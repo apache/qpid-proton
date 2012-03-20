@@ -1,0 +1,168 @@
+<!--
+ -
+ - Licensed to the Apache Software Foundation (ASF) under one
+ - or more contributor license agreements.  See the NOTICE file
+ - distributed with this work for additional information
+ - regarding copyright ownership.  The ASF licenses this file
+ - to you under the Apache License, Version 2.0 (the
+ - "License"); you may not use this file except in compliance
+ - with the License.  You may obtain a copy of the License at
+ - 
+ -   http://www.apache.org/licenses/LICENSE-2.0
+ - 
+ - Unless required by applicable law or agreed to in writing,
+ - software distributed under the License is distributed on an
+ - "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ - KIND, either express or implied.  See the License for the
+ - specific language governing permissions and limitations
+ - under the License.
+ -
+ -->
+<project name="Qpid AMQP 1.0" default="build">
+
+  <import file="common.xml"/>
+
+  <property name="modules.core"       value="codec engine driver"/>
+  <property name="modules.opt"        value=""/>
+  <property name="modules"            value="${modules.core} ${modules.opt}"/>
+
+  <property name="resources"     value="${project.root}/resources"/>
+
+  <map property="release.excludes" value="${modules}">
+    <globmapper from="*" to="*/\*\*"/>
+  </map>
+
+
+  <macrodef name="iterate">
+    <attribute name="target"/>
+    <attribute name="modules" default="${modules}"/>
+    <element name="elements" implicit="true" optional="true"/>
+    <sequential>
+      <subant target="@{target}" antfile="build.xml">
+        <filelist dir="." files="@{modules}"/>
+        <elements/>
+      </subant>
+    </sequential>
+  </macrodef>
+
+  <target name="compile" description="compile sources">
+    <iterate target="compile"/>
+  </target>
+
+  <target name="compile-tests" description="compile unit tests">
+    <iterate target="compile-tests"/>
+  </target>
+
+  <target name="test" description="execute tests" depends="compile">
+
+    <delete file="${build.failed}"/>
+
+    <iterate target="test">
+      <property name="test.failures.ignore" value="true"/>
+    </iterate>
+
+    <condition property="failed">
+      <available file="${build.failed}"/>
+    </condition>
+
+    <fail if="failed" message="TEST SUITE FAILED"/>
+
+  </target>
+  
+  <target name="report-module" description="generate junitreport for modules">
+    <iterate target="report-module"/>
+  </target>
+
+  <target name="jar" description="create module jars">
+    <iterate target="jar"/>
+  </target>
+
+  <target name="jar-tests" description="create unit test jars">
+    <iterate target="jar-tests"/>
+  </target>
+
+  <target name="libs" description="copy dependencies into build tree">
+    <iterate target="libs"/>
+  </target>
+
+  <target name="doc" description="generate api-doc">
+    <iterate target="doc"/>
+  </target>
+
+  <target name="test-doc" description="generate api-doc">
+    <iterate target="test-doc"/>
+  </target>
+
+  <target name="bundle" description="create OSGi bundles">
+    <iterate target="bundle"/>
+  </target>
+  
+  <target name="release-bin" description="build a binary release artifact" depends="build,bundle">
+      <iterate  target="release-bin"/>
+  </target>
+
+
+  <target name="build" description="build the project">
+    <iterate target="build"/>
+  </target>
+
+  <target name="clean" description="remove build and release artifacts">
+    <iterate target="clean"/>
+    <delete dir="${build}"/>
+  </target>
+
+  <target name="coverage-report" description="generate coverage report" depends="cobertura-init">
+    <cobertura-merge datafile="${build.coveragereport}/cobertura.ser">
+      <!-- merge all module coverage reports -->
+      <fileset dir="${build}">
+        <include name="**/*.ser"/>
+      </fileset>
+    </cobertura-merge>
+    <cobertura-report format="xml"
+                      destdir="${build.coveragereport}"
+		      datafile="${build.coveragereport}/cobertura.ser"
+		      >
+      <fileset dir="${project.root}/engine/src" includes="**/*.java" />
+      <fileset dir="${project.root}/codec/src" includes="**/*.java" />
+    </cobertura-report>
+	<cobertura-report format="html"
+                      destdir="${build.coveragereport}"
+		      datafile="${build.coveragereport}/cobertura.ser"
+		      >
+      <fileset dir="${project.root}/engine/src" includes="**/*.java" />
+      <fileset dir="${project.root}/codec/src" includes="**/*.java" />
+    </cobertura-report>
+  </target>
+
+  <target name="instrument" description="instrument for artifacts">
+    <iterate target="instrument"/>
+  </target>
+  
+  <target name="cover-test" description="run tests and generate coverage information" depends="build">
+    <iterate target="cover-test" modules="engine codec"/>
+  </target>
+
+  <target name="findbugs" depends="findbugs-init,build">
+
+    <mkdir dir="${build.findbugs}"/>
+
+    <findbugs home="${findbugs.dir}"
+              output="html"
+              outputFile="${build.findbugs}/report.html" 
+              stylesheet="fancy-hist.xsl"
+              jvmargs="-Xmx512m"
+              projectName="Qpid">
+      <auxAnalyzePath>
+        <fileset dir="${build.lib}" includes="qpid*.jar" excludes="*test*.jar *junit*.jar *example*.jar qpid-all.jar"/>
+      </auxAnalyzePath>
+      <auxClassPath>
+        <fileset dir="${build.lib}" includes="**/*.jar" />
+        <fileset dir="${basedir}/lib" includes="org.eclipse*.jar com.ibm.*.jar"/>
+      </auxClassPath>
+      <sourcePath>
+        <fileset dir="${basedir}" includes="**/src/**/org/.." />
+      </sourcePath>
+    </findbugs>
+  </target>
+
+</project>
