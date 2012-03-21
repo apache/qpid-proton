@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <iconv.h>
 #include <arpa/inet.h>
-#include "../codec/encodings.h"
+#include "encodings.h"
 #include "value-internal.h"
 
 int pn_compare_value(pn_value_t a, pn_value_t b)

@@ -29,6 +29,7 @@
 #include <proton/util.h>
 #include <unistd.h>
 #include "util.h"
+#include "pn_config.h"
 
 void print(pn_value_t value)
 {
@@ -368,7 +369,7 @@ int main(int argc, char **argv)
   char *mechanism = "ANONYMOUS";
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:a:m:hX")) != -1)
+  while ((opt = getopt(argc, argv, "c:a:m:hVX")) != -1)
   {
     switch (opt) {
     case 'c':
@@ -381,6 +382,9 @@ int main(int argc, char **argv)
     case 'm':
       mechanism = optarg;
       break;
+    case 'V':
+      printf("proton version %i.%i\n", PN_VERSION_MAJOR, PN_VERSION_MINOR);
+      exit(EXIT_SUCCESS);
     case 'X':
       value(argc, argv);
       exit(EXIT_SUCCESS);

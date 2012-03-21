@@ -24,7 +24,7 @@
 #include <string.h>
 #include <proton/framing.h>
 #include <proton/value.h>
-#include "../protocol.h"
+#include "protocol.h"
 #include <wchar.h>
 #include <inttypes.h>
 

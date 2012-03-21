@@ -26,7 +26,7 @@
 #include <proton/value.h>
 #include <proton/engine.h> // XXX: just needed for PN_EOS
 #include "sasl-internal.h"
-#include "../protocol.h"
+#include "protocol.h"
 #include "../util.h"
 
 void pn_do_init(pn_dispatcher_t *disp);

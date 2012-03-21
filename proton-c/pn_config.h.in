@@ -1,3 +1,6 @@
+#ifndef _PROTON_CONFIG_H
+#define _PROTON_CONFIG_H 1
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,17 +22,7 @@
  *
  */
 
-#include <proton/message.h>
-#include <proton/codec.h>
-#include "protocol.h"
+#define PN_VERSION_MAJOR @PN_VERSION_MAJOR@
+#define PN_VERSION_MINOR @PN_VERSION_MINOR@
 
-ssize_t pn_message_data(char *dst, size_t available, char *src, size_t size)
-{
-  char *pos = dst;
-  char *limit = pos + available;
-  int e;
-  if ((e = pn_write_descriptor(&pos, limit))) return e;
-  if ((e = pn_write_ulong(&pos, limit, 0x75))) return e;
-  if ((e = pn_write_binary(&pos, limit, size, src))) return e;
-  return pos - dst;
-}
+#endif /* pn_config.h */
