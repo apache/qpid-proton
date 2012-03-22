@@ -189,7 +189,7 @@ wchar_t *pn_string_wcs(pn_string_t *str);
 
 /* binary */
 
-pn_binary_t *pn_binary(char *bytes, size_t size);
+pn_binary_t *pn_binary(const char *bytes, size_t size);
 size_t pn_binary_size(pn_binary_t *b);
 const char *pn_binary_bytes(pn_binary_t *b);
 pn_binary_t *pn_binary_dup(pn_binary_t *b);

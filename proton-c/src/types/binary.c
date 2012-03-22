@@ -26,7 +26,7 @@
 #include "value-internal.h"
 #include "../util.h"
 
-pn_binary_t *pn_binary(char *bytes, size_t size)
+pn_binary_t *pn_binary(const char *bytes, size_t size)
 {
   pn_binary_t *bin = malloc(sizeof(pn_binary_t) + size);
   bin->size = size;

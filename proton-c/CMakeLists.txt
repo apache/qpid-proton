@@ -61,8 +61,8 @@ find_package (PythonLibs)
 include_directories (${PYTHON_INCLUDE_PATH})
 include_directories (${PROJECT_SOURCE_DIR})
 
-swig_add_module(proton python proton.i)
-swig_link_libraries(proton qpidproton ${PYTHON_LIBRARIES})
+swig_add_module(cproton python cproton.i)
+swig_link_libraries(cproton qpidproton ${PYTHON_LIBRARIES})
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpidproton)

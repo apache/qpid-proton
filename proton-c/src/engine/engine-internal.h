@@ -35,10 +35,14 @@ struct pn_error_t {
   pn_map_t *info;
 };
 
+typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER, TRANSPORT} pn_endpoint_type_t;
+
+typedef struct pn_endpoint_t pn_endpoint_t;
+
 struct pn_endpoint_t {
   pn_endpoint_type_t type;
-  pn_endpoint_state_t local_state, remote_state;
-  pn_error_t local_error, remote_error;
+  pn_state_t state;
+  pn_error_t error;
   pn_endpoint_t *endpoint_next;
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;
@@ -140,17 +144,10 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
+  // XXX
   pn_sequence_t credit;
-  size_t id;
-};
-
-struct pn_sender_t {
-  pn_link_t link;
-};
-
-struct pn_receiver_t {
-  pn_link_t link;
   pn_sequence_t credits;
+  size_t id;
 };
 
 struct pn_delivery_t {
@@ -175,11 +172,11 @@ struct pn_delivery_t {
   void *context;
 };
 
-void pn_destroy_connection(pn_connection_t *connection);
-void pn_destroy_transport(pn_transport_t *transport);
-void pn_destroy_session(pn_session_t *session);
-void pn_destroy_sender(pn_sender_t *sender);
-void pn_destroy_receiver(pn_receiver_t *receiver);
+#define PN_SET_LOCAL(OLD, NEW)                                          \
+  (OLD) = ((OLD) & (PN_REMOTE_UNINIT | PN_REMOTE_ACTIVE | PN_REMOTE_CLOSED)) | (NEW)
+
+#define PN_SET_REMOTE(OLD, NEW)                                         \
+  (OLD) = ((OLD) & (PN_LOCAL_UNINIT | PN_LOCAL_ACTIVE | PN_LOCAL_CLOSED)) | (NEW)
 
 void pn_link_dump(pn_link_t *link);
 

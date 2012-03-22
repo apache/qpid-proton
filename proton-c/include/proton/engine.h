@@ -25,93 +25,119 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <proton/value.h>
 
 typedef struct pn_error_t pn_error_t;
-typedef struct pn_endpoint_t pn_endpoint_t;
 typedef struct pn_transport_t pn_transport_t;
 typedef struct pn_connection_t pn_connection_t;
 typedef struct pn_session_t pn_session_t;
 typedef struct pn_link_t pn_link_t;
-typedef struct pn_sender_t pn_sender_t;
-typedef struct pn_receiver_t pn_receiver_t;
 typedef struct pn_delivery_t pn_delivery_t;
 
-typedef enum pn_endpoint_state_t {UNINIT=1, ACTIVE=2, CLOSED=4} pn_endpoint_state_t;
-typedef enum pn_endpoint_type_t {CONNECTION=1, TRANSPORT=2, SESSION=3, SENDER=4, RECEIVER=5} pn_endpoint_type_t;
-typedef enum pn_disposition_t {PN_RECEIVED=1, PN_ACCEPTED=2, PN_REJECTED=3, PN_RELEASED=4, PN_MODIFIED=5} pn_disposition_t;
+typedef struct pn_delivery_tag_t {
+  size_t size;
+  const char *bytes;
+} pn_delivery_tag_t;
+
+#define pn_dtag(BYTES, SIZE) ((pn_delivery_tag_t) {(SIZE), (BYTES)})
+
+typedef enum pn_state_t {
+  PN_LOCAL_UNINIT=1,
+  PN_LOCAL_ACTIVE=2,
+  PN_LOCAL_CLOSED=4,
+  PN_REMOTE_UNINIT=8,
+  PN_REMOTE_ACTIVE=16,
+  PN_REMOTE_CLOSED=32
+} pn_state_t;
+
+typedef enum pn_disposition_t {
+  PN_RECEIVED=1,
+  PN_ACCEPTED=2,
+  PN_REJECTED=3,
+  PN_RELEASED=4,
+  PN_MODIFIED=5
+} pn_disposition_t;
 
 typedef enum pn_trace_t {PN_TRACE_OFF=0, PN_TRACE_RAW=1, PN_TRACE_FRM=2} pn_trace_t;
 
-/* Currently the way inheritence is done it is safe to "upcast" from
-   pn_{transport,connection,session,link,sender,or receiver}_t to
-   pn_endpoint_t and to "downcast" based on the endpoint type. I'm
-   not sure if this should be part of the ABI or not. */
-
-// endpoint
-pn_endpoint_type_t pn_endpoint_type(pn_endpoint_t *endpoint);
-pn_endpoint_state_t pn_local_state(pn_endpoint_t *endpoint);
-pn_endpoint_state_t pn_remote_state(pn_endpoint_t *endpoint);
-pn_error_t *pn_local_error(pn_endpoint_t *endpoint);
-pn_error_t *pn_remote_error(pn_endpoint_t *endpoint);
-void pn_destroy(pn_endpoint_t *endpoint);
-void pn_open(pn_endpoint_t *endpoint);
-void pn_close(pn_endpoint_t *endpoint);
-
 // connection
 pn_connection_t *pn_connection();
+
+pn_state_t pn_connection_state(pn_connection_t *connection);
+pn_error_t *pn_connection_error(pn_connection_t *connection);
 void pn_connection_set_container(pn_connection_t *connection, const wchar_t *container);
 void pn_connection_set_hostname(pn_connection_t *connection, const wchar_t *hostname);
+
 pn_delivery_t *pn_work_head(pn_connection_t *connection);
 pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
 
 pn_session_t *pn_session(pn_connection_t *connection);
 pn_transport_t *pn_transport(pn_connection_t *connection);
 
-pn_endpoint_t *pn_endpoint_head(pn_connection_t *connection,
-                                pn_endpoint_state_t local,
-                                pn_endpoint_state_t remote);
-pn_endpoint_t *pn_endpoint_next(pn_endpoint_t *endpoint,
-                                pn_endpoint_state_t local,
-                                pn_endpoint_state_t remote);
+pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state);
+pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
+
+pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
+pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
+
+void pn_connection_open(pn_connection_t *connection);
+void pn_connection_close(pn_connection_t *connection);
+void pn_connection_destroy(pn_connection_t *connection);
 
 // transport
 #define PN_EOS (-1)
 #define PN_ERR (-2)
+pn_state_t pn_transport_state(pn_transport_t *transport);
+pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
 ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size);
 time_t pn_tick(pn_transport_t *transport, time_t now);
 void pn_trace(pn_transport_t *transport, pn_trace_t trace);
+void pn_transport_open(pn_transport_t *transport);
+void pn_transport_close(pn_transport_t *transport);
+void pn_transport_destroy(pn_transport_t *transport);
 
 // session
-pn_sender_t *pn_sender(pn_session_t *session, const wchar_t *name);
-pn_receiver_t *pn_receiver(pn_session_t *session, const wchar_t *name);
+pn_state_t pn_session_state(pn_session_t *session);
+pn_error_t *pn_session_error(pn_session_t *session);
+pn_link_t *pn_sender(pn_session_t *session, const wchar_t *name);
+pn_link_t *pn_receiver(pn_session_t *session, const wchar_t *name);
+void pn_session_open(pn_session_t *session);
+void pn_session_close(pn_session_t *session);
+void pn_session_destroy(pn_session_t *session);
 
 // link
+bool pn_is_sender(pn_link_t *link);
+bool pn_is_receiver(pn_link_t *link);
+pn_state_t pn_link_state(pn_link_t *link);
+pn_error_t *pn_link_error(pn_link_t *link);
 pn_session_t *pn_get_session(pn_link_t *link);
 void pn_set_source(pn_link_t *link, const wchar_t *source);
 void pn_set_target(pn_link_t *link, const wchar_t *target);
 wchar_t *pn_remote_source(pn_link_t *link);
 wchar_t *pn_remote_target(pn_link_t *link);
-pn_delivery_t *pn_delivery(pn_link_t *link, pn_binary_t *tag);
+pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_t *pn_current(pn_link_t *link);
 bool pn_advance(pn_link_t *link);
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
+void pn_link_open(pn_link_t *sender);
+void pn_link_close(pn_link_t *sender);
+void pn_link_destroy(pn_link_t *sender);
+
 // sender
 //void pn_offer(pn_sender_t *sender, int credits);
-ssize_t pn_send(pn_sender_t *sender, const char *bytes, size_t n);
+ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n);
 //void pn_abort(pn_sender_t *sender);
 
 // receiver
 #define PN_EOM (-1)
-void pn_flow(pn_receiver_t *receiver, int credits);
-ssize_t pn_recv(pn_receiver_t *receiver, char *bytes, size_t n);
+void pn_flow(pn_link_t *receiver, int credits);
+ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
 
 // delivery
-pn_binary_t *pn_delivery_tag(pn_delivery_t *delivery);
+pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
 pn_link_t *pn_link(pn_delivery_t *delivery);
 // how do we do delivery state?
 int pn_local_disp(pn_delivery_t *delivery);

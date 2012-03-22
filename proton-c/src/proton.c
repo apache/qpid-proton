@@ -116,54 +116,42 @@ void server_callback(pn_selectable_t *sel)
   char msg[1024];
   char data[1024];
 
-  pn_endpoint_t *endpoint = pn_endpoint_head(conn, UNINIT, ACTIVE);
-  while (endpoint)
-  {
-    switch (pn_endpoint_type(endpoint))
-    {
-    case CONNECTION:
-    case SESSION:
-      if (pn_remote_state(endpoint) != UNINIT)
-        pn_open(endpoint);
-      break;
-    case SENDER:
-    case RECEIVER:
-      {
-        pn_link_t *link = (pn_link_t *) endpoint;
-        if (pn_remote_state(endpoint) != UNINIT) {
-          printf("%ls, %ls\n", pn_remote_source(link), pn_remote_target(link));
-          pn_set_source(link, pn_remote_source(link));
-          pn_set_target(link, pn_remote_target(link));
-          pn_open(endpoint);
-          if (pn_endpoint_type(endpoint) == RECEIVER) {
-            pn_flow((pn_receiver_t *) endpoint, 100);
-          } else {
-            pn_binary_t *tag = pn_binary("blah", 4);
-            pn_delivery(link, tag);
-            pn_free_binary(tag);
-          }
-        }
-      }
-      break;
-    case TRANSPORT:
-      break;
+  if (pn_connection_state(conn) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)) {
+    pn_connection_open(conn);
+  }
+
+  pn_session_t *ssn = pn_session_head(conn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
+  while (ssn) {
+    pn_session_open(ssn);
+    ssn = pn_session_next(ssn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
+  }
+
+  pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
+  while (link) {
+    printf("%ls, %ls\n", pn_remote_source(link), pn_remote_target(link));
+    pn_set_source(link, pn_remote_source(link));
+    pn_set_target(link, pn_remote_target(link));
+    pn_link_open(link);
+    if (pn_is_receiver(link)) {
+      pn_flow(link, 100);
+    } else {
+      pn_delivery(link, pn_dtag("blah", 4));
     }
 
-    endpoint = pn_endpoint_next(endpoint, UNINIT, ACTIVE);
+    link = pn_link_next(link, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
   }
 
   pn_delivery_t *delivery = pn_work_head(conn);
   while (delivery)
   {
-    pn_binary_t *tag = pn_delivery_tag(delivery);
-    pn_format(tagstr, 1024, pn_from_binary(tag));
+    pn_delivery_tag_t tag = pn_delivery_tag(delivery);
+    pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
     pn_link_t *link = pn_link(delivery);
     if (pn_readable(delivery)) {
       printf("received delivery: %s\n", tagstr);
-      pn_receiver_t *receiver = (pn_receiver_t *) link;
       printf("  payload = \"");
       while (true) {
-        ssize_t n = pn_recv(receiver, msg, 1024);
+        ssize_t n = pn_recv(link, msg, 1024);
         if (n == PN_EOM) {
           pn_advance(link);
           pn_disposition(delivery, PN_ACCEPTED);
@@ -174,17 +162,14 @@ void server_callback(pn_selectable_t *sel)
       }
       printf("\"\n");
     } else if (pn_writable(delivery)) {
-      pn_sender_t *sender = (pn_sender_t *) link;
       sprintf(msg, "message body for %s", tagstr);
       size_t n = pn_message_data(data, 1024, msg, strlen(msg));
-      pn_send(sender, data, n);
+      pn_send(link, data, n);
       if (pn_advance(link)) {
         printf("sent delivery: %s\n", tagstr);
         char tagbuf[16];
         sprintf(tagbuf, "%i", ctx->count++);
-        pn_binary_t *tag = pn_binary(tagbuf, strlen(tagbuf));
-        pn_delivery(link, tag);
-        pn_free_binary(tag);
+        pn_delivery(link, pn_dtag(tagbuf, strlen(tagbuf)));
       }
     }
 
@@ -196,24 +181,20 @@ void server_callback(pn_selectable_t *sel)
     delivery = pn_work_next(delivery);
   }
 
-  endpoint = pn_endpoint_head(conn, ACTIVE, CLOSED);
-  while (endpoint)
-  {
-    switch (pn_endpoint_type(endpoint))
-    {
-    case CONNECTION:
-    case SESSION:
-    case SENDER:
-    case RECEIVER:
-      if (pn_remote_state(endpoint) == CLOSED) {
-        pn_close(endpoint);
-      }
-      break;
-    case TRANSPORT:
-      break;
-    }
+  if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+    pn_connection_close(conn);
+  }
 
-    endpoint = pn_endpoint_next(endpoint, ACTIVE, CLOSED);
+  ssn = pn_session_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+  while (ssn) {
+    pn_session_close(ssn);
+    ssn = pn_session_next(ssn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+  }
+
+  link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+  while (link) {
+    pn_link_close(link);
+    link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
   }
 }
 
@@ -266,27 +247,25 @@ void client_callback(pn_selectable_t *sel)
     pn_connection_set_hostname(connection, ctx->hostname);
 
     pn_session_t *ssn = pn_session(connection);
-    pn_open((pn_endpoint_t *) connection);
-    pn_open((pn_endpoint_t *) ssn);
+    pn_connection_open(connection);
+    pn_session_open(ssn);
 
     if (ctx->send_count) {
-      pn_sender_t *snd = pn_sender(ssn, L"sender");
-      pn_set_target((pn_link_t *) snd, ctx->address);
-      pn_open((pn_endpoint_t *) snd);
+      pn_link_t *snd = pn_sender(ssn, L"sender");
+      pn_set_target(snd, ctx->address);
+      pn_link_open(snd);
 
       char buf[16];
       for (int i = 0; i < ctx->send_count; i++) {
         sprintf(buf, "%c", 'a' + i);
-        pn_binary_t *tag = pn_binary(buf, strlen(buf));
-        pn_delivery((pn_link_t *) snd, tag);
-        pn_free_binary(tag);
+        pn_delivery(snd, pn_dtag(buf, strlen(buf)));
       }
     }
 
     if (ctx->recv_count) {
-      pn_receiver_t *rcv = pn_receiver(ssn, L"receiver");
-      pn_set_source((pn_link_t *) rcv, ctx->address);
-      pn_open((pn_endpoint_t *) rcv);
+      pn_link_t *rcv = pn_receiver(ssn, L"receiver");
+      pn_set_source(rcv, ctx->address);
+      pn_link_open(rcv);
       pn_flow(rcv, ctx->recv_count);
     }
   }
@@ -294,27 +273,25 @@ void client_callback(pn_selectable_t *sel)
   pn_delivery_t *delivery = pn_work_head(connection);
   while (delivery)
   {
-    pn_binary_t *tag = pn_delivery_tag(delivery);
-    pn_format(tagstr, 1024, pn_from_binary(tag));
+    pn_delivery_tag_t tag = pn_delivery_tag(delivery);
+    pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
     pn_link_t *link = pn_link(delivery);
     if (pn_writable(delivery)) {
-      pn_sender_t *snd = (pn_sender_t *) link;
       sprintf(msg, "message body for %s", tagstr);
       ssize_t n = pn_message_data(data, 1024, msg, strlen(msg));
-      pn_send(snd, data, n);
+      pn_send(link, data, n);
       if (pn_advance(link)) printf("sent delivery: %s\n", tagstr);
     } else if (pn_readable(delivery)) {
       printf("received delivery: %s\n", tagstr);
-      pn_receiver_t *rcv = (pn_receiver_t *) link;
       printf("  payload = \"");
       while (true) {
-        size_t n = pn_recv(rcv, msg, 1024);
+        size_t n = pn_recv(link, msg, 1024);
         if (n == PN_EOM) {
           pn_advance(link);
           pn_disposition(delivery, PN_ACCEPTED);
           pn_settle(delivery);
           if (!--ctx->recv_count) {
-            pn_close((pn_endpoint_t *)link);
+            pn_link_close(link);
           }
           break;
         } else {
@@ -329,7 +306,7 @@ void client_callback(pn_selectable_t *sel)
       pn_clean(delivery);
       pn_settle(delivery);
       if (!--ctx->send_count) {
-        pn_close((pn_endpoint_t *)link);
+        pn_link_close(link);
       }
     }
 
@@ -340,23 +317,11 @@ void client_callback(pn_selectable_t *sel)
     printf("closing\n");
     // XXX: how do we close the session?
     //pn_close((pn_endpoint_t *) ssn);
-    pn_close((pn_endpoint_t *)connection);
+    pn_connection_close(connection);
   }
 
-  pn_endpoint_t *endpoint = pn_endpoint_head(connection, CLOSED, CLOSED);
-  while (endpoint)
-  {
-    switch (pn_endpoint_type(endpoint)) {
-    case CONNECTION:
-      pn_driver_stop(ctx->driver);
-      break;
-    case SESSION:
-    case SENDER:
-    case RECEIVER:
-    case TRANSPORT:
-      break;
-    }
-    endpoint = pn_endpoint_next(endpoint, CLOSED, CLOSED);
+  if (pn_connection_state(connection) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
+    pn_driver_stop(ctx->driver);
   }
 }
 

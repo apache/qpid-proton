@@ -153,9 +153,11 @@ void *pn_selectable_context(pn_selectable_t *sel)
 
 void pn_selectable_destroy(pn_selectable_t *sel)
 {
+  if (!sel) return;
+
   if (sel->driver) pn_driver_remove(sel->driver, sel);
-  if (sel->connection) pn_destroy((pn_endpoint_t *) sel->connection);
-  if (sel->sasl) pn_sasl_destroy(sel->sasl);
+  pn_connection_destroy(sel->connection);
+  pn_sasl_destroy(sel->sasl);
   free(sel);
 }
 
@@ -322,7 +324,7 @@ static ssize_t pn_selectable_write_amqp_header(pn_selectable_t *sel)
   fprintf(stderr, "    -> AMQP 1.0\n");
   memmove(pn_selectable_output(sel), "AMQP\x00\x01\x00\x00", 8);
   sel->process_output = pn_selectable_write_amqp;
-  pn_open((pn_endpoint_t *) sel->transport);
+  pn_transport_open(sel->transport);
   return 8;
 }
 
