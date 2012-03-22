@@ -972,6 +972,7 @@ void pn_do_begin(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = disp->context;
   pn_value_t remote_channel = pn_list_get(disp->args, BEGIN_REMOTE_CHANNEL);
+  pn_sequence_t next = pn_to_uint32(pn_list_get(disp->args, BEGIN_NEXT_OUTGOING_ID));
   pn_session_state_t *state;
   if (remote_channel.type == USHORT) {
     // XXX: what if session is NULL?
@@ -980,6 +981,7 @@ void pn_do_begin(pn_dispatcher_t *disp)
     pn_session_t *ssn = pn_session(transport->connection);
     state = pn_session_get_state(transport, ssn);
   }
+  state->incoming.next = next;
   pn_map_channel(transport, disp->channel, state);
   PN_SET_REMOTE(state->session->endpoint.state, PN_REMOTE_ACTIVE);
 }
