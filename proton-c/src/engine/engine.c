@@ -1601,13 +1601,13 @@ void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition)
 bool pn_writable(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
-  return link->endpoint.type == SENDER && pn_is_current(delivery) && link->credit > 0;
+  return pn_is_sender(link) && pn_is_current(delivery) && link->credit > 0;
 }
 
 bool pn_readable(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
-  return link->endpoint.type == RECEIVER && pn_is_current(delivery);
+  return pn_is_receiver(link) && pn_is_current(delivery);
 }
 
 size_t pn_pending(pn_delivery_t *delivery)
