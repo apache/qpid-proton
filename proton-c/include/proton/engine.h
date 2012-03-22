@@ -40,14 +40,14 @@ typedef struct pn_delivery_tag_t {
 
 #define pn_dtag(BYTES, SIZE) ((pn_delivery_tag_t) {(SIZE), (BYTES)})
 
-typedef enum pn_state_t {
-  PN_LOCAL_UNINIT=1,
-  PN_LOCAL_ACTIVE=2,
-  PN_LOCAL_CLOSED=4,
-  PN_REMOTE_UNINIT=8,
-  PN_REMOTE_ACTIVE=16,
-  PN_REMOTE_CLOSED=32
-} pn_state_t;
+typedef int pn_state_t;
+
+#define PN_LOCAL_UNINIT (1)
+#define PN_LOCAL_ACTIVE (2)
+#define PN_LOCAL_CLOSED (4)
+#define PN_REMOTE_UNINIT (8)
+#define PN_REMOTE_ACTIVE (16)
+#define PN_REMOTE_CLOSED (32)
 
 typedef enum pn_disposition_t {
   PN_RECEIVED=1,
@@ -57,7 +57,11 @@ typedef enum pn_disposition_t {
   PN_MODIFIED=5
 } pn_disposition_t;
 
-typedef enum pn_trace_t {PN_TRACE_OFF=0, PN_TRACE_RAW=1, PN_TRACE_FRM=2} pn_trace_t;
+typedef int pn_trace_t;
+
+#define PN_TRACE_OFF (0)
+#define PN_TRACE_RAW (1)
+#define PN_TRACE_FRM (2)
 
 // connection
 pn_connection_t *pn_connection();
