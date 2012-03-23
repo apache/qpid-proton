@@ -23,7 +23,7 @@
 #include <proton/codec.h>
 #include "protocol.h"
 
-ssize_t pn_message_data(char *dst, size_t available, char *src, size_t size)
+ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
   char *pos = dst;
   char *limit = pos + available;

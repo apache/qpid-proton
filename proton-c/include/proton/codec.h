@@ -41,7 +41,7 @@ int pn_write_float(char **pos, char *limit, float v);
 int pn_write_ulong(char **pos, char *limit, uint64_t v);
 int pn_write_long(char **pos, char *limit, int64_t v);
 int pn_write_double(char **pos, char *limit, double v);
-int pn_write_binary(char **pos, char *limit, size_t size, char *src);
+int pn_write_binary(char **pos, char *limit, size_t size, const char *src);
 int pn_write_utf8(char **pos, char *limit, size_t size, char *utf8);
 int pn_write_symbol(char **pos, char *limit, size_t size, const char *symbol);
 int pn_write_start(char **pos, char *limit, char **start);

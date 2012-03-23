@@ -24,6 +24,6 @@
 
 #include <sys/types.h>
 
-ssize_t pn_message_data(char *dst, size_t available, char *src, size_t size);
+ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size);
 
 #endif /* message.h */

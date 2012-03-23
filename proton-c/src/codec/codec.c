@@ -150,7 +150,7 @@ int pn_write_double(char **pos, char *limit, double v) {
 
 #define CONSISTENT (1)
 
-static int pn_write_variable(char **pos, char *limit, size_t size, char *src,
+static int pn_write_variable(char **pos, char *limit, size_t size, const char *src,
                              uint8_t code8, uint8_t code32) {
   int n;
 
@@ -168,7 +168,7 @@ static int pn_write_variable(char **pos, char *limit, size_t size, char *src,
   *pos += size;
   return 0;
 }
-int pn_write_binary(char **pos, char *limit, size_t size, char *src) {
+int pn_write_binary(char **pos, char *limit, size_t size, const char *src) {
   return pn_write_variable(pos, limit, size, src, PNE_VBIN8, PNE_VBIN32);
 }
 int pn_write_utf8(char **pos, char *limit, size_t size, char *utf8) {
