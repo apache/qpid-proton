@@ -443,11 +443,14 @@ void pn_connection_set_hostname(pn_connection_t *connection, const wchar_t *host
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection)
 {
+  if (!connection) return NULL;
   return connection->work_head;
 }
 
 pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
 {
+  if (!delivery) return NULL;
+
   if (delivery->work)
     return delivery->work_next;
   else
@@ -888,6 +891,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 
 pn_delivery_t *pn_current(pn_link_t *link)
 {
+  if (!link) return NULL;
   return link->current;
 }
 
@@ -907,7 +911,7 @@ void pn_advance_receiver(pn_link_t *link)
 
 bool pn_advance(pn_link_t *link)
 {
-  if (link->current) {
+  if (link && link->current) {
     pn_delivery_t *prev = link->current;
     if (link->endpoint.type == SENDER) {
       pn_advance_sender(link);
@@ -1568,6 +1572,7 @@ time_t pn_tick(pn_transport_t *engine, time_t now)
 
 pn_link_t *pn_link(pn_delivery_t *delivery)
 {
+  if (!delivery) return NULL;
   return delivery->link;
 }
 
@@ -1600,6 +1605,8 @@ void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition)
 
 bool pn_writable(pn_delivery_t *delivery)
 {
+  if (!delivery) return false;
+
   pn_link_t *link = delivery->link;
   return pn_is_sender(link) && pn_is_current(delivery) && link->credit > 0;
 }

@@ -35,16 +35,22 @@ typedef void (pn_callback_t)(pn_selectable_t *);
 
 pn_driver_t *pn_driver(void);
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace);
+void pn_driver_wakeup(pn_driver_t *d);
+void pn_driver_wait(pn_driver_t *d);
+pn_selectable_t *pn_driver_next(pn_driver_t *d);
 void pn_driver_run(pn_driver_t *d);
 void pn_driver_stop(pn_driver_t *d);
 void pn_driver_destroy(pn_driver_t *d);
 
-pn_selectable_t *pn_acceptor(pn_driver_t *driver, char *host, char *port, pn_callback_t *callback, void* context);
-pn_selectable_t *pn_connector(pn_driver_t *driver, char *host, char *port, pn_callback_t *callback, void* context);
+pn_selectable_t *pn_acceptor(pn_driver_t *driver, const char *host, const char *port,
+                             pn_callback_t *callback, void* context);
+pn_selectable_t *pn_connector(pn_driver_t *driver, const char *host, const char *port,
+                              pn_callback_t *callback, void* context);
 void pn_selectable_trace(pn_selectable_t *sel, pn_trace_t trace);
 pn_sasl_t *pn_selectable_sasl(pn_selectable_t *sel);
 pn_connection_t *pn_selectable_connection(pn_selectable_t *sel);
 void *pn_selectable_context(pn_selectable_t *sel);
+void pn_selectable_close(pn_selectable_t *sel);
 void pn_selectable_destroy(pn_selectable_t *sel);
 
 #endif /* driver.h */

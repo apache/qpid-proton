@@ -40,7 +40,10 @@
 struct pn_driver_t {
   pn_selectable_t *head;
   pn_selectable_t *tail;
+  pn_selectable_t *current;
   size_t size;
+  size_t capacity;
+  struct pollfd *fds;
   int ctrl[2]; //pipe for updating selectable status
   bool stopping;
   pn_trace_t trace;
@@ -52,6 +55,7 @@ struct pn_selectable_t {
   pn_driver_t *driver;
   pn_selectable_t *next;
   pn_selectable_t *prev;
+  int idx;
   int fd;
   int status;
   time_t wakeup;
@@ -82,6 +86,10 @@ static void pn_driver_add(pn_driver_t *d, pn_selectable_t *s)
 
 static void pn_driver_remove(pn_driver_t *d, pn_selectable_t *s)
 {
+  if (s == d->current) {
+    d->current = s->next;
+  }
+
   LL_REMOVE(d->head, d->tail, s);
   s->driver = NULL;
   d->size--;
@@ -122,6 +130,7 @@ pn_selectable_t *pn_selectable(pn_driver_t *driver, int fd, pn_callback_t *callb
   s->process_output = pn_selectable_write_sasl_header;
   s->callback = callback;
   s->context = context;
+  s->idx = 0;
 
   pn_selectable_trace(s, driver->trace);
 
@@ -138,17 +147,17 @@ void pn_selectable_trace(pn_selectable_t *sel, pn_trace_t trace)
 
 pn_sasl_t *pn_selectable_sasl(pn_selectable_t *sel)
 {
-  return sel->sasl;
+  return sel ? sel->sasl : NULL;
 }
 
 pn_connection_t *pn_selectable_connection(pn_selectable_t *sel)
 {
-  return sel->connection;
+  return sel ? sel->connection : NULL;
 }
 
 void *pn_selectable_context(pn_selectable_t *sel)
 {
-  return sel->context;
+  return sel ? sel->context : NULL;
 }
 
 void pn_selectable_destroy(pn_selectable_t *sel)
@@ -161,9 +170,11 @@ void pn_selectable_destroy(pn_selectable_t *sel)
   free(sel);
 }
 
-static void pn_selectable_close(pn_selectable_t *sel)
+void pn_selectable_close(pn_selectable_t *sel)
 {
   // XXX: should probably signal engine and callback here
+  if (!sel) return;
+
   sel->status = 0;
   if (close(sel->fd) == -1)
     perror("close");
@@ -349,12 +360,21 @@ pn_driver_t *pn_driver()
   if (!d) return NULL;
   d->head = NULL;
   d->tail = NULL;
+  d->current = NULL;
   d->size = 0;
+  d->capacity = 0;
+  d->fds = NULL;
   d->ctrl[0] = 0;
   d->ctrl[1] = 0;
   d->stopping = false;
   d->trace = ((pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
               (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF));
+
+  // XXX
+  if (pipe(d->ctrl)) {
+    perror("Can't create control pipe");
+  }
+
   return d;
 }
 
@@ -365,78 +385,105 @@ void pn_driver_trace(pn_driver_t *d, pn_trace_t trace)
 
 void pn_driver_destroy(pn_driver_t *d)
 {
+  if (!d) return;
+
+  close(d->ctrl[0]);
+  close(d->ctrl[1]);
   while (d->head)
     pn_selectable_destroy(d->head);
+  free(d->fds);
   free(d);
+}
+
+void pn_driver_wakeup(pn_driver_t *d)
+{
+  write(d->ctrl[1], "x", 1);
+}
+
+static void pn_driver_rebuild(pn_driver_t *d)
+{
+  if (d->size == 0) return;
+  while (d->capacity < d->size + 1) {
+    d->capacity = d->capacity ? 2*d->capacity : 16;
+    d->fds = realloc(d->fds, d->capacity*sizeof(struct pollfd));
+  }
+
+  d->fds[0].fd = d->ctrl[0];
+  d->fds[0].events = POLLIN;
+  d->fds[0].revents = 0;
+
+  pn_selectable_t *s = d->head;
+  for (int i = 1; i <= d->size; i++)
+  {
+    d->fds[i].fd = s->fd;
+    d->fds[i].events = (s->status & PN_SEL_RD ? POLLIN : 0) |
+      (s->status & PN_SEL_WR ? POLLOUT : 0);
+    d->fds[i].revents = 0;
+    s->idx = i;
+    s = s->next;
+  }
+
+}
+
+void pn_driver_wait(pn_driver_t *d) {
+  pn_driver_rebuild(d);
+
+  pn_selectable_t *s = d->head;
+  while (s) {
+    // XXX
+    s->tick(s, 0);
+    s = s->next;
+  }
+
+  DIE_IFE(poll(d->fds, d->size+1, -1));
+
+  if (d->fds[0].revents & POLLIN) {
+    //clear the pipe
+    char buffer[512];
+    while (read(d->ctrl[0], buffer, 512) == 512);
+  }
+
+  d->current = d->head;
+}
+
+void pn_selectable_work(pn_selectable_t *s) {
+  // XXX: this is necessary because read or write might close the
+  // selectable, should probably fix this by making them mark it
+  // and keeping close/destroy/etc entirely outside the driver
+  int idx = s->idx;
+  pn_driver_t *d = s->driver;
+  if (d->fds[idx].revents & POLLIN)
+    s->read(s);
+  if (d->fds[idx].revents & POLLOUT)
+    s->write(s);
+}
+
+pn_selectable_t *pn_driver_next(pn_driver_t *d) {
+  pn_selectable_t *s = d->current;
+  if (s) {
+    d->current = s->next;
+    pn_selectable_work(s);
+  }
+  return s;
 }
 
 void pn_driver_run(pn_driver_t *d)
 {
-  int i, nfds = 0;
-  struct pollfd *fds = NULL;
-
-  if (pipe(d->ctrl)) {
-      perror("Can't create control pipe");
-  }
   while (!d->stopping)
   {
-    int n = d->size;
-    if (n == 0) break;
-    if (n > nfds) {
-      fds = realloc(fds, (n+1)*sizeof(struct pollfd));
-      nfds = n;
-    }
-
-    pn_selectable_t *s = d->head;
-    for (i = 0; i < n; i++)
-    {
-      fds[i].fd = s->fd;
-      fds[i].events = (s->status & PN_SEL_RD ? POLLIN : 0) |
-        (s->status & PN_SEL_WR ? POLLOUT : 0);
-      fds[i].revents = 0;
-      // XXX
-      s->tick(s, 0);
-      s = s->next;
-    }
-    fds[n].fd = d->ctrl[0];
-    fds[n].events = POLLIN;
-    fds[n].revents = 0;
-
-    DIE_IFE(poll(fds, n+1, -1));
-
-    s = d->head;
-    for (i = 0; i < n; i++)
-    {
-      // XXX: this is necessary because read or write might close the
-      // selectable, should probably fix this by making them mark it
-      // as closed and closing from this loop
-      pn_selectable_t *next = s->next;
-      if (fds[i].revents & POLLIN)
-        s->read(s);
-      if (fds[i].revents & POLLOUT)
-        s->write(s);
-      s = next;
-    }
-
-    if (fds[n].revents & POLLIN) {
-      //clear the pipe
-      char buffer[512];
-      while (read(d->ctrl[0], buffer, 512) == 512);
-    }
+    pn_driver_wait(d);
+    while (pn_driver_next(d));
   }
-
-  close(d->ctrl[0]);
-  close(d->ctrl[1]);
-  free(fds);
 }
 
 void pn_driver_stop(pn_driver_t *d)
 {
   d->stopping = true;
-  write(d->ctrl[1], "x", 1);
+  pn_driver_wakeup(d);
 }
 
-pn_selectable_t *pn_connector(pn_driver_t *driver, char *host, char *port, pn_callback_t *callback, void *context)
+pn_selectable_t *pn_connector(pn_driver_t *driver, const char *host, const char *port,
+                              pn_callback_t *callback, void *context)
 {
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
@@ -489,7 +536,8 @@ static void do_accept(pn_selectable_t *s)
 static void do_nothing(pn_selectable_t *s) {}
 static time_t never_tick(pn_selectable_t *s, time_t now) { return 0; }
 
-pn_selectable_t *pn_acceptor(pn_driver_t *driver, char *host, char *port, pn_callback_t *callback, void* context)
+pn_selectable_t *pn_acceptor(pn_driver_t *driver, const char *host, const char *port,
+                             pn_callback_t *callback, void* context)
 {
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);

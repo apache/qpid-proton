@@ -2,6 +2,9 @@
 %{
 /* Includes the header in the wrapper code */
 #include <proton/engine.h>
+#include <proton/message.h>
+#include <proton/sasl.h>
+#include <proton/driver.h>
 %}
 
 typedef unsigned int size_t;
@@ -65,5 +68,61 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_delivery_tag;
 
+%rename(pn_message_data) wrap_pn_message_data;
+%inline %{
+  int wrap_pn_message_data(char *STRING, size_t LENGTH, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
+    if (sz >= 0) {
+      *OUTPUT_SIZE = sz;
+      return 0;
+    } else {
+      *OUTPUT_SIZE = 0;
+      return sz;
+    }
+  }
+%}
+%ignore pn_message_data;
+
+%rename(pn_acceptor) wrap_pn_acceptor;
+%inline {
+  pn_selectable_t *wrap_pn_acceptor(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
+    Py_XINCREF(context);
+    return pn_acceptor(driver, host, port, NULL, context);
+  }
+}
+%ignore pn_acceptor;
+
+%rename(pn_connector) wrap_pn_connector;
+%inline {
+  pn_selectable_t *wrap_pn_connector(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
+    Py_XINCREF(context);
+    return pn_connector(driver, host, port, NULL, context);
+  }
+}
+%ignore pn_connector;
+
+%rename(pn_selectable_context) wrap_pn_selectable_context;
+%inline {
+  PyObject *wrap_pn_selectable_context(pn_selectable_t *sel) {
+    PyObject *result = pn_selectable_context(sel);
+    Py_XINCREF(result);
+    return result;
+  }
+}
+%ignore pn_selectable_context;
+
+%rename(pn_selectable_destroy) wrap_pn_selectable_destroy;
+%inline %{
+  void wrap_pn_selectable_destroy(pn_selectable_t *selectable) {
+    PyObject *obj = pn_selectable_context(selectable);
+    Py_XDECREF(obj);
+    pn_selectable_destroy(selectable);
+  }
+%}
+%ignore pn_selectable_destroy;
+
 /* Parse the header file to generate wrappers */
 %include "proton/engine.h"
+%include "proton/message.h"
+%include "proton/sasl.h"
+%include "proton/driver.h"
