@@ -83,43 +83,81 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_message_data;
 
-%rename(pn_acceptor) wrap_pn_acceptor;
+%rename(pn_listener) wrap_pn_listener;
 %inline {
-  pn_selectable_t *wrap_pn_acceptor(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
+  pn_listener_t *wrap_pn_listener(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
     Py_XINCREF(context);
-    return pn_acceptor(driver, host, port, NULL, context);
+    return pn_listener(driver, host, port, context);
   }
 }
-%ignore pn_acceptor;
+%ignore pn_listener;
+
+%rename(pn_listener_context) wrap_pn_listener_context;
+%inline {
+  PyObject *wrap_pn_listener_context(pn_listener_t *l) {
+    PyObject *result = pn_listener_context(l);
+    if (result) {
+      Py_INCREF(result);
+      return result;
+    } else {
+      Py_RETURN_NONE;
+    }
+  }
+}
+%ignore pn_listener_context;
+
+%rename(pn_listener_destroy) wrap_pn_listener_destroy;
+%inline %{
+  void wrap_pn_listener_destroy(pn_listener_t *l) {
+    PyObject *obj = pn_listener_context(l);
+    Py_XDECREF(obj);
+    pn_listener_destroy(l);
+  }
+%}
+%ignore pn_listener_destroy;
 
 %rename(pn_connector) wrap_pn_connector;
 %inline {
-  pn_selectable_t *wrap_pn_connector(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
+  pn_connector_t *wrap_pn_connector(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
     Py_XINCREF(context);
-    return pn_connector(driver, host, port, NULL, context);
+    return pn_connector(driver, host, port, context);
   }
 }
 %ignore pn_connector;
 
-%rename(pn_selectable_context) wrap_pn_selectable_context;
+%rename(pn_connector_context) wrap_pn_connector_context;
 %inline {
-  PyObject *wrap_pn_selectable_context(pn_selectable_t *sel) {
-    PyObject *result = pn_selectable_context(sel);
-    Py_XINCREF(result);
-    return result;
+  PyObject *wrap_pn_connector_context(pn_connector_t *c) {
+    PyObject *result = pn_connector_context(c);
+    if (result) {
+      Py_INCREF(result);
+      return result;
+    } else {
+      Py_RETURN_NONE;
+    }
   }
 }
-%ignore pn_selectable_context;
+%ignore pn_connector_context;
 
-%rename(pn_selectable_destroy) wrap_pn_selectable_destroy;
+%rename(pn_connector_set_context) wrap_pn_connector_set_context;
+%inline {
+  void wrap_pn_connector_set_context(pn_connector_t *ctor, PyObject *context) {
+    Py_XDECREF(pn_connector_context(ctor));
+    Py_XINCREF(context);
+    pn_connector_set_context(ctor, context);
+  }
+}
+%ignore pn_connector_set_context;
+
+%rename(pn_connector_destroy) wrap_pn_connector_destroy;
 %inline %{
-  void wrap_pn_selectable_destroy(pn_selectable_t *selectable) {
-    PyObject *obj = pn_selectable_context(selectable);
+  void wrap_pn_connector_destroy(pn_connector_t *c) {
+    PyObject *obj = pn_connector_context(c);
     Py_XDECREF(obj);
-    pn_selectable_destroy(selectable);
+    pn_connector_destroy(c);
   }
 %}
-%ignore pn_selectable_destroy;
+%ignore pn_connector_destroy;
 
 /* Parse the header file to generate wrappers */
 %include "proton/engine.h"

@@ -81,9 +81,9 @@ struct server_context {
   int count;
 };
 
-void server_callback(pn_selectable_t *sel)
+void server_callback(pn_connector_t *ctor)
 {
-  pn_sasl_t *sasl = pn_selectable_sasl(sel);
+  pn_sasl_t *sasl = pn_connector_sasl(ctor);
 
   if (!pn_sasl_init(sasl)) {
     pn_sasl_server(sasl);
@@ -110,8 +110,8 @@ void server_callback(pn_selectable_t *sel)
     return;
   }
 
-  pn_connection_t *conn = pn_selectable_connection(sel);
-  struct server_context *ctx = pn_selectable_context(sel);
+  pn_connection_t *conn = pn_connector_connection(ctor);
+  struct server_context *ctx = pn_connector_context(ctor);
   char tagstr[1024];
   char msg[1024];
   char data[1024];
@@ -200,6 +200,7 @@ void server_callback(pn_selectable_t *sel)
 
 struct client_context {
   bool init;
+  bool done;
   int recv_count;
   int send_count;
   pn_driver_t *driver;
@@ -210,11 +211,11 @@ struct client_context {
   wchar_t address[1024];
 };
 
-void client_callback(pn_selectable_t *sel)
+void client_callback(pn_connector_t *ctor)
 {
-  struct client_context *ctx = pn_selectable_context(sel);
+  struct client_context *ctx = pn_connector_context(ctor);
 
-  pn_sasl_t *sasl = pn_selectable_sasl(sel);
+  pn_sasl_t *sasl = pn_connector_sasl(ctor);
   if (!pn_sasl_init(sasl)) {
     pn_sasl_client(sasl, ctx->mechanism, ctx->username, ctx->password);
   }
@@ -226,11 +227,11 @@ void client_callback(pn_selectable_t *sel)
     break;
   default:
     fprintf(stderr, "auth failed\n");
-    pn_driver_stop(ctx->driver);
+    ctx->done = true;
     return;
   }
 
-  pn_connection_t *connection = pn_selectable_connection(sel);
+  pn_connection_t *connection = pn_connector_connection(ctor);
   char tagstr[1024];
   char msg[1024];
   char data[1024];
@@ -321,7 +322,7 @@ void client_callback(pn_selectable_t *sel)
   }
 
   if (pn_connection_state(connection) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-    pn_driver_stop(ctx->driver);
+    ctx->done = true;
   }
 }
 
@@ -375,19 +376,43 @@ int main(int argc, char **argv)
 
   pn_driver_t *drv = pn_driver();
   if (url) {
-    struct client_context ctx = {false, 10, 10, drv};
+    struct client_context ctx = {false, false, 10, 10, drv};
     ctx.username = user;
     ctx.password = pass;
     ctx.mechanism = mechanism;
     mbstowcs(ctx.hostname, host, 1024);
     mbstowcs(ctx.address, address, 1024);
-    if (!pn_connector(drv, host, port, client_callback, &ctx)) pn_fatal("connector failed\n");
+    if (!pn_connector(drv, host, port, &ctx)) pn_fatal("connector failed\n");
+    while (!ctx.done) {
+      pn_driver_wait(drv);
+      pn_connector_t *c;
+      while ((c = pn_driver_process(drv))) {
+        client_callback(c);
+        if (pn_connector_closed(c)) {
+          pn_connector_destroy(c);
+        }
+      }
+    }
   } else {
     struct server_context ctx = {0};
-    if (!pn_acceptor(drv, host, port, server_callback, &ctx)) pn_fatal("acceptor failed\n");
+    if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
+    while (true) {
+      pn_driver_wait(drv);
+      pn_connector_t *c;
+
+      while ((c = pn_driver_listen(drv))) {
+        pn_connector_set_context(c, &ctx);
+      }
+
+      while ((c = pn_driver_process(drv))) {
+        server_callback(c);
+        if (pn_connector_closed(c)) {
+          pn_connector_destroy(c);
+        }
+      }
+    }
   }
 
-  pn_driver_run(drv);
   pn_driver_destroy(drv);
 
   return 0;

@@ -31,7 +31,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-wchar_t *wcsdup(const wchar_t *src)
+#define wcsdup my_wcsdup
+
+wchar_t *my_wcsdup(const wchar_t *src)
 {
   if (src) {
     wchar_t *dest = malloc((wcslen(src)+1)*sizeof(wchar_t));

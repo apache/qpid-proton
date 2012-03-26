@@ -24,33 +24,38 @@
 
 #include <proton/engine.h>
 #include <proton/sasl.h>
-#include <stdlib.h>
 
 typedef struct pn_driver_t pn_driver_t;
-typedef struct pn_selectable_t pn_selectable_t;
-typedef void (pn_callback_t)(pn_selectable_t *);
-
-#define PN_SEL_RD (0x0001)
-#define PN_SEL_WR (0x0002)
+typedef struct pn_listener_t pn_listener_t;
+typedef struct pn_connector_t pn_connector_t;
 
 pn_driver_t *pn_driver(void);
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace);
 void pn_driver_wakeup(pn_driver_t *d);
 void pn_driver_wait(pn_driver_t *d);
-pn_selectable_t *pn_driver_next(pn_driver_t *d);
-void pn_driver_run(pn_driver_t *d);
-void pn_driver_stop(pn_driver_t *d);
+pn_connector_t *pn_driver_listen(pn_driver_t *d);
+pn_connector_t *pn_driver_process(pn_driver_t *d);
 void pn_driver_destroy(pn_driver_t *d);
 
-pn_selectable_t *pn_acceptor(pn_driver_t *driver, const char *host, const char *port,
-                             pn_callback_t *callback, void* context);
-pn_selectable_t *pn_connector(pn_driver_t *driver, const char *host, const char *port,
-                              pn_callback_t *callback, void* context);
-void pn_selectable_trace(pn_selectable_t *sel, pn_trace_t trace);
-pn_sasl_t *pn_selectable_sasl(pn_selectable_t *sel);
-pn_connection_t *pn_selectable_connection(pn_selectable_t *sel);
-void *pn_selectable_context(pn_selectable_t *sel);
-void pn_selectable_close(pn_selectable_t *sel);
-void pn_selectable_destroy(pn_selectable_t *sel);
+pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
+                           const char *port, void* context);
+pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context);
+void pn_listener_trace(pn_listener_t *listener, pn_trace_t trace);
+void *pn_listener_context(pn_listener_t *listener);
+void pn_listener_close(pn_listener_t *listener);
+void pn_listener_destroy(pn_listener_t *listener);
+
+pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
+                             const char *port, void* context);
+pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context);
+void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace);
+pn_listener_t *pn_connector_listener(pn_connector_t *ctor);
+pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor);
+pn_connection_t *pn_connector_connection(pn_connector_t *ctor);
+void *pn_connector_context(pn_connector_t *ctor);
+void pn_connector_set_context(pn_connector_t *ctor, void *context);
+void pn_connector_close(pn_connector_t *ctor);
+bool pn_connector_closed(pn_connector_t *ctor);
+void pn_connector_destroy(pn_connector_t *ctor);
 
 #endif /* driver.h */
