@@ -74,7 +74,7 @@ typedef struct {
   void (*stop_map)(void *ctx, size_t count);
 } pn_data_callbacks_t;
 
-ssize_t pn_read_datum(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx);
+ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx);
 
 #define PN_DATA_CALLBACKS(STEM) ((pn_data_callbacks_t) { \
   .on_null = & STEM ## _null,                              \

@@ -205,9 +205,9 @@ int pn_write_map(char **pos, char *limit, char *start, size_t count) {
   return pn_write_end(pos, limit, start, 2*count, PNE_MAP32);
 }
 
-ssize_t pn_read_datum(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx);
+ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx);
 
-ssize_t pn_read_type(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t *code)
+ssize_t pn_read_type(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t *code)
 {
   if (bytes[0] != PNE_DESCRIPTOR) {
     *code = bytes[0];
@@ -227,7 +227,7 @@ ssize_t pn_read_type(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, 
   }
 }
 
-ssize_t pn_read_encoding(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t code)
+ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t code)
 {
   size_t size;
   size_t count;
@@ -456,7 +456,7 @@ ssize_t pn_read_encoding(char *bytes, size_t n, pn_data_callbacks_t *cb, void *c
   }
 }
 
-ssize_t pn_read_datum(char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx)
+ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx)
 {
   uint8_t code;
   ssize_t rcode;
