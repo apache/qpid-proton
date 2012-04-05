@@ -197,7 +197,6 @@ static pn_connector_t *pn_listener_accept(pn_listener_t *l)
   }
 }
 
-
 void pn_listener_close(pn_listener_t *l)
 {
   if (!l) return;
@@ -272,6 +271,7 @@ static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor);
 static ssize_t pn_connector_write_sasl(pn_connector_t *ctor);
 static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor);
 static ssize_t pn_connector_write_amqp(pn_connector_t *ctor);
+static ssize_t pn_connector_write_eos(pn_connector_t *ctor);
 
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 {
@@ -334,6 +334,13 @@ void pn_connector_set_context(pn_connector_t *ctor, void *context)
 pn_listener_t *pn_connector_listener(pn_connector_t *ctor)
 {
   return ctor ? ctor->listener : NULL;
+}
+
+void pn_connector_eos(pn_connector_t *ctor)
+{
+  if (!ctor) return;
+
+  ctor->process_input = pn_connector_write_eos;
 }
 
 void pn_connector_close(pn_connector_t *ctor)
@@ -465,7 +472,7 @@ static void pn_connector_write(pn_connector_t *ctor)
     } else if (n == 0) {
       break;
     } else {
-      if (n != PN_EOS) fprintf(stderr, "error in process_output: %zi", n);
+      if (n != PN_EOS) fprintf(stderr, "error in process_output: %zi\n", n);
       pn_connector_close(ctor);
       return;
     }
@@ -523,6 +530,11 @@ static ssize_t pn_connector_write_amqp(pn_connector_t *ctor)
 {
   pn_transport_t *transport = ctor->transport;
   return pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
+}
+
+static ssize_t pn_connector_write_eos(pn_connector_t *ctor)
+{
+  return PN_EOS;
 }
 
 static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)

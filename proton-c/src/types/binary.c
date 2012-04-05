@@ -19,6 +19,7 @@
  *
  */
 
+#include <proton/errors.h>
 #include <proton/codec.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,6 +48,16 @@ size_t pn_binary_size(pn_binary_t *b)
 const char *pn_binary_bytes(pn_binary_t *b)
 {
   return b->bytes;
+}
+
+ssize_t pn_binary_get(pn_binary_t *b, char *bytes, size_t size)
+{
+  if (size < b->size) {
+    return PN_OVERFLOW;
+  } else {
+    memmove(bytes, b->bytes, b->size);
+    return b->size;
+  }
 }
 
 uintptr_t pn_hash_binary(pn_binary_t *b)

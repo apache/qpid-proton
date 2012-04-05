@@ -1553,11 +1553,11 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
       delivery->size -= size;
       return size;
     } else {
-      return PN_EOM;
+      return PN_EOS;
     }
   } else {
     // XXX: ?
-    return PN_EOM;
+    return PN_EOS;
   }
 }
 

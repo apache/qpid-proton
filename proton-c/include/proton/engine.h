@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <proton/errors.h>
 
 typedef struct pn_error_t pn_error_t;
 typedef struct pn_transport_t pn_transport_t;
@@ -88,8 +89,6 @@ void pn_connection_close(pn_connection_t *connection);
 void pn_connection_destroy(pn_connection_t *connection);
 
 // transport
-#define PN_EOS (-1)
-#define PN_ERR (-2)
 pn_state_t pn_transport_state(pn_transport_t *transport);
 pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
@@ -136,7 +135,6 @@ ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n);
 //void pn_abort(pn_sender_t *sender);
 
 // receiver
-#define PN_EOM (-1)
 void pn_flow(pn_link_t *receiver, int credits);
 ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
 

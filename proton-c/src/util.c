@@ -28,9 +28,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
-
-// XXX: should centralize error codes
-#define PN_OVERFLOW (-1)
+#include <proton/errors.h>
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {

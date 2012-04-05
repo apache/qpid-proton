@@ -21,6 +21,7 @@
 
 #include <proton/util.h>
 #include <arpa/inet.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "encodings.h"
 #include "value-internal.h"
@@ -88,6 +89,17 @@ pn_array_t *pn_array(enum TYPE type, int capacity)
     l->size = 0;
   }
   return l;
+}
+
+int pn_array_add(pn_array_t *a, pn_value_t v)
+{
+  if (a->capacity <= a->size) {
+    fprintf(stderr, "wah!\n");
+    return -1;
+  }
+
+  a->values[a->size++] = v;
+  return 0;
 }
 
 void pn_free_array(pn_array_t *a)

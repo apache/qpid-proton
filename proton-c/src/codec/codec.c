@@ -41,7 +41,7 @@ typedef union {
 static int pn_write_code(char **pos, char *limit, uint8_t code) {
   char *dst = *pos;
   if (limit - dst < 1) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     dst[0] = code;
     *pos += 1;
@@ -58,7 +58,7 @@ int pn_write_null(char **pos, char *limit) {
 static int pn_write_fixed8(char **pos, char *limit, uint8_t v, uint8_t code) {
   char *dst = *pos;
   if (limit - dst < 2) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     dst[0] = code;
     dst[1] = v;
@@ -81,7 +81,7 @@ static int pn_write_fixed16(char **pos, char *limit, uint16_t v,
                             uint8_t code) {
   char *dst = *pos;
   if (limit - dst < 3) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     dst[0] = code;
     *((uint16_t *) (dst + 1)) = htons(v);
@@ -99,7 +99,7 @@ int pn_write_short(char **pos, char *limit, int16_t v) {
 static int pn_write_fixed32(char **pos, char *limit, uint32_t v, uint8_t code) {
   char *dst = *pos;
   if (limit - dst < 5) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     dst[0] = code;
     *((uint32_t *) (dst + 1)) = htonl(v);
@@ -125,7 +125,7 @@ int pn_write_float(char **pos, char *limit, float v) {
 static int pn_write_fixed64(char **pos, char *limit, uint64_t v, uint8_t code) {
   char *dst = *pos;
   if (limit - dst < 9) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     dst[0] = code;
     uint32_t hi = v >> 32;
@@ -162,7 +162,7 @@ static int pn_write_variable(char **pos, char *limit, size_t size, const char *s
       return n;
   }
 
-  if (limit - *pos < size) return -1;
+  if (limit - *pos < size) return PN_OVERFLOW;
 
   memmove(*pos, src, size);
   *pos += size;
@@ -181,7 +181,7 @@ int pn_write_symbol(char **pos, char *limit, size_t size, const char *symbol) {
 int pn_write_start(char **pos, char *limit, char **start) {
   char *dst = *pos;
   if (limit - dst < 9) {
-    return -1;
+    return PN_OVERFLOW;
   } else {
     *start = dst;
     *pos += 9;
@@ -238,7 +238,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
   switch (code)
   {
   case PNE_DESCRIPTOR:
-    return -8;
+    return PN_ARG_ERR;
   case PNE_NULL:
     cb->on_null(ctx);
     return offset;
@@ -313,7 +313,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
       cb->on_double(ctx, conv.d);
       break;
     default:
-      return -1;
+      return PN_ARG_ERR;
     }
 
     return offset;
@@ -341,7 +341,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
       offset += 4;
       break;
     default:
-      return -2;
+      return PN_ARG_ERR;
     }
 
     {
@@ -358,7 +358,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
         cb->on_symbol(ctx, size, start);
         break;
       default:
-        return -3;
+        return PN_ARG_ERR;
       }
     }
 
@@ -394,7 +394,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
       offset += 4;
       break;
     default:
-      return -4;
+      return PN_ARG_ERR;
     }
 
     switch (code)
@@ -425,7 +425,7 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
       cb->start_map(ctx, count);
       break;
     default:
-      return -5;
+      return PN_ARG_ERR;
     }
 
     for (int i = 0; i < count; i++)
@@ -446,13 +446,13 @@ ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, v
       cb->stop_map(ctx, count);
       break;
     default:
-      return -6;
+      return PN_ARG_ERR;
     }
 
     return offset;
   default:
     printf("Unrecognised typecode: %u\n", code);
-    return -7;
+    return PN_ARG_ERR;
   }
 }
 

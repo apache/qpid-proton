@@ -1,5 +1,5 @@
-#ifndef _PROTON_SASL_INTERNAL_H
-#define _PROTON_SASL_INTERNAL_H 1
+#ifndef _PROTON_ERRORS_H
+#define _PROTON_ERRORS_H 1
 
 /*
  *
@@ -22,19 +22,10 @@
  *
  */
 
-#include <proton/sasl.h>
-#include "../dispatcher/dispatcher.h"
+#define PN_EOS (-1)
+#define PN_ERR (-2)
+#define PN_OVERFLOW (-3)
+#define PN_STATE_ERR (-4)
+#define PN_ARG_ERR (-5)
 
-#define SCRATCH (1024)
-
-struct pn_sasl_t {
-  pn_dispatcher_t *disp;
-  bool init;
-  pn_symbol_t *mechanism;
-  pn_binary_t *challenge;
-  pn_binary_t *response;
-  pn_sasl_outcome_t outcome;
-  char scratch[SCRATCH];
-};
-
-#endif /* sasl-internal.h */
+#endif /* errors.h */

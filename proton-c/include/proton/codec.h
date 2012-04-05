@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <wchar.h>
+#include <proton/errors.h>
 
 int pn_write_descriptor(char **pos, char *limit);
 int pn_write_null(char **pos, char *limit);

@@ -85,29 +85,31 @@ void server_callback(pn_connector_t *ctor)
 {
   pn_sasl_t *sasl = pn_connector_sasl(ctor);
 
-  if (!pn_sasl_init(sasl)) {
-    pn_sasl_server(sasl);
-  }
-
-  switch (pn_sasl_outcome(sasl)) {
-  case SASL_NONE:
-    {
-      const char *mech = pn_sasl_mechanism(sasl);
-      if (mech && (!strcmp(mech, "PLAIN") || !strcmp(mech, "ANONYMOUS"))) {
-        pn_binary_t *response = pn_sasl_response(sasl);
-        char buf[1024];
-        pn_format(buf, 1024, pn_from_binary(response));
-        printf("response = %s\n", buf);
-        pn_sasl_auth(sasl, SASL_OK);
-        break;
-      } else {
-        return;
+  while (pn_sasl_state(sasl) != PN_SASL_PASS) {
+    switch (pn_sasl_state(sasl)) {
+    case PN_SASL_IDLE:
+      return;
+    case PN_SASL_CONF:
+      pn_sasl_mechanisms(sasl, "PLAIN ANONYMOUS");
+      pn_sasl_server(sasl);
+      break;
+    case PN_SASL_STEP:
+      {
+        size_t n = pn_sasl_pending(sasl);
+        char iresp[n];
+        pn_sasl_recv(sasl, iresp, n);
+        printf(pn_sasl_remote_mechanisms(sasl));
+        printf(" response = ");
+        pn_print_data(iresp, n);
+        printf("\n");
+        pn_sasl_done(sasl, PN_SASL_OK);
       }
+      break;
+    case PN_SASL_PASS:
+      break;
+    case PN_SASL_FAIL:
+      return;
     }
-  case SASL_OK:
-    break;
-  default:
-    return;
   }
 
   pn_connection_t *conn = pn_connector_connection(ctor);
@@ -152,7 +154,7 @@ void server_callback(pn_connector_t *ctor)
       printf("  payload = \"");
       while (true) {
         ssize_t n = pn_recv(link, msg, 1024);
-        if (n == PN_EOM) {
+        if (n == PN_EOS) {
           pn_advance(link);
           pn_disposition(delivery, PN_ACCEPTED);
           break;
@@ -214,21 +216,38 @@ struct client_context {
 void client_callback(pn_connector_t *ctor)
 {
   struct client_context *ctx = pn_connector_context(ctor);
-
-  pn_sasl_t *sasl = pn_connector_sasl(ctor);
-  if (!pn_sasl_init(sasl)) {
-    pn_sasl_client(sasl, ctx->mechanism, ctx->username, ctx->password);
+  if (pn_connector_closed(ctor)) {
+    ctx->done = true;
   }
 
-  switch (pn_sasl_outcome(sasl)) {
-  case SASL_NONE:
-    return;
-  case SASL_OK:
-    break;
-  default:
-    fprintf(stderr, "auth failed\n");
-    ctx->done = true;
-    return;
+  pn_sasl_t *sasl = pn_connector_sasl(ctor);
+
+  while (pn_sasl_state(sasl) != PN_SASL_PASS) {
+    pn_sasl_state_t st = pn_sasl_state(sasl);
+    switch (st) {
+    case PN_SASL_IDLE:
+      return;
+    case PN_SASL_CONF:
+      if (ctx->mechanism && !strcmp(ctx->mechanism, "PLAIN")) {
+        pn_sasl_plain(sasl, ctx->username, ctx->password);
+      } else {
+        pn_sasl_mechanisms(sasl, ctx->mechanism);
+        pn_sasl_client(sasl);
+      }
+      break;
+    case PN_SASL_STEP:
+      if (pn_sasl_pending(sasl)) {
+        fprintf(stderr, "challenge failed\n");
+        ctx->done = true;
+      }
+      return;
+    case PN_SASL_FAIL:
+      fprintf(stderr, "authentication failed\n");
+      ctx->done = true;
+      return;
+    case PN_SASL_PASS:
+      break;
+    }
   }
 
   pn_connection_t *connection = pn_connector_connection(ctor);
@@ -287,7 +306,7 @@ void client_callback(pn_connector_t *ctor)
       printf("  payload = \"");
       while (true) {
         size_t n = pn_recv(link, msg, 1024);
-        if (n == PN_EOM) {
+        if (n == PN_EOS) {
           pn_advance(link);
           pn_disposition(delivery, PN_ACCEPTED);
           pn_settle(delivery);

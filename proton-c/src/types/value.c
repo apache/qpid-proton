@@ -358,6 +358,11 @@ void *pn_to_ref(pn_value_t v)
   return v.u.as_ref;
 }
 
+pn_value_t pn_from_array(pn_array_t *a)
+{
+  return (pn_value_t) {.type = ARRAY, .u.as_array = a};
+}
+
 pn_value_t pn_from_list(pn_list_t *l)
 {
   return (pn_value_t) {.type = LIST, .u.as_list = l};
@@ -572,6 +577,7 @@ size_t pn_format_sizeof(pn_value_t v)
   }
 }
 
+// XXX: this should delegate to stuff in codec
 size_t pn_encode_sizeof(pn_value_t v)
 {
   switch (v.type)

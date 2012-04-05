@@ -104,6 +104,7 @@ pn_map_t *pn_to_map(pn_value_t v);
 pn_tag_t *pn_to_tag(pn_value_t v);
 void *pn_to_ref(pn_value_t v);
 
+pn_value_t pn_from_array(pn_array_t *a);
 pn_value_t pn_from_list(pn_list_t *l);
 pn_value_t pn_from_map(pn_map_t *m);
 pn_value_t pn_from_tag(pn_tag_t *t);
@@ -193,10 +194,12 @@ pn_binary_t *pn_binary(const char *bytes, size_t size);
 size_t pn_binary_size(pn_binary_t *b);
 const char *pn_binary_bytes(pn_binary_t *b);
 pn_binary_t *pn_binary_dup(pn_binary_t *b);
+ssize_t pn_binary_get(pn_binary_t *b, char *bytes, size_t size);
 
 /* arrays */
 
 pn_array_t *pn_array(enum TYPE type, int capacity);
+int pn_array_add(pn_array_t *a, pn_value_t v);
 pn_value_t pn_array_get(pn_array_t *a, int index);
 size_t pn_encode_sizeof_array(pn_array_t *a);
 size_t pn_encode_array(pn_array_t *array, char *out);
