@@ -171,8 +171,12 @@ void *pn_listener_context(pn_listener_t *l) {
   return l ? l->context : NULL;
 }
 
-static pn_connector_t *pn_listener_accept(pn_listener_t *l)
+pn_connector_t *pn_listener_accept(pn_listener_t *l)
 {
+  if (!(l->idx && l->driver && l->driver->fds[l->idx].revents & POLLIN)) {
+    return NULL;
+  }
+
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
   socklen_t addrlen = sizeof(addr);
@@ -545,14 +549,16 @@ static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
   return result;
 }
 
-void pn_connector_work(pn_connector_t *c) {
-  int idx = c->idx;
-  if (!idx) return;
-  pn_driver_t *d = c->driver;
-  if (d->fds[idx].revents & POLLIN)
-    c->read(c);
-  if (d->fds[idx].revents & POLLOUT)
-    c->write(c);
+void pn_connector_process(pn_connector_t *c) {
+  if (c) {
+    int idx = c->idx;
+    if (!idx) return;
+    pn_driver_t *d = c->driver;
+    if (d->fds[idx].revents & POLLIN)
+      c->read(c);
+    if (d->fds[idx].revents & POLLOUT)
+      c->write(c);
+  }
 }
 
 // driver
@@ -667,27 +673,18 @@ void pn_driver_wait(pn_driver_t *d) {
   d->connector_next = d->connector_head;
 }
 
-pn_connector_t *pn_driver_listen(pn_driver_t *d) {
+pn_listener_t *pn_driver_listener(pn_driver_t *d) {
   if (!d) return NULL;
 
   pn_listener_t *l = d->listener_next;
-  if (l) {
-    d->listener_next = l->next;
-    if (l->idx && d->fds[l->idx].revents & POLLIN) {
-      pn_connector_t *c = pn_listener_accept(l);
-      return c;
-    }
-  }
-  return NULL;
+  if (l) { d->listener_next = l->next; }
+  return l;
 }
 
-pn_connector_t *pn_driver_process(pn_driver_t *d) {
+pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   if (!d) return NULL;
 
   pn_connector_t *c = d->connector_next;
-  if (c) {
-    d->connector_next = c->next;
-    pn_connector_work(c);
-  }
+  if (c) { d->connector_next = c->next; }
   return c;
 }

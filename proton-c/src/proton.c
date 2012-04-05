@@ -405,7 +405,8 @@ int main(int argc, char **argv)
     while (!ctx.done) {
       pn_driver_wait(drv);
       pn_connector_t *c;
-      while ((c = pn_driver_process(drv))) {
+      while ((c = pn_driver_connector(drv))) {
+        pn_connector_process(c);
         client_callback(c);
         if (pn_connector_closed(c)) {
           pn_connector_destroy(c);
@@ -417,13 +418,16 @@ int main(int argc, char **argv)
     if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
     while (true) {
       pn_driver_wait(drv);
+      pn_listener_t *l;
       pn_connector_t *c;
 
-      while ((c = pn_driver_listen(drv))) {
+      while ((l = pn_driver_listener(drv))) {
+        c = pn_listener_accept(l);
         pn_connector_set_context(c, &ctx);
       }
 
-      while ((c = pn_driver_process(drv))) {
+      while ((c = pn_driver_connector(drv))) {
+        pn_connector_process(c);
         server_callback(c);
         if (pn_connector_closed(c)) {
           pn_connector_destroy(c);

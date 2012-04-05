@@ -34,14 +34,15 @@ pn_driver_t *pn_driver(void);
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace);
 void pn_driver_wakeup(pn_driver_t *d);
 void pn_driver_wait(pn_driver_t *d);
-pn_connector_t *pn_driver_listen(pn_driver_t *d);
-pn_connector_t *pn_driver_process(pn_driver_t *d);
+pn_listener_t *pn_driver_listener(pn_driver_t *d);
+pn_connector_t *pn_driver_connector(pn_driver_t *d);
 void pn_driver_destroy(pn_driver_t *d);
 
 pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
                            const char *port, void* context);
 pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context);
 void pn_listener_trace(pn_listener_t *listener, pn_trace_t trace);
+pn_connector_t *pn_listener_accept(pn_listener_t *listener);
 void *pn_listener_context(pn_listener_t *listener);
 void pn_listener_close(pn_listener_t *listener);
 void pn_listener_destroy(pn_listener_t *listener);
@@ -50,6 +51,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
                              const char *port, void* context);
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context);
 void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace);
+void pn_connector_process(pn_connector_t *ctor);
 pn_listener_t *pn_connector_listener(pn_connector_t *ctor);
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor);
 pn_connection_t *pn_connector_connection(pn_connector_t *ctor);
