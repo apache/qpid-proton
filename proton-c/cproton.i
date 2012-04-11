@@ -25,11 +25,10 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
     ssize_t sz = pn_recv(link, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
-      return 0;
     } else {
       *OUTPUT_SIZE = 0;
-      return sz;
     }
+    return sz;
   }
 %}
 %ignore pn_recv;
@@ -40,11 +39,10 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
     ssize_t sz = pn_output(transport, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
-      return 0;
     } else {
       *OUTPUT_SIZE = 0;
-      return sz;
     }
+    return sz;
   }
 %}
 %ignore pn_output;
@@ -74,11 +72,10 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
     ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
-      return 0;
     } else {
       *OUTPUT_SIZE = 0;
-      return sz;
     }
+    return sz;
   }
 %}
 %ignore pn_message_data;

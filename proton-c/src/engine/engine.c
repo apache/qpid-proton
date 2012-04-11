@@ -848,6 +848,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->bytes = NULL;
   delivery->size = 0;
   delivery->capacity = 0;
+  delivery->done = false;
   delivery->context = NULL;
 
   if (!link->current)
@@ -888,7 +889,11 @@ void pn_delivery_dump(pn_delivery_t *d)
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
-  return pn_dtag(pn_binary_bytes(delivery->tag), pn_binary_size(delivery->tag));
+  if (delivery) {
+    return pn_dtag(pn_binary_bytes(delivery->tag), pn_binary_size(delivery->tag));
+  } else {
+    return (pn_delivery_tag_t) {0};
+  }
 }
 
 pn_delivery_t *pn_current(pn_link_t *link)
@@ -915,6 +920,7 @@ bool pn_advance(pn_link_t *link)
 {
   if (link && link->current) {
     pn_delivery_t *prev = link->current;
+    prev->done = true;
     if (link->endpoint.type == SENDER) {
       pn_advance_sender(link);
     } else {
@@ -992,12 +998,15 @@ void pn_do_begin(pn_dispatcher_t *disp)
   PN_SET_REMOTE(state->session->endpoint.state, PN_REMOTE_ACTIVE);
 }
 
-pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_string_t *name)
+pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_string_t *name, bool is_sender)
 {
+  pn_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
+
   for (int i = 0; i < ssn_state->session->link_count; i++)
   {
     pn_link_t *link = ssn_state->session->links[i];
-    if (!wcsncmp(pn_string_wcs(name), link->name, pn_string_size(name)))
+    if (link->endpoint.type == type &&
+        !wcsncmp(pn_string_wcs(name), link->name, pn_string_size(name)))
     {
       return pn_link_get_state(ssn_state, link);
     }
@@ -1013,7 +1022,7 @@ void pn_do_attach(pn_dispatcher_t *disp)
   bool is_sender = pn_to_bool(pn_list_get(args, ATTACH_ROLE));
   pn_string_t *name = pn_to_string(pn_list_get(args, ATTACH_NAME));
   pn_session_state_t *ssn_state = pn_channel_state(transport, disp->channel);
-  pn_link_state_t *link_state = pn_find_link(ssn_state, name);
+  pn_link_state_t *link_state = pn_find_link(ssn_state, name, is_sender);
   if (!link_state) {
     pn_link_t *link;
     if (is_sender) {
@@ -1053,19 +1062,25 @@ void pn_do_transfer(pn_dispatcher_t *disp)
   uint32_t handle = pn_to_uint32(pn_list_get(args, TRANSFER_HANDLE));
   pn_link_state_t *link_state = pn_handle_state(ssn_state, handle);
   pn_link_t *link = link_state->link;
-  pn_binary_t *tag = pn_to_binary(pn_list_get(args, TRANSFER_DELIVERY_TAG));
-  pn_delivery_t *delivery = pn_delivery(link, pn_dtag(pn_binary_bytes(tag), pn_binary_size(tag)));
-  pn_delivery_state_t *state = pn_delivery_buffer_push(&ssn_state->incoming, delivery);
-  delivery->context = state;
-  // XXX: need to check that state is not null (i.e. we haven't hit the limit)
-  pn_sequence_t id = pn_to_int32(pn_list_get(args, TRANSFER_DELIVERY_ID));
-  if (id != state->id) {
-    // XXX: signal error somehow
+  pn_delivery_t *delivery;
+  if (link->tail && !link->tail->done) {
+    delivery = link->tail;
+  } else {
+    pn_binary_t *tag = pn_to_binary(pn_list_get(args, TRANSFER_DELIVERY_TAG));
+    delivery = pn_delivery(link, pn_dtag(pn_binary_bytes(tag), pn_binary_size(tag)));
+    pn_delivery_state_t *state = pn_delivery_buffer_push(&ssn_state->incoming, delivery);
+    delivery->context = state;
+    // XXX: need to check that state is not null (i.e. we haven't hit the limit)
+    pn_sequence_t id = pn_to_int32(pn_list_get(args, TRANSFER_DELIVERY_ID));
+    if (id != state->id) {
+      // XXX: signal error somehow
+    }
   }
 
-  PN_ENSURE(delivery->bytes, delivery->capacity, disp->size);
-  memmove(delivery->bytes, disp->payload, disp->size);
-  delivery->size = disp->size;
+  PN_ENSURE(delivery->bytes, delivery->capacity, delivery->size + disp->size);
+  memmove(delivery->bytes + delivery->size, disp->payload, disp->size);
+  delivery->size += disp->size;
+  delivery->done = !pn_to_bool(pn_list_get(args, TRANSFER_MORE));
 }
 
 void pn_do_flow(pn_dispatcher_t *disp)
@@ -1223,7 +1238,7 @@ void pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 
 void pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
-  if (endpoint->type == SESSION)
+  if (endpoint->type == SESSION && transport->open_sent)
   {
     pn_session_t *ssn = (pn_session_t *) endpoint;
     pn_session_state_t *state = pn_session_get_state(transport, ssn);
@@ -1246,12 +1261,14 @@ void pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 
 void pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
-  if (endpoint->type == SENDER || endpoint->type == RECEIVER)
+  if (transport->open_sent && (endpoint->type == SENDER ||
+                               endpoint->type == RECEIVER))
   {
     pn_link_t *link = (pn_link_t *) endpoint;
     pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
     pn_link_state_t *state = pn_link_get_state(ssn_state, link);
-    if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
+    if (((int16_t) ssn_state->local_channel >= 0) &&
+        !(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
     {
       pn_init_frame(transport->disp);
       pn_field(transport->disp, ATTACH_ROLE, pn_boolean(endpoint->type == RECEIVER));
@@ -1308,6 +1325,7 @@ void pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_field(transport->disp, DISPOSITION_LAST, pn_uint(state->id));
   // XXX
   pn_field(transport->disp, DISPOSITION_SETTLED, pn_boolean(delivery->local_settled));
+  //pn_field(transport->disp, DISPOSITION_BATCHABLE, pn_boolean(batchable));
   uint64_t code;
   switch(delivery->local_state) {
   case PN_ACCEPTED:
@@ -1320,10 +1338,10 @@ void pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   default:
     code = 0;
   }
-  if (code)
+  if (code) {
     pn_field(transport->disp, DISPOSITION_STATE, pn_value("L([])", code));
-  //pn_field(transport->disp, DISPOSITION_BATCHABLE, pn_boolean(batchable));
-  pn_post_frame(transport->disp, ssn_state->local_channel, DISPOSITION);
+    pn_post_frame(transport->disp, ssn_state->local_channel, DISPOSITION);
+  }
 }
 
 void pn_process_disp_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -1368,18 +1386,22 @@ void pn_process_msg_data(pn_transport_t *transport, pn_endpoint_t *endpoint)
           state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
           delivery->context = state;
         }
-        if (!state->sent && (int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
+        if (!state->sent &&
+            (delivery->done || delivery->size > 0) &&
+            (int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
           pn_init_frame(transport->disp);
           pn_field(transport->disp, TRANSFER_HANDLE, pn_value("I", link_state->local_handle));
           pn_field(transport->disp, TRANSFER_DELIVERY_ID, pn_value("I", state->id));
           pn_field(transport->disp, TRANSFER_DELIVERY_TAG, pn_from_binary(pn_binary_dup(delivery->tag)));
           pn_field(transport->disp, TRANSFER_MESSAGE_FORMAT, pn_value("I", 0));
+          pn_field(transport->disp, TRANSFER_MORE, pn_boolean(!delivery->done));
           if (delivery->bytes) {
             pn_append_payload(transport->disp, delivery->bytes, delivery->size);
             delivery->size = 0;
           }
           pn_post_frame(transport->disp, ssn_state->local_channel, TRANSFER);
-          state->sent = true;
+          if (delivery->done)
+            state->sent = true;
         }
       }
       delivery = delivery->tpwork_next;
@@ -1399,9 +1421,9 @@ void pn_process_disp_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
       if (link->endpoint.type == SENDER) {
         // XXX: need to prevent duplicate disposition sending
         pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
-        /*if ((int16_t) ssn_state->local_channel >= 0) {
+        if ((int16_t) ssn_state->local_channel >= 0) {
           pn_post_disp(transport, delivery);
-          }*/
+        }
 
         if (delivery->local_settled) {
           pn_full_settle(&ssn_state->outgoing, delivery);
@@ -1533,17 +1555,18 @@ void pn_trace(pn_transport_t *transport, pn_trace_t trace)
 ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n)
 {
   pn_delivery_t *current = pn_current(sender);
-  if (!current) return -1;
-  if (current->bytes) return 0;
+  if (!current) return PN_EOS;
   PN_ENSURE(current->bytes, current->capacity, current->size + n);
   memmove(current->bytes + current->size, bytes, n);
-  current->size = +n;
+  current->size += n;
   pn_add_tpwork(current);
   return n;
 }
 
 ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
 {
+  if (!receiver) return PN_ARG_ERR;
+
   pn_delivery_t *delivery = receiver->current;
   if (delivery) {
     if (delivery->size) {
@@ -1553,11 +1576,10 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
       delivery->size -= size;
       return size;
     } else {
-      return PN_EOS;
+      return delivery->done ? PN_EOS : 0;
     }
   } else {
-    // XXX: ?
-    return PN_EOS;
+    return PN_STATE_ERR;
   }
 }
 
@@ -1615,8 +1637,12 @@ bool pn_writable(pn_delivery_t *delivery)
 
 bool pn_readable(pn_delivery_t *delivery)
 {
-  pn_link_t *link = delivery->link;
-  return pn_is_receiver(link) && pn_is_current(delivery);
+  if (delivery) {
+    pn_link_t *link = delivery->link;
+    return pn_is_receiver(link) && pn_is_current(delivery);
+  } else {
+    return false;
+  }
 }
 
 size_t pn_pending(pn_delivery_t *delivery)

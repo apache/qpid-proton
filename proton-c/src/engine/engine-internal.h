@@ -169,6 +169,7 @@ struct pn_delivery_t {
   char *bytes;
   size_t size;
   size_t capacity;
+  bool done;
   void *context;
 };
 
