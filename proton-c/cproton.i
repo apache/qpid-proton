@@ -33,6 +33,9 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_recv;
 
+ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_input;
+
 %rename(pn_output) wrap_pn_output;
 %inline %{
   int wrap_pn_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {

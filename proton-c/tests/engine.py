@@ -29,10 +29,10 @@ def pump(t1, t2):
 
     if out1 or out2:
       if out1:
-        cd = pn_input(t2, out1, len(out1))
+        cd = pn_input(t2, out1)
         assert cd == len(out1)
       if out2:
-        cd = pn_input(t1, out2, len(out2))
+        cd = pn_input(t1, out2)
         assert cd == len(out2)
     else:
       return
@@ -49,7 +49,7 @@ class Test:
     self.t2 = pn_transport(self.c2)
     pn_transport_open(self.t1)
     pn_transport_open(self.t2)
-    trc = os.environ["PN_TRACE_FRM"]
+    trc = os.environ.get("PN_TRACE_FRM")
     if trc and trc.lower() in ("1", "2", "yes", "true"):
       pn_trace(self.t1, PN_TRACE_FRM)
     if trc == "2":
