@@ -20,6 +20,10 @@
 import os
 from cproton import *
 
+# future test areas
+# different permutations of setup
+#   - creating deliveries and calling input/output before opening the session/link
+
 def pump(t1, t2):
   while True:
     cd, out1 = pn_output(t1, 1024)

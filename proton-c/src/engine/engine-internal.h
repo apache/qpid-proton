@@ -81,6 +81,7 @@ typedef struct {
   // XXX: stop using negative numbers
   uint16_t local_channel;
   uint16_t remote_channel;
+  bool incoming_init;
   pn_delivery_buffer_t incoming;
   pn_delivery_buffer_t outgoing;
   pn_link_state_t *links;
