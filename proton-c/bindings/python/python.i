@@ -159,9 +159,4 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_connector_destroy;
 
-/* Parse the header file to generate wrappers */
-%include "proton/errors.h"
-%include "proton/engine.h"
-%include "proton/message.h"
-%include "proton/sasl.h"
-%include "proton/driver.h"
+%include "../cproton.i"

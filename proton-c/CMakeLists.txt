@@ -53,16 +53,10 @@ add_library (
   ${PROJECT_BINARY_DIR}/protocol.h
 )
 
-find_package (SWIG REQUIRED)
-include (${SWIG_USE_FILE})
-
-find_package (PythonLibs)
-
-include_directories (${PYTHON_INCLUDE_PATH})
-include_directories (${PROJECT_SOURCE_DIR})
-
-swig_add_module(cproton python cproton.i)
-swig_link_libraries(cproton qpidproton ${PYTHON_LIBRARIES})
+include(FindSWIG)
+if (SWIG_FOUND)
+  add_subdirectory(bindings)
+endif (SWIG_FOUND)
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpidproton)
