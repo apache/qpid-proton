@@ -32,22 +32,26 @@
     const char *src = Z_STRVAL_PP($input);
     const size_t inLen = Z_STRLEN_PP($input);
 
-    // determine size needed for converted buffer
-    mbstate_t state = {};
-    const char *tmp = src;
-    size_t wlen = mbsnrtowcs( NULL, &tmp, inLen, 0, &state );
-    if (wlen == (size_t)-1) {
+    if (src) {
+      // determine size needed for converted buffer
+      mbstate_t state = {};
+      const char *tmp = src;
+      size_t wlen = mbsnrtowcs( NULL, &tmp, inLen, 0, &state );
+      if (wlen == (size_t)-1) {
         SWIG_PHP_Error(E_ERROR, "Cannot convert string argument $argnum of $symname to wchar_t string.");
-    }
-    // include additional nul terminator in case source does not include one
-    $1 = malloc(sizeof(wchar_t) * (wlen + 2));
+      }
+      // include additional nul terminator in case source does not include one
+      $1 = malloc(sizeof(wchar_t) * (wlen + 2));
 
-    tmp = src;
-    wlen = mbsnrtowcs( $1, &tmp, inLen, wlen+1, &state);
-    if (wlen == (size_t)-1) {
+      tmp = src;
+      wlen = mbsnrtowcs( $1, &tmp, inLen, wlen+1, &state);
+      if (wlen == (size_t)-1) {
         SWIG_PHP_Error(E_ERROR, "Cannot convert string argument $argnum of $symname to wchar_t string.");
+      }
+      $1[wlen] = (wchar_t)0;
+    } else {
+      $1 == NULL;
     }
-    $1[wlen] = (wchar_t)0;
  }
 %typemap(freearg) wchar_t * {
     free($1);   // free the buffer holding the wchar_t buffer
@@ -56,28 +60,32 @@
 // convert wchar_t * return value to a PHP string
 %typemap(out) wchar_t * {
     // determine size needed for converted buffer
-    mbstate_t state = {};
     const wchar_t *tmp = $1;
-    size_t slen = wcsrtombs( NULL, &tmp, 0, &state);
-    if (slen == (size_t)-1) {
+    if (tmp) {
+      mbstate_t state = {};
+      size_t slen = wcsrtombs( NULL, &tmp, 0, &state);
+      if (slen == (size_t)-1) {
         SWIG_PHP_Error(E_ERROR, "Cannot convert wchar_t return value from $symname to string.");
-    }
+      }
 
-    char *str = emalloc(sizeof(char) * slen+1);
-    tmp = $1;
-    slen = wcsrtombs( str, &tmp, slen+1, &state);
-    if (slen == (size_t)-1) {
+      char *str = emalloc(sizeof(char) * slen+1);
+      tmp = $1;
+      slen = wcsrtombs( str, &tmp, slen+1, &state);
+      if (slen == (size_t)-1) {
         SWIG_PHP_Error(E_ERROR, "Cannot convert wchar_t return value from $symname to string.");
-    }
+      }
 
-    ZVAL_STRINGL($result, str, slen, 0);  // 0 == assume ownership of buffer
+      ZVAL_STRINGL($result, str, slen, 0);  // 0 == assume ownership of buffer
+    } else {
+      ZVAL_NULL($result);
+    }
  }
 
 
-// (char **OUTPUT_BUFFER, size_t *OUTPUT_LEN)
+// (char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN)
 //
 // typemap for binary buffer output arguments.  Given an uninitialized pointer for a
-// buffer (OUTPUT_BUFFER) and a pointer to an un-initialized size (OUTPUT_LEN), a buffer
+// buffer (OUTPUT_BUFFER) and a pointer to an un-initialized size/error (OUTPUT_LEN), a buffer
 // will be allocated and filled with binary data. *OUTPUT_BUFFER will be set to the address
 // of the allocated buffer.  *OUTPUT_LEN will be set to the size of the data.  The maximum
 // length of the buffer must be provided by a separate argument.
@@ -86,18 +94,18 @@
 // error code and [1] set to the returned string object.  This value is appended to the
 // function's return value (also an array).
 //
-%typemap(in,numinputs=0) (char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) (char *Buff = 0, size_t outLen = 0) {
+%typemap(in,numinputs=0) (char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) (char *Buff = 0, ssize_t outLen = 0) {
     // setup locals for output.
     $1 = &Buff;
     $2 = &outLen;
 }
-%typemap(argout,fragment="t_output_helper") (char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+%typemap(argout,fragment="t_output_helper") (char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
     // convert to array: [0]=len||error, [1]=binary string
     zval *tmp;
     ALLOC_INIT_ZVAL(tmp);
     array_init(tmp);
-    size_t len = *($2);
-    add_next_index_long(tmp, len);
+    ssize_t len = *($2);
+    add_next_index_long(tmp, len); // write the len|error code
     if (len >= 0) {
         add_next_index_stringl(tmp, *($1), len, 0);  // 0 == take ownership of $1 memory
     } else {
@@ -131,7 +139,7 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_recv(pn_link_t *link, size_t maxCount, char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+    void wrap_pn_recv(pn_link_t *link, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
         *OUTPUT_LEN = pn_recv(link, *OUTPUT_BUFFER, maxCount );
     }
@@ -143,7 +151,7 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_sasl_recv(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+    void wrap_pn_sasl_recv(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
         *OUTPUT_LEN = pn_sasl_recv( sasl, *OUTPUT_BUFFER, maxCount );
     }
@@ -155,7 +163,7 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_output(pn_transport_t *transport, size_t maxCount, char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+    void wrap_pn_output(pn_transport_t *transport, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
         *OUTPUT_LEN = pn_output(transport, *OUTPUT_BUFFER, maxCount);
     }
@@ -167,7 +175,7 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_sasl_output(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+    void wrap_pn_sasl_output(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
         *OUTPUT_LEN = pn_sasl_output(sasl, *OUTPUT_BUFFER, maxCount);
     }
@@ -179,7 +187,7 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 //          array[0] = size || error code
 //          array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_message_data(size_t count, char *STRING, size_t LENGTH, char **OUTPUT_BUFFER, size_t *OUTPUT_LEN) {
+    void wrap_pn_message_data(size_t count, char *STRING, size_t LENGTH, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * count);
         *OUTPUT_LEN = pn_message_data(*OUTPUT_BUFFER, count, STRING, LENGTH );
     }
