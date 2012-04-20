@@ -117,6 +117,8 @@ static void pn_driver_remove_listener(pn_driver_t *d, pn_listener_t *l)
 pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
                            const char *port, void* context)
 {
+  if (!driver) return NULL;
+
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
