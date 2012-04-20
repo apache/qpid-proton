@@ -481,7 +481,7 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   pn_link_t *link = pn_link(delivery);
   pn_delivery_t *current = pn_current(link);
-  if (delivery->dirty) {
+  if (delivery->updated) {
     pn_add_work(connection, delivery);
   } else if (delivery == current) {
     if (link->endpoint.type == SENDER) {
@@ -839,7 +839,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->remote_state = 0;
   delivery->local_settled = false;
   delivery->remote_settled = false;
-  delivery->dirty = false;
+  delivery->updated = false;
   LL_ADD_PFX(link->head, link->tail, delivery, link_);
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
@@ -882,10 +882,10 @@ void pn_delivery_dump(pn_delivery_t *d)
   char tag[1024];
   pn_format(tag, 1024, pn_from_binary(d->tag));
   printf("{tag=%s, local_state=%u, remote_state=%u, local_settled=%u, "
-         "remote_settled=%u, dirty=%u, current=%u, writable=%u, readable=%u, "
+         "remote_settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
          tag, d->local_state, d->remote_state, d->local_settled,
-         d->remote_settled, d->dirty, pn_is_current(d), pn_writable(d),
+         d->remote_settled, d->updated, pn_is_current(d), pn_writable(d),
          pn_readable(d), d->work);
 }
 
@@ -1162,7 +1162,7 @@ void pn_do_disposition(pn_dispatcher_t *disp)
     pn_delivery_state_t *state = pn_delivery_buffer_get(deliveries, id - lwm);
     pn_delivery_t *delivery = state->delivery;
     delivery->remote_state = dispo;
-    delivery->dirty = true;
+    delivery->updated = true;
     pn_work_update(transport->connection, delivery);
   }
 }
@@ -1620,14 +1620,14 @@ int pn_remote_disp(pn_delivery_t *delivery)
   return delivery->remote_state;
 }
 
-bool pn_dirty(pn_delivery_t *delivery)
+bool pn_updated(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->dirty : false;
+  return delivery ? delivery->updated : false;
 }
 
-void pn_clean(pn_delivery_t *delivery)
+void pn_clear(pn_delivery_t *delivery)
 {
-  delivery->dirty = false;
+  delivery->updated = false;
   pn_work_update(delivery->link->session->connection, delivery);
 }
 

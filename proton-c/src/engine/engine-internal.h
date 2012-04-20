@@ -158,7 +158,7 @@ struct pn_delivery_t {
   int remote_state;
   bool local_settled;
   bool remote_settled;
-  bool dirty;
+  bool updated;
   pn_delivery_t *link_next;
   pn_delivery_t *link_prev;
   pn_delivery_t *work_next;

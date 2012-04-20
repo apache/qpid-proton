@@ -378,7 +378,7 @@ class TransferTest(Test):
     self.pump()
 
     assert pn_remote_disp(sd) == pn_local_disp(rd) == PN_ACCEPTED
-    assert pn_dirty(sd)
+    assert pn_updated(sd)
 
     pn_disposition(sd, PN_ACCEPTED)
     pn_settle(sd)
