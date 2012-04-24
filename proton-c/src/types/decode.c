@@ -126,7 +126,7 @@ static pn_value_t *curr_value(void *ptr)
 
 void pn_decode_null(void *ctx) {
   pn_value_t *value = next_value(ctx);
-  value->type = EMPTY;
+  *value = EMPTY_VALUE;
 }
 void pn_decode_bool(void *ctx, bool v) {
   pn_value_t *value = next_value(ctx);

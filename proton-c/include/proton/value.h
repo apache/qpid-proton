@@ -92,7 +92,7 @@ struct pn_tag_t {
   pn_value_t value;
 };
 
-#define EMPTY_VALUE ((pn_value_t) {.type = EMPTY})
+#define EMPTY_VALUE ((pn_value_t) {.type = EMPTY, .u = {0}})
 
 int pn_scan(pn_value_t *value, const char *fmt, ...);
 int pn_vscan(pn_value_t *value, const char *fmt, va_list ap);
