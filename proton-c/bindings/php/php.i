@@ -183,11 +183,11 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %ignore pn_sasl_output;
 
 %rename(pn_message_data) wrap_pn_message_data;
-// in PHP:  array = pn_message_data(MAXLEN, "binary message data");
+// in PHP:  array = pn_message_data("binary message data", MAXLEN);
 //          array[0] = size || error code
 //          array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_message_data(size_t count, char *STRING, size_t LENGTH, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
+    void wrap_pn_message_data(char *STRING, size_t LENGTH, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN, size_t count) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * count);
         *OUTPUT_LEN = pn_message_data(*OUTPUT_BUFFER, count, STRING, LENGTH );
     }

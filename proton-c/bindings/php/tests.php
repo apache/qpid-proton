@@ -111,7 +111,7 @@ pn_connection_destroy($c2);
 // pn_message_data test
 //
 
-$x = pn_message_data(1024, "This is test data!");
+$x = pn_message_data("This is test data!", 1024);
 //print("Msg Len  = " . $x[0] . "\n");
 assert("$x[0] > 0");
 //print("Msg data = " . $x[1] . "\n");
