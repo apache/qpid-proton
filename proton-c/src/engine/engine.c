@@ -481,7 +481,7 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   pn_link_t *link = pn_link(delivery);
   pn_delivery_t *current = pn_current(link);
-  if (delivery->updated) {
+  if (delivery->updated && !delivery->local_settled) {
     pn_add_work(connection, delivery);
   } else if (delivery == current) {
     if (link->endpoint.type == SENDER) {
@@ -965,6 +965,7 @@ void pn_settle(pn_delivery_t *delivery)
 {
   delivery->local_settled = true;
   pn_add_tpwork(delivery);
+  pn_work_update(delivery->link->session->connection, delivery);
 }
 
 void pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...)
