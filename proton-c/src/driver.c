@@ -679,7 +679,13 @@ pn_listener_t *pn_driver_listener(pn_driver_t *d) {
   if (!d) return NULL;
 
   pn_listener_t *l = d->listener_next;
-  if (l) { d->listener_next = l->next; }
+  if (!l) return NULL;
+
+  if (!(l->idx && d->fds[l->idx].revents & POLLIN)) {
+    return NULL;
+  }
+
+  d->listener_next = l->next;
   return l;
 }
 
