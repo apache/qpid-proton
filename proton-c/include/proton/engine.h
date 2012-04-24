@@ -121,6 +121,7 @@ wchar_t *pn_remote_target(pn_link_t *link);
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_t *pn_current(pn_link_t *link);
 bool pn_advance(pn_link_t *link);
+int pn_credit(pn_link_t *link);
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);

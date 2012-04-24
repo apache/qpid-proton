@@ -84,6 +84,8 @@ typedef struct {
   bool incoming_init;
   pn_delivery_buffer_t incoming;
   pn_delivery_buffer_t outgoing;
+  pn_sequence_t incoming_transfer_count;
+  pn_sequence_t outgoing_transfer_count;
   pn_link_state_t *links;
   size_t link_capacity;
   pn_link_state_t **handles;
@@ -145,9 +147,7 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
-  // XXX
   pn_sequence_t credit;
-  pn_sequence_t credits;
   size_t id;
 };
 
