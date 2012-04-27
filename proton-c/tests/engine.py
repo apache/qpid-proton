@@ -27,17 +27,17 @@ from cproton import *
 def pump(t1, t2):
   while True:
     cd, out1 = pn_output(t1, 1024)
-    assert cd >= 0
+    assert cd >= 0, cd
     cd, out2 = pn_output(t2, 1024)
-    assert cd >= 0
+    assert cd >= 0, cd
 
     if out1 or out2:
       if out1:
         cd = pn_input(t2, out1)
-        assert cd == len(out1)
+        assert cd == len(out1), (cd, out1)
       if out2:
         cd = pn_input(t1, out2)
-        assert cd == len(out2)
+        assert cd == len(out2), (cd, out2)
     else:
       return
 
