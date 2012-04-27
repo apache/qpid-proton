@@ -20,6 +20,7 @@
 include(UseSWIG)
 
 #set(CMAKE_SWIG_FLAGS "-w362,401")
+set(CMAKE_SWIG_FLAGS, "-threads")
 
 # Build wrapper for Python:
 # @todo: conditionalize on whether python is available!
