@@ -177,7 +177,7 @@ void server_callback(pn_connector_t *ctor)
 
     if (pn_updated(delivery)) {
       printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
-      pn_clear(delivery);
+      pn_settle(delivery);
     }
 
     delivery = pn_work_next(delivery);
@@ -403,7 +403,7 @@ int main(int argc, char **argv)
     mbstowcs(ctx.address, address, 1024);
     if (!pn_connector(drv, host, port, &ctx)) pn_fatal("connector failed\n");
     while (!ctx.done) {
-      pn_driver_wait(drv);
+      pn_driver_wait(drv, -1);
       pn_connector_t *c;
       while ((c = pn_driver_connector(drv))) {
         pn_connector_process(c);
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
     struct server_context ctx = {0};
     if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
     while (true) {
-      pn_driver_wait(drv);
+      pn_driver_wait(drv, -1);
       pn_listener_t *l;
       pn_connector_t *c;
 

@@ -49,6 +49,7 @@ struct pn_dispatcher_t {
   size_t available;
   char *output;
   void *context;
+  bool halt;
   char scratch[SCRATCH];
 };
 

@@ -85,7 +85,9 @@ typedef struct {
   pn_delivery_buffer_t incoming;
   pn_delivery_buffer_t outgoing;
   pn_sequence_t incoming_transfer_count;
+  pn_sequence_t incoming_window;
   pn_sequence_t outgoing_transfer_count;
+  pn_sequence_t outgoing_window;
   pn_link_state_t *links;
   size_t link_capacity;
   pn_link_state_t **handles;
@@ -147,6 +149,7 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
+  size_t unsettled_count;
   pn_sequence_t credit;
   size_t id;
 };
@@ -175,10 +178,10 @@ struct pn_delivery_t {
 };
 
 #define PN_SET_LOCAL(OLD, NEW)                                          \
-  (OLD) = ((OLD) & (PN_REMOTE_UNINIT | PN_REMOTE_ACTIVE | PN_REMOTE_CLOSED)) | (NEW)
+  (OLD) = ((OLD) & PN_REMOTE_MASK) | (NEW)
 
 #define PN_SET_REMOTE(OLD, NEW)                                         \
-  (OLD) = ((OLD) & (PN_LOCAL_UNINIT | PN_LOCAL_ACTIVE | PN_LOCAL_CLOSED)) | (NEW)
+  (OLD) = ((OLD) & PN_LOCAL_MASK) | (NEW)
 
 void pn_link_dump(pn_link_t *link);
 

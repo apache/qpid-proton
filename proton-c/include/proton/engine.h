@@ -50,6 +50,9 @@ typedef int pn_state_t;
 #define PN_REMOTE_ACTIVE (16)
 #define PN_REMOTE_CLOSED (32)
 
+#define PN_LOCAL_MASK (PN_LOCAL_UNINIT | PN_LOCAL_ACTIVE | PN_LOCAL_CLOSED)
+#define PN_REMOTE_MASK (PN_REMOTE_UNINIT | PN_REMOTE_ACTIVE | PN_REMOTE_CLOSED)
+
 typedef enum pn_disposition_t {
   PN_RECEIVED=1,
   PN_ACCEPTED=2,

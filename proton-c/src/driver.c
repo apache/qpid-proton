@@ -81,6 +81,7 @@ struct pn_connector_t {
   time_t (*tick)(pn_connector_t *sel, time_t now);
   size_t input_size;
   char input[IO_BUF_SIZE];
+  bool input_eos;
   size_t output_size;
   char output[IO_BUF_SIZE];
   pn_sasl_t *sasl;
@@ -88,6 +89,8 @@ struct pn_connector_t {
   pn_transport_t *transport;
   ssize_t (*process_input)(pn_connector_t *);
   ssize_t (*process_output)(pn_connector_t *);
+  bool input_done;
+  bool output_done;
   pn_listener_t *listener;
   void *context;
 };
@@ -294,12 +297,15 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->write = pn_connector_write;
   c->tick = pn_connector_tick;
   c->input_size = 0;
+  c->input_eos = false;
   c->output_size = 0;
   c->sasl = pn_sasl();
   c->connection = pn_connection();
   c->transport = pn_transport(c->connection);
   c->process_input = pn_connector_read_sasl_header;
   c->process_output = pn_connector_write_sasl_header;
+  c->input_done = false;
+  c->output_done = false;
   c->context = context;
   c->listener = NULL;
   c->idx = 0;
@@ -375,34 +381,39 @@ void pn_connector_destroy(pn_connector_t *ctor)
   free(ctor);
 }
 
+static void pn_connector_read(pn_connector_t *ctor)
+{
+  ssize_t n = recv(ctor->fd, ctor->input + ctor->input_size, IO_BUF_SIZE - ctor->input_size, 0);
+  if (n <= 0) {
+    printf("disconnected: %zi\n", n);
+    ctor->status &= ~PN_SEL_RD;
+    ctor->input_eos = true;
+  } else {
+    ctor->input_size += n;
+  }
+}
+
 static void pn_connector_consume(pn_connector_t *ctor, int n)
 {
   ctor->input_size -= n;
   memmove(ctor->input, ctor->input + n, ctor->input_size);
 }
 
-static void pn_connector_read(pn_connector_t *ctor)
+static void pn_connector_process_input(pn_connector_t *ctor)
 {
-  ssize_t n = recv(ctor->fd, ctor->input + ctor->input_size, IO_BUF_SIZE - ctor->input_size, 0);
-
-  if (n <= 0) {
-    printf("disconnected: %zi\n", n);
-    pn_connector_close(ctor);
-    return;
-  } else {
-    ctor->input_size += n;
-  }
-
-  while (ctor->input_size > 0) {
-    n = ctor->process_input(ctor);
+  while (!ctor->input_done && (ctor->input_size > 0 || ctor->input_eos)) {
+    ssize_t n = ctor->process_input(ctor);
     if (n > 0) {
       pn_connector_consume(ctor, n);
     } else if (n == 0) {
-      return;
+      break;
     } else {
-      if (n != PN_EOS) printf("error in process_input: %zi\n", n);
-      pn_connector_close(ctor);
-      return;
+      if (n != PN_EOS) {
+        printf("error in process_input: %zi\n", n);
+      }
+      ctor->input_done = true;
+      ctor->output_done = true;
+      break;
     }
   }
 }
@@ -411,13 +422,20 @@ static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor)
 {
   if (ctor->input_size >= 8) {
     if (memcmp(ctor->input, "AMQP\x03\x01\x00\x00", 8)) {
-      fprintf(stderr, "sasl header missmatch\n");
+      fprintf(stderr, "sasl header missmatch: ");
+      pn_fprint_data(stderr, ctor->input, ctor->input_size);
+      fprintf(stderr, "\n");
       return PN_ERR;
     } else {
       fprintf(stderr, "    <- AMQP SASL 1.0\n");
       ctor->process_input = pn_connector_read_sasl;
       return 8;
     }
+  } else if (ctor->input_eos) {
+    fprintf(stderr, "sasl header missmatch: ");
+    pn_fprint_data(stderr, ctor->input, ctor->input_size);
+    fprintf(stderr, "\n");
+    return PN_ERR;
   }
 
   return 0;
@@ -448,6 +466,11 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
       ctor->process_input = pn_connector_read_amqp;
       return 8;
     }
+  } else if (ctor->input_eos) {
+    fprintf(stderr, "amqp header missmatch: ");
+    pn_fprint_data(stderr, ctor->input, ctor->input_size);
+    fprintf(stderr, "\n");
+    return PN_ERR;
   }
 
   return 0;
@@ -456,7 +479,13 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
 static ssize_t pn_connector_read_amqp(pn_connector_t *ctor)
 {
   pn_transport_t *transport = ctor->transport;
-  return pn_input(transport, ctor->input, ctor->input_size);
+  size_t n = 0;
+  if (ctor->input_size) {
+    n = pn_input(transport, ctor->input, ctor->input_size);
+  } else if (ctor->input_eos) {
+    ctor->input_done = true;
+  }
+  return n;
 }
 
 static char *pn_connector_output(pn_connector_t *ctor)
@@ -469,38 +498,46 @@ static size_t pn_connector_available(pn_connector_t *ctor)
   return IO_BUF_SIZE - ctor->output_size;
 }
 
-static void pn_connector_write(pn_connector_t *ctor)
+static void pn_connector_process_output(pn_connector_t *ctor)
 {
-  while (pn_connector_available(ctor) > 0) {
+  while (!ctor->output_done && pn_connector_available(ctor) > 0) {
     ssize_t n = ctor->process_output(ctor);
     if (n > 0) {
       ctor->output_size += n;
     } else if (n == 0) {
       break;
     } else {
-      if (n != PN_EOS) fprintf(stderr, "error in process_output: %zi\n", n);
-      pn_connector_close(ctor);
-      return;
+      if (n != PN_EOS) {
+        fprintf(stderr, "error in process_output: %zi\n", n);
+      }
+      ctor->output_done = true;
+      ctor->input_done = true;
+      break;
     }
   }
 
+  if (ctor->output_size) {
+    ctor->status |= PN_SEL_WR;
+  }
+}
+
+static void pn_connector_write(pn_connector_t *ctor)
+{
   if (ctor->output_size > 0) {
     ssize_t n = send(ctor->fd, ctor->output, ctor->output_size, 0);
     if (n < 0) {
       // XXX
       perror("send");
-      pn_connector_close(ctor);
-      return;
+      ctor->output_size = 0;
+      ctor->output_done = true;
     } else {
       ctor->output_size -= n;
       memmove(ctor->output, ctor->output + n, ctor->output_size);
     }
-
-    if (ctor->output_size)
-      ctor->status |= PN_SEL_WR;
-    else
-      ctor->status &= ~PN_SEL_WR;
   }
+
+  if (!ctor->output_size)
+    ctor->status &= ~PN_SEL_WR;
 }
 
 static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor)
@@ -547,7 +584,8 @@ static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
   // XXX: should probably have a function pointer for this and switch it with different layers
   time_t result = pn_tick(ctor->transport, now);
-  pn_connector_write(ctor);
+  pn_connector_process_input(ctor);
+  pn_connector_process_output(ctor);
   return result;
 }
 
@@ -556,10 +594,19 @@ void pn_connector_process(pn_connector_t *c) {
     int idx = c->idx;
     if (!idx) return;
     pn_driver_t *d = c->driver;
-    if (d->fds[idx].revents & POLLIN)
+    if (d->fds[idx].revents & POLLIN) {
       c->read(c);
-    if (d->fds[idx].revents & POLLOUT)
+      d->fds[idx].revents &= ~POLLIN;
+    }
+    pn_connector_process_input(c);
+    pn_connector_process_output(c);
+    if (d->fds[idx].revents & POLLOUT) {
       c->write(c);
+      d->fds[idx].revents &= ~POLLOUT;
+    }
+    if (c->output_size == 0 && c->input_done && c->output_done) {
+      pn_connector_close(c);
+    }
   }
 }
 
@@ -620,7 +667,6 @@ void pn_driver_wakeup(pn_driver_t *d)
 static void pn_driver_rebuild(pn_driver_t *d)
 {
   size_t size = d->listener_count + d->connector_count;
-  if (size == 0) return;
   while (d->capacity < size + 1) {
     d->capacity = d->capacity ? 2*d->capacity : 16;
     d->fds = realloc(d->fds, d->capacity*sizeof(struct pollfd));
@@ -653,17 +699,22 @@ static void pn_driver_rebuild(pn_driver_t *d)
   }
 }
 
-void pn_driver_wait(pn_driver_t *d) {
+void pn_driver_wait(pn_driver_t *d, int timeout) {
   pn_driver_rebuild(d);
 
   pn_connector_t *c = d->connector_head;
   while (c) {
-    // XXX
+    // XXX: should do this in process
+    // XXX: should handle timing also
     c->tick(c, 0);
     c = c->next;
   }
 
-  DIE_IFE(poll(d->fds, 1 + d->listener_count + d->connector_count, -1));
+  // XXX: double rebuild necessary now due to separating of read/write
+  // and processing
+  pn_driver_rebuild(d);
+
+  DIE_IFE(poll(d->fds, 1 + d->listener_count + d->connector_count, timeout));
 
   if (d->fds[0].revents & POLLIN) {
     //clear the pipe

@@ -33,7 +33,7 @@ typedef struct pn_connector_t pn_connector_t;
 pn_driver_t *pn_driver(void);
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace);
 void pn_driver_wakeup(pn_driver_t *d);
-void pn_driver_wait(pn_driver_t *d);
+void pn_driver_wait(pn_driver_t *d, int timeout);
 pn_listener_t *pn_driver_listener(pn_driver_t *d);
 pn_connector_t *pn_driver_connector(pn_driver_t *d);
 void pn_driver_destroy(pn_driver_t *d);

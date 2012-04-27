@@ -47,6 +47,8 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->output = malloc(disp->capacity);
   disp->available = 0;
 
+  disp->halt = false;
+
   return disp;
 }
 
@@ -88,7 +90,7 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available)
 {
   size_t read = 0;
-  while (true) {
+  while (!disp->halt) {
     pn_frame_t frame;
     size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
@@ -124,6 +126,8 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
 
       available -= n;
       read += n;
+
+      if (disp->halt) break;
     } else {
       break;
     }
