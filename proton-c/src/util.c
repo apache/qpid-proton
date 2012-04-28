@@ -43,7 +43,7 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
         return PN_OVERFLOW;
       }
     } else {
-      if (idx < capacity - 5) {
+      if (idx < capacity - 4) {
         sprintf(dst + idx, "\\x%.2x", c);
         idx += 4;
       } else {
@@ -60,8 +60,12 @@ void pn_fprint_data(FILE *stream, const char *bytes, size_t size)
 {
   size_t capacity = 4*size + 1;
   char buf[capacity];
-  pn_quote_data(buf, capacity, bytes, size);
-  fputs(buf, stream);
+  ssize_t n = pn_quote_data(buf, capacity, bytes, size);
+  if (n >= 0) {
+    fputs(buf, stream);
+  } else {
+    fprintf(stderr, "pn_quote_data: %zi\n", n);
+  }
 }
 
 void pn_print_data(const char *bytes, size_t size)
