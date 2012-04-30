@@ -176,6 +176,16 @@ void *pn_listener_context(pn_listener_t *l) {
   return l ? l->context : NULL;
 }
 
+static void pn_configure_sock(int sock) {
+  // this would be nice, but doesn't appear to exist on linux
+  /*
+  int set = 1;
+  if (!setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int))) {
+    perror("setsockopt");
+  };
+  */
+}
+
 pn_connector_t *pn_listener_accept(pn_listener_t *l)
 {
   if (!(l->idx && l->driver && l->driver->fds[l->idx].revents & POLLIN)) {
@@ -198,6 +208,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
         perror("close");
       return NULL;
     } else {
+      pn_configure_sock(sock);
       printf("accepted from %s:%s\n", host, serv);
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
       c->listener = l;
@@ -255,6 +266,8 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
   if (sock == -1)
     return NULL;
+
+  pn_configure_sock(sock);
 
   if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     freeaddrinfo(addr);
@@ -524,7 +537,7 @@ static void pn_connector_process_output(pn_connector_t *ctor)
 static void pn_connector_write(pn_connector_t *ctor)
 {
   if (ctor->output_size > 0) {
-    ssize_t n = send(ctor->fd, ctor->output, ctor->output_size, 0);
+    ssize_t n = send(ctor->fd, ctor->output, ctor->output_size, MSG_NOSIGNAL);
     if (n < 0) {
       // XXX
       perror("send");
