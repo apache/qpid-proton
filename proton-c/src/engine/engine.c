@@ -662,7 +662,9 @@ void pn_transport_init(pn_transport_t *transport)
   pn_dispatcher_action(transport->disp, CLOSE, "CLOSE", pn_do_close);
 
   transport->open_sent = false;
+  transport->open_rcvd = false;
   transport->close_sent = false;
+  transport->close_rcvd = false;
 
   transport->sessions = NULL;
   transport->session_capacity = 0;
@@ -715,11 +717,6 @@ pn_transport_t *pn_transport(pn_connection_t *conn)
     pn_transport_init(conn->transport);
     return conn->transport;
   }
-}
-
-pn_state_t pn_transport_state(pn_transport_t *transport)
-{
-  return transport->endpoint.state;
 }
 
 pn_error_t *pn_transport_error(pn_transport_t *transport)
@@ -1018,12 +1015,12 @@ void pn_do_error(pn_transport_t *transport, const char *condition, const char *f
   // XXX: result
   vsnprintf(transport->endpoint.error.description, DESCRIPTION, fmt, ap);
   va_end(ap);
-  fprintf(stderr, "ERROR %s %s\n", condition, transport->endpoint.error.description);
-  if (!transport->close_sent)
+  if (!transport->close_sent) {
     pn_post_close(transport);
-  PN_SET_LOCAL(transport->endpoint.state, PN_LOCAL_CLOSED);
-  PN_SET_REMOTE(transport->endpoint.state, PN_REMOTE_CLOSED);
+    transport->close_sent = true;
+  }
   transport->disp->halt = true;
+  fprintf(stderr, "ERROR %s %s\n", condition, transport->endpoint.error.description);
 }
 
 void pn_do_open(pn_dispatcher_t *disp)
@@ -1286,26 +1283,30 @@ void pn_do_end(pn_dispatcher_t *disp)
 void pn_do_close(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = disp->context;
+  transport->close_rcvd = true;
   PN_SET_REMOTE(transport->connection->endpoint.state, PN_REMOTE_CLOSED);
-  PN_SET_REMOTE(transport->endpoint.state, PN_REMOTE_CLOSED);
 }
 
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available)
 {
-  if (transport->endpoint.state & PN_LOCAL_UNINIT) {
-    return 0;
-  }
-
-  if (transport->endpoint.state & PN_LOCAL_CLOSED) {
-    return PN_EOS;
-  }
-
-  if (transport->endpoint.state & PN_REMOTE_CLOSED) {
-    pn_do_error(transport, "amqp:connection:framing-error", "data after close");
+  if (!available) {
+    pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
+    fprintf(stderr, "    <- EOS\n");
     return PN_ERR;
   }
 
-  return pn_dispatcher_input(transport->disp, bytes, available);
+  if (transport->close_rcvd) {
+    pn_do_error(transport, "amqp:connection:framing-error", "data after close");
+    fprintf(stderr, "    <- EOS\n");
+    return PN_ERR;
+  }
+
+  ssize_t n = pn_dispatcher_input(transport->disp, bytes, available);
+  if (n >= 0 && transport->close_rcvd) {
+    fprintf(stderr, "    <- EOS\n");
+    return PN_EOS;
+  }
+  return n;
 }
 
 void pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -1645,11 +1646,10 @@ void pn_process(pn_transport_t *transport)
 
 ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
 {
-  if (!(transport->endpoint.state & PN_LOCAL_UNINIT)) {
-    pn_process(transport);
-  }
+  pn_process(transport);
 
-  if (!transport->disp->available && transport->endpoint.state & PN_LOCAL_CLOSED) {
+  if (!transport->disp->available && transport->close_sent) {
+    fprintf(stderr, "    -> EOS\n");
     return PN_EOS;
   }
 

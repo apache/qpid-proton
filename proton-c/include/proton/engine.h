@@ -92,14 +92,11 @@ void pn_connection_close(pn_connection_t *connection);
 void pn_connection_destroy(pn_connection_t *connection);
 
 // transport
-pn_state_t pn_transport_state(pn_transport_t *transport);
 pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
 ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size);
 time_t pn_tick(pn_transport_t *transport, time_t now);
 void pn_trace(pn_transport_t *transport, pn_trace_t trace);
-void pn_transport_open(pn_transport_t *transport);
-void pn_transport_close(pn_transport_t *transport);
 void pn_transport_destroy(pn_transport_t *transport);
 
 // session

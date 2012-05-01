@@ -101,7 +101,9 @@ struct pn_transport_t {
   pn_connection_t *connection;
   pn_dispatcher_t *disp;
   bool open_sent;
+  bool open_rcvd;
   bool close_sent;
+  bool close_rcvd;
   pn_session_state_t *sessions;
   size_t session_capacity;
   pn_session_state_t **channels;

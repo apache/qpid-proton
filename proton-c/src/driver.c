@@ -398,7 +398,7 @@ static void pn_connector_read(pn_connector_t *ctor)
 {
   ssize_t n = recv(ctor->fd, ctor->input + ctor->input_size, IO_BUF_SIZE - ctor->input_size, 0);
   if (n <= 0) {
-    printf("disconnected: %zi\n", n);
+    if (n < 0) perror("read");
     ctor->status &= ~PN_SEL_RD;
     ctor->input_eos = true;
   } else {
@@ -421,11 +421,12 @@ static void pn_connector_process_input(pn_connector_t *ctor)
     } else if (n == 0) {
       break;
     } else {
-      if (n != PN_EOS) {
+      if (n == PN_EOS) {
+        pn_connector_consume(ctor, ctor->input_size);
+      } else {
         printf("error in process_input: %zi\n", n);
       }
       ctor->input_done = true;
-      ctor->output_done = true;
       break;
     }
   }
@@ -438,6 +439,7 @@ static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor)
       fprintf(stderr, "sasl header missmatch: ");
       pn_fprint_data(stderr, ctor->input, ctor->input_size);
       fprintf(stderr, "\n");
+      ctor->output_done = true;
       return PN_ERR;
     } else {
       fprintf(stderr, "    <- AMQP SASL 1.0\n");
@@ -448,6 +450,7 @@ static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor)
     fprintf(stderr, "sasl header missmatch: ");
     pn_fprint_data(stderr, ctor->input, ctor->input_size);
     fprintf(stderr, "\n");
+    ctor->output_done = true;
     return PN_ERR;
   }
 
@@ -473,6 +476,7 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
       fprintf(stderr, "amqp header missmatch: ");
       pn_fprint_data(stderr, ctor->input, ctor->input_size);
       fprintf(stderr, "\n");
+      ctor->output_done = true;
       return PN_ERR;
     } else {
       fprintf(stderr, "    <- AMQP 1.0\n");
@@ -483,6 +487,7 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
     fprintf(stderr, "amqp header missmatch: ");
     pn_fprint_data(stderr, ctor->input, ctor->input_size);
     fprintf(stderr, "\n");
+    ctor->output_done = true;
     return PN_ERR;
   }
 
@@ -492,13 +497,7 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
 static ssize_t pn_connector_read_amqp(pn_connector_t *ctor)
 {
   pn_transport_t *transport = ctor->transport;
-  size_t n = 0;
-  if (ctor->input_size) {
-    n = pn_input(transport, ctor->input, ctor->input_size);
-  } else if (ctor->input_eos) {
-    ctor->input_done = true;
-  }
-  return n;
+  return pn_input(transport, ctor->input, ctor->input_size);
 }
 
 static char *pn_connector_output(pn_connector_t *ctor)
@@ -524,7 +523,6 @@ static void pn_connector_process_output(pn_connector_t *ctor)
         fprintf(stderr, "error in process_output: %zi\n", n);
       }
       ctor->output_done = true;
-      ctor->input_done = true;
       break;
     }
   }
@@ -578,7 +576,6 @@ static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor)
   fprintf(stderr, "    -> AMQP 1.0\n");
   memmove(pn_connector_output(ctor), "AMQP\x00\x01\x00\x00", 8);
   ctor->process_output = pn_connector_write_amqp;
-  pn_transport_open(ctor->transport);
   return 8;
 }
 
@@ -618,6 +615,7 @@ void pn_connector_process(pn_connector_t *c) {
       d->fds[idx].revents &= ~POLLOUT;
     }
     if (c->output_size == 0 && c->input_done && c->output_done) {
+      fprintf(stderr, "closed\n");
       pn_connector_close(c);
     }
   }
