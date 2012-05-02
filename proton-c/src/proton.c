@@ -130,7 +130,7 @@ void server_callback(pn_connector_t *ctor)
 
   pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
   while (link) {
-    printf("%ls, %ls\n", pn_remote_source(link), pn_remote_target(link));
+    printf("%s, %s\n", pn_remote_source(link), pn_remote_target(link));
     pn_set_source(link, pn_remote_source(link));
     pn_set_target(link, pn_remote_target(link));
     pn_link_open(link);
@@ -209,8 +209,8 @@ struct client_context {
   const char *mechanism;
   const char *username;
   const char *password;
-  wchar_t hostname[1024];
-  wchar_t address[1024];
+  const char *hostname;
+  const char *address;
 };
 
 void client_callback(pn_connector_t *ctor)
@@ -260,10 +260,8 @@ void client_callback(pn_connector_t *ctor)
 
     char container[1024];
     if (gethostname(container, 1024)) pn_fatal("hostname lookup failed");
-    wchar_t wcontainer[1024];
-    mbstowcs(wcontainer, container, 1024);
 
-    pn_connection_set_container(connection, wcontainer);
+    pn_connection_set_container(connection, container);
     pn_connection_set_hostname(connection, ctx->hostname);
 
     pn_session_t *ssn = pn_session(connection);
@@ -271,7 +269,7 @@ void client_callback(pn_connector_t *ctor)
     pn_session_open(ssn);
 
     if (ctx->send_count) {
-      pn_link_t *snd = pn_sender(ssn, L"sender");
+      pn_link_t *snd = pn_sender(ssn, "sender");
       pn_set_target(snd, ctx->address);
       pn_link_open(snd);
 
@@ -283,7 +281,7 @@ void client_callback(pn_connector_t *ctor)
     }
 
     if (ctx->recv_count) {
-      pn_link_t *rcv = pn_receiver(ssn, L"receiver");
+      pn_link_t *rcv = pn_receiver(ssn, "receiver");
       pn_set_source(rcv, ctx->address);
       pn_link_open(rcv);
       pn_flow(rcv, ctx->recv_count);
@@ -399,8 +397,8 @@ int main(int argc, char **argv)
     ctx.username = user;
     ctx.password = pass;
     ctx.mechanism = mechanism;
-    mbstowcs(ctx.hostname, host, 1024);
-    mbstowcs(ctx.address, address, 1024);
+    ctx.hostname = host;
+    ctx.address = address;
     if (!pn_connector(drv, host, port, &ctx)) pn_fatal("connector failed\n");
     while (!ctx.done) {
       pn_driver_wait(drv, -1);

@@ -25,24 +25,10 @@
 #include <proton/framing.h>
 #include <proton/value.h>
 #include "protocol.h"
-#include <wchar.h>
 #include <inttypes.h>
 
 #include <stdarg.h>
 #include <stdio.h>
-
-#define wcsdup my_wcsdup
-
-wchar_t *my_wcsdup(const wchar_t *src)
-{
-  if (src) {
-    wchar_t *dest = malloc((wcslen(src)+1)*sizeof(wchar_t));
-    if (!dest) return NULL;
-    return wcscpy(dest, src);
-  } else {
-    return 0;
-  }
-}
 
 // delivery buffers
 
@@ -431,16 +417,16 @@ pn_error_t *pn_connection_error(pn_connection_t *connection)
   return &connection->endpoint.error;
 }
 
-void pn_connection_set_container(pn_connection_t *connection, const wchar_t *container)
+void pn_connection_set_container(pn_connection_t *connection, const char *container)
 {
   if (connection->container) free(connection->container);
-  connection->container = wcsdup(container);
+  connection->container = strdup(container);
 }
 
-void pn_connection_set_hostname(pn_connection_t *connection, const wchar_t *hostname)
+void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname)
 {
   if (connection->hostname) free(connection->hostname);
-  connection->hostname = wcsdup(hostname);
+  connection->hostname = strdup(hostname);
 }
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection)
@@ -724,11 +710,11 @@ pn_error_t *pn_transport_error(pn_transport_t *transport)
   return &transport->endpoint.error;
 }
 
-void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const wchar_t *name)
+void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *name)
 {
   pn_endpoint_init(&link->endpoint, type, session->connection);
   pn_add_link(session, link);
-  link->name = wcsdup(name);
+  link->name = strdup(name);
   link->local_source = NULL;
   link->local_target = NULL;
   link->remote_source = NULL;
@@ -739,26 +725,26 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const wchar_
   link->credit = 0;
 }
 
-void pn_set_source(pn_link_t *link, const wchar_t *source)
+void pn_set_source(pn_link_t *link, const char *source)
 {
   if (!link) return;
   if (link->local_source) free(link->local_source);
-  link->local_source = wcsdup(source);
+  link->local_source = strdup(source);
 }
 
-void pn_set_target(pn_link_t *link, const wchar_t *target)
+void pn_set_target(pn_link_t *link, const char *target)
 {
   if (!link) return;
   if (link->local_target) free(link->local_target);
-  link->local_target = wcsdup(target);
+  link->local_target = strdup(target);
 }
 
-wchar_t *pn_remote_source(pn_link_t *link)
+char *pn_remote_source(pn_link_t *link)
 {
   return link ? link->remote_source : NULL;
 }
 
-wchar_t *pn_remote_target(pn_link_t *link)
+char *pn_remote_target(pn_link_t *link)
 {
   return link ? link->remote_target : NULL;
 }
@@ -790,7 +776,7 @@ pn_link_state_t *pn_handle_state(pn_session_state_t *ssn_state, uint32_t handle)
   return ssn_state->handles[handle];
 }
 
-pn_link_t *pn_sender(pn_session_t *session, const wchar_t *name)
+pn_link_t *pn_sender(pn_session_t *session, const char *name)
 {
   if (!session) return NULL;
   pn_link_t *snd = malloc(sizeof(pn_link_t));
@@ -799,7 +785,7 @@ pn_link_t *pn_sender(pn_session_t *session, const wchar_t *name)
   return snd;
 }
 
-pn_link_t *pn_receiver(pn_session_t *session, const wchar_t *name)
+pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 {
   if (!session) return NULL;
   pn_link_t *rcv = malloc(sizeof(pn_link_t));
@@ -1056,7 +1042,7 @@ pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_string_t *name, 
   {
     pn_link_t *link = ssn_state->session->links[i];
     if (link->endpoint.type == type &&
-        !wcsncmp(pn_string_wcs(name), link->name, pn_string_size(name)))
+        !strcmp(pn_string_utf8(name), link->name))
     {
       return pn_link_get_state(ssn_state, link);
     }
@@ -1076,9 +1062,9 @@ void pn_do_attach(pn_dispatcher_t *disp)
   if (!link_state) {
     pn_link_t *link;
     if (is_sender) {
-      link = (pn_link_t *) pn_sender(ssn_state->session, pn_string_wcs(name));
+      link = (pn_link_t *) pn_sender(ssn_state->session, pn_string_utf8(name));
     } else {
-      link = (pn_link_t *) pn_receiver(ssn_state->session, pn_string_wcs(name));
+      link = (pn_link_t *) pn_receiver(ssn_state->session, pn_string_utf8(name));
     }
     link_state = pn_link_get_state(ssn_state, link);
   }
@@ -1093,9 +1079,9 @@ void pn_do_attach(pn_dispatcher_t *disp)
     remote_target = pn_tag_value(pn_to_tag(remote_target));
   // XXX: dup src/tgt
   if (remote_source.type == LIST)
-    link_state->link->remote_source = wcsdup(pn_string_wcs(pn_to_string(pn_list_get(pn_to_list(remote_source), SOURCE_ADDRESS))));
+    link_state->link->remote_source = strdup(pn_string_utf8(pn_to_string(pn_list_get(pn_to_list(remote_source), SOURCE_ADDRESS))));
   if (remote_target.type == LIST)
-    link_state->link->remote_target = wcsdup(pn_string_wcs(pn_to_string(pn_list_get(pn_to_list(remote_target), TARGET_ADDRESS))));
+    link_state->link->remote_target = strdup(pn_string_utf8(pn_to_string(pn_list_get(pn_to_list(remote_target), TARGET_ADDRESS))));
 
   if (!is_sender) {
     link_state->delivery_count = pn_to_int32(pn_list_get(args, ATTACH_INITIAL_DELIVERY_COUNT));

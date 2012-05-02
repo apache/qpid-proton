@@ -54,18 +54,6 @@ void pn_do_challenge(pn_dispatcher_t *disp);
 void pn_do_response(pn_dispatcher_t *disp);
 void pn_do_outcome(pn_dispatcher_t *disp);
 
-#define strdup my_strdup
-
-char *my_strdup(const char *s)
-{
-  if (!s) return NULL;
-  size_t size = strlen(s);
-  char *r = malloc(size + 1);
-  memcpy(r, s, size);
-  r[size] = '\0';
-  return r;
-}
-
 pn_sasl_t *pn_sasl()
 {
   pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));

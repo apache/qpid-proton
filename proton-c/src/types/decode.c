@@ -20,7 +20,6 @@
  */
 
 #include <proton/codec.h>
-#include <iconv.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
@@ -191,18 +190,7 @@ void pn_decode_binary(void *ctx, size_t size, char *bytes) {
 void pn_decode_utf8(void *ctx, size_t size, char *bytes) {
   pn_value_t *value = next_value(ctx);
   value->type = STRING;
-  size_t remaining = (size+1)*sizeof(wchar_t);
-  wchar_t buf[size+1];
-  iconv_t cd = iconv_open("WCHAR_T", "UTF-8");
-  wchar_t *out = buf;
-  size_t n = iconv(cd, &bytes, &size, (char **)&out, &remaining);
-  if (n == -1)
-  {
-    perror("pn_decode_utf8");
-  }
-  *out = L'\0';
-  iconv_close(cd);
-  value->u.as_string = pn_string(buf);
+  value->u.as_string = pn_stringn(bytes, size);
 }
 void pn_decode_symbol(void *ctx, size_t size, char *bytes) {
   pn_value_t *value = next_value(ctx);

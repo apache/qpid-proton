@@ -23,11 +23,9 @@
 #include <proton/util.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <wchar.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iconv.h>
 #include <arpa/inet.h>
 #include "encodings.h"
 #include "value-internal.h"
@@ -257,8 +255,8 @@ int pn_vscan(pn_value_t *value, const char *fmt, va_list ap)
       break;
     case 'S':
       value->type = STRING;
-      wchar_t *wcs = va_arg(ap, wchar_t *);
-      value->u.as_string = pn_string(wcs);
+      char *utf8 = va_arg(ap, char *);
+      value->u.as_string = pn_string(utf8);
       break;
     case 'z':
       value->type = BINARY;
@@ -471,7 +469,7 @@ int pn_format_value(char **pos, char *limit, pn_value_t *values, size_t n)
       if ((e = pn_format_symbol(pos, limit, v.u.as_symbol))) return e;
       break;
     case STRING:
-      if ((e = pn_fmt(pos, limit, "%ls", v.u.as_string->wcs))) return e;
+      if ((e = pn_fmt(pos, limit, "%s", v.u.as_string->utf8))) return e;
       break;
     case BINARY:
       if ((e = pn_format_binary(pos, limit, v.u.as_binary))) return e;
@@ -624,10 +622,6 @@ size_t pn_encode(pn_value_t v, char *out)
 {
   char *old = out;
   size_t size = pn_encode_sizeof(v);
-  iconv_t cd;
-  char *inbuf;
-  size_t insize;
-  char *outbuf;
 
   switch (v.type)
   {
@@ -674,13 +668,7 @@ size_t pn_encode(pn_value_t v, char *out)
     pn_write_symbol(&out, out + size, v.u.as_symbol->size, v.u.as_symbol->name);
     return out - old;
   case STRING:
-    cd = iconv_open("UTF-8", "WCHAR_T");
-    insize = 4*v.u.as_string->size;
-    inbuf = (char *)v.u.as_string->wcs;
-    outbuf = out + 5;
-    iconv(cd, &inbuf, &insize, &outbuf, &size);
-    iconv_close(cd);
-    pn_write_utf8(&out, out + size, outbuf - out - 5, out + 5);
+    pn_write_utf8(&out, out + size, v.u.as_string->size, v.u.as_string->utf8);
     return out - old;
   case BINARY:
     pn_write_binary(&out, out + size, v.u.as_binary->size, v.u.as_binary->bytes);

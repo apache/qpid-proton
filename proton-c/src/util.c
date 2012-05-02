@@ -121,3 +121,14 @@ bool pn_env_bool(const char *name)
   return v && (!strcasecmp(v, "true") || !strcasecmp(v, "1") ||
                !strcasecmp(v, "yes"));
 }
+
+char *pn_strdup(const char *src)
+{
+  if (src) {
+    char *dest = malloc((strlen(src)+1)*sizeof(char));
+    if (!dest) return NULL;
+    return strcpy(dest, src);
+  } else {
+    return NULL;
+  }
+}

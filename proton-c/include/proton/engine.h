@@ -72,8 +72,8 @@ pn_connection_t *pn_connection();
 
 pn_state_t pn_connection_state(pn_connection_t *connection);
 pn_error_t *pn_connection_error(pn_connection_t *connection);
-void pn_connection_set_container(pn_connection_t *connection, const wchar_t *container);
-void pn_connection_set_hostname(pn_connection_t *connection, const wchar_t *hostname);
+void pn_connection_set_container(pn_connection_t *connection, const char *container);
+void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection);
 pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
@@ -102,8 +102,8 @@ void pn_transport_destroy(pn_transport_t *transport);
 // session
 pn_state_t pn_session_state(pn_session_t *session);
 pn_error_t *pn_session_error(pn_session_t *session);
-pn_link_t *pn_sender(pn_session_t *session, const wchar_t *name);
-pn_link_t *pn_receiver(pn_session_t *session, const wchar_t *name);
+pn_link_t *pn_sender(pn_session_t *session, const char *name);
+pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 void pn_session_open(pn_session_t *session);
 void pn_session_close(pn_session_t *session);
 void pn_session_destroy(pn_session_t *session);
@@ -114,10 +114,10 @@ bool pn_is_receiver(pn_link_t *link);
 pn_state_t pn_link_state(pn_link_t *link);
 pn_error_t *pn_link_error(pn_link_t *link);
 pn_session_t *pn_get_session(pn_link_t *link);
-void pn_set_source(pn_link_t *link, const wchar_t *source);
-void pn_set_target(pn_link_t *link, const wchar_t *target);
-wchar_t *pn_remote_source(pn_link_t *link);
-wchar_t *pn_remote_target(pn_link_t *link);
+void pn_set_source(pn_link_t *link, const char *source);
+void pn_set_target(pn_link_t *link, const char *target);
+char *pn_remote_source(pn_link_t *link);
+char *pn_remote_target(pn_link_t *link);
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_t *pn_current(pn_link_t *link);
 bool pn_advance(pn_link_t *link);

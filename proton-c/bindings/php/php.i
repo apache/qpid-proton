@@ -7,7 +7,6 @@
 %header %{
 /* Include the headers needed by the code in this wrapper file */
 #include <proton/driver.h>
-#include <wchar.h>
 
 #define zend_error_noreturn zend_error
 %}
@@ -19,68 +18,6 @@
 %typemap(out) ssize_t {
     ZVAL_LONG($result, (long)$1);
 }
-
-
-// wchar_t *WCHAR_INPUT
-//
-// support for wchar_t * input arguments: convert PHP string to wchar_t string.
-//
-%typemap(in) wchar_t * {
-    if (Z_TYPE_PP($input) != IS_STRING) {
-        convert_to_string_ex($input);
-    }
-    const char *src = Z_STRVAL_PP($input);
-    const size_t inLen = Z_STRLEN_PP($input);
-
-    if (src) {
-      // determine size needed for converted buffer
-      mbstate_t state = {};
-      const char *tmp = src;
-      size_t wlen = mbsnrtowcs( NULL, &tmp, inLen, 0, &state );
-      if (wlen == (size_t)-1) {
-        SWIG_PHP_Error(E_ERROR, "Cannot convert string argument $argnum of $symname to wchar_t string.");
-      }
-      // include additional nul terminator in case source does not include one
-      $1 = malloc(sizeof(wchar_t) * (wlen + 2));
-
-      tmp = src;
-      wlen = mbsnrtowcs( $1, &tmp, inLen, wlen+1, &state);
-      if (wlen == (size_t)-1) {
-        SWIG_PHP_Error(E_ERROR, "Cannot convert string argument $argnum of $symname to wchar_t string.");
-      }
-      $1[wlen] = (wchar_t)0;
-    } else {
-      $1 == NULL;
-    }
- }
-%typemap(freearg) wchar_t * {
-    free($1);   // free the buffer holding the wchar_t buffer
- }
-
-// convert wchar_t * return value to a PHP string
-%typemap(out) wchar_t * {
-    // determine size needed for converted buffer
-    const wchar_t *tmp = $1;
-    if (tmp) {
-      mbstate_t state = {};
-      size_t slen = wcsrtombs( NULL, &tmp, 0, &state);
-      if (slen == (size_t)-1) {
-        SWIG_PHP_Error(E_ERROR, "Cannot convert wchar_t return value from $symname to string.");
-      }
-
-      char *str = emalloc(sizeof(char) * slen+1);
-      tmp = $1;
-      slen = wcsrtombs( str, &tmp, slen+1, &state);
-      if (slen == (size_t)-1) {
-        SWIG_PHP_Error(E_ERROR, "Cannot convert wchar_t return value from $symname to string.");
-      }
-
-      ZVAL_STRINGL($result, str, slen, 0);  // 0 == assume ownership of buffer
-    } else {
-      ZVAL_NULL($result);
-    }
- }
-
 
 // (char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN)
 //

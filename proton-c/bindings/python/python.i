@@ -10,7 +10,6 @@
 typedef unsigned int size_t;
 typedef signed int ssize_t;
 
-%include <cwstring.i>
 %include <cstring.i>
 
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)

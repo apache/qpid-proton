@@ -125,8 +125,8 @@ struct pn_connection_t {
   pn_delivery_t *work_tail;
   pn_delivery_t *tpwork_head;
   pn_delivery_t *tpwork_tail;
-  wchar_t *container;
-  wchar_t *hostname;
+  char *container;
+  char *hostname;
 };
 
 struct pn_session_t {
@@ -140,12 +140,12 @@ struct pn_session_t {
 
 struct pn_link_t {
   pn_endpoint_t endpoint;
-  wchar_t *name;
+  char *name;
   pn_session_t *session;
-  wchar_t *local_source;
-  wchar_t *local_target;
-  wchar_t *remote_source;
-  wchar_t *remote_target;
+  char *local_source;
+  char *local_target;
+  char *remote_source;
+  char *remote_target;
   pn_delivery_t *head;
   pn_delivery_t *tail;
   pn_delivery_t *current;

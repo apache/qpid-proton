@@ -24,12 +24,17 @@
 #include <stdlib.h>
 #include "value-internal.h"
 
-pn_string_t *pn_string(wchar_t *wcs)
+pn_string_t *pn_string(const char *utf8)
 {
-  size_t size = wcslen(wcs);
-  pn_string_t *str = malloc(sizeof(pn_string_t) + (size+1)*sizeof(wchar_t));
+  return pn_stringn(utf8, strlen(utf8));
+}
+
+pn_string_t *pn_stringn(const char *utf8, size_t size)
+{
+  pn_string_t *str = malloc(sizeof(pn_string_t) + (size+1)*sizeof(char));
   str->size = size;
-  wcscpy(str->wcs, wcs);
+  strncpy(str->utf8, utf8, size);
+  str->utf8[size] = '\0';
   return str;
 }
 
@@ -38,21 +43,16 @@ void pn_free_string(pn_string_t *str)
   free(str);
 }
 
-size_t pn_string_size(pn_string_t *str)
+const char *pn_string_utf8(pn_string_t *str)
 {
-  return str->size;
-}
-
-wchar_t *pn_string_wcs(pn_string_t *str)
-{
-  return str->wcs;
+  return str->utf8;
 }
 
 uintptr_t pn_hash_string(pn_string_t *s)
 {
-  wchar_t *c;
+  char *c;
   uintptr_t hash = 1;
-  for (c = s->wcs; *c; c++)
+  for (c = s->utf8; *c; c++)
   {
     hash = 31*hash + *c;
   }
@@ -62,7 +62,7 @@ uintptr_t pn_hash_string(pn_string_t *s)
 int pn_compare_string(pn_string_t *a, pn_string_t *b)
 {
   if (a->size == b->size)
-    return wmemcmp(a->wcs, b->wcs, a->size);
+    return memcmp(a->utf8, b->utf8, a->size);
   else
     return b->size - a->size;
 }

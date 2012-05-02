@@ -88,4 +88,7 @@ bool pn_env_bool(const char *name);
       (TAIL) = (NODE)-> PFX ## prev;                             \
   }
 
+char *pn_strdup(const char *src);
+#define strdup pn_strdup
+
 #endif /* util.h */

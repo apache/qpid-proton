@@ -31,7 +31,7 @@ struct pn_symbol_t {
 
 struct pn_string_t {
   size_t size;
-  wchar_t wcs[];
+  char utf8[];
 };
 
 struct pn_binary_t {

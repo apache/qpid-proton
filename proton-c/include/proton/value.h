@@ -184,9 +184,9 @@ pn_symbol_t *pn_symbol_dup(pn_symbol_t *s);
 
 /* string */
 
-pn_string_t *pn_string(wchar_t *wcs);
-size_t pn_string_size(pn_string_t *str);
-wchar_t *pn_string_wcs(pn_string_t *str);
+pn_string_t *pn_string(const char *utf8);
+pn_string_t *pn_stringn(const char *utf8, size_t size);
+const char *pn_string_utf8(pn_string_t *str);
 
 /* binary */
 
