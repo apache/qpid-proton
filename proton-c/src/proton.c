@@ -408,6 +408,8 @@ int main(int argc, char **argv)
         client_callback(c);
         if (pn_connector_closed(c)) {
           pn_connector_destroy(c);
+        } else {
+          pn_connector_process(c);
         }
       }
     }
@@ -429,6 +431,8 @@ int main(int argc, char **argv)
         server_callback(c);
         if (pn_connector_closed(c)) {
           pn_connector_destroy(c);
+        } else {
+          pn_connector_process(c);
         }
       }
     }
