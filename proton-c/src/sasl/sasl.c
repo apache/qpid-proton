@@ -58,6 +58,7 @@ pn_sasl_t *pn_sasl()
 {
   pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));
   sasl->disp = pn_dispatcher(1, sasl);
+  sasl->disp->batch = false;
 
   pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
   pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
@@ -277,20 +278,28 @@ void pn_sasl_process(pn_sasl_t *sasl)
     pn_server_done(sasl);
     sasl->sent_done = true;
     sasl->rcvd_done = true;
+    sasl->disp->halt = true;
   }
 }
 
 ssize_t pn_sasl_input(pn_sasl_t *sasl, char *bytes, size_t available)
 {
+  ssize_t n = pn_dispatcher_input(sasl->disp, bytes, available);
+  if (n < 0) return n;
+
   if (sasl->rcvd_done) {
     if (pn_sasl_state(sasl) == PN_SASL_PASS) {
-      return PN_EOS;
+      if (n) {
+        return n;
+      } else {
+        return PN_EOS;
+      }
     } else {
       // XXX: should probably do something better here
       return PN_ERR;
     }
   } else {
-    return pn_dispatcher_input(sasl->disp, bytes, available);
+    return n;
   }
 }
 
@@ -341,4 +350,5 @@ void pn_do_outcome(pn_dispatcher_t *disp)
   sasl->outcome = pn_to_uint8(pn_list_get(disp->args, SASL_OUTCOME_CODE));
   sasl->rcvd_done = true;
   sasl->sent_done = true;
+  disp->halt = true;
 }

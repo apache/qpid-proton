@@ -61,6 +61,7 @@ struct pn_listener_t {
   pn_listener_t *next;
   pn_listener_t *prev;
   int idx;
+  bool pending;
   int fd;
   void *context;
 };
@@ -72,6 +73,9 @@ struct pn_connector_t {
   pn_connector_t *next;
   pn_connector_t *prev;
   int idx;
+  bool pending_tick;
+  bool pending_read;
+  bool pending_write;
   int fd;
   int status;
   bool closed;
@@ -101,6 +105,7 @@ struct pn_connector_t {
 
 static void pn_driver_add_listener(pn_driver_t *d, pn_listener_t *l)
 {
+  if (!l->driver) return;
   LL_ADD(d->listener_head, d->listener_tail, l);
   l->driver = d;
   d->listener_count++;
@@ -108,6 +113,8 @@ static void pn_driver_add_listener(pn_driver_t *d, pn_listener_t *l)
 
 static void pn_driver_remove_listener(pn_driver_t *d, pn_listener_t *l)
 {
+  if (!l->driver) return;
+
   if (l == d->listener_next) {
     d->listener_next = l->next;
   }
@@ -155,14 +162,17 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 
 pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
 {
+  if (!driver) return NULL;
+
   pn_listener_t *l = malloc(sizeof(pn_listener_t));
   if (!l) return NULL;
   l->driver = driver;
   l->next = NULL;
   l->prev = NULL;
+  l->idx = 0;
+  l->pending = false;
   l->fd = fd;
   l->context = context;
-  l->idx = 0;
 
   pn_driver_add_listener(driver, l);
   return l;
@@ -188,9 +198,7 @@ static void pn_configure_sock(int sock) {
 
 pn_connector_t *pn_listener_accept(pn_listener_t *l)
 {
-  if (!(l->idx && l->driver && l->driver->fds[l->idx].revents & POLLIN)) {
-    return NULL;
-  }
+  if (!l || !l->pending) return NULL;
 
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
@@ -237,6 +245,7 @@ void pn_listener_destroy(pn_listener_t *l)
 
 static void pn_driver_add_connector(pn_driver_t *d, pn_connector_t *c)
 {
+  if (!c->driver) return;
   LL_ADD(d->connector_head, d->connector_tail, c);
   c->driver = d;
   d->connector_count++;
@@ -244,6 +253,8 @@ static void pn_driver_add_connector(pn_driver_t *d, pn_connector_t *c)
 
 static void pn_driver_remove_connector(pn_driver_t *d, pn_connector_t *c)
 {
+  if (!c->driver) return;
+
   if (c == d->connector_next) {
     d->connector_next = c->next;
   }
@@ -256,6 +267,8 @@ static void pn_driver_remove_connector(pn_driver_t *d, pn_connector_t *c)
 pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
                              const char *port, void *context)
 {
+  if (!driver) return NULL;
+
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
@@ -293,15 +306,20 @@ static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor);
 static ssize_t pn_connector_write_sasl(pn_connector_t *ctor);
 static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor);
 static ssize_t pn_connector_write_amqp(pn_connector_t *ctor);
-static ssize_t pn_connector_write_eos(pn_connector_t *ctor);
 
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 {
+  if (!driver) return NULL;
+
   pn_connector_t *c = malloc(sizeof(pn_connector_t));
   if (!c) return NULL;
   c->driver = driver;
   c->next = NULL;
   c->prev = NULL;
+  c->pending_tick = false;
+  c->pending_read = false;
+  c->pending_write = false;
+  c->idx = 0;
   c->fd = fd;
   c->status = PN_SEL_RD | PN_SEL_WR;
   c->closed = false;
@@ -321,7 +339,6 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->output_done = false;
   c->context = context;
   c->listener = NULL;
-  c->idx = 0;
 
   pn_connector_trace(c, driver->trace);
 
@@ -359,13 +376,6 @@ void pn_connector_set_context(pn_connector_t *ctor, void *context)
 pn_listener_t *pn_connector_listener(pn_connector_t *ctor)
 {
   return ctor ? ctor->listener : NULL;
-}
-
-void pn_connector_eos(pn_connector_t *ctor)
-{
-  if (!ctor) return;
-
-  ctor->process_input = pn_connector_write_eos;
 }
 
 void pn_connector_close(pn_connector_t *ctor)
@@ -585,11 +595,6 @@ static ssize_t pn_connector_write_amqp(pn_connector_t *ctor)
   return pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
 }
 
-static ssize_t pn_connector_write_eos(pn_connector_t *ctor)
-{
-  return PN_EOS;
-}
-
 static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
   // XXX: should probably have a function pointer for this and switch it with different layers
@@ -601,18 +606,21 @@ static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 
 void pn_connector_process(pn_connector_t *c) {
   if (c) {
-    int idx = c->idx;
-    if (!idx) return;
-    pn_driver_t *d = c->driver;
-    if (d->fds[idx].revents & POLLIN) {
+    if (c->pending_tick) {
+      // XXX: should handle timing also
+      c->tick(c, 0);
+      c->pending_tick = false;
+    }
+
+    if (c->pending_read) {
       c->read(c);
-      d->fds[idx].revents &= ~POLLIN;
+      c->pending_read = false;
     }
     pn_connector_process_input(c);
     pn_connector_process_output(c);
-    if (d->fds[idx].revents & POLLOUT) {
+    if (c->pending_write) {
       c->write(c);
-      d->fds[idx].revents &= ~POLLOUT;
+      c->pending_write = false;
     }
     if (c->output_size == 0 && c->input_done && c->output_done) {
       fprintf(stderr, "closed\n");
@@ -672,7 +680,9 @@ void pn_driver_destroy(pn_driver_t *d)
 
 void pn_driver_wakeup(pn_driver_t *d)
 {
-  write(d->ctrl[1], "x", 1);
+  if (d) {
+    write(d->ctrl[1], "x", 1);
+  }
 }
 
 static void pn_driver_rebuild(pn_driver_t *d)
@@ -713,18 +723,6 @@ static void pn_driver_rebuild(pn_driver_t *d)
 void pn_driver_wait(pn_driver_t *d, int timeout) {
   pn_driver_rebuild(d);
 
-  pn_connector_t *c = d->connector_head;
-  while (c) {
-    // XXX: should do this in process
-    // XXX: should handle timing also
-    c->tick(c, 0);
-    c = c->next;
-  }
-
-  // XXX: double rebuild necessary now due to separating of read/write
-  // and processing
-  pn_driver_rebuild(d);
-
   DIE_IFE(poll(d->fds, 1 + d->listener_count + d->connector_count, timeout));
 
   if (d->fds[0].revents & POLLIN) {
@@ -740,21 +738,35 @@ void pn_driver_wait(pn_driver_t *d, int timeout) {
 pn_listener_t *pn_driver_listener(pn_driver_t *d) {
   if (!d) return NULL;
 
-  pn_listener_t *l = d->listener_next;
-  if (!l) return NULL;
+  while (d->listener_next) {
+    pn_listener_t *l = d->listener_next;
+    d->listener_next = l->next;
 
-  if (!(l->idx && d->fds[l->idx].revents & POLLIN)) {
-    return NULL;
+    l->pending = (l->idx && d->fds[l->idx].revents & POLLIN);
+
+    if (l->pending) {
+      return l;
+    }
   }
 
-  d->listener_next = l->next;
-  return l;
+  return NULL;
 }
 
 pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   if (!d) return NULL;
 
-  pn_connector_t *c = d->connector_next;
-  if (c) { d->connector_next = c->next; }
-  return c;
+  while (d->connector_next) {
+    pn_connector_t *c = d->connector_next;
+    d->connector_next = c->next;
+
+    int idx = c->idx;
+    c->pending_read = (idx && d->fds[idx].revents & POLLIN);
+    c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
+
+    if (c->pending_read || c->pending_write || c->pending_tick) {
+      return c;
+    }
+  }
+
+  return NULL;
 }

@@ -21,14 +21,12 @@ $handler = function($c) {
   $sasl = pn_connector_sasl($c);
   switch (pn_sasl_state($sasl)) {
     case PN_SASL_CONF:
+    case PN_SASL_STEP:
+    case PN_SASL_IDLE:
     case PN_SASL_FAIL:
-      pn_connector_eos($c);
       return;
     case PN_SASL_PASS:
       break;
-    case PN_SASL_STEP:
-    case PN_SASL_IDLE:
-      return;
   }
 
   global $count, $counter, $sent, $rcvd;
@@ -88,7 +86,9 @@ $handler = function($c) {
 
     if (pn_updated($delivery)) {
       // the disposition was updated, let's report it and settle the delivery
-      //print("disposition for $tag: " . pn_remote_disp($delivery) . "\n");
+      print "disposition for $tag: " .
+        pn_local_disp($delivery) . " " .
+        pn_remote_disp($delivery) . "\n";
       // we could clear the updated flag if we didn't want to settle
       // pn_clear($delivery);
       pn_settle($delivery);

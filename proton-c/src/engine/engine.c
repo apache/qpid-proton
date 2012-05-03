@@ -419,12 +419,14 @@ pn_error_t *pn_connection_error(pn_connection_t *connection)
 
 void pn_connection_set_container(pn_connection_t *connection, const char *container)
 {
+  if (!connection) return;
   if (connection->container) free(connection->container);
   connection->container = strdup(container);
 }
 
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname)
 {
+  if (!connection) return;
   if (connection->hostname) free(connection->hostname);
   connection->hostname = strdup(hostname);
 }

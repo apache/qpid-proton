@@ -37,12 +37,10 @@ $handler = function($c) {
       }
       break;
     case PN_SASL_FAIL:
-      pn_connector_eos($c);
+    case PN_SASL_IDLE:
       return;
     case PN_SASL_PASS:
       break;
-    case PN_SASL_IDLE:
-      return;
     }
   }
 
@@ -173,7 +171,6 @@ while (TRUE) {
   // cycle through all listeners with I/O activity
   while ($l = pn_driver_listener($driver)) {
     $c = pn_listener_accept($l);
-    print("listener $l -> $c\n");
     pn_connector_set_context($c, $handler);
   }
 

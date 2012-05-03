@@ -57,7 +57,6 @@ pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor);
 pn_connection_t *pn_connector_connection(pn_connector_t *ctor);
 void *pn_connector_context(pn_connector_t *ctor);
 void pn_connector_set_context(pn_connector_t *ctor, void *context);
-void pn_connector_eos(pn_connector_t *ctor);
 void pn_connector_close(pn_connector_t *ctor);
 bool pn_connector_closed(pn_connector_t *ctor);
 void pn_connector_destroy(pn_connector_t *ctor);

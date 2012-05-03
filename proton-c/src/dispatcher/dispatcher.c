@@ -48,6 +48,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->available = 0;
 
   disp->halt = false;
+  disp->batch = true;
 
   return disp;
 }
@@ -127,7 +128,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
       available -= n;
       read += n;
 
-      if (disp->halt) break;
+      if (!disp->batch) break;
     } else {
       break;
     }

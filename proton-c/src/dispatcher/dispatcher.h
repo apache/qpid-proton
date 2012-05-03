@@ -50,6 +50,7 @@ struct pn_dispatcher_t {
   char *output;
   void *context;
   bool halt;
+  bool batch;
   char scratch[SCRATCH];
 };
 
