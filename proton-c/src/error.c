@@ -1,6 +1,3 @@
-#ifndef _PROTON_ERRORS_H
-#define _PROTON_ERRORS_H 1
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,13 +19,19 @@
  *
  */
 
-#define PN_EOS (-1)
-#define PN_ERR (-2)
-#define PN_OVERFLOW (-3)
-#define PN_UNDERFLOW (-4)
-#define PN_STATE_ERR (-5)
-#define PN_ARG_ERR (-6)
+#include <proton/errors.h>
 
-const char *pn_error(int err);
-
-#endif /* errors.h */
+const char *pn_error(int err)
+{
+  switch (err)
+  {
+  case 0: return "<ok>";
+  case PN_EOS: return "PN_EOS";
+  case PN_ERR: return "PN_ERR";
+  case PN_OVERFLOW: return "PN_OVERFLOW";
+  case PN_UNDERFLOW: return "PN_UNDERFLOW";
+  case PN_STATE_ERR: return "PN_STATE_ERR";
+  case PN_ARG_ERR: return "PN_ARG_ERR";
+  default: return "<unknown>";
+  }
+}

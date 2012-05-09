@@ -30,6 +30,7 @@ add_library (
 
   src/util.c
   src/driver.c
+  src/error.c
 
   src/framing/framing.c
 
