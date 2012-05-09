@@ -158,4 +158,11 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_connector_destroy;
 
+%exception pn_driver_wait
+{
+  Py_BEGIN_ALLOW_THREADS
+  $action
+  Py_END_ALLOW_THREADS
+}
+
 %include "../cproton.i"
