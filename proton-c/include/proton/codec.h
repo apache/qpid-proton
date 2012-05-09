@@ -106,4 +106,71 @@ ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void
 extern pn_data_callbacks_t *noop;
 extern pn_data_callbacks_t *printer;
 
+// new codec
+
+typedef enum {
+  PN_NULL,
+  PN_BOOL,
+  PN_UBYTE,
+  PN_BYTE,
+  PN_USHORT,
+  PN_SHORT,
+  PN_UINT,
+  PN_INT,
+  PN_ULONG,
+  PN_LONG,
+  PN_FLOAT,
+  PN_DOUBLE,
+  PN_BINARY,
+  PN_STRING,
+  PN_SYMBOL,
+  PN_DESCRIPTOR,
+  PN_ARRAY,
+  PN_LIST,
+  PN_MAP,
+  PN_TYPE
+} pn_type_t;
+
+typedef struct {
+  size_t size;
+  char *start;
+} pn_bytes_t;
+
+typedef struct {
+  pn_type_t type;
+  union {
+    bool as_bool;
+    uint8_t as_ubyte;
+    int8_t as_byte;
+    uint16_t as_ushort;
+    int16_t as_short;
+    uint32_t as_uint;
+    int32_t as_int;
+    uint64_t as_ulong;
+    int64_t as_long;
+    float as_float;
+    double as_double;
+    pn_bytes_t as_binary;
+    pn_bytes_t as_string;
+    pn_bytes_t as_symbol;
+    size_t count;
+    pn_type_t type;
+  } u;
+} pn_datum_t;
+
+typedef struct {
+  size_t size;
+  pn_datum_t *start;
+} pn_data_t;
+
+int pn_decode_data(pn_bytes_t *bytes, pn_data_t *data);
+int pn_encode_data(pn_bytes_t *bytes, pn_data_t *data);
+
+void pn_print_datum(pn_datum_t datum);
+const char *pn_type_str(pn_type_t type);
+int pn_pprint_data(const pn_data_t *data);
+
+int pn_fill_data(pn_data_t *data, const char *fmt, ...);
+int pn_scan_data(const pn_data_t *data, const char *fmt, ...);
+
 #endif /* codec.h */

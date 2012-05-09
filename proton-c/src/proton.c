@@ -25,53 +25,49 @@
 #include <string.h>
 #include <proton/driver.h>
 #include <proton/message.h>
-#include <proton/value.h>
 #include <proton/util.h>
 #include <unistd.h>
 #include "util.h"
 #include "pn_config.h"
-
-void print(pn_value_t value)
-{
-  char buf[1024];
-  char *pos = buf;
-  pn_format_value(&pos, buf + 1024, &value, 1);
-  *pos = '\0';
-  printf("%s\n", buf);
-}
+#include <proton/codec.h>
 
 int value(int argc, char **argv)
 {
-  pn_value_t v[1024];
-  int count = pn_scan(v, "niIlLISz[iii{SSSi}]i([iiiiz])@i[iii]{SiSiSi}", -3, 3, -123456789101112, 123456719101112, 3,
-                       L"this is a string", (size_t) 16, "this is binary\x00\x01",
-                       1, 2, 3, L"key", L"value", L"one", 1,
-                       1, 2, 3, 4, 5, 7, "binary",
-                       1, 2, 3,
-                       L"one", 1, L"two", 2, L"three", 3);
+  pn_datum_t dbuf[1024];
+  pn_data_t data = {1024, dbuf};
 
-  pn_list_t *list = pn_to_list(v[8]);
-  pn_map_t *map = pn_to_map(pn_list_get(list, 3));
-  print(pn_list_get(list, 3));
-  printf("POP: ");
-  print(pn_map_pop(map, pn_value("S", L"key")));
-
-  printf("scanned %i values\n", count);
-  for (int i = 0; i < count; i++) {
-    printf("value %.2i [%zi]: ", i, pn_encode_sizeof(v[i])); print(v[i]);
+  int err = pn_fill_data(&data, "DDsL[i[i]i]{sfsf}@DLT[sss]", "blam", 21, 1, 2, 3, "pi", 3.14159265359, "e", 2.7, 42, PN_SYMBOL, "one", "two", "three");
+  if (err) {
+    printf("err = %s\n", pn_error(err));
+  } else {
+    pn_pprint_data(&data);
+    printf("\n");
   }
 
-  pn_list_t *l = pn_list(1024);
-  pn_list_extend(l, "SIi[iii]", L"One", 2, -3, 4, 5, 6);
-  printf("list [%zi]: ", pn_encode_sizeof_list(l)); print(pn_from_list(l));
+  pn_bytes_t blam;
+  uint64_t n;
+  int32_t one, two, three;
 
-  for (int i = 0; i < count; i++)
-  {
-    char buf[pn_encode_sizeof(v[i])];
-    size_t size = pn_encode(v[i], buf);
-    pn_value_t value;
-    size_t read = pn_decode(&value, buf, size);
-    printf("read=%zi: ", read); print(value);
+  pn_bytes_t key1;
+  float val1;
+
+  pn_bytes_t key2;
+  float val2;
+
+  uint64_t al;
+  pn_type_t type;
+
+  bool threeq;
+
+  pn_bytes_t sym;
+
+  err = pn_scan_data(&data, "DDsL[i[i]?i]{sfsf}@DLT[.s.]", &blam, &n, &one, &two, &threeq, &three,
+                     &key1, &val1, &key2, &val2, &al, &type, &sym);
+  if (err) {
+    printf("err = %s\n", pn_error(err));
+  } else {
+    printf("scan=%.*s %lu %i %i %i %.*s %f %.*s %f %lu %i %.*s\n", (int) blam.size, blam.start, n, one, two, three,
+           (int) key1.size, key1.start, val1, (int) key2.size, key2.start, val2, al, threeq, (int) sym.size, sym.start);
   }
 
   return 0;
