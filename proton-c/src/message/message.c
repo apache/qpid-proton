@@ -25,11 +25,13 @@
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
-  char *pos = dst;
-  char *limit = pos + available;
-  int e;
-  if ((e = pn_write_descriptor(&pos, limit))) return e;
-  if ((e = pn_write_ulong(&pos, limit, 0x75))) return e;
-  if ((e = pn_write_binary(&pos, limit, size, src))) return e;
-  return pos - dst;
+  pn_bytes_t bytes = pn_bytes(available, dst);
+  pn_datum_t buf[16];
+  pn_data_t data = {16, buf};
+
+  int err = pn_fill_data(&data, "DLz", 0x75, size, src);
+  if (err) return err;
+  err = pn_encode_data(&bytes, &data);
+  if (err) return err;
+  return bytes.size;
 }

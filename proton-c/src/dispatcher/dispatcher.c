@@ -37,11 +37,13 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 
   disp->channel = 0;
   disp->code = 0;
-  disp->args = NULL;
+  disp->args.size = 0;
+  disp->args.start = disp->decode_buf;
   disp->payload = NULL;
   disp->size = 0;
 
-  disp->output_args = pn_list(16);
+  disp->output_args.size = 0;
+  disp->output_args.start = disp->encode_buf;
   // XXX
   disp->capacity = 4*1024;
   disp->output = malloc(disp->capacity);
@@ -55,7 +57,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 
 void pn_dispatcher_destroy(pn_dispatcher_t *disp)
 {
-  pn_free_list(disp->output_args);
   free(disp->output);
   free(disp);
 }
@@ -70,11 +71,14 @@ void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
 typedef enum {IN, OUT} pn_dir_t;
 
 static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
-                        uint8_t code, pn_list_t *args, const char *payload,
-                        size_t size)
+                        pn_data_t args, const char *payload, size_t size)
 {
   if (disp->trace & PN_TRACE_FRM) {
-    pn_format(disp->scratch, SCRATCH, pn_from_list(args));
+    uint64_t code64;
+    bool scanned;
+    pn_scan_data(&args, "D?L.", &scanned, &code64);
+    uint8_t code = scanned ? code64 : 0;
+    pn_format_data(disp->scratch, SCRATCH, args);
     fprintf(stderr, "[%u] %s %s %s", ch, dir == OUT ? "->" : "<-",
             disp->names[code], disp->scratch);
     if (size) {
@@ -95,35 +99,44 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
     pn_frame_t frame;
     size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
-      pn_value_t performative;
-      ssize_t e = pn_decode(&performative, frame.payload, frame.size);
-      if (e < 0) {
-        fprintf(stderr, "Error decoding frame: %zi\n", e);
-        pn_format(disp->scratch, SCRATCH, pn_value("z", frame.size, frame.payload));
-        fprintf(stderr, "%s\n", disp->scratch);
+      disp->args.size = CODEC_LIMIT;
+      pn_bytes_t bytes = {frame.size, frame.payload};
+      int e = pn_decode_one(&bytes, &disp->args);
+      if (e) {
+        fprintf(stderr, "Error decoding frame: %s\n", pn_error(e));
+        pn_fprint_data(stderr, frame.payload, frame.size);
+        fprintf(stderr, "\n");
         return e;
       }
 
       disp->channel = frame.channel;
       // XXX: assuming numeric
-      uint8_t code = pn_to_uint8(pn_tag_descriptor(pn_to_tag(performative)));
+      uint64_t lcode;
+      bool scanned;
+      e = pn_scan_data(&disp->args, "D?L.", &scanned, &lcode);
+      if (e) return e;
+      if (!scanned) {
+        fprintf(stderr, "Error dispatching frame\n");
+        return PN_ERR;
+      }
+      uint8_t code = lcode;
       disp->code = code;
-      disp->args = pn_to_list(pn_tag_value(pn_to_tag(performative)));
-      disp->size = frame.size - e;
+      disp->size = frame.size - bytes.size;
       if (disp->size)
-        disp->payload = frame.payload + e;
+        disp->payload = frame.payload + bytes.size;
 
-      pn_do_trace(disp, disp->channel, IN, code, disp->args, disp->payload, disp->size);
+      pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
 
       pn_action_t *action = disp->actions[code];
-      action(disp);
+      int err = action(disp);
 
       disp->channel = 0;
       disp->code = 0;
-      disp->args = NULL;
+      disp->args.size = 0;
       disp->size = 0;
       disp->payload = NULL;
-      pn_visit(performative, pn_free_value);
+
+      if (err) return err;
 
       available -= n;
       read += n;
@@ -137,59 +150,82 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
   return read;
 }
 
-void pn_init_frame(pn_dispatcher_t *disp)
+int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)
 {
-  pn_list_clear(disp->output_args);
-  disp->output_payload = NULL;
-  disp->output_size = 0;
+  va_list ap;
+  va_start(ap, fmt);
+  int err = pn_vscan_data(&disp->args, fmt, ap);
+  va_end(ap);
+  return err;
 }
 
-void pn_field(pn_dispatcher_t *disp, int index, pn_value_t arg)
-{
-  int n = pn_list_size(disp->output_args);
-  if (index >= n)
-    pn_list_fill(disp->output_args, EMPTY_VALUE, index - n + 1);
-  pn_list_set(disp->output_args, index, arg);
-}
-
-void pn_append_payload(pn_dispatcher_t *disp, const char *data, size_t size)
+void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size)
 {
   disp->output_payload = data;
   disp->output_size = size;
 }
 
-void pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, uint32_t performative)
+int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 {
-  pn_tag_t tag = { .descriptor = pn_ulong(performative),
-                   .value = pn_from_list(disp->output_args) };
-  pn_do_trace(disp, ch, OUT, performative, disp->output_args, disp->output_payload,
-              disp->output_size);
-  pn_frame_t frame = {disp->frame_type};
-  char bytes[pn_encode_sizeof(pn_from_tag(&tag)) + disp->output_size];
-  size_t size = pn_encode(pn_from_tag(&tag), bytes);
-  for (int i = 0; i < pn_list_size(disp->output_args); i++)
-    pn_visit(pn_list_get(disp->output_args, i), pn_free_value);
-  if (disp->output_size) {
-    memmove(bytes + size, disp->output_payload, disp->output_size);
-    size += disp->output_size;
-    disp->output_payload = NULL;
-    disp->output_size = 0;
+  va_list ap;
+  va_start(ap, fmt);
+  disp->output_args.size = CODEC_LIMIT;
+  int err = pn_vfill_data(&disp->output_args, fmt, ap);
+  va_end(ap);
+  if (err) {
+    fprintf(stderr, "error posting frame: %s, %s\n", fmt, pn_error(err));
+    return PN_ERR;
   }
-  frame.channel = ch;
-  frame.payload = bytes;
-  frame.size = size;
-  size_t n;
-  while (!(n = pn_write_frame(disp->output + disp->available,
-                              disp->capacity - disp->available, frame))) {
-    disp->capacity *= 2;
-    disp->output = realloc(disp->output, disp->capacity);
+
+  pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, disp->output_size);
+
+  size_t size = 1024;
+
+  while (true) {
+    char buf[size];
+    pn_bytes_t bytes = {size, buf};
+    err = pn_encode_data(&bytes, &disp->output_args);
+    if (err)
+    {
+      if (err == PN_OVERFLOW) {
+        size *= 2;
+        continue;
+      } else {
+        fprintf(stderr, "error posting frame: %s", pn_error(err));
+        return PN_ERR;
+      }
+    } else if (size - bytes.size < disp->output_size) {
+      size += bytes.size + disp->output_size - size;
+      continue;
+    } else {
+      if (disp->output_size) {
+        memmove(bytes.start + bytes.size, disp->output_payload, disp->output_size);
+        bytes.size += disp->output_size;
+        disp->output_payload = NULL;
+        disp->output_size = 0;
+      }
+
+      pn_frame_t frame = {disp->frame_type};
+      frame.channel = ch;
+      frame.payload = bytes.start;
+      frame.size = bytes.size;
+      size_t n;
+      while (!(n = pn_write_frame(disp->output + disp->available,
+                                  disp->capacity - disp->available, frame))) {
+        disp->capacity *= 2;
+        disp->output = realloc(disp->output, disp->capacity);
+      }
+      if (disp->trace & PN_TRACE_RAW) {
+        fprintf(stderr, "RAW: \"");
+        pn_fprint_data(stderr, disp->output + disp->available, n);
+        fprintf(stderr, "\"\n");
+      }
+      disp->available += n;
+      break;
+    }
   }
-  if (disp->trace & PN_TRACE_RAW) {
-    fprintf(stderr, "RAW: \"");
-    pn_fprint_data(stderr, disp->output + disp->available, n);
-    fprintf(stderr, "\"\n");
-  }
-  disp->available += n;
+
+  return 0;
 }
 
 ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size)

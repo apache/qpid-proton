@@ -24,13 +24,14 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
-#include <proton/value.h>
+#include <proton/codec.h>
 
 typedef struct pn_dispatcher_t pn_dispatcher_t;
 
-typedef void (pn_action_t)(pn_dispatcher_t *disp);
+typedef int (pn_action_t)(pn_dispatcher_t *disp);
 
 #define SCRATCH (1024)
+#define CODEC_LIMIT (1024)
 
 struct pn_dispatcher_t {
   pn_action_t *actions[256];
@@ -39,10 +40,12 @@ struct pn_dispatcher_t {
   pn_trace_t trace;
   uint16_t channel;
   uint8_t code;
-  pn_list_t *args;
+  pn_datum_t decode_buf[CODEC_LIMIT];
+  pn_data_t args;
   char *payload;
   size_t size;
-  pn_list_t *output_args;
+  pn_datum_t encode_buf[CODEC_LIMIT];
+  pn_data_t output_args;
   const char *output_payload;
   size_t output_size;
   size_t capacity;
@@ -58,10 +61,9 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context);
 void pn_dispatcher_destroy(pn_dispatcher_t *disp);
 void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
                           pn_action_t *action);
-void pn_init_frame(pn_dispatcher_t *disp);
-void pn_field(pn_dispatcher_t *disp, int index, pn_value_t arg);
-void pn_append_payload(pn_dispatcher_t *disp, const char *data, size_t size);
-void pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, uint32_t performative);
+int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...);
+void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size);
+int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available);
 ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size);
 

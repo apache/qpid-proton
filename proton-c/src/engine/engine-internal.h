@@ -23,7 +23,6 @@
  */
 
 #include <proton/engine.h>
-#include <proton/value.h>
 #include "../dispatcher/dispatcher.h"
 #include "../util.h"
 
@@ -32,7 +31,6 @@
 struct pn_error_t {
   const char *condition;
   char description[DESCRIPTION];
-  pn_map_t *info;
 };
 
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER, TRANSPORT} pn_endpoint_type_t;
@@ -104,6 +102,7 @@ struct pn_transport_t {
   bool open_rcvd;
   bool close_sent;
   bool close_rcvd;
+  int error;
   pn_session_state_t *sessions;
   size_t session_capacity;
   pn_session_state_t **channels;
@@ -158,7 +157,7 @@ struct pn_link_t {
 
 struct pn_delivery_t {
   pn_link_t *link;
-  pn_binary_t *tag;
+  pn_bytes_t tag;
   int local_state;
   int remote_state;
   bool local_settled;

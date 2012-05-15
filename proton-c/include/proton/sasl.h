@@ -24,7 +24,6 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
-#include <proton/value.h>
 
 typedef struct pn_sasl_t pn_sasl_t;
 

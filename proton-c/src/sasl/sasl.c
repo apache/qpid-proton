@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <proton/framing.h>
-#include <proton/value.h>
 #include <proton/engine.h> // XXX: just needed for PN_EOS
 #include <proton/sasl.h>
 #include "protocol.h"
@@ -38,8 +37,8 @@ struct pn_sasl_t {
   bool configured;
   char *mechanisms;
   char *remote_mechanisms;
-  pn_binary_t *send_data;
-  pn_binary_t *recv_data;
+  pn_bytes_t send_data;
+  pn_bytes_t recv_data;
   pn_sasl_outcome_t outcome;
   bool sent_init;
   bool rcvd_init;
@@ -48,11 +47,11 @@ struct pn_sasl_t {
   char scratch[SCRATCH];
 };
 
-void pn_do_init(pn_dispatcher_t *disp);
-void pn_do_mechanisms(pn_dispatcher_t *disp);
-void pn_do_challenge(pn_dispatcher_t *disp);
-void pn_do_response(pn_dispatcher_t *disp);
-void pn_do_outcome(pn_dispatcher_t *disp);
+int pn_do_init(pn_dispatcher_t *disp);
+int pn_do_mechanisms(pn_dispatcher_t *disp);
+int pn_do_challenge(pn_dispatcher_t *disp);
+int pn_do_response(pn_dispatcher_t *disp);
+int pn_do_outcome(pn_dispatcher_t *disp);
 
 pn_sasl_t *pn_sasl()
 {
@@ -70,8 +69,8 @@ pn_sasl_t *pn_sasl()
   sasl->configured = false;
   sasl->mechanisms = NULL;
   sasl->remote_mechanisms = NULL;
-  sasl->send_data = NULL;
-  sasl->recv_data = NULL;
+  sasl->send_data = (pn_bytes_t) {0, NULL};
+  sasl->recv_data = (pn_bytes_t) {0, NULL};
   sasl->outcome = PN_SASL_NONE;
   sasl->sent_init = false;
   sasl->rcvd_init = false;
@@ -112,11 +111,11 @@ const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl)
 ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
 {
   if (sasl) {
-    if (sasl->send_data) {
+    if (sasl->send_data.start) {
       // XXX: need better error
       return PN_STATE_ERR;
     }
-    sasl->send_data = pn_binary(bytes, size);
+    sasl->send_data = pn_bytes_dup(size, bytes);
     return size;
   } else {
     return PN_ARG_ERR;
@@ -125,8 +124,8 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
 
 size_t pn_sasl_pending(pn_sasl_t *sasl)
 {
-  if (sasl && sasl->recv_data) {
-    return pn_binary_size(sasl->recv_data);
+  if (sasl && sasl->recv_data.start) {
+    return sasl->recv_data.size;
   } else {
     return 0;
   }
@@ -136,13 +135,12 @@ ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size)
 {
   if (!sasl) return PN_ARG_ERR;
 
-  if (sasl->recv_data) {
-    ssize_t result = pn_binary_get(sasl->recv_data, bytes, size);
-    if (result >= 0) {
-      pn_free_binary(sasl->recv_data);
-      sasl->recv_data = NULL;
-    }
-    return result;
+  if (sasl->recv_data.start) {
+    if (sasl->recv_data.size > size) return PN_OVERFLOW;
+    memmove(bytes, sasl->recv_data.start, sasl->recv_data.size);
+    free(sasl->recv_data.start);
+    sasl->recv_data = pn_bytes(0, NULL);
+    return sasl->recv_data.size;
   } else {
     return PN_EOS;
   }
@@ -206,27 +204,28 @@ void pn_sasl_destroy(pn_sasl_t *sasl)
 {
   free(sasl->mechanisms);
   free(sasl->remote_mechanisms);
-  pn_free_binary(sasl->send_data);
-  pn_free_binary(sasl->recv_data);
+  free(sasl->send_data.start);
+  free(sasl->recv_data.start);
   pn_dispatcher_destroy(sasl->disp);
   free(sasl);
 }
 
 void pn_client_init(pn_sasl_t *sasl)
 {
-  pn_init_frame(sasl->disp);
-  pn_field(sasl->disp, SASL_INIT_MECHANISM, pn_from_symbol(pn_symbol(sasl->mechanisms)));
-  if (sasl->send_data) {
-    pn_field(sasl->disp, SASL_INIT_INITIAL_RESPONSE, pn_from_binary(sasl->send_data));
-    sasl->send_data = NULL;
+  pn_post_frame(sasl->disp, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
+                sasl->send_data.size, sasl->send_data.start);
+  if (sasl->send_data.start) {
+    free(sasl->send_data.start);
+    sasl->send_data = pn_bytes(0, NULL);
   }
-  pn_post_frame(sasl->disp, 0, SASL_INIT);
 }
 
 void pn_server_init(pn_sasl_t *sasl)
 {
   // XXX
-  pn_array_t *mechs = pn_array(SYMBOL, 16);
+  char *mechs[16];
+  int count = 0;
+
   if (sasl->mechanisms) {
     char *start = sasl->mechanisms;
     char *end = start;
@@ -235,7 +234,7 @@ void pn_server_init(pn_sasl_t *sasl)
       if (*end == ' ') {
         if (start != end) {
           *end = '\0';
-          pn_array_add(mechs, pn_value("s", start));
+          mechs[count++] = start;
         }
         end++;
         start = end;
@@ -245,20 +244,16 @@ void pn_server_init(pn_sasl_t *sasl)
     }
 
     if (start != end) {
-      pn_array_add(mechs, pn_value("s", start));
+      mechs[count++] = start;
     }
   }
 
-  pn_init_frame(sasl->disp);
-  pn_field(sasl->disp, SASL_MECHANISMS_SASL_SERVER_MECHANISMS, pn_from_array(mechs));
-  pn_post_frame(sasl->disp, 0, SASL_MECHANISMS);
+  pn_post_frame(sasl->disp, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
 }
 
 void pn_server_done(pn_sasl_t *sasl)
 {
-  pn_init_frame(sasl->disp);
-  pn_field(sasl->disp, SASL_OUTCOME_CODE, pn_value("B", sasl->outcome));
-  pn_post_frame(sasl->disp, 0, SASL_OUTCOME);
+  pn_post_frame(sasl->disp, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
 }
 
 void pn_sasl_process(pn_sasl_t *sasl)
@@ -319,36 +314,45 @@ ssize_t pn_sasl_output(pn_sasl_t *sasl, char *bytes, size_t size)
   }
 }
 
-void pn_do_init(pn_dispatcher_t *disp)
+int pn_do_init(pn_dispatcher_t *disp)
 {
   pn_sasl_t *sasl = disp->context;
-  pn_symbol_t *mech = pn_to_symbol(pn_list_get(disp->args, SASL_INIT_MECHANISM));
-  sasl->remote_mechanisms = strdup(pn_symbol_name(mech));
-  sasl->recv_data = pn_binary_dup(pn_to_binary(pn_list_get(disp->args, SASL_INIT_INITIAL_RESPONSE)));
+  pn_bytes_t mech;
+  pn_bytes_t recv;
+  int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
+  if (err) return err;
+  sasl->remote_mechanisms = strndup(mech.start, mech.size);
+  sasl->recv_data = pn_bytes_dup(recv.size, recv.start);
   sasl->rcvd_init = true;
+  return 0;
 }
 
-void pn_do_mechanisms(pn_dispatcher_t *disp)
+int pn_do_mechanisms(pn_dispatcher_t *disp)
 {
   pn_sasl_t *sasl = disp->context;
   sasl->rcvd_init = true;
+  return 0;
 }
 
-void pn_do_challenge(pn_dispatcher_t *disp)
+int pn_do_challenge(pn_dispatcher_t *disp)
 {
-  
+  return PN_ERR;
 }
 
-void pn_do_response(pn_dispatcher_t *resp)
+int pn_do_response(pn_dispatcher_t *resp)
 {
-  
+  return PN_ERR;
 }
 
-void pn_do_outcome(pn_dispatcher_t *disp)
+int pn_do_outcome(pn_dispatcher_t *disp)
 {
   pn_sasl_t *sasl = disp->context;
-  sasl->outcome = pn_to_uint8(pn_list_get(disp->args, SASL_OUTCOME_CODE));
+  uint8_t outcome;
+  int err = pn_scan_args(disp, "D.[B]", &outcome);
+  if (err) return err;
+  sasl->outcome = outcome;
   sasl->rcvd_done = true;
   sasl->sent_done = true;
   disp->halt = true;
+  return 0;
 }

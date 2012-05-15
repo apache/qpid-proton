@@ -30,6 +30,7 @@
 #include <proton/codec.h>
 #include <proton/util.h>
 #include "encodings.h"
+#include "../util.h"
 
 typedef union {
   uint32_t i;
@@ -38,499 +39,6 @@ typedef union {
   float f;
   double d;
 } conv_t;
-
-static int pn_write_code(char **pos, char *limit, uint8_t code) {
-  char *dst = *pos;
-  if (limit - dst < 1) {
-    return PN_OVERFLOW;
-  } else {
-    dst[0] = code;
-    *pos += 1;
-    return 0;
-  }
-}
-int pn_write_descriptor(char **pos, char *limit) {
-  return pn_write_code(pos, limit, PNE_DESCRIPTOR);
-}
-int pn_write_null(char **pos, char *limit) {
-  return pn_write_code(pos, limit, PNE_NULL);
-}
-
-static int pn_write_fixed8(char **pos, char *limit, uint8_t v, uint8_t code) {
-  char *dst = *pos;
-  if (limit - dst < 2) {
-    return PN_OVERFLOW;
-  } else {
-    dst[0] = code;
-    dst[1] = v;
-    *pos += 2;
-    return 0;
-  }
-}
-
-int pn_write_boolean(char **pos, char *limit, bool v) {
-  return pn_write_fixed8(pos, limit, v, PNE_BOOLEAN);
-}
-int pn_write_ubyte(char **pos, char *limit, uint8_t v) {
-  return pn_write_fixed8(pos, limit, v, PNE_UBYTE);
-}
-int pn_write_byte(char **pos, char *limit, int8_t v) {
-  return pn_write_fixed8(pos, limit, v, PNE_BYTE);
-}
-
-static int pn_write_fixed16(char **pos, char *limit, uint16_t v,
-                            uint8_t code) {
-  char *dst = *pos;
-  if (limit - dst < 3) {
-    return PN_OVERFLOW;
-  } else {
-    dst[0] = code;
-    *((uint16_t *) (dst + 1)) = htons(v);
-    *pos += 3;
-    return 0;
-  }
-}
-int pn_write_ushort(char **pos, char *limit, uint16_t v) {
-  return pn_write_fixed16(pos, limit, v, PNE_USHORT);
-}
-int pn_write_short(char **pos, char *limit, int16_t v) {
-  return pn_write_fixed16(pos, limit, v, PNE_SHORT);
-}
-
-static int pn_write_fixed32(char **pos, char *limit, uint32_t v, uint8_t code) {
-  char *dst = *pos;
-  if (limit - dst < 5) {
-    return PN_OVERFLOW;
-  } else {
-    dst[0] = code;
-    *((uint32_t *) (dst + 1)) = htonl(v);
-    *pos += 5;
-    return 0;
-  }
-}
-int pn_write_uint(char **pos, char *limit, uint32_t v) {
-  return pn_write_fixed32(pos, limit, v, PNE_UINT);
-}
-int pn_write_int(char **pos, char *limit, int32_t v) {
-  return pn_write_fixed32(pos, limit, v, PNE_INT);
-}
-int pn_write_char(char **pos, char *limit, wchar_t v) {
-  return pn_write_fixed32(pos, limit, v, PNE_UTF32);
-}
-int pn_write_float(char **pos, char *limit, float v) {
-  conv_t c;
-  c.f = v;
-  return pn_write_fixed32(pos, limit, c.i, PNE_FLOAT);
-}
-
-static int pn_write_fixed64(char **pos, char *limit, uint64_t v, uint8_t code) {
-  char *dst = *pos;
-  if (limit - dst < 9) {
-    return PN_OVERFLOW;
-  } else {
-    dst[0] = code;
-    uint32_t hi = v >> 32;
-    uint32_t lo = v;
-    *((uint32_t *) (dst + 1)) = htonl(hi);
-    *((uint32_t *) (dst + 5)) = htonl(lo);
-    *pos += 9;
-    return 0;
-  }
-}
-int pn_write_ulong(char **pos, char *limit, uint64_t v) {
-  return pn_write_fixed64(pos, limit, v, PNE_ULONG);
-}
-int pn_write_long(char **pos, char *limit, int64_t v) {
-  return pn_write_fixed64(pos, limit, v, PNE_LONG);
-}
-int pn_write_double(char **pos, char *limit, double v) {
-  conv_t c;
-  c.d = v;
-  return pn_write_fixed64(pos, limit, c.l, PNE_DOUBLE);
-}
-
-#define CONSISTENT (1)
-
-static int pn_write_variable(char **pos, char *limit, size_t size, const char *src,
-                             uint8_t code8, uint8_t code32) {
-  int n;
-
-  if (!CONSISTENT && size < 256) {
-    if ((n = pn_write_fixed8(pos, limit, size, code8)))
-      return n;
-  } else {
-    if ((n = pn_write_fixed32(pos, limit, size, code32)))
-      return n;
-  }
-
-  if (limit - *pos < size) return PN_OVERFLOW;
-
-  memmove(*pos, src, size);
-  *pos += size;
-  return 0;
-}
-int pn_write_binary(char **pos, char *limit, size_t size, const char *src) {
-  return pn_write_variable(pos, limit, size, src, PNE_VBIN8, PNE_VBIN32);
-}
-int pn_write_utf8(char **pos, char *limit, size_t size, char *utf8) {
-  return pn_write_variable(pos, limit, size, utf8, PNE_STR8_UTF8, PNE_STR32_UTF8);
-}
-int pn_write_symbol(char **pos, char *limit, size_t size, const char *symbol) {
-  return pn_write_variable(pos, limit, size, (char *) symbol, PNE_SYM8, PNE_SYM32);
-}
-
-int pn_write_start(char **pos, char *limit, char **start) {
-  char *dst = *pos;
-  if (limit - dst < 9) {
-    return PN_OVERFLOW;
-  } else {
-    *start = dst;
-    *pos += 9;
-    return 0;
-  }
-}
-
-static int pn_write_end(char **pos, char *limit, char *start, size_t count, uint8_t code) {
-  int n;
-  if ((n = pn_write_fixed32(&start, limit, *pos - start - 5, code)))
-    return n;
-  *((uint32_t *) start) = htonl(count);
-  return 0;
-}
-
-int pn_write_list(char **pos, char *limit, char *start, size_t count) {
-  return pn_write_end(pos, limit, start, count, PNE_LIST32);
-}
-
-int pn_write_map(char **pos, char *limit, char *start, size_t count) {
-  return pn_write_end(pos, limit, start, 2*count, PNE_MAP32);
-}
-
-ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx);
-
-ssize_t pn_read_type(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t *code)
-{
-  if (bytes[0] != PNE_DESCRIPTOR) {
-    *code = bytes[0];
-    return 1;
-  } else {
-    ssize_t offset = 1;
-    ssize_t rcode;
-    cb->start_descriptor(ctx);
-    rcode = pn_read_datum(bytes + offset, n - offset, cb, ctx);
-    cb->stop_descriptor(ctx);
-    if (rcode < 0) return rcode;
-    offset += rcode;
-    rcode = pn_read_type(bytes + offset, n - offset, cb, ctx, code);
-    if (rcode < 0) return rcode;
-    offset += rcode;
-    return offset;
-  }
-}
-
-ssize_t pn_read_encoding(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx, uint8_t code)
-{
-  size_t size;
-  size_t count;
-  conv_t conv;
-  ssize_t rcode;
-  int offset = 0;
-
-  switch (code)
-  {
-  case PNE_DESCRIPTOR:
-    return PN_ARG_ERR;
-  case PNE_NULL:
-    cb->on_null(ctx);
-    return offset;
-  case PNE_TRUE:
-    cb->on_bool(ctx, true);
-    return offset;
-  case PNE_FALSE:
-    cb->on_bool(ctx, false);
-    return offset;
-  case PNE_BOOLEAN:
-    cb->on_bool(ctx, *(bytes + offset) != 0);
-    offset += 1;
-    return offset;
-  case PNE_UBYTE:
-    cb->on_ubyte(ctx, *((uint8_t *) (bytes + offset)));
-    offset += 1;
-    return offset;
-  case PNE_BYTE:
-    cb->on_byte(ctx, *((int8_t *) (bytes + offset)));
-    offset += 1;
-    return offset;
-  case PNE_USHORT:
-    cb->on_ushort(ctx, ntohs(*((uint16_t *) (bytes + offset))));
-    offset += 2;
-    return offset;
-  case PNE_SHORT:
-    cb->on_short(ctx, (int16_t) ntohs(*((int16_t *) (bytes + offset))));
-    offset += 2;
-    return offset;
-  case PNE_UINT:
-    cb->on_uint(ctx, ntohl(*((uint32_t *) (bytes + offset))));
-    offset += 4;
-    return offset;
-  case PNE_UINT0:
-    cb->on_uint(ctx, 0);
-    return offset;
-  case PNE_SMALLUINT:
-    cb->on_uint(ctx, *((uint8_t *) (bytes + offset)));
-    offset += 1;
-    return offset;
-  case PNE_INT:
-    cb->on_int(ctx, ntohl(*((uint32_t *) (bytes + offset))));
-    offset += 4;
-    return offset;
-  case PNE_FLOAT:
-    // XXX: this assumes the platform uses IEEE floats
-    conv.i = ntohl(*((uint32_t *) (bytes + offset)));
-    cb->on_float(ctx, conv.f);
-    offset += 4;
-    return offset;
-  case PNE_ULONG:
-  case PNE_LONG:
-  case PNE_DOUBLE:
-    {
-      uint32_t hi = ntohl(*((uint32_t *) (bytes + offset)));
-      offset += 4;
-      uint32_t lo = ntohl(*((uint32_t *) (bytes + offset)));
-      offset += 4;
-      conv.l = (((uint64_t) hi) << 32) | lo;
-    }
-
-    switch (code)
-    {
-    case PNE_ULONG:
-      cb->on_ulong(ctx, conv.l);
-      break;
-    case PNE_LONG:
-      cb->on_long(ctx, (int64_t) conv.l);
-      break;
-    case PNE_DOUBLE:
-      // XXX: this assumes the platform uses IEEE floats
-      cb->on_double(ctx, conv.d);
-      break;
-    default:
-      return PN_ARG_ERR;
-    }
-
-    return offset;
-  case PNE_ULONG0:
-    cb->on_ulong(ctx, 0);
-    return offset;
-  case PNE_SMALLULONG:
-    cb->on_ulong(ctx, *((uint8_t *) (bytes + offset)));
-    offset += 1;
-    return offset;
-  case PNE_VBIN8:
-  case PNE_STR8_UTF8:
-  case PNE_SYM8:
-  case PNE_VBIN32:
-  case PNE_STR32_UTF8:
-  case PNE_SYM32:
-    switch (code & 0xF0)
-    {
-    case 0xA0:
-      size = *(uint8_t *) (bytes + offset);
-      offset += 1;
-      break;
-    case 0xB0:
-      size = ntohl(*(uint32_t *) (bytes + offset));
-      offset += 4;
-      break;
-    default:
-      return PN_ARG_ERR;
-    }
-
-    {
-      char *start = (char *) (bytes + offset);
-      switch (code & 0x0F)
-      {
-      case 0x0:
-        cb->on_binary(ctx, size, start);
-        break;
-      case 0x1:
-        cb->on_utf8(ctx, size, start);
-        break;
-      case 0x3:
-        cb->on_symbol(ctx, size, start);
-        break;
-      default:
-        return PN_ARG_ERR;
-      }
-    }
-
-    offset += size;
-    return offset;
-  case PNE_LIST0:
-    count = 0;
-    cb->start_list(ctx, count);
-    cb->stop_list(ctx, count);
-    return offset;
-  case PNE_ARRAY8:
-  case PNE_ARRAY32:
-  case PNE_LIST8:
-  case PNE_LIST32:
-  case PNE_MAP8:
-  case PNE_MAP32:
-    switch (code)
-    {
-    case PNE_ARRAY8:
-    case PNE_LIST8:
-    case PNE_MAP8:
-      size = *(uint8_t *) (bytes + offset);
-      offset += 1;
-      count = *(uint8_t *) (bytes + offset);
-      offset += 1;
-      break;
-    case PNE_ARRAY32:
-    case PNE_LIST32:
-    case PNE_MAP32:
-      size = ntohl(*(uint32_t *) (bytes + offset));
-      offset += 4;
-      count = ntohl(*(uint32_t *) (bytes + offset));
-      offset += 4;
-      break;
-    default:
-      return PN_ARG_ERR;
-    }
-
-    switch (code)
-    {
-    case PNE_ARRAY8:
-    case PNE_ARRAY32:
-      {
-        uint8_t acode;
-        rcode = pn_read_type(bytes + offset, n - offset, cb, ctx, &acode);
-        cb->start_array(ctx, count, acode);
-        if (rcode < 0) return rcode;
-        offset += rcode;
-        for (int i = 0; i < count; i++)
-        {
-          rcode = pn_read_encoding(bytes + offset, n - offset, cb, ctx, acode);
-          if (rcode < 0) return rcode;
-          offset += rcode;
-        }
-        cb->stop_array(ctx, count, acode);
-      }
-      return offset;
-    case PNE_LIST8:
-    case PNE_LIST32:
-      cb->start_list(ctx, count);
-      break;
-    case PNE_MAP8:
-    case PNE_MAP32:
-      cb->start_map(ctx, count);
-      break;
-    default:
-      return PN_ARG_ERR;
-    }
-
-    for (int i = 0; i < count; i++)
-    {
-      rcode = pn_read_datum(bytes + offset, n - offset, cb, ctx);
-      if (rcode < 0) return rcode;
-      offset += rcode;
-    }
-
-    switch (code)
-    {
-    case PNE_LIST8:
-    case PNE_LIST32:
-      cb->stop_list(ctx, count);
-      break;
-    case PNE_MAP8:
-    case PNE_MAP32:
-      cb->stop_map(ctx, count);
-      break;
-    default:
-      return PN_ARG_ERR;
-    }
-
-    return offset;
-  default:
-    printf("Unrecognised typecode: %u\n", code);
-    return PN_ARG_ERR;
-  }
-}
-
-ssize_t pn_read_datum(const char *bytes, size_t n, pn_data_callbacks_t *cb, void *ctx)
-{
-  uint8_t code;
-  ssize_t rcode;
-  size_t offset = 0;
-
-  rcode = pn_read_type(bytes + offset, n - offset, cb, ctx, &code);
-  if (rcode < 0) return rcode;
-  offset += rcode;
-  rcode = pn_read_encoding(bytes + offset, n - offset, cb, ctx, code);
-  if (rcode < 0) return rcode;
-  offset += rcode;
-  return offset;
-}
-
-void noop_null(void *ctx) {}
-void noop_bool(void *ctx, bool v) {}
-void noop_ubyte(void *ctx, uint8_t v) {}
-void noop_byte(void *ctx, int8_t v) {}
-void noop_ushort(void *ctx, uint16_t v) {}
-void noop_short(void *ctx, int16_t v) {}
-void noop_uint(void *ctx, uint32_t v) {}
-void noop_int(void *ctx, int32_t v) {}
-void noop_float(void *ctx, float f) {}
-void noop_ulong(void *ctx, uint64_t v) {}
-void noop_long(void *ctx, int64_t v) {}
-void noop_double(void *ctx, double v) {}
-void noop_binary(void *ctx, size_t size, char *bytes) {}
-void noop_utf8(void *ctx, size_t size, char *bytes) {}
-void noop_symbol(void *ctx, size_t size, char *bytes) {}
-void noop_start_array(void *ctx, size_t count, uint8_t code) {}
-void noop_stop_array(void *ctx, size_t count, uint8_t code) {}
-void noop_start_list(void *ctx, size_t count) {}
-void noop_stop_list(void *ctx, size_t count) {}
-void noop_start_map(void *ctx, size_t count) {}
-void noop_stop_map(void *ctx, size_t count) {}
-void noop_start_descriptor(void *ctx) {}
-void noop_stop_descriptor(void *ctx) {}
-
-pn_data_callbacks_t *noop = &PN_DATA_CALLBACKS(noop);
-
-void print_null(void *ctx) { printf("null\n"); }
-void print_bool(void *ctx, bool v) { if (v) printf("true\n"); else printf("false\n"); }
-void print_ubyte(void *ctx, uint8_t v) { printf("%hhu\n", v); }
-void print_byte(void *ctx, int8_t v) { printf("%hhi\n", v); }
-void print_ushort(void *ctx, uint16_t v) { printf("%hu\n", v); }
-void print_short(void *ctx, int16_t v) { printf("%hi\n", v); }
-void print_uint(void *ctx, uint32_t v) { printf("%u\n", v); }
-void print_int(void *ctx, int32_t v) { printf("%i\n", v); }
-void print_float(void *ctx, float v) { printf("%f\n", v); }
-void print_ulong(void *ctx, uint64_t v) { printf("%"PRIu64"\n", v); }
-void print_long(void *ctx, int64_t v) { printf("%"PRIi64"\n", v); }
-void print_double(void *ctx, double v) { printf("%f\n", v); }
-
-void print_bytes(char *label, int size, char *bytes) {
-  printf("%s(%.*s)\n", label, size, bytes);
-}
-
-void print_binary(void *ctx, size_t size, char *bytes) { print_bytes("bin", size, bytes); }
-void print_utf8(void *ctx, size_t size, char *bytes) { print_bytes("utf8", size, bytes); }
-void print_symbol(void *ctx, size_t size, char *bytes) { print_bytes("sym", size, bytes); }
-void print_start_array(void *ctx, size_t count, uint8_t code) { printf("start array %zd\n", count); }
-void print_stop_array(void *ctx, size_t count, uint8_t code) { printf("stop array %zd\n", count); }
-void print_start_list(void *ctx, size_t count) { printf("start list %zd\n", count); }
-void print_stop_list(void *ctx, size_t count) { printf("stop list %zd\n", count); }
-void print_start_map(void *ctx, size_t count) { printf("start map %zd\n", count); }
-void print_stop_map(void *ctx, size_t count) { printf("stop map %zd\n", count); }
-void print_start_descriptor(void *ctx) { printf("start descriptor "); }
-void print_stop_descriptor(void *ctx) { printf("stop descriptor "); }
-
-pn_data_callbacks_t *printer = &PN_DATA_CALLBACKS(print);
-
-// new codec
-#include "../util.h"
 
 const char *pn_type_str(pn_type_t type)
 {
@@ -561,71 +69,98 @@ const char *pn_type_str(pn_type_t type)
   return "<UNKNOWN>";
 }
 
-void pn_print_datum(pn_datum_t datum)
+void pn_print_datum(pn_datum_t datum);
+
+size_t pn_bytes_ltrim(pn_bytes_t *bytes, size_t size);
+
+int pn_bytes_format(pn_bytes_t *bytes, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int n = vsnprintf(bytes->start, bytes->size, fmt, ap);
+  va_end(ap);
+  if (n >= bytes->size) {
+    return PN_OVERFLOW;
+  } else if (n > 0) {
+    pn_bytes_ltrim(bytes, n);
+    return 0;
+  } else {
+    return PN_ERR;
+  }
+}
+
+int pn_format_datum(pn_bytes_t *bytes, pn_datum_t datum)
 {
   switch (datum.type)
   {
   case PN_NULL:
-    printf("null");
-    break;
+    return pn_bytes_format(bytes, "null");
   case PN_BOOL:
-    printf(datum.u.as_bool ? "true" : "false");
-    break;
+    return pn_bytes_format(bytes, datum.u.as_bool ? "true" : "false");
   case PN_UBYTE:
-    printf("%u", datum.u.as_ubyte);
-    break;
+    return pn_bytes_format(bytes, "%u", datum.u.as_ubyte);
   case PN_BYTE:
-    printf("%i", datum.u.as_byte);
-    break;
+    return pn_bytes_format(bytes, "%i", datum.u.as_byte);
   case PN_USHORT:
-    printf("%u", datum.u.as_ushort);
-    break;
+    return pn_bytes_format(bytes, "%u", datum.u.as_ushort);
   case PN_SHORT:
-    printf("%i", datum.u.as_short);
-    break;
+    return pn_bytes_format(bytes, "%i", datum.u.as_short);
   case PN_UINT:
-    printf("%u", datum.u.as_uint);
-    break;
+    return pn_bytes_format(bytes, "%u", datum.u.as_uint);
   case PN_INT:
-    printf("%i", datum.u.as_int);
-    break;
+    return pn_bytes_format(bytes, "%i", datum.u.as_int);
   case PN_ULONG:
-    printf("%lu", datum.u.as_ulong);
-    break;
+    return pn_bytes_format(bytes, "%lu", datum.u.as_ulong);
   case PN_LONG:
-    printf("%li", datum.u.as_long);
-    break;
+    return pn_bytes_format(bytes, "%li", datum.u.as_long);
   case PN_FLOAT:
-    printf("%f", datum.u.as_float);
-    break;
+    return pn_bytes_format(bytes, "%f", datum.u.as_float);
   case PN_DOUBLE:
-    printf("%f", datum.u.as_double);
-    break;
+    return pn_bytes_format(bytes, "%f", datum.u.as_double);
   case PN_BINARY:
-    pn_print_data(datum.u.as_binary.start, datum.u.as_binary.size);
-    break;
   case PN_STRING:
-    printf("%.*s", (int) datum.u.as_string.size, datum.u.as_string.start);
-    break;
   case PN_SYMBOL:
-    printf("%.*s", (int) datum.u.as_symbol.size, datum.u.as_symbol.start);
-    break;
+    {
+      int err;
+      const char *pfx;
+      pn_bytes_t bin;
+      switch (datum.type) {
+      case PN_BINARY:
+        pfx = "b";
+        bin = datum.u.as_binary;
+        break;
+      case PN_STRING:
+        pfx = "u";
+        bin = datum.u.as_string;
+        break;
+      case PN_SYMBOL:
+        pfx = "";
+        bin = datum.u.as_symbol;
+        break;
+      default:
+        pn_fatal("XXX");
+        return PN_ERR;
+      }
+
+      if ((err = pn_bytes_format(bytes, "%s\"", pfx))) return err;
+      ssize_t n = pn_quote_data(bytes->start, bytes->size, bin.start, bin.size);
+      if (n < 0) return n;
+      pn_bytes_ltrim(bytes, n);
+      return pn_bytes_format(bytes, "\"");
+    }
   case PN_DESCRIPTOR:
-    printf("descriptor");
-    break;
+    return pn_bytes_format(bytes, "descriptor");
   case PN_ARRAY:
-    printf("array[%zu]", datum.u.count);
-    break;
+    return pn_bytes_format(bytes, "array[%zu]", datum.u.count);
   case PN_LIST:
-    printf("list[%zu]", datum.u.count);
-    break;
+    return pn_bytes_format(bytes, "list[%zu]", datum.u.count);
   case PN_MAP:
-    printf("map[%zu]", datum.u.count);
-    break;
+    return pn_bytes_format(bytes, "map[%zu]", datum.u.count);
   case PN_TYPE:
-    printf("%s", pn_type_str(datum.u.type));
-    break;
+    return pn_bytes_format(bytes, "%s", pn_type_str(datum.u.type));
   }
+
+  return PN_ARG_ERR;
 }
 
 void pn_print_indent(int level)
@@ -657,7 +192,7 @@ size_t pn_data_ltrim(pn_data_t *data, size_t size)
   return size;
 }
 
-int pn_pprint_data_one(pn_data_t *data, int level)
+int pn_format_data_one(pn_bytes_t *bytes, pn_data_t *data, int level)
 {
   if (!data->size) return PN_UNDERFLOW;
   pn_datum_t *datum = data->start;
@@ -666,66 +201,88 @@ int pn_pprint_data_one(pn_data_t *data, int level)
 
   switch (datum->type) {
   case PN_DESCRIPTOR:
-    err = pn_pprint_data_one(data, level + 1);
-    if (err) return err;
-    printf("(");
-    err = pn_pprint_data_one(data, level + 1);
-    if (err) return err;
-    printf(")");
+    if ((err = pn_format_data_one(bytes, data, level + 1))) return err;
+    if ((err = pn_bytes_format(bytes, "("))) return err;
+    if ((err = pn_format_data_one(bytes, data, level + 1))) return err;
+    if ((err = pn_bytes_format(bytes, ")"))) return err;
     return 0;
   case PN_ARRAY:
     count = datum->u.count;
-    printf("@");
-    err = pn_pprint_data_one(data, level + 1);
-    if (err) return err;
-    printf("[");
+    if ((err = pn_bytes_format(bytes, "@"))) return err;
+    if ((err = pn_format_data_one(bytes, data, level + 1))) return err;
+    if ((err = pn_bytes_format(bytes, "["))) return err;
     for (int i = 0; i < count; i++)
     {
-      err = pn_pprint_data_one(data, level + 1);
-      if (err) return err;
-      if (i < count - 1) printf(", ");
+      if ((err = pn_format_data_one(bytes, data, level + 1))) return err;
+      if (i < count - 1) {
+        if ((err = pn_bytes_format(bytes, ", "))) return err;
+      }
     }
-    printf("]");
+    if ((err = pn_bytes_format(bytes, "]"))) return err;
     return 0;
   case PN_LIST:
   case PN_MAP:
     count = datum->u.count;
     bool list = datum->type == PN_LIST;
-    printf("%s",  list ? "[" : "{");
+    if ((err = pn_bytes_format(bytes, "%s",  list ? "[" : "{"))) return err;
     for (int i = 0; i < count; i++)
     {
-      err = pn_pprint_data_one(data, level + 1);
-      if (err) return err;
+      if ((err = pn_format_data_one(bytes, data, level + 1))) return err;
       if (list) {
-        if (i < count - 1) printf(", ");
+        if (i < count - 1) {
+          if ((err = pn_bytes_format(bytes, ", "))) return err;
+        }
       } else {
         if (i % 2) {
-          if (i < count - 1) printf(", ");
+          if (i < count - 1) {
+            if ((err = pn_bytes_format(bytes, ", "))) return err;
+          }
         } else {
-          printf(": ");
+          if ((err = pn_bytes_format(bytes, ": "))) return err;
         }
       }
     }
-    printf("%s",  list ? "]" : "}");
+    if ((err = pn_bytes_format(bytes, "%s",  list ? "]" : "}"))) return err;
     return 0;
   default:
-    pn_print_datum(*datum);
+    pn_format_datum(bytes, *datum);
     return 0;
   }
 }
 
-int pn_pprint_data(const pn_data_t *data)
+ssize_t pn_format_data(char *buf, size_t n, pn_data_t data)
 {
-  pn_data_t copy = *data;
-  int err;
-
-  while (copy.size) {
-    err = pn_pprint_data_one(&copy, 0);
-    if (err) return err;
-    if (copy.size) printf(" ");
+  pn_bytes_t bytes = {n, buf};
+  pn_data_t copy = data;
+  while (copy.size)
+  {
+    int e = pn_format_data_one(&bytes, &copy, 0);
+    if (e) return e;
   }
 
-  return 0;
+  return n - bytes.size;
+}
+
+int pn_pprint_data(const pn_data_t *data)
+{
+  int size = 4;
+
+  while (true)
+  {
+    char buf[size];
+    ssize_t n = pn_format_data(buf, size, *data);
+    if (n < 0) {
+      if (n == PN_OVERFLOW) {
+        size *= 2;
+        continue;
+      } else {
+        return n;
+      }
+    } else {
+      printf("%.*s", (int) n, buf);
+      return 0;
+    }
+  }
 }
 
 int pn_decode_datum(pn_bytes_t *bytes, pn_data_t *data);
@@ -742,7 +299,19 @@ int pn_decode_data(pn_bytes_t *bytes, pn_data_t *data)
   }
 
   data->size -= dat.size;
+  return 0;
+}
 
+int pn_decode_one(pn_bytes_t *bytes, pn_data_t *data)
+{
+  pn_bytes_t buf = *bytes;
+  pn_data_t dat = *data;
+
+  int e = pn_decode_datum(&buf, &dat);
+  if (e) return e;
+
+  data->size -= dat.size;
+  bytes->size -= buf.size;
   return 0;
 }
 
@@ -757,7 +326,6 @@ int pn_encode_data(pn_bytes_t *bytes, pn_data_t *data)
   }
 
   bytes->size -= buf.size;
-
   return 0;
 }
 
@@ -1297,96 +865,134 @@ int pn_decode_datum(pn_bytes_t *bytes, pn_data_t *data)
   return 0;
 }
 
-int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap)
+int pn_fill_one(pn_data_t *data, const char *fmt, ...);
+
+int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap, bool skip, int *nvals)
 {
   int err, count;
   char code = **fmt;
   if (!code) return PN_ARG_ERR;
-  if (!data->size) return PN_OVERFLOW;
-  pn_datum_t *datum = data->start;
-  pn_data_ltrim(data, 1);
+  if (!skip && !data->size) return PN_OVERFLOW;
+  pn_datum_t skipped;
+  pn_datum_t *datum;
+  if (skip) {
+    datum = &skipped;
+  } else {
+    datum = data->start;
+    pn_data_ltrim(data, 1);
+  }
   (*fmt)++;
 
   switch (code) {
   case 'n':
     *datum = (pn_datum_t) {PN_NULL, {0}};
+    (*nvals)++;
     return 0;
   case 'o':
     datum->type = PN_BOOL;
     datum->u.as_bool = va_arg(ap, int);
+    (*nvals)++;
     return 0;
   case 'B':
     datum->type = PN_UBYTE;
     datum->u.as_ubyte = va_arg(ap, unsigned int);
+    (*nvals)++;
     return 0;
   case 'b':
     datum->type = PN_BYTE;
     datum->u.as_byte = va_arg(ap, int);
+    (*nvals)++;
     return 0;
   case 'H':
     datum->type = PN_USHORT;
     datum->u.as_ushort = va_arg(ap, unsigned int);
+    (*nvals)++;
     return 0;
   case 'h':
     datum->type = PN_SHORT;
     datum->u.as_short = va_arg(ap, int);
+    (*nvals)++;
     return 0;
   case 'I':
     datum->type = PN_UINT;
     datum->u.as_uint = va_arg(ap, uint32_t);
+    (*nvals)++;
     return 0;
   case 'i':
     datum->type = PN_INT;
     datum->u.as_int = va_arg(ap, int32_t);
+    (*nvals)++;
     return 0;
   case 'L':
     datum->type = PN_ULONG;
     datum->u.as_ulong = va_arg(ap, uint64_t);
+    (*nvals)++;
     return 0;
   case 'l':
     datum->type = PN_LONG;
     datum->u.as_long = va_arg(ap, int64_t);
+    (*nvals)++;
     return 0;
   case 'f':
     datum->type = PN_FLOAT;
     datum->u.as_float = va_arg(ap, double);
+    (*nvals)++;
     return 0;
   case 'd':
     datum->type = PN_DOUBLE;
     datum->u.as_double = va_arg(ap, double);
+    (*nvals)++;
     return 0;
   case 'z':
     datum->type = PN_BINARY;
     datum->u.as_binary.size = va_arg(ap, size_t);
     datum->u.as_binary.start = va_arg(ap, char *);
+    if (!datum->u.as_binary.start)
+      *datum = (pn_datum_t) {PN_NULL, {0}};
+    (*nvals)++;
     return 0;
   case 'S':
     datum->type = PN_STRING;
     datum->u.as_string.start = va_arg(ap, char *);
-    datum->u.as_string.size = strlen(datum->u.as_string.start);
+    if (datum->u.as_string.start)
+      datum->u.as_string.size = strlen(datum->u.as_string.start);
+    else
+      *datum = (pn_datum_t) {PN_NULL, {0}};
+    (*nvals)++;
     return 0;
   case 's':
     datum->type = PN_SYMBOL;
     datum->u.as_symbol.start = va_arg(ap, char *);
-    datum->u.as_symbol.size = strlen(datum->u.as_symbol.start);
+    if (datum->u.as_symbol.start)
+      datum->u.as_symbol.size = strlen(datum->u.as_symbol.start);
+    else
+      *datum = (pn_datum_t) {PN_NULL, {0}};
+    (*nvals)++;
     return 0;
   case 'D':
     *datum = (pn_datum_t) {PN_DESCRIPTOR, {0}};
-    err = pn_vfill_one(data, fmt, ap);
+    count = 0;
+    err = pn_vfill_one(data, fmt, ap, skip, &count);
     if (err) return err;
-    err = pn_vfill_one(data, fmt, ap);
+    if (count != 1) return PN_ARG_ERR;
+    err = pn_vfill_one(data, fmt, ap, skip, &count);
     if (err) return err;
+    if (count != 2) return PN_ARG_ERR;
+    (*nvals)++;
     return 0;
   case 'T':
     datum->type = PN_TYPE;
     datum->u.type = va_arg(ap, int);
+    (*nvals)++;
     return 0;
   case '@':
     datum->type = PN_ARRAY;
-    err = pn_vfill_one(data, fmt, ap);
+    count = 0;
+    err = pn_vfill_one(data, fmt, ap, skip, &count);
     if (err) return err;
-    if (data->start[-1].type != PN_TYPE) {
-      fprintf(stderr, "expected PN_TYPE, got %s\n", pn_type_str(data->start[-1].type));
+    if (count != 1 || data->start[-1].type != PN_TYPE) {
+      fprintf(stderr, "expected a single PN_TYPE, got %i data ending in %s\n",
+              count, pn_type_str(data->start[-1].type));
       return PN_ARG_ERR;
     }
     if (**fmt != '[') {
@@ -1396,9 +1002,8 @@ int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap)
     (*fmt)++;
     count = 0;
     while (**fmt && **fmt != ']') {
-      err = pn_vfill_one(data, fmt, ap);
+      err = pn_vfill_one(data, fmt, ap, skip, &count);
       if (err) return err;
-      count++;
     }
     if (**fmt != ']') {
       fprintf(stderr, "expected ']'\n");
@@ -1406,14 +1011,14 @@ int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap)
     }
     (*fmt)++;
     datum->u.count = count;
+    (*nvals)++;
     return 0;
   case '[':
     datum->type = PN_LIST;
     count = 0;
     while (**fmt && **fmt != ']') {
-      err = pn_vfill_one(data, fmt, ap);
+      err = pn_vfill_one(data, fmt, ap, skip, &count);
       if (err) return err;
-      count++;
     }
     if (**fmt != ']') {
       fprintf(stderr, "expected ']'\n");
@@ -1421,14 +1026,14 @@ int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap)
     }
     (*fmt)++;
     datum->u.count = count;
+    (*nvals)++;
     return 0;
   case '{':
     datum->type = PN_MAP;
     count = 0;
     while (**fmt && **fmt != '}') {
-      err = pn_vfill_one(data, fmt, ap);
+      err = pn_vfill_one(data, fmt, ap, skip, &count);
       if (err) return err;
-      count++;
     }
     if (**fmt != '}') {
       fprintf(stderr, "expected '}'\n");
@@ -1436,31 +1041,97 @@ int pn_vfill_one(pn_data_t *data, const char **fmt, va_list ap)
     }
     (*fmt)++;
     datum->u.count = count;
+    (*nvals)++;
     return 0;
+  case '?':
+    count = 0;
+    if (va_arg(ap, int)) {
+      // rewind data by one
+      if (!skip) {
+        data->start--;
+        data->size++;
+      }
+      err = pn_vfill_one(data, fmt, ap, skip, &count);
+      if (err) return err;
+    } else {
+      *datum = (pn_datum_t) {PN_NULL, {0}};
+      err = pn_vfill_one(NULL, fmt, ap, true, &count);
+      if (err) return err;
+    }
+    (*nvals)++;
+    return 0;
+  case '*':
+    {
+      int count = va_arg(ap, int);
+      void *ptr = va_arg(ap, void *);
+      // rewind data by one
+      if (!skip) {
+        data->start--;
+        data->size++;
+      }
+
+      char c = **fmt;
+      (*fmt)++;
+
+      switch (c)
+      {
+      case 's':
+        {
+          char **sptr = ptr;
+          for (int i = 0; i < count; i++)
+          {
+            char *sym = *(sptr++);
+            err = pn_fill_one(data, "s", sym);
+            if (err) return err;
+            (*nvals)++;
+          }
+        }
+        break;
+      default:
+        fprintf(stderr, "unrecognized * code: 0x%.2X '%c'\n", code, code);
+        return PN_ARG_ERR;
+      }
+
+      return 0;
+    }
   default:
-    fprintf(stderr, "unrecognized code: '%c'\n", code);
+    fprintf(stderr, "unrecognized fill code: 0x%.2X '%c'\n", code, code);
     return PN_ARG_ERR;
   }
+}
+
+int pn_fill_one(pn_data_t *data, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int count = 0;
+  int err = pn_vfill_one(data, &fmt, ap, false, &count);
+  va_end(ap);
+  return err;
+}
+
+int pn_vfill_data(pn_data_t *data, const char *fmt, va_list ap)
+{
+  const char *pos = fmt;
+  pn_data_t dbuf = *data;
+  int count = 0;
+
+  while (*pos) {
+    int err = pn_vfill_one(&dbuf, &pos, ap, false, &count);
+    if (err) return err;
+  }
+
+  data->size -= dbuf.size;
+  return 0;
 }
 
 int pn_fill_data(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  const char *pos = fmt;
-  pn_data_t dbuf = *data;
-
-  while (*pos) {
-    int err = pn_vfill_one(&dbuf, &pos, ap);
-    if (err) {
-      va_end(ap);
-      return err;
-    }
-  }
+  int n = pn_vfill_data(data, fmt, ap);
   va_end(ap);
-
-  data->size -= dbuf.size;
-  return 0;
+  return n;
 }
 
 int pn_skip(pn_data_t *data, size_t n)
@@ -1696,16 +1367,28 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     if (data) pn_data_ltrim(data, 1);
     return 0;
   case 'D':
-    if (data) pn_data_ltrim(data, 1);
-    if (datum && datum->type == PN_DESCRIPTOR) {
+    {
+      if (data) pn_data_ltrim(data, 1);
       bool scd, scv;
-      err = pn_scan_one(data, fmt, ap, &scd);
+      pn_data_t *rdata;
+      if (datum && datum->type == PN_DESCRIPTOR) {
+        rdata = data;
+      } else {
+        rdata = NULL;
+      }
+      if (!**fmt) {
+        fprintf(stderr, "expecting descriptor\n");
+        return PN_ARG_ERR;
+      }
+      err = pn_scan_one(rdata, fmt, ap, &scd);
       if (err) return err;
-      err = pn_scan_one(data, fmt, ap, &scv);
+      if (!**fmt) {
+        fprintf(stderr, "expecting described value\n");
+        return PN_ARG_ERR;
+      }
+      err = pn_scan_one(rdata, fmt, ap, &scv);
       if (err) return err;
       *scanned = scd && scv;
-    } else {
-      *scanned = false;
     }
     return 0;
   case 'T':
@@ -1722,6 +1405,10 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     if (data) pn_data_ltrim(data, 1);
     if (datum && datum->type == PN_ARRAY) {
       bool sc;
+      if (!**fmt) {
+        fprintf(stderr, "type must follow array\n");
+        return PN_ARG_ERR;
+      }
       err = pn_scan_one(data, fmt, ap, &sc);
       if (err) return err;
       if (**fmt != '[') {
@@ -1758,14 +1445,15 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     }
     return 0;
   case '[':
-    if (data) pn_data_ltrim(data, 1);
-    if (datum && datum->type == PN_LIST) {
+    {
+      if (data) pn_data_ltrim(data, 1);
+      pn_data_t *rdata = datum && datum->type == PN_LIST ? data : NULL;
       count = 0;
       bool sc = true;
       while (**fmt && **fmt != ']') {
         bool sce;
-        if (count < datum->u.count) {
-          err = pn_scan_one(data, fmt, ap, &sce);
+        if (datum && count < datum->u.count) {
+          err = pn_scan_one(rdata, fmt, ap, &sce);
           if (err) return err;
           sc = sc && sce;
         } else {
@@ -1780,13 +1468,11 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
         return PN_ARG_ERR;
       }
       (*fmt)++;
-      if (count < datum->u.count) {
-        err = pn_skip(data, datum->u.count - count);
+      if (datum && count < datum->u.count) {
+        err = pn_skip(rdata, datum->u.count - count);
         if (err) return err;
       }
-      *scanned = (datum->u.count == count) && sc;
-    } else {
-      *scanned = false;
+      *scanned = (datum && datum->u.count == count) && sc;
     }
     return 0;
   case '{':
@@ -1794,7 +1480,7 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     if (datum && datum->type == PN_MAP) {
       count = 0;
       bool sc = true;
-      while (count < datum->u.count && **fmt && **fmt != '}') {
+      while (**fmt && **fmt != '}') {
         bool sce;
         if (count < datum->u.count) {
           err = pn_scan_one(data, fmt, ap, &sce);
@@ -1822,12 +1508,18 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     }
     return 0;
   case '.':
-    err = pn_skip(data, 1);
-    if (err) return err;
+    if (data) {
+      err = pn_skip(data, 1);
+      if (err) return err;
+    }
     *scanned = true;
     return 0;
   case '?':
     {
+      if (!**fmt) {
+        fprintf(stderr, "codes must follow ?\n");
+        return PN_ARG_ERR;
+      }
       bool *sc = va_arg(ap, bool *);
       err = pn_scan_one(data, fmt, ap, sc);
       if (err) return err;
@@ -1835,7 +1527,7 @@ int pn_scan_one(pn_data_t *data, const char **fmt, va_list ap, bool *scanned)
     }
     return 0;
   default:
-    fprintf(stderr, "unrecognized code: '%c'\n", code);
+    fprintf(stderr, "unrecognized scan code: 0x%.2X '%c'\n", code, code);
     return PN_ARG_ERR;
   }
 }
@@ -1844,19 +1536,38 @@ int pn_scan_data(const pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
+  int err = pn_vscan_data(data, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
+int pn_vscan_data(const pn_data_t *data, const char *fmt, va_list ap)
+{
   pn_data_t dbuf = *data;
   const char *pos = fmt;
   bool scanned;
 
   while (*pos) {
     int err = pn_scan_one(&dbuf, &pos, ap, &scanned);
-    if (err) {
-      va_end(ap);
-      return err;
-    }
+    if (err) return err;
   }
 
-  va_end(ap);
-
   return 0;
+}
+
+pn_bytes_t pn_bytes(size_t size, char *start)
+{
+  return (pn_bytes_t) {size, start};
+}
+
+pn_bytes_t pn_bytes_dup(size_t size, const char *start)
+{
+  if (size && start)
+  {
+    char *dup = malloc(size);
+    memmove(dup, start, size);
+    return pn_bytes(size, dup);
+  } else {
+    return pn_bytes(0, NULL);
+  }
 }

@@ -434,7 +434,7 @@ static void pn_connector_process_input(pn_connector_t *ctor)
       if (n == PN_EOS) {
         pn_connector_consume(ctor, ctor->input_size);
       } else {
-        printf("error in process_input: %zi\n", n);
+        printf("error in process_input: %s\n", pn_error(n));
       }
       ctor->input_done = true;
       break;
@@ -530,7 +530,7 @@ static void pn_connector_process_output(pn_connector_t *ctor)
       break;
     } else {
       if (n != PN_EOS) {
-        fprintf(stderr, "error in process_output: %zi\n", n);
+        fprintf(stderr, "error in process_output: %s\n", pn_error(n));
       }
       ctor->output_done = true;
       break;

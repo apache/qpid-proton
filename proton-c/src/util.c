@@ -132,3 +132,21 @@ char *pn_strdup(const char *src)
     return NULL;
   }
 }
+
+char *pn_strndup(const char *src, size_t n)
+{
+  if (src) {
+    int size = 0;
+    for (const char *c = src; *c && size < n; c++) {
+      size++;
+    }
+
+    char *dest = malloc(size + 1);
+    if (!dest) return NULL;
+    strncpy(dest, src, n);
+    dest[size] = '\0';
+    return dest;
+  } else {
+    return NULL;
+  }
+}

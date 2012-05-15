@@ -36,15 +36,6 @@ add_library (
 
   src/codec/codec.c
 
-  src/types/decode.c
-  src/types/value.c
-  src/types/binary.c
-  src/types/string.c
-  src/types/list.c
-  src/types/array.c
-  src/types/symbol.c
-  src/types/map.c
-
   src/dispatcher/dispatcher.c
   src/engine/engine.c
   src/message/message.c
