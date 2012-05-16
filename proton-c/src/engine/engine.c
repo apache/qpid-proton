@@ -408,12 +408,17 @@ pn_connection_t *pn_connection()
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
 {
-  return connection->endpoint.state;
+  return connection ? connection->endpoint.state : 0;
 }
 
 pn_error_t *pn_connection_error(pn_connection_t *connection)
 {
-  return &connection->endpoint.error;
+  return connection ? &connection->endpoint.error : NULL;
+}
+
+char *pn_connection_container(pn_connection_t *connection)
+{
+  return connection ? connection->container : NULL;
 }
 
 void pn_connection_set_container(pn_connection_t *connection, const char *container)
@@ -421,6 +426,11 @@ void pn_connection_set_container(pn_connection_t *connection, const char *contai
   if (!connection) return;
   if (connection->container) free(connection->container);
   connection->container = strdup(container);
+}
+
+char *pn_connection_hostname(pn_connection_t *connection)
+{
+  return connection ? connection->hostname : NULL;
 }
 
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname)
@@ -561,16 +571,24 @@ pn_endpoint_t *pn_find(pn_endpoint_t *endpoint, pn_endpoint_type_t type, pn_stat
 
 pn_session_t *pn_session_head(pn_connection_t *conn, pn_state_t state)
 {
-  return (pn_session_t *) pn_find(conn->endpoint_head, SESSION, state);
+  if (conn)
+    return (pn_session_t *) pn_find(conn->endpoint_head, SESSION, state);
+  else
+    return NULL;
 }
 
 pn_session_t *pn_session_next(pn_session_t *ssn, pn_state_t state)
 {
-  return (pn_session_t *) pn_find(ssn->endpoint.endpoint_next, SESSION, state);
+  if (ssn)
+    return (pn_session_t *) pn_find(ssn->endpoint.endpoint_next, SESSION, state);
+  else
+    return NULL;
 }
 
 pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
 {
+  if (!conn) return NULL;
+
   pn_endpoint_t *endpoint = conn->endpoint_head;
 
   while (endpoint)
@@ -583,9 +601,11 @@ pn_link_t *pn_link_head(pn_connection_t *conn, pn_state_t state)
   return NULL;
 }
 
-pn_link_t *pn_link_next(pn_link_t *ssn, pn_state_t state)
+pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 {
-  pn_endpoint_t *endpoint = ssn->endpoint.endpoint_next;
+  if (!link) return NULL;
+
+  pn_endpoint_t *endpoint = link->endpoint.endpoint_next;
 
   while (endpoint)
   {

@@ -72,7 +72,9 @@ pn_connection_t *pn_connection();
 
 pn_state_t pn_connection_state(pn_connection_t *connection);
 pn_error_t *pn_connection_error(pn_connection_t *connection);
+char *pn_connection_container(pn_connection_t *connection);
 void pn_connection_set_container(pn_connection_t *connection, const char *container);
+char *pn_connection_hostname(pn_connection_t *connection);
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection);

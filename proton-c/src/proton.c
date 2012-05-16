@@ -101,6 +101,7 @@ void server_callback(pn_connector_t *ctor)
         pn_print_data(iresp, n);
         printf("\n");
         pn_sasl_done(sasl, PN_SASL_OK);
+        pn_connector_set_connection(ctor, pn_connection());
       }
       break;
     case PN_SASL_PASS:
@@ -397,7 +398,9 @@ int main(int argc, char **argv)
     ctx.mechanism = mechanism;
     ctx.hostname = host;
     ctx.address = address;
-    if (!pn_connector(drv, host, port, &ctx)) pn_fatal("connector failed\n");
+    pn_connector_t *ctor = pn_connector(drv, host, port, &ctx);
+    if (!ctor) pn_fatal("connector failed\n");
+    pn_connector_set_connection(ctor, pn_connection());
     while (!ctx.done) {
       pn_driver_wait(drv, -1);
       pn_connector_t *c;
@@ -405,6 +408,7 @@ int main(int argc, char **argv)
         pn_connector_process(c);
         client_callback(c);
         if (pn_connector_closed(c)) {
+	  pn_connection_destroy(pn_connector_connection(c));
           pn_connector_destroy(c);
         } else {
           pn_connector_process(c);
@@ -428,6 +432,7 @@ int main(int argc, char **argv)
         pn_connector_process(c);
         server_callback(c);
         if (pn_connector_closed(c)) {
+	  pn_connection_destroy(pn_connector_connection(c));
           pn_connector_destroy(c);
         } else {
           pn_connector_process(c);

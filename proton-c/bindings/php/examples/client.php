@@ -118,7 +118,8 @@ if ($user) {
 }
 
 // set up a session with a sender and receiver
-$conn = pn_connector_connection($c);
+$conn = pn_connection();
+pn_connector_set_connection($c, $conn);
 pn_connection_set_hostname($conn, "rschloming.servicebus.appfabriclabs.com");
 pn_connection_set_container($conn, "asdf");
 $ssn = pn_session($conn);
@@ -152,6 +153,7 @@ while (!$done) {
     $h = pn_connector_context($c);
     $h($c);
     if (pn_connector_closed($c)) {
+      pn_connection_destroy(pn_connector_connection($c));
       pn_connector_destroy($c);
       unset($c);
       $done = true;

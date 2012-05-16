@@ -78,6 +78,7 @@ struct pn_connector_t {
   bool pending_write;
   int fd;
   int status;
+  pn_trace_t trace;
   bool closed;
   time_t wakeup;
   void (*read)(pn_connector_t *);
@@ -322,6 +323,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->idx = 0;
   c->fd = fd;
   c->status = PN_SEL_RD | PN_SEL_WR;
+  c->trace = driver->trace;
   c->closed = false;
   c->wakeup = 0;
   c->read = pn_connector_read;
@@ -331,8 +333,8 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->input_eos = false;
   c->output_size = 0;
   c->sasl = pn_sasl();
-  c->connection = pn_connection();
-  c->transport = pn_transport(c->connection);
+  c->connection = NULL;
+  c->transport = NULL;
   c->process_input = pn_connector_read_sasl_header;
   c->process_output = pn_connector_write_sasl_header;
   c->input_done = false;
@@ -340,21 +342,29 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->context = context;
   c->listener = NULL;
 
-  pn_connector_trace(c, driver->trace);
-
   pn_driver_add_connector(driver, c);
   return c;
 }
 
 void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 {
-  pn_sasl_trace(ctor->sasl, trace);
-  pn_trace(ctor->transport, trace);
+  if (!ctor) return;
+  ctor->trace = trace;
+  if (ctor->sasl) pn_sasl_trace(ctor->sasl, trace);
+  if (ctor->transport) pn_trace(ctor->transport, trace);
 }
 
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
   return ctor ? ctor->sasl : NULL;
+}
+
+void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
+{
+  if (!ctor) return;
+  ctor->connection = connection;
+  ctor->transport = pn_transport(connection);
+  if (ctor->transport) pn_trace(ctor->transport, ctor->trace);
 }
 
 pn_connection_t *pn_connector_connection(pn_connector_t *ctor)
@@ -399,7 +409,8 @@ void pn_connector_destroy(pn_connector_t *ctor)
   if (!ctor) return;
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
-  pn_connection_destroy(ctor->connection);
+  ctor->connection = NULL;
+  ctor->transport = NULL;
   pn_sasl_destroy(ctor->sasl);
   free(ctor);
 }
@@ -506,6 +517,7 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
 
 static ssize_t pn_connector_read_amqp(pn_connector_t *ctor)
 {
+  if (!ctor->transport) return 0;
   pn_transport_t *transport = ctor->transport;
   return pn_input(transport, ctor->input, ctor->input_size);
 }
@@ -591,12 +603,14 @@ static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor)
 
 static ssize_t pn_connector_write_amqp(pn_connector_t *ctor)
 {
+  if (!ctor->transport) return 0;
   pn_transport_t *transport = ctor->transport;
   return pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
 }
 
 static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
+  if (!ctor->transport) return 0;
   // XXX: should probably have a function pointer for this and switch it with different layers
   time_t result = pn_tick(ctor->transport, now);
   pn_connector_process_input(ctor);

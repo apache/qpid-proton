@@ -55,6 +55,7 @@ void pn_connector_process(pn_connector_t *connector);
 pn_listener_t *pn_connector_listener(pn_connector_t *connector);
 pn_sasl_t *pn_connector_sasl(pn_connector_t *connector);
 pn_connection_t *pn_connector_connection(pn_connector_t *connector);
+void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection);
 void *pn_connector_context(pn_connector_t *connector);
 void pn_connector_set_context(pn_connector_t *connector, void *context);
 void pn_connector_close(pn_connector_t *connector);

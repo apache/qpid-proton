@@ -32,6 +32,7 @@ $handler = function($c) {
       $mech = pn_sasl_remote_mechanisms($sasl);
       if ($mech == "ANONYMOUS") {
         pn_sasl_done($sasl, PN_SASL_OK);
+        pn_connector_set_connection($c, pn_connection());
       } else {
         pn_sasl_done($sasl, PN_SASL_AUTH);
       }
@@ -183,6 +184,7 @@ while (TRUE) {
     $h($c);
     if (pn_connector_closed($c)) {
       // destroy the connector if closed
+      pn_connection_destroy(pn_connector_connection($c));
       pn_connector_destroy($c);
       unset($c);
     } else {
