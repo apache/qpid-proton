@@ -96,7 +96,7 @@ void server_callback(pn_connector_t *ctor)
         size_t n = pn_sasl_pending(sasl);
         char iresp[n];
         pn_sasl_recv(sasl, iresp, n);
-        printf(pn_sasl_remote_mechanisms(sasl));
+        printf("%s", pn_sasl_remote_mechanisms(sasl));
         printf(" response = ");
         pn_print_data(iresp, n);
         printf("\n");
