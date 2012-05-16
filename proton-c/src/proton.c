@@ -30,6 +30,7 @@
 #include "util.h"
 #include "pn_config.h"
 #include <proton/codec.h>
+#include <inttypes.h>
 
 int value(int argc, char **argv)
 {
@@ -66,8 +67,9 @@ int value(int argc, char **argv)
   if (err) {
     printf("err = %s\n", pn_error(err));
   } else {
-    printf("scan=%.*s %lu %i %i %i %.*s %f %.*s %f %lu %i %.*s\n", (int) blam.size, blam.start, n, one, two, three,
-           (int) key1.size, key1.start, val1, (int) key2.size, key2.start, val2, al, threeq, (int) sym.size, sym.start);
+    printf("scan=%.*s %" PRIu64 " %i %i %i %.*s %f %.*s %f %" PRIu64 " %i %.*s\n", (int) blam.size,
+	   blam.start, n, one, two, three, (int) key1.size, key1.start, val1, (int) key2.size,
+	   key2.start, val2, al, threeq, (int) sym.size, sym.start);
   }
 
   return 0;
