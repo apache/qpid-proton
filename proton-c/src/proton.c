@@ -54,28 +54,28 @@ int buffer(int argc, char **argv)
   pn_buffer_print(buf); printf("\n");
   pn_buffer_free(buf);
 
-  pn_dbuf_t *data = pn_dbuf(16);
-  int err = pn_dbuf_fill(data, "Ds[iSi]", "desc", 1, "two", 3);
+  pn_data_t *data = pn_data(16);
+  int err = pn_data_fill(data, "Ds[iSi]", "desc", 1, "two", 3);
   if (err) {
     printf("%s\n", pn_error(err));
   }
-  pn_dbuf_print(data); printf("\n");
+  pn_data_print(data); printf("\n");
   pn_bytes_t str;
-  err = pn_dbuf_scan(data, "D.[.S.]", &str);
+  err = pn_data_scan(data, "D.[.S.]", &str);
   if (err) {
     printf("%s\n", pn_error(err));
   } else {
     printf("%.*s\n", (int) str.size, str.start);
   }
-  pn_dbuf_free(data);
+  pn_data_free(data);
 
   return 0;
 }
 
 int value(int argc, char **argv)
 {
-  pn_atom_t dbuf[1024];
-  pn_atoms_t atoms = {1024, dbuf};
+  pn_atom_t data[1024];
+  pn_atoms_t atoms = {1024, data};
 
   int err = pn_fill_atoms(&atoms, "DDsL[i[i]i]{sfsf}@DLT[sss]", "blam", 21, 1, 2, 3,
                           "pi", 3.14159265359, "e", 2.7,

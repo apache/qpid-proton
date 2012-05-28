@@ -1136,15 +1136,15 @@ int pn_fill_one(pn_atoms_t *atoms, const char *fmt, ...)
 int pn_vfill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap)
 {
   const char *pos = fmt;
-  pn_atoms_t dbuf = *atoms;
+  pn_atoms_t copy = *atoms;
   int count = 0;
 
   while (*pos) {
-    int err = pn_vfill_one(&dbuf, &pos, ap, false, &count);
+    int err = pn_vfill_one(&copy, &pos, ap, false, &count);
     if (err) return err;
   }
 
-  atoms->size -= dbuf.size;
+  atoms->size -= copy.size;
   return 0;
 }
 
@@ -1579,12 +1579,12 @@ int pn_scan_atoms(const pn_atoms_t *atoms, const char *fmt, ...)
 
 int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap)
 {
-  pn_atoms_t dbuf = *atoms;
+  pn_atoms_t copy = *atoms;
   const char *pos = fmt;
   bool scanned;
 
   while (*pos) {
-    int err = pn_scan_one(&dbuf, &pos, ap, &scanned);
+    int err = pn_scan_one(&copy, &pos, ap, &scanned);
     if (err) return err;
   }
 
@@ -2425,9 +2425,9 @@ int pn_buffer_print(pn_buffer_t *buf)
   return 0;
 }
 
-// dbuf
+// data
 
-struct pn_dbuf_t {
+struct pn_data_t {
   size_t capacity;
   size_t size;
   pn_atom_t *atoms;
@@ -2436,9 +2436,9 @@ struct pn_dbuf_t {
 };
 
 
-pn_dbuf_t *pn_dbuf(size_t capacity)
+pn_data_t *pn_data(size_t capacity)
 {
-  pn_dbuf_t *data = malloc(sizeof(pn_dbuf_t));
+  pn_data_t *data = malloc(sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
   data->atoms = capacity ? malloc(capacity * sizeof(pn_atom_t)) : NULL;
@@ -2447,7 +2447,7 @@ pn_dbuf_t *pn_dbuf(size_t capacity)
   return data;
 }
 
-void pn_dbuf_free(pn_dbuf_t *data)
+void pn_data_free(pn_data_t *data)
 {
   if (data) {
     pn_buffer_free(data->buf);
@@ -2456,7 +2456,7 @@ void pn_dbuf_free(pn_dbuf_t *data)
   }
 }
 
-int pn_dbuf_clear(pn_dbuf_t *data)
+int pn_data_clear(pn_data_t *data)
 {
   data->size = 0;
   if (data->buf) {
@@ -2466,14 +2466,14 @@ int pn_dbuf_clear(pn_dbuf_t *data)
   return 0;
 }
 
-int pn_dbuf_grow(pn_dbuf_t *data)
+int pn_data_grow(pn_data_t *data)
 {
   data->capacity = 2*(data->capacity ? data->capacity : 16);
   data->atoms = realloc(data->atoms, data->capacity * sizeof(pn_atom_t));
   return 0;
 }
 
-int pn_dbuf_decode(pn_dbuf_t *data, char *bytes, size_t *size)
+int pn_data_decode(pn_data_t *data, char *bytes, size_t *size)
 {
   pn_atoms_t atoms;
   pn_bytes_t lbytes;
@@ -2491,7 +2491,7 @@ int pn_dbuf_decode(pn_dbuf_t *data, char *bytes, size_t *size)
       *size = lbytes.size;
       return 0;
     } else if (err == PN_OVERFLOW) {
-      err = pn_dbuf_grow(data);
+      err = pn_data_grow(data);
       if (err) return err;
       atoms.size = data->capacity;
     } else {
@@ -2500,7 +2500,7 @@ int pn_dbuf_decode(pn_dbuf_t *data, char *bytes, size_t *size)
   }
 }
 
-int pn_dbuf_encode(pn_dbuf_t *data, char *bytes, size_t *size)
+int pn_data_encode(pn_data_t *data, char *bytes, size_t *size)
 {
   pn_atoms_t atoms = {.size=data->size, .start=data->atoms};
   pn_bytes_t lbytes = pn_bytes(*size, bytes);
@@ -2512,7 +2512,7 @@ int pn_dbuf_encode(pn_dbuf_t *data, char *bytes, size_t *size)
   return 0;
 }
 
-int pn_dbuf_vfill(pn_dbuf_t *data, const char *fmt, va_list ap)
+int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   pn_atoms_t atoms;
 
@@ -2524,7 +2524,7 @@ int pn_dbuf_vfill(pn_dbuf_t *data, const char *fmt, va_list ap)
       data->size += atoms.size;
       return 0;
     } else if (err == PN_OVERFLOW) {
-      err = pn_dbuf_grow(data);
+      err = pn_data_grow(data);
       if (err) return err;
     } else {
       return err;
@@ -2532,44 +2532,44 @@ int pn_dbuf_vfill(pn_dbuf_t *data, const char *fmt, va_list ap)
   }
 }
 
-int pn_dbuf_fill(pn_dbuf_t *data, const char *fmt, ...)
+int pn_data_fill(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  int err = pn_dbuf_vfill(data, fmt, ap);
+  int err = pn_data_vfill(data, fmt, ap);
   va_end(ap);
   return err;
 }
 
-int pn_dbuf_vscan(pn_dbuf_t *data, const char *fmt, va_list ap)
+int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
   pn_atoms_t atoms = {.size=data->size, .start=data->atoms};
   return pn_vscan_atoms(&atoms, fmt, ap);
 }
 
-int pn_dbuf_scan(pn_dbuf_t *data, const char *fmt, ...)
+int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  int err = pn_dbuf_vscan(data, fmt, ap);
+  int err = pn_data_vscan(data, fmt, ap);
   va_end(ap);
   return err;
 }
 
-int pn_dbuf_print(pn_dbuf_t *data)
+int pn_data_print(pn_data_t *data)
 {
   pn_atoms_t atoms = {.size=data->size, .start=data->atoms};
   return pn_print_atoms(&atoms);
 }
 
-pn_atoms_t pn_dbuf_atoms(pn_dbuf_t *data, size_t size)
+pn_atoms_t pn_data_atoms(pn_data_t *data, size_t size)
 {
   return (pn_atoms_t) {.size=size, .start=data->atoms};
 }
 
-int pn_dbuf_format(pn_dbuf_t *data, char *bytes, size_t *size)
+int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  ssize_t sz = pn_format_atoms(bytes, *size, pn_dbuf_atoms(data, data->size));
+  ssize_t sz = pn_format_atoms(bytes, *size, pn_data_atoms(data, data->size));
   if (sz < 0) {
     return sz;
   } else {

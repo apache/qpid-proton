@@ -141,20 +141,20 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
 int pn_buffer_clear(pn_buffer_t *buf);
 int pn_buffer_print(pn_buffer_t *buf);
 
-// dbuf
+// data
 
-typedef struct pn_dbuf_t pn_dbuf_t;
+typedef struct pn_data_t pn_data_t;
 
-pn_dbuf_t *pn_dbuf(size_t capacity);
-void pn_dbuf_free(pn_dbuf_t *data);
-int pn_dbuf_clear(pn_dbuf_t *data);
-int pn_dbuf_decode(pn_dbuf_t *data, char *bytes, size_t *size);
-int pn_dbuf_encode(pn_dbuf_t *data, char *bytes, size_t *size);
-int pn_dbuf_vfill(pn_dbuf_t *data, const char *fmt, va_list ap);
-int pn_dbuf_fill(pn_dbuf_t *data, const char *fmt, ...);
-int pn_dbuf_vscan(pn_dbuf_t *data, const char *fmt, va_list ap);
-int pn_dbuf_scan(pn_dbuf_t *data, const char *fmt, ...);
-int pn_dbuf_print(pn_dbuf_t *data);
-int pn_dbuf_format(pn_dbuf_t *data, char *bytes, size_t *size);
+pn_data_t *pn_data(size_t capacity);
+void pn_data_free(pn_data_t *data);
+int pn_data_clear(pn_data_t *data);
+int pn_data_decode(pn_data_t *data, char *bytes, size_t *size);
+int pn_data_encode(pn_data_t *data, char *bytes, size_t *size);
+int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
+int pn_data_fill(pn_data_t *data, const char *fmt, ...);
+int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
+int pn_data_scan(pn_data_t *data, const char *fmt, ...);
+int pn_data_print(pn_data_t *data);
+int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 
 #endif /* codec.h */
