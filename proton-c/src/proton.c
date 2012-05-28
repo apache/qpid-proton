@@ -32,16 +32,58 @@
 #include <proton/codec.h>
 #include <inttypes.h>
 
+int buffer(int argc, char **argv)
+{
+  pn_buffer_t *buf = pn_buffer(16);
+
+  pn_buffer_append(buf, "abcd", 4);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_prepend(buf, "012", 3);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_prepend(buf, "z", 1);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_append(buf, "efg", 3);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_append(buf, "hijklm", 6);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_trim(buf, 1, 1);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_trim(buf, 4, 0);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_clear(buf);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_free(buf);
+
+  pn_dbuf_t *data = pn_dbuf(16);
+  int err = pn_dbuf_fill(data, "Ds[iSi]", "desc", 1, "two", 3);
+  if (err) {
+    printf("%s\n", pn_error(err));
+  }
+  pn_dbuf_print(data); printf("\n");
+  pn_bytes_t str;
+  err = pn_dbuf_scan(data, "D.[.S.]", &str);
+  if (err) {
+    printf("%s\n", pn_error(err));
+  } else {
+    printf("%.*s\n", (int) str.size, str.start);
+  }
+  pn_dbuf_free(data);
+
+  return 0;
+}
+
 int value(int argc, char **argv)
 {
-  pn_datum_t dbuf[1024];
-  pn_data_t data = {1024, dbuf};
+  pn_atom_t dbuf[1024];
+  pn_atoms_t atoms = {1024, dbuf};
 
-  int err = pn_fill_data(&data, "DDsL[i[i]i]{sfsf}@DLT[sss]", "blam", 21, 1, 2, 3, "pi", 3.14159265359, "e", 2.7, 42, PN_SYMBOL, "one", "two", "three");
+  int err = pn_fill_atoms(&atoms, "DDsL[i[i]i]{sfsf}@DLT[sss]", "blam", 21, 1, 2, 3,
+                          "pi", 3.14159265359, "e", 2.7,
+                          (uint64_t) 42, PN_SYMBOL, "one", "two", "three");
   if (err) {
     printf("err = %s\n", pn_error(err));
   } else {
-    pn_pprint_data(&data);
+    pn_print_atoms(&atoms);
     printf("\n");
   }
 
@@ -62,8 +104,8 @@ int value(int argc, char **argv)
 
   pn_bytes_t sym;
 
-  err = pn_scan_data(&data, "DDsL[i[i]?i]{sfsf}@DLT[.s.]", &blam, &n, &one, &two, &threeq, &three,
-                     &key1, &val1, &key2, &val2, &al, &type, &sym);
+  err = pn_scan_atoms(&atoms, "DDsL[i[i]?i]{sfsf}@DLT[.s.]", &blam, &n, &one, &two, &threeq, &three,
+                      &key1, &val1, &key2, &val2, &al, &type, &sym);
   if (err) {
     printf("err = %s\n", pn_error(err));
   } else {
@@ -71,6 +113,48 @@ int value(int argc, char **argv)
 	   blam.start, n, one, two, three, (int) key1.size, key1.start, val1, (int) key2.size,
 	   key2.start, val2, al, threeq, (int) sym.size, sym.start);
   }
+
+  char str[1024*10];
+  int ch, idx = 0;
+  while ((ch = getchar()) != EOF) {
+    str[idx++] = ch;
+  }
+  str[idx] = '\0';
+
+  /*  str[0] = '\0';
+  for (int i = 2; i < argc; i++) {
+    strcat(str, argv[i]);
+    if (i < argc - 1)
+      strcat(str, " ");
+      }*/
+
+  printf("JSON: %s\n", str);
+
+  pn_atom_t jsondata[1024];
+  pn_atoms_t jsond = {1024, jsondata};
+
+  printf("\n");
+
+  pn_json_t *json = pn_json();
+
+  err = pn_json_parse(json, str, &jsond);
+  if (err) {
+    printf("parse err=%s, %s\n", pn_error(err), pn_json_error_str(json));
+  } else {
+    printf("--\n");
+    for (int i = 0; i < jsond.size; i++) {
+      printf("%s: ", pn_type_str(jsond.start[i].type));
+      err = pn_print_atom(jsond.start[i]);
+      if (err) printf("err=%s", pn_error(err));
+      printf("\n");
+    }
+    printf("--\n");
+    err = pn_print_atoms(&jsond);
+    if (err) printf("print err=%s", pn_error(err));
+    printf("\n");
+  }
+
+  pn_json_free(json);
 
   return 0;
 }
@@ -351,7 +435,7 @@ int main(int argc, char **argv)
   char *mechanism = "ANONYMOUS";
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:a:m:hVX")) != -1)
+  while ((opt = getopt(argc, argv, "c:a:m:hVXY")) != -1)
   {
     switch (opt) {
     case 'c':
@@ -369,6 +453,9 @@ int main(int argc, char **argv)
       exit(EXIT_SUCCESS);
     case 'X':
       value(argc, argv);
+      exit(EXIT_SUCCESS);
+    case 'Y':
+      buffer(argc, argv);
       exit(EXIT_SUCCESS);
     case 'h':
       printf("Usage: %s [-h] [-c [user[:password]@]host[:port]] [-a <address>] [-m <sasl-mech>]\n", argv[0]);

@@ -40,12 +40,10 @@ struct pn_dispatcher_t {
   pn_trace_t trace;
   uint16_t channel;
   uint8_t code;
-  pn_datum_t decode_buf[CODEC_LIMIT];
-  pn_data_t args;
+  pn_dbuf_t *args;
   char *payload;
   size_t size;
-  pn_datum_t encode_buf[CODEC_LIMIT];
-  pn_data_t output_args;
+  pn_dbuf_t *output_args;
   const char *output_payload;
   size_t output_size;
   size_t capacity;

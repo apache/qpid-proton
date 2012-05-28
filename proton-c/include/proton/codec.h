@@ -76,31 +76,85 @@ typedef struct {
     size_t count;
     pn_type_t type;
   } u;
-} pn_datum_t;
+} pn_atom_t;
 
 typedef struct {
   size_t size;
-  pn_datum_t *start;
-} pn_data_t;
+  pn_atom_t *start;
+} pn_atoms_t;
 
 // XXX: incremental decode and scan/fill both ways could be used for things like accessing lists/arrays
-int pn_decode_data(pn_bytes_t *bytes, pn_data_t *data);
-int pn_encode_data(pn_bytes_t *bytes, pn_data_t *data);
-int pn_decode_one(pn_bytes_t *bytes, pn_data_t *data);
+int pn_decode_atoms(pn_bytes_t *bytes, pn_atoms_t *atoms);
+int pn_encode_atoms(pn_bytes_t *bytes, pn_atoms_t *atoms);
+int pn_decode_one(pn_bytes_t *bytes, pn_atoms_t *atoms);
 
-void pn_print_datum(pn_datum_t datum);
+int pn_print_atom(pn_atom_t atom);
 const char *pn_type_str(pn_type_t type);
-int pn_pprint_data(const pn_data_t *data);
-ssize_t pn_format_data(char *buf, size_t n, pn_data_t data);
+int pn_print_atoms(const pn_atoms_t *atoms);
+ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms);
+int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom);
 
-int pn_fill_data(pn_data_t *data, const char *fmt, ...);
-int pn_vfill_data(pn_data_t *data, const char *fmt, va_list ap);
-int pn_scan_data(const pn_data_t *data, const char *fmt, ...);
-int pn_vscan_data(const pn_data_t *data, const char *fmt, va_list ap);
+int pn_fill_atoms(pn_atoms_t *atoms, const char *fmt, ...);
+int pn_vfill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap);
+int pn_scan_atoms(const pn_atoms_t *atoms, const char *fmt, ...);
+int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap);
 
 // pn_bytes_t
 
 pn_bytes_t pn_bytes(size_t size, char *start);
 pn_bytes_t pn_bytes_dup(size_t size, const char *start);
+
+// JSON
+
+typedef struct pn_json_t pn_json_t;
+
+pn_json_t *pn_json();
+int pn_json_parse(pn_json_t *json, const char *str, pn_atoms_t *atoms);
+int pn_json_render(pn_json_t *json, pn_atoms_t *atoms, char *output, size_t *size);
+int pn_json_error_code(pn_json_t *json);
+const char *pn_json_error_str(pn_json_t *json);
+void pn_json_free(pn_json_t *json);
+
+
+// transcoder
+
+typedef struct pn_transcoder_t pn_transcoder_t;
+typedef enum {
+  PN_AMQP,
+  PN_JSON
+} pn_encoding_t;
+
+pn_transcoder_t *pn_transcoder();
+int pn_transcoder_input(pn_transcoder_t *trans, pn_encoding_t encoding, const char *input, size_t size);
+int pn_transcoder_output(pn_transcoder_t *trans, pn_encoding_t encoding, const char *output, size_t *size);
+void pn_transcoder_free(pn_transcoder_t *trans);
+
+// buffer
+
+typedef struct pn_buffer_t pn_buffer_t;
+
+pn_buffer_t *pn_buffer(size_t capacity);
+void pn_buffer_free(pn_buffer_t *buf);
+int pn_buffer_append(pn_buffer_t *buf, char *bytes, size_t size);
+int pn_buffer_prepend(pn_buffer_t *buf, char *bytes, size_t size);
+int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
+int pn_buffer_clear(pn_buffer_t *buf);
+int pn_buffer_print(pn_buffer_t *buf);
+
+// dbuf
+
+typedef struct pn_dbuf_t pn_dbuf_t;
+
+pn_dbuf_t *pn_dbuf(size_t capacity);
+void pn_dbuf_free(pn_dbuf_t *data);
+int pn_dbuf_clear(pn_dbuf_t *data);
+int pn_dbuf_decode(pn_dbuf_t *data, char *bytes, size_t *size);
+int pn_dbuf_encode(pn_dbuf_t *data, char *bytes, size_t *size);
+int pn_dbuf_vfill(pn_dbuf_t *data, const char *fmt, va_list ap);
+int pn_dbuf_fill(pn_dbuf_t *data, const char *fmt, ...);
+int pn_dbuf_vscan(pn_dbuf_t *data, const char *fmt, va_list ap);
+int pn_dbuf_scan(pn_dbuf_t *data, const char *fmt, ...);
+int pn_dbuf_print(pn_dbuf_t *data);
+int pn_dbuf_format(pn_dbuf_t *data, char *bytes, size_t *size);
 
 #endif /* codec.h */

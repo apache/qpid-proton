@@ -342,6 +342,8 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->context = context;
   c->listener = NULL;
 
+  pn_connector_trace(c, driver->trace);
+
   pn_driver_add_connector(driver, c);
   return c;
 }

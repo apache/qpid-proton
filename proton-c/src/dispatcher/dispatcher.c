@@ -37,13 +37,11 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 
   disp->channel = 0;
   disp->code = 0;
-  disp->args.size = 0;
-  disp->args.start = disp->decode_buf;
+  disp->args = pn_dbuf(16);
   disp->payload = NULL;
   disp->size = 0;
 
-  disp->output_args.size = 0;
-  disp->output_args.start = disp->encode_buf;
+  disp->output_args = pn_dbuf(16);
   // XXX
   disp->capacity = 4*1024;
   disp->output = malloc(disp->capacity);
@@ -57,8 +55,12 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 
 void pn_dispatcher_destroy(pn_dispatcher_t *disp)
 {
-  free(disp->output);
-  free(disp);
+  if (disp) {
+    pn_dbuf_free(disp->args);
+    pn_dbuf_free(disp->output_args);
+    free(disp->output);
+    free(disp);
+  }
 }
 
 void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
@@ -71,14 +73,15 @@ void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
 typedef enum {IN, OUT} pn_dir_t;
 
 static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
-                        pn_data_t args, const char *payload, size_t size)
+                        pn_dbuf_t *args, const char *payload, size_t size)
 {
   if (disp->trace & PN_TRACE_FRM) {
     uint64_t code64;
     bool scanned;
-    pn_scan_data(&args, "D?L.", &scanned, &code64);
+    pn_dbuf_scan(args, "D?L.", &scanned, &code64);
     uint8_t code = scanned ? code64 : 0;
-    pn_format_data(disp->scratch, SCRATCH, args);
+    size_t n = SCRATCH;
+    pn_dbuf_format(args, disp->scratch, &n);
     fprintf(stderr, "[%u] %s %s %s", ch, dir == OUT ? "->" : "<-",
             disp->names[code], disp->scratch);
     if (size) {
@@ -99,9 +102,8 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
     pn_frame_t frame;
     size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
-      disp->args.size = CODEC_LIMIT;
-      pn_bytes_t bytes = {frame.size, frame.payload};
-      int e = pn_decode_one(&bytes, &disp->args);
+      size_t dsize = frame.size;
+      int e = pn_dbuf_decode(disp->args, frame.payload, &dsize);
       if (e) {
         fprintf(stderr, "Error decoding frame: %s\n", pn_error(e));
         pn_fprint_data(stderr, frame.payload, frame.size);
@@ -113,7 +115,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
       // XXX: assuming numeric
       uint64_t lcode;
       bool scanned;
-      e = pn_scan_data(&disp->args, "D?L.", &scanned, &lcode);
+      e = pn_dbuf_scan(disp->args, "D?L.", &scanned, &lcode);
       if (e) return e;
       if (!scanned) {
         fprintf(stderr, "Error dispatching frame\n");
@@ -121,9 +123,9 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
       }
       uint8_t code = lcode;
       disp->code = code;
-      disp->size = frame.size - bytes.size;
+      disp->size = frame.size - dsize;
       if (disp->size)
-        disp->payload = frame.payload + bytes.size;
+        disp->payload = frame.payload + dsize;
 
       pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
 
@@ -132,7 +134,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
 
       disp->channel = 0;
       disp->code = 0;
-      disp->args.size = 0;
+      pn_dbuf_clear(disp->args);
       disp->size = 0;
       disp->payload = NULL;
 
@@ -154,7 +156,7 @@ int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  int err = pn_vscan_data(&disp->args, fmt, ap);
+  int err = pn_dbuf_vscan(disp->args, fmt, ap);
   va_end(ap);
   return err;
 }
@@ -169,8 +171,8 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  disp->output_args.size = CODEC_LIMIT;
-  int err = pn_vfill_data(&disp->output_args, fmt, ap);
+  pn_dbuf_clear(disp->output_args);
+  int err = pn_dbuf_vfill(disp->output_args, fmt, ap);
   va_end(ap);
   if (err) {
     fprintf(stderr, "error posting frame: %s, %s\n", fmt, pn_error(err));
@@ -183,8 +185,8 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 
   while (true) {
     char buf[size];
-    pn_bytes_t bytes = {size, buf};
-    err = pn_encode_data(&bytes, &disp->output_args);
+    size_t wr = size;
+    err = pn_dbuf_encode(disp->output_args, buf, &wr);
     if (err)
     {
       if (err == PN_OVERFLOW) {
@@ -194,21 +196,21 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
         fprintf(stderr, "error posting frame: %s", pn_error(err));
         return PN_ERR;
       }
-    } else if (size - bytes.size < disp->output_size) {
-      size += bytes.size + disp->output_size - size;
+    } else if (size - wr < disp->output_size) {
+      size += wr + disp->output_size - size;
       continue;
     } else {
       if (disp->output_size) {
-        memmove(bytes.start + bytes.size, disp->output_payload, disp->output_size);
-        bytes.size += disp->output_size;
+        memmove(buf + wr, disp->output_payload, disp->output_size);
+        wr += disp->output_size;
         disp->output_payload = NULL;
         disp->output_size = 0;
       }
 
       pn_frame_t frame = {disp->frame_type};
       frame.channel = ch;
-      frame.payload = bytes.start;
-      frame.size = bytes.size;
+      frame.payload = buf;
+      frame.size = wr;
       size_t n;
       while (!(n = pn_write_frame(disp->output + disp->available,
                                   disp->capacity - disp->available, frame))) {

@@ -26,12 +26,12 @@
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
   pn_bytes_t bytes = pn_bytes(available, dst);
-  pn_datum_t buf[16];
-  pn_data_t data = {16, buf};
+  pn_atom_t buf[16];
+  pn_atoms_t atoms = {16, buf};
 
-  int err = pn_fill_data(&data, "DLz", 0x75, size, src);
+  int err = pn_fill_atoms(&atoms, "DLz", 0x75, size, src);
   if (err) return err;
-  err = pn_encode_data(&bytes, &data);
+  err = pn_encode_atoms(&bytes, &atoms);
   if (err) return err;
   return bytes.size;
 }
