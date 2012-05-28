@@ -28,7 +28,7 @@ import org.apache.qpid.proton.engine.EndpointState;
 public abstract class EndpointImpl implements Endpoint
 {
     private EndpointState _localState = EndpointState.UNINITIALIZED;
-    private EndpointState _remoteState;
+    private EndpointState _remoteState = EndpointState.UNINITIALIZED;
     private EndpointError _localError;
     private EndpointError _remoteError;
     private boolean _modified;

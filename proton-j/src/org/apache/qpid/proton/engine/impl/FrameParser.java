@@ -84,29 +84,30 @@ class FrameParser
         _frameBodyHandler = frameBodyHandler;
     }
 
-    public int input(byte[] bytes, int offset, int length)
+    public int input(byte[] bytes, int offset, final int length)
     {
+        int unconsumed = length;
         EndpointError frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
         if(_ignore != 0)
         {
-            if(length > _ignore)
+            if(unconsumed > _ignore)
             {
                 offset+=_ignore;
-                length -= _ignore;
+                unconsumed -= _ignore;
 
                 _ignore = 0;
             }
             else
             {
-                _ignore-=length;
-                return length;
+                _ignore-=unconsumed;
+                return unconsumed;
             }
         }
 
-        ByteBuffer in = ByteBuffer.wrap(bytes, offset, length);
+        ByteBuffer in = ByteBuffer.wrap(bytes, offset, unconsumed);
 
         while(in.hasRemaining() && state != State.ERROR)
         {
@@ -284,7 +285,7 @@ class FrameParser
 
         _localError = frameParsingError;
 
-        return _state == State.ERROR ? -1 : length;
+        return _state == State.ERROR ? -1 : length - unconsumed;
     }
 
     private void reset()
