@@ -32,6 +32,7 @@ package org.apache.qpid.proton.engine;
 public interface Transport extends Endpoint
 {
 
+    public int END_OF_STREAM = -1;
     /**
      * @param bytes input bytes for consumption
      * @param offset the offset within bytes where input begins
