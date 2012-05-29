@@ -23,9 +23,6 @@ package org.apache.qpid.proton.engine;
 
 /**
  * Accepted
- *
- * @hidden
- *
  */
 
 public class Accepted implements Outcome

@@ -26,13 +26,6 @@ import java.util.EnumSet;
 /**
  * Session
  *
- * @opt operations
- * @opt types
- *
- * @composed 1 - "0..n" Link
- * @composed 1 incoming 1 DeliveryBuffer
- * @composed 1 outgoing 1 DeliveryBuffer
- *
  */
 
 public interface Session extends Endpoint

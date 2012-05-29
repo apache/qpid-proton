@@ -24,8 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Received
  *
- * @hidden
- *
  */
 
 public interface Received extends DeliveryState

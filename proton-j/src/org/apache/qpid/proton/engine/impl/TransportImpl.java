@@ -92,8 +92,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     public TransportImpl(Connection connectionEndpoint)
     {
         _connectionEndpoint = (ConnectionImpl) connectionEndpoint;
-        _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()];
-        _remoteSessions = new TransportSession[_connectionEndpoint.getMaxChannels()];
+        _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
+        _remoteSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
         _frameParser = new FrameParser(this);
     }
 
@@ -416,17 +416,23 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             {
                 SessionImpl session = (SessionImpl) endpoint;
                 TransportSession transportSession = getTransportState(session);
-                if(session.getLocalState() == EndpointState.ACTIVE
-                   && session.getRemoteState() == EndpointState.ACTIVE
-                   && !transportSession.isLocalChannelSet())
+                if(session.getLocalState() == EndpointState.ACTIVE)
                 {
                     int channelId = allocateLocalChannel();
-                    transportSession.setLocalChannel(channelId);
-                    _localSessions[channelId] = transportSession;
 
                     Begin begin = new Begin();
 
-                    begin.setRemoteChannel(UnsignedShort.valueOf((short) transportSession.getRemoteChannel()));
+                    if(session.getRemoteState() == EndpointState.ACTIVE
+                       && !transportSession.isLocalChannelSet())
+                    {
+                        transportSession.setLocalChannel(channelId);
+                        _localSessions[channelId] = transportSession;
+                    }
+
+                    if(session.getRemoteState() != EndpointState.UNINITIALIZED)
+                    {
+                        begin.setRemoteChannel(UnsignedShort.valueOf((short) transportSession.getRemoteChannel()));
+                    }
                     begin.setHandleMax(transportSession.getHandleMax());
                     begin.setIncomingWindow(transportSession.getIncomingWindowSize());
                     begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());

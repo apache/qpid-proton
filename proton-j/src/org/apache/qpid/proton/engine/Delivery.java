@@ -24,11 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Delivery
  *
- * @opt operations
- * @opt types
- *
- * @assoc - - 1 DeliveryState
- *
  */
 
 public interface Delivery

@@ -62,6 +62,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         SessionImpl session = new SessionImpl(this);
         _sessions.add(session);
 
+
         return session;
     }
 

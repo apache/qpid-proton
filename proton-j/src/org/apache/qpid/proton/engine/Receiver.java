@@ -24,9 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Receiver
  *
- * @opt operations
- * @opt types
- *
  */
 
 public interface Receiver extends Link

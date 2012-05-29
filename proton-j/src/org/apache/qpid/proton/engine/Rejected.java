@@ -24,8 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Rejected
  *
- * @hidden
- *
  */
 
 public interface Rejected extends Outcome

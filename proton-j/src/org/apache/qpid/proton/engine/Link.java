@@ -25,11 +25,6 @@ import java.util.EnumSet;
 /**
  * Link
  *
- * @opt operations
- * @opt types
- *
- * @assoc 1 - n Delivery
- *
  */
 
 public interface Link extends Endpoint

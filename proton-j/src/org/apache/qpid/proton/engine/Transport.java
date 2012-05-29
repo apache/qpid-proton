@@ -24,9 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Transport
  *
- * @opt operations
- * @opt types
- *
  */
 
 public interface Transport extends Endpoint

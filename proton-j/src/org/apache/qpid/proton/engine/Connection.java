@@ -26,12 +26,6 @@ import java.util.EnumSet;
 /**
  * Connection
  *
- * @opt operations
- * @opt types
- *
- * @composed 1 - "0..n" Session
- * @composed 1 - "0..?" Transport
- *
  */
 
 public interface Connection extends Endpoint

@@ -24,12 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * DeliveryBuffer
  *
- * @opt operations
- * @opt attributes
- * @opt types
- *
- * @composed 1 - "0..n" Delivery
- *
  */
 
 public interface DeliveryBuffer

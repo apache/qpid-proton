@@ -24,9 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Sender
  *
- * @opt operations
- * @opt types
- *
  */
 
 public interface Sender extends Link

@@ -24,8 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Outcome
  *
- * @hidden
- *
  */
 
 public interface Outcome extends DeliveryState

@@ -24,8 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Released
  *
- * @hidden
- *
  */
 
 public interface Released extends Outcome

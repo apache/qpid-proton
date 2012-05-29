@@ -24,13 +24,6 @@ package org.apache.qpid.proton.engine;
 /**
  * Endpoint
  *
- * @opt operations
- * @opt types
- *
- * @assoc - local 1 Endpoint.State
- * @assoc - remote 1 Endpoint.State
- * @assoc - local 0..1 Endpoint.EndpointError
- * @assoc - remote 0..1 Endpoint.EndpointError
  */
 
 public interface Endpoint
