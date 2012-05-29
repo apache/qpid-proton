@@ -103,7 +103,7 @@ class FrameParser
             else
             {
                 _ignore-=unconsumed;
-                return unconsumed;
+                return length-unconsumed;
             }
         }
 

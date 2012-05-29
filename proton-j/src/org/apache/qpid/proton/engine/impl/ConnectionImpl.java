@@ -268,27 +268,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         _localContainerId = localContainerId;
     }
 
-    private static class EndpointSequence implements Sequence<EndpointImpl>
-    {
-        private EndpointImpl _current;
-
-        public EndpointSequence(ConnectionImpl connection)
-        {
-            _current = connection;
-        }
-
-
-        public EndpointImpl next()
-        {
-            EndpointImpl next = _current;
-            if(next != null)
-            {
-                _current = next.getNext();
-            }
-            return next;
-        }
-    }
-
     public DeliveryImpl getWorkHead()
     {
         return _workHead;
