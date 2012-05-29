@@ -419,15 +419,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 if(session.getLocalState() == EndpointState.ACTIVE)
                 {
                     int channelId = allocateLocalChannel();
+                    transportSession.setLocalChannel(channelId);
+                    _localSessions[channelId] = transportSession;
 
                     Begin begin = new Begin();
 
-                    if(session.getRemoteState() == EndpointState.ACTIVE
-                       && !transportSession.isLocalChannelSet())
-                    {
-                        transportSession.setLocalChannel(channelId);
-                        _localSessions[channelId] = transportSession;
-                    }
 
                     if(session.getRemoteState() != EndpointState.UNINITIALIZED)
                     {

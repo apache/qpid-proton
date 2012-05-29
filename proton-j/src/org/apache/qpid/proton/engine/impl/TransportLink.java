@@ -38,6 +38,7 @@ class TransportLink<T extends LinkImpl>
     protected TransportLink(T link)
     {
         _link = link;
+        _name = link.getName();
     }
 
     static <L extends LinkImpl> TransportLink<L> createTransportLink(L link)
