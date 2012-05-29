@@ -290,7 +290,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                         flow.setDeliveryCount(transportLink.getDeliveryCount());
                         flow.setLinkCredit(transportLink.getLinkCredit());
-
+                        flow.setNextOutgoingId(transportSession.getNextOutgoingId());
                         int frameBytes = writeFrame(bytes, offset, length, transportSession.getLocalChannel(), flow, null);
                         written += frameBytes;
                         offset += frameBytes;

@@ -40,7 +40,7 @@ public class DynamicTypeConstructor implements TypeConstructor
         }
         catch (NullPointerException npe)
         {
-            throw new DecodeException("Unexpected null value - mandatory field not set?", npe);
+            throw new DecodeException("Unexpected null value - mandatory field not set? ("+npe.getMessage()+")", npe);
         }
         catch (ClassCastException cce)
         {
