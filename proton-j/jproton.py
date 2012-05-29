@@ -75,6 +75,9 @@ def state(endpoint):
 def pn_connection():
   return impl.ConnectionImpl()
 
+def pn_connection_destroy(c):
+  pass
+
 def pn_connection_state(c):
   return state(c)
 
@@ -84,17 +87,20 @@ def pn_connection_open(c):
 def pn_connection_close(c):
   return c.close()
 
-def pn_connection_destroy(c):
-  pass
-
 def pn_session(c):
   return c.session()
+
+def pn_session_destroy(s):
+  pass
 
 def pn_session_state(s):
   return state(s)
 
 def pn_session_open(s):
   return s.open()
+
+def pn_session_close(s):
+  return s.close()
 
 def pn_transport(c):
   return c.transport()
@@ -120,5 +126,26 @@ def pn_sender(ssn, name):
 def pn_receiver(ssn, name):
   return ssn.receiver(name)
 
+def pn_link_destroy(lnk):
+  pass
+
+def pn_link_state(lnk):
+  return state(lnk)
+
 def pn_link_open(lnk):
   return lnk.open()
+
+def pn_link_close(lnk):
+  return lnk.close()
+
+def pn_work_head(c):
+  return c.getWorkHead()
+
+def pn_delivery(lnk, tag):
+  return lnk.delivery(tag, 0, len(tag))
+
+def pn_flow(rcv, n):
+  return rcv.flow(n)
+
+def pn_send(snd, msg):
+  return snd.send(msg, 0, len(msg))
