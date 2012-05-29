@@ -24,11 +24,13 @@ from cproton import *
 # different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
 
+OUTPUT_SIZE = 32*1024
+
 def pump(t1, t2):
   while True:
-    cd, out1 = pn_output(t1, 1024)
+    cd, out1 = pn_output(t1, OUTPUT_SIZE)
     assert cd >= 0 or cd == PN_EOS, (cd, out1)
-    cd, out2 = pn_output(t2, 1024)
+    cd, out2 = pn_output(t2, OUTPUT_SIZE)
     assert cd >= 0 or cd == PN_EOS, (cd, out2)
 
     if out1 or out2:
