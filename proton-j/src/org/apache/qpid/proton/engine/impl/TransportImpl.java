@@ -630,6 +630,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                            : session.receiver(attach.getName());
                     transportLink = getTransportState(link);
                 }
+                else
+                {
+                    link = transportLink.getLink();
+                }
 
                 link.setRemoteState(EndpointState.ACTIVE);
                 Source source = (Source) attach.getSource();
