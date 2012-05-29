@@ -59,8 +59,9 @@ public class SenderImpl  extends LinkImpl implements Sender
 
     public void destroy()
     {
+        getSession().destroySender(this);
         super.destroy();
-        //TODO.
+
     }
 
     @Override

@@ -20,9 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
+import java.util.*;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Session;
 
@@ -30,8 +28,8 @@ public class SessionImpl extends EndpointImpl implements Session
 {
     private final ConnectionImpl _connection;
 
-    private List<SenderImpl> _senders = new ArrayList<SenderImpl>();
-    private List<ReceiverImpl> _receivers = new ArrayList<ReceiverImpl>();
+    private Map<String, SenderImpl> _senders = new LinkedHashMap<String, SenderImpl>();
+    private Map<String, ReceiverImpl>  _receivers = new LinkedHashMap<String, ReceiverImpl>();
     private TransportSession _transportSession;
 
     private LinkNode<SessionImpl> _node;
@@ -58,17 +56,25 @@ public class SessionImpl extends EndpointImpl implements Session
 
     public SenderImpl sender(String name)
     {
-        SenderImpl sender = new SenderImpl(this, name);
-        _senders.add(sender);
-        _connection.addLinkEndpoint(sender);
+        SenderImpl sender = _senders.get(name);
+        if(sender == null)
+        {
+            sender = new SenderImpl(this, name);
+            _senders.put(name, sender);
+            _connection.addLinkEndpoint(sender);
+        }
         return sender;
     }
 
     public ReceiverImpl receiver(String name)
     {
-        ReceiverImpl receiver = new ReceiverImpl(this, name);
-        _receivers.add(receiver);
-        _connection.addLinkEndpoint(receiver);
+        ReceiverImpl receiver = _receivers.get(name);
+        if(receiver == null)
+        {
+            receiver = new ReceiverImpl(this, name);
+            _receivers.put(name, receiver);
+            _connection.addLinkEndpoint(receiver);
+        }
         return receiver;
     }
 
@@ -94,12 +100,12 @@ public class SessionImpl extends EndpointImpl implements Session
         _connection.removeSessionEndpoint(_node);
         _node = null;
 
-        for(SenderImpl sender : _senders)
+        for(SenderImpl sender : _senders.values())
         {
             sender.destroy();
         }
         _senders.clear();
-        for(ReceiverImpl receiver : _receivers)
+        for(ReceiverImpl receiver : _receivers.values())
         {
             receiver.destroy();
         }
@@ -119,5 +125,15 @@ public class SessionImpl extends EndpointImpl implements Session
     void setNode(LinkNode<SessionImpl> node)
     {
         _node = node;
+    }
+
+    void destroySender(SenderImpl sender)
+    {
+        _senders.remove(sender.getName());
+    }
+
+    void destroyReceiver(ReceiverImpl receiver)
+    {
+        _receivers.remove(receiver.getName());
     }
 }

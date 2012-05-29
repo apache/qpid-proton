@@ -33,13 +33,13 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     {
         super(session, name);
     }
-    
+
     public void flow(final int credits)
     {
         modified();
         _credits += credits;
     }
-    
+
     int getCredits()
     {
         return _credits;
@@ -65,6 +65,8 @@ public class ReceiverImpl extends LinkImpl implements Receiver
 
     public void destroy()
     {
+        getSession().destroyReceiver(this);
+
         super.destroy();
         //TODO.
     }
