@@ -91,6 +91,8 @@ class FrameParser
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
+
+        // TODO protocol header hack
         if(_ignore != 0)
         {
             if(unconsumed > _ignore)
@@ -102,8 +104,8 @@ class FrameParser
             }
             else
             {
-                _ignore-=unconsumed;
-                return length-unconsumed;
+                _ignore-=length;
+                return length;
             }
         }
 
@@ -285,7 +287,7 @@ class FrameParser
 
         _localError = frameParsingError;
 
-        return _state == State.ERROR ? -1 : length - unconsumed;
+        return _state == State.ERROR ? -1 : length - in.remaining();
     }
 
     private void reset()
