@@ -45,9 +45,7 @@ public interface Session extends Endpoint
 
     public Receiver receiver(String name);
 
-    /**
-     * @see Connection#endpoints(EnumSet, EnumSet)
-     */
-    public Sequence<? extends Link> endpoints(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
+    public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
+
 
 }

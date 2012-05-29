@@ -24,21 +24,23 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.Sequence;
 import org.apache.qpid.proton.engine.Session;
 
 public class SessionImpl extends EndpointImpl implements Session
 {
     private final ConnectionImpl _connection;
-    
+
     private List<SenderImpl> _senders = new ArrayList<SenderImpl>();
     private List<ReceiverImpl> _receivers = new ArrayList<ReceiverImpl>();
     private TransportSession _transportSession;
+
+    private LinkNode<SessionImpl> _node;
 
 
     public SessionImpl(ConnectionImpl connection)
     {
         _connection = connection;
+        _node = _connection.addSessionEndpoint(this);
     }
 
     public void open()
@@ -58,25 +60,25 @@ public class SessionImpl extends EndpointImpl implements Session
     {
         SenderImpl sender = new SenderImpl(this, name);
         _senders.add(sender);
-        _connection.addEndpoint(sender);
+        _connection.addLinkEndpoint(sender);
         return sender;
     }
-    
+
     public ReceiverImpl receiver(String name)
     {
         ReceiverImpl receiver = new ReceiverImpl(this, name);
         _receivers.add(receiver);
-        _connection.addEndpoint(receiver);
+        _connection.addLinkEndpoint(receiver);
         return receiver;
     }
 
-    public Sequence<LinkImpl> endpoints(final EnumSet<EndpointState> local, final EnumSet<EndpointState> remote)
+    public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
-        IteratorSequence<LinkImpl> senderSequence = new IteratorSequence<LinkImpl>(_senders.iterator());
-        IteratorSequence<LinkImpl> receiverSequence = new IteratorSequence<LinkImpl>(_receivers.iterator());
-        
-        return new EndpointSelectionSequence<LinkImpl>(local, remote,
-                                              new ConcatenatedSequence<LinkImpl>(senderSequence,receiverSequence));
+        LinkNode.Query<SessionImpl> query = new EndpointImplQuery<SessionImpl>(local, remote);
+
+        LinkNode<SessionImpl> sessionNode = _node.next(query);
+
+        return sessionNode == null ? null : sessionNode.getValue();
     }
 
     @Override
@@ -88,7 +90,10 @@ public class SessionImpl extends EndpointImpl implements Session
     public void destroy()
     {
         super.destroy();
-        _connection.removeEndpoint(this);
+
+        _connection.removeSessionEndpoint(_node);
+        _node = null;
+
         for(SenderImpl sender : _senders)
         {
             sender.destroy();
@@ -109,5 +114,10 @@ public class SessionImpl extends EndpointImpl implements Session
     void setTransportSession(TransportSession transportSession)
     {
         _transportSession = transportSession;
+    }
+
+    void setNode(LinkNode<SessionImpl> node)
+    {
+        _node = node;
     }
 }

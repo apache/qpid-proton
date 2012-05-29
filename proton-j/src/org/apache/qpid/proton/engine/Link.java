@@ -20,6 +20,8 @@
  */
 package org.apache.qpid.proton.engine;
 
+import java.util.EnumSet;
+
 /**
  * Link
  *
@@ -56,11 +58,14 @@ public interface Link extends Endpoint
      * @return true if it can advance, false if it cannot
      */
     boolean advance();
-    
+
     void setLocalSourceAddress(String address);
     void setLocalTargetAddress(String address);
-    
+
     String getRemoteSourceAddress();
     String getRemoteTargetAddress();
-    
+
+
+    public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
+
 }

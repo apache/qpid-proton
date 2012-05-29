@@ -79,7 +79,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private Map<SessionImpl, TransportSession> _transportSessionState = new HashMap<SessionImpl, TransportSession>();
     private Map<LinkImpl, TransportLink> _transportLinkState = new HashMap<LinkImpl, TransportLink>();
 
-    
+
     private DecoderImpl _decoder = new DecoderImpl();
     private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
@@ -209,13 +209,13 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 transportLink.setDeliveryCount(deliveryId.add(UnsignedInteger.ONE));
                 TransportDelivery transportDelivery = new TransportDelivery(deliveryId, delivery, transportLink);
 
-                
+
                 Transfer transfer = new Transfer();
                 transfer.setDeliveryId(deliveryId);
                 transfer.setDeliveryTag(new Binary(delivery.getTag()));
                 transfer.setHandle(transportLink.getLocalHandle());
                 transfer.setMessageFormat(UnsignedInteger.ZERO);
-                
+
                 int frameBytes = writeFrame(bytes, offset, length,
                                             sender.getSession().getTransportSession().getLocalChannel(),
                                             transfer, null);
@@ -309,7 +309,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         int written = 0;
         while(endpoint != null && length >= _maxFrameSize)
         {
-            
+
             if(endpoint instanceof LinkImpl)
             {
 
@@ -321,12 +321,12 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     if( (link.getRemoteState() == EndpointState.ACTIVE
                         && !transportLink.isLocalHandleSet()) || link.getRemoteState() == EndpointState.UNINITIALIZED)
                     {
-    
+
                         SessionImpl session = link.getSession();
                         TransportSession transportSession = getTransportState(session);
                         UnsignedInteger localHandle = transportSession.allocateLocalHandle();
                         transportLink.setLocalHandle(localHandle);
-                        
+
                         if(link.getRemoteState() == EndpointState.UNINITIALIZED)
                         {
                             transportSession.addHalfOpenLink(transportLink);
@@ -335,21 +335,21 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         Attach attach = new Attach();
                         attach.setHandle(localHandle);
                         attach.setName(transportLink.getName());
-                        
+
                         if(link.getLocalSourceAddress() != null)
                         {
                             Source source = new Source();
                             source.setAddress(link.getLocalSourceAddress());
                             attach.setSource(source);
                         }
-                        
+
                         if(link.getLocalTargetAddress() != null)
                         {
                             Target target = new Target();
                             target.setAddress(link.getLocalTargetAddress());
                             attach.setTarget(target);
                         }
-                        
+
                         attach.setRole(endpoint instanceof ReceiverImpl ? Role.RECEIVER : Role.SENDER);
 
                         if(link instanceof SenderImpl)
@@ -363,11 +363,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         length -= frameBytes;
                     }
                 }
-                    
+
             }
             endpoint = endpoint.getNext();
         }
-        return written;        
+        return written;
     }
 
     private void clearInterestList()
@@ -395,7 +395,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         if(_connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
         {
             Open open = new Open();
-
+            open.setContainerId(_connectionEndpoint.getLocalContainerId());
             // TODO - populate;
 
             _isOpenSent = true;
@@ -423,7 +423,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     int channelId = allocateLocalChannel();
                     transportSession.setLocalChannel(channelId);
                     _localSessions[channelId] = transportSession;
-                    
+
                     Begin begin = new Begin();
 
                     begin.setRemoteChannel(UnsignedShort.valueOf((short) transportSession.getRemoteChannel()));
@@ -431,7 +431,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     begin.setIncomingWindow(transportSession.getIncomingWindowSize());
                     begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                     begin.setNextOutgoingId(transportSession.getNextOutgoingId());
-                    
+
                     written += writeFrame(bytes, offset, length, channelId, begin, null);
                 }
             }
@@ -462,7 +462,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
         return transportLink;
     }
-    
+
     private int allocateLocalChannel()
     {
         return 0;  //TODO - Implement
@@ -612,7 +612,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             SessionImpl session = transportSession.getSession();
             TransportLink transportLink = transportSession.getLinkFromRemoteHandle(attach.getHandle());
             LinkImpl link = null;
-            
+
             if(transportLink != null)
             {
                 // TODO - fail - attempt attach on a handle which is in use
@@ -622,7 +622,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 transportLink = transportSession.resolveHalfOpenLink(attach.getName());
                 if(transportLink == null)
                 {
-                    
+
                     link = (attach.getRole() == Role.RECEIVER)
                            ? session.sender(attach.getName())
                            : session.receiver(attach.getName());
@@ -640,7 +640,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 {
                     link.setRemoteTargetAddress(target.getAddress());
                 }
-                
+
                 transportLink.setName(attach.getName());
                 transportLink.setRemoteHandle(attach.getHandle());
                 transportSession.addLinkRemoteHandle(transportLink, attach.getHandle());
@@ -661,7 +661,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         {
             transportSession.handleFlow(flow);
         }
-    
+
     }
 
     public void handleTransfer(Transfer transfer, Binary payload, Integer channel)

@@ -27,7 +27,7 @@ public class DeliveryImpl implements Delivery
 {
     private DeliveryImpl _linkPrevious;
     private DeliveryImpl _linkNext;
-    
+
     private DeliveryImpl _workNext;
     private DeliveryImpl _workPrev;
 
@@ -127,7 +127,7 @@ public class DeliveryImpl implements Delivery
         return _linkPrevious;
     }
 
-    DeliveryImpl getWorkNext()
+    public DeliveryImpl getWorkNext()
     {
         return _workNext;
     }

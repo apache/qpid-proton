@@ -51,9 +51,10 @@ public interface Connection extends Endpoint
      * @return iterator for endpoints matching the specified local and
      *         remote states
      */
-    public Sequence<? extends Endpoint> endpoints(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
+    public Session sessionHead(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
-    public Sequence<? extends Delivery> getWorkSequence();
+    public Link linkHead(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
+    public Delivery getWorkHead();
 
 }

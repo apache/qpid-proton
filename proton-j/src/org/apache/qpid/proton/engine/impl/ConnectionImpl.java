@@ -23,11 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.Sequence;
-import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.type.transport.Open;
 
 public class ConnectionImpl extends EndpointImpl implements Connection
@@ -40,56 +36,103 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     private EndpointImpl _transportTail;
     private EndpointImpl _transportHead;
     private int _maxChannels = MAX_CHANNELS;
-    private EndpointImpl _tail;
-    private EndpointImpl _head;
+
+    private LinkNode<SessionImpl> _sessionHead;
+    private LinkNode<SessionImpl> _sessionTail;
+
+
+    private LinkNode<LinkImpl> _linkHead;
+    private LinkNode<LinkImpl> _linkTail;
+
 
     private DeliveryImpl _workHead;
     private DeliveryImpl _workTail;
 
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
+    private String _localContainerId = "";
 
-    public ConnectionImpl() 
+    public ConnectionImpl()
     {
         _transportFactory = TransportFactory.getDefaultTransportFactory();
-        _head = this;
-        _tail = this;
     }
 
     public SessionImpl session()
     {
         SessionImpl session = new SessionImpl(this);
         _sessions.add(session);
-        addEndpoint(session);
+
         return session;
     }
 
-    protected void addEndpoint(EndpointImpl endpoint)
+    protected LinkNode<SessionImpl> addSessionEndpoint(SessionImpl endpoint)
     {
-        endpoint.setPrev(_tail);
-        _tail.setNext(endpoint);
-        _tail = endpoint;
+        LinkNode<SessionImpl> node;
+        if(_sessionHead == null)
+        {
+            node = _sessionHead = _sessionTail = LinkNode.newList(endpoint);
+        }
+        else
+        {
+            node = _sessionTail = _sessionTail.addAtTail(endpoint);
+        }
+        return node;
     }
 
-    protected void removeEndpoint(EndpointImpl endpoint)
+    void removeSessionEndpoint(LinkNode<SessionImpl> node)
     {
-        if(endpoint == _tail)
-        {
-            _tail = endpoint.getPrev();
-        }
-        if(endpoint == _head)
-        {
-            _head = endpoint.getNext();
-        }
+        LinkNode<SessionImpl> prev = node.getPrev();
+        LinkNode<SessionImpl> next = node.getNext();
 
+        if(_sessionHead == node)
+        {
+            _sessionHead = next;
+        }
+        if(_sessionTail == node)
+        {
+            _sessionTail = prev;
+        }
+        node.remove();
     }
+
+
+    protected LinkNode<LinkImpl> addLinkEndpoint(LinkImpl endpoint)
+    {
+        LinkNode<LinkImpl> node;
+        if(_linkHead == null)
+        {
+            node = _linkHead = _linkTail = LinkNode.newList(endpoint);
+        }
+        else
+        {
+            node = _linkTail = _linkTail.addAtTail(endpoint);
+        }
+        return node;
+    }
+
+
+    void removeLinkEndpoint(LinkNode<LinkImpl> node)
+    {
+        LinkNode<LinkImpl> prev = node.getPrev();
+        LinkNode<LinkImpl> next = node.getNext();
+
+        if(_linkHead == node)
+        {
+            _linkHead = next;
+        }
+        if(_linkTail == node)
+        {
+            _linkTail = prev;
+        }
+        node.remove();
+    }
+
 
     public Transport transport()
     {
         if(_transport == null)
         {
             _transport = (TransportImpl) _transportFactory.transport(this);
-            addEndpoint(_transport);
         }
         else
         {
@@ -99,10 +142,33 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _transport;
     }
 
-    public Sequence<? extends EndpointImpl> endpoints(final EnumSet<EndpointState> local, 
-                                                      final EnumSet<EndpointState> remote)
+
+    public Session sessionHead(final EnumSet<EndpointState> local, final EnumSet<EndpointState> remote)
     {
-        return new EndpointSelectionSequence<EndpointImpl>(local, remote, new EndpointSequence(this));
+        if(_sessionHead == null)
+        {
+            return null;
+        }
+        else
+        {
+            LinkNode.Query<SessionImpl> query = new EndpointImplQuery<SessionImpl>(local, remote);
+            LinkNode<SessionImpl> node = query.matches(_sessionHead) ? _sessionHead : _sessionHead.next(query);
+            return node == null ? null : node.getValue();
+        }
+    }
+
+    public Link linkHead(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
+    {
+        if(_linkHead == null)
+        {
+            return null;
+        }
+        else
+        {
+            LinkNode.Query<LinkImpl> query = new EndpointImplQuery<LinkImpl>(local, remote);
+            LinkNode<LinkImpl> node = query.matches(_linkHead) ? _linkHead : _linkHead.next(query);
+            return node == null ? null : node.getValue();
+        }
     }
 
     @Override
@@ -125,9 +191,8 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         }
     }
 
-    void clearTransport() 
+    void clearTransport()
     {
-        removeEndpoint(_transport);
         _transport = null;
     }
 
@@ -193,6 +258,15 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return getNext();
     }
 
+    public String getLocalContainerId()
+    {
+        return _localContainerId;
+    }
+
+    public void setLocalContainerId(String localContainerId)
+    {
+        _localContainerId = localContainerId;
+    }
 
     private static class EndpointSequence implements Sequence<EndpointImpl>
     {
@@ -215,7 +289,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         }
     }
 
-    DeliveryImpl getWorkHead()
+    public DeliveryImpl getWorkHead()
     {
         return _workHead;
     }
@@ -224,7 +298,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     {
         return _workTail;
     }
-    
+
     void removeWork(DeliveryImpl delivery)
     {
         if(_workHead == delivery)
@@ -234,10 +308,10 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         }
         if(_workTail == delivery)
         {
-            _workTail = delivery.getWorkPrev();    
+            _workTail = delivery.getWorkPrev();
         }
     }
-    
+
     void addWork(DeliveryImpl delivery)
     {
         if(_workHead != delivery && delivery.getWorkNext() == null && delivery.getWorkPrev() == null)

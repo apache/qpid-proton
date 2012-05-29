@@ -20,13 +20,15 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.util.EnumSet;
+import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
 
 public abstract class LinkImpl extends EndpointImpl implements Link
 {
 
     private final SessionImpl _session;
-    
+
     DeliveryImpl _head;
     DeliveryImpl _tail;
     DeliveryImpl _current;
@@ -36,11 +38,14 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private String _localTargetAddress;
     private String _remoteTargetAddress;
 
+    private LinkNode<LinkImpl> _node;
+
 
     public LinkImpl(SessionImpl session, String name)
     {
         _session = session;
         _name = name;
+        _node = session.getConnectionImpl().addLinkEndpoint(this);
     }
 
 
@@ -60,8 +65,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         return _name;
     }
-    
-    
+
+
 
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
@@ -82,7 +87,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     public void destroy()
     {
         super.destroy();
-        _session.getConnectionImpl().removeEndpoint(this);
+        _session.getConnectionImpl().removeLinkEndpoint(_node);
         //TODO.
     }
 
@@ -181,6 +186,16 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         // TODO - should be an error if local state is ACTIVE
         _localTargetAddress = localTargetAddress;
         modified();
+    }
+
+    public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
+    {
+        LinkNode.Query<LinkImpl> query = new EndpointImplQuery<LinkImpl>(local, remote);
+
+        LinkNode<LinkImpl> linkNode = _node.next(query);
+
+        return linkNode == null ? null : linkNode.getValue();
+
     }
 
     abstract TransportLink getTransportLink();

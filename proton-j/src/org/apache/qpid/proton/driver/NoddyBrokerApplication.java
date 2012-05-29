@@ -21,19 +21,9 @@
 
 package org.apache.qpid.proton.driver;
 
-import org.apache.qpid.proton.engine.Accepted;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.Link;
-import org.apache.qpid.proton.engine.Receiver;
-import org.apache.qpid.proton.engine.Sender;
-import org.apache.qpid.proton.engine.Sequence;
-import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.type.Binary;
-
 import java.util.EnumSet;
+import org.apache.qpid.proton.engine.*;
+import org.apache.qpid.proton.type.Binary;
 
 public class NoddyBrokerApplication implements Application
 {
@@ -47,62 +37,56 @@ public class NoddyBrokerApplication implements Application
 
     public void process(Connection conn)
     {
-        Sequence<? extends Endpoint> s = conn.endpoints(UNINITIALIZED_SET, INITIALIZED_SET);
-        Endpoint endpoint;
-        while((endpoint = s.next()) != null)
+        if(conn.getLocalState() == EndpointState.UNINITIALIZED && conn.getRemoteState() != EndpointState.UNINITIALIZED)
         {
-            if(endpoint instanceof Connection)
+            conn.open();
+        }
+        Session session = conn.sessionHead(UNINITIALIZED_SET, INITIALIZED_SET);
+        while(session != null)
+        {
+            // TODO
+            session.open();
+            session = conn.sessionHead(UNINITIALIZED_SET, INITIALIZED_SET);
+        }
+
+        Link link = conn.linkHead(UNINITIALIZED_SET, INITIALIZED_SET);
+        while(link != null)
+        {
+            // TODO - following is a hack
+            link.setLocalSourceAddress(link.getRemoteSourceAddress());
+            link.setLocalTargetAddress(link.getRemoteTargetAddress());
+
+            link.open();
+            if(link instanceof Receiver)
             {
-                // TODO
-                conn.open();
+                ((Receiver)link).flow(200);
             }
-            else if(endpoint instanceof Session)
+            else
             {
-                // TODO
-                ((Session)endpoint).open();
-            }
-            else if(endpoint instanceof Link)
-            {
-                Link link = (Link) endpoint;
-
-                // TODO
-
-                // TODO - following is a hack
-                link.setLocalSourceAddress(link.getRemoteSourceAddress());
-                link.setLocalTargetAddress(link.getRemoteTargetAddress());
-
-                link.open();
-                if(link instanceof Receiver)
-                {
-                    ((Receiver)link).flow(200);
-                }
-                else
-                {
-                    Sender sender = (Sender)link;
-                    sender.offer(100);
-                    sendMessages(sender);
-                }
+                Sender sender = (Sender)link;
+                sender.offer(100);
+                sendMessages(sender);
             }
         }
 
-        Sequence<? extends Delivery> deliveries = conn.getWorkSequence();
-        Delivery delivery;
-        while((delivery = deliveries.next()) != null)
+        Delivery delivery = conn.getWorkHead();
+
+        while(delivery != null)
         {
             System.out.println("received " + new Binary(delivery.getTag()));
             if(delivery.getLink() instanceof Receiver)
             {
 
-                Receiver link = (Receiver) delivery.getLink();
-                if(link.current() == null)
+                Receiver receiver = (Receiver) delivery.getLink();
+                if(receiver.current() == null)
                 {
-                    link.advance();
+                    receiver.advance();
                 }
-                if(link.recv(new byte[0], 0, 0) == -1)
+                if(receiver.recv(new byte[0], 0, 0) == -1)
                 {
 
-                    link.advance();
-    
+                    receiver.advance();
+
                 }
                 delivery.disposition(Accepted.getInstance());
 
@@ -112,27 +96,29 @@ public class NoddyBrokerApplication implements Application
                 Sender sender = (Sender) delivery.getLink();
                 sendMessages(sender);
             }
+
+            delivery = delivery.getWorkNext();
         }
 
-        s = conn.endpoints(ACTIVE_STATE, CLOSED_STATE);
-        while((endpoint = s.next()) != null)
+        link = conn.linkHead(ACTIVE_STATE, CLOSED_STATE);
+        while(link != null)
         {
-            if(endpoint instanceof Link)
-            {
-                // TODO
-                ((Link)endpoint).close();
-            }
-            else if(endpoint instanceof Session)
-            {
-                //TODO - close links?
-                ((Session)endpoint).close();
-            }
-            else if(endpoint instanceof Connection)
-            {
-                //TODO - close sessions / links?
-                ((Connection)endpoint).close();
-            }
+            // TODO
+            link.close();
+            link = link.next(ACTIVE_STATE, CLOSED_STATE);
+        }
 
+        session = conn.sessionHead(ACTIVE_STATE, CLOSED_STATE);
+        while(session != null)
+        {
+            //TODO - close links?
+            session.close();
+            session = session.next(ACTIVE_STATE, CLOSED_STATE);
+        }
+        if(conn.getLocalState() == EndpointState.ACTIVE && conn.getRemoteState() == EndpointState.CLOSED)
+        {
+                //TODO - close sessions / links?
+                conn.close();
         }
 
     }
@@ -147,7 +133,7 @@ public class NoddyBrokerApplication implements Application
         }
         while(sender.advance())
         {
-            
+
 
             System.out.println("Sending message " + _tagId);
             if(sender.current() == null)
@@ -155,7 +141,7 @@ public class NoddyBrokerApplication implements Application
                 byte[] tag = {_tagId++};
                 sender.delivery(tag, 0, 1);
             }
-        
+
         }
         ;
     }

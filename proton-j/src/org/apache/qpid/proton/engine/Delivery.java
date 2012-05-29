@@ -59,5 +59,6 @@ public interface Delivery
 
     public void destroy();
 
+    public Delivery getWorkNext();
 
 }
