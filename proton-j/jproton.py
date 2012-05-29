@@ -113,3 +113,12 @@ def pn_input(t, inp):
 def pn_session_head(c, mask):
   local, remote = enums(mask)
   return c.sessionHead(local, remote)
+
+def pn_sender(ssn, name):
+  return ssn.sender(name)
+
+def pn_receiver(ssn, name):
+  return ssn.receiver(name)
+
+def pn_link_open(lnk):
+  return lnk.open()
