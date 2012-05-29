@@ -141,11 +141,23 @@ def pn_link_close(lnk):
 def pn_work_head(c):
   return c.getWorkHead()
 
-def pn_delivery(lnk, tag):
-  return lnk.delivery(tag, 0, len(tag))
-
 def pn_flow(rcv, n):
   return rcv.flow(n)
 
 def pn_send(snd, msg):
   return snd.send(msg, 0, len(msg))
+
+def pn_delivery(lnk, tag):
+  return lnk.delivery(tag, 0, len(tag))
+
+def pn_delivery_tag(d):
+  return d.getTag().tostring()
+
+def pn_writable(d):
+  return d.isWritable()
+
+def pn_readable(d):
+  return d.isReadable()
+
+def pn_updated(d):
+  return d.isUpdated()
