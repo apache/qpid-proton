@@ -53,6 +53,8 @@ endif (SWIG_FOUND)
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpidproton)
 
+add_subdirectory(docs/api)
+
 set_target_properties (
   qpidproton proton
   PROPERTIES
