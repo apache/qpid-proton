@@ -102,10 +102,7 @@ for a in args:
   includes.append(a.strip())
 
 if not includes:
-  if opts.modules:
-    includes.append("*")
-  else:
-    includes.extend(["proton.tests.*"])
+  includes.append("*")
 
 def is_ignored(path):
   for p in excludes:
@@ -550,7 +547,7 @@ class Harness:
 
 modules = opts.modules
 if not modules:
-  modules.extend(["proton.tests"])
+  modules.extend(["proton_tests"])
 h = Harness()
 for name in modules:
   m = __import__(name, None, None, ["dummy"])

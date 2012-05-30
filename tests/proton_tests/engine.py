@@ -18,7 +18,7 @@
 #
 
 import os
-from cproton import *
+from xproton import *
 
 # future test areas
 # different permutations of setup
