@@ -50,6 +50,8 @@ public class DeliveryImpl implements Delivery
     private int _flags = (byte) 0;
     private int _transportFlags = (byte) 0;
     private TransportDelivery _transportDelivery;
+    private byte[] _data;
+    private int _dataSize;
 
     public DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
     {
@@ -96,7 +98,6 @@ public class DeliveryImpl implements Delivery
     {
         _deliveryState = state;
         setTransportFlag(DELIVERY_STATE_CHANGED);
-
     }
 
     public void settle()
@@ -151,9 +152,24 @@ public class DeliveryImpl implements Delivery
     int recv(byte[] bytes, int offset, int size)
     {
 
-        //TODO - should only be if no bytes left
-        clearFlag(IO_WORK);
-        return -1;  //TODO - Implement
+        final int consumed;
+        if(_data != null)
+        {
+            //TODO - should only be if no bytes left
+            consumed = Math.min(size, _dataSize);
+
+            System.arraycopy(_data, 0, bytes, offset, consumed);
+            _dataSize -= consumed;
+        }
+        else
+        {
+            _dataSize =  consumed = 0;
+        }
+        if(_dataSize == 0)
+        {
+            clearFlag(IO_WORK);
+        }
+        return consumed;  //TODO - Implement
     }
 
     private void clearFlag(int ioWork)
@@ -291,5 +307,53 @@ public class DeliveryImpl implements Delivery
     public boolean isSettled()
     {
         return _settled;
+    }
+
+    int send(byte[] bytes, int offset, int length)
+    {
+        if(_data == null)
+        {
+            _data = new byte[length];
+        }
+        else if(_data.length - _dataSize < length)
+        {
+            byte[] oldData = _data;
+            _data = new byte[oldData.length + _dataSize];
+            System.arraycopy(oldData,0,_data,0,_dataSize);
+        }
+        System.arraycopy(bytes,offset,_data,_dataSize,length);
+        _dataSize+=length;
+        addToWorkList();
+        return length;  //TODO - Implement.
+    }
+
+    byte[] getData()
+    {
+        return _data;
+    }
+
+    int getDataOffset()
+    {
+        return 0;  //TODO - Implement.
+    }
+
+    int getDataLength()
+    {
+        return _dataSize;  //TODO - Implement.
+    }
+
+    public void setData(byte[] data)
+    {
+        _data = data;
+    }
+
+    void setDataLength(int length)
+    {
+        _dataSize = length;
+    }
+
+    public void setDataOffset(int arrayOffset)
+    {
+        // TODO - implement
     }
 }

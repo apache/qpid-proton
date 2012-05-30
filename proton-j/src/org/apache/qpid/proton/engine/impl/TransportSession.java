@@ -21,13 +21,13 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.transport.Flow;
-import org.apache.qpid.proton.type.transport.Transfer;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.type.UnsignedInteger;
+import org.apache.qpid.proton.type.transport.Disposition;
+import org.apache.qpid.proton.type.transport.Flow;
+import org.apache.qpid.proton.type.transport.Transfer;
 
 class TransportSession
 {
@@ -199,6 +199,13 @@ class TransportSession
                                                       deliveryTag.getLength());
             TransportDelivery transportDelivery = new TransportDelivery(_currentDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);
+            // TODO - should this be a copy?
+            if(payload != null)
+            {
+                delivery.setData(payload.getArray());
+                delivery.setDataLength(payload.getLength());
+                delivery.setDataOffset(payload.getArrayOffset());
+            }
             delivery.addIOWork();
 
 
@@ -251,5 +258,10 @@ class TransportSession
     private void setRemoteNextIncomingId(UnsignedInteger remoteNextIncomingId)
     {
         _remoteNextIncomingId = remoteNextIncomingId;
+    }
+
+    void handleDisposition(Disposition disposition)
+    {
+        //TODO - Implement.
     }
 }

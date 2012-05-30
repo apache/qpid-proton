@@ -42,8 +42,12 @@ public class SenderImpl  extends LinkImpl implements Sender
 
     public int send(final byte[] bytes, int offset, int length)
     {
-        //TODO.
-        return 0;
+        DeliveryImpl current = current();
+        if(current == null || current.getLink() != this)
+        {
+            throw new IllegalArgumentException();//TODO.
+        }
+        return current.send(bytes, offset, length);
     }
 
     public void abort()

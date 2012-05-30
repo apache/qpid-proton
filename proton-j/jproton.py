@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -29,6 +29,12 @@ PN_LOCAL_CLOSED = 4
 PN_REMOTE_UNINIT = 8
 PN_REMOTE_ACTIVE = 16
 PN_REMOTE_CLOSED = 32
+
+PN_RECEIVED = 1
+PN_ACCEPTED = 2
+PN_REJECTED = 3
+PN_RELEASED = 4
+PN_MODIFIED = 5
 
 def enums(mask):
   local = []
@@ -161,3 +167,29 @@ def pn_readable(d):
 
 def pn_updated(d):
   return d.isUpdated()
+
+def pn_advance(l):
+  return l.advance()
+
+def pn_current(l):
+  return l.current()
+
+def pn_recv(l, size):
+  output = zeros(size, "b")
+  n = l.recv(output, 0, size)
+  result = ""
+  if n > 0:
+    result = output.tostring()[:n]
+  return [n, result]
+
+def pn_disposition(d, p):
+  if p == PN_ACCEPTED:
+    d.disposition(Accepted.getInstance())
+
+def pn_remote_disp(d):
+  if(d.getRemoteState() == Accepted.getInstance()):
+    return PN_ACCEPTED
+
+def pn_local_disp(d):
+  if(d.getLocalState() == Accepted.getInstance()):
+    return PN_ACCEPTED

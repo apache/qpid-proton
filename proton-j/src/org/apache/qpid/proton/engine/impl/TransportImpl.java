@@ -216,9 +216,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 transfer.setHandle(transportLink.getLocalHandle());
                 transfer.setMessageFormat(UnsignedInteger.ZERO);
 
+                // TODO - large frames
+                ByteBuffer payload = ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(), delivery.getDataLength());
+
                 int frameBytes = writeFrame(bytes, offset, length,
                                             sender.getSession().getTransportSession().getLocalChannel(),
-                                            transfer, null);
+                                            transfer, payload);
+
+
                 written += frameBytes;
                 offset += frameBytes;
                 length -= frameBytes;
@@ -531,6 +536,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         _encoder.setByteBuffer(buf);
         _encoder.writeDescribedType(frameBody);
 
+        int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize);
+        if(payloadSize > 0)
+        {
+            int oldLimit = payload.limit();
+            payload.limit(payload.position() + payloadSize);
+            buf.put(payload);
+            payload.limit(oldLimit);
+        }
         int frameSize = 8 + buf.position() - oldPosition;
         bytes[offset] = (byte) ((frameSize>>24) & 0xFF);
         bytes[offset+1] = (byte) ((frameSize>>16) & 0xFF);
@@ -685,9 +698,18 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-    public void handleDisposition(Disposition disposition, Binary payload, Integer context)
+    public void handleDisposition(Disposition disposition, Binary payload, Integer channel)
     {
-        //To change body of implemented methods use File | Settings | File Templates.
+        System.out.println("CH["+channel+"] : " + disposition);
+        TransportSession transportSession = _remoteSessions[channel];
+        if(transportSession == null)
+        {
+            // TODO - fail due to attach on non-begun session
+        }
+        else
+        {
+            transportSession.handleDisposition(disposition);
+        }
     }
 
     public void handleDetach(Detach detach, Binary payload, Integer channel)
