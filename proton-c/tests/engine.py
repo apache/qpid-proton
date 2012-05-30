@@ -305,7 +305,8 @@ class TransferTest(Test):
     self.pump()
     d = pn_work_head(self.c1)
     assert d is not None
-    assert pn_delivery_tag(d) == "tag"
+    tag = pn_delivery_tag(d)
+    assert tag == "tag", tag
     assert pn_writable(d)
 
     n = pn_send(self.snd, "this is a test")
@@ -377,7 +378,9 @@ class TransferTest(Test):
 
     self.pump()
 
-    assert pn_remote_disp(sd) == pn_local_disp(rd) == PN_ACCEPTED
+    rdisp = pn_remote_disp(sd)
+    ldisp = pn_local_disp(rd)
+    assert rdisp == ldisp == PN_ACCEPTED, (rdisp, ldisp)
     assert pn_updated(sd)
 
     pn_disposition(sd, PN_ACCEPTED)
