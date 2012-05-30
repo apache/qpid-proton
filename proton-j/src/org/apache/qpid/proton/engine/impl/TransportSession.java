@@ -49,7 +49,10 @@ class TransportSession
     private UnsignedInteger _remoteOutgoingWindow;
     private UnsignedInteger _remoteNextIncomingId;
     private UnsignedInteger _remoteNextOutgoingId;
-    private Map<UnsignedInteger, DeliveryImpl> _unsettledDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
+    private Map<UnsignedInteger, DeliveryImpl>
+            _unsettledIncomingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
+    private Map<UnsignedInteger, DeliveryImpl>
+            _unsettledOutgoingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
 
     public TransportSession(SessionImpl session)
     {
@@ -188,7 +191,7 @@ class TransportSession
             TransportReceiver transportReceiver = (TransportReceiver) getLinkFromRemoteHandle(transfer.getHandle());
             ReceiverImpl receiver = transportReceiver.getReceiver();
             Binary deliveryTag = transfer.getDeliveryTag();
-            delivery = _unsettledDeliveriesById.get(_currentDeliveryId);
+            delivery = _unsettledIncomingDeliveriesById.get(_currentDeliveryId);
 
 
         }
@@ -204,7 +207,7 @@ class TransportSession
                                                       deliveryTag.getLength());
             TransportDelivery transportDelivery = new TransportDelivery(_currentDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);
-            _unsettledDeliveriesById.put(_currentDeliveryId, delivery);
+            _unsettledIncomingDeliveriesById.put(_currentDeliveryId, delivery);
 
 
         }
@@ -270,6 +273,29 @@ class TransportSession
 
     void handleDisposition(Disposition disposition)
     {
+        UnsignedInteger id = disposition.getFirst();
+        UnsignedInteger last = disposition.getLast() == null ? id : disposition.getLast();
+        final Map<UnsignedInteger, DeliveryImpl> unsettledDeliveries =
+                disposition.getRole() ? _unsettledOutgoingDeliveriesById
+                        : _unsettledIncomingDeliveriesById;
+
+        while(id.compareTo(last)<=0)
+        {
+            DeliveryImpl delivery = unsettledDeliveries.get(id);
+            if(delivery != null)
+            {
+                if(disposition.getState() != null)
+                {
+                    delivery.setRemoteDeliveryState(DeliveryStateConverter.convert(disposition.getState()));
+                }
+            }
+            id = id.add(UnsignedInteger.ONE);
+        }
         //TODO - Implement.
+    }
+
+    void addUnsettledOutgoing(UnsignedInteger deliveryId, DeliveryImpl delivery)
+    {
+        _unsettledOutgoingDeliveriesById.put(deliveryId, delivery);
     }
 }

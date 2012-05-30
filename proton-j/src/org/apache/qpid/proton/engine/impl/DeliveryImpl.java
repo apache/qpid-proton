@@ -53,6 +53,8 @@ public class DeliveryImpl implements Delivery
     private byte[] _data;
     private int _dataSize;
     private boolean _complete;
+    private boolean _updated;
+    private boolean _done;
 
     public DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
     {
@@ -104,6 +106,7 @@ public class DeliveryImpl implements Delivery
     public void settle()
     {
         _settled = true;
+        setTransportFlag(DELIVERY_STATE_CHANGED);
     }
 
     DeliveryImpl getLinkNext()
@@ -387,5 +390,27 @@ public class DeliveryImpl implements Delivery
     void setComplete()
     {
         _complete = true;
+    }
+
+    void setRemoteDeliveryState(DeliveryState remoteDeliveryState)
+    {
+        _remoteDeliveryState = remoteDeliveryState;
+        _updated = true;
+    }
+
+    public boolean isUpdated()
+    {
+        return _updated;
+    }
+
+
+    void setDone()
+    {
+        _done = true;
+    }
+
+    boolean isDone()
+    {
+        return _done;
     }
 }

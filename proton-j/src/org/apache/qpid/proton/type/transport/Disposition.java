@@ -37,12 +37,12 @@ public class Disposition
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000015L), Symbol.valueOf("amqp:disposition:list"), 
+        UnsignedLong.valueOf(0x0000000000000015L), Symbol.valueOf("amqp:disposition:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000015L);
     private final DispositionWrapper _wrapper = new DispositionWrapper();
-    
+
     private boolean _role;
     private UnsignedInteger _first;
     private UnsignedInteger _last;
@@ -114,7 +114,7 @@ public class Disposition
     {
         _batchable = batchable;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -124,7 +124,7 @@ public class Disposition
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -141,7 +141,7 @@ public class Disposition
             case 4:
                 return _state;
             case 5:
-                return _batchable;            
+                return _batchable;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -151,14 +151,14 @@ public class Disposition
     public int size()
     {
         return (_batchable != false)
-                  ? 6 
-                  : _state != null 
-                  ? 5 
+                  ? 6
+                  : _state != null
+                  ? 5
                   : (_settled != false)
-                  ? 4 
-                  : _last != null 
-                  ? 3 
-                  : 2;        
+                  ? 4
+                  : _last != null
+                  ? 3
+                  : 2;
 
     }
 
@@ -235,5 +235,17 @@ public class Disposition
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "Disposition{" +
+               "role=" + (_role ? "RECIEVER" : "SENDER") +
+               ", first=" + _first +
+               ", last=" + _last +
+               ", settled=" + _settled +
+               ", state=" + _state +
+               ", batchable=" + _batchable +
+               '}';
+    }
 }
-  

@@ -116,6 +116,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         if(_current != null )
         {
+            _current.setDone();
             DeliveryImpl oldCurrent = _current;
             _current = _current.getLinkNext();
             getConnectionImpl().workUpdate(oldCurrent);

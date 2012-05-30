@@ -107,7 +107,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     public int output(byte[] bytes, final int offset, final int size)
     {
-
         int written = 0;
 
         written += processHeader(bytes, offset);
@@ -189,7 +188,38 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     private int processSenderDisposition(byte[] bytes, int offset, int length)
     {
-        return 0;  //TODO - Implement
+        DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
+        int written = 0;
+        while(delivery != null && length >= _maxFrameSize)
+        {
+            if((delivery.getLink() instanceof SenderImpl) && delivery.isLocalStateChange())
+            {
+                TransportDelivery transportDelivery = delivery.getTransportDelivery();
+                Disposition disposition = new Disposition();
+                disposition.setFirst(transportDelivery.getDeliveryId());
+                disposition.setLast(transportDelivery.getDeliveryId());
+                disposition.setRole(Role.SENDER);
+                disposition.setSettled(delivery.isSettled());
+                DeliveryState deliveryState = delivery.getLocalState();
+                if(deliveryState == Accepted.getInstance())
+                {
+                    disposition.setState(ACCEPTED);
+                }
+                else
+                {
+                    // TODO
+                }
+                int frameBytes = writeFrame(bytes, offset, length, delivery.getLink().getSession()
+                                                                  .getTransportSession().getLocalChannel(),
+                                   disposition, null);
+                written += frameBytes;
+                offset += frameBytes;
+                length -= frameBytes;
+            }
+            delivery = delivery.getTransportWorkNext();
+        }
+        return written;
+
     }
 
     private int processMessageData(byte[] bytes, int offset, int length)
@@ -198,7 +228,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         int written = 0;
         while(delivery != null && length >= _maxFrameSize)
         {
-            if((delivery.getLink() instanceof SenderImpl))
+            if((delivery.getLink() instanceof SenderImpl) && !(delivery.isDone() && delivery.getDataLength() == 0))
             {
                 SenderImpl sender = (SenderImpl) delivery.getLink();
 
@@ -208,7 +238,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
                 UnsignedInteger deliveryId = transportLink.getDeliveryCount();
                 TransportDelivery transportDelivery = new TransportDelivery(deliveryId, delivery, transportLink);
-
+                delivery.setTransportDelivery(transportDelivery);
+                sender.getSession().getTransportSession().addUnsettledOutgoing(deliveryId, delivery);
 
                 Transfer transfer = new Transfer();
                 transfer.setDeliveryId(deliveryId);

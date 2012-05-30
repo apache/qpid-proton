@@ -197,3 +197,6 @@ def pn_remote_disp(d):
 def pn_local_disp(d):
   if(d.getLocalState() == Accepted.getInstance()):
     return PN_ACCEPTED
+
+def pn_settle(d):
+  d.settle()

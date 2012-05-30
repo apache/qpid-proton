@@ -36,13 +36,13 @@ public class Accepted
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000024L), Symbol.valueOf("amqp:accepted:list"), 
+        UnsignedLong.valueOf(0x0000000000000024L), Symbol.valueOf("amqp:accepted:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000024L);
     private final AcceptedWrapper _wrapper = new AcceptedWrapper();
-    
-    
+
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -52,7 +52,7 @@ public class Accepted
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -62,7 +62,7 @@ public class Accepted
 
     public int size()
     {
-        return 0;        
+        return 0;
 
     }
 
@@ -110,5 +110,10 @@ public class Accepted
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "Accepted{}";
+    }
 }
-  
