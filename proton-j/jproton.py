@@ -111,6 +111,10 @@ def pn_session_close(s):
 def pn_transport(c):
   return c.transport()
 
+def pn_trace(t, lvl):
+  # XXX: fix up later
+  pass
+
 def pn_output(t, size):
   output = zeros(size, "b")
   n = t.output(output, 0, size)
