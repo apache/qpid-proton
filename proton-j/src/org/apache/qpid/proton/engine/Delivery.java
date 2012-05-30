@@ -56,4 +56,9 @@ public interface Delivery
 
     public Delivery getWorkNext();
 
+    public boolean isWritable();
+
+    public boolean isReadable();
+
+
 }

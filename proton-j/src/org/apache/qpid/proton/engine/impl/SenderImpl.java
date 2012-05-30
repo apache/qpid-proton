@@ -85,7 +85,7 @@ public class SenderImpl  extends LinkImpl implements Sender
         return advance;
     }
 
-    private boolean hasCredit()
+    boolean hasCredit()
     {
         return _credit > 0;
     }

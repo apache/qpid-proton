@@ -356,4 +356,18 @@ public class DeliveryImpl implements Delivery
     {
         // TODO - implement
     }
+
+    public boolean isWritable()
+    {
+        return getLink() instanceof SenderImpl
+                && getLink().current() == this
+                && ((SenderImpl) getLink()).hasCredit();
+    }
+
+    public boolean isReadable()
+    {
+        return getLink() instanceof ReceiverImpl
+                && getLink().current() == this
+                && _dataSize > 0;
+    }
 }
