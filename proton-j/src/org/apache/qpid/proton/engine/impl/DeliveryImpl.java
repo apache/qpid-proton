@@ -52,6 +52,7 @@ public class DeliveryImpl implements Delivery
     private TransportDelivery _transportDelivery;
     private byte[] _data;
     private int _dataSize;
+    private boolean _complete;
 
     public DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
     {
@@ -169,7 +170,7 @@ public class DeliveryImpl implements Delivery
         {
             clearFlag(IO_WORK);
         }
-        return consumed;  //TODO - Implement
+        return (_complete && consumed == 0) ? TransportImpl.END_OF_STREAM : consumed;  //TODO - Implement
     }
 
     private void clearFlag(int ioWork)
@@ -236,8 +237,9 @@ public class DeliveryImpl implements Delivery
         }
     }
 
-    void clearTransportWork()
+    DeliveryImpl clearTransportWork()
     {
+        DeliveryImpl next = _transportWorkNext;
         getLink().getConnectionImpl().removeTransportWork(this);
         if(_transportWorkPrev != null)
         {
@@ -250,11 +252,17 @@ public class DeliveryImpl implements Delivery
         }
         _transportWorkNext = null;
         _transportWorkPrev = null;
+        return next;
     }
 
     void addToTransportWorkList()
     {
-        getLink().getConnectionImpl().addTransportWork(this);
+        if(_transportWorkNext == null
+           && _transportWorkPrev == null
+           && getLink().getConnectionImpl().getTransportWorkHead() != this)
+        {
+            getLink().getConnectionImpl().addTransportWork(this);
+        }
     }
 
 
@@ -281,6 +289,10 @@ public class DeliveryImpl implements Delivery
 
     void setTransportWorkNext(DeliveryImpl transportWorkNext)
     {
+        if(transportWorkNext == this)
+        {
+            (new Exception("Aaaargh")).printStackTrace();
+        }
         _transportWorkNext = transportWorkNext;
     }
 
@@ -323,7 +335,8 @@ public class DeliveryImpl implements Delivery
         }
         System.arraycopy(bytes,offset,_data,_dataSize,length);
         _dataSize+=length;
-        addToWorkList();
+//        addToWorkList();
+        addToTransportWorkList();
         return length;  //TODO - Implement.
     }
 
@@ -342,7 +355,7 @@ public class DeliveryImpl implements Delivery
         return _dataSize;  //TODO - Implement.
     }
 
-    public void setData(byte[] data)
+    void setData(byte[] data)
     {
         _data = data;
     }
@@ -369,5 +382,10 @@ public class DeliveryImpl implements Delivery
         return getLink() instanceof ReceiverImpl
                 && getLink().current() == this
                 && _dataSize > 0;
+    }
+
+    void setComplete()
+    {
+        _complete = true;
     }
 }

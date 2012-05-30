@@ -205,8 +205,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
 
                 TransportLink transportLink = sender.getTransportLink();
+
                 UnsignedInteger deliveryId = transportLink.getDeliveryCount();
-                transportLink.setDeliveryCount(deliveryId.add(UnsignedInteger.ONE));
                 TransportDelivery transportDelivery = new TransportDelivery(deliveryId, delivery, transportLink);
 
 
@@ -214,6 +214,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 transfer.setDeliveryId(deliveryId);
                 transfer.setDeliveryTag(new Binary(delivery.getTag()));
                 transfer.setHandle(transportLink.getLocalHandle());
+                if(delivery.getLink().current() == delivery)
+                {
+                    transfer.setMore(true);
+                }
                 transfer.setMessageFormat(UnsignedInteger.ZERO);
 
                 // TODO - large frames
@@ -228,8 +232,24 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 offset += frameBytes;
                 length -= frameBytes;
 
+                // TODO partial consumption
+                delivery.setData(null);
+                delivery.setDataLength(0);
+
+                if(delivery.getLink().current() != delivery)
+                {
+                    transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.ONE));
+                }
+
+                delivery = delivery.clearTransportWork();
+
+
+
             }
-            delivery = delivery.getTransportWorkNext();
+            else
+            {
+                delivery = delivery.getTransportWorkNext();
+            }
         }
         return written;
     }
@@ -685,7 +705,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     public void handleTransfer(Transfer transfer, Binary payload, Integer channel)
     {
-        System.out.println("CH["+channel+"] : " + transfer);
+        System.out.println("CH["+channel+"] : " + transfer + " ["+payload+"]");
         // TODO - check channel < max_channel
         TransportSession transportSession = _remoteSessions[channel];
         if(transportSession != null)

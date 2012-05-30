@@ -49,6 +49,7 @@ class TransportSession
     private UnsignedInteger _remoteOutgoingWindow;
     private UnsignedInteger _remoteNextIncomingId;
     private UnsignedInteger _remoteNextOutgoingId;
+    private Map<UnsignedInteger, DeliveryImpl> _unsettledDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
 
     public TransportSession(SessionImpl session)
     {
@@ -181,11 +182,15 @@ class TransportSession
 
     public void handleTransfer(Transfer transfer, Binary payload)
     {
-
+        DeliveryImpl delivery;
         if(transfer.getDeliveryId() == null || transfer.getDeliveryId().equals(_currentDeliveryId))
         {
+            TransportReceiver transportReceiver = (TransportReceiver) getLinkFromRemoteHandle(transfer.getHandle());
+            ReceiverImpl receiver = transportReceiver.getReceiver();
+            Binary deliveryTag = transfer.getDeliveryTag();
+            delivery = _unsettledDeliveriesById.get(_currentDeliveryId);
 
-            // TODO - handle large messages
+
         }
         else
         {
@@ -195,24 +200,27 @@ class TransportSession
             TransportReceiver transportReceiver = (TransportReceiver) getLinkFromRemoteHandle(transfer.getHandle());
             ReceiverImpl receiver = transportReceiver.getReceiver();
             Binary deliveryTag = transfer.getDeliveryTag();
-            DeliveryImpl delivery = receiver.delivery(deliveryTag.getArray(), deliveryTag.getArrayOffset(),
+            delivery = receiver.delivery(deliveryTag.getArray(), deliveryTag.getArrayOffset(),
                                                       deliveryTag.getLength());
             TransportDelivery transportDelivery = new TransportDelivery(_currentDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);
-            // TODO - should this be a copy?
-            if(payload != null)
-            {
-                delivery.setData(payload.getArray());
-                delivery.setDataLength(payload.getLength());
-                delivery.setDataOffset(payload.getArrayOffset());
-            }
-            delivery.addIOWork();
+            _unsettledDeliveriesById.put(_currentDeliveryId, delivery);
 
 
         }
+        // TODO - should this be a copy?
+        if(payload != null)
+        {
+            delivery.setData(payload.getArray());
+            delivery.setDataLength(payload.getLength());
+            delivery.setDataOffset(payload.getArrayOffset());
+        }
+        delivery.addIOWork();
+
 
         if(!(transfer.getMore() || transfer.getAborted()))
         {
+            delivery.setComplete();
             _incomingWindowSize = _incomingWindowSize.subtract(UnsignedInteger.ONE);
         }
 
