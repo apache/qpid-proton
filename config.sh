@@ -18,7 +18,7 @@
 # under the License.
 #
 
-export PROTON_HOME=$(dirname $(readlink -f $0))
+export PROTON_HOME=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 
 if [ -z "$CPROTON_BUILD" ]; then
     if [ -d $PROTON_HOME/proton-c/build ]; then
