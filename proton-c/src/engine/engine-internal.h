@@ -23,6 +23,7 @@
  */
 
 #include <proton/engine.h>
+#include <proton/types.h>
 #include "../dispatcher/dispatcher.h"
 #include "../util.h"
 
@@ -47,8 +48,6 @@ struct pn_endpoint_t {
   pn_endpoint_t *transport_prev;
   bool modified;
 };
-
-typedef int32_t pn_sequence_t;
 
 typedef struct {
   pn_delivery_t *delivery;

@@ -17,5 +17,8 @@
 # under the License.
 #
 
-import proton_tests.engine
-import proton_tests.message
+class Test:
+
+  def __init__(self, name):
+    self.name = name
+

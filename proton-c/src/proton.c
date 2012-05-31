@@ -30,6 +30,7 @@
 #include "util.h"
 #include "pn_config.h"
 #include <proton/codec.h>
+#include <proton/buffer.h>
 #include <inttypes.h>
 
 int buffer(int argc, char **argv)
@@ -45,6 +46,8 @@ int buffer(int argc, char **argv)
   pn_buffer_append(buf, "efg", 3);
   pn_buffer_print(buf); printf("\n");
   pn_buffer_append(buf, "hijklm", 6);
+  pn_buffer_print(buf); printf("\n");
+  pn_buffer_defrag(buf);
   pn_buffer_print(buf); printf("\n");
   pn_buffer_trim(buf, 1, 1);
   pn_buffer_print(buf); printf("\n");

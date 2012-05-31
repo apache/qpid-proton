@@ -21,14 +21,16 @@
 
 #define _GNU_SOURCE
 
+#include <proton/codec.h>
+#include <proton/errors.h>
+#include <proton/buffer.h>
+#include <proton/util.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
-#include <proton/codec.h>
-#include <proton/util.h>
 #include "encodings.h"
 #include "../util.h"
 
@@ -1591,23 +1593,6 @@ int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap)
   return 0;
 }
 
-pn_bytes_t pn_bytes(size_t size, char *start)
-{
-  return (pn_bytes_t) {size, start};
-}
-
-pn_bytes_t pn_bytes_dup(size_t size, const char *start)
-{
-  if (size && start)
-  {
-    char *dup = malloc(size);
-    memmove(dup, start, size);
-    return pn_bytes(size, dup);
-  } else {
-    return pn_bytes(0, NULL);
-  }
-}
-
 // JSON
 
 typedef enum {
@@ -2242,188 +2227,6 @@ int pn_json_render(pn_json_t *json, pn_atoms_t *atoms, char *output, size_t *siz
   return 0;
 }
 */
-
-// buffer
-
-struct pn_buffer_t {
-  size_t capacity;
-  size_t start;
-  size_t size;
-  char *bytes;
-};
-
-pn_buffer_t *pn_buffer(size_t capacity)
-{
-  pn_buffer_t *buf = malloc(sizeof(pn_buffer_t));
-  buf->capacity = capacity;
-  buf->start = 0;
-  buf->size = 0;
-  buf->bytes = capacity ? malloc(capacity) : NULL;
-  return buf;
-}
-
-void pn_buffer_free(pn_buffer_t *buf)
-{
-  if (buf) {
-    free(buf->bytes);
-    free(buf);
-  }
-}
-
-size_t pn_buffer_available(pn_buffer_t *buf)
-{
-  return buf->capacity - buf->size;
-}
-
-size_t pn_buffer_head(pn_buffer_t *buf)
-{
-  return buf->start;
-}
-
-size_t pn_buffer_tail(pn_buffer_t *buf)
-{
-  size_t tail = buf->start + buf->size;
-  if (tail >= buf->capacity)
-    tail -= buf->capacity;
-  return tail;
-}
-
-bool pn_buffer_wrapped(pn_buffer_t *buf)
-{
-  return buf->size && pn_buffer_head(buf) >= pn_buffer_tail(buf);
-}
-
-size_t pn_buffer_tail_space(pn_buffer_t *buf)
-{
-  if (pn_buffer_wrapped(buf)) {
-    return pn_buffer_available(buf);
-  } else {
-    return buf->capacity - pn_buffer_tail(buf);
-  }
-}
-
-size_t pn_buffer_head_space(pn_buffer_t *buf)
-{
-  if (pn_buffer_wrapped(buf)) {
-    return pn_buffer_available(buf);
-  } else {
-    return pn_buffer_head(buf);
-  }
-}
-
-size_t pn_buffer_head_size(pn_buffer_t *buf)
-{
-  if (pn_buffer_wrapped(buf)) {
-    return buf->capacity - pn_buffer_head(buf);
-  } else {
-    return pn_buffer_tail(buf) - pn_buffer_head(buf);
-  }
-}
-
-size_t pn_buffer_tail_size(pn_buffer_t *buf)
-{
-  if (pn_buffer_wrapped(buf)) {
-    return pn_buffer_tail(buf);
-  } else {
-    return 0;
-  }
-}
-
-int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
-{
-  size_t old_capacity = buf->capacity;
-  size_t old_head = pn_buffer_head(buf);
-  bool wrapped = pn_buffer_wrapped(buf);
-
-  while (pn_buffer_available(buf) < size) {
-    buf->capacity = 2*(buf->capacity ? buf->capacity : 16);
-  }
-
-  if (buf->capacity != old_capacity) {
-    buf->bytes = realloc(buf->bytes, buf->capacity);
-
-    if (wrapped) {
-      size_t n = old_capacity - old_head;
-      memmove(buf->bytes + buf->capacity - n, buf->bytes + old_head, n);
-      buf->start = buf->capacity - n;
-    }
-  }
-
-  return 0;
-}
-
-#define min(X,Y) ((X) > (Y) ? (Y) : (X))
-#define max(X,Y) ((X) < (Y) ? (Y) : (X))
-
-int pn_buffer_append(pn_buffer_t *buf, char *bytes, size_t size)
-{
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
-
-  size_t tail = pn_buffer_tail(buf);
-  size_t tail_space = pn_buffer_tail_space(buf);
-  size_t n = min(tail_space, size);
-
-  memmove(buf->bytes + tail, bytes, n);
-  memmove(buf->bytes, bytes + n, size - n);
-
-  buf->size += size;
-
-  return 0;
-}
-
-int pn_buffer_prepend(pn_buffer_t *buf, char *bytes, size_t size)
-{
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
-
-  size_t head = pn_buffer_head(buf);
-  size_t head_space = pn_buffer_head_space(buf);
-  size_t n = min(head_space, size);
-
-  memmove(buf->bytes + head - n, bytes + size - n, n);
-  memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);
-
-  if (buf->start >= size) {
-    buf->start -= size;
-  } else {
-    buf->start = buf->capacity - (size - buf->start);
-  }
-
-  buf->size += size;
-
-  return 0;
-}
-
-int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
-{
-  if (left + right > buf->size) return PN_ARG_ERR;
-
-  buf->start += left;
-  if (buf->start >= buf->capacity)
-    buf->start -= buf->capacity;
-
-  buf->size -= left + right;
-
-  return 0;
-}
-
-int pn_buffer_clear(pn_buffer_t *buf)
-{
-  buf->start = 0;
-  buf->size = 0;
-  return 0;
-}
-
-int pn_buffer_print(pn_buffer_t *buf)
-{
-  printf("pn_buffer(\"");
-  pn_print_data(buf->bytes + pn_buffer_head(buf), pn_buffer_head_size(buf));
-  pn_print_data(buf->bytes, pn_buffer_tail_size(buf));
-  printf("\")");
-
-  return 0;
-}
 
 // data
 

@@ -31,6 +31,8 @@ add_library (
   src/util.c
   src/driver.c
   src/error.c
+  src/buffer.c
+  src/types.c
 
   src/framing/framing.c
 

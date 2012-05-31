@@ -22,10 +22,10 @@
  *
  */
 
+#include <proton/types.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <proton/errors.h>
 #include <stdarg.h>
 
 typedef enum {
@@ -50,11 +50,6 @@ typedef enum {
   PN_MAP,
   PN_TYPE
 } pn_type_t;
-
-typedef struct {
-  size_t size;
-  char *start;
-} pn_bytes_t;
 
 typedef struct {
   pn_type_t type;
@@ -99,11 +94,6 @@ int pn_vfill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap);
 int pn_scan_atoms(const pn_atoms_t *atoms, const char *fmt, ...);
 int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap);
 
-// pn_bytes_t
-
-pn_bytes_t pn_bytes(size_t size, char *start);
-pn_bytes_t pn_bytes_dup(size_t size, const char *start);
-
 // JSON
 
 typedef struct pn_json_t pn_json_t;
@@ -114,32 +104,6 @@ int pn_json_render(pn_json_t *json, pn_atoms_t *atoms, char *output, size_t *siz
 int pn_json_error_code(pn_json_t *json);
 const char *pn_json_error_str(pn_json_t *json);
 void pn_json_free(pn_json_t *json);
-
-
-// transcoder
-
-typedef struct pn_transcoder_t pn_transcoder_t;
-typedef enum {
-  PN_AMQP,
-  PN_JSON
-} pn_encoding_t;
-
-pn_transcoder_t *pn_transcoder();
-int pn_transcoder_input(pn_transcoder_t *trans, pn_encoding_t encoding, const char *input, size_t size);
-int pn_transcoder_output(pn_transcoder_t *trans, pn_encoding_t encoding, const char *output, size_t *size);
-void pn_transcoder_free(pn_transcoder_t *trans);
-
-// buffer
-
-typedef struct pn_buffer_t pn_buffer_t;
-
-pn_buffer_t *pn_buffer(size_t capacity);
-void pn_buffer_free(pn_buffer_t *buf);
-int pn_buffer_append(pn_buffer_t *buf, char *bytes, size_t size);
-int pn_buffer_prepend(pn_buffer_t *buf, char *bytes, size_t size);
-int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
-int pn_buffer_clear(pn_buffer_t *buf);
-int pn_buffer_print(pn_buffer_t *buf);
 
 // data
 

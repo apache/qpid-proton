@@ -9,11 +9,35 @@
 
 typedef unsigned int size_t;
 typedef signed int ssize_t;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef unsigned long int uint64_t;
+typedef int int32_t;
 
 %include <cstring.i>
 
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
+
+%typemap(in) pn_bytes_t {
+  if ($input == Py_None) {
+    $1.start = NULL;
+    $1.size = 0;
+  } else {
+    $1.start = PyString_AsString($input);
+    if (!$1.start) {
+      return NULL;
+    }
+    $1.size = PyString_Size($input);
+  }
+}
+
+%typemap(out) pn_bytes_t {
+  $result = PyString_FromStringAndSize($1.start, $1.size);
+}
+
+int pn_message_encode(pn_message_t *msg, pn_format_t format, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_message_encode;
 
 ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_send;

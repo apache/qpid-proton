@@ -479,7 +479,7 @@ class PatternMatcher:
 class FunctionScanner(PatternMatcher):
 
   def inspect(self, obj):
-    return type(obj) == types.FunctionType and self.matches(name)
+    return type(obj) == types.FunctionType and self.matches(obj.__name__)
 
   def descend(self, func):
     # the None is required for older versions of python

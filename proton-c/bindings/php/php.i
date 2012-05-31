@@ -6,6 +6,8 @@
 
 %header %{
 /* Include the headers needed by the code in this wrapper file */
+#include <proton/types.h>
+#include <proton/message.h>
 #include <proton/driver.h>
 
 #define zend_error_noreturn zend_error

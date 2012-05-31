@@ -17,36 +17,33 @@
 # under the License.
 #
 
-import os
+import os, common
 from xproton import *
 
 # future test areas
 # different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
 
-OUTPUT_SIZE = 32*1024
+OUTPUT_SIZE = 1024
 
 def pump(t1, t2):
   while True:
     cd, out1 = pn_output(t1, OUTPUT_SIZE)
-    assert cd >= 0 or cd == PN_EOS, (cd, out1)
+    assert cd >= 0 or cd == PN_EOS, (cd, out1, len(out1))
     cd, out2 = pn_output(t2, OUTPUT_SIZE)
-    assert cd >= 0 or cd == PN_EOS, (cd, out2)
+    assert cd >= 0 or cd == PN_EOS, (cd, out2, len(out2))
 
     if out1 or out2:
       if out1:
         cd = pn_input(t2, out1)
-        assert cd == PN_EOS or cd == len(out1), (cd, out1)
+        assert cd == PN_EOS or cd == len(out1), (cd, out1, len(out1))
       if out2:
         cd = pn_input(t1, out2)
-        assert cd == PN_EOS or cd == len(out2), (cd, out2)
+        assert cd == PN_EOS or cd == len(out2), (cd, out2, len(out2))
     else:
       return
 
-class Test:
-
-  def __init__(self, name):
-    self.name = name
+class Test(common.Test):
 
   def setup(self):
     self.c1 = pn_connection()

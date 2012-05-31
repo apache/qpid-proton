@@ -1,4 +1,5 @@
 /* Parse these interface header files to generate APIs for script languages */
+%include "proton/types.h"
 %include "proton/errors.h"
 %include "proton/engine.h"
 %include "proton/message.h"
