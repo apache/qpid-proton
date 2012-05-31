@@ -37,12 +37,12 @@ public class Properties
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000073L), Symbol.valueOf("amqp:properties:list"), 
+        UnsignedLong.valueOf(0x0000000000000073L), Symbol.valueOf("amqp:properties:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000073L);
     private final PropertiesWrapper _wrapper = new PropertiesWrapper();
-    
+
     private Object _messageId;
     private Binary _userId;
     private String _to;
@@ -186,7 +186,7 @@ public class Properties
     {
         _replyToGroupId = replyToGroupId;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -196,7 +196,7 @@ public class Properties
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -227,7 +227,7 @@ public class Properties
             case 11:
                 return _groupSequence;
             case 12:
-                return _replyToGroupId;            
+                return _replyToGroupId;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -236,33 +236,33 @@ public class Properties
 
     public int size()
     {
-        return _replyToGroupId != null 
-                  ? 13 
-                  : _groupSequence != null 
-                  ? 12 
-                  : _groupId != null 
-                  ? 11 
-                  : _creationTime != null 
-                  ? 10 
-                  : _absoluteExpiryTime != null 
-                  ? 9 
-                  : _contentEncoding != null 
-                  ? 8 
-                  : _contentType != null 
-                  ? 7 
-                  : _correlationId != null 
-                  ? 6 
-                  : _replyTo != null 
-                  ? 5 
-                  : _subject != null 
-                  ? 4 
-                  : _to != null 
-                  ? 3 
-                  : _userId != null 
-                  ? 2 
-                  : _messageId != null 
-                  ? 1 
-                  : 0;        
+        return _replyToGroupId != null
+                  ? 13
+                  : _groupSequence != null
+                  ? 12
+                  : _groupId != null
+                  ? 11
+                  : _creationTime != null
+                  ? 10
+                  : _absoluteExpiryTime != null
+                  ? 9
+                  : _contentEncoding != null
+                  ? 8
+                  : _contentType != null
+                  ? 7
+                  : _correlationId != null
+                  ? 6
+                  : _replyTo != null
+                  ? 5
+                  : _subject != null
+                  ? 4
+                  : _to != null
+                  ? 3
+                  : _userId != null
+                  ? 2
+                  : _messageId != null
+                  ? 1
+                  : 0;
 
     }
 
@@ -342,5 +342,24 @@ public class Properties
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "Properties{" +
+               "messageId=" + _messageId +
+               ", userId=" + _userId +
+               ", to='" + _to + '\'' +
+               ", subject='" + _subject + '\'' +
+               ", replyTo='" + _replyTo + '\'' +
+               ", correlationId=" + _correlationId +
+               ", contentType=" + _contentType +
+               ", contentEncoding=" + _contentEncoding +
+               ", absoluteExpiryTime=" + _absoluteExpiryTime +
+               ", creationTime=" + _creationTime +
+               ", groupId='" + _groupId + '\'' +
+               ", groupSequence=" + _groupSequence +
+               ", replyToGroupId='" + _replyToGroupId + '\'' +
+               '}';
+    }
 }
-  

@@ -36,12 +36,12 @@ public class Header
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000070L), Symbol.valueOf("amqp:header:list"), 
+        UnsignedLong.valueOf(0x0000000000000070L), Symbol.valueOf("amqp:header:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000070L);
     private final HeaderWrapper _wrapper = new HeaderWrapper();
-    
+
     private Boolean _durable;
     private UnsignedByte _priority;
     private UnsignedInteger _ttl;
@@ -97,7 +97,7 @@ public class Header
     {
         _deliveryCount = deliveryCount;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -107,7 +107,7 @@ public class Header
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -122,7 +122,7 @@ public class Header
             case 3:
                 return _firstAcquirer;
             case 4:
-                return _deliveryCount;            
+                return _deliveryCount;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -131,17 +131,17 @@ public class Header
 
     public int size()
     {
-        return _deliveryCount != null 
-                  ? 5 
-                  : _firstAcquirer != null 
-                  ? 4 
-                  : _ttl != null 
-                  ? 3 
-                  : _priority != null 
-                  ? 2 
-                  : _durable != null 
-                  ? 1 
-                  : 0;        
+        return _deliveryCount != null
+                  ? 5
+                  : _firstAcquirer != null
+                  ? 4
+                  : _ttl != null
+                  ? 3
+                  : _priority != null
+                  ? 2
+                  : _durable != null
+                  ? 1
+                  : 0;
 
     }
 
@@ -205,5 +205,16 @@ public class Header
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "Header{" +
+               "durable=" + _durable +
+               ", priority=" + _priority +
+               ", ttl=" + _ttl +
+               ", firstAcquirer=" + _firstAcquirer +
+               ", deliveryCount=" + _deliveryCount +
+               '}';
+    }
 }
-  

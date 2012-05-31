@@ -18,6 +18,7 @@
 #
 
 from org.apache.qpid.proton.engine import *
+from org.apache.qpid.proton.message import *
 from jarray import zeros
 from java.util import EnumSet
 
@@ -35,6 +36,10 @@ PN_ACCEPTED = 2
 PN_REJECTED = 3
 PN_RELEASED = 4
 PN_MODIFIED = 5
+
+PN_DEFAULT_PRIORITY = Message.DEFAULT_PRIORITY
+
+PN_AMQP = MessageFormat.AMQP
 
 def enums(mask):
   local = []
@@ -200,3 +205,155 @@ def pn_local_disp(d):
 
 def pn_settle(d):
   d.settle()
+
+def pn_message():
+  return Message()
+
+def pn_message_is_durable(m):
+  return m.isDurable()
+
+def pn_message_set_durable(m,d):
+  m.setDurable(d)
+  return 0
+
+def pn_message_get_priority(m):
+  return m.getPriority()
+
+def pn_message_set_priority(m,p):
+  m.setPriority(p)
+  return 0
+
+def pn_message_get_ttl(m):
+  return m.getTtl()
+
+def pn_message_set_ttl(m, t):
+  m.setTtl(t)
+  return 0
+
+def pn_message_is_first_acquirer(m):
+  return m.isFirstAcquirer()
+
+def pn_message_set_first_acquirer(m, b):
+  m.setFirstAcquirer(b)
+  return 0
+
+def pn_message_get_delivery_count(m):
+  return m.getDeliveryCount()
+
+def pn_message_set_delivery_count(m,c):
+  m.setDeliveryCount(c)
+  return 0
+
+def pn_message_get_id(m):
+  return m.getId()
+
+def pn_message_set_id(m, i):
+  m.setId(i)
+  return 0
+
+def pn_message_get_user_id(m):
+  u = m.getUserId()
+  if u is None:
+      return ""
+  else:
+      return u.tostring()
+
+def pn_message_set_user_id(m, u):
+  m.setUserId(u)
+  return 0
+
+def pn_message_get_address(m):
+  return m.getAddress()
+
+def pn_message_set_address(m, a):
+  m.setAddress(a)
+  return 0
+
+def pn_message_get_subject(m):
+  return m.getSubject()
+
+def pn_message_set_subject(m,d):
+  m.setSubject(d)
+  return 0
+
+def pn_message_get_reply_to(m):
+  return m.getReplyTo()
+
+def pn_message_set_reply_to(m,d):
+  m.setReplyTo(d)
+  return 0
+
+def pn_message_get_correlation_id(m):
+  return m.getCorrelationId()
+
+def pn_message_set_correlation_id(m,d):
+  m.setCorrelationId(d)
+  return 0
+
+def pn_message_get_content_type(m):
+  return m.getContentType()
+
+def pn_message_set_content_type(m,d):
+  m.setContentType(d)
+  return 0
+
+def pn_message_get_content_encoding(m):
+  return m.getContentEncoding()
+
+def pn_message_set_content_encoding(m,d):
+  m.setContentEncoding(d)
+  return 0
+
+def pn_message_get_expiry_time(m):
+  return m.getExpiryTime()
+
+def pn_message_set_expiry_time(m,d):
+  m.setExpiryTime(d)
+  return 0
+
+def pn_message_get_creation_time(m):
+  return m.getCreationTime()
+
+def pn_message_set_creation_time(m,d):
+  m.setCreationTime(d)
+  return 0
+
+def pn_message_get_group_id(m):
+  return m.getGroupId()
+
+def pn_message_set_group_id(m,d):
+  m.setGroupId(d)
+  return 0
+
+def pn_message_get_group_sequence(m):
+  return m.getGroupSequence()
+
+def pn_message_set_group_sequence(m,d):
+  m.setGroupSequence(d)
+  return 0
+
+def pn_message_get_reply_to_group_id(m):
+  return m.getReplyToGroupId()
+
+def pn_message_set_reply_to_group_id(m,d):
+  m.setReplyToGroupId(d)
+  return 0
+
+def pn_message_free(m):
+  return
+
+def pn_message_encode(m,f,size):
+    output = zeros(size, "b")
+    n = m.encode(f, output, 0, size)
+    result = ""
+    if n > 0:
+      result = output.tostring()[:n]
+    return [0, result]
+
+def pn_message_decode(m,f,data,size):
+    m.decode(f,data,0,size)
+    return 0
+
+
+
+
