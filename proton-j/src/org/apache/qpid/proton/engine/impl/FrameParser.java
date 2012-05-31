@@ -160,7 +160,6 @@ class FrameParser
                         break;
                     }
 
-
                     if(in.remaining() < size-4)
                     {
                         _buffer = ByteBuffer.allocate(size-4);

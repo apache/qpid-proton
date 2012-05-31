@@ -25,7 +25,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -60,7 +59,7 @@ public class StringType extends AbstractPrimitiveType<String>
 
     private final StringEncoding _stringEncoding;
     private final StringEncoding _shortStringEncoding;
-    
+
     StringType(final EncoderImpl encoder, final DecoderImpl decoder)
     {
         _stringEncoding = new AllStringEncoding(encoder, decoder);
@@ -139,8 +138,7 @@ public class StringType extends AbstractPrimitiveType<String>
         @Override
         protected void writeEncodedValue(final String val)
         {
-            final CharsetEncoder charsetEncoder = Charset_UTF8.newEncoder();
-            getEncoder().writeRaw(new StringWritable(charsetEncoder, val));
+            getEncoder().writeRaw(val);
         }
 
         @Override
@@ -181,7 +179,7 @@ public class StringType extends AbstractPrimitiveType<String>
         }
 
     }
-    
+
     private class ShortStringEncoding
             extends SmallFloatingSizePrimitiveTypeEncoding<String>
             implements StringEncoding
@@ -199,8 +197,7 @@ public class StringType extends AbstractPrimitiveType<String>
         @Override
         protected void writeEncodedValue(final String val)
         {
-            final CharsetEncoder charsetEncoder = Charset_UTF8.newEncoder();
-            getEncoder().writeRaw(new StringWritable(charsetEncoder, val));
+            getEncoder().writeRaw(val);
         }
 
         @Override
@@ -241,22 +238,4 @@ public class StringType extends AbstractPrimitiveType<String>
         }
     }
 
-
-    private static class StringWritable implements EncoderImpl.Writable
-    {
-
-        private final CharsetEncoder _charsetEncoder;
-        private final String _val;
-
-        public StringWritable(final CharsetEncoder charsetEncoder, final String val)
-        {
-            _charsetEncoder = charsetEncoder;
-            _val = val;
-        }
-
-        public void writeTo(final ByteBuffer buf)
-        {
-            _charsetEncoder.encode(CharBuffer.wrap(_val), buf, true);
-        }
-    }
 }

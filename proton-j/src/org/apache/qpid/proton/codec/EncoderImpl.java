@@ -20,10 +20,9 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.*;
-
 import java.nio.ByteBuffer;
 import java.util.*;
+import org.apache.qpid.proton.type.*;
 
 public final class EncoderImpl implements ByteBufferEncoder
 {
@@ -31,12 +30,8 @@ public final class EncoderImpl implements ByteBufferEncoder
 
     private static final byte DESCRIBED_TYPE_OP = (byte)0;
 
-    public static interface Writable
-    {
-        void writeTo(ByteBuffer buf);
-    }
 
-    private ByteBuffer _buffer;
+    private WritableBuffer _buffer;
 
     private final Map<Class, AMQPType> _typeRegistry = new HashMap<Class, AMQPType>();
     private Map<Object, AMQPType> _describedDescriptorRegistry = new HashMap<Object, AMQPType>();
@@ -126,8 +121,14 @@ public final class EncoderImpl implements ByteBufferEncoder
 
     public void setByteBuffer(final ByteBuffer buf)
     {
+        _buffer = new WritableBuffer.ByteBufferWrapper(buf);
+    }
+
+    public void setByteBuffer(final WritableBuffer buf)
+    {
         _buffer = buf;
     }
+
 
     public AMQPType getType(final Object element)
     {
@@ -751,134 +752,31 @@ public final class EncoderImpl implements ByteBufferEncoder
         _buffer.put(src, offset, length);
     }
 
-    void writeRaw(Writable writable)
+    void writeRaw(String string)
     {
-        writable.writeTo(_buffer);
-    }
+        final int length = string.length();
+        char c;
 
-
-
-    public static class ExampleObject implements DescribedType
-    {
-        public static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(254l);
-
-        private int _handle;
-        private String _name;
-
-        private final ExampleObjectWrapper _wrapper = new ExampleObjectWrapper();
-
-        public ExampleObject()
+        for (int i = 0; i < length; i++)
         {
-
-        }
-
-        public ExampleObject(final int handle, final String name)
-        {
-            _handle = handle;
-            _name = name;
-
-        }
-
-        public int getHandle()
-        {
-            return _handle;
-        }
-
-        public String getName()
-        {
-            return _name;
-        }
-
-        public void setHandle(final int handle)
-        {
-            _handle = handle;
-        }
-
-        public void setName(final String name)
-        {
-            _name = name;
-        }
-
-        public Object getDescriptor()
-        {
-            return DESCRIPTOR;
-        }
-
-        public Object getDescribed()
-        {
-            return _wrapper;
-        }
-
-        private class ExampleObjectWrapper extends AbstractList
-        {
-
-            @Override
-            public Object get(final int index)
+            c = string.charAt(i);
+            if ((c >= 0x0001) && (c <= 0x007F))
             {
-                switch(index)
-                {
-                    case 0:
-                        return getHandle();
-                    case 1:
-                        return getName();
-                }
-                throw new IllegalStateException("Unknown index " + index);
+                _buffer.put((byte) c);
+
             }
-
-            @Override
-            public int size()
+            else if (c > 0x07FF)
             {
-                return getName() == null ? getHandle() == 0 ? 0 : 1 : 2;
+                _buffer.put((byte) (0xE0 | ((c >> 12) & 0x0F)));
+                _buffer.put((byte) (0x80 | ((c >>  6) & 0x3F)));
+                _buffer.put((byte) (0x80 | (c & 0x3F)));
+            }
+            else
+            {
+                _buffer.put((byte) (0xC0 | ((c >>  6) & 0x1F)));
+                _buffer.put((byte) (0x80 | (c & 0x3F)));
             }
         }
-
-    }
-
-
-    public static void main(String[] args)
-    {
-        byte[] data = new byte[1024];
-
-        DecoderImpl decoder = new DecoderImpl(ByteBuffer.wrap(data));
-        Encoder enc = new EncoderImpl(ByteBuffer.wrap(data), decoder);
-
-        decoder.register(ExampleObject.DESCRIPTOR, new DescribedTypeConstructor<ExampleObject>()
-        {
-            public ExampleObject newInstance(final Object described)
-            {
-                List l = (List) described;
-                ExampleObject o = new ExampleObject();
-                switch(l.size())
-                {
-                    case 2:
-                        o.setName((String)l.get(1));
-                    case 1:
-                        o.setHandle((Integer)l.get(0));
-                }
-                return o;
-            }
-
-            public Class<ExampleObject> getTypeClass()
-            {
-                return ExampleObject.class;
-            }
-        }
-        );
-
-        ExampleObject[] examples = new ExampleObject[2];
-        examples[0] = new ExampleObject(7,"fred");
-        examples[1] = new ExampleObject(19, "bret");
-
-        enc.writeObject(examples);
-
-        enc.writeObject(new Object[][]{new Integer[]{1,2,3}, new Long[]{4l,5L,6L}, new String[] {"hello", "world"}});
-        enc.writeObject(new int[][]{{256,27}, {1}});
-
-        Object rval = decoder.readObject();
-        rval = decoder.readObject();
-
-        System.out.println("Hello");
-
 
     }
 

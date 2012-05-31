@@ -17,8 +17,10 @@
 
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Accepted;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.DeliveryState;
@@ -70,7 +72,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private boolean _isOpenSent;
     private boolean _isCloseSent;
 
-    private int _headerWritten;
+    private boolean _headerWritten;
     private TransportSession[] _remoteSessions;
     private TransportSession[] _localSessions;
 
@@ -85,8 +87,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     private int _maxFrameSize = 16 * 1024;
 
+    private final ByteBuffer _overflowBuffer = ByteBuffer.wrap(new byte[_maxFrameSize]);
+
     {
         AMQPDefinedTypes.registerAllTypes(_decoder);
+        _overflowBuffer.flip();
     }
 
     public TransportImpl(Connection connectionEndpoint)
@@ -105,24 +110,42 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     //==================================================================================================================
     // Process model state to generate output
 
+
     public int output(byte[] bytes, final int offset, final int size)
     {
         int written = 0;
 
-        written += processHeader(bytes, offset);
-        written += processOpen(bytes, offset + written, size - written);
-        written += processBegin(bytes, offset + written, size - written);
-        written += processAttach(bytes, offset + written, size - written);
-        written += processReceiverFlow(bytes, offset + written, size - written);
-        written += processReceiverDisposition(bytes, offset + written, size - written);
-        written += processMessageData(bytes, offset + written, size - written);
-        written += processSenderDisposition(bytes, offset + written, size - written);
-        written += processSenderFlow(bytes, offset + written, size - written);
-        written += processDetach(bytes, offset + written, size - written);
-        written += processEnd(bytes, offset+written, size-written);
-        written += processClose(bytes, offset+written, size-written);
+        if(_overflowBuffer.hasRemaining())
+        {
+            final int overflowWritten = Math.min(size, _overflowBuffer.remaining());
+            _overflowBuffer.get(bytes, offset, overflowWritten);
+            written+=overflowWritten;
+        }
+        if(!_overflowBuffer.hasRemaining())
+        {
+            _overflowBuffer.clear();
 
-        if(size - written > _maxFrameSize)
+            CompositeWritableBuffer outputBuffer =
+                    new CompositeWritableBuffer(
+                       new WritableBuffer.ByteBufferWrapper(ByteBuffer.wrap(bytes, offset + written, size - written)),
+                       new WritableBuffer.ByteBufferWrapper(_overflowBuffer));
+
+            written += processHeader(outputBuffer);
+            written += processOpen(outputBuffer);
+            written += processBegin(outputBuffer);
+            written += processAttach(outputBuffer);
+            written += processReceiverFlow(outputBuffer);
+            written += processReceiverDisposition(outputBuffer);
+            written += processMessageData(outputBuffer);
+            written += processSenderDisposition(outputBuffer);
+            written += processSenderFlow(outputBuffer);
+            written += processDetach(outputBuffer);
+            written += processEnd(outputBuffer);
+            written += processClose(outputBuffer);
+            _overflowBuffer.flip();
+        }
+
+        if(_overflowBuffer.position() == 0)
         {
             clearInterestList();
             clearTransportWorkList();
@@ -142,11 +165,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-    private int processDetach(byte[] bytes, int offset, int length)
+    private int processDetach(WritableBuffer buffer)
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
-        while(endpoint != null && length >= _maxFrameSize)
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
 
             if(endpoint instanceof LinkImpl)
@@ -169,10 +192,9 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     detach.setHandle(localHandle);
 
 
-                    int frameBytes = writeFrame(bytes, offset, length, transportSession.getLocalChannel(), detach, null);
+                    int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null);
                     written += frameBytes;
-                    offset += frameBytes;
-                    length -= frameBytes;
+
                 }
 
             }
@@ -181,16 +203,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return written;
     }
 
-    private int processSenderFlow(byte[] bytes, int offset, int length)
+    private int processSenderFlow(WritableBuffer buffer)
     {
         return 0;  //TODO - Implement
     }
 
-    private int processSenderDisposition(byte[] bytes, int offset, int length)
+    private int processSenderDisposition(WritableBuffer buffer)
     {
         DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
         int written = 0;
-        while(delivery != null && length >= _maxFrameSize)
+        while(delivery != null && buffer.remaining() >= _maxFrameSize)
         {
             if((delivery.getLink() instanceof SenderImpl) && delivery.isLocalStateChange())
             {
@@ -209,12 +231,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 {
                     // TODO
                 }
-                int frameBytes = writeFrame(bytes, offset, length, delivery.getLink().getSession()
+                int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
                                                                   .getTransportSession().getLocalChannel(),
                                    disposition, null);
                 written += frameBytes;
-                offset += frameBytes;
-                length -= frameBytes;
             }
             delivery = delivery.getTransportWorkNext();
         }
@@ -222,11 +242,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
-    private int processMessageData(byte[] bytes, int offset, int length)
+    private int processMessageData(WritableBuffer buffer)
     {
         DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
         int written = 0;
-        while(delivery != null && length >= _maxFrameSize)
+        while(delivery != null && buffer.remaining() >= _maxFrameSize)
         {
             if((delivery.getLink() instanceof SenderImpl) && !(delivery.isDone() && delivery.getDataLength() == 0))
             {
@@ -254,14 +274,12 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 // TODO - large frames
                 ByteBuffer payload = ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(), delivery.getDataLength());
 
-                int frameBytes = writeFrame(bytes, offset, length,
+                int frameBytes = writeFrame(buffer,
                                             sender.getSession().getTransportSession().getLocalChannel(),
                                             transfer, payload);
 
 
                 written += frameBytes;
-                offset += frameBytes;
-                length -= frameBytes;
 
                 // TODO partial consumption
                 delivery.setData(null);
@@ -285,11 +303,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return written;
     }
 
-    private int processReceiverDisposition(byte[] bytes, int offset, int length)
+    private int processReceiverDisposition(WritableBuffer buffer)
     {
         DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
         int written = 0;
-        while(delivery != null && length >= _maxFrameSize)
+        while(delivery != null && buffer.remaining() >= _maxFrameSize)
         {
             if((delivery.getLink() instanceof ReceiverImpl) && delivery.isLocalStateChange())
             {
@@ -308,23 +326,21 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 {
                     // TODO
                 }
-                int frameBytes = writeFrame(bytes, offset, length, delivery.getLink().getSession()
+                int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
                                                                   .getTransportSession().getLocalChannel(),
                                    disposition, null);
                 written += frameBytes;
-                offset += frameBytes;
-                length -= frameBytes;
             }
             delivery = delivery.getTransportWorkNext();
         }
         return written;
     }
 
-    private int processReceiverFlow(byte[] bytes, int offset, int length)
+    private int processReceiverFlow(WritableBuffer buffer)
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
-        while(endpoint != null && length >= _maxFrameSize)
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
 
             if(endpoint instanceof ReceiverImpl)
@@ -347,10 +363,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         flow.setDeliveryCount(transportLink.getDeliveryCount());
                         flow.setLinkCredit(transportLink.getLinkCredit());
                         flow.setNextOutgoingId(transportSession.getNextOutgoingId());
-                        int frameBytes = writeFrame(bytes, offset, length, transportSession.getLocalChannel(), flow, null);
+                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
                         written += frameBytes;
-                        offset += frameBytes;
-                        length -= frameBytes;
                     }
                 }
             }
@@ -359,11 +373,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return written;
     }
 
-    private int processAttach(byte[] bytes, int offset, int length)
+    private int processAttach(WritableBuffer buffer)
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
-        while(endpoint != null && length >= _maxFrameSize)
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
 
             if(endpoint instanceof LinkImpl)
@@ -413,10 +427,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                             attach.setInitialDeliveryCount(UnsignedInteger.ZERO);
                         }
 
-                        int frameBytes = writeFrame(bytes, offset, length, transportSession.getLocalChannel(), attach, null);
+                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), attach, null);
                         written += frameBytes;
-                        offset += frameBytes;
-                        length -= frameBytes;
                     }
                 }
 
@@ -436,17 +448,21 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-    private int processHeader(byte[] bytes, int offset)
+    private int processHeader(WritableBuffer buffer)
     {
-        int headerWritten = 0;
-        while(_headerWritten < HEADER.length)
+        if(!_headerWritten)
         {
-            bytes[offset+(headerWritten++)] = HEADER[_headerWritten++];
+            buffer.put(HEADER, 0, HEADER.length);
+            _headerWritten = true;
+            return HEADER.length;
         }
-        return headerWritten;
+        else
+        {
+            return 0;
+        }
     }
 
-    private int processOpen(byte[] bytes, int offset, int length)
+    private int processOpen(WritableBuffer buffer)
     {
         if(_connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
         {
@@ -456,17 +472,17 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
             _isOpenSent = true;
 
-            return  writeFrame(bytes, offset, length, 0, open, null);
+            return  writeFrame(buffer, 0, open, null);
 
         }
         return 0;
     }
 
-    private int processBegin(byte[] bytes, final int offset, final int length)
+    private int processBegin(WritableBuffer buffer)
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
-        while(endpoint != null && length >= _maxFrameSize)
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
             if(endpoint instanceof SessionImpl)
             {
@@ -490,7 +506,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                     begin.setNextOutgoingId(transportSession.getNextOutgoingId());
 
-                    written += writeFrame(bytes, offset, length, channelId, begin, null);
+                    written += writeFrame(buffer, channelId, begin, null);
                 }
             }
             endpoint = endpoint.transportNext();
@@ -526,11 +542,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return 0;  //TODO - Implement
     }
 
-    private int processEnd(byte[] bytes, int offset, int length)
+    private int processEnd(WritableBuffer buffer)
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
-        while(endpoint != null && length >= _maxFrameSize)
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
 
             if(endpoint instanceof SessionImpl)
@@ -549,10 +565,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
                     End end = new End();
 
-                    int frameBytes = writeFrame(bytes, offset, length, channel, end, null);
+                    int frameBytes = writeFrame(buffer, channel, end, null);
                     written += frameBytes;
-                    offset += frameBytes;
-                    length -= frameBytes;
                 }
 
             }
@@ -561,7 +575,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return written;
     }
 
-    private int processClose(byte[] bytes, final int offset, final int length)
+    private int processClose(WritableBuffer buffer)
     {
         if(_connectionEndpoint.getLocalState() == EndpointState.CLOSED && !_isCloseSent)
         {
@@ -571,7 +585,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
             _isCloseSent = true;
 
-            return  writeFrame(bytes, offset, length, 0, close, null);
+            return  writeFrame(buffer, 0, close, null);
 
         }
         return 0;
@@ -580,11 +594,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
 
 
-    private int writeFrame(byte[] bytes, int offset, int size, int channel, DescribedType frameBody, ByteBuffer payload)
+    private int writeFrame(WritableBuffer buffer, int channel, DescribedType frameBody, ByteBuffer payload)
     {
-        ByteBuffer buf = ByteBuffer.wrap(bytes, offset+8, size-8);
-        int oldPosition = buf.position();
-        _encoder.setByteBuffer(buf);
+        int oldPosition = buffer.position();
+        buffer.position(buffer.position()+8);
+        _encoder.setByteBuffer(buffer);
         _encoder.writeDescribedType(frameBody);
 
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize);
@@ -592,18 +606,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         {
             int oldLimit = payload.limit();
             payload.limit(payload.position() + payloadSize);
-            buf.put(payload);
+            buffer.put(payload);
             payload.limit(oldLimit);
         }
-        int frameSize = 8 + buf.position() - oldPosition;
-        bytes[offset] = (byte) ((frameSize>>24) & 0xFF);
-        bytes[offset+1] = (byte) ((frameSize>>16) & 0xFF);
-        bytes[offset+2] = (byte) ((frameSize>>8) & 0xFF);
-        bytes[offset+3] = (byte) (frameSize & 0xFF);
-        bytes[offset+4] = (byte) 2;
-        bytes[offset+6] =  (byte) ((channel>>8) & 0xFF);
-        bytes[offset+7] =  (byte) (channel & 0xFF);
-
+        int frameSize = buffer.position() - oldPosition;
+        int limit = buffer.position();
+        buffer.position(oldPosition);
+        buffer.putInt(frameSize);
+        buffer.put((byte) 2);
+        buffer.putShort((short) channel);
+        buffer.position(limit);
 
         return frameSize;
     }
