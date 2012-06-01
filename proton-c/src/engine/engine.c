@@ -1323,19 +1323,22 @@ ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available)
 {
   if (!available) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
-    fprintf(stderr, "    <- EOS\n");
+    if (transport->disp->trace & PN_TRACE_RAW)
+      fprintf(stderr, "    <- EOS\n");
     return PN_ERR;
   }
 
   if (transport->close_rcvd) {
     pn_do_error(transport, "amqp:connection:framing-error", "data after close");
-    fprintf(stderr, "    <- EOS\n");
+    if (transport->disp->trace & PN_TRACE_RAW)
+      fprintf(stderr, "    <- EOS\n");
     return PN_ERR;
   }
 
   ssize_t n = pn_dispatcher_input(transport->disp, bytes, available);
   if (n >= 0 && transport->close_rcvd) {
-    fprintf(stderr, "    <- EOS\n");
+    if (transport->disp->trace & PN_TRACE_RAW)
+      fprintf(stderr, "    <- EOS\n");
     return PN_EOS;
   } else if (n < 0) {
     transport->error = n;
@@ -1686,7 +1689,8 @@ ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
     transport->error = pn_process(transport);
 
   if (!transport->disp->available && (transport->close_sent || transport->error)) {
-    fprintf(stderr, "    -> EOS\n");
+    if (transport->disp->trace & PN_TRACE_RAW)
+      fprintf(stderr, "    -> EOS\n");
     if (transport->error)
       return transport->error;
     else
