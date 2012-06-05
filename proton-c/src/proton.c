@@ -164,6 +164,7 @@ int value(int argc, char **argv)
 
 struct server_context {
   int count;
+  bool quiet;
 };
 
 void server_callback(pn_connector_t *ctor)
@@ -236,25 +237,28 @@ void server_callback(pn_connector_t *ctor)
     pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
     pn_link_t *link = pn_link(delivery);
     if (pn_readable(delivery)) {
-      printf("received delivery: %s\n", tagstr);
-      printf("  payload = \"");
+      if (!ctx->quiet) {
+        printf("received delivery: %s\n", tagstr);
+        printf("  payload = \"");
+      }
       while (true) {
         ssize_t n = pn_recv(link, msg, 1024);
         if (n == PN_EOS) {
           pn_advance(link);
           pn_disposition(delivery, PN_ACCEPTED);
           break;
-        } else {
+        } else if (!ctx->quiet) {
           pn_print_data(msg, n);
         }
       }
-      printf("\"\n");
+      if (!ctx->quiet) printf("\"\n");
+      if (pn_credit(link) < 50) pn_flow(link, 100);
     } else if (pn_writable(delivery)) {
       sprintf(msg, "message body for %s", tagstr);
       size_t n = pn_message_data(data, 1024, msg, strlen(msg));
       pn_send(link, data, n);
       if (pn_advance(link)) {
-        printf("sent delivery: %s\n", tagstr);
+        if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
         char tagbuf[16];
         sprintf(tagbuf, "%i", ctx->count++);
         pn_delivery(link, pn_dtag(tagbuf, strlen(tagbuf)));
@@ -262,7 +266,7 @@ void server_callback(pn_connector_t *ctor)
     }
 
     if (pn_updated(delivery)) {
-      printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
       pn_settle(delivery);
     }
 
@@ -292,6 +296,9 @@ struct client_context {
   int recv_count;
   int send_count;
   pn_driver_t *driver;
+  bool quiet;
+  int high;
+  int low;
   const char *mechanism;
   const char *username;
   const char *password;
@@ -361,7 +368,7 @@ void client_callback(pn_connector_t *ctor)
 
       char buf[16];
       for (int i = 0; i < ctx->send_count; i++) {
-        sprintf(buf, "%c", 'a' + i);
+        sprintf(buf, "%x", i);
         pn_delivery(snd, pn_dtag(buf, strlen(buf)));
       }
     }
@@ -370,7 +377,7 @@ void client_callback(pn_connector_t *ctor)
       pn_link_t *rcv = pn_receiver(ssn, "receiver");
       pn_set_source(rcv, ctx->address);
       pn_link_open(rcv);
-      pn_flow(rcv, ctx->recv_count);
+      pn_flow(rcv, ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high);
     }
   }
 
@@ -384,10 +391,14 @@ void client_callback(pn_connector_t *ctor)
       sprintf(msg, "message body for %s", tagstr);
       ssize_t n = pn_message_data(data, 1024, msg, strlen(msg));
       pn_send(link, data, n);
-      if (pn_advance(link)) printf("sent delivery: %s\n", tagstr);
+      if (pn_advance(link)) {
+        if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
+      }
     } else if (pn_readable(delivery)) {
-      printf("received delivery: %s\n", tagstr);
-      printf("  payload = \"");
+      if (!ctx->quiet) {
+        printf("received delivery: %s\n", tagstr);
+        printf("  payload = \"");
+      }
       while (true) {
         size_t n = pn_recv(link, msg, 1024);
         if (n == PN_EOS) {
@@ -398,15 +409,19 @@ void client_callback(pn_connector_t *ctor)
             pn_link_close(link);
           }
           break;
-        } else {
+        } else if (!ctx->quiet) {
           pn_print_data(msg, n);
         }
       }
-      printf("\"\n");
+      if (!ctx->quiet) printf("\"\n");
+
+      if (pn_credit(link) < ctx->low && pn_credit(link) < ctx->recv_count) {
+        pn_flow(link, (ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high) - pn_credit(link));
+      }
     }
 
     if (pn_updated(delivery)) {
-      printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
       pn_clear(delivery);
       pn_settle(delivery);
       if (!--ctx->send_count) {
@@ -436,9 +451,13 @@ int main(int argc, char **argv)
   char *url = NULL;
   char *address = "queue";
   char *mechanism = "ANONYMOUS";
+  int count = 1;
+  bool quiet = false;
+  int high = 100;
+  int low = 50;
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:a:m:hVXY")) != -1)
+  while ((opt = getopt(argc, argv, "c:a:m:n:u:l:qhVXY")) != -1)
   {
     switch (opt) {
     case 'c':
@@ -450,6 +469,18 @@ int main(int argc, char **argv)
       break;
     case 'm':
       mechanism = optarg;
+      break;
+    case 'n':
+      count = atoi(optarg);
+      break;
+    case 'u':
+      high = atoi(optarg);
+      break;
+    case 'l':
+      low = atoi(optarg);
+      break;
+    case 'q':
+      quiet = true;
       break;
     case 'V':
       printf("proton version %i.%i\n", PN_VERSION_MAJOR, PN_VERSION_MINOR);
@@ -466,6 +497,8 @@ int main(int argc, char **argv)
       printf("    -c    The connect url.\n");
       printf("    -a    The AMQP address.\n");
       printf("    -m    The SASL mechanism.\n");
+      printf("    -n    <count>\n");
+      printf("    -q    Supress printouts.\n");
       printf("    -h    Print this help.\n");
       exit(EXIT_SUCCESS);
     default: /* '?' */
@@ -482,7 +515,7 @@ int main(int argc, char **argv)
 
   pn_driver_t *drv = pn_driver();
   if (url) {
-    struct client_context ctx = {false, false, 10, 10, drv};
+    struct client_context ctx = {false, false, count, count, drv, quiet, high, low};
     ctx.username = user;
     ctx.password = pass;
     ctx.mechanism = mechanism;
@@ -506,7 +539,7 @@ int main(int argc, char **argv)
       }
     }
   } else {
-    struct server_context ctx = {0};
+    struct server_context ctx = {0, quiet};
     if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
     while (true) {
       pn_driver_wait(drv, -1);

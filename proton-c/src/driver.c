@@ -138,22 +138,29 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   }
 
   int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
-  if (sock == -1)
+  if (sock == -1) {
+    perror("socket");
     return NULL;
+  }
 
   int optval = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+    perror("setsockopt");
     return NULL;
+  }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
+    perror("bind");
     freeaddrinfo(addr);
     return NULL;
   }
 
   freeaddrinfo(addr);
 
-  if (listen(sock, 50) == -1)
+  if (listen(sock, 50) == -1) {
+    perror("listen");
     return NULL;
+  }
 
   pn_listener_t *l = pn_listener_fd(driver, sock, context);
 
@@ -218,7 +225,8 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
       return NULL;
     } else {
       pn_configure_sock(sock);
-      printf("accepted from %s:%s\n", host, serv);
+      if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW))
+        printf("accepted from %s:%s\n", host, serv);
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
       c->listener = l;
       return c;
@@ -465,7 +473,8 @@ static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor)
       ctor->output_done = true;
       return PN_ERR;
     } else {
-      fprintf(stderr, "    <- AMQP SASL 1.0\n");
+      if (ctor->trace & PN_TRACE_FRM)
+        fprintf(stderr, "    <- AMQP SASL 1.0\n");
       ctor->process_input = pn_connector_read_sasl;
       return 8;
     }
@@ -502,7 +511,8 @@ static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
       ctor->output_done = true;
       return PN_ERR;
     } else {
-      fprintf(stderr, "    <- AMQP 1.0\n");
+      if (ctor->trace & PN_TRACE_FRM)
+        fprintf(stderr, "    <- AMQP 1.0\n");
       ctor->process_input = pn_connector_read_amqp;
       return 8;
     }
@@ -577,7 +587,8 @@ static void pn_connector_write(pn_connector_t *ctor)
 
 static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor)
 {
-  fprintf(stderr, "    -> AMQP SASL 1.0\n");
+  if (ctor->trace & PN_TRACE_FRM)
+    fprintf(stderr, "    -> AMQP SASL 1.0\n");
   memmove(pn_connector_output(ctor), "AMQP\x03\x01\x00\x00", 8);
   ctor->process_output = pn_connector_write_sasl;
   return 8;
@@ -597,7 +608,8 @@ static ssize_t pn_connector_write_sasl(pn_connector_t *ctor)
 
 static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor)
 {
-  fprintf(stderr, "    -> AMQP 1.0\n");
+  if (ctor->trace & PN_TRACE_FRM)
+    fprintf(stderr, "    -> AMQP 1.0\n");
   memmove(pn_connector_output(ctor), "AMQP\x00\x01\x00\x00", 8);
   ctor->process_output = pn_connector_write_amqp;
   return 8;
@@ -639,7 +651,8 @@ void pn_connector_process(pn_connector_t *c) {
       c->pending_write = false;
     }
     if (c->output_size == 0 && c->input_done && c->output_done) {
-      fprintf(stderr, "closed\n");
+      if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW))
+        fprintf(stderr, "closed\n");
       pn_connector_close(c);
     }
   }

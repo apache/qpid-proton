@@ -78,6 +78,8 @@ typedef int pn_trace_t;
 #define PN_TRACE_RAW (1)
 #define PN_TRACE_FRM (2)
 
+#define PN_SESSION_WINDOW (1024)
+
 // connection
 
 /** Factory to construct a new Connection.
@@ -227,16 +229,20 @@ pn_state_t pn_session_state(pn_session_t *session);
 pn_error_t *pn_session_error(pn_session_t *session);
 pn_link_t *pn_sender(pn_session_t *session, const char *name);
 pn_link_t *pn_receiver(pn_session_t *session, const char *name);
+pn_connection_t *pn_get_connection(pn_session_t *session);
 void pn_session_open(pn_session_t *session);
 void pn_session_close(pn_session_t *session);
 void pn_session_destroy(pn_session_t *session);
 
 // link
+const char *pn_link_name(pn_link_t *link);
 bool pn_is_sender(pn_link_t *link);
 bool pn_is_receiver(pn_link_t *link);
 pn_state_t pn_link_state(pn_link_t *link);
 pn_error_t *pn_link_error(pn_link_t *link);
 pn_session_t *pn_get_session(pn_link_t *link);
+const char *pn_target(pn_link_t *link);
+const char *pn_source(pn_link_t *link);
 void pn_set_source(pn_link_t *link, const char *source);
 void pn_set_target(pn_link_t *link, const char *target);
 char *pn_remote_source(pn_link_t *link);
@@ -245,6 +251,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_t *pn_current(pn_link_t *link);
 bool pn_advance(pn_link_t *link);
 int pn_credit(pn_link_t *link);
+int pn_queued(pn_link_t *link);
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
@@ -256,10 +263,12 @@ void pn_link_destroy(pn_link_t *sender);
 // sender
 //void pn_offer(pn_sender_t *sender, int credits);
 ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n);
+void pn_drained(pn_link_t *sender);
 //void pn_abort(pn_sender_t *sender);
 
 // receiver
 void pn_flow(pn_link_t *receiver, int credits);
+void pn_drain(pn_link_t *receiver);
 ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
 
 // delivery
@@ -268,6 +277,7 @@ pn_link_t *pn_link(pn_delivery_t *delivery);
 // how do we do delivery state?
 int pn_local_disp(pn_delivery_t *delivery);
 int pn_remote_disp(pn_delivery_t *delivery);
+bool pn_remote_settled(pn_delivery_t *delivery);
 size_t pn_pending(pn_delivery_t *delivery);
 bool pn_writable(pn_delivery_t *delivery);
 bool pn_readable(pn_delivery_t *delivery);

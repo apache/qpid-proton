@@ -1,0 +1,13 @@
+from queue import Queue
+from hole import Hole
+
+queue = Queue()
+topic = Queue(ring=0, acquire=False, dequeue=False)
+
+ring_queue = Queue(ring=10)
+ring_topic = Queue(ring=10, acquire=False, dequeue=False)
+
+bounded_queue = Queue(threshold=100)
+bounded_topic = Queue(threshold=100, ring=0, acquire=False, dequeue=False)
+
+hole = Hole()

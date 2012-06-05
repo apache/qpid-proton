@@ -100,7 +100,7 @@ pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl)
 void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms)
 {
   if (!sasl) return;
-  sasl->mechanisms = strdup(mechanisms);
+  sasl->mechanisms = pn_strdup(mechanisms);
 }
 
 const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl)
@@ -321,7 +321,7 @@ int pn_do_init(pn_dispatcher_t *disp)
   pn_bytes_t recv;
   int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
   if (err) return err;
-  sasl->remote_mechanisms = strndup(mech.start, mech.size);
+  sasl->remote_mechanisms = pn_strndup(mech.start, mech.size);
   sasl->recv_data = pn_bytes_dup(recv.size, recv.start);
   sasl->rcvd_init = true;
   return 0;

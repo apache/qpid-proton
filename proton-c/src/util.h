@@ -89,8 +89,6 @@ bool pn_env_bool(const char *name);
   }
 
 char *pn_strdup(const char *src);
-#define strdup pn_strdup
 char *pn_strndup(const char *src, size_t n);
-#define strndup pn_strndup
 
 #endif /* util.h */

@@ -69,7 +69,6 @@ typedef struct {
   uint32_t local_handle;
   uint32_t remote_handle;
   pn_sequence_t delivery_count;
-  // XXX: this is only used for receiver
   pn_sequence_t link_credit;
 } pn_link_state_t;
 
@@ -151,6 +150,9 @@ struct pn_link_t {
   pn_delivery_t *settled_tail;
   size_t unsettled_count;
   pn_sequence_t credit;
+  pn_sequence_t queued;
+  bool drain;
+  bool drained; // sender only
   size_t id;
 };
 
@@ -162,6 +164,7 @@ struct pn_delivery_t {
   bool local_settled;
   bool remote_settled;
   bool updated;
+  bool settled; // tracks whether we're in the unsettled list or not
   pn_delivery_t *link_next;
   pn_delivery_t *link_prev;
   pn_delivery_t *work_next;

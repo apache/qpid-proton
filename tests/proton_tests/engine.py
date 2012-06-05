@@ -21,8 +21,9 @@ import os, common
 from xproton import *
 
 # future test areas
-# different permutations of setup
+#  + different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
+#  + shrinking output_size down to something small? should the enginge buffer?
 
 OUTPUT_SIZE = 1024
 
@@ -45,25 +46,53 @@ def pump(t1, t2):
 
 class Test(common.Test):
 
-  def setup(self):
-    self.c1 = pn_connection()
-    self.c2 = pn_connection()
-    self.t1 = pn_transport(self.c1)
-    self.t2 = pn_transport(self.c2)
+  def __init__(self, *args):
+    common.Test.__init__(self, *args)
+    self._wires = []
+
+  def connection(self):
+    c1 = pn_connection()
+    c2 = pn_connection()
+    t1 = pn_transport(c1)
+    t2 = pn_transport(c2)
+    self._wires.append((c1, t1, c2, t2))
     trc = os.environ.get("PN_TRACE_FRM")
     if trc and trc.lower() in ("1", "2", "yes", "true"):
-      pn_trace(self.t1, PN_TRACE_FRM)
+      pn_trace(t1, PN_TRACE_FRM)
     if trc == "2":
-      pn_trace(self.t2, PN_TRACE_FRM)
+      pn_trace(t2, PN_TRACE_FRM)
+    return c1, c2
 
-  def teardown(self):
-    pn_connection_destroy(self.c1)
-    pn_connection_destroy(self.c2)
+  def link(self, name):
+    c1, c2 = self.connection()
+    pn_connection_open(c1)
+    pn_connection_open(c2)
+    ssn1 = pn_session(c1)
+    pn_session_open(ssn1)
+    self.pump()
+    ssn2 = pn_session_head(c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    pn_session_open(ssn2)
+    self.pump()
+    snd = pn_sender(ssn1, name)
+    rcv = pn_receiver(ssn2, name)
+    return snd, rcv
+
+  def cleanup(self):
+    for c1, t1, c2, t2 in self._wires:
+      pn_connection_destroy(c1)
+      pn_connection_destroy(c2)
 
   def pump(self):
-    pump(self.t1, self.t2)
+    for c1, t1, c2, t2 in self._wires:
+      pump(t1, t2)
 
 class ConnectionTest(Test):
+
+  def setup(self):
+    self.c1, self.c2 = self.connection()
+
+  def teardown(self):
+    self.cleanup()
 
   def test_open_close(self):
     assert pn_connection_state(self.c1) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
@@ -116,10 +145,13 @@ class ConnectionTest(Test):
 class SessionTest(Test):
 
   def setup(self):
-    Test.setup(self)
+    self.c1, self.c2 = self.connection()
     self.ssn = pn_session(self.c1)
     pn_connection_open(self.c1)
     pn_connection_open(self.c2)
+
+  def teardown(self):
+    self.cleanup()
 
   def test_open_close(self):
     assert pn_session_state(self.ssn) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
@@ -193,17 +225,10 @@ class SessionTest(Test):
 class LinkTest(Test):
 
   def setup(self):
-    Test.setup(self)
-    pn_connection_open(self.c1)
-    pn_connection_open(self.c2)
-    self.ssn1 = pn_session(self.c1)
-    pn_session_open(self.ssn1)
-    self.pump()
-    self.ssn2 = pn_session_head(self.c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
-    pn_session_open(self.ssn2)
-    self.pump()
-    self.snd = pn_sender(self.ssn1, "test-link")
-    self.rcv = pn_receiver(self.ssn2, "test-link")
+    self.snd, self.rcv = self.link("test-link")
+
+  def teardown(self):
+    self.cleanup()
 
   def test_open_close(self):
     assert pn_link_state(self.snd) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
@@ -278,21 +303,15 @@ class LinkTest(Test):
 class TransferTest(Test):
 
   def setup(self):
-    Test.setup(self)
-    self.ssn1 = pn_session(self.c1)
-    pn_connection_open(self.c1)
-    pn_connection_open(self.c2)
-    pn_session_open(self.ssn1)
-    self.pump()
-    self.ssn2 = pn_session_head(self.c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
-    assert self.ssn2 != None
-    pn_session_open(self.ssn2)
-
-    self.snd = pn_sender(self.ssn1, "test-link")
-    self.rcv = pn_receiver(self.ssn2, "test-link")
+    self.snd, self.rcv = self.link("test-link")
+    self.c1 = pn_get_connection(pn_get_session(self.snd))
+    self.c2 = pn_get_connection(pn_get_session(self.rcv))
     pn_link_open(self.snd)
     pn_link_open(self.rcv)
     self.pump()
+
+  def teardown(self):
+    self.cleanup()
 
   def test_work_queue(self):
     assert pn_work_head(self.c1) is None
@@ -326,7 +345,8 @@ class TransferTest(Test):
     self.pump()
 
     d = pn_current(self.rcv)
-    assert pn_delivery_tag(d) == "tag"
+    assert d
+    assert pn_delivery_tag(d) == "tag", repr(pn_delivery_tag(d))
     assert pn_readable(d)
 
     cd, bytes = pn_recv(self.rcv, 1024)
@@ -386,3 +406,146 @@ class TransferTest(Test):
     self.pump()
 
     assert pn_local_disp(sd) == pn_remote_disp(rd) == PN_ACCEPTED
+
+class CreditTest(Test):
+
+  def setup(self):
+    self.snd, self.rcv = self.link("test-link")
+    self.c1 = pn_get_connection(pn_get_session(self.snd))
+    self.c2 = pn_get_connection(pn_get_session(self.rcv))
+    pn_link_open(self.snd)
+    pn_link_open(self.rcv)
+    self.pump()
+
+  def teardown(self):
+    self.cleanup()
+
+  def testCreditSender(self):
+    credit = pn_credit(self.snd)
+    assert credit == 0, credit
+    pn_flow(self.rcv, 10)
+    self.pump()
+    credit = pn_credit(self.snd)
+    assert credit == 10, credit
+
+    pn_flow(self.rcv, PN_SESSION_WINDOW)
+    self.pump()
+    credit = pn_credit(self.snd)
+    assert credit == 10 + PN_SESSION_WINDOW, credit
+
+  def testCreditReceiver(self):
+    pn_flow(self.rcv, 10)
+    self.pump()
+    assert pn_credit(self.rcv) == 10, pn_credit(self.rcv)
+
+    d = pn_delivery(self.snd, "tag")
+    assert d
+    assert pn_advance(self.snd)
+    self.pump()
+    assert pn_credit(self.rcv) == 10, pn_credit(self.rcv)
+    assert pn_queued(self.rcv) == 1, pn_queued(self.rcv)
+    c = pn_current(self.rcv)
+    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
+    assert pn_advance(self.rcv)
+    assert pn_credit(self.rcv) == 9, pn_credit(self.rcv)
+    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+  def settle(self):
+    result = []
+    d = pn_work_head(self.c1)
+    while d:
+      if pn_updated(d):
+        result.append(pn_delivery_tag(d))
+        pn_settle(d)
+      d = pn_work_next(d)
+    return result
+
+  def testBuffering(self):
+    pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
+    self.pump()
+
+    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+    idx = 0
+    while pn_credit(self.snd):
+      d = pn_delivery(self.snd, "tag%s" % idx)
+      assert d
+      assert pn_advance(self.snd)
+      self.pump()
+      idx += 1
+
+    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+
+    extra = pn_delivery(self.snd, "extra")
+    assert extra
+    assert not pn_advance(self.snd)
+    self.pump()
+
+    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+
+    for i in range(10):
+      d = pn_current(self.rcv)
+      assert pn_delivery_tag(d) == "tag%s" % i, pn_delivery_tag(d)
+      assert pn_advance(self.rcv)
+      pn_settle(d)
+      self.pump()
+      assert pn_queued(self.rcv) == PN_SESSION_WINDOW - (i+1), pn_queued(self.rcv)
+
+    tags = self.settle()
+    assert tags == ["tag%s" % i for i in range(10)], tags
+    self.pump()
+
+    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+
+    for i in range(PN_SESSION_WINDOW):
+      d = pn_current(self.rcv)
+      assert d, i
+      assert pn_delivery_tag(d) == "tag%s" % (i+10), pn_delivery_tag(d)
+      assert pn_advance(self.rcv)
+      pn_settle(d)
+      self.pump()
+
+    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+    tags = self.settle()
+    assert tags == ["tag%s" % (i+10) for i in range(PN_SESSION_WINDOW)]
+
+    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+  def testCreditWithBuffering(self):
+    pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
+    self.pump()
+    assert pn_credit(self.snd) == PN_SESSION_WINDOW + 10, pn_credit(self.snd)
+    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+    idx = 0
+    while pn_credit(self.snd):
+      d = pn_delivery(self.snd, "tag%s" % idx)
+      assert d
+      assert pn_advance(self.snd)
+      self.pump()
+      idx += 1
+
+    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+
+    pn_flow(self.rcv, 1)
+    self.pump()
+    assert pn_credit(self.snd) == 1, pn_credit(self.snd)
+
+  def testDrain(self):
+    pn_flow(self.rcv, 2)
+    pn_drain(self.rcv)
+    self.pump()
+
+    d = pn_delivery(self.snd, "tag")
+    assert d
+    assert pn_advance(self.snd)
+    pn_drained(self.snd)
+    self.pump()
+
+    c = pn_current(self.rcv)
+    assert pn_queued(self.rcv) == 1, pn_queued(self.rcv)
+    assert pn_delivery_tag(c) == pn_delivery_tag(d), pn_delivery_tag(c)
+    assert pn_advance(self.rcv)
+    assert not pn_current(self.rcv)
+    assert pn_credit(self.rcv) == 0, pn_credit(self.rcv)
