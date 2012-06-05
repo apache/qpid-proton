@@ -49,10 +49,11 @@ struct pn_driver_t {
   pn_connector_t *connector_next;
   size_t listener_count;
   size_t connector_count;
+  size_t closed_count;
   size_t capacity;
   struct pollfd *fds;
+  size_t nfds;
   int ctrl[2]; //pipe for updating selectable status
-  bool stopping;
   pn_trace_t trace;
 };
 
@@ -271,6 +272,9 @@ static void pn_driver_remove_connector(pn_driver_t *d, pn_connector_t *c)
   LL_REMOVE(d->connector_head, d->connector_tail, c);
   c->driver = NULL;
   d->connector_count--;
+  if (c->closed) {
+    d->closed_count--;
+  }
 }
 
 pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
@@ -407,6 +411,7 @@ void pn_connector_close(pn_connector_t *ctor)
   if (close(ctor->fd) == -1)
     perror("close");
   ctor->closed = true;
+  ctor->driver->closed_count++;
 }
 
 bool pn_connector_closed(pn_connector_t *ctor)
@@ -634,6 +639,8 @@ static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 
 void pn_connector_process(pn_connector_t *c) {
   if (c) {
+    if (c->closed) return;
+
     if (c->pending_tick) {
       // XXX: should handle timing also
       c->tick(c, 0);
@@ -672,11 +679,12 @@ pn_driver_t *pn_driver()
   d->connector_next = NULL;
   d->listener_count = 0;
   d->connector_count = 0;
+  d->closed_count = 0;
   d->capacity = 0;
   d->fds = NULL;
+  d->nfds = 0;
   d->ctrl[0] = 0;
   d->ctrl[1] = 0;
-  d->stopping = false;
   d->trace = ((pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
               (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF));
 
@@ -722,29 +730,34 @@ static void pn_driver_rebuild(pn_driver_t *d)
     d->fds = realloc(d->fds, d->capacity*sizeof(struct pollfd));
   }
 
-  d->fds[0].fd = d->ctrl[0];
-  d->fds[0].events = POLLIN;
-  d->fds[0].revents = 0;
+  d->nfds = 0;
+
+  d->fds[d->nfds].fd = d->ctrl[0];
+  d->fds[d->nfds].events = POLLIN;
+  d->fds[d->nfds].revents = 0;
+  d->nfds++;
 
   pn_listener_t *l = d->listener_head;
   for (int i = 0; i < d->listener_count; i++) {
-    int idx = 1 + i;
-    d->fds[idx].fd = l->fd;
-    d->fds[idx].events = POLLIN;
-    d->fds[idx].revents = 0;
-    l->idx = idx;
+    d->fds[d->nfds].fd = l->fd;
+    d->fds[d->nfds].events = POLLIN;
+    d->fds[d->nfds].revents = 0;
+    l->idx = d->nfds;
+    d->nfds++;
     l = l->next;
   }
 
   pn_connector_t *c = d->connector_head;
   for (int i = 0; i < d->connector_count; i++)
   {
-    int idx = 1 + d->listener_count + i;
-    d->fds[idx].fd = c->fd;
-    d->fds[idx].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
-      (c->status & PN_SEL_WR ? POLLOUT : 0);
-    d->fds[idx].revents = 0;
-    c->idx = idx;
+    if (!c->closed) {
+      d->fds[d->nfds].fd = c->fd;
+      d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
+        (c->status & PN_SEL_WR ? POLLOUT : 0);
+      d->fds[d->nfds].revents = 0;
+      c->idx = d->nfds;
+      d->nfds++;
+    }
     c = c->next;
   }
 }
@@ -752,7 +765,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
 void pn_driver_wait(pn_driver_t *d, int timeout) {
   pn_driver_rebuild(d);
 
-  DIE_IFE(poll(d->fds, 1 + d->listener_count + d->connector_count, timeout));
+  DIE_IFE(poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout));
 
   if (d->fds[0].revents & POLLIN) {
     //clear the pipe
@@ -788,9 +801,16 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
     pn_connector_t *c = d->connector_next;
     d->connector_next = c->next;
 
-    int idx = c->idx;
-    c->pending_read = (idx && d->fds[idx].revents & POLLIN);
-    c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
+    if (c->closed) {
+      c->pending_read = false;
+      c->pending_write = false;
+      c->pending_tick = false;
+      return c;
+    } else {
+      int idx = c->idx;
+      c->pending_read = (idx && d->fds[idx].revents & POLLIN);
+      c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
+    }
 
     if (c->pending_read || c->pending_write || c->pending_tick) {
       return c;
