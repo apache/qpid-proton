@@ -25,7 +25,7 @@ from xproton import *
 #   - creating deliveries and calling input/output before opening the session/link
 #  + shrinking output_size down to something small? should the enginge buffer?
 
-OUTPUT_SIZE = 1024
+OUTPUT_SIZE = 10*1024
 
 def pump(t1, t2):
   while True:
@@ -642,3 +642,58 @@ class SettlementTest(Test):
 
     assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
     assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
+
+class PipelineTest(Test):
+
+  def setup(self):
+    self.c1, self.c2 = self.connection()
+
+  def teardown(self):
+    self.cleanup()
+
+  def test(self):
+    ssn = pn_session(self.c1)
+    snd = pn_sender(ssn, "sender")
+    pn_connection_open(self.c1)
+    pn_session_open(ssn)
+    pn_link_open(snd)
+
+    for i in range(10):
+      d = pn_delivery(snd, "delivery-%s" % i)
+      pn_send(snd, "delivery-%s" % i)
+      pn_settle(d)
+
+    pn_link_close(snd)
+    pn_session_close(ssn)
+    pn_connection_close(self.c1)
+
+    self.pump()
+
+    assert pn_connection_state(self.c2) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    ssn2 = pn_session_head(self.c2, PN_LOCAL_UNINIT)
+    assert ssn2
+    assert pn_session_state(ssn2) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    rcv = pn_link_head(self.c2, PN_LOCAL_UNINIT)
+    assert rcv
+    assert pn_link_state(rcv) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+
+    pn_connection_open(self.c2)
+    pn_session_open(ssn2)
+    pn_link_open(rcv)
+    pn_flow(rcv, 10)
+    assert pn_queued(rcv) == 0
+
+    self.pump()
+
+    assert pn_queued(rcv) == 10
+    assert pn_link_state(rcv) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
+    assert pn_session_state(ssn2) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
+    assert pn_connection_state(self.c2) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
+
+    for i in range(pn_queued(rcv)):
+      d = pn_current(rcv)
+      assert d
+      assert pn_delivery_tag(d) == "delivery-%s" % i
+      pn_settle(d)
+
+    assert pn_queued(rcv) == 0

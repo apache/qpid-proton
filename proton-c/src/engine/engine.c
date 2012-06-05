@@ -1527,41 +1527,79 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
-int pn_process_disp_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
+int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
 {
-  if (endpoint->type == CONNECTION && !transport->close_sent)
-  {
-    pn_connection_t *conn = (pn_connection_t *) endpoint;
-    pn_delivery_t *delivery = conn->tpwork_head;
-    while (delivery)
-    {
-      pn_link_t *link = delivery->link;
-      if (link->endpoint.type == RECEIVER) {
-        // XXX: need to prevent duplicate disposition sending
-        pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
-        if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled) {
-          int err = pn_post_disp(transport, delivery);
-          if (err) return err;
-        }
+  pn_link_t *link = delivery->link;
+  pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
+  pn_link_state_t *link_state = pn_link_get_state(ssn_state, link);
+  if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
+    pn_delivery_state_t *state = delivery->context;
+    if (!state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
+      state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
+      delivery->context = state;
+    }
 
-        if (delivery->local_settled) {
-          size_t available = pn_delivery_buffer_available(&ssn_state->incoming);
-          pn_full_settle(&ssn_state->incoming, delivery);
-          if (!ssn_state->incoming_window &&
-              pn_delivery_buffer_available(&ssn_state->incoming) > available) {
-            int err = pn_post_flow(transport, ssn_state, NULL);
-            if (err) return err;
-          }
-        }
+    if (state && !state->sent && (delivery->done || delivery->size > 0) &&
+        ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
+      if (delivery->bytes) {
+        pn_set_payload(transport->disp, delivery->bytes, delivery->size);
+        delivery->size = 0;
       }
-      delivery = delivery->tpwork_next;
+      int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
+                              link_state->local_handle, state->id,
+                              delivery->tag.size, delivery->tag.start,
+                              0, delivery->local_settled, !delivery->done);
+      if (err) return err;
+      ssn_state->outgoing_transfer_count++;
+      ssn_state->outgoing_window--;
+      if (delivery->done) {
+        state->sent = true;
+        link_state->delivery_count++;
+        link_state->link_credit--;
+        link->queued--;
+      }
+    }
+  }
+
+  pn_delivery_state_t *state = delivery->context;
+  // XXX: need to prevent duplicate disposition sending
+  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
+      && state && state->sent) {
+    int err = pn_post_disp(transport, delivery);
+    if (err) return err;
+  }
+
+  if (delivery->local_settled && state && state->sent) {
+    pn_full_settle(&ssn_state->outgoing, delivery);
+  }
+
+  return 0;
+}
+
+int pn_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *delivery)
+{
+  pn_link_t *link = delivery->link;
+  // XXX: need to prevent duplicate disposition sending
+  pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
+  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled) {
+    int err = pn_post_disp(transport, delivery);
+    if (err) return err;
+  }
+
+  if (delivery->local_settled) {
+    size_t available = pn_delivery_buffer_available(&ssn_state->incoming);
+    pn_full_settle(&ssn_state->incoming, delivery);
+    if (!ssn_state->incoming_window &&
+        pn_delivery_buffer_available(&ssn_state->incoming) > available) {
+      int err = pn_post_flow(transport, ssn_state, NULL);
+      if (err) return err;
     }
   }
 
   return 0;
 }
 
-int pn_process_msg_data(pn_transport_t *transport, pn_endpoint_t *endpoint)
+int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION && !transport->close_sent)
   {
@@ -1570,69 +1608,18 @@ int pn_process_msg_data(pn_transport_t *transport, pn_endpoint_t *endpoint)
     while (delivery)
     {
       pn_link_t *link = delivery->link;
-      if (link->endpoint.type == SENDER) {
-        pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
-        pn_link_state_t *link_state = pn_link_get_state(ssn_state, link);
-        if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-          pn_delivery_state_t *state = delivery->context;
-          if (!state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
-            state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
-            delivery->context = state;
-          }
-
-          if (state && !state->sent && (delivery->done || delivery->size > 0) &&
-              ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
-            if (delivery->bytes) {
-              pn_set_payload(transport->disp, delivery->bytes, delivery->size);
-              delivery->size = 0;
-            }
-            // XXX: need to handle sending settled
-            int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
-                                    link_state->local_handle, state->id,
-                                    delivery->tag.size, delivery->tag.start,
-                                    0, delivery->local_settled, !delivery->done);
-            if (err) return err;
-            ssn_state->outgoing_transfer_count++;
-            ssn_state->outgoing_window--;
-            if (delivery->done) {
-              state->sent = true;
-              link_state->delivery_count++;
-              link_state->link_credit--;
-              link->queued--;
-            }
-          }
-        }
+      if (pn_is_sender(link)) {
+        int err = pn_process_tpwork_sender(transport, delivery);
+        if (err) return err;
+      } else {
+        int err = pn_process_tpwork_receiver(transport, delivery);
+        if (err) return err;
       }
-      delivery = delivery->tpwork_next;
-    }
-  }
 
-  return 0;
-}
-
-int pn_process_disp_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
-{
-  if (endpoint->type == CONNECTION && !transport->close_sent)
-  {
-    pn_connection_t *conn = (pn_connection_t *) endpoint;
-    pn_delivery_t *delivery = conn->tpwork_head;
-    while (delivery)
-    {
-      pn_link_t *link = delivery->link;
-      if (link->endpoint.type == SENDER) {
-        pn_delivery_state_t *state = delivery->context;
-        // XXX: need to prevent duplicate disposition sending
-        pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
-        if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
-            && state && state->sent) {
-          int err = pn_post_disp(transport, delivery);
-          if (err) return err;
-        }
-
-        if (delivery->local_settled && state && state->sent) {
-          pn_full_settle(&ssn_state->outgoing, delivery);
-        }
+      if (!pn_delivery_buffered(delivery)) {
+        pn_clear_tpwork(delivery);
       }
+
       delivery = delivery->tpwork_next;
     }
   }
@@ -1673,15 +1660,14 @@ int pn_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_session_state_t *ssn_state = pn_session_get_state(transport, session);
     pn_link_state_t *state = pn_link_get_state(ssn_state, link);
     if (endpoint->state & PN_LOCAL_CLOSED && (int32_t) state->local_handle >= 0) {
-      /* XXX: error
-    if (condition)
-      // XXX: symbol
-      pn_engine_field(eng, DETACH_ERROR, pn_value("B([zS])", ERROR, condition, description)); */
+      if (pn_is_sender(link) && pn_queued(link)) return 0;
       int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[Io]", DETACH,
                               state->local_handle, true);
       if (err) return err;
       state->local_handle = -2;
     }
+
+    pn_clear_modified(transport->connection, endpoint);
   }
 
   return 0;
@@ -1695,13 +1681,13 @@ int pn_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_session_state_t *state = pn_session_get_state(transport, session);
     if (endpoint->state & PN_LOCAL_CLOSED && (int16_t) state->local_channel >= 0)
     {
-      /*if (condition)
-      // XXX: symbol
-      pn_engine_field(eng, DETACH_ERROR, pn_value("B([zS])", ERROR, condition, description));*/
+      if (transport->connection->tpwork_head) return 0;
       int err = pn_post_frame(transport->disp, state->local_channel, "DL[]", END);
       if (err) return err;
       state->local_channel = -2;
     }
+
+    pn_clear_modified(transport->connection, endpoint);
   }
   return 0;
 }
@@ -1711,17 +1697,14 @@ int pn_process_conn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
   if (endpoint->type == CONNECTION)
   {
     if (endpoint->state & PN_LOCAL_CLOSED && !transport->close_sent) {
+      if (transport->connection->tpwork_head) return 0;
       int err = pn_post_close(transport);
       if (err) return err;
       transport->close_sent = true;
     }
-  }
-  return 0;
-}
 
-int pn_clear_phase(pn_transport_t *transport, pn_endpoint_t *endpoint)
-{
-  pn_clear_modified(transport->connection, endpoint);
+    pn_clear_modified(transport->connection, endpoint);
+  }
   return 0;
 }
 
@@ -1745,24 +1728,20 @@ int pn_process(pn_transport_t *transport)
   if ((err = pn_phase(transport, pn_process_ssn_setup))) return err;
   if ((err = pn_phase(transport, pn_process_link_setup))) return err;
   if ((err = pn_phase(transport, pn_process_flow_receiver))) return err;
-  if ((err = pn_phase(transport, pn_process_disp_receiver))) return err;
-  if ((err = pn_phase(transport, pn_process_disp_sender))) return err;
-  if ((err = pn_phase(transport, pn_process_msg_data))) return err;
-  if ((err = pn_phase(transport, pn_process_disp_sender))) return err;
+
+  // XXX: this has to happen two times because we might settle stuff
+  // on the first pass and create space for more work to be done on the
+  // second pass
+  if ((err = pn_phase(transport, pn_process_tpwork))) return err;
+  if ((err = pn_phase(transport, pn_process_tpwork))) return err;
+
   if ((err = pn_phase(transport, pn_process_flow_sender))) return err;
   if ((err = pn_phase(transport, pn_process_link_teardown))) return err;
   if ((err = pn_phase(transport, pn_process_ssn_teardown))) return err;
   if ((err = pn_phase(transport, pn_process_conn_teardown))) return err;
-  if ((err = pn_phase(transport, pn_clear_phase))) return err;
 
-  pn_delivery_t *delivery = transport->connection->tpwork_head;
-  while (delivery) {
-    if (pn_delivery_buffered(delivery)) {
-      pn_modified(transport->connection, &transport->connection->endpoint);
-    } else {
-      pn_clear_tpwork(delivery);
-    }
-    delivery = delivery->tpwork_next;
+  if (transport->connection->tpwork_head) {
+    pn_modified(transport->connection, &transport->connection->endpoint);
   }
 
   return 0;
