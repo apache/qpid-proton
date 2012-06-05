@@ -478,7 +478,7 @@ class CreditTest(Test):
 
     extra = pn_delivery(self.snd, "extra")
     assert extra
-    assert not pn_advance(self.snd)
+    assert pn_advance(self.snd)
     self.pump()
 
     assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
@@ -549,3 +549,96 @@ class CreditTest(Test):
     assert pn_advance(self.rcv)
     assert not pn_current(self.rcv)
     assert pn_credit(self.rcv) == 0, pn_credit(self.rcv)
+
+  def testNegative(self):
+    assert pn_credit(self.snd) == 0
+    d = pn_delivery(self.snd, "tag")
+    assert d
+    assert pn_advance(self.snd)
+    self.pump()
+
+    assert pn_credit(self.rcv) == 0
+    assert pn_queued(self.rcv) == 0
+
+    pn_flow(self.rcv, 1)
+    assert pn_credit(self.rcv) == 1
+    assert pn_queued(self.rcv) == 0
+    self.pump()
+    assert pn_credit(self.rcv) == 1
+    assert pn_queued(self.rcv) == 1
+
+    c = pn_current(self.rcv)
+    assert c
+    assert pn_delivery_tag(c) == "tag"
+    assert pn_advance(self.rcv)
+    assert pn_credit(self.rcv) == 0
+    assert pn_queued(self.rcv) == 0
+
+class SettlementTest(Test):
+
+  def setup(self):
+    self.snd, self.rcv = self.link("test-link")
+    self.c1 = pn_get_connection(pn_get_session(self.snd))
+    self.c2 = pn_get_connection(pn_get_session(self.rcv))
+    pn_link_open(self.snd)
+    pn_link_open(self.rcv)
+    self.pump()
+
+  def teardown(self):
+    self.cleanup()
+
+  def testSettleCurrent(self):
+    pn_flow(self.rcv, 10)
+    self.pump()
+
+    assert pn_credit(self.snd) == 10, pn_credit(self.snd)
+    d = pn_delivery(self.snd, "tag")
+    e = pn_delivery(self.snd, "tag2")
+    assert d
+    assert e
+    c = pn_current(self.snd)
+    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
+    pn_settle(c)
+    c = pn_current(self.snd)
+    assert pn_delivery_tag(c) == "tag2", pn_delivery_tag(c)
+    pn_settle(c)
+    c = pn_current(self.snd)
+    assert not c
+    self.pump()
+
+    c = pn_current(self.rcv)
+    assert c
+    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
+    assert pn_remote_settled(c)
+    pn_settle(c)
+    c = pn_current(self.rcv)
+    assert c
+    assert pn_delivery_tag(c) == "tag2", pn_delivery_tag(c)
+    assert pn_remote_settled(c)
+    pn_settle(c)
+    c = pn_current(self.rcv)
+    assert not c
+
+  def testUnsettled(self):
+    pn_flow(self.rcv, 10)
+    self.pump()
+
+    assert pn_unsettled(self.snd) == 0, pn_unsettled(self.snd)
+    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
+
+    d = pn_delivery(self.snd, "tag")
+    assert d
+    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
+    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
+    assert pn_advance(self.snd)
+    self.pump()
+
+    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
+    assert pn_unsettled(self.rcv) == 1, pn_unsettled(self.rcv)
+
+    c = pn_current(self.rcv)
+    assert c
+    pn_settle(c)
+
+    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
+    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)

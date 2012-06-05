@@ -178,10 +178,11 @@ class Broker:
 
     lnk = pn_link_head(connection, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
     while lnk:
-      if pn_is_sender(lnk):
-        self.detach_sender(lnk, connection)
-      else:
-        self.detach_receiver(lnk, connection)
+      if not pn_unsettled(lnk):
+        if pn_is_sender(lnk):
+          self.detach_sender(lnk, connection)
+        else:
+          self.detach_receiver(lnk, connection)
       lnk = pn_link_next(lnk, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
 
     # XXX: need to destroy links

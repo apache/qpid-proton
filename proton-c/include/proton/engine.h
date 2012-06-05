@@ -253,6 +253,7 @@ bool pn_advance(pn_link_t *link);
 int pn_credit(pn_link_t *link);
 int pn_queued(pn_link_t *link);
 
+int pn_unsettled(pn_link_t *link);
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 

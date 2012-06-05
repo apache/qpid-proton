@@ -904,6 +904,11 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
+int pn_unsettled(pn_link_t *link)
+{
+  return link->unsettled_count;
+}
+
 pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 {
   return link->head;
@@ -949,21 +954,17 @@ pn_delivery_t *pn_current(pn_link_t *link)
 
 void pn_advance_sender(pn_link_t *link)
 {
-  if (pn_credit(link) > 0) {
-    link->current->done = true;
-    link->queued++;
-    link->credit--;
-    pn_add_tpwork(link->current);
-    link->current = link->current->link_next;
-  }
+  link->current->done = true;
+  link->queued++;
+  link->credit--;
+  pn_add_tpwork(link->current);
+  link->current = link->current->link_next;
 }
 
 void pn_advance_receiver(pn_link_t *link)
 {
-  if (link->current) {
-    link->credit--;
-    link->queued--;
-  }
+  link->credit--;
+  link->queued--;
   link->current = link->current->link_next;
 }
 
@@ -1003,7 +1004,6 @@ void pn_real_settle(pn_delivery_t *delivery)
   LL_ADD_PFX(link->settled_head, link->settled_tail, delivery, link_);
   pn_clear_tag(delivery);
   pn_clear_bytes(delivery);
-  link->unsettled_count--;
   delivery->settled = true;
 }
 
@@ -1019,6 +1019,14 @@ void pn_full_settle(pn_delivery_buffer_t *db, pn_delivery_t *delivery)
 
 void pn_settle(pn_delivery_t *delivery)
 {
+  if (!delivery) return;
+
+  pn_link_t *link = delivery->link;
+  if (pn_is_current(delivery)) {
+    pn_advance(link);
+  }
+
+  link->unsettled_count--;
   delivery->local_settled = true;
   pn_add_tpwork(delivery);
   pn_work_update(delivery->link->session->connection, delivery);
@@ -1573,16 +1581,16 @@ int pn_process_msg_data(pn_transport_t *transport, pn_endpoint_t *endpoint)
           }
 
           if (state && !state->sent && (delivery->done || delivery->size > 0) &&
-              ssn_state->outgoing_window > 0) {
+              ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
             if (delivery->bytes) {
               pn_set_payload(transport->disp, delivery->bytes, delivery->size);
               delivery->size = 0;
             }
             // XXX: need to handle sending settled
-            int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIno]", TRANSFER,
+            int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
                                     link_state->local_handle, state->id,
                                     delivery->tag.size, delivery->tag.start,
-                                    0, !delivery->done);
+                                    0, delivery->local_settled, !delivery->done);
             if (err) return err;
             ssn_state->outgoing_transfer_count++;
             ssn_state->outgoing_window--;
