@@ -773,6 +773,26 @@ void pn_driver_wait(pn_driver_t *d, int timeout) {
     while (read(d->ctrl[0], buffer, 512) == 512);
   }
 
+  pn_listener_t *l = d->listener_head;
+  while (l) {
+    l->pending = (l->idx && d->fds[l->idx].revents & POLLIN);
+    l = l->next;
+  }
+
+  pn_connector_t *c = d->connector_head;
+  while (c) {
+    if (c->closed) {
+      c->pending_read = false;
+      c->pending_write = false;
+      c->pending_tick = false;
+    } else {
+      int idx = c->idx;
+      c->pending_read = (idx && d->fds[idx].revents & POLLIN);
+      c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
+    }
+    c = c->next;
+  }
+
   d->listener_next = d->listener_head;
   d->connector_next = d->connector_head;
 }
@@ -783,8 +803,6 @@ pn_listener_t *pn_driver_listener(pn_driver_t *d) {
   while (d->listener_next) {
     pn_listener_t *l = d->listener_next;
     d->listener_next = l->next;
-
-    l->pending = (l->idx && d->fds[l->idx].revents & POLLIN);
 
     if (l->pending) {
       return l;
@@ -801,18 +819,7 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
     pn_connector_t *c = d->connector_next;
     d->connector_next = c->next;
 
-    if (c->closed) {
-      c->pending_read = false;
-      c->pending_write = false;
-      c->pending_tick = false;
-      return c;
-    } else {
-      int idx = c->idx;
-      c->pending_read = (idx && d->fds[idx].revents & POLLIN);
-      c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
-    }
-
-    if (c->pending_read || c->pending_write || c->pending_tick) {
+    if (c->closed || c->pending_read || c->pending_write || c->pending_tick) {
       return c;
     }
   }
