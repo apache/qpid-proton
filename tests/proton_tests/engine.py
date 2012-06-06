@@ -532,9 +532,24 @@ class CreditTest(Test):
     self.pump()
     assert pn_credit(self.snd) == 1, pn_credit(self.snd)
 
-  def testDrain(self):
-    pn_flow(self.rcv, 2)
-    pn_drain(self.rcv)
+  def testFullDrain(self):
+    assert pn_credit(self.rcv) == 0
+    assert pn_credit(self.snd) == 0
+    pn_drain(self.rcv, 10)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 0
+    self.pump()
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    pn_drained(self.snd)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    self.pump()
+    assert pn_credit(self.rcv) == 0
+    assert pn_credit(self.snd) == 0
+
+  def testPartialDrain(self):
+    pn_drain(self.rcv, 2)
     self.pump()
 
     d = pn_delivery(self.snd, "tag")
@@ -549,6 +564,34 @@ class CreditTest(Test):
     assert pn_advance(self.rcv)
     assert not pn_current(self.rcv)
     assert pn_credit(self.rcv) == 0, pn_credit(self.rcv)
+
+  def testDrainFlow(self):
+    assert pn_credit(self.rcv) == 0
+    assert pn_credit(self.snd) == 0
+    pn_drain(self.rcv, 10)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 0
+    self.pump()
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    pn_drained(self.snd)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    self.pump()
+    assert pn_credit(self.rcv) == 0
+    assert pn_credit(self.snd) == 0
+    pn_flow(self.rcv, 10)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 0
+    self.pump()
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    pn_drained(self.snd)
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
+    self.pump()
+    assert pn_credit(self.rcv) == 10
+    assert pn_credit(self.snd) == 10
 
   def testNegative(self):
     assert pn_credit(self.snd) == 0
