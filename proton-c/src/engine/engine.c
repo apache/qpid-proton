@@ -1810,15 +1810,19 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
 
 void pn_flow(pn_link_t *receiver, int credit)
 {
-  if (!receiver) return;
-  receiver->credit += credit;
-  pn_modified(receiver->session->connection, &receiver->endpoint);
+  if (receiver && pn_is_receiver(receiver)) {
+    receiver->credit += credit;
+    receiver->drain = false;
+    pn_modified(receiver->session->connection, &receiver->endpoint);
+  }
 }
 
-void pn_drain(pn_link_t *receiver)
+void pn_drain(pn_link_t *receiver, int credit)
 {
-  if (receiver && pn_is_receiver(receiver))
+  if (receiver && pn_is_receiver(receiver)) {
+    pn_flow(receiver, credit);
     receiver->drain = true;
+  }
 }
 
 time_t pn_tick(pn_transport_t *engine, time_t now)

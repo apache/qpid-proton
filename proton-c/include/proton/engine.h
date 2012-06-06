@@ -268,8 +268,8 @@ void pn_drained(pn_link_t *sender);
 //void pn_abort(pn_sender_t *sender);
 
 // receiver
-void pn_flow(pn_link_t *receiver, int credits);
-void pn_drain(pn_link_t *receiver);
+void pn_flow(pn_link_t *receiver, int credit);
+void pn_drain(pn_link_t *receiver, int credit);
 ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
 
 // delivery
