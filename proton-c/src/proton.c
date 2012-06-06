@@ -165,6 +165,7 @@ int value(int argc, char **argv)
 struct server_context {
   int count;
   bool quiet;
+  int size;
 };
 
 void server_callback(pn_connector_t *ctor)
@@ -202,8 +203,12 @@ void server_callback(pn_connector_t *ctor)
   pn_connection_t *conn = pn_connector_connection(ctor);
   struct server_context *ctx = pn_connector_context(ctor);
   char tagstr[1024];
-  char msg[1024];
-  char data[1024];
+  char msg[10*1024];
+  char data[ctx->size + 16];
+  for (int i = 0; i < ctx->size; i++) {
+    msg[i] = 'x';
+  }
+  size_t ndata = pn_message_data(data, ctx->size + 16, msg, ctx->size);
 
   if (pn_connection_state(conn) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)) {
     pn_connection_open(conn);
@@ -254,9 +259,7 @@ void server_callback(pn_connector_t *ctor)
       if (!ctx->quiet) printf("\"\n");
       if (pn_credit(link) < 50) pn_flow(link, 100);
     } else if (pn_writable(delivery)) {
-      sprintf(msg, "message body for %s", tagstr);
-      size_t n = pn_message_data(data, 1024, msg, strlen(msg));
-      pn_send(link, data, n);
+      pn_send(link, data, ndata);
       if (pn_advance(link)) {
         if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
         char tagbuf[16];
@@ -297,6 +300,7 @@ struct client_context {
   int send_count;
   pn_driver_t *driver;
   bool quiet;
+  int size;
   int high;
   int low;
   const char *mechanism;
@@ -345,8 +349,12 @@ void client_callback(pn_connector_t *ctor)
 
   pn_connection_t *connection = pn_connector_connection(ctor);
   char tagstr[1024];
-  char msg[1024];
-  char data[1024];
+  char msg[ctx->size];
+  char data[ctx->size + 16];
+  for (int i = 0; i < ctx->size; i++) {
+    msg[i] = 'x';
+  }
+  size_t ndata = pn_message_data(data, ctx->size + 16, msg, ctx->size);
 
   if (!ctx->init) {
     ctx->init = true;
@@ -388,9 +396,7 @@ void client_callback(pn_connector_t *ctor)
     pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
     pn_link_t *link = pn_link(delivery);
     if (pn_writable(delivery)) {
-      sprintf(msg, "message body for %s", tagstr);
-      ssize_t n = pn_message_data(data, 1024, msg, strlen(msg));
-      pn_send(link, data, n);
+      pn_send(link, data, ndata);
       if (pn_advance(link)) {
         if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
       }
@@ -455,9 +461,10 @@ int main(int argc, char **argv)
   bool quiet = false;
   int high = 100;
   int low = 50;
+  int size = 32;
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:a:m:n:u:l:qhVXY")) != -1)
+  while ((opt = getopt(argc, argv, "c:a:m:n:s:u:l:qhVXY")) != -1)
   {
     switch (opt) {
     case 'c':
@@ -472,6 +479,9 @@ int main(int argc, char **argv)
       break;
     case 'n':
       count = atoi(optarg);
+      break;
+    case 's':
+      size = atoi(optarg);
       break;
     case 'u':
       high = atoi(optarg);
@@ -497,7 +507,10 @@ int main(int argc, char **argv)
       printf("    -c    The connect url.\n");
       printf("    -a    The AMQP address.\n");
       printf("    -m    The SASL mechanism.\n");
-      printf("    -n    <count>\n");
+      printf("    -n    The number of messages.\n");
+      printf("    -s    Message size.\n");
+      printf("    -u    Upper flow threshold.\n");
+      printf("    -l    Lower flow threshold.\n");
       printf("    -q    Supress printouts.\n");
       printf("    -h    Print this help.\n");
       exit(EXIT_SUCCESS);
@@ -515,7 +528,7 @@ int main(int argc, char **argv)
 
   pn_driver_t *drv = pn_driver();
   if (url) {
-    struct client_context ctx = {false, false, count, count, drv, quiet, high, low};
+    struct client_context ctx = {false, false, count, count, drv, quiet, size, high, low};
     ctx.username = user;
     ctx.password = pass;
     ctx.mechanism = mechanism;
@@ -539,7 +552,7 @@ int main(int argc, char **argv)
       }
     }
   } else {
-    struct server_context ctx = {0, quiet};
+    struct server_context ctx = {0, quiet, size};
     if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
     while (true) {
       pn_driver_wait(drv, -1);
