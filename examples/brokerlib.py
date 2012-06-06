@@ -123,8 +123,8 @@ class Broker:
     self.sources = {}
     self.targets = {}
     self.dynamic_counter = 0
-    self.high = 30
-    self.low = 15
+    self.high = 200
+    self.low = 100
 
   def tick(self, connector):
     self.sasl_tick(connector)
