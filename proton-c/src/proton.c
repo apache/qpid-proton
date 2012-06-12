@@ -32,6 +32,7 @@
 #include <proton/codec.h>
 #include <proton/buffer.h>
 #include <inttypes.h>
+#include "protocol.h"
 
 int buffer(int argc, char **argv)
 {
@@ -70,6 +71,16 @@ int buffer(int argc, char **argv)
   } else {
     printf("%.*s\n", (int) str.size, str.start);
   }
+
+  pn_data_clear(data);
+  pn_data_fill(data, "DL[SIonn?DL[S]?DL[S]nnI]", ATTACH, "asdf", 1, true,
+               true, SOURCE, "queue",
+               true, TARGET, "queue",
+               0);
+
+  pn_data_print(data); printf("\n");
+
+
   pn_data_free(data);
 
   return 0;
