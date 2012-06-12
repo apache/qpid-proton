@@ -268,6 +268,8 @@ class Broker:
       # possibly update the real target
       pn_set_target(link, pn_remote_target(link))
       pn_link_open(link)
+      if target.capacity():
+        pn_flow(link, self.high)
     else:
       # XXX: this is just a string
       remote_target = pn_remote_target(link)
@@ -279,11 +281,11 @@ class Broker:
         target = n.target()
         local_target = target.configure(remote_target)
         self.targets[key] = target
-        if target.capacity():
-          pn_flow(link, self.high)
         pn_set_source(link, pn_remote_source(link))
         pn_set_target(link, local_target)
         pn_link_open(link)
+        if target.capacity():
+          pn_flow(link, self.high)
 
   def resolve(self, terminus):
     # XXX: need to support full source/target
@@ -355,8 +357,11 @@ class Broker:
     assert cd == PN_EOS or cd >= 0, cd
     if cd != PN_EOS:
       cd, tmp = pn_recv(link, 1024)
-      assert cd == PN_EOS and tmp == "", (cd, tmp)
-    pn_advance(link)
+      if cd == PN_EOS:
+        pn_advance(link)
+      else:
+        assert not xfr
+        return
 
     # XXX: transactions
     txn = None
