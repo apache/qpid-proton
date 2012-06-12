@@ -1606,7 +1606,8 @@ typedef enum {
   PN_JTOK_NEG,
   PN_JTOK_DOT,
   PN_JTOK_STRING,
-  PN_JTOK_DIGITS,
+  PN_JTOK_FLOAT,
+  PN_JTOK_INT,
   PN_JTOK_TRUE,
   PN_JTOK_FALSE,
   PN_JTOK_NULL,
@@ -1648,7 +1649,8 @@ const char *pn_token_type(pn_token_type_t type)
   case PN_JTOK_NEG: return "NEG";
   case PN_JTOK_DOT: return "DOT";
   case PN_JTOK_STRING: return "STRING";
-  case PN_JTOK_DIGITS: return "DIGITS";
+  case PN_JTOK_FLOAT: return "FLOAT";
+  case PN_JTOK_INT: return "INT";
   case PN_JTOK_TRUE: return "TRUE";
   case PN_JTOK_FALSE: return "FALSE";
   case PN_JTOK_NULL: return "NULL";
@@ -1799,13 +1801,52 @@ int pn_json_scan_alpha(pn_json_t *json, const char *str)
   }
 }
 
-int pn_json_scan_digits(pn_json_t *json, const char *str)
+int pn_json_scan_number(pn_json_t *json, const char *str)
 {
-  for (int i = 0; true; i++) {
+  bool dot = false;
+  bool exp = false;
+
+  int i = 0;
+
+  if (str[i] == '+' || str[i] == '-') {
+    i++;
+  }
+
+  for ( ; true; i++) {
     char c = str[i];
-    if (!(c >= '0' && c <= '9')) {
-      pn_json_token(json, PN_JTOK_DIGITS, str, i);
-      return 0;
+    switch (c) {
+    case '0': case '1': case '2': case '3': case '4': case '5': case '6':
+    case '7': case '8': case '9':
+      continue;
+    case '.':
+      if (dot) {
+        pn_json_token(json, PN_JTOK_FLOAT, str, i);
+        return 0;
+      } else {
+        dot = true;
+      }
+      continue;
+    case 'e':
+    case 'E':
+      if (exp) {
+        pn_json_token(json, PN_JTOK_FLOAT, str, i);
+        return 0;
+      } else {
+        dot = true;
+        exp = true;
+        if (str[i+1] == '+' || str[i+1] == '-') {
+          i++;
+        }
+        continue;
+      }
+    default:
+      if (dot || exp) {
+        pn_json_token(json, PN_JTOK_FLOAT, str, i);
+        return 0;
+      } else {
+        pn_json_token(json, PN_JTOK_INT, str, i);
+        return 0;
+      }
     }
   }
 }
@@ -1819,6 +1860,7 @@ int pn_json_scan_symbol(pn_json_t *json, const char *str, pn_token_type_t type)
 int pn_json_scan(pn_json_t *json)
 {
   const char *str = json->position;
+  char n;
 
   for (char c; true; str++) {
     c = *str;
@@ -1837,16 +1879,31 @@ int pn_json_scan(pn_json_t *json)
     case ',':
       return pn_json_scan_symbol(json, str, PN_JTOK_COMMA);
     case '.':
-      return pn_json_scan_symbol(json, str, PN_JTOK_DOT);
+      n = *(str+1);
+      if ((n >= '0' && n <= '9')) {
+        return pn_json_scan_number(json, str);
+      } else {
+        return pn_json_scan_symbol(json, str, PN_JTOK_DOT);
+      }
     case '-':
-      return pn_json_scan_symbol(json, str, PN_JTOK_NEG);
+      n = *(str+1);
+      if ((n >= '0' && n <= '9') || n == '.') {
+        return pn_json_scan_number(json, str);
+      } else {
+        return pn_json_scan_symbol(json, str, PN_JTOK_NEG);
+      }
     case '+':
-      return pn_json_scan_symbol(json, str, PN_JTOK_POS);
+      n = *(str+1);
+      if ((n >= '0' && n <= '9') || n == '.') {
+        return pn_json_scan_number(json, str);
+      } else {
+        return pn_json_scan_symbol(json, str, PN_JTOK_POS);
+      }
     case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
       break;
     case '0': case '1': case '2': case '3': case '4': case '5': case '6':
     case '7': case '8': case '9':
-      return pn_json_scan_digits(json, str);
+      return pn_json_scan_number(json, str);
     case '"':
       return pn_json_scan_string(json, str);
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
@@ -1985,59 +2042,38 @@ int pn_json_parse_number(pn_json_t *json, pn_atoms_t *atoms)
   int idx = 0;
   int err;
 
-  if (json->token.type == PN_JTOK_NEG) {
-    pn_json_append_tok(json, number, &idx);
+  bool negate = false;
+
+  if (json->token.type == PN_JTOK_NEG || json->token.type == PN_JTOK_POS) {
+    if (json->token.type == PN_JTOK_NEG)
+      negate = !negate;
     err = pn_json_shift(json);
     if (err) return err;
   }
 
-  if (json->token.type == PN_JTOK_DIGITS) {
+  if (json->token.type == PN_JTOK_FLOAT || json->token.type == PN_JTOK_INT) {
+    dbl = json->token.type == PN_JTOK_FLOAT;
     pn_json_append_tok(json, number, &idx);
     err = pn_json_shift(json);
     if (err) return err;
-    if (json->token.type == PN_JTOK_DOT) {
-      dbl = true;
-      pn_json_append_tok(json, number, &idx);
-      err = pn_json_shift(json);
-      if (err) return err;
-      if (json->token.type == PN_JTOK_DIGITS) {
-        pn_json_append_tok(json, number, &idx);
-        err = pn_json_shift(json);
-        if (err) return err;
-      } else {
-        return pn_json_error(json, PN_ERR, "expecting DIGITS");
-      }
-    }
   } else {
-    return pn_json_error(json, PN_ERR, "expecting DIGITS");
-  }
-
-  if (json->token.type == PN_JTOK_EXP) {
-    dbl = true;
-    pn_json_append_tok(json, number, &idx);
-    err = pn_json_shift(json);
-    if (err) return err;
-    if (json->token.type == PN_JTOK_POS || json->token.type == PN_JTOK_NEG) {
-      pn_json_append_tok(json, number, &idx);
-      err = pn_json_shift(json);
-      if (err) return err;
-    }
-    if (json->token.type == PN_JTOK_DIGITS) {
-      pn_json_append_tok(json, number, &idx);
-      err = pn_json_shift(json);
-      if (err) return err;
-    } else {
-      return pn_json_error(json, PN_ERR, "expecting DIGITS");
-    }
+    return pn_json_error(json, PN_ERR, "expecting FLOAT or INT");
   }
 
   number[idx] = '\0';
+
   if (dbl) {
     double value = atof(number);
+    if (negate) {
+      value = -value;
+    }
     err = pn_ifill_atoms(atoms, "d", value);
     if (err) return pn_json_error(json, err, "error writing double atoms");
   } else {
-    uint64_t value = atoll(number);
+    int64_t value = atoll(number);
+    if (negate) {
+      value = -value;
+    }
     err = pn_ifill_atoms(atoms, "l", value);
     if (err) return pn_json_error(json, err, "error writing long atoms");
   }
@@ -2121,7 +2157,8 @@ int pn_json_parse_value(pn_json_t *json, pn_atoms_t *atoms)
     return pn_json_shift(json);
   case PN_JTOK_POS:
   case PN_JTOK_NEG:
-  case PN_JTOK_DIGITS:
+  case PN_JTOK_FLOAT:
+  case PN_JTOK_INT:
     return pn_json_parse_number(json, atoms);
   case PN_JTOK_TRUE:
     err = pn_ifill_atoms(atoms, "o", true);
@@ -2320,9 +2357,11 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
   pn_atoms_t atoms;
 
   while (true) {
+    va_list cp;
+    va_copy(cp, ap);
     atoms.size=data->capacity - data->size;
     atoms.start=data->atoms + data->size;
-    int err = pn_vfill_atoms(&atoms, fmt, ap);
+    int err = pn_vfill_atoms(&atoms, fmt, cp);
     if (!err) {
       data->size += atoms.size;
       return 0;
