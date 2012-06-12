@@ -45,6 +45,8 @@ add_library (
 
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
+
+  src/messenger.c
 )
 
 include(FindSWIG)

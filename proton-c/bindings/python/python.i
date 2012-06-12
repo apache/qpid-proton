@@ -5,6 +5,7 @@
 #include <proton/message.h>
 #include <proton/sasl.h>
 #include <proton/driver.h>
+#include <proton/messenger.h>
 %}
 
 typedef unsigned int size_t;
