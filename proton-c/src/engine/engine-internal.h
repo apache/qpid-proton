@@ -124,6 +124,8 @@ struct pn_connection_t {
   pn_delivery_t *tpwork_tail;
   char *container;
   char *hostname;
+  char *remote_container;
+  char *remote_hostname;
 };
 
 struct pn_session_t {

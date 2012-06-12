@@ -97,13 +97,15 @@ pn_state_t pn_connection_state(pn_connection_t *connection);
 /** @todo: needs documentation */
 pn_error_t *pn_connection_error(pn_connection_t *connection);
 /** @todo: needs documentation */
-char *pn_connection_container(pn_connection_t *connection);
+const char *pn_connection_container(pn_connection_t *connection);
 /** @todo: needs documentation */
 void pn_connection_set_container(pn_connection_t *connection, const char *container);
 /** @todo: needs documentation */
-char *pn_connection_hostname(pn_connection_t *connection);
+const char *pn_connection_hostname(pn_connection_t *connection);
 /** @todo: needs documentation */
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
+const char *pn_connection_remote_container(pn_connection_t *connection);
+const char *pn_connection_remote_hostname(pn_connection_t *connection);
 
 /** Extracts the first delivery on the connection that has pending
  *  operations.

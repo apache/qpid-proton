@@ -17,13 +17,15 @@
 # under the License.
 #
 
-import os, common
+import os, common, xproton
 from xproton import *
 
 # future test areas
 #  + different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
 #  + shrinking output_size down to something small? should the enginge buffer?
+#  + resuming
+#    - locally and remotely created deliveries with the same tag
 
 OUTPUT_SIZE = 10*1024
 
@@ -222,6 +224,15 @@ class SessionTest(Test):
     assert pn_session_state(self.ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
     assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
 
+  def test_closing_connection(self):
+    pn_session_open(self.ssn)
+    self.pump()
+    pn_connection_close(self.c1)
+    self.pump()
+    pn_session_close(self.ssn)
+    self.pump()
+
+
 class LinkTest(Test):
 
   def setup(self):
@@ -299,6 +310,49 @@ class LinkTest(Test):
 
     assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
     assert pn_link_state(self.rcv) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+
+  def test_multiple(self):
+    rcv = pn_receiver(pn_get_session(self.snd), "second-rcv")
+    pn_link_open(self.snd)
+    pn_link_open(rcv)
+    self.pump()
+    c2 = pn_get_connection(pn_get_session(self.rcv))
+    l = pn_link_head(c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    while l:
+      pn_link_open(l)
+      l = pn_link_next(l, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    self.pump()
+
+    assert self.snd
+    assert rcv
+    pn_link_close(self.snd)
+    pn_link_close(rcv)
+    ssn = pn_get_session(rcv)
+    conn = pn_get_connection(ssn)
+    pn_session_close(ssn)
+    pn_connection_close(conn)
+    self.pump()
+
+  def test_closing_session(self):
+    pn_link_open(self.snd)
+    pn_link_open(self.rcv)
+    ssn1 = pn_get_session(self.snd)
+    self.pump()
+    pn_session_close(ssn1)
+    self.pump()
+    pn_link_close(self.snd)
+    self.pump()
+
+  def test_closing_connection(self):
+    pn_link_open(self.snd)
+    pn_link_open(self.rcv)
+    ssn1 = pn_get_session(self.snd)
+    c1 = pn_get_connection(ssn1)
+    self.pump()
+    pn_connection_close(c1)
+    self.pump()
+    pn_link_close(self.snd)
+    self.pump()
 
 class TransferTest(Test):
 
@@ -511,6 +565,61 @@ class CreditTest(Test):
     assert tags == ["tag%s" % (i+10) for i in range(PN_SESSION_WINDOW)]
 
     assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+
+  def _testBufferingOnClose(self, a, b):
+    for i in range(10):
+      d = pn_delivery(self.snd, "tag-%s" % i)
+      assert d
+      pn_settle(d)
+    self.pump()
+    assert pn_queued(self.snd) == 10
+
+    endpoints = {"connection": (self.c1, self.c2),
+                 "session": (pn_get_session(self.snd), pn_get_session(self.rcv)),
+                 "link": (self.snd, self.rcv)}
+
+    local_a, remote_a = endpoints[a]
+    local_b, remote_b = endpoints[b]
+
+    a_close = getattr(xproton, "pn_%s_close" % a)
+    a_state = getattr(xproton, "pn_%s_state" % a)
+    b_close = getattr(xproton, "pn_%s_close" % b)
+    b_state = getattr(xproton, "pn_%s_state" % b)
+
+    b_close(remote_b)
+    self.pump()
+    assert b_state(local_b) == PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED
+    a_close(local_a)
+    self.pump()
+    assert a_state(remote_a) & PN_REMOTE_CLOSED
+    assert pn_queued(self.snd) == 10
+
+  def testBufferingOnCloseLinkLink(self):
+    self._testBufferingOnClose("link", "link")
+
+  def testBufferingOnCloseLinkSession(self):
+    self._testBufferingOnClose("link", "session")
+
+  def testBufferingOnCloseLinkConnection(self):
+    self._testBufferingOnClose("link", "connection")
+
+  def testBufferingOnCloseSessionLink(self):
+    self._testBufferingOnClose("session", "link")
+
+  def testBufferingOnCloseSessionSession(self):
+    self._testBufferingOnClose("session", "session")
+
+  def testBufferingOnCloseSessionConnection(self):
+    self._testBufferingOnClose("session", "connection")
+
+  def testBufferingOnCloseConnectionLink(self):
+    self._testBufferingOnClose("connection", "link")
+
+  def testBufferingOnCloseConnectionSession(self):
+    self._testBufferingOnClose("connection", "session")
+
+  def testBufferingOnCloseConnectionConnection(self):
+    self._testBufferingOnClose("connection", "connection")
 
   def testCreditWithBuffering(self):
     pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
