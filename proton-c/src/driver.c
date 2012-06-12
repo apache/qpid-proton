@@ -819,7 +819,8 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
     pn_connector_t *c = d->connector_next;
     d->connector_next = c->next;
 
-    if (c->closed || c->pending_read || c->pending_write || c->pending_tick) {
+    if (c->closed || c->pending_read || c->pending_write || c->pending_tick ||
+        c->input_size || c->input_eos) {
       return c;
     }
   }
