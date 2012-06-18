@@ -31,6 +31,7 @@
 #include "pn_config.h"
 #include <proton/codec.h>
 #include <proton/buffer.h>
+#include <proton/parser.h>
 #include <inttypes.h>
 #include "protocol.h"
 
@@ -144,31 +145,31 @@ int value(int argc, char **argv)
 
   printf("JSON: %s\n", str);
 
-  pn_atom_t jsondata[1024];
-  pn_atoms_t jsond = {1024, jsondata};
+  pn_atom_t parserdata[1024];
+  pn_atoms_t parserd = {1024, parserdata};
 
   printf("\n");
 
-  pn_json_t *json = pn_json();
+  pn_parser_t *parser = pn_parser();
 
-  err = pn_json_parse(json, str, &jsond);
+  err = pn_parser_parse(parser, str, &parserd);
   if (err) {
-    printf("parse err=%s, %s\n", pn_error(err), pn_json_error_str(json));
+    printf("parse err=%s, %s\n", pn_error(err), pn_parser_error(parser));
   } else {
     printf("--\n");
-    for (int i = 0; i < jsond.size; i++) {
-      printf("%s: ", pn_type_str(jsond.start[i].type));
-      err = pn_print_atom(jsond.start[i]);
+    for (int i = 0; i < parserd.size; i++) {
+      printf("%s: ", pn_type_str(parserd.start[i].type));
+      err = pn_print_atom(parserd.start[i]);
       if (err) printf("err=%s", pn_error(err));
       printf("\n");
     }
     printf("--\n");
-    err = pn_print_atoms(&jsond);
+    err = pn_print_atoms(&parserd);
     if (err) printf("print err=%s", pn_error(err));
     printf("\n");
   }
 
-  pn_json_free(json);
+  pn_parser_free(parser);
 
   return 0;
 }

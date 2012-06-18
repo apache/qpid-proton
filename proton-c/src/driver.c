@@ -59,8 +59,8 @@ struct pn_driver_t {
 
 struct pn_listener_t {
   pn_driver_t *driver;
-  pn_listener_t *next;
-  pn_listener_t *prev;
+  pn_listener_t *listener_next;
+  pn_listener_t *listener_prev;
   int idx;
   bool pending;
   int fd;
@@ -71,8 +71,8 @@ struct pn_listener_t {
 
 struct pn_connector_t {
   pn_driver_t *driver;
-  pn_connector_t *next;
-  pn_connector_t *prev;
+  pn_connector_t *connector_next;
+  pn_connector_t *connector_prev;
   int idx;
   bool pending_tick;
   bool pending_read;
@@ -108,7 +108,7 @@ struct pn_connector_t {
 static void pn_driver_add_listener(pn_driver_t *d, pn_listener_t *l)
 {
   if (!l->driver) return;
-  LL_ADD(d->listener_head, d->listener_tail, l);
+  LL_ADD(d, listener, l);
   l->driver = d;
   d->listener_count++;
 }
@@ -118,10 +118,10 @@ static void pn_driver_remove_listener(pn_driver_t *d, pn_listener_t *l)
   if (!l->driver) return;
 
   if (l == d->listener_next) {
-    d->listener_next = l->next;
+    d->listener_next = l->listener_next;
   }
 
-  LL_REMOVE(d->listener_head, d->listener_tail, l);
+  LL_REMOVE(d, listener, l);
   l->driver = NULL;
   d->listener_count--;
 }
@@ -176,8 +176,8 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
   pn_listener_t *l = malloc(sizeof(pn_listener_t));
   if (!l) return NULL;
   l->driver = driver;
-  l->next = NULL;
-  l->prev = NULL;
+  l->listener_next = NULL;
+  l->listener_prev = NULL;
   l->idx = 0;
   l->pending = false;
   l->fd = fd;
@@ -256,7 +256,7 @@ void pn_listener_destroy(pn_listener_t *l)
 static void pn_driver_add_connector(pn_driver_t *d, pn_connector_t *c)
 {
   if (!c->driver) return;
-  LL_ADD(d->connector_head, d->connector_tail, c);
+  LL_ADD(d, connector, c);
   c->driver = d;
   d->connector_count++;
 }
@@ -266,10 +266,10 @@ static void pn_driver_remove_connector(pn_driver_t *d, pn_connector_t *c)
   if (!c->driver) return;
 
   if (c == d->connector_next) {
-    d->connector_next = c->next;
+    d->connector_next = c->connector_next;
   }
 
-  LL_REMOVE(d->connector_head, d->connector_tail, c);
+  LL_REMOVE(d, connector, c);
   c->driver = NULL;
   d->connector_count--;
   if (c->closed) {
@@ -327,8 +327,8 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   pn_connector_t *c = malloc(sizeof(pn_connector_t));
   if (!c) return NULL;
   c->driver = driver;
-  c->next = NULL;
-  c->prev = NULL;
+  c->connector_next = NULL;
+  c->connector_prev = NULL;
   c->pending_tick = false;
   c->pending_read = false;
   c->pending_write = false;
@@ -744,7 +744,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
     d->fds[d->nfds].revents = 0;
     l->idx = d->nfds;
     d->nfds++;
-    l = l->next;
+    l = l->listener_next;
   }
 
   pn_connector_t *c = d->connector_head;
@@ -758,7 +758,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
       c->idx = d->nfds;
       d->nfds++;
     }
-    c = c->next;
+    c = c->connector_next;
   }
 }
 
@@ -776,7 +776,7 @@ void pn_driver_wait(pn_driver_t *d, int timeout) {
   pn_listener_t *l = d->listener_head;
   while (l) {
     l->pending = (l->idx && d->fds[l->idx].revents & POLLIN);
-    l = l->next;
+    l = l->listener_next;
   }
 
   pn_connector_t *c = d->connector_head;
@@ -790,7 +790,7 @@ void pn_driver_wait(pn_driver_t *d, int timeout) {
       c->pending_read = (idx && d->fds[idx].revents & POLLIN);
       c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
     }
-    c = c->next;
+    c = c->connector_next;
   }
 
   d->listener_next = d->listener_head;
@@ -802,7 +802,7 @@ pn_listener_t *pn_driver_listener(pn_driver_t *d) {
 
   while (d->listener_next) {
     pn_listener_t *l = d->listener_next;
-    d->listener_next = l->next;
+    d->listener_next = l->listener_next;
 
     if (l->pending) {
       return l;
@@ -817,7 +817,7 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
 
   while (d->connector_next) {
     pn_connector_t *c = d->connector_next;
-    d->connector_next = c->next;
+    d->connector_next = c->connector_next;
 
     if (c->closed || c->pending_read || c->pending_write || c->pending_tick ||
         c->input_size || c->input_eos) {

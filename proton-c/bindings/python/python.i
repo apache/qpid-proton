@@ -40,6 +40,9 @@ typedef int int32_t;
 int pn_message_encode(pn_message_t *msg, pn_format_t format, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
 
+int pn_section_save(pn_section_t *section, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_section_save;
+
 ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_send;
 

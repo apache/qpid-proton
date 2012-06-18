@@ -44,8 +44,7 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
       }
     } else {
       if (idx < capacity - 4) {
-        sprintf(dst + idx, "\\x%.2x", c);
-        idx += 4;
+        idx += sprintf(dst + idx, "\\x%.2x", c);
       } else {
         return PN_OVERFLOW;
       }

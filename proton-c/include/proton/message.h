@@ -118,6 +118,27 @@ int pn_message_idecode(pn_message_t *msg, pn_format_t format, const char *bytes,
 int pn_message_iencode(pn_message_t *msg, pn_format_t format, char *bytes, size_t *size);
 */
 
+typedef struct pn_section_t pn_section_t;
+
+pn_section_t *pn_section(pn_message_t *msg);
+void pn_section_free(pn_section_t *section);
+void pn_section_clear(pn_section_t *section);
+const char *pn_section_error(pn_section_t *section);
+
+pn_format_t pn_section_get_format(pn_section_t *section);
+int pn_section_set_format(pn_section_t *section, pn_format_t format);
+int pn_section_load(pn_section_t *section, const char *data);
+int pn_section_save(pn_section_t *section, char *data, size_t *size);
+
+// TODO:
+// bind vars
+//int pn_section_set(pn_section_t *section, int i, pn_atom_t *atom);
+//pn_atom_t *pn_section_get(pn_section_t *section, int i);
+// querying
+// could separate query from getting results
+//int pn_section_scan(pn_section_t *section, const char *query, pn_atom_t *atom);
+// multisection
+
 // full decode/encode
 int pn_message_decode(pn_message_t *msg, pn_format_t format, const char *bytes, size_t size);
 int pn_message_encode(pn_message_t *msg, pn_format_t format, char *bytes, size_t *size);

@@ -108,15 +108,62 @@ class CodecTest(Test):
     assert not pn_message_set_priority(self.msg, 100)
     assert not pn_message_set_address(self.msg, "address")
     assert not pn_message_set_subject(self.msg, "subject")
+    section = pn_section(self.msg)
+    body = '"test body"'
+    assert section
+    rc = pn_section_load(section, body)
+    assert not rc, rc
 
     cd, data = pn_message_encode(self.msg, PN_AMQP, 1024)
     assert cd == 0, cd
 
     msg2 = pn_message()
     cd = pn_message_decode(msg2, PN_AMQP, data, len(data))
-    assert cd == 0, cd
+    assert cd == 0, (cd, data)
 
     assert pn_message_get_ttl(self.msg) == pn_message_get_ttl(msg2)
     assert pn_message_get_priority(self.msg) == pn_message_get_priority(msg2)
     assert pn_message_get_address(self.msg) == pn_message_get_address(msg2)
     assert pn_message_get_subject(self.msg) == pn_message_get_subject(msg2)
+    cd, saved = pn_section_save(section, 1024)
+    assert not cd, cd
+    assert saved == body, (body, saved)
+
+class SectionTest(Test):
+
+  def _test(self, *bodies):
+    section = pn_section(self.msg)
+    for body in bodies:
+      pn_section_clear(section)
+      cd, saved = pn_section_save(section, 1024)
+      assert  (cd, saved) == (0, ""), (cd, saved)
+      err = pn_section_load(section, body)
+      assert err == 0, (pn_section_error(section), repr(body))
+      cd, saved = pn_section_save(section, 1024)
+      assert cd >= 0, (cd, pn_section_error(section))
+      assert saved == body, (body, saved)
+
+  def testIntegral(self):
+    self._test("0", "1", "-1", "9223372036854775807")
+
+  def testFloating(self):
+    self._test("1.1", "3.14159", "-3.14159", "-1.1")
+
+  def testSymbol(self):
+    self._test(':symbol', ':"quoted symbol"')
+
+  def testString(self):
+    self._test('"string"', '"string with spaces"')
+
+  def testBinary(self):
+    self._test('b"binary"', 'b"binary with spaces and special values: \\x00\\x01\\x02"')
+
+  def testMap(self):
+    self._test('{"one"=1, :two=2, :pi=3.14159}', '{[1, 2, 3]=[3, 2, 1], {1=2}={3=4}}')
+
+  def testList(self):
+    self._test('[1, 2, 3]', '["one", "two", "three"]', '[:one, 2, 3.14159]',
+               '[{1=2}, {3=4}, {5=6}]')
+
+  def testDescriptor(self):
+    self._test('@21 ["one", 2, "three", @:url "http://example.org"]')

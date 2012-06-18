@@ -52,40 +52,39 @@ bool pn_env_bool(const char *name);
     }                                                                   \
   } while (0)
 
-#define __EMPTY__next next
-#define __EMPTY__prev prev
-#define LL_ADD(HEAD, TAIL, NODE) LL_ADD_PFX(HEAD, TAIL, NODE, __EMPTY__)
-#define LL_ADD_PFX(HEAD, TAIL, NODE, PFX)    \
-  {                                          \
-    (NODE)-> PFX ## next = NULL;             \
-    (NODE)-> PFX ## prev = (TAIL);           \
-    if (TAIL) (TAIL)-> PFX ## next = (NODE); \
-    (TAIL) = (NODE);                         \
-    if (!(HEAD)) (HEAD) = NODE;              \
+
+#define LL_HEAD(ROOT, LIST) ((ROOT)-> LIST ## _head)
+#define LL_TAIL(ROOT, LIST) ((ROOT)-> LIST ## _tail)
+#define LL_ADD(ROOT, LIST, NODE)                              \
+  {                                                           \
+    (NODE)-> LIST ## _next = NULL;                            \
+    (NODE)-> LIST ## _prev = (ROOT)-> LIST ## _tail;          \
+    if (LL_TAIL(ROOT, LIST))                                  \
+      LL_TAIL(ROOT, LIST)-> LIST ## _next = (NODE);           \
+    LL_TAIL(ROOT, LIST) = (NODE);                             \
+    if (!LL_HEAD(ROOT, LIST)) LL_HEAD(ROOT, LIST) = (NODE);   \
   }
 
-#define LL_POP(HEAD, TAIL) LL_POP_PFX(HEAD, TAIL, __EMPTY__)
-#define LL_POP_PFX(HEAD, TAIL, PFX)  \
-  {                                  \
-    if (HEAD) {                      \
-      void *_head = (HEAD);          \
-      (HEAD) = (HEAD)-> PFX ## next; \
-      if (_head == (TAIL))           \
-        (TAIL) = NULL;               \
-    }                                \
-  }
-
-#define LL_REMOVE(HEAD, TAIL, NODE) LL_REMOVE_PFX(HEAD, TAIL, NODE, __EMPTY__)
-#define LL_REMOVE_PFX(HEAD, TAIL, NODE, PFX)                     \
+#define LL_POP(ROOT, LIST)                                       \
   {                                                              \
-    if ((NODE)-> PFX ## prev)                                    \
-      (NODE)-> PFX ## prev-> PFX ## next = (NODE)-> PFX ## next; \
-    if ((NODE)-> PFX ## next)                                    \
-      (NODE)-> PFX ## next-> PFX ## prev = (NODE)-> PFX ## prev; \
-    if ((NODE) == (HEAD))                                        \
-      (HEAD) = (NODE)-> PFX ## next;                             \
-    if ((NODE) == (TAIL))                                        \
-      (TAIL) = (NODE)-> PFX ## prev;                             \
+    if (LL_HEAD(ROOT, LIST)) {                                   \
+      void *_head = LL_HEAD(ROOT, LIST);                         \
+      LL_HEAD(ROOT, LIST) = LL_HEAD(ROOT, LIST)-> LIST ## _next; \
+      if (_head == LL_TAIL(ROOT, LIST))                          \
+        LL_TAIL(ROOT, LIST) = NULL;                              \
+    }                                                            \
+  }
+
+#define LL_REMOVE(ROOT, LIST, NODE)                                    \
+  {                                                                    \
+    if ((NODE)-> LIST ## _prev)                                        \
+      (NODE)-> LIST ## _prev-> LIST ## _next = (NODE)-> LIST ## _next; \
+    if ((NODE)-> LIST ## _next)                                        \
+      (NODE)-> LIST ## _next-> LIST ## _prev = (NODE)-> LIST ## _prev; \
+    if ((NODE) == LL_HEAD(ROOT, LIST))                                 \
+      LL_HEAD(ROOT, LIST) = (NODE)-> LIST ## _next;                    \
+    if ((NODE) == LL_TAIL(ROOT, LIST))                                 \
+      LL_TAIL(ROOT, LIST) = (NODE)-> LIST ## _prev;                    \
   }
 
 char *pn_strdup(const char *src);

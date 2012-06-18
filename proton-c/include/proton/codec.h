@@ -91,19 +91,10 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom);
 
 int pn_fill_atoms(pn_atoms_t *atoms, const char *fmt, ...);
 int pn_vfill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap);
+int pn_ifill_atoms(pn_atoms_t *atoms, const char *fmt, ...);
+int pn_vifill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap);
 int pn_scan_atoms(const pn_atoms_t *atoms, const char *fmt, ...);
 int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap);
-
-// JSON
-
-typedef struct pn_json_t pn_json_t;
-
-pn_json_t *pn_json();
-int pn_json_parse(pn_json_t *json, const char *str, pn_atoms_t *atoms);
-int pn_json_render(pn_json_t *json, pn_atoms_t *atoms, char *output, size_t *size);
-int pn_json_error_code(pn_json_t *json);
-const char *pn_json_error_str(pn_json_t *json);
-void pn_json_free(pn_json_t *json);
 
 // data
 
@@ -112,6 +103,7 @@ typedef struct pn_data_t pn_data_t;
 pn_data_t *pn_data(size_t capacity);
 void pn_data_free(pn_data_t *data);
 int pn_data_clear(pn_data_t *data);
+int pn_data_grow(pn_data_t *data);
 int pn_data_decode(pn_data_t *data, char *bytes, size_t *size);
 int pn_data_encode(pn_data_t *data, char *bytes, size_t *size);
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
@@ -119,6 +111,9 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...);
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
 int pn_data_scan(pn_data_t *data, const char *fmt, ...);
 int pn_data_print(pn_data_t *data);
+pn_atoms_t pn_data_atoms(pn_data_t *data);
+pn_atoms_t pn_data_available(pn_data_t *data);
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
+int pn_data_resize(pn_data_t *data, size_t size);
 
 #endif /* codec.h */

@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 #include "encodings.h"
 #include "../util.h"
 
@@ -81,7 +82,7 @@ int pn_bytes_format(pn_bytes_t *bytes, const char *fmt, ...)
   va_end(ap);
   if (n >= bytes->size) {
     return PN_OVERFLOW;
-  } else if (n > 0) {
+  } else if (n >= 0) {
     pn_bytes_ltrim(bytes, n);
     return 0;
   } else {
@@ -135,9 +136,9 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
   case PN_LONG:
     return pn_bytes_format(bytes, "%li", atom.u.as_long);
   case PN_FLOAT:
-    return pn_bytes_format(bytes, "%f", atom.u.as_float);
+    return pn_bytes_format(bytes, "%g", atom.u.as_float);
   case PN_DOUBLE:
-    return pn_bytes_format(bytes, "%f", atom.u.as_double);
+    return pn_bytes_format(bytes, "%g", atom.u.as_double);
   case PN_BINARY:
   case PN_STRING:
   case PN_SYMBOL:
@@ -145,29 +146,41 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
       int err;
       const char *pfx;
       pn_bytes_t bin;
+      bool quote;
       switch (atom.type) {
       case PN_BINARY:
         pfx = "b";
         bin = atom.u.as_binary;
+        quote = true;
         break;
       case PN_STRING:
-        pfx = "u";
+        pfx = "";
         bin = atom.u.as_string;
+        quote = true;
         break;
       case PN_SYMBOL:
-        pfx = "";
+        pfx = ":";
         bin = atom.u.as_symbol;
+        quote = false;
+        for (int i = 0; i < bin.size; i++) {
+          if (!isalpha(bin.start[i])) {
+            quote = true;
+            break;
+          }
+        }
         break;
       default:
         pn_fatal("XXX");
         return PN_ERR;
       }
 
-      if ((err = pn_bytes_format(bytes, "%s\"", pfx))) return err;
+      if ((err = pn_bytes_format(bytes, "%s", pfx))) return err;
+      if (quote) if ((err = pn_bytes_format(bytes, "\""))) return err;
       ssize_t n = pn_quote_data(bytes->start, bytes->size, bin.start, bin.size);
       if (n < 0) return n;
       pn_bytes_ltrim(bytes, n);
-      return pn_bytes_format(bytes, "\"");
+      if (quote) if ((err = pn_bytes_format(bytes, "\""))) return err;
+      return 0;
     }
   case PN_DESCRIPTOR:
     return pn_bytes_format(bytes, "descriptor");
@@ -222,10 +235,10 @@ int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level)
 
   switch (atom->type) {
   case PN_DESCRIPTOR:
+    if ((err = pn_bytes_format(bytes, "@"))) return err;
     if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
-    if ((err = pn_bytes_format(bytes, "("))) return err;
+    if ((err = pn_bytes_format(bytes, " "))) return err;
     if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
-    if ((err = pn_bytes_format(bytes, ")"))) return err;
     return 0;
   case PN_ARRAY:
     count = atom->u.count;
@@ -259,7 +272,7 @@ int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level)
             if ((err = pn_bytes_format(bytes, ", "))) return err;
           }
         } else {
-          if ((err = pn_bytes_format(bytes, ": "))) return err;
+          if ((err = pn_bytes_format(bytes, "="))) return err;
         }
       }
     }
@@ -1159,17 +1172,23 @@ int pn_fill_atoms(pn_atoms_t *atoms, const char *fmt, ...)
   return n;
 }
 
-int pn_ifill_atoms(pn_atoms_t *atoms, const char *fmt, ...)
+int pn_vifill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap)
 {
-  va_list ap;
-  va_start(ap, fmt);
   pn_atoms_t copy = *atoms;
   int err = pn_vfill_atoms(&copy, fmt, ap);
-  va_end(ap);
   if (err) return err;
   atoms->start = copy.start + copy.size;
   atoms->size -= copy.size;
   return 0;
+}
+
+int pn_ifill_atoms(pn_atoms_t *atoms, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int err = pn_vifill_atoms(atoms, fmt, ap);
+  va_end(ap);
+  return err;
 }
 
 int pn_skip(pn_atoms_t *atoms, size_t n)
@@ -1593,678 +1612,6 @@ int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap)
   return 0;
 }
 
-// JSON
-
-typedef enum {
-  PN_JTOK_LBRACE,
-  PN_JTOK_RBRACE,
-  PN_JTOK_LBRACKET,
-  PN_JTOK_RBRACKET,
-  PN_JTOK_COLON,
-  PN_JTOK_COMMA,
-  PN_JTOK_POS,
-  PN_JTOK_NEG,
-  PN_JTOK_DOT,
-  PN_JTOK_STRING,
-  PN_JTOK_FLOAT,
-  PN_JTOK_INT,
-  PN_JTOK_TRUE,
-  PN_JTOK_FALSE,
-  PN_JTOK_NULL,
-  PN_JTOK_EXP,
-  PN_JTOK_EOS,
-  PN_JTOK_ERR
-} pn_token_type_t;
-
-typedef struct {
-  pn_token_type_t type;
-  const char *start;
-  size_t size;
-} pn_token_t;
-
-#define ERROR_SIZE (1024)
-
-struct pn_json_t {
-  const char *input;
-  const char *position;
-  pn_token_t token;
-  int error_code;
-  char *atoms;
-  size_t size;
-  size_t capacity;
-  char error_str[ERROR_SIZE];
-};
-
-const char *pn_token_type(pn_token_type_t type)
-{
-  switch (type)
-  {
-  case PN_JTOK_LBRACE: return "LBRACE";
-  case PN_JTOK_RBRACE: return "RBRACE";
-  case PN_JTOK_LBRACKET: return "LBRACKET";
-  case PN_JTOK_RBRACKET: return "RBRACKET";
-  case PN_JTOK_COLON: return "COLON";
-  case PN_JTOK_COMMA: return "COMMA";
-  case PN_JTOK_POS: return "POS";
-  case PN_JTOK_NEG: return "NEG";
-  case PN_JTOK_DOT: return "DOT";
-  case PN_JTOK_STRING: return "STRING";
-  case PN_JTOK_FLOAT: return "FLOAT";
-  case PN_JTOK_INT: return "INT";
-  case PN_JTOK_TRUE: return "TRUE";
-  case PN_JTOK_FALSE: return "FALSE";
-  case PN_JTOK_NULL: return "NULL";
-  case PN_JTOK_EXP: return "EXP";
-  case PN_JTOK_EOS: return "EOS";
-  case PN_JTOK_ERR: return "ERR";
-  default: return "<UNKNOWN>";
-  }
-}
-
-pn_json_t *pn_json()
-{
-  pn_json_t *json = malloc(sizeof(pn_json_t));
-  json->input = NULL;
-  json->error_code = 0;
-  json->error_str[0] = '\0';
-  json->atoms = NULL;
-  json->size = 0;
-  json->capacity = 0;
-  return json;
-}
-
-void pn_json_ensure(pn_json_t *json, size_t size)
-{
-  while (json->capacity - json->size < size) {
-    json->capacity = json->capacity ? 2 * json->capacity : 1024;
-    json->atoms = realloc(json->atoms, json->capacity);
-  }
-}
-
-void pn_json_line_info(pn_json_t *json, int *line, int *col)
-{
-  *line = 1;
-  *col = 0;
-
-  for (const char *c = json->input; *c && c <= json->token.start; c++) {
-    if (*c == '\n') {
-      *line += 1;
-      *col = -1;
-    } else {
-      *col += 1;
-    }
-  }
-}
-
-int pn_json_error(pn_json_t *json, int code, const char *fmt, ...)
-{
-  json->error_code = code;
-
-  int line, col;
-  pn_json_line_info(json, &line, &col);
-  int size = json->token.size;
-  int ln = snprintf(json->error_str, ERROR_SIZE,
-                    "input line %i column %i %s:'%.*s': ", line, col,
-                    pn_token_type(json->token.type),
-                    size, json->token.start);
-  if (ln >= ERROR_SIZE) {
-    return pn_json_error(json, code, "error info truncated");
-  } else if (ln < 0) {
-    json->error_str[0] = '\0';
-  }
-
-  va_list ap;
-  va_start(ap, fmt);
-  int n = snprintf(json->error_str + ln, ERROR_SIZE - ln, fmt, ap);
-  va_end(ap);
-
-  if (n >= ERROR_SIZE - ln) {
-    return pn_json_error(json, code, "error info truncated");
-  } else if (n < 0) {
-    json->error_str[0] = '\0';
-  }
-
-  return code;
-}
-
-int pn_json_error_code(pn_json_t *json)
-{
-  return json->error_code;
-}
-
-const char *pn_json_error_str(pn_json_t *json)
-{
-  if (json->error_code) {
-    return json->error_str;
-  } else {
-    return NULL;
-  }
-}
-
-void pn_json_free(pn_json_t *json)
-{
-  free(json->atoms);
-  free(json);
-}
-
-void pn_json_token(pn_json_t *json, pn_token_type_t type, const char *start, size_t size)
-{
-  json->token.type = type;
-  json->token.start = start;
-  json->token.size = size;
-}
-
-int pn_json_scan_string(pn_json_t *json, const char *str)
-{
-  bool escape = false;
-
-  for (int i = 1; true; i++) {
-    char c = str[i];
-    if (escape) {
-      escape = false;
-    } else {
-      switch (c) {
-      case '\0':
-      case '"':
-        pn_json_token(json, c ? PN_JTOK_STRING : PN_JTOK_ERR,
-                      str, c ? i + 1 : i);
-        return c ? 0 : PN_ERR;
-      case '\\':
-        escape = true;
-        break;
-      }
-    }
-  }
-}
-
-int pn_json_scan_alpha(pn_json_t *json, const char *str)
-{
-  for (int i = 0; true; i++) {
-    char c = str[i];
-    if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) {
-      pn_token_type_t type;
-      if (!strncmp(str, "true", i)) {
-        type = PN_JTOK_TRUE;
-      } else if (!strncmp(str, "false", i)) {
-        type = PN_JTOK_FALSE;
-      } else if (!strncmp(str, "null", i)) {
-        type = PN_JTOK_NULL;
-      } else if (!strncasecmp(str, "e", i)) {
-        type = PN_JTOK_EXP;
-      } else {
-        type = PN_JTOK_ERR;
-      }
-
-      pn_json_token(json, type, str, i);
-      return type == PN_JTOK_ERR ? PN_ERR : 0;
-    }
-  }
-}
-
-int pn_json_scan_number(pn_json_t *json, const char *str)
-{
-  bool dot = false;
-  bool exp = false;
-
-  int i = 0;
-
-  if (str[i] == '+' || str[i] == '-') {
-    i++;
-  }
-
-  for ( ; true; i++) {
-    char c = str[i];
-    switch (c) {
-    case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-    case '7': case '8': case '9':
-      continue;
-    case '.':
-      if (dot) {
-        pn_json_token(json, PN_JTOK_FLOAT, str, i);
-        return 0;
-      } else {
-        dot = true;
-      }
-      continue;
-    case 'e':
-    case 'E':
-      if (exp) {
-        pn_json_token(json, PN_JTOK_FLOAT, str, i);
-        return 0;
-      } else {
-        dot = true;
-        exp = true;
-        if (str[i+1] == '+' || str[i+1] == '-') {
-          i++;
-        }
-        continue;
-      }
-    default:
-      if (dot || exp) {
-        pn_json_token(json, PN_JTOK_FLOAT, str, i);
-        return 0;
-      } else {
-        pn_json_token(json, PN_JTOK_INT, str, i);
-        return 0;
-      }
-    }
-  }
-}
-
-int pn_json_scan_symbol(pn_json_t *json, const char *str, pn_token_type_t type)
-{
-  pn_json_token(json, type, str, 1);
-  return 0;
-}
-
-int pn_json_scan(pn_json_t *json)
-{
-  const char *str = json->position;
-  char n;
-
-  for (char c; true; str++) {
-    c = *str;
-    switch (c)
-    {
-    case '{':
-      return pn_json_scan_symbol(json, str, PN_JTOK_LBRACE);
-    case '}':
-      return pn_json_scan_symbol(json, str, PN_JTOK_RBRACE);
-    case'[':
-      return pn_json_scan_symbol(json, str, PN_JTOK_LBRACKET);
-    case ']':
-      return pn_json_scan_symbol(json, str, PN_JTOK_RBRACKET);
-    case ':':
-      return pn_json_scan_symbol(json, str, PN_JTOK_COLON);
-    case ',':
-      return pn_json_scan_symbol(json, str, PN_JTOK_COMMA);
-    case '.':
-      n = *(str+1);
-      if ((n >= '0' && n <= '9')) {
-        return pn_json_scan_number(json, str);
-      } else {
-        return pn_json_scan_symbol(json, str, PN_JTOK_DOT);
-      }
-    case '-':
-      n = *(str+1);
-      if ((n >= '0' && n <= '9') || n == '.') {
-        return pn_json_scan_number(json, str);
-      } else {
-        return pn_json_scan_symbol(json, str, PN_JTOK_NEG);
-      }
-    case '+':
-      n = *(str+1);
-      if ((n >= '0' && n <= '9') || n == '.') {
-        return pn_json_scan_number(json, str);
-      } else {
-        return pn_json_scan_symbol(json, str, PN_JTOK_POS);
-      }
-    case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
-      break;
-    case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-    case '7': case '8': case '9':
-      return pn_json_scan_number(json, str);
-    case '"':
-      return pn_json_scan_string(json, str);
-    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
-    case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
-    case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u':
-    case 'v': case 'w': case 'x': case 'y': case 'z': case 'A': case 'B':
-    case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I':
-    case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P':
-    case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W':
-    case 'X': case 'Y': case 'Z':
-      return pn_json_scan_alpha(json, str);
-    case '\0':
-      pn_json_token(json, PN_JTOK_EOS, str, 0);
-      return PN_EOS;
-    default:
-      pn_json_token(json, PN_JTOK_ERR, str, 1);
-      return PN_ERR;
-    }
-  }
-}
-
-int pn_json_shift(pn_json_t *json)
-{
-  json->position = json->token.start + json->token.size;
-  int err = pn_json_scan(json);
-  if (err == PN_EOS) {
-    return 0;
-  } else {
-    return err;
-  }
-}
-
-int pn_json_parse_value(pn_json_t *json, pn_atoms_t *atoms);
-
-int pn_json_parse_object(pn_json_t *json, pn_atoms_t *atoms)
-{
-  if (json->token.type == PN_JTOK_LBRACE) {
-    int err = pn_json_shift(json);
-    if (err) return err;
-
-    pn_atom_t *map = atoms->start;
-    err = pn_ifill_atoms(atoms, "{}");
-    if (err) return pn_json_error(json, err, "error writing map atoms");
-
-    int count = 0;
-
-    if (json->token.type != PN_JTOK_RBRACE) {
-      while (true) {
-        err = pn_json_parse_value(json, atoms);
-        if (err) return err;
-        count++;
-
-        if (json->token.type == PN_JTOK_COLON) {
-          err = pn_json_shift(json);
-          if (err) return err;
-        } else {
-          return pn_json_error(json, PN_ERR, "expecting ':'");
-        }
-
-        err = pn_json_parse_value(json, atoms);
-        if (err) return err;
-        count++;
-
-        if (json->token.type == PN_JTOK_COMMA) {
-          err = pn_json_shift(json);
-          if (err) return err;
-        } else {
-          break;
-        }
-      }
-    }
-
-    map->u.count = count;
-
-    if (json->token.type == PN_JTOK_RBRACE) {
-      return pn_json_shift(json);
-    } else {
-      return pn_json_error(json, PN_ERR, "expecting '}'");
-    }
-  } else {
-    return pn_json_error(json, PN_ERR, "expecting '{'");
-  }
-}
-
-int pn_json_parse_array(pn_json_t *json, pn_atoms_t *atoms)
-{
-  int err;
-
-  if (json->token.type == PN_JTOK_LBRACKET) {
-    err = pn_json_shift(json);
-    if (err) return err;
-
-    pn_atom_t *list = atoms->start;
-    int err = pn_ifill_atoms(atoms, "[]");
-    if (err) return pn_json_error(json, err, "error writing list atoms");
-
-    int count = 0;
-
-    if (json->token.type != PN_JTOK_RBRACKET) {
-      while (true) {
-        err = pn_json_parse_value(json, atoms);
-        if (err) return err;
-        count++;
-
-        if (json->token.type == PN_JTOK_COMMA) {
-          err = pn_json_shift(json);
-          if (err) return err;
-        } else {
-          break;
-        }
-      }
-    }
-
-    list->u.count = count;
-
-    if (json->token.type == PN_JTOK_RBRACKET) {
-      return pn_json_shift(json);
-    } else {
-      return pn_json_error(json, PN_ERR, "expecting ']'");
-    }
-  } else {
-    return pn_json_error(json, PN_ERR, "expecting '['");
-  }
-}
-
-void pn_json_append_tok(pn_json_t *json, char *dst, int *idx)
-{
-  memcpy(dst + *idx, json->token.start, json->token.size);
-  *idx += json->token.size;
-}
-
-int pn_json_parse_number(pn_json_t *json, pn_atoms_t *atoms)
-{
-  bool dbl = false;
-  char number[1024];
-  int idx = 0;
-  int err;
-
-  bool negate = false;
-
-  if (json->token.type == PN_JTOK_NEG || json->token.type == PN_JTOK_POS) {
-    if (json->token.type == PN_JTOK_NEG)
-      negate = !negate;
-    err = pn_json_shift(json);
-    if (err) return err;
-  }
-
-  if (json->token.type == PN_JTOK_FLOAT || json->token.type == PN_JTOK_INT) {
-    dbl = json->token.type == PN_JTOK_FLOAT;
-    pn_json_append_tok(json, number, &idx);
-    err = pn_json_shift(json);
-    if (err) return err;
-  } else {
-    return pn_json_error(json, PN_ERR, "expecting FLOAT or INT");
-  }
-
-  number[idx] = '\0';
-
-  if (dbl) {
-    double value = atof(number);
-    if (negate) {
-      value = -value;
-    }
-    err = pn_ifill_atoms(atoms, "d", value);
-    if (err) return pn_json_error(json, err, "error writing double atoms");
-  } else {
-    int64_t value = atoll(number);
-    if (negate) {
-      value = -value;
-    }
-    err = pn_ifill_atoms(atoms, "l", value);
-    if (err) return pn_json_error(json, err, "error writing long atoms");
-  }
-
-  return 0;
-}
-
-int pn_json_unquote(pn_json_t *json, char *dst, const char *src, size_t *n)
-{
-  size_t idx = 0;
-  bool escape = false;
-  for (int i = 1; i < *n - 1; i++)
-  {
-    char c = src[i];
-    if (escape) {
-      switch (c) {
-      case '"':
-      case '\\':
-      case '/':
-        dst[idx++] = c;
-        escape = false;
-        break;
-      case 'b':
-        dst[idx++] = '\b';
-        break;
-      case 'f':
-        dst[idx++] = '\f';
-        break;
-      case 'n':
-        dst[idx++] = '\n';
-        break;
-      case 'r':
-        dst[idx++] = '\r';
-        break;
-      case 't':
-        dst[idx++] = '\t';
-        break;
-      // XXX: need to handle unicode escapes: 'u'
-      default:
-        return pn_json_error(json, PN_ERR, "unrecognized escape code");
-      }
-      escape = false;
-    } else {
-      switch (c)
-      {
-      case '\\':
-        escape = true;
-        break;
-      default:
-        dst[idx++] = c;
-        break;
-      }
-    }
-  }
-  dst[idx++] = '\0';
-  *n = idx;
-  return 0;
-}
-
-int pn_json_parse_value(pn_json_t *json, pn_atoms_t *atoms)
-{
-  int err;
-  size_t n;
-  char *dst;
-
-  switch (json->token.type)
-  {
-  case PN_JTOK_LBRACE:
-    return pn_json_parse_object(json, atoms);
-  case PN_JTOK_LBRACKET:
-    return pn_json_parse_array(json, atoms);
-  case PN_JTOK_STRING:
-    n = json->token.size;
-    pn_json_ensure(json, n);
-    dst = json->atoms + json->size;
-    err = pn_json_unquote(json, dst, json->token.start, &n);
-    if (err) return err;
-    json->size += n;
-    err = pn_ifill_atoms(atoms, "S", dst);
-    if (err) return pn_json_error(json, err, "error writing string atoms");
-    return pn_json_shift(json);
-  case PN_JTOK_POS:
-  case PN_JTOK_NEG:
-  case PN_JTOK_FLOAT:
-  case PN_JTOK_INT:
-    return pn_json_parse_number(json, atoms);
-  case PN_JTOK_TRUE:
-    err = pn_ifill_atoms(atoms, "o", true);
-    if (err) return pn_json_error(json, err, "error writing boolean atoms");
-    return pn_json_shift(json);
-  case PN_JTOK_FALSE:
-    err = pn_ifill_atoms(atoms, "o", false);
-    if (err) return pn_json_error(json, err, "error writing boolean atoms");
-    return pn_json_shift(json);
-  case PN_JTOK_NULL:
-    err = pn_ifill_atoms(atoms, "n");
-    if (err) return pn_json_error(json, err, "error writing null atoms");
-    return pn_json_shift(json);
-  default:
-    return pn_json_error(json, PN_ERR, "expecting one of '[', '{', STRING, "
-                         "true, false, null, NUMBER");
-  }
-}
-
-int pn_json_parse_r(pn_json_t *json, pn_atoms_t *atoms)
-{
-  while (true) {
-    int err;
-    switch (json->token.type)
-    {
-    case PN_JTOK_EOS:
-      return 0;
-    case PN_JTOK_ERR:
-      return PN_ERR;
-    default:
-      err = pn_json_parse_value(json, atoms);
-      if (err) return err;
-    }
-  }
-}
-
-int pn_json_parse(pn_json_t *json, const char *str, pn_atoms_t *atoms)
-{
-  pn_atoms_t copy = *atoms;
-  json->input = str;
-  json->position = json->input;
-  json->size = 0;
-  int err = pn_json_scan(json);
-  if (err) return err;
-  err = pn_json_parse_r(json, &copy);
-  if (err) return err;
-  atoms->size -= copy.size;
-  return 0;
-}
-
-/* XXX: in progress
-int pn_json_render_r(pn_json_t *json, pn_atoms_t *atoms, pn_bytes_t *bytes)
-{
-  if (!atoms->size) {
-    return PN_UNDERFLOW;
-  }
-
-  pn_atom_t *atom = atoms->start;
-  switch (atom->type)
-  {
-  case PN_DESCRIPTOR:
-    return 0;
-  case PN_ARRAY:
-    return 0;
-  case PN_LIST:
-    return 0;
-  case PN_MAP:
-    return 0;
-  case PN_NULL:
-    return 0;
-  case PN_BOOL:
-    return 0;
-  case PN_UBYTE:
-  case PN_USHORT:
-  case PN_UINT:
-  case PN_ULONG:
-  case PN_BYTE:
-  case PN_SHORT:
-  case PN_INT:
-  case PN_LONG:
-    return 0;
-  case PN_FLOAT:
-  case PN_DOUBLE:
-    return 0;
-  case PN_BINARY:
-  case PN_STRING:
-  case PN_SYMBOL:
-    return 0;
-  case PN_TYPE:
-    return 0;
-  }
-
-  return 0;
-}
-
-int pn_json_render(pn_json_t *json, pn_atoms_t *atoms, char *output, size_t *size)
-{
-  pn_atoms_t copy = *atoms;
-  pn_bytes_t bytes = pn_bytes(*size, output);
-  int err = pn_json_render_r(json, &copy, &bytes);
-  if (err) return err;
-  *size -= bytes.size;
-  return 0;
-}
-*/
-
 // data
 
 struct pn_data_t {
@@ -2298,10 +1645,12 @@ void pn_data_free(pn_data_t *data)
 
 int pn_data_clear(pn_data_t *data)
 {
-  data->size = 0;
-  if (data->buf) {
-    int e = pn_buffer_clear(data->buf);
-    if (e) return e;
+  if (data) {
+    data->size = 0;
+    if (data->buf) {
+      int e = pn_buffer_clear(data->buf);
+      if (e) return e;
+    }
   }
   return 0;
 }
@@ -2404,18 +1753,31 @@ int pn_data_print(pn_data_t *data)
   return pn_print_atoms(&atoms);
 }
 
-pn_atoms_t pn_data_atoms(pn_data_t *data, size_t size)
+pn_atoms_t pn_data_atoms(pn_data_t *data)
 {
-  return (pn_atoms_t) {.size=size, .start=data->atoms};
+  return (pn_atoms_t) {.size=data->size, .start=data->atoms};
+}
+
+pn_atoms_t pn_data_available(pn_data_t *data)
+{
+  return (pn_atoms_t) {.size=data->capacity - data->size,
+      .start=data->atoms + data->size};
 }
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  ssize_t sz = pn_format_atoms(bytes, *size, pn_data_atoms(data, data->size));
+  ssize_t sz = pn_format_atoms(bytes, *size, pn_data_atoms(data));
   if (sz < 0) {
     return sz;
   } else {
     *size = sz;
     return 0;
   }
+}
+
+int pn_data_resize(pn_data_t *data, size_t size)
+{
+  if (!data || size > data->capacity) return PN_ARG_ERR;
+  data->size = size;
+  return 0;
 }

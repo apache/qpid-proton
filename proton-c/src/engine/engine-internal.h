@@ -145,8 +145,8 @@ struct pn_link_t {
   char *local_target;
   char *remote_source;
   char *remote_target;
-  pn_delivery_t *head;
-  pn_delivery_t *tail;
+  pn_delivery_t *unsettled_head;
+  pn_delivery_t *unsettled_tail;
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
@@ -167,8 +167,10 @@ struct pn_delivery_t {
   bool remote_settled;
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
-  pn_delivery_t *link_next;
-  pn_delivery_t *link_prev;
+  pn_delivery_t *unsettled_next;
+  pn_delivery_t *unsettled_prev;
+  pn_delivery_t *settled_next;
+  pn_delivery_t *settled_prev;
   pn_delivery_t *work_next;
   pn_delivery_t *work_prev;
   bool work;

@@ -315,39 +315,13 @@ void pn_clear_bytes(pn_delivery_t *delivery)
   }
 }
 
-void pn_free_deliveries(pn_delivery_t *delivery)
+void pn_free_delivery(pn_delivery_t *delivery)
 {
-  while (delivery)
-  {
-    pn_delivery_t *next = delivery->link_next;
+  if (delivery) {
     pn_clear_tag(delivery);
     pn_clear_bytes(delivery);
     free(delivery);
-    delivery = next;
   }
-}
-
-void pn_dump_deliveries(pn_delivery_t *delivery)
-{
-  if (delivery) {
-    while (delivery)
-    {
-      printf("%p(%.*s)", (void *) delivery, (int) delivery->tag.size,
-             delivery->tag.start);
-      if (delivery->link_next) printf(" -> ");
-      delivery = delivery->link_next;
-    }
-  } else {
-    printf("NULL");
-  }
-}
-
-void pn_link_dump(pn_link_t *link)
-{
-  pn_dump_deliveries(link->settled_head);
-  printf("\n");
-  pn_dump_deliveries(link->head);
-  printf("\n");
 }
 
 void pn_link_open(pn_link_t *link)
@@ -369,8 +343,16 @@ void pn_link_destroy(pn_link_t *link)
   free(link->remote_source);
   free(link->remote_target);
   pn_remove_link(link->session, link);
-  pn_free_deliveries(link->settled_head);
-  pn_free_deliveries(link->head);
+  while (link->settled_head) {
+    pn_delivery_t *d = link->settled_head;
+    LL_POP(link, settled);
+    pn_free_delivery(d);
+  }
+  while (link->unsettled_head) {
+    pn_delivery_t *d = link->unsettled_head;
+    LL_POP(link, unsettled);
+    pn_free_delivery(d);
+  }
   free(link->name);
   free(link);
 }
@@ -386,7 +368,7 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
   endpoint->transport_prev = NULL;
   endpoint->modified = false;
 
-  LL_ADD_PFX(conn->endpoint_head, conn->endpoint_tail, endpoint, endpoint_);
+  LL_ADD(conn, endpoint, endpoint);
 }
 
 pn_connection_t *pn_connection()
@@ -479,7 +461,7 @@ void pn_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   if (!delivery->work)
   {
-    LL_ADD_PFX(connection->work_head, connection->work_tail, delivery, work_);
+    LL_ADD(connection, work, delivery);
     delivery->work = true;
   }
 }
@@ -488,7 +470,7 @@ void pn_clear_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   if (delivery->work)
   {
-    LL_REMOVE_PFX(connection->work_head, connection->work_tail, delivery, work_);
+    LL_REMOVE(connection, work, delivery);
     delivery->work = false;
   }
 }
@@ -519,7 +501,7 @@ void pn_add_tpwork(pn_delivery_t *delivery)
   pn_connection_t *connection = delivery->link->session->connection;
   if (!delivery->tpwork)
   {
-    LL_ADD_PFX(connection->tpwork_head, connection->tpwork_tail, delivery, tpwork_);
+    LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
   }
   pn_modified(connection, &connection->endpoint);
@@ -530,7 +512,7 @@ void pn_clear_tpwork(pn_delivery_t *delivery)
   pn_connection_t *connection = delivery->link->session->connection;
   if (delivery->tpwork)
   {
-    LL_REMOVE_PFX(connection->tpwork_head, connection->tpwork_tail, delivery, tpwork_);
+    LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
   }
 }
@@ -551,7 +533,7 @@ void pn_dump(pn_connection_t *conn)
 void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
 {
   if (!endpoint->modified) {
-    LL_ADD_PFX(connection->transport_head, connection->transport_tail, endpoint, transport_);
+    LL_ADD(connection, transport, endpoint);
     endpoint->modified = true;
   }
 }
@@ -559,7 +541,7 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
 {
   if (endpoint->modified) {
-    LL_REMOVE_PFX(connection->transport_head, connection->transport_tail, endpoint, transport_);
+    LL_REMOVE(connection, transport, endpoint);
     endpoint->transport_next = NULL;
     endpoint->transport_prev = NULL;
     endpoint->modified = false;
@@ -763,7 +745,7 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *
   link->remote_source = NULL;
   link->remote_target = NULL;
   link->settled_head = link->settled_tail = NULL;
-  link->head = link->tail = link->current = NULL;
+  link->unsettled_head = link->unsettled_tail = link->current = NULL;
   link->unsettled_count = 0;
   link->credit = 0;
   link->queued = 0;
@@ -884,7 +866,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   if (!link) return NULL;
   pn_delivery_t *delivery = link->settled_head;
-  LL_POP_PFX(link->settled_head, link->settled_tail, link_);
+  LL_POP(link, settled);
   if (!delivery) delivery = malloc(sizeof(pn_delivery_t));
   if (!delivery) return NULL;
   delivery->link = link;
@@ -897,7 +879,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->remote_settled = false;
   delivery->updated = false;
   delivery->settled = false;
-  LL_ADD_PFX(link->head, link->tail, delivery, link_);
+  LL_ADD(link, unsettled, delivery);
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
   delivery->work = false;
@@ -927,12 +909,12 @@ int pn_unsettled(pn_link_t *link)
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 {
-  return link->head;
+  return link->unsettled_head;
 }
 
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
 {
-  return delivery->link_next;
+  return delivery->unsettled_next;
 }
 
 bool pn_is_current(pn_delivery_t *delivery)
@@ -974,14 +956,14 @@ void pn_advance_sender(pn_link_t *link)
   link->queued++;
   link->credit--;
   pn_add_tpwork(link->current);
-  link->current = link->current->link_next;
+  link->current = link->current->unsettled_next;
 }
 
 void pn_advance_receiver(pn_link_t *link)
 {
   link->credit--;
   link->queued--;
-  link->current = link->current->link_next;
+  link->current = link->current->unsettled_next;
 }
 
 bool pn_advance(pn_link_t *link)
@@ -1015,9 +997,9 @@ int pn_queued(pn_link_t *link)
 void pn_real_settle(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
-  LL_REMOVE_PFX(link->head, link->tail, delivery, link_);
+  LL_REMOVE(link, unsettled, delivery);
   // TODO: what if we settle the current delivery?
-  LL_ADD_PFX(link->settled_head, link->settled_tail, delivery, link_);
+  LL_ADD(link, settled, delivery);
   pn_clear_tag(delivery);
   pn_clear_bytes(delivery);
   delivery->settled = true;
@@ -1198,8 +1180,8 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   pn_link_state_t *link_state = pn_handle_state(ssn_state, handle);
   pn_link_t *link = link_state->link;
   pn_delivery_t *delivery;
-  if (link->tail && !link->tail->done) {
-    delivery = link->tail;
+  if (link->unsettled_tail && !link->unsettled_tail->done) {
+    delivery = link->unsettled_tail;
   } else {
     pn_delivery_buffer_t *incoming = &ssn_state->incoming;
 
@@ -1673,7 +1655,7 @@ int pn_process_flow_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if ((int16_t) ssn_state->local_channel >= 0 &&
         (int32_t) state->local_handle >= 0 &&
         snd->drain && snd->drained) {
-      pn_delivery_t *tail = state->link->tail;
+      pn_delivery_t *tail = state->link->unsettled_tail;
       if (!tail || !pn_delivery_buffered(tail)) {
         state->delivery_count += state->link_credit;
         state->link_credit = 0;
