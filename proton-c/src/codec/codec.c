@@ -22,7 +22,7 @@
 #define _GNU_SOURCE
 
 #include <proton/codec.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <proton/buffer.h>
 #include <proton/util.h>
 #include <stdio.h>

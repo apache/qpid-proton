@@ -19,11 +19,83 @@
  *
  */
 
-#include <proton/errors.h>
+#include <proton/error.h>
+#include <stdlib.h>
+#include "util.h"
 
-const char *pn_error(int err)
+struct pn_error_t {
+  int code;
+  char *text;
+  pn_error_t *root;
+};
+
+pn_error_t *pn_error()
 {
-  switch (err)
+  pn_error_t *error = malloc(sizeof(pn_error_t));
+  error->code = 0;
+  error->text = NULL;
+  error->root = NULL;
+  return error;
+}
+
+void pn_error_free(pn_error_t *error)
+{
+  if (error) {
+    free(error->text);
+    free(error);
+  }
+}
+
+void pn_error_clear(pn_error_t *error)
+{
+  if (error) {
+    error->code = 0;
+    free(error->text);
+    error->text = NULL;
+    error->root = NULL;
+  }
+}
+
+int pn_error_set(pn_error_t *error, int code, const char *text)
+{
+  pn_error_clear(error);
+  error->code = code;
+  error->text = pn_strdup(text);
+  return code;
+}
+
+int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
+{
+  char text[1024];
+  int n = vsnprintf(text, 1024, fmt, ap);
+  if (n >= 1024) {
+    text[1023] = '\0';
+  }
+  return pn_error_set(error, code, text);
+}
+
+int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  int rcode = pn_error_vformat(error, code, fmt, ap);
+  va_end(ap);
+  return rcode;
+}
+
+int pn_error_code(pn_error_t *error)
+{
+  return error ? error->code : PN_ARG_ERR;
+}
+
+const char *pn_error_text(pn_error_t *error)
+{
+  return error ? error->text : NULL;
+}
+
+const char *pn_code(int code)
+{
+  switch (code)
   {
   case 0: return "<ok>";
   case PN_EOS: return "PN_EOS";

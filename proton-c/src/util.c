@@ -28,7 +28,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {

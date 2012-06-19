@@ -27,13 +27,6 @@
 #include "../dispatcher/dispatcher.h"
 #include "../util.h"
 
-#define DESCRIPTION (1024)
-
-struct pn_error_t {
-  const char *condition;
-  char description[DESCRIPTION];
-};
-
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER, TRANSPORT} pn_endpoint_type_t;
 
 typedef struct pn_endpoint_t pn_endpoint_t;
@@ -41,7 +34,7 @@ typedef struct pn_endpoint_t pn_endpoint_t;
 struct pn_endpoint_t {
   pn_endpoint_type_t type;
   pn_state_t state;
-  pn_error_t error;
+  pn_error_t *error;
   pn_endpoint_t *endpoint_next;
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;
@@ -105,6 +98,7 @@ struct pn_transport_t {
   size_t session_capacity;
   pn_session_state_t **channels;
   size_t channel_capacity;
+  const char *condition;
   char scratch[SCRATCH];
 };
 

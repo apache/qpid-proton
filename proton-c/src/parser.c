@@ -21,7 +21,7 @@
 
 #include <proton/parser.h>
 #include <proton/scanner.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

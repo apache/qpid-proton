@@ -30,8 +30,10 @@ struct pn_messenger_t {
   pn_driver_t *driver;
   pn_connector_t *connectors[1024];
   size_t size;
+  size_t listeners;
   int credit;
   uint64_t next_tag;
+  pn_error_t *error;
 };
 
 pn_messenger_t *pn_messenger()
@@ -41,11 +43,30 @@ pn_messenger_t *pn_messenger()
   if (m) {
     m->driver = pn_driver();
     m->size = 0;
+    m->listeners = 0;
     m->credit = 0;
     m->next_tag = 0;
+    m->error = pn_error();
   }
 
   return m;
+}
+
+void pn_messenger_free(pn_messenger_t *messenger)
+{
+  if (messenger) {
+    pn_driver_destroy(messenger->driver);
+    pn_error_free(messenger->error);
+  }
+}
+
+const char *pn_messenger_error(pn_messenger_t *messenger)
+{
+  if (messenger) {
+    return pn_error_text(messenger->error);
+  } else {
+    return NULL;
+  }
 }
 
 void pn_messenger_flow(pn_messenger_t *messenger)
@@ -258,6 +279,7 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
   }
 
   pn_connector_t *connector = pn_connector(messenger->driver, domain, "5672", NULL);
+  if (!connector) return NULL;
   messenger->connectors[messenger->size++] = connector;
   pn_sasl_t *sasl = pn_connector_sasl(connector);
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
@@ -284,6 +306,7 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   parse_address(address ? buf : NULL, &domain, &name);
 
   pn_connection_t *connection = pn_messenger_domain(messenger, domain);
+  if (!connection) return NULL;
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
@@ -329,23 +352,42 @@ pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *sourc
   parse_address(buf, &domain, &name);
 
   pn_listener_t *listener = pn_listener(messenger->driver, domain + 1, "5672", pn_strdup(domain + 1));
+  if (listener) {
+    messenger->listeners++;
+  }
   return listener;
 }
 
 int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
   if (strlen(source) >= 3 && source[0] == '/' && source[1] == '/' && source[2] == '~') {
-    pn_messenger_isource(messenger, source);
-    return 0;
+    pn_listener_t *lnr = pn_messenger_isource(messenger, source);
+    if (lnr) {
+      return 0;
+    } else {
+      return pn_error_format(messenger->error, PN_ERR,
+                             "unable to subscribe to source: %s", source);
+    }
   } else {
-    pn_messenger_source(messenger, source);
-    return 0;
+    pn_link_t *src = pn_messenger_source(messenger, source);
+    if (src) {
+      return 0;
+    } else {
+      return pn_error_format(messenger->error, PN_ERR,
+                             "unable to subscribe to source: %s", source);
+    }
   }
 }
 
 int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 {
-  pn_link_t *sender = pn_messenger_target(messenger, pn_message_get_address(msg));
+  if (!messenger) return PN_ARG_ERR;
+  if (!msg) return pn_error_set(messenger->error, PN_ARG_ERR, "null message");
+  const char *address = pn_message_get_address(msg);
+  pn_link_t *sender = pn_messenger_target(messenger, address);
+  if (!sender)
+    return pn_error_format(messenger->error, PN_ERR,
+                           "unable to send to address: %s", address);
   // XXX: proper tag
   char tag[8];
   void *ptr = &tag;
@@ -430,6 +472,9 @@ int pn_messenger_send(pn_messenger_t *messenger)
 
 int pn_messenger_recv(pn_messenger_t *messenger, int n)
 {
+  if (!messenger) return PN_ARG_ERR;
+  if (!messenger->listeners && !messenger->size)
+    return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
   messenger->credit += n;
   pn_messenger_flow(messenger);
   return pn_messenger_sync(messenger, pn_messenger_rcvd);
@@ -451,8 +496,11 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         pn_settle(d);
         if (n < 0) return n;
         int err = pn_message_decode(msg, PN_AMQP, buf, n);
-        if (err) return err;
-        return 0;
+        if (err)
+          return pn_error_format(messenger->error, err, "error decoding message: %s",
+                                 pn_message_error(msg));
+        else
+          return 0;
       }
       d = pn_work_next(d);
     }

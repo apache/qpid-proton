@@ -29,6 +29,9 @@ typedef int pn_source_t;
 typedef int pn_target_t;
 
 pn_messenger_t *pn_messenger();
+void pn_messenger_free(pn_messenger_t *messenger);
+
+const char *pn_messenger_error(pn_messenger_t *messenger);
 
 int pn_messenger_start(pn_messenger_t *messenger);
 int pn_messenger_stop(pn_messenger_t *messenger);

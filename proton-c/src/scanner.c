@@ -20,7 +20,7 @@
  */
 
 #include <proton/scanner.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,8 +36,7 @@ struct pn_scanner_t {
   char *atoms;
   size_t size;
   size_t capacity;
-  int errno;
-  char error[ERROR_SIZE];
+  pn_error_t *error;
 };
 
 const char *pn_token_type(pn_token_type_t type)
@@ -75,8 +74,7 @@ pn_scanner_t *pn_scanner()
   pn_scanner_t *scanner = malloc(sizeof(pn_scanner_t));
   if (scanner) {
     scanner->input = NULL;
-    scanner->errno = 0;
-    scanner->error[0] = '\0';
+    scanner->error = pn_error();
   }
   return scanner;
 }
@@ -121,44 +119,40 @@ int pn_scanner_err(pn_scanner_t *scanner, int code, const char *fmt, ...)
 
 int pn_scanner_verr(pn_scanner_t *scanner, int code, const char *fmt, va_list ap)
 {
-  scanner->errno = code;
+  char error[ERROR_SIZE];
 
   int line, col;
   pn_scanner_line_info(scanner, &line, &col);
   int size = scanner->token.size;
-  int ln = snprintf(scanner->error, ERROR_SIZE,
+  int ln = snprintf(error, ERROR_SIZE,
                     "input line %i column %i %s:'%.*s': ", line, col,
                     pn_token_type(scanner->token.type),
                     size, scanner->token.start);
   if (ln >= ERROR_SIZE) {
     return pn_scanner_err(scanner, code, "error info truncated");
   } else if (ln < 0) {
-    scanner->error[0] = '\0';
+    error[0] = '\0';
   }
 
-  int n = snprintf(scanner->error + ln, ERROR_SIZE - ln, fmt, ap);
+  int n = snprintf(error + ln, ERROR_SIZE - ln, fmt, ap);
 
   if (n >= ERROR_SIZE - ln) {
     return pn_scanner_err(scanner, code, "error info truncated");
   } else if (n < 0) {
-    scanner->error[0] = '\0';
+    error[0] = '\0';
   }
 
-  return code;
+  return pn_error_set(scanner->error, code, error);
 }
 
 int pn_scanner_errno(pn_scanner_t *scanner)
 {
-  return scanner->errno;
+  return pn_error_code(scanner->error);
 }
 
 const char *pn_scanner_error(pn_scanner_t *scanner)
 {
-  if (scanner->errno) {
-    return scanner->error;
-  } else {
-    return NULL;
-  }
+  return pn_error_text(scanner->error);
 }
 
 void pn_scanner_emit(pn_scanner_t *scanner, pn_token_type_t type, const char *start, size_t size)

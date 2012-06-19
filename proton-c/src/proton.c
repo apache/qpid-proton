@@ -62,13 +62,13 @@ int buffer(int argc, char **argv)
   pn_data_t *data = pn_data(16);
   int err = pn_data_fill(data, "Ds[iSi]", "desc", 1, "two", 3);
   if (err) {
-    printf("%s\n", pn_error(err));
+    printf("%s\n", pn_code(err));
   }
   pn_data_print(data); printf("\n");
   pn_bytes_t str;
   err = pn_data_scan(data, "D.[.S.]", &str);
   if (err) {
-    printf("%s\n", pn_error(err));
+    printf("%s\n", pn_code(err));
   } else {
     printf("%.*s\n", (int) str.size, str.start);
   }
@@ -96,7 +96,7 @@ int value(int argc, char **argv)
                           "pi", 3.14159265359, "e", 2.7,
                           (uint64_t) 42, PN_SYMBOL, "one", "two", "three");
   if (err) {
-    printf("err = %s\n", pn_error(err));
+    printf("err = %s\n", pn_code(err));
   } else {
     pn_print_atoms(&atoms);
     printf("\n");
@@ -122,7 +122,7 @@ int value(int argc, char **argv)
   err = pn_scan_atoms(&atoms, "DDsL[i[i]?i]{sfsf}@DLT[.s.]", &blam, &n, &one, &two, &threeq, &three,
                       &key1, &val1, &key2, &val2, &al, &type, &sym);
   if (err) {
-    printf("err = %s\n", pn_error(err));
+    printf("err = %s\n", pn_code(err));
   } else {
     printf("scan=%.*s %" PRIu64 " %i %i %i %.*s %f %.*s %f %" PRIu64 " %i %.*s\n", (int) blam.size,
 	   blam.start, n, one, two, three, (int) key1.size, key1.start, val1, (int) key2.size,
@@ -154,18 +154,18 @@ int value(int argc, char **argv)
 
   err = pn_parser_parse(parser, str, &parserd);
   if (err) {
-    printf("parse err=%s, %s\n", pn_error(err), pn_parser_error(parser));
+    printf("parse err=%s, %s\n", pn_code(err), pn_parser_error(parser));
   } else {
     printf("--\n");
     for (int i = 0; i < parserd.size; i++) {
       printf("%s: ", pn_type_str(parserd.start[i].type));
       err = pn_print_atom(parserd.start[i]);
-      if (err) printf("err=%s", pn_error(err));
+      if (err) printf("err=%s", pn_code(err));
       printf("\n");
     }
     printf("--\n");
     err = pn_print_atoms(&parserd);
-    if (err) printf("print err=%s", pn_error(err));
+    if (err) printf("print err=%s", pn_code(err));
     printf("\n");
   }
 

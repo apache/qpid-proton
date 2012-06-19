@@ -20,7 +20,7 @@
  */
 
 #include <proton/buffer.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,5 +1,5 @@
-#ifndef _PROTON_ERRORS_H
-#define _PROTON_ERRORS_H 1
+#ifndef _PROTON_ERROR_H
+#define _PROTON_ERROR_H 1
 
 /*
  *
@@ -22,6 +22,10 @@
  *
  */
 
+#include <stdarg.h>
+
+typedef struct pn_error_t pn_error_t;
+
 #define PN_EOS (-1)
 #define PN_ERR (-2)
 #define PN_OVERFLOW (-3)
@@ -29,6 +33,15 @@
 #define PN_STATE_ERR (-5)
 #define PN_ARG_ERR (-6)
 
-const char *pn_error(int err);
+const char *pn_code(int code);
 
-#endif /* errors.h */
+pn_error_t *pn_error();
+void pn_error_free(pn_error_t *error);
+void pn_error_clear(pn_error_t *error);
+int pn_error_set(pn_error_t *error, int code, const char *text);
+int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
+int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
+int pn_error_code(pn_error_t *error);
+const char *pn_error_text(pn_error_t *error);
+
+#endif /* error.h */

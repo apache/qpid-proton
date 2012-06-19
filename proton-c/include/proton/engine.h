@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 
 /** @file
  * API for the proton Engine.
@@ -33,7 +33,6 @@
  * @todo
  */
 
-typedef struct pn_error_t pn_error_t;
 typedef struct pn_transport_t pn_transport_t;
 typedef struct pn_connection_t pn_connection_t; /**< Connection */
 typedef struct pn_session_t pn_session_t;       /**< Session */

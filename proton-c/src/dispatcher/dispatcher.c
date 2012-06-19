@@ -105,7 +105,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
       size_t dsize = frame.size;
       int e = pn_data_decode(disp->args, frame.payload, &dsize);
       if (e) {
-        fprintf(stderr, "Error decoding frame: %s\n", pn_error(e));
+        fprintf(stderr, "Error decoding frame: %s\n", pn_code(e));
         pn_fprint_data(stderr, frame.payload, frame.size);
         fprintf(stderr, "\n");
         return e;
@@ -175,7 +175,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
   int err = pn_data_vfill(disp->output_args, fmt, ap);
   va_end(ap);
   if (err) {
-    fprintf(stderr, "error posting frame: %s, %s\n", fmt, pn_error(err));
+    fprintf(stderr, "error posting frame: %s, %s\n", fmt, pn_code(err));
     return PN_ERR;
   }
 
@@ -193,7 +193,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
         size *= 2;
         continue;
       } else {
-        fprintf(stderr, "error posting frame: %s", pn_error(err));
+        fprintf(stderr, "error posting frame: %s", pn_code(err));
         return PN_ERR;
       }
     } else if (size - wr < disp->output_size) {

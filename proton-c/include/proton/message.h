@@ -39,6 +39,8 @@ pn_message_t * pn_message();
 void           pn_message_free(pn_message_t *msg);
 
 void           pn_message_clear(pn_message_t *msg);
+int            pn_message_errno(pn_message_t *msg);
+const char *   pn_message_error(pn_message_t *msg);
 
 // standard message headers and properties
 bool           pn_message_is_durable            (pn_message_t *msg);

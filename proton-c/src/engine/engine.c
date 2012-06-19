@@ -361,7 +361,7 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
 {
   endpoint->type = type;
   endpoint->state = PN_LOCAL_UNINIT | PN_REMOTE_UNINIT;
-  endpoint->error = (pn_error_t) {.condition = NULL};
+  endpoint->error = pn_error();
   endpoint->endpoint_next = NULL;
   endpoint->endpoint_prev = NULL;
   endpoint->transport_next = NULL;
@@ -404,7 +404,7 @@ pn_state_t pn_connection_state(pn_connection_t *connection)
 
 pn_error_t *pn_connection_error(pn_connection_t *connection)
 {
-  return connection ? &connection->endpoint.error : NULL;
+  return connection ? connection->endpoint.error : NULL;
 }
 
 const char *pn_connection_container(pn_connection_t *connection)
@@ -642,7 +642,7 @@ pn_state_t pn_session_state(pn_session_t *session)
 
 pn_error_t *pn_session_error(pn_session_t *session)
 {
-  return &session->endpoint.error;
+  return session->endpoint.error;
 }
 
 int pn_do_open(pn_dispatcher_t *disp);
@@ -682,6 +682,8 @@ void pn_transport_init(pn_transport_t *transport)
 
   transport->channels = NULL;
   transport->channel_capacity = 0;
+
+  transport->condition = NULL;
 }
 
 pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t *ssn)
@@ -732,7 +734,7 @@ pn_transport_t *pn_transport(pn_connection_t *conn)
 
 pn_error_t *pn_transport_error(pn_transport_t *transport)
 {
-  return &transport->endpoint.error;
+  return transport->endpoint.error;
 }
 
 void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *name)
@@ -839,7 +841,7 @@ pn_state_t pn_link_state(pn_link_t *link)
 
 pn_error_t *pn_link_error(pn_link_t *link)
 {
-  return &link->endpoint.error;
+  return link->endpoint.error;
 }
 
 const char *pn_link_name(pn_link_t *link)
@@ -1032,24 +1034,26 @@ void pn_settle(pn_delivery_t *delivery)
 
 int pn_post_close(pn_transport_t *transport)
 {
-  const char *condition = transport->endpoint.error.condition;
+  const char *condition = transport->condition;
   return pn_post_frame(transport->disp, 0, "DL[?DL[s]]", CLOSE, (bool) condition, ERROR, condition);
 }
 
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...)
 {
   va_list ap;
-  transport->endpoint.error.condition = condition;
+  transport->condition = condition;
   va_start(ap, fmt);
+  char buf[1024];
   // XXX: result
-  vsnprintf(transport->endpoint.error.description, DESCRIPTION, fmt, ap);
+  vsnprintf(buf, 1024, fmt, ap);
   va_end(ap);
+  pn_error_set(transport->endpoint.error, PN_ERR, buf);
   if (!transport->close_sent) {
     pn_post_close(transport);
     transport->close_sent = true;
   }
   transport->disp->halt = true;
-  fprintf(stderr, "ERROR %s %s\n", condition, transport->endpoint.error.description);
+  fprintf(stderr, "ERROR %s %s\n", condition, pn_error_text(transport->endpoint.error));
   return PN_ERR;
 }
 

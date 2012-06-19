@@ -22,7 +22,7 @@
 #include <proton/message.h>
 #include <proton/buffer.h>
 #include <proton/codec.h>
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <proton/parser.h>
 #include <stdlib.h>
 #include <string.h>
@@ -147,6 +147,15 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   if (msg->reply_to_group_id) pn_buffer_clear(msg->reply_to_group_id);
   if (msg->data) pn_data_clear(msg->data);
+}
+
+int pn_message_errno(pn_message_t *msg)
+{
+  if (msg && msg->parser) {
+    return pn_parser_errno(msg->parser);
+  } else {
+    return 0;
+  }
 }
 
 const char *pn_message_error(pn_message_t *msg)

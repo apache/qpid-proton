@@ -22,7 +22,7 @@
  *
  */
 
-#include <proton/errors.h>
+#include <proton/error.h>
 #include <proton/engine.h>
 #include <proton/sasl.h>
 
