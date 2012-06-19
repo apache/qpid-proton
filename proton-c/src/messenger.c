@@ -60,6 +60,15 @@ void pn_messenger_free(pn_messenger_t *messenger)
   }
 }
 
+int pn_messenger_errno(pn_messenger_t *messenger)
+{
+  if (messenger) {
+    return pn_error_code(messenger->error);
+  } else {
+    return PN_ARG_ERR;
+  }
+}
+
 const char *pn_messenger_error(pn_messenger_t *messenger)
 {
   if (messenger) {
