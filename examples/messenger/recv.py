@@ -28,24 +28,24 @@ opts, args = parser.parse_args()
 if not args:
   args = ["//~0.0.0.0"]
 
-m = pn_messenger()
-pn_messenger_start(m)
+mng = pn_messenger()
+pn_messenger_start(mng)
 
 for a in args:
-  if pn_messenger_subscribe(m, a):
-    print pn_messenger_error(m)
+  if pn_messenger_subscribe(mng, a):
+    print pn_messenger_error(mng)
     break
 
 msg = pn_message()
 while True:
-  if pn_messenger_recv(m, 10):
-    print pn_messenger_error(m)
+  if pn_messenger_recv(mng, 10):
+    print pn_messenger_error(mng)
     break
-  while pn_messenger_incoming(m):
-    if pn_messenger_get(m, msg):
-      print pn_messenger_error(m)
+  while pn_messenger_incoming(mng):
+    if pn_messenger_get(mng, msg):
+      print pn_messenger_error(mng)
     else:
       print "%s: %s" % (pn_message_get_address(msg), pn_message_get_subject(msg))
 
-pn_messenger_stop(m)
-pn_messenger_free(m)
+pn_messenger_stop(mng)
+pn_messenger_free(mng)
