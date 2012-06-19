@@ -17,4 +17,4 @@ For peer to peer usage:
   # execute on <host> to receive messages from all local network interfaces
   recv.py //~0.0.0.0
 
-  send.py -a //<host msg_1 ... msg_n
+  send.py -a //<host> msg_1 ... msg_n
