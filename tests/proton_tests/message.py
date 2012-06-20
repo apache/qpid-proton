@@ -108,39 +108,36 @@ class CodecTest(Test):
     assert not pn_message_set_priority(self.msg, 100)
     assert not pn_message_set_address(self.msg, "address")
     assert not pn_message_set_subject(self.msg, "subject")
-    section = pn_section(self.msg)
     body = '"test body"'
-    assert section
-    rc = pn_section_load(section, body)
+    rc = pn_message_load(self.msg, body)
     assert not rc, rc
 
-    cd, data = pn_message_encode(self.msg, PN_AMQP, 1024)
+    cd, data = pn_message_encode(self.msg, 1024)
     assert cd == 0, cd
 
     msg2 = pn_message()
-    cd = pn_message_decode(msg2, PN_AMQP, data, len(data))
+    cd = pn_message_decode(msg2, data, len(data))
     assert cd == 0, (cd, data)
 
     assert pn_message_get_ttl(self.msg) == pn_message_get_ttl(msg2)
     assert pn_message_get_priority(self.msg) == pn_message_get_priority(msg2)
     assert pn_message_get_address(self.msg) == pn_message_get_address(msg2)
     assert pn_message_get_subject(self.msg) == pn_message_get_subject(msg2)
-    cd, saved = pn_section_save(section, 1024)
+    cd, saved = pn_message_save(self.msg, 1024)
     assert not cd, cd
     assert saved == body, (body, saved)
 
-class SectionTest(Test):
+class ParserTest(Test):
 
   def _test(self, *bodies):
-    section = pn_section(self.msg)
     for body in bodies:
-      pn_section_clear(section)
-      cd, saved = pn_section_save(section, 1024)
+      pn_message_clear(self.msg)
+      cd, saved = pn_message_save(self.msg, 1024)
       assert  (cd, saved) == (0, ""), (cd, saved)
-      err = pn_section_load(section, body)
-      assert err == 0, (pn_section_error(section), repr(body))
-      cd, saved = pn_section_save(section, 1024)
-      assert cd >= 0, (cd, pn_section_error(section))
+      err = pn_message_load(self.msg, body)
+      assert err == 0, (pn_message_error(self.msg), repr(body))
+      cd, saved = pn_message_save(self.msg, 1024)
+      assert cd >= 0, (cd, pn_message_error(self.msg))
       assert saved == body, (body, saved)
 
   def testIntegral(self):

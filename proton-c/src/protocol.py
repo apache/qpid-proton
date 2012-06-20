@@ -27,7 +27,8 @@ def eq(attr, value):
 
 TYPES = doc.query["amqp/section/type", eq("@class", "composite")] + \
     mdoc.query["amqp/section/type", eq("@class", "composite")] + \
-    sdoc.query["amqp/section/type", eq("@class", "composite")]
+    sdoc.query["amqp/section/type", eq("@class", "composite")] + \
+    mdoc.query["amqp/section/type", eq("@provides", "section")]
 RESTRICTIONS = {}
 COMPOSITES = {}
 

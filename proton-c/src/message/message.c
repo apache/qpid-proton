@@ -66,20 +66,10 @@ struct pn_message_t {
   pn_buffer_t *reply_to_group_id;
 
   pn_data_t *data;
+  pn_data_t *body;
 
-  pn_parser_t *parser;
-
-  pn_section_t *section_head;
-  pn_section_t *section_tail;
-};
-
-struct pn_section_t {
-  pn_message_t *message;
-  pn_section_t *section_next;
-  pn_section_t *section_prev;
   pn_format_t format;
-  pn_data_t *data;
-  bool cleared;
+  pn_parser_t *parser;
 };
 
 pn_message_t *pn_message()
@@ -104,9 +94,9 @@ pn_message_t *pn_message()
   msg->group_sequence = 0;
   msg->reply_to_group_id = NULL;
   msg->data = NULL;
+  msg->body = NULL;
+  msg->format = PN_AMQP;
   msg->parser = NULL;
-  msg->section_head = NULL;
-  msg->section_tail = NULL;
   return msg;
 }
 
@@ -122,6 +112,7 @@ void pn_message_free(pn_message_t *msg)
     pn_buffer_free(msg->group_id);
     pn_buffer_free(msg->reply_to_group_id);
     pn_data_free(msg->data);
+    pn_data_free(msg->body);
     free(msg);
   }
 }
@@ -147,6 +138,7 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   if (msg->reply_to_group_id) pn_buffer_clear(msg->reply_to_group_id);
   if (msg->data) pn_data_clear(msg->data);
+  if (msg->body) pn_data_clear(msg->body);
 }
 
 int pn_message_errno(pn_message_t *msg)
@@ -415,14 +407,18 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_buffer_set_str(&msg->reply_to_group_id, reply_to_group_id);
 }
 
-int pn_message_decode(pn_message_t *msg, pn_format_t format, const char *bytes, size_t size)
+int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
-  if (!msg || format != PN_AMQP || !bytes || !size) return PN_ARG_ERR;
+  if (!msg || !bytes || !size) return PN_ARG_ERR;
+
+  if (!msg->data) {
+    msg->data = pn_data(64);
+  }
+  if (!msg->body) {
+    msg->body = pn_data(64);
+  }
 
   while (size) {
-    if (!msg->data) {
-      msg->data = pn_data(64);
-    }
     size_t copy = size;
     pn_data_clear(msg->data);
     int err = pn_data_decode(msg->data, (char *) bytes, &copy);
@@ -471,14 +467,13 @@ int pn_message_decode(pn_message_t *msg, pn_format_t format, const char *bytes, 
         if (err) return err;
       }
       break;
+    case DELIVERY_ANNOTATIONS:
+    case MESSAGE_ANNOTATIONS:
+      break;
     default:
       {
-        pn_section_t *section = msg->section_head;
-        if (!section) {
-          section = pn_section(msg);
-        }
-        pn_data_t *data = section->data;
-        section->data = msg->data;
+        pn_data_t *data = msg->body;
+        msg->body = msg->data;
         msg->data = data;
       }
       break;
@@ -488,13 +483,14 @@ int pn_message_decode(pn_message_t *msg, pn_format_t format, const char *bytes, 
   return pn_data_clear(msg->data);
 }
 
-int pn_section_encode(pn_section_t *section, char *data, size_t *size);
-
-int pn_message_encode(pn_message_t *msg, pn_format_t format, char *bytes, size_t *size)
+int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 {
-  if (!msg || format != PN_AMQP || !bytes || !size || !*size) return PN_ARG_ERR;
+  if (!msg || !bytes || !size || !*size) return PN_ARG_ERR;
   if (!msg->data) {
     msg->data = pn_data(64);
+  }
+  if (!msg->body) {
+    msg->body = pn_data(64);
   }
 
   int err = pn_data_clear(msg->data);
@@ -528,117 +524,64 @@ int pn_message_encode(pn_message_t *msg, pn_format_t format, char *bytes, size_t
   bytes += encoded;
   remaining -= encoded;
 
-  pn_section_t *section = msg->section_head;
-  while (section) {
-    encoded = remaining;
-    err = pn_section_encode(section, bytes, &encoded);
-    if (err) return err;
-    bytes += encoded;
-    remaining -= encoded;
-    section = section->section_next;
-  }
+  encoded = remaining;
+  err = pn_data_encode(msg->body, bytes, &encoded);
+  if (err) return err;
+  bytes += encoded;
+  remaining -= encoded;
 
   *size -= remaining;
 
   return 0;
 }
 
-pn_section_t *pn_section(pn_message_t *message)
+pn_format_t pn_message_get_format(pn_message_t *msg)
 {
-  pn_section_t *section = malloc(sizeof(pn_section_t));
-  if (!section) return section;
-  section->message = message;
-  LL_ADD(message, section, section);
-  section->format = PN_AMQP;
-  section->data = NULL;
-  return section;
+  return msg ? msg->format : PN_AMQP;
 }
 
-void pn_section_free(pn_section_t *section)
+int pn_message_set_format(pn_message_t *msg, pn_format_t format)
 {
-  if (section) {
-    LL_REMOVE(section->message, section, section);
-    free(section);
-  }
-}
+  if (!msg) return PN_ARG_ERR;
 
-void pn_section_clear(pn_section_t *section)
-{
-  if (!section) return;
-
-  if (section->data) {
-    pn_data_clear(section->data);
-  }
-}
-
-const char *pn_section_error(pn_section_t *section)
-{
-  if (section) {
-    return pn_message_error(section->message);
-  } else {
-    return NULL;
-  }
-}
-
-pn_format_t pn_section_get_format(pn_section_t *section)
-{
-  return section ? section->format : PN_AMQP;
-}
-
-int pn_section_set_format(pn_section_t *section, pn_format_t format)
-{
-  if (!section) return PN_ARG_ERR;
-
-  section->format = format;
+  msg->format = format;
   return 0;
 }
 
-int pn_section_load(pn_section_t *section, const char *data)
+int pn_message_load(pn_message_t *msg, const char *data)
 {
-  if (!section) return PN_ARG_ERR;
+  if (!msg) return PN_ARG_ERR;
 
-  if (!section->data) {
-    section->data = pn_data(16);
+  if (!msg->body) {
+    msg->body = pn_data(64);
   }
 
-  pn_parser_t *parser = pn_message_parser(section->message);
+  pn_parser_t *parser = pn_message_parser(msg);
 
   while (true) {
-    pn_data_clear(section->data);
-    pn_atoms_t atoms = pn_data_available(section->data);
+    pn_data_clear(msg->body);
+    pn_atoms_t atoms = pn_data_available(msg->body);
     int err = pn_parser_parse(parser, data, &atoms);
     if (err == PN_OVERFLOW) {
-      err = pn_data_grow(section->data);
+      err = pn_data_grow(msg->body);
       if (err) return err;
       continue;
     } else if (err) {
       return err;
     } else {
-      return pn_data_resize(section->data, atoms.size);
+      return pn_data_resize(msg->body, atoms.size);
     }
   }
 }
 
-int pn_section_save(pn_section_t *section, char *data, size_t *size)
+int pn_message_save(pn_message_t *msg, char *data, size_t *size)
 {
-  if (!section) return PN_ARG_ERR;
+  if (!msg) return PN_ARG_ERR;
 
-  if (!section->data) {
+  if (!msg->body) {
     *size = 0;
     return 0;
   }
 
-  return pn_data_format(section->data, data, size);
-}
-
-int pn_section_encode(pn_section_t *section, char *data, size_t *size)
-{
-  if (!section || !data || !size || !*size) return PN_ARG_ERR;
-
-  if (!section->data) {
-    *size = 0;
-    return 0;
-  }
-
-  return pn_data_encode(section->data, data, size);
+  return pn_data_format(msg->body, data, size);
 }

@@ -37,11 +37,11 @@ typedef int int32_t;
   $result = PyString_FromStringAndSize($1.start, $1.size);
 }
 
-int pn_message_encode(pn_message_t *msg, pn_format_t format, char *OUTPUT, size_t *OUTPUT_SIZE);
+int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
 
-int pn_section_save(pn_section_t *section, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_section_save;
+int pn_message_save(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_message_save;
 
 ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_send;

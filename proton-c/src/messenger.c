@@ -407,7 +407,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
   // XXX: max message size
   while (size < 16*1024) {
     char encoded[size];
-    int err = pn_message_encode(msg, PN_AMQP, encoded, &size);
+    int err = pn_message_encode(msg, encoded, &size);
     if (err == PN_OVERFLOW) {
       size *= 2;
     } else if (err) {
@@ -504,7 +504,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         ssize_t n = pn_recv(l, buf, 1024);
         pn_settle(d);
         if (n < 0) return n;
-        int err = pn_message_decode(msg, PN_AMQP, buf, n);
+        int err = pn_message_decode(msg, buf, n);
         if (err)
           return pn_error_format(messenger->error, err, "error decoding message: %s",
                                  pn_message_error(msg));
