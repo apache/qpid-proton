@@ -1701,6 +1701,45 @@ int pn_data_encode(pn_data_t *data, char *bytes, size_t *size)
   return 0;
 }
 
+int pn_data_intern_bytes(pn_data_t *data, pn_bytes_t *bytes)
+{
+  pn_bytes_t prev = pn_buffer_bytes(data->buf);
+  int err = pn_buffer_append(data->buf, bytes->start, bytes->size);
+  if (err) return err;
+  bytes->start = prev.start + prev.size;
+  return 0;
+}
+
+int pn_data_intern(pn_data_t *data)
+{
+  if (!data) return PN_ARG_ERR;
+  if (!data->buf) {
+    data->buf = pn_buffer(64);
+  }
+
+  for (int i = 0; i < data->size; i++) {
+    pn_atom_t *atom = data->atoms + i;
+    pn_bytes_t *bytes;
+    switch (atom->type) {
+    case PN_BINARY:
+      bytes = &atom->u.as_binary;
+      break;
+    case PN_STRING:
+      bytes = &atom->u.as_string;
+      break;
+    case PN_SYMBOL:
+      bytes = &atom->u.as_symbol;
+      break;
+    default:
+      continue;
+    }
+    int err = pn_data_intern_bytes(data, bytes);
+    if (err) return err;
+  }
+
+  return 0;
+}
+
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   pn_atoms_t atoms;

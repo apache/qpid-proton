@@ -106,6 +106,7 @@ int pn_data_clear(pn_data_t *data);
 int pn_data_grow(pn_data_t *data);
 int pn_data_decode(pn_data_t *data, char *bytes, size_t *size);
 int pn_data_encode(pn_data_t *data, char *bytes, size_t *size);
+int pn_data_intern(pn_data_t *data);
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
 int pn_data_fill(pn_data_t *data, const char *fmt, ...);
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);

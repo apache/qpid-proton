@@ -20,7 +20,7 @@
 import sys, optparse
 from xproton import *
 
-parser = optparse.OptionParser(usage="usage: %prog [options] msg_1 ... msg_n",
+parser = optparse.OptionParser(usage="usage: %prog [options] <msg_1> ... <msg_n>",
                                description="simple message sender")
 parser.add_option("-a", "--address", default="//0.0.0.0",
                   help="address: //<domain>[/<name>] (default %default)")
@@ -35,7 +35,7 @@ pn_messenger_start(mng)
 msg = pn_message()
 for m in args:
   pn_message_set_address(msg, opts.address)
-  pn_message_set_subject(msg, m)
+  pn_message_load(msg, m)
   if pn_messenger_put(mng, msg):
     print pn_messenger_error(mng)
     break

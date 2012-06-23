@@ -29,6 +29,8 @@
 
 typedef struct pn_message_t pn_message_t;
 typedef enum {
+  PN_DATA,
+  PN_TEXT,
   PN_AMQP,
   PN_JSON
 } pn_format_t;
@@ -116,8 +118,17 @@ int            pn_message_set_json              (pn_message_t *msg, const char *
 pn_format_t pn_message_get_format(pn_message_t *message);
 int pn_message_set_format(pn_message_t *message, pn_format_t format);
 
-int pn_message_load(pn_message_t *message, const char *data);
+int pn_message_load(pn_message_t *message, const char *data, size_t size);
+int pn_message_load_data(pn_message_t *message, const char *data, size_t size);
+int pn_message_load_text(pn_message_t *message, const char *data, size_t size);
+int pn_message_load_amqp(pn_message_t *message, const char *data, size_t size);
+int pn_message_load_json(pn_message_t *message, const char *data, size_t size);
+
 int pn_message_save(pn_message_t *message, char *data, size_t *size);
+int pn_message_save_data(pn_message_t *message, char *data, size_t *size);
+int pn_message_save_text(pn_message_t *message, char *data, size_t *size);
+int pn_message_save_amqp(pn_message_t *message, char *data, size_t *size);
+int pn_message_save_json(pn_message_t *message, char *data, size_t *size);
 
 // TODO:
 // bind vars

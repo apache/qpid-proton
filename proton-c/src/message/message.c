@@ -95,7 +95,7 @@ pn_message_t *pn_message()
   msg->reply_to_group_id = NULL;
   msg->data = NULL;
   msg->body = NULL;
-  msg->format = PN_AMQP;
+  msg->format = PN_DATA;
   msg->parser = NULL;
   return msg;
 }
@@ -475,6 +475,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         pn_data_t *data = msg->body;
         msg->body = msg->data;
         msg->data = data;
+        err = pn_data_intern(msg->body);
+        if (err) return err;
       }
       break;
     }
@@ -548,7 +550,45 @@ int pn_message_set_format(pn_message_t *msg, pn_format_t format)
   return 0;
 }
 
-int pn_message_load(pn_message_t *msg, const char *data)
+int pn_message_load(pn_message_t *msg, const char *data, size_t size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  switch (msg->format) {
+  case PN_DATA: return pn_message_load_data(msg, data, size);
+  case PN_TEXT: return pn_message_load_text(msg, data, size);
+  case PN_AMQP: return pn_message_load_amqp(msg, data, size);
+  case PN_JSON: return pn_message_load_json(msg, data, size);
+  }
+
+  return PN_STATE_ERR;
+}
+
+int pn_message_load_data(pn_message_t *msg, const char *data, size_t size)
+{
+  if (!msg) return PN_ARG_ERR;
+  if (!msg->body) {
+    msg->body = pn_data(64);
+  }
+
+  int err = pn_data_fill(msg->body, "DLz", DATA, size, data);
+  if (err) return err;
+  return pn_data_intern(msg->body);
+}
+
+int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
+{
+  if (!msg) return PN_ARG_ERR;
+  if (!msg->body) {
+    msg->body = pn_data(64);
+  }
+
+  int err = pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
+  if (err) return err;
+  return pn_data_intern(msg->body);
+}
+
+int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
 {
   if (!msg) return PN_ARG_ERR;
 
@@ -574,7 +614,85 @@ int pn_message_load(pn_message_t *msg, const char *data)
   }
 }
 
+int pn_message_load_json(pn_message_t *msg, const char *data, size_t size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  // XXX: unsupported format
+
+  return PN_ERR;
+}
+
 int pn_message_save(pn_message_t *msg, char *data, size_t *size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  switch (msg->format) {
+  case PN_DATA: return pn_message_save_data(msg, data, size);
+  case PN_TEXT: return pn_message_save_text(msg, data, size);
+  case PN_AMQP: return pn_message_save_amqp(msg, data, size);
+  case PN_JSON: return pn_message_save_json(msg, data, size);
+  }
+
+  return PN_STATE_ERR;
+}
+
+int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  if (!msg->body) {
+    *size = 0;
+    return 0;
+  }
+
+  uint64_t desc;
+  pn_bytes_t bytes;
+  bool scanned;
+  int err = pn_data_scan(msg->body, "DL?z", &desc, &scanned, &bytes);
+  if (err) return err;
+  if (desc == DATA && scanned) {
+    if (bytes.size > *size) {
+      return PN_OVERFLOW;
+    } else {
+      memcpy(data, bytes.start, bytes.size);
+      *size = bytes.size;
+      return 0;
+    }
+  } else {
+    return PN_STATE_ERR;
+  }
+}
+
+int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  if (!msg->body) {
+    *size = 0;
+    return 0;
+  }
+
+  uint64_t desc;
+  pn_bytes_t str;
+  bool scanned;
+  int err = pn_data_scan(msg->body, "DL?S", &desc, &scanned, &str);
+  if (err) return err;
+  if (desc == AMQP_VALUE && scanned) {
+    if (str.size >= *size) {
+      return PN_OVERFLOW;
+    } else {
+      memcpy(data, str.start, str.size);
+      data[str.size] = '\0';
+      *size = str.size;
+      return 0;
+    }
+  } else {
+    return PN_STATE_ERR;
+  }
+}
+
+int pn_message_save_amqp(pn_message_t *msg, char *data, size_t *size)
 {
   if (!msg) return PN_ARG_ERR;
 
@@ -584,4 +702,13 @@ int pn_message_save(pn_message_t *msg, char *data, size_t *size)
   }
 
   return pn_data_format(msg->body, data, size);
+}
+
+int pn_message_save_json(pn_message_t *msg, char *data, size_t *size)
+{
+  if (!msg) return PN_ARG_ERR;
+
+  // XXX: unsupported format
+
+  return PN_ERR;
 }

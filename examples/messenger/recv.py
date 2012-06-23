@@ -20,7 +20,7 @@
 import sys, optparse
 from xproton import *
 
-parser = optparse.OptionParser(usage="usage: %prog [options] addr_1 ... addr_n",
+parser = optparse.OptionParser(usage="usage: %prog [options] <addr_1> ... <addr_n>",
                                description="simple message receiver")
 
 opts, args = parser.parse_args()
@@ -45,7 +45,10 @@ while True:
     if pn_messenger_get(mng, msg):
       print pn_messenger_error(mng)
     else:
-      print "%s: %s" % (pn_message_get_address(msg), pn_message_get_subject(msg))
+      cd, body = pn_message_save(msg, 1024)
+      print pn_message_get_address(msg), \
+          pn_message_get_subject(msg) or "(no subject)", \
+          body
 
 pn_messenger_stop(mng)
 pn_messenger_free(mng)

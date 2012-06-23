@@ -108,7 +108,7 @@ class CodecTest(Test):
     assert not pn_message_set_priority(self.msg, 100)
     assert not pn_message_set_address(self.msg, "address")
     assert not pn_message_set_subject(self.msg, "subject")
-    body = '"test body"'
+    body = 'Hello World!'
     rc = pn_message_load(self.msg, body)
     assert not rc, rc
 
@@ -127,9 +127,11 @@ class CodecTest(Test):
     assert not cd, cd
     assert saved == body, (body, saved)
 
-class ParserTest(Test):
 
-  def _test(self, *bodies):
+class LoadSaveTest(Test):
+
+  def _test(self, fmt, *bodies):
+    pn_message_set_format(self.msg, fmt)
     for body in bodies:
       pn_message_clear(self.msg)
       cd, saved = pn_message_save(self.msg, 1024)
@@ -141,26 +143,32 @@ class ParserTest(Test):
       assert saved == body, (body, saved)
 
   def testIntegral(self):
-    self._test("0", "1", "-1", "9223372036854775807")
+    self._test(PN_AMQP, "0", "1", "-1", "9223372036854775807")
 
   def testFloating(self):
-    self._test("1.1", "3.14159", "-3.14159", "-1.1")
+    self._test(PN_AMQP, "1.1", "3.14159", "-3.14159", "-1.1")
 
   def testSymbol(self):
-    self._test(':symbol', ':"quoted symbol"')
+    self._test(PN_AMQP, ':symbol', ':"quoted symbol"')
 
   def testString(self):
-    self._test('"string"', '"string with spaces"')
+    self._test(PN_AMQP, '"string"', '"string with spaces"')
 
   def testBinary(self):
-    self._test('b"binary"', 'b"binary with spaces and special values: \\x00\\x01\\x02"')
+    self._test(PN_AMQP, 'b"binary"', 'b"binary with spaces and special values: \\x00\\x01\\x02"')
 
   def testMap(self):
-    self._test('{"one"=1, :two=2, :pi=3.14159}', '{[1, 2, 3]=[3, 2, 1], {1=2}={3=4}}')
+    self._test(PN_AMQP, '{"one"=1, :two=2, :pi=3.14159}', '{[1, 2, 3]=[3, 2, 1], {1=2}={3=4}}')
 
   def testList(self):
-    self._test('[1, 2, 3]', '["one", "two", "three"]', '[:one, 2, 3.14159]',
+    self._test(PN_AMQP, '[1, 2, 3]', '["one", "two", "three"]', '[:one, 2, 3.14159]',
                '[{1=2}, {3=4}, {5=6}]')
 
   def testDescriptor(self):
-    self._test('@21 ["one", 2, "three", @:url "http://example.org"]')
+    self._test(PN_AMQP, '@21 ["one", 2, "three", @:url "http://example.org"]')
+
+  def testData(self):
+    self._test(PN_DATA, "this is data\x00\x01\x02 blah blah")
+
+  def testText(self):
+    self._test(PN_TEXT, "this is a text string")
