@@ -628,9 +628,9 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return _connectionEndpoint;
     }
 
-    public void destroy()
+    public void free()
     {
-        super.destroy();
+        super.free();
         _connectionEndpoint.clearTransport();
     }
 

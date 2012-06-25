@@ -81,8 +81,8 @@ class Test(common.Test):
 
   def cleanup(self):
     for c1, t1, c2, t2 in self._wires:
-      pn_connection_destroy(c1)
-      pn_connection_destroy(c2)
+      pn_connection_free(c1)
+      pn_connection_free(c2)
 
   def pump(self):
     for c1, t1, c2, t2 in self._wires:

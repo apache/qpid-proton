@@ -200,13 +200,13 @@ void pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace)
   sasl->disp->trace = trace;
 }
 
-void pn_sasl_destroy(pn_sasl_t *sasl)
+void pn_sasl_free(pn_sasl_t *sasl)
 {
   free(sasl->mechanisms);
   free(sasl->remote_mechanisms);
   free(sasl->send_data.start);
   free(sasl->recv_data.start);
-  pn_dispatcher_destroy(sasl->disp);
+  pn_dispatcher_free(sasl->disp);
   free(sasl);
 }
 

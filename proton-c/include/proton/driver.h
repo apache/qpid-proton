@@ -47,7 +47,7 @@ typedef struct pn_connector_t pn_connector_t;
 
 /** Construct a driver
  *
- *  Call pn_driver_destroy() to release the driver object.
+ *  Call pn_driver_free() to release the driver object.
  *  @return new driver object, NULL if error
  */
 pn_driver_t *pn_driver(void);
@@ -91,13 +91,13 @@ pn_listener_t *pn_driver_listener(pn_driver_t *driver);
  */
 pn_connector_t *pn_driver_connector(pn_driver_t *driver);
 
-/** Destruct the driver allocated via pn_driver, and all associated
+/** Free the driver allocated via pn_driver, and all associated
  *  listeners and connectors.
  *
- * @param[in] driver the driver to destruct, no longer valid on
+ * @param[in] driver the driver to free, no longer valid on
  *                   return
  */
-void pn_driver_destroy(pn_driver_t *driver);
+void pn_driver_free(pn_driver_t *driver);
 
 
 /** pn_listener - the server API **/
@@ -150,14 +150,14 @@ void *pn_listener_context(pn_listener_t *listener);
  */
 void pn_listener_close(pn_listener_t *listener);
 
-/** Destructor for the given listener.
+/** Frees the given listener.
  *
  * Assumes the listener's socket has been closed prior to call.
  *
- * @param[in] listener the listener object to destroy, no longer valid
+ * @param[in] listener the listener object to free, no longer valid
  *            on return
  */
-void pn_listener_destroy(pn_listener_t *listener);
+void pn_listener_free(pn_listener_t *listener);
 
 
 /** pn_connector - the client API **/
@@ -268,9 +268,9 @@ bool pn_connector_closed(pn_connector_t *connector);
  *
  * Assumes the connector's socket has been closed prior to call.
  *
- * @param[in] connector the connector object to destroy. No longer
+ * @param[in] connector the connector object to free. No longer
  *                      valid on return
  */
-void pn_connector_destroy(pn_connector_t *connector);
+void pn_connector_free(pn_connector_t *connector);
 
 #endif /* driver.h */

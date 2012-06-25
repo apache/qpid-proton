@@ -185,14 +185,14 @@ class Broker:
           self.detach_receiver(lnk, connection)
       lnk = pn_link_next(lnk, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
 
-    # XXX: need to destroy links
+    # XXX: need to free links
 
     ssn = pn_session_head(connection, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
     while ssn:
       pn_session_close(ssn)
       ssn = pn_session_next(ssn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
 
-    # XXX: need to destroy sessions
+    # XXX: need to free sessions
     # XXX: need to orphan links
 
     state = pn_connection_state(connection)

@@ -51,7 +51,7 @@ public interface Endpoint
     /**
      * free the endpoint and any associated resources
      */
-    public void destroy();
+    public void free();
 
     /**
      * transition local state to ACTIVE

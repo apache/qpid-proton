@@ -55,7 +55,7 @@ pn_messenger_t *pn_messenger()
 void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
-    pn_driver_destroy(messenger->driver);
+    pn_driver_free(messenger->driver);
     pn_error_free(messenger->error);
   }
 }
@@ -181,9 +181,9 @@ int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_
           if (c == messenger->connectors[i]) {
             memmove(messenger->connectors + i, messenger->connectors + i + 1, messenger->size - i - 1);
             messenger->size--;
-            pn_connector_destroy(c);
+            pn_connector_free(c);
             pn_messenger_reclaim(messenger, conn);
-            pn_connection_destroy(conn);
+            pn_connection_free(conn);
             pn_messenger_flow(messenger);
             break;
           }

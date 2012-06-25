@@ -63,11 +63,11 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return null;  //TODO.
     }
 
-    public void destroy()
+    public void free()
     {
-        getSession().destroyReceiver(this);
+        getSession().freeReceiver(this);
 
-        super.destroy();
+        super.free();
         //TODO.
     }
 

@@ -214,17 +214,17 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *PHP_CONTEXT);
 }
 %ignore pn_listener_context;
 
-%rename(pn_listener_destroy) wrap_pn_listener_destroy;
+%rename(pn_listener_free) wrap_pn_listener_free;
 %inline %{
-  void wrap_pn_listener_destroy(pn_listener_t *l) {
+  void wrap_pn_listener_free(pn_listener_t *l) {
       zval *obj = pn_listener_context(l);
       if (obj) {
           zval_ptr_dtor(&obj);  // drop the reference taken on input
       }
-      pn_listener_destroy(l);
+      pn_listener_free(l);
   }
 %}
-%ignore pn_listener_destroy;
+%ignore pn_listener_free;
 
 
 // increment reference count of PHP_CONTEXT on input:
@@ -261,17 +261,17 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *PHP_CONTEXT);
 }
 %ignore pn_connector_set_context;
 
-%rename(pn_connector_destroy) wrap_pn_connector_destroy;
+%rename(pn_connector_free) wrap_pn_connector_free;
 %inline %{
-  void wrap_pn_connector_destroy(pn_connector_t *c) {
+  void wrap_pn_connector_free(pn_connector_t *c) {
       zval *obj = pn_connector_context(c);
       if (obj) {
           zval_ptr_dtor(&obj);  // drop the reference taken on input
       }
-      pn_connector_destroy(c);
+      pn_connector_free(c);
   }
 %}
-%ignore pn_connector_destroy;
+%ignore pn_connector_free;
 
 
 %include "../cproton.i"

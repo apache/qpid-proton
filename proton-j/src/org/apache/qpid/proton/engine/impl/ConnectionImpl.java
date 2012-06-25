@@ -178,17 +178,17 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return this;
     }
 
-    public void destroy()
+    public void free()
     {
-        super.destroy();
+        super.free();
         for(Session session : _sessions)
         {
-            session.destroy();
+            session.free();
         }
         _sessions = null;
         if(_transport != null)
         {
-            _transport.destroy();
+            _transport.free();
         }
     }
 

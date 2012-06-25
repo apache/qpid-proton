@@ -41,7 +41,7 @@ void pn_delivery_buffer_init(pn_delivery_buffer_t *db, pn_sequence_t next, size_
   db->size = 0;
 }
 
-void pn_delivery_buffer_destroy(pn_delivery_buffer_t *db)
+void pn_delivery_buffer_free(pn_delivery_buffer_t *db)
 {
   free(db->deliveries);
 }
@@ -155,24 +155,24 @@ void pn_close(pn_endpoint_t *endpoint)
   pn_modified(pn_ep_get_connection(endpoint), endpoint);
 }
 
-void pn_destroy(pn_endpoint_t *endpoint)
+void pn_free(pn_endpoint_t *endpoint)
 {
   switch (endpoint->type)
   {
   case CONNECTION:
-    pn_connection_destroy((pn_connection_t *)endpoint);
+    pn_connection_free((pn_connection_t *)endpoint);
     break;
   case TRANSPORT:
-    pn_transport_destroy((pn_transport_t *)endpoint);
+    pn_transport_free((pn_transport_t *)endpoint);
     break;
   case SESSION:
-    pn_session_destroy((pn_session_t *)endpoint);
+    pn_session_free((pn_session_t *)endpoint);
     break;
   case SENDER:
-    pn_link_destroy((pn_link_t *)endpoint);
+    pn_link_free((pn_link_t *)endpoint);
     break;
   case RECEIVER:
-    pn_link_destroy((pn_link_t *)endpoint);
+    pn_link_free((pn_link_t *)endpoint);
     break;
   }
 }
@@ -187,13 +187,13 @@ void pn_connection_close(pn_connection_t *connection)
   if (connection) pn_close((pn_endpoint_t *) connection);
 }
 
-void pn_connection_destroy(pn_connection_t *connection)
+void pn_connection_free(pn_connection_t *connection)
 {
   if (!connection) return;
 
-  pn_transport_destroy(connection->transport);
+  pn_transport_free(connection->transport);
   while (connection->session_count)
-    pn_session_destroy(connection->sessions[connection->session_count - 1]);
+    pn_session_free(connection->sessions[connection->session_count - 1]);
   free(connection->sessions);
   free(connection->container);
   free(connection->hostname);
@@ -212,14 +212,14 @@ void pn_transport_close(pn_transport_t *transport)
   pn_close((pn_endpoint_t *) transport);
 }
 
-void pn_transport_destroy(pn_transport_t *transport)
+void pn_transport_free(pn_transport_t *transport)
 {
   if (!transport) return;
 
-  pn_dispatcher_destroy(transport->disp);
+  pn_dispatcher_free(transport->disp);
   for (int i = 0; i < transport->session_capacity; i++) {
-    pn_delivery_buffer_destroy(&transport->sessions[i].incoming);
-    pn_delivery_buffer_destroy(&transport->sessions[i].outgoing);
+    pn_delivery_buffer_free(&transport->sessions[i].incoming);
+    pn_delivery_buffer_free(&transport->sessions[i].outgoing);
     free(transport->sessions[i].links);
     free(transport->sessions[i].handles);
   }
@@ -265,12 +265,12 @@ void pn_session_close(pn_session_t *session)
   if (session) pn_close((pn_endpoint_t *) session);
 }
 
-void pn_session_destroy(pn_session_t *session)
+void pn_session_free(pn_session_t *session)
 {
   if (!session) return;
 
   while (session->link_count)
-    pn_link_destroy(session->links[session->link_count - 1]);
+    pn_link_free(session->links[session->link_count - 1]);
   pn_remove_session(session->connection, session);
   free(session->links);
   free(session);
@@ -334,7 +334,7 @@ void pn_link_close(pn_link_t *link)
   if (link) pn_close((pn_endpoint_t *) link);
 }
 
-void pn_link_destroy(pn_link_t *link)
+void pn_link_free(pn_link_t *link)
 {
   if (!link) return;
 

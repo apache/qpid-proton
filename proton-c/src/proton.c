@@ -556,8 +556,8 @@ int main(int argc, char **argv)
         pn_connector_process(c);
         client_callback(c);
         if (pn_connector_closed(c)) {
-	  pn_connection_destroy(pn_connector_connection(c));
-          pn_connector_destroy(c);
+	  pn_connection_free(pn_connector_connection(c));
+          pn_connector_free(c);
         } else {
           pn_connector_process(c);
         }
@@ -580,8 +580,8 @@ int main(int argc, char **argv)
         pn_connector_process(c);
         server_callback(c);
         if (pn_connector_closed(c)) {
-	  pn_connection_destroy(pn_connector_connection(c));
-          pn_connector_destroy(c);
+	  pn_connection_free(pn_connector_connection(c));
+          pn_connector_free(c);
         } else {
           pn_connector_process(c);
         }
@@ -589,7 +589,7 @@ int main(int argc, char **argv)
     }
   }
 
-  pn_driver_destroy(drv);
+  pn_driver_free(drv);
 
   return 0;
 }

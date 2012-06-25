@@ -86,7 +86,7 @@ def state(endpoint):
 def pn_connection():
   return impl.ConnectionImpl()
 
-def pn_connection_destroy(c):
+def pn_connection_free(c):
   pass
 
 def pn_connection_state(c):
@@ -101,7 +101,7 @@ def pn_connection_close(c):
 def pn_session(c):
   return c.session()
 
-def pn_session_destroy(s):
+def pn_session_free(s):
   pass
 
 def pn_session_state(s):
@@ -141,7 +141,7 @@ def pn_sender(ssn, name):
 def pn_receiver(ssn, name):
   return ssn.receiver(name)
 
-def pn_link_destroy(lnk):
+def pn_link_free(lnk):
   pass
 
 def pn_link_state(lnk):

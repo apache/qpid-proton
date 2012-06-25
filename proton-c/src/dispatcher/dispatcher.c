@@ -53,7 +53,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   return disp;
 }
 
-void pn_dispatcher_destroy(pn_dispatcher_t *disp)
+void pn_dispatcher_free(pn_dispatcher_t *disp)
 {
   if (disp) {
     pn_data_free(disp->args);

@@ -120,7 +120,7 @@ public class DelegatingTransport implements BytesTransport
         return null;  //TODO.
     }
 
-    public void destroy()
+    public void free()
     {
         //TODO.
     }

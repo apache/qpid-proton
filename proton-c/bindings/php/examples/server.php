@@ -183,9 +183,9 @@ while (TRUE) {
     $h = pn_connector_context($c);
     $h($c);
     if (pn_connector_closed($c)) {
-      // destroy the connector if closed
-      pn_connection_destroy(pn_connector_connection($c));
-      pn_connector_destroy($c);
+      // free the connector if closed
+      pn_connection_free(pn_connector_connection($c));
+      pn_connector_free($c);
       unset($c);
     } else {
       // otherwise process any work the handler might have done

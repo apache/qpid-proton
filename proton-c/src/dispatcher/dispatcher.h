@@ -56,7 +56,7 @@ struct pn_dispatcher_t {
 };
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context);
-void pn_dispatcher_destroy(pn_dispatcher_t *disp);
+void pn_dispatcher_free(pn_dispatcher_t *disp);
 void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
                           pn_action_t *action);
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...);

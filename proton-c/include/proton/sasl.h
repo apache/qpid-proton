@@ -187,10 +187,10 @@ void pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace);
 
 /** Destructor for the given SASL layer.
  *
- * @param[in] sasl the SASL object to destroy. No longer valid on
+ * @param[in] sasl the SASL object to free. No longer valid on
  *                 return.
  */
-void pn_sasl_destroy(pn_sasl_t *sasl);
+void pn_sasl_free(pn_sasl_t *sasl);
 
 
 #endif /* sasl.h */

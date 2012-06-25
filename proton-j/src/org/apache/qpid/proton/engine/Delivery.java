@@ -52,7 +52,7 @@ public interface Delivery
      */
     public void settle();
 
-    public void destroy();
+    public void free();
 
     public Delivery getWorkNext();
 

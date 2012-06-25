@@ -123,8 +123,8 @@ try:
         window.redraw()
         if pn_connector_closed(c):
           conn = pn_connector_connection(c)
-          if conn: pn_connection_destroy(conn)
-          pn_connector_destroy(c)
+          if conn: pn_connection_free(conn)
+          pn_connector_free(c)
         else:
           pn_connector_process(c)
 

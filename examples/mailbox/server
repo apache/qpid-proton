@@ -125,7 +125,7 @@ class MailboxServer(object):
 
             if pn_connector_closed(cxtr):
                 self.log("Closing connector")
-                pn_connector_destroy(cxtr)
+                pn_connector_free(cxtr)
 
             cxtr = pn_driver_connector(self.driver)
 

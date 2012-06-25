@@ -61,10 +61,10 @@ public class SenderImpl  extends LinkImpl implements Sender
     }
 
 
-    public void destroy()
+    public void free()
     {
-        getSession().destroySender(this);
-        super.destroy();
+        getSession().freeSender(this);
+        super.free();
 
     }
 

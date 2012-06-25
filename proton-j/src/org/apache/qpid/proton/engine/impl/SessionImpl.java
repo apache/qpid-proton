@@ -93,21 +93,21 @@ public class SessionImpl extends EndpointImpl implements Session
         return _connection;
     }
 
-    public void destroy()
+    public void free()
     {
-        super.destroy();
+        super.free();
 
         _connection.removeSessionEndpoint(_node);
         _node = null;
 
         for(SenderImpl sender : _senders.values())
         {
-            sender.destroy();
+            sender.free();
         }
         _senders.clear();
         for(ReceiverImpl receiver : _receivers.values())
         {
-            receiver.destroy();
+            receiver.free();
         }
         _receivers.clear();
     }
@@ -127,12 +127,12 @@ public class SessionImpl extends EndpointImpl implements Session
         _node = node;
     }
 
-    void destroySender(SenderImpl sender)
+    void freeSender(SenderImpl sender)
     {
         _senders.remove(sender.getName());
     }
 
-    void destroyReceiver(ReceiverImpl receiver)
+    void freeReceiver(ReceiverImpl receiver)
     {
         _receivers.remove(receiver.getName());
     }

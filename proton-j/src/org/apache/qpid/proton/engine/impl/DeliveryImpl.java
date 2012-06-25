@@ -114,7 +114,7 @@ public class DeliveryImpl implements Delivery
         return _linkNext;
     }
 
-    public void destroy()
+    public void free()
     {
         _link.remove(this);
         if(_linkPrevious != null)

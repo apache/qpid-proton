@@ -84,9 +84,9 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return delivery;
     }
 
-    public void destroy()
+    public void free()
     {
-        super.destroy();
+        super.free();
         _session.getConnectionImpl().removeLinkEndpoint(_node);
         //TODO.
     }

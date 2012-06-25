@@ -243,7 +243,7 @@ void pn_listener_close(pn_listener_t *l)
     perror("close");
 }
 
-void pn_listener_destroy(pn_listener_t *l)
+void pn_listener_free(pn_listener_t *l)
 {
   if (!l) return;
 
@@ -419,14 +419,14 @@ bool pn_connector_closed(pn_connector_t *ctor)
   return ctor ? ctor->closed : true;
 }
 
-void pn_connector_destroy(pn_connector_t *ctor)
+void pn_connector_free(pn_connector_t *ctor)
 {
   if (!ctor) return;
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
   ctor->connection = NULL;
   ctor->transport = NULL;
-  pn_sasl_destroy(ctor->sasl);
+  pn_sasl_free(ctor->sasl);
   free(ctor);
 }
 
@@ -701,16 +701,16 @@ void pn_driver_trace(pn_driver_t *d, pn_trace_t trace)
   d->trace = trace;
 }
 
-void pn_driver_destroy(pn_driver_t *d)
+void pn_driver_free(pn_driver_t *d)
 {
   if (!d) return;
 
   close(d->ctrl[0]);
   close(d->ctrl[1]);
   while (d->connector_head)
-    pn_connector_destroy(d->connector_head);
+    pn_connector_free(d->connector_head);
   while (d->listener_head)
-    pn_listener_destroy(d->listener_head);
+    pn_listener_free(d->listener_head);
   free(d->fds);
   free(d);
 }

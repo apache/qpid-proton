@@ -103,8 +103,8 @@ pn_settle($sd);
 pump($t1, $t2);
 
 // cleanup
-pn_connection_destroy($c1);
-pn_connection_destroy($c2);
+pn_connection_free($c1);
+pn_connection_free($c2);
 
 
 //
@@ -128,7 +128,7 @@ $pnl = pn_driver_listener($pnd);
 $pnlc = pn_listener_context($pnl);
 //print("Empty listener " . $pnlc . "\n");
 unset($pnlc);
-pn_listener_destroy($pnl);
+pn_listener_free($pnl);
 
 $pnc = pn_driver_connector($pnd);
 $pncc = pn_connector_context($pnc);
@@ -136,7 +136,7 @@ $pncc = pn_connector_context($pnc);
 //assert("is_null($pncc)");
 unset($pncc);
 
-pn_connector_destroy($pnc);
+pn_connector_free($pnc);
 
 
 // manage a listener context
@@ -148,8 +148,8 @@ assert('$x == "listener-context"');
 //print("Retrieved listener context: " . $x . "\n");
 unset($x);
 $m = pn_listener_context($pnl);
-pn_listener_destroy($pnl);
-//print("After destroy: " . $m . "\n");
+pn_listener_free($pnl);
+//print("After free: " . $m . "\n");
 assert('$m == "listener-context"');
 
 
@@ -166,12 +166,12 @@ unset($y);
 //print("Updated connector context: " . pn_connector_context($pnc) . "\n");
 assert('pn_connector_context($pnc) == 75');
 $m = pn_connector_context($pnc);
-pn_connector_destroy($pnc);
-//print("After destroy: " . $m . "\n");
+pn_connector_free($pnc);
+//print("After free: " . $m . "\n");
 assert('$m == 75');
 
 
-pn_driver_destroy($pnd);
+pn_driver_free($pnd);
 
 
 print("END TEST\n");

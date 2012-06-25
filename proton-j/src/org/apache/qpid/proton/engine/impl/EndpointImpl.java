@@ -152,7 +152,7 @@ public abstract class EndpointImpl implements Endpoint
     }
 
 
-    public void destroy()
+    public void free()
     {
         if(_next != null)
         {

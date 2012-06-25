@@ -215,7 +215,7 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
 
 void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
-void pn_connection_destroy(pn_connection_t *connection);
+void pn_connection_free(pn_connection_t *connection);
 
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
@@ -223,7 +223,7 @@ ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
 ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size);
 time_t pn_tick(pn_transport_t *transport, time_t now);
 void pn_trace(pn_transport_t *transport, pn_trace_t trace);
-void pn_transport_destroy(pn_transport_t *transport);
+void pn_transport_free(pn_transport_t *transport);
 
 // session
 pn_state_t pn_session_state(pn_session_t *session);
@@ -233,7 +233,7 @@ pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 pn_connection_t *pn_get_connection(pn_session_t *session);
 void pn_session_open(pn_session_t *session);
 void pn_session_close(pn_session_t *session);
-void pn_session_destroy(pn_session_t *session);
+void pn_session_free(pn_session_t *session);
 
 // link
 const char *pn_link_name(pn_link_t *link);
@@ -260,7 +260,7 @@ pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
 void pn_link_open(pn_link_t *sender);
 void pn_link_close(pn_link_t *sender);
-void pn_link_destroy(pn_link_t *sender);
+void pn_link_free(pn_link_t *sender);
 
 // sender
 //void pn_offer(pn_sender_t *sender, int credits);
