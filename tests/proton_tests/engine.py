@@ -528,6 +528,8 @@ class CreditTest(Test):
       self.pump()
       idx += 1
 
+    assert idx == 1034, idx
+
     assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
 
     extra = pn_delivery(self.snd, "extra")
