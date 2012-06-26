@@ -204,7 +204,7 @@ class Broker:
     result = {}
     d = pn_unsettled_head(link)
     while d:
-      rdisp = pn_remote_disp(d)
+      rdisp = pn_remote_disposition(d)
       result[pn_delivery_tag(d)] = rdisp
       d = pn_unsettled_next(d)
     return result
@@ -418,7 +418,7 @@ class Broker:
     link = pn_link(delivery)
     key = (pn_connection_container(connection), pn_link_name(link))
     tag = pn_delivery_tag(delivery)
-    rdisp = pn_remote_disp(delivery)
+    rdisp = pn_remote_disposition(delivery)
     if pn_is_sender(link):
       source = self.sources[key]
       if pn_remote_settled(delivery) or rdisp:
@@ -429,7 +429,7 @@ class Broker:
         pn_clear(delivery)
     elif pn_remote_settled(delivery): # XXX: and not transactional
       target = self.targets[key]
-      state = target.settle(tag, pn_local_disp(delivery))
+      state = target.settle(tag, pn_local_disposition(delivery))
       pn_disposition(delivery, state)
       pn_settle(delivery)
     else:

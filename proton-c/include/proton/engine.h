@@ -277,8 +277,8 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
 pn_link_t *pn_link(pn_delivery_t *delivery);
 // how do we do delivery state?
-int pn_local_disp(pn_delivery_t *delivery);
-int pn_remote_disp(pn_delivery_t *delivery);
+int pn_local_disposition(pn_delivery_t *delivery);
+int pn_remote_disposition(pn_delivery_t *delivery);
 bool pn_remote_settled(pn_delivery_t *delivery);
 size_t pn_pending(pn_delivery_t *delivery);
 bool pn_writable(pn_delivery_t *delivery);

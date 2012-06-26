@@ -281,7 +281,7 @@ void server_callback(pn_connector_t *ctor)
     }
 
     if (pn_updated(delivery)) {
-      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disposition(delivery));
       pn_settle(delivery);
     }
 
@@ -439,7 +439,7 @@ void client_callback(pn_connector_t *ctor)
     }
 
     if (pn_updated(delivery)) {
-      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disp(delivery));
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disposition(delivery));
       pn_clear(delivery);
       pn_settle(delivery);
       if (!--ctx->send_count) {

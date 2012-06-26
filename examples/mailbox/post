@@ -117,7 +117,7 @@ class PostClient(object):
             _next = pn_unsettled_next(d)
             # if the remote has either settled this delivery OR set the
             # disposition, we consider the message received.
-            disp = pn_remote_disp(d)
+            disp = pn_remote_disposition(d)
             if disp and disp != PN_ACCEPTED:
                 print("Warning: message was not accepted by the remote!")
             if disp or pn_remote_settled(d):

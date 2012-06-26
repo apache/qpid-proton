@@ -439,7 +439,7 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
       if (pn_is_sender(link)) {
         pn_delivery_t *d = pn_unsettled_head(link);
         while (d) {
-          if (pn_remote_disp(d) || pn_remote_settled(d)) {
+          if (pn_remote_disposition(d) || pn_remote_settled(d)) {
             pn_settle(d);
           } else {
             return false;

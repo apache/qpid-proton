@@ -94,7 +94,7 @@ pn_disposition($rd, PN_ACCEPTED);
 
 pump($t1, $t2);
 
-//    assert pn_remote_disp(sd) == pn_local_disp(rd) == PN_ACCEPTED
+//    assert pn_remote_disposition(sd) == pn_local_disposition(rd) == PN_ACCEPTED
 //    assert pn_updated(sd)
 
 pn_disposition($sd, PN_ACCEPTED);

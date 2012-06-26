@@ -1892,12 +1892,12 @@ pn_link_t *pn_link(pn_delivery_t *delivery)
   return delivery->link;
 }
 
-int pn_local_disp(pn_delivery_t *delivery)
+int pn_local_disposition(pn_delivery_t *delivery)
 {
   return delivery->local_state;
 }
 
-int pn_remote_disp(pn_delivery_t *delivery)
+int pn_remote_disposition(pn_delivery_t *delivery)
 {
   return delivery->remote_state;
 }

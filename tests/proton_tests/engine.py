@@ -449,8 +449,8 @@ class TransferTest(Test):
 
     self.pump()
 
-    rdisp = pn_remote_disp(sd)
-    ldisp = pn_local_disp(rd)
+    rdisp = pn_remote_disposition(sd)
+    ldisp = pn_local_disposition(rd)
     assert rdisp == ldisp == PN_ACCEPTED, (rdisp, ldisp)
     assert pn_updated(sd)
 
@@ -459,7 +459,7 @@ class TransferTest(Test):
 
     self.pump()
 
-    assert pn_local_disp(sd) == pn_remote_disp(rd) == PN_ACCEPTED
+    assert pn_local_disposition(sd) == pn_remote_disposition(rd) == PN_ACCEPTED
 
 class CreditTest(Test):
 

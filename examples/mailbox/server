@@ -247,8 +247,8 @@ class MailboxServer(object):
             if pn_updated(delivery):
                 # check to see if the remote has accepted message we sent
                 self.log("remote disposition for %s: %s " % (str(pn_delivery_tag(delivery)),
-                                                             str(pn_remote_disp(delivery))))
-                if pn_remote_disp(delivery):
+                                                             str(pn_remote_disposition(delivery))))
+                if pn_remote_disposition(delivery):
                     # once we know the remote has seen the message, we can
                     # release the delivery.
                     pn_settle(delivery)
