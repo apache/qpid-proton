@@ -146,4 +146,14 @@ class TransportLink<T extends LinkImpl>
     {
         _remoteLinkCredit = remoteLinkCredit;
     }
+
+    void decrementLinkCredit()
+    {
+        _linkCredit = _linkCredit.subtract(UnsignedInteger.ONE);
+    }
+
+    void incrementDeliveryCount()
+    {
+        _deliveryCount = _deliveryCount.add(UnsignedInteger.ONE);
+    }
 }

@@ -244,6 +244,8 @@ class TransportSession
         {
             delivery.setComplete();
             _incomingWindowSize = _incomingWindowSize.subtract(UnsignedInteger.ONE);
+            delivery.getLink().getTransportLink().decrementLinkCredit();
+            delivery.getLink().getTransportLink().incrementDeliveryCount();
         }
         if(Boolean.TRUE == transfer.getSettled())
         {

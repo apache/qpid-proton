@@ -352,6 +352,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 if(delivery.getLink().current() != delivery)
                 {
                     transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.ONE));
+                    transportLink.setLinkCredit(transportLink.getLinkCredit().subtract(UnsignedInteger.ONE));
                 }
 
                 delivery.getLink().decrementQueued();

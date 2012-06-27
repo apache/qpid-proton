@@ -40,9 +40,13 @@ class TransportSender extends TransportLink<SenderImpl>
         super.handleFlow(flow);
         _drain = flow.getDrain();
         getLink().setDrain(flow.getDrain());
-        UnsignedInteger transferLimit = flow.getLinkCredit().add(getDeliveryCount());
+        int oldCredit = getLink().getCredit();
+        UnsignedInteger oldLimit = getLinkCredit().add(getDeliveryCount());
+        UnsignedInteger transferLimit = flow.getLinkCredit().add(flow.getDeliveryCount());
         UnsignedInteger linkCredit = transferLimit.subtract(getDeliveryCount());
-        getLink().setCredit(linkCredit.intValue());
+
+        setLinkCredit(linkCredit);
+        getLink().setCredit(transferLimit.subtract(oldLimit).intValue() + oldCredit);
 
         DeliveryImpl current = getLink().current();
         getLink().getConnectionImpl().workUpdate(current);
