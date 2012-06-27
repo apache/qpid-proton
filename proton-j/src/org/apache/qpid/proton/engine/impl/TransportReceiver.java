@@ -44,7 +44,7 @@ class TransportReceiver extends TransportLink<ReceiverImpl>
         super.handleFlow(flow);
         if(getRemoteDeliveryCount().compareTo(getDeliveryCount())>=0)
         {
-            getLink().setCredit(getRemoteLinkCredit().intValue());
+            getLink().setCredit(getLink().getQueued());
             setLinkCredit(getRemoteLinkCredit());
             setDeliveryCount(getRemoteDeliveryCount());
         }
