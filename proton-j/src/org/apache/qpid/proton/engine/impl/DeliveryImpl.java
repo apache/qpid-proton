@@ -109,6 +109,10 @@ public class DeliveryImpl implements Delivery
         _settled = true;
         _link.decrementUnsettled();
         setTransportFlag(DELIVERY_STATE_CHANGED);
+        if(_link.current() == this)
+        {
+            _link.advance();
+        }
     }
 
     DeliveryImpl getLinkNext()

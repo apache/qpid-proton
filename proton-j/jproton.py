@@ -200,6 +200,9 @@ def pn_disposition(d, p):
     d.disposition(Accepted.getInstance())
 
 
+def pn_remote_settled(d):
+  return d.remotelySettled()
+
 def pn_remote_disp(d):
   if(d.getRemoteState() == Accepted.getInstance()):
     return PN_ACCEPTED

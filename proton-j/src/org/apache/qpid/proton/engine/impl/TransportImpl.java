@@ -324,6 +324,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 transfer.setDeliveryId(deliveryId);
                 transfer.setDeliveryTag(new Binary(delivery.getTag()));
                 transfer.setHandle(transportLink.getLocalHandle());
+                if(delivery.isSettled())
+                {
+                    transfer.setSettled(Boolean.TRUE);
+                }
                 if(delivery.getLink().current() == delivery)
                 {
                     transfer.setMore(true);

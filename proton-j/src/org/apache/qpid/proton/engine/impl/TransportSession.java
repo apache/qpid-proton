@@ -245,6 +245,10 @@ class TransportSession
             delivery.setComplete();
             _incomingWindowSize = _incomingWindowSize.subtract(UnsignedInteger.ONE);
         }
+        if(Boolean.TRUE == transfer.getSettled())
+        {
+            delivery.setRemoteSettled(true);
+        }
 
     }
 
