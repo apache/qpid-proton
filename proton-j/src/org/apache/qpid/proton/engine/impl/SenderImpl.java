@@ -71,6 +71,7 @@ public class SenderImpl  extends LinkImpl implements Sender
     public boolean advance()
     {
         DeliveryImpl delivery = current();
+
         boolean advance = super.advance();
         if(advance && _offered > 0)
         {
@@ -79,7 +80,6 @@ public class SenderImpl  extends LinkImpl implements Sender
         if(advance)
         {
             decrementCredit();
-
             delivery.addToTransportWorkList();
         }
 

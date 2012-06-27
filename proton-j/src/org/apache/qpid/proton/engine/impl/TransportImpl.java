@@ -305,6 +305,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 // TODO partial consumption
                 delivery.setData(null);
                 delivery.setDataLength(0);
+                delivery.setDone();
 
                 if(delivery.getLink().current() != delivery)
                 {
