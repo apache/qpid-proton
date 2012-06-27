@@ -28,6 +28,7 @@ public class SenderImpl  extends LinkImpl implements Sender
 {
     private int _offered;
     private TransportSender _transportLink;
+    private boolean _drained;
 
     public SenderImpl(SessionImpl session, String name)
     {
@@ -117,5 +118,21 @@ public class SenderImpl  extends LinkImpl implements Sender
         {
             advance();
         }*/
+    }
+
+    public void drained()
+    {
+        _drained = true;
+        modified();
+    }
+
+    boolean clearDrained()
+    {
+        final boolean drained = _drained;
+        if(drained)
+        {
+            _drained = false;
+        }
+        return drained;
     }
 }

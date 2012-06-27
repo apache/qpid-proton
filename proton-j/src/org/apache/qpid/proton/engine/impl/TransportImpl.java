@@ -92,6 +92,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private final ByteBuffer _overflowBuffer = ByteBuffer.wrap(new byte[_maxFrameSize]);
     private static final byte AMQP_FRAME_TYPE = 0;
 
+
     {
         AMQPDefinedTypes.registerAllTypes(_decoder);
         _overflowBuffer.flip();
@@ -216,7 +217,44 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     private int processSenderFlow(WritableBuffer buffer)
     {
-        return 0;  //TODO - Implement
+        EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
+        int written = 0;
+        while(endpoint != null && buffer.remaining() >= _maxFrameSize)
+        {
+
+            if(endpoint instanceof SenderImpl)
+            {
+                SenderImpl sender = (SenderImpl) endpoint;
+                if(sender.getDrain() && sender.clearDrained())
+                {
+                    TransportSender transportLink = sender.getTransportLink();
+                    TransportSession transportSession = sender.getSession().getTransportSession();
+                    int credits = sender.getCredit();
+                    sender.setCredit(0);
+                    if(credits != 0)
+                    {
+                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.valueOf(credits)));
+                        transportLink.setLinkCredit(UnsignedInteger.ZERO);
+
+                        Flow flow = new Flow();
+                        flow.setHandle(transportLink.getLocalHandle());
+                        flow.setNextIncomingId(transportSession.getNextIncomingId());
+                        flow.setIncomingWindow(transportSession.getIncomingWindowSize());
+                        flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
+                        flow.setDeliveryCount(transportLink.getDeliveryCount());
+                        flow.setLinkCredit(transportLink.getLinkCredit());
+                        flow.setDrain(sender.getDrain());
+                        flow.setNextOutgoingId(transportSession.getNextOutgoingId());
+                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
+                        written += frameBytes;
+                    }
+                }
+
+            }
+
+            endpoint = endpoint.getNext();
+        }
+        return written;  //TODO - Implement
     }
 
     private int processSenderDisposition(WritableBuffer buffer)
@@ -398,6 +436,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                         flow.setDeliveryCount(transportLink.getDeliveryCount());
                         flow.setLinkCredit(transportLink.getLinkCredit());
+                        flow.setDrain(receiver.getDrain());
                         flow.setNextOutgoingId(transportSession.getNextOutgoingId());
                         int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
                         written += frameBytes;

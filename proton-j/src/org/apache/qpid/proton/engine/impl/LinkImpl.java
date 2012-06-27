@@ -42,6 +42,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private int _unsettled;
 
     private LinkNode<LinkImpl> _node;
+    private boolean _drain;
 
 
     public LinkImpl(SessionImpl session, String name)
@@ -271,5 +272,15 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     void decrementUnsettled()
     {
         _unsettled--;
+    }
+
+    void setDrain(boolean drain)
+    {
+        _drain = drain;
+    }
+
+    boolean getDrain()
+    {
+        return _drain;
     }
 }

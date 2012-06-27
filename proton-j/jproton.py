@@ -382,3 +382,9 @@ def pn_queued(l):
 
 def pn_unsettled(l):
   return l.getUnsettled()
+
+def pn_drain(l, c):
+  l.drain(c)
+
+def pn_drained(l):
+  l.drained()

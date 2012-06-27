@@ -26,6 +26,8 @@ import org.apache.qpid.proton.engine.Sequence;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
 {
+
+
     @Override
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
@@ -62,6 +64,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     {
         modified();
         addCredit(credits);
+        setDrain(false);
         _unsentCredits += credits;
     }
 
@@ -113,4 +116,9 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return (delivery == current());
     }
 
+    public void drain(int credit)
+    {
+        flow(credit);
+        setDrain(true);
+    }
 }

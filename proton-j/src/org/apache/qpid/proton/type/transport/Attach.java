@@ -44,12 +44,12 @@ public class Attach
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000012L), Symbol.valueOf("amqp:attach:list"), 
+        UnsignedLong.valueOf(0x0000000000000012L), Symbol.valueOf("amqp:attach:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000012L);
     private final AttachWrapper _wrapper = new AttachWrapper();
-    
+
     private String _name;
     private UnsignedInteger _handle;
     private boolean _role;
@@ -214,7 +214,7 @@ public class Attach
     {
         _properties = properties;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -224,7 +224,7 @@ public class Attach
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -257,7 +257,7 @@ public class Attach
             case 12:
                 return _desiredCapabilities;
             case 13:
-                return _properties;            
+                return _properties;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -266,29 +266,29 @@ public class Attach
 
     public int size()
     {
-        return _properties != null 
-                  ? 14 
-                  : _desiredCapabilities != null 
-                  ? 13 
-                  : _offeredCapabilities != null 
-                  ? 12 
-                  : _maxMessageSize != null 
-                  ? 11 
-                  : _initialDeliveryCount != null 
-                  ? 10 
+        return _properties != null
+                  ? 14
+                  : _desiredCapabilities != null
+                  ? 13
+                  : _offeredCapabilities != null
+                  ? 12
+                  : _maxMessageSize != null
+                  ? 11
+                  : _initialDeliveryCount != null
+                  ? 10
                   : (_incompleteUnsettled != false)
-                  ? 9 
-                  : _unsettled != null 
-                  ? 8 
-                  : _target != null 
-                  ? 7 
-                  : _source != null 
-                  ? 6 
+                  ? 9
+                  : _unsettled != null
+                  ? 8
+                  : _target != null
+                  ? 7
+                  : _source != null
+                  ? 6
                   : (_rcvSettleMode != null && !_rcvSettleMode.equals(ReceiverSettleMode.FIRST))
-                  ? 5 
+                  ? 5
                   : (_sndSettleMode != null && !_sndSettleMode.equals(SenderSettleMode.MIXED))
-                  ? 4 
-                  : 3;        
+                  ? 4
+                  : 3;
 
     }
 
@@ -405,7 +405,7 @@ public class Attach
         return "Attach{" +
                "name='" + _name + '\'' +
                ", handle=" + _handle +
-               ", role=" + _role +
+               ", role=" + (_role ? "RECEIVER" : "SENDER") +
                ", sndSettleMode=" + _sndSettleMode +
                ", rcvSettleMode=" + _rcvSettleMode +
                ", source=" + _source +
@@ -420,4 +420,3 @@ public class Attach
                '}';
     }
 }
-  

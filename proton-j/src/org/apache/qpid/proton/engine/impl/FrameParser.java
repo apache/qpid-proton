@@ -45,6 +45,9 @@ class FrameParser
     private Logger _traceLogger = Logger.getLogger("proton.trace");
     private Logger _rawLogger = Logger.getLogger("proton.raw");
 
+//    private static int ID;
+//    private int _id = ID++;
+//
     static
     {
         HEADER[0] = (byte) 'A';
@@ -265,7 +268,7 @@ class FrameParser
                                 _traceLogger.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
                             }
 
-//                            System.out.println("IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
+//                            System.out.println("IN["+_id+"]: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
                             frameBody.invoke(_frameBodyHandler, payload,channel);
 
                         }

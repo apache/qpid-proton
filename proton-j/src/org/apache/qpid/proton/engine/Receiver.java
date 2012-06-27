@@ -45,4 +45,5 @@ public interface Receiver extends Link
      */
     public int recv(byte[] bytes, int offset, int size);
 
+    public void drain(int credit);
 }

@@ -113,6 +113,7 @@ class TransportLink<T extends LinkImpl>
         _remoteDeliveryCount = flow.getDeliveryCount();
         _remoteLinkCredit = flow.getLinkCredit();
 
+
     }
 
     void setLinkCredit(UnsignedInteger linkCredit)
@@ -128,5 +129,21 @@ class TransportLink<T extends LinkImpl>
     public void settled(TransportDelivery transportDelivery)
     {
         getLink().getSession().getTransportSession().settled(transportDelivery);
+    }
+
+
+    UnsignedInteger getRemoteDeliveryCount()
+    {
+        return _remoteDeliveryCount;
+    }
+
+    UnsignedInteger getRemoteLinkCredit()
+    {
+        return _remoteLinkCredit;
+    }
+
+    public void setRemoteLinkCredit(UnsignedInteger remoteLinkCredit)
+    {
+        _remoteLinkCredit = remoteLinkCredit;
     }
 }

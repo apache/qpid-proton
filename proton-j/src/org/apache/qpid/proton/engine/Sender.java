@@ -51,4 +51,6 @@ public interface Sender extends Link
      */
     public void abort();
 
+
+    public void drained();
 }
