@@ -310,7 +310,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             {
                 SenderImpl sender = (SenderImpl) delivery.getLink();
 
-                sender.incrementQueued();
+                sender.decrementQueued();
 
 
                 TransportLink transportLink = sender.getTransportLink();

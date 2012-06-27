@@ -74,6 +74,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
+
+        incrementQueued();
         try
         {
         DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);

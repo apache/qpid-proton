@@ -27,14 +27,6 @@ import org.apache.qpid.proton.engine.Sequence;
 public class ReceiverImpl extends LinkImpl implements Receiver
 {
 
-
-    @Override
-    public DeliveryImpl delivery(byte[] tag, int offset, int length)
-    {
-        incrementQueued();
-        return super.delivery(tag, offset, length);
-    }
-
     @Override
     public boolean advance()
     {
