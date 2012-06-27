@@ -379,3 +379,6 @@ def pn_credit(l):
 
 def pn_queued(l):
   return l.getQueued()
+
+def pn_unsettled(l):
+  return l.getUnsettled()

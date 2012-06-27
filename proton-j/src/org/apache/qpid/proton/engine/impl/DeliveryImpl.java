@@ -60,6 +60,7 @@ public class DeliveryImpl implements Delivery
     {
         _tag = tag;
         _link = link;
+        _link.incrementUnsettled();
         _linkPrevious = previous;
         if(previous != null)
         {
@@ -106,6 +107,7 @@ public class DeliveryImpl implements Delivery
     public void settle()
     {
         _settled = true;
+        _link.decrementUnsettled();
         setTransportFlag(DELIVERY_STATE_CHANGED);
     }
 

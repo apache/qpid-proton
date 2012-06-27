@@ -39,6 +39,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private String _remoteTargetAddress;
     private int _queued;
     private int _credit;
+    private int _unsettled;
 
     private LinkNode<LinkImpl> _node;
 
@@ -255,5 +256,20 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     void decrementQueued()
     {
         _queued--;
+    }
+
+    public int getUnsettled()
+    {
+        return _unsettled;
+    }
+
+    void incrementUnsettled()
+    {
+        _unsettled++;
+    }
+
+    void decrementUnsettled()
+    {
+        _unsettled--;
     }
 }

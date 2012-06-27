@@ -65,5 +65,6 @@ public interface Link extends Endpoint
 
     public int getCredit();
     public int getQueued();
+    public int getUnsettled();
 
 }
