@@ -93,6 +93,11 @@ public class SessionImpl extends EndpointImpl implements Session
         return _connection;
     }
 
+    public ConnectionImpl getConnection()
+    {
+        return getConnectionImpl();
+    }
+
     public void free()
     {
         super.free();
@@ -135,5 +140,10 @@ public class SessionImpl extends EndpointImpl implements Session
     void freeReceiver(ReceiverImpl receiver)
     {
         _receivers.remove(receiver.getName());
+    }
+
+    public boolean clearIncomingWindowResize()
+    {
+        return getTransportSession().clearIncomingWindowResize();
     }
 }

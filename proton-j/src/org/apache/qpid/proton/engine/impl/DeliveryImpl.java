@@ -413,4 +413,10 @@ public class DeliveryImpl implements Delivery
     {
         return _done;
     }
+
+    void setRemoteSettled(boolean remoteSettled)
+    {
+        _remoteSettled = remoteSettled;
+        _updated = true;
+    }
 }

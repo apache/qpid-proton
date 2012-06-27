@@ -21,16 +21,16 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.type.UnsignedInteger;
 
 public class TransportDelivery
 {
     private UnsignedInteger _deliveryId;
-    private Delivery _delivery;
+    private DeliveryImpl _delivery;
     private TransportLink _transportLink;
+    private int _sessionSize = 1;
 
-    public TransportDelivery(UnsignedInteger currentDeliveryId, Delivery delivery, TransportLink transportLink)
+    public TransportDelivery(UnsignedInteger currentDeliveryId, DeliveryImpl delivery, TransportLink transportLink)
     {
         _deliveryId = currentDeliveryId;
         _delivery = delivery;
@@ -45,5 +45,21 @@ public class TransportDelivery
     public TransportLink getTransportLink()
     {
         return _transportLink;
+    }
+
+    void incrementSessionSize()
+    {
+        _sessionSize++;
+    }
+
+    int getSessionSize()
+    {
+        return _sessionSize;
+    }
+
+    void settled()
+    {
+        _transportLink.settled(this);
+        _delivery.clearWork();
     }
 }

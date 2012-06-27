@@ -63,4 +63,7 @@ public interface Link extends Endpoint
 
     public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
+    public int getCredit();
+    public int getQueued();
+
 }

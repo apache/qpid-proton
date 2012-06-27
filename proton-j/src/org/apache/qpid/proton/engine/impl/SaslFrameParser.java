@@ -21,41 +21,20 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.codec.DecoderImpl;
-import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.engine.EndpointError;
-import org.apache.qpid.proton.type.AMQPDefinedTypes;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.transport.FrameBody;
-
 import java.nio.ByteBuffer;
 import java.util.Formatter;
+import org.apache.qpid.proton.codec.DecodeException;
+import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.type.security.SaslFrameBody;
 
-class FrameParser
+class SaslFrameParser
 {
-    private final FrameBody.FrameBodyHandler<Integer> _frameBodyHandler;
-
-
-    public static final byte[] HEADER = new byte[8];
 
     private EndpointError _localError;
-    private Logger _traceLogger = Logger.getLogger("proton.trace");
-    private Logger _rawLogger = Logger.getLogger("proton.raw");
+    private SaslImpl _sasl;
 
-    static
-    {
-        HEADER[0] = (byte) 'A';
-        HEADER[1] = (byte) 'M';
-        HEADER[2] = (byte) 'Q';
-        HEADER[3] = (byte) 'P';
-        HEADER[4] = 0;
-        HEADER[5] = 1;
-        HEADER[6] = 0;
-        HEADER[7] = 0;
-    }
+
 
     enum State
     {
@@ -74,18 +53,12 @@ class FrameParser
 
     private ByteBuffer _buffer;
 
-    private DecoderImpl _decoder = new DecoderImpl();
-    private EncoderImpl _encoder = new EncoderImpl(_decoder);
-
-    {
-        AMQPDefinedTypes.registerAllTypes(_decoder);
-    }
     private int _ignore = 8;
 
 
-    FrameParser(FrameBody.FrameBodyHandler<Integer> frameBodyHandler)
+    SaslFrameParser(SaslImpl sasl)
     {
-        _frameBodyHandler = frameBodyHandler;
+        _sasl = sasl;
     }
 
     public int input(byte[] bytes, int offset, final int length)
@@ -115,7 +88,7 @@ class FrameParser
 
         ByteBuffer in = ByteBuffer.wrap(bytes, offset, unconsumed);
 
-        while(in.hasRemaining() && state != State.ERROR)
+        while(in.hasRemaining() && state != State.ERROR && !_sasl.isDone())
         {
             switch(state)
             {
@@ -216,7 +189,7 @@ class FrameParser
                     int type = in.get() & 0xFF;
                     int channel = in.getShort() & 0xFF;
 
-                    if(type != 0)
+                    if(type != 1)
                     {
                         frameParsingError = createFramingError("unknown frame type: %d", type);
                         state = State.ERROR;
@@ -241,8 +214,8 @@ class FrameParser
 
                     try
                     {
-                        _decoder.setByteBuffer(in);
-                        Object val = _decoder.readObject();
+                        _sasl.getDecoder().setByteBuffer(in);
+                        Object val = _sasl.getDecoder().readObject();
 
                         Binary payload;
 
@@ -257,16 +230,10 @@ class FrameParser
                             payload = null;
                         }
 
-                        if(val instanceof FrameBody)
+                        if(val instanceof SaslFrameBody)
                         {
-                            FrameBody frameBody = (FrameBody) val;
-                            if(_traceLogger.isLoggable(Level.FINE))
-                            {
-                                _traceLogger.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
-                            }
-
-//                            System.out.println("IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
-                            frameBody.invoke(_frameBodyHandler, payload,channel);
+                            SaslFrameBody frameBody = (SaslFrameBody) val;
+                            frameBody.invoke(_sasl, payload,null);
 
                         }
                         else
@@ -310,7 +277,7 @@ class FrameParser
     {
         Formatter formatter = new Formatter();
         formatter.format(description, args);
-        System.out.println(formatter.toString());
+//        System.out.println(formatter.toString());
         return null;  //TODO.
     }
 

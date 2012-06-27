@@ -37,12 +37,12 @@ public class SaslOutcome
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000044L), Symbol.valueOf("amqp:sasl-outcome:list"), 
+        UnsignedLong.valueOf(0x0000000000000044L), Symbol.valueOf("amqp:sasl-outcome:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000044L);
     private final SaslOutcomeWrapper _wrapper = new SaslOutcomeWrapper();
-    
+
     private UnsignedByte _code;
     private Binary _additionalData;
 
@@ -70,7 +70,7 @@ public class SaslOutcome
     {
         _additionalData = additionalData;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -80,7 +80,7 @@ public class SaslOutcome
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -89,7 +89,7 @@ public class SaslOutcome
             case 0:
                 return _code;
             case 1:
-                return _additionalData;            
+                return _additionalData;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -98,10 +98,15 @@ public class SaslOutcome
 
     public int size()
     {
-        return _additionalData != null 
-                  ? 2 
-                  : 1;        
+        return _additionalData != null
+                  ? 2
+                  : 1;
 
+    }
+
+    public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
+    {
+        handler.handleOutcome(this, payload, context);
     }
 
 
@@ -163,4 +168,3 @@ public class SaslOutcome
         }
     }
 }
-  

@@ -124,4 +124,9 @@ class TransportLink<T extends LinkImpl>
     {
         _deliveryCount = deliveryCount;
     }
+
+    public void settled(TransportDelivery transportDelivery)
+    {
+        getLink().getSession().getTransportSession().settled(transportDelivery);
+    }
 }

@@ -36,10 +36,12 @@
 
   <target name="doc" depends="apidoc"/>
 
-  <target name="dist" depends="compile,doc" description="generate the distribution">
+  <target name="jar" depends="compile">
     <mkdir dir="${dist}/lib"/>
-
     <jar jarfile="${dist}/lib/qpidproton.jar" basedir="${classes}"/>
+  </target>
+
+  <target name="dist" depends="jar,doc" description="generate the distribution">
     <zip destfile="${dist}/docs.zip" basedir="${docs}"/>
     <zip destfile="${dist}/srcs.zip" basedir="${basedir}" excludes="build/**,dist/**"/>
   </target>

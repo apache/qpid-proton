@@ -37,12 +37,12 @@ public class SaslChallenge
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000042L), Symbol.valueOf("amqp:sasl-challenge:list"), 
+        UnsignedLong.valueOf(0x0000000000000042L), Symbol.valueOf("amqp:sasl-challenge:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000042L);
     private final SaslChallengeWrapper _wrapper = new SaslChallengeWrapper();
-    
+
     private Binary _challenge;
 
     public Binary getChallenge()
@@ -59,7 +59,7 @@ public class SaslChallenge
 
         _challenge = challenge;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -69,14 +69,14 @@ public class SaslChallenge
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
         switch(index)
         {
             case 0:
-                return _challenge;            
+                return _challenge;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -85,8 +85,13 @@ public class SaslChallenge
 
     public int size()
     {
-        return 1;        
+        return 1;
 
+    }
+
+    public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
+    {
+        handler.handleChallenge(this, payload, context);
     }
 
 
@@ -146,4 +151,3 @@ public class SaslChallenge
         }
     }
 }
-  

@@ -20,6 +20,19 @@
  */
 package org.apache.qpid.proton.type.security;
 
-public interface SaslFrameBody
+import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.type.DescribedType;
+
+public interface SaslFrameBody extends DescribedType
 {
+    interface SaslFrameBodyHandler<E>
+    {
+        void handleMechanisms(SaslMechanisms saslMechanisms, Binary payload, E context);
+        void handleInit(SaslInit saslInit, Binary payload, E context);
+        void handleChallenge(SaslChallenge saslChallenge, Binary payload, E context);
+        void handleResponse(SaslResponse saslResponse, Binary payload, E context);
+        void handleOutcome(SaslOutcome saslOutcome, Binary payload, E context);
+    }
+
+    <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context);
 }

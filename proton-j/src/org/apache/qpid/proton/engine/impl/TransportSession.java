@@ -36,9 +36,11 @@ class TransportSession
     private int _remoteChannel = -1;
     private boolean _openSent;
     private UnsignedInteger       _handleMax = UnsignedInteger.valueOf(1024);
-    private UnsignedInteger _incomingWindowSize = UnsignedInteger.valueOf(1024);
-    private UnsignedInteger _outgoingWindowSize = UnsignedInteger.valueOf(1024);
+    private UnsignedInteger _incomingWindowSize = UnsignedInteger.valueOf(TransportImpl.SESSION_WINDOW);
+    private UnsignedInteger _outgoingWindowSize = UnsignedInteger.valueOf(TransportImpl.SESSION_WINDOW);
     private UnsignedInteger _nextOutgoingId = UnsignedInteger.ONE;
+    private UnsignedInteger _nextIncomingId = null;
+
     private TransportLink[] _remoteHandleMap = new TransportLink[1024];
     private TransportLink[] _localHandleMap = new TransportLink[1024];
     private Map<String, TransportLink> _halfOpenLinks = new HashMap<String, TransportLink>();
@@ -47,12 +49,15 @@ class TransportSession
     private UnsignedInteger _currentDeliveryId;
     private UnsignedInteger _remoteIncomingWindow;
     private UnsignedInteger _remoteOutgoingWindow;
-    private UnsignedInteger _remoteNextIncomingId;
+    private UnsignedInteger _remoteNextIncomingId = _nextOutgoingId;
     private UnsignedInteger _remoteNextOutgoingId;
     private Map<UnsignedInteger, DeliveryImpl>
             _unsettledIncomingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
     private Map<UnsignedInteger, DeliveryImpl>
             _unsettledOutgoingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
+    private int _unsettledIncomingSize;
+    private boolean _incomingWindowSizeChange;
+    private boolean _outgoingWindowSizeChange;
 
     public TransportSession(SessionImpl session)
     {
@@ -130,6 +135,18 @@ class TransportSession
         return _outgoingWindowSize;
     }
 
+    public void incrementOutgoingWindow()
+    {
+        _outgoingWindowSize = _outgoingWindowSize.add(UnsignedInteger.ONE);
+    }
+
+    public void decrementOutgoingWindow()
+    {
+        _outgoingWindowSize = _outgoingWindowSize.subtract(UnsignedInteger.ONE);
+    }
+
+
+
     public UnsignedInteger getNextOutgoingId()
     {
         return _nextOutgoingId;
@@ -186,13 +203,14 @@ class TransportSession
     public void handleTransfer(Transfer transfer, Binary payload)
     {
         DeliveryImpl delivery;
+        incrementNextIncomingId();
         if(transfer.getDeliveryId() == null || transfer.getDeliveryId().equals(_currentDeliveryId))
         {
             TransportReceiver transportReceiver = (TransportReceiver) getLinkFromRemoteHandle(transfer.getHandle());
             ReceiverImpl receiver = transportReceiver.getReceiver();
             Binary deliveryTag = transfer.getDeliveryTag();
             delivery = _unsettledIncomingDeliveriesById.get(_currentDeliveryId);
-
+            delivery.getTransportDelivery().incrementSessionSize();
 
         }
         else
@@ -211,6 +229,7 @@ class TransportSession
 
 
         }
+        _unsettledIncomingSize++;
         // TODO - should this be a copy?
         if(payload != null)
         {
@@ -248,7 +267,10 @@ class TransportSession
     {
         setRemoteIncomingWindow(flow.getIncomingWindow());
         setRemoteOutgoingWindow(flow.getOutgoingWindow());
-        setRemoteNextIncomingId(flow.getNextIncomingId());
+        if(flow.getNextIncomingId() != null)
+        {
+            setRemoteNextIncomingId(flow.getNextIncomingId());
+        }
         setRemoteNextOutgoingId(flow.getNextOutgoingId());
 
         if(flow.getHandle() != null)
@@ -288,6 +310,12 @@ class TransportSession
                 {
                     delivery.setRemoteDeliveryState(DeliveryStateConverter.convert(disposition.getState()));
                 }
+                if(Boolean.TRUE.equals(disposition.getSettled()))
+                {
+                    delivery.setRemoteSettled(true);
+
+                }
+                delivery.addToWorkList();
             }
             id = id.add(UnsignedInteger.ONE);
         }
@@ -297,5 +325,72 @@ class TransportSession
     void addUnsettledOutgoing(UnsignedInteger deliveryId, DeliveryImpl delivery)
     {
         _unsettledOutgoingDeliveriesById.put(deliveryId, delivery);
+        _outgoingWindowSize = _outgoingWindowSize.subtract(UnsignedInteger.valueOf(delivery.getTransportDelivery().getSessionSize()));
+    }
+
+    public boolean hasOutgoingCredit()
+    {
+        return _remoteIncomingWindow == null
+                   ? false
+                   : _remoteIncomingWindow.add(_remoteNextIncomingId).compareTo(_nextOutgoingId)>0
+                     && _outgoingWindowSize.compareTo(UnsignedInteger.ZERO)>0;
+
+    }
+
+    void incrementOutgoingId()
+    {
+        _nextOutgoingId = _nextOutgoingId.add(UnsignedInteger.ONE);
+    }
+
+    public void settled(TransportDelivery transportDelivery)
+    {
+        if(transportDelivery.getTransportLink().getLink() instanceof ReceiverImpl)
+        {
+            _incomingWindowSize = _incomingWindowSize.add( UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
+            _incomingWindowSizeChange = true;
+            getSession().modified();
+        }
+        else
+        {
+            _outgoingWindowSize = _outgoingWindowSize.add(UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
+            _outgoingWindowSizeChange = true;
+            getSession().modified();
+        }
+    }
+
+    public boolean clearIncomingWindowResize()
+    {
+        if(_incomingWindowSizeChange)
+        {
+            _incomingWindowSizeChange = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean clearOutgoingWindowResize()
+    {
+        if(_outgoingWindowSizeChange)
+        {
+            _outgoingWindowSizeChange = false;
+            return true;
+        }
+        return false;
+    }
+
+
+    public UnsignedInteger getNextIncomingId()
+    {
+        return _nextIncomingId;
+    }
+
+    public void setNextIncomingId(UnsignedInteger nextIncomingId)
+    {
+        _nextIncomingId = nextIncomingId;
+    }
+
+    public void incrementNextIncomingId()
+    {
+        _nextIncomingId = _nextIncomingId.add(UnsignedInteger.ONE);
     }
 }

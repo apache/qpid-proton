@@ -37,6 +37,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private String _remoteSourceAddress;
     private String _localTargetAddress;
     private String _remoteTargetAddress;
+    private int _queued;
+    private int _credit;
 
     private LinkNode<LinkImpl> _node;
 
@@ -70,6 +72,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
+        try
+        {
         DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);
         if(_tail == null)
         {
@@ -82,6 +86,12 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         }
         getConnectionImpl().workUpdate(delivery);
         return delivery;
+        }
+        catch(RuntimeException e)
+        {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public void free()
@@ -116,7 +126,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         if(_current != null )
         {
-            _current.setDone();
             DeliveryImpl oldCurrent = _current;
             _current = _current.getLinkNext();
             getConnectionImpl().workUpdate(oldCurrent);
@@ -140,7 +149,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _session.getConnectionImpl();
     }
 
-    SessionImpl getSession()
+    public SessionImpl getSession()
     {
         return _session;
     }
@@ -202,4 +211,49 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     abstract TransportLink getTransportLink();
 
     abstract boolean workUpdate(DeliveryImpl delivery);
+
+    public int getCredit()
+    {
+        return _credit;
+    }
+
+    public void addCredit(int credit)
+    {
+        _credit+=credit;
+    }
+
+    public void setCredit(int credit)
+    {
+        _credit = credit;
+    }
+
+    boolean hasCredit()
+    {
+        return _credit > 0;
+    }
+
+    void incrementCredit()
+    {
+        _credit++;
+    }
+
+    void decrementCredit()
+    {
+        _credit--;
+    }
+
+    public int getQueued()
+    {
+        return _queued;
+    }
+
+    void incrementQueued()
+    {
+        _queued++;
+    }
+
+    void decrementQueued()
+    {
+        _queued--;
+    }
 }

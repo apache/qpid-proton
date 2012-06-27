@@ -22,6 +22,7 @@ from org.apache.qpid.proton.message import *
 from jarray import zeros
 from java.util import EnumSet
 
+PN_SESSION_WINDOW = impl.TransportImpl.SESSION_WINDOW
 PN_EOS = Transport.END_OF_STREAM
 
 PN_LOCAL_UNINIT = 1
@@ -117,7 +118,7 @@ def pn_transport(c):
   return c.transport()
 
 def pn_trace(t, lvl):
-  # XXX: fix up later
+  t.setLogLevel(lvl)
   pass
 
 def pn_output(t, size):
@@ -155,6 +156,9 @@ def pn_link_close(lnk):
 
 def pn_work_head(c):
   return c.getWorkHead()
+
+def pn_work_next(d):
+  return d.getWorkNext()
 
 def pn_flow(rcv, n):
   return rcv.flow(n)
@@ -354,6 +358,14 @@ def pn_message_decode(m,f,data,size):
     m.decode(f,data,0,size)
     return 0
 
+def pn_get_connection(s):
+  return s.getConnection()
 
+def pn_get_session(l):
+  return l.getSession()
 
+def pn_credit(l):
+  return l.getCredit()
 
+def pn_queued(l):
+  return l.getQueued()

@@ -37,12 +37,12 @@ public class SaslResponse
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000043L), Symbol.valueOf("amqp:sasl-response:list"), 
+        UnsignedLong.valueOf(0x0000000000000043L), Symbol.valueOf("amqp:sasl-response:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000043L);
     private final SaslResponseWrapper _wrapper = new SaslResponseWrapper();
-    
+
     private Binary _response;
 
     public Binary getResponse()
@@ -59,7 +59,7 @@ public class SaslResponse
 
         _response = response;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -69,14 +69,14 @@ public class SaslResponse
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
         switch(index)
         {
             case 0:
-                return _response;            
+                return _response;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -85,8 +85,13 @@ public class SaslResponse
 
     public int size()
     {
-        return 1;        
+        return 1;
 
+    }
+
+    public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
+    {
+        handler.handleResponse(this, payload, context);
     }
 
 
@@ -146,4 +151,3 @@ public class SaslResponse
         }
     }
 }
-  

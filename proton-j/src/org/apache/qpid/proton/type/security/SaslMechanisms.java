@@ -37,12 +37,12 @@ public class SaslMechanisms
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000040L), Symbol.valueOf("amqp:sasl-mechanisms:list"), 
+        UnsignedLong.valueOf(0x0000000000000040L), Symbol.valueOf("amqp:sasl-mechanisms:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000040L);
     private final SaslMechanismsWrapper _wrapper = new SaslMechanismsWrapper();
-    
+
     private Symbol[] _saslServerMechanisms;
 
     public Symbol[] getSaslServerMechanisms()
@@ -59,7 +59,7 @@ public class SaslMechanisms
 
         _saslServerMechanisms = saslServerMechanisms;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -69,14 +69,14 @@ public class SaslMechanisms
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
         switch(index)
         {
             case 0:
-                return _saslServerMechanisms;            
+                return _saslServerMechanisms;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -85,8 +85,13 @@ public class SaslMechanisms
 
     public int size()
     {
-        return 1;        
+        return 1;
 
+    }
+
+    public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
+    {
+        handler.handleMechanisms(this, payload, context);
     }
 
 
@@ -154,4 +159,3 @@ public class SaslMechanisms
         }
     }
 }
-  

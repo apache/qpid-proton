@@ -37,12 +37,12 @@ public class SaslInit
 {
     private static final Object[] DESCRIPTORS =
     {
-        UnsignedLong.valueOf(0x0000000000000041L), Symbol.valueOf("amqp:sasl-init:list"), 
+        UnsignedLong.valueOf(0x0000000000000041L), Symbol.valueOf("amqp:sasl-init:list"),
     };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000041L);
     private final SaslInitWrapper _wrapper = new SaslInitWrapper();
-    
+
     private Symbol _mechanism;
     private Binary _initialResponse;
     private String _hostname;
@@ -81,7 +81,7 @@ public class SaslInit
     {
         _hostname = hostname;
     }
-    
+
     public Object getDescriptor()
     {
         return DESCRIPTOR;
@@ -91,7 +91,7 @@ public class SaslInit
     {
         return _wrapper;
     }
-    
+
     public Object get(final int index)
     {
 
@@ -102,7 +102,7 @@ public class SaslInit
             case 1:
                 return _initialResponse;
             case 2:
-                return _hostname;            
+                return _hostname;
         }
 
         throw new IllegalStateException("Unknown index " + index);
@@ -111,12 +111,17 @@ public class SaslInit
 
     public int size()
     {
-        return _hostname != null 
-                  ? 3 
-                  : _initialResponse != null 
-                  ? 2 
-                  : 1;        
+        return _hostname != null
+                  ? 3
+                  : _initialResponse != null
+                  ? 2
+                  : 1;
 
+    }
+
+    public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
+    {
+        handler.handleInit(this, payload, context);
     }
 
 
@@ -180,4 +185,3 @@ public class SaslInit
         }
     }
 }
-  

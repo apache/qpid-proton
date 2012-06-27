@@ -26,8 +26,32 @@ import org.apache.qpid.proton.engine.Sequence;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
 {
-    private int _credits;
+    @Override
+    public DeliveryImpl delivery(byte[] tag, int offset, int length)
+    {
+        incrementQueued();
+        return super.delivery(tag, offset, length);
+    }
+
+    @Override
+    public boolean advance()
+    {
+        if(current() != null)
+        {
+            current().setDone();
+        }
+        final boolean advance = super.advance();
+        if(advance)
+        {
+            decrementQueued();
+            decrementCredit();
+        }
+        return advance;
+    }
+
     private TransportReceiver _transportReceiver;
+    private int _unsentCredits;
+
 
     public ReceiverImpl(SessionImpl session, String name)
     {
@@ -37,18 +61,14 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     public void flow(final int credits)
     {
         modified();
-        _credits += credits;
+        addCredit(credits);
+        _unsentCredits += credits;
     }
 
-    int getCredits()
+    int clearUnsentCredits()
     {
-        return _credits;
-    }
-
-    int clearCredits()
-    {
-        int credits = _credits;
-        _credits = 0;
+        int credits = _unsentCredits;
+        _unsentCredits = 0;
         return credits;
     }
 
@@ -92,4 +112,5 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     {
         return (delivery == current());
     }
+
 }

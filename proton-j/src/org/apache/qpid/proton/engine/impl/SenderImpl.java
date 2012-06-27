@@ -26,7 +26,6 @@ import org.apache.qpid.proton.engine.Sequence;
 
 public class SenderImpl  extends LinkImpl implements Sender
 {
-    private int _credit;
     private int _offered;
     private TransportSender _transportLink;
 
@@ -72,22 +71,19 @@ public class SenderImpl  extends LinkImpl implements Sender
     public boolean advance()
     {
         DeliveryImpl delivery = current();
-        boolean advance = hasCredit() && super.advance();
+        boolean advance = super.advance();
         if(advance && _offered > 0)
         {
             _offered--;
-            _credit--;
         }
         if(advance)
         {
+            decrementCredit();
+
             delivery.addToTransportWorkList();
         }
-        return advance;
-    }
 
-    boolean hasCredit()
-    {
-        return _credit > 0;
+        return advance;
     }
 
     boolean hasOfferedCredits()
@@ -106,14 +102,20 @@ public class SenderImpl  extends LinkImpl implements Sender
         _transportLink = transportLink;
     }
 
-    public void setCredit(int credit)
-    {
-        _credit = credit;
-    }
 
     @Override
     boolean workUpdate(DeliveryImpl delivery)
     {
         return (delivery == current()) && hasCredit();
+    }
+
+    @Override
+    public void setCredit(int credit)
+    {
+        super.setCredit(credit);
+       /* while(getQueued()>0 && getCredit()>0)
+        {
+            advance();
+        }*/
     }
 }
