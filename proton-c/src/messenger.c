@@ -24,9 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <uuid/uuid.h>
 #include "util.h"
 
 struct pn_messenger_t {
+  char *name;
   pn_driver_t *driver;
   pn_connector_t *connectors[1024];
   size_t size;
@@ -36,11 +38,25 @@ struct pn_messenger_t {
   pn_error_t *error;
 };
 
-pn_messenger_t *pn_messenger()
+char *build_name(const char *name)
+{
+  if (name) {
+    return pn_strdup(name);
+  } else {
+    char *generated = malloc(37*sizeof(char));
+    uuid_t uuid;
+    uuid_generate(uuid);
+    uuid_unparse_lower(uuid, generated);
+    return generated;
+  }
+}
+
+pn_messenger_t *pn_messenger(const char *name)
 {
   pn_messenger_t *m = malloc(sizeof(pn_messenger_t));
 
   if (m) {
+    m->name = build_name(name);
     m->driver = pn_driver();
     m->size = 0;
     m->listeners = 0;
@@ -52,9 +68,15 @@ pn_messenger_t *pn_messenger()
   return m;
 }
 
+const char *pn_messenger_name(pn_messenger_t *messenger)
+{
+  return messenger->name;
+}
+
 void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
+    free(messenger->name);
     pn_driver_free(messenger->driver);
     pn_error_free(messenger->error);
   }
@@ -166,7 +188,7 @@ int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_
       pn_sasl_server(sasl);
       pn_sasl_done(sasl, PN_SASL_OK);
       pn_connection_t *conn = pn_connection();
-      pn_connection_set_container(conn, pn_listener_context(l));
+      pn_connection_set_container(conn, messenger->name);
       pn_connector_set_connection(c, conn);
       messenger->connectors[messenger->size++] = c;
     }
@@ -294,7 +316,7 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
   pn_sasl_client(sasl);
   pn_connection_t *connection = pn_connection();
-  pn_connection_set_container(connection, domain);
+  pn_connection_set_container(connection, messenger->name);
   pn_connection_set_hostname(connection, domain);
   pn_connection_open(connection);
   pn_connector_set_connection(connector, connection);
@@ -360,7 +382,7 @@ pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *sourc
   char *name;
   parse_address(buf, &domain, &name);
 
-  pn_listener_t *listener = pn_listener(messenger->driver, domain + 1, "5672", pn_strdup(domain + 1));
+  pn_listener_t *listener = pn_listener(messenger->driver, domain + 1, "5672", NULL);
   if (listener) {
     messenger->listeners++;
   }
@@ -369,7 +391,8 @@ pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *sourc
 
 int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
-  if (strlen(source) >= 3 && source[0] == '/' && source[1] == '/' && source[2] == '~') {
+  int len = strlen(source);
+  if (len >= 3 && source[0] == '/' && source[1] == '/' && source[2] == '~') {
     pn_listener_t *lnr = pn_messenger_isource(messenger, source);
     if (lnr) {
       return 0;
@@ -377,7 +400,7 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
       return pn_error_format(messenger->error, PN_ERR,
                              "unable to subscribe to source: %s", source);
     }
-  } else {
+  } else if (len >= 2 && source[0] == '/' && source[1] == '/') {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (src) {
       return 0;
@@ -385,6 +408,23 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
       return pn_error_format(messenger->error, PN_ERR,
                              "unable to subscribe to source: %s", source);
     }
+  } else {
+    return 0;
+  }
+}
+
+static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
+{
+  const char *address = pn_message_get_reply_to(msg);
+  int len = address ? strlen(address) : 0;
+  if (len > 0 && address[0] != '/') {
+    char buf[len + strlen(mng->name) + 4];
+    sprintf(buf, "//%s/%s", mng->name, address);
+    pn_message_set_reply_to(msg, buf);
+  } else if (len == 0) {
+    char buf[strlen(mng->name) + 4];
+    sprintf(buf, "//%s", mng->name);
+    pn_message_set_reply_to(msg, buf);
   }
 }
 
@@ -392,6 +432,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 {
   if (!messenger) return PN_ARG_ERR;
   if (!msg) return pn_error_set(messenger->error, PN_ARG_ERR, "null message");
+  outward_munge(messenger, msg);
   const char *address = pn_message_get_address(msg);
   pn_link_t *sender = pn_messenger_target(messenger, address);
   if (!sender)
@@ -505,11 +546,12 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         pn_settle(d);
         if (n < 0) return n;
         int err = pn_message_decode(msg, buf, n);
-        if (err)
+        if (err) {
           return pn_error_format(messenger->error, err, "error decoding message: %s",
                                  pn_message_error(msg));
-        else
+        } else {
           return 0;
+        }
       }
       d = pn_work_next(d);
     }

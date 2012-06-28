@@ -20,8 +20,8 @@
 import sys, optparse
 from xproton import *
 
-parser = optparse.OptionParser(usage="usage: %prog [options] <addr_1> ... <addr_n>",
-                               description="simple message receiver")
+parser = optparse.OptionParser(usage="usage: %prog <addr_1> ... <addr_n>",
+                               description="simple message server")
 
 opts, args = parser.parse_args()
 
@@ -29,6 +29,7 @@ if not args:
   args = ["//~0.0.0.0"]
 
 mng = pn_messenger(None)
+print pn_messenger_name(mng)
 pn_messenger_start(mng)
 
 for a in args:
@@ -36,22 +37,34 @@ for a in args:
     print pn_messenger_error(mng)
     break
 
+def dispatch(request, response):
+  subject = pn_message_get_subject(request)
+  pn_message_set_subject(response, "Re: %s" % subject)
+  print "Dispatched %s" % subject
+
 msg = pn_message()
+reply = pn_message()
+
 while True:
-  if pn_messenger_recv(mng, 10):
-    print pn_messenger_error(mng)
-    break
-  while pn_messenger_incoming(mng):
+  if pn_messenger_incoming(mng) < 10:
+    if pn_messenger_recv(mng, 10):
+      print pn_messenger_error(mng)
+      break
+  if pn_messenger_incoming(mng) > 0:
     if pn_messenger_get(mng, msg):
       print pn_messenger_error(mng)
     else:
-      cd, body = pn_message_save(msg, 1024)
-      if cd:
-        print pn_message_error(msg)
-      else:
-        print pn_message_get_address(msg), \
-            pn_message_get_subject(msg) or "(no subject)", \
-            body
+      reply_to = pn_message_get_reply_to(msg)
+      cid = pn_message_get_correlation_id(msg)
+      if reply_to:
+        pn_message_set_address(reply, reply_to)
+      if cid:
+        pn_message_set_correlation_id(reply, cid)
+      dispatch(msg, reply)
+      if pn_messenger_put(mng, reply):
+        print pn_messenger_error(mng)
+      if pn_messenger_send(mng):
+        print pn_messenger_error(mng)
 
 pn_messenger_stop(mng)
 pn_messenger_free(mng)

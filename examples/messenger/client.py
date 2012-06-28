@@ -20,30 +20,34 @@
 import sys, optparse
 from xproton import *
 
-parser = optparse.OptionParser(usage="usage: %prog [options] <msg_1> ... <msg_n>",
-                               description="simple message sender")
-parser.add_option("-a", "--address", default="//0.0.0.0",
+parser = optparse.OptionParser(usage="usage: %prog <addr> <subject>",
+                               description="simple message server")
+
+parser.add_option("-r", "--reply_to", default="replies",
                   help="address: //<domain>[/<name>] (default %default)")
 
 opts, args = parser.parse_args()
-if not args:
-  args = ["Hello World!"]
+
+if len(args) != 2:
+  parser.error("incorrect number of arguments")
+
+address, subject = args
 
 mng = pn_messenger(None)
 pn_messenger_start(mng)
 
 msg = pn_message()
-for m in args:
-  pn_message_set_address(msg, opts.address)
-  pn_message_load(msg, m)
-  if pn_messenger_put(mng, msg):
-    print pn_messenger_error(mng)
-    break
+pn_message_set_address(msg, address)
+pn_message_set_subject(msg, subject)
+pn_message_set_reply_to(msg, opts.reply_to)
 
-if pn_messenger_send(mng):
-  print pn_messenger_error(mng)
-else:
-  print "sent:", ", ".join(args)
+if pn_messenger_put(mng, msg): print pn_messenger_error(mng)
+if pn_messenger_send(mng): print pn_messenger_error(mng)
+
+if opts.reply_to[:2] != "//":
+  if pn_messenger_recv(mng, 1): print pn_messenger_error(mng)
+  elif pn_messenger_get(mng, msg): print pn_messenger_error(mng)
+  else: print pn_message_get_address(msg), pn_message_get_subject(msg)
 
 pn_messenger_stop(mng)
 pn_messenger_free(mng)

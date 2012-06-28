@@ -4,6 +4,7 @@ project (Proton)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
+set (LINK_DEPS uuid)
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
@@ -57,7 +58,7 @@ if (SWIG_FOUND)
 endif (SWIG_FOUND)
 
 add_executable (proton src/proton.c)
-target_link_libraries (proton qpidproton)
+target_link_libraries (proton qpidproton ${LINK_DEPS})
 
 add_subdirectory(docs/api)
 

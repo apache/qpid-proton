@@ -418,6 +418,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     msg->body = pn_data(64);
   }
 
+  pn_data_clear(msg->body);
+
   while (size) {
     size_t copy = size;
     pn_data_clear(msg->data);
@@ -641,7 +643,7 @@ int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
 {
   if (!msg) return PN_ARG_ERR;
 
-  if (!msg->body) {
+  if (!msg->body || pn_data_size(msg->body) == 0) {
     *size = 0;
     return 0;
   }

@@ -31,11 +31,22 @@
 
 typedef struct pn_messenger_t pn_messenger_t; /**< Messenger*/
 
-/** Constructs a new Messenger.
+/** Construct a new Messenger with the given name. The name is global.
+ * If a NULL name is supplied, a UUID based name will be chosen.
+ *
+ * @param[in] name the name of the messenger or NULL
  *
  * @return pointer to a new Messenger
  */
-pn_messenger_t *pn_messenger();
+pn_messenger_t *pn_messenger(const char *name);
+
+/** Retrieves the name of a Messenger.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return the name of the messenger
+ */
+const char *pn_messenger_name(pn_messenger_t *messenger);
 
 /** Frees a Messenger.
  *
