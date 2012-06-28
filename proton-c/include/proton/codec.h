@@ -101,6 +101,7 @@ int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap);
 typedef struct pn_data_t pn_data_t;
 
 pn_data_t *pn_data(size_t capacity);
+size_t pn_data_size(pn_data_t *data);
 void pn_data_free(pn_data_t *data);
 int pn_data_clear(pn_data_t *data);
 int pn_data_grow(pn_data_t *data);
