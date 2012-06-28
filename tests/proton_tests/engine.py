@@ -528,7 +528,7 @@ class CreditTest(Test):
       self.pump()
       idx += 1
 
-    assert idx == 1034, idx
+    assert idx == PN_SESSION_WINDOW + 10, idx
 
     assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
 
@@ -637,6 +637,7 @@ class CreditTest(Test):
       self.pump()
       idx += 1
 
+    assert idx == PN_SESSION_WINDOW + 10, idx
     assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
 
     pn_flow(self.rcv, 1)
