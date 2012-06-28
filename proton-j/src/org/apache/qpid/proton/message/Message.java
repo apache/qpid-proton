@@ -18,6 +18,7 @@ public class Message
     private ApplicationProperties _applicationProperties;
     private Section _body;
     private Footer _footer;
+    private MessageFormat _format = MessageFormat.AMQP;
 
     public Message()
     {
@@ -437,7 +438,7 @@ public class Message
         return _footer;
     }
 
-    public int decode(MessageFormat format, byte[] data, int offset, int length)
+    public int decode(byte[] data, int offset, int length)
     {
         DecoderImpl decoder = new DecoderImpl();
         EncoderImpl encoder = new EncoderImpl(decoder);
@@ -552,7 +553,7 @@ public class Message
 
     }
 
-    public int encode(MessageFormat format, byte[] data, int offset, int length)
+    public int encode(byte[] data, int offset, int length)
     {
         DecoderImpl decoder = new DecoderImpl();
         EncoderImpl encoder = new EncoderImpl(decoder);
@@ -590,6 +591,76 @@ public class Message
         }
 
         return length - buffer.remaining();
+    }
+
+    public void load(Object data)
+    {
+        switch (_format)
+        {
+            case DATA:
+                Binary binData;
+                if(data instanceof byte[])
+                {
+                    binData = new Binary((byte[])data);
+                }
+                else if(data instanceof Binary)
+                {
+                    binData = (Binary) data;
+                }
+                else
+                {
+                    binData = null;
+                }
+                _body = new Data(binData);
+            default:
+                // AMQP
+                _body = new AmqpValue(data);
+        }
+
+    }
+
+    public Object save()
+    {
+        switch (_format)
+        {
+            case DATA:
+                if(_body instanceof Data)
+                {
+                    return ((Data)_body).getValue().getArray();
+                }
+                else return null;
+            case AMQP:
+                if(_body instanceof AmqpValue)
+                {
+                    return ((AmqpValue)_body).getValue();
+                }
+                else
+                {
+                    return null;
+                }
+            default:
+                return null;
+        }
+    }
+
+    public void setMessageFormat(MessageFormat format)
+    {
+        _format = format;
+    }
+
+    public MessageFormat getMessageFormat()
+    {
+        return _format;
+    }
+
+    public void clear()
+    {
+        _body = null;
+    }
+
+    public MessageError getError()
+    {
+        return MessageError.OK;
     }
 
 }

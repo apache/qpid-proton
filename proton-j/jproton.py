@@ -41,6 +41,8 @@ PN_MODIFIED = 5
 PN_DEFAULT_PRIORITY = Message.DEFAULT_PRIORITY
 
 PN_AMQP = MessageFormat.AMQP
+PN_TEXT = MessageFormat.TEXT
+PN_DATA = MessageFormat.DATA
 
 def enums(mask):
   local = []
@@ -223,6 +225,28 @@ def pn_local_disposition(d):
 def pn_settle(d):
   d.settle()
 
+
+def pn_get_connection(s):
+  return s.getConnection()
+
+def pn_get_session(l):
+  return l.getSession()
+
+def pn_credit(l):
+  return l.getCredit()
+
+def pn_queued(l):
+  return l.getQueued()
+
+def pn_unsettled(l):
+  return l.getUnsettled()
+
+def pn_drain(l, c):
+  l.drain(c)
+
+def pn_drained(l):
+  l.drained()
+
 def pn_message():
   return Message()
 
@@ -278,6 +302,17 @@ def pn_message_get_user_id(m):
 def pn_message_set_user_id(m, u):
   m.setUserId(u)
   return 0
+
+def pn_message_load(m, d):
+  m.load(d)
+  return 0
+
+def pn_message_save(m, s):
+  saved = m.save()
+  if saved is None:
+    saved = ""
+  return 0, saved
+
 
 def pn_message_get_address(m):
   return m.getAddress()
@@ -359,35 +394,26 @@ def pn_message_set_reply_to_group_id(m,d):
 def pn_message_free(m):
   return
 
-def pn_message_encode(m,f,size):
+def pn_message_encode(m,size):
     output = zeros(size, "b")
-    n = m.encode(f, output, 0, size)
+    n = m.encode(output, 0, size)
     result = ""
     if n > 0:
       result = output.tostring()[:n]
     return [0, result]
 
-def pn_message_decode(m,f,data,size):
-    m.decode(f,data,0,size)
+def pn_message_decode(m,data,size):
+    m.decode(data,0,size)
     return 0
 
-def pn_get_connection(s):
-  return s.getConnection()
+def pn_message_set_format(m, f):
+    m.setMessageFormat(f)
 
-def pn_get_session(l):
-  return l.getSession()
+def pn_message_get_format(m):
+    return m.getMessageFormat()
 
-def pn_credit(l):
-  return l.getCredit()
+def pn_message_clear(m):
+    m.clear()
 
-def pn_queued(l):
-  return l.getQueued()
-
-def pn_unsettled(l):
-  return l.getUnsettled()
-
-def pn_drain(l, c):
-  l.drain(c)
-
-def pn_drained(l):
-  l.drained()
+def pn_message_error(m):
+    return m.getError().ordinal()
