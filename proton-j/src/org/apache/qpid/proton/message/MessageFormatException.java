@@ -21,7 +21,10 @@
 
 package org.apache.qpid.proton.message;
 
-public enum MessageError
+public class MessageFormatException extends RuntimeException
 {
-    OK
+    public MessageFormatException(String message, CharSequence value)
+    {
+        super(message + ": "+ value);
+    }
 }

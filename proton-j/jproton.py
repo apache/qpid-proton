@@ -311,6 +311,8 @@ def pn_message_save(m, s):
   saved = m.save()
   if saved is None:
     saved = ""
+  elif not isinstance(saved, unicode):
+    saved = saved.tostring()
   return 0, saved
 
 

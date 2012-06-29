@@ -11,6 +11,8 @@ public class Message
 {
     public static final short DEFAULT_PRIORITY = 4;
 
+    private final AMQPMessageFormat _parser = new AMQPMessageFormat();
+
     private Header _header;
     private DeliveryAnnotations _deliveryAnnotations;
     private MessageAnnotations _messageAnnotations;
@@ -18,7 +20,7 @@ public class Message
     private ApplicationProperties _applicationProperties;
     private Section _body;
     private Footer _footer;
-    private MessageFormat _format = MessageFormat.AMQP;
+    private MessageFormat _format = MessageFormat.DATA;
 
     public Message()
     {
@@ -607,14 +609,28 @@ public class Message
                 {
                     binData = (Binary) data;
                 }
+                else if(data instanceof String)
+                {
+                    final String strData = (String) data;
+                    byte[] bin = new byte[strData.length()];
+                    for(int i = 0; i < bin.length; i++)
+                    {
+                        bin[i] = (byte) strData.charAt(i);
+                    }
+                    binData = new Binary(bin);
+                }
                 else
                 {
                     binData = null;
                 }
                 _body = new Data(binData);
+                break;
+            case TEXT:
+                _body = new AmqpValue(data == null ? "" : data.toString());
+                break;
             default:
                 // AMQP
-                _body = new AmqpValue(data);
+                _body = new AmqpValue(parseAMQPFormat((String) data));
         }
 
     }
@@ -632,15 +648,34 @@ public class Message
             case AMQP:
                 if(_body instanceof AmqpValue)
                 {
-                    return ((AmqpValue)_body).getValue();
+                    return toAMQPFormat(((AmqpValue) _body).getValue());
                 }
                 else
                 {
                     return null;
                 }
+            case TEXT:
+                if(_body instanceof AmqpValue)
+                {
+                    final Object value = ((AmqpValue) _body).getValue();
+                    return value == null ? "" : value.toString();
+                }
+                return null;
             default:
                 return null;
         }
+    }
+
+    private String toAMQPFormat(Object value)
+    {
+        return _parser.encode(value);
+    }
+
+    private Object parseAMQPFormat(String value)
+    {
+
+        Object obj = _parser.format(value);
+        return obj;
     }
 
     public void setMessageFormat(MessageFormat format)

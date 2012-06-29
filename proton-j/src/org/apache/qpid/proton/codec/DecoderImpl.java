@@ -968,5 +968,19 @@ public class DecoderImpl implements ByteBufferDecoder
         {
             return _described;
         }
+
+
+        @Override
+        public boolean equals(Object obj)
+        {
+
+            return obj instanceof DescribedType
+                   && _descriptor == null ? ((DescribedType) obj).getDescriptor() == null
+                                         : _descriptor.equals(((DescribedType) obj).getDescriptor())
+                   && _described == null ?  ((DescribedType) obj).getDescribed() == null
+                                         : _described.equals(((DescribedType) obj).getDescribed());
+
+        }
+
     }
 }
