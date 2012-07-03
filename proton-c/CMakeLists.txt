@@ -60,10 +60,13 @@ endif (SWIG_FOUND)
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpidproton ${LINK_DEPS})
 
+add_executable (proton-dump src/proton-dump.c)
+target_link_libraries (proton-dump qpidproton ${LINK_DEPS})
+
 add_subdirectory(docs/api)
 
 set_target_properties (
-  qpidproton proton
+  qpidproton proton proton-dump
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
 )
