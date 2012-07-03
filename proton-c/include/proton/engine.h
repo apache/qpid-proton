@@ -76,6 +76,7 @@ typedef int pn_trace_t;
 #define PN_TRACE_OFF (0)
 #define PN_TRACE_RAW (1)
 #define PN_TRACE_FRM (2)
+#define PN_TRACE_DRV (4)
 
 #define PN_SESSION_WINDOW (1024)
 

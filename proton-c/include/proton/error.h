@@ -32,6 +32,7 @@ typedef struct pn_error_t pn_error_t;
 #define PN_UNDERFLOW (-4)
 #define PN_STATE_ERR (-5)
 #define PN_ARG_ERR (-6)
+#define PN_TIMEOUT (-7)
 
 const char *pn_code(int code);
 

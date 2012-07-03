@@ -68,11 +68,13 @@ struct pn_listener_t {
 };
 
 #define IO_BUF_SIZE (4*1024)
+#define NAME_MAX (256)
 
 struct pn_connector_t {
   pn_driver_t *driver;
   pn_connector_t *connector_next;
   pn_connector_t *connector_prev;
+  char name[256];
   int idx;
   bool pending_tick;
   bool pending_read;
@@ -165,7 +167,8 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 
   pn_listener_t *l = pn_listener_fd(driver, sock, context);
 
-  printf("Listening on %s:%s\n", host, port);
+  if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+    printf("Listening on %s:%s\n", host, port);
   return l;
 }
 
@@ -226,9 +229,10 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
       return NULL;
     } else {
       pn_configure_sock(sock);
-      if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW))
-        printf("accepted from %s:%s\n", host, serv);
+      if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+        fprintf(stderr, "Accepted from %s:%s\n", host, serv);
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
+      snprintf(c->name, NAME_MAX, "%s:%s", host, serv);
       c->listener = l;
       return c;
     }
@@ -303,7 +307,9 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   freeaddrinfo(addr);
 
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
-  printf("Connected to %s:%s\n", host, port);
+  snprintf(c->name, NAME_MAX, "%s:%s", host, port);
+  if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+    fprintf(stderr, "Connected to %s\n", c->name);
   return c;
 }
 
@@ -332,6 +338,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->pending_tick = false;
   c->pending_read = false;
   c->pending_write = false;
+  c->name[0] = '\0';
   c->idx = 0;
   c->fd = fd;
   c->status = PN_SEL_RD | PN_SEL_WR;
@@ -460,7 +467,7 @@ static void pn_connector_process_input(pn_connector_t *ctor)
       if (n == PN_EOS) {
         pn_connector_consume(ctor, ctor->input_size);
       } else {
-        printf("error in process_input: %s\n", pn_code(n));
+        fprintf(stderr, "error in process_input: %s\n", pn_code(n));
       }
       ctor->input_done = true;
       break;
@@ -658,8 +665,9 @@ void pn_connector_process(pn_connector_t *c) {
       c->pending_write = false;
     }
     if (c->output_size == 0 && c->input_done && c->output_done) {
-      if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW))
-        fprintf(stderr, "closed\n");
+      if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
+        fprintf(stderr, "Closed %s\n", c->name);
+      }
       pn_connector_close(c);
     }
   }
@@ -686,7 +694,8 @@ pn_driver_t *pn_driver()
   d->ctrl[0] = 0;
   d->ctrl[1] = 0;
   d->trace = ((pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
-              (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF));
+              (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
+              (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF));
 
   // XXX
   if (pipe(d->ctrl)) {

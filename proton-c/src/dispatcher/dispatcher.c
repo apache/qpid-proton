@@ -82,8 +82,8 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
     uint8_t code = scanned ? code64 : 0;
     size_t n = SCRATCH;
     pn_data_format(args, disp->scratch, &n);
-    fprintf(stderr, "[%u] %s %s %s", ch, dir == OUT ? "->" : "<-",
-            disp->names[code], disp->scratch);
+    fprintf(stderr, "[%p:%u] %s %s %s", (void *) disp, ch,
+            dir == OUT ? "->" : "<-", disp->names[code], disp->scratch);
     if (size) {
       size_t capacity = 4*size + 1;
       char buf[capacity];

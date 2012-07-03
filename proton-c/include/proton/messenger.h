@@ -48,6 +48,24 @@ pn_messenger_t *pn_messenger(const char *name);
  */
 const char *pn_messenger_name(pn_messenger_t *messenger);
 
+/** Sets the timeout for a Messenger. A negative timeout means
+ * infinite.
+ *
+ * @param[in] messenger the messenger
+ * @param[timeout] the new timeout for the messenger, in milliseconds
+ *
+ * @return an error code or zero if there is no error
+ */
+int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
+
+/** Retrieves the timeout for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return the timeout for the messenger, in milliseconds
+ */
+int pn_messenger_get_timeout(pn_messenger_t *messenger);
+
 /** Frees a Messenger.
  *
  * @param[in] messenger the messenger to free, no longer valid on

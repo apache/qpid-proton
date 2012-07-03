@@ -21,6 +21,7 @@
 
 #include <proton/messenger.h>
 #include <proton/driver.h>
+#include <proton/util.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -29,6 +30,7 @@
 
 struct pn_messenger_t {
   char *name;
+  int timeout;
   pn_driver_t *driver;
   pn_connector_t *connectors[1024];
   size_t size;
@@ -57,6 +59,7 @@ pn_messenger_t *pn_messenger(const char *name)
 
   if (m) {
     m->name = build_name(name);
+    m->timeout = -1;
     m->driver = pn_driver();
     m->size = 0;
     m->listeners = 0;
@@ -71,6 +74,18 @@ pn_messenger_t *pn_messenger(const char *name)
 const char *pn_messenger_name(pn_messenger_t *messenger)
 {
   return messenger->name;
+}
+
+int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout)
+{
+  if (!messenger) return PN_ARG_ERR;
+  messenger->timeout = timeout;
+  return 0;
+}
+
+int pn_messenger_get_timeout(pn_messenger_t *messenger)
+{
+  return messenger ? messenger->timeout : 0;
 }
 
 void pn_messenger_free(pn_messenger_t *messenger)
@@ -171,14 +186,28 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
   }
 }
 
-int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *))
+long int millis(struct timeval tv)
+{
+  return tv.tv_sec * 1000 + tv.tv_usec/1000;
+}
+
+int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
 {
   for (int i = 0; i < messenger->size; i++) {
     pn_connector_process(messenger->connectors[i]);
   }
 
-  while (!predicate(messenger)) {
-    pn_driver_wait(messenger->driver, -1);
+  struct timeval now;
+  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+  long int deadline = millis(now) + timeout;
+  bool pred;
+
+  while (true) {
+    pred = predicate(messenger);
+    int remaining = deadline - millis(now);
+    if (pred || (timeout >= 0 && remaining < 0)) break;
+
+    pn_driver_wait(messenger->driver, remaining);
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {
@@ -214,47 +243,30 @@ int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_
         pn_connector_process(c);
       }
     }
+
+    if (timeout >= 0) {
+      if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+    }
   }
 
-  return 0;
+  return pred ? 0 : PN_TIMEOUT;
 }
 
-bool pn_messenger_linked(pn_messenger_t *messenger)
+int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *))
 {
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
-    pn_connection_t *conn = pn_connector_connection(ctor);
-    pn_state_t state = pn_connection_state(conn);
-    if ((state == (PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT)) ||
-        (state == (PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE))) {
-      return false;
-    }
-
-    if (pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT) ||
-        pn_link_head(conn, PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE)) {
-      return false;
-    }
-  }
-
-  return true;
+  return pn_messenger_tsync(messenger, predicate, messenger->timeout);
 }
 
 int pn_messenger_start(pn_messenger_t *messenger)
 {
   if (!messenger) return PN_ARG_ERR;
-  return pn_messenger_sync(messenger, pn_messenger_linked);
+  // right now this is a noop
+  return 0;
 }
 
-bool pn_messenger_unlinked(pn_messenger_t *messenger)
+bool pn_messenger_stopped(pn_messenger_t *messenger)
 {
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
-    pn_connection_t *conn = pn_connector_connection(ctor);
-    pn_state_t state = pn_connection_state(conn);
-    if (state != (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))
-      return false;
-  }
-  return true;
+  return messenger->size == 0;
 }
 
 int pn_messenger_stop(pn_messenger_t *messenger)
@@ -272,7 +284,7 @@ int pn_messenger_stop(pn_messenger_t *messenger)
     pn_connection_close(conn);
   }
 
-  return pn_messenger_sync(messenger, pn_messenger_unlinked);
+  return pn_messenger_sync(messenger, pn_messenger_stopped);
 }
 
 static void parse_address(char *address, char **domain, char **name)
@@ -301,6 +313,18 @@ bool pn_streq(const char *a, const char *b)
 
 pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *domain)
 {
+  char buf[strlen(domain) + 1];
+  if (domain) {
+    strcpy(buf, domain);
+  } else {
+    buf[0] = '\0';
+  }
+  char *user = NULL;
+  char *pass = NULL;
+  char *host = "0.0.0.0";
+  char *port = "5672";
+  parse_url(buf, &user, &pass, &host, &port);
+
   for (int i = 0; i < messenger->size; i++) {
     pn_connection_t *connection = pn_connector_connection(messenger->connectors[i]);
     const char *container = pn_connection_remote_container(connection);
@@ -309,12 +333,16 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
       return connection;
   }
 
-  pn_connector_t *connector = pn_connector(messenger->driver, domain, "5672", NULL);
+  pn_connector_t *connector = pn_connector(messenger->driver, host, port, NULL);
   if (!connector) return NULL;
   messenger->connectors[messenger->size++] = connector;
   pn_sasl_t *sasl = pn_connector_sasl(connector);
-  pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_client(sasl);
+  if (user) {
+    pn_sasl_plain(sasl, user, pass);
+  } else {
+    pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    pn_sasl_client(sasl);
+  }
   pn_connection_t *connection = pn_connection();
   pn_connection_set_container(connection, messenger->name);
   pn_connection_set_hostname(connection, domain);
@@ -378,11 +406,15 @@ pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *sourc
 {
   char buf[strlen(source) + 1];
   strcpy(buf, source);
-  char *domain;
-  char *name;
+  char *domain, *name;
   parse_address(buf, &domain, &name);
+  char *user = NULL;
+  char *pass = NULL;
+  char *host = "0.0.0.0";
+  char *port = "5672";
+  parse_url(domain + 1, &user, &pass, &host, &port);
 
-  pn_listener_t *listener = pn_listener(messenger->driver, domain + 1, "5672", NULL);
+  pn_listener_t *listener = pn_listener(messenger->driver, host, port, NULL);
   if (listener) {
     messenger->listeners++;
   }
@@ -428,6 +460,8 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
   }
 }
 
+bool false_pred(pn_messenger_t *messenger) { return false; }
+
 int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 {
   if (!messenger) return PN_ARG_ERR;
@@ -459,6 +493,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
         return n;
       } else {
         pn_advance(sender);
+        pn_messenger_tsync(messenger, false_pred, 0);
         return 0;
       }
     }
@@ -469,8 +504,6 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
 bool pn_messenger_sent(pn_messenger_t *messenger)
 {
-  //  if (!pn_messenger_linked(messenger)) return false;
-
   for (int i = 0; i < messenger->size; i++) {
     pn_connector_t *ctor = messenger->connectors[i];
     pn_connection_t *conn = pn_connector_connection(ctor);
@@ -497,8 +530,6 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
 
 bool pn_messenger_rcvd(pn_messenger_t *messenger)
 {
-  //  if (!pn_messenger_linked(messenger)) return false;
-
   for (int i = 0; i < messenger->size; i++) {
     pn_connector_t *ctor = messenger->connectors[i];
     pn_connection_t *conn = pn_connector_connection(ctor);
@@ -532,6 +563,8 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
 
 int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 {
+  if (!messenger) return PN_ARG_ERR;
+
   for (int i = 0; i < messenger->size; i++) {
     pn_connector_t *ctor = messenger->connectors[i];
     pn_connection_t *conn = pn_connector_connection(ctor);
@@ -545,10 +578,14 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         ssize_t n = pn_recv(l, buf, 1024);
         pn_settle(d);
         if (n < 0) return n;
-        int err = pn_message_decode(msg, buf, n);
-        if (err) {
-          return pn_error_format(messenger->error, err, "error decoding message: %s",
+        if (msg) {
+          int err = pn_message_decode(msg, buf, n);
+          if (err) {
+            return pn_error_format(messenger->error, err, "error decoding message: %s",
                                  pn_message_error(msg));
+          } else {
+            return 0;
+          }
         } else {
           return 0;
         }
@@ -564,6 +601,8 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 
 int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
 {
+  if (!messenger) return 0;
+
   int result = 0;
 
   for (int i = 0; i < messenger->size; i++) {
