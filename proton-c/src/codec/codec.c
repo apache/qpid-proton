@@ -303,7 +303,7 @@ ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms)
 
 int pn_print_atoms(const pn_atoms_t *atoms)
 {
-  int size = 4;
+  int size = 128;
 
   while (true)
   {
