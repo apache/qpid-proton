@@ -29,7 +29,6 @@ if not args:
   args = ["//~0.0.0.0"]
 
 mng = pn_messenger(None)
-print pn_messenger_name(mng)
 pn_messenger_start(mng)
 
 for a in args:
