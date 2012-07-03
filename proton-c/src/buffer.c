@@ -52,6 +52,11 @@ void pn_buffer_free(pn_buffer_t *buf)
   }
 }
 
+size_t pn_buffer_size(pn_buffer_t *buf)
+{
+  return buf->size;
+}
+
 size_t pn_buffer_available(pn_buffer_t *buf)
 {
   return buf->capacity - buf->size;

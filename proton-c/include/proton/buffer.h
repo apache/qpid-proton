@@ -28,6 +28,7 @@ typedef struct pn_buffer_t pn_buffer_t;
 
 pn_buffer_t *pn_buffer(size_t capacity);
 void pn_buffer_free(pn_buffer_t *buf);
+size_t pn_buffer_size(pn_buffer_t *buf);
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size);
 int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size);
 int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
