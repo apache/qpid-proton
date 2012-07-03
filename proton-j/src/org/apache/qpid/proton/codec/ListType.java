@@ -23,12 +23,14 @@ package org.apache.qpid.proton.codec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class ListType extends AbstractPrimitiveType<List>
 {
     private final ListEncoding _listEncoding;
     private final ListEncoding _shortListEncoding;
+    private final ListEncoding _zeroListEncoding;
     private EncoderImpl _encoder;
 
     private static interface ListEncoding extends PrimitiveTypeEncoding<List>
@@ -41,6 +43,7 @@ public class ListType extends AbstractPrimitiveType<List>
         _encoder = encoder;
         _listEncoding = new AllListEncoding(encoder, decoder);
         _shortListEncoding = new ShortListEncoding(encoder, decoder);
+        _zeroListEncoding = new ZeroListEncoding(encoder, decoder);
         encoder.register(List.class, this);
         decoder.register(this);
     }
@@ -54,9 +57,11 @@ public class ListType extends AbstractPrimitiveType<List>
     {
 
         int calculatedSize = calculateSize(val, _encoder);
-        ListEncoding encoding = (val.size() > 255 || calculatedSize >= 254)
-                                    ? _listEncoding
-                                    : _shortListEncoding;
+        ListEncoding encoding = val.isEmpty() 
+                                    ? _zeroListEncoding 
+                                    : (val.size() > 255 || calculatedSize >= 254)
+                                        ? _listEncoding
+                                        : _shortListEncoding;
 
         encoding.setValue(val, calculatedSize);
         return encoding;
@@ -84,7 +89,7 @@ public class ListType extends AbstractPrimitiveType<List>
 
     public Collection<ListEncoding> getAllEncodings()
     {
-        return Arrays.asList(_shortListEncoding, _listEncoding);
+        return Arrays.asList(_zeroListEncoding, _shortListEncoding, _listEncoding);
     }
 
     private class AllListEncoding
@@ -231,5 +236,54 @@ public class ListType extends AbstractPrimitiveType<List>
             _value = value;
             _length = length;
         }
+    }
+
+    
+    private class ZeroListEncoding
+            extends FixedSizePrimitiveTypeEncoding<List>
+            implements ListEncoding
+    {
+        public ZeroListEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
+        {
+            super(encoder, decoder);
+        }
+
+        @Override
+        public byte getEncodingCode()
+        {
+            return EncodingCodes.LIST0;
+        }
+
+        @Override
+        protected int getFixedSize()
+        {
+            return 0;
+        }
+
+
+        public ListType getType()
+        {
+           return ListType.this;
+        }
+
+        public void setValue(List value, int length)
+        {
+        }
+
+        public void writeValue(final List val)
+        {
+        }
+
+        public boolean encodesSuperset(final TypeEncoding<List> encoder)
+        {
+            return encoder == this;
+        }
+
+        public List readValue()
+        {
+            return Collections.EMPTY_LIST;
+        }
+
+
     }
 }

@@ -77,6 +77,7 @@ interface EncodingCodes
     public static final byte SYM8                     = (byte) 0xa3;
     public static final byte SYM32                    = (byte) 0xb3;
 
+    public static final byte LIST0                    = (byte) 0x45;
     public static final byte LIST8                    = (byte) 0xc0;
     public static final byte LIST32                   = (byte) 0xd0;
 
