@@ -86,7 +86,7 @@ typedef int pn_trace_t;
  *
  * @return pointer to a new connection object.
  */
-pn_connection_t *pn_connection();
+pn_connection_t *pn_connection(void);
 
 /** Retrieve the state of the connection.
  *
