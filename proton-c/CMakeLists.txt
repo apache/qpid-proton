@@ -6,6 +6,20 @@ set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
 set (LINK_DEPS uuid)
 
+include(CheckIncludeFile)
+
+CHECK_INCLUDE_FILE(poll.h HAVE_POLL_H)
+CHECK_INCLUDE_FILE(sys/select.h HAVE_SYS_SELECT_H)
+
+# Set default poller implementation (check from general to specific to allow overriding)
+if (HAVE_SYS_SELECT_H)
+  set(poller_default select)
+endif (HAVE_SYS_SELECT_H)
+if (HAVE_POLL_H)
+  set(poller_default poll)
+endif (HAVE_POLL_H)
+set(POLLER ${poller_default} CACHE STRING "Poller implementation (poll/select)")
+
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
   "${PROJECT_BINARY_DIR}/pn_config.h"
@@ -25,6 +39,17 @@ add_custom_command (
   COMMAND PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
+
+if (POLLER STREQUAL poll)
+  set (pn_driver_impl
+       src/drivers/driver_poll.c
+  )
+elseif (POLLER STREQUAL select)
+  set (pn_driver_impl
+       src/drivers/driver_select.c
+  )
+endif (POLLER STREQUAL poll)
+
 
 add_library (
   qpidproton SHARED
@@ -50,6 +75,8 @@ add_library (
   ${PROJECT_BINARY_DIR}/protocol.h
 
   src/messenger.c
+
+  ${pn_driver_impl}
 )
 
 include(FindSWIG)
