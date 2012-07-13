@@ -19,6 +19,8 @@
 
 include(UseSWIG)
 
+set (BINDING_DEPS qpid-proton qpid-proton-posix ${LINK_DEPS})
+
 # Build wrapper for Python:
 # @todo: conditionalize on whether python is available!
 add_subdirectory(python)
@@ -31,4 +33,3 @@ FIND_PROGRAM(PHP_CONFIG_EXE php-config)
 IF(PHP_CONFIG_EXE)
   add_subdirectory(php)
 ENDIF(PHP_CONFIG_EXE)
-

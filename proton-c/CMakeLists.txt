@@ -27,10 +27,9 @@ add_custom_command (
 )
 
 add_library (
-  qpidproton SHARED
+  qpid-proton SHARED
 
   src/util.c
-  src/driver.c
   src/error.c
   src/buffer.c
   src/parser.c
@@ -48,7 +47,12 @@ add_library (
 
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
+)
 
+add_library (
+  qpid-proton-posix SHARED
+
+  src/driver.c
   src/messenger.c
 )
 
@@ -58,19 +62,19 @@ if (SWIG_FOUND)
 endif (SWIG_FOUND)
 
 add_executable (proton src/proton.c)
-target_link_libraries (proton qpidproton ${LINK_DEPS})
+target_link_libraries (proton qpid-proton qpid-proton-posix ${LINK_DEPS})
 
 add_executable (proton-dump src/proton-dump.c)
-target_link_libraries (proton-dump qpidproton ${LINK_DEPS})
+target_link_libraries (proton-dump qpid-proton)
 
 add_subdirectory(docs/api)
 
 set_target_properties (
-  qpidproton proton proton-dump
+  qpid-proton qpid-proton-posix proton proton-dump
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
 )
 
-install (TARGETS proton qpidproton
+install (TARGETS proton proton-dump qpid-proton qpid-proton-posix
          RUNTIME DESTINATION bin
          LIBRARY DESTINATION lib)
