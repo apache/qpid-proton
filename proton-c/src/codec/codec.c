@@ -120,21 +120,21 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
   case PN_BOOL:
     return pn_bytes_format(bytes, atom.u.as_bool ? "true" : "false");
   case PN_UBYTE:
-    return pn_bytes_format(bytes, "%u", atom.u.as_ubyte);
+    return pn_bytes_format(bytes, "%" PRIu8, atom.u.as_ubyte);
   case PN_BYTE:
-    return pn_bytes_format(bytes, "%i", atom.u.as_byte);
+    return pn_bytes_format(bytes, "%" PRIi8, atom.u.as_byte);
   case PN_USHORT:
-    return pn_bytes_format(bytes, "%u", atom.u.as_ushort);
+    return pn_bytes_format(bytes, "%" PRIu16, atom.u.as_ushort);
   case PN_SHORT:
-    return pn_bytes_format(bytes, "%i", atom.u.as_short);
+    return pn_bytes_format(bytes, "%" PRIi16, atom.u.as_short);
   case PN_UINT:
-    return pn_bytes_format(bytes, "%u", atom.u.as_uint);
+    return pn_bytes_format(bytes, "%" PRIu32, atom.u.as_uint);
   case PN_INT:
-    return pn_bytes_format(bytes, "%i", atom.u.as_int);
+    return pn_bytes_format(bytes, "%" PRIi32, atom.u.as_int);
   case PN_ULONG:
-    return pn_bytes_format(bytes, "%lu", atom.u.as_ulong);
+    return pn_bytes_format(bytes, "%" PRIu64, atom.u.as_ulong);
   case PN_LONG:
-    return pn_bytes_format(bytes, "%li", atom.u.as_long);
+    return pn_bytes_format(bytes, "%" PRIi64, atom.u.as_long);
   case PN_FLOAT:
     return pn_bytes_format(bytes, "%g", atom.u.as_float);
   case PN_DOUBLE:
