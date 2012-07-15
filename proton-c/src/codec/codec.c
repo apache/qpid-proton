@@ -905,7 +905,7 @@ int pn_decode_atom(pn_bytes_t *bytes, pn_atoms_t *atoms)
 
 int pn_fill_one(pn_atoms_t *atoms, const char *fmt, ...);
 
-int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int *nvals)
+int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list *ap, bool skip, int *nvals)
 {
   int err, count;
   char code = **fmt;
@@ -928,70 +928,70 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int
     return 0;
   case 'o':
     atom->type = PN_BOOL;
-    atom->u.as_bool = va_arg(ap, int);
+    atom->u.as_bool = va_arg(*ap, int);
     (*nvals)++;
     return 0;
   case 'B':
     atom->type = PN_UBYTE;
-    atom->u.as_ubyte = va_arg(ap, unsigned int);
+    atom->u.as_ubyte = va_arg(*ap, unsigned int);
     (*nvals)++;
     return 0;
   case 'b':
     atom->type = PN_BYTE;
-    atom->u.as_byte = va_arg(ap, int);
+    atom->u.as_byte = va_arg(*ap, int);
     (*nvals)++;
     return 0;
   case 'H':
     atom->type = PN_USHORT;
-    atom->u.as_ushort = va_arg(ap, unsigned int);
+    atom->u.as_ushort = va_arg(*ap, unsigned int);
     (*nvals)++;
     return 0;
   case 'h':
     atom->type = PN_SHORT;
-    atom->u.as_short = va_arg(ap, int);
+    atom->u.as_short = va_arg(*ap, int);
     (*nvals)++;
     return 0;
   case 'I':
     atom->type = PN_UINT;
-    atom->u.as_uint = va_arg(ap, uint32_t);
+    atom->u.as_uint = va_arg(*ap, uint32_t);
     (*nvals)++;
     return 0;
   case 'i':
     atom->type = PN_INT;
-    atom->u.as_int = va_arg(ap, int32_t);
+    atom->u.as_int = va_arg(*ap, int32_t);
     (*nvals)++;
     return 0;
   case 'L':
     atom->type = PN_ULONG;
-    atom->u.as_ulong = va_arg(ap, uint64_t);
+    atom->u.as_ulong = va_arg(*ap, uint64_t);
     (*nvals)++;
     return 0;
   case 'l':
     atom->type = PN_LONG;
-    atom->u.as_long = va_arg(ap, int64_t);
+    atom->u.as_long = va_arg(*ap, int64_t);
     (*nvals)++;
     return 0;
   case 'f':
     atom->type = PN_FLOAT;
-    atom->u.as_float = va_arg(ap, double);
+    atom->u.as_float = va_arg(*ap, double);
     (*nvals)++;
     return 0;
   case 'd':
     atom->type = PN_DOUBLE;
-    atom->u.as_double = va_arg(ap, double);
+    atom->u.as_double = va_arg(*ap, double);
     (*nvals)++;
     return 0;
   case 'z':
     atom->type = PN_BINARY;
-    atom->u.as_binary.size = va_arg(ap, size_t);
-    atom->u.as_binary.start = va_arg(ap, char *);
+    atom->u.as_binary.size = va_arg(*ap, size_t);
+    atom->u.as_binary.start = va_arg(*ap, char *);
     if (!atom->u.as_binary.start)
       *atom = (pn_atom_t) {PN_NULL, {0}};
     (*nvals)++;
     return 0;
   case 'S':
     atom->type = PN_STRING;
-    atom->u.as_string.start = va_arg(ap, char *);
+    atom->u.as_string.start = va_arg(*ap, char *);
     if (atom->u.as_string.start)
       atom->u.as_string.size = strlen(atom->u.as_string.start);
     else
@@ -1000,7 +1000,7 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int
     return 0;
   case 's':
     atom->type = PN_SYMBOL;
-    atom->u.as_symbol.start = va_arg(ap, char *);
+    atom->u.as_symbol.start = va_arg(*ap, char *);
     if (atom->u.as_symbol.start)
       atom->u.as_symbol.size = strlen(atom->u.as_symbol.start);
     else
@@ -1020,7 +1020,7 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int
     return 0;
   case 'T':
     atom->type = PN_TYPE;
-    atom->u.type = va_arg(ap, int);
+    atom->u.type = va_arg(*ap, int);
     (*nvals)++;
     return 0;
   case '@':
@@ -1083,7 +1083,7 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int
     return 0;
   case '?':
     count = 0;
-    if (va_arg(ap, int)) {
+    if (va_arg(*ap, int)) {
       // rewind atoms by one
       if (!skip) {
         atoms->start--;
@@ -1100,8 +1100,8 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool skip, int
     return 0;
   case '*':
     {
-      int count = va_arg(ap, int);
-      void *ptr = va_arg(ap, void *);
+      int count = va_arg(*ap, int);
+      void *ptr = va_arg(*ap, void *);
       // rewind atoms by one
       if (!skip) {
         atoms->start--;
@@ -1143,7 +1143,7 @@ int pn_fill_one(pn_atoms_t *atoms, const char *fmt, ...)
   va_list ap;
   va_start(ap, fmt);
   int count = 0;
-  int err = pn_vfill_one(atoms, &fmt, ap, false, &count);
+  int err = pn_vfill_one(atoms, &fmt, &ap, false, &count);
   va_end(ap);
   return err;
 }
@@ -1153,11 +1153,18 @@ int pn_vfill_atoms(pn_atoms_t *atoms, const char *fmt, va_list ap)
   const char *pos = fmt;
   pn_atoms_t copy = *atoms;
   int count = 0;
+  va_list cp;
+  va_copy(cp, ap);
 
   while (*pos) {
-    int err = pn_vfill_one(&copy, &pos, ap, false, &count);
-    if (err) return err;
+    int err = pn_vfill_one(&copy, &pos, &cp, false, &count);
+    if (err) {
+      va_end(cp);
+      return err;
+    }
   }
+
+  va_end(cp);
 
   atoms->size -= copy.size;
   return 0;
@@ -1224,7 +1231,7 @@ int pn_skip(pn_atoms_t *atoms, size_t n)
   return 0;
 }
 
-int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
+int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list *ap, bool *scanned)
 {
   char code = **fmt;
   pn_atom_t *atom = atoms ? atoms->start : NULL;
@@ -1243,7 +1250,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'o':
     {
-      bool *value = va_arg(ap, bool *);
+      bool *value = va_arg(*ap, bool *);
       if (atom && atom->type == PN_BOOL) {
         *value = atom->u.as_bool;
         *scanned = true;
@@ -1256,7 +1263,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'B':
     {
-      uint8_t *value = va_arg(ap, uint8_t *);
+      uint8_t *value = va_arg(*ap, uint8_t *);
       if (atom && atom->type == PN_UBYTE) {
         *value = atom->u.as_ubyte;
         *scanned = true;
@@ -1269,7 +1276,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'b':
     {
-      int8_t *value = va_arg(ap, int8_t *);
+      int8_t *value = va_arg(*ap, int8_t *);
       if (atom && atom->type == PN_BYTE) {
         *value = atom->u.as_byte;
         *scanned = true;
@@ -1282,7 +1289,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'H':
     {
-      uint16_t *value = va_arg(ap, uint16_t *);
+      uint16_t *value = va_arg(*ap, uint16_t *);
       if (atom && atom->type == PN_USHORT) {
         *value = atom->u.as_ushort;
         *scanned = true;
@@ -1295,7 +1302,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'h':
     {
-      int16_t *value = va_arg(ap, int16_t *);
+      int16_t *value = va_arg(*ap, int16_t *);
       if (atom && atom->type == PN_SHORT) {
         *value = atom->u.as_short;
         *scanned = true;
@@ -1308,7 +1315,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'I':
     {
-      uint32_t *value = va_arg(ap, uint32_t *);
+      uint32_t *value = va_arg(*ap, uint32_t *);
       if (atom && atom->type == PN_UINT) {
         *value = atom->u.as_uint;
         *scanned = true;
@@ -1321,7 +1328,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'i':
     {
-      int32_t *value = va_arg(ap, int32_t *);
+      int32_t *value = va_arg(*ap, int32_t *);
       if (atom && atom->type == PN_INT) {
         *value = atom->u.as_int;
         *scanned = true;
@@ -1334,7 +1341,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'L':
     {
-      uint64_t *value = va_arg(ap, uint64_t *);
+      uint64_t *value = va_arg(*ap, uint64_t *);
       if (atom && atom->type == PN_ULONG) {
         *value = atom->u.as_ulong;
         *scanned = true;
@@ -1347,7 +1354,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'l':
     {
-      int64_t *value = va_arg(ap, int64_t *);
+      int64_t *value = va_arg(*ap, int64_t *);
       if (atom && atom->type == PN_LONG) {
         *value = atom->u.as_long;
         *scanned = true;
@@ -1360,7 +1367,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'f':
     {
-      float *value = va_arg(ap, float *);
+      float *value = va_arg(*ap, float *);
       if (atom && atom->type == PN_FLOAT) {
         *value = atom->u.as_float;
         *scanned = true;
@@ -1373,7 +1380,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'd':
     {
-      double *value = va_arg(ap, double *);
+      double *value = va_arg(*ap, double *);
       if (atom && atom->type == PN_DOUBLE) {
         *value = atom->u.as_double;
         *scanned = true;
@@ -1386,7 +1393,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'z':
     {
-      pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
+      pn_bytes_t *bytes = va_arg(*ap, pn_bytes_t *);
       if (atom && atom->type == PN_BINARY) {
         *bytes = atom->u.as_binary;
         *scanned = true;
@@ -1399,7 +1406,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'S':
     {
-      pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
+      pn_bytes_t *bytes = va_arg(*ap, pn_bytes_t *);
       if (atom && atom->type == PN_STRING) {
         *bytes = atom->u.as_string;
         *scanned = true;
@@ -1412,7 +1419,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 's':
     {
-      pn_bytes_t *bytes = va_arg(ap, pn_bytes_t *);
+      pn_bytes_t *bytes = va_arg(*ap, pn_bytes_t *);
       if (atom && atom->type == PN_SYMBOL) {
         *bytes = atom->u.as_symbol;
         *scanned = true;
@@ -1450,7 +1457,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
     return 0;
   case 'T':
     if (atom && atom->type == PN_TYPE) {
-      pn_type_t *type = va_arg(ap, pn_type_t *);
+      pn_type_t *type = va_arg(*ap, pn_type_t *);
       *type = atom->u.type;
       *scanned = true;
     } else {
@@ -1577,7 +1584,7 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list ap, bool *scanned)
         fprintf(stderr, "codes must follow ?\n");
         return PN_ARG_ERR;
       }
-      bool *sc = va_arg(ap, bool *);
+      bool *sc = va_arg(*ap, bool *);
       err = pn_scan_one(atoms, fmt, ap, sc);
       if (err) return err;
       *scanned = true;
@@ -1603,11 +1610,18 @@ int pn_vscan_atoms(const pn_atoms_t *atoms, const char *fmt, va_list ap)
   pn_atoms_t copy = *atoms;
   const char *pos = fmt;
   bool scanned;
+  va_list cp;
+  va_copy(cp, ap);
 
   while (*pos) {
-    int err = pn_scan_one(&copy, &pos, ap, &scanned);
-    if (err) return err;
+    int err = pn_scan_one(&copy, &pos, &cp, &scanned);
+    if (err) {
+      va_end(cp);
+      return err;
+    }
   }
+
+  va_end(cp);
 
   return 0;
 }
