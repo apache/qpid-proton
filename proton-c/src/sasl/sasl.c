@@ -57,7 +57,6 @@ pn_sasl_t *pn_sasl()
 {
   pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));
   sasl->disp = pn_dispatcher(1, sasl);
-  sasl->disp->batch = false;
 
   pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
   pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
@@ -272,6 +271,13 @@ void pn_sasl_process(pn_sasl_t *sasl)
   if (!sasl->client && sasl->outcome != PN_SASL_NONE && !sasl->sent_done) {
     pn_server_done(sasl);
     sasl->sent_done = true;
+  }
+
+  // XXX: need to finish this check when challenge/response is complete
+  //      check for client is outome is received
+  //      check for server is that there are no pending frames (either init
+  //      or challenges) from client
+  if (!sasl->client && sasl->sent_done && sasl->rcvd_init) {
     sasl->rcvd_done = true;
     sasl->disp->halt = true;
   }
@@ -281,6 +287,8 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *bytes, size_t available)
 {
   ssize_t n = pn_dispatcher_input(sasl->disp, bytes, available);
   if (n < 0) return n;
+
+  pn_sasl_process(sasl);
 
   if (sasl->rcvd_done) {
     if (pn_sasl_state(sasl) == PN_SASL_PASS) {
