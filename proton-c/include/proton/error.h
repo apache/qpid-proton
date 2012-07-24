@@ -1,5 +1,5 @@
-#ifndef _PROTON_ERROR_H
-#define _PROTON_ERROR_H 1
+#ifndef PROTON_ERROR_H
+#define PROTON_ERROR_H 1
 
 /*
  *

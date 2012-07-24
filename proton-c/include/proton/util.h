@@ -1,5 +1,5 @@
-#ifndef _PROTON_UTIL_H
-#define _PROTON_UTIL_H 1
+#ifndef PROTON_UTIL_H
+#define PROTON_UTIL_H 1
 
 /*
  *

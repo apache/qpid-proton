@@ -1,5 +1,5 @@
-#ifndef _PROTON_TYPES_H
-#define _PROTON_TYPES_H 1
+#ifndef PROTON_TYPES_H
+#define PROTON_TYPES_H 1
 
 /*
  *

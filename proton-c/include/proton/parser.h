@@ -1,5 +1,5 @@
-#ifndef _PROTON_PARSER_H
-#define _PROTON_PARSER_H 1
+#ifndef PROTON_PARSER_H
+#define PROTON_PARSER_H 1
 
 /*
  *

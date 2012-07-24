@@ -1,5 +1,5 @@
-#ifndef _PROTON_DRIVER_H
-#define _PROTON_DRIVER_H 1
+#ifndef PROTON_DRIVER_H
+#define PROTON_DRIVER_H 1
 
 /*
  *

@@ -1,5 +1,5 @@
-#ifndef _PROTON_ENGINE_H
-#define _PROTON_ENGINE_H 1
+#ifndef PROTON_ENGINE_H
+#define PROTON_ENGINE_H 1
 
 /*
  *

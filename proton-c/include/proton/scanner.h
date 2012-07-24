@@ -1,5 +1,5 @@
-#ifndef _PROTON_SCANNER_H
-#define _PROTON_SCANNER_H 1
+#ifndef PROTON_SCANNER_H
+#define PROTON_SCANNER_H 1
 
 /*
  *
