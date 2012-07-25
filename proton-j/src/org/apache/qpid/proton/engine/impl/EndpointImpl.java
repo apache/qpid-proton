@@ -32,8 +32,6 @@ public abstract class EndpointImpl implements Endpoint
     private EndpointError _localError;
     private EndpointError _remoteError;
     private boolean _modified;
-    private EndpointImpl _next;
-    private EndpointImpl _prev;
     private EndpointImpl _transportNext;
     private EndpointImpl _transportPrev;
 
@@ -141,26 +139,15 @@ public abstract class EndpointImpl implements Endpoint
         return _transportPrev;
     }
 
-    void setNext(EndpointImpl next)
-    {
-        _next = next;
-    }
-
-    void setPrev(EndpointImpl prev)
-    {
-        _prev = prev;
-    }
-
-
     public void free()
     {
-        if(_next != null)
+        if(_transportNext != null)
         {
-            _next._prev = _prev;
+            _transportNext.setTransportPrev(_transportPrev);
         }
-        if(_prev != null)
+        if(_transportPrev != null)
         {
-            _prev._next = _next;
+            _transportPrev.setTransportNext(_transportNext);
         }
     }
 
@@ -173,17 +160,4 @@ public abstract class EndpointImpl implements Endpoint
     {
         _transportPrev = transportPrevious;
     }
-
-    EndpointImpl getPrev()
-    {
-        return _prev;
-    }
-
-    EndpointImpl getNext()
-    {
-        return _next;
-    }
-
-
-
 }
