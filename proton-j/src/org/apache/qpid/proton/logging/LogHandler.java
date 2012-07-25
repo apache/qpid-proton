@@ -18,10 +18,31 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.logging;
 
-package org.apache.qpid.proton.driver;
-
-public interface ApplicationFactory
+public interface LogHandler
 {
-    Application createApplication();
+   public boolean isTraceEnabled();
+    
+   public void trace(String message);
+   
+   public boolean isDebugEnabled();
+        
+   public void debug(String message);
+
+   public void debug(Throwable t, String message);
+
+   public boolean isInfoEnabled();
+   
+   public void info(String message);
+
+   public void info(Throwable t, String message);
+
+   public void warn(String message);
+   
+   public void warn(Throwable t, String message);
+   
+   public void error(String message);
+
+   public void error(Throwable t, String message);   
 }

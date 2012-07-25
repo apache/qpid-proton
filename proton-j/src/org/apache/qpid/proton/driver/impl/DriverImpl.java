@@ -1,23 +1,55 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
 package org.apache.qpid.proton.driver.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.nio.channels.*;
+import java.net.Socket;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
+
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
+import org.apache.qpid.proton.logging.LogHandler;
 
 public class DriverImpl implements Driver
 {
     private Selector _selector;
     private Set<SelectionKey> _selectedKeys = Collections.emptySet();
+    private ConnectorFactory _connectorFactory;
+    private LogHandler _logger;
 
-    public DriverImpl() throws IOException
+    public DriverImpl(ConnectorFactory connectorFactory, LogHandler logger) throws IOException
     {
+        _connectorFactory = connectorFactory;
+        _logger = logger;
         _selector = Selector.open();
     }
 
@@ -35,10 +67,12 @@ public class DriverImpl implements Driver
         }
         catch (IOException e)
         {
-            e.printStackTrace();  // TODO - Implement
+            _logger.error(e, "Exception when waiting for IO Event");
+            throw new RuntimeException(e);
         }
     }
 
+    @SuppressWarnings("rawtypes")
     public Listener listener()
     {
         Listener listener = null;
@@ -51,7 +85,8 @@ public class DriverImpl implements Driver
             }
             catch (IOException e)
             {
-                e.printStackTrace();  // TODO - Implement
+                _logger.error(e, "Exception when selecting");
+                throw new RuntimeException(e);
             }
             listener = getFirstListener();
         }
@@ -64,6 +99,7 @@ public class DriverImpl implements Driver
         _selectedKeys = _selector.selectedKeys();
     }
 
+    @SuppressWarnings("rawtypes")
     private Listener getFirstListener()
     {
         Iterator<SelectionKey> selectedIter = _selectedKeys.iterator();
@@ -74,14 +110,13 @@ public class DriverImpl implements Driver
             selectedIter.remove();
             if(key.isAcceptable())
             {
-                selectedIter.remove();
                 return (Listener) key.attachment();
-
             }
         }
         return null;
     }
 
+    @SuppressWarnings("rawtypes")
     public Connector connector()
     {
         Connector connector = null;
@@ -94,13 +129,15 @@ public class DriverImpl implements Driver
             }
             catch (IOException e)
             {
-                e.printStackTrace();  // TODO - Implement
+                _logger.error(e, "Exception when selecting");
+                throw new RuntimeException(e);
             }
             connector = getFirstConnector();
         }
         return connector;
     }
 
+    @SuppressWarnings("rawtypes")
     private Connector getFirstConnector()
     {
         Iterator<SelectionKey> selectedIter = _selectedKeys.iterator();
@@ -111,7 +148,6 @@ public class DriverImpl implements Driver
             selectedIter.remove();
             if(key.isReadable() || key.isWritable())
             {
-                selectedIter.remove();
                 return (Connector) key.attachment();
 
             }
@@ -122,7 +158,15 @@ public class DriverImpl implements Driver
 
     public void destroy()
     {
-        //TODO - Implement
+        try
+        {
+            _selector.close();
+        }
+        catch (IOException e)
+        {
+            _logger.error(e, "Exception when closing selector");
+            throw new RuntimeException(e);
+        }
     }
 
     public <C> Listener<C> createListener(String host, int port, C context)
@@ -150,8 +194,9 @@ public class DriverImpl implements Driver
     {
         try
         {
-            c.register(_selector, SelectionKey.OP_ACCEPT);
-            return new ListenerImpl<C>(this, c, context);
+            Listener<C> l = new ListenerImpl<C>(this, c, context);
+            c.register(_selector, SelectionKey.OP_ACCEPT,l);
+            return l;
         }
         catch (ClosedChannelException e)
         {
@@ -162,11 +207,41 @@ public class DriverImpl implements Driver
 
     public <C> Connector<C> createConnector(String host, int port, C context)
     {
-        return null;  //TODO - Implement
+        try
+        {
+            SocketChannel channel = SocketChannel.open();
+            channel.configureBlocking(false);
+            Socket socket = channel.socket();
+            socket.bind(new InetSocketAddress(host, port));
+            return createConnector(channel, context);
+        }
+        catch (IOException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 
-    public <C> Connector<C> createConnector(SelectableChannel fd, C context)
+    public <C> Connector<C> createConnector(SelectableChannel c, C context)
     {
-        return null;  //TODO - Implement
+        try
+        {
+            int opKeys = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+            SelectionKey key = c.register(_selector, opKeys);
+            Connector<C> co = _connectorFactory.createConnector(this, (SocketChannel)c, context, key);
+            key.attach(co);
+            return co;
+        }
+        catch (ClosedChannelException e)
+        {
+            e.printStackTrace();  // TODO - Implement
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected LogHandler getLogHandler()
+    {
+        return _logger;
     }
 }

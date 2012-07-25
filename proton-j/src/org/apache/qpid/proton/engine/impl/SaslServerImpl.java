@@ -40,6 +40,7 @@ public class SaslServerImpl extends SaslImpl implements SaslServer, SaslFrameBod
 
             mechanisms.setSaslServerMechanisms(_mechanisms);
             written += writeFrame(outputBuffer, mechanisms);
+            _state = SaslState.PN_SASL_STEP;
         }
         else if(getChallengeResponse() != null)
         {
@@ -97,11 +98,13 @@ public class SaslServerImpl extends SaslImpl implements SaslServer, SaslFrameBod
     {
         //TODO - Implement
         // error - should only be sent server -> client
+        System.out.println(saslMechanisms);
     }
 
     public void handleInit(SaslInit saslInit, Binary payload, Void context)
     {
         _hostname = saslInit.getHostname();
+        setMechanism(saslInit.getMechanism());
         if(saslInit.getInitialResponse() != null)
         {
             setPending(saslInit.getInitialResponse().asByteBuffer());
@@ -112,6 +115,7 @@ public class SaslServerImpl extends SaslImpl implements SaslServer, SaslFrameBod
     {
         //TODO - Implement
         // error - should only be sent server -> client
+        System.out.println(saslChallenge);
     }
 
     public void handleResponse(SaslResponse saslResponse, Binary payload, Void context)
@@ -125,6 +129,7 @@ public class SaslServerImpl extends SaslImpl implements SaslServer, SaslFrameBod
     {
         //TODO - Implement
         // error - should only be sent server -> client
+        System.out.println(saslOutcome);
     }
 
     @Override

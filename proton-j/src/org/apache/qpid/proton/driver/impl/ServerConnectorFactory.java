@@ -18,12 +18,20 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.driver.impl;
 
-package org.apache.qpid.proton.driver;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 
-public interface BytesTransport
+import org.apache.qpid.proton.driver.Connector;
+import org.apache.qpid.proton.driver.Driver;
+
+public class ServerConnectorFactory implements ConnectorFactory
 {
-    int input(byte[] bytes, int offset, int size);
+    @Override
+    public <C> Connector<C> createConnector(DriverImpl driver, SocketChannel sc, C context, SelectionKey key)
+    {
+        return new ServerConnectorImpl<C>(driver, sc,context, key);
+    }
 
-    int output(byte[] bytes, int offset, int size);
 }

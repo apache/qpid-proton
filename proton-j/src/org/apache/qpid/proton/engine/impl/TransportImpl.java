@@ -142,7 +142,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             written += processAttach(outputBuffer);
             written += processReceiverFlow(outputBuffer);
             written += processReceiverDisposition(outputBuffer);
-            written += processReceiverFlow(outputBuffer);       // TODO
             written += processMessageData(outputBuffer);
             written += processSenderDisposition(outputBuffer);
             written += processSenderFlow(outputBuffer);
@@ -448,7 +447,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     }
                 }
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         endpoint = _connectionEndpoint.getTransportHead();
         while(endpoint != null && buffer.remaining() >= _maxFrameSize)
@@ -540,7 +539,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 }
 
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;
     }

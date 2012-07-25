@@ -69,6 +69,7 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
         if(!_overflowBuffer.hasRemaining())
         {
             _overflowBuffer.clear();
+            _overflowBuffer.limit(0);
 
             CompositeWritableBuffer outputBuffer =
                     new CompositeWritableBuffer(

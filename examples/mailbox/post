@@ -76,6 +76,7 @@ class PostClient(object):
 
         # inform the engine about the connection, and link the driver to it.
         self.conn = pn_connection()
+        pn_connection_set_container(self.conn, "post")
         pn_connector_set_connection(self.cxtr, self.conn)
 
         # create a session, and Link for receiving from the mailbox

@@ -161,7 +161,9 @@ class MailboxServer(object):
             state = pn_sasl_state(sasl)
 
         if state == PN_SASL_PASS:
-            pn_connector_set_connection(cxtr, pn_connection());
+            conn =  pn_connection()
+            pn_connection_set_container(conn, "mail-server")
+            pn_connector_set_connection(cxtr, conn)
             pn_connector_set_context(cxtr, CONNECTION_UP)
             self.log("Authentication-PASSED")
         elif state == PN_SASL_FAIL:

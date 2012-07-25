@@ -18,12 +18,14 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.driver.impl;
 
-package org.apache.qpid.proton.driver;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 
-import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.driver.Connector;
 
-public interface Application
+public interface ConnectorFactory
 {
-    void process(Connection conn);
+    <C> Connector<C> createConnector(DriverImpl driver, SocketChannel sc, C context, SelectionKey key);
 }
