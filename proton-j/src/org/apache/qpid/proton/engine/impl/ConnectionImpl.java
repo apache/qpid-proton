@@ -216,8 +216,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
 
     void addModified(EndpointImpl endpoint)
     {
-        dumpList(_transportHead);
-
         if(_transportTail == null)
         {
             endpoint.setTransportNext(null);
@@ -231,20 +229,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
             _transportTail = endpoint;
             _transportTail.setTransportNext(null);
         }
-
-        dumpList(_transportHead);
-    }
-
-    private void dumpList(EndpointImpl _transportHead)
-    {
-        StringBuffer buf = new StringBuffer();
-        EndpointImpl p = _transportHead;
-        while (p != null)
-        {
-            buf.append(p + "->");
-            p = p.transportNext();
-        }
-        System.out.println(buf.toString());
     }
 
     void removeModified(EndpointImpl endpoint)
@@ -266,7 +250,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         {
             endpoint.transportNext().setTransportPrev(endpoint.transportPrev());
         }
-        dumpList(_transportHead);
     }
 
     public int getMaxChannels()
@@ -313,6 +296,8 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         {
             if(_workTail == null)
             {
+                delivery.setWorkNext(null);
+                delivery.setWorkPrev(null);
                 _workHead = _workTail = delivery;
             }
             else
@@ -320,6 +305,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
                 _workTail.setWorkNext(delivery);
                 delivery.setWorkPrev(_workTail);
                 _workTail = delivery;
+                delivery.setWorkNext(null);
             }
         }
     }
@@ -374,6 +360,8 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     {
         if(_transportWorkTail == null)
         {
+            delivery.setTransportWorkNext(null);
+            delivery.setTransportWorkPrev(null);
             _transportWorkHead = _transportWorkTail = delivery;
         }
         else
@@ -381,6 +369,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
             _transportWorkTail.setTransportWorkNext(delivery);
             delivery.setTransportWorkPrev(_transportWorkTail);
             _transportWorkTail = delivery;
+            delivery.setTransportWorkNext(null);
         }
     }
 
