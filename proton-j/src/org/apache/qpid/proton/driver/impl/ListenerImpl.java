@@ -39,7 +39,7 @@ class ListenerImpl<C> implements Listener<C>
         _context = context;
     }
 
-    public Connector accept()
+    public Connector<C> accept()
     {
         try
         {
@@ -47,7 +47,7 @@ class ListenerImpl<C> implements Listener<C>
             if(c != null)
             {
                 c.configureBlocking(false);
-                return _driver.createConnector(c, _context);
+                return _driver.createServerConnector(c, _context, this);
             }
         }
         catch (IOException e)
@@ -64,11 +64,19 @@ class ListenerImpl<C> implements Listener<C>
 
     public void close()
     {
-        //TODO - Implement
+        try
+        {
+            _channel.close();
+        }
+        catch (IOException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     public void destroy()
     {
-        //TODO - Implement
+        close();
     }
 }

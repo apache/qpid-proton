@@ -1,6 +1,6 @@
 package org.apache.qpid.proton.driver.impl;
 
-import static org.apache.qpid.proton.driver.impl.ServerConnectorImpl.ConnectorState.NEW;
+import static org.apache.qpid.proton.driver.impl.ServerConnectorImpl.ConnectorState.UNINITIALIZED;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,16 +23,18 @@ class ServerConnectorImpl<C> implements Connector<C>
     private static int writeBufferSize = Integer.getInteger
         ("pn.send_buffer_size", DEFAULT_BUFFER_SIZE);
 
-    enum ConnectorState {NEW, OPENED, CLOSED};
+    enum ConnectorState {UNINITIALIZED, OPENED, EOS, CLOSED};
 
-    private final SaslServerImpl _sasl;
+    private final Sasl _sasl;
     private final DriverImpl _driver;
+    private final Listener<C> _listener;
     private final SocketChannel _channel;
     private final LogHandler _logger;
     private C _context;
+
     private Connection _connection;
     private SelectionKey _key;
-    private ConnectorState _state = NEW;
+    private ConnectorState _state = UNINITIALIZED;
 
     private ByteBuffer _readBuffer = ByteBuffer.allocate(readBufferSize);
     private int _bytesNotRead = 0;
@@ -40,12 +42,12 @@ class ServerConnectorImpl<C> implements Connector<C>
     private int _bytesNotWritten = 0;
     private ByteBuffer _writeBuffer = ByteBuffer.allocate(writeBufferSize);
 
-    ServerConnectorImpl(DriverImpl driver, SocketChannel c, C context, SelectionKey key)
+    ServerConnectorImpl(DriverImpl driver, Listener<C> listener, Sasl sasl, SocketChannel c, C context, SelectionKey key)
     {
         _driver = driver;
+        _listener = listener;
         _channel = c;
-        _sasl = new SaslServerImpl();
-        _sasl.setMechanisms(new String[]{"ANONYMOUS"}); //TODO
+        _sasl = sasl;
         _logger = driver.getLogHandler();
         _context = context;
         _key = key;
@@ -55,6 +57,7 @@ class ServerConnectorImpl<C> implements Connector<C>
     {
         if (!_channel.isOpen())
         {
+            _state = ConnectorState.CLOSED;
             return;
         }
 
@@ -69,82 +72,36 @@ class ServerConnectorImpl<C> implements Connector<C>
         }
     }
 
-    int processInput(byte[] bytes, int offset, int size)
+    void read()
     {
-        int read = 0;
-        while (read < size)
+        try
         {
-            switch (_state)
+            int  bytesRead = _channel.read(_readBuffer);
+            int consumed = 0;
+            while (bytesRead > 0)
             {
-            case NEW:
-                read += readSasl(bytes, offset, size);
-                writeSasl();
-                break;
-            case OPENED:
-                read += readAMQPCommands(bytes, offset, size);
-                writeAMQPCommands();
-                break;
+                consumed = processInput(_readBuffer.array(), 0, bytesRead + _bytesNotRead);
+                if (consumed < bytesRead)
+                {
+                    _readBuffer.compact();
+                    _bytesNotRead = bytesRead - consumed;
+                }
+                else
+                {
+                    _readBuffer.rewind();
+                    _bytesNotRead = 0;
+                }
+                bytesRead = _channel.read(_readBuffer);
+            }
+            if (bytesRead == -1)
+            {
+                _state = ConnectorState.EOS;
             }
         }
-        return read;
-    }
-
-    void processOutput()
-    {
-        switch (_state)
+        catch (IOException e)
         {
-        case NEW:
-            writeSasl();
-            break;
-        case OPENED:
-            writeAMQPCommands();
-            break;
+            e.printStackTrace();
         }
-    }
-
-    private int readAMQPCommands(byte[] bytes, int offset, int size)
-    {
-        int consumed = _connection.transport().input(bytes, offset, size);
-        if (consumed == END_OF_STREAM)
-        {
-            return size;
-        }
-        else
-        {
-            return consumed;
-        }
-    }
-
-    private void writeAMQPCommands()
-    {
-        int size = _writeBuffer.array().length - _bytesNotWritten;
-        _bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
-                _bytesNotWritten, size);
-    }
-
-    private void setState(ConnectorState newState)
-    {
-        _state = newState;
-    }
-
-    int readSasl(byte[] bytes, int offset, int size)
-    {
-        int consumed = _sasl.input(bytes, offset, size);
-        if (consumed == END_OF_STREAM)
-        {
-            return size;
-        }
-        else
-        {
-            return consumed;
-        }
-    }
-
-    void writeSasl()
-    {
-        int size = _writeBuffer.array().length - _bytesNotWritten;
-        _bytesNotWritten += _sasl.output(_writeBuffer.array(),
-                _bytesNotWritten, size);
     }
 
     void write()
@@ -174,37 +131,88 @@ class ServerConnectorImpl<C> implements Connector<C>
         }
     }
 
-    void read()
+    int processInput(byte[] bytes, int offset, int size)
     {
-        try
+        int read = 0;
+        while (read < size)
         {
-            int  bytesRead = _channel.read(_readBuffer);
-            int consumed = 0;
-            while (bytesRead > 0)
+            switch (_state)
             {
-                consumed = processInput(_readBuffer.array(), 0, bytesRead + _bytesNotRead);
-                if (consumed < bytesRead)
-                {
-                    _readBuffer.compact();
-                    _bytesNotRead = bytesRead - consumed;
-                }
-                else
-                {
-                    _readBuffer.rewind();
-                    _bytesNotRead = 0;
-                }
-                bytesRead = _channel.read(_readBuffer);
+            case UNINITIALIZED:
+                read += readSasl(bytes, offset, size);
+                break;
+            case OPENED:
+                read += readAMQPCommands(bytes, offset, size);
+                break;
+            case EOS:
+            case CLOSED:
+                break;
             }
         }
-        catch (IOException e)
+        return read;
+    }
+
+    void processOutput()
+    {
+        switch (_state)
         {
-            e.printStackTrace();
+        case UNINITIALIZED:
+            writeSasl();
+            break;
+        case OPENED:
+            writeAMQPCommands();
+            break;
+        case EOS:
+            writeAMQPCommands();
+        case CLOSED:  // not a valid option
+            //TODO
+            break;
         }
     }
 
-    public Listener listener()
+    int readAMQPCommands(byte[] bytes, int offset, int size)
     {
-        return null;  //TODO - Implement
+        int consumed = _connection.transport().input(bytes, offset, size);
+        if (consumed == END_OF_STREAM)
+        {
+            return size;
+        }
+        else
+        {
+            return consumed;
+        }
+    }
+
+    void writeAMQPCommands()
+    {
+        int size = _writeBuffer.array().length - _bytesNotWritten;
+        _bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
+                _bytesNotWritten, size);
+    }
+
+    int readSasl(byte[] bytes, int offset, int size)
+    {
+        int consumed = _sasl.input(bytes, offset, size);
+        if (consumed == END_OF_STREAM)
+        {
+            return size;
+        }
+        else
+        {
+            return consumed;
+        }
+    }
+
+    void writeSasl()
+    {
+        int size = _writeBuffer.array().length - _bytesNotWritten;
+        _bytesNotWritten += _sasl.output(_writeBuffer.array(),
+                _bytesNotWritten, size);
+    }
+
+    public Listener<C> listener()
+    {
+        return _listener;
     }
 
     public Sasl sasl()
@@ -219,17 +227,10 @@ class ServerConnectorImpl<C> implements Connector<C>
 
     public void setConnection(Connection connection)
     {
-        if (_sasl.isDone())
-        {
-            writeSasl();
-        }
-        else
-        {
-            throw new RuntimeException("Cannot set the connection before authentication is completed");
-        }
-
+        // write any remaining data on to the wire.
+        writeSasl();
         _connection = connection;
-        // write any initial data
+        // write initial data
         int size = _writeBuffer.array().length - _bytesNotWritten;
         _bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
                 _bytesNotWritten, size);
@@ -248,24 +249,38 @@ class ServerConnectorImpl<C> implements Connector<C>
 
     public void close()
     {
+        if (_state == ConnectorState.CLOSED)
+        {
+            return;
+        }
+
         try
         {
+            // If the connection was closed due to authentication error
+            // then there might be data available to write on to the wire.
             writeSasl();
+            writeAMQPCommands(); // write any closing commands
             _channel.close();
+            _state = ConnectorState.CLOSED;
         }
         catch (IOException e)
         {
-
+            e.printStackTrace();
         }
     }
 
     public boolean isClosed()
     {
-        return !_channel.isOpen();
+        return _state == ConnectorState.EOS || _state == ConnectorState.CLOSED;
     }
 
     public void destroy()
     {
-        close();
+        close(); // close if not closed already
+    }
+
+    private void setState(ConnectorState newState)
+    {
+        _state = newState;
     }
 }

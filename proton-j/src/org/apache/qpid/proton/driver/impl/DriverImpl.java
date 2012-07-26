@@ -37,18 +37,18 @@ import java.util.Set;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
+import org.apache.qpid.proton.engine.impl.SaslClientImpl;
+import org.apache.qpid.proton.engine.impl.SaslServerImpl;
 import org.apache.qpid.proton.logging.LogHandler;
 
 public class DriverImpl implements Driver
 {
     private Selector _selector;
     private Set<SelectionKey> _selectedKeys = Collections.emptySet();
-    private ConnectorFactory _connectorFactory;
     private LogHandler _logger;
 
-    public DriverImpl(ConnectorFactory connectorFactory, LogHandler logger) throws IOException
+    public DriverImpl(LogHandler logger) throws IOException
     {
-        _connectorFactory = connectorFactory;
         _logger = logger;
         _selector = Selector.open();
     }
@@ -192,17 +192,10 @@ public class DriverImpl implements Driver
 
     public <C> Listener<C> createListener(ServerSocketChannel c, C context)
     {
-        try
-        {
-            Listener<C> l = new ListenerImpl<C>(this, c, context);
-            c.register(_selector, SelectionKey.OP_ACCEPT,l);
-            return l;
-        }
-        catch (ClosedChannelException e)
-        {
-            e.printStackTrace();  // TODO - Implement
-            throw new RuntimeException(e);
-        }
+        Listener<C> l = new ListenerImpl<C>(this, c, context);
+        SelectionKey key = registerInterest(c,SelectionKey.OP_ACCEPT);
+        key.attach(l);
+        return l;
     }
 
     public <C> Connector<C> createConnector(String host, int port, C context)
@@ -225,13 +218,25 @@ public class DriverImpl implements Driver
 
     public <C> Connector<C> createConnector(SelectableChannel c, C context)
     {
+        SelectionKey key = registerInterest(c,SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        Connector<C> co = new ServerConnectorImpl<C>(this, null, new SaslClientImpl(),(SocketChannel)c, context, key);
+        key.attach(co);
+        return co;
+    }
+
+    protected <C> Connector<C> createServerConnector(SelectableChannel c, C context, Listener<C> l)
+    {
+        SelectionKey key = registerInterest(c,SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        Connector<C> co = new ServerConnectorImpl<C>(this, l, new SaslServerImpl(),(SocketChannel)c, context, key);
+        key.attach(co);
+        return co;
+    }
+
+    private <C> SelectionKey registerInterest(SelectableChannel c, int opKeys)
+    {
         try
         {
-            int opKeys = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
-            SelectionKey key = c.register(_selector, opKeys);
-            Connector<C> co = _connectorFactory.createConnector(this, (SocketChannel)c, context, key);
-            key.attach(co);
-            return co;
+            return c.register(_selector, opKeys);
         }
         catch (ClosedChannelException e)
         {
@@ -239,6 +244,7 @@ public class DriverImpl implements Driver
             throw new RuntimeException(e);
         }
     }
+
 
     protected LogHandler getLogHandler()
     {

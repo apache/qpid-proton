@@ -32,13 +32,14 @@ public class MailServer
     private Driver _driver;
     private LogHandler _logger;
     private Listener<State> _listener;
+    private String[] _saslMechs = "ANONYMOUS".split(",");
     private int _counter;
     private Map<String,List<byte[]>> _mailboxes = new HashMap<String,List<byte[]>>();
 
     public MailServer() throws Exception
     {
         _logger = new Logger();
-        _driver = new DriverImpl(new ServerConnectorFactory(),_logger);
+        _driver = new DriverImpl(_logger);
         _listener = _driver.createListener("localhost", 5672, State.NEW);
     }
 
@@ -54,6 +55,7 @@ public class MailServer
         {
             _logger.info("Accepting Connection.");
             Connector<State> ctor = _listener.accept();
+            ctor.sasl().setMechanisms(_saslMechs);
             ctor.setContext(State.AUTHENTICATING);
         }
     }
@@ -85,6 +87,10 @@ public class MailServer
             // now generate any outbound network data generated in response to
             // any work done by the engine.
             ctor.process();
+            if (ctor.isClosed())
+            {
+                ctor.destroy();
+            }
 
             ctor = _driver.connector();
         }
@@ -181,7 +187,7 @@ public class MailServer
        Delivery delivery = con.getWorkHead();
        while (delivery != null)
        {
-           _logger.debug("Process delivery " + delivery.getTag());
+           _logger.debug("Process delivery " + String.valueOf(delivery.getTag()));
 
            if (delivery.isReadable())   // inbound data available
            {
@@ -193,14 +199,15 @@ public class MailServer
            }
 
            // check to see if the remote has accepted message we sent
-           if (delivery.remotelySettled())
+           if (delivery.getRemoteState() != null)
            {
+               _logger.debug("Remote has seen it, Settling delivery " + String.valueOf(delivery.getTag()));
                // once we know the remote has seen the message, we can
                // release the delivery.
                delivery.settle();
            }
 
-           delivery = con.getWorkHead();
+           delivery = delivery.getWorkNext();
        }
 
        // Step 3: Clean up any links or sessions that have been closed by the
