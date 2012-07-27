@@ -1,5 +1,3 @@
-find_package (PythonLibs)
-
 set(CMAKE_SWIG_FLAGS "-threads")
 
 swig_add_module(cproton python python.i)

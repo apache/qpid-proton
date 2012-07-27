@@ -22,14 +22,21 @@ include(UseSWIG)
 set (BINDING_DEPS qpid-proton qpid-proton-posix ${LINK_DEPS})
 
 # Build wrapper for Python:
-# @todo: conditionalize on whether python is available!
-add_subdirectory(python)
+find_package (PythonLibs)
+if (PYTHONLIBS_FOUND)
+  add_subdirectory(python)
+endif (PYTHONLIBS_FOUND)
+
+# Build wrapper for Ruby:
+include(FindRuby)
+if (RUBY_FOUND)
+  add_subdirectory(ruby)
+endif (RUBY_FOUND)
 
 # Build wrapper for PHP
 # For now, assume PHP support if the 'php-config' tool is present.
 # @todo: allow user to specify which php-config if multiple PHP sources installed!
-
-FIND_PROGRAM(PHP_CONFIG_EXE php-config)
-IF(PHP_CONFIG_EXE)
+find_program(PHP_CONFIG_EXE php-config)
+if (PHP_CONFIG_EXE)
   add_subdirectory(php)
-ENDIF(PHP_CONFIG_EXE)
+endif (PHP_CONFIG_EXE)
