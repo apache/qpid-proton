@@ -24,3 +24,14 @@ set_target_properties(cproton-ruby PROPERTIES PREFIX "")
 add_custom_command(TARGET cproton-ruby
                    POST_BUILD
                    COMMAND cmake -E rename cproton-ruby.so cproton.so)
+
+execute_process(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RbConfig::CONFIG['prefix']"
+                OUTPUT_VARIABLE RUBY_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+string(REPLACE ${RUBY_PREFIX} ${CMAKE_INSTALL_PREFIX} RUBY_PFX_ARCH_DIR ${RUBY_ARCH_DIR})
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
+        RENAME cproton.so
+        DESTINATION ${RUBY_PFX_ARCH_DIR}
+        COMPONENT Ruby)

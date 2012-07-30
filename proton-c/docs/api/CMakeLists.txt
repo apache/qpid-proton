@@ -17,19 +17,20 @@
 # under the License.
 #
 
-include(FindDoxygen)
+find_package(Doxygen)
 if (DOXYGEN_FOUND)
-    configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
-                    ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
-    add_custom_target (docs-user-api COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+  configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
+                  ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
+  add_custom_target (docs COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
 
-    # HTML files are generated to ./html - put those in the install.
-    install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-             DESTINATION docs/api
-             COMPONENT documentation)
-    # if (CPACK_GENERATOR STREQUAL "NSIS")
-    #     set (CPACK_NSIS_MENU_LINKS
-    #          "${QPID_INSTALL_HTMLDIR}/index.html" "Qpid C++ API Documentation"
-    #          "https://issues.apache.org/jira/browse/QPID" "Report Qpid Problem")
-    # endif (CPACK_GENERATOR STREQUAL "NSIS")
+  # HTML files are generated to ./html - put those in the install.
+  install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
+           DESTINATION docs/api
+           COMPONENT documentation
+           OPTIONAL)
+  # if (CPACK_GENERATOR STREQUAL "NSIS")
+  #     set (CPACK_NSIS_MENU_LINKS
+  #          "${QPID_INSTALL_HTMLDIR}/index.html" "Qpid C++ API Documentation"
+  #          "https://issues.apache.org/jira/browse/QPID" "Report Qpid Problem")
+  # endif (CPACK_GENERATOR STREQUAL "NSIS")
 endif (DOXYGEN_FOUND)

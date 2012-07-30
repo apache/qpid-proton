@@ -28,7 +28,7 @@ if (PYTHONLIBS_FOUND)
 endif (PYTHONLIBS_FOUND)
 
 # Build wrapper for Ruby:
-include(FindRuby)
+find_package(Ruby)
 if (RUBY_FOUND)
   add_subdirectory(ruby)
 endif (RUBY_FOUND)

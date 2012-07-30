@@ -56,7 +56,7 @@ add_library (
   src/messenger.c
 )
 
-include(FindSWIG)
+find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
