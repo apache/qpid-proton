@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 
-project (Proton)
+project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
@@ -52,10 +52,9 @@ endif (POLLER STREQUAL poll)
 
 
 add_library (
-  qpidproton SHARED
+  qpid-proton SHARED
 
   src/util.c
-  src/driver.c
   src/error.c
   src/buffer.c
   src/parser.c
@@ -73,31 +72,36 @@ add_library (
 
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
+)
 
+add_library (
+  qpid-proton-posix SHARED
+
+  src/driver.c
   src/messenger.c
 
   ${pn_driver_impl}
 )
 
-include(FindSWIG)
+find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
 add_executable (proton src/proton.c)
-target_link_libraries (proton qpidproton ${LINK_DEPS})
+target_link_libraries (proton qpid-proton qpid-proton-posix ${LINK_DEPS})
 
 add_executable (proton-dump src/proton-dump.c)
-target_link_libraries (proton-dump qpidproton ${LINK_DEPS})
+target_link_libraries (proton-dump qpid-proton)
 
 add_subdirectory(docs/api)
 
 set_target_properties (
-  qpidproton proton proton-dump
+  qpid-proton qpid-proton-posix proton proton-dump
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
 )
 
-install (TARGETS proton qpidproton
+install (TARGETS proton proton-dump qpid-proton qpid-proton-posix
          RUNTIME DESTINATION bin
          LIBRARY DESTINATION lib)

@@ -1,5 +1,5 @@
-#ifndef _PROTON_BUFFER_H
-#define _PROTON_BUFFER_H 1
+#ifndef PROTON_BUFFER_H
+#define PROTON_BUFFER_H 1
 
 /*
  *

@@ -24,17 +24,27 @@
 # Uses the php-config command line tool from PHP to extract the location of the PHP header
 # files
 
-EXECUTE_PROCESS(COMMAND ${PHP_CONFIG_EXE} --includes
+execute_process(COMMAND ${PHP_CONFIG_EXE} --includes
                 OUTPUT_VARIABLE PHP_INCLUDES
                 RESULT_VARIABLE retval
                 ERROR_VARIABLE  errmsg
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-IF (NOT ${retval} EQUAL 0)
-   MESSAGE(SEND_ERROR "Command \"${PHP_CONFIG_EXE} --include\" failed with output:\n${errmsg}")
-ELSE()
-   #MESSAGE(STATUS "PHP_INCLUDES=[${PHP_INCLUDES}]")
-   set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/php.i PROPERTIES SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}/include")
-   swig_add_module(cproton php ${CMAKE_CURRENT_SOURCE_DIR}/php.i)
-   set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_FLAGS "${PHP_INCLUDES}")
-   swig_link_libraries(cproton qpidproton ${LINK_DEPS})
-ENDIF()
+
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/php.i PROPERTIES SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}/include")
+swig_add_module(cproton php ${CMAKE_CURRENT_SOURCE_DIR}/php.i)
+set_target_properties(cproton PROPERTIES PREFIX "")
+set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_FLAGS "${PHP_INCLUDES}")
+swig_link_libraries(cproton ${BINDING_DEPS})
+
+execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
+                OUTPUT_VARIABLE PHP_EXT_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
+                OUTPUT_VARIABLE PHP_PFX
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+string(REPLACE ${PHP_PFX} ${CMAKE_INSTALL_PREFIX} PHP_REL_EXT_DIR ${PHP_EXT_DIR})
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
+        DESTINATION ${PHP_REL_EXT_DIR}
+        COMPONENT PHP)

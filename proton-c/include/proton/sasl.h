@@ -1,5 +1,5 @@
-#ifndef _PROTON_SASL_H
-#define _PROTON_SASL_H 1
+#ifndef PROTON_SASL_H
+#define PROTON_SASL_H 1
 
 /*
  *

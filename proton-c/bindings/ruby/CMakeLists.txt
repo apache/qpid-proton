@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,7 +17,21 @@
 # under the License.
 #
 
-import proton_tests.engine
-import proton_tests.message
-import proton_tests.messenger
-import proton_tests.sasl
+include_directories (${RUBY_INCLUDE_PATH})
+swig_add_module(cproton-ruby ruby ruby.i)
+swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
+set_target_properties(cproton-ruby PROPERTIES PREFIX "")
+add_custom_command(TARGET cproton-ruby
+                   POST_BUILD
+                   COMMAND cmake -E rename cproton-ruby.so cproton.so)
+
+execute_process(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RbConfig::CONFIG['prefix']"
+                OUTPUT_VARIABLE RUBY_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+string(REPLACE ${RUBY_PREFIX} ${CMAKE_INSTALL_PREFIX} RUBY_PFX_ARCH_DIR ${RUBY_ARCH_DIR})
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
+        RENAME cproton.so
+        DESTINATION ${RUBY_PFX_ARCH_DIR}
+        COMPONENT Ruby)

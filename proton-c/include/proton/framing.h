@@ -1,5 +1,5 @@
-#ifndef _PROTON_FRAMING_H
-#define _PROTON_FRAMING_H 1
+#ifndef PROTON_FRAMING_H
+#define PROTON_FRAMING_H 1
 
 /*
  *

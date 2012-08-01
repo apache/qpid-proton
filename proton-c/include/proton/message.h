@@ -1,5 +1,5 @@
-#ifndef _PROTON_MESSAGE_H
-#define _PROTON_MESSAGE_H 1
+#ifndef PROTON_MESSAGE_H
+#define PROTON_MESSAGE_H 1
 
 /*
  *

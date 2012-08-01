@@ -22,13 +22,22 @@ export PROTON_HOME=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
 
 if [ -z "$CPROTON_BUILD" ]; then
     if [ -d $PROTON_HOME/proton-c/build ]; then
-        export PYTHON_BINDINGS=$PROTON_HOME/proton-c/build/bindings/python
+        PROTON_BINDINGS=$PROTON_HOME/proton-c/build/bindings
     else
-        export PYTHON_BINDINGS=$PROTON_HOME/proton-c/bindings/python
+        PROTON_BINDINGS=$PROTON_HOME/proton-c/bindings
     fi
 else
-    export PYTHON_BINDINGS=$CPROTON_BUILD/bindings/python
+    PROTON_BINDINGS=$CPROTON_BUILD/bindings
 fi
 
+# Python & Jython
+export PYTHON_BINDINGS=$PROTON_BINDINGS/python
 export PYTHONPATH=$PROTON_HOME/tests:$PROTON_HOME/proton-c:$PYTHON_BINDINGS
 export JYTHONPATH=$PROTON_HOME/tests:$PROTON_HOME/proton-j:$PROTON_HOME/proton-j/dist/lib/qpidproton.jar
+
+# PHP
+export PHP_BINDINGS=$PROTON_BINDINGS/php
+
+# Ruby
+export RUBY_BINDINGS=$PROTON_BINDINGS/ruby
+export RUBYLIB=$RUBY_BINDINGS
