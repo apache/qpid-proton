@@ -204,8 +204,7 @@ public class DriverImpl implements Driver
         {
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(false);
-            Socket socket = channel.socket();
-            socket.bind(new InetSocketAddress(host, port));
+            channel.connect(new InetSocketAddress(host, port));
             return createConnector(channel, context);
         }
         catch (IOException e)

@@ -53,7 +53,7 @@ public class MailServer
 
     public MailServer() throws Exception
     {
-        _logger = new Logger();
+        _logger = new SystemOutLogger("TestServer: ");
         _driver = new DriverImpl(_logger);
         _listener = _driver.createListener("localhost", 5672, State.NEW);
     }
@@ -135,7 +135,7 @@ public class MailServer
                 {
                     //sasl.(sasl, PN_SASL_AUTH)
                 }
-            }
+            }            
             state = sasl.getState();
         }
 
@@ -366,87 +366,5 @@ public class MailServer
             server.acceptConnections();
             server.processConnections();
         }
-    }
-
-    class Logger implements LogHandler
-    {
-        static final String prefix = "TestServer: ";
-
-        @Override
-        public boolean isTraceEnabled()
-        {
-            return true;
-        }
-
-        @Override
-        public void trace(String message)
-        {
-            System.out.println(prefix + message);
-        }
-
-        @Override
-        public boolean isDebugEnabled()
-        {
-            return true;
-        }
-
-        @Override
-        public void debug(String message)
-        {
-            System.out.println(prefix + "DEBUG : " + message);
-        }
-
-        @Override
-        public void debug(Throwable t, String message)
-        {
-            System.out.println(prefix + "DEBUG : " + message);
-            t.printStackTrace();
-        }
-
-        @Override
-        public boolean isInfoEnabled()
-        {
-            return true;
-        }
-
-        @Override
-        public void info(String message)
-        {
-            System.out.println(prefix + "INFO : " + message);
-        }
-
-        @Override
-        public void info(Throwable t, String message)
-        {
-            System.out.println(prefix + "INFO : " + message);
-            t.printStackTrace();
-        }
-
-        @Override
-        public void warn(String message)
-        {
-            System.out.println(prefix + "WARN : " + message);
-        }
-
-        @Override
-        public void warn(Throwable t, String message)
-        {
-            System.out.println(prefix + "INFO : " + message);
-            t.printStackTrace();
-        }
-
-        @Override
-        public void error(String message)
-        {
-            System.out.println(prefix + "ERROR : " + message);
-        }
-
-        @Override
-        public void error(Throwable t, String message)
-        {
-            System.out.println(prefix + "INFO : " + message);
-            t.printStackTrace();
-        }
-
-    }
+    }    
 }

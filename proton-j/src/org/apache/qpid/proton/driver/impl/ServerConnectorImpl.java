@@ -27,6 +27,7 @@ import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.Sasl.SaslState;
 import org.apache.qpid.proton.logging.LogHandler;
 
 class ServerConnectorImpl<C> implements Connector<C>
@@ -70,6 +71,18 @@ class ServerConnectorImpl<C> implements Connector<C>
 
     public void process()
     {
+        if (_channel.isConnectionPending())
+        {
+            try
+            {
+                _channel.finishConnect();
+            }
+            catch (IOException io)
+            {
+                throw new RuntimeException("Exception will trying to complete connection",io);
+            }
+        }
+        
         if (!_channel.isOpen())
         {
             _state = ConnectorState.CLOSED;
@@ -151,13 +164,18 @@ class ServerConnectorImpl<C> implements Connector<C>
         int read = 0;
         while (read < size)
         {
+            offset = read;
             switch (_state)
             {
             case UNINITIALIZED:
-                read += readSasl(bytes, offset, size);
+                read += readSasl(bytes, offset, size - offset);
+                if (isSaslDone())
+                {
+                    _state = _sasl.getState() == SaslState.PN_SASL_PASS ? ConnectorState.OPENED : ConnectorState.CLOSED;
+                }
                 break;
             case OPENED:
-                read += readAMQPCommands(bytes, offset, size);
+                read += readAMQPCommands(bytes, offset, size - offset);
                 break;
             case EOS:
             case CLOSED:
@@ -173,6 +191,10 @@ class ServerConnectorImpl<C> implements Connector<C>
         {
         case UNINITIALIZED:
             writeSasl();
+            if (isSaslDone())
+            {
+                _state = _sasl.getState() == SaslState.PN_SASL_PASS ? ConnectorState.OPENED : ConnectorState.CLOSED;
+            }
             break;
         case OPENED:
             writeAMQPCommands();
@@ -243,13 +265,13 @@ class ServerConnectorImpl<C> implements Connector<C>
     public void setConnection(Connection connection)
     {
         // write any remaining data on to the wire.
-        writeSasl();
+        //writeSasl();
         _connection = connection;
         // write initial data
-        int size = _writeBuffer.array().length - _bytesNotWritten;
-        _bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
-                _bytesNotWritten, size);
-        setState(ConnectorState.OPENED);
+        //int size = _writeBuffer.array().length - _bytesNotWritten;
+        //_bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
+        //        _bytesNotWritten, size);
+        //setState(ConnectorState.OPENED);
     }
 
     public C getContext()
@@ -297,5 +319,11 @@ class ServerConnectorImpl<C> implements Connector<C>
     private void setState(ConnectorState newState)
     {
         _state = newState;
+    }
+    
+    private boolean isSaslDone()
+    {
+        SaslState state = _sasl.getState();
+        return state == SaslState.PN_SASL_PASS || state == SaslState.PN_SASL_FAIL;
     }
 }

@@ -2,6 +2,8 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.SaslClient;
+import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
+import org.apache.qpid.proton.engine.Sasl.SaslState;
 import org.apache.qpid.proton.type.Binary;
 import org.apache.qpid.proton.type.Symbol;
 import org.apache.qpid.proton.type.security.*;
@@ -79,6 +81,7 @@ public class SaslClientImpl extends SaslImpl implements SaslClient, SaslFrameBod
                 break;
             }
         }
+        _state = _outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
         _done = true;
     }
 
