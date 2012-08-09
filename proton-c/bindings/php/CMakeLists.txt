@@ -42,7 +42,9 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
 execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
                 OUTPUT_VARIABLE PHP_PFX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-
+execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
+                OUTPUT_VARIABLE PHP_OPTS
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 string(REPLACE ${PHP_PFX} ${CMAKE_INSTALL_PREFIX} PHP_REL_EXT_DIR ${PHP_EXT_DIR})
 
@@ -52,9 +54,21 @@ execute_process(COMMAND ${PHP_EXE} ${GET_INCLUDE_DIR} ${PHP_PFX}
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 string(REPLACE ${PHP_PFX} ${CMAKE_INSTALL_PREFIX} PHP_REL_INCLUDE_DIR ${PHP_INCLUDE_DIR})
 
+string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
+set (PHP_INI_SCAN_DIR ${CMAKE_MATCH_1})
+if (NOT ${PHP_REL_EXT_DIR} STREQUAL ${PHP_EXT_DIR})
+  set (PHP_INI_SCAN_DIR "${CMAKE_INSTALL_PREFIX}${PHP_INI_SCAN_DIR}")
+endif ()
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
         DESTINATION ${PHP_REL_EXT_DIR}
         COMPONENT PHP)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.php
         DESTINATION ${PHP_REL_INCLUDE_DIR}
         COMPONENT PHP)
+
+if (NOT ${PHP_INI_SCAN_DIR} STREQUAL "")
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cproton.ini
+          DESTINATION ${PHP_INI_SCAN_DIR}
+          COMPONENT PHP)
+endif ()
