@@ -116,6 +116,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
   l->pending = false;
   l->fd = fd;
   l->context = context;
+  l->ssl = NULL;
 
   pn_listener_impl_init(l);
 
@@ -293,6 +294,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->output_done = false;
   c->context = context;
   c->listener = NULL;
+  c->ssl = NULL;
 
   pn_connector_impl_init(c);
 

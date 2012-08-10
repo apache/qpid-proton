@@ -61,6 +61,7 @@ endif (POLLER STREQUAL poll)
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/drivers/driver_openssl.c)
+  set (LINK_DEPS ${LINK_DEPS} ssl crypto)
 else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/drivers/driver_no_ssl.c)
 endif (SSL_IMPL STREQUAL openssl)

@@ -66,6 +66,8 @@ void pn_listener_impl_destroy( struct pn_listener_t *);
 #define PN_SEL_RD (0x0001)
 #define PN_SEL_WR (0x0002)
 
+struct pn_listener_ssl_impl_t;
+
 struct pn_connector_t {
   pn_driver_t *driver;
   pn_connector_t *connector_next;
@@ -98,6 +100,7 @@ struct pn_connector_t {
   void *context;
 
   struct pn_connector_impl_t *impl;
+  struct pn_connector_ssl_impl_t *ssl;
 };
 
 int pn_connector_impl_init( struct pn_connector_t *);
