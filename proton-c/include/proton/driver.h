@@ -159,6 +159,36 @@ void pn_listener_close(pn_listener_t *listener);
  */
 void pn_listener_free(pn_listener_t *listener);
 
+/** Set the identifying certificate for the listener.  This certificate will set the
+ * identity for all connectors created from this listener.  Setting these parameters
+ * configures the pn_listener_t to use SSL/TLS on all connectors created from this
+ * listener (see ::pn_listener_accept).  The certificate will be used for authenticating
+ * this server to connecting clients and encrypting the data stream.
+ *
+ * @param[in] listener the listener that will provide this certificate.
+ * @param[in] certificate_file path to file containing the certificate.
+ * @param[in] private_key_file path to file the private key used to sign the certificate
+ * @param[in] password the password used to sign the key, else NULL if key is not protected.
+ * @return 0 on success
+ */
+int pn_listener_ssl_set_certificate(pn_listener_t *listener,
+                                    const char *certificate_file,
+                                    const char *private_key_file,
+                                    const char *password);
+
+
+/** Permit a listener that has been configured to use SSL/TLS to accept connection
+ * requests from clients that are not using SSL/TLS.  This configures the listener to
+ * "sniff" the incoming client data stream, and dynamically determine whether SSL/TLS is
+ * being used on a per-client basis.  This option is disabled by default: only clients
+ * using SSL/TLS are accepted.  See ::pn_listener_ssl_set_certificate.
+ *
+ * @param[in] listener the listener that will accept client connections.
+ * @return 0 on success
+ */
+int pn_listener_ssl_allow_unsecured_clients(pn_listener_t *listener);
+
+
 
 /** pn_connector - the client API **/
 
@@ -272,5 +302,51 @@ bool pn_connector_closed(pn_connector_t *connector);
  *                      valid on return
  */
 void pn_connector_free(pn_connector_t *connector);
+
+
+/** Configure the set of trusted server certificates for this connector.  This causes the
+ * connector to use SSL/TLS to authenticate the peer.  It is intended to be used by a
+ * client that is attempting to connecto to a trusted server.  See ::pn_driver_connector
+ * ::pn_connector ::pn_connector_fd
+ *
+ * @param[in] listener the listener that will use the certificates.
+ * @param[in] certificates path to file containing certificates for trusted servers.
+ * @return 0 on success
+ *
+ * @brief For connectors that have been created directly from the driver (client
+ * connections), rather than from the listener.  See
+ * ::pn_listener_ssl_set_trusted_certificates.
+ */
+int pn_connector_ssl_set_trusted_certificates(pn_connector_t *connector,
+                                              const char *certificates);
+
+
+
+/** Configure the identifying certificate for the connector.  Used for client connections
+ * that will have to authenticate with the remote server.
+ *
+ * @param[in] connector the connector that will provide this certificate.
+ * @param[in] certificate_file path to file containing the certificate.
+ * @param[in] private_key_file path to file the private key used to sign the certificate
+ * @param[in] password the password used to sign the key, else NULL if key is not protected.
+ * @return 0 on success
+ */
+int pn_connector_ssl_set_certificate(pn_connector_t *connector,
+                                     const char *certificate,
+                                     const char *private_key,
+                                     const char *private_key_password);
+
+
+/** Force the peer to authenticate.  This is intended to be used on those connectors that
+ * have been created by a listener - it permits the server to force authentication of the
+ * connected client.  See ::pn_listener_ssl_set_certificate.
+ *
+ * @param[in] connector the connector that will require authentication from its peer.
+ * @param[in] certificates if set, a restricted set of allowable certificates (subset of
+ *     trusted certificates configured).
+ * @return 0 on success
+ */
+int pn_connector_ssl_authenticate_peer(pn_connector_t *connector,
+                                       const char *certificates);
 
 #endif /* driver.h */

@@ -84,12 +84,11 @@ void pn_driver_impl_wait(pn_driver_t *d, int timeout)
   pn_driver_impl_t *impl = d->impl;
 
   // setup the select
-  impl->max_fds = -1;
   FD_ZERO(&impl->readfds);
   FD_ZERO(&impl->writefds);
 
   FD_SET(d->ctrl[0], &impl->readfds);
-  if (d->ctrl[0] > impl->max_fds) impl->max_fds = d->ctrl[0];
+  impl->max_fds = d->ctrl[0];
 
   pn_listener_t *l = d->listener_head;
   for (int i = 0; i < d->listener_count; i++) {

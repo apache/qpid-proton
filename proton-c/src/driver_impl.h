@@ -43,6 +43,7 @@ struct pn_driver_t {
 int pn_driver_impl_init( struct pn_driver_t * );
 void pn_driver_impl_destroy( struct pn_driver_t * );
 
+struct pn_listener_ssl_impl_t;
 
 struct pn_listener_t {
   pn_driver_t *driver;
@@ -53,6 +54,7 @@ struct pn_listener_t {
   void *context;
 
   struct pn_listener_impl_t *impl;
+  struct pn_listener_ssl_impl_t *ssl;
 };
 
 int pn_listener_impl_init( struct pn_listener_t *);

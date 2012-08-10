@@ -10,6 +10,7 @@ include(CheckIncludeFile)
 
 CHECK_INCLUDE_FILE(poll.h HAVE_POLL_H)
 CHECK_INCLUDE_FILE(sys/select.h HAVE_SYS_SELECT_H)
+CHECK_INCLUDE_FILE(openssl/ssl.h HAVE_OPENSSL_H)
 
 # Set default poller implementation (check from general to specific to allow overriding)
 if (HAVE_SYS_SELECT_H)
