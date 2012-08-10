@@ -34,10 +34,11 @@
 
 
 
-int pn_listener_ssl_set_certificate(pn_listener_t *listener,
-                                    const char *certificate_file,
-                                    const char *private_key_file,
-                                    const char *password)
+int pn_listener_ssl_server_init(pn_listener_t *listener,
+                                const char *certificate_file,
+                                const char *private_key_file,
+                                const char *password,
+                                const char *certificate_db)
 {
     return -1;
 }
@@ -47,22 +48,22 @@ int pn_listener_ssl_allow_unsecured_clients(pn_listener_t *listener)
     return -1;
 }
 
-int pn_connector_ssl_set_trusted_certificates(pn_connector_t *connector,
-                                              const char *certificates)
+int pn_connector_ssl_client_init(pn_connector_t *connector,
+                                 const char *certificate_db)
 {
     return -1;
 }
 
-int pn_connector_ssl_set_certificate(pn_connector_t *connector,
-                                     const char *certificate,
-                                     const char *private_key,
-                                     const char *private_key_password)
+int pn_connector_ssl_set_client_auth(pn_connector_t *connector,
+                                     const char *certificate_file,
+                                     const char *private_key_file,
+                                     const char *password)
 {
     return -1;
 }
 
-int pn_connector_ssl_authenticate_peer(pn_connector_t *connector,
-                                       const char *certificates)
+int pn_connector_ssl_authenticate_client(pn_connector_t *connector,
+                                         const char *trusted_CAs_file)
 {
     return -1;
 }
@@ -79,16 +80,16 @@ void pn_connector_shutdown_ssl( pn_connector_t *c)
 }
 
 
-void pn_listener_free_ssl( pn_listener_t * )
+void pn_listener_free_ssl( pn_listener_t *l )
 {
 }
 
 
-void pn_connector_free_ssl( pn_connector_t * )
+void pn_connector_free_ssl( pn_connector_t *c )
 {
 }
 
-int pn_driver_ssl_data_ready( pn_driver_t * )
+int pn_driver_ssl_data_ready( pn_driver_t *d )
 {
     return 0;
 }
