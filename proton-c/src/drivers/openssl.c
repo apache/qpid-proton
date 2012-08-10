@@ -78,6 +78,55 @@ static int start_clear_connected( pn_connector_t *c );
 static int start_ssl_shutdown( pn_connector_t *c );
 static int handle_ssl_shutdown( pn_connector_t *c );
 
+
+#if 1
+static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+    fprintf(stderr, "VERIFY_CALLBACK: pre-verify-ok=%d\n", preverify_ok);
+
+           char    buf[256];
+           X509   *err_cert;
+           int     err, depth;
+
+           err_cert = X509_STORE_CTX_get_current_cert(ctx);
+           err = X509_STORE_CTX_get_error(ctx);
+           depth = X509_STORE_CTX_get_error_depth(ctx);
+
+           /*
+            * Retrieve the pointer to the SSL of the connection currently treated
+            * and the application specific data stored into the SSL object.
+            */
+
+           X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+
+           /*
+            * Catch a too long certificate chain. The depth limit set using
+            * SSL_CTX_set_verify_depth() is by purpose set to "limit+1" so
+            * that whenever the "depth>verify_depth" condition is met, we
+            * have violated the limit and want to log this error condition.
+            * We must do it here, because the CHAIN_TOO_LONG error would not
+            * be found explicitly; only errors introduced by cutting off the
+            * additional certificates would be logged.
+            */
+           if (!preverify_ok) {
+               printf("verify error:num=%d:%s:depth=%d:%s\n", err,
+                        X509_verify_cert_error_string(err), depth, buf);
+           }
+
+           /*
+            * At this point, err contains the last verification error. We can use
+            * it for something special
+            */
+           if (!preverify_ok && (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT))
+           {
+             X509_NAME_oneline(X509_get_issuer_name(ctx->current_cert), buf, 256);
+             printf("issuer= %s\n", buf);
+           }
+
+    return 1;
+}
+#endif
+
 /** Public API - visible to application code */
 
 int pn_listener_ssl_server_init(pn_listener_t *listener,
@@ -97,6 +146,7 @@ int pn_listener_ssl_server_init(pn_listener_t *listener,
     if (!ssl_initialized) {
         ssl_initialized = 1;
         SSL_library_init();
+        SSL_load_error_strings();
     }
 
     impl->ctx = SSL_CTX_new(SSLv23_server_method());
@@ -147,6 +197,9 @@ int pn_listener_ssl_allow_unsecured_clients(pn_listener_t *listener)
 int pn_connector_ssl_client_init(pn_connector_t *connector,
                                  const char *certificate_db)
 {
+    if (connector->listener)
+        return -1;   // not for listener-based connectors
+
     connector->ssl = calloc(1, sizeof(pn_connector_ssl_impl_t));
     if (!connector->ssl) {
         perror("calloc()");
@@ -159,6 +212,7 @@ int pn_connector_ssl_client_init(pn_connector_t *connector,
     if (!ssl_initialized) {
         ssl_initialized = 1;
         SSL_library_init();
+        SSL_load_error_strings();
     }
 
     impl->ctx = SSL_CTX_new(SSLv23_client_method());
@@ -174,7 +228,8 @@ int pn_connector_ssl_client_init(pn_connector_t *connector,
     /* Force servers to authenticate */
     SSL_CTX_set_verify( connector->ssl->ctx,
                         SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                        0 /*?verify callback?*/ );
+                        verify_callback /*?verify callback?*/ );
+    //0 /*?verify callback?*/ );
 
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(connector->ssl->ctx, 1);
@@ -253,7 +308,8 @@ int pn_connector_ssl_authenticate_client(pn_connector_t *connector,
 
     SSL_set_verify( impl->ssl,
                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                    0 /*?verify callback?*/);
+                    verify_callback /*?verify callback?*/);
+    //0 /*?verify callback?*/ );
     return 0;
 }
 
@@ -388,6 +444,7 @@ static int configure_ca_database(SSL_CTX *ctx, const char *certificate_db)
         file = certificate_db;
     }
 
+    fprintf(stderr, "load verify locations: file=%s dir=%s\n", file, dir);
     if (SSL_CTX_load_verify_locations( ctx, file, dir ) != 1) {
         fprintf(stderr, "SSL_CTX_load_verify_locations( %s ) failed\n", certificate_db);
         return -1;
@@ -488,6 +545,7 @@ static int handle_check_for_ssl( pn_connector_t *client )
  */
 static int start_ssl_connect(pn_connector_t *client)
 {
+    fprintf(stderr, "start_ssl_connect()\n");
     pn_connector_ssl_impl_t *impl = client->ssl;
     if (!impl) return -1;
 
@@ -509,6 +567,7 @@ static int start_ssl_connect(pn_connector_t *client)
 
 int handle_ssl_connect( pn_connector_t *client )
 {
+    fprintf(stderr, "handle_ssl_connect()\n");
     pn_connector_ssl_impl_t *impl = client->ssl;
     if (!impl) return -1;
 
@@ -519,7 +578,7 @@ int handle_ssl_connect( pn_connector_t *client )
         return start_ssl_connection_up( client );
 
     case SSL_ERROR_WANT_READ:
-        printf("  need read...\n");
+        //printf("  need read...\n");
         client->status |= PN_SEL_RD;
         break;
     case SSL_ERROR_WANT_WRITE:
@@ -527,7 +586,8 @@ int handle_ssl_connect( pn_connector_t *client )
         client->status |= PN_SEL_WR;
         break;
     default:
-        fprintf(stderr, "SSL_connect() failure");
+        fprintf(stderr, "SSL_connect() failure: %d\n", SSL_get_error(impl->ssl, rc));
+        ERR_print_errors_fp(stderr);
         return -1;
     }
 
@@ -546,9 +606,11 @@ static int start_ssl_accept(pn_connector_t *client)
 {
     pn_connector_ssl_impl_t *impl = client->ssl;
     if (!impl) return -1;
+    pn_listener_ssl_impl_t *parent = client->listener->ssl;
+    if (!parent) return -1;
 
     impl->sbio = BIO_new_socket(client->fd, BIO_NOCLOSE);
-    impl->ssl = SSL_new(impl->ctx);
+    impl->ssl = SSL_new(parent->ctx);
     SSL_set_bio(impl->ssl, impl->sbio, impl->sbio);
 
     return handle_ssl_accept(client);
@@ -566,7 +628,7 @@ static int handle_ssl_accept(pn_connector_t *client)
         return start_ssl_connection_up( client );
 
     case SSL_ERROR_WANT_READ:
-        printf("  need read...\n");
+        //printf("  need read...\n");
         client->status |= PN_SEL_RD;
         break;
     case SSL_ERROR_WANT_WRITE:
@@ -574,7 +636,8 @@ static int handle_ssl_accept(pn_connector_t *client)
         client->status |= PN_SEL_WR;
         break;
     default:
-        fprintf(stderr, "SSL_accept() failure\n");
+        fprintf(stderr, "SSL_accept() failure: %d\n", SSL_get_error(impl->ssl, rc));
+        ERR_print_errors_fp(stderr);
         return -1;
     }
     client->io_handler = handle_ssl_accept;
@@ -607,7 +670,7 @@ int handle_ssl_connection_up( pn_connector_t *c )
     pn_connector_ssl_impl_t *impl = c->ssl;
     assert(impl);
 
-    printf("handle_ssl_connection_up\n");
+    printf("handle_ssl_connection_up  OUT=%d\n", (int)c->output_size);
 
     c->status &= ~(PN_SEL_RD | PN_SEL_WR);
 
@@ -628,7 +691,7 @@ int handle_ssl_connection_up( pn_connector_t *c )
             } else if (ssl_err == SSL_ERROR_WANT_WRITE) {
                 printf("need write\n");
                 read_blocked = 1;
-                write_blocked = 1;
+                write_blocked = 1;  // don't bother writing
                 need_write = 1;
             } else {
                 if (ssl_err == SSL_ERROR_ZERO_RETURN) {
@@ -642,15 +705,13 @@ int handle_ssl_connection_up( pn_connector_t *c )
             }
         }
 
-        // we need to re-call SSL_read when the receive buffer is drained (do not need to wait for I/O!)
-        if (!read_blocked && SSL_pending(impl->ssl) && PN_CONNECTOR_IO_BUF_SIZE == c->input_size) {
-            printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  >>>>> READ STALLED <<<<<< !!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-            impl->read_stalled = true;
-        }
+        pn_connector_process_input(c);
+        pn_connector_process_output(c);
 
         if (!write_blocked && c->output_size > 0) {
 
             rc = SSL_write( impl->ssl, c->output, c->output_size );
+            printf("write %d possible bytes: actual = %d\n", (int)c->output_size, rc);
             ssl_err = SSL_get_error( impl->ssl, rc );
             if (ssl_err == SSL_ERROR_NONE) {
                 c->output_size -= rc;
@@ -664,7 +725,7 @@ int handle_ssl_connection_up( pn_connector_t *c )
             } else if (ssl_err == SSL_ERROR_WANT_READ) {
                 printf("need read\n");
                 read_blocked = 1;
-                write_blocked = 1;
+                write_blocked = 1;  // don't bother reading
                 need_read = 1;
             } else {
                 if (ssl_err == SSL_ERROR_ZERO_RETURN)
@@ -682,6 +743,12 @@ int handle_ssl_connection_up( pn_connector_t *c )
 
     if (need_read) c->status |= PN_SEL_RD;
     if (need_write) c->status |= PN_SEL_WR;
+
+    // we need to re-call SSL_read when the receive buffer is drained (do not need to wait for I/O!)
+    if (!read_blocked && SSL_pending(impl->ssl) && PN_CONNECTOR_IO_BUF_SIZE == c->input_size) {
+        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  >>>>> READ STALLED <<<<<< !!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        impl->read_stalled = true;
+    }
 
     return 0;
 }
@@ -722,7 +789,7 @@ static int handle_ssl_shutdown( pn_connector_t *c )
 
     switch (SSL_get_error( impl->ssl, rc )) {
     case SSL_ERROR_WANT_READ:
-        printf("  need read...\n");
+        //printf("  need read...\n");
         c->status |= PN_SEL_RD;
         break;
     case SSL_ERROR_WANT_WRITE:

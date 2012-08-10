@@ -111,6 +111,8 @@ void pn_connector_impl_destroy( struct pn_connector_t *);
 void pn_driver_impl_wait(struct pn_driver_t *, int timeout_ms);
 int pn_io_handler(pn_connector_t *);
 int pn_null_io_handler(pn_connector_t *);
+void pn_connector_process_output(pn_connector_t *);
+void pn_connector_process_input(pn_connector_t *);
 
 
 #endif /* driver.h */

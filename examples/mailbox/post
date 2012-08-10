@@ -72,6 +72,7 @@ class PostClient(object):
         self.logging = False
         self.ca_database = ca_database
 
+
     def setup(self):
         """ Setup and configure the connection to the server.
         """
@@ -143,6 +144,10 @@ class PostClient(object):
             d = _next
 
 
+    def closed(self):
+        return self.cxtr == None or pn_connector_closed(self.cxtr)
+
+
     def enableLogging(self):
         self.logging = True
 
@@ -175,7 +180,11 @@ def main():
 
     # wait until we authenticate with the server
     while pn_sasl_state(sender.sasl) not in (PN_SASL_PASS, PN_SASL_FAIL):
+        print("sasl wait...");
         sender.wait()
+        if sender.closed():
+            sender.log("connection failed")
+            return -1;
 
     if pn_sasl_state(sender.sasl) == PN_SASL_FAIL:
         print("Error: Authentication failure")
@@ -185,12 +194,12 @@ def main():
 
     pendingSends = list(options.messages)
     while pendingSends:
-        # wait until the server grands us some send credit
+        # wait until the server grants us some send credit
         if pn_credit(sender.link) == 0:
             sender.log("wait for credit")
             sender.wait()
 
-        while pn_credit(sender.link) > 0:
+        while pn_credit(sender.link) > 0 and not sender.closed():
             msg = pendingSends.pop(0)
             sender.log("sending %s" % msg)
             d = pn_delivery(sender.link, "post-delivery-%s" % len(pendingSends))
@@ -205,7 +214,7 @@ def main():
         sender.settle()
 
     # done sending, now block until any pending deliveries are settled
-    while pn_unsettled(sender.link) > 0:
+    while pn_unsettled(sender.link) > 0 and not sender.closed():
         sender.wait()
         sender.settle()
 

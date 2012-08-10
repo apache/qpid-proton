@@ -123,6 +123,10 @@ class FetchClient(object):
             d = _next
 
 
+    def closed(self):
+        return self.cxtr == None or pn_connector_closed(self.cxtr)
+
+
     def enableLogging(self):
         self.logging = True
 
@@ -155,6 +159,9 @@ def main():
     # wait until we authenticate with the server
     while pn_sasl_state(receiver.sasl) not in (PN_SASL_PASS, PN_SASL_FAIL):
         receiver.wait()
+        if receiver.closed():
+            receiver.log("connection failed")
+            return -1;
 
     if pn_sasl_state(receiver.sasl) == PN_SASL_FAIL:
         print("Error: Authentication failure")
@@ -163,6 +170,9 @@ def main():
     # wait until the server has opened the connection
     while not (pn_link_state(receiver.link) & PN_REMOTE_ACTIVE):
         receiver.wait()
+        if receiver.closed():
+            receiver.log("connection failed")
+            return -1;
 
     # check if the server recognizes the mailbox, fail if it does not
     if pn_remote_source(receiver.link) != options.mailbox:
@@ -176,7 +186,7 @@ def main():
     # main loop: continue fetching messages until 'count' messages have been
     # retrieved
 
-    while pn_credit(receiver.link) > 0:    # while all msgs have not arrived
+    while pn_credit(receiver.link) > 0 and not receiver.closed():    # while all msgs have not arrived
         if pn_queued(receiver.link) == 0:  # wait for some to arrive
             receiver.wait()
 
@@ -198,7 +208,7 @@ def main():
         receiver.settle()
 
     # block until any leftover deliveries are settled
-    while pn_unsettled(receiver.link) > 0:
+    while pn_unsettled(receiver.link) > 0 and not receiver.closed():
         receiver.wait()
         receiver.settle()
 

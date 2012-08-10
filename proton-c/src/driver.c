@@ -398,7 +398,7 @@ static void pn_connector_consume(pn_connector_t *ctor, int n)
   memmove(ctor->input, ctor->input + n, ctor->input_size);
 }
 
-static void pn_connector_process_input(pn_connector_t *ctor)
+void pn_connector_process_input(pn_connector_t *ctor)
 {
   while (!ctor->input_done && (ctor->input_size > 0 || ctor->input_eos)) {
     ssize_t n = ctor->process_input(ctor);
@@ -499,7 +499,7 @@ static size_t pn_connector_available(pn_connector_t *ctor)
   return PN_CONNECTOR_IO_BUF_SIZE - ctor->output_size;
 }
 
-static void pn_connector_process_output(pn_connector_t *ctor)
+void pn_connector_process_output(pn_connector_t *ctor)
 {
   while (!ctor->output_done && pn_connector_available(ctor) > 0) {
     ssize_t n = ctor->process_output(ctor);
@@ -597,7 +597,13 @@ void pn_connector_process(pn_connector_t *c) {
       c->pending_tick = false;
     }
 
-    c->io_handler(c);
+    int rc;
+    rc = c->io_handler(c);
+    if (rc) {
+        fprintf(stderr, "I/O Failure: %d\n", rc);
+        pn_connector_close(c);
+        return;
+    }
 
     if (c->output_size == 0 && c->input_done && c->output_done) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
