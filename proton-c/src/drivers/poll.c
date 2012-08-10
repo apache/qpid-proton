@@ -28,98 +28,98 @@
 #include <poll.h>
 #include <unistd.h>
 
-typedef struct pn_driver_impl_t {
+typedef struct pn_driver_poller_t {
   size_t capacity;
   struct pollfd *fds;
   size_t nfds;
-} pn_driver_impl_t;
+} pn_driver_poller_t;
 
-typedef struct pn_listener_impl_t {
+typedef struct pn_listener_poller_t {
     int idx;
-} pn_listener_impl_t;
+} pn_listener_poller_t;
 
-typedef struct pn_connector_impl_t {
+typedef struct pn_connector_poller_t {
     int idx;
-} pn_connector_impl_t;
+} pn_connector_poller_t;
 
 
-int pn_driver_impl_init( struct pn_driver_t *d )
+int pn_driver_poller_init( struct pn_driver_t *d )
 {
-    d->impl = calloc(1, sizeof(pn_driver_impl_t));
-    if (!d->impl) {
-        perror("Unable to allocate select() driver_impl:");
+    d->poller = calloc(1, sizeof(pn_driver_poller_t));
+    if (!d->poller) {
+        perror("Unable to allocate poll() driver poller:");
         return -1;
     }
     return 0;
 }
 
-void pn_driver_impl_destroy( struct pn_driver_t *d )
+void pn_driver_poller_destroy( struct pn_driver_t *d )
 {
-    if (d->impl) {
-        if (d->impl->fds) free(d->impl->fds);
-        free(d->impl);
+    if (d->poller) {
+        if (d->poller->fds) free(d->poller->fds);
+        free(d->poller);
     }
-    d->impl = NULL;
+    d->poller = NULL;
 }
 
 
-int pn_listener_impl_init( struct pn_listener_t *l )
+int pn_listener_poller_init( struct pn_listener_t *l )
 {
-    l->impl = calloc(1, sizeof(pn_listener_impl_t));
-    if (!l->impl) {
-        perror("Unable to allocate poll() listener_impl:");
+    l->poller = calloc(1, sizeof(pn_listener_poller_t));
+    if (!l->poller) {
+        perror("Unable to allocate poll() listener_poller:");
         return -1;
     }
     return 0;
 }
 
-void pn_listener_impl_destroy( struct pn_listener_t *l )
+void pn_listener_poller_destroy( struct pn_listener_t *l )
 {
-    if (l->impl) free(l->impl);
-    l->impl = NULL;
+    if (l->poller) free(l->poller);
+    l->poller = NULL;
 }
 
 
-int pn_connector_impl_init( struct pn_connector_t *c )
+int pn_connector_poller_init( struct pn_connector_t *c )
 {
-    c->impl = calloc(1, sizeof(pn_connector_impl_t));
-    if (!c->impl) {
-        perror("Unable to allocate poll() connector_impl:");
+    c->poller = calloc(1, sizeof(pn_connector_poller_t));
+    if (!c->poller) {
+        perror("Unable to allocate poll() connector_poller:");
         return -1;
     }
     return 0;
 }
 
-void pn_connector_impl_destroy( struct pn_connector_t *c )
+void pn_connector_poller_destroy( struct pn_connector_t *c )
 {
-    if (c->impl) free(c->impl);
-    c->impl = NULL;
+    if (c->poller) free(c->poller);
+    c->poller = NULL;
 }
 
 
-void pn_driver_impl_wait(pn_driver_t *d, int timeout)
+void pn_driver_poller_wait(pn_driver_t *d, int timeout)
 {
-  pn_driver_impl_t *impl = d->impl;
+  pn_driver_poller_t *poller = d->poller;
   size_t size = d->listener_count + d->connector_count;
-  while (impl->capacity < size + 1) {
-    impl->capacity = impl->capacity ? 2*impl->capacity : 16;
-    impl->fds = realloc(impl->fds, impl->capacity*sizeof(struct pollfd));
+  while (poller->capacity < size + 1) {
+    poller->capacity = poller->capacity ? 2*poller->capacity : 16;
+    poller->fds = realloc(poller->fds, poller->capacity*sizeof(struct pollfd));
   }
 
-  impl->nfds = 0;
+  poller->nfds = 0;
 
-  impl->fds[impl->nfds].fd = d->ctrl[0];
-  impl->fds[impl->nfds].events = POLLIN;
-  impl->fds[impl->nfds].revents = 0;
-  impl->nfds++;
+  poller->fds[poller->nfds].fd = d->ctrl[0];
+  poller->fds[poller->nfds].events = POLLIN;
+  poller->fds[poller->nfds].revents = 0;
+  poller->nfds++;
 
   pn_listener_t *l = d->listener_head;
   for (int i = 0; i < d->listener_count; i++) {
-    impl->fds[impl->nfds].fd = l->fd;
-    impl->fds[impl->nfds].events = POLLIN;
-    impl->fds[impl->nfds].revents = 0;
-    l->impl->idx = impl->nfds;
-    impl->nfds++;
+    poller->fds[poller->nfds].fd = l->fd;
+    poller->fds[poller->nfds].events = POLLIN;
+    poller->fds[poller->nfds].revents = 0;
+    l->poller->idx = poller->nfds;
+    poller->nfds++;
     l = l->listener_next;
   }
 
@@ -127,19 +127,19 @@ void pn_driver_impl_wait(pn_driver_t *d, int timeout)
   for (int i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
-      impl->fds[impl->nfds].fd = c->fd;
-      impl->fds[impl->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
+      poller->fds[poller->nfds].fd = c->fd;
+      poller->fds[poller->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
         (c->status & PN_SEL_WR ? POLLOUT : 0);
-      impl->fds[impl->nfds].revents = 0;
-      c->impl->idx = impl->nfds;
-      impl->nfds++;
+      poller->fds[poller->nfds].revents = 0;
+      c->poller->idx = poller->nfds;
+      poller->nfds++;
     }
     c = c->connector_next;
   }
 
-  DIE_IFE(poll(impl->fds, impl->nfds, d->closed_count > 0 ? 0 : timeout));
+  DIE_IFE(poll(poller->fds, poller->nfds, d->closed_count > 0 ? 0 : timeout));
 
-  if (impl->fds[0].revents & POLLIN) {
+  if (poller->fds[0].revents & POLLIN) {
     //clear the pipe
     char buffer[512];
     while (read(d->ctrl[0], buffer, 512) == 512);
@@ -147,8 +147,8 @@ void pn_driver_impl_wait(pn_driver_t *d, int timeout)
 
   l = d->listener_head;
   while (l) {
-    int idx = l->impl->idx;
-    l->pending = (idx && impl->fds[idx].revents & POLLIN);
+    int idx = l->poller->idx;
+    l->pending = (idx && poller->fds[idx].revents & POLLIN);
     l = l->listener_next;
   }
 
@@ -159,9 +159,9 @@ void pn_driver_impl_wait(pn_driver_t *d, int timeout)
       c->pending_write = false;
       c->pending_tick = false;
     } else {
-      int idx = c->impl->idx;
-      c->pending_read = (idx && impl->fds[idx].revents & POLLIN);
-      c->pending_write = (idx && impl->fds[idx].revents & POLLOUT);
+      int idx = c->poller->idx;
+      c->pending_read = (idx && poller->fds[idx].revents & POLLIN);
+      c->pending_write = (idx && poller->fds[idx].revents & POLLOUT);
     }
     c = c->connector_next;
   }

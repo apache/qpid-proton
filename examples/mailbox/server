@@ -36,7 +36,7 @@ class Options(object):
     def __init__(self):
         parser = OptionParser(usage="usage: %prog [options] <server-address>")
         parser.add_option("-v", "--verbose",
-                          action="store_false", dest="verbose", default=True,
+                          action="store_true", dest="verbose",
                           help="print status messages to stdout")
         # SSL configuration
         parser.add_option("--ssl-cert-file", type="str", metavar="<file>",
@@ -95,7 +95,7 @@ class MailboxServer(object):
         self.require_encryption = require_encryption
 
         self.mailboxes = {}
-        self.verbose = False
+        self.logging = False
         self.counter = 0
 
 

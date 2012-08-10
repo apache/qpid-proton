@@ -43,16 +43,16 @@
 
 static int ssl_initialized;
 
-struct pn_listener_ssl_impl_t {
+struct pn_listener_ssl_t {
     SSL_CTX *ctx;
     bool allow_unsecured;
     bool ca_db;
     char *keyfile_pw;
 };
-typedef struct pn_listener_ssl_impl_t pn_listener_ssl_impl_t;
+typedef struct pn_listener_ssl_t pn_listener_ssl_t;
 
 
-struct pn_connector_ssl_impl_t {
+struct pn_connector_ssl_t {
 
     enum { SSL_CLIENT, SSL_SERVER } mode;
     SSL_CTX *ctx;   // NULL if mode=SSL_SERVER - uses listener's ctx
@@ -61,7 +61,7 @@ struct pn_connector_ssl_impl_t {
     char *keyfile_pw;
     bool read_stalled;  // SSL has data to read, but client buffer is full.
 };
-typedef struct pn_connector_ssl_impl_t pn_connector_ssl_impl_t;
+typedef struct pn_connector_ssl_t pn_connector_ssl_t;
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
@@ -135,13 +135,13 @@ int pn_listener_ssl_server_init(pn_listener_t *listener,
                                 const char *password,
                                 const char *certificate_db)
 {
-    listener->ssl = calloc(1, sizeof(pn_listener_ssl_impl_t));
+    listener->ssl = calloc(1, sizeof(pn_listener_ssl_t));
     // note: see pn_listener_free_ssl for cleanup/deallocation
     if (!listener->ssl) {
         perror("calloc()");
         return -1;
     }
-    pn_listener_ssl_impl_t *impl = listener->ssl;
+    pn_listener_ssl_t *impl = listener->ssl;
 
     if (!ssl_initialized) {
         ssl_initialized = 1;
@@ -200,12 +200,12 @@ int pn_connector_ssl_client_init(pn_connector_t *connector,
     if (connector->listener)
         return -1;   // not for listener-based connectors
 
-    connector->ssl = calloc(1, sizeof(pn_connector_ssl_impl_t));
+    connector->ssl = calloc(1, sizeof(pn_connector_ssl_t));
     if (!connector->ssl) {
         perror("calloc()");
         return -1;
     }
-    pn_connector_ssl_impl_t *impl = connector->ssl;
+    pn_connector_ssl_t *impl = connector->ssl;
 
     impl->mode = SSL_CLIENT;
 
@@ -256,7 +256,7 @@ int pn_connector_ssl_set_client_auth(pn_connector_t *connector,
 {
     // @todo check state to verify not yet connected!
 
-    pn_connector_ssl_impl_t *impl = connector->ssl;
+    pn_connector_ssl_t *impl = connector->ssl;
 
     if (!impl || impl->mode != SSL_CLIENT) {
         fprintf(stderr, "Error: connector not configured as SSL client.\n");
@@ -286,7 +286,7 @@ int pn_connector_ssl_set_client_auth(pn_connector_t *connector,
 int pn_connector_ssl_authenticate_client(pn_connector_t *connector,
                                          const char *trusted_CAs_file)
 {
-    pn_connector_ssl_impl_t *impl = connector->ssl;
+    pn_connector_ssl_t *impl = connector->ssl;
 
     if (!impl || impl->mode != SSL_SERVER) {
         fprintf(stderr, "Error: connector not configured as SSL server.\n");
@@ -325,7 +325,7 @@ int pn_driver_ssl_data_ready( pn_driver_t *d )
     pn_connector_t *c = d->connector_head;
     while (c) {
         if (!c->closed && c->ssl) {
-            pn_connector_ssl_impl_t *impl = c->ssl;
+            pn_connector_ssl_t *impl = c->ssl;
             if (impl->read_stalled && (c->input_size < PN_CONNECTOR_IO_BUF_SIZE)) {
                 impl->read_stalled = 0;
                 c->pending_read = true;
@@ -343,12 +343,12 @@ int pn_listener_init_ssl_client( pn_listener_t *l, pn_connector_t *c)
     if (!l->ssl) return 0;
     assert(!c->ssl);
 
-    c->ssl = calloc(1, sizeof(pn_connector_ssl_impl_t));
+    c->ssl = calloc(1, sizeof(pn_connector_ssl_t));
     if (!c->ssl) {
         perror("calloc()");
         return -1;
     }
-    pn_connector_ssl_impl_t *impl = c->ssl;
+    pn_connector_ssl_t *impl = c->ssl;
 
     impl->mode = SSL_SERVER;
     impl->ctx = NULL;    // share the acceptor's context
@@ -383,7 +383,7 @@ void pn_connector_shutdown_ssl( pn_connector_t *c)
 void pn_listener_free_ssl( pn_listener_t *l )
 {
     if (l->ssl) {
-        pn_listener_ssl_impl_t *impl = l->ssl;
+        pn_listener_ssl_t *impl = l->ssl;
         // note: ctx is referenced counted - will not actually free until all child SSL
         // connections are freed.
         if (impl->ctx) SSL_CTX_free(impl->ctx);
@@ -400,7 +400,7 @@ void pn_listener_free_ssl( pn_listener_t *l )
 void pn_connector_free_ssl( pn_connector_t *c )
 {
     if (c->ssl) {
-        pn_connector_ssl_impl_t *impl = c->ssl;
+        pn_connector_ssl_t *impl = c->ssl;
         if (impl->ssl) SSL_free(impl->ssl);
         if (impl->sbio) BIO_free(impl->sbio);
         if (impl->ctx) SSL_CTX_free(impl->ctx);
@@ -546,7 +546,7 @@ static int handle_check_for_ssl( pn_connector_t *client )
 static int start_ssl_connect(pn_connector_t *client)
 {
     fprintf(stderr, "start_ssl_connect()\n");
-    pn_connector_ssl_impl_t *impl = client->ssl;
+    pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
 
     impl->ssl = SSL_new(impl->ctx);
@@ -568,7 +568,7 @@ static int start_ssl_connect(pn_connector_t *client)
 int handle_ssl_connect( pn_connector_t *client )
 {
     fprintf(stderr, "handle_ssl_connect()\n");
-    pn_connector_ssl_impl_t *impl = client->ssl;
+    pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
 
     int rc = SSL_connect( impl->ssl );
@@ -604,9 +604,9 @@ int handle_ssl_connect( pn_connector_t *client )
 
 static int start_ssl_accept(pn_connector_t *client)
 {
-    pn_connector_ssl_impl_t *impl = client->ssl;
+    pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
-    pn_listener_ssl_impl_t *parent = client->listener->ssl;
+    pn_listener_ssl_t *parent = client->listener->ssl;
     if (!parent) return -1;
 
     impl->sbio = BIO_new_socket(client->fd, BIO_NOCLOSE);
@@ -618,7 +618,7 @@ static int start_ssl_accept(pn_connector_t *client)
 
 static int handle_ssl_accept(pn_connector_t *client)
 {
-    pn_connector_ssl_impl_t *impl = client->ssl;
+    pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
 
     int rc = SSL_accept(impl->ssl);
@@ -667,7 +667,7 @@ int handle_ssl_connection_up( pn_connector_t *c )
     int need_read = 0;
     int need_write = 0;
     int input_space;
-    pn_connector_ssl_impl_t *impl = c->ssl;
+    pn_connector_ssl_t *impl = c->ssl;
     assert(impl);
 
     printf("handle_ssl_connection_up  OUT=%d\n", (int)c->output_size);
@@ -778,7 +778,7 @@ static int start_ssl_shutdown( pn_connector_t *c )
 static int handle_ssl_shutdown( pn_connector_t *c )
 {
     int rc;
-    pn_connector_ssl_impl_t *impl = c->ssl;
+    pn_connector_ssl_t *impl = c->ssl;
     if (!impl) return -1;
 
     printf("handle_ssl_shutdown...\n");
@@ -798,6 +798,7 @@ static int handle_ssl_shutdown( pn_connector_t *c )
         break;
     default: // whatever- consider us closed
     case SSL_ERROR_NONE:
+        printf("  shutdown code=%d\n", SSL_get_error(impl->ssl,rc));
         // shutdown completed
         pn_connector_close( c );
         return 0;

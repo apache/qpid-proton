@@ -109,6 +109,25 @@ class PostClient(object):
         pn_link_open(self.link)
 
 
+    def teardown(self):
+        """ Perform a clean disconnect from the server, and release the
+        resources created in setup()
+        """
+        self.log("Shutting down the connection cleanly...")
+        pn_connection_close(self.conn)
+
+        # now wait for the connector to close
+        while not pn_connector_closed(self.cxtr):
+            self.wait()
+
+        #pn_sasl_free(self.sasl);
+        pn_link_free(self.link);
+        pn_session_free(self.ssn);
+        pn_connection_free(self.conn);
+        pn_connector_free(self.cxtr);
+        self.log("...Shutdown complete!")
+
+
     def wait(self):
         """ Wait for an event to process.
         """
@@ -214,14 +233,14 @@ def main():
         sender.settle()
 
     # done sending, now block until any pending deliveries are settled
+    sender.log("Done sending messages, waiting for deliveries to settle...");
     while pn_unsettled(sender.link) > 0 and not sender.closed():
         sender.wait()
         sender.settle()
 
-    # we're done, close and wait for the remote to close also
-    pn_connection_close(sender.conn)
-    while not (pn_connection_state(sender.conn) & PN_REMOTE_CLOSED):
-        sender.wait()
+    # We're done - now clean up the connection:
+    sender.teardown()
+
     return 0
 
 

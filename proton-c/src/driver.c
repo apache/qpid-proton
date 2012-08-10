@@ -119,7 +119,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
   l->context = context;
   l->ssl = NULL;
 
-  pn_listener_impl_init(l);
+  pn_listener_poller_init(l);
 
   pn_driver_add_listener(driver, l);
   return l;
@@ -189,7 +189,7 @@ void pn_listener_free(pn_listener_t *l)
 
   if (l->driver) pn_driver_remove_listener(l->driver, l);
   pn_listener_free_ssl(l);
-  pn_listener_impl_destroy(l);
+  pn_listener_poller_destroy(l);
   free(l);
 }
 
@@ -300,7 +300,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->listener = NULL;
   c->ssl = NULL;
 
-  pn_connector_impl_init(c);
+  pn_connector_poller_init(c);
 
   pn_connector_trace(c, driver->trace);
 
@@ -373,7 +373,7 @@ void pn_connector_free(pn_connector_t *ctor)
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
 
-  pn_connector_impl_destroy(ctor);
+  pn_connector_poller_destroy(ctor);
   ctor->connection = NULL;
   ctor->transport = NULL;
   pn_sasl_free(ctor->sasl);
@@ -640,7 +640,7 @@ pn_driver_t *pn_driver()
     perror("Can't create control pipe");
   }
 
-  pn_driver_impl_init(d);
+  pn_driver_poller_init(d);
 
   return d;
 }
@@ -661,7 +661,7 @@ void pn_driver_free(pn_driver_t *d)
   while (d->listener_head)
     pn_listener_free(d->listener_head);
 
-  pn_driver_impl_destroy(d);
+  pn_driver_poller_destroy(d);
   free(d);
 }
 
@@ -677,7 +677,7 @@ void pn_driver_wait(pn_driver_t *d, int timeout)
 {
   // if SSL/TlS has data available, no need to wait for I/O
   if (!pn_driver_ssl_data_ready(d)) {
-      pn_driver_impl_wait(d, timeout);
+      pn_driver_poller_wait(d, timeout);
   }
   d->listener_next = d->listener_head;
   d->connector_next = d->connector_head;
