@@ -1,5 +1,5 @@
-#ifndef _PROTON_SRC_DRIVER_H
-#define _PROTON_SRC_DRIVER_H 1
+#ifndef PROTON_SRC_DRIVER_H
+#define PROTON_SRC_DRIVER_H 1
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one

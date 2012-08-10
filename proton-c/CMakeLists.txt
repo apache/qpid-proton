@@ -21,6 +21,13 @@ if (HAVE_POLL_H)
 endif (HAVE_POLL_H)
 set(POLLER ${poller_default} CACHE STRING "Poller implementation (poll/select)")
 
+# Set the default SSL/TLS implementation
+set(ssl_impl, NONE)
+if (HAVE_OPENSSL_H)
+   set(ssl_impl openssl)
+endif(HAVE_OPENSSL_H)
+set(SSL_IMPL ${ssl_impl} CACHE STRING "SSL/TLS support library")
+
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
   "${PROJECT_BINARY_DIR}/pn_config.h"
@@ -50,6 +57,13 @@ elseif (POLLER STREQUAL select)
        src/drivers/driver_select.c
   )
 endif (POLLER STREQUAL poll)
+
+# Link in openssl if present
+if (SSL_IMPL STREQUAL openssl)
+  set (pn_driver_ssl_impl src/drivers/driver_openssl.c)
+else (SSL_IMPL STREQUAL openssl)
+  set (pn_driver_ssl_impl src/drivers/driver_no_ssl.c)
+endif (SSL_IMPL STREQUAL openssl)
 
 
 add_library (
@@ -82,6 +96,7 @@ add_library (
   src/messenger.c
 
   ${pn_driver_impl}
+  ${pn_driver_ssl_impl}
 )
 
 find_package(SWIG)
