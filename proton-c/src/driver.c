@@ -25,6 +25,7 @@
 #include <proton/sasl.h>
 #include "util.h"
 #include "driver_impl.h"
+#include "drivers/ssl.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -168,6 +169,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
       snprintf(c->name, PN_CONNECTOR_NAME_MAX, "%s:%s", host, serv);
       c->listener = l;
+      pn_listener_init_ssl_client( l, c );  // @todo KAG: deal with error case!!!
       return c;
     }
   }
@@ -186,6 +188,7 @@ void pn_listener_free(pn_listener_t *l)
   if (!l) return;
 
   if (l->driver) pn_driver_remove_listener(l->driver, l);
+  pn_listener_free_ssl(l);
   pn_listener_impl_destroy(l);
   free(l);
 }
@@ -282,6 +285,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->read = pn_connector_read;
   c->write = pn_connector_write;
   c->tick = pn_connector_tick;
+  c->io_handler = pn_io_handler;
   c->input_size = 0;
   c->input_eos = false;
   c->output_size = 0;
@@ -368,10 +372,11 @@ void pn_connector_free(pn_connector_t *ctor)
   if (!ctor) return;
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
+
+  pn_connector_impl_destroy(ctor);
   ctor->connection = NULL;
   ctor->transport = NULL;
   pn_sasl_free(ctor->sasl);
-  pn_connector_impl_destroy(ctor);
   free(ctor);
 }
 
@@ -592,21 +597,13 @@ void pn_connector_process(pn_connector_t *c) {
       c->pending_tick = false;
     }
 
-    if (c->pending_read) {
-      c->read(c);
-      c->pending_read = false;
-    }
-    pn_connector_process_input(c);
-    pn_connector_process_output(c);
-    if (c->pending_write) {
-      c->write(c);
-      c->pending_write = false;
-    }
+    c->io_handler(c);
+
     if (c->output_size == 0 && c->input_done && c->output_done) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
         fprintf(stderr, "Closed %s\n", c->name);
       }
-      pn_connector_close(c);
+      pn_connector_shutdown_ssl(c);   // AMQP finished, perform clean shutdown
     }
   }
 }
@@ -672,7 +669,10 @@ void pn_driver_wakeup(pn_driver_t *d)
 
 void pn_driver_wait(pn_driver_t *d, int timeout)
 {
-  pn_driver_impl_wait(d, timeout);
+  // if SSL/TlS has data available, no need to wait for I/O
+  if (!pn_driver_ssl_data_ready(d)) {
+      pn_driver_impl_wait(d, timeout);
+  }
   d->listener_next = d->listener_head;
   d->connector_next = d->connector_head;
 }
@@ -707,3 +707,28 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
 
   return NULL;
 }
+
+
+/** default I/O handling routine */
+int pn_io_handler(pn_connector_t *c)
+{
+    if (c->pending_read) {
+      c->read(c);
+      c->pending_read = false;
+    }
+    pn_connector_process_input(c);
+    pn_connector_process_output(c);
+    if (c->pending_write) {
+      c->write(c);
+      c->pending_write = false;
+    }
+    return 0;
+}
+
+/** stub handling routine */
+int pn_null_io_handler(pn_connector_t *c)
+{
+    return 0;
+}
+
+

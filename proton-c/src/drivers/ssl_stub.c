@@ -22,6 +22,7 @@
 #define _POSIX_C_SOURCE 1
 
 #include <proton/driver.h>
+#include "ssl.h"
 
 
 /** @file
@@ -64,4 +65,30 @@ int pn_connector_ssl_authenticate_peer(pn_connector_t *connector,
                                        const char *certificates)
 {
     return -1;
+}
+
+int pn_listener_init_ssl_client( pn_listener_t *l, pn_connector_t *c)
+{
+    return 0;  // support routine - always succeed.
+}
+
+void pn_connector_shutdown_ssl( pn_connector_t *c)
+{
+    // since there's no SSL/TLS, we just close the connector
+    pn_connector_close( c );
+}
+
+
+void pn_listener_free_ssl( pn_listener_t * )
+{
+}
+
+
+void pn_connector_free_ssl( pn_connector_t * )
+{
+}
+
+int pn_driver_ssl_data_ready( pn_driver_t * )
+{
+    return 0;
 }

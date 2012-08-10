@@ -84,6 +84,9 @@ struct pn_connector_t {
   void (*read)(pn_connector_t *);
   void (*write) (pn_connector_t *);
   time_t (*tick)(pn_connector_t *sel, time_t now);
+
+  int (*io_handler)(pn_connector_t *);
+
   size_t input_size;
   char input[PN_CONNECTOR_IO_BUF_SIZE];
   bool input_eos;
@@ -105,8 +108,9 @@ struct pn_connector_t {
 
 int pn_connector_impl_init( struct pn_connector_t *);
 void pn_connector_impl_destroy( struct pn_connector_t *);
-
 void pn_driver_impl_wait(struct pn_driver_t *, int timeout_ms);
+int pn_io_handler(pn_connector_t *);
+int pn_null_io_handler(pn_connector_t *);
 
 
 #endif /* driver.h */

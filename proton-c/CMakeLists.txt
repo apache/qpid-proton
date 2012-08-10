@@ -50,20 +50,20 @@ add_custom_command (
 
 if (POLLER STREQUAL poll)
   set (pn_driver_impl
-       src/drivers/driver_poll.c
+       src/drivers/poll.c
   )
 elseif (POLLER STREQUAL select)
   set (pn_driver_impl
-       src/drivers/driver_select.c
+       src/drivers/select.c
   )
 endif (POLLER STREQUAL poll)
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/drivers/driver_openssl.c)
+  set (pn_driver_ssl_impl src/drivers/openssl.c)
   set (LINK_DEPS ${LINK_DEPS} ssl crypto)
 else (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/drivers/driver_no_ssl.c)
+  set (pn_driver_ssl_impl src/drivers/ssl_stub.c)
 endif (SSL_IMPL STREQUAL openssl)
 
 
