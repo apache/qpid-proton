@@ -16,7 +16,7 @@
  */
 package org.apache.qpid.proton.driver.impl;
 
-import static org.apache.qpid.proton.driver.impl.ServerConnectorImpl.ConnectorState.UNINITIALIZED;
+import static org.apache.qpid.proton.driver.impl.ConnectorImpl.ConnectorState.UNINITIALIZED;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +30,7 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslState;
 import org.apache.qpid.proton.logging.LogHandler;
 
-class ServerConnectorImpl<C> implements Connector<C>
+class ConnectorImpl<C> implements Connector<C>
 {
     public static int END_OF_STREAM = -1;
     private static int DEFAULT_BUFFER_SIZE = 64 * 1024;
@@ -58,7 +58,7 @@ class ServerConnectorImpl<C> implements Connector<C>
     private int _bytesNotWritten = 0;
     private ByteBuffer _writeBuffer = ByteBuffer.allocate(writeBufferSize);
 
-    ServerConnectorImpl(DriverImpl driver, Listener<C> listener, Sasl sasl, SocketChannel c, C context, SelectionKey key)
+    ConnectorImpl(DriverImpl driver, Listener<C> listener, Sasl sasl, SocketChannel c, C context, SelectionKey key)
     {
         _driver = driver;
         _listener = listener;
@@ -264,14 +264,7 @@ class ServerConnectorImpl<C> implements Connector<C>
 
     public void setConnection(Connection connection)
     {
-        // write any remaining data on to the wire.
-        //writeSasl();
         _connection = connection;
-        // write initial data
-        //int size = _writeBuffer.array().length - _bytesNotWritten;
-        //_bytesNotWritten += _connection.transport().output(_writeBuffer.array(),
-        //        _bytesNotWritten, size);
-        //setState(ConnectorState.OPENED);
     }
 
     public C getContext()
