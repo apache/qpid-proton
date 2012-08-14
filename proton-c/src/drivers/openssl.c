@@ -465,6 +465,7 @@ static int configure_ca_database(SSL_CTX *ctx, const char *certificate_db)
 
 static int start_check_for_ssl( pn_connector_t *client )
 {
+    printf("start_check_for_ssl()\n");
     client->status |= PN_SEL_RD;
     client->io_handler = handle_check_for_ssl;
     return 0;
@@ -477,13 +478,20 @@ static int handle_check_for_ssl( pn_connector_t *client )
     int rc;
     int retries = 3;
 
+    printf("handle_check_for_ssl()\n");
+
     do {
         rc = recv(client->fd, buf, sizeof(buf), MSG_PEEK);
         if (rc == sizeof(buf))
             break;
-        if (rc < 0 && errno != EINTR && errno != EAGAIN) {
-            perror("handle_check_for_ssl() recv failed:");
-            break;
+        if (rc < 0) {
+            if (errno == EWOULDBLOCK) {
+                client->status |= PN_SEL_RD;
+                return 0;
+            } else if (errno != EINTR) {
+                perror("handle_check_for_ssl() recv failed:");
+                break;
+            }
         }
     } while (retries-- > 0);
 
@@ -604,6 +612,7 @@ int handle_ssl_connect( pn_connector_t *client )
 
 static int start_ssl_accept(pn_connector_t *client)
 {
+    printf("start_ssl_accept()\n");
     pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
     pn_listener_ssl_t *parent = client->listener->ssl;
@@ -618,6 +627,7 @@ static int start_ssl_accept(pn_connector_t *client)
 
 static int handle_ssl_accept(pn_connector_t *client)
 {
+    printf("handle_ssl_accept()\n");
     pn_connector_ssl_t *impl = client->ssl;
     if (!impl) return -1;
 
@@ -760,7 +770,9 @@ int handle_ssl_connection_up( pn_connector_t *c )
  */
 static int start_clear_connected( pn_connector_t *c )
 {
+    printf("start_clear_connected()\n");
     pn_connector_free_ssl( c );
+    c->status |= (PN_SEL_RD | PN_SEL_WR);
     c->io_handler = pn_io_handler;
     return 0;
 }
@@ -772,7 +784,7 @@ static int start_clear_connected( pn_connector_t *c )
  */
 static int start_ssl_shutdown( pn_connector_t *c )
 {
-    printf("start_ssl_shutdown...\n");
+    printf("start_ssl_shutdown()\n");
     if (c->closed) return 0;
     return handle_ssl_shutdown( c );
 }
@@ -783,7 +795,7 @@ static int handle_ssl_shutdown( pn_connector_t *c )
     pn_connector_ssl_t *impl = c->ssl;
     if (!impl) return -1;
 
-    printf("handle_ssl_shutdown...\n");
+    printf("handle_ssl_shutdown()\n");
 
     do {
         rc = SSL_shutdown( impl->ssl );

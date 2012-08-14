@@ -116,6 +116,7 @@ class MailboxServer(object):
                                              self.ca_database);
             assert(rc == 0)
             if not self.require_encryption:
+                self.log("Allowing both encrypted AND unencrypted connections!")
                 rc = pn_listener_ssl_allow_unsecured_clients(self.listener)
                 assert(rc == 0)
         return True
