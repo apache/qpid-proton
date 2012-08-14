@@ -772,6 +772,8 @@ static int start_clear_connected( pn_connector_t *c )
  */
 static int start_ssl_shutdown( pn_connector_t *c )
 {
+    printf("start_ssl_shutdown...\n");
+    if (c->closed) return 0;
     return handle_ssl_shutdown( c );
 }
 
@@ -800,6 +802,7 @@ static int handle_ssl_shutdown( pn_connector_t *c )
     case SSL_ERROR_NONE:
         printf("  shutdown code=%d\n", SSL_get_error(impl->ssl,rc));
         // shutdown completed
+        c->io_handler = pn_null_io_handler;
         pn_connector_close( c );
         return 0;
     }
