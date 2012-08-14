@@ -59,6 +59,7 @@ Optional - using SSL to encrypt the data connections between the server and the 
     certificates:
 
     $ post -m myMailbox --ssl-cert-db ./trusted_db "Here is a message"
+    $ fetch --ssl-cert-db ./trusted_db  myMailbox
 
 
 [1] At the time of this writing SSL/TLS is implemented using OpenSSL, and is only
