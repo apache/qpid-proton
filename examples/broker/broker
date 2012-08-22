@@ -128,5 +128,13 @@ try:
         else:
           pn_connector_process(c)
 
+      c = pn_connector_head(driver)
+      while c:
+        handler = pn_connector_context(c)
+        handler(c)
+        pn_connector_process(c)
+        window.redraw()
+        c = pn_connector_next(c)
+
 except KeyboardInterrupt:
   pass
