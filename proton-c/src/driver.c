@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include <proton/driver.h>
+#include <proton/error.h>
 #include <proton/sasl.h>
 #include "util.h"
 
@@ -41,6 +42,7 @@
 #define PN_SEL_WR (0x0002)
 
 struct pn_driver_t {
+  pn_error_t *error;
   pn_listener_t *listener_head;
   pn_listener_t *listener_tail;
   pn_listener_t *listener_next;
@@ -136,24 +138,24 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s\n", gai_strerror(code));
     return NULL;
   }
 
   int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
   if (sock == -1) {
-    perror("socket");
+    pn_error_from_errno(driver->error, "socket");
     return NULL;
   }
 
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-    perror("setsockopt");
+    pn_error_from_errno(driver->error, "setsockopt");
     return NULL;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    perror("bind");
+    pn_error_from_errno(driver->error, "bind");
     freeaddrinfo(addr);
     return NULL;
   }
@@ -161,14 +163,14 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   freeaddrinfo(addr);
 
   if (listen(sock, 50) == -1) {
-    perror("listen");
+    pn_error_from_errno(driver->error, "listen");
     return NULL;
   }
 
   pn_listener_t *l = pn_listener_fd(driver, sock, context);
 
   if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-    printf("Listening on %s:%s\n", host, port);
+    fprintf(stderr, "Listening on %s:%s\n", host, port);
   return l;
 }
 
@@ -188,6 +190,16 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
 
   pn_driver_add_listener(driver, l);
   return l;
+}
+
+pn_listener_t *pn_listener_head(pn_driver_t *driver)
+{
+  return driver ? driver->listener_head : NULL;
+}
+
+pn_listener_t *pn_listener_next(pn_listener_t *listener)
+{
+  return listener ? listener->listener_next : NULL;
 }
 
 void pn_listener_trace(pn_listener_t *l, pn_trace_t trace) {
@@ -289,17 +301,20 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s", gai_strerror(code));
     return NULL;
   }
 
   int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
-  if (sock == -1)
+  if (sock == -1) {
+    pn_error_from_errno(driver->error, "socket");
     return NULL;
+  }
 
   pn_configure_sock(sock);
 
   if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
+    pn_error_from_errno(driver->error, "connect");
     freeaddrinfo(addr);
     return NULL;
   }
@@ -365,6 +380,16 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 
   pn_driver_add_connector(driver, c);
   return c;
+}
+
+pn_connector_t *pn_connector_head(pn_driver_t *driver)
+{
+  return driver ? driver->connector_head : NULL;
+}
+
+pn_connector_t *pn_connector_next(pn_connector_t *connector)
+{
+  return connector ? connector->connector_next : NULL;
 }
 
 void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
@@ -679,6 +704,7 @@ pn_driver_t *pn_driver()
 {
   pn_driver_t *d = malloc(sizeof(pn_driver_t));
   if (!d) return NULL;
+  d->error = pn_error();
   d->listener_head = NULL;
   d->listener_tail = NULL;
   d->listener_next = NULL;
@@ -705,6 +731,16 @@ pn_driver_t *pn_driver()
   return d;
 }
 
+int pn_driver_errno(pn_driver_t *d)
+{
+  return d ? pn_error_code(d->error) : PN_ARG_ERR;
+}
+
+const char *pn_driver_error(pn_driver_t *d)
+{
+  return d ? pn_error_text(d->error) : NULL;
+}
+
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace)
 {
   d->trace = trace;
@@ -721,6 +757,7 @@ void pn_driver_free(pn_driver_t *d)
   while (d->listener_head)
     pn_listener_free(d->listener_head);
   free(d->fds);
+  pn_error_free(d->error);
   free(d);
 }
 

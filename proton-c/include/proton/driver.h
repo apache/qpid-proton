@@ -52,6 +52,22 @@ typedef struct pn_connector_t pn_connector_t;
  */
 pn_driver_t *pn_driver(void);
 
+/** Return the most recent error code.
+ *
+ * @param[in] d the driver
+ *
+ * @return the most recent error text for d
+ */
+int pn_driver_errno(pn_driver_t *d);
+
+/** Return the most recent error text for d.
+ *
+ * @param[in] d the driver
+ *
+ * @return the most recent error text for d
+ */
+const char *pn_driver_error(pn_driver_t *d);
+
 /** Set the tracing level for the given driver.
  *
  * @param[in] driver the driver to trace
@@ -124,6 +140,23 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
  */
 pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context);
 
+/** Access the head listener for a driver.
+ *
+ * @param[in] driver the driver whose head listener will be returned
+ *
+ * @return the head listener for driver or NULL if there is none
+ */
+pn_listener_t *pn_listener_head(pn_driver_t *driver);
+
+/** Access the next listener.
+ *
+ * @param[in] listener the listener whose next listener will be
+ *            returned
+ *
+ * @return the next listener
+ */
+pn_listener_t *pn_listener_next(pn_listener_t *listener);
+
 /**
  * @todo pn_listener_trace needs documentation
  */
@@ -183,6 +216,23 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
  * @return a new connector to the given host:port, NULL if error.
  */
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context);
+
+/** Access the head connector for a driver.
+ *
+ * @param[in] driver the driver whose head connector will be returned
+ *
+ * @return the head connector for driver or NULL if there is none
+ */
+pn_connector_t *pn_connector_head(pn_driver_t *driver);
+
+/** Access the next connector.
+ *
+ * @param[in] connector the connector whose next connector will be
+ *            returned
+ *
+ * @return the next connector
+ */
+pn_connector_t *pn_connector_next(pn_connector_t *connector);
 
 /** Set the tracing level for the given connector.
  *

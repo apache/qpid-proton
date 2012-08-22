@@ -86,3 +86,9 @@ class MessengerTest(Test):
 
     pn_message_free(msg)
     pn_message_free(reply)
+
+  def testSendBogus(self):
+    msg = pn_message()
+    pn_message_set_address(msg, "totally-bogus-address")
+    assert pn_messenger_put(self.client, msg) == PN_ERR
+    assert "unable to send to address: totally-bogus-address (getaddrinfo:" in pn_messenger_error(self.client)

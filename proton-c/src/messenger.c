@@ -284,6 +284,14 @@ int pn_messenger_stop(pn_messenger_t *messenger)
     pn_connection_close(conn);
   }
 
+  pn_listener_t *l = pn_listener_head(messenger->driver);
+  while (l) {
+    pn_listener_close(l);
+    pn_listener_t *prev = l;
+    l = pn_listener_next(l);
+    pn_listener_free(prev);
+  }
+
   return pn_messenger_sync(messenger, pn_messenger_stopped);
 }
 
@@ -313,7 +321,7 @@ bool pn_streq(const char *a, const char *b)
 
 pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *domain)
 {
-  char buf[strlen(domain) + 1];
+  char buf[domain ? strlen(domain) + 1 : 1];
   if (domain) {
     strcpy(buf, domain);
   } else {
@@ -430,7 +438,8 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
       return 0;
     } else {
       return pn_error_format(messenger->error, PN_ERR,
-                             "unable to subscribe to source: %s", source);
+                             "unable to subscribe to source: %s (%s)", source,
+                             pn_driver_error(messenger->driver));
     }
   } else if (len >= 2 && source[0] == '/' && source[1] == '/') {
     pn_link_t *src = pn_messenger_source(messenger, source);
@@ -438,7 +447,8 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
       return 0;
     } else {
       return pn_error_format(messenger->error, PN_ERR,
-                             "unable to subscribe to source: %s", source);
+                             "unable to subscribe to source: %s (%s)", source,
+                             pn_driver_error(messenger->driver));
     }
   } else {
     return 0;
@@ -471,7 +481,8 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
   pn_link_t *sender = pn_messenger_target(messenger, address);
   if (!sender)
     return pn_error_format(messenger->error, PN_ERR,
-                           "unable to send to address: %s", address);
+                           "unable to send to address: %s (%s)", address,
+                           pn_driver_error(messenger->driver));
   // XXX: proper tag
   char tag[8];
   void *ptr = &tag;
