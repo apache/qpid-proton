@@ -466,7 +466,8 @@ static int configure_ca_database(SSL_CTX *ctx, const char *certificate_db)
 static int start_check_for_ssl( pn_connector_t *client )
 {
     printf("start_check_for_ssl()\n");
-    client->status |= PN_SEL_RD;
+    client->status &= ~PN_SEL_WR;   // don't start writing until
+    client->status |= PN_SEL_RD;    // we've read from the client
     client->io_handler = handle_check_for_ssl;
     return 0;
 }

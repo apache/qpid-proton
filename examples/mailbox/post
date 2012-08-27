@@ -85,6 +85,7 @@ class PostClient(object):
 
         # configure database of trusted CA's
         if self.ca_database:
+            self.log("Using CA database = %s" % self.ca_database)
             rc = pn_connector_ssl_client_init(self.cxtr, self.ca_database);
             assert(rc == 0)
 
