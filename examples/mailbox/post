@@ -200,7 +200,6 @@ def main():
 
     # wait until we authenticate with the server
     while pn_sasl_state(sender.sasl) not in (PN_SASL_PASS, PN_SASL_FAIL):
-        print("sasl wait...");
         sender.wait()
         if sender.closed():
             sender.log("connection failed")
