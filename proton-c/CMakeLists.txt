@@ -84,3 +84,7 @@ set_target_properties (
 install (TARGETS proton proton-dump qpid-proton
          RUNTIME DESTINATION bin
          LIBRARY DESTINATION lib)
+
+# Install header files
+file(GLOB headers "include/proton/*.h")
+install (FILES ${headers} DESTINATION include/proton)
