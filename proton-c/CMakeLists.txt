@@ -4,7 +4,6 @@ project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
-set (LINK_DEPS uuid)
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
@@ -26,6 +25,21 @@ add_custom_command (
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
 
+find_package(SWIG)
+if (SWIG_FOUND)
+  add_subdirectory(bindings)
+endif (SWIG_FOUND)
+
+add_subdirectory(docs/api)
+
+# Should really be finding the uuid library appropriate for the platform
+# in lieu of doing this set the library name directly.
+set (UUID_LIB uuid)
+
+set (qpid-proton-platform
+  src/driver.c
+)
+
 add_library (
   qpid-proton SHARED
 
@@ -45,36 +59,28 @@ add_library (
   src/message/message.c
   src/sasl/sasl.c
 
+  src/messenger.c
+
+  ${qpid-proton-platform}
+
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
 )
-
-add_library (
-  qpid-proton-posix SHARED
-
-  src/driver.c
-  src/messenger.c
-)
-
-find_package(SWIG)
-if (SWIG_FOUND)
-  add_subdirectory(bindings)
-endif (SWIG_FOUND)
+target_link_libraries (qpid-proton ${UUID_LIB})
 
 add_executable (proton src/proton.c)
-target_link_libraries (proton qpid-proton qpid-proton-posix ${LINK_DEPS})
+target_link_libraries (proton qpid-proton)
 
 add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
-add_subdirectory(docs/api)
-
 set_target_properties (
-  qpid-proton qpid-proton-posix proton proton-dump
+  qpid-proton proton proton-dump
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
 )
 
-install (TARGETS proton proton-dump qpid-proton qpid-proton-posix
+# Install executables and libraries
+install (TARGETS proton proton-dump qpid-proton
          RUNTIME DESTINATION bin
          LIBRARY DESTINATION lib)
