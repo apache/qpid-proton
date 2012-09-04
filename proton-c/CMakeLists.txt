@@ -86,5 +86,6 @@ install (TARGETS proton proton-dump qpid-proton
          LIBRARY DESTINATION lib)
 
 # Install header files
-file(GLOB headers "include/proton/*.h")
+file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION include/proton)
+

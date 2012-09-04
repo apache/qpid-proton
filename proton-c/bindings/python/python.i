@@ -230,4 +230,4 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %}
 %ignore pn_connector_free;
 
-%include "../cproton.i"
+%include "proton/cproton.i"

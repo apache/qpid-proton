@@ -154,4 +154,4 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_message_data;
 
-%include "../cproton.i"
+%include "proton/cproton.i"

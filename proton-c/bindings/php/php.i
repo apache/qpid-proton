@@ -274,4 +274,4 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *PHP_CONTEXT);
 %ignore pn_connector_free;
 
 
-%include "../cproton.i"
+%include "proton/cproton.i"
