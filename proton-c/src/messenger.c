@@ -307,6 +307,7 @@ static void parse_address(char *address, char **domain, char **name)
       if (*c == '/') {
         *c = '\0';
         *name = c + 1;
+        break;
       }
     }
   } else {
