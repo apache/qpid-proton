@@ -24,6 +24,10 @@
 
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct pn_error_t pn_error_t;
 
 #define PN_EOS (-1)
@@ -45,5 +49,9 @@ int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
 int pn_error_from_errno(pn_error_t *error, const char *msg);
 int pn_error_code(pn_error_t *error);
 const char *pn_error_text(pn_error_t *error);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* error.h */

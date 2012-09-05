@@ -25,6 +25,10 @@
 #include <sys/types.h>
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   PN_TOK_LBRACE,
   PN_TOK_RBRACE,
@@ -69,5 +73,9 @@ const char *pn_scanner_error(pn_scanner_t *scanner);
 int pn_scanner_start(pn_scanner_t *scanner, const char *input);
 int pn_scanner_scan(pn_scanner_t *scanner);
 int pn_scanner_shift(pn_scanner_t *scanner);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* scanner.h */

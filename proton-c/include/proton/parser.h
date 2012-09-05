@@ -24,6 +24,10 @@
 
 #include <proton/codec.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct pn_parser_t pn_parser_t;
 
 pn_parser_t *pn_parser();
@@ -31,5 +35,9 @@ int pn_parser_parse(pn_parser_t *parser, const char *str, pn_atoms_t *atoms);
 int pn_parser_errno(pn_parser_t *parser);
 const char *pn_parser_error(pn_parser_t *parser);
 void pn_parser_free(pn_parser_t *parser);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* parser.h */

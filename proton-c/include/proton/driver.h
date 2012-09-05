@@ -26,6 +26,10 @@
 #include <proton/engine.h>
 #include <proton/sasl.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * API for the Driver Layer.
  *
@@ -322,5 +326,9 @@ bool pn_connector_closed(pn_connector_t *connector);
  *                      valid on return
  */
 void pn_connector_free(pn_connector_t *connector);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* driver.h */

@@ -28,6 +28,10 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   PN_NULL,
   PN_BOOL,
@@ -117,5 +121,9 @@ pn_atoms_t pn_data_atoms(pn_data_t *data);
 pn_atoms_t pn_data_available(pn_data_t *data);
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 int pn_data_resize(pn_data_t *data, size_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* codec.h */

@@ -25,6 +25,10 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * API for the SASL Secure Transport Layer.
  *
@@ -192,5 +196,8 @@ void pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace);
  */
 void pn_sasl_free(pn_sasl_t *sasl);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* sasl.h */

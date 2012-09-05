@@ -25,6 +25,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define AMQP_HEADER_SIZE (8)
 
 typedef struct {
@@ -38,5 +42,9 @@ typedef struct {
 
 size_t pn_read_frame(pn_frame_t *frame, char *bytes, size_t available);
 size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* framing.h */

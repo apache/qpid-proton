@@ -24,6 +24,10 @@
 
 #include <proton/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct pn_buffer_t pn_buffer_t;
 
 pn_buffer_t *pn_buffer(size_t capacity);
@@ -36,5 +40,9 @@ int pn_buffer_clear(pn_buffer_t *buf);
 int pn_buffer_defrag(pn_buffer_t *buf);
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf);
 int pn_buffer_print(pn_buffer_t *buf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* buffer.h */

@@ -27,6 +27,10 @@
 #include <sys/types.h>
 #include <proton/error.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * API for the proton Engine.
  *
@@ -290,5 +294,9 @@ void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition);
 //int pn_format(pn_delivery_t *delivery);
 void pn_settle(pn_delivery_t *delivery);
 void pn_delivery_dump(pn_delivery_t *delivery);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* engine.h */
