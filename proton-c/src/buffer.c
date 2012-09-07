@@ -179,6 +179,35 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   return 0;
 }
 
+size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
+{
+  size_t result = buf->start + index;
+  if (result >= buf->capacity) result -= buf->capacity;
+  return result;
+}
+
+size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
+{
+  size_t start = pn_buffer_index(buf, offset);
+  size_t stop = pn_buffer_index(buf, pn_min(offset + size, buf->size));
+
+  size_t sz1;
+  size_t sz2;
+
+  if (start > stop) {
+    sz1 = buf->capacity - start;
+    sz2 = stop;
+  } else {
+    sz1 = stop - start;
+    sz2 = 0;
+  }
+
+  memmove(dst, buf->bytes + start, sz1);
+  memmove(dst + sz1, buf->bytes, sz2);
+
+  return sz1 + sz2;
+}
+
 int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
 {
   if (left + right > buf->size) return PN_ARG_ERR;
@@ -197,13 +226,6 @@ int pn_buffer_clear(pn_buffer_t *buf)
   buf->start = 0;
   buf->size = 0;
   return 0;
-}
-
-size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
-{
-  size_t result = buf->start + index;
-  if (result >= buf->capacity) result -= buf->capacity;
-  return result;
 }
 
 static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {

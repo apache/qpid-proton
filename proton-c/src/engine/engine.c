@@ -305,28 +305,11 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
   link->session = NULL;
 }
 
-void pn_clear_tag(pn_delivery_t *delivery)
-{
-  if (delivery->tag.start) {
-    free(delivery->tag.start);
-    delivery->tag = (pn_bytes_t) {0, NULL};
-  }
-}
-
-void pn_clear_bytes(pn_delivery_t *delivery)
-{
-  if (delivery->capacity) {
-    free(delivery->bytes);
-    delivery->bytes = NULL;
-    delivery->capacity = 0;
-  }
-}
-
 void pn_free_delivery(pn_delivery_t *delivery)
 {
   if (delivery) {
-    pn_clear_tag(delivery);
-    pn_clear_bytes(delivery);
+    pn_buffer_free(delivery->tag);
+    pn_buffer_free(delivery->bytes);
     free(delivery);
   }
 }
@@ -911,12 +894,15 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   if (!link) return NULL;
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled);
-  if (!delivery) delivery = malloc(sizeof(pn_delivery_t));
-  if (!delivery) return NULL;
+  if (!delivery) {
+    delivery = malloc(sizeof(pn_delivery_t));
+    if (!delivery) return NULL;
+    delivery->tag = pn_buffer(16);
+    delivery->bytes = pn_buffer(64);
+  }
   delivery->link = link;
-  delivery->tag.size = tag.size;
-  delivery->tag.start = malloc(tag.size);
-  memcpy(delivery->tag.start, tag.bytes, tag.size);
+  pn_buffer_clear(delivery->tag);
+  pn_buffer_append(delivery->tag, tag.bytes, tag.size);
   delivery->local_state = 0;
   delivery->remote_state = 0;
   delivery->local_settled = false;
@@ -930,9 +916,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
-  delivery->bytes = NULL;
-  delivery->size = 0;
-  delivery->capacity = 0;
+  pn_buffer_clear(delivery->bytes);
   delivery->done = false;
   delivery->context = NULL;
 
@@ -970,7 +954,8 @@ bool pn_is_current(pn_delivery_t *delivery)
 void pn_delivery_dump(pn_delivery_t *d)
 {
   char tag[1024];
-  pn_quote_data(tag, 1024, d->tag.start, d->tag.size);
+  pn_bytes_t bytes = pn_buffer_bytes(d->tag);
+  pn_quote_data(tag, 1024, bytes.start, bytes.size);
   printf("{tag=%s, local_state=%u, remote_state=%u, local_settled=%u, "
          "remote_settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
@@ -982,7 +967,8 @@ void pn_delivery_dump(pn_delivery_t *d)
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   if (delivery) {
-    return pn_dtag(delivery->tag.start, delivery->tag.size);
+    pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+    return pn_dtag(tag.start, tag.size);
   } else {
     return (pn_delivery_tag_t) {0};
   }
@@ -1044,8 +1030,8 @@ void pn_real_settle(pn_delivery_t *delivery)
   LL_REMOVE(link, unsettled, delivery);
   // TODO: what if we settle the current delivery?
   LL_ADD(link, settled, delivery);
-  pn_clear_tag(delivery);
-  pn_clear_bytes(delivery);
+  pn_buffer_clear(delivery->tag);
+  pn_buffer_clear(delivery->bytes);
   delivery->settled = true;
 }
 
@@ -1261,9 +1247,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     link->queued++;
   }
 
-  PN_ENSURE(delivery->bytes, delivery->capacity, delivery->size + disp->size);
-  memmove(delivery->bytes + delivery->size, disp->payload, disp->size);
-  delivery->size += disp->size;
+  pn_buffer_append(delivery->bytes, disp->payload, disp->size);
   delivery->done = !more;
 
   ssn_state->incoming_transfer_count++;
@@ -1533,7 +1517,7 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
   if (pn_is_sender(delivery->link)) {
     pn_delivery_state_t *state = delivery->context;
     if (state) {
-      return (delivery->done && !state->sent) || delivery->size > 0;
+      return (delivery->done && !state->sent) || pn_buffer_size(delivery->bytes) > 0;
     } else {
       return delivery->done;
     }
@@ -1681,16 +1665,16 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
       delivery->context = state;
     }
 
-    if (state && !state->sent && (delivery->done || delivery->size > 0) &&
+    if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
-      if (delivery->bytes) {
-        pn_set_payload(transport->disp, delivery->bytes, delivery->size);
-        delivery->size = 0;
-      }
+      pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
+      pn_set_payload(transport->disp, bytes.start, bytes.size);
+      pn_buffer_clear(delivery->bytes);
+      pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
       int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
                               link_state->local_handle, state->id,
-                              delivery->tag.size, delivery->tag.start,
-                              0, delivery->local_settled, !delivery->done);
+                              tag.size, tag.start, 0, delivery->local_settled,
+                              !delivery->done);
       if (err) return err;
       ssn_state->outgoing_transfer_count++;
       ssn_state->outgoing_window--;
@@ -2023,9 +2007,7 @@ ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n)
 {
   pn_delivery_t *current = pn_current(sender);
   if (!current) return PN_EOS;
-  PN_ENSURE(current->bytes, current->capacity, current->size + n);
-  memmove(current->bytes + current->size, bytes, n);
-  current->size += n;
+  pn_buffer_append(current->bytes, bytes, n);
   pn_add_tpwork(current);
   return n;
 }
@@ -2044,11 +2026,9 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
 
   pn_delivery_t *delivery = receiver->current;
   if (delivery) {
-    if (delivery->size) {
-      size_t size = n > delivery->size ? delivery->size : n;
-      memmove(bytes, delivery->bytes, size);
-      memmove(bytes, bytes + size, delivery->size - size);
-      delivery->size -= size;
+    size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
+    pn_buffer_trim(delivery->bytes, size, 0);
+    if (size) {
       return size;
     } else {
       return delivery->done ? PN_EOS : 0;
@@ -2139,5 +2119,5 @@ bool pn_readable(pn_delivery_t *delivery)
 
 size_t pn_pending(pn_delivery_t *delivery)
 {
-  return delivery->size;
+  return pn_buffer_size(delivery->bytes);
 }

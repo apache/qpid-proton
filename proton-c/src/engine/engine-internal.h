@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/buffer.h>
 #include <proton/engine.h>
 #include <proton/types.h>
 #include "../dispatcher/dispatcher.h"
@@ -159,7 +160,7 @@ struct pn_link_t {
 
 struct pn_delivery_t {
   pn_link_t *link;
-  pn_bytes_t tag;
+  pn_buffer_t *tag;
   int local_state;
   int remote_state;
   bool local_settled;
@@ -176,9 +177,7 @@ struct pn_delivery_t {
   pn_delivery_t *tpwork_next;
   pn_delivery_t *tpwork_prev;
   bool tpwork;
-  char *bytes;
-  size_t size;
-  size_t capacity;
+  pn_buffer_t *bytes;
   bool done;
   void *context;
 };

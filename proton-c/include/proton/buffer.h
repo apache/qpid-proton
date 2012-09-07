@@ -35,6 +35,7 @@ void pn_buffer_free(pn_buffer_t *buf);
 size_t pn_buffer_size(pn_buffer_t *buf);
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size);
 int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size);
+size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst);
 int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
 int pn_buffer_clear(pn_buffer_t *buf);
 int pn_buffer_defrag(pn_buffer_t *buf);
