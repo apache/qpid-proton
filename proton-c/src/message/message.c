@@ -677,12 +677,12 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
   }
 
   uint64_t desc;
-  pn_bytes_t str;
-  bool scanned;
-  int err = pn_data_scan(msg->body, "DL?S", &desc, &scanned, &str);
+  pn_bytes_t str = {0,0};
+  bool scanned, dscanned;
+  int err = pn_data_scan(msg->body, "?DL?S", &dscanned, &desc, &scanned, &str);
   if (err) return err;
-  if (desc == AMQP_VALUE && scanned) {
-    if (str.size >= *size) {
+  if (dscanned && desc == AMQP_VALUE) {
+    if (scanned && str.size >= *size) {
       return PN_OVERFLOW;
     } else {
       memcpy(data, str.start, str.size);
