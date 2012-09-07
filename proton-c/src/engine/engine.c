@@ -804,12 +804,12 @@ void pn_set_target(pn_link_t *link, const char *target)
   link->local_target = pn_strdup(target);
 }
 
-char *pn_remote_source(pn_link_t *link)
+const char *pn_remote_source(pn_link_t *link)
 {
   return link ? link->remote_source : NULL;
 }
 
-char *pn_remote_target(pn_link_t *link)
+const char *pn_remote_target(pn_link_t *link)
 {
   return link ? link->remote_target : NULL;
 }
