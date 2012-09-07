@@ -1039,7 +1039,6 @@
   driver != NULL;
   host != NULL;
   port != NULL;
-  context != NULL;
 }
 
 %contract pn_listener_fd(pn_driver_t *driver, int fd, void *context)
@@ -1047,7 +1046,6 @@
  require:
   driver != NULL;
   fd >= 0;
-  context != NULL;
 }
 
 %contract pn_listener_trace(pn_listener_t *listener, pn_trace_t trace)
@@ -1091,7 +1089,6 @@
   driver != NULL;
   host != NULL;
   port != NULL;
-  context != NULL;
  ensure:
   pn_connector != NULL;
 }
@@ -1101,7 +1098,6 @@
  require:
   driver != NULL;
   fd >= 0;
-  context != NULL;
  ensure:
   pn_connector_fd != NULL;
 }
@@ -1154,7 +1150,6 @@
 {
  require:
   connector != NULL;
-  context != NULL;
 }
 
 %contract pn_connector_close(pn_connector_t *connector)
