@@ -204,6 +204,17 @@ void pn_connection_free(pn_connection_t *connection)
   free(connection);
 }
 
+void *pn_connection_context(pn_connection_t *conn)
+{
+    return conn ? conn->context : 0;
+}
+
+void pn_connection_set_context(pn_connection_t *conn, void *context)
+{
+    if (conn)
+        conn->context = context;
+}
+
 void pn_transport_open(pn_transport_t *transport)
 {
   pn_open((pn_endpoint_t *) transport);
@@ -372,6 +383,7 @@ pn_connection_t *pn_connection()
   pn_connection_t *conn = malloc(sizeof(pn_connection_t));
   if (!conn) return NULL;
 
+  conn->context = NULL;
   conn->endpoint_head = NULL;
   conn->endpoint_tail = NULL;
   pn_endpoint_init(&conn->endpoint, CONNECTION, conn);

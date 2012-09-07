@@ -229,6 +229,24 @@ void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
 void pn_connection_free(pn_connection_t *connection);
 
+/** Access the application context that is associated with the
+ *  connection.
+ *
+ * @param[in] connection the connection whose context is to be returned.
+ *
+ * @return the application context that was passed to pn_connection_set_context()
+ */
+void *pn_connection_context(pn_connection_t *connection);
+
+/** Assign a new application context to the connection.
+ *
+ * @param[in] connection the connection which will hold the context.
+ * @param[in] context new application context to associate with the
+ *                    connection
+ */
+void pn_connection_set_context(pn_connection_t *connection, void *context);
+
+
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
