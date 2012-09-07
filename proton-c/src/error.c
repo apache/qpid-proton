@@ -62,8 +62,10 @@ void pn_error_clear(pn_error_t *error)
 int pn_error_set(pn_error_t *error, int code, const char *text)
 {
   pn_error_clear(error);
-  error->code = code;
-  error->text = pn_strdup(text);
+  if (code) {
+    error->code = code;
+    error->text = pn_strdup(text);
+  }
   return code;
 }
 

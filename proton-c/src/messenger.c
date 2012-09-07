@@ -32,9 +32,6 @@ struct pn_messenger_t {
   char *name;
   int timeout;
   pn_driver_t *driver;
-  pn_connector_t *connectors[1024];
-  size_t size;
-  size_t listeners;
   int credit;
   uint64_t next_tag;
   pn_error_t *error;
@@ -61,8 +58,6 @@ pn_messenger_t *pn_messenger(const char *name)
     m->name = build_name(name);
     m->timeout = -1;
     m->driver = pn_driver();
-    m->size = 0;
-    m->listeners = 0;
     m->credit = 0;
     m->next_tag = 0;
     m->error = pn_error();
@@ -94,6 +89,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->name);
     pn_driver_free(messenger->driver);
     pn_error_free(messenger->error);
+    free(messenger);
   }
 }
 
@@ -119,8 +115,8 @@ void pn_messenger_flow(pn_messenger_t *messenger)
 {
   while (messenger->credit > 0) {
     int prev = messenger->credit;
-    for (int i = 0; i < messenger->size; i++) {
-      pn_connector_t *ctor = messenger->connectors[i];
+    pn_connector_t *ctor = pn_connector_head(messenger->driver);
+    while (ctor) {
       pn_connection_t *conn = pn_connector_connection(ctor);
 
       pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
@@ -131,6 +127,8 @@ void pn_messenger_flow(pn_messenger_t *messenger)
         }
         link = pn_link_next(link, PN_LOCAL_ACTIVE);
       }
+
+      ctor = pn_connector_next(ctor);
     }
     if (messenger->credit == prev) break;
   }
@@ -193,8 +191,10 @@ long int millis(struct timeval tv)
 
 int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
 {
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_process(messenger->connectors[i]);
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
+    pn_connector_process(ctor);
+    ctor = pn_connector_next(ctor);
   }
 
   struct timeval now;
@@ -219,7 +219,6 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       pn_connection_t *conn = pn_connection();
       pn_connection_set_container(conn, messenger->name);
       pn_connector_set_connection(c, conn);
-      messenger->connectors[messenger->size++] = c;
     }
 
     pn_connector_t *c;
@@ -228,17 +227,10 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       pn_connection_t *conn = pn_connector_connection(c);
       pn_messenger_endpoints(messenger, conn);
       if (pn_connector_closed(c)) {
-        for (int i = 0; i < messenger->size; i++) {
-          if (c == messenger->connectors[i]) {
-            memmove(messenger->connectors + i, messenger->connectors + i + 1, messenger->size - i - 1);
-            messenger->size--;
-            pn_connector_free(c);
-            pn_messenger_reclaim(messenger, conn);
-            pn_connection_free(conn);
-            pn_messenger_flow(messenger);
-            break;
-          }
-        }
+        pn_connector_free(c);
+        pn_messenger_reclaim(messenger, conn);
+        pn_connection_free(conn);
+        pn_messenger_flow(messenger);
       } else {
         pn_connector_process(c);
       }
@@ -266,15 +258,15 @@ int pn_messenger_start(pn_messenger_t *messenger)
 
 bool pn_messenger_stopped(pn_messenger_t *messenger)
 {
-  return messenger->size == 0;
+  return pn_connector_head(messenger->driver) == NULL;
 }
 
 int pn_messenger_stop(pn_messenger_t *messenger)
 {
   if (!messenger) return PN_ARG_ERR;
 
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
     pn_connection_t *conn = pn_connector_connection(ctor);
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (link) {
@@ -282,6 +274,7 @@ int pn_messenger_stop(pn_messenger_t *messenger)
       link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }
     pn_connection_close(conn);
+    ctor = pn_connector_next(ctor);
   }
 
   pn_listener_t *l = pn_listener_head(messenger->driver);
@@ -334,17 +327,18 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
   char *port = "5672";
   parse_url(buf, &user, &pass, &host, &port);
 
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connection_t *connection = pn_connector_connection(messenger->connectors[i]);
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
+    pn_connection_t *connection = pn_connector_connection(ctor);
     const char *container = pn_connection_remote_container(connection);
     const char *hostname = pn_connection_hostname(connection);
     if (pn_streq(container, domain) || pn_streq(hostname, domain))
       return connection;
+    ctor = pn_connector_next(ctor);
   }
 
   pn_connector_t *connector = pn_connector(messenger->driver, host, port, NULL);
   if (!connector) return NULL;
-  messenger->connectors[messenger->size++] = connector;
   pn_sasl_t *sasl = pn_connector_sasl(connector);
   if (user) {
     pn_sasl_plain(sasl, user, pass);
@@ -423,11 +417,7 @@ pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *sourc
   char *port = "5672";
   parse_url(domain + 1, &user, &pass, &host, &port);
 
-  pn_listener_t *listener = pn_listener(messenger->driver, host, port, NULL);
-  if (listener) {
-    messenger->listeners++;
-  }
-  return listener;
+  return pn_listener(messenger->driver, host, port, NULL);
 }
 
 int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
@@ -516,8 +506,8 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
 bool pn_messenger_sent(pn_messenger_t *messenger)
 {
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
     pn_connection_t *conn = pn_connector_connection(ctor);
 
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
@@ -535,6 +525,8 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
       }
       link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }
+
+    ctor = pn_connector_next(ctor);
   }
 
   return true;
@@ -542,8 +534,8 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
 
 bool pn_messenger_rcvd(pn_messenger_t *messenger)
 {
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
     pn_connection_t *conn = pn_connector_connection(ctor);
 
     pn_delivery_t *d = pn_work_head(conn);
@@ -553,6 +545,7 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
       }
       d = pn_work_next(d);
     }
+    ctor = pn_connector_next(ctor);
   }
 
   return false;
@@ -566,7 +559,7 @@ int pn_messenger_send(pn_messenger_t *messenger)
 int pn_messenger_recv(pn_messenger_t *messenger, int n)
 {
   if (!messenger) return PN_ARG_ERR;
-  if (!messenger->listeners && !messenger->size)
+  if (!pn_listener_head(messenger->driver) && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
   messenger->credit += n;
   pn_messenger_flow(messenger);
@@ -577,8 +570,8 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 {
   if (!messenger) return PN_ARG_ERR;
 
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
     pn_connection_t *conn = pn_connector_connection(ctor);
 
     pn_delivery_t *d = pn_work_head(conn);
@@ -604,6 +597,8 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
       }
       d = pn_work_next(d);
     }
+
+    ctor = pn_connector_next(ctor);
   }
 
   // XXX: need to drain credit before returning EOS
@@ -617,8 +612,8 @@ int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
 
   int result = 0;
 
-  for (int i = 0; i < messenger->size; i++) {
-    pn_connector_t *ctor = messenger->connectors[i];
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
     pn_connection_t *conn = pn_connector_connection(ctor);
 
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
@@ -632,6 +627,7 @@ int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
       }
       link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }
+    ctor = pn_connector_next(ctor);
   }
 
   return result;

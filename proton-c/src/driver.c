@@ -94,11 +94,8 @@ struct pn_connector_t {
   bool input_eos;
   size_t output_size;
   char output[IO_BUF_SIZE];
-  pn_sasl_t *sasl;
   pn_connection_t *connection;
   pn_transport_t *transport;
-  ssize_t (*process_input)(pn_connector_t *);
-  ssize_t (*process_output)(pn_connector_t *);
   bool input_done;
   bool output_done;
   pn_listener_t *listener;
@@ -332,15 +329,6 @@ static void pn_connector_read(pn_connector_t *ctor);
 static void pn_connector_write(pn_connector_t *ctor);
 static time_t pn_connector_tick(pn_connector_t *ctor, time_t now);
 
-static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor);
-static ssize_t pn_connector_read_sasl(pn_connector_t *ctor);
-static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor);
-static ssize_t pn_connector_read_amqp(pn_connector_t *ctor);
-static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor);
-static ssize_t pn_connector_write_sasl(pn_connector_t *ctor);
-static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor);
-static ssize_t pn_connector_write_amqp(pn_connector_t *ctor);
-
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 {
   if (!driver) return NULL;
@@ -366,11 +354,8 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->input_size = 0;
   c->input_eos = false;
   c->output_size = 0;
-  c->sasl = pn_sasl();
   c->connection = NULL;
-  c->transport = NULL;
-  c->process_input = pn_connector_read_sasl_header;
-  c->process_output = pn_connector_write_sasl_header;
+  c->transport = pn_transport();
   c->input_done = false;
   c->output_done = false;
   c->context = context;
@@ -396,20 +381,19 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 {
   if (!ctor) return;
   ctor->trace = trace;
-  if (ctor->sasl) pn_sasl_trace(ctor->sasl, trace);
   if (ctor->transport) pn_trace(ctor->transport, trace);
 }
 
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
-  return ctor ? ctor->sasl : NULL;
+  return ctor ? pn_sasl(ctor->transport) : NULL;
 }
 
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
 {
   if (!ctor) return;
   ctor->connection = connection;
-  ctor->transport = pn_transport(connection);
+  pn_transport_bind(ctor->transport, connection);
   if (ctor->transport) pn_trace(ctor->transport, ctor->trace);
 }
 
@@ -457,8 +441,8 @@ void pn_connector_free(pn_connector_t *ctor)
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
   ctor->connection = NULL;
+  pn_transport_free(ctor->transport);
   ctor->transport = NULL;
-  pn_sasl_free(ctor->sasl);
   free(ctor);
 }
 
@@ -482,93 +466,18 @@ static void pn_connector_consume(pn_connector_t *ctor, int n)
 
 static void pn_connector_process_input(pn_connector_t *ctor)
 {
-  while (!ctor->input_done && (ctor->input_size > 0 || ctor->input_eos)) {
-    ssize_t n = ctor->process_input(ctor);
-    if (n > 0) {
-      pn_connector_consume(ctor, n);
-    } else if (n == 0) {
-      break;
-    } else {
-      if (n == PN_EOS) {
-        pn_connector_consume(ctor, ctor->input_size);
-      } else {
-        fprintf(stderr, "error in process_input: %s\n", pn_code(n));
-      }
-      ctor->input_done = true;
-      break;
-    }
-  }
-}
-
-static ssize_t pn_connector_read_sasl_header(pn_connector_t *ctor)
-{
-  if (ctor->input_size >= 8) {
-    if (memcmp(ctor->input, "AMQP\x03\x01\x00\x00", 8)) {
-      fprintf(stderr, "sasl header missmatch: ");
-      pn_fprint_data(stderr, ctor->input, ctor->input_size);
-      fprintf(stderr, "\n");
-      ctor->output_done = true;
-      return PN_ERR;
-    } else {
-      if (ctor->trace & PN_TRACE_FRM)
-        fprintf(stderr, "    <- AMQP SASL 1.0\n");
-      ctor->process_input = pn_connector_read_sasl;
-      return 8;
-    }
-  } else if (ctor->input_eos) {
-    fprintf(stderr, "sasl header missmatch: ");
-    pn_fprint_data(stderr, ctor->input, ctor->input_size);
-    fprintf(stderr, "\n");
-    ctor->output_done = true;
-    return PN_ERR;
-  }
-
-  return 0;
-}
-
-static ssize_t pn_connector_read_sasl(pn_connector_t *ctor)
-{
-  pn_sasl_t *sasl = ctor->sasl;
-  ssize_t n = pn_sasl_input(sasl, ctor->input, ctor->input_size);
-  if (n == PN_EOS) {
-    ctor->process_input = pn_connector_read_amqp_header;
-    return ctor->process_input(ctor);
-  } else {
-    return n;
-  }
-}
-
-static ssize_t pn_connector_read_amqp_header(pn_connector_t *ctor)
-{
-  if (ctor->input_size >= 8) {
-    if (memcmp(ctor->input, "AMQP\x00\x01\x00\x00", 8)) {
-      fprintf(stderr, "amqp header missmatch: ");
-      pn_fprint_data(stderr, ctor->input, ctor->input_size);
-      fprintf(stderr, "\n");
-      ctor->output_done = true;
-      return PN_ERR;
-    } else {
-      if (ctor->trace & PN_TRACE_FRM)
-        fprintf(stderr, "    <- AMQP 1.0\n");
-      ctor->process_input = pn_connector_read_amqp;
-      return 8;
-    }
-  } else if (ctor->input_eos) {
-    fprintf(stderr, "amqp header missmatch: ");
-    pn_fprint_data(stderr, ctor->input, ctor->input_size);
-    fprintf(stderr, "\n");
-    ctor->output_done = true;
-    return PN_ERR;
-  }
-
-  return 0;
-}
-
-static ssize_t pn_connector_read_amqp(pn_connector_t *ctor)
-{
-  if (!ctor->transport) return 0;
   pn_transport_t *transport = ctor->transport;
-  return pn_input(transport, ctor->input, ctor->input_size);
+  if (!ctor->input_done) {
+    if (ctor->input_size > 0 || ctor->input_eos) {
+      ssize_t n = pn_input(transport, ctor->input, ctor->input_size);
+      if (n >= 0) {
+        pn_connector_consume(ctor, n);
+      } else {
+        pn_connector_consume(ctor, ctor->input_size);
+        ctor->input_done = true;
+      }
+    }
+  }
 }
 
 static char *pn_connector_output(pn_connector_t *ctor)
@@ -583,18 +492,13 @@ static size_t pn_connector_available(pn_connector_t *ctor)
 
 static void pn_connector_process_output(pn_connector_t *ctor)
 {
-  while (!ctor->output_done && pn_connector_available(ctor) > 0) {
-    ssize_t n = ctor->process_output(ctor);
-    if (n > 0) {
+  pn_transport_t *transport = ctor->transport;
+  if (!ctor->output_done) {
+    ssize_t n = pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
+    if (n >= 0) {
       ctor->output_size += n;
-    } else if (n == 0) {
-      break;
     } else {
-      if (n != PN_EOS) {
-        fprintf(stderr, "error in process_output: %s\n", pn_code(n));
-      }
       ctor->output_done = true;
-      break;
     }
   }
 
@@ -620,43 +524,6 @@ static void pn_connector_write(pn_connector_t *ctor)
 
   if (!ctor->output_size)
     ctor->status &= ~PN_SEL_WR;
-}
-
-static ssize_t pn_connector_write_sasl_header(pn_connector_t *ctor)
-{
-  if (ctor->trace & PN_TRACE_FRM)
-    fprintf(stderr, "    -> AMQP SASL 1.0\n");
-  memmove(pn_connector_output(ctor), "AMQP\x03\x01\x00\x00", 8);
-  ctor->process_output = pn_connector_write_sasl;
-  return 8;
-}
-
-static ssize_t pn_connector_write_sasl(pn_connector_t *ctor)
-{
-  pn_sasl_t *sasl = ctor->sasl;
-  ssize_t n = pn_sasl_output(sasl, pn_connector_output(ctor), pn_connector_available(ctor));
-  if (n == PN_EOS) {
-    ctor->process_output = pn_connector_write_amqp_header;
-    return ctor->process_output(ctor);
-  } else {
-    return n;
-  }
-}
-
-static ssize_t pn_connector_write_amqp_header(pn_connector_t *ctor)
-{
-  if (ctor->trace & PN_TRACE_FRM)
-    fprintf(stderr, "    -> AMQP 1.0\n");
-  memmove(pn_connector_output(ctor), "AMQP\x00\x01\x00\x00", 8);
-  ctor->process_output = pn_connector_write_amqp;
-  return 8;
-}
-
-static ssize_t pn_connector_write_amqp(pn_connector_t *ctor)
-{
-  if (!ctor->transport) return 0;
-  pn_transport_t *transport = ctor->transport;
-  return pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
 }
 
 static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)

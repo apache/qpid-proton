@@ -26,36 +26,34 @@ class Test(common.Test):
 class SaslTest(Test):
 
   def testPipelined(self):
-    cli = pn_sasl()
-    pn_sasl_mechanisms(cli, "ANONYMOUS")
-    pn_sasl_client(cli)
+    cli = pn_transport()
+    cli_auth = pn_sasl(cli)
+    pn_sasl_mechanisms(cli_auth, "ANONYMOUS")
+    pn_sasl_client(cli_auth)
 
-    srv = pn_sasl()
-    pn_sasl_mechanisms(srv, "ANONYMOUS")
-    pn_sasl_server(srv)
-    pn_sasl_done(srv, PN_SASL_OK)
+    assert pn_sasl_outcome(cli_auth) == PN_SASL_NONE
 
-    cli_code, cli_out = pn_sasl_output(cli, 1024)
-    srv_code, srv_out = pn_sasl_output(srv, 1024)
+    srv = pn_transport()
+    srv_auth = pn_sasl(srv)
+    pn_sasl_mechanisms(srv_auth, "ANONYMOUS")
+    pn_sasl_server(srv_auth)
+    pn_sasl_done(srv_auth, PN_SASL_OK)
+
+    cli_code, cli_out = pn_output(cli, 1024)
+    srv_code, srv_out = pn_output(srv, 1024)
 
     assert cli_code > 0, cli_code
     assert srv_code > 0, srv_code
 
-    dummy_header = "AMQPxxxx"
+    n = pn_input(srv, cli_out)
+    assert n == len(cli_out), "(%s) %s" % (n, pn_error_text(pn_transport_error(srv)))
 
-    srv_out += dummy_header
-    cli_out += dummy_header
+    assert pn_sasl_outcome(cli_auth) == PN_SASL_NONE
 
-    n = pn_sasl_input(srv, cli_out)
-    assert n > 0, n
-    cli_out = cli_out[n:]
-    assert cli_out == dummy_header
-    n = pn_sasl_input(srv, cli_out)
-    assert n == PN_EOS, n
+    n = pn_input(cli, srv_out)
+    assert n == len(srv_out), n
 
-    n = pn_sasl_input(cli, srv_out)
-    assert n > 0, n
-    srv_out = srv_out[n:]
-    assert srv_out == dummy_header
-    n = pn_sasl_input(cli, srv_out)
-    assert n == PN_EOS, n
+    assert pn_sasl_outcome(cli_auth) == PN_SASL_OK
+
+    pn_transport_free(cli)
+    pn_transport_free(srv)

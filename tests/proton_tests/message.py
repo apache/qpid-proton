@@ -127,6 +127,8 @@ class CodecTest(Test):
     assert not cd, cd
     assert saved == body, (body, saved)
 
+    pn_message_free(msg2)
+
 
 class LoadSaveTest(Test):
 

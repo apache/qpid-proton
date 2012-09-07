@@ -148,15 +148,22 @@ pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
  */
 pn_session_t *pn_session(pn_connection_t *connection);
 
-/** Factory for creating the connection's transport.
+/** Factory for creating a transport.
  *
- * The transport used by the connection to interface with the network.
- * There can only be one transport associated with a connection.
+ * A transport to be used by a connection to interface with the
+ * network. There can only be one connection associated with a
+ * transport. See pn_transport_bind().
  *
- * @param[in] connection connection that will use the transport
- * @return pointer to new session
+ * @return pointer to new transport
  */
-pn_transport_t *pn_transport(pn_connection_t *connection);
+pn_transport_t *pn_transport(void);
+
+/** Binds the transport to an AMQP connection endpoint.
+ *
+ * @return an error code, or 0 on success
+ */
+
+int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
 
 /** Retrieve the first Session that matches the given state mask.
  *

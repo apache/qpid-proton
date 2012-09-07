@@ -104,23 +104,6 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_output;
 
-ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
-%ignore pn_sasl_input;
-
-%rename(pn_sasl_output) wrap_pn_sasl_output;
-%inline %{
-  int wrap_pn_sasl_output(pn_sasl_t *sasl, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_sasl_output(sasl, OUTPUT, *OUTPUT_SIZE);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_sasl_output;
-
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
   pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {

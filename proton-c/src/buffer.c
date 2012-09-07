@@ -139,9 +139,6 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-#define min(X,Y) ((X) > (Y) ? (Y) : (X))
-#define max(X,Y) ((X) < (Y) ? (Y) : (X))
-
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   int err = pn_buffer_ensure(buf, size);
@@ -149,7 +146,7 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 
   size_t tail = pn_buffer_tail(buf);
   size_t tail_space = pn_buffer_tail_space(buf);
-  size_t n = min(tail_space, size);
+  size_t n = pn_min(tail_space, size);
 
   memmove(buf->bytes + tail, bytes, n);
   memmove(buf->bytes, bytes + n, size - n);
@@ -166,7 +163,7 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
 
   size_t head = pn_buffer_head(buf);
   size_t head_space = pn_buffer_head_space(buf);
-  size_t n = min(head_space, size);
+  size_t n = pn_min(head_space, size);
 
   memmove(buf->bytes + head - n, bytes + size - n, n);
   memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);

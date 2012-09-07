@@ -981,34 +981,6 @@
   check_sasl_outcome(pn_sasl_outcome);
 }
 
-%contract pn_sasl_input(pn_sasl_t *sasl, char *bytes, size_t available)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  available > 0;
-}
-
-%contract pn_sasl_output(pn_sasl_t *sasl, char *bytes, size_t size)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  size > 0;
-}
-
-%contract pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_free(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
 %include "proton/sasl.h"
 
 %contract pn_driver(void)

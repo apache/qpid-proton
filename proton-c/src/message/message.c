@@ -113,6 +113,7 @@ void pn_message_free(pn_message_t *msg)
     pn_buffer_free(msg->reply_to_group_id);
     pn_data_free(msg->data);
     pn_data_free(msg->body);
+    pn_parser_free(msg->parser);
     free(msg);
   }
 }
