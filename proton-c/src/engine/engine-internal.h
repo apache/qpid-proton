@@ -126,7 +126,7 @@ struct pn_connection_t {
   pn_delivery_t *tpwork_tail;
   char *container;
   char *hostname;
-  void          *context;
+  void *context;
 };
 
 struct pn_session_t {
