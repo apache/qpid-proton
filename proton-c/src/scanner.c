@@ -81,7 +81,10 @@ pn_scanner_t *pn_scanner()
 
 void pn_scanner_free(pn_scanner_t *scanner)
 {
-  free(scanner);
+  if (scanner) {
+    pn_error_free(scanner->error);
+    free(scanner);
+  }
 }
 
 pn_token_t pn_scanner_token(pn_scanner_t *scanner)

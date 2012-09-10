@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/buffer.h>
 #include <proton/engine.h>
 #include <proton/types.h>
 #include "../dispatcher/dispatcher.h"
@@ -85,15 +86,22 @@ typedef struct {
 
 #define SCRATCH (1024)
 
+#include <proton/sasl.h>
+
 struct pn_transport_t {
-  pn_endpoint_t endpoint;
+  ssize_t (*process_input)(pn_transport_t *, char *, size_t);
+  ssize_t (*process_output)(pn_transport_t *, char *, size_t);
+  size_t header_count;
+  pn_sasl_t *sasl;
   pn_connection_t *connection;
   pn_dispatcher_t *disp;
   bool open_sent;
   bool open_rcvd;
   bool close_sent;
   bool close_rcvd;
-  int error;
+  char *remote_container;
+  char *remote_hostname;
+  pn_error_t *error;
   pn_session_state_t *sessions;
   size_t session_capacity;
   pn_session_state_t **channels;
@@ -118,8 +126,7 @@ struct pn_connection_t {
   pn_delivery_t *tpwork_tail;
   char *container;
   char *hostname;
-  char *remote_container;
-  char *remote_hostname;
+  void *context;
 };
 
 struct pn_session_t {
@@ -154,7 +161,7 @@ struct pn_link_t {
 
 struct pn_delivery_t {
   pn_link_t *link;
-  pn_bytes_t tag;
+  pn_buffer_t *tag;
   int local_state;
   int remote_state;
   bool local_settled;
@@ -171,9 +178,7 @@ struct pn_delivery_t {
   pn_delivery_t *tpwork_next;
   pn_delivery_t *tpwork_prev;
   bool tpwork;
-  char *bytes;
-  size_t size;
-  size_t capacity;
+  pn_buffer_t *bytes;
   bool done;
   void *context;
 };
@@ -201,5 +206,6 @@ void pn_link_dump(pn_link_t *link);
   }
 
 void pn_dump(pn_connection_t *conn);
+void pn_transport_sasl_init(pn_transport_t *transport);
 
 #endif /* engine-internal.h */

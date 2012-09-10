@@ -127,6 +127,8 @@ class CodecTest(Test):
     assert not cd, cd
     assert saved == body, (body, saved)
 
+    pn_message_free(msg2)
+
 
 class LoadSaveTest(Test):
 
@@ -172,3 +174,12 @@ class LoadSaveTest(Test):
 
   def testText(self):
     self._test(PN_TEXT, "this is a text string")
+
+  def testTextLoadNone(self):
+    pn_message_set_format(self.msg, PN_TEXT)
+    pn_message_clear(self.msg)
+    cd = pn_message_load(self.msg, None)
+    assert cd == 0
+    cd, saved = pn_message_save(self.msg, 1024)
+    assert cd >= 0
+    assert saved == ""

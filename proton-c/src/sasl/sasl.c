@@ -27,6 +27,7 @@
 #include <proton/sasl.h>
 #include "protocol.h"
 #include "../dispatcher/dispatcher.h"
+#include "../engine/engine-internal.h"
 #include "../util.h"
 
 #define SCRATCH (1024)
@@ -53,30 +54,36 @@ int pn_do_challenge(pn_dispatcher_t *disp);
 int pn_do_response(pn_dispatcher_t *disp);
 int pn_do_outcome(pn_dispatcher_t *disp);
 
-pn_sasl_t *pn_sasl()
+pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
-  pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));
-  sasl->disp = pn_dispatcher(1, sasl);
+  if (!transport->sasl) {
+    pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));
+    sasl->disp = pn_dispatcher(1, sasl);
 
-  pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
-  pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
-  pn_dispatcher_action(sasl->disp, SASL_CHALLENGE, "SASL-CHALLENGE", pn_do_challenge);
-  pn_dispatcher_action(sasl->disp, SASL_RESPONSE, "SASL-RESPONSE", pn_do_response);
-  pn_dispatcher_action(sasl->disp, SASL_OUTCOME, "SASL-OUTCOME", pn_do_outcome);
+    pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
+    pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
+    pn_dispatcher_action(sasl->disp, SASL_CHALLENGE, "SASL-CHALLENGE", pn_do_challenge);
+    pn_dispatcher_action(sasl->disp, SASL_RESPONSE, "SASL-RESPONSE", pn_do_response);
+    pn_dispatcher_action(sasl->disp, SASL_OUTCOME, "SASL-OUTCOME", pn_do_outcome);
 
-  sasl->client = false;
-  sasl->configured = false;
-  sasl->mechanisms = NULL;
-  sasl->remote_mechanisms = NULL;
-  sasl->send_data = (pn_bytes_t) {0, NULL};
-  sasl->recv_data = (pn_bytes_t) {0, NULL};
-  sasl->outcome = PN_SASL_NONE;
-  sasl->sent_init = false;
-  sasl->rcvd_init = false;
-  sasl->sent_done = false;
-  sasl->rcvd_done = false;
+    sasl->client = false;
+    sasl->configured = false;
+    sasl->mechanisms = NULL;
+    sasl->remote_mechanisms = NULL;
+    sasl->send_data = (pn_bytes_t) {0, NULL};
+    sasl->recv_data = (pn_bytes_t) {0, NULL};
+    sasl->outcome = PN_SASL_NONE;
+    sasl->sent_init = false;
+    sasl->rcvd_init = false;
+    sasl->sent_done = false;
+    sasl->rcvd_done = false;
 
-  return sasl;
+    transport->sasl = sasl;
+
+    pn_transport_sasl_init(transport);
+  }
+
+  return transport->sasl;
 }
 
 pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl)
@@ -201,12 +208,14 @@ void pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace)
 
 void pn_sasl_free(pn_sasl_t *sasl)
 {
-  free(sasl->mechanisms);
-  free(sasl->remote_mechanisms);
-  free(sasl->send_data.start);
-  free(sasl->recv_data.start);
-  pn_dispatcher_free(sasl->disp);
-  free(sasl);
+  if (sasl) {
+    free(sasl->mechanisms);
+    free(sasl->remote_mechanisms);
+    free(sasl->send_data.start);
+    free(sasl->recv_data.start);
+    pn_dispatcher_free(sasl->disp);
+    free(sasl);
+  }
 }
 
 void pn_client_init(pn_sasl_t *sasl)

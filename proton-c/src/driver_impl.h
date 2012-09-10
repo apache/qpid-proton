@@ -25,6 +25,7 @@
 /* Decls */
 
 struct pn_driver_t {
+  pn_error_t *error;
   pn_listener_t *listener_head;
   pn_listener_t *listener_tail;
   pn_listener_t *listener_next;
@@ -90,11 +91,8 @@ struct pn_connector_t {
   bool input_eos;
   size_t output_size;
   char output[PN_CONNECTOR_IO_BUF_SIZE];
-  pn_sasl_t *sasl;
   pn_connection_t *connection;
   pn_transport_t *transport;
-  ssize_t (*process_input)(pn_connector_t *);
-  ssize_t (*process_output)(pn_connector_t *);
   bool input_done;
   bool output_done;
   pn_listener_t *listener;

@@ -55,8 +55,10 @@ class Test(common.Test):
   def connection(self):
     c1 = pn_connection()
     c2 = pn_connection()
-    t1 = pn_transport(c1)
-    t2 = pn_transport(c2)
+    t1 = pn_transport()
+    pn_transport_bind(t1, c1)
+    t2 = pn_transport()
+    pn_transport_bind(t2, c2)
     self._wires.append((c1, t1, c2, t2))
     trc = os.environ.get("PN_TRACE_FRM")
     if trc and trc.lower() in ("1", "2", "yes", "true"):
@@ -82,7 +84,9 @@ class Test(common.Test):
   def cleanup(self):
     for c1, t1, c2, t2 in self._wires:
       pn_connection_free(c1)
+      pn_transport_free(t1)
       pn_connection_free(c2)
+      pn_transport_free(t2)
 
   def pump(self):
     for c1, t1, c2, t2 in self._wires:

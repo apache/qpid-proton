@@ -139,9 +139,6 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   return 0;
 }
 
-#define min(X,Y) ((X) > (Y) ? (Y) : (X))
-#define max(X,Y) ((X) < (Y) ? (Y) : (X))
-
 int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 {
   int err = pn_buffer_ensure(buf, size);
@@ -149,7 +146,7 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
 
   size_t tail = pn_buffer_tail(buf);
   size_t tail_space = pn_buffer_tail_space(buf);
-  size_t n = min(tail_space, size);
+  size_t n = pn_min(tail_space, size);
 
   memmove(buf->bytes + tail, bytes, n);
   memmove(buf->bytes, bytes + n, size - n);
@@ -166,7 +163,7 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
 
   size_t head = pn_buffer_head(buf);
   size_t head_space = pn_buffer_head_space(buf);
-  size_t n = min(head_space, size);
+  size_t n = pn_min(head_space, size);
 
   memmove(buf->bytes + head - n, bytes + size - n, n);
   memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);
@@ -180,6 +177,35 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   buf->size += size;
 
   return 0;
+}
+
+size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
+{
+  size_t result = buf->start + index;
+  if (result >= buf->capacity) result -= buf->capacity;
+  return result;
+}
+
+size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
+{
+  size_t start = pn_buffer_index(buf, offset);
+  size_t stop = pn_buffer_index(buf, pn_min(offset + size, buf->size));
+
+  size_t sz1;
+  size_t sz2;
+
+  if (start > stop) {
+    sz1 = buf->capacity - start;
+    sz2 = stop;
+  } else {
+    sz1 = stop - start;
+    sz2 = 0;
+  }
+
+  memmove(dst, buf->bytes + start, sz1);
+  memmove(dst + sz1, buf->bytes, sz2);
+
+  return sz1 + sz2;
 }
 
 int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
@@ -200,13 +226,6 @@ int pn_buffer_clear(pn_buffer_t *buf)
   buf->start = 0;
   buf->size = 0;
   return 0;
-}
-
-size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
-{
-  size_t result = buf->start + index;
-  if (result >= buf->capacity) result -= buf->capacity;
-  return result;
 }
 
 static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {

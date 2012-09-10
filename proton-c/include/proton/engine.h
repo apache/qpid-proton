@@ -27,6 +27,10 @@
 #include <sys/types.h>
 #include <proton/error.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * API for the proton Engine.
  *
@@ -144,15 +148,22 @@ pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
  */
 pn_session_t *pn_session(pn_connection_t *connection);
 
-/** Factory for creating the connection's transport.
+/** Factory for creating a transport.
  *
- * The transport used by the connection to interface with the network.
- * There can only be one transport associated with a connection.
+ * A transport to be used by a connection to interface with the
+ * network. There can only be one connection associated with a
+ * transport. See pn_transport_bind().
  *
- * @param[in] connection connection that will use the transport
- * @return pointer to new session
+ * @return pointer to new transport
  */
-pn_transport_t *pn_transport(pn_connection_t *connection);
+pn_transport_t *pn_transport(void);
+
+/** Binds the transport to an AMQP connection endpoint.
+ *
+ * @return an error code, or 0 on success
+ */
+
+int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
 
 /** Retrieve the first Session that matches the given state mask.
  *
@@ -218,6 +229,24 @@ void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
 void pn_connection_free(pn_connection_t *connection);
 
+/** Access the application context that is associated with the
+ *  connection.
+ *
+ * @param[in] connection the connection whose context is to be returned.
+ *
+ * @return the application context that was passed to pn_connection_set_context()
+ */
+void *pn_connection_context(pn_connection_t *connection);
+
+/** Assign a new application context to the connection.
+ *
+ * @param[in] connection the connection which will hold the context.
+ * @param[in] context new application context to associate with the
+ *                    connection
+ */
+void pn_connection_set_context(pn_connection_t *connection, void *context);
+
+
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
@@ -247,8 +276,8 @@ const char *pn_target(pn_link_t *link);
 const char *pn_source(pn_link_t *link);
 void pn_set_source(pn_link_t *link, const char *source);
 void pn_set_target(pn_link_t *link, const char *target);
-char *pn_remote_source(pn_link_t *link);
-char *pn_remote_target(pn_link_t *link);
+const char *pn_remote_source(pn_link_t *link);
+const char *pn_remote_target(pn_link_t *link);
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_t *pn_current(pn_link_t *link);
 bool pn_advance(pn_link_t *link);
@@ -290,5 +319,9 @@ void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition);
 //int pn_format(pn_delivery_t *delivery);
 void pn_settle(pn_delivery_t *delivery);
 void pn_delivery_dump(pn_delivery_t *delivery);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* engine.h */

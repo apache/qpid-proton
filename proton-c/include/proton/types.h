@@ -25,6 +25,10 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
 typedef uint64_t pn_timestamp_t;
@@ -36,5 +40,9 @@ typedef struct {
 
 pn_bytes_t pn_bytes(size_t size, char *start);
 pn_bytes_t pn_bytes_dup(size_t size, const char *start);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* types.h */

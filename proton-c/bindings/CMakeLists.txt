@@ -19,7 +19,7 @@
 
 include(UseSWIG)
 
-set (BINDING_DEPS qpid-proton qpid-proton-posix ${LINK_DEPS})
+set (BINDING_DEPS qpid-proton)
 
 # Build wrapper for Python:
 find_package (PythonLibs)

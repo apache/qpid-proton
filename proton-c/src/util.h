@@ -92,4 +92,7 @@ bool pn_env_bool(const char *name);
 char *pn_strdup(const char *src);
 char *pn_strndup(const char *src, size_t n);
 
+#define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
+#define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))
+
 #endif /* util.h */

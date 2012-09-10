@@ -19,8 +19,11 @@
  *
  */
 
+#define _POSIX_C_SOURCE (200112)
+
 #include <proton/error.h>
 #include <stdlib.h>
+#include <string.h>
 #include "util.h"
 
 struct pn_error_t {
@@ -59,8 +62,10 @@ void pn_error_clear(pn_error_t *error)
 int pn_error_set(pn_error_t *error, int code, const char *text)
 {
   pn_error_clear(error);
-  error->code = code;
-  error->text = pn_strdup(text);
+  if (code) {
+    error->code = code;
+    error->text = pn_strdup(text);
+  }
   return code;
 }
 
@@ -81,6 +86,13 @@ int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
   int rcode = pn_error_vformat(error, code, fmt, ap);
   va_end(ap);
   return rcode;
+}
+
+int pn_error_from_errno(pn_error_t *error, const char *msg)
+{
+  char err[1024];
+  strerror_r(errno, err, 1024);
+  return pn_error_format(error, PN_ERR, "%s: %s", msg, err);
 }
 
 int pn_error_code(pn_error_t *error)

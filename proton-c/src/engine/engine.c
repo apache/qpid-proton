@@ -29,6 +29,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "../sasl/sasl-internal.h"
+
 // delivery buffers
 
 void pn_delivery_buffer_init(pn_delivery_buffer_t *db, pn_sequence_t next, size_t capacity)
@@ -187,19 +189,30 @@ void pn_connection_close(pn_connection_t *connection)
   if (connection) pn_close((pn_endpoint_t *) connection);
 }
 
+void pn_endpoint_tini(pn_endpoint_t *endpoint);
+
 void pn_connection_free(pn_connection_t *connection)
 {
   if (!connection) return;
 
-  pn_transport_free(connection->transport);
   while (connection->session_count)
     pn_session_free(connection->sessions[connection->session_count - 1]);
   free(connection->sessions);
   free(connection->container);
   free(connection->hostname);
-  free(connection->remote_container);
-  free(connection->remote_hostname);
+  pn_endpoint_tini(&connection->endpoint);
   free(connection);
+}
+
+void *pn_connection_context(pn_connection_t *conn)
+{
+    return conn ? conn->context : 0;
+}
+
+void pn_connection_set_context(pn_connection_t *conn, void *context)
+{
+    if (conn)
+        conn->context = context;
 }
 
 void pn_transport_open(pn_transport_t *transport)
@@ -216,6 +229,7 @@ void pn_transport_free(pn_transport_t *transport)
 {
   if (!transport) return;
 
+  pn_sasl_free(transport->sasl);
   pn_dispatcher_free(transport->disp);
   for (int i = 0; i < transport->session_capacity; i++) {
     pn_delivery_buffer_free(&transport->sessions[i].incoming);
@@ -223,6 +237,9 @@ void pn_transport_free(pn_transport_t *transport)
     free(transport->sessions[i].links);
     free(transport->sessions[i].handles);
   }
+  free(transport->remote_container);
+  free(transport->remote_hostname);
+  pn_error_free(transport->error);
   free(transport->sessions);
   free(transport->channels);
   free(transport);
@@ -273,6 +290,7 @@ void pn_session_free(pn_session_t *session)
     pn_link_free(session->links[session->link_count - 1]);
   pn_remove_session(session->connection, session);
   free(session->links);
+  pn_endpoint_tini(&session->endpoint);
   free(session);
 }
 
@@ -298,28 +316,11 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
   link->session = NULL;
 }
 
-void pn_clear_tag(pn_delivery_t *delivery)
-{
-  if (delivery->tag.start) {
-    free(delivery->tag.start);
-    delivery->tag = (pn_bytes_t) {0, NULL};
-  }
-}
-
-void pn_clear_bytes(pn_delivery_t *delivery)
-{
-  if (delivery->capacity) {
-    free(delivery->bytes);
-    delivery->bytes = NULL;
-    delivery->capacity = 0;
-  }
-}
-
 void pn_free_delivery(pn_delivery_t *delivery)
 {
   if (delivery) {
-    pn_clear_tag(delivery);
-    pn_clear_bytes(delivery);
+    pn_buffer_free(delivery->tag);
+    pn_buffer_free(delivery->bytes);
     free(delivery);
   }
 }
@@ -354,6 +355,7 @@ void pn_link_free(pn_link_t *link)
     pn_free_delivery(d);
   }
   free(link->name);
+  pn_endpoint_tini(&link->endpoint);
   free(link);
 }
 
@@ -371,11 +373,17 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
   LL_ADD(conn, endpoint, endpoint);
 }
 
+void pn_endpoint_tini(pn_endpoint_t *endpoint)
+{
+  pn_error_free(endpoint->error);
+}
+
 pn_connection_t *pn_connection()
 {
   pn_connection_t *conn = malloc(sizeof(pn_connection_t));
   if (!conn) return NULL;
 
+  conn->context = NULL;
   conn->endpoint_head = NULL;
   conn->endpoint_tail = NULL;
   pn_endpoint_init(&conn->endpoint, CONNECTION, conn);
@@ -391,8 +399,6 @@ pn_connection_t *pn_connection()
   conn->tpwork_tail = NULL;
   conn->container = NULL;
   conn->hostname = NULL;
-  conn->remote_container = NULL;
-  conn->remote_hostname = NULL;
 
   return conn;
 }
@@ -433,12 +439,14 @@ void pn_connection_set_hostname(pn_connection_t *connection, const char *hostnam
 
 const char *pn_connection_remote_container(pn_connection_t *connection)
 {
-  return connection ? connection->remote_container : NULL;
+  if (!connection) return NULL;
+  return connection->transport ? connection->transport->remote_container : NULL;
 }
 
 const char *pn_connection_remote_hostname(pn_connection_t *connection)
 {
-  return connection ? connection->remote_hostname : NULL;
+  if (!connection) return NULL;
+  return connection->transport ? connection->transport->remote_hostname : NULL;
 }
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection)
@@ -655,10 +663,21 @@ int pn_do_detach(pn_dispatcher_t *disp);
 int pn_do_end(pn_dispatcher_t *disp);
 int pn_do_close(pn_dispatcher_t *disp);
 
+static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_input_read_sasl(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_input_read_amqp(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_output_write_sasl(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_output_write_amqp(pn_transport_t *transport, char *bytes, size_t available);
+
 void pn_transport_init(pn_transport_t *transport)
 {
-  pn_endpoint_init(&transport->endpoint, TRANSPORT, transport->connection);
-
+  transport->process_input = pn_input_read_amqp_header;
+  transport->process_output = pn_output_write_amqp_header;
+  transport->header_count = 0;
+  transport->sasl = NULL;
   transport->disp = pn_dispatcher(0, transport);
 
   pn_dispatcher_action(transport->disp, OPEN, "OPEN", pn_do_open);
@@ -675,7 +694,9 @@ void pn_transport_init(pn_transport_t *transport)
   transport->open_rcvd = false;
   transport->close_sent = false;
   transport->close_rcvd = false;
-  transport->error = 0;
+  transport->remote_container = NULL;
+  transport->remote_hostname = NULL;
+  transport->error = pn_error();
 
   transport->sessions = NULL;
   transport->session_capacity = 0;
@@ -716,25 +737,41 @@ void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_stat
   transport->channels[channel] = state;
 }
 
-pn_transport_t *pn_transport(pn_connection_t *conn)
+pn_transport_t *pn_transport()
 {
-  if (!conn) return NULL;
+  pn_transport_t *transport = malloc(sizeof(pn_transport_t));
+  if (!transport) return NULL;
 
-  if (conn->transport) {
-    return NULL;
-  } else {
-    conn->transport = malloc(sizeof(pn_transport_t));
-    if (!conn->transport) return NULL;
+  transport->connection = NULL;
+  pn_transport_init(transport);
+  return transport;
+}
 
-    conn->transport->connection = conn;
-    pn_transport_init(conn->transport);
-    return conn->transport;
+void pn_transport_sasl_init(pn_transport_t *transport)
+{
+  transport->process_input = pn_input_read_sasl_header;
+  transport->process_output = pn_output_write_sasl_header;
+}
+
+int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
+{
+  if (!transport) return PN_ARG_ERR;
+  if (transport->connection) return PN_STATE_ERR;
+  if (connection->transport) return PN_STATE_ERR;
+  transport->connection = connection;
+  connection->transport = transport;
+  if (transport->open_rcvd) {
+    PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
+    if (!pn_error_code(transport->error)) {
+      transport->disp->halt = false;
+    }
   }
+  return 0;
 }
 
 pn_error_t *pn_transport_error(pn_transport_t *transport)
 {
-  return transport->endpoint.error;
+  return transport->error;
 }
 
 void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *name)
@@ -779,12 +816,12 @@ void pn_set_target(pn_link_t *link, const char *target)
   link->local_target = pn_strdup(target);
 }
 
-char *pn_remote_source(pn_link_t *link)
+const char *pn_remote_source(pn_link_t *link)
 {
   return link ? link->remote_source : NULL;
 }
 
-char *pn_remote_target(pn_link_t *link)
+const char *pn_remote_target(pn_link_t *link)
 {
   return link ? link->remote_target : NULL;
 }
@@ -869,12 +906,15 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   if (!link) return NULL;
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled);
-  if (!delivery) delivery = malloc(sizeof(pn_delivery_t));
-  if (!delivery) return NULL;
+  if (!delivery) {
+    delivery = malloc(sizeof(pn_delivery_t));
+    if (!delivery) return NULL;
+    delivery->tag = pn_buffer(16);
+    delivery->bytes = pn_buffer(64);
+  }
   delivery->link = link;
-  delivery->tag.size = tag.size;
-  delivery->tag.start = malloc(tag.size);
-  memcpy(delivery->tag.start, tag.bytes, tag.size);
+  pn_buffer_clear(delivery->tag);
+  pn_buffer_append(delivery->tag, tag.bytes, tag.size);
   delivery->local_state = 0;
   delivery->remote_state = 0;
   delivery->local_settled = false;
@@ -888,9 +928,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork_next = NULL;
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
-  delivery->bytes = NULL;
-  delivery->size = 0;
-  delivery->capacity = 0;
+  pn_buffer_clear(delivery->bytes);
   delivery->done = false;
   delivery->context = NULL;
 
@@ -928,7 +966,8 @@ bool pn_is_current(pn_delivery_t *delivery)
 void pn_delivery_dump(pn_delivery_t *d)
 {
   char tag[1024];
-  pn_quote_data(tag, 1024, d->tag.start, d->tag.size);
+  pn_bytes_t bytes = pn_buffer_bytes(d->tag);
+  pn_quote_data(tag, 1024, bytes.start, bytes.size);
   printf("{tag=%s, local_state=%u, remote_state=%u, local_settled=%u, "
          "remote_settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
@@ -940,7 +979,8 @@ void pn_delivery_dump(pn_delivery_t *d)
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   if (delivery) {
-    return pn_dtag(delivery->tag.start, delivery->tag.size);
+    pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+    return pn_dtag(tag.start, tag.size);
   } else {
     return (pn_delivery_tag_t) {0};
   }
@@ -1002,8 +1042,8 @@ void pn_real_settle(pn_delivery_t *delivery)
   LL_REMOVE(link, unsettled, delivery);
   // TODO: what if we settle the current delivery?
   LL_ADD(link, settled, delivery);
-  pn_clear_tag(delivery);
-  pn_clear_bytes(delivery);
+  pn_buffer_clear(delivery->tag);
+  pn_buffer_clear(delivery->bytes);
   delivery->settled = true;
 }
 
@@ -1047,13 +1087,13 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   // XXX: result
   vsnprintf(buf, 1024, fmt, ap);
   va_end(ap);
-  pn_error_set(transport->endpoint.error, PN_ERR, buf);
+  pn_error_set(transport->error, PN_ERR, buf);
   if (!transport->close_sent) {
     pn_post_close(transport);
     transport->close_sent = true;
   }
   transport->disp->halt = true;
-  fprintf(stderr, "ERROR %s %s\n", condition, pn_error_text(transport->endpoint.error));
+  fprintf(stderr, "ERROR %s %s\n", condition, pn_error_text(transport->error));
   return PN_ERR;
 }
 
@@ -1072,16 +1112,20 @@ int pn_do_open(pn_dispatcher_t *disp)
                          &hostname_q, &remote_hostname);
   if (err) return err;
   if (container_q) {
-    conn->remote_container = pn_bytes_strdup(remote_container);
+    transport->remote_container = pn_bytes_strdup(remote_container);
   } else {
-    conn->remote_container = NULL;
+    transport->remote_container = NULL;
   }
   if (hostname_q) {
-    conn->remote_hostname = pn_bytes_strdup(remote_hostname);
+    transport->remote_hostname = pn_bytes_strdup(remote_hostname);
   } else {
-    conn->remote_hostname = NULL;
+    transport->remote_hostname = NULL;
   }
-  PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
+  if (conn) {
+    PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
+  } else {
+    transport->disp->halt = true;
+  }
   transport->open_rcvd = true;
   return 0;
 }
@@ -1215,9 +1259,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     link->queued++;
   }
 
-  PN_ENSURE(delivery->bytes, delivery->capacity, delivery->size + disp->size);
-  memmove(delivery->bytes + delivery->size, disp->payload, disp->size);
-  delivery->size += disp->size;
+  pn_buffer_append(delivery->bytes, disp->payload, disp->size);
   delivery->done = !more;
 
   ssn_state->incoming_transfer_count++;
@@ -1382,29 +1424,103 @@ ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available)
 {
   if (!transport) return PN_ARG_ERR;
 
+  size_t consumed = 0;
+
+  while (true) {
+    ssize_t n = transport->process_input(transport, bytes + consumed, available - consumed);
+    if (n > 0) {
+      consumed += n;
+      if (consumed >= available) {
+        break;
+      }
+    } else if (n == 0) {
+      break;
+    } else {
+      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+        pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
+      return n;
+    }
+  }
+
+  return consumed;
+}
+
+#define SASL_HEADER ("AMQP\x03\x01\x00\x00")
+
+static ssize_t pn_input_read_header(pn_transport_t *transport, char *bytes, size_t available,
+                                    const char *header, size_t size, const char *protocol,
+                                    ssize_t (*next)(pn_transport_t *, char *, size_t))
+{
+  const char *point = header + transport->header_count;
+  int delta = pn_min(available, size - transport->header_count);
+  if (!available || memcmp(bytes, point, delta)) {
+    char quoted[1024];
+    pn_quote_data(quoted, 1024, bytes, available);
+    return pn_error_format(transport->error, PN_ERR,
+                           "%s header missmatch: '%s'", protocol, quoted);
+  } else {
+    transport->header_count += delta;
+    if (transport->header_count == size) {
+      transport->header_count = 0;
+      transport->process_input = next;
+
+      if (transport->disp->trace & PN_TRACE_FRM)
+        fprintf(stderr, "    <- %s\n", protocol);
+    }
+    return delta;
+  }
+}
+
+static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, char *bytes, size_t available)
+{
+  return pn_input_read_header(transport, bytes, available, SASL_HEADER, 8, "SASL", pn_input_read_sasl);
+}
+
+static ssize_t pn_input_read_sasl(pn_transport_t *transport, char *bytes, size_t available)
+{
+  pn_sasl_t *sasl = transport->sasl;
+  ssize_t n = pn_sasl_input(sasl, bytes, available);
+  if (n == PN_EOS) {
+    transport->process_input = pn_input_read_amqp_header;
+    return transport->process_input(transport, bytes, available);
+  } else {
+    return n;
+  }
+}
+
+#define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
+
+static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, char *bytes, size_t available)
+{
+  return pn_input_read_header(transport, bytes, available, AMQP_HEADER, 8,
+                              "AMQP", pn_input_read_amqp);
+}
+
+static ssize_t pn_input_read_amqp(pn_transport_t *transport, char *bytes, size_t available)
+{
+  if (transport->close_rcvd) {
+    if (available > 0) {
+      pn_do_error(transport, "amqp:connection:framing-error", "data after close");
+      return PN_ERR;
+    } else {
+      return PN_EOS;
+    }
+  }
+
   if (!available) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
-    if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-      fprintf(stderr, "    <- EOS\n");
     return PN_ERR;
   }
 
-  if (transport->close_rcvd) {
-    pn_do_error(transport, "amqp:connection:framing-error", "data after close");
-    if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-      fprintf(stderr, "    <- EOS\n");
-    return PN_ERR;
-  }
 
   ssize_t n = pn_dispatcher_input(transport->disp, bytes, available);
-  if (n >= 0 && transport->close_rcvd) {
-    if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-      fprintf(stderr, "    <- EOS\n");
+  if (n < 0) {
+    return pn_error_set(transport->error, n, "dispatch error");
+  } else if (transport->close_rcvd) {
     return PN_EOS;
-  } else if (n < 0) {
-    transport->error = n;
+  } else {
+    return n;
   }
-  return n;
 }
 
 bool pn_delivery_buffered(pn_delivery_t *delivery)
@@ -1413,7 +1529,7 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
   if (pn_is_sender(delivery->link)) {
     pn_delivery_state_t *state = delivery->context;
     if (state) {
-      return (delivery->done && !state->sent) || delivery->size > 0;
+      return (delivery->done && !state->sent) || pn_buffer_size(delivery->bytes) > 0;
     } else {
       return delivery->done;
     }
@@ -1561,16 +1677,16 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
       delivery->context = state;
     }
 
-    if (state && !state->sent && (delivery->done || delivery->size > 0) &&
+    if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
-      if (delivery->bytes) {
-        pn_set_payload(transport->disp, delivery->bytes, delivery->size);
-        delivery->size = 0;
-      }
+      pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
+      pn_set_payload(transport->disp, bytes.start, bytes.size);
+      pn_buffer_clear(delivery->bytes);
+      pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
       int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
                               link_state->local_handle, state->id,
-                              delivery->tag.size, delivery->tag.start,
-                              0, delivery->local_settled, !delivery->done);
+                              tag.size, tag.start, 0, delivery->local_settled,
+                              !delivery->done);
       if (err) return err;
       ssn_state->outgoing_transfer_count++;
       ssn_state->outgoing_window--;
@@ -1801,18 +1917,60 @@ int pn_process(pn_transport_t *transport)
   return 0;
 }
 
-ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
+static ssize_t pn_output_write_header(pn_transport_t *transport,
+                                      char *bytes, size_t size,
+                                      const char *header, size_t hdrsize,
+                                      const char *protocol,
+                                      ssize_t (*next)(pn_transport_t *, char *, size_t))
 {
-  if (!transport) return PN_ARG_ERR;
+  if (transport->disp->trace & PN_TRACE_FRM)
+    fprintf(stderr, "    -> %s\n", protocol);
+  if (size >= hdrsize) {
+    memmove(bytes, header, hdrsize);
+    transport->process_output = next;
+    return hdrsize;
+  } else {
+    return pn_error_format(transport->error, PN_UNDERFLOW, "underflow writing %s header", protocol);
+  }
+}
 
-  if (!transport->error)
-    transport->error = pn_process(transport);
+static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, char *bytes, size_t size)
+{
+  return pn_output_write_header(transport, bytes, size, SASL_HEADER, 8, "SASL",
+                                pn_output_write_sasl);
+}
 
-  if (!transport->disp->available && (transport->close_sent || transport->error)) {
-    if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-      fprintf(stderr, "    -> EOS\n");
-    if (transport->error)
-      return transport->error;
+static ssize_t pn_output_write_sasl(pn_transport_t *transport, char *bytes, size_t size)
+{
+  pn_sasl_t *sasl = transport->sasl;
+  ssize_t n = pn_sasl_output(sasl, bytes, size);
+  if (n == PN_EOS) {
+    transport->process_output = pn_output_write_amqp_header;
+    return 0;
+  } else {
+    return n;
+  }
+}
+
+static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, char *bytes, size_t size)
+{
+  return pn_output_write_header(transport, bytes, size, AMQP_HEADER, 8, "AMQP",
+                                pn_output_write_amqp);
+}
+
+static ssize_t pn_output_write_amqp(pn_transport_t *transport, char *bytes, size_t size)
+{
+  if (!transport->connection) {
+    return 0;
+  }
+
+  if (!pn_error_code(transport->error)) {
+    pn_error_set(transport->error, pn_process(transport), "process error");
+  }
+
+  if (!transport->disp->available && (transport->close_sent || pn_error_code(transport->error))) {
+    if (pn_error_code(transport->error))
+      return pn_error_code(transport->error);
     else
       return PN_EOS;
   }
@@ -1820,8 +1978,40 @@ ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
   return pn_dispatcher_output(transport->disp, bytes, size);
 }
 
+ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
+{
+  if (!transport) return PN_ARG_ERR;
+
+  size_t total = 0;
+
+  while (size - total > 0) {
+    ssize_t n = transport->process_output(transport, bytes + total, size - total);
+    if (n > 0) {
+      total += n;
+    } else if (n == 0) {
+      break;
+    } else if (n == PN_EOS) {
+      if (total > 0) {
+        return total;
+      } else {
+        if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+          pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
+        return PN_EOS;
+      }
+    } else {
+      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+        pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", n,
+                            pn_error_text(transport->error));
+      return n;
+    }
+  }
+
+  return total;
+}
+
 void pn_trace(pn_transport_t *transport, pn_trace_t trace)
 {
+  if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
   transport->disp->trace = trace;
 }
 
@@ -1829,9 +2019,7 @@ ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n)
 {
   pn_delivery_t *current = pn_current(sender);
   if (!current) return PN_EOS;
-  PN_ENSURE(current->bytes, current->capacity, current->size + n);
-  memmove(current->bytes + current->size, bytes, n);
-  current->size += n;
+  pn_buffer_append(current->bytes, bytes, n);
   pn_add_tpwork(current);
   return n;
 }
@@ -1850,11 +2038,9 @@ ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n)
 
   pn_delivery_t *delivery = receiver->current;
   if (delivery) {
-    if (delivery->size) {
-      size_t size = n > delivery->size ? delivery->size : n;
-      memmove(bytes, delivery->bytes, size);
-      memmove(bytes, bytes + size, delivery->size - size);
-      delivery->size -= size;
+    size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
+    pn_buffer_trim(delivery->bytes, size, 0);
+    if (size) {
       return size;
     } else {
       return delivery->done ? PN_EOS : 0;
@@ -1945,5 +2131,5 @@ bool pn_readable(pn_delivery_t *delivery)
 
 size_t pn_pending(pn_delivery_t *delivery)
 {
-  return delivery->size;
+  return pn_buffer_size(delivery->bytes);
 }

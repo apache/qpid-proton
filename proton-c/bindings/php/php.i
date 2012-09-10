@@ -67,8 +67,6 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 
 ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %ignore pn_sasl_send;
-ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
-%ignore pn_sasl_input;
 
 
 // Use the OUTPUT_BUFFER,OUTPUT_LEN typemap to allow these functions to return
@@ -109,18 +107,6 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
     }
 %}
 %ignore pn_output;
-
-%rename(pn_sasl_output) wrap_pn_output;
-// in PHP:   array = pn_sasl_output(sasl, MAXLEN);
-//           array[0] = size || error code
-//           array[1] = native string containing binary data
-%inline %{
-    void wrap_pn_sasl_output(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
-        *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
-        *OUTPUT_LEN = pn_sasl_output(sasl, *OUTPUT_BUFFER, maxCount);
-    }
-%}
-%ignore pn_sasl_output;
 
 %rename(pn_message_data) wrap_pn_message_data;
 // in PHP:  array = pn_message_data("binary message data", MAXLEN);
@@ -274,4 +260,4 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *PHP_CONTEXT);
 %ignore pn_connector_free;
 
 
-%include "../cproton.i"
+%include "proton/cproton.i"

@@ -24,6 +24,10 @@
 
 #include <proton/message.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @file
  * The messenger API provides a high level interface for sending and
  * receiving AMQP messages.
@@ -179,5 +183,9 @@ int pn_messenger_outgoing(pn_messenger_t *messenger);
  * @return the incoming queue depth
  */
 int pn_messenger_incoming(pn_messenger_t *messenger);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* messenger.h */

@@ -27,6 +27,10 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct pn_message_t pn_message_t;
 typedef enum {
   PN_DATA,
@@ -142,5 +146,9 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size);
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* message.h */
