@@ -1436,6 +1436,11 @@ ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available)
     } else if (n == 0) {
       break;
     } else {
+      if (n != PN_EOS) {
+        pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
+                            pn_error_code(transport->error),
+                            pn_error_text(transport->error));
+      }
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
         pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
       return n;

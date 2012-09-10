@@ -96,6 +96,7 @@ struct pn_connector_t {
   char output[IO_BUF_SIZE];
   pn_connection_t *connection;
   pn_transport_t *transport;
+  pn_sasl_t *sasl;
   bool input_done;
   bool output_done;
   pn_listener_t *listener;
@@ -356,6 +357,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->output_size = 0;
   c->connection = NULL;
   c->transport = pn_transport();
+  c->sasl = pn_sasl(c->transport);
   c->input_done = false;
   c->output_done = false;
   c->context = context;
@@ -386,7 +388,7 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
-  return ctor ? pn_sasl(ctor->transport) : NULL;
+  return ctor ? ctor->sasl : NULL;
 }
 
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
