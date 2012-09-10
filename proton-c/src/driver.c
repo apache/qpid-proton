@@ -24,7 +24,7 @@
 #include <proton/driver.h>
 #include <proton/sasl.h>
 #include "util.h"
-#include "driver_impl.h"
+#include "driver-internal.h"
 #include "drivers/ssl.h"
 
 #include <stdio.h>

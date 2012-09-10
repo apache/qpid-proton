@@ -23,7 +23,7 @@
 
 #include <proton/driver.h>
 #include "../util.h"
-#include "../driver_impl.h"
+#include "../driver-internal.h"
 
 #include <poll.h>
 #include <unistd.h>

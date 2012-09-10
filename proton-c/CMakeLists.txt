@@ -61,7 +61,7 @@ endif (POLLER STREQUAL poll)
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/drivers/openssl.c)
-  set (LINK_DEPS ${LINK_DEPS} ssl crypto)
+  set (SSL_LIB ssl crypto)
 else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/drivers/ssl_stub.c)
 endif (SSL_IMPL STREQUAL openssl)
@@ -109,7 +109,7 @@ add_library (
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
 )
-target_link_libraries (qpid-proton ${UUID_LIB})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB})
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpid-proton)

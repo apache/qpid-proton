@@ -22,7 +22,7 @@
 #define _POSIX_C_SOURCE 1
 
 #include <proton/driver.h>
-#include "../driver_impl.h"
+#include "../driver-internal.h"
 #include "../util.h"
 
 #include <openssl/ssl.h>

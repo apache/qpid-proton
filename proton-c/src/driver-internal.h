@@ -1,5 +1,5 @@
-#ifndef PROTON_SRC_DRIVER_H
-#define PROTON_SRC_DRIVER_H 1
+#ifndef PROTON_SRC_DRIVER_INTERNAL_H
+#define PROTON_SRC_DRIVER_INTERNAL_H 1
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -111,4 +111,4 @@ void pn_connector_process_output(pn_connector_t *);
 void pn_connector_process_input(pn_connector_t *);
 
 
-#endif /* driver.h */
+#endif /* driver-internal.h */
