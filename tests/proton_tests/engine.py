@@ -659,7 +659,7 @@ class CreditTest(Test):
     assert pn_credit(self.snd) == 10
     pn_drained(self.snd)
     assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.snd) == 0
     self.pump()
     assert pn_credit(self.rcv) == 0
     assert pn_credit(self.snd) == 0
@@ -692,7 +692,7 @@ class CreditTest(Test):
     assert pn_credit(self.snd) == 10
     pn_drained(self.snd)
     assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.snd) == 0
     self.pump()
     assert pn_credit(self.rcv) == 0
     assert pn_credit(self.snd) == 0
@@ -730,6 +730,44 @@ class CreditTest(Test):
     assert c
     assert pn_delivery_tag(c) == "tag"
     assert pn_advance(self.rcv)
+    assert pn_credit(self.rcv) == 0
+    assert pn_queued(self.rcv) == 0
+
+  def testDrainZero(self):
+    assert pn_credit(self.snd) == 0
+    assert pn_credit(self.rcv) == 0
+    assert pn_queued(self.rcv) == 0
+
+    pn_flow(self.rcv, 10)
+    self.pump()
+    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.rcv) == 10
+    assert pn_queued(self.rcv) == 0
+
+    pn_drained(self.snd)
+    self.pump()
+    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.rcv) == 10
+    assert pn_queued(self.rcv) == 0
+
+    pn_drain(self.rcv, 0)
+    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.rcv) == 10
+    assert pn_queued(self.rcv) == 0
+
+    self.pump()
+
+    assert pn_credit(self.snd) == 10
+    assert pn_credit(self.rcv) == 10
+    assert pn_queued(self.rcv) == 0
+
+    pn_drained(self.snd)
+    assert pn_credit(self.snd) == 0
+    assert pn_credit(self.rcv) == 10
+    assert pn_queued(self.rcv) == 0
+    self.pump()
+
+    assert pn_credit(self.snd) == 0
     assert pn_credit(self.rcv) == 0
     assert pn_queued(self.rcv) == 0
 

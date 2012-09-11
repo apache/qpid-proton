@@ -1634,7 +1634,7 @@ int pn_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_link_state_t *state = pn_link_get_state(ssn_state, rcv);
     if ((int16_t) ssn_state->local_channel >= 0 &&
         (int32_t) state->local_handle >= 0 &&
-        ((state->link_credit != rcv->credit - rcv->queued) || !ssn_state->incoming_window)) {
+        ((rcv->drain || state->link_credit != rcv->credit - rcv->queued) || !ssn_state->incoming_window)) {
       state->link_credit = rcv->credit - rcv->queued;
       return pn_post_flow(transport, ssn_state, state);
     }
@@ -1784,7 +1784,6 @@ int pn_process_flow_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
       if (!tail || !pn_delivery_buffered(tail)) {
         state->delivery_count += state->link_credit;
         state->link_credit = 0;
-        snd->credit = 0;
         snd->drained = false;
         return pn_post_flow(transport, ssn_state, state);
       }
@@ -2031,7 +2030,8 @@ ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n)
 
 void pn_drained(pn_link_t *sender)
 {
-  if (sender) {
+  if (sender && sender->drain && sender->credit > 0) {
+    sender->credit = 0;
     sender->drained = true;
     pn_modified(sender->session->connection, &sender->endpoint);
   }
