@@ -93,6 +93,7 @@ struct pn_connector_t {
   char output[PN_CONNECTOR_IO_BUF_SIZE];
   pn_connection_t *connection;
   pn_transport_t *transport;
+  pn_sasl_t *sasl;
   bool input_done;
   bool output_done;
   pn_listener_t *listener;

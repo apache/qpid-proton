@@ -295,6 +295,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->output_size = 0;
   c->connection = NULL;
   c->transport = pn_transport();
+  c->sasl = pn_sasl(c->transport);
   c->input_done = false;
   c->output_done = false;
   c->context = context;
@@ -328,7 +329,7 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
-  return ctor ? pn_sasl(ctor->transport) : NULL;
+  return ctor ? ctor->sasl : NULL;
 }
 
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
