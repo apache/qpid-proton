@@ -210,7 +210,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 }
 
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;
     }
@@ -252,7 +252,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
             }
 
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;  //TODO - Implement
     }
@@ -475,7 +475,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     }
                 }
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;
     }
@@ -677,7 +677,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 }
 
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;
     }

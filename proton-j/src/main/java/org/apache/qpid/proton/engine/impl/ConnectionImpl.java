@@ -274,11 +274,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _maxChannels;
     }
 
-    public EndpointImpl next()
-    {
-        return getNext();
-    }
-
     public String getLocalContainerId()
     {
         return _localContainerId;
