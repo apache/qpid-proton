@@ -448,7 +448,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     }
                 }
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         endpoint = _connectionEndpoint.getTransportHead();
         while(endpoint != null && buffer.remaining() >= _maxFrameSize)
@@ -540,7 +540,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 }
 
             }
-            endpoint = endpoint.getNext();
+            endpoint = endpoint.transportNext();
         }
         return written;
     }
