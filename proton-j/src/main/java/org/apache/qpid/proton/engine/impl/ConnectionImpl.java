@@ -216,8 +216,12 @@ public class ConnectionImpl extends EndpointImpl implements Connection
 
     void addModified(EndpointImpl endpoint)
     {
+        dumpList(_transportHead);
+
         if(_transportTail == null)
         {
+            endpoint.setTransportNext(null);
+            endpoint.setTransportPrev(null);
             _transportHead = _transportTail = endpoint;
         }
         else
@@ -225,7 +229,22 @@ public class ConnectionImpl extends EndpointImpl implements Connection
             _transportTail.setTransportNext(endpoint);
             endpoint.setTransportPrev(_transportTail);
             _transportTail = endpoint;
+            _transportTail.setTransportNext(null);
         }
+
+        dumpList(_transportHead);
+    }
+
+    private void dumpList(EndpointImpl _transportHead)
+    {
+        StringBuffer buf = new StringBuffer();
+        EndpointImpl p = _transportHead;
+        while (p != null)
+        {
+            buf.append(p + "->");
+            p = p.transportNext();
+        }
+        System.out.println(buf.toString());
     }
 
     void removeModified(EndpointImpl endpoint)
@@ -247,6 +266,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         {
             endpoint.transportNext().setTransportPrev(endpoint.transportPrev());
         }
+        dumpList(_transportHead);
     }
 
     public int getMaxChannels()
