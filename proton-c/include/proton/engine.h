@@ -264,6 +264,8 @@ pn_connection_t *pn_get_connection(pn_session_t *session);
 void pn_session_open(pn_session_t *session);
 void pn_session_close(pn_session_t *session);
 void pn_session_free(pn_session_t *session);
+void *pn_session_context(pn_session_t *session);
+void pn_session_set_context(pn_session_t *session, void *context);
 
 // link
 const char *pn_link_name(pn_link_t *link);
@@ -291,6 +293,8 @@ pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 void pn_link_open(pn_link_t *sender);
 void pn_link_close(pn_link_t *sender);
 void pn_link_free(pn_link_t *sender);
+void *pn_link_context(pn_link_t *link);
+void pn_link_set_context(pn_link_t *link, void *context);
 
 // sender
 //void pn_offer(pn_sender_t *sender, int credits);

@@ -294,6 +294,18 @@ void pn_session_free(pn_session_t *session)
   free(session);
 }
 
+void *pn_session_context(pn_session_t *session)
+{
+    return session ? session->context : 0;
+}
+
+void pn_session_set_context(pn_session_t *session, void *context)
+{
+    if (session)
+        session->context = context;
+}
+
+
 void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 {
   PN_ENSURE(ssn->links, ssn->link_capacity, ssn->link_count + 1);
@@ -357,6 +369,17 @@ void pn_link_free(pn_link_t *link)
   free(link->name);
   pn_endpoint_tini(&link->endpoint);
   free(link);
+}
+
+void *pn_link_context(pn_link_t *link)
+{
+    return link ? link->context : 0;
+}
+
+void pn_link_set_context(pn_link_t *link, void *context)
+{
+    if (link)
+        link->context = context;
 }
 
 void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
@@ -639,6 +662,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->links = NULL;
   ssn->link_capacity = 0;
   ssn->link_count = 0;
+  ssn->context = 0;
 
   return ssn;
 }
@@ -790,6 +814,7 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *
   link->queued = 0;
   link->drain = false;
   link->drained = false;
+  link->context = 0;
 }
 
 const char *pn_source(pn_link_t *link)
