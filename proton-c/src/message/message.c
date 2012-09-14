@@ -445,7 +445,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       {
         pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
           group_id, reply_to_group_id;
-        err = pn_data_scan(msg->data, "D.[.zSSS.ssLLSiS]", &user_id, &address,
+        err = pn_data_scan(msg->data, "D.[.zSSS.ssLLSIS]", &user_id, &address,
                            &subject, &reply_to, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
