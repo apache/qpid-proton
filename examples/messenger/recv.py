@@ -18,7 +18,7 @@
 # under the License.
 #
 import sys, optparse
-from xproton import *
+from proton import *
 
 parser = optparse.OptionParser(usage="usage: %prog [options] <addr_1> ... <addr_n>",
                                description="simple message receiver")
@@ -28,30 +28,26 @@ opts, args = parser.parse_args()
 if not args:
   args = ["//~0.0.0.0"]
 
-mng = pn_messenger(None)
-pn_messenger_start(mng)
+mng = Messenger()
+mng.start()
 
 for a in args:
-  if pn_messenger_subscribe(mng, a):
-    print pn_messenger_error(mng)
-    break
+  mng.subscribe(a)
 
-msg = pn_message()
+msg = Message()
 while True:
-  if pn_messenger_recv(mng, 10):
-    print pn_messenger_error(mng)
-    break
-  while pn_messenger_incoming(mng):
-    if pn_messenger_get(mng, msg):
-      print pn_messenger_error(mng)
+  mng.recv(10)
+  while mng.incoming:
+    try:
+      mng.get(msg)
+    except Exception, e:
+      print e
     else:
-      cd, body = pn_message_save(msg, 1024)
-      if cd:
-        print pn_message_error(msg)
+      try:
+        body = msg.save()
+      except Exception, e:
+        print e
       else:
-        print pn_message_get_address(msg), \
-            pn_message_get_subject(msg) or "(no subject)", \
-            body
+        print msg.address, msg.subject or "(no subject)", body
 
-pn_messenger_stop(mng)
-pn_messenger_free(mng)
+mng.stop()

@@ -32,8 +32,9 @@ fi
 
 # Python & Jython
 export PYTHON_BINDINGS=$PROTON_BINDINGS/python
-export PYTHONPATH=$PROTON_HOME/tests:$PROTON_HOME/proton-c:$PYTHON_BINDINGS
-export JYTHONPATH=$PROTON_HOME/tests:$PROTON_HOME/proton-j:$PROTON_HOME/proton-j/dist/lib/qpidproton.jar
+export COMMON_PYPATH=$PROTON_HOME/tests:$PROTON_HOME/proton-c/bindings/python
+export PYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-c:$PYTHON_BINDINGS
+export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j:$PROTON_HOME/proton-j/dist/lib/qpidproton.jar
 
 # PHP
 export PHP_BINDINGS=$PROTON_BINDINGS/php

@@ -15,9 +15,16 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile cproton
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile cproton.py
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile proton.py
+                              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile proton.py
+                              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyc
               ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyo
+              ${CMAKE_CURRENT_SOURCE_DIR}/proton.py
+              ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyc
+              ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/_cproton.so

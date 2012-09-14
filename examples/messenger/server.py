@@ -18,7 +18,7 @@
 # under the License.
 #
 import sys, optparse
-from xproton import *
+from proton import *
 
 parser = optparse.OptionParser(usage="usage: %prog <addr_1> ... <addr_n>",
                                description="simple message server")
@@ -28,42 +28,30 @@ opts, args = parser.parse_args()
 if not args:
   args = ["//~0.0.0.0"]
 
-mng = pn_messenger(None)
-pn_messenger_start(mng)
+mng = Messenger()
+mng.start()
 
 for a in args:
-  if pn_messenger_subscribe(mng, a):
-    print pn_messenger_error(mng)
-    break
+  mng.subscribe(a)
 
 def dispatch(request, response):
-  subject = pn_message_get_subject(request)
-  pn_message_set_subject(response, "Re: %s" % subject)
-  print "Dispatched %s" % subject
+  response.subject = "Re: %s" % request.subject
+  print "Dispatched %s" % request.subject
 
-msg = pn_message()
-reply = pn_message()
+msg = Message()
+reply = Message()
 
 while True:
-  if pn_messenger_incoming(mng) < 10:
-    if pn_messenger_recv(mng, 10):
-      print pn_messenger_error(mng)
-      break
-  if pn_messenger_incoming(mng) > 0:
-    if pn_messenger_get(mng, msg):
-      print pn_messenger_error(mng)
-    else:
-      reply_to = pn_message_get_reply_to(msg)
-      cid = pn_message_get_correlation_id(msg)
-      if reply_to:
-        pn_message_set_address(reply, reply_to)
-      if cid:
-        pn_message_set_correlation_id(reply, cid)
-      dispatch(msg, reply)
-      if pn_messenger_put(mng, reply):
-        print pn_messenger_error(mng)
-      if pn_messenger_send(mng):
-        print pn_messenger_error(mng)
+  if mng.incoming < 10:
+    mng.recv(10)
 
-pn_messenger_stop(mng)
-pn_messenger_free(mng)
+  if mng.incoming > 0:
+    mng.get(msg)
+    if msg.reply_to:
+      reply.address = msg.reply_to
+      reply.correlation_id = msg.correlation_id
+    dispatch(msg, reply)
+    mng.put(reply)
+    mng.send()
+
+mng.stop()

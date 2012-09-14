@@ -18,7 +18,7 @@
 # under the License.
 #
 import sys, optparse
-from xproton import *
+from proton import *
 
 parser = optparse.OptionParser(usage="usage: %prog [options] <msg_1> ... <msg_n>",
                                description="simple message sender")
@@ -29,21 +29,16 @@ opts, args = parser.parse_args()
 if not args:
   args = ["Hello World!"]
 
-mng = pn_messenger(None)
-pn_messenger_start(mng)
+mng = Messenger()
+mng.start()
 
-msg = pn_message()
+msg = Message()
 for m in args:
-  pn_message_set_address(msg, opts.address)
-  pn_message_load(msg, m)
-  if pn_messenger_put(mng, msg):
-    print pn_messenger_error(mng)
-    break
+  msg.address = opts.address
+  msg.load(m)
+  mng.put(msg)
 
-if pn_messenger_send(mng):
-  print pn_messenger_error(mng)
-else:
-  print "sent:", ", ".join(args)
+mng.send()
+print "sent:", ", ".join(args)
 
-pn_messenger_stop(mng)
-pn_messenger_free(mng)
+mng.stop()

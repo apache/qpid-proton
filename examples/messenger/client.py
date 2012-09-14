@@ -18,7 +18,7 @@
 # under the License.
 #
 import sys, optparse
-from xproton import *
+from proton import *
 
 parser = optparse.OptionParser(usage="usage: %prog <addr> <subject>",
                                description="simple message server")
@@ -33,21 +33,23 @@ if len(args) != 2:
 
 address, subject = args
 
-mng = pn_messenger(None)
-pn_messenger_start(mng)
+mng = Messenger()
+mng.start()
 
-msg = pn_message()
-pn_message_set_address(msg, address)
-pn_message_set_subject(msg, subject)
-pn_message_set_reply_to(msg, opts.reply_to)
+msg = Message()
+msg.address = address
+msg.subject = subject
+msg.reply_to = opts.reply_to
 
-if pn_messenger_put(mng, msg): print pn_messenger_error(mng)
-if pn_messenger_send(mng): print pn_messenger_error(mng)
+mng.put(msg)
+mng.send()
 
 if opts.reply_to[:2] != "//":
-  if pn_messenger_recv(mng, 1): print pn_messenger_error(mng)
-  elif pn_messenger_get(mng, msg): print pn_messenger_error(mng)
-  else: print pn_message_get_address(msg), pn_message_get_subject(msg)
+  mng.recv(1)
+  try:
+    mng.get(msg)
+    print msg.address, msg.subject
+  except Exception, e:
+    print e
 
-pn_messenger_stop(mng)
-pn_messenger_free(mng)
+mng.stop()
