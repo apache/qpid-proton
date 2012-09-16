@@ -30,6 +30,9 @@ public interface Transport extends Endpoint
 {
 
     public int END_OF_STREAM = -1;
+
+    public void bind(Connection connection);
+
     /**
      * @param bytes input bytes for consumption
      * @param offset the offset within bytes where input begins

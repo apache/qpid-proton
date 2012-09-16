@@ -98,12 +98,18 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         _overflowBuffer.flip();
     }
 
-    public TransportImpl(Connection connectionEndpoint)
+    public TransportImpl()
     {
-        _connectionEndpoint = (ConnectionImpl) connectionEndpoint;
+        _frameParser = new FrameParser(this);
+    }
+
+    public void bind(Connection conn)
+    {
+        // TODO - check if already bound
+        ((ConnectionImpl) conn).bind(this);
+        _connectionEndpoint = (ConnectionImpl) conn;
         _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
         _remoteSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
-        _frameParser = new FrameParser(this);
     }
 
     public int input(byte[] bytes, int offset, int length)

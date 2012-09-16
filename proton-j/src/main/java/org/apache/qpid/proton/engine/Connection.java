@@ -37,11 +37,6 @@ public interface Connection extends Endpoint
     public Session session();
 
     /**
-     * @return a newly created transport
-     */
-    public Transport transport();
-
-    /**
      * @return iterator for endpoints matching the specified local and
      *         remote states
      */

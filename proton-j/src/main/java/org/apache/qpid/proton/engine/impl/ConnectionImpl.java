@@ -30,7 +30,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
 {
 
     public static final int MAX_CHANNELS = 255;
-    private TransportFactory _transportFactory = TransportFactory.getDefaultTransportFactory();
     private TransportImpl _transport;
     private List<SessionImpl> _sessions = new ArrayList<SessionImpl>();
     private EndpointImpl _transportTail;
@@ -54,7 +53,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
 
     public ConnectionImpl()
     {
-        _transportFactory = TransportFactory.getDefaultTransportFactory();
     }
 
     public SessionImpl session()
@@ -129,18 +127,17 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     }
 
 
-    public Transport transport()
+    public void bind(Transport transport)
     {
         if(_transport == null)
         {
-            _transport = (TransportImpl) _transportFactory.transport(this);
+            _transport = (TransportImpl) transport;
         }
         else
         {
             // todo - should error
 
         }
-        return _transport;
     }
 
 
