@@ -92,6 +92,9 @@ def pn_connection():
 def pn_connection_free(c):
   pass
 
+def pn_transport_free(c):
+  pass
+
 def pn_connection_state(c):
   return state(c)
 
@@ -116,8 +119,11 @@ def pn_session_open(s):
 def pn_session_close(s):
   return s.close()
 
-def pn_transport(c):
-  return c.transport()
+def pn_transport():
+  return impl.TransportImpl()
+
+def pn_transport_bind(t,c):
+  return t.bind(c)
 
 def pn_trace(t, lvl):
   t.setLogLevel(lvl)
