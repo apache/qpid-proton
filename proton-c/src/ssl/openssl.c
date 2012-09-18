@@ -21,7 +21,10 @@
 
 #define _POSIX_C_SOURCE 1
 
-#include <proton/driver.h>
+#include <proton/ssl.h>
+#include "./ssl-internal.h"
+#include <proton/engine.h>
+#include "../engine/engine-internal.h"
 #include "../driver-internal.h"
 #include "../util.h"
 
@@ -31,52 +34,66 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <assert.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
 
 
 /** @file
  * SSL/TLS support API.
  *
- * This file contains stub implementations of the SSL/TLS API.  This implementation is
- * used if there is no SSL/TLS support in the system's environment.
+ * This file contains an OpenSSL-based implemention of the SSL/TLS API.
  */
 
 static int ssl_initialized;
 
-struct pn_listener_ssl_t {
-    SSL_CTX *ctx;
-    bool allow_unsecured;
-    bool ca_db;
-    char *keyfile_pw;
+typedef enum { SSL_MODE_CLIENT, SSL_MODE_SERVER } ssl_mode_t;
+typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
+
+struct pn_ssl_t {
+  SSL_CTX *ctx;
+  SSL *ssl;
+  ssl_mode_t mode;
+  bool allow_unsecured;
+  bool ca_db;           // true when CA database configured
+  char *keyfile_pw;
+  pn_ssl_verify_mode_t verify_mode;    // NEED INIT
+  char *trusted_CAs;
+
+  pn_transport_t *transport;
+
+  BIO *bio_ssl;         // i/o from/to SSL socket layer
+  BIO *bio_ssl_io;      // SSL "half" of network-facing BIO
+  BIO *bio_net_io;      // socket-side "half" of network-facing BIO
+  bool read_stalled;  // SSL has data to read, but client buffer is full.
+  bool ssl_closed;      // SSL socket has closed
+  bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
+  ssize_t app_closed;   // error code returned by upper layer
+
+
+  // buffers for holding I/O from "applications" above SSL
+#define APP_BUF_SIZE    PN_CONNECTOR_IO_BUF_SIZE
+  char outbuf[APP_BUF_SIZE];
+  size_t out_count;
+  char inbuf[APP_BUF_SIZE];
+  size_t in_count;
+
+  // process cleartext i/o "above" the SSL layer
+  ssize_t (*process_input)(pn_transport_t *, char *, size_t);
+  ssize_t (*process_output)(pn_transport_t *, char *, size_t);
+
+  pn_trace_t trace;
 };
-typedef struct pn_listener_ssl_t pn_listener_ssl_t;
 
-
-struct pn_connector_ssl_t {
-
-    enum { SSL_CLIENT, SSL_SERVER } mode;
-    SSL_CTX *ctx;   // NULL if mode=SSL_SERVER - uses listener's ctx
-    SSL *ssl;
-    BIO *sbio;
-    char *keyfile_pw;
-    bool read_stalled;  // SSL has data to read, but client buffer is full.
-};
-typedef struct pn_connector_ssl_t pn_connector_ssl_t;
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
-static int configure_ca_database(SSL_CTX *ctx, const char *certificate_db, pn_trace_t);
-static int start_check_for_ssl( pn_connector_t *client );
-static int handle_check_for_ssl( pn_connector_t *client );
-static int start_ssl_connect(pn_connector_t *client);
-static int handle_ssl_connect( pn_connector_t *client );
-static int start_ssl_accept(pn_connector_t *client);
-static int handle_ssl_accept(pn_connector_t *client);
-static int start_ssl_connection_up( pn_connector_t *c );
-static int handle_ssl_connection_up( pn_connector_t *c );
-static int start_clear_connected( pn_connector_t *c );
-static int start_ssl_shutdown( pn_connector_t *c );
-static int handle_ssl_shutdown( pn_connector_t *c );
+static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_output_ssl( pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_input_cleartext(pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_output_cleartext(pn_transport_t *transport, char *buffer, size_t max_len);
+static ssize_t process_input_unknown(pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_output_unknown(pn_transport_t *transport, char *input_data, size_t len);
+static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
+
 
 // @todo: used to avoid littering the code with calls to printf...
 static void _log_error(const char *fmt, ...)
@@ -88,9 +105,9 @@ static void _log_error(const char *fmt, ...)
 }
 
 // @todo: used to avoid littering the code with calls to printf...
-static void _log(pn_trace_t filter, const char *fmt, ...)
+static void _log(pn_ssl_t *ssl, const char *fmt, ...)
 {
-    if (PN_TRACE_DRV & filter) {
+    if (PN_TRACE_DRV & ssl->trace) {
         va_list ap;
         va_start(ap, fmt);
         vfprintf(stderr, fmt, ap);
@@ -101,7 +118,7 @@ static void _log(pn_trace_t filter, const char *fmt, ...)
 
 // @todo replace with a "reasonable" default (?), allow application to register its own
 // callback.
-#if 1
+#if 0
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
     fprintf(stderr, "VERIFY_CALLBACK: pre-verify-ok=%d\n", preverify_ok);
@@ -149,290 +166,320 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 }
 #endif
 
+
+
+
 /** Public API - visible to application code */
 
-int pn_listener_ssl_server_init(pn_listener_t *listener,
-                                const char *certificate_file,
-                                const char *private_key_file,
-                                const char *password,
-                                const char *certificate_db)
+
+int pn_ssl_set_credentials( pn_ssl_t *ssl,
+                            const char *certificate_file,
+                            const char *private_key_file,
+                            const char *password)
 {
-    listener->ssl = calloc(1, sizeof(pn_listener_ssl_t));
-    // note: see pn_listener_free_ssl for cleanup/deallocation
-    if (!listener->ssl) {
-        _log_error("calloc() failed: %s\n", strerror(errno));
-        return -1;
-    }
-    pn_listener_ssl_t *impl = listener->ssl;
+  if (!ssl) return 0;
 
-    if (!ssl_initialized) {
-        ssl_initialized = 1;
-        SSL_library_init();
-        SSL_load_error_strings();
-    }
+  if (SSL_CTX_use_certificate_chain_file(ssl->ctx, certificate_file) != 1) {
+    _log_error("SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
+    return -3;
+  }
 
-    impl->ctx = SSL_CTX_new(SSLv23_server_method());
-    if (!impl->ctx) {
-        _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-        return -2;
-    }
+  if (password) {
+    ssl->keyfile_pw = pn_strdup(password);  // @todo: obfuscate me!!!
+    SSL_CTX_set_default_passwd_cb(ssl->ctx, keyfile_pw_cb);
+    SSL_CTX_set_default_passwd_cb_userdata(ssl->ctx, ssl->keyfile_pw);
+  }
 
-    if (SSL_CTX_use_certificate_chain_file(impl->ctx, certificate_file) != 1) {
-        _log_error("SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
-        return -3;
-    }
+  if (SSL_CTX_use_PrivateKey_file(ssl->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
+    _log_error("SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
+    return -4;
+  }
 
-    if (password) {
-        impl->keyfile_pw = pn_strdup(password);  // @todo: obfuscate me!!!
-        SSL_CTX_set_default_passwd_cb(impl->ctx, keyfile_pw_cb);
-        SSL_CTX_set_default_passwd_cb_userdata(impl->ctx, impl->keyfile_pw);
-    }
-
-    if (SSL_CTX_use_PrivateKey_file(impl->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
-        _log_error("SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
-        return -4;
-    }
-
-    if (certificate_db) {
-        impl->ca_db = true;
-        if (configure_ca_database(impl->ctx, certificate_db, listener->driver->trace)) {
-            return -5;
-        }
-    }
-    return 0;
+  _log( ssl, "Configured local certificate file %s\n", certificate_file );
+  return 0;
 }
 
 
-int pn_listener_ssl_allow_unsecured_clients(pn_listener_t *listener)
+int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
+                             const char *certificate_db)
 {
-    if (!listener->ssl) {
-        _log_error("SSL not initialized\n");
-        return -1;
-    }
+  if (!ssl) return 0;
 
-    listener->ssl->allow_unsecured = true;
-    return 0;
+  // certificates can be either a file or a directory, which determines how it is passed
+  // to SSL_CTX_load_verify_locations()
+  struct stat sbuf;
+  if (stat( certificate_db, &sbuf ) != 0) {
+    _log_error("stat(%s) failed: %s\n", certificate_db, strerror(errno));
+    return -1;
+  }
+
+  const char *file;
+  const char *dir;
+  if (S_ISDIR(sbuf.st_mode)) {
+    dir = certificate_db;
+    file = NULL;
+  } else {
+    dir = NULL;
+    file = certificate_db;
+  }
+
+  if (SSL_CTX_load_verify_locations( ssl->ctx, file, dir ) != 1) {
+    _log_error("SSL_CTX_load_verify_locations( %s ) failed\n", certificate_db);
+    return -1;
+  }
+
+  _log( ssl, "loaded trusted CA database: file=%s dir=%s\n", file, dir );
+  return 0;
 }
 
 
-
-int pn_connector_ssl_client_init(pn_connector_t *connector,
-                                 const char *certificate_db)
+int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl)
 {
-    if (connector->listener)
-        return -1;   // not for listener-based connectors
+  if (ssl) {
+    if (ssl->mode != SSL_MODE_SERVER) {
+      _log_error("Cannot permit unsecured clients - not a server.\n");
+      return -1;
+    }
+    ssl->allow_unsecured = true;
+    ssl->process_input = process_input_unknown;
+    ssl->process_output = process_output_unknown;
+    _log( ssl, "Allowing connections from unsecured clients.\n" );
+  }
+  return 0;
+}
 
-    connector->ssl = calloc(1, sizeof(pn_connector_ssl_t));
-    if (!connector->ssl) {
-        _log_error("calloc() failed: %s\n", strerror(errno));
+
+int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
+                                   const pn_ssl_verify_mode_t mode,
+                                   const char *trusted_CAs)
+{
+  if (!ssl) return 0;
+
+  switch (mode) {
+  case PN_SSL_VERIFY_PEER:
+
+    if (ssl->mode == SSL_MODE_SERVER) {
+      // openssl requires that server connections supply a list of trusted CAs which is
+      // sent to the client
+      if (!trusted_CAs) {
+        _log_error("Error: a list of trusted CAs must be provided.\n");
         return -1;
-    }
-    pn_connector_ssl_t *impl = connector->ssl;
+      }
 
-    impl->mode = SSL_CLIENT;
-
-    if (!ssl_initialized) {
-        ssl_initialized = 1;
-        SSL_library_init();
-        SSL_load_error_strings();
-    }
-
-    impl->ctx = SSL_CTX_new(SSLv23_client_method());
-    if (!impl->ctx) {
-        _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-        return -2;
+      ssl->trusted_CAs = pn_strdup( trusted_CAs );
+      STACK_OF(X509_NAME) *cert_names;
+      cert_names = SSL_load_client_CA_file( ssl->trusted_CAs );
+      if (cert_names != NULL)
+        SSL_set_client_CA_list(ssl->ssl, cert_names);
+      else {
+        _log_error("Unable to process file of trusted CAs: %s\n", trusted_CAs);
+        return -1;
+      }
     }
 
-    if (configure_ca_database(impl->ctx, certificate_db, connector->trace)) {
-        return -3;
-    }
-
-    /* Force servers to authenticate */
-    SSL_CTX_set_verify( connector->ssl->ctx,
-                        SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                        verify_callback /*?verify callback?*/ );
-    //0 /*?verify callback?*/ );
-
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+    // verify_callback /*?verify callback?*/ );
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(connector->ssl->ctx, 1);
+    SSL_CTX_set_verify_depth(ssl->ctx, 1);
+#endif
+    ssl->verify_mode = PN_SSL_VERIFY_PEER;
+    break;
+
+  case PN_SSL_NO_VERIFY_PEER:
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
+    ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
+    break;
+
+  default:
+    _log_error( "Invalid peer authentication mode given.\n" );
+    return -1;
+  }
+
+    _log( ssl, "Peer authentication mode set to %s\n", (ssl->verify_mode == PN_SSL_VERIFY_PEER) ? "VERIFY-PEER" : "NO-VERIFY-PEER");
+    return 0;
+}
+
+
+int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
+                                   pn_ssl_verify_mode_t *mode,
+                                   char *trusted_CAs, size_t *trusted_CAs_size)
+{
+  if (!ssl) return -1;
+
+  if (mode) *mode = ssl->verify_mode;
+  if (trusted_CAs && trusted_CAs_size && *trusted_CAs_size) {
+    if (ssl->trusted_CAs) {
+      strncpy( trusted_CAs, ssl->trusted_CAs, *trusted_CAs_size );
+      trusted_CAs[*trusted_CAs_size - 1] = '\0';
+      *trusted_CAs_size = strlen(ssl->trusted_CAs) + 1;
+    } else {
+      *trusted_CAs = '\0';
+      *trusted_CAs_size = 0;
+    }
+  } else if (trusted_CAs_size) {
+    *trusted_CAs_size = (ssl->trusted_CAs) ? strlen(ssl->trusted_CAs) + 1 : 0;
+  }
+  return 0;
+}
+
+
+pn_ssl_t *pn_ssl_server(pn_transport_t *transport)
+{
+  if (!transport) return NULL;
+  if (transport->ssl) {
+    if (transport->ssl->mode != SSL_MODE_SERVER) {
+      _log_error("Error: transport already configured as a client.\n");
+      return NULL;
+    }
+    return transport->ssl;
+  }
+
+  if (!ssl_initialized) {
+    ssl_initialized = 1;
+    SSL_library_init();
+    SSL_load_error_strings();
+  }
+
+  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
+  if (!ssl) return NULL;
+
+  ssl->ctx = SSL_CTX_new(SSLv23_server_method());
+  if (!ssl->ctx) {
+    _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
+    free(ssl);
+    return NULL;
+  }
+  ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
+  SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );        // default: no client authentication
+
+  ssl->ssl = SSL_new(ssl->ctx);
+  if (!ssl->ssl) {
+    _log_error( "SSL socket setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  SSL_set_accept_state(ssl->ssl);
+
+  // now layer a BIO over the SSL socket
+  ssl->bio_ssl = BIO_new(BIO_f_ssl());
+  if (!ssl->bio_ssl) {
+    _log_error( "BIO setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  (void)BIO_set_ssl(ssl->bio_ssl, ssl->ssl, BIO_NOCLOSE);
+
+  // create the "lower" BIO "pipe", and attach it below the SSL layer
+  if (!BIO_new_bio_pair(&ssl->bio_ssl_io, 0, &ssl->bio_net_io, 0)) {
+    _log_error( "BIO setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  SSL_set_bio(ssl->ssl, ssl->bio_ssl_io, ssl->bio_ssl_io);
+
+  ssl->mode = SSL_MODE_SERVER;
+  ssl->transport = transport;
+  ssl->process_input = process_input_ssl;
+  ssl->process_output = process_output_ssl;
+
+  ssl->trace = PN_TRACE_OFF;
+
+  return ssl;
+}
+
+pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
+{
+  if (!transport) return NULL;
+  if (transport->ssl) {
+    if (transport->ssl->mode != SSL_MODE_CLIENT) {
+      _log_error("Error: transport already configured as a server.\n");
+      return NULL;
+    }
+    return transport->ssl;
+  }
+
+  if (!ssl_initialized) {
+    ssl_initialized = 1;
+    SSL_library_init();
+    SSL_load_error_strings();
+  }
+
+  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
+  if (!ssl) return NULL;
+
+  ssl->ctx = SSL_CTX_new(SSLv23_client_method());
+  if (!ssl->ctx) {
+    _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
+    free(ssl);
+    return NULL;
+  }
+  ssl->verify_mode = PN_SSL_VERIFY_PEER;
+  SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL );
+#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
+  SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
 
-    /* make the socket nonblocking*/
-    int flags = fcntl(connector->fd, F_GETFL, 0);
+  ssl->ssl = SSL_new(ssl->ctx);
+  if (!ssl->ssl) {
+    _log_error( "SSL socket setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  SSL_set_connect_state(ssl->ssl);
 
-    flags |= O_NONBLOCK;
-    if (fcntl(connector->fd, F_SETFL, flags)) {
-        // @todo: better error handling - fail this connection
-        _log_error("fcntl() failed: %s\n", strerror(errno));
-        return -1;
-    }
+  // now layer a BIO over the SSL socket
+  ssl->bio_ssl = BIO_new(BIO_f_ssl());
+  if (!ssl->bio_ssl) {
+    _log_error( "BIO setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  (void)BIO_set_ssl(ssl->bio_ssl, ssl->ssl, BIO_NOCLOSE);
 
-    return start_ssl_connect( connector );    // start connecting!
+  // create the "lower" BIO "pipe", and attach it below the SSL layer
+  if (!BIO_new_bio_pair(&ssl->bio_ssl_io, 0, &ssl->bio_net_io, 0)) {
+    _log_error( "BIO setup failure.\n" );
+    pn_ssl_free(ssl);
+    return NULL;
+  }
+  SSL_set_bio(ssl->ssl, ssl->bio_ssl_io, ssl->bio_ssl_io);
+
+  ssl->mode = SSL_MODE_CLIENT;
+
+  ssl->transport = transport;
+  ssl->process_input = process_input_ssl;
+  ssl->process_output = process_output_ssl;
+
+  ssl->trace = PN_TRACE_OFF;
+
+  return ssl;
 }
 
-
-int pn_connector_ssl_set_client_auth(pn_connector_t *connector,
-                                     const char *certificate_file,
-                                     const char *private_key_file,
-                                     const char *password)
+void pn_ssl_free( pn_ssl_t *ssl)
 {
-    // @todo check state to verify not yet connected!
 
-    pn_connector_ssl_t *impl = connector->ssl;
+  if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
+  if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
+  if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
+  if (ssl->ssl) SSL_free(ssl->ssl);
+  if (ssl->ctx) SSL_CTX_free(ssl->ctx);
 
-    if (!impl || impl->mode != SSL_CLIENT) {
-        _log_error("Error: connector not configured as SSL client.\n");
-        return -1;
-    }
+  if (ssl->keyfile_pw) free(ssl->keyfile_pw);
+  if (ssl->trusted_CAs) free(ssl->trusted_CAs);
 
-    if (SSL_CTX_use_certificate_chain_file(impl->ctx, certificate_file) != 1) {
-        _log_error("SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
-        return -3;
-    }
-
-    if (password) {
-        impl->keyfile_pw = pn_strdup(password);  // @todo: obfuscate me!!!
-        SSL_CTX_set_default_passwd_cb(impl->ctx, keyfile_pw_cb);
-        SSL_CTX_set_default_passwd_cb_userdata(impl->ctx, impl->keyfile_pw);
-    }
-
-    if (SSL_CTX_use_PrivateKey_file(impl->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
-        _log_error("SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
-        return -4;
-    }
-
-    return 0;
+  free(ssl);
 }
 
-
-int pn_connector_ssl_authenticate_client(pn_connector_t *connector,
-                                         const char *trusted_CAs_file)
+// move data received from the network into the SSL layer
+ssize_t pn_ssl_input(pn_ssl_t *ssl, char *bytes, size_t available)
 {
-    pn_connector_ssl_t *impl = connector->ssl;
-
-    if (!impl || impl->mode != SSL_SERVER) {
-        _log_error("Error: connector not configured as SSL server.\n");
-    }
-
-    // @todo: make sure certificate_db is set...
-
-
-    // load the CA's that we trust - this will be sent to the client when client
-    // authentication is requested
-    STACK_OF(X509_NAME) *cert_names;
-    cert_names = SSL_load_client_CA_file( trusted_CAs_file );
-    if (cert_names != NULL)
-        SSL_set_client_CA_list(impl->ssl, cert_names);
-    else {
-        _log_error("Unable to process file of trusted_CAs: %s\n", trusted_CAs_file);
-        return -1;
-    }
-
-    SSL_set_verify( impl->ssl,
-                    SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                    verify_callback /*?verify callback?*/);
-    //0 /*?verify callback?*/ );
-    return 0;
+  return ssl->process_input( ssl->transport, bytes, available );
 }
 
-
-/** Abstraction API - visible to Driver only - see ssl.h */
-
-
-int pn_driver_ssl_data_ready( pn_driver_t *d )
+// pull output from the SSL layer and move into network output buffers
+ssize_t pn_ssl_output(pn_ssl_t *ssl, char *buffer, size_t max_size)
 {
-    int ready = 0;
-
-    // check if any stalled readers exist, and if they have buffer space available.
-    pn_connector_t *c = d->connector_head;
-    while (c) {
-        if (!c->closed && c->ssl) {
-            pn_connector_ssl_t *impl = c->ssl;
-            if (impl->read_stalled && (c->input_size < PN_CONNECTOR_IO_BUF_SIZE)) {
-                impl->read_stalled = 0;
-                c->pending_read = true;
-                ready += 1;
-            }
-        }
-        c = c->connector_next;
-    }
-    return ready;
-}
-
-
-int pn_listener_init_ssl_client( pn_listener_t *l, pn_connector_t *c)
-{
-    if (!l->ssl) return 0;
-    assert(!c->ssl);
-
-    c->ssl = calloc(1, sizeof(pn_connector_ssl_t));
-    if (!c->ssl) {
-        _log_error("calloc() failed: %s\n", strerror(errno));
-        return -1;
-    }
-    pn_connector_ssl_t *impl = c->ssl;
-
-    impl->mode = SSL_SERVER;
-    impl->ctx = NULL;    // share the acceptor's context
-
-    /* make the socket nonblocking*/
-    int flags = fcntl(c->fd, F_GETFL, 0);
-
-    flags |= O_NONBLOCK;
-    if (fcntl(c->fd, F_SETFL, flags)) {
-        // @todo: better error handling - fail this connection
-        _log_error("fcntl() failed: %s\n", strerror(errno));
-        return -1;
-    }
-
-    if (l->ssl->allow_unsecured) {
-        return start_check_for_ssl(c);
-    } else {
-        return start_ssl_accept(c);
-    }
-}
-
-void pn_connector_shutdown_ssl( pn_connector_t *c)
-{
-    if (c->ssl) {
-        if (start_ssl_shutdown(c) == 0)
-            return;  // shutting down
-    }
-    // if no ssl or shutdown fails, just close the underlying socket
-    pn_connector_close(c);
-}
-
-void pn_listener_free_ssl( pn_listener_t *l )
-{
-    if (l->ssl) {
-        pn_listener_ssl_t *impl = l->ssl;
-        // note: ctx is referenced counted - will not actually free until all child SSL
-        // connections are freed.
-        if (impl->ctx) SSL_CTX_free(impl->ctx);
-        if (impl->keyfile_pw) {
-            memset( impl->keyfile_pw, 0, strlen( impl->keyfile_pw ) );
-            free( impl->keyfile_pw );
-        }
-        free(l->ssl);
-        l->ssl = NULL;
-    }
-}
-
-
-void pn_connector_free_ssl( pn_connector_t *c )
-{
-    if (c->ssl) {
-        pn_connector_ssl_t *impl = c->ssl;
-        if (impl->ssl) SSL_free(impl->ssl);
-        if (impl->sbio) BIO_free(impl->sbio);
-        if (impl->ctx) SSL_CTX_free(impl->ctx);
-        if (impl->keyfile_pw) {
-            memset( impl->keyfile_pw, 0, strlen( impl->keyfile_pw ) );
-            free( impl->keyfile_pw );
-        }
-        free(c->ssl);
-        c->ssl = NULL;
-    }
+  return ssl->process_output( ssl->transport, buffer, max_size );
 }
 
 
@@ -446,382 +493,325 @@ static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata)
 }
 
 
-// Configure the database containing trusted CA certificates
-static int configure_ca_database(SSL_CTX *ctx, const char *certificate_db, pn_trace_t trace)
+
+
+static int start_ssl_shutdown( pn_ssl_t *ssl )
 {
-    // certificates can be either a file or a directory, which determines how it is passed
-    // to SSL_CTX_load_verify_locations()
-    struct stat sbuf;
-    if (stat( certificate_db, &sbuf ) != 0) {
-        _log_error("stat(%s) failed: %s\n", certificate_db, strerror(errno));
-        return -1;
+  if (!ssl->ssl_shutdown) {
+    ssl->ssl_shutdown = true;
+    BIO_ssl_shutdown( ssl->bio_ssl );
+  }
+  return 0;
+}
+
+
+
+static int setup_ssl_connection( pn_ssl_t *ssl )
+{
+  _log( ssl, "SSL connection detected.\n");
+  ssl->process_input = process_input_ssl;
+  ssl->process_output = process_output_ssl;
+  return 0;
+}
+
+//////// SSL Connections
+
+// transfer data between the SSL socket and the upper layer.  Returns true if any work was
+// done.  This routine modifies the app buffers (outbuf and inbuf), and possibly sets the
+// ssl_closed or app_closed flags.
+static bool do_socket_io( pn_ssl_t *ssl )
+{
+  pn_transport_t *transport = ssl->transport;
+  size_t total = 0;
+  size_t activity;
+
+  do {
+    activity = 0;
+
+    // get outgoing data from app layer
+
+    if (!ssl->app_closed) {
+      while (ssl->out_count < APP_BUF_SIZE) {
+        ssize_t app_bytes = transport->process_output(transport, &ssl->outbuf[ssl->out_count], ssl->out_count);
+        if (app_bytes > 0) {
+          ssl->out_count += app_bytes;
+          activity += app_bytes;
+        } else {
+          if (app_bytes < 0) {
+            _log(ssl, "Application layer closed: %d\n", (int) app_bytes);
+            ssl->app_closed = app_bytes;
+            if (app_bytes == PN_EOS) {
+              if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+                pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
+            } else {
+              if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+                pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", app_bytes,
+                                    pn_error_text(transport->error));
+            }
+          }
+          break;
+        }
+      }
     }
-    const char *file;
-    const char *dir;
-    if (S_ISDIR(sbuf.st_mode)) {
-        dir = certificate_db;
-        file = NULL;
+
+    // write outgoing data to socket
+
+    if (!ssl->ssl_closed) {
+      char *data = ssl->outbuf;
+      while (ssl->out_count > 0) {
+        int written = BIO_write( ssl->bio_ssl, data, ssl->out_count );
+        if (written > 0) {
+          data += written;
+          ssl->out_count -= written;
+          activity += written;
+        } else if (!BIO_should_retry(ssl->bio_ssl)) {
+          _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
+          ssl->ssl_closed = true;
+          break;
+        }
+      }
+      if (!ssl->ssl_closed && ssl->out_count > 0 && data != ssl->outbuf)
+        memmove( ssl->outbuf, data, ssl->out_count );
+    }
+
+    if (ssl->ssl_closed) {
+      ssl->out_count = 0;       // cannot write to socket, so erase app output data
+    }
+
+    // read incoming data from socket
+
+    if (!ssl->ssl_closed) {
+      while ((APP_BUF_SIZE - ssl->in_count) > 0) {
+        int written = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], APP_BUF_SIZE - ssl->in_count );
+        if (written > 0) {
+          ssl->in_count += written;
+          activity += written;
+        } else if (!BIO_should_retry(ssl->bio_ssl)) {
+          _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
+          ssl->ssl_closed = true;
+          break;
+        }
+      }
+    }
+
+    // write incoming data to app layer
+
+    if (!ssl->app_closed) {
+      char *data = ssl->inbuf;
+      while (ssl->in_count > 0) {
+        ssize_t consumed = transport->process_input(transport, data, ssl->in_count);
+        if (consumed > 0) {
+          ssl->in_count -= consumed;
+          data += consumed;
+          activity += consumed;
+        } else {
+          if (consumed < 0) {
+            _log(ssl, "Application layer closed: %d\n", (int) consumed);
+            ssl->app_closed = consumed;
+            if (consumed == PN_EOS) {
+              if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+                pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
+            } else {
+              pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
+                                  pn_error_code(transport->error),
+                                  pn_error_text(transport->error));
+            }
+          }
+          break;
+        }
+      }
+      if (!ssl->app_closed && ssl->in_count > 0 && data != ssl->inbuf)
+        memmove( ssl->inbuf, data, ssl->in_count );
+    }
+
+    if (ssl->app_closed) {
+      ssl->in_count = 0;        // cannot accept more input, drop it
+    }
+
+    total += activity;
+
+  } while (activity);
+
+  return total > 0 ? true : false;
+}
+
+
+static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, size_t available)
+{
+  pn_ssl_t *ssl = transport->ssl;
+  if (!ssl) return PN_ERR;
+
+  ssize_t consumed = 0;
+  bool activity;
+
+  do {
+
+    activity = false;
+
+    // Write to network bio as much as possible, consuming bytes/available
+    while (available) {
+      int written = BIO_write( ssl->bio_net_io, input_data, available );
+      if (written < 1) break;
+      input_data += written;
+      available -= written;
+      consumed += written;
+      activity = true;
+    }
+
+    // process any work available at the SSL socket or application
+
+    if (do_socket_io(ssl))
+      activity = true;
+
+  } while (activity);
+
+  if (consumed == 0 && ssl->ssl_closed && ssl->app_closed)
+    return ssl->app_closed;
+
+  _log(ssl, "Processed %d bytes from transport input.\n", (int) consumed );
+  return consumed;
+}
+
+static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size_t max_len)
+{
+  pn_ssl_t *ssl = transport->ssl;
+  if (!ssl) return PN_ERR;
+
+  ssize_t written = 0;
+  bool activity;
+
+  do {
+    activity = false;
+
+    // process any work available at the SSL socket or application
+    if (do_socket_io(ssl))
+      activity = true;
+
+    // read from the network bio as much as possible, filling the buffer
+    while (max_len) {
+      int available = BIO_read( ssl->bio_net_io, buffer, max_len );
+      if (available < 1) break;
+      max_len -= available;
+      buffer += available;
+      written += available;
+      activity = true;
+    }
+  } while (activity);
+
+  // if the app is closed, and we've written any remaining app output to the socket, then
+  // start the SSL shutdown handshake
+  if (!ssl->ssl_shutdown && ssl->app_closed && ssl->out_count == 0) {
+    start_ssl_shutdown(ssl);
+  }
+
+  if (written == 0 && ssl->ssl_closed && ssl->app_closed)
+    return ssl->app_closed;
+  _log(ssl, "Created %d bytes for transport output.\n", (int) written );
+  return written;
+}
+
+
+//////// CLEARTEXT CONNECTIONS
+
+static ssize_t process_input_cleartext(pn_transport_t *transport, char *input_data, size_t len)
+{
+  // just write directly to layer "above" SSL
+  return transport->process_input( transport, input_data, len );
+}
+
+static ssize_t process_output_cleartext(pn_transport_t *transport, char *buffer, size_t max_len)
+{
+  // just read directly from the layer "above" SSL
+  return transport->process_input( transport, buffer, max_len );
+}
+
+
+
+static int setup_cleartext_connection( pn_ssl_t *ssl )
+{
+  _log( ssl, "Cleartext connection detected.\n");
+  ssl->process_input = process_input_cleartext;
+  ssl->process_output = process_output_cleartext;
+  return 0;
+}
+
+
+// until we determine if the client is using SSL or not:
+
+static ssize_t process_input_unknown(pn_transport_t *transport, char *input_data, size_t len)
+{
+  switch (check_for_ssl_connection( input_data, len )) {
+  case SSL_CONNECTION:
+    setup_ssl_connection( transport->ssl );
+    return transport->ssl->process_input( transport, input_data, len );
+  case CLEAR_CONNECTION:
+    setup_cleartext_connection( transport->ssl );
+    return transport->ssl->process_input( transport, input_data, len );
+  default:
+    return 0;
+  }
+}
+
+static ssize_t process_output_unknown(pn_transport_t *transport, char *input_data, size_t len)
+{
+  // do not do output until we know if SSL is used or not
+  return 0;
+}
+
+static connection_mode_t check_for_ssl_connection( const char *data, size_t len )
+{
+  if (len >= 5) {
+    const unsigned char *buf = (unsigned char *)data;
+    /*
+     * SSLv2 Client Hello format
+     * http://www.mozilla.org/projects/security/pki/nss/ssl/draft02.html
+     *
+     * Bytes 0-1: RECORD-LENGTH
+     * Byte    2: MSG-CLIENT-HELLO (1)
+     * Byte    3: CLIENT-VERSION-MSB
+     * Byte    4: CLIENT-VERSION-LSB
+     *
+     * Allowed versions:
+     * 2.0 - SSLv2
+     * 3.0 - SSLv3
+     * 3.1 - TLS 1.0
+     * 3.2 - TLS 1.1
+     * 3.3 - TLS 1.2
+     *
+     * The version sent in the Client-Hello is the latest version supported by
+     * the client. NSS may send version 3.x in an SSLv2 header for
+     * maximum compatibility.
+     */
+    int isSSL2Handshake = buf[2] == 1 &&   // MSG-CLIENT-HELLO
+      ((buf[3] == 3 && buf[4] <= 3) ||    // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
+       (buf[3] == 2 && buf[4] == 0));     // SSL 2
+
+    /*
+     * SSLv3/TLS Client Hello format
+     * RFC 2246
+     *
+     * Byte    0: ContentType (handshake - 22)
+     * Bytes 1-2: ProtocolVersion {major, minor}
+     *
+     * Allowed versions:
+     * 3.0 - SSLv3
+     * 3.1 - TLS 1.0
+     * 3.2 - TLS 1.1
+     * 3.3 - TLS 1.2
+     */
+    int isSSL3Handshake = buf[0] == 22 &&  // handshake
+      (buf[1] == 3 && buf[2] <= 3);       // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
+
+    if (isSSL2Handshake || isSSL3Handshake) {
+      return SSL_CONNECTION;
     } else {
-        dir = NULL;
-        file = certificate_db;
+      return CLEAR_CONNECTION;
     }
-
-    _log(trace, "load verify locations: file=%s dir=%s\n", file, dir);
-    if (SSL_CTX_load_verify_locations( ctx, file, dir ) != 1) {
-        _log_error("SSL_CTX_load_verify_locations( %s ) failed\n", certificate_db);
-        return -1;
-    }
-
-    return 0;
+  }
+  return UNKNOWN_CONNECTION;
 }
 
-
-
-
-
-/* STATE: check_for_ssl
- *
- * The server will allow both encrypted and non-encrypted clients.  Determine if
- * encryption is being used by peeking at the first few bytes of incoming data.
- */
-
-static int start_check_for_ssl( pn_connector_t *client )
+void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
 {
-    client->status &= ~PN_SEL_WR;   // don't start writing until
-    client->status |= PN_SEL_RD;    // we've read from the client
-    client->io_handler = handle_check_for_ssl;
-    return 0;
+  ssl->trace = trace;
 }
-
-
-static int handle_check_for_ssl( pn_connector_t *client )
-{
-    unsigned char buf[5];
-    int rc;
-    int retries = 3;
-
-    do {
-        rc = recv(client->fd, buf, sizeof(buf), MSG_PEEK);
-        if (rc == sizeof(buf))
-            break;
-        if (rc < 0) {
-            if (errno == EWOULDBLOCK) {
-                client->status |= PN_SEL_RD;
-                return 0;
-            } else if (errno != EINTR) {
-                _log_error("handle_check_for_ssl() recv failed: %s\n", strerror(errno));
-                break;
-            }
-        }
-    } while (retries-- > 0);
-
-    if (rc == sizeof(buf)) {
-        /*
-         * SSLv2 Client Hello format
-         * http://www.mozilla.org/projects/security/pki/nss/ssl/draft02.html
-         *
-         * Bytes 0-1: RECORD-LENGTH
-         * Byte    2: MSG-CLIENT-HELLO (1)
-         * Byte    3: CLIENT-VERSION-MSB
-         * Byte    4: CLIENT-VERSION-LSB
-         *
-         * Allowed versions:
-         * 2.0 - SSLv2
-         * 3.0 - SSLv3
-         * 3.1 - TLS 1.0
-         * 3.2 - TLS 1.1
-         * 3.3 - TLS 1.2
-         *
-         * The version sent in the Client-Hello is the latest version supported by
-         * the client. NSS may send version 3.x in an SSLv2 header for
-         * maximum compatibility.
-         */
-        int isSSL2Handshake = buf[2] == 1 &&   // MSG-CLIENT-HELLO
-          ((buf[3] == 3 && buf[4] <= 3) ||    // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-           (buf[3] == 2 && buf[4] == 0));     // SSL 2
-
-        /*
-         * SSLv3/TLS Client Hello format
-         * RFC 2246
-         *
-         * Byte    0: ContentType (handshake - 22)
-         * Bytes 1-2: ProtocolVersion {major, minor}
-         *
-         * Allowed versions:
-         * 3.0 - SSLv3
-         * 3.1 - TLS 1.0
-         * 3.2 - TLS 1.1
-         * 3.3 - TLS 1.2
-         */
-        int isSSL3Handshake = buf[0] == 22 &&  // handshake
-          (buf[1] == 3 && buf[2] <= 3);       // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-
-        if (isSSL2Handshake || isSSL3Handshake) {
-            _log(client->trace, "Connector %s using SSL encryption.\n", client->name);
-            return start_ssl_accept( client );
-        }
-    }
-    _log (client->trace, "Connector %s not using SSL encryption.\n", client->name);
-    return start_clear_connected( client );
-}
-
-
-/* STATE: ssl_connect
- *
- * Start the SSL connection to the server.  This will require I/O to complete the
- * handshake.
- */
-static int start_ssl_connect(pn_connector_t *client)
-{
-    pn_connector_ssl_t *impl = client->ssl;
-    if (!impl) return -1;
-
-    impl->ssl = SSL_new(impl->ctx);
-    impl->sbio = BIO_new_socket( client->fd, BIO_NOCLOSE );
-    SSL_set_bio(impl->ssl, impl->sbio, impl->sbio);
-#if 0
-    // @todo reconnect support
-    if (conn->reconnecting && conn->session) {
-        printf("Resuming old session...\n");
-        SSL_set_session(conn->ssl, conn->session);
-        SSL_SESSION_free(conn->session);
-        conn->session = NULL;
-    }
-#endif
-    return handle_ssl_connect(client);
-}
-
-
-int handle_ssl_connect( pn_connector_t *client )
-{
-    pn_connector_ssl_t *impl = client->ssl;
-    if (!impl) return -1;
-
-    int rc = SSL_connect( impl->ssl );
-    switch (SSL_get_error( impl->ssl, rc )) {
-    case SSL_ERROR_NONE:
-        // connection completed
-        _log(client->trace, "SSL_connect() completed, connector=%s.\n", client->name);
-        return start_ssl_connection_up( client );
-
-    case SSL_ERROR_WANT_READ:
-        client->status |= PN_SEL_RD;
-        break;
-    case SSL_ERROR_WANT_WRITE:
-        client->status |= PN_SEL_WR;
-        break;
-    default:
-        _log_error("SSL_connect() failure: %d\n", SSL_get_error(impl->ssl, rc));
-        ERR_print_errors_fp(stderr);
-        return -1;
-    }
-
-    client->io_handler = handle_ssl_connect;
-    return 0;
-}
-
-
-
-/* STATE: ssl_accept
- *
- * Accept the client connection.  This may require I/O to complete the handshake.
- */
-
-static int start_ssl_accept(pn_connector_t *client)
-{
-    pn_connector_ssl_t *impl = client->ssl;
-    if (!impl) return -1;
-    pn_listener_ssl_t *parent = client->listener->ssl;
-    if (!parent) return -1;
-
-    impl->sbio = BIO_new_socket(client->fd, BIO_NOCLOSE);
-    impl->ssl = SSL_new(parent->ctx);
-    SSL_set_bio(impl->ssl, impl->sbio, impl->sbio);
-
-    return handle_ssl_accept(client);
-}
-
-static int handle_ssl_accept(pn_connector_t *client)
-{
-    pn_connector_ssl_t *impl = client->ssl;
-    if (!impl) return -1;
-
-    int rc = SSL_accept(impl->ssl);
-    switch (SSL_get_error(impl->ssl, rc)) {
-    case SSL_ERROR_NONE:
-        // connection completed
-        _log(client->trace, "SSL_accept() completed, connector=%s.\n", client->name);
-        return start_ssl_connection_up( client );
-
-    case SSL_ERROR_WANT_READ:
-        client->status |= PN_SEL_RD;
-        break;
-    case SSL_ERROR_WANT_WRITE:
-        client->status |= PN_SEL_WR;
-        break;
-    default:
-        _log_error("SSL_accept() failure: %d\n", SSL_get_error(impl->ssl, rc));
-        ERR_print_errors_fp(stderr);
-        return -1;
-    }
-    client->io_handler = handle_ssl_accept;
-    return 0;
-}
-
-
-/* STATE: ssl_connection_up
- *
- * The SSL connection is up and data is passing!
- */
-int start_ssl_connection_up( pn_connector_t *c )
-{
-    c->io_handler = handle_ssl_connection_up;
-    c->status |= PN_SEL_RD;
-    return 0;
-}
-
-
-int handle_ssl_connection_up( pn_connector_t *c )
-{
-    int rc;
-    int ssl_err;
-    int read_blocked = 0;
-    int write_blocked = 0;
-    int need_read = 0;
-    int need_write = 0;
-    int input_space;
-    pn_connector_ssl_t *impl = c->ssl;
-    assert(impl);
-
-    c->status &= ~(PN_SEL_RD | PN_SEL_WR);
-
-    do {
-        input_space = PN_CONNECTOR_IO_BUF_SIZE - c->input_size;
-        if (!read_blocked && input_space > 0) {
-            rc = SSL_read(impl->ssl, &c->input[c->input_size], input_space);
-            ssl_err = SSL_get_error( impl->ssl, rc );
-            if (ssl_err == SSL_ERROR_NONE) {
-                c->input_size += rc;
-            } else if (ssl_err == SSL_ERROR_WANT_READ) {
-                // socket read blocked
-                read_blocked = 1;
-                need_read = 1;
-            } else if (ssl_err == SSL_ERROR_WANT_WRITE) {
-                read_blocked = 1;
-                write_blocked = 1;  // don't bother writing
-                need_write = 1;
-            } else {
-                if (ssl_err == SSL_ERROR_ZERO_RETURN) {
-                    /* remote shutdown */
-                    _log(c->trace, "Peer has shut down the connection, connector=%s\n", c->name);
-                } else {
-                    _log_error("Unexpected SSL_read() failure, errno: %s, SSL_read() status: %d\n",
-                              strerror(errno), ssl_err);
-                }
-                return start_ssl_shutdown(c);
-            }
-        }
-
-        pn_connector_process_input(c);
-        pn_connector_process_output(c);
-
-        if (!write_blocked && c->output_size > 0) {
-
-            rc = SSL_write( impl->ssl, c->output, c->output_size );
-            ssl_err = SSL_get_error( impl->ssl, rc );
-            if (ssl_err == SSL_ERROR_NONE) {
-                c->output_size -= rc;
-                if (c->output_size > 0)
-                    memmove(c->output, c->output + rc, c->output_size);
-            } else if (ssl_err == SSL_ERROR_WANT_WRITE) {
-                /* We would have blocked */
-                write_blocked = 1;
-                need_write = 1;
-            } else if (ssl_err == SSL_ERROR_WANT_READ) {
-                read_blocked = 1;
-                write_blocked = 1;  // don't bother reading
-                need_read = 1;
-            } else {
-                if (ssl_err == SSL_ERROR_ZERO_RETURN)
-                    _log(c->trace, "Peer has shut down the connection, connector=%s\n", c->name);
-                else {
-                    _log_error("Unexpected SSL_write() failure, errno: %s, SSL_write() status: %d\n",
-                              strerror(errno), ssl_err);
-                }
-                return start_ssl_shutdown(c);
-            }
-        }
-
-    } while ((!read_blocked && c->input_size < PN_CONNECTOR_IO_BUF_SIZE) ||
-             (!write_blocked && c->output_size));
-
-    if (need_read) c->status |= PN_SEL_RD;
-    if (need_write) c->status |= PN_SEL_WR;
-
-    // we need to re-call SSL_read when the receive buffer is drained (do not need to wait for I/O!)
-    if (!read_blocked && SSL_pending(impl->ssl) && PN_CONNECTOR_IO_BUF_SIZE == c->input_size) {
-        impl->read_stalled = true;
-    }
-
-    return 0;
-}
-
-
-/* STATE: clear_connected
- *
- * The peer has connected without SSL (in the clear).  Use the default I/O handler
- */
-static int start_clear_connected( pn_connector_t *c )
-{
-    pn_connector_free_ssl( c );
-    c->status |= (PN_SEL_RD | PN_SEL_WR);
-    c->io_handler = pn_io_handler;
-    return 0;
-}
-
-
-/* STATE: ssl_shutdown
- *
- * Shutting down the SSL connection.
- */
-static int start_ssl_shutdown( pn_connector_t *c )
-{
-    if (c->closed) return 0;
-    return handle_ssl_shutdown( c );
-}
-
-static int handle_ssl_shutdown( pn_connector_t *c )
-{
-    int rc;
-    pn_connector_ssl_t *impl = c->ssl;
-    if (!impl) return -1;
-
-    do {
-        rc = SSL_shutdown( impl->ssl );
-    } while (rc == 0);
-
-    switch (SSL_get_error( impl->ssl, rc )) {
-    case SSL_ERROR_WANT_READ:
-        //printf("  need read...\n");
-        c->status |= PN_SEL_RD;
-        break;
-    case SSL_ERROR_WANT_WRITE:
-        //printf("  need write...\n");
-        c->status |= PN_SEL_WR;
-        break;
-    default: // whatever- consider us closed
-    case SSL_ERROR_NONE:
-        _log(c->trace, "SSL connection shutdown complete code=%d, connector=%s\n",
-            SSL_get_error(impl->ssl,rc), c->name);
-        // shutdown completed
-        c->io_handler = pn_null_io_handler;
-        pn_connector_close( c );
-        return 0;
-    }
-    c->io_handler = handle_ssl_shutdown;
-    return 0;
-}
-
-
-
-

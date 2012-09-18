@@ -88,5 +88,12 @@ void pn_connector_shutdown_ssl(pn_connector_t *c)
   pn_connector_close(c);
 }
 
+void pn_ssl_free( pn_ssl_t *ssl)
+{
+}
+
+void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
+{
+}
 
 

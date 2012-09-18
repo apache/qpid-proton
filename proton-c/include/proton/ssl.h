@@ -133,7 +133,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
  * @param[out] trusted_CAs set to a buffer to hold the path to the database of trusted CAs
  * that the server will advertise to the peer client. If NULL, the path will not be
  * returned.
- * @param[in,out] trusted_CAs_size on input, set to the number of octets in trusted_CAs,
+ * @param[in,out] trusted_CAs_size on input set to the number of octets in trusted_CAs.
  * on output, set to the number of octets needed to hold the value of trusted_CAs plus a
  * null byte.  @return 0 on success
  */
