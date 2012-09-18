@@ -54,7 +54,6 @@ struct pn_listener_t {
   void *context;
 
   struct pn_listener_poller_t *poller;
-  struct pn_listener_ssl_t *ssl;
 };
 
 int pn_listener_poller_init( struct pn_listener_t *);
@@ -100,7 +99,6 @@ struct pn_connector_t {
   void *context;
 
   struct pn_connector_poller_t *poller;
-  struct pn_connector_ssl_t *ssl;
 };
 
 int pn_connector_poller_init( struct pn_connector_t *);

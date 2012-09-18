@@ -26,6 +26,7 @@
 #include <proton/ssl.h>
 #include "util.h"
 #include "driver-internal.h"
+#include "ssl/ssl-internal.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -117,7 +118,6 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
   l->pending = false;
   l->fd = fd;
   l->context = context;
-  l->ssl = NULL;
 
   pn_listener_poller_init(l);
 
@@ -179,7 +179,6 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
       snprintf(c->name, PN_CONNECTOR_NAME_MAX, "%s:%s", host, serv);
       c->listener = l;
-      pn_listener_init_ssl_client( l, c );  // @todo KAG: deal with error case!!!
       return c;
     }
   }
@@ -198,7 +197,6 @@ void pn_listener_free(pn_listener_t *l)
   if (!l) return;
 
   if (l->driver) pn_driver_remove_listener(l->driver, l);
-  pn_listener_free_ssl(l);
   pn_listener_poller_destroy(l);
   free(l);
 }
@@ -300,7 +298,6 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->output_done = false;
   c->context = context;
   c->listener = NULL;
-  c->ssl = NULL;
 
   pn_connector_poller_init(c);
 

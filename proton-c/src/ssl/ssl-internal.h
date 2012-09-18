@@ -32,14 +32,29 @@
  *
  */
 
-
-/** Configure SSL/TLS on a connector that has just been accepted on the given listener.
+/** Get the SSL server object associated with a transport.
  *
- * @param[in,out] l the listener that has accepted the connnector c.
- * @param[in,out] c the connector that will be configured for SSL/TLS (client mode).
- * @return 0 on success, else an error code if SSL/TLS cannot be configured.
+ * A transport may be configured to be either an SSL server or an SSL client.  Those
+ * transports that will be used to accept incoming connections must be configured as an
+ * SSL server.
+ *
+ * @return a pointer to the SSL server object configured for this transport.  Returns NULL
+ * if the server cannot be configured, which would occur if no SSL support is available,
+ * or the transport has already been configured as an SSL client.
  */
-int pn_ssl_client_init( pn_ssl_t *ssl);
+pn_ssl_t *pn_ssl_server(pn_transport_t *transport);
+
+/** Get the SSL client object associated with a transport.
+ *
+ * A transport may be configured to be either an SSL server or an SSL client.  Those
+ * transports that will be used to initiate outbound connections must be configured as an
+ * SSL client.
+ *
+ * @return a pointer to the SSL client object configured for this transport.  Returns NULL
+ * if the client cannot be configured, which would occur if no SSL support is available,
+ * or the transport has already been configured as an SSL server.
+ */
+pn_ssl_t *pn_ssl_client(pn_transport_t *transport);
 
 /** Start the SSL/TLS shutdown handshake.
  *
@@ -65,4 +80,5 @@ void pn_ssl_free( pn_ssl_t *ssl);
  */
 int pn_driver_ssl_data_ready( pn_driver_t *d );
 
+void pn_connector_shutdown_ssl(pn_connector_t *c);   // fuck you
 #endif /* ssl.h */

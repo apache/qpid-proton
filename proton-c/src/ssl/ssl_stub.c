@@ -78,4 +78,15 @@ int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
   return -1;
 }
 
+int pn_driver_ssl_data_ready( pn_driver_t *d )
+{
+  return 0;
+}
+
+void pn_connector_shutdown_ssl(pn_connector_t *c)
+{
+  pn_connector_close(c);
+}
+
+
 

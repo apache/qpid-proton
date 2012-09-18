@@ -53,31 +53,6 @@ extern "C" {
 
 typedef struct pn_ssl_t pn_ssl_t;
 
-/** Get the SSL server object associated with a transport.
- *
- * A transport may be configured to be either an SSL server or an SSL client.  Those
- * transports that will be used to accept incoming connections must be configured as an
- * SSL server.
- *
- * @return a pointer to the SSL server object configured for this transport.  Returns NULL
- * if the server cannot be configured, which would occur if no SSL support is available,
- * or the transport has already been configured as an SSL client.
- */
-pn_ssl_t *pn_ssl_server(pn_transport_t *transport);
-
-/** Get the SSL client object associated with a transport.
- *
- * A transport may be configured to be either an SSL server or an SSL client.  Those
- * transports that will be used to initiate outbound connections must be configured as an
- * SSL client.
- *
- * @return a pointer to the SSL client object configured for this transport.  Returns NULL
- * if the client cannot be configured, which would occur if no SSL support is available,
- * or the transport has already been configured as an SSL server.
- */
-pn_ssl_t *pn_ssl_client(pn_transport_t *transport);
-
-
 /** Set the certificate that identifies the local node to the remote.
  *
  * This certificate establishes the identity for the local node.  It will be sent to the
