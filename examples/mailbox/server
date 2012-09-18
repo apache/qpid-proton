@@ -48,7 +48,7 @@ class Options(object):
         parser.add_option("--require-encryption", action="store_true",
                           help="Do not accept connections from clients that do not use encryption.")
         parser.add_option("--ssl-cert-db", type="str", metavar="<dir>",
-                          help="database of trusted certificates")
+                          help="database of trusted certificates. Used to authenticate clients.")
 
         # For client authentication using SSL:
         #parser.add_option("-c", "--ssl-require-client-authentication", action="store_true", help="force client to authenticate itself.")
@@ -110,15 +110,8 @@ class MailboxServer(object):
             return False
         if self.certificate_file:
             self.log("Setting SSL certificate %s" % self.certificate_file)
-            rc = pn_listener_ssl_server_init(self.listener, self.certificate_file,
-                                             self.certificate_key_file,
-                                             self.key_file_password,
-                                             self.ca_database);
-            assert(rc == 0)
             if not self.require_encryption:
                 self.log("Allowing both encrypted AND unencrypted connections!")
-                rc = pn_listener_ssl_allow_unsecured_clients(self.listener)
-                assert(rc == 0)
         return True
 
 
@@ -139,6 +132,26 @@ class MailboxServer(object):
             self.log("Accepting Connection.")
             cxtr = pn_listener_accept(l)
             pn_connector_set_context(cxtr, AUTHENTICATING)
+
+            # configure SSL
+            if self.certificate_file:
+                ssl_server = pn_ssl(cxtr)
+                assert(ssl_server)
+                rc = pn_ssl_set_credentials(ssl_server,
+                                            self.certificate_file,
+                                            self.certificate_key_file,
+                                            self.key_file_password)
+                assert(rc == 0)
+                if not self.require_encryption:
+                    rc = pn_ssl_allow_unsecured_client(ssl_server)
+                    assert(rc == 0)
+
+                # TODO: client authentication incomplete, for now skip peer verification
+                rc = pn_ssl_set_peer_authentication(ssl_server,
+                                                    PN_SSL_NO_VERIFY_PEER,
+                                                    None)
+                assert(rc == 0)
+
             l = pn_driver_listener(self.driver)
 
 

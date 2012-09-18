@@ -23,6 +23,7 @@
 
 #include <proton/driver.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 #include "util.h"
 #include "driver-internal.h"
 #include "drivers/ssl.h"
@@ -330,6 +331,17 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
   return ctor ? ctor->sasl : NULL;
+}
+
+pn_ssl_t *pn_connector_ssl(pn_connector_t *ctor)
+{
+  if (ctor) {
+    // use server mode SSL if this connector was created by a listener
+    if (ctor->listener)
+      return pn_ssl_server(ctor->transport);
+    return pn_ssl_client(ctor->transport);
+  }
+  return NULL;
 }
 
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)

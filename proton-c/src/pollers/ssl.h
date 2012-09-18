@@ -23,6 +23,8 @@
 
 #define _POSIX_C_SOURCE 1
 
+#include <proton/driver.h>
+
 /** @file
  * Internal API for SSL/TLS support in the Driver Layer.
  *
@@ -37,8 +39,7 @@
  * @param[in,out] c the connector that will be configured for SSL/TLS (client mode).
  * @return 0 on success, else an error code if SSL/TLS cannot be configured.
  */
-int pn_listener_init_ssl_client( pn_listener_t *l, pn_connector_t *c);
-
+int pn_ssl_client_init( pn_ssl_t *ssl);
 
 /** Start the SSL/TLS shutdown handshake.
  *
@@ -49,21 +50,13 @@ int pn_listener_init_ssl_client( pn_listener_t *l, pn_connector_t *c);
  *
  * @param[in,out] c the connector to shutdown.
  */
-void pn_connector_shutdown_ssl( pn_connector_t *c);
-
+void pn_ssl_shutdown( pn_ssl_t *ssl);
 
 /** Release any SSL/TLS related resources used by the listener.
  *
  * @param[in,out] l the listener to clean up.
  */
-void pn_listener_free_ssl( pn_listener_t *l);
-
-
-/** Release any SSL/TLS related resources used by the connector.
- *
- * @param[in,out] c the connector to clean up.
- */
-void pn_connector_free_ssl( pn_connector_t *c);
+void pn_ssl_free( pn_ssl_t *ssl);
 
 /** Check if the SSL/TLS layer has data ready for reading or writing
  *

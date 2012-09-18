@@ -38,9 +38,9 @@ class Options(object):
 
         # SSL configuration
         parser.add_option("--ssl-cert-db", type="str", metavar="<dir>",
-                          help="database of trusted certificates")
+                          help="database of trusted certificates.  Enables use of SSL.")
 
-        # if server wants authentication:
+        # if server wants client authentication:
         #parser.add_option("--ssl-cert-file")
         #parser.add_option("--ssl-key-file")
         #parser.add_option("--ssl-key-pw")
@@ -71,6 +71,7 @@ class PostClient(object):
         self.mailbox = mailbox
         self.logging = False
         self.ca_database = ca_database
+        self.ssl_client = None
 
 
     def setup(self):
@@ -83,10 +84,16 @@ class PostClient(object):
         self.cxtr = pn_connector(self.driver, self.host, self.port, None)
         assert(self.cxtr)
 
-        # configure database of trusted CA's
+        # Enable SSL if database of trusted CAs given
         if self.ca_database:
-            self.log("Using CA database = %s" % self.ca_database)
-            rc = pn_connector_ssl_client_init(self.cxtr, self.ca_database);
+            self.log("Using SSL, CA database = %s" % self.ca_database)
+
+            ssl_client = pn_ssl_client(self.cxtr)
+            assert(ssl_client)
+            rc = pn_ssl_set_trusted_ca_db(ssl_client, self.ca_database)
+            assert(rc == 0)
+            # we want to fail if the server's certificate is invalid:
+            rc = pn_ssl_set_peer_authentication(ssl_client, PN_SSL_VERIFY_PEER, None)
             assert(rc == 0)
 
         # configure SASL
