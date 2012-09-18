@@ -98,21 +98,21 @@ static connection_mode_t check_for_ssl_connection( const char *data, size_t len 
 // @todo: used to avoid littering the code with calls to printf...
 static void _log_error(const char *fmt, ...)
 {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 }
 
 // @todo: used to avoid littering the code with calls to printf...
 static void _log(pn_ssl_t *ssl, const char *fmt, ...)
 {
-    if (PN_TRACE_DRV & ssl->trace) {
-        va_list ap;
-        va_start(ap, fmt);
-        vfprintf(stderr, fmt, ap);
-        va_end(ap);
-    }
+  if (PN_TRACE_DRV & ssl->trace) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+  }
 }
 
 
@@ -381,9 +381,11 @@ pn_ssl_t *pn_ssl_server(pn_transport_t *transport)
   ssl->transport = transport;
   ssl->process_input = process_input_ssl;
   ssl->process_output = process_output_ssl;
+  transport->ssl = ssl;
 
   ssl->trace = PN_TRACE_OFF;
 
+  _log( ssl, "Server SSL socket created.\n" );
   return ssl;
 }
 
@@ -449,15 +451,18 @@ pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
   ssl->transport = transport;
   ssl->process_input = process_input_ssl;
   ssl->process_output = process_output_ssl;
+  transport->ssl = ssl;
 
   ssl->trace = PN_TRACE_OFF;
 
+  _log( ssl, "Client SSL socket created.\n" );
   return ssl;
 }
 
 void pn_ssl_free( pn_ssl_t *ssl)
 {
   if (!ssl) return;
+  _log( ssl, "SSL socket freed.\n" );
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
   if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
   if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
@@ -538,7 +543,7 @@ static bool do_socket_io( pn_ssl_t *ssl )
           activity += app_bytes;
         } else {
           if (app_bytes < 0) {
-            _log(ssl, "Application layer closed: %d\n", (int) app_bytes);
+            _log(ssl, "Application layer closed: %d (out_count=%d)\n", (int) app_bytes, (int) ssl->out_count);
             ssl->app_closed = app_bytes;
             if (app_bytes == PN_EOS) {
               if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
@@ -606,7 +611,7 @@ static bool do_socket_io( pn_ssl_t *ssl )
           activity += consumed;
         } else {
           if (consumed < 0) {
-            _log(ssl, "Application layer closed: %d\n", (int) consumed);
+            _log(ssl, "Application layer closed: %d (in_count=%d)\n", (int) consumed, (int)ssl->in_count);
             ssl->app_closed = consumed;
             if (consumed == PN_EOS) {
               if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
