@@ -182,6 +182,7 @@ struct pn_delivery_t {
   bool tpwork;
   pn_buffer_t *bytes;
   bool done;
+  void *transport_context;
   void *context;
 };
 

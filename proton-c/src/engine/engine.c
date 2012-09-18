@@ -955,6 +955,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork = false;
   pn_buffer_clear(delivery->bytes);
   delivery->done = false;
+  delivery->transport_context = NULL;
   delivery->context = NULL;
 
   if (!link->current)
@@ -999,6 +1000,17 @@ void pn_delivery_dump(pn_delivery_t *d)
          tag, d->local_state, d->remote_state, d->local_settled,
          d->remote_settled, d->updated, pn_is_current(d), pn_writable(d),
          pn_readable(d), d->work);
+}
+
+void *pn_delivery_context(pn_delivery_t *delivery)
+{
+    return delivery ? delivery->context : NULL;
+}
+
+void pn_delivery_set_context(pn_delivery_t *delivery, void *context)
+{
+    if (delivery)
+        delivery->context = context;
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
@@ -1074,8 +1086,8 @@ void pn_real_settle(pn_delivery_t *delivery)
 
 void pn_full_settle(pn_delivery_buffer_t *db, pn_delivery_t *delivery)
 {
-  pn_delivery_state_t *state = delivery->context;
-  delivery->context = NULL;
+  pn_delivery_state_t *state = delivery->transport_context;
+  delivery->transport_context = NULL;
   if (state) state->delivery = NULL;
   pn_real_settle(delivery);
   if (state) pn_delivery_buffer_gc(db);
@@ -1269,7 +1281,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
     pn_delivery_state_t *state = pn_delivery_buffer_push(incoming, delivery);
-    delivery->context = state;
+    delivery->transport_context = state;
     if (id != state->id) {
       int err = pn_do_error(transport, "amqp:session:invalid-field",
                             "sequencing error, expected delivery-id %u, got %u",
@@ -1557,7 +1569,7 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   if (delivery->settled) return false;
   if (pn_is_sender(delivery->link)) {
-    pn_delivery_state_t *state = delivery->context;
+    pn_delivery_state_t *state = delivery->transport_context;
     if (state) {
       return (delivery->done && !state->sent) || pn_buffer_size(delivery->bytes) > 0;
     } else {
@@ -1673,7 +1685,7 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
   // XXX: check for null state
-  pn_delivery_state_t *state = delivery->context;
+  pn_delivery_state_t *state = delivery->transport_context;
   uint64_t code;
   switch(delivery->local_state) {
   case PN_ACCEPTED:
@@ -1701,10 +1713,10 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
   pn_link_state_t *link_state = pn_link_get_state(ssn_state, link);
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    pn_delivery_state_t *state = delivery->context;
+    pn_delivery_state_t *state = delivery->transport_context;
     if (!state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
       state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
-      delivery->context = state;
+      delivery->transport_context = state;
     }
 
     if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
@@ -1729,7 +1741,7 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
     }
   }
 
-  pn_delivery_state_t *state = delivery->context;
+  pn_delivery_state_t *state = delivery->transport_context;
   // XXX: need to prevent duplicate disposition sending
   if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
       && state && state->sent) {
@@ -1749,7 +1761,7 @@ int pn_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *deliver
   pn_link_t *link = delivery->link;
   // XXX: need to prevent duplicate disposition sending
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
-  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled && delivery->context) {
+  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled && delivery->transport_context) {
     int err = pn_post_disp(transport, delivery);
     if (err) return err;
   }

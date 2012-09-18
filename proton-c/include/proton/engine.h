@@ -323,6 +323,8 @@ void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition);
 //int pn_format(pn_delivery_t *delivery);
 void pn_settle(pn_delivery_t *delivery);
 void pn_delivery_dump(pn_delivery_t *delivery);
+void *pn_delivery_context(pn_delivery_t *delivery);
+void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
 
 #ifdef __cplusplus
 }
