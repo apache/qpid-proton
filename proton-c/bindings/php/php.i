@@ -10,6 +10,7 @@
 #include <proton/message.h>
 #include <proton/driver.h>
 #include <proton/messenger.h>
+#include <proton/ssl.h>
 
 #define zend_error_noreturn zend_error
 %}

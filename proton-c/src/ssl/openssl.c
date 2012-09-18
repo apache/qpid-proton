@@ -457,7 +457,7 @@ pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
 
 void pn_ssl_free( pn_ssl_t *ssl)
 {
-
+  if (!ssl) return;
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
   if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
   if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);

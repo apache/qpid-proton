@@ -78,9 +78,7 @@ void pn_ssl_free( pn_ssl_t *ssl);
  * @param[in] d the driver
  * @return 0 if no data ready, else !0
  */
-int pn_driver_ssl_data_ready( pn_driver_t *d );
-
-void pn_connector_shutdown_ssl(pn_connector_t *c);   // @todo: can I remove this???
+//int pn_driver_ssl_data_ready( pn_driver_t *d );
 
 // move data received from the network into the SSL layer
 ssize_t pn_ssl_input(pn_ssl_t *ssl, char *bytes, size_t available);

@@ -511,7 +511,7 @@ void pn_connector_process(pn_connector_t *c) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
         fprintf(stderr, "Closed %s\n", c->name);
       }
-      pn_connector_shutdown_ssl(c);   // AMQP finished, perform clean shutdown
+      pn_connector_close(c);
     }
   }
 }
@@ -589,10 +589,7 @@ void pn_driver_wakeup(pn_driver_t *d)
 
 void pn_driver_wait(pn_driver_t *d, int timeout)
 {
-  // if SSL/TlS has data available, no need to wait for I/O
-  if (!pn_driver_ssl_data_ready(d)) {
-      pn_driver_poller_wait(d, timeout);
-  }
+  pn_driver_poller_wait(d, timeout);
   d->listener_next = d->listener_head;
   d->connector_next = d->connector_head;
 }
