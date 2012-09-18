@@ -26,7 +26,6 @@
 #include <proton/ssl.h>
 #include "util.h"
 #include "driver-internal.h"
-#include "drivers/ssl.h"
 
 #include <stdio.h>
 #include <time.h>

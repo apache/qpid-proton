@@ -18,14 +18,14 @@ endif (HAVE_SYS_SELECT_H)
 if (HAVE_POLL_H)
   set(poller_default poll)
 endif (HAVE_POLL_H)
-set(POLLER ${poller_default} CACHE STRING "Poller implementation (poll/select)")
+set(POLLER ${poller_default} CACHE STRING "Poller implementation to use. Valid values: 'poll','select'")
 
 # Set the default SSL/TLS implementation
 set(ssl_impl, NONE)
 if (HAVE_OPENSSL_H)
    set(ssl_impl openssl)
 endif(HAVE_OPENSSL_H)
-set(SSL_IMPL ${ssl_impl} CACHE STRING "SSL/TLS support library")
+set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
@@ -50,20 +50,20 @@ add_custom_command (
 # Configure the poller
 if (POLLER STREQUAL poll)
   set (pn_driver_impl
-       src/drivers/poll.c
+       src/pollers/poll.c
   )
 elseif (POLLER STREQUAL select)
   set (pn_driver_impl
-       src/drivers/select.c
+       src/pollers/select.c
   )
 endif (POLLER STREQUAL poll)
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/drivers/openssl.c)
+  set (pn_driver_ssl_impl src/ssl/openssl.c)
   set (SSL_LIB ssl crypto)
 else (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/drivers/ssl_stub.c)
+  set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
 endif (SSL_IMPL STREQUAL openssl)
 
 find_package(SWIG)
