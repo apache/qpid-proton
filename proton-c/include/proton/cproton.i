@@ -1281,3 +1281,8 @@
 
 
 %include "proton/messenger.h"
+
+
+
+%include "proton/ssl.h"
+
