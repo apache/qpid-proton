@@ -53,6 +53,35 @@ extern "C" {
 
 typedef struct pn_ssl_t pn_ssl_t;
 
+/** Get the SSL  object associated with a transport.
+ *
+ * This method returns the SSL object associated with the transport.  If no SSL object
+ * exists, one will be allocated and returned.  A transport must have a configured SSL
+ * object in order to "speak" SSL over its connection.
+ *
+ * By default, a new SSL object is configured to be a Client.  Use :pn_ssl_init to change
+ * the SSL object's mode to Server if desired.
+ *
+ * @return a pointer to the SSL object configured for this transport.  Returns NULL if SSL
+ * cannot be provided, which would occur if no SSL support is available.
+ */
+pn_ssl_t *pn_ssl(pn_transport_t *transport);
+
+/** Initialize the pn_ssl_t object.
+ *
+ * An SSL object be either an SSL server or an SSL client.  It cannot be both. Those
+ * transports that will be used to accept incoming connection requests must be configured
+ * as an SSL server. Those transports that will be used to initiate outbound connections
+ * must be configured as an SSL client.
+ *
+ * @return 0 if configuration succeeded, else an error code.
+ */
+typedef enum {
+  PN_SSL_MODE_CLIENT=1, /**< Local connection endpoint is an SSL client */
+  PN_SSL_MODE_SERVER    /**< Local connection endpoint is an SSL server */
+} pn_ssl_mode_t;
+int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode);
+
 /** Set the certificate that identifies the local node to the remote.
  *
  * This certificate establishes the identity for the local node.  It will be sent to the

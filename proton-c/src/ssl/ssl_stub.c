@@ -32,14 +32,14 @@
  * used if there is no SSL/TLS support in the system's environment.
  */
 
-pn_ssl_t *pn_ssl_server(pn_transport_t *transport)
+pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
   return NULL;
 }
 
-pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
+int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
 {
-  return NULL;
+  return -1;
 }
 
 

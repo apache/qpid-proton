@@ -309,12 +309,12 @@ void *pn_connector_context(pn_connector_t *connector);
  */
 void pn_connector_set_context(pn_connector_t *connector, void *context);
 
-/** Access the SSL/TLS context of the connector.
+/** Access the transport used by this connector.
  *
- * @param[in] connector connector whose SSL/TLS context will be returned
- * @return the SSL/TLS context for the connector, or NULL if none
+ * @param[in] connector connector whose transport will be returned
+ * @return the transport, or NULL if none
  */
-pn_ssl_t *pn_connector_ssl(pn_connector_t *connector);
+pn_transport_t *pn_connector_transport(pn_connector_t *connector);
 
 /** Close the socket used by the connector.
  *

@@ -43,13 +43,12 @@
 
 static int ssl_initialized;
 
-typedef enum { SSL_MODE_CLIENT, SSL_MODE_SERVER } ssl_mode_t;
 typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
 
 struct pn_ssl_t {
   SSL_CTX *ctx;
   SSL *ssl;
-  ssl_mode_t mode;
+  pn_ssl_mode_t mode;
   bool allow_unsecured;
   bool ca_db;           // true when CA database configured
   char *keyfile_pw;
@@ -178,9 +177,9 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
                             const char *private_key_file,
                             const char *password)
 {
-  if (!ssl) return 0;
+  if (!ssl) return -1;
   if (ssl->ssl) {
-    _log_error("Error: attempting to set credentials after SSL connection initialized.\n");
+    _log_error("Error: attempting to set credentials while SSL in use.\n");
     return -1;
   }
 
@@ -245,7 +244,7 @@ int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
 int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl)
 {
   if (ssl) {
-    if (ssl->mode != SSL_MODE_SERVER) {
+    if (ssl->mode != PN_SSL_MODE_SERVER) {
       _log_error("Cannot permit unsecured clients - not a server.\n");
       return -1;
     }
@@ -271,7 +270,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
 
-    if (ssl->mode == SSL_MODE_SERVER) {
+    if (ssl->mode == PN_SSL_MODE_SERVER) {
       // openssl requires that server connections supply a list of trusted CAs which is
       // sent to the client
       if (!trusted_CAs) {
@@ -336,80 +335,63 @@ int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
 }
 
 
-pn_ssl_t *pn_ssl_server(pn_transport_t *transport)
+int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
 {
-  if (!transport) return NULL;
-  if (transport->ssl) {
-    if (transport->ssl->mode != SSL_MODE_SERVER) {
-      _log_error("Error: transport already configured as a client.\n");
-      return NULL;
+  if (!ssl) return -1;
+  if (ssl->mode == mode) return 0;      // already set
+  if (ssl->ssl) {
+    _log_error("Unable to change mode once SSL is active.\n");
+    return -1;
+  }
+
+  // if changing the mode from the default, must release old context
+  if (ssl->ctx) SSL_CTX_free( ssl->ctx );
+
+  switch (mode) {
+  case PN_SSL_MODE_CLIENT:
+    _log( ssl, "Setting up Client SSL object.\n" );
+    ssl->ctx = SSL_CTX_new(SSLv23_client_method());
+    if (!ssl->ctx) {
+      _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
+      return -1;
     }
-    return transport->ssl;
-  }
-
-  if (!ssl_initialized) {
-    ssl_initialized = 1;
-    SSL_library_init();
-    SSL_load_error_strings();
-  }
-
-  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
-  if (!ssl) return NULL;
-
-  ssl->ctx = SSL_CTX_new(SSLv23_server_method());
-  if (!ssl->ctx) {
-    _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-    free(ssl);
-    return NULL;
-  }
-  ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
-  SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );        // default: no client authentication
-
-  ssl->mode = SSL_MODE_SERVER;
-  ssl->transport = transport;
-  ssl->process_input = process_input_ssl;
-  ssl->process_output = process_output_ssl;
-  transport->ssl = ssl;
-
-  ssl->trace = PN_TRACE_OFF;
-
-  _log( ssl, "Setting up Server SSL connection.\n" );
-  return ssl;
-}
-
-pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
-{
-  if (!transport) return NULL;
-  if (transport->ssl) {
-    if (transport->ssl->mode != SSL_MODE_CLIENT) {
-      _log_error("Error: transport already configured as a server.\n");
-      return NULL;
-    }
-    return transport->ssl;
-  }
-
-  if (!ssl_initialized) {
-    ssl_initialized = 1;
-    SSL_library_init();
-    SSL_load_error_strings();
-  }
-
-  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
-  if (!ssl) return NULL;
-
-  ssl->ctx = SSL_CTX_new(SSLv23_client_method());
-  if (!ssl->ctx) {
-    _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-    free(ssl);
-    return NULL;
-  }
-  ssl->verify_mode = PN_SSL_VERIFY_PEER;
-  SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL );
+    // default: always verify the remote server
+    ssl->verify_mode = PN_SSL_VERIFY_PEER;
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL );
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-  SSL_CTX_set_verify_depth(ssl->ctx, 1);
+    SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
+    break;
 
-  ssl->mode = SSL_MODE_CLIENT;
+  case PN_SSL_MODE_SERVER:
+    _log( ssl, "Setting up Server SSL object.\n" );
+    ssl->ctx = SSL_CTX_new(SSLv23_server_method());
+    if (!ssl->ctx) {
+      _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
+      return -1;
+    }
+    // default: no client authentication
+    ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
+    ssl->mode = PN_SSL_MODE_SERVER;
+    break;
+  }
+  return 0;
+}
+
+pn_ssl_t *pn_ssl(pn_transport_t *transport)
+{
+  if (!transport) return NULL;
+  if (transport->ssl) return transport->ssl;
+
+  if (!ssl_initialized) {
+    ssl_initialized = 1;
+    SSL_library_init();
+    SSL_load_error_strings();
+  }
+
+  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
+  if (!ssl) return NULL;
 
   ssl->transport = transport;
   ssl->process_input = process_input_ssl;
@@ -418,9 +400,14 @@ pn_ssl_t *pn_ssl_client(pn_transport_t *transport)
 
   ssl->trace = PN_TRACE_OFF;
 
-  _log( ssl, "Setting up Client SSL connection.\n" );
+  // default mode is client
+  if (pn_ssl_init(ssl, PN_SSL_MODE_CLIENT)) {
+    free(ssl);
+    return NULL;
+  }
   return ssl;
 }
+
 
 void pn_ssl_free( pn_ssl_t *ssl)
 {
@@ -711,7 +698,7 @@ static int init_ssl_socket( pn_ssl_t *ssl )
   }
   SSL_set_bio(ssl->ssl, ssl->bio_ssl_io, ssl->bio_ssl_io);
 
-  if (ssl->mode == SSL_MODE_SERVER) {
+  if (ssl->mode == PN_SSL_MODE_SERVER) {
     SSL_set_accept_state(ssl->ssl);
     BIO_set_ssl_mode(ssl->bio_ssl, 0);  // server mode
     _log( ssl, "Server SSL socket created.\n" );

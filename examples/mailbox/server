@@ -138,8 +138,12 @@ class MailboxServer(object):
 
             # configure SSL
             if self.certificate_file:
-                ssl_server = pn_connector_ssl(cxtr)
+                transport = pn_connector_transport(cxtr);
+                assert(transport);
+                ssl_server = pn_ssl(transport)
                 assert(ssl_server)
+                rc = pn_ssl_init(ssl_server, PN_SSL_MODE_SERVER);
+                assert(rc == 0)
                 rc = pn_ssl_set_credentials(ssl_server,
                                             self.certificate_file,
                                             self.certificate_key_file,
