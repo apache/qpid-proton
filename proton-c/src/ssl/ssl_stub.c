@@ -86,4 +86,14 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
 {
 }
 
+ssize_t pn_ssl_input(pn_ssl_t *ssl, char *bytes, size_t available)
+{
+  return PN_EOS;
+}
+
+ssize_t pn_ssl_output(pn_ssl_t *ssl, char *buffer, size_t max_size)
+{
+  return PN_EOS;
+}
+
 
