@@ -36,11 +36,36 @@ class Options(object):
     def __init__(self):
         parser = OptionParser(usage="usage: %prog [options] <server-address>")
         parser.add_option("-v", "--verbose",
-                          action="store_false", dest="verbose", default=True,
+                          action="store_true", dest="verbose",
                           help="print status messages to stdout")
+        # SSL configuration
+        parser.add_option("--ssl-cert-file", type="str", metavar="<file>",
+                          help="PEM file containing identifying certificate.")
+        parser.add_option("--ssl-key-file", type="str", metavar="<file>",
+                          help="PEM file containing private key of certificate.")
+        parser.add_option("--ssl-key-pw", type="str", metavar='"password"',
+                          help="key file password (if key encrypted).")
+        parser.add_option("--require-encryption", action="store_true",
+                          help="Do not accept connections from clients that do not use encryption.")
+        parser.add_option("--ssl-cert-db", type="str", metavar="<dir>",
+                          help="database of trusted certificates. Used to authenticate clients.")
+
+        # For client authentication using SSL:
+        #parser.add_option("-c", "--ssl-require-client-authentication", action="store_true", help="force client to authenticate itself.")
+        #parser.add_option("-t", "--ssl-trusted-CA-file", type="str", metavar="<file>", help="file holding certificates of CAs to advertise")
 
         opts, self.server = parser.parse_args()   # uses sys.argv[1:]
         self.verbose = opts.verbose
+
+        if opts.ssl_cert_file:
+            if not opts.ssl_key_file:
+                print("Error: if --ssl-cert-file given, --ssl-key-file must be supplied!");
+                sys.exit(-1)
+        self.certificate_file = opts.ssl_cert_file
+        self.certificate_key_file = opts.ssl_key_file
+        self.key_file_password = opts.ssl_key_pw
+        self.require_encryption = opts.require_encryption
+        self.ca_database = opts.ssl_cert_db
 
         if self.server:
             addr = self.server[0].rsplit(":", 1)
@@ -55,14 +80,22 @@ class Options(object):
 
 
 class MailboxServer(object):
-    def __init__(self, host, port):
+    def __init__(self, host, port, require_encryption=False, certificate_file=None,
+                 certificate_key_file=None, key_file_password=None,
+                 ca_database=None):
         """ Initialize the server to wait on the given address for inbound
         connection requests.
         """
         self.host = host
         self.port = port
+        self.certificate_file = certificate_file
+        self.certificate_key_file = certificate_key_file
+        self.key_file_password = key_file_password
+        self.ca_database = ca_database
+        self.require_encryption = require_encryption
+
         self.mailboxes = {}
-        self.verbose = False
+        self.logging = False
         self.counter = 0
 
 
@@ -75,6 +108,13 @@ class MailboxServer(object):
         if self.listener is None:
             print("Error: could not listen on %s:%s" % (self.host, self.port))
             return False
+        # if self.certificate_file:
+        #     self.log("Setting SSL certificate %s" % self.certificate_file)
+        #     if not self.require_encryption:
+        #         self.log("Allowing both encrypted AND unencrypted connections!")
+        if self.certificate_file:
+            if not self.require_encryption:
+                self.log("Allowing both encrypted AND unencrypted connections!")
         return True
 
 
@@ -95,6 +135,30 @@ class MailboxServer(object):
             self.log("Accepting Connection.")
             cxtr = pn_listener_accept(l)
             pn_connector_set_context(cxtr, AUTHENTICATING)
+
+            # configure SSL
+            if self.certificate_file:
+                transport = pn_connector_transport(cxtr);
+                assert(transport);
+                ssl_server = pn_ssl(transport)
+                assert(ssl_server)
+                rc = pn_ssl_init(ssl_server, PN_SSL_MODE_SERVER);
+                assert(rc == 0)
+                rc = pn_ssl_set_credentials(ssl_server,
+                                            self.certificate_file,
+                                            self.certificate_key_file,
+                                            self.key_file_password)
+                assert(rc == 0)
+                if not self.require_encryption:
+                    rc = pn_ssl_allow_unsecured_client(ssl_server)
+                    assert(rc == 0)
+
+                # TODO: client authentication incomplete, for now skip peer verification
+                rc = pn_ssl_set_peer_authentication(ssl_server,
+                                                    PN_SSL_NO_VERIFY_PEER,
+                                                    None)
+                assert(rc == 0)
+
             l = pn_driver_listener(self.driver)
 
 
@@ -345,7 +409,12 @@ class MailboxServer(object):
 def main():
     options = Options()
 
-    server = MailboxServer(options.host, options.port)
+    server = MailboxServer(options.host, options.port,
+                           options.require_encryption,
+                           options.certificate_file,
+                           options.certificate_key_file,
+                           options.key_file_password,
+                           options.ca_database)
     if (options.verbose):
         server.enableLogging()
 

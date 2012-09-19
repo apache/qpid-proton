@@ -39,3 +39,31 @@ To run the example:
     use the --help option for additional details.
 
     Once you are done running the example, you may stop the server application.
+
+
+Optional - using SSL to encrypt the data connections between the server and the clients:
+
+    The Proton driver library has support for SSL/TLS [1].  The mailbox example can be
+    configured to use SSL to encypt the connections between the server and the post/fetch
+    clients.
+
+    Use the ssl-setup.sh script to create the trusted certificates database, and an
+    identifying certificate for the server [2].
+
+    Once ssl-setup.sh has created all the necessary certificates, you supply the server
+    with these parameters:
+
+    $ server --ssl-cert-file ./server-certificate.pem --ssl-key-file ./server-private-key.pem --require-encryption --ssl-cert-db ./trusted_db --ssl-key-pw "trustno1"
+
+    And give the fetch/post clients the path to the database containing the trusted
+    certificates:
+
+    $ post -m myMailbox --ssl-cert-db ./trusted_db "Here is a message"
+    $ fetch --ssl-cert-db ./trusted_db  myMailbox
+
+
+[1] At the time of this writing SSL/TLS is implemented using OpenSSL, and is only
+available on those platforms that support the OpenSSL libraries.
+
+[2] Running ssl-setup.sh will require you have the "openssl" and "c_rehash" tools
+installed and available on your $PATH.  See http://www.openssl.org.

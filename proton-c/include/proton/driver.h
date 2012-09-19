@@ -25,6 +25,7 @@
 #include <proton/error.h>
 #include <proton/engine.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -197,6 +198,8 @@ void pn_listener_close(pn_listener_t *listener);
 void pn_listener_free(pn_listener_t *listener);
 
 
+
+
 /** pn_connector - the client API **/
 
 /** Construct a connector to the given remote address.
@@ -265,7 +268,7 @@ pn_listener_t *pn_connector_listener(pn_connector_t *connector);
 
 /** Access the Authentication and Security context of the connector.
  *
- * @param[in] connector connector whose securty context will be
+ * @param[in] connector connector whose security context will be
  *                      returned
  * @return the Authentication and Security context for the connector,
  *         or NULL if none
@@ -306,6 +309,13 @@ void *pn_connector_context(pn_connector_t *connector);
  */
 void pn_connector_set_context(pn_connector_t *connector, void *context);
 
+/** Access the transport used by this connector.
+ *
+ * @param[in] connector connector whose transport will be returned
+ * @return the transport, or NULL if none
+ */
+pn_transport_t *pn_connector_transport(pn_connector_t *connector);
+
 /** Close the socket used by the connector.
  *
  * @param[in] connector the connector whose socket will be closed
@@ -326,6 +336,7 @@ bool pn_connector_closed(pn_connector_t *connector);
  *                      valid on return
  */
 void pn_connector_free(pn_connector_t *connector);
+
 
 #ifdef __cplusplus
 }

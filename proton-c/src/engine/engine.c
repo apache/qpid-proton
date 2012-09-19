@@ -30,6 +30,7 @@
 #include <stdio.h>
 
 #include "../sasl/sasl-internal.h"
+#include "../ssl/ssl-internal.h"
 
 // delivery buffers
 
@@ -229,6 +230,7 @@ void pn_transport_free(pn_transport_t *transport)
 {
   if (!transport) return;
 
+  pn_ssl_free(transport->ssl);
   pn_sasl_free(transport->sasl);
   pn_dispatcher_free(transport->disp);
   for (int i = 0; i < transport->session_capacity; i++) {
@@ -702,6 +704,7 @@ void pn_transport_init(pn_transport_t *transport)
   transport->process_output = pn_output_write_amqp_header;
   transport->header_count = 0;
   transport->sasl = NULL;
+  transport->ssl = NULL;
   transport->disp = pn_dispatcher(0, transport);
 
   pn_dispatcher_action(transport->disp, OPEN, "OPEN", pn_do_open);
@@ -1463,8 +1466,13 @@ ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available)
 
   size_t consumed = 0;
 
+  const bool use_ssl = transport->ssl != NULL;
   while (true) {
-    ssize_t n = transport->process_input(transport, bytes + consumed, available - consumed);
+    ssize_t n;
+    if (use_ssl)
+      n = pn_ssl_input( transport->ssl, bytes + consumed, available - consumed);
+    else
+      n = transport->process_input(transport, bytes + consumed, available - consumed);
     if (n > 0) {
       consumed += n;
       if (consumed >= available) {
@@ -2025,8 +2033,14 @@ ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
 
   size_t total = 0;
 
+  const bool use_ssl = transport->ssl != NULL;
+
   while (size - total > 0) {
-    ssize_t n = transport->process_output(transport, bytes + total, size - total);
+    ssize_t n;
+    if (use_ssl)
+      n = pn_ssl_output( transport->ssl, bytes + total, size - total);
+    else
+      n = transport->process_output(transport, bytes + total, size - total);
     if (n > 0) {
       total += n;
     } else if (n == 0) {
@@ -2053,6 +2067,7 @@ ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size)
 void pn_trace(pn_transport_t *transport, pn_trace_t trace)
 {
   if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
+  if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
   transport->disp->trace = trace;
 }
 

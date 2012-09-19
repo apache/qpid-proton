@@ -33,8 +33,9 @@
 #include <proton/driver.h>
 #include <proton/error.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 #include "util.h"
-
+#include "ssl/ssl-internal.h"
 
 /* Decls */
 
@@ -389,6 +390,11 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
 {
   return ctor ? ctor->sasl : NULL;
+}
+
+pn_transport_t *pn_connector_transport(pn_connector_t *ctor)
+{
+  return ctor ? ctor->transport : NULL;
 }
 
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)

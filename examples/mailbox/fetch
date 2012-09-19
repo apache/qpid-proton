@@ -35,12 +35,23 @@ class Options(object):
         parser.add_option("-v", "--verbose", action="store_true",
                           help="Turn on extra trace messages.")
 
+        # SSL configuration
+        parser.add_option("--ssl-cert-db", type="str", metavar="<dir>",
+                          help="database of trusted certificates. Enables use of SSL.")
+
+        # if server wants authentication:
+        #parser.add_option("--ssl-cert-file")
+        #parser.add_option("--ssl-key-file")
+        #parser.add_option("--ssl-key-pw")
+
         opts, mailboxes = parser.parse_args()   # uses sys.argv[1:]
 
         self.mailbox = None
         if len(mailboxes) == 1:
             self.mailbox = str(mailboxes[0])
         self.server = opts.server
+        self.ca_database = opts.ssl_cert_db
+
         addr = opts.server.rsplit(":", 1)
         self.host = addr[0]
         if len(addr) == 2:
@@ -52,7 +63,7 @@ class Options(object):
 
 
 class FetchClient(object):
-    def __init__(self, host, port, mailbox):
+    def __init__(self, host, port, mailbox, ca_database=None):
         """ Initialize the client by supplying the address of the server, and
         the name of the mailbox to fetch from.
         """
@@ -60,6 +71,8 @@ class FetchClient(object):
         self.port = port
         self.mailbox = mailbox
         self.logging = False
+        self.ca_database = ca_database
+        self.ssl_client = None
 
     def setup(self):
         """ Setup and configure the connection to the server.
@@ -69,6 +82,20 @@ class FetchClient(object):
         self.log("Connecting to server host = %s:%s" % (self.host, self.port))
         self.driver = pn_driver();
         self.cxtr = pn_connector(self.driver, self.host, self.port, None)
+
+        # Enable SSL if database of trusted CAs given
+        if self.ca_database:
+            self.log("Using SSL, CA database = %s" % self.ca_database)
+
+            transport = pn_connector_transport(self.cxtr);
+            assert(transport);
+            ssl_client = pn_ssl(transport)
+            assert(ssl_client)
+            rc = pn_ssl_set_trusted_ca_db(ssl_client, self.ca_database)
+            assert(rc == 0)
+            # we want to fail if the server's certificate is invalid:
+            rc = pn_ssl_set_peer_authentication(ssl_client, PN_SSL_VERIFY_PEER, None)
+            assert(rc == 0)
 
         # configure SASL
         self.sasl = pn_connector_sasl(self.cxtr)
@@ -89,6 +116,25 @@ class FetchClient(object):
         pn_connection_open(self.conn)
         pn_session_open(self.ssn)
         pn_link_open(self.link)
+
+
+    def teardown(self):
+        """ Perform a clean disconnect from the server, and release the
+        resources created in setup()
+        """
+        self.log("Shutting down the connection cleanly...")
+        pn_connection_close(self.conn)
+
+        # now wait for the connector to close
+        while not (pn_connector_closed(self.cxtr)):
+            self.wait()
+
+        #pn_sasl_free(self.sasl);
+        pn_link_free(self.link);
+        pn_session_free(self.ssn);
+        pn_connection_free(self.conn);
+        pn_connector_free(self.cxtr);
+        self.log("...Shutdown complete!")
 
 
     def wait(self):
@@ -123,6 +169,10 @@ class FetchClient(object):
             d = _next
 
 
+    def closed(self):
+        return self.cxtr == None or pn_connector_closed(self.cxtr)
+
+
     def enableLogging(self):
         self.logging = True
 
@@ -146,7 +196,8 @@ def main():
 
     receiver = FetchClient(options.host,
                            options.port,
-                           options.mailbox)
+                           options.mailbox,
+                           options.ca_database)
     if options.verbose:
         receiver.enableLogging()
 
@@ -155,6 +206,9 @@ def main():
     # wait until we authenticate with the server
     while pn_sasl_state(receiver.sasl) not in (PN_SASL_PASS, PN_SASL_FAIL):
         receiver.wait()
+        if receiver.closed():
+            receiver.log("connection failed")
+            return -1;
 
     if pn_sasl_state(receiver.sasl) == PN_SASL_FAIL:
         print("Error: Authentication failure")
@@ -163,6 +217,9 @@ def main():
     # wait until the server has opened the connection
     while not (pn_link_state(receiver.link) & PN_REMOTE_ACTIVE):
         receiver.wait()
+        if receiver.closed():
+            receiver.log("connection failed")
+            return -1;
 
     # check if the server recognizes the mailbox, fail if it does not
     if pn_remote_source(receiver.link) != options.mailbox:
@@ -176,7 +233,7 @@ def main():
     # main loop: continue fetching messages until 'count' messages have been
     # retrieved
 
-    while pn_credit(receiver.link) > 0:    # while all msgs have not arrived
+    while pn_credit(receiver.link) > 0 and not receiver.closed():    # while all msgs have not arrived
         if pn_queued(receiver.link) == 0:  # wait for some to arrive
             receiver.wait()
 
@@ -198,14 +255,13 @@ def main():
         receiver.settle()
 
     # block until any leftover deliveries are settled
-    while pn_unsettled(receiver.link) > 0:
+    while pn_unsettled(receiver.link) > 0 and not receiver.closed():
         receiver.wait()
         receiver.settle()
 
-    # we're done, close and wait for the remote to close also
-    pn_connection_close(receiver.conn)
-    while not (pn_connection_state(receiver.conn) & PN_REMOTE_CLOSED):
-        receiver.wait()
+    # we're done, now clean up the connection:
+    receiver.teardown()
+
     return 0
 
 

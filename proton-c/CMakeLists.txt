@@ -5,6 +5,16 @@ project (Proton C)
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
 
+include(CheckIncludeFile)
+CHECK_INCLUDE_FILE(openssl/ssl.h HAVE_OPENSSL_H)
+
+# Set the default SSL/TLS implementation
+set(ssl_impl, NONE)
+if (HAVE_OPENSSL_H)
+   set(ssl_impl openssl)
+endif(HAVE_OPENSSL_H)
+set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
+
 configure_file (
   "${PROJECT_SOURCE_DIR}/pn_config.h.in"
   "${PROJECT_BINARY_DIR}/pn_config.h"
@@ -25,6 +35,14 @@ add_custom_command (
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
 
+# Link in openssl if present
+if (SSL_IMPL STREQUAL openssl)
+  set (pn_driver_ssl_impl src/ssl/openssl.c)
+  set (SSL_LIB ssl crypto)
+else (SSL_IMPL STREQUAL openssl)
+  set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
+endif (SSL_IMPL STREQUAL openssl)
+
 find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
@@ -38,6 +56,7 @@ set (UUID_LIB uuid)
 
 set (qpid-proton-platform
   src/driver.c
+  ${pn_driver_ssl_impl}
 )
 
 add_library (
@@ -66,7 +85,7 @@ add_library (
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
 )
-target_link_libraries (qpid-proton ${UUID_LIB})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB})
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpid-proton)
