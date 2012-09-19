@@ -579,7 +579,8 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
       memmove( ssl->inbuf, data, ssl->in_count );
   }
 
-  if (consumed == 0 && ssl->ssl_closed && BIO_pending(ssl->bio_net_io) == 0) {
+  //if (consumed == 0 && ssl->ssl_closed) {
+  if (ssl->ssl_closed) {
     consumed = ssl->app_closed;
   }
 
