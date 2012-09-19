@@ -734,7 +734,7 @@ static ssize_t process_input_cleartext(pn_transport_t *transport, char *input_da
 static ssize_t process_output_cleartext(pn_transport_t *transport, char *buffer, size_t max_len)
 {
   // just read directly from the layer "above" SSL
-  return transport->process_input( transport, buffer, max_len );
+  return transport->process_output( transport, buffer, max_len );
 }
 
 
