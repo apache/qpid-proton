@@ -587,11 +587,36 @@ void pn_driver_wakeup(pn_driver_t *d)
 }
 
 
+//
+// XXX - pn_driver_wait has been divided into three internal functions as a
+//       temporary workaround for a multi-threading problem.  A multi-threaded
+//       application must hold a lock on parts 1 and 3, but not on part 2.
+//       This temporary change, which is not reflected in the driver's API, allows
+//       a multi-threaded application to use the three parts separately.
+//
+//       This workaround will eventually be replaced by a more elegant solution
+//       to the problem.
+//
+void pn_driver_wait_1(pn_driver_t *d)
+{
+  pn_driver_poller_wait_1(d);
+}
+
+void pn_driver_wait_2(pn_driver_t *d, int timeout)
+{
+  pn_driver_poller_wait_2(d, timeout);
+}
+
+void pn_driver_wait_3(pn_driver_t *d)
+{
+  pn_driver_poller_wait_3(d);
+}
+
 void pn_driver_wait(pn_driver_t *d, int timeout)
 {
-  pn_driver_poller_wait(d, timeout);
-  d->listener_next = d->listener_head;
-  d->connector_next = d->connector_head;
+  pn_driver_wait_1(d);
+  pn_driver_wait_2(d, timeout);
+  pn_driver_wait_3(d);
 }
 
 pn_listener_t *pn_driver_listener(pn_driver_t *d) {

@@ -78,7 +78,7 @@ void pn_connector_poller_destroy( struct pn_connector_t *c )
 {
 }
 
-
+#if 0 // save it for now
 void pn_driver_poller_wait(pn_driver_t *d, int timeout)
 {
   pn_driver_poller_t *poller = d->poller;
@@ -146,4 +146,84 @@ void pn_driver_poller_wait(pn_driver_t *d, int timeout)
           c = c->connector_next;
       }
   }
+}
+#endif
+
+void pn_driver_poller_wait_1(pn_driver_t *d)
+{
+  pn_driver_poller_t *poller = d->poller;
+
+  // setup the select
+  FD_ZERO(&poller->readfds);
+  FD_ZERO(&poller->writefds);
+
+  FD_SET(d->ctrl[0], &poller->readfds);
+  poller->max_fds = d->ctrl[0];
+
+  pn_listener_t *l = d->listener_head;
+  for (int i = 0; i < d->listener_count; i++) {
+      FD_SET(l->fd, &poller->readfds);
+      if (l->fd > poller->max_fds) poller->max_fds = l->fd;
+      l = l->listener_next;
+  }
+
+  pn_connector_t *c = d->connector_head;
+  for (int i = 0; i < d->connector_count; i++) {
+      if (!c->closed && (c->status & (PN_SEL_RD|PN_SEL_WR))) {
+          if (c->status & PN_SEL_RD)
+              FD_SET(c->fd, &poller->readfds);
+          if (c->status & PN_SEL_WR)
+              FD_SET(c->fd, &poller->writefds);
+          if (c->fd > poller->max_fds) poller->max_fds = c->fd;
+      }
+      c = c->connector_next;
+  }
+}
+
+void pn_driver_poller_wait_2(pn_driver_t *d, int timeout)
+{
+  pn_driver_poller_t *poller = d->poller;
+
+  struct timeval to = {0};
+  if (timeout > 0) {
+      // convert millisecs to sec and usec:
+      to.tv_sec = timeout/1000;
+      to.tv_usec = (timeout - (to.tv_sec * 1000)) * 1000;
+  }
+
+  int nfds = select(poller->max_fds + 1, &poller->readfds, &poller->writefds, NULL, timeout < 0 ? NULL : &to);
+  DIE_IFE(nfds);
+}
+
+void pn_driver_poller_wait_3(pn_driver_t *d)
+{
+  pn_driver_poller_t *poller = d->poller;
+
+  if (FD_ISSET(d->ctrl[0], &poller->readfds)) {
+    //clear the pipe
+    char buffer[512];
+    while (read(d->ctrl[0], buffer, 512) == 512);
+  }
+
+  pn_listener_t *l = d->listener_head;
+  while (l) {
+    l->pending = FD_ISSET(l->fd, &poller->readfds);
+    l = l->listener_next;
+  }
+
+  pn_connector_t *c = d->connector_head;
+  while (c) {
+    if (c->closed) {
+      c->pending_read = false;
+      c->pending_write = false;
+      c->pending_tick = false;
+    } else {
+      c->pending_read = FD_ISSET(c->fd, &poller->readfds);
+      c->pending_write = FD_ISSET(c->fd, &poller->writefds);
+    }
+    c = c->connector_next;
+  }
+
+  d->listener_next = d->listener_head;
+  d->connector_next = d->connector_head;
 }

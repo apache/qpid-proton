@@ -96,7 +96,7 @@ void pn_connector_poller_destroy( struct pn_connector_t *c )
     c->poller = NULL;
 }
 
-
+#if 0   // save for now
 void pn_driver_poller_wait(pn_driver_t *d, int timeout)
 {
   pn_driver_poller_t *poller = d->poller;
@@ -165,4 +165,103 @@ void pn_driver_poller_wait(pn_driver_t *d, int timeout)
     }
     c = c->connector_next;
   }
+}
+#endif
+
+//
+// XXX - pn_driver_wait has been divided into three internal functions as a
+//       temporary workaround for a multi-threading problem.  A multi-threaded
+//       application must hold a lock on parts 1 and 3, but not on part 2.
+//       This temporary change, which is not reflected in the driver's API, allows
+//       a multi-threaded application to use the three parts separately.
+//
+//       This workaround will eventually be replaced by a more elegant solution
+//       to the problem.
+//
+
+static void pn_driver_poller_rebuild(pn_driver_t *d)
+{
+  pn_driver_poller_t *poller = d->poller;
+  size_t size = d->listener_count + d->connector_count;
+  while (poller->capacity < size + 1) {
+    poller->capacity = poller->capacity ? 2*poller->capacity : 16;
+    poller->fds = realloc(poller->fds, poller->capacity*sizeof(struct pollfd));
+  }
+
+  poller->nfds = 0;
+
+  poller->fds[poller->nfds].fd = d->ctrl[0];
+  poller->fds[poller->nfds].events = POLLIN;
+  poller->fds[poller->nfds].revents = 0;
+  poller->nfds++;
+
+  pn_listener_t *l = d->listener_head;
+  for (int i = 0; i < d->listener_count; i++) {
+    poller->fds[poller->nfds].fd = l->fd;
+    poller->fds[poller->nfds].events = POLLIN;
+    poller->fds[poller->nfds].revents = 0;
+    l->poller->idx = poller->nfds;
+    poller->nfds++;
+    l = l->listener_next;
+  }
+
+  pn_connector_t *c = d->connector_head;
+  for (int i = 0; i < d->connector_count; i++)
+  {
+    if (!c->closed) {
+      poller->fds[poller->nfds].fd = c->fd;
+      poller->fds[poller->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
+        (c->status & PN_SEL_WR ? POLLOUT : 0);
+      poller->fds[poller->nfds].revents = 0;
+      c->poller->idx = poller->nfds;
+      poller->nfds++;
+    }
+    c = c->connector_next;
+  }
+}
+
+void pn_driver_poller_wait_1(pn_driver_t *d)
+{
+  pn_driver_poller_rebuild(d);
+}
+
+void pn_driver_poller_wait_2(pn_driver_t *d, int timeout)
+{
+  pn_driver_poller_t *poller = d->poller;
+  DIE_IFE(poll(poller->fds, poller->nfds, d->closed_count > 0 ? 0 : timeout));
+}
+
+void pn_driver_poller_wait_3(pn_driver_t *d)
+{
+  pn_driver_poller_t *poller = d->poller;
+
+  if (poller->fds[0].revents & POLLIN) {
+    //clear the pipe
+    char buffer[512];
+    while (read(d->ctrl[0], buffer, 512) == 512);
+  }
+
+  pn_listener_t *l = d->listener_head;
+  while (l) {
+    int idx = l->poller->idx;
+    l->pending = (idx && poller->fds[idx].revents & POLLIN);
+    l = l->listener_next;
+  }
+
+  pn_connector_t *c = d->connector_head;
+  while (c) {
+    if (c->closed) {
+      c->pending_read = false;
+      c->pending_write = false;
+      c->pending_tick = false;
+    } else {
+      int idx = c->poller->idx;
+      c->pending_read = (idx && poller->fds[idx].revents & POLLIN);
+      c->pending_write = (idx && poller->fds[idx].revents & POLLOUT);
+    }
+    c = c->connector_next;
+  }
+
+  d->listener_next = d->listener_head;
+  d->connector_next = d->connector_head;
 }

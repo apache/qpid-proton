@@ -138,6 +138,7 @@ struct pn_session_t {
   size_t link_capacity;
   size_t link_count;
   size_t id;
+  void *context;
 };
 
 struct pn_link_t {
@@ -159,6 +160,7 @@ struct pn_link_t {
   bool drain;
   bool drained; // sender only
   size_t id;
+  void *context;
 };
 
 struct pn_delivery_t {
@@ -182,6 +184,7 @@ struct pn_delivery_t {
   bool tpwork;
   pn_buffer_t *bytes;
   bool done;
+  void *transport_context;
   void *context;
 };
 

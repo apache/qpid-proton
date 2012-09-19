@@ -103,7 +103,10 @@ struct pn_connector_t {
 
 int pn_connector_poller_init( struct pn_connector_t *);
 void pn_connector_poller_destroy( struct pn_connector_t *);
-void pn_driver_poller_wait(struct pn_driver_t *, int timeout_ms);
+//void pn_driver_poller_wait(struct pn_driver_t *, int timeout_ms);
+void pn_driver_poller_wait_1(pn_driver_t *);
+void pn_driver_poller_wait_2(pn_driver_t *, int);
+void pn_driver_poller_wait_3(pn_driver_t *);
 int pn_io_handler(pn_connector_t *);
 int pn_null_io_handler(pn_connector_t *);
 void pn_connector_process_output(pn_connector_t *);
