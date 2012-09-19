@@ -428,9 +428,11 @@ void pn_ssl_free( pn_ssl_t *ssl)
   if (!ssl) return;
   _log( ssl, "SSL socket freed.\n" );
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
-  if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
-  if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
   if (ssl->ssl) SSL_free(ssl->ssl);
+  else {
+    if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
+    if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
+  }
   if (ssl->ctx) SSL_CTX_free(ssl->ctx);
 
   if (ssl->keyfile_pw) free(ssl->keyfile_pw);
