@@ -48,7 +48,7 @@ Optional - using SSL to encrypt the data connections between the server and the 
     clients.
 
     Use the ssl-setup.sh script to create the trusted certificates database, and an
-    identifying certificate for the server.
+    identifying certificate for the server [2].
 
     Once ssl-setup.sh has created all the necessary certificates, you supply the server
     with these parameters:
@@ -64,3 +64,6 @@ Optional - using SSL to encrypt the data connections between the server and the 
 
 [1] At the time of this writing SSL/TLS is implemented using OpenSSL, and is only
 available on those platforms that support the OpenSSL libraries.
+
+[2] Running ssl-setup.sh will require you have the "openssl" and "c_rehash" tools
+installed and available on your $PATH.  See http://www.openssl.org.
