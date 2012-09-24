@@ -39,10 +39,12 @@ def pump(t1, t2):
     if out1 or out2:
       if out1:
         cd = pn_input(t2, out1)
-        assert cd == PN_EOS or cd == len(out1), (cd, out1, len(out1))
+        assert cd == PN_EOS or cd == len(out1), \
+            (cd, out1, len(out1), pn_error_text(pn_transport_error(t2)))
       if out2:
         cd = pn_input(t1, out2)
-        assert cd == PN_EOS or cd == len(out2), (cd, out2, len(out2))
+        assert cd == PN_EOS or cd == len(out2), \
+            (cd, out2, len(out2), pn_error_text(pn_transport_error(t1)))
     else:
       return
 

@@ -136,7 +136,7 @@ char *pn_strndup(const char *src, size_t n)
 {
   if (src) {
     int size = 0;
-    for (const char *c = src; *c && size < n; c++) {
+    for (const char *c = src; size < n && *c; c++) {
       size++;
     }
 

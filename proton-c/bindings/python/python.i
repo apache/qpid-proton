@@ -38,6 +38,14 @@ typedef int int32_t;
   $result = PyString_FromStringAndSize($1.start, $1.size);
 }
 
+%typemap(in, numinputs=0) pn_bytes_t * (pn_bytes_t temp) {
+  $1 = &temp;
+}
+
+%typemap(argout) pn_bytes_t * {
+  $result = Py_BuildValue("NN", $result, PyString_FromStringAndSize(temp$argnum.start, temp$argnum.size));
+}
+
 int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
 %ignore pn_message_load;
 
@@ -213,5 +221,23 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
   }
 %}
 %ignore pn_connector_free;
+
+ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
+%ignore pn_data_decode;
+
+%rename(pn_data_encode) wrap_pn_data_encode;
+%inline %{
+  int wrap_pn_data_encode(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_data_encode(data, OUTPUT, *OUTPUT_SIZE);
+    if (sz >= 0) {
+      *OUTPUT_SIZE = sz;
+    } else {
+      *OUTPUT_SIZE = 0;
+    }
+    return sz;
+  }
+%}
+%ignore pn_data_encode;
+
 
 %include "proton/cproton.i"

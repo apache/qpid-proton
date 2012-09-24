@@ -19,7 +19,7 @@ EXCEPTIONS = {
 class Messenger(object):
 
   def __init__(self, name=None):
-    self._mng = pn_messenger(name);
+    self._mng = pn_messenger(name)
 
   def __del__(self):
     if hasattr(self, "_mng"):
@@ -268,5 +268,233 @@ class Message(object):
         self._check(err)
         return data
 
+class DataException(ProtonException):
+  pass
+
+class Data:
+
+  NULL = PN_NULL
+  BOOL = PN_BOOL
+  UBYTE = PN_UBYTE
+  BYTE = PN_BYTE
+  USHORT = PN_USHORT
+  SHORT = PN_SHORT
+  UINT = PN_UINT
+  INT = PN_INT
+  ULONG = PN_ULONG
+  LONG = PN_LONG
+  FLOAT = PN_FLOAT
+  DOUBLE = PN_DOUBLE
+  BINARY = PN_BINARY
+  STRING = PN_STRING
+  SYMBOL = PN_SYMBOL
+  DESCRIBED = PN_DESCRIPTOR
+  ARRAY = PN_ARRAY
+  LIST = PN_LIST
+  MAP = PN_MAP
+
+  def __init__(self, capacity=16):
+    self._data = pn_data(capacity)
+
+  def __del__(self):
+    if hasattr(self, "_data"):
+      pn_data_free(self._data)
+      del self._data
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, DataException)
+      raise exc("[%s]: %s" % (err, "xxx"))
+    else:
+      return err
+
+  def rewind(self):
+    pn_data_rewind(self._data)
+
+  def next(self):
+    found, dtype = pn_data_next(self._data)
+    if found:
+      return dtype
+    else:
+      return None
+
+  def prev(self):
+    found, dtype = pn_data_prev(self._data)
+    if found:
+      return dtype
+    else:
+      return None
+
+  def enter(self):
+    return pn_data_enter(self._data)
+
+  def exit(self):
+    return pn_data_exit(self._data)
+
+  def encode(self):
+    size = 1024
+    while True:
+      cd, enc = pn_data_encode(self._data, size)
+      if cd == PN_OVERFLOW:
+        size *= 2
+      elif cd >= 0:
+        return enc
+      else:
+        self._check(cd)
+
+  def decode(self, encoded):
+    return self._check(pn_data_decode(self._data, encoded))
+
+  def put_list(self):
+    self._check(pn_data_put_list(self._data))
+
+  def put_map(self):
+    self._check(pn_data_put_map(self._data))
+
+  def put_array(self, described, etype):
+    self._check(pn_data_put_array(self._data, described, etype))
+
+  def put_described(self):
+    self._check(pn_data_put_described(self._data))
+
+  def put_null(self):
+    self._check(pn_data_put_null(self._data))
+
+  def put_bool(self, b):
+    self._check(pn_data_put_bool(self._data, b))
+
+  def put_ubyte(self, ub):
+    self._check(pn_data_put_ubyte(self._data, ub))
+
+  def put_byte(self, b):
+    self._check(pn_data_put_byte(self._data, b))
+
+  def put_ushort(self, us):
+    self._check(pn_data_put_ushort(self._data, us))
+
+  def put_short(self, s):
+    self._check(pn_data_put_short(self._data, s))
+
+  def put_uint(self, ui):
+    self._check(pn_data_put_uint(self._data, ui))
+
+  def put_int(self, i):
+    self._check(pn_data_put_int(self._data, i))
+
+  def put_ulong(self, ul):
+    self._check(pn_data_put_ulong(self._data, ul))
+
+  def put_long(self, l):
+    self._check(pn_data_put_long(self._data, l))
+
+  def put_float(self, f):
+    self._check(pn_data_put_float(self._data, f))
+
+  def put_double(self, d):
+    self._check(pn_data_put_double(self._data, d))
+
+  def put_binary(self, b):
+    self._check(pn_data_put_binary(self._data, b))
+
+  def put_string(self, s):
+    self._check(pn_data_put_string(self._data, s))
+
+  def put_symbol(self, s):
+    self._check(pn_data_put_symbol(self._data, s))
+
+  def get_list(self):
+    err, count = pn_data_get_list(self._data)
+    self._check(err)
+    return count
+
+  def get_map(self):
+    err, count = pn_data_get_map(self._data)
+    self._check(err)
+    return count
+
+  def get_array(self):
+    err, count, described, type = pn_data_get_array(self._data)
+    self._check(err)
+    return count, described, type
+
+  def get_described(self):
+    self._check(pn_data_get_described(self._data))
+
+  def get_null(self):
+    self._check(pn_data_get_null(self._data))
+
+  def get_bool(self):
+    err, b = pn_data_get_bool(self._data)
+    self._check(err)
+    return b
+
+  def get_ubyte(self):
+    err, value = pn_data_get_ubyte(self._data)
+    self._check(err)
+    return value
+
+  def get_byte(self):
+    err, value = pn_data_get_byte(self._data)
+    self._check(err)
+    return value
+
+  def get_ushort(self):
+    err, value = pn_data_get_ushort(self._data)
+    self._check(err)
+    return value
+
+  def get_short(self):
+    err, value = pn_data_get_short(self._data)
+    self._check(err)
+    return value
+
+  def get_uint(self):
+    err, value = pn_data_get_uint(self._data)
+    self._check(err)
+    return value
+
+  def get_int(self):
+    err, value = pn_data_get_int(self._data)
+    self._check(err)
+    return value
+
+  def get_ulong(self):
+    err, value = pn_data_get_ulong(self._data)
+    self._check(err)
+    return value
+
+  def get_long(self):
+    err, value = pn_data_get_long(self._data)
+    self._check(err)
+    return value
+
+  def get_float(self):
+    err, value = pn_data_get_float(self._data)
+    self._check(err)
+    return value
+
+  def get_double(self):
+    err, value = pn_data_get_double(self._data)
+    self._check(err)
+    return value
+
+  def get_binary(self):
+    err, value = pn_data_get_binary(self._data)
+    self._check(err)
+    return value
+
+  def get_string(self):
+    err, value = pn_data_get_string(self._data)
+    self._check(err)
+    return value
+
+  def get_symbol(self):
+    err, value = pn_data_get_symbol(self._data)
+    self._check(err)
+    return value
+
+  def dump(self):
+    pn_data_dump(self._data)
+
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout"]
+           "MessageException", "Timeout", "Data"]

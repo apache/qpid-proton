@@ -95,44 +95,43 @@ pn_token_t pn_parser_token(pn_parser_t *parser)
   return pn_scanner_token(parser->scanner);
 }
 
-int pn_parser_value(pn_parser_t *parser, pn_atoms_t *atoms);
+int pn_parser_value(pn_parser_t *parser, pn_data_t *data);
 
-int pn_parser_descriptor(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_descriptor(pn_parser_t *parser, pn_data_t *data)
 {
   if (pn_parser_token(parser).type == PN_TOK_AT) {
     int err = pn_parser_shift(parser);
     if (err) return err;
 
-    pn_atom_t *desc = atoms->start;
-    err = pn_ifill_atoms(atoms, "n");
-    if (err) return pn_parser_err(parser, err,
-                                  "error writing descriptor atoms");
-    desc->type = PN_DESCRIPTOR;
-    err = pn_parser_value(parser, atoms);
-    if (err) return err;
-    return pn_parser_value(parser, atoms);
+    err = pn_data_put_described(data);
+    if (err) return pn_parser_err(parser, err, "error writing described");
+    pn_data_enter(data);
+    for (int i = 0; i < 2; i++) {
+      err = pn_parser_value(parser, data);
+      if (err) return err;
+    }
+    pn_data_exit(data);
+    return 0;
   } else {
     return pn_parser_err(parser, PN_ERR, "expecting '@'");
   }
 }
 
-int pn_parser_map(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_map(pn_parser_t *parser, pn_data_t *data)
 {
   if (pn_parser_token(parser).type == PN_TOK_LBRACE) {
     int err = pn_parser_shift(parser);
     if (err) return err;
 
-    pn_atom_t *map = atoms->start;
-    err = pn_ifill_atoms(atoms, "{}");
-    if (err) return pn_parser_err(parser, err, "error writing map atoms");
+    err = pn_data_put_map(data);
+    if (err) return pn_parser_err(parser, err, "error writing map");
 
-    int count = 0;
+    pn_data_enter(data);
 
     if (pn_parser_token(parser).type != PN_TOK_RBRACE) {
       while (true) {
-        err = pn_parser_value(parser, atoms);
+        err = pn_parser_value(parser, data);
         if (err) return err;
-        count++;
 
         if (pn_parser_token(parser).type == PN_TOK_EQUAL) {
           err = pn_parser_shift(parser);
@@ -141,9 +140,8 @@ int pn_parser_map(pn_parser_t *parser, pn_atoms_t *atoms)
           return pn_parser_err(parser, PN_ERR, "expecting '='");
         }
 
-        err = pn_parser_value(parser, atoms);
+        err = pn_parser_value(parser, data);
         if (err) return err;
-        count++;
 
         if (pn_parser_token(parser).type == PN_TOK_COMMA) {
           err = pn_parser_shift(parser);
@@ -154,7 +152,7 @@ int pn_parser_map(pn_parser_t *parser, pn_atoms_t *atoms)
       }
     }
 
-    map->u.count = count;
+    pn_data_exit(data);
 
     if (pn_parser_token(parser).type == PN_TOK_RBRACE) {
       return pn_parser_shift(parser);
@@ -166,7 +164,7 @@ int pn_parser_map(pn_parser_t *parser, pn_atoms_t *atoms)
   }
 }
 
-int pn_parser_list(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_list(pn_parser_t *parser, pn_data_t *data)
 {
   int err;
 
@@ -174,17 +172,15 @@ int pn_parser_list(pn_parser_t *parser, pn_atoms_t *atoms)
     err = pn_parser_shift(parser);
     if (err) return err;
 
-    pn_atom_t *list = atoms->start;
-    int err = pn_ifill_atoms(atoms, "[]");
-    if (err) return pn_parser_err(parser, err, "error writing list atoms");
+    err = pn_data_put_list(data);
+    if (err) return pn_parser_err(parser, err, "error writing list");
 
-    int count = 0;
+    pn_data_enter(data);
 
     if (pn_parser_token(parser).type != PN_TOK_RBRACKET) {
       while (true) {
-        err = pn_parser_value(parser, atoms);
+        err = pn_parser_value(parser, data);
         if (err) return err;
-        count++;
 
         if (pn_parser_token(parser).type == PN_TOK_COMMA) {
           err = pn_parser_shift(parser);
@@ -195,7 +191,7 @@ int pn_parser_list(pn_parser_t *parser, pn_atoms_t *atoms)
       }
     }
 
-    list->u.count = count;
+    pn_data_exit(data);
 
     if (pn_parser_token(parser).type == PN_TOK_RBRACKET) {
       return pn_parser_shift(parser);
@@ -213,7 +209,7 @@ void pn_parser_append_tok(pn_parser_t *parser, char *dst, int *idx)
   *idx += pn_parser_token(parser).size;
 }
 
-int pn_parser_number(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_number(pn_parser_t *parser, pn_data_t *data)
 {
   bool dbl = false;
   char number[1024];
@@ -245,15 +241,15 @@ int pn_parser_number(pn_parser_t *parser, pn_atoms_t *atoms)
     if (negate) {
       value = -value;
     }
-    err = pn_ifill_atoms(atoms, "d", value);
-    if (err) return pn_parser_err(parser, err, "error writing double atoms");
+    err = pn_data_put_double(data, value);
+    if (err) return pn_parser_err(parser, err, "error writing double");
   } else {
     int64_t value = atoll(number);
     if (negate) {
       value = -value;
     }
-    err = pn_ifill_atoms(atoms, "l", value);
-    if (err) return pn_parser_err(parser, err, "error writing long atoms");
+    err = pn_data_put_long(data, value);
+    if (err) return pn_parser_err(parser, err, "error writing long");
   }
 
   return 0;
@@ -337,7 +333,7 @@ int pn_parser_unquote(pn_parser_t *parser, char *dst, const char *src, size_t *n
   return 0;
 }
 
-int pn_parser_value(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_value(pn_parser_t *parser, pn_data_t *data)
 {
   int err;
   size_t n;
@@ -348,11 +344,11 @@ int pn_parser_value(pn_parser_t *parser, pn_atoms_t *atoms)
   switch (tok.type)
   {
   case PN_TOK_AT:
-    return pn_parser_descriptor(parser, atoms);
+    return pn_parser_descriptor(parser, data);
   case PN_TOK_LBRACE:
-    return pn_parser_map(parser, atoms);
+    return pn_parser_map(parser, data);
   case PN_TOK_LBRACKET:
-    return pn_parser_list(parser, atoms);
+    return pn_parser_list(parser, data);
   case PN_TOK_BINARY:
   case PN_TOK_SYMBOL:
   case PN_TOK_STRING:
@@ -364,35 +360,35 @@ int pn_parser_value(pn_parser_t *parser, pn_atoms_t *atoms)
     parser->size += n;
     switch (tok.type) {
     case PN_TOK_BINARY:
-      err = pn_ifill_atoms(atoms, "z", n - 1, dst);
+      err = pn_data_put_binary(data, pn_bytes(n - 1, dst));
       break;
     case PN_TOK_STRING:
-      err = pn_ifill_atoms(atoms, "S", dst);
+      err = pn_data_put_string(data, pn_bytes(n - 1, dst));
       break;
     case PN_TOK_SYMBOL:
-      err = pn_ifill_atoms(atoms, "s", dst);
+      err = pn_data_put_symbol(data, pn_bytes(n - 1, dst));
       break;
     default:
       return pn_parser_err(parser, PN_ERR, "internal error");
     }
-    if (err) return pn_parser_err(parser, err, "error writing string atoms");
+    if (err) return pn_parser_err(parser, err, "error writing string/binary/symbol");
     return pn_parser_shift(parser);
   case PN_TOK_POS:
   case PN_TOK_NEG:
   case PN_TOK_FLOAT:
   case PN_TOK_INT:
-    return pn_parser_number(parser, atoms);
+    return pn_parser_number(parser, data);
   case PN_TOK_TRUE:
-    err = pn_ifill_atoms(atoms, "o", true);
-    if (err) return pn_parser_err(parser, err, "error writing boolean atoms");
+    err = pn_data_put_bool(data, true);
+    if (err) return pn_parser_err(parser, err, "error writing boolean");
     return pn_parser_shift(parser);
   case PN_TOK_FALSE:
-    err = pn_ifill_atoms(atoms, "o", false);
-    if (err) return pn_parser_err(parser, err, "error writing boolean atoms");
+    err = pn_data_put_bool(data, false);
+    if (err) return pn_parser_err(parser, err, "error writing boolean");
     return pn_parser_shift(parser);
   case PN_TOK_NULL:
-    err = pn_ifill_atoms(atoms, "n");
-    if (err) return pn_parser_err(parser, err, "error writing null atoms");
+    err = pn_data_put_null(data);
+    if (err) return pn_parser_err(parser, err, "error writing null");
     return pn_parser_shift(parser);
   default:
     return pn_parser_err(parser, PN_ERR, "expecting one of '[', '{', STRING, "
@@ -400,7 +396,7 @@ int pn_parser_value(pn_parser_t *parser, pn_atoms_t *atoms)
   }
 }
 
-int pn_parser_parse_r(pn_parser_t *parser, pn_atoms_t *atoms)
+int pn_parser_parse_r(pn_parser_t *parser, pn_data_t *data)
 {
   while (true) {
     int err;
@@ -411,20 +407,16 @@ int pn_parser_parse_r(pn_parser_t *parser, pn_atoms_t *atoms)
     case PN_TOK_ERR:
       return PN_ERR;
     default:
-      err = pn_parser_value(parser, atoms);
+      err = pn_parser_value(parser, data);
       if (err) return err;
     }
   }
 }
 
-int pn_parser_parse(pn_parser_t *parser, const char *str, pn_atoms_t *atoms)
+int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *data)
 {
-  pn_atoms_t copy = *atoms;
   int err = pn_scanner_start(parser->scanner, str);
   if (err) return err;
   parser->size = 0;
-  err = pn_parser_parse_r(parser, &copy);
-  if (err) return err;
-  atoms->size -= copy.size;
-  return 0;
+  return pn_parser_parse_r(parser, data);
 }

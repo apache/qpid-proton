@@ -112,21 +112,24 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available
     pn_frame_t frame;
     size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
-      size_t dsize = frame.size;
-      int e = pn_data_decode(disp->args, frame.payload, &dsize);
-      if (e) {
-        fprintf(stderr, "Error decoding frame: %s\n", pn_code(e));
+      ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
+      if (dsize < 0) {
+        fprintf(stderr, "Error decoding frame: %s %s\n", pn_code(dsize),
+                pn_data_error(disp->args));
         pn_fprint_data(stderr, frame.payload, frame.size);
         fprintf(stderr, "\n");
-        return e;
+        return dsize;
       }
 
       disp->channel = frame.channel;
       // XXX: assuming numeric
       uint64_t lcode;
       bool scanned;
-      e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
-      if (e) return e;
+      int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
+      if (e) {
+        fprintf(stderr, "Scan error\n");
+        return e;
+      }
       if (!scanned) {
         fprintf(stderr, "Error dispatching frame\n");
         return PN_ERR;
@@ -168,6 +171,7 @@ int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)
   va_start(ap, fmt);
   int err = pn_data_vscan(disp->args, fmt, ap);
   va_end(ap);
+  if (err) printf("scan error: %s\n", fmt);
   return err;
 }
 
@@ -185,7 +189,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
   int err = pn_data_vfill(disp->output_args, fmt, ap);
   va_end(ap);
   if (err) {
-    fprintf(stderr, "error posting frame: %s, %s\n", fmt, pn_code(err));
+    fprintf(stderr, "error posting frame: %s, %s: %s\n", fmt, pn_code(err), pn_data_error(disp->output_args));
     return PN_ERR;
   }
 
@@ -195,15 +199,14 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 
   while (true) {
     char buf[size];
-    size_t wr = size;
-    err = pn_data_encode(disp->output_args, buf, &wr);
-    if (err)
+    ssize_t wr = pn_data_encode(disp->output_args, buf, size);
+    if (wr < 0)
     {
-      if (err == PN_OVERFLOW) {
+      if (wr == PN_OVERFLOW) {
         size *= 2;
         continue;
       } else {
-        fprintf(stderr, "error posting frame: %s", pn_code(err));
+        fprintf(stderr, "error posting frame: %s", pn_code(wr));
         return PN_ERR;
       }
     } else if (size - wr < disp->output_size) {

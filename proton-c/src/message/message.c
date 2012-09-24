@@ -32,15 +32,16 @@
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
-  pn_bytes_t bytes = pn_bytes(available, dst);
-  pn_atom_t buf[16];
-  pn_atoms_t atoms = {16, buf};
-
-  int err = pn_fill_atoms(&atoms, "DLz", 0x75, size, src);
-  if (err) return err;
-  err = pn_encode_atoms(&bytes, &atoms);
-  if (err) return err;
-  return bytes.size;
+  pn_data_t *data = pn_data(16);
+  pn_data_put_described(data);
+  pn_data_enter(data);
+  pn_data_put_long(data, 0x75);
+  pn_data_put_binary(data, pn_bytes(size, (char *)src));
+  pn_data_exit(data);
+  pn_data_rewind(data);
+  int err = pn_data_encode(data, dst, available);
+  pn_data_free(data);
+  return err;
 }
 
 // message
@@ -242,8 +243,7 @@ static int pn_buffer_set_bytes(pn_buffer_t **buf, pn_bytes_t bytes)
     *buf = pn_buffer(64);
   }
 
-  int err = pn_buffer_clear(*buf);
-  if (err) return err;
+  pn_buffer_clear(*buf);
 
   return pn_buffer_append(*buf, bytes.start, bytes.size);
 }
@@ -266,9 +266,8 @@ static int pn_buffer_set_strn(pn_buffer_t **buf, const char *str, size_t size)
     *buf = pn_buffer(64);
   }
 
-  int err = pn_buffer_clear(*buf);
-  if (err) return err;
-  err = pn_buffer_append(*buf, str, size);
+  pn_buffer_clear(*buf);
+  int err = pn_buffer_append(*buf, str, size);
   if (err) return err;
   if (str && str[size-1]) {
     return pn_buffer_append(*buf, "\0", 1);
@@ -422,15 +421,14 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   pn_data_clear(msg->body);
 
   while (size) {
-    size_t copy = size;
     pn_data_clear(msg->data);
-    int err = pn_data_decode(msg->data, (char *) bytes, &copy);
-    if (err) return err;
-    size -= copy;
-    bytes += copy;
+    ssize_t used = pn_data_decode(msg->data, (char *) bytes, size);
+    if (used < 0) return used;
+    size -= used;
+    bytes += used;
     bool scanned;
     uint64_t desc;
-    err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
+    int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
     if (err) return err;
     if (!scanned){
       desc = 0;
@@ -478,8 +476,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         pn_data_t *data = msg->body;
         msg->body = msg->data;
         msg->data = data;
-        err = pn_data_intern(msg->body);
-        if (err) return err;
       }
       break;
     }
@@ -521,17 +517,14 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   if (err) return err;
 
   size_t remaining = *size;
-  size_t encoded = remaining;
-
-  err = pn_data_encode(msg->data, bytes, &encoded);
-  if (err) return err;
+  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
+  if (encoded < 0) return encoded;
 
   bytes += encoded;
   remaining -= encoded;
 
-  encoded = remaining;
-  err = pn_data_encode(msg->body, bytes, &encoded);
-  if (err) return err;
+  encoded = pn_data_encode(msg->body, bytes, remaining);
+  if (encoded < 0) return encoded;
   bytes += encoded;
   remaining -= encoded;
 
@@ -574,9 +567,8 @@ int pn_message_load_data(pn_message_t *msg, const char *data, size_t size)
     msg->body = pn_data(64);
   }
 
-  int err = pn_data_fill(msg->body, "DLz", DATA, size, data);
-  if (err) return err;
-  return pn_data_intern(msg->body);
+  pn_data_clear(msg->body);
+  return pn_data_fill(msg->body, "DLz", DATA, size, data);
 }
 
 int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
@@ -586,9 +578,8 @@ int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
     msg->body = pn_data(64);
   }
 
-  int err = pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
-  if (err) return err;
-  return pn_data_intern(msg->body);
+  pn_data_clear(msg->body);
+  return pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
 }
 
 int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
@@ -601,20 +592,8 @@ int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
 
   pn_parser_t *parser = pn_message_parser(msg);
 
-  while (true) {
-    pn_data_clear(msg->body);
-    pn_atoms_t atoms = pn_data_available(msg->body);
-    int err = pn_parser_parse(parser, data, &atoms);
-    if (err == PN_OVERFLOW) {
-      err = pn_data_grow(msg->body);
-      if (err) return err;
-      continue;
-    } else if (err) {
-      return err;
-    } else {
-      return pn_data_resize(msg->body, atoms.size);
-    }
-  }
+  pn_data_clear(msg->body);
+  return pn_parser_parse(parser, data, msg->body);
 }
 
 int pn_message_load_json(pn_message_t *msg, const char *data, size_t size)

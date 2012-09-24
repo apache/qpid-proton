@@ -84,7 +84,7 @@ class MessengerTest(Test):
     assert pn_message_get_subject(reply) == "Hello World!"
     cd, rbod = pn_message_save(reply, 1024)
     assert not cd
-    assert rbod == body
+    assert rbod == body, (rbod, body)
 
     pn_message_free(msg)
     pn_message_free(reply)

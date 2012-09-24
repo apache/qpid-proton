@@ -31,7 +31,7 @@ extern "C" {
 typedef struct pn_parser_t pn_parser_t;
 
 pn_parser_t *pn_parser(void);
-int pn_parser_parse(pn_parser_t *parser, const char *str, pn_atoms_t *atoms);
+int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *data);
 int pn_parser_errno(pn_parser_t *parser);
 const char *pn_parser_error(pn_parser_t *parser);
 void pn_parser_free(pn_parser_t *parser);

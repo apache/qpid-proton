@@ -87,93 +87,6 @@ int buffer(int argc, char **argv)
   return 0;
 }
 
-int value(int argc, char **argv)
-{
-  pn_atom_t data[1024];
-  pn_atoms_t atoms = {1024, data};
-
-  int err = pn_fill_atoms(&atoms, "DDsL[i[i]i]{sfsf}@DLT[sss]", "blam", 21, 1, 2, 3,
-                          "pi", 3.14159265359, "e", 2.7,
-                          (uint64_t) 42, PN_SYMBOL, "one", "two", "three");
-  if (err) {
-    printf("err = %s\n", pn_code(err));
-  } else {
-    pn_print_atoms(&atoms);
-    printf("\n");
-  }
-
-  pn_bytes_t blam;
-  uint64_t n;
-  int32_t one, two, three;
-
-  pn_bytes_t key1;
-  float val1;
-
-  pn_bytes_t key2;
-  float val2;
-
-  uint64_t al;
-  pn_type_t type;
-
-  bool threeq;
-
-  pn_bytes_t sym;
-
-  err = pn_scan_atoms(&atoms, "DDsL[i[i]?i]{sfsf}@DLT[.s.]", &blam, &n, &one, &two, &threeq, &three,
-                      &key1, &val1, &key2, &val2, &al, &type, &sym);
-  if (err) {
-    printf("err = %s\n", pn_code(err));
-  } else {
-    printf("scan=%.*s %" PRIu64 " %i %i %i %.*s %f %.*s %f %" PRIu64 " %i %.*s\n", (int) blam.size,
-	   blam.start, n, one, two, three, (int) key1.size, key1.start, val1, (int) key2.size,
-	   key2.start, val2, al, threeq, (int) sym.size, sym.start);
-  }
-
-  char str[1024*10];
-  int ch, idx = 0;
-  while ((ch = getchar()) != EOF) {
-    str[idx++] = ch;
-  }
-  str[idx] = '\0';
-
-  /*  str[0] = '\0';
-  for (int i = 2; i < argc; i++) {
-    strcat(str, argv[i]);
-    if (i < argc - 1)
-      strcat(str, " ");
-      }*/
-
-  printf("JSON: %s\n", str);
-
-  pn_atom_t parserdata[1024];
-  pn_atoms_t parserd = {1024, parserdata};
-
-  printf("\n");
-
-  pn_parser_t *parser = pn_parser();
-
-  err = pn_parser_parse(parser, str, &parserd);
-  if (err) {
-    printf("parse err=%s, %s\n", pn_code(err), pn_parser_error(parser));
-  } else {
-    printf("--\n");
-    for (int i = 0; i < parserd.size; i++) {
-      printf("%s: ", pn_type_str(parserd.start[i].type));
-      err = pn_print_atom(parserd.start[i]);
-      if (err) printf("err=%s", pn_code(err));
-      printf("\n");
-    }
-    printf("--\n");
-    err = pn_print_atoms(&parserd);
-    if (err) printf("print err=%s", pn_code(err));
-    printf("\n");
-  }
-
-  pn_parser_free(parser);
-
-  return 0;
-}
-
 struct server_context {
   int count;
   bool quiet;
@@ -506,9 +419,6 @@ int main(int argc, char **argv)
       break;
     case 'V':
       printf("proton version %i.%i\n", PN_VERSION_MAJOR, PN_VERSION_MINOR);
-      exit(EXIT_SUCCESS);
-    case 'X':
-      value(argc, argv);
       exit(EXIT_SUCCESS);
     case 'Y':
       buffer(argc, argv);

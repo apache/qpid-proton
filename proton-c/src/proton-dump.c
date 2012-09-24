@@ -59,10 +59,9 @@ int dump(const char *file)
       pn_frame_t frame;
       size_t consumed = pn_read_frame(&frame, available.start, available.size);
       if (consumed) {
-        size_t dsize = frame.size;
         pn_data_clear(data);
-        err = pn_data_decode(data, frame.payload, &dsize);
-        if (err) {
+        ssize_t dsize = pn_data_decode(data, frame.payload, frame.size);
+        if (dsize < 0) {
           fprintf(stderr, "Error decoding frame: %s\n", pn_code(err));
           pn_fprint_data(stderr, frame.payload, frame.size);
           fprintf(stderr, "\n");

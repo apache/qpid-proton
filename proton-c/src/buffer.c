@@ -57,6 +57,11 @@ size_t pn_buffer_size(pn_buffer_t *buf)
   return buf->size;
 }
 
+size_t pn_buffer_capacity(pn_buffer_t *buf)
+{
+  return buf->capacity;
+}
+
 size_t pn_buffer_available(pn_buffer_t *buf)
 {
   return buf->capacity - buf->size;
@@ -221,11 +226,10 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right)
   return 0;
 }
 
-int pn_buffer_clear(pn_buffer_t *buf)
+void pn_buffer_clear(pn_buffer_t *buf)
 {
   buf->start = 0;
   buf->size = 0;
-  return 0;
 }
 
 static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {

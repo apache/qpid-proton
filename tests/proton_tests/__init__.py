@@ -17,6 +17,7 @@
 # under the License.
 #
 
+import proton_tests.codec
 import proton_tests.engine
 import proton_tests.message
 import proton_tests.messenger

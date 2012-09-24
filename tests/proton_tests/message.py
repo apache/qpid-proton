@@ -119,9 +119,11 @@ class CodecTest(Test):
     cd = pn_message_decode(msg2, data, len(data))
     assert cd == 0, (cd, data)
 
-    assert pn_message_get_ttl(self.msg) == pn_message_get_ttl(msg2)
+    assert pn_message_get_ttl(self.msg) == pn_message_get_ttl(msg2), \
+        (pn_message_get_ttl(self.msg), pn_message_get_ttl(msg2))
     assert pn_message_get_priority(self.msg) == pn_message_get_priority(msg2)
-    assert pn_message_get_address(self.msg) == pn_message_get_address(msg2)
+    assert pn_message_get_address(self.msg) == pn_message_get_address(msg2), \
+        (pn_message_get_address(self.msg), pn_message_get_address(msg2))
     assert pn_message_get_subject(self.msg) == pn_message_get_subject(msg2)
     cd, saved = pn_message_save(self.msg, 1024)
     assert not cd, cd
