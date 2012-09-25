@@ -131,7 +131,7 @@ int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl);
 /** Determines the level of peer certificate validation. */
 typedef enum {
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
-  PN_SSL_NO_VERIFY_PEER,  /**< do not require peer to provide an identifying certificate */
+  PN_SSL_NO_VERIFY_PEER  /**< do not require peer to provide an identifying certificate */
 } pn_ssl_verify_mode_t;
 
 
