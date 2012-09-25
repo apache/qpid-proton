@@ -27,7 +27,7 @@ class Test(common.Test):
     self.server = pn_messenger("server")
     pn_messenger_set_timeout(self.server, 10000)
     pn_messenger_start(self.server)
-    pn_messenger_subscribe(self.server, "//~0.0.0.0:12345")
+    pn_messenger_subscribe(self.server, "amqp://~0.0.0.0:12345")
     self.thread = Thread(target=self.run)
     self.running = True
     self.thread.start()
@@ -39,7 +39,7 @@ class Test(common.Test):
   def teardown(self):
     self.running = False
     msg = pn_message()
-    pn_message_set_address(msg, "//0.0.0.0:12345")
+    pn_message_set_address(msg, "amqp://0.0.0.0:12345")
     pn_messenger_put(self.client, msg)
     pn_messenger_send(self.client)
     pn_messenger_stop(self.client)
@@ -69,7 +69,7 @@ class MessengerTest(Test):
 
   def testSendReceive(self):
     msg = pn_message()
-    pn_message_set_address(msg, "//0.0.0.0:12345")
+    pn_message_set_address(msg, "amqp://0.0.0.0:12345")
     pn_message_set_subject(msg, "Hello World!")
     body = "First the world, then the galaxy!"
     pn_message_load(msg, body)
@@ -94,5 +94,5 @@ class MessengerTest(Test):
     pn_message_set_address(msg, "totally-bogus-address")
     assert pn_messenger_put(self.client, msg) == PN_ERR
     err = pn_messenger_error(self.client)
-    assert "unable to send to address: totally-bogus-address (getaddrinfo:" in err, err
+    assert "unable to send to address: totally-bogus-address (" in err, err
     pn_message_free(msg)

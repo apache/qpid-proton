@@ -22,7 +22,7 @@ from proton import *
 
 parser = optparse.OptionParser(usage="usage: %prog [options] <msg_1> ... <msg_n>",
                                description="simple message sender")
-parser.add_option("-a", "--address", default="//0.0.0.0",
+parser.add_option("-a", "--address", default="amqp://0.0.0.0",
                   help="address: //<domain>[/<name>] (default %default)")
 
 opts, args = parser.parse_args()

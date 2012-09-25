@@ -115,6 +115,15 @@ static void _log(pn_ssl_t *ssl, const char *fmt, ...)
   }
 }
 
+static void _log_ssl_error(pn_ssl_t *ssl)
+{
+  unsigned long err = ERR_get_error();
+  while (err) {
+    char *msg = ERR_error_string(err, NULL);
+    _log(ssl, "%s\n", msg);
+    err = ERR_get_error();
+  }
+}
 
 // @todo replace with a "reasonable" default (?), allow application to register its own
 // callback.
@@ -513,6 +522,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         _log( ssl, "Read %d bytes from socket for app\n", written );
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
+          _log_ssl_error(ssl);
           _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
           ssl->ssl_closed = (ssl->app_closed) ? ssl->app_closed : PN_EOS;
           start_ssl_shutdown(ssl);
@@ -627,6 +637,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
         _log( ssl, "Wrote %d bytes from app to socket\n", written );
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
+          _log_ssl_error(ssl);
           _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
           ssl->ssl_closed = (ssl->app_closed) ? ssl->app_closed : PN_EOS;
           start_ssl_shutdown(ssl);

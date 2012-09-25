@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-void parse_url(char *url, char **user, char **pass, char **host, char **port);
+void parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
 void pn_fatal(char *fmt, ...);
 void pn_vfatal(char *fmt, va_list ap);
 

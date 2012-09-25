@@ -38,6 +38,38 @@ class Messenger(object):
     return pn_messenger_name(self._mng)
 
   @property
+  def certificate(self):
+    return pn_messenger_get_certificate(self._mng)
+
+  @certificate.setter
+  def certificate(self, value):
+    self._check(pn_messenger_set_certificate(self._mng, value))
+
+  @property
+  def private_key(self):
+    return pn_messenger_get_private_key(self._mng)
+
+  @private_key.setter
+  def private_key(self, value):
+    self._check(pn_messenger_set_private_key(self._mng, value))
+
+  @property
+  def password(self):
+    return pn_messenger_get_password(self._mng)
+
+  @password.setter
+  def password(self, value):
+    self._check(pn_messenger_set_password(self._mng, value))
+
+  @property
+  def trusted_certificates(self):
+    return pn_messenger_get_trusted_certificates(self._mng)
+
+  @trusted_certificates.setter
+  def trusted_certificates(self, value):
+    self._check(pn_messenger_set_trusted_certificates(self._mng, value))
+
+  @property
   def timeout(self):
     return pn_messenger_get_timeout(self._mng)
 

@@ -441,12 +441,14 @@ int main(int argc, char **argv)
     }
   }
 
+  char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
   char *host = "0.0.0.0";
   char *port = "5672";
+  char *path = NULL;
 
-  parse_url(url, &user, &pass, &host, &port);
+  parse_url(url, &scheme, &user, &pass, &host, &port, &path);
 
   pn_driver_t *drv = pn_driver();
   if (url) {

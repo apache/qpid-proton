@@ -52,6 +52,70 @@ pn_messenger_t *pn_messenger(const char *name);
  */
 const char *pn_messenger_name(pn_messenger_t *messenger);
 
+/** Sets the certificate file for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] certificate a path to a certificate file
+ *
+ * @return an error code of zero if there is no error
+ */
+int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
+
+/** Gets the certificate file fora Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return the certificate file path
+ */
+const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
+
+/** Sets the private key file for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] private_key a path to a private key file
+ *
+ * @return an error code of zero if there is no error
+ */
+int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
+
+/** Gets the private key file for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return the private key file path
+ */
+const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
+
+/** Sets the private key password for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] password the password for the private key file
+ *
+ * @return an error code of zero if there is no error
+ */
+int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
+
+/** Gets the private key file password for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return password for the private key file
+ */
+const char *pn_messenger_get_password(pn_messenger_t *messenger);
+
+/** Sets the trusted certificates database for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] cert_db a path to the certificates database
+ *
+ * @return an error code of zero if there is no error
+ */
+int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
+
+/** Gets the trusted certificates database for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return path to the trusted certificates database
+ */
+const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
+
 /** Sets the timeout for a Messenger. A negative timeout means
  * infinite.
  *

@@ -22,6 +22,7 @@
 #include <proton/messenger.h>
 #include <proton/driver.h>
 #include <proton/util.h>
+#include <proton/ssl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -30,6 +31,10 @@
 
 struct pn_messenger_t {
   char *name;
+  char *certificate;
+  char *private_key;
+  char *password;
+  char *trusted_certificates;
   int timeout;
   pn_driver_t *driver;
   int credit;
@@ -56,6 +61,10 @@ pn_messenger_t *pn_messenger(const char *name)
 
   if (m) {
     m->name = build_name(name);
+    m->certificate = NULL;
+    m->private_key = NULL;
+    m->password = NULL;
+    m->trusted_certificates = NULL;
     m->timeout = -1;
     m->driver = pn_driver();
     m->credit = 0;
@@ -69,6 +78,54 @@ pn_messenger_t *pn_messenger(const char *name)
 const char *pn_messenger_name(pn_messenger_t *messenger)
 {
   return messenger->name;
+}
+
+int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate)
+{
+  if (messenger->certificate) free(messenger->certificate);
+  messenger->certificate = pn_strdup(certificate);
+  return 0;
+}
+
+const char *pn_messenger_get_certificate(pn_messenger_t *messenger)
+{
+  return messenger->certificate;
+}
+
+int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key)
+{
+  if (messenger->private_key) free(messenger->private_key);
+  messenger->private_key = pn_strdup(private_key);
+  return 0;
+}
+
+const char *pn_messenger_get_private_key(pn_messenger_t *messenger)
+{
+  return messenger->private_key;
+}
+
+int pn_messenger_set_password(pn_messenger_t *messenger, const char *password)
+{
+  if (messenger->password) free(messenger->password);
+  messenger->password = pn_strdup(password);
+  return 0;
+}
+
+const char *pn_messenger_get_password(pn_messenger_t *messenger)
+{
+  return messenger->password;
+}
+
+int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *trusted_certificates)
+{
+  if (messenger->trusted_certificates) free(messenger->trusted_certificates);
+  messenger->trusted_certificates = pn_strdup(trusted_certificates);
+  return 0;
+}
+
+const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger)
+{
+  return messenger->trusted_certificates;
 }
 
 int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout)
@@ -87,6 +144,10 @@ void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
     free(messenger->name);
+    free(messenger->certificate);
+    free(messenger->private_key);
+    free(messenger->password);
+    free(messenger->trusted_certificates);
     pn_driver_free(messenger->driver);
     pn_error_free(messenger->error);
     free(messenger);
@@ -211,8 +272,21 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {
+      char *scheme = pn_listener_context(l);
       pn_connector_t *c = pn_listener_accept(l);
-      pn_sasl_t *sasl = pn_connector_sasl(c);
+      pn_transport_t *t = pn_connector_transport(c);
+      pn_ssl_t *ssl = pn_ssl(t);
+      pn_ssl_init(ssl, PN_SSL_MODE_SERVER);
+      if (messenger->certificate) {
+        pn_ssl_set_credentials(ssl, messenger->certificate,
+                               messenger->private_key,
+                               messenger->password);
+      }
+      pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL);
+      if (!(scheme && !strcmp(scheme, "amqps"))) {
+        pn_ssl_allow_unsecured_client(ssl);
+      }
+      pn_sasl_t *sasl = pn_sasl(t);
       pn_sasl_mechanisms(sasl, "ANONYMOUS");
       pn_sasl_server(sasl);
       pn_sasl_done(sasl, PN_SASL_OK);
@@ -282,30 +356,11 @@ int pn_messenger_stop(pn_messenger_t *messenger)
     pn_listener_close(l);
     pn_listener_t *prev = l;
     l = pn_listener_next(l);
+    free(pn_listener_context(prev));
     pn_listener_free(prev);
   }
 
   return pn_messenger_sync(messenger, pn_messenger_stopped);
-}
-
-static void parse_address(char *address, char **domain, char **name)
-{
-  *domain = NULL;
-  *name = NULL;
-
-  if (!address) return;
-  if (address[0] == '/' && address[1] == '/') {
-    *domain = address + 2;
-    for (char *c = *domain; *c; c++) {
-      if (*c == '/') {
-        *c = '\0';
-        *name = c + 1;
-        break;
-      }
-    }
-  } else {
-    *name = address;
-  }
 }
 
 bool pn_streq(const char *a, const char *b)
@@ -313,19 +368,34 @@ bool pn_streq(const char *a, const char *b)
   return a == b || (a && b && !strcmp(a, b));
 }
 
-pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *domain)
+pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
 {
-  char buf[domain ? strlen(domain) + 1 : 1];
-  if (domain) {
-    strcpy(buf, domain);
+  size_t size = address ? strlen(address) + 1 : 1;
+  char buf[size];
+  if (address) {
+    strcpy(buf, address);
   } else {
     buf[0] = '\0';
   }
+  char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
   char *host = "0.0.0.0";
-  char *port = "5672";
-  parse_url(buf, &user, &pass, &host, &port);
+  char *port = NULL;
+  parse_url(buf, &scheme, &user, &pass, &host, &port, name);
+
+  char domain[size];
+  domain[0] = '\0';
+
+  if (user) {
+    strcat(domain, user);
+    strcat(domain, "@");
+  }
+  strcat(domain, host);
+  if (port) {
+    strcat(domain, ":");
+    strcat(domain, port);
+  }
 
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
@@ -337,9 +407,26 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
     ctor = pn_connector_next(ctor);
   }
 
-  pn_connector_t *connector = pn_connector(messenger->driver, host, port, NULL);
+  pn_connector_t *connector = pn_connector(messenger->driver, host, port ? port : "5672", NULL);
   if (!connector) return NULL;
-  pn_sasl_t *sasl = pn_connector_sasl(connector);
+  pn_transport_t *transport = pn_connector_transport(connector);
+  if (scheme && !strcmp(scheme, "amqps")) {
+    pn_ssl_t *ssl = pn_ssl(transport);
+    pn_ssl_init(ssl, PN_SSL_MODE_CLIENT);
+    if (messenger->certificate && messenger->private_key) {
+      pn_ssl_set_credentials(ssl, messenger->certificate,
+                             messenger->private_key,
+                             messenger->password);
+    }
+    if (messenger->trusted_certificates) {
+      pn_ssl_set_trusted_ca_db(ssl, messenger->trusted_certificates);
+      pn_ssl_set_peer_authentication(ssl, PN_SSL_VERIFY_PEER, NULL);
+    } else {
+      pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL);
+    }
+  }
+
+  pn_sasl_t *sasl = pn_sasl(transport);
   if (user) {
     pn_sasl_plain(sasl, user, pass);
   } else {
@@ -357,17 +444,14 @@ pn_connection_t *pn_messenger_domain(pn_messenger_t *messenger, const char *doma
 
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
 {
-  char buf[(address ? strlen(address) : 0) + 1];
+  char copy[(address ? strlen(address) : 0) + 1];
   if (address) {
-    strcpy(buf, address);
+    strcpy(copy, address);
   } else {
-    buf[0] = '\0';
+    copy[0] = '\0';
   }
-  char *domain;
-  char *name;
-  parse_address(address ? buf : NULL, &domain, &name);
-
-  pn_connection_t *connection = pn_messenger_domain(messenger, domain);
+  char *name = NULL;
+  pn_connection_t *connection = pn_messenger_resolve(messenger, copy, &name);
   if (!connection) return NULL;
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
@@ -405,26 +489,22 @@ pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
   return pn_messenger_link(messenger, target, true);
 }
 
-pn_listener_t *pn_messenger_isource(pn_messenger_t *messenger, const char *source)
+int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
-  char buf[strlen(source) + 1];
-  strcpy(buf, source);
-  char *domain, *name;
-  parse_address(buf, &domain, &name);
+  char copy[strlen(source) + 1];
+  strcpy(copy, source);
+
+  char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
   char *host = "0.0.0.0";
   char *port = "5672";
-  parse_url(domain + 1, &user, &pass, &host, &port);
+  char *path = NULL;
 
-  return pn_listener(messenger->driver, host, port, NULL);
-}
+  parse_url(copy, &scheme, &user, &pass, &host, &port, &path);
 
-int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
-{
-  int len = strlen(source);
-  if (len >= 3 && source[0] == '/' && source[1] == '/' && source[2] == '~') {
-    pn_listener_t *lnr = pn_messenger_isource(messenger, source);
+  if (host[0] == '~') {
+    pn_listener_t *lnr = pn_listener(messenger->driver, host + 1, port, pn_strdup(scheme));
     if (lnr) {
       return 0;
     } else {
@@ -432,7 +512,7 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
                              "unable to subscribe to source: %s (%s)", source,
                              pn_driver_error(messenger->driver));
     }
-  } else if (len >= 2 && source[0] == '/' && source[1] == '/') {
+  } else if (scheme) {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (src) {
       return 0;
@@ -452,11 +532,11 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
   int len = address ? strlen(address) : 0;
   if (len > 0 && address[0] != '/') {
     char buf[len + strlen(mng->name) + 4];
-    sprintf(buf, "//%s/%s", mng->name, address);
+    sprintf(buf, "amqp://%s/%s", mng->name, address);
     pn_message_set_reply_to(msg, buf);
   } else if (len == 0) {
     char buf[strlen(mng->name) + 4];
-    sprintf(buf, "//%s", mng->name);
+    sprintf(buf, "amqp://%s", mng->name);
     pn_message_set_reply_to(msg, buf);
   }
 }

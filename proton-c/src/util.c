@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <proton/error.h>
+#include <proton/util.h>
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {
@@ -72,27 +73,39 @@ void pn_print_data(const char *bytes, size_t size)
   pn_fprint_data(stdout, bytes, size);
 }
 
-void parse_url(char *url, char **user, char **pass, char **host, char **port)
+void parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
 {
   if (url) {
+    char *scheme_end = strstr(url, "://");
+    if (scheme_end) {
+      *scheme_end = '\0';
+      *scheme = url;
+      url = scheme_end + 3;
+    }
+
     char *at = index(url, '@');
-    char *hp;
     if (at) {
       *at = '\0';
-      *user = url;
-      char *colon = index(url, ':');
+      char *up = url;
+      *user = up;
+      url = at + 1;
+      char *colon = index(up, ':');
       if (colon) {
         *colon = '\0';
         *pass = colon + 1;
       }
-      hp = at + 1;
-    } else {
-      hp = url;
     }
 
-    *host = hp;
+    char *slash = index(url, '/');
+    if (slash) {
+      *slash = '\0';
+      *host = url;
+      url = slash + 1;
+    } else {
+      *host = url;
+    }
 
-    char *colon = index(hp, ':');
+    char *colon = index(*host, ':');
     if (colon) {
       *colon = '\0';
       *port = colon + 1;
