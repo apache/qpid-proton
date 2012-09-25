@@ -368,23 +368,16 @@ bool pn_streq(const char *a, const char *b)
   return a == b || (a && b && !strcmp(a, b));
 }
 
-pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
+pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, char **name)
 {
-  size_t size = address ? strlen(address) + 1 : 1;
-  char buf[size];
-  if (address) {
-    strcpy(buf, address);
-  } else {
-    buf[0] = '\0';
-  }
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
   char *host = "0.0.0.0";
   char *port = NULL;
-  parse_url(buf, &scheme, &user, &pass, &host, &port, name);
+  parse_url(address, &scheme, &user, &pass, &host, &port, name);
 
-  char domain[size];
+  char domain[strlen(address) + 1];
   domain[0] = '\0';
 
   if (user) {

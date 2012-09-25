@@ -101,6 +101,7 @@ void parse_url(char *url, char **scheme, char **user, char **pass, char **host, 
       *slash = '\0';
       *host = url;
       url = slash + 1;
+      *path = url;
     } else {
       *host = url;
     }
