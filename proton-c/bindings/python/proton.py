@@ -37,45 +37,45 @@ class Messenger(object):
   def name(self):
     return pn_messenger_name(self._mng)
 
-  @property
-  def certificate(self):
+  def get_certificate(self):
     return pn_messenger_get_certificate(self._mng)
 
-  @certificate.setter
-  def certificate(self, value):
+  def set_certificate(self, value):
     self._check(pn_messenger_set_certificate(self._mng, value))
 
-  @property
-  def private_key(self):
+  certificate = property(get_certificate, set_certificate)
+
+  def get_private_key(self):
     return pn_messenger_get_private_key(self._mng)
 
-  @private_key.setter
-  def private_key(self, value):
+  def set_private_key(self, value):
     self._check(pn_messenger_set_private_key(self._mng, value))
 
-  @property
-  def password(self):
+  private_key = property(get_private_key, set_private_key)
+
+  def get_password(self):
     return pn_messenger_get_password(self._mng)
 
-  @password.setter
-  def password(self, value):
+  def set_password(self, value):
     self._check(pn_messenger_set_password(self._mng, value))
 
-  @property
-  def trusted_certificates(self):
+  password = property(get_password, set_password)
+
+  def get_trusted_certificates(self):
     return pn_messenger_get_trusted_certificates(self._mng)
 
-  @trusted_certificates.setter
-  def trusted_certificates(self, value):
+  def set_trusted_certificates(self, value):
     self._check(pn_messenger_set_trusted_certificates(self._mng, value))
 
-  @property
-  def timeout(self):
+  trusted_certificates = property(get_trusted_certificates, set_trusted_certificates)
+
+  def get_timeout(self):
     return pn_messenger_get_timeout(self._mng)
 
-  @timeout.setter
-  def timeout(self, value):
+  def set_timeout(self, value):
     self._check(pn_messenger_set_timeout(self._mng, value))
+
+  timeout = property(get_timeout, set_timeout)
 
   def start(self):
     self._check(pn_messenger_start(self._mng))
@@ -131,160 +131,160 @@ class Message(object):
   def clear(self):
     pn_message_clear(self._msg)
 
-  @property
-  def durable(self):
+  def is_durable(self):
     return pn_message_is_durable(self._msg)
 
-  @durable.setter
-  def durable(self, value):
+  def set_durable(self, value):
     self._check(pn_message_set_durable(self._msg, bool(value)))
 
-  @property
-  def priority(self):
+  durable = property(is_durable, set_durable)
+
+  def get_priority(self):
     return pn_message_get_priority(self._msg)
 
-  @priority.setter
-  def priority(self, value):
+  def set_priority(self, value):
     self._check(pn_message_set_priority(self._msg, value))
 
-  @property
-  def ttl(self):
+  priority = property(get_priority, set_priority)
+
+  def get_ttl(self):
     return pn_message_get_ttl(self._msg)
 
-  @ttl.setter
-  def ttl(self, value):
+  def set_ttl(self, value):
     self._check(pn_message_set_ttl(self._msg, value))
 
-  @property
-  def first_acquirer(self):
+  ttl = property(get_ttl, set_ttl)
+
+  def is_first_acquirer(self):
     return pn_message_is_first_acquirer(self._msg)
 
-  @first_acquirer.setter
-  def first_acquirer(self, value):
+  def set_first_acquirer(self, value):
     self._check(pn_message_set_first_acquirer(self._msg, bool(value)))
 
-  @property
-  def delivery_count(self):
+  first_acquirer = property(is_first_acquirer, set_first_acquirer)
+
+  def get_delivery_count(self):
     return pn_message_get_delivery_count(self._msg)
 
-  @delivery_count.setter
-  def delivery_count(self, value):
+  def set_delivery_count(self, value):
     self._check(pn_message_set_delivery_count(self._msg, value))
 
+  delivery_count = property(get_delivery_count, set_delivery_count)
+
   # XXX
-  @property
-  def id(self):
+  def get_id(self):
     return pn_message_get_id(self._msg)
 
-  @id.setter
-  def id(self, value):
+  def set_id(self, value):
     self._check(pn_message_set_id(self._msg, value))
 
-  @property
-  def user_id(self):
+  id = property(get_id, set_id)
+
+  def get_user_id(self):
     return pn_message_get_user_id(self._msg)
 
-  @user_id.setter
-  def user_id(self, value):
+  def set_user_id(self, value):
     self._check(pn_message_set_user_id(self._msg, value))
 
-  @property
-  def address(self):
+  user_id = property(get_user_id, set_user_id)
+
+  def get_address(self):
     return pn_message_get_address(self._msg)
 
-  @address.setter
-  def address(self, value):
+  def set_address(self, value):
     self._check(pn_message_set_address(self._msg, value))
 
-  @property
-  def subject(self):
+  address = property(get_address, set_address)
+
+  def get_subject(self):
     return pn_message_get_subject(self._msg)
 
-  @subject.setter
-  def subject(self, value):
+  def set_subject(self, value):
     self._check(pn_message_set_subject(self._msg, value))
 
-  @property
-  def reply_to(self):
+  subject = property(get_subject, set_subject)
+
+  def get_reply_to(self):
     return pn_message_get_reply_to(self._msg)
 
-  @reply_to.setter
-  def reply_to(self, value):
+  def set_reply_to(self, value):
     self._check(pn_message_set_reply_to(self._msg, value))
 
+  reply_to = property(get_reply_to, set_reply_to)
+
   # XXX
-  @property
-  def correlation_id(self):
+  def get_correlation_id(self):
     return pn_message_get_correlation_id(self._msg)
 
-  @correlation_id.setter
-  def correlation_id(self, value):
+  def set_correlation_id(self, value):
     self._check(pn_message_set_correlation_id(self._msg, value))
 
-  @property
-  def content_type(self):
+  correlation_id = property(get_correlation_id, set_correlation_id)
+
+  def get_content_type(self):
     return pn_message_get_content_type(self._msg)
 
-  @content_type.setter
-  def content_type(self, value):
+  def set_content_type(self, value):
     self._check(pn_message_set_content_type(self._msg, value))
 
-  @property
-  def content_encoding(self):
+  content_type = property(get_content_type, set_content_type)
+
+  def get_content_encoding(self):
     return pn_message_get_content_encoding(self._msg)
 
-  @content_encoding.setter
-  def content_encoding(self, value):
+  def set_content_encoding(self, value):
     self._check(pn_message_set_content_encoding(self._msg, value))
 
-  @property
-  def expiry_time(self):
+  content_encoding = property(get_content_encoding, set_content_encoding)
+
+  def get_expiry_time(self):
     return pn_message_get_expiry_time(self._msg)
 
-  @expiry_time.setter
-  def expiry_time(self, value):
+  def set_expiry_time(self, value):
     self._check(pn_message_set_expiry_time(self._msg, value))
 
-  @property
-  def creation_time(self):
+  expiry_time = property(get_expiry_time, set_expiry_time)
+
+  def get_creation_time(self):
     return pn_message_get_creation_time(self._msg)
 
-  @creation_time.setter
-  def creation_time(self, value):
+  def set_creation_time(self, value):
     self._check(pn_message_set_creation_time(self._msg, value))
 
-  @property
-  def group_id(self):
+  creation_time = property(get_creation_time, set_creation_time)
+
+  def get_group_id(self):
     return pn_message_get_group_id(self._msg)
 
-  @group_id.setter
-  def group_id(self, value):
+  def set_group_id(self, value):
     self._check(pn_message_set_group_id(self._msg, value))
 
-  @property
-  def group_sequence(self):
+  group_id = property(get_group_id, set_group_id)
+
+  def get_group_sequence(self):
     return pn_message_get_group_sequence(self._msg)
 
-  @group_sequence.setter
-  def group_sequence(self, value):
+  def set_group_sequence(self, value):
     self._check(pn_message_set_group_sequence(self._msg, value))
 
-  @property
-  def reply_to_group_id(self):
+  group_sequence = property(get_group_sequence, set_group_sequence)
+
+  def get_reply_to_group_id(self):
     return pn_message_get_reply_to_group_id(self._msg)
 
-  @reply_to_group_id.setter
-  def reply_to_group_id(self, value):
+  def set_reply_to_group_id(self, value):
     self._check(pn_message_set_reply_to_group_id(self._msg, value))
 
+  reply_to_group_id = property(get_reply_to_group_id, set_reply_to_group_id)
+
   # XXX
-  @property
-  def format(self):
+  def get_format(self):
     return pn_message_get_format(self._msg)
 
-  @format.setter
-  def format(self, value):
+  def set_format(self, value):
     self._check(pn_message_set_format(self._msg, value))
+
+  format = property(get_format, set_format)
 
   def load(self, data):
     self._check(pn_message_load(self._msg, data))

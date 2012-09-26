@@ -22,8 +22,17 @@ from org.apache.qpid.proton.message import *
 from jarray import zeros
 from java.util import EnumSet
 
+class Skipped(Exception):
+  skipped = True
+
 PN_SESSION_WINDOW = impl.TransportImpl.SESSION_WINDOW
 PN_EOS = Transport.END_OF_STREAM
+PN_ERR = -2
+PN_OVERFLOW = -3
+PN_UNDERFLOW = -4
+PN_STATE_ERR = -5
+PN_ARG_ERR = -6
+PN_TIMEOUT = -7
 
 PN_LOCAL_UNINIT = 1
 PN_LOCAL_ACTIVE = 2
@@ -43,6 +52,27 @@ PN_DEFAULT_PRIORITY = Message.DEFAULT_PRIORITY
 PN_AMQP = MessageFormat.AMQP
 PN_TEXT = MessageFormat.TEXT
 PN_DATA = MessageFormat.DATA
+PN_JSON = MessageFormat.JSON
+
+PN_NULL = 1
+PN_BOOL = 2
+PN_UBYTE = 3
+PN_BYTE = 4
+PN_USHORT = 5
+PN_SHORT = 6
+PN_UINT = 7
+PN_INT = 8
+PN_ULONG = 9
+PN_LONG = 10
+PN_FLOAT = 11
+PN_DOUBLE = 12
+PN_BINARY = 13
+PN_STRING = 14
+PN_SYMBOL = 15
+PN_DESCRIPTOR = 16
+PN_ARRAY = 17
+PN_LIST = 18
+PN_MAP = 19
 
 def enums(mask):
   local = []
@@ -425,3 +455,9 @@ def pn_message_clear(m):
 
 def pn_message_error(m):
     return m.getError().ordinal()
+
+def pn_data(*args, **kwargs):
+  raise Skipped()
+
+def pn_messenger(*args, **kwargs):
+  raise Skipped()

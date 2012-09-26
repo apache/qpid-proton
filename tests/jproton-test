@@ -19,4 +19,4 @@
 #
 
 TEST_HOME=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
-exec jython ${TEST_HOME}/proton-test
+exec jython ${TEST_HOME}/proton-test "$@"
