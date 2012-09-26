@@ -27,7 +27,9 @@ class TransportFactoryImpl extends TransportFactory
 {
     public Transport transport(Connection c)
     {
-        return new TransportImpl(c);
+        TransportImpl t = new TransportImpl();
+        t.bind(c);
+        return t;
     }
 
 }

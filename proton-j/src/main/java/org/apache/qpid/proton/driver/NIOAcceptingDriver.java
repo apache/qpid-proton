@@ -82,7 +82,8 @@ public class NIOAcceptingDriver implements Runnable
                         SocketChannel newChan = channel.accept();
                         newChan.configureBlocking(false);
                         ConnectionImpl connection = new ConnectionImpl();
-                        Transport amqpTransport = connection.transport();
+                        Transport amqpTransport = new TransportImpl();
+                        amqpTransport.bind(connection);
                         Map<byte[], Transport> transportMap = new HashMap<byte[], Transport>();
                         transportMap.put(TransportImpl.HEADER, amqpTransport);
                         DelegatingTransport transport = new DelegatingTransport(transportMap, amqpTransport);
