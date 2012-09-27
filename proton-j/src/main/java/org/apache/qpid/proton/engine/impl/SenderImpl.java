@@ -122,8 +122,12 @@ public class SenderImpl  extends LinkImpl implements Sender
 
     public void drained()
     {
-        _drained = true;
-        modified();
+        if(getDrain())
+        {
+            _drained = true;
+            setCredit(0);
+            modified();
+        }
     }
 
     boolean clearDrained()

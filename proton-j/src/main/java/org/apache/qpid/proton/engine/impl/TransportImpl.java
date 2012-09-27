@@ -237,23 +237,20 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     TransportSession transportSession = sender.getSession().getTransportSession();
                     int credits = sender.getCredit();
                     sender.setCredit(0);
-                    if(credits != 0)
-                    {
-                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.valueOf(credits)));
-                        transportLink.setLinkCredit(UnsignedInteger.ZERO);
+                    transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.valueOf(credits)));
+                    transportLink.setLinkCredit(UnsignedInteger.ZERO);
 
-                        Flow flow = new Flow();
-                        flow.setHandle(transportLink.getLocalHandle());
-                        flow.setNextIncomingId(transportSession.getNextIncomingId());
-                        flow.setIncomingWindow(transportSession.getIncomingWindowSize());
-                        flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
-                        flow.setDeliveryCount(transportLink.getDeliveryCount());
-                        flow.setLinkCredit(transportLink.getLinkCredit());
-                        flow.setDrain(sender.getDrain());
-                        flow.setNextOutgoingId(transportSession.getNextOutgoingId());
-                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
-                        written += frameBytes;
-                    }
+                    Flow flow = new Flow();
+                    flow.setHandle(transportLink.getLocalHandle());
+                    flow.setNextIncomingId(transportSession.getNextIncomingId());
+                    flow.setIncomingWindow(transportSession.getIncomingWindowSize());
+                    flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
+                    flow.setDeliveryCount(transportLink.getDeliveryCount());
+                    flow.setLinkCredit(transportLink.getLinkCredit());
+                    flow.setDrain(sender.getDrain());
+                    flow.setNextOutgoingId(transportSession.getNextOutgoingId());
+                    int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
+                    written += frameBytes;
                 }
 
             }
@@ -437,7 +434,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 {
                     int credits = receiver.clearUnsentCredits();
                     transportSession.getSession().clearIncomingWindowResize();
-                    if(credits != 0)
+                    if(credits != 0 || receiver.getDrain())
                     {
                         transportLink.addCredit(credits);
                         Flow flow = new Flow();
