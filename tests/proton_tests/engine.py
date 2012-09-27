@@ -868,26 +868,32 @@ class PipelineTest(Test):
 
     self.pump()
 
-    assert pn_connection_state(self.c2) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    state = pn_connection_state(self.c2)
+    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
     ssn2 = pn_session_head(self.c2, PN_LOCAL_UNINIT)
     assert ssn2
-    assert pn_session_state(ssn2) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    state == pn_session_state(ssn2)
+    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
     rcv = pn_link_head(self.c2, PN_LOCAL_UNINIT)
     assert rcv
-    assert pn_link_state(rcv) == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    state = pn_link_state(rcv)
+    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
 
     pn_connection_open(self.c2)
     pn_session_open(ssn2)
     pn_link_open(rcv)
     pn_flow(rcv, 10)
-    assert pn_queued(rcv) == 0
+    assert pn_queued(rcv) == 0, pn_queued(rcv)
 
     self.pump()
 
-    assert pn_queued(rcv) == 10
-    assert pn_link_state(rcv) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
-    assert pn_session_state(ssn2) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
-    assert pn_connection_state(self.c2) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)
+    assert pn_queued(rcv) == 10, pn_queued(rcv)
+    state = pn_link_state(rcv)
+    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
+    state = pn_session_state(ssn2)
+    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
+    state = pn_connection_state(self.c2)
+    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
 
     for i in range(pn_queued(rcv)):
       d = pn_current(rcv)
@@ -895,4 +901,4 @@ class PipelineTest(Test):
       assert pn_delivery_tag(d) == "delivery-%s" % i
       pn_settle(d)
 
-    assert pn_queued(rcv) == 0
+    assert pn_queued(rcv) == 0, pn_queued(rcv)
