@@ -41,7 +41,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private int _credit;
     private int _unsettled;
 
-    private LinkNode<LinkImpl> _node;
+    private final LinkNode<LinkImpl> _node;
     private boolean _drain;
 
 
@@ -285,4 +285,5 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         return _drain;
     }
+
 }

@@ -198,6 +198,15 @@ def pn_work_head(c):
 def pn_work_next(d):
   return d.getWorkNext()
 
+def pn_link_head(c, m):
+  local, remote = enums(m)
+  return c.linkHead(local, remote)
+
+
+def pn_link_next(l, m):
+  local, remote = enums(m)
+  return l.next(local, remote)
+
 def pn_flow(rcv, n):
   return rcv.flow(n)
 

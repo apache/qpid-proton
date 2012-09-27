@@ -61,7 +61,6 @@ public class SessionImpl extends EndpointImpl implements Session
         {
             sender = new SenderImpl(this, name);
             _senders.put(name, sender);
-            _connection.addLinkEndpoint(sender);
         }
         return sender;
     }
@@ -73,7 +72,6 @@ public class SessionImpl extends EndpointImpl implements Session
         {
             receiver = new ReceiverImpl(this, name);
             _receivers.put(name, receiver);
-            _connection.addLinkEndpoint(receiver);
         }
         return receiver;
     }
