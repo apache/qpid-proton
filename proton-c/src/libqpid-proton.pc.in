@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=@EXEC_PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: Proton
+Description: Qpid Proton C library
+Version: @PN_VERSION@
+URL: http://qpid.apache.org/proton/
+Libs: -L${libdir} -lqpidproton
+Cflags: -I${includedir}

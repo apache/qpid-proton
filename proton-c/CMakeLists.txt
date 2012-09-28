@@ -5,6 +5,12 @@ project (Proton C)
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
 
+set (PREFIX ${CMAKE_INSTALL_PREFIX})
+set (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX})
+set (LIBDIR ${CMAKE_INSTALL_PREFIX}/lib CACHE STRING "Library directory")
+set (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
+
 include(CheckIncludeFile)
 CHECK_INCLUDE_FILE(openssl/ssl.h HAVE_OPENSSL_H)
 
@@ -102,9 +108,16 @@ set_target_properties (
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton
          RUNTIME DESTINATION bin
-         LIBRARY DESTINATION lib)
+         LIBRARY DESTINATION ${LIBDIR})
 
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION include/proton)
+
+# Pkg config file
+
+configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
+         ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)
+install (FILES ${PROJECT_BINARY_DIR}/libqpid-proton.pc
+         DESTINATION ${LIBDIR}/pkgconfig)
 
