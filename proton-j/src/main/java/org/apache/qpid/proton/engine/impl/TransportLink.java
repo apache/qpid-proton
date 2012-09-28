@@ -34,6 +34,8 @@ class TransportLink<T extends LinkImpl>
     private T _link;
     private UnsignedInteger _remoteDeliveryCount;
     private UnsignedInteger _remoteLinkCredit;
+    private boolean _detachReceived;
+    private boolean _attachSent;
 
     protected TransportLink(T link)
     {
@@ -155,5 +157,25 @@ class TransportLink<T extends LinkImpl>
     void incrementDeliveryCount()
     {
         _deliveryCount = _deliveryCount.add(UnsignedInteger.ONE);
+    }
+
+    public void receivedDetach()
+    {
+        _detachReceived = true;
+    }
+
+    public boolean detachReceived()
+    {
+        return _detachReceived;
+    }
+
+    public boolean attachSent()
+    {
+        return _attachSent;
+    }
+
+    public void sentAttach()
+    {
+        _attachSent = true;
     }
 }

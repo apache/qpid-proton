@@ -58,6 +58,8 @@ class TransportSession
     private int _unsettledIncomingSize;
     private boolean _incomingWindowSizeChange;
     private boolean _outgoingWindowSizeChange;
+    private boolean _endReceived;
+    private boolean _beginSent;
 
     public TransportSession(SessionImpl session)
     {
@@ -398,5 +400,25 @@ class TransportSession
     public void incrementNextIncomingId()
     {
         _nextIncomingId = _nextIncomingId.add(UnsignedInteger.ONE);
+    }
+
+    public boolean endReceived()
+    {
+        return _endReceived;
+    }
+
+    public void receivedEnd()
+    {
+        _endReceived = true;
+    }
+
+    public boolean beginSent()
+    {
+        return _beginSent;
+    }
+
+    public void sentBegin()
+    {
+        _beginSent = true;
     }
 }

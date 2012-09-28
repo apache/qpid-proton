@@ -91,6 +91,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     private final ByteBuffer _overflowBuffer = ByteBuffer.wrap(new byte[_maxFrameSize]);
     private static final byte AMQP_FRAME_TYPE = 0;
+    private boolean _closeReceived;
 
 
     {
@@ -158,14 +159,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             _overflowBuffer.flip();
         }
 
-        if(_overflowBuffer.position() == 0)
-        {
-            clearInterestList();
-            //clearTransportWorkList();
-        }
 
         return written;
-        }catch (RuntimeException e)
+        }
+        catch (RuntimeException e)
         {
             e.printStackTrace();
             throw e;
@@ -192,27 +189,33 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
             if(endpoint instanceof LinkImpl)
             {
-
                 LinkImpl link = (LinkImpl) endpoint;
                 TransportLink transportLink = getTransportState(link);
+                SessionImpl session = link.getSession();
+                TransportSession transportSession = getTransportState(session);
+
                 if(link.getLocalState() == EndpointState.CLOSED
                    && transportLink.isLocalHandleSet())
                 {
+                    if(!(link instanceof SenderImpl)
+                       || link.getQueued() == 0
+                       || transportLink.detachReceived()
+                       || transportSession.endReceived()
+                       || _closeReceived)
+                    {
+                        UnsignedInteger localHandle = transportLink.getLocalHandle();
+                        transportLink.clearLocalHandle();
+                        transportSession.freeLocalHandle(localHandle);
 
-                    SessionImpl session = link.getSession();
-                    TransportSession transportSession = getTransportState(session);
-                    UnsignedInteger localHandle = transportLink.getLocalHandle();
-                    transportLink.clearLocalHandle();
-                    transportSession.freeLocalHandle(localHandle);
+
+                        Detach detach = new Detach();
+                        detach.setHandle(localHandle);
 
 
-                    Detach detach = new Detach();
-                    detach.setHandle(localHandle);
-
-
-                    int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null);
-                    written += frameBytes;
-
+                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null);
+                        written += frameBytes;
+                        endpoint.clearModified();
+                    }
                 }
 
             }
@@ -251,6 +254,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     flow.setNextOutgoingId(transportSession.getNextOutgoingId());
                     int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
                     written += frameBytes;
+                    endpoint.clearModified();
                 }
 
             }
@@ -358,8 +362,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     transportLink.setLinkCredit(transportLink.getLinkCredit().subtract(UnsignedInteger.ONE));
                 }
 
-                delivery.getLink().decrementQueued();
-
                 delivery = delivery.clearTransportWork();
 
 
@@ -448,7 +450,12 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                         flow.setNextOutgoingId(transportSession.getNextOutgoingId());
                         int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null);
                         written += frameBytes;
+                        if(receiver.getLocalState() == EndpointState.ACTIVE)
+                        {
+                            endpoint.clearModified();
+                        }
                     }
+
                 }
             }
             endpoint = endpoint.transportNext();
@@ -487,15 +494,15 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     {
         EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
         int written = 0;
+
         while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
-
             if(endpoint instanceof LinkImpl)
             {
 
                 LinkImpl link = (LinkImpl) endpoint;
                 TransportLink transportLink = getTransportState(link);
-                if(link.getLocalState() == EndpointState.ACTIVE)
+                if(link.getLocalState() != EndpointState.UNINITIALIZED && !transportLink.attachSent())
                 {
 
                     if( (link.getRemoteState() == EndpointState.ACTIVE
@@ -539,10 +546,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
                         int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), attach, null);
                         written += frameBytes;
+                        transportLink.sentAttach();
+                        if(link.getLocalState() == EndpointState.ACTIVE && (link instanceof SenderImpl || !link.hasCredit()))
+                        {
+                            endpoint.clearModified();
+                        }
                     }
                 }
 
             }
+
             endpoint = endpoint.transportNext();
         }
         return written;
@@ -598,7 +611,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             {
                 SessionImpl session = (SessionImpl) endpoint;
                 TransportSession transportSession = getTransportState(session);
-                if(session.getLocalState() == EndpointState.ACTIVE)
+                if(session.getLocalState() != EndpointState.UNINITIALIZED && !transportSession.beginSent())
                 {
                     int channelId = allocateLocalChannel();
                     transportSession.setLocalChannel(channelId);
@@ -617,6 +630,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     begin.setNextOutgoingId(transportSession.getNextOutgoingId());
 
                     written += writeFrame(buffer, channelId, begin, null);
+                    transportSession.sentBegin();
+                    if(session.getLocalState() == EndpointState.ACTIVE)
+                    {
+                        endpoint.clearModified();
+                    }
                 }
             }
             endpoint = endpoint.transportNext();
@@ -658,51 +676,75 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         int written = 0;
         while(endpoint != null && buffer.remaining() >= _maxFrameSize)
         {
+            SessionImpl session;
+            TransportSession transportSession;
 
-            if(endpoint instanceof SessionImpl)
+            if((endpoint instanceof SessionImpl)
+               && (session = (SessionImpl)endpoint).getLocalState() == EndpointState.CLOSED
+               && (transportSession = session.getTransportSession()).isLocalChannelSet()
+               && !hasSendableMessages(session))
             {
-
-                SessionImpl session = (SessionImpl) endpoint;
-                TransportSession transportSession = session.getTransportSession();
-                if(session.getLocalState() == EndpointState.CLOSED
-                   && transportSession.isLocalChannelSet())
-                {
-
-                    int channel = transportSession.getLocalChannel();
-                    transportSession.freeLocalChannel();
-                    _localSessions[channel] = null;
+                int channel = transportSession.getLocalChannel();
+                transportSession.freeLocalChannel();
+                _localSessions[channel] = null;
 
 
-                    End end = new End();
+                End end = new End();
 
-                    int frameBytes = writeFrame(buffer, channel, end, null);
-                    written += frameBytes;
-                }
+                int frameBytes = writeFrame(buffer, channel, end, null);
+                written += frameBytes;
+                endpoint.clearModified();
 
             }
+
             endpoint = endpoint.transportNext();
+
         }
         return written;
+    }
+
+    private boolean hasSendableMessages(SessionImpl session)
+    {
+
+        if(!_closeReceived && (session == null || !session.getTransportSession().endReceived()))
+        {
+            EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
+            while(endpoint != null)
+            {
+                if(endpoint instanceof SenderImpl)
+                {
+                    SenderImpl sender = (SenderImpl) endpoint;
+                    if((session == null || sender.getSession() == session)
+                       && sender.getQueued() != 0
+                        && !getTransportState(sender).detachReceived())
+                    {
+                        return true;
+                    }
+                }
+                endpoint = endpoint.transportNext();
+            }
+        }
+        return false;
     }
 
     private int processClose(WritableBuffer buffer)
     {
         if(_connectionEndpoint.getLocalState() == EndpointState.CLOSED && !_isCloseSent)
         {
-            Close close = new Close();
+            if(!hasSendableMessages(null))
+            {
+                Close close = new Close();
 
-            // TODO - populate;
+                // TODO - populate;
 
-            _isCloseSent = true;
+                _isCloseSent = true;
 
-            return  writeFrame(buffer, 0, close, null);
-
+                return  writeFrame(buffer, 0, close, null);
+            }
         }
         return 0;
 
     }
-
-
 
     private int writeFrame(WritableBuffer buffer, int channel, DescribedType frameBody, ByteBuffer payload)
     {
@@ -895,6 +937,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             if(transportLink != null)
             {
                 LinkImpl link = transportLink.getLink();
+                transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
                 link.setRemoteState(EndpointState.CLOSED);
 
@@ -916,7 +959,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         else
         {
             _remoteSessions[channel] = null;
-
+            transportSession.receivedEnd();
             transportSession.getSession().setRemoteState(EndpointState.CLOSED);
 
         }
@@ -924,6 +967,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     public void handleClose(Close close, Binary payload, Integer channel)
     {
+        _closeReceived = true;
         _connectionEndpoint.setRemoteState(EndpointState.CLOSED);
     }
 
