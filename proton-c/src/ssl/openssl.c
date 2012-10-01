@@ -525,14 +525,16 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
   // Read all available data from the SSL socket
 
   if (!ssl->ssl_closed) {
-    int pending = BIO_pending(ssl->bio_ssl);
-    int available = pn_min( (APP_BUF_SIZE - ssl->in_count), pending );
+    //int pending = BIO_pending(ssl->bio_ssl);
+    //int available = pn_min( (APP_BUF_SIZE - ssl->in_count), pending );
+    int available = APP_BUF_SIZE - ssl->in_count;
     while (available > 0) {
       int written = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], available );
       if (written > 0) {
         _log( ssl, "Read %d bytes from SSL socket for app\n", written );
         _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], written );
         ssl->in_count += written;
+        available -= written;
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
           _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
@@ -551,8 +553,6 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         }
         break;
       }
-      pending = BIO_pending(ssl->bio_ssl);
-      available = pn_min( (APP_BUF_SIZE - ssl->in_count), pending );
     }
   }
 
@@ -568,7 +568,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
       } else {
         if (consumed < 0) {
-          _log(ssl, "Application layer closed its input: %d (discarding %d bytes)\n",
+          _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
                (int) consumed, (int)ssl->in_count);
           ssl->in_count = 0;    // discard any pending input
           ssl->app_input_closed = consumed;
@@ -593,13 +593,15 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
       memmove( ssl->inbuf, data, ssl->in_count );
   }
 
+  //_log(ssl, "ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d\n",
+  //     ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed );
+
   // tell transport our input side is closed if the SSL socket cannot be read from any
   // longer, AND any pending input has been written up to the application (or the
   // application is closed)
   if (ssl->ssl_closed && ssl->in_count == 0) {
     consumed = ssl->app_input_closed ? ssl->app_input_closed : PN_EOS;
   }
-
   _log(ssl, "process_input_ssl() returning %d\n", (int) consumed);
   return consumed;
 }
@@ -622,7 +624,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
         _log( ssl, "Gathered %d bytes from app to send to peer\n", app_bytes );
       } else {
         if (app_bytes < 0) {
-          _log(ssl, "Application layer closed its output size: %d (%d bytes pending send)\n",
+          _log(ssl, "Application layer closed its output, error=%d (%d bytes pending send)\n",
                (int) app_bytes, (int) ssl->out_count);
           ssl->app_output_closed = app_bytes;
           if (app_bytes == PN_EOS) {
@@ -692,6 +694,9 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
       _log( ssl, "Read %d bytes from BIO Layer\n", available );
     }
   }
+
+  //_log(ssl, "written=%d ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d bio_pend=%d\n",
+  //     written, ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed, BIO_pending(ssl->bio_net_io) );
 
   // Once no more data is available "below" the SSL socket, tell the transport we are
   // done.
