@@ -1508,7 +1508,7 @@ static ssize_t pn_input_read_header(pn_transport_t *transport, char *bytes, size
     char quoted[1024];
     pn_quote_data(quoted, 1024, bytes, available);
     return pn_error_format(transport->error, PN_ERR,
-                           "%s header missmatch: '%s'", protocol, quoted);
+                           "%s header mismatch: '%s'", protocol, quoted);
   } else {
     transport->header_count += delta;
     if (transport->header_count == size) {
