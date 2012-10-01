@@ -67,4 +67,6 @@ public interface Link extends Endpoint
     public int getQueued();
     public int getUnsettled();
 
+    public Session getSession();
+
 }
