@@ -30,7 +30,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
 {
 
     public static final int MAX_CHANNELS = 255;
-    private TransportImpl _transport;
     private List<SessionImpl> _sessions = new ArrayList<SessionImpl>();
     private EndpointImpl _transportTail;
     private EndpointImpl _transportHead;
@@ -50,6 +49,10 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
     private String _localContainerId = "";
+    private String _localHostname = "";
+    private boolean _bound;
+    private String _remoteContainer;
+    private String _remoteHostname;
 
     public ConnectionImpl()
     {
@@ -127,20 +130,6 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     }
 
 
-    public void bind(Transport transport)
-    {
-        if(_transport == null)
-        {
-            _transport = (TransportImpl) transport;
-        }
-        else
-        {
-            // todo - should error
-
-        }
-    }
-
-
     public Session sessionHead(final EnumSet<EndpointState> local, final EnumSet<EndpointState> remote)
     {
         if(_sessionHead == null)
@@ -183,21 +172,14 @@ public class ConnectionImpl extends EndpointImpl implements Connection
             session.free();
         }
         _sessions = null;
-        if(_transport != null)
-        {
-            _transport.free();
-        }
-    }
-
-    void clearTransport()
-    {
-        _transport = null;
     }
 
     public void handleOpen(Open open)
     {
         // TODO - store state
         setRemoteState(EndpointState.ACTIVE);
+        setRemoteHostname(open.getHostname());
+        setRemoteContainer(open.getContainerId());
     }
 
 
@@ -269,6 +251,45 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _workHead;
     }
 
+    @Override
+    public void setContainer(String container)
+    {
+        _localContainerId = container;
+    }
+
+    @Override
+    public void setHostname(String hostname)
+    {
+        _localHostname = hostname;
+    }
+
+    @Override
+    public String getRemoteContainer()
+    {
+        return _remoteContainer;
+    }
+
+    @Override
+    public String getRemoteHostname()
+    {
+        return _remoteHostname;
+    }
+
+    public String getHostname()
+    {
+        return _localHostname;
+    }
+
+    void setRemoteContainer(String remoteContainerId)
+    {
+        _remoteContainer = remoteContainerId;
+    }
+
+    void setRemoteHostname(String remoteHostname)
+    {
+        _remoteHostname = remoteHostname;
+    }
+
     DeliveryImpl getWorkTail()
     {
         return _workTail;
@@ -310,6 +331,16 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     public Sequence<DeliveryImpl> getWorkSequence()
     {
         return new WorkSequence(_workHead);
+    }
+
+    public void setBound(boolean bound)
+    {
+        _bound = true;
+    }
+
+    public boolean isBound()
+    {
+        return _bound;
     }
 
     private class WorkSequence implements Sequence<DeliveryImpl>

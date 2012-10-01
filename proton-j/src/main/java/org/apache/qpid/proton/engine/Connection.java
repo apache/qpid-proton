@@ -46,4 +46,11 @@ public interface Connection extends Endpoint
 
     public Delivery getWorkHead();
 
+    public void setContainer(String container);
+
+    public void setHostname(String hostname);
+
+    public String getRemoteContainer();
+
+    public String getRemoteHostname();
 }

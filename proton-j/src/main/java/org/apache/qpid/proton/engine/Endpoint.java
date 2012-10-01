@@ -62,4 +62,8 @@ public interface Endpoint
      * transition local state to CLOSED
      */
     void close();
+
+    public void setContext(Object o);
+
+    public Object getContext();
 }

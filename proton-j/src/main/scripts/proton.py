@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from org.apache.qpid.proton.engine import EndpointState, Accepted
+from org.apache.qpid.proton.engine import EndpointState, Accepted, TransportException
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
 from org.apache.qpid.proton.message import Message as MessageImpl, \
@@ -29,9 +29,6 @@ class Skipped(Exception):
   skipped = True
 
 PN_SESSION_WINDOW = TransportImpl.SESSION_WINDOW
-
-class ProtonException(Exception):
-  pass
 
 class Endpoint(object):
 
@@ -111,6 +108,34 @@ class Connection(Endpoint):
   @property
   def work_head(self):
     return wrap_delivery(self.impl.getWorkHead())
+
+  def _get_container(self):
+    return self.impl.getContainer()
+  def _set_container(self, container):
+    self.impl.setContainer(container)
+  container = property(_get_container, _set_container)
+
+
+  def _get_hostname(self):
+      return self.impl.getHostname()
+  def _set_hostname(self, hostname):
+      self.impl.setHostname(hostname)
+  hostname = property(_get_hostname, _set_hostname)
+
+  def _get_remote_container(self):
+    return self.impl.getRemoteContainer()
+  def _set_remote_container(self, container):
+    self.impl.setRemoteContainer(container)
+  remote_container = property(_get_remote_container, _set_remote_container)
+
+
+  def _get_remote_hostname(self):
+      return self.impl.getRemoteHostname()
+  def _set_remote_hostname(self, hostname):
+      self.impl.setRemoteHostname(hostname)
+  remote_hostname = property(_get_remote_hostname, _set_remote_hostname)
+
+
 
 def wrap_session(impl):
   # XXX
@@ -262,9 +287,6 @@ class Delivery(object):
   @property
   def work_next(self):
     return wrap_delivery(self.impl.getWorkNext())
-
-class TransportException(ProtonException):
-  pass
 
 class Transport(object):
 

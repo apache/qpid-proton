@@ -34,7 +34,7 @@ public abstract class EndpointImpl implements Endpoint
     private boolean _modified;
     private EndpointImpl _transportNext;
     private EndpointImpl _transportPrev;
-
+    private Object _context;
 
     public void open()
     {
@@ -159,5 +159,15 @@ public abstract class EndpointImpl implements Endpoint
     void setTransportPrev(EndpointImpl transportPrevious)
     {
         _transportPrev = transportPrevious;
+    }
+
+    public Object getContext()
+    {
+        return _context;
+    }
+
+    public void setContext(Object context)
+    {
+        _context = context;
     }
 }

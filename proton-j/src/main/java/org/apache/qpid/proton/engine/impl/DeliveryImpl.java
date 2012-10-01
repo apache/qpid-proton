@@ -34,7 +34,7 @@ public class DeliveryImpl implements Delivery
     private DeliveryImpl _transportWorkNext;
     private DeliveryImpl _transportWorkPrev;
 
-
+    private Object _context;
 
     private final byte[] _tag;
     private final LinkImpl _link;
@@ -425,4 +425,15 @@ public class DeliveryImpl implements Delivery
         _remoteSettled = remoteSettled;
         _updated = true;
     }
+
+    public Object getContext()
+    {
+        return _context;
+    }
+
+    public void setContext(Object context)
+    {
+        _context = context;
+    }
+
 }

@@ -6,21 +6,31 @@ package org.apache.qpid.proton.engine;
 public final class EndpointError
 {
 
-private String name;
-private String description;
+    private String name;
+    private String description;
 
-public EndpointError(String name, String description)
-{
-    this.name = name;
-    this.description = description;
-}
+    public EndpointError(String name, String description)
+    {
+        this.name = name;
+        this.description = description;
+    }
 
-public EndpointError(String name)
-{
-    this(name, null);
-}
+    public EndpointError(String name)
+    {
+        this(name, null);
+    }
 
-public String toString()
+    public String getName()
+    {
+        return name;
+    }
+
+    public String getDescription()
+    {
+        return description;
+    }
+
+    public String toString()
 {
     if (description == null)
     {

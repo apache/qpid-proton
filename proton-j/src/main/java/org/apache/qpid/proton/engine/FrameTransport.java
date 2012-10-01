@@ -20,39 +20,9 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.framing.TransportFrame;
 
-/**
- * Transport
- *
- */
-
-public interface Transport extends Endpoint
+public interface FrameTransport
 {
-
-    public int END_OF_STREAM = -1;
-
-    public void bind(Connection connection);
-
-    /**
-     * @param bytes input bytes for consumption
-     * @param offset the offset within bytes where input begins
-     * @param size the number of bytes available for input
-     *
-     * @return the number of bytes consumed
-     */
-    public int input(byte[] bytes, int offset, int size);
-
-    /**
-     * @param bytes array for output bytes
-     * @param offset the offset within bytes where output begins
-     * @param size the number of bytes available for output
-     *
-     * @return the number of bytes written
-     */
-    public int output(byte[] bytes, int offset, int size);
-
-
-    SaslClient saslClient();
-
-    SaslServer saslServer();
+    boolean input(TransportFrame frame);
 }

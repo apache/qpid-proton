@@ -27,6 +27,11 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.engine.ProtonException;
+import org.apache.qpid.proton.engine.FrameTransport;
+import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.TransportInput;
+import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.type.AMQPDefinedTypes;
 import org.apache.qpid.proton.type.Binary;
 import org.apache.qpid.proton.type.transport.FrameBody;
@@ -34,20 +39,17 @@ import org.apache.qpid.proton.type.transport.FrameBody;
 import java.nio.ByteBuffer;
 import java.util.Formatter;
 
-class FrameParser
+class FrameParser implements TransportInput
 {
-    private final FrameBody.FrameBodyHandler<Integer> _frameBodyHandler;
-
 
     public static final byte[] HEADER = new byte[8];
 
     private EndpointError _localError;
     private Logger _traceLogger = Logger.getLogger("proton.trace");
     private Logger _rawLogger = Logger.getLogger("proton.raw");
+    private FrameTransport _frameTransport;
+    private TransportFrame _heldFrame;
 
-//    private static int ID;
-//    private int _id = ID++;
-//
     static
     {
         HEADER[0] = (byte) 'A';
@@ -62,6 +64,14 @@ class FrameParser
 
     enum State
     {
+        HEADER0,
+        HEADER1,
+        HEADER2,
+        HEADER3,
+        HEADER4,
+        HEADER5,
+        HEADER6,
+        HEADER7,
         SIZE_0,
         SIZE_1,
         SIZE_2,
@@ -72,7 +82,7 @@ class FrameParser
         ERROR
     }
 
-    private State _state = State.SIZE_0;
+    private State _state = State.HEADER0;
     private int _size;
 
     private ByteBuffer _buffer;
@@ -83,46 +93,174 @@ class FrameParser
     {
         AMQPDefinedTypes.registerAllTypes(_decoder);
     }
-    private int _ignore = 8;
 
 
-    FrameParser(FrameBody.FrameBodyHandler<Integer> frameBodyHandler)
+
+    FrameParser(FrameTransport frameTransport)
     {
-        _frameBodyHandler = frameBodyHandler;
+        _frameTransport = frameTransport;
     }
 
     public int input(byte[] bytes, int offset, final int length)
     {
+        if(_heldFrame != null)
+        {
+            if(_frameTransport.input(_heldFrame))
+            {
+                _heldFrame = null;
+            }
+            else
+            {
+                return 0;
+            }
+        }
         int unconsumed = length;
         EndpointError frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
 
-        // TODO protocol header hack
-        if(_ignore != 0)
-        {
-            if(unconsumed > _ignore)
-            {
-                offset+=_ignore;
-                unconsumed -= _ignore;
-
-                _ignore = 0;
-            }
-            else
-            {
-                _ignore-=length;
-                return length;
-            }
-        }
-
         ByteBuffer in = ByteBuffer.wrap(bytes, offset, unconsumed);
 
-        while(in.hasRemaining() && state != State.ERROR)
+        boolean transportAccepting = true;
+
+        while(in.hasRemaining() && state != State.ERROR && transportAccepting)
         {
             switch(state)
             {
+                case HEADER0:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[0])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[0]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER1;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER1:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[1])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[1]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER2;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER2:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[2])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[2]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER3;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER3:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[3])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[3]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER4;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER4:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[4])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[4]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER5;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER5:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[5])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[5]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER6;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER6:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[6])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[6]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.HEADER7;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                case HEADER7:
+                    if(in.hasRemaining())
+                    {
+                        byte c = in.get();
+                        if(c != HEADER[7])
+                        {
+                            frameParsingError = createFramingError("AMQP header mismatch value %x, expecting %x", c, HEADER[7]);
+                            state = State.ERROR;
+                            break;
+                        }
+                        state = State.SIZE_0;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 case SIZE_0:
+                    if(!in.hasRemaining())
+                    {
+                        break;
+                    }
                     if(in.remaining() >= 4)
                     {
                         size = in.getInt();
@@ -267,9 +405,12 @@ class FrameParser
                             {
                                 _traceLogger.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
                             }
-
-//                            System.out.println("IN["+_id+"]: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
-                            frameBody.invoke(_frameBodyHandler, payload,channel);
+                            TransportFrame frame = new TransportFrame(channel, frameBody, payload);
+                            if(!_frameTransport.input(frame))
+                            {
+                                transportAccepting = false;
+                                _heldFrame = frame;
+                            }
 
                         }
                         else
@@ -298,7 +439,10 @@ class FrameParser
         _size = size;
 
         _localError = frameParsingError;
-
+        if(_state == State.ERROR )
+        {
+            throw new TransportException(frameParsingError.getDescription());
+        }
         return _state == State.ERROR ? -1 : length - in.remaining();
     }
 
@@ -313,8 +457,9 @@ class FrameParser
     {
         Formatter formatter = new Formatter();
         formatter.format(description, args);
-        System.out.println(formatter.toString());
-        return null;  //TODO.
+
+        return new EndpointError("ERROR", formatter.toString());
     }
+
 
 }

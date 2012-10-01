@@ -18,41 +18,28 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.framing;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.transport.FrameBody;
+package org.apache.qpid.proton.engine;
 
-import java.nio.ByteBuffer;
-
-public class TransportFrame
+public class ProtonException extends RuntimeException
 {
-    private final int _channel;
-    private final FrameBody _body;
-    private final Binary _payload;
-
-
-    public TransportFrame(final int channel,
-                          final FrameBody body,
-                          final Binary payload)
+    public ProtonException()
     {
-        _payload = payload;
-        _body = body;
-        _channel = channel;
     }
 
-    public int getChannel()
+    public ProtonException(String message)
     {
-        return _channel;
+        super(message);
     }
 
-    public FrameBody getBody()
+    public ProtonException(String message, Throwable cause)
     {
-        return _body;
+        super(message, cause);
     }
 
-    public Binary getPayload()
+    public ProtonException(Throwable cause)
     {
-        return _payload;
+        super(cause);
     }
+
 }

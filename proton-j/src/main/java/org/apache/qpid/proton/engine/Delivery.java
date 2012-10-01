@@ -60,5 +60,7 @@ public interface Delivery
 
     public boolean isReadable();
 
+    public void setContext(Object o);
 
+    public Object getContext();
 }
