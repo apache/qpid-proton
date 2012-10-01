@@ -443,6 +443,12 @@ class Message(object):
     self.impl.setContentEncoding(content_encoding)
   content_encoding = property(_get_content_encoding, _set_content_encoding)
 
+  def _get_format(self):
+    return self.impl.getFormat()
+  def _set_format(self, format):
+    self.impl.setMessageFormat(format)
+  format = property(_get_format, _set_format)
+
 class SASL(object):
 
   def __init__(self, *args, **kwargs):
