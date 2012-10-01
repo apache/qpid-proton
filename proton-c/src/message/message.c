@@ -71,6 +71,7 @@ struct pn_message_t {
 
   pn_format_t format;
   pn_parser_t *parser;
+  pn_error_t *error;
 };
 
 pn_message_t *pn_message()
@@ -98,6 +99,7 @@ pn_message_t *pn_message()
   msg->body = NULL;
   msg->format = PN_DATA;
   msg->parser = NULL;
+  msg->error = pn_error();
   return msg;
 }
 
@@ -115,6 +117,7 @@ void pn_message_free(pn_message_t *msg)
     pn_data_free(msg->data);
     pn_data_free(msg->body);
     pn_parser_free(msg->parser);
+    pn_error_free(msg->error);
     free(msg);
   }
 }
@@ -145,8 +148,8 @@ void pn_message_clear(pn_message_t *msg)
 
 int pn_message_errno(pn_message_t *msg)
 {
-  if (msg && msg->parser) {
-    return pn_parser_errno(msg->parser);
+  if (msg) {
+    return pn_error_code(msg->error);
   } else {
     return 0;
   }
@@ -154,8 +157,8 @@ int pn_message_errno(pn_message_t *msg)
 
 const char *pn_message_error(pn_message_t *msg)
 {
-  if (msg && msg->parser) {
-    return pn_parser_error(msg->parser);
+  if (msg) {
+    return pn_error_text(msg->error);
   } else {
     return NULL;
   }
@@ -423,13 +426,15 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   while (size) {
     pn_data_clear(msg->data);
     ssize_t used = pn_data_decode(msg->data, (char *) bytes, size);
-    if (used < 0) return used;
+    if (used < 0) return pn_error_format(msg->error, used, "data error: %s",
+                                         pn_data_error(msg->data));
     size -= used;
     bytes += used;
     bool scanned;
     uint64_t desc;
     int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
-    if (err) return err;
+    if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                    pn_data_error(msg->data));
     if (!scanned){
       desc = 0;
     }
@@ -447,25 +452,26 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
                            &subject, &reply_to, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                        pn_data_error(msg->data));
         err = pn_buffer_set_bytes(&msg->user_id, user_id);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting user_id");
         err = pn_buffer_set_strn(&msg->address, address.start, address.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting address");
         err = pn_buffer_set_strn(&msg->subject, subject.start, subject.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting subject");
         err = pn_buffer_set_strn(&msg->reply_to, reply_to.start, reply_to.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting reply_to");
         err = pn_buffer_set_strn(&msg->content_type, ctype.start, ctype.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting content_type");
         err = pn_buffer_set_strn(&msg->content_encoding, cencoding.start,
                                  cencoding.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting content_encoding");
         err = pn_buffer_set_strn(&msg->group_id, group_id.start, group_id.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting group_id");
         err = pn_buffer_set_strn(&msg->reply_to_group_id, reply_to_group_id.start,
                                  reply_to_group_id.size);
-        if (err) return err;
+        if (err) return pn_error_format(msg->error, err, "error setting reply_to_group_id");
       }
       break;
     case DELIVERY_ANNOTATIONS:
@@ -481,7 +487,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     }
   }
 
-  return pn_data_clear(msg->data);
+  pn_data_clear(msg->data);
+  return 0;
 }
 
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
@@ -494,13 +501,14 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     msg->body = pn_data(64);
   }
 
-  int err = pn_data_clear(msg->data);
-  if (err) return err;
+  pn_data_clear(msg->data);
 
-  err = pn_data_fill(msg->data, "DL[oBIoI]", HEADER, msg->durable,
-                     msg->priority, msg->ttl, msg->first_acquirer,
-                     msg->delivery_count);
-  if (err) return err;
+  int err = pn_data_fill(msg->data, "DL[oBIoI]", HEADER, msg->durable,
+                         msg->priority, msg->ttl, msg->first_acquirer,
+                         msg->delivery_count);
+  if (err)
+    return pn_error_format(msg->error, err, "data error: %s",
+                           pn_data_error(msg->data));
 
   err = pn_data_fill(msg->data, "DL[nzSSSnssLLSiS]", PROPERTIES,
                      pn_buffer_bytes(msg->user_id),
@@ -514,17 +522,23 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
                      pn_buffer_str(msg->group_id),
                      msg->group_sequence,
                      pn_buffer_str(msg->reply_to_group_id));
-  if (err) return err;
+  if (err)
+    return pn_error_format(msg->error, err, "data error: %s",
+                           pn_data_error(msg->data));
 
   size_t remaining = *size;
   ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
-  if (encoded < 0) return encoded;
+  if (encoded < 0)
+    return pn_error_format(msg->error, encoded, "data error: %s",
+                           pn_data_error(msg->data));
 
   bytes += encoded;
   remaining -= encoded;
 
   encoded = pn_data_encode(msg->body, bytes, remaining);
-  if (encoded < 0) return encoded;
+  if (encoded < 0)
+    return pn_error_format(msg->error, encoded, "data error: %s",
+                           pn_data_error(msg->body));
   bytes += encoded;
   remaining -= encoded;
 
@@ -568,7 +582,13 @@ int pn_message_load_data(pn_message_t *msg, const char *data, size_t size)
   }
 
   pn_data_clear(msg->body);
-  return pn_data_fill(msg->body, "DLz", DATA, size, data);
+  int err = pn_data_fill(msg->body, "DLz", DATA, size, data);
+  if (err) {
+    return pn_error_format(msg->error, err, "data error: %s",
+                           pn_data_error(msg->body));
+  } else {
+    return 0;
+  }
 }
 
 int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
@@ -579,7 +599,13 @@ int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
   }
 
   pn_data_clear(msg->body);
-  return pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
+  int err = pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
+  if (err) {
+    return pn_error_format(msg->error, err, "data error: %s",
+                           pn_data_error(msg->body));
+  } else {
+    return 0;
+  }
 }
 
 int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
@@ -593,7 +619,13 @@ int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
   pn_parser_t *parser = pn_message_parser(msg);
 
   pn_data_clear(msg->body);
-  return pn_parser_parse(parser, data, msg->body);
+  int err = pn_parser_parse(parser, data, msg->body);
+  if (err) {
+    return pn_error_format(msg->error, err, "parse error: %s",
+                           pn_parser_error(parser));
+  } else {
+    return 0;
+  }
 }
 
 int pn_message_load_json(pn_message_t *msg, const char *data, size_t size)
@@ -632,7 +664,8 @@ int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
   pn_bytes_t bytes;
   bool scanned;
   int err = pn_data_scan(msg->body, "DL?z", &desc, &scanned, &bytes);
-  if (err) return err;
+  if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                  pn_data_error(msg->body));
   if (desc == DATA && scanned) {
     if (bytes.size > *size) {
       return PN_OVERFLOW;
@@ -659,7 +692,8 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
   pn_bytes_t str = {0,0};
   bool scanned, dscanned;
   int err = pn_data_scan(msg->body, "?DL?S", &dscanned, &desc, &scanned, &str);
-  if (err) return err;
+  if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                  pn_data_error(msg->body));
   if (dscanned && desc == AMQP_VALUE) {
     if (scanned && str.size >= *size) {
       return PN_OVERFLOW;
@@ -683,7 +717,11 @@ int pn_message_save_amqp(pn_message_t *msg, char *data, size_t *size)
     return 0;
   }
 
-  return pn_data_format(msg->body, data, size);
+  int err = pn_data_format(msg->body, data, size);
+  if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                  pn_data_error(msg->body));
+
+  return 0;
 }
 
 int pn_message_save_json(pn_message_t *msg, char *data, size_t *size)

@@ -90,7 +90,7 @@ int pn_data_fill(pn_data_t *data, const char *fmt, ...);
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
 int pn_data_scan(pn_data_t *data, const char *fmt, ...);
 
-int pn_data_clear(pn_data_t *data);
+void pn_data_clear(pn_data_t *data);
 size_t pn_data_size(pn_data_t *data);
 void pn_data_rewind(pn_data_t *data);
 bool pn_data_next(pn_data_t *data, pn_type_t *type);

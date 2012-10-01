@@ -193,13 +193,16 @@ size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
 
 size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
 {
+  size = pn_min(size, buf->size);
   size_t start = pn_buffer_index(buf, offset);
-  size_t stop = pn_buffer_index(buf, pn_min(offset + size, buf->size));
+  size_t stop = pn_buffer_index(buf, offset + size);
+
+  if (size == 0) return 0;
 
   size_t sz1;
   size_t sz2;
 
-  if (start > stop) {
+  if (start >= stop) {
     sz1 = buf->capacity - start;
     sz2 = stop;
   } else {

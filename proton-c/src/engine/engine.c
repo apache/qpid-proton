@@ -290,7 +290,8 @@ void pn_session_free(pn_session_t *session)
 
   while (session->link_count)
     pn_link_free(session->links[session->link_count - 1]);
-  pn_remove_session(session->connection, session);
+  if (session->connection)
+    pn_remove_session(session->connection, session);
   free(session->links);
   pn_endpoint_tini(&session->endpoint);
   free(session);

@@ -17,8 +17,8 @@
 # under the License.
 #
 
-import os, common, xproton
-from xproton import *
+import os, common
+from proton import *
 
 class Test(common.Test):
   pass
@@ -26,80 +26,104 @@ class Test(common.Test):
 class TransportTest(Test):
 
   def setup(self):
-    self.transport = pn_transport()
+    self.transport = Transport()
 
   def teardown(self):
-    pn_transport_free(self.transport)
     self.transport = None
 
   def testEOS(self):
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, pn_error_text(pn_transport_error(self.transport))
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
 
   def testPartial(self):
-    n = pn_input(self.transport, "AMQ")
+    n = self.transport.input("AMQ")
     assert n == 3, n
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, n
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
 
   def testGarbage(self):
-    n = pn_input(self.transport, "GARBAGE_")
-    assert n == PN_ERR, pn_error_text(pn_transport_error(self.transport))
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, n
+    try:
+      n = self.transport.input("GARBAGE_")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
 
   def testSmallGarbage(self):
-    n = pn_input(self.transport, "XXX")
-    assert n == PN_ERR, pn_error_text(pn_transport_error(self.transport))
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, n
+    try:
+      n = self.transport.input("XXX")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
 
   def testBigGarbage(self):
-    n = pn_input(self.transport, "GARBAGE_XXX")
-    assert n == PN_ERR, pn_error_text(pn_transport_error(self.transport))
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, n
+    try:
+      n = self.transport.input("GARBAGE_XXX")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "AMQP header missmatch" in str(e)
 
   def testHeader(self):
-    n = pn_input(self.transport, "AMQP\x00\x01\x00\x00")
+    n = self.transport.input("AMQP\x00\x01\x00\x00")
     assert n == 8, n
-    n = pn_input(self.transport, "")
-    assert n == PN_ERR, n
+    try:
+      n = self.transport.input("")
+      assert False, n
+    except TransportException, e:
+      assert "connection aborted" in str(e)
 
   def testOutput(self):
-    n, out = pn_output(self.transport, 1024)
-    assert n == len(out)
+    out = self.transport.output(1024)
+    assert out is not None
 
   def testBindAfterOpen(self):
-    conn = pn_connection()
-    ssn = pn_session(conn)
-    pn_connection_open(conn)
-    pn_session_open(ssn)
-    pn_connection_set_container(conn, "test-container")
-    pn_connection_set_hostname(conn, "test-hostname")
-    trn = pn_transport()
-    pn_transport_bind(trn, conn)
-    n, out = pn_output(trn, 1024)
-    assert n == len(out), n
+    conn = Connection()
+    ssn = conn.session()
+    conn.open()
+    ssn.open()
+    conn.container = "test-container"
+    conn.hostname = "test-hostname"
+    trn = Transport()
+    trn.bind(conn)
+    out = trn.output(1024)
     assert "test-container" in out, repr(out)
-    n = pn_input(self.transport, out)
-    assert n > 0 and n < len(out)
+    assert "test-hostname" in out, repr(out)
+    n = self.transport.input(out)
+    assert n > 0, n
     out = out[n:]
 
-    n = pn_input(self.transport, out)
+    n = self.transport.input(out)
     assert n == 0
 
-    c = pn_connection()
-    assert pn_connection_remote_container(c) == None
-    assert pn_connection_remote_hostname(c) == None
-    pn_transport_bind(self.transport, c)
-    assert pn_connection_remote_container(c) == "test-container"
-    assert pn_connection_remote_hostname(c) == "test-hostname"
-    assert pn_session_head(c, 0) == None
-    n = pn_input(self.transport, out)
-    assert n == len(out), (n, out)
-    assert pn_session_head(c, 0) != None
-
-    pn_transport_free(trn)
-    pn_connection_free(conn)
-    pn_connection_free(c)
+    c = Connection()
+    assert c.remote_container == None
+    assert c.remote_hostname == None
+    assert c.session_head(0) == None
+    self.transport.bind(c)
+    assert c.remote_container == "test-container"
+    assert c.remote_hostname == "test-hostname"
+    if out:
+      assert c.session_head(0) == None
+      n = self.transport.input(out)
+      assert n == len(out), (n, out)
+    assert c.session_head(0) != None

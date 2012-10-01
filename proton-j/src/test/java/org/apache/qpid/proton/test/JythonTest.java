@@ -32,7 +32,6 @@ public class JythonTest
 {
 
     static final private String PROTON_TESTS = "PROTON_TESTS";
-    static final private String PROTON_COMMON = "PROTON_COMMON";
 
     @Test
     public void test() throws Exception
@@ -57,30 +56,12 @@ public class JythonTest
             }
         }
 
-        File commonDir;
-        String protonCommonVar = System.getenv(PROTON_COMMON);
-        if( protonCommonVar != null && protonCommonVar.trim().length()>0 )
-        {
-            commonDir = new File(protonCommonVar).getCanonicalFile();
-            assertTrue(PROTON_COMMON + " env variable set incorrectly: " + protonCommonVar, commonDir.isDirectory());
-        }
-        else
-        {
-            commonDir = new File(basedir, "../proton-c/bindings/python");
-            if( !commonDir.isDirectory() )
-            {
-                return;
-            }
-        }
-        // /proton-c/bindings/python
-
         File classesDir = new File(basedir, "target/classes");
         PythonInterpreter interp = new PythonInterpreter();
 
         interp.exec(
         "import sys\n"+
         "sys.path.insert(0,\""+classesDir.getCanonicalPath()+"\")\n"+
-        "sys.path.insert(0,\""+commonDir.getCanonicalPath()+"\")\n"+
         "sys.path.insert(0,\""+testDir.getCanonicalPath()+"\")\n"
         );
         interp.execfile(new File(testDir, "proton-test").getCanonicalPath());

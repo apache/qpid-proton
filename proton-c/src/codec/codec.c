@@ -1715,7 +1715,7 @@ size_t pn_data_size(pn_data_t *data)
   return data ? data->size : 0;
 }
 
-int pn_data_clear(pn_data_t *data)
+void pn_data_clear(pn_data_t *data)
 {
   if (data) {
     data->size = 0;
@@ -1724,7 +1724,6 @@ int pn_data_clear(pn_data_t *data)
     data->current = 0;
     pn_buffer_clear(data->buf);
   }
-  return 0;
 }
 
 int pn_data_grow(pn_data_t *data)

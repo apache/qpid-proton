@@ -17,8 +17,8 @@
 # under the License.
 #
 
-import os, common, xproton
-from xproton import *
+import os, common
+from proton import *
 
 # future test areas
 #  + different permutations of setup
@@ -31,20 +31,16 @@ OUTPUT_SIZE = 10*1024
 
 def pump(t1, t2):
   while True:
-    cd, out1 = pn_output(t1, OUTPUT_SIZE)
-    assert cd >= 0 or cd == PN_EOS, (cd, out1, len(out1))
-    cd, out2 = pn_output(t2, OUTPUT_SIZE)
-    assert cd >= 0 or cd == PN_EOS, (cd, out2, len(out2))
+    out1 = t1.output(OUTPUT_SIZE)
+    out2 = t2.output(OUTPUT_SIZE)
 
     if out1 or out2:
       if out1:
-        cd = pn_input(t2, out1)
-        assert cd == PN_EOS or cd == len(out1), \
-            (cd, out1, len(out1), pn_error_text(pn_transport_error(t2)))
+        n = t2.input(out1)
+        assert n is None or n == len(out1), (n, out1, len(out1))
       if out2:
-        cd = pn_input(t1, out2)
-        assert cd == PN_EOS or cd == len(out2), \
-            (cd, out2, len(out2), pn_error_text(pn_transport_error(t1)))
+        n = t1.input(out2)
+        assert n is None or n == len(out2), (n, out2, len(out2))
     else:
       return
 
@@ -55,40 +51,36 @@ class Test(common.Test):
     self._wires = []
 
   def connection(self):
-    c1 = pn_connection()
-    c2 = pn_connection()
-    t1 = pn_transport()
-    pn_transport_bind(t1, c1)
-    t2 = pn_transport()
-    pn_transport_bind(t2, c2)
+    c1 = Connection()
+    c2 = Connection()
+    t1 = Transport()
+    t1.bind(c1)
+    t2 = Transport()
+    t2.bind(c2)
     self._wires.append((c1, t1, c2, t2))
     trc = os.environ.get("PN_TRACE_FRM")
     if trc and trc.lower() in ("1", "2", "yes", "true"):
-      pn_trace(t1, PN_TRACE_FRM)
+      t1.trace(Transport.TRACE_FRM)
     if trc == "2":
-      pn_trace(t2, PN_TRACE_FRM)
+      t2.trace(Transport.TRACE_FRM)
     return c1, c2
 
   def link(self, name):
     c1, c2 = self.connection()
-    pn_connection_open(c1)
-    pn_connection_open(c2)
-    ssn1 = pn_session(c1)
-    pn_session_open(ssn1)
+    c1.open()
+    c2.open()
+    ssn1 = c1.session()
+    ssn1.open()
     self.pump()
-    ssn2 = pn_session_head(c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
-    pn_session_open(ssn2)
+    ssn2 = c2.session_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+    ssn2.open()
     self.pump()
-    snd = pn_sender(ssn1, name)
-    rcv = pn_receiver(ssn2, name)
+    snd = ssn1.sender(name)
+    rcv = ssn2.receiver(name)
     return snd, rcv
 
   def cleanup(self):
-    for c1, t1, c2, t2 in self._wires:
-      pn_connection_free(c1)
-      pn_transport_free(t1)
-      pn_connection_free(c2)
-      pn_transport_free(t2)
+    pass
 
   def pump(self):
     for c1, t1, c2, t2 in self._wires:
@@ -103,139 +95,139 @@ class ConnectionTest(Test):
     self.cleanup()
 
   def test_open_close(self):
-    assert pn_connection_state(self.c1) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
-    assert pn_connection_state(self.c2) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
+    assert self.c1.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert self.c2.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
-    pn_connection_open(self.c1)
+    self.c1.open()
     self.pump()
 
-    assert pn_connection_state(self.c1) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-    assert pn_connection_state(self.c2) == PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE
+    assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
+    assert self.c2.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE
 
-    pn_connection_open(self.c2)
+    self.c2.open()
     self.pump()
 
-    assert pn_connection_state(self.c1) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_connection_state(self.c2) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
+    assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
-    pn_connection_close(self.c1)
+    self.c1.close()
     self.pump()
 
-    assert pn_connection_state(self.c1) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_connection_state(self.c2) == PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED
+    assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
-    pn_connection_close(self.c2)
+    self.c2.close()
     self.pump()
 
-    assert pn_connection_state(self.c1) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_connection_state(self.c2) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_simultaneous_open_close(self):
-    assert pn_connection_state(self.c1) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
-    assert pn_connection_state(self.c2) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
+    assert self.c1.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert self.c2.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
-    pn_connection_open(self.c1)
-    pn_connection_open(self.c2)
-
-    self.pump()
-
-    assert pn_connection_state(self.c1) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_connection_state(self.c2) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-
-    pn_connection_close(self.c1)
-    pn_connection_close(self.c2)
+    self.c1.open()
+    self.c2.open()
 
     self.pump()
 
-    assert pn_connection_state(self.c1) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_connection_state(self.c2) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    self.c1.close()
+    self.c2.close()
+
+    self.pump()
+
+    assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
 class SessionTest(Test):
 
   def setup(self):
     self.c1, self.c2 = self.connection()
-    self.ssn = pn_session(self.c1)
-    pn_connection_open(self.c1)
-    pn_connection_open(self.c2)
+    self.ssn = self.c1.session()
+    self.c1.open()
+    self.c2.open()
 
   def teardown(self):
     self.cleanup()
 
   def test_open_close(self):
-    assert pn_session_state(self.ssn) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
+    assert self.ssn.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
-    pn_session_open(self.ssn)
+    self.ssn.open()
 
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
     self.pump()
 
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
-    ssn = pn_session_head(self.c2, PN_REMOTE_ACTIVE | PN_LOCAL_UNINIT)
+    ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
 
     assert ssn != None
-    assert pn_session_state(ssn) == PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
+    assert ssn.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
-    pn_session_open(ssn)
+    ssn.open()
 
-    assert pn_session_state(ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-
-    self.pump()
-
-    assert pn_session_state(ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-
-    pn_session_close(ssn)
-
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
+    assert ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
     self.pump()
 
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED
+    assert ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
-    pn_session_close(self.ssn)
+    ssn.close()
 
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_session_state(self.ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
     self.pump()
 
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_session_state(self.ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+    self.ssn.close()
+
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+
+    self.pump()
+
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert self.ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_simultaneous_close(self):
-    pn_session_open(self.ssn)
+    self.ssn.open()
     self.pump()
-    ssn = pn_session_head(self.c2, PN_REMOTE_ACTIVE | PN_LOCAL_UNINIT)
+    ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
     assert ssn != None
-    pn_session_open(ssn)
+    ssn.open()
     self.pump()
 
-    assert pn_session_state(self.ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_session_state(ssn) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
-    pn_session_close(self.ssn)
-    pn_session_close(ssn)
+    self.ssn.close()
+    ssn.close()
 
-    assert pn_session_state(self.ssn) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
+    assert self.ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
 
     self.pump()
 
-    assert pn_session_state(self.ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_session_state(ssn) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_closing_connection(self):
-    pn_session_open(self.ssn)
+    self.ssn.open()
     self.pump()
-    pn_connection_close(self.c1)
+    self.c1.close()
     self.pump()
-    pn_session_close(self.ssn)
+    self.ssn.close()
     self.pump()
 
 
@@ -248,359 +240,349 @@ class LinkTest(Test):
     self.cleanup()
 
   def test_open_close(self):
-    assert pn_link_state(self.snd) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
+    assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
-    pn_link_open(self.snd)
+    self.snd.open()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
-
-    self.pump()
-
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE
-
-    pn_link_open(self.rcv)
-
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
     self.pump()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE
 
-    pn_link_close(self.snd)
+    self.rcv.open()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-
-    self.pump()
-
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED
-
-    pn_link_close(self.rcv)
-
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
     self.pump()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_link_state(self.rcv) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    self.snd.close()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    self.pump()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+    self.rcv.close()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+
+    self.pump()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_simultaneous_open_close(self):
-    assert pn_link_state(self.snd) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_UNINIT | PN_REMOTE_UNINIT
+    assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
 
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
+    self.snd.open()
+    self.rcv.open()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_UNINIT
-
-    self.pump()
-
-    assert pn_link_state(self.snd) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE
-
-    pn_link_close(self.snd)
-    pn_link_close(self.rcv)
-
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
-    assert pn_link_state(self.rcv) == PN_LOCAL_CLOSED | PN_REMOTE_ACTIVE
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
     self.pump()
 
-    assert pn_link_state(self.snd) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
-    assert pn_link_state(self.rcv) == PN_LOCAL_CLOSED | PN_REMOTE_CLOSED
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    self.snd.close()
+    self.rcv.close()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+
+    self.pump()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_multiple(self):
-    rcv = pn_receiver(pn_get_session(self.snd), "second-rcv")
-    pn_link_open(self.snd)
-    pn_link_open(rcv)
+    rcv = self.snd.session.receiver("second-rcv")
+    self.snd.open()
+    rcv.open()
     self.pump()
-    c2 = pn_get_connection(pn_get_session(self.rcv))
-    l = pn_link_head(c2, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+    c2 = self.rcv.session.connection
+    l = c2.link_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
     while l:
-      pn_link_open(l)
-      l = pn_link_next(l, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+      l.open()
+      l = l.next(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
     self.pump()
 
     assert self.snd
     assert rcv
-    pn_link_close(self.snd)
-    pn_link_close(rcv)
-    ssn = pn_get_session(rcv)
-    conn = pn_get_connection(ssn)
-    pn_session_close(ssn)
-    pn_connection_close(conn)
+    self.snd.close()
+    rcv.close()
+    ssn = rcv.session
+    conn = ssn.connection
+    ssn.close()
+    conn.close()
     self.pump()
 
   def test_closing_session(self):
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
-    ssn1 = pn_get_session(self.snd)
+    self.snd.open()
+    self.rcv.open()
+    ssn1 = self.snd.session
     self.pump()
-    pn_session_close(ssn1)
+    ssn1.close()
     self.pump()
-    pn_link_close(self.snd)
+    self.snd.close()
     self.pump()
 
   def test_closing_connection(self):
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
-    ssn1 = pn_get_session(self.snd)
-    c1 = pn_get_connection(ssn1)
+    self.snd.open()
+    self.rcv.open()
+    ssn1 = self.snd.session
+    c1 = ssn1.connection
     self.pump()
-    pn_connection_close(c1)
+    c1.close()
     self.pump()
-    pn_link_close(self.snd)
+    self.snd.close()
     self.pump()
 
 class TransferTest(Test):
 
   def setup(self):
     self.snd, self.rcv = self.link("test-link")
-    self.c1 = pn_get_connection(pn_get_session(self.snd))
-    self.c2 = pn_get_connection(pn_get_session(self.rcv))
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
     self.pump()
 
   def teardown(self):
     self.cleanup()
 
   def test_work_queue(self):
-    assert pn_work_head(self.c1) is None
-    pn_delivery(self.snd, "tag")
-    assert pn_work_head(self.c1) is None
-    pn_flow(self.rcv, 1)
+    assert self.c1.work_head is None
+    self.snd.delivery("tag")
+    assert self.c1.work_head is None
+    self.rcv.flow(1)
     self.pump()
-    d = pn_work_head(self.c1)
+    d = self.c1.work_head
     assert d is not None
-    tag = pn_delivery_tag(d)
+    tag = d.tag
     assert tag == "tag", tag
-    assert pn_writable(d)
+    assert d.writable
 
-    n = pn_send(self.snd, "this is a test")
-    assert pn_advance(self.snd)
-    assert pn_work_head(self.c1) is None
+    n = self.snd.send("this is a test")
+    assert self.snd.advance()
+    assert self.c1.work_head is None
 
     self.pump()
 
-    d = pn_work_head(self.c2)
-    assert pn_delivery_tag(d) == "tag"
-    assert pn_readable(d)
+    d = self.c2.work_head
+    assert d.tag == "tag"
+    assert d.readable
 
   def test_multiframe(self):
-    pn_flow(self.rcv, 1)
-    pn_delivery(self.snd, "tag")
+    self.rcv.flow(1)
+    self.snd.delivery("tag")
     msg = "this is a test"
-    n = pn_send(self.snd, msg)
+    n = self.snd.send(msg)
     assert n == len(msg)
 
     self.pump()
 
-    d = pn_current(self.rcv)
+    d = self.rcv.current
     assert d
-    assert pn_delivery_tag(d) == "tag", repr(pn_delivery_tag(d))
-    assert pn_readable(d)
+    assert d.tag == "tag", repr(d.tag)
+    assert d.readable
 
-    cd, bytes = pn_recv(self.rcv, 1024)
+    bytes = self.rcv.recv(1024)
     assert bytes == msg
-    assert cd == len(bytes)
 
-    cd, bytes = pn_recv(self.rcv, 1024)
-    assert cd == 0
+    bytes = self.rcv.recv(1024)
     assert bytes == ""
 
     msg = "this is more"
-    n = pn_send(self.snd, msg)
+    n = self.snd.send(msg)
     assert n == len(msg)
-    assert pn_advance(self.snd)
+    assert self.snd.advance()
 
     self.pump()
 
-    cd, bytes = pn_recv(self.rcv, 1024)
-    assert cd == len(bytes)
+    bytes = self.rcv.recv(1024)
     assert bytes == msg
 
-    cd, bytes = pn_recv(self.rcv, 1024)
-    assert cd == PN_EOS
-    assert bytes == ""
+    bytes = self.rcv.recv(1024)
+    assert bytes is None
 
   def test_disposition(self):
-    pn_flow(self.rcv, 1)
+    self.rcv.flow(1)
 
     self.pump()
 
-    sd = pn_delivery(self.snd, "tag")
+    sd = self.snd.delivery("tag")
     msg = "this is a test"
-    n = pn_send(self.snd, msg)
+    n = self.snd.send(msg)
     assert n == len(msg)
-    assert pn_advance(self.snd)
+    assert self.snd.advance()
 
     self.pump()
 
-    rd = pn_current(self.rcv)
+    rd = self.rcv.current
     assert rd is not None
-    assert pn_delivery_tag(rd) == pn_delivery_tag(sd)
-    cd, rmsg = pn_recv(self.rcv, 1024)
-    assert cd == len(rmsg)
+    assert rd.tag == sd.tag
+    rmsg = self.rcv.recv(1024)
     assert rmsg == msg
-    pn_disposition(rd, PN_ACCEPTED)
+    rd.disposition(Delivery.ACCEPTED)
 
     self.pump()
 
-    rdisp = pn_remote_disposition(sd)
-    ldisp = pn_local_disposition(rd)
-    assert rdisp == ldisp == PN_ACCEPTED, (rdisp, ldisp)
-    assert pn_updated(sd)
+    rdisp = sd.remote_disposition
+    ldisp = rd.local_disposition
+    assert rdisp == ldisp == Delivery.ACCEPTED, (rdisp, ldisp)
+    assert sd.updated
 
-    pn_disposition(sd, PN_ACCEPTED)
-    pn_settle(sd)
+    sd.disposition(Delivery.ACCEPTED)
+    sd.settle()
 
     self.pump()
 
-    assert pn_local_disposition(sd) == pn_remote_disposition(rd) == PN_ACCEPTED
+    assert sd.local_disposition == rd.remote_disposition == Delivery.ACCEPTED
 
 class CreditTest(Test):
 
   def setup(self):
     self.snd, self.rcv = self.link("test-link")
-    self.c1 = pn_get_connection(pn_get_session(self.snd))
-    self.c2 = pn_get_connection(pn_get_session(self.rcv))
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
     self.pump()
 
   def teardown(self):
     self.cleanup()
 
   def testCreditSender(self):
-    credit = pn_credit(self.snd)
+    credit = self.snd.credit
     assert credit == 0, credit
-    pn_flow(self.rcv, 10)
+    self.rcv.flow(10)
     self.pump()
-    credit = pn_credit(self.snd)
+    credit = self.snd.credit
     assert credit == 10, credit
 
-    pn_flow(self.rcv, PN_SESSION_WINDOW)
+    self.rcv.flow(PN_SESSION_WINDOW)
     self.pump()
-    credit = pn_credit(self.snd)
+    credit = self.snd.credit
     assert credit == 10 + PN_SESSION_WINDOW, credit
 
   def testCreditReceiver(self):
-    pn_flow(self.rcv, 10)
+    self.rcv.flow(10)
     self.pump()
-    assert pn_credit(self.rcv) == 10, pn_credit(self.rcv)
+    assert self.rcv.credit == 10, self.rcv.credit
 
-    d = pn_delivery(self.snd, "tag")
+    d = self.snd.delivery("tag")
     assert d
-    assert pn_advance(self.snd)
+    assert self.snd.advance()
     self.pump()
-    assert pn_credit(self.rcv) == 10, pn_credit(self.rcv)
-    assert pn_queued(self.rcv) == 1, pn_queued(self.rcv)
-    c = pn_current(self.rcv)
-    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
-    assert pn_advance(self.rcv)
-    assert pn_credit(self.rcv) == 9, pn_credit(self.rcv)
-    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+    assert self.rcv.credit == 10, self.rcv.credit
+    assert self.rcv.queued == 1, self.rcv.queued
+    c = self.rcv.current
+    assert c.tag == "tag", c.tag
+    assert self.rcv.advance()
+    assert self.rcv.credit == 9, self.rcv.credit
+    assert self.rcv.queued == 0, self.rcv.queued
 
   def settle(self):
     result = []
-    d = pn_work_head(self.c1)
+    d = self.c1.work_head
     while d:
-      if pn_updated(d):
-        result.append(pn_delivery_tag(d))
-        pn_settle(d)
-      d = pn_work_next(d)
+      if d.updated:
+        result.append(d.tag)
+        d.settle()
+      d = d.work_next
     return result
 
   def testBuffering(self):
-    pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
+    self.rcv.flow(PN_SESSION_WINDOW + 10)
     self.pump()
 
-    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+    assert self.rcv.queued == 0, self.rcv.queued
 
     idx = 0
-    while pn_credit(self.snd):
-      d = pn_delivery(self.snd, "tag%s" % idx)
+    while self.snd.credit:
+      d = self.snd.delivery("tag%s" % idx)
       assert d
-      assert pn_advance(self.snd)
+      assert self.snd.advance()
       self.pump()
       idx += 1
 
     assert idx == PN_SESSION_WINDOW + 10, idx
 
-    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
 
-    extra = pn_delivery(self.snd, "extra")
+    extra = self.snd.delivery("extra")
     assert extra
-    assert pn_advance(self.snd)
+    assert self.snd.advance()
     self.pump()
 
-    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
 
     for i in range(10):
-      d = pn_current(self.rcv)
-      assert pn_delivery_tag(d) == "tag%s" % i, pn_delivery_tag(d)
-      assert pn_advance(self.rcv)
-      pn_settle(d)
+      d = self.rcv.current
+      assert d.tag == "tag%s" % i, d.tag
+      assert self.rcv.advance()
+      d.settle()
       self.pump()
-      assert pn_queued(self.rcv) == PN_SESSION_WINDOW - (i+1), pn_queued(self.rcv)
+      assert self.rcv.queued == PN_SESSION_WINDOW - (i+1), self.rcv.queued
 
     tags = self.settle()
     assert tags == ["tag%s" % i for i in range(10)], tags
     self.pump()
 
-    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
 
     for i in range(PN_SESSION_WINDOW):
-      d = pn_current(self.rcv)
+      d = self.rcv.current
       assert d, i
-      assert pn_delivery_tag(d) == "tag%s" % (i+10), pn_delivery_tag(d)
-      assert pn_advance(self.rcv)
-      pn_settle(d)
+      assert d.tag == "tag%s" % (i+10), d.tag
+      assert self.rcv.advance()
+      d.settle()
       self.pump()
 
-    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+    assert self.rcv.queued == 0, self.rcv.queued
 
     tags = self.settle()
     assert tags == ["tag%s" % (i+10) for i in range(PN_SESSION_WINDOW)]
 
-    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+    assert self.rcv.queued == 0, self.rcv.queued
 
   def _testBufferingOnClose(self, a, b):
     for i in range(10):
-      d = pn_delivery(self.snd, "tag-%s" % i)
+      d = self.snd.delivery("tag-%s" % i)
       assert d
-      pn_settle(d)
+      d.settle()
     self.pump()
-    assert pn_queued(self.snd) == 10
+    assert self.snd.queued == 10
 
     endpoints = {"connection": (self.c1, self.c2),
-                 "session": (pn_get_session(self.snd), pn_get_session(self.rcv)),
+                 "session": (self.snd.session, self.rcv.session),
                  "link": (self.snd, self.rcv)}
 
     local_a, remote_a = endpoints[a]
     local_b, remote_b = endpoints[b]
 
-    a_close = getattr(xproton, "pn_%s_close" % a)
-    a_state = getattr(xproton, "pn_%s_state" % a)
-    b_close = getattr(xproton, "pn_%s_close" % b)
-    b_state = getattr(xproton, "pn_%s_state" % b)
-
-    b_close(remote_b)
+    remote_b.close()
     self.pump()
-    assert b_state(local_b) == PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED
-    a_close(local_a)
+    assert local_b.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+    local_a.close()
     self.pump()
-    assert a_state(remote_a) & PN_REMOTE_CLOSED
-    assert pn_queued(self.snd) == 10
+    assert remote_a.state & Endpoint.REMOTE_CLOSED
+    assert self.snd.queued == 10
 
   def testBufferingOnCloseLinkLink(self):
     self._testBufferingOnClose("link", "link")
@@ -630,217 +612,217 @@ class CreditTest(Test):
     self._testBufferingOnClose("connection", "connection")
 
   def testCreditWithBuffering(self):
-    pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
+    self.rcv.flow(PN_SESSION_WINDOW + 10)
     self.pump()
-    assert pn_credit(self.snd) == PN_SESSION_WINDOW + 10, pn_credit(self.snd)
-    assert pn_queued(self.rcv) == 0, pn_queued(self.rcv)
+    assert self.snd.credit == PN_SESSION_WINDOW + 10, self.snd.credit
+    assert self.rcv.queued == 0, self.rcv.queued
 
     idx = 0
-    while pn_credit(self.snd):
-      d = pn_delivery(self.snd, "tag%s" % idx)
+    while self.snd.credit:
+      d = self.snd.delivery("tag%s" % idx)
       assert d
-      assert pn_advance(self.snd)
+      assert self.snd.advance()
       self.pump()
       idx += 1
 
     assert idx == PN_SESSION_WINDOW + 10, idx
-    assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
+    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
 
-    pn_flow(self.rcv, 1)
+    self.rcv.flow(1)
     self.pump()
-    assert pn_credit(self.snd) == 1, pn_credit(self.snd)
+    assert self.snd.credit == 1, self.snd.credit
 
   def testFullDrain(self):
-    assert pn_credit(self.rcv) == 0
-    assert pn_credit(self.snd) == 0
-    pn_drain(self.rcv, 10)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 0
+    assert self.snd.credit == 0
+    self.rcv.drain(10)
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 0
     self.pump()
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
-    pn_drained(self.snd)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 10
+    self.snd.drained()
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 0
     self.pump()
-    assert pn_credit(self.rcv) == 0
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 0
+    assert self.snd.credit == 0
 
   def testPartialDrain(self):
-    pn_drain(self.rcv, 2)
+    self.rcv.drain(2)
     self.pump()
 
-    d = pn_delivery(self.snd, "tag")
+    d = self.snd.delivery("tag")
     assert d
-    assert pn_advance(self.snd)
-    pn_drained(self.snd)
+    assert self.snd.advance()
+    self.snd.drained()
     self.pump()
 
-    c = pn_current(self.rcv)
-    assert pn_queued(self.rcv) == 1, pn_queued(self.rcv)
-    assert pn_delivery_tag(c) == pn_delivery_tag(d), pn_delivery_tag(c)
-    assert pn_advance(self.rcv)
-    assert not pn_current(self.rcv)
-    assert pn_credit(self.rcv) == 0, pn_credit(self.rcv)
+    c = self.rcv.current
+    assert self.rcv.queued == 1, self.rcv.queued
+    assert c.tag == d.tag, c.tag
+    assert self.rcv.advance()
+    assert not self.rcv.current
+    assert self.rcv.credit == 0, self.rcv.credit
 
   def testDrainFlow(self):
-    assert pn_credit(self.rcv) == 0
-    assert pn_credit(self.snd) == 0
-    pn_drain(self.rcv, 10)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 0
+    assert self.snd.credit == 0
+    self.rcv.drain(10)
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 0
     self.pump()
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
-    pn_drained(self.snd)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 10
+    self.snd.drained()
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 0
     self.pump()
-    assert pn_credit(self.rcv) == 0
-    assert pn_credit(self.snd) == 0
-    pn_flow(self.rcv, 10)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 0
+    assert self.rcv.credit == 0
+    assert self.snd.credit == 0
+    self.rcv.flow(10)
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 0
     self.pump()
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
-    pn_drained(self.snd)
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 10
+    self.snd.drained()
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 10
     self.pump()
-    assert pn_credit(self.rcv) == 10
-    assert pn_credit(self.snd) == 10
+    assert self.rcv.credit == 10
+    assert self.snd.credit == 10
 
   def testNegative(self):
-    assert pn_credit(self.snd) == 0
-    d = pn_delivery(self.snd, "tag")
+    assert self.snd.credit == 0
+    d = self.snd.delivery("tag")
     assert d
-    assert pn_advance(self.snd)
+    assert self.snd.advance()
     self.pump()
 
-    assert pn_credit(self.rcv) == 0
-    assert pn_queued(self.rcv) == 0
+    assert self.rcv.credit == 0
+    assert self.rcv.queued == 0
 
-    pn_flow(self.rcv, 1)
-    assert pn_credit(self.rcv) == 1
-    assert pn_queued(self.rcv) == 0
+    self.rcv.flow(1)
+    assert self.rcv.credit == 1
+    assert self.rcv.queued == 0
     self.pump()
-    assert pn_credit(self.rcv) == 1
-    assert pn_queued(self.rcv) == 1
+    assert self.rcv.credit == 1
+    assert self.rcv.queued == 1
 
-    c = pn_current(self.rcv)
+    c = self.rcv.current
     assert c
-    assert pn_delivery_tag(c) == "tag"
-    assert pn_advance(self.rcv)
-    assert pn_credit(self.rcv) == 0
-    assert pn_queued(self.rcv) == 0
+    assert c.tag == "tag"
+    assert self.rcv.advance()
+    assert self.rcv.credit == 0
+    assert self.rcv.queued == 0
 
   def testDrainZero(self):
-    assert pn_credit(self.snd) == 0
-    assert pn_credit(self.rcv) == 0
-    assert pn_queued(self.rcv) == 0
+    assert self.snd.credit == 0
+    assert self.rcv.credit == 0
+    assert self.rcv.queued == 0
 
-    pn_flow(self.rcv, 10)
+    self.rcv.flow(10)
     self.pump()
-    assert pn_credit(self.snd) == 10
-    assert pn_credit(self.rcv) == 10
-    assert pn_queued(self.rcv) == 0
+    assert self.snd.credit == 10
+    assert self.rcv.credit == 10
+    assert self.rcv.queued == 0
 
-    pn_drained(self.snd)
+    self.snd.drained()
     self.pump()
-    assert pn_credit(self.snd) == 10
-    assert pn_credit(self.rcv) == 10
-    assert pn_queued(self.rcv) == 0
+    assert self.snd.credit == 10
+    assert self.rcv.credit == 10
+    assert self.rcv.queued == 0
 
-    pn_drain(self.rcv, 0)
-    assert pn_credit(self.snd) == 10
-    assert pn_credit(self.rcv) == 10
-    assert pn_queued(self.rcv) == 0
+    self.rcv.drain(0)
+    assert self.snd.credit == 10
+    assert self.rcv.credit == 10
+    assert self.rcv.queued == 0
 
-    self.pump()
-
-    assert pn_credit(self.snd) == 10
-    assert pn_credit(self.rcv) == 10
-    assert pn_queued(self.rcv) == 0
-
-    pn_drained(self.snd)
-    assert pn_credit(self.snd) == 0
-    assert pn_credit(self.rcv) == 10
-    assert pn_queued(self.rcv) == 0
     self.pump()
 
-    assert pn_credit(self.snd) == 0
-    assert pn_credit(self.rcv) == 0
-    assert pn_queued(self.rcv) == 0
+    assert self.snd.credit == 10
+    assert self.rcv.credit == 10
+    assert self.rcv.queued == 0
+
+    self.snd.drained()
+    assert self.snd.credit == 0
+    assert self.rcv.credit == 10
+    assert self.rcv.queued == 0
+    self.pump()
+
+    assert self.snd.credit == 0
+    assert self.rcv.credit == 0
+    assert self.rcv.queued == 0
 
 class SettlementTest(Test):
 
   def setup(self):
     self.snd, self.rcv = self.link("test-link")
-    self.c1 = pn_get_connection(pn_get_session(self.snd))
-    self.c2 = pn_get_connection(pn_get_session(self.rcv))
-    pn_link_open(self.snd)
-    pn_link_open(self.rcv)
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
     self.pump()
 
   def teardown(self):
     self.cleanup()
 
   def testSettleCurrent(self):
-    pn_flow(self.rcv, 10)
+    self.rcv.flow(10)
     self.pump()
 
-    assert pn_credit(self.snd) == 10, pn_credit(self.snd)
-    d = pn_delivery(self.snd, "tag")
-    e = pn_delivery(self.snd, "tag2")
+    assert self.snd.credit == 10, self.snd.credit
+    d = self.snd.delivery("tag")
+    e = self.snd.delivery("tag2")
     assert d
     assert e
-    c = pn_current(self.snd)
-    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
-    pn_settle(c)
-    c = pn_current(self.snd)
-    assert pn_delivery_tag(c) == "tag2", pn_delivery_tag(c)
-    pn_settle(c)
-    c = pn_current(self.snd)
+    c = self.snd.current
+    assert c.tag == "tag", c.tag
+    c.settle()
+    c = self.snd.current
+    assert c.tag == "tag2", c.tag
+    c.settle()
+    c = self.snd.current
     assert not c
     self.pump()
 
-    c = pn_current(self.rcv)
+    c = self.rcv.current
     assert c
-    assert pn_delivery_tag(c) == "tag", pn_delivery_tag(c)
-    assert pn_remote_settled(c)
-    pn_settle(c)
-    c = pn_current(self.rcv)
+    assert c.tag == "tag", c.tag
+    assert c.remote_settled
+    c.settle()
+    c = self.rcv.current
     assert c
-    assert pn_delivery_tag(c) == "tag2", pn_delivery_tag(c)
-    assert pn_remote_settled(c)
-    pn_settle(c)
-    c = pn_current(self.rcv)
+    assert c.tag == "tag2", c.tag
+    assert c.remote_settled
+    c.settle()
+    c = self.rcv.current
     assert not c
 
   def testUnsettled(self):
-    pn_flow(self.rcv, 10)
+    self.rcv.flow(10)
     self.pump()
 
-    assert pn_unsettled(self.snd) == 0, pn_unsettled(self.snd)
-    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
+    assert self.snd.unsettled == 0, self.snd.unsettled
+    assert self.rcv.unsettled == 0, self.rcv.unsettled
 
-    d = pn_delivery(self.snd, "tag")
+    d = self.snd.delivery("tag")
     assert d
-    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
-    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
-    assert pn_advance(self.snd)
+    assert self.snd.unsettled == 1, self.snd.unsettled
+    assert self.rcv.unsettled == 0, self.rcv.unsettled
+    assert self.snd.advance()
     self.pump()
 
-    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
-    assert pn_unsettled(self.rcv) == 1, pn_unsettled(self.rcv)
+    assert self.snd.unsettled == 1, self.snd.unsettled
+    assert self.rcv.unsettled == 1, self.rcv.unsettled
 
-    c = pn_current(self.rcv)
+    c = self.rcv.current
     assert c
-    pn_settle(c)
+    c.settle()
 
-    assert pn_unsettled(self.snd) == 1, pn_unsettled(self.snd)
-    assert pn_unsettled(self.rcv) == 0, pn_unsettled(self.rcv)
+    assert self.snd.unsettled == 1, self.snd.unsettled
+    assert self.rcv.unsettled == 0, self.rcv.unsettled
 
 class PipelineTest(Test):
 
@@ -851,54 +833,54 @@ class PipelineTest(Test):
     self.cleanup()
 
   def test(self):
-    ssn = pn_session(self.c1)
-    snd = pn_sender(ssn, "sender")
-    pn_connection_open(self.c1)
-    pn_session_open(ssn)
-    pn_link_open(snd)
+    ssn = self.c1.session()
+    snd = ssn.sender("sender")
+    self.c1.open()
+    ssn.open()
+    snd.open()
 
     for i in range(10):
-      d = pn_delivery(snd, "delivery-%s" % i)
-      pn_send(snd, "delivery-%s" % i)
-      pn_settle(d)
+      d = snd.delivery("delivery-%s" % i)
+      snd.send("delivery-%s" % i)
+      d.settle()
 
-    pn_link_close(snd)
-    pn_session_close(ssn)
-    pn_connection_close(self.c1)
+    snd.close()
+    ssn.close()
+    self.c1.close()
 
     self.pump()
 
-    state = pn_connection_state(self.c2)
-    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
-    ssn2 = pn_session_head(self.c2, PN_LOCAL_UNINIT)
+    state = self.c2.state
+    assert state == (Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE), "%x" % state
+    ssn2 = self.c2.session_head(Endpoint.LOCAL_UNINIT)
     assert ssn2
-    state == pn_session_state(ssn2)
-    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
-    rcv = pn_link_head(self.c2, PN_LOCAL_UNINIT)
+    state == ssn2.state
+    assert state == (Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE), "%x" % state
+    rcv = self.c2.link_head(Endpoint.LOCAL_UNINIT)
     assert rcv
-    state = pn_link_state(rcv)
-    assert state == (PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE), "%x" % state
+    state = rcv.state
+    assert state == (Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE), "%x" % state
 
-    pn_connection_open(self.c2)
-    pn_session_open(ssn2)
-    pn_link_open(rcv)
-    pn_flow(rcv, 10)
-    assert pn_queued(rcv) == 0, pn_queued(rcv)
+    self.c2.open()
+    ssn2.open()
+    rcv.open()
+    rcv.flow(10)
+    assert rcv.queued == 0, rcv.queued
 
     self.pump()
 
-    assert pn_queued(rcv) == 10, pn_queued(rcv)
-    state = pn_link_state(rcv)
-    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
-    state = pn_session_state(ssn2)
-    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
-    state = pn_connection_state(self.c2)
-    assert state == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED), "%x" % state
+    assert rcv.queued == 10, rcv.queued
+    state = rcv.state
+    assert state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED), "%x" % state
+    state = ssn2.state
+    assert state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED), "%x" % state
+    state = self.c2.state
+    assert state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED), "%x" % state
 
-    for i in range(pn_queued(rcv)):
-      d = pn_current(rcv)
+    for i in range(rcv.queued):
+      d = rcv.current
       assert d
-      assert pn_delivery_tag(d) == "delivery-%s" % i
-      pn_settle(d)
+      assert d.tag == "delivery-%s" % i
+      d.settle()
 
-    assert pn_queued(rcv) == 0, pn_queued(rcv)
+    assert rcv.queued == 0, rcv.queued

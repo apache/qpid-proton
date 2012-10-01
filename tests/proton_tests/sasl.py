@@ -17,8 +17,8 @@
 # under the License.
 #
 
-import os, common, xproton
-from xproton import *
+import os, common
+from proton import *
 
 class Test(common.Test):
   pass
@@ -26,34 +26,28 @@ class Test(common.Test):
 class SaslTest(Test):
 
   def testPipelined(self):
-    cli = pn_transport()
-    cli_auth = pn_sasl(cli)
-    pn_sasl_mechanisms(cli_auth, "ANONYMOUS")
-    pn_sasl_client(cli_auth)
+    cli = Transport()
+    cli_auth = SASL(cli)
+    cli_auth.mechanisms("ANONYMOUS")
+    cli_auth.client()
 
-    assert pn_sasl_outcome(cli_auth) == PN_SASL_NONE
+    assert cli_auth.outcome is None
 
-    srv = pn_transport()
-    srv_auth = pn_sasl(srv)
-    pn_sasl_mechanisms(srv_auth, "ANONYMOUS")
-    pn_sasl_server(srv_auth)
-    pn_sasl_done(srv_auth, PN_SASL_OK)
+    srv = Transport()
+    srv_auth = SASL(srv)
+    srv_auth.mechanisms("ANONYMOUS")
+    srv_auth.server()
+    srv_auth.done(SASL.OK)
 
-    cli_code, cli_out = pn_output(cli, 1024)
-    srv_code, srv_out = pn_output(srv, 1024)
+    cli_out = cli.output(1024)
+    srv_out = srv.output(1024)
 
-    assert cli_code > 0, cli_code
-    assert srv_code > 0, srv_code
+    n = srv.input(cli_out)
+    assert n == len(cli_out), (n, cli_out)
 
-    n = pn_input(srv, cli_out)
-    assert n == len(cli_out), "(%s) %s" % (n, pn_error_text(pn_transport_error(srv)))
+    assert cli_auth.outcome is None
 
-    assert pn_sasl_outcome(cli_auth) == PN_SASL_NONE
-
-    n = pn_input(cli, srv_out)
+    n = cli.input(srv_out)
     assert n == len(srv_out), n
 
-    assert pn_sasl_outcome(cli_auth) == PN_SASL_OK
-
-    pn_transport_free(cli)
-    pn_transport_free(srv)
+    assert cli_auth.outcome == SASL.OK

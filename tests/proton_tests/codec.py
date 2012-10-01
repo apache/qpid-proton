@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import os, common, xproton
+import os, common
 from proton import *
 
 class Test(common.Test):

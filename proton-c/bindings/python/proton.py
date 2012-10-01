@@ -30,7 +30,7 @@ The proton APIs consist of the following classes:
 
 """
 
-from xproton import *
+from cproton import *
 
 class ProtonException(Exception):
   """
@@ -328,6 +328,8 @@ class Message(object):
   AMQP = PN_AMQP
   JSON = PN_JSON
 
+  DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
+
   def __init__(self):
     self._msg = pn_message()
 
@@ -563,6 +565,20 @@ The group-id for any replies.
                     doc="""
 The format of the message.
 """)
+
+  def encode(self):
+    sz = 16
+    while True:
+      err, data = pn_message_encode(self._msg, sz)
+      if err == PN_OVERFLOW:
+        sz *= 2
+        continue
+      else:
+        self._check(err)
+        return data
+
+  def decode(self, data):
+    return self._check(pn_message_decode(self._msg, data, len(data)))
 
   def load(self, data):
     self._check(pn_message_load(self._msg, data))
@@ -1149,5 +1165,365 @@ class Data:
   def dump(self):
     pn_data_dump(self._data)
 
+class ConnectionException(ProtonException):
+  pass
+
+class Endpoint(object):
+
+  LOCAL_UNINIT = PN_LOCAL_UNINIT
+  REMOTE_UNINIT = PN_REMOTE_UNINIT
+  LOCAL_ACTIVE = PN_LOCAL_ACTIVE
+  REMOTE_ACTIVE = PN_REMOTE_ACTIVE
+  LOCAL_CLOSED = PN_LOCAL_CLOSED
+  REMOTE_CLOSED  = PN_REMOTE_CLOSED
+
+def wrap_connection(conn):
+  if not conn: return None
+  ctx = pn_connection_context(conn)
+  if ctx: return ctx
+  wrapper = Connection(_conn=conn)
+  return wrapper
+
+class Connection(Endpoint):
+
+  def __init__(self, _conn=None):
+    if _conn:
+      self._conn = _conn
+    else:
+      self._conn = pn_connection()
+      pn_connection_set_context(self._conn, self)
+
+  def __del__(self):
+    if hasattr(self, "_conn"):
+      pn_connection_free(self._conn)
+      del self._conn
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, ConnectionException)
+      raise exc("[%s]: %s" % (err, pn_connection_error(self._conn)))
+    else:
+      return err
+
+  def _get_container(self):
+    return pn_connection_container(self._conn)
+  def _set_container(self, name):
+    return pn_connection_set_container(self._conn, name)
+
+  container = property(_get_container, _set_container)
+
+  def _get_hostname(self):
+    return pn_connection_hostname(self._conn)
+  def _set_hostname(self, name):
+    return pn_connection_set_hostname(self._conn, name)
+
+  hostname = property(_get_hostname, _set_hostname)
+
+  @property
+  def remote_container(self):
+    return pn_connection_remote_container(self._conn)
+
+  @property
+  def remote_hostname(self):
+    return pn_connection_remote_hostname(self._conn)
+
+  def open(self):
+    pn_connection_open(self._conn)
+
+  def close(self):
+    pn_connection_close(self._conn)
+
+  @property
+  def state(self):
+    return pn_connection_state(self._conn)
+
+  def session(self):
+    return wrap_session(pn_session(self._conn))
+
+  def session_head(self, mask):
+    return wrap_session(pn_session_head(self._conn, mask))
+
+  def link_head(self, mask):
+    return wrap_link(pn_link_head(self._conn, mask))
+
+  @property
+  def work_head(self):
+    return wrap_delivery(pn_work_head(self._conn))
+
+class SessionException(ProtonException):
+  pass
+
+def wrap_session(ssn):
+  if ssn is None: return None
+  ctx = pn_session_context(ssn)
+  if ctx:
+    return ctx
+  else:
+    wrapper = Session(ssn)
+    pn_session_set_context(ssn, wrapper)
+    return wrapper
+
+class Session(Endpoint):
+
+  def __init__(self, ssn):
+    self._ssn = ssn
+
+  def __del__(self):
+    if hasattr(self, "_ssn"):
+      pn_session_free(self._ssn)
+      del self._ssn
+
+  def open(self):
+    pn_session_open(self._ssn)
+
+  def close(self):
+    pn_session_close(self._ssn)
+
+  @property
+  def state(self):
+    return pn_session_state(self._ssn)
+
+  @property
+  def connection(self):
+    return wrap_connection(pn_get_connection(self._ssn))
+
+  def sender(self, name):
+    return wrap_link(pn_sender(self._ssn, name))
+
+  def receiver(self, name):
+    return wrap_link(pn_receiver(self._ssn, name))
+
+class LinkException(ProtonException):
+  pass
+
+def wrap_link(link):
+  if link is None: return None
+  ctx = pn_link_context(link)
+  if ctx:
+    return ctx
+  else:
+    if pn_is_sender(link):
+      wrapper = Sender(link)
+    else:
+      wrapper = Receiver(link)
+    pn_link_set_context(link, wrapper)
+    return wrapper
+
+class Link(Endpoint):
+
+  def __init__(self, link):
+    self._link = link
+
+  def __del__(self):
+    if hasattr(self, "_link"):
+      pn_link_free(self._link)
+      del self._link
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, LinkException)
+      raise exc("[%s]: %s" % (err, pn_connection_error(self._conn)))
+    else:
+      return err
+
+  def open(self):
+    pn_link_open(self._link)
+
+  def close(self):
+    pn_link_close(self._link)
+
+  @property
+  def state(self):
+    return pn_link_state(self._link)
+
+  @property
+  def session(self):
+    return wrap_session(pn_get_session(self._link))
+
+  def delivery(self, tag):
+    return wrap_delivery(pn_delivery(self._link, tag))
+
+  @property
+  def current(self):
+    return wrap_delivery(pn_current(self._link))
+
+  def advance(self):
+    return pn_advance(self._link)
+
+  @property
+  def unsettled(self):
+    return pn_unsettled(self._link)
+
+  @property
+  def credit(self):
+    return pn_credit(self._link)
+
+  @property
+  def queued(self):
+    return pn_queued(self._link)
+
+  def next(self, mask):
+    return wrap_link(pn_link_next(self._link, mask))
+
+class Sender(Link):
+
+  def send(self, bytes):
+    return self._check(pn_send(self._link, bytes))
+
+  def drained(self):
+    pn_drained(self._link)
+
+class Receiver(Link):
+
+  def flow(self, n):
+    pn_flow(self._link, n)
+
+  def recv(self, limit):
+    n, bytes = pn_recv(self._link, limit)
+    if n == PN_EOS:
+      return None
+    else:
+      self._check(n)
+      return bytes
+
+  def drain(self, n):
+    pn_drain(self._link, n)
+
+def wrap_delivery(dlv):
+  if not dlv: return None
+  ctx = pn_delivery_context(dlv)
+  if ctx: return ctx
+  wrapper = Delivery(dlv)
+  pn_delivery_set_context(dlv, wrapper)
+  return wrapper
+
+class Delivery(object):
+
+  ACCEPTED = PN_ACCEPTED
+
+  def __init__(self, dlv):
+    self._dlv = dlv
+
+  @property
+  def tag(self):
+    return pn_delivery_tag(self._dlv)
+
+  @property
+  def writable(self):
+    return pn_writable(self._dlv)
+
+  @property
+  def readable(self):
+    return pn_readable(self._dlv)
+
+  @property
+  def updated(self):
+    return pn_updated(self._dlv)
+
+  def disposition(self, disp):
+    pn_disposition(self._dlv, disp)
+
+  @property
+  def local_disposition(self):
+    return pn_local_disposition(self._dlv)
+
+  @property
+  def remote_disposition(self):
+    return pn_remote_disposition(self._dlv)
+
+  @property
+  def remote_settled(self):
+    return pn_remote_settled(self._dlv)
+
+  def settle(self):
+    pn_settle(self._dlv)
+
+  @property
+  def work_next(self):
+    return wrap_delivery(pn_work_next(self._dlv))
+
+class TransportException(ProtonException):
+  pass
+
+class Transport(object):
+
+  TRACE_DRV = PN_TRACE_DRV
+  TRACE_FRM = PN_TRACE_FRM
+  TRACE_RAW = PN_TRACE_RAW
+
+  def __init__(self):
+    self._trans = pn_transport()
+
+  def __del__(self):
+    if hasattr(self, "_trans"):
+      pn_transport_free(self._trans)
+      del self._trans
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, TransportException)
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._trans))))
+    else:
+      return err
+
+  def bind(self, connection):
+    self._check(pn_transport_bind(self._trans, connection._conn))
+
+  def trace(self, n):
+    pn_trace(self._trans, n)
+
+  def tick(self, now):
+    return pn_tick(self._trans, now)
+
+  def output(self, n):
+    cd, out = pn_output(self._trans, n)
+    if cd == PN_EOS:
+      return None
+    else:
+      self._check(cd)
+      return out
+
+  def input(self, binary):
+    n = pn_input(self._trans, binary)
+    if n == PN_EOS:
+      return None
+    else:
+      return self._check(n)
+
+class SASL(object):
+
+  OK = PN_SASL_OK
+  AUTH = PN_SASL_AUTH
+
+  def __init__(self, transport):
+    self._sasl = pn_sasl(transport._trans)
+
+  def mechanisms(self, mechs):
+    pn_sasl_mechanisms(self._sasl, mechs)
+
+  def client(self):
+    pn_sasl_client(self._sasl)
+
+  def server(self):
+    pn_sasl_server(self._sasl)
+
+  @property
+  def outcome(self):
+    outcome = pn_sasl_outcome(self._sasl)
+    if outcome == PN_SASL_NONE:
+      return None
+    else:
+      return outcome
+
+  def done(self, outcome):
+    pn_sasl_done(self._sasl, outcome)
+
+class SSL(object):
+
+  def __init__(self, transport):
+    self._ssl = pn_ssl(transport._trans)
+
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Data"]
+           "MessageException", "Timeout", "Data", "Endpoint", "Connection",
+           "Session", "Link", "Sender", "Receiver", "Delivery", "Transport",
+           "TransportException", "SASL", "SSL", "PN_SESSION_WINDOW"]

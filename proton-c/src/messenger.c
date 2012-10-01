@@ -655,6 +655,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         pn_link_t *l = pn_link(d);
         ssize_t n = pn_recv(l, buf, 1024);
         pn_settle(d);
+        if (n == PN_EOS) n = 0;
         if (n < 0) return n;
         if (msg) {
           int err = pn_message_decode(msg, buf, n);

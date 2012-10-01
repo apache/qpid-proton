@@ -17,82 +17,77 @@
 # under the License.
 #
 
-import os, common, xproton
-from xproton import *
+import os, common
+from proton import *
 from threading import Thread
 
 class Test(common.Test):
 
   def setup(self):
-    self.server = pn_messenger("server")
-    pn_messenger_set_timeout(self.server, 10000)
-    pn_messenger_start(self.server)
-    pn_messenger_subscribe(self.server, "amqp://~0.0.0.0:12345")
-    self.thread = Thread(target=self.run)
+    self.server = Messenger("server")
+    self.server.timeout=10000
+    self.server.start()
+    self.server.subscribe("amqp://~0.0.0.0:12345")
+    self.thread = Thread(name="server-thread", target=self.run)
     self.running = True
     self.thread.start()
 
-    self.client = pn_messenger("client")
-    pn_messenger_set_timeout(self.client, 10000)
-    pn_messenger_start(self.client)
+    self.client = Messenger("client")
+    self.client.timeout=1000
+    self.client.start()
 
   def teardown(self):
-    self.running = False
-    msg = pn_message()
-    pn_message_set_address(msg, "amqp://0.0.0.0:12345")
-    pn_messenger_put(self.client, msg)
-    pn_messenger_send(self.client)
-    pn_messenger_stop(self.client)
+    if self.running:
+      self.running = False
+      msg = Message()
+      msg.address="amqp://0.0.0.0:12345"
+      self.client.put(msg)
+      self.client.send()
+    self.client.stop()
     self.thread.join()
-    pn_messenger_free(self.client)
-    pn_messenger_free(self.server)
     self.client = None
     self.server = None
-    pn_message_free(msg)
 
 class MessengerTest(Test):
 
   def run(self):
-    msg = pn_message()
-    while self.running:
-      pn_messenger_recv(self.server, 10)
-      while pn_messenger_incoming(self.server):
-        if pn_messenger_get(self.server, msg):
-          print pn_messenger_error(self.server)
-        else:
-          reply_to = pn_message_get_reply_to(msg)
-          if reply_to:
-            pn_message_set_address(msg, reply_to)
-            pn_messenger_put(self.server, msg)
-    pn_messenger_stop(self.server)
-    pn_message_free(msg)
+    msg = Message()
+    try:
+      while self.running:
+        self.server.recv(10)
+        while self.server.incoming:
+          self.server.get(msg)
+          if msg.reply_to:
+            msg.address = msg.reply_to
+            self.server.put(msg)
+    except Timeout:
+      print "server timed out"
+    self.server.stop()
+    self.running = False
 
   def testSendReceive(self):
-    msg = pn_message()
-    pn_message_set_address(msg, "amqp://0.0.0.0:12345")
-    pn_message_set_subject(msg, "Hello World!")
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
-    pn_message_load(msg, body)
-    pn_messenger_put(self.client, msg)
-    pn_messenger_send(self.client)
+    msg.load(body)
+    self.client.put(msg)
+    self.client.send()
 
-    reply = pn_message()
-    assert not pn_messenger_recv(self.client, 1)
-    assert pn_messenger_incoming(self.client) == 1
-    assert not pn_messenger_get(self.client, reply)
+    reply = Message()
+    self.client.recv(1)
+    assert self.client.incoming == 1
+    self.client.get(reply)
 
-    assert pn_message_get_subject(reply) == "Hello World!"
-    cd, rbod = pn_message_save(reply, 1024)
-    assert not cd
+    assert reply.subject == "Hello World!"
+    rbod = reply.save()
     assert rbod == body, (rbod, body)
 
-    pn_message_free(msg)
-    pn_message_free(reply)
-
   def testSendBogus(self):
-    msg = pn_message()
-    pn_message_set_address(msg, "totally-bogus-address")
-    assert pn_messenger_put(self.client, msg) == PN_ERR
-    err = pn_messenger_error(self.client)
-    assert "unable to send to address: totally-bogus-address (" in err, err
-    pn_message_free(msg)
+    msg = Message()
+    msg.address="totally-bogus-address"
+    try:
+      self.client.put(msg)
+    except MessengerException, exc:
+      err = str(exc)
+      assert "unable to send to address: totally-bogus-address (" in err, err
