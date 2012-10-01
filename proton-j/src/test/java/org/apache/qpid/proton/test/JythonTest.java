@@ -22,6 +22,8 @@ package org.apache.qpid.proton.test;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
+
+import org.python.core.PyException;
 import org.python.util.PythonInterpreter;
 import java.io.File;
 
@@ -64,8 +66,22 @@ public class JythonTest
         "sys.path.insert(0,\""+classesDir.getCanonicalPath()+"\")\n"+
         "sys.path.insert(0,\""+testDir.getCanonicalPath()+"\")\n"
         );
-        interp.execfile(new File(testDir, "proton-test").getCanonicalPath());
 
+        try
+        {
+            interp.execfile(new File(testDir, "proton-test").getCanonicalPath());
+        }
+        catch (PyException e)
+        {
+            if( e.type.toString().equals("<type 'exceptions.SystemExit'>") && e.value.toString().equals("0") )
+            {
+                // Build succeeded.
+            }
+            else
+            {
+                throw e;
+            }
+        }
     }
 
 }
