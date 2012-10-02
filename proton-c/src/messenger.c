@@ -651,13 +651,12 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
     pn_delivery_t *d = pn_work_head(conn);
     while (d) {
       if (pn_delivery_readable(d)) {
-        // XXX: buf size, eof, etc
-        char buf[1024];
         pn_link_t *l = pn_delivery_link(d);
-        ssize_t n = pn_link_recv(l, buf, 1024);
+        size_t pending = pn_delivery_pending(d);
+        char buf[pending];
+        ssize_t n = pn_link_recv(l, buf, pending);
         pn_delivery_settle(d);
-        if (n == PN_EOS) n = 0;
-        if (n < 0) return n;
+        if (n < 0) return pn_error_format(messenger->error, n, "receive error");
         if (msg) {
           int err = pn_message_decode(msg, buf, n);
           if (err) {
