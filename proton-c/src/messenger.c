@@ -661,7 +661,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
           int err = pn_message_decode(msg, buf, n);
           if (err) {
             return pn_error_format(messenger->error, err, "error decoding message: %s",
-                                 pn_message_error(msg));
+                                   pn_message_error(msg));
           } else {
             return 0;
           }
