@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <proton/driver.h>
 #include <proton/error.h>
@@ -217,6 +218,13 @@ static void pn_configure_sock(int sock) {
     perror("setsockopt");
   };
   */
+
+    int flags = fcntl(sock, F_GETFL);
+    flags |= O_NONBLOCK;
+
+    if (fcntl(sock, F_SETFL, flags) < 0) {
+        perror("fcntl");
+    }
 }
 
 pn_connector_t *pn_listener_accept(pn_listener_t *l)
@@ -310,14 +318,13 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
     return NULL;
   }
 
-  pn_configure_sock(sock);
-
   if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     pn_error_from_errno(driver->error, "connect");
     freeaddrinfo(addr);
     return NULL;
   }
 
+  pn_configure_sock(sock);
   freeaddrinfo(addr);
 
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
@@ -457,8 +464,13 @@ void pn_connector_free(pn_connector_t *ctor)
 static void pn_connector_read(pn_connector_t *ctor)
 {
   ssize_t n = recv(ctor->fd, ctor->input + ctor->input_size, IO_BUF_SIZE - ctor->input_size, 0);
-  if (n <= 0) {
-    if (n < 0) perror("read");
+  if (n < 0) {
+      if (errno != EAGAIN) {
+          if (n < 0) perror("read");
+          ctor->status &= ~PN_SEL_RD;
+          ctor->input_eos = true;
+      }
+  } else if (n == 0) {
     ctor->status &= ~PN_SEL_RD;
     ctor->input_eos = true;
   } else {
@@ -522,9 +534,11 @@ static void pn_connector_write(pn_connector_t *ctor)
     ssize_t n = send(ctor->fd, ctor->output, ctor->output_size, MSG_NOSIGNAL);
     if (n < 0) {
       // XXX
-      perror("send");
-      ctor->output_size = 0;
-      ctor->output_done = true;
+        if (errno != EAGAIN) {
+            perror("send");
+            ctor->output_size = 0;
+            ctor->output_done = true;
+        }
     } else {
       ctor->output_size -= n;
       memmove(ctor->output, ctor->output + n, ctor->output_size);
