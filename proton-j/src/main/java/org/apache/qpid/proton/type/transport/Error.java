@@ -180,5 +180,15 @@ public class Error
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "Error{" +
+               "_condition=" + _condition +
+               ", _description='" + _description + '\'' +
+               ", _info=" + _info +
+               '}';
+    }
 }
   

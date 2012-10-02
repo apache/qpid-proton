@@ -45,7 +45,7 @@ public class Detach
     
     private UnsignedInteger _handle;
     private boolean _closed;
-    private List _error;
+    private Error _error;
 
     public UnsignedInteger getHandle()
     {
@@ -72,12 +72,12 @@ public class Detach
         _closed = closed;
     }
 
-    public List getError()
+    public Error getError()
     {
         return _error;
     }
 
-    public void setError(List error)
+    public void setError(Error error)
     {
         _error = error;
     }
@@ -153,7 +153,7 @@ public class Detach
             {
 
                 case 0:
-                    o.setError( (List) l.get( 2 ) );
+                    o.setError( (Error) l.get( 2 ) );
                 case 1:
                     Boolean closed = (Boolean) l.get(1);
                     o.setClosed(closed == null ? false : closed);
