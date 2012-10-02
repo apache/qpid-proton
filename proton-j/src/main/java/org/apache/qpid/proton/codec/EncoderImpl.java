@@ -783,27 +783,5 @@ public final class EncoderImpl implements ByteBufferEncoder
     }
 
 
-    public static void main(String[] args)
-    {
-        String HEX = "00800000000000000018c043010080000000000000001dc03602a31d616d71703a636f6e6e656374696f6e3a6672616d696e672d6572726f72a1146a6176612e696f2e454f46457863657074696f6e";
-        byte[] bytes = new byte[HEX.length()/2];
-        for(int i = 0; i < bytes.length; i++)
-        {
-            char d = HEX.charAt(2 * i);
-            byte m = (byte) (d >= (byte)'a' ? 10+d-(byte)'a' : d-(byte)'0');
-            d = HEX.charAt((2 * i)+1);
-            byte n = (byte) (d >= (byte)'a' ? 10+d-(byte)'a' : d-(byte)'0');
-            bytes[i] = (byte) (((m << 4) & 0xf0) | (n & 0x0f));
-        }
-            DecoderImpl decoder = new DecoderImpl();
-            EncoderImpl encoder = new EncoderImpl(decoder);
-            AMQPDefinedTypes.registerAllTypes(decoder);
-
-            decoder.setByteBuffer(ByteBuffer.wrap(bytes));
-            System.err.println(decoder.readObject());
-
-
-
-    }
 
 }
