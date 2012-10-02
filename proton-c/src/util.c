@@ -41,12 +41,14 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
       if (idx < (int) (capacity - 1)) {
         dst[idx++] = c;
       } else {
+        dst[idx - 1] = '\0';
         return PN_OVERFLOW;
       }
     } else {
       if (idx < (int) (capacity - 4)) {
         idx += sprintf(dst + idx, "\\x%.2x", c);
       } else {
+        dst[idx - 1] = '\0';
         return PN_OVERFLOW;
       }
     }

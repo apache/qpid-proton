@@ -87,10 +87,10 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
     pn_dispatcher_trace(disp, ch, "%s %s %s", dir == OUT ? "->" : "<-",
                         disp->names[code], disp->scratch);
     if (size) {
-      size_t capacity = 4*size + 1;
-      char buf[capacity];
-      pn_quote_data(buf, capacity, payload, size);
-      fprintf(stderr, " (%zu) \"%s\"\n", size, buf);
+      char buf[1024];
+      int e = pn_quote_data(buf, 1024, payload, size);
+      fprintf(stderr, " (%zu) \"%s\"%s\n", size, buf,
+              e == PN_OVERFLOW ? "... (truncated)" : "");
     } else {
       fprintf(stderr, "\n");
     }
