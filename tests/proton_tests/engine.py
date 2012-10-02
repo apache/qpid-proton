@@ -438,21 +438,21 @@ class TransferTest(Test):
     assert rd.tag == sd.tag
     rmsg = self.rcv.recv(1024)
     assert rmsg == msg
-    rd.disposition(Delivery.ACCEPTED)
+    rd.update(Delivery.ACCEPTED)
 
     self.pump()
 
-    rdisp = sd.remote_disposition
-    ldisp = rd.local_disposition
+    rdisp = sd.remote_state
+    ldisp = rd.local_state
     assert rdisp == ldisp == Delivery.ACCEPTED, (rdisp, ldisp)
     assert sd.updated
 
-    sd.disposition(Delivery.ACCEPTED)
+    sd.update(Delivery.ACCEPTED)
     sd.settle()
 
     self.pump()
 
-    assert sd.local_disposition == rd.remote_disposition == Delivery.ACCEPTED
+    assert sd.local_state == rd.remote_state == Delivery.ACCEPTED
 
 class CreditTest(Test):
 
@@ -790,12 +790,12 @@ class SettlementTest(Test):
     c = self.rcv.current
     assert c
     assert c.tag == "tag", c.tag
-    assert c.remote_settled
+    assert c.settled
     c.settle()
     c = self.rcv.current
     assert c
     assert c.tag == "tag2", c.tag
-    assert c.remote_settled
+    assert c.settled
     c.settle()
     c = self.rcv.current
     assert not c

@@ -103,7 +103,7 @@ class PostClient
     log "Posting to mailbox = #{@mailbox}"
     @ssn = Cproton::pn_session @conn
     @link = Cproton::pn_sender @ssn, "sender"
-    Cproton::pn_set_target @link, @mailbox
+    Cproton::pn_link_set_target @link, @mailbox
 
     # now open all the engien end points
     Cproton::pn_connection_open @conn
@@ -123,14 +123,14 @@ class PostClient
     d = Cproton::pn_unsettled_head @link
     while d
       _next = Cproton::pn_unsettled_next d
-      disp = Cproton::pn_remote_disposition d
+      disp = Cproton::pn_delivery_remote_state d
 
       if disp.nonzero? && disp != Cproton::PN_ACCEPTED
         log "Warning: message was not accepted by the remote!"
       end
 
       if disp || Cproton::pn_remote_settled(disp)
-        Cproton::pn_settle(d)
+        Cproton::pn_delivery_settle(d)
       end
 
       d = _next
@@ -153,29 +153,29 @@ if __FILE__ == $PROGRAM_NAME
 
   while !$options[:messages].empty? do
 
-    while Cproton::pn_credit(sender.link).zero?
+    while Cproton::pn_link_credit(sender.link).zero?
       log "Waiting for credit"
       sender.wait
     end
 
-    while Cproton::pn_credit(sender.link) > 0
+    while Cproton::pn_link_credit(sender.link) > 0
       msg = $options[:messages].first
       $options[:messages].delete_at 0
       log "Sending #{msg}"
       d = Cproton::pn_delivery sender.link, "post-deliver-#{$options[:messages].length}"
-      rc = Cproton::pn_send(sender.link, msg)
+      rc = Cproton::pn_link_send(sender.link, msg)
 
       abort "Error: sending message: #{msg}" if rc < 0
 
       fail unless rc == msg.length
 
-      Cproton::pn_advance sender.link
+      Cproton::pn_link_advance sender.link
     end
 
     sender.settle
   end
 
-  while Cproton::pn_unsettled(sender.link) > 0
+  while Cproton::pn_link_unsettled(sender.link) > 0
     log "Settling things with the server..."
     sender.wait
     sender.settle

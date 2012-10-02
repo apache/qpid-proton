@@ -105,7 +105,7 @@
   connection != NULL;
 }
 
-%contract pn_connection_container(pn_connection_t *connection)
+%contract pn_connection_get_container(pn_connection_t *connection)
 {
  require:
   connection != NULL;
@@ -117,7 +117,7 @@
   connection != NULL;
 }
 
-%contract pn_connection_hostname(pn_connection_t *connection)
+%contract pn_connection_get_hostname(pn_connection_t *connection)
 {
  require:
   connection != NULL;
@@ -217,24 +217,24 @@
   transport != NULL;
 }
 
-%contract pn_input(pn_transport_t *transport, char *bytes, size_t available)
+%contract pn_transport_input(pn_transport_t *transport, char *bytes, size_t available)
 {
  require:
   transport != NULL;
 }
 
-%contract pn_output(pn_transport_t *transport, char *bytes, size_t size)
+%contract pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
 {
  require:
   transport != NULL;
 }
 
-#%contract pn_tick(pn_transport_t *transport, time_t now)
+#%contract pn_transport_tick(pn_transport_t *transport, time_t now)
 #{
 #  # this method currently always returns 0
 #}
 
-%contract pn_trace(pn_transport_t *transport, pn_trace_t trace)
+%contract pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
 {
  require:
   transport != NULL;
@@ -274,12 +274,12 @@
   pn_receiver != NULL;
 }
 
-%contract pn_get_connection(pn_session_t *session)
+%contract pn_session_connection(pn_session_t *session)
 {
  require:
   session != NULL;
  ensure:
-  pn_get_connection != NULL;
+  pn_session_connection != NULL;
 }
 
 %contract pn_session_open(pn_session_t *session)
@@ -306,13 +306,13 @@
   link != NULL;
 }
 
-%contract pn_is_sender(pn_link_t *link)
+%contract pn_link_is_sender(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_is_receiver(pn_link_t *link)
+%contract pn_link_is_receiver(pn_link_t *link)
 {
  require:
   link != NULL;
@@ -330,45 +330,45 @@
   link != NULL;
 }
 
-%contract pn_get_session(pn_link_t *link)
+%contract pn_link_session(pn_link_t *link)
 {
  require:
   link != NULL;
  ensure:
-  pn_get_session != NULL;
+  pn_link_session != NULL;
 }
 
-%contract pn_target(pn_link_t *link)
+%contract pn_link_get_target(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_source(pn_link_t *link)
+%contract pn_link_get_source(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_set_source(pn_link_t *link, const char *source)
+%contract pn_link_set_source(pn_link_t *link, const char *source)
 {
  require:
   link != NULL;
 }
 
-%contract pn_set_target(pn_link_t *link, const char *target)
+%contract pn_link_set_target(pn_link_t *link, const char *target)
 {
  require:
   link != NULL;
 }
 
-%contract pn_remote_source(pn_link_t *link)
+%contract pn_link_remote_source(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_remote_target(pn_link_t *link)
+%contract pn_link_remote_target(pn_link_t *link)
 {
  require:
   link != NULL;
@@ -382,31 +382,31 @@
   pn_delivery != NULL;
 }
 
-%contract pn_current(pn_link_t *link)
+%contract pn_link_current(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_advance(pn_link_t *link)
+%contract pn_link_advance(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_credit(pn_link_t *link)
+%contract pn_link_credit(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_queued(pn_link_t *link)
+%contract pn_link_queued(pn_link_t *link)
 {
  require:
   link != NULL;
 }
 
-%contract pn_unsettled(pn_link_t *link)
+%contract pn_link_unsettled(pn_link_t *link)
 {
  require:
   link != NULL;
@@ -442,31 +442,31 @@
   sender != NULL;
 }
 
-%contract pn_send(pn_link_t *sender, const char *bytes, size_t n)
+%contract pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
 {
  require:
   sender != NULL;
 }
 
-%contract pn_drained(pn_link_t *sender)
+%contract pn_link_drained(pn_link_t *sender)
 {
  require:
   sender != NULL;
 }
 
-%contract pn_flow(pn_link_t *receiver, int credit)
+%contract pn_link_flow(pn_link_t *receiver, int credit)
 {
  require:
   receiver != NULL;
 }
 
-%contract pn_drain(pn_link_t *receiver, int credit)
+%contract pn_link_drain(pn_link_t *receiver, int credit)
 {
  require:
   receiver != NULL;
 }
 
-%contract pn_recv(pn_link_t *receiver, char *bytes, size_t n)
+%contract pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
 {
  require:
   receiver != NULL;
@@ -478,68 +478,68 @@
   delivery != NULL;
 }
 
-%contract pn_link(pn_delivery_t *delivery)
+%contract pn_delivery_link(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_local_disposition(pn_delivery_t *delivery)
+%contract pn_delivery_local_state(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_remote_disposition(pn_delivery_t *delivery)
+%contract pn_delivery_remote_state(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_remote_settled(pn_delivery_t *delivery)
+%contract pn_delivery_settled(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_pending(pn_delivery_t *delivery)
+%contract pn_delivery_pending(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_writable(pn_delivery_t *delivery)
+%contract pn_delivery_writable(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_readable(pn_delivery_t *delivery)
+%contract pn_delivery_readable(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_updated(pn_delivery_t *delivery)
+%contract pn_delivery_updated(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_clear(pn_delivery_t *delivery)
+%contract pn_delivery_clear(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;
 }
 
-%contract pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition)
+%contract pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition)
 {
  require:
   delivery != NULL;
   check_disposition(disposition);
 }
 
-%contract pn_settle(pn_delivery_t *delivery)
+%contract pn_delivery_settle(pn_delivery_t *delivery)
 {
  require:
   delivery != NULL;

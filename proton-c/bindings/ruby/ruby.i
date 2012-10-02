@@ -88,13 +88,13 @@ int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_save_json;
 
-ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_send;
+ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_link_send;
 
-%rename(pn_recv) wrap_pn_recv;
+%rename(pn_link_recv) wrap_pn_link_recv;
 %inline %{
-  int wrap_pn_recv(pn_link_t *link, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_recv(link, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_link_recv(pn_link_t *link, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_link_recv(link, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
@@ -103,15 +103,15 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
     return sz;
   }
 %}
-%ignore pn_recv;
+%ignore pn_link_recv;
 
-ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_input;
+ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_transport_input;
 
-%rename(pn_output) wrap_pn_output;
+%rename(pn_transport_output) wrap_pn_transport_output;
 %inline %{
-  int wrap_pn_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_output(transport, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_transport_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_transport_output(transport, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
@@ -120,7 +120,7 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     return sz;
   }
 %}
-%ignore pn_output;
+%ignore pn_transport_output;
 
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{

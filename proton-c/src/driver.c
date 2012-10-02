@@ -384,7 +384,7 @@ void pn_connector_trace(pn_connector_t *ctor, pn_trace_t trace)
 {
   if (!ctor) return;
   ctor->trace = trace;
-  if (ctor->transport) pn_trace(ctor->transport, trace);
+  if (ctor->transport) pn_transport_trace(ctor->transport, trace);
 }
 
 pn_sasl_t *pn_connector_sasl(pn_connector_t *ctor)
@@ -402,7 +402,7 @@ void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connecti
   if (!ctor) return;
   ctor->connection = connection;
   pn_transport_bind(ctor->transport, connection);
-  if (ctor->transport) pn_trace(ctor->transport, ctor->trace);
+  if (ctor->transport) pn_transport_trace(ctor->transport, ctor->trace);
 }
 
 pn_connection_t *pn_connector_connection(pn_connector_t *ctor)
@@ -477,7 +477,7 @@ static void pn_connector_process_input(pn_connector_t *ctor)
   pn_transport_t *transport = ctor->transport;
   if (!ctor->input_done) {
     if (ctor->input_size > 0 || ctor->input_eos) {
-      ssize_t n = pn_input(transport, ctor->input, ctor->input_size);
+      ssize_t n = pn_transport_input(transport, ctor->input, ctor->input_size);
       if (n >= 0) {
         pn_connector_consume(ctor, n);
       } else {
@@ -502,7 +502,8 @@ static void pn_connector_process_output(pn_connector_t *ctor)
 {
   pn_transport_t *transport = ctor->transport;
   if (!ctor->output_done) {
-    ssize_t n = pn_output(transport, pn_connector_output(ctor), pn_connector_available(ctor));
+    ssize_t n = pn_transport_output(transport, pn_connector_output(ctor),
+                                    pn_connector_available(ctor));
     if (n >= 0) {
       ctor->output_size += n;
     } else {
@@ -538,7 +539,7 @@ static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
   if (!ctor->transport) return 0;
   // XXX: should probably have a function pointer for this and switch it with different layers
-  time_t result = pn_tick(ctor->transport, now);
+  time_t result = pn_transport_tick(ctor->transport, now);
   pn_connector_process_input(ctor);
   pn_connector_process_output(ctor);
   return result;

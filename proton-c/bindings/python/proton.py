@@ -1179,7 +1179,7 @@ class Endpoint(object):
 
 def wrap_connection(conn):
   if not conn: return None
-  ctx = pn_connection_context(conn)
+  ctx = pn_connection_get_context(conn)
   if ctx: return ctx
   wrapper = Connection(_conn=conn)
   return wrapper
@@ -1206,14 +1206,14 @@ class Connection(Endpoint):
       return err
 
   def _get_container(self):
-    return pn_connection_container(self._conn)
+    return pn_connection_get_container(self._conn)
   def _set_container(self, name):
     return pn_connection_set_container(self._conn, name)
 
   container = property(_get_container, _set_container)
 
   def _get_hostname(self):
-    return pn_connection_hostname(self._conn)
+    return pn_connection_get_hostname(self._conn)
   def _set_hostname(self, name):
     return pn_connection_set_hostname(self._conn, name)
 
@@ -1255,7 +1255,7 @@ class SessionException(ProtonException):
 
 def wrap_session(ssn):
   if ssn is None: return None
-  ctx = pn_session_context(ssn)
+  ctx = pn_session_get_context(ssn)
   if ctx:
     return ctx
   else:
@@ -1285,7 +1285,7 @@ class Session(Endpoint):
 
   @property
   def connection(self):
-    return wrap_connection(pn_get_connection(self._ssn))
+    return wrap_connection(pn_session_connection(self._ssn))
 
   def sender(self, name):
     return wrap_link(pn_sender(self._ssn, name))
@@ -1298,11 +1298,11 @@ class LinkException(ProtonException):
 
 def wrap_link(link):
   if link is None: return None
-  ctx = pn_link_context(link)
+  ctx = pn_link_get_context(link)
   if ctx:
     return ctx
   else:
-    if pn_is_sender(link):
+    if pn_link_is_sender(link):
       wrapper = Sender(link)
     else:
       wrapper = Receiver(link)
@@ -1322,7 +1322,7 @@ class Link(Endpoint):
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, LinkException)
-      raise exc("[%s]: %s" % (err, pn_connection_error(self._conn)))
+      raise exc("[%s]: %s" % (err, pn_link_error(self._link)))
     else:
       return err
 
@@ -1338,29 +1338,29 @@ class Link(Endpoint):
 
   @property
   def session(self):
-    return wrap_session(pn_get_session(self._link))
+    return wrap_session(pn_link_session(self._link))
 
   def delivery(self, tag):
     return wrap_delivery(pn_delivery(self._link, tag))
 
   @property
   def current(self):
-    return wrap_delivery(pn_current(self._link))
+    return wrap_delivery(pn_link_current(self._link))
 
   def advance(self):
-    return pn_advance(self._link)
+    return pn_link_advance(self._link)
 
   @property
   def unsettled(self):
-    return pn_unsettled(self._link)
+    return pn_link_unsettled(self._link)
 
   @property
   def credit(self):
-    return pn_credit(self._link)
+    return pn_link_credit(self._link)
 
   @property
   def queued(self):
-    return pn_queued(self._link)
+    return pn_link_queued(self._link)
 
   def next(self, mask):
     return wrap_link(pn_link_next(self._link, mask))
@@ -1368,18 +1368,18 @@ class Link(Endpoint):
 class Sender(Link):
 
   def send(self, bytes):
-    return self._check(pn_send(self._link, bytes))
+    return self._check(pn_link_send(self._link, bytes))
 
   def drained(self):
-    pn_drained(self._link)
+    pn_link_drained(self._link)
 
 class Receiver(Link):
 
   def flow(self, n):
-    pn_flow(self._link, n)
+    pn_link_flow(self._link, n)
 
   def recv(self, limit):
-    n, bytes = pn_recv(self._link, limit)
+    n, bytes = pn_link_recv(self._link, limit)
     if n == PN_EOS:
       return None
     else:
@@ -1387,11 +1387,11 @@ class Receiver(Link):
       return bytes
 
   def drain(self, n):
-    pn_drain(self._link, n)
+    pn_link_drain(self._link, n)
 
 def wrap_delivery(dlv):
   if not dlv: return None
-  ctx = pn_delivery_context(dlv)
+  ctx = pn_delivery_get_context(dlv)
   if ctx: return ctx
   wrapper = Delivery(dlv)
   pn_delivery_set_context(dlv, wrapper)
@@ -1410,33 +1410,33 @@ class Delivery(object):
 
   @property
   def writable(self):
-    return pn_writable(self._dlv)
+    return pn_delivery_writable(self._dlv)
 
   @property
   def readable(self):
-    return pn_readable(self._dlv)
+    return pn_delivery_readable(self._dlv)
 
   @property
   def updated(self):
-    return pn_updated(self._dlv)
+    return pn_delivery_updated(self._dlv)
 
-  def disposition(self, disp):
-    pn_disposition(self._dlv, disp)
-
-  @property
-  def local_disposition(self):
-    return pn_local_disposition(self._dlv)
+  def update(self, state):
+    pn_delivery_update(self._dlv, state)
 
   @property
-  def remote_disposition(self):
-    return pn_remote_disposition(self._dlv)
+  def local_state(self):
+    return pn_delivery_local_state(self._dlv)
 
   @property
-  def remote_settled(self):
-    return pn_remote_settled(self._dlv)
+  def remote_state(self):
+    return pn_delivery_remote_state(self._dlv)
+
+  @property
+  def settled(self):
+    return pn_delivery_settled(self._dlv)
 
   def settle(self):
-    pn_settle(self._dlv)
+    pn_delivery_settle(self._dlv)
 
   @property
   def work_next(self):
@@ -1470,13 +1470,13 @@ class Transport(object):
     self._check(pn_transport_bind(self._trans, connection._conn))
 
   def trace(self, n):
-    pn_trace(self._trans, n)
+    pn_transport_trace(self._trans, n)
 
   def tick(self, now):
-    return pn_tick(self._trans, now)
+    return pn_transport_tick(self._trans, now)
 
   def output(self, n):
-    cd, out = pn_output(self._trans, n)
+    cd, out = pn_transport_output(self._trans, n)
     if cd == PN_EOS:
       return None
     else:
@@ -1484,7 +1484,7 @@ class Transport(object):
       return out
 
   def input(self, binary):
-    n = pn_input(self._trans, binary)
+    n = pn_transport_input(self._trans, binary)
     if n == PN_EOS:
       return None
     else:

@@ -185,15 +185,15 @@ class MailServer
     delivery = Cproton::pn_work_head conn
     while delivery
       log "Process delivery #{Cproton::pn_delivery_tag delivery}"
-      if Cproton::pn_readable delivery
+      if Cproton::pn_delivery_readable delivery
         process_receive delivery
-      elsif Cproton::pn_writable delivery
+      elsif Cproton::pn_delivery_writable delivery
         send_message delivery
       end
 
-      if Cproton::pn_updated delivery
-        log "Remote disposition for #{Cproton::pn_delivery_tag delivery}: #{Cproton::pn_remote_disposition delivery}"
-        Cproton::pn_settle(delivery) if Cproton::pn_remote_disposition delivery
+      if Cproton::pn_delivery_updated delivery
+        log "Remote disposition for #{Cproton::pn_delivery_tag delivery}: #{Cproton::pn_delivery_remote_state delivery}"
+        Cproton::pn_delivery_settle(delivery) if Cproton::pn_delivery_remote_state delivery
       end
 
       delivery = Cproton::pn_work_next delivery
@@ -221,9 +221,9 @@ class MailServer
   end
 
   def process_receive(delivery)
-    link = Cproton::pn_link delivery
-    mbox = Cproton::pn_remote_target link
-    (rc, msg) = Cproton::pn_recv link, 1024
+    link = Cproton::pn_delivery_link delivery
+    mbox = Cproton::pn_link_remote_target link
+    (rc, msg) = Cproton::pn_link_recv link, 1024
 
     log "Message received #{rc}"
 
@@ -235,21 +235,21 @@ class MailServer
         log "Mailbox #{mbox} contains: #{@mailboxes[mbox].size}"
       end
 
-      (rc, msg) = Cproton::pn_recv link, 1024
+      (rc, msg) = Cproton::pn_link_recv link, 1024
     end
 
     log "Messages accepted."
 
-    Cproton::pn_disposition delivery, Cproton::PN_ACCEPTED
-    Cproton::pn_settle delivery
-    Cproton::pn_advance link
+    Cproton::pn_delivery_update delivery, Cproton::PN_ACCEPTED
+    Cproton::pn_delivery_settle delivery
+    Cproton::pn_link_advance link
 
-    Cproton::pn_flow(link, 1) if Cproton::pn_credit(link).zero?
+    Cproton::pn_link_flow(link, 1) if Cproton::pn_link_credit(link).zero?
   end
 
   def send_message(delivery)
-    link = Cproton::pn_link delivery
-    mbox = Cproton::pn_remote_source link
+    link = Cproton::pn_delivery_link delivery
+    mbox = Cproton::pn_link_remote_source link
     log "Request for Mailbox=#{mbox}"
 
     if @mailboxes.include?(mbox) && !@mailboxes[mbox].empty?
@@ -261,20 +261,20 @@ class MailServer
       msg = ""
     end
 
-    sent = Cproton::pn_send link, msg
+    sent = Cproton::pn_link_send link, msg
     log "Message sent: #{sent}"
 
-    if Cproton::pn_advance link
+    if Cproton::pn_link_advance link
       Cproton::pn_delivery link, "server-delivery-#{@counter}"
       @counter += 1
     end
   end
 
   def setup_link(link)
-    r_tgt = Cproton::pn_remote_target link
-    r_src = Cproton::pn_remote_source link
+    r_tgt = Cproton::pn_link_remote_target link
+    r_src = Cproton::pn_link_remote_source link
 
-    if Cproton::pn_is_sender link
+    if Cproton::pn_link_is_sender link
       log "Opening link to read from mailbox: #{r_src}"
 
       unless @mailboxes.include? r_src
@@ -287,14 +287,14 @@ class MailServer
       @mailboxes[r_tgt] = [] unless @mailboxes.include? r_tgt
     end
 
-    Cproton::pn_set_target link, r_tgt
-    Cproton::pn_set_source link, r_src
+    Cproton::pn_link_set_target link, r_tgt
+    Cproton::pn_link_set_source link, r_src
 
-    if Cproton::pn_is_sender link
+    if Cproton::pn_link_is_sender link
       Cproton::pn_delivery link, "server-delivery-#{@counter}"
       @counter += 1
     else
-      Cproton::pn_flow link, 1
+      Cproton::pn_link_flow link, 1
     end
 
     Cproton::pn_link_open link

@@ -182,8 +182,8 @@ void pn_messenger_flow(pn_messenger_t *messenger)
 
       pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
       while (link && messenger->credit > 0) {
-        if (pn_is_receiver(link)) {
-          pn_flow(link, 1);
+        if (pn_link_is_receiver(link)) {
+          pn_link_flow(link, 1);
           messenger->credit--;
         }
         link = pn_link_next(link, PN_LOCAL_ACTIVE);
@@ -209,8 +209,8 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn)
 
   pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT);
   while (link) {
-    pn_set_source(link, pn_remote_source(link));
-    pn_set_target(link, pn_remote_target(link));
+    pn_link_set_source(link, pn_link_remote_source(link));
+    pn_link_set_target(link, pn_link_remote_target(link));
     pn_link_open(link);
     link = pn_link_next(link, PN_LOCAL_UNINIT);
   }
@@ -238,8 +238,8 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 {
   pn_link_t *link = pn_link_head(conn, 0);
   while (link) {
-    if (pn_is_receiver(link) && pn_credit(link) > 0) {
-      messenger->credit += pn_credit(link);
+    if (pn_link_is_receiver(link) && pn_link_credit(link) > 0) {
+      messenger->credit += pn_link_credit(link);
     }
     link = pn_link_next(link, 0);
   }
@@ -394,7 +394,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
   while (ctor) {
     pn_connection_t *connection = pn_connector_connection(ctor);
     const char *container = pn_connection_remote_container(connection);
-    const char *hostname = pn_connection_hostname(connection);
+    const char *hostname = pn_connection_get_hostname(connection);
     if (pn_streq(container, domain) || pn_streq(hostname, domain))
       return connection;
     ctor = pn_connector_next(ctor);
@@ -449,8 +449,9 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
-    if (pn_is_sender(link) == sender) {
-      const char *terminus = pn_is_sender(link) ? pn_target(link) : pn_source(link);
+    if (pn_link_is_sender(link) == sender) {
+      const char *terminus = pn_link_is_sender(link) ?
+        pn_link_get_target(link) : pn_link_get_source(link);
       if (pn_streq(name, terminus))
         return link;
     }
@@ -462,11 +463,11 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
   // XXX
   if (sender) {
-    pn_set_target(link, name);
-    pn_set_source(link, name);
+    pn_link_set_target(link, name);
+    pn_link_set_source(link, name);
   } else {
-    pn_set_target(link, name);
-    pn_set_source(link, name);
+    pn_link_set_target(link, name);
+    pn_link_set_source(link, name);
   }
   pn_link_open(link);
   return link;
@@ -563,11 +564,11 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
     } else if (err) {
       return err;
     } else {
-      ssize_t n = pn_send(sender, encoded, size);
+      ssize_t n = pn_link_send(sender, encoded, size);
       if (n < 0) {
         return n;
       } else {
-        pn_advance(sender);
+        pn_link_advance(sender);
         pn_messenger_tsync(messenger, false_pred, 0);
         return 0;
       }
@@ -585,11 +586,11 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
 
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (link) {
-      if (pn_is_sender(link)) {
+      if (pn_link_is_sender(link)) {
         pn_delivery_t *d = pn_unsettled_head(link);
         while (d) {
-          if (pn_remote_disposition(d) || pn_remote_settled(d)) {
-            pn_settle(d);
+          if (pn_delivery_remote_state(d) || pn_delivery_settled(d)) {
+            pn_delivery_settle(d);
           } else {
             return false;
           }
@@ -613,7 +614,7 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
 
     pn_delivery_t *d = pn_work_head(conn);
     while (d) {
-      if (pn_readable(d)) {
+      if (pn_delivery_readable(d)) {
         return true;
       }
       d = pn_work_next(d);
@@ -649,12 +650,12 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 
     pn_delivery_t *d = pn_work_head(conn);
     while (d) {
-      if (pn_readable(d)) {
+      if (pn_delivery_readable(d)) {
         // XXX: buf size, eof, etc
         char buf[1024];
-        pn_link_t *l = pn_link(d);
-        ssize_t n = pn_recv(l, buf, 1024);
-        pn_settle(d);
+        pn_link_t *l = pn_delivery_link(d);
+        ssize_t n = pn_link_recv(l, buf, 1024);
+        pn_delivery_settle(d);
         if (n == PN_EOS) n = 0;
         if (n < 0) return n;
         if (msg) {
@@ -692,12 +693,12 @@ int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
 
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (link) {
-      if (pn_is_sender(link)) {
+      if (pn_link_is_sender(link)) {
         if (sender) {
-          result += pn_queued(link);
+          result += pn_link_queued(link);
         }
       } else if (!sender) {
-        result += pn_queued(link);
+        result += pn_link_queued(link);
       }
       link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }

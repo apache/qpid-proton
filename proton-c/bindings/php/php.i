@@ -60,11 +60,11 @@
 // embedded \0's).
 //
 
-// allow pn_send/pn_input's input buffer to be binary safe
-ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_send;
-ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_input;
+// allow pn_link_send/pn_input's input buffer to be binary safe
+ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_link_send;
+ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_transport_input;
 
 ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %ignore pn_sasl_send;
@@ -73,17 +73,17 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 // Use the OUTPUT_BUFFER,OUTPUT_LEN typemap to allow these functions to return
 // variable length binary data.
 
-%rename(pn_recv) wrap_pn_recv;
-// in PHP:   array = pn_recv(link, MAXLEN);
+%rename(pn_link_recv) wrap_pn_link_recv;
+// in PHP:   array = pn_link_recv(link, MAXLEN);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_recv(pn_link_t *link, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
+    void wrap_pn_link_recv(pn_link_t *link, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
-        *OUTPUT_LEN = pn_recv(link, *OUTPUT_BUFFER, maxCount );
+        *OUTPUT_LEN = pn_link_recv(link, *OUTPUT_BUFFER, maxCount );
     }
 %}
-%ignore pn_recv;
+%ignore pn_link_recv;
 
 %rename(pn_sasl_recv) wrap_pn_sasl_recv;
 // in PHP:   array = pn_sasl_recv(sasl, MAXLEN);
@@ -97,17 +97,17 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %}
 %ignore pn_sasl_recv;
 
-%rename(pn_output) wrap_pn_output;
+%rename(pn_transport_output) wrap_pn_transport_output;
 // in PHP:   array = pn_output(transport, MAXLEN);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
-    void wrap_pn_output(pn_transport_t *transport, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
+    void wrap_pn_transport_output(pn_transport_t *transport, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
         *OUTPUT_LEN = pn_output(transport, *OUTPUT_BUFFER, maxCount);
     }
 %}
-%ignore pn_output;
+%ignore pn_transport_output;
 
 %rename(pn_message_data) wrap_pn_message_data;
 // in PHP:  array = pn_message_data("binary message data", MAXLEN);

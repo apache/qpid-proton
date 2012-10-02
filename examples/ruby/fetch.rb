@@ -101,7 +101,7 @@ class FetchClient
     log "Fetching from the mailbox = #{@mailbox}"
     @ssn = Cproton::pn_session @conn
     @link = Cproton::pn_receiver @ssn, "receiver"
-    Cproton::pn_set_source @link, @mailbox
+    Cproton::pn_link_set_source @link, @mailbox
 
     # now open all the engine endpoints
     Cproton::pn_connection_open @conn
@@ -120,10 +120,10 @@ class FetchClient
   def settle
     # locally settle any remotely settled deliveries
     d = Cproton::pn_unsettled_head @link
-    while d && !Cproton::pn_readable(d)
+    while d && !Cproton::pn_delivery_readable(d)
       # delivery that has not yet been read
       _next = Cproton::pn_unsettled_next d
-      Cproton::pn_settle(d) if Cproton::pn_remote_settled(d)
+      Cproton::pn_delivery_settle(d) if Cproton::pn_remote_settled(d)
       d = _next
     end
   end
@@ -152,18 +152,18 @@ if __FILE__ == $PROGRAM_NAME
   end
 
   # check if the server recognizes the mailbox, fail if it does not
-  if Cproton::pn_remote_source(receiver.link) != $options[:mailbox]
+  if Cproton::pn_link_remote_source(receiver.link) != $options[:mailbox]
     log "ERROR: mailbox #{$options[:mailbox]} does not exist!", -2
   end
 
   # Allow the server to send the expected number of messages to the receiver
   # by setting the credit to the expected count
-  Cproton::pn_flow(receiver.link, $options[:count])
+  Cproton::pn_link_flow(receiver.link, $options[:count])
 
   # main loop: continue fetching messages until all the expected number of
   # messages have been retrieved
 
-  while Cproton::pn_credit(receiver.link) > 0
+  while Cproton::pn_link_credit(receiver.link) > 0
     # wait for some messages to arrive
     receiver.wait if Cproton::pn_queued(receiver.link).zero?
 
@@ -172,7 +172,7 @@ if __FILE__ == $PROGRAM_NAME
       delivery = Cproton::pn_current(receiver.link)
 
       # read all bytes of message
-      (rc, msg) = Cproton::pn_recv(receiver.link, Cproton::pn_pending(delivery))
+      (rc, msg) = Cproton::pn_link_recv(receiver.link, Cproton::pn_pending(delivery))
       log "Received count/status=#{rc}"
 
       log("ERROR: Receive failed (#{rc}), exiting...", -3) if rc < 0
@@ -180,17 +180,17 @@ if __FILE__ == $PROGRAM_NAME
       puts "#{msg}"
 
       # let the server know we accept the message
-      Cproton::pn_disposition(delivery, Cproton::PN_ACCEPTED)
+      Cproton::pn_delivery_update(delivery, Cproton::PN_ACCEPTED)
 
       # go to the next deliverable
-      Cproton::pn_advance(receiver.link)
+      Cproton::pn_link_advance(receiver.link)
     end
 
     receiver.settle
   end
 
   # block until any leftover deliveries are settled
-  while Cproton::pn_unsettled(receiver.link) > 0
+  while Cproton::pn_link_unsettled(receiver.link) > 0
     receiver.wait
     receiver.settle
   end

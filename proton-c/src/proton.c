@@ -147,12 +147,13 @@ void server_callback(pn_connector_t *ctor)
 
   pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
   while (link) {
-    printf("%s, %s\n", pn_remote_source(link), pn_remote_target(link));
-    pn_set_source(link, pn_remote_source(link));
-    pn_set_target(link, pn_remote_target(link));
+    printf("%s, %s\n", pn_link_remote_source(link),
+           pn_link_remote_target(link));
+    pn_link_set_source(link, pn_link_remote_source(link));
+    pn_link_set_target(link, pn_link_remote_target(link));
     pn_link_open(link);
-    if (pn_is_receiver(link)) {
-      pn_flow(link, 100);
+    if (pn_link_is_receiver(link)) {
+      pn_link_flow(link, 100);
     } else {
       pn_delivery(link, pn_dtag("blah", 4));
     }
@@ -165,27 +166,27 @@ void server_callback(pn_connector_t *ctor)
   {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
     pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
-    pn_link_t *link = pn_link(delivery);
-    if (pn_readable(delivery)) {
+    pn_link_t *link = pn_delivery_link(delivery);
+    if (pn_delivery_readable(delivery)) {
       if (!ctx->quiet) {
         printf("received delivery: %s\n", tagstr);
         printf("  payload = \"");
       }
       while (true) {
-        ssize_t n = pn_recv(link, msg, 1024);
+        ssize_t n = pn_link_recv(link, msg, 1024);
         if (n == PN_EOS) {
-          pn_advance(link);
-          pn_disposition(delivery, PN_ACCEPTED);
+          pn_link_advance(link);
+          pn_delivery_update(delivery, PN_ACCEPTED);
           break;
         } else if (!ctx->quiet) {
           pn_print_data(msg, n);
         }
       }
       if (!ctx->quiet) printf("\"\n");
-      if (pn_credit(link) < 50) pn_flow(link, 100);
-    } else if (pn_writable(delivery)) {
-      pn_send(link, data, ndata);
-      if (pn_advance(link)) {
+      if (pn_link_credit(link) < 50) pn_link_flow(link, 100);
+    } else if (pn_delivery_writable(delivery)) {
+      pn_link_send(link, data, ndata);
+      if (pn_link_advance(link)) {
         if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
         char tagbuf[16];
         sprintf(tagbuf, "%i", ctx->count++);
@@ -193,9 +194,9 @@ void server_callback(pn_connector_t *ctor)
       }
     }
 
-    if (pn_updated(delivery)) {
-      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disposition(delivery));
-      pn_settle(delivery);
+    if (pn_delivery_updated(delivery)) {
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_delivery_remote_state(delivery));
+      pn_delivery_settle(delivery);
     }
 
     delivery = pn_work_next(delivery);
@@ -296,7 +297,7 @@ void client_callback(pn_connector_t *ctor)
 
     if (ctx->send_count) {
       pn_link_t *snd = pn_sender(ssn, "sender");
-      pn_set_target(snd, ctx->address);
+      pn_link_set_target(snd, ctx->address);
       pn_link_open(snd);
 
       char buf[16];
@@ -308,9 +309,9 @@ void client_callback(pn_connector_t *ctor)
 
     if (ctx->recv_count) {
       pn_link_t *rcv = pn_receiver(ssn, "receiver");
-      pn_set_source(rcv, ctx->address);
+      pn_link_set_source(rcv, ctx->address);
       pn_link_open(rcv);
-      pn_flow(rcv, ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high);
+      pn_link_flow(rcv, ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high);
     }
   }
 
@@ -319,23 +320,23 @@ void client_callback(pn_connector_t *ctor)
   {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
     pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
-    pn_link_t *link = pn_link(delivery);
-    if (pn_writable(delivery)) {
-      pn_send(link, data, ndata);
-      if (pn_advance(link)) {
+    pn_link_t *link = pn_delivery_link(delivery);
+    if (pn_delivery_writable(delivery)) {
+      pn_link_send(link, data, ndata);
+      if (pn_link_advance(link)) {
         if (!ctx->quiet) printf("sent delivery: %s\n", tagstr);
       }
-    } else if (pn_readable(delivery)) {
+    } else if (pn_delivery_readable(delivery)) {
       if (!ctx->quiet) {
         printf("received delivery: %s\n", tagstr);
         printf("  payload = \"");
       }
       while (true) {
-        size_t n = pn_recv(link, msg, 1024);
+        size_t n = pn_link_recv(link, msg, 1024);
         if (n == PN_EOS) {
-          pn_advance(link);
-          pn_disposition(delivery, PN_ACCEPTED);
-          pn_settle(delivery);
+          pn_link_advance(link);
+          pn_delivery_update(delivery, PN_ACCEPTED);
+          pn_delivery_settle(delivery);
           if (!--ctx->recv_count) {
             pn_link_close(link);
           }
@@ -346,15 +347,16 @@ void client_callback(pn_connector_t *ctor)
       }
       if (!ctx->quiet) printf("\"\n");
 
-      if (pn_credit(link) < ctx->low && pn_credit(link) < ctx->recv_count) {
-        pn_flow(link, (ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high) - pn_credit(link));
+      if (pn_link_credit(link) < ctx->low && pn_link_credit(link) < ctx->recv_count) {
+        pn_link_flow(link, (ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high)
+                     - pn_link_credit(link));
       }
     }
 
-    if (pn_updated(delivery)) {
-      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_remote_disposition(delivery));
-      pn_clear(delivery);
-      pn_settle(delivery);
+    if (pn_delivery_updated(delivery)) {
+      if (!ctx->quiet) printf("disposition for %s: %u\n", tagstr, pn_delivery_remote_state(delivery));
+      pn_delivery_clear(delivery);
+      pn_delivery_settle(delivery);
       if (!--ctx->send_count) {
         pn_link_close(link);
       }

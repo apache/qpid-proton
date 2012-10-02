@@ -79,13 +79,13 @@ int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_save_json;
 
-ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_send;
+ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_link_send;
 
-%rename(pn_recv) wrap_pn_recv;
+%rename(pn_link_recv) wrap_pn_link_recv;
 %inline %{
-  int wrap_pn_recv(pn_link_t *link, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_recv(link, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_link_recv(pn_link_t *link, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_link_recv(link, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
@@ -94,15 +94,15 @@ ssize_t pn_send(pn_link_t *transport, char *STRING, size_t LENGTH);
     return sz;
   }
 %}
-%ignore pn_recv;
+%ignore pn_link_recv;
 
-ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_input;
+ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_transport_input;
 
-%rename(pn_output) wrap_pn_output;
+%rename(pn_transport_output) wrap_pn_transport_output;
 %inline %{
-  int wrap_pn_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_output(transport, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_transport_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_transport_output(transport, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
@@ -111,7 +111,7 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     return sz;
   }
 %}
-%ignore pn_output;
+%ignore pn_transport_output;
 
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
@@ -222,10 +222,10 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_connector_free;
 
-%rename(pn_connection_context) wrap_pn_connection_context;
+%rename(pn_connection_get_context) wrap_pn_connection_get_context;
 %inline {
-  PyObject *wrap_pn_connection_context(pn_connection_t *c) {
-    PyObject *result = pn_connection_context(c);
+  PyObject *wrap_pn_connection_get_context(pn_connection_t *c) {
+    PyObject *result = pn_connection_get_context(c);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -234,12 +234,12 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     }
   }
 }
-%ignore pn_connection_context;
+%ignore pn_connection_get_context;
 
 %rename(pn_connection_set_context) wrap_pn_connection_set_context;
 %inline {
   void wrap_pn_connection_set_context(pn_connection_t *c, PyObject *context) {
-    Py_XDECREF(pn_connection_context(c));
+    Py_XDECREF(pn_connection_get_context(c));
     Py_XINCREF(context);
     pn_connection_set_context(c, context);
   }
@@ -249,17 +249,17 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %rename(pn_connection_free) wrap_pn_connection_free;
 %inline %{
   void wrap_pn_connection_free(pn_connection_t *c) {
-    PyObject *obj = pn_connection_context(c);
+    PyObject *obj = pn_connection_get_context(c);
     Py_XDECREF(obj);
     pn_connection_free(c);
   }
 %}
 %ignore pn_connection_free;
 
-%rename(pn_session_context) wrap_pn_session_context;
+%rename(pn_session_get_context) wrap_pn_session_get_context;
 %inline {
-  PyObject *wrap_pn_session_context(pn_session_t *s) {
-    PyObject *result = pn_session_context(s);
+  PyObject *wrap_pn_session_get_context(pn_session_t *s) {
+    PyObject *result = pn_session_get_context(s);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -268,12 +268,12 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     }
   }
 }
-%ignore pn_session_context;
+%ignore pn_session_get_context;
 
 %rename(pn_session_set_context) wrap_pn_session_set_context;
 %inline {
   void wrap_pn_session_set_context(pn_session_t *s, PyObject *context) {
-    Py_XDECREF(pn_session_context(s));
+    Py_XDECREF(pn_session_get_context(s));
     Py_XINCREF(context);
     pn_session_set_context(s, context);
   }
@@ -283,17 +283,17 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %rename(pn_session_free) wrap_pn_session_free;
 %inline %{
   void wrap_pn_session_free(pn_session_t *s) {
-    PyObject *obj = pn_session_context(s);
+    PyObject *obj = pn_session_get_context(s);
     Py_XDECREF(obj);
     pn_session_free(s);
   }
 %}
 %ignore pn_session_free;
 
-%rename(pn_link_context) wrap_pn_link_context;
+%rename(pn_link_get_context) wrap_pn_link_get_context;
 %inline {
-  PyObject *wrap_pn_link_context(pn_link_t *l) {
-    PyObject *result = pn_link_context(l);
+  PyObject *wrap_pn_link_get_context(pn_link_t *l) {
+    PyObject *result = pn_link_get_context(l);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -302,12 +302,12 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     }
   }
 }
-%ignore pn_link_context;
+%ignore pn_link_get_context;
 
 %rename(pn_link_set_context) wrap_pn_link_set_context;
 %inline {
   void wrap_pn_link_set_context(pn_link_t *l, PyObject *context) {
-    Py_XDECREF(pn_link_context(l));
+    Py_XDECREF(pn_link_get_context(l));
     Py_XINCREF(context);
     pn_link_set_context(l, context);
   }
@@ -317,17 +317,17 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %rename(pn_link_free) wrap_pn_link_free;
 %inline %{
   void wrap_pn_link_free(pn_link_t *l) {
-    PyObject *obj = pn_link_context(l);
+    PyObject *obj = pn_link_get_context(l);
     Py_XDECREF(obj);
     pn_link_free(l);
   }
 %}
 %ignore pn_link_free;
 
-%rename(pn_delivery_context) wrap_pn_delivery_context;
+%rename(pn_delivery_get_context) wrap_pn_delivery_get_context;
 %inline {
-  PyObject *wrap_pn_delivery_context(pn_delivery_t *d) {
-    PyObject *result = pn_delivery_context(d);
+  PyObject *wrap_pn_delivery_get_context(pn_delivery_t *d) {
+    PyObject *result = pn_delivery_get_context(d);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -336,27 +336,27 @@ ssize_t pn_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
     }
   }
 }
-%ignore pn_delivery_context;
+%ignore pn_delivery_get_context;
 
 %rename(pn_delivery_set_context) wrap_pn_delivery_set_context;
 %inline {
   void wrap_pn_delivery_set_context(pn_delivery_t *d, PyObject *context) {
-    Py_XDECREF(pn_delivery_context(d));
+    Py_XDECREF(pn_delivery_get_context(d));
     Py_XINCREF(context);
     pn_delivery_set_context(d, context);
   }
 }
 %ignore pn_delivery_set_context;
 
-%rename(pn_settle) wrap_pn_settle;
+%rename(pn_delivery_settle) wrap_pn_delivery_settle;
 %inline %{
-  void wrap_pn_settle(pn_delivery_t *d) {
-    PyObject *obj = pn_delivery_context(d);
+  void wrap_pn_delivery_settle(pn_delivery_t *d) {
+    PyObject *obj = pn_delivery_get_context(d);
     Py_XDECREF(obj);
-    pn_settle(d);
+    pn_delivery_settle(d);
   }
 %}
-%ignore pn_settle;
+%ignore pn_delivery_settle;
 
 ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %ignore pn_data_decode;

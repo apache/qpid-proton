@@ -101,11 +101,11 @@ pn_state_t pn_connection_state(pn_connection_t *connection);
 /** @todo: needs documentation */
 pn_error_t *pn_connection_error(pn_connection_t *connection);
 /** @todo: needs documentation */
-const char *pn_connection_container(pn_connection_t *connection);
+const char *pn_connection_get_container(pn_connection_t *connection);
 /** @todo: needs documentation */
 void pn_connection_set_container(pn_connection_t *connection, const char *container);
 /** @todo: needs documentation */
-const char *pn_connection_hostname(pn_connection_t *connection);
+const char *pn_connection_get_hostname(pn_connection_t *connection);
 /** @todo: needs documentation */
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
 const char *pn_connection_remote_container(pn_connection_t *connection);
@@ -236,7 +236,7 @@ void pn_connection_free(pn_connection_t *connection);
  *
  * @return the application context that was passed to pn_connection_set_context()
  */
-void *pn_connection_context(pn_connection_t *connection);
+void *pn_connection_get_context(pn_connection_t *connection);
 
 /** Assign a new application context to the connection.
  *
@@ -249,81 +249,81 @@ void pn_connection_set_context(pn_connection_t *connection, void *context);
 
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
-ssize_t pn_input(pn_transport_t *transport, char *bytes, size_t available);
-ssize_t pn_output(pn_transport_t *transport, char *bytes, size_t size);
-time_t pn_tick(pn_transport_t *transport, time_t now);
-void pn_trace(pn_transport_t *transport, pn_trace_t trace);
+ssize_t pn_transport_input(pn_transport_t *transport, char *bytes, size_t available);
+ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
+time_t pn_transport_tick(pn_transport_t *transport, time_t now);
+void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 void pn_transport_free(pn_transport_t *transport);
 
 // session
 pn_state_t pn_session_state(pn_session_t *session);
 pn_error_t *pn_session_error(pn_session_t *session);
-pn_link_t *pn_sender(pn_session_t *session, const char *name);
-pn_link_t *pn_receiver(pn_session_t *session, const char *name);
-pn_connection_t *pn_get_connection(pn_session_t *session);
+pn_connection_t *pn_session_connection(pn_session_t *session);
 void pn_session_open(pn_session_t *session);
 void pn_session_close(pn_session_t *session);
 void pn_session_free(pn_session_t *session);
-void *pn_session_context(pn_session_t *session);
+void *pn_session_get_context(pn_session_t *session);
 void pn_session_set_context(pn_session_t *session, void *context);
 
 // link
+pn_link_t *pn_sender(pn_session_t *session, const char *name);
+pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 const char *pn_link_name(pn_link_t *link);
-bool pn_is_sender(pn_link_t *link);
-bool pn_is_receiver(pn_link_t *link);
+bool pn_link_is_sender(pn_link_t *link);
+bool pn_link_is_receiver(pn_link_t *link);
 pn_state_t pn_link_state(pn_link_t *link);
 pn_error_t *pn_link_error(pn_link_t *link);
-pn_session_t *pn_get_session(pn_link_t *link);
-const char *pn_target(pn_link_t *link);
-const char *pn_source(pn_link_t *link);
-void pn_set_source(pn_link_t *link, const char *source);
-void pn_set_target(pn_link_t *link, const char *target);
-const char *pn_remote_source(pn_link_t *link);
-const char *pn_remote_target(pn_link_t *link);
-pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
-pn_delivery_t *pn_current(pn_link_t *link);
-bool pn_advance(pn_link_t *link);
-int pn_credit(pn_link_t *link);
-int pn_queued(pn_link_t *link);
+pn_session_t *pn_link_session(pn_link_t *link);
+const char *pn_link_get_target(pn_link_t *link);
+const char *pn_link_get_source(pn_link_t *link);
+void pn_link_set_source(pn_link_t *link, const char *source);
+void pn_link_set_target(pn_link_t *link, const char *target);
+const char *pn_link_remote_source(pn_link_t *link);
+const char *pn_link_remote_target(pn_link_t *link);
+pn_delivery_t *pn_link_current(pn_link_t *link);
+bool pn_link_advance(pn_link_t *link);
+int pn_link_credit(pn_link_t *link);
+int pn_link_queued(pn_link_t *link);
 
-int pn_unsettled(pn_link_t *link);
+int pn_link_unsettled(pn_link_t *link);
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
 void pn_link_open(pn_link_t *sender);
 void pn_link_close(pn_link_t *sender);
 void pn_link_free(pn_link_t *sender);
-void *pn_link_context(pn_link_t *link);
+void *pn_link_get_context(pn_link_t *link);
 void pn_link_set_context(pn_link_t *link, void *context);
 
 // sender
-//void pn_offer(pn_sender_t *sender, int credits);
-ssize_t pn_send(pn_link_t *sender, const char *bytes, size_t n);
-void pn_drained(pn_link_t *sender);
-//void pn_abort(pn_sender_t *sender);
+//void pn_link_offer(pn_sender_t *sender, int credits);
+ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
+void pn_link_drained(pn_link_t *sender);
+//void pn_link_abort(pn_sender_t *sender);
 
 // receiver
-void pn_flow(pn_link_t *receiver, int credit);
-void pn_drain(pn_link_t *receiver, int credit);
-ssize_t pn_recv(pn_link_t *receiver, char *bytes, size_t n);
+void pn_link_flow(pn_link_t *receiver, int credit);
+void pn_link_drain(pn_link_t *receiver, int credit);
+ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
 
 // delivery
+pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
-pn_link_t *pn_link(pn_delivery_t *delivery);
+pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
 // how do we do delivery state?
-int pn_local_disposition(pn_delivery_t *delivery);
-int pn_remote_disposition(pn_delivery_t *delivery);
-bool pn_remote_settled(pn_delivery_t *delivery);
-size_t pn_pending(pn_delivery_t *delivery);
-bool pn_writable(pn_delivery_t *delivery);
-bool pn_readable(pn_delivery_t *delivery);
-bool pn_updated(pn_delivery_t *delivery);
-void pn_clear(pn_delivery_t *delivery);
-void pn_disposition(pn_delivery_t *delivery, pn_disposition_t disposition);
-//int pn_format(pn_delivery_t *delivery);
-void pn_settle(pn_delivery_t *delivery);
+pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery);
+pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery);
+bool pn_delivery_settled(pn_delivery_t *delivery);
+size_t pn_delivery_pending(pn_delivery_t *delivery);
+bool pn_delivery_writable(pn_delivery_t *delivery);
+bool pn_delivery_readable(pn_delivery_t *delivery);
+bool pn_delivery_updated(pn_delivery_t *delivery);
+void pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition);
+void pn_delivery_clear(pn_delivery_t *delivery);
+//int pn_delivery_format(pn_delivery_t *delivery);
+void pn_delivery_settle(pn_delivery_t *delivery);
 void pn_delivery_dump(pn_delivery_t *delivery);
-void *pn_delivery_context(pn_delivery_t *delivery);
+void *pn_delivery_get_context(pn_delivery_t *delivery);
 void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
 
 #ifdef __cplusplus

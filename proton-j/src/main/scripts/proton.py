@@ -255,14 +255,14 @@ class Delivery(object):
   def updated(self):
     return self.impl.isUpdated()
 
-  def disposition(self, disp):
+  def update(self, disp):
     if disp == self.ACCEPTED:
       self.impl.disposition(Accepted.getInstance())
     else:
       raise Exception("xxx: %s" % disp)
 
   @property
-  def remote_disposition(self):
+  def remote_state(self):
     rd = self.impl.getRemoteState()
     if(rd == Accepted.getInstance()):
       return self.ACCEPTED
@@ -270,7 +270,7 @@ class Delivery(object):
       raise Exception("xxx: %s" % rd)
 
   @property
-  def local_disposition(self):
+  def local_state(self):
     ld = self.impl.getLocalState()
     if(ld == Accepted.getInstance()):
       return self.ACCEPTED
@@ -281,7 +281,7 @@ class Delivery(object):
     self.impl.settle()
 
   @property
-  def remote_settled(self):
+  def settled(self):
     return self.impl.remotelySettled()
 
   @property
