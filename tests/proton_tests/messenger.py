@@ -65,11 +65,15 @@ class MessengerTest(Test):
     self.server.stop()
     self.running = False
 
-  def testSendReceive(self):
+  def _testSendReceive(self, size=None):
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
+    if size is not None:
+      while len(body) < size:
+        body = 2*body
+      body = body[:size]
     msg.load(body)
     self.client.put(msg)
     self.client.send()
@@ -82,6 +86,27 @@ class MessengerTest(Test):
     assert reply.subject == "Hello World!"
     rbod = reply.save()
     assert rbod == body, (rbod, body)
+
+  def testSendReceive(self):
+    self._testSendReceive()
+
+  def testSendReceive1K(self):
+    self._testSendReceive(1024)
+
+  def testSendReceive2K(self):
+    self._testSendReceive(2*1024)
+
+  def testSendReceive4K(self):
+    self._testSendReceive(4*1024)
+
+  def testSendReceive10K(self):
+    self._testSendReceive(10*1024)
+
+  def testSendReceive100K(self):
+    self._testSendReceive(100*1024)
+
+  def testSendReceive1M(self):
+    self._testSendReceive(1024*1024)
 
   def testSendBogus(self):
     msg = Message()

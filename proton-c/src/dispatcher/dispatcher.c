@@ -35,6 +35,8 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->context = context;
   disp->trace = PN_TRACE_OFF;
 
+  disp->input = pn_buffer(1024);
+
   disp->channel = 0;
   disp->code = 0;
   disp->args = pn_data(16);
@@ -48,7 +50,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->available = 0;
 
   disp->halt = false;
-  disp->batch = true;
 
   return disp;
 }
@@ -56,6 +57,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 void pn_dispatcher_free(pn_dispatcher_t *disp)
 {
   if (disp) {
+    pn_buffer_free(disp->input);
     pn_data_free(disp->args);
     pn_data_free(disp->output_args);
     free(disp->output);
@@ -105,64 +107,84 @@ void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...)
   va_end(ap);
 }
 
+int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
+{
+  ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
+  if (dsize < 0) {
+    fprintf(stderr, "Error decoding frame: %s %s\n", pn_code(dsize),
+            pn_data_error(disp->args));
+    pn_fprint_data(stderr, frame.payload, frame.size);
+    fprintf(stderr, "\n");
+    return dsize;
+  }
+
+  disp->channel = frame.channel;
+  // XXX: assuming numeric
+  uint64_t lcode;
+  bool scanned;
+  int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
+  if (e) {
+    fprintf(stderr, "Scan error\n");
+    return e;
+  }
+  if (!scanned) {
+    fprintf(stderr, "Error dispatching frame\n");
+    return PN_ERR;
+  }
+  uint8_t code = lcode;
+  disp->code = code;
+  disp->size = frame.size - dsize;
+  if (disp->size)
+    disp->payload = frame.payload + dsize;
+
+  pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
+
+  pn_action_t *action = disp->actions[code];
+  int err = action(disp);
+
+  disp->channel = 0;
+  disp->code = 0;
+  pn_data_clear(disp->args);
+  disp->size = 0;
+  disp->payload = NULL;
+
+  return err;
+}
+
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available)
 {
+  size_t leftover = pn_buffer_size(disp->input);
+  if (leftover) {
+    int e = pn_buffer_append(disp->input, bytes, available);
+    if (e) return e;
+    pn_bytes_t b = pn_buffer_bytes(disp->input);
+    bytes = b.start;
+    available = b.size;
+  }
+
   size_t read = 0;
+
   while (!disp->halt) {
     pn_frame_t frame;
-    size_t n = pn_read_frame(&frame, bytes + read, available);
+
+    size_t n = pn_read_frame(&frame, bytes + read, available - read);
     if (n) {
-      ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
-      if (dsize < 0) {
-        fprintf(stderr, "Error decoding frame: %s %s\n", pn_code(dsize),
-                pn_data_error(disp->args));
-        pn_fprint_data(stderr, frame.payload, frame.size);
-        fprintf(stderr, "\n");
-        return dsize;
-      }
-
-      disp->channel = frame.channel;
-      // XXX: assuming numeric
-      uint64_t lcode;
-      bool scanned;
-      int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
-      if (e) {
-        fprintf(stderr, "Scan error\n");
-        return e;
-      }
-      if (!scanned) {
-        fprintf(stderr, "Error dispatching frame\n");
-        return PN_ERR;
-      }
-      uint8_t code = lcode;
-      disp->code = code;
-      disp->size = frame.size - dsize;
-      if (disp->size)
-        disp->payload = frame.payload + dsize;
-
-      pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
-
-      pn_action_t *action = disp->actions[code];
-      int err = action(disp);
-
-      disp->channel = 0;
-      disp->code = 0;
-      pn_data_clear(disp->args);
-      disp->size = 0;
-      disp->payload = NULL;
-
-      if (err) return err;
-
-      available -= n;
+      int e = pn_dispatch_frame(disp, frame);
+      if (e) return e;
       read += n;
-
-      if (!disp->batch) break;
     } else {
+      if (leftover) {
+        pn_buffer_trim(disp->input, read, 0);
+      } else {
+        int e = pn_buffer_append(disp->input, bytes + read, available - read);
+        if (e) return e;
+      }
+      read = available;
       break;
     }
   }
 
-  return read;
+  return read - leftover;
 }
 
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)

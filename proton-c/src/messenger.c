@@ -23,6 +23,7 @@
 #include <proton/driver.h>
 #include <proton/util.h>
 #include <proton/ssl.h>
+#include <proton/buffer.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -39,6 +40,7 @@ struct pn_messenger_t {
   pn_driver_t *driver;
   int credit;
   uint64_t next_tag;
+  pn_buffer_t *buffer;
   pn_error_t *error;
 };
 
@@ -69,6 +71,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->driver = pn_driver();
     m->credit = 0;
     m->next_tag = 0;
+    m->buffer = pn_buffer(1024);
     m->error = pn_error();
   }
 
@@ -149,6 +152,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->password);
     free(messenger->trusted_certificates);
     pn_driver_free(messenger->driver);
+    pn_buffer_free(messenger->buffer);
     pn_error_free(messenger->error);
     free(messenger);
   }
@@ -548,25 +552,30 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
     return pn_error_format(messenger->error, PN_ERR,
                            "unable to send to address: %s (%s)", address,
                            pn_driver_error(messenger->driver));
-  // XXX: proper tag
-  char tag[8];
-  void *ptr = &tag;
-  uint64_t next = messenger->next_tag++;
-  *((uint32_t *) ptr) = next;
-  pn_delivery(sender, pn_dtag(tag, 8));
-  size_t size = 1024;
-  // XXX: max message size
-  while (size < 16*1024) {
-    char encoded[size];
+
+  pn_buffer_t *buf = messenger->buffer;
+
+  while (true) {
+    char *encoded = pn_buffer_bytes(buf).start;
+    size_t size = pn_buffer_capacity(buf);
     int err = pn_message_encode(msg, encoded, &size);
     if (err == PN_OVERFLOW) {
-      size *= 2;
+      err = pn_buffer_ensure(buf, 2*pn_buffer_capacity(buf));
+      if (err) return pn_error_format(messenger->error, err, "put: error growing buffer");
     } else if (err) {
-      return err;
+      return pn_error_format(messenger->error, err, "encode error: %s",
+                             pn_message_error(msg));
     } else {
+      // XXX: proper tag
+      char tag[8];
+      void *ptr = &tag;
+      uint64_t next = messenger->next_tag++;
+      *((uint32_t *) ptr) = next;
+      pn_delivery(sender, pn_dtag(tag, 8));
       ssize_t n = pn_link_send(sender, encoded, size);
       if (n < 0) {
-        return n;
+        return pn_error_format(messenger->error, n, "send error: %s",
+                               pn_error_text(pn_link_error(sender)));
       } else {
         pn_link_advance(sender);
         pn_messenger_tsync(messenger, false_pred, 0);
@@ -653,12 +662,21 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
       if (pn_delivery_readable(d)) {
         pn_link_t *l = pn_delivery_link(d);
         size_t pending = pn_delivery_pending(d);
-        char buf[pending];
-        ssize_t n = pn_link_recv(l, buf, pending);
+        pn_buffer_t *buf = messenger->buffer;
+        int err = pn_buffer_ensure(buf, pending + 1);
+        if (err) return pn_error_format(messenger->error, err, "get: error growing buffer");
+        char *encoded = pn_buffer_bytes(buf).start;
+        ssize_t n = pn_link_recv(l, encoded, pending);
+        if (n != pending) {
+          return pn_error_format(messenger->error, n, "didn't receive pending bytes: %zi", n);
+        }
+        n = pn_link_recv(l, encoded + pending, 1);
         pn_delivery_settle(d);
-        if (n < 0) return pn_error_format(messenger->error, n, "receive error");
+        if (n != PN_EOS) {
+          return pn_error_format(messenger->error, n, "PN_EOS expected");
+        }
         if (msg) {
-          int err = pn_message_decode(msg, buf, n);
+          int err = pn_message_decode(msg, encoded, pending);
           if (err) {
             return pn_error_format(messenger->error, err, "error decoding message: %s",
                                    pn_message_error(msg));

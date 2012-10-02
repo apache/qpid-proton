@@ -24,6 +24,7 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
+#include <proton/buffer.h>
 #include <proton/codec.h>
 
 typedef struct pn_dispatcher_t pn_dispatcher_t;
@@ -38,6 +39,7 @@ struct pn_dispatcher_t {
   const char *names[256];
   uint8_t frame_type;
   pn_trace_t trace;
+  pn_buffer_t *input;
   uint16_t channel;
   uint8_t code;
   pn_data_t *args;
