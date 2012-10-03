@@ -448,7 +448,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       {
         pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
           group_id, reply_to_group_id;
-        err = pn_data_scan(msg->data, "D.[.zSSS.ssLLSIS]", &user_id, &address,
+        err = pn_data_scan(msg->data, "D.[.zSSS.ssttSIS]", &user_id, &address,
                            &subject, &reply_to, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
@@ -503,14 +503,14 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 
   pn_data_clear(msg->data);
 
-  int err = pn_data_fill(msg->data, "DL[oBIoI]", HEADER, msg->durable,
-                         msg->priority, msg->ttl, msg->first_acquirer,
+  int err = pn_data_fill(msg->data, "DL[oB?IoI]", HEADER, msg->durable,
+                         msg->priority, msg->ttl, msg->ttl, msg->first_acquirer,
                          msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_data_error(msg->data));
 
-  err = pn_data_fill(msg->data, "DL[nzSSSnssLLSiS]", PROPERTIES,
+  err = pn_data_fill(msg->data, "DL[nzSSSnssttSIS]", PROPERTIES,
                      pn_buffer_bytes(msg->user_id),
                      pn_buffer_str(msg->address),
                      pn_buffer_str(msg->subject),

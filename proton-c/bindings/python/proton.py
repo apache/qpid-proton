@@ -663,6 +663,7 @@ class Data:
   INT = PN_INT; "A signed int value."
   ULONG = PN_ULONG; "An unsigned long value."
   LONG = PN_LONG; "A signed long value."
+  TIMESTAMP = PN_TIMESTAMP; "A timestamp value."
   FLOAT = PN_FLOAT; "A float value."
   DOUBLE = PN_DOUBLE; "A double value."
   BINARY = PN_BINARY; "A binary string."
@@ -910,6 +911,14 @@ class Data:
     """
     self._check(pn_data_put_long(self._data, l))
 
+  def put_timestamp(self, t):
+    """
+    Puts a timestamp value.
+
+    @param t: an integral value
+    """
+    self._check(pn_data_put_timestamp(self._data, t))
+
   def put_float(self, f):
     """
     Puts a float value.
@@ -1114,6 +1123,15 @@ class Data:
     an exception otherwise.
     """
     err, value = pn_data_get_long(self._data)
+    self._check(err)
+    return value
+
+  def get_timestamp(self):
+    """
+    If the current node is a timestamp, returns its value, raises
+    an exception otherwise.
+    """
+    err, value = pn_data_get_timestamp(self._data)
     self._check(err)
     return value
 

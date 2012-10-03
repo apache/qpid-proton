@@ -171,3 +171,6 @@ class DataTest(Test):
 
   def testSymbol(self):
     self._test("symbol", "this is a symbol test", "bleh", "blah")
+
+  def testTimestamp(self):
+    self._test("timestamp", 0, 12345, 1000000)
