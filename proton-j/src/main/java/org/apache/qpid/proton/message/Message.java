@@ -26,8 +26,8 @@ public class Message
     {
     }
 
-    Message(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
-            Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
+    public Message(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+                   Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
     {
         _header = header;
         _deliveryAnnotations = deliveryAnnotations;
@@ -405,39 +405,74 @@ public class Message
     }
 
 
-    Header getHeader()
+    public Header getHeader()
     {
         return _header;
     }
 
-    DeliveryAnnotations getDeliveryAnnotations()
+    public DeliveryAnnotations getDeliveryAnnotations()
     {
         return _deliveryAnnotations;
     }
 
-    MessageAnnotations getMessageAnnotations()
+    public MessageAnnotations getMessageAnnotations()
     {
         return _messageAnnotations;
     }
 
-    Properties getProperties()
+    public Properties getProperties()
     {
         return _properties;
     }
 
-    ApplicationProperties getApplicationProperties()
+    public ApplicationProperties getApplicationProperties()
     {
         return _applicationProperties;
     }
 
-    Section getBody()
+    public Section getBody()
     {
         return _body;
     }
 
-    Footer getFooter()
+    public Footer getFooter()
     {
         return _footer;
+    }
+
+    public void setHeader(Header header)
+    {
+        _header = header;
+    }
+
+    public void setDeliveryAnnotations(DeliveryAnnotations deliveryAnnotations)
+    {
+        _deliveryAnnotations = deliveryAnnotations;
+    }
+
+    public void setMessageAnnotations(MessageAnnotations messageAnnotations)
+    {
+        _messageAnnotations = messageAnnotations;
+    }
+
+    public void setProperties(Properties properties)
+    {
+        _properties = properties;
+    }
+
+    public void setApplicationProperties(ApplicationProperties applicationProperties)
+    {
+        _applicationProperties = applicationProperties;
+    }
+
+    public void setBody(Section body)
+    {
+        _body = body;
+    }
+
+    public void setFooter(Footer footer)
+    {
+        _footer = footer;
     }
 
     public int decode(byte[] data, int offset, int length)
