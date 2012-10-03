@@ -41,6 +41,7 @@ typedef enum {
   PN_SHORT,
   PN_UINT,
   PN_INT,
+  PN_CHAR,
   PN_ULONG,
   PN_LONG,
   PN_TIMESTAMP,
@@ -66,6 +67,7 @@ typedef struct {
     int16_t as_short;
     uint32_t as_uint;
     int32_t as_int;
+    pn_char_t as_char;
     uint64_t as_ulong;
     int64_t as_long;
     pn_timestamp_t as_timestamp;
@@ -117,6 +119,7 @@ int pn_data_put_ushort(pn_data_t *data, uint16_t us);
 int pn_data_put_short(pn_data_t *data, int16_t s);
 int pn_data_put_uint(pn_data_t *data, uint32_t ui);
 int pn_data_put_int(pn_data_t *data, int32_t i);
+int pn_data_put_char(pn_data_t *data, pn_char_t c);
 int pn_data_put_ulong(pn_data_t *data, uint64_t ul);
 int pn_data_put_long(pn_data_t *data, int64_t l);
 int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
@@ -138,6 +141,7 @@ int pn_data_get_ushort(pn_data_t *data, uint16_t *us);
 int pn_data_get_short(pn_data_t *data, int16_t *s);
 int pn_data_get_uint(pn_data_t *data, uint32_t *ui);
 int pn_data_get_int(pn_data_t *data, int32_t *i);
+int pn_data_get_char(pn_data_t *data, pn_char_t *c);
 int pn_data_get_ulong(pn_data_t *data, uint64_t *ul);
 int pn_data_get_long(pn_data_t *data, int64_t *l);
 int pn_data_get_timestamp(pn_data_t *data, pn_timestamp_t *l);

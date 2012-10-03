@@ -174,3 +174,6 @@ class DataTest(Test):
 
   def testTimestamp(self):
     self._test("timestamp", 0, 12345, 1000000)
+
+  def testChar(self):
+    self._test("char", 'a', 'b', 'c', u'\u1234')

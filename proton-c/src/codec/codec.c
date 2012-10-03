@@ -77,6 +77,7 @@ const char *pn_type_str(pn_type_t type)
   case PN_SHORT: return "PN_SHORT";
   case PN_UINT: return "PN_UINT";
   case PN_INT: return "PN_INT";
+  case PN_CHAR: return "PN_CHAR";
   case PN_ULONG: return "PN_ULONG";
   case PN_LONG: return "PN_LONG";
   case PN_TIMESTAMP: return "PN_TIMESTAMP";
@@ -154,6 +155,8 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
     return pn_bytes_format(bytes, "%" PRIu32, atom.u.as_uint);
   case PN_INT:
     return pn_bytes_format(bytes, "%" PRIi32, atom.u.as_int);
+  case PN_CHAR:
+    return pn_bytes_format(bytes, "%lc",  atom.u.as_char);
   case PN_ULONG:
     return pn_bytes_format(bytes, "%" PRIu64, atom.u.as_ulong);
   case PN_LONG:
@@ -404,6 +407,7 @@ uint8_t pn_type2code(pn_type_t type)
   case PN_SHORT: return PNE_SHORT;
   case PN_UINT: return PNE_UINT;
   case PN_INT: return PNE_INT;
+  case PN_CHAR: return PNE_UTF32;
   case PN_FLOAT: return PNE_FLOAT;
   case PN_LONG: return PNE_LONG;
   case PN_TIMESTAMP: return PNE_MS64;
@@ -532,6 +536,7 @@ int pn_encode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, pn_type_t type)
   case PN_SHORT: return pn_bytes_writef16(bytes, atom->u.as_short);
   case PN_UINT: return pn_bytes_writef32(bytes, atom->u.as_uint);
   case PN_INT: return pn_bytes_writef32(bytes, atom->u.as_int);
+  case PN_CHAR: return pn_bytes_writef32(bytes, atom->u.as_char);
   case PN_ULONG: return pn_bytes_writef64(bytes, atom->u.as_ulong);
   case PN_LONG: return pn_bytes_writef64(bytes, atom->u.as_long);
   case PN_TIMESTAMP: return pn_bytes_writef64(bytes, atom->u.as_timestamp);
@@ -643,6 +648,8 @@ pn_type_t pn_code2type(uint8_t code)
     return PN_UINT;
   case PNE_INT:
     return PN_INT;
+  case PNE_UTF32:
+    return PN_CHAR;
   case PNE_FLOAT:
     return PN_FLOAT;
   case PNE_LONG:
@@ -750,6 +757,11 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
   case PNE_INT:
     if (bytes->size < 4) return PN_UNDERFLOW;
     atom.type=PN_INT, atom.u.as_int=ntohl(*((uint32_t *) (bytes->start)));
+    pn_bytes_ltrim(bytes, 4);
+    break;
+  case PNE_UTF32:
+    if (bytes->size < 4) return PN_UNDERFLOW;
+    atom.type=PN_CHAR, atom.u.as_char=ntohl(*((uint32_t *) (bytes->start)));
     pn_bytes_ltrim(bytes, 4);
     break;
   case PNE_FLOAT:
@@ -1004,6 +1016,11 @@ int pn_vfill_one(pn_atoms_t *atoms, const char **fmt, va_list *ap, bool skip, in
   case 'i':
     atom->type = PN_INT;
     atom->u.as_int = va_arg(*ap, int32_t);
+    (*nvals)++;
+    return 0;
+  case 'c':
+    atom->type = PN_CHAR;
+    atom->u.as_char = va_arg(*ap, pn_char_t);
     (*nvals)++;
     return 0;
   case 'L':
@@ -1381,6 +1398,19 @@ int pn_scan_one(pn_atoms_t *atoms, const char **fmt, va_list *ap, bool *scanned)
       int32_t *value = va_arg(*ap, int32_t *);
       if (atom && atom->type == PN_INT) {
         *value = atom->u.as_int;
+        *scanned = true;
+      } else {
+        *value = 0;
+        *scanned = false;
+      }
+    }
+    if (atoms) pn_atoms_ltrim(atoms, 1);
+    return 0;
+  case 'c':
+    {
+      uint32_t *value = va_arg(*ap, pn_char_t *);
+      if (atom && atom->type == PN_CHAR) {
+        *value = atom->u.as_char;
         *scanned = true;
       } else {
         *value = 0;
@@ -2157,6 +2187,20 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       }
       if (resume_count && level == count_level) resume_count--;
       break;
+    case 'c':
+      {
+        pn_char_t *value = va_arg(ap, pn_char_t *);
+        found = pn_scan_next(data, &type, suspend);
+        if (found && type == PN_CHAR) {
+          pn_data_get_char(data, value);
+          scanned = true;
+        } else {
+          *value = 0;
+          scanned = false;
+        }
+      }
+      if (resume_count && level == count_level) resume_count--;
+      break;
     case 'L':
       {
         uint64_t *value = va_arg(ap, uint64_t *);
@@ -2687,6 +2731,10 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
       pn_data_put_int(data, atom.u.as_int);
       count++;
       break;
+    case PN_CHAR:
+      pn_data_put_char(data, atom.u.as_char);
+      count++;
+      break;
     case PN_ULONG:
       pn_data_put_ulong(data, atom.u.as_ulong);
       count++;
@@ -2919,6 +2967,14 @@ int pn_data_put_int(pn_data_t *data, int32_t i)
   return 0;
 }
 
+int pn_data_put_char(pn_data_t *data, pn_char_t c)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom.type = PN_CHAR;
+  node->atom.u.as_char = c;
+  return 0;
+}
+
 int pn_data_put_ulong(pn_data_t *data, uint64_t ul)
 {
   pn_node_t *node = pn_data_add(data);
@@ -3127,6 +3183,18 @@ int pn_data_get_int(pn_data_t *data, int32_t *i)
     return 0;
   } else {
     *i = 0;
+    return PN_ERR;
+  }
+}
+
+int pn_data_get_char(pn_data_t *data, pn_char_t *c)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node->atom.type == PN_CHAR) {
+    *c = node->atom.u.as_char;
+    return 0;
+  } else {
+    *c = 0;
     return PN_ERR;
   }
 }

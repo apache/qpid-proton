@@ -661,6 +661,7 @@ class Data:
   SHORT = PN_SHORT; "A short value."
   UINT = PN_UINT; "An unsigned int value."
   INT = PN_INT; "A signed int value."
+  CHAR = PN_CHAR; "A character value."
   ULONG = PN_ULONG; "An unsigned long value."
   LONG = PN_LONG; "A signed long value."
   TIMESTAMP = PN_TIMESTAMP; "A timestamp value."
@@ -895,6 +896,14 @@ class Data:
     """
     self._check(pn_data_put_int(self._data, i))
 
+  def put_char(self, c):
+    """
+    Puts a char value.
+
+    @param c: a single character
+    """
+    self._check(pn_data_put_char(self._data, ord(c)))
+
   def put_ulong(self, ul):
     """
     Puts an unsigned long value.
@@ -1107,6 +1116,15 @@ class Data:
     err, value = pn_data_get_int(self._data)
     self._check(err)
     return value
+
+  def get_char(self):
+    """
+    If the current node is a char, returns its value, raises an
+    exception otherwise.
+    """
+    err, value = pn_data_get_char(self._data)
+    self._check(err)
+    return unichr(value)
 
   def get_ulong(self):
     """
