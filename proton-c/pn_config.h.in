@@ -25,6 +25,4 @@
 #define PN_VERSION_MAJOR @PN_VERSION_MAJOR@
 #define PN_VERSION_MINOR @PN_VERSION_MINOR@
 
-#cmakedefine HAVE_OPENSSL_H 1
-
 #endif /* pn_config.h */

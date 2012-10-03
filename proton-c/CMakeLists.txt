@@ -11,14 +11,13 @@ set (LIBDIR ${CMAKE_INSTALL_PREFIX}/lib CACHE STRING "Library directory")
 set (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
-include(CheckIncludeFile)
-CHECK_INCLUDE_FILE(openssl/ssl.h HAVE_OPENSSL_H)
-
 # Set the default SSL/TLS implementation
-set(ssl_impl, NONE)
-if (HAVE_OPENSSL_H)
+find_package(OpenSSL)
+
+set(ssl_impl, none)
+if (OPENSSL_FOUND)
    set(ssl_impl openssl)
-endif(HAVE_OPENSSL_H)
+endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
@@ -44,7 +43,7 @@ add_custom_command (
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/openssl.c)
-  set (SSL_LIB ssl crypto)
+  set (SSL_LIB ${OPENSSL_LIBRARIES})
 else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
 endif (SSL_IMPL STREQUAL openssl)
