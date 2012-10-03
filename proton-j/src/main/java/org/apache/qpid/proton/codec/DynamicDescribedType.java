@@ -89,7 +89,9 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
         {
             _underlyingEncoding = underlyingEncoding;
             _descriptorType = _encoder.getType(_descriptor).getEncoding(_descriptor);
-            _constructorSize = 1 + _descriptorType.getConstructorSize() + _descriptorType.getValueSize(_descriptor);
+            _constructorSize = 1 + _descriptorType.getConstructorSize()
+                               + _descriptorType.getValueSize(_descriptor)
+                               + _underlyingEncoding.getConstructorSize();
         }
 
         public AMQPType getType()
