@@ -372,6 +372,14 @@ bool pn_streq(const char *a, const char *b)
   return a == b || (a && b && !strcmp(a, b));
 }
 
+static const char *default_port(const char *scheme)
+{
+  if (scheme && pn_streq(scheme, "amqps"))
+    return "5671";
+  else
+    return "5672";
+}
+
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, char **name)
 {
   char *scheme = NULL;
@@ -404,7 +412,9 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
     ctor = pn_connector_next(ctor);
   }
 
-  pn_connector_t *connector = pn_connector(messenger->driver, host, port ? port : "5672", NULL);
+  pn_connector_t *connector = pn_connector(messenger->driver, host,
+                                           port ? port : default_port(scheme),
+                                           NULL);
   if (!connector) return NULL;
   pn_transport_t *transport = pn_connector_transport(connector);
   if (scheme && !strcmp(scheme, "amqps")) {
@@ -496,13 +506,15 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
   char *user = NULL;
   char *pass = NULL;
   char *host = "0.0.0.0";
-  char *port = "5672";
+  char *port = NULL;
   char *path = NULL;
 
   parse_url(copy, &scheme, &user, &pass, &host, &port, &path);
 
   if (host[0] == '~') {
-    pn_listener_t *lnr = pn_listener(messenger->driver, host + 1, port, pn_strdup(scheme));
+    pn_listener_t *lnr = pn_listener(messenger->driver, host + 1,
+                                     port ? port : default_port(scheme),
+                                     pn_strdup(scheme));
     if (lnr) {
       return 0;
     } else {
