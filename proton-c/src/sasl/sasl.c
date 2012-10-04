@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <proton/buffer.h>
 #include <proton/framing.h>
 #include <proton/engine.h> // XXX: just needed for PN_EOS
 #include <proton/sasl.h>
@@ -38,8 +39,8 @@ struct pn_sasl_t {
   bool configured;
   char *mechanisms;
   char *remote_mechanisms;
-  pn_bytes_t send_data;
-  pn_bytes_t recv_data;
+  pn_buffer_t *send_data;
+  pn_buffer_t *recv_data;
   pn_sasl_outcome_t outcome;
   bool sent_init;
   bool rcvd_init;
@@ -70,8 +71,8 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->configured = false;
     sasl->mechanisms = NULL;
     sasl->remote_mechanisms = NULL;
-    sasl->send_data = (pn_bytes_t) {0, NULL};
-    sasl->recv_data = (pn_bytes_t) {0, NULL};
+    sasl->send_data = pn_buffer(16);
+    sasl->recv_data = pn_buffer(16);
     sasl->outcome = PN_SASL_NONE;
     sasl->sent_init = false;
     sasl->rcvd_init = false;
@@ -117,11 +118,12 @@ const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl)
 ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
 {
   if (sasl) {
-    if (sasl->send_data.start) {
+    if (pn_buffer_size(sasl->send_data)) {
       // XXX: need better error
       return PN_STATE_ERR;
     }
-    sasl->send_data = pn_bytes_dup(size, bytes);
+    int err = pn_buffer_append(sasl->send_data, bytes, size);
+    if (err) return err;
     return size;
   } else {
     return PN_ARG_ERR;
@@ -130,8 +132,8 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
 
 size_t pn_sasl_pending(pn_sasl_t *sasl)
 {
-  if (sasl && sasl->recv_data.start) {
-    return sasl->recv_data.size;
+  if (sasl && pn_buffer_size(sasl->recv_data)) {
+    return pn_buffer_size(sasl->recv_data);
   } else {
     return 0;
   }
@@ -141,12 +143,12 @@ ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size)
 {
   if (!sasl) return PN_ARG_ERR;
 
-  if (sasl->recv_data.start) {
-    if (sasl->recv_data.size > size) return PN_OVERFLOW;
-    memmove(bytes, sasl->recv_data.start, sasl->recv_data.size);
-    free(sasl->recv_data.start);
-    sasl->recv_data = pn_bytes(0, NULL);
-    return sasl->recv_data.size;
+  size_t bsize = pn_buffer_size(sasl->recv_data);
+  if (bsize) {
+    if (bsize > size) return PN_OVERFLOW;
+    pn_buffer_get(sasl->recv_data, 0, bsize, bytes);
+    pn_buffer_clear(sasl->recv_data);
+    return bsize;
   } else {
     return PN_EOS;
   }
@@ -211,8 +213,8 @@ void pn_sasl_free(pn_sasl_t *sasl)
   if (sasl) {
     free(sasl->mechanisms);
     free(sasl->remote_mechanisms);
-    free(sasl->send_data.start);
-    free(sasl->recv_data.start);
+    pn_buffer_free(sasl->send_data);
+    pn_buffer_free(sasl->recv_data);
     pn_dispatcher_free(sasl->disp);
     free(sasl);
   }
@@ -220,12 +222,10 @@ void pn_sasl_free(pn_sasl_t *sasl)
 
 void pn_client_init(pn_sasl_t *sasl)
 {
+  pn_bytes_t bytes = pn_buffer_bytes(sasl->send_data);
   pn_post_frame(sasl->disp, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
-                sasl->send_data.size, sasl->send_data.start);
-  if (sasl->send_data.start) {
-    free(sasl->send_data.start);
-    sasl->send_data = pn_bytes(0, NULL);
-  }
+                bytes.size, bytes.start);
+  pn_buffer_clear(sasl->send_data);
 }
 
 void pn_server_init(pn_sasl_t *sasl)
@@ -275,6 +275,13 @@ void pn_sasl_process(pn_sasl_t *sasl)
       pn_server_init(sasl);
     }
     sasl->sent_init = true;
+  }
+
+  if (pn_buffer_size(sasl->send_data)) {
+    pn_bytes_t bytes = pn_buffer_bytes(sasl->send_data);
+    pn_post_frame(sasl->disp, 0, "DL[z]", sasl->client ? SASL_RESPONSE : SASL_CHALLENGE,
+                  bytes.size, bytes.start);
+    pn_buffer_clear(sasl->send_data);
   }
 
   if (!sasl->client && sasl->outcome != PN_SASL_NONE && !sasl->sent_done) {
@@ -339,7 +346,7 @@ int pn_do_init(pn_dispatcher_t *disp)
   int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
   if (err) return err;
   sasl->remote_mechanisms = pn_strndup(mech.start, mech.size);
-  sasl->recv_data = pn_bytes_dup(recv.size, recv.start);
+  pn_buffer_append(sasl->recv_data, recv.start, recv.size);
   sasl->rcvd_init = true;
   return 0;
 }
@@ -351,14 +358,24 @@ int pn_do_mechanisms(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_challenge(pn_dispatcher_t *disp)
+int pn_do_recv(pn_dispatcher_t *disp)
 {
-  return PN_ERR;
+  pn_sasl_t *sasl = disp->context;
+  pn_bytes_t recv;
+  int err = pn_scan_args(disp, "D.[z]", &recv);
+  if (err) return err;
+  pn_buffer_append(sasl->recv_data, recv.start, recv.size);
+  return 0;
 }
 
-int pn_do_response(pn_dispatcher_t *resp)
+int pn_do_challenge(pn_dispatcher_t *disp)
 {
-  return PN_ERR;
+  return pn_do_recv(disp);
+}
+
+int pn_do_response(pn_dispatcher_t *disp)
+{
+  return pn_do_recv(disp);
 }
 
 int pn_do_outcome(pn_dispatcher_t *disp)

@@ -1526,6 +1526,9 @@ class Transport(object):
     else:
       return self._check(n)
 
+class SASLException(TransportException):
+  pass
+
 class SASL(object):
 
   OK = PN_SASL_OK
@@ -1533,6 +1536,13 @@ class SASL(object):
 
   def __init__(self, transport):
     self._sasl = pn_sasl(transport._trans)
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, SASLException)
+      raise exc("[%s]" % (err))
+    else:
+      return err
 
   def mechanisms(self, mechs):
     pn_sasl_mechanisms(self._sasl, mechs)
@@ -1542,6 +1552,25 @@ class SASL(object):
 
   def server(self):
     pn_sasl_server(self._sasl)
+
+  def plain(self, user, password):
+    pn_sasl_plain(self._sasl, user, password)
+
+  def send(self, data):
+    self._check(pn_sasl_send(self._sasl, data, len(data)))
+
+  def recv(self):
+    sz = 16
+    while True:
+      n, data = pn_sasl_recv(self._sasl, sz)
+      if n == PN_OVERFLOW:
+        sz *= 2
+        continue
+      elif n == PN_EOS:
+        return None
+      else:
+        self._check(n)
+        return data
 
   @property
   def outcome(self):

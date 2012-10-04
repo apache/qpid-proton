@@ -25,29 +25,62 @@ class Test(common.Test):
 
 class SaslTest(Test):
 
+  def setup(self):
+    self.t1 = Transport()
+    self.s1 = SASL(self.t1)
+    self.t2 = Transport()
+    self.s2 = SASL(self.t2)
+
+  def pump(self):
+    while True:
+      out1 = self.t1.output(1024)
+      out2 = self.t2.output(1024)
+      if out1: self.t2.input(out1)
+      if out2: self.t1.input(out2)
+      if not out1 and not out2: break
+
   def testPipelined(self):
-    cli = Transport()
-    cli_auth = SASL(cli)
-    cli_auth.mechanisms("ANONYMOUS")
-    cli_auth.client()
+    self.s1.mechanisms("ANONYMOUS")
+    self.s1.client()
 
-    assert cli_auth.outcome is None
+    assert self.s1.outcome is None
 
-    srv = Transport()
-    srv_auth = SASL(srv)
-    srv_auth.mechanisms("ANONYMOUS")
-    srv_auth.server()
-    srv_auth.done(SASL.OK)
+    self.s2.mechanisms("ANONYMOUS")
+    self.s2.server()
+    self.s2.done(SASL.OK)
 
-    cli_out = cli.output(1024)
-    srv_out = srv.output(1024)
+    out1 = self.t1.output(1024)
+    out2 = self.t2.output(1024)
 
-    n = srv.input(cli_out)
-    assert n == len(cli_out), (n, cli_out)
+    n = self.t2.input(out1)
+    assert n == len(out1), (n, out1)
 
-    assert cli_auth.outcome is None
+    assert self.s1.outcome is None
 
-    n = cli.input(srv_out)
-    assert n == len(srv_out), n
+    n = self.t1.input(out2)
+    assert n == len(out2), (n, out2)
 
-    assert cli_auth.outcome == SASL.OK
+    assert self.s2.outcome == SASL.OK
+
+  def testChallengeResponse(self):
+    self.s1.mechanisms("FAKE_MECH")
+    self.s1.client()
+    self.s2.mechanisms("FAKE_MECH")
+    self.s2.server()
+    self.pump()
+    challenge = "Who goes there!"
+    self.s2.send(challenge)
+    self.pump()
+    ch = self.s1.recv()
+    assert ch == challenge, ch
+
+    response = "It is I, Secundus!"
+    self.s1.send(response)
+    self.pump()
+    re = self.s2.recv()
+    assert re == response, re
+
+  def testInitialResponse(self):
+    self.s1.plain("secundus", "trustno1")
+    self.pump()
+    assert self.s2.recv() == "\x00secundus\x00trustno1"
