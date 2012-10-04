@@ -891,6 +891,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         {
             _open = open;
         }
+
+        if(open.getMaxFrameSize().longValue() > 0 && open.getMaxFrameSize().longValue() < (long) _maxFrameSize)
+        {
+            _maxFrameSize = (int) open.getMaxFrameSize().longValue();
+        }
     }
 
     public void handleBegin(Begin begin, Binary payload, Integer channel)
