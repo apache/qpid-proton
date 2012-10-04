@@ -1372,6 +1372,25 @@ class Link(Endpoint):
   def state(self):
     return pn_link_state(self._link)
 
+  def _set_source(self, source):
+    pn_link_set_source(self._link, source)
+  def _get_source(self):
+    return pn_link_get_source(self._link)
+  source = property(_get_source, _set_source)
+
+  def _set_target(self, target):
+    pn_link_set_target(self._link, target)
+  def _get_target(self):
+    return pn_link_get_target(self._link)
+  target = property(_get_target, _set_target)
+
+  @property
+  def remote_source(self):
+    return pn_link_remote_source(self._link)
+  @property
+  def remote_target(self):
+    return pn_link_remote_target(self._link)
+
   @property
   def session(self):
     return wrap_session(pn_link_session(self._link))

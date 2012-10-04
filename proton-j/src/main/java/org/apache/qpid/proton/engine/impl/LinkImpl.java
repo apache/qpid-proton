@@ -178,7 +178,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         _remoteTargetAddress = targetAddress;
     }
 
-    String getLocalSourceAddress()
+    public String getLocalSourceAddress()
     {
         return _localSourceAddress;
     }
@@ -190,7 +190,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         modified();
     }
 
-    String getLocalTargetAddress()
+    public String getLocalTargetAddress()
     {
         return _localTargetAddress;
     }

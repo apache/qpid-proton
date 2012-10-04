@@ -54,6 +54,8 @@ public interface Link extends Endpoint
      */
     boolean advance();
 
+    String getLocalSourceAddress();
+    String getLocalTargetAddress();
     void setLocalSourceAddress(String address);
     void setLocalTargetAddress(String address);
 

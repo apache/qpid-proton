@@ -170,6 +170,25 @@ class Link(Endpoint):
   def __init__(self, impl):
     self.impl = impl
 
+  def _set_source(self, source):
+    self.impl.setLocalSourceAddress(source)
+  def _get_source(self):
+    return self.impl.getLocalSourceAddress()
+  source = property(_get_source, _set_source)
+
+  def _set_target(self, target):
+    self.impl.setLocalTargetAddress(target)
+  def _get_target(self):
+    return self.impl.getLocalTargetAddress()
+  target = property(_get_target, _set_target)
+
+  @property
+  def remote_source(self):
+    return self.impl.getRemoteSourceAddress()
+  @property
+  def remote_target(self):
+    return self.impl.getRemoteTargetAddress()
+
   @property
   def session(self):
     return wrap_session(self.impl.getSession())
