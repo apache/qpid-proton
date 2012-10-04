@@ -958,6 +958,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 {
                     link = transportLink.getLink();
                 }
+                if(attach.getRole() == Role.SENDER)
+                {
+                    transportLink.setDeliveryCount(attach.getInitialDeliveryCount());
+                }
 
                 link.setRemoteState(EndpointState.ACTIVE);
                 Source source = (Source) attach.getSource();

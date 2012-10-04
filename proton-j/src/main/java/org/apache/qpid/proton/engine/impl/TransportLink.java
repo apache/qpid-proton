@@ -29,7 +29,7 @@ class TransportLink<T extends LinkImpl>
     private UnsignedInteger _localHandle;
     private String _name;
     private UnsignedInteger _remoteHandle;
-    private UnsignedInteger _deliveryCount = UnsignedInteger.ZERO;
+    private UnsignedInteger _deliveryCount;
     private UnsignedInteger _linkCredit = UnsignedInteger.ZERO;
     private T _link;
     private UnsignedInteger _remoteDeliveryCount;
@@ -177,5 +177,10 @@ class TransportLink<T extends LinkImpl>
     public void sentAttach()
     {
         _attachSent = true;
+    }
+
+    public void setRemoteDeliveryCount(UnsignedInteger remoteDeliveryCount)
+    {
+        _remoteDeliveryCount = remoteDeliveryCount;
     }
 }

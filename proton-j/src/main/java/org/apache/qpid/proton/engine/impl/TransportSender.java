@@ -27,10 +27,12 @@ import org.apache.qpid.proton.type.transport.Flow;
 class TransportSender extends TransportLink<SenderImpl>
 {
     private boolean _drain;
+    private static final UnsignedInteger ORIGINAL_DELIVERY_COUNT = UnsignedInteger.ZERO;
 
     TransportSender(SenderImpl link)
     {
         super(link);
+        setDeliveryCount(ORIGINAL_DELIVERY_COUNT);
         link.setTransportLink(this);
     }
 
@@ -42,7 +44,9 @@ class TransportSender extends TransportLink<SenderImpl>
         getLink().setDrain(flow.getDrain());
         int oldCredit = getLink().getCredit();
         UnsignedInteger oldLimit = getLinkCredit().add(getDeliveryCount());
-        UnsignedInteger transferLimit = flow.getLinkCredit().add(flow.getDeliveryCount());
+        UnsignedInteger transferLimit = flow.getLinkCredit().add(flow.getDeliveryCount() == null
+                                                                         ? ORIGINAL_DELIVERY_COUNT
+                                                                         : flow.getDeliveryCount());
         UnsignedInteger linkCredit = transferLimit.subtract(getDeliveryCount());
 
         setLinkCredit(linkCredit);
