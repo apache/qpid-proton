@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.type.*;
 import org.apache.qpid.proton.type.messaging.*;
 
@@ -592,10 +593,16 @@ public class Message
 
     public int encode(byte[] data, int offset, int length)
     {
+        ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
+        return encode(new WritableBuffer.ByteBufferWrapper(buffer));
+    }
+
+    public int encode(WritableBuffer buffer)
+    {
+        int length = buffer.remaining();
         DecoderImpl decoder = new DecoderImpl();
         EncoderImpl encoder = new EncoderImpl(decoder);
         AMQPDefinedTypes.registerAllTypes(decoder);
-        final ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
         encoder.setByteBuffer(buffer);
 
         if(getHeader() != null)
