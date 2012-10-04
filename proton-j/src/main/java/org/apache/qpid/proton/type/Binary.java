@@ -31,7 +31,7 @@ public class Binary
     private final byte[] _data;
     private final int _offset;
     private final int _length;
-    private final int _hashCode;
+    private int _hashCode;
 
     public Binary(final byte[] data)
     {
@@ -40,16 +40,9 @@ public class Binary
 
     public Binary(final byte[] data, final int offset, final int length)
     {
-
         _data = data;
         _offset = offset;
         _length = length;
-        int hc = 0;
-        for (int i = 0; i < length; i++)
-        {
-            hc = 31*hc + (0xFF & data[offset + i]);
-        }
-        _hashCode = hc;
     }
 
     public ByteBuffer asByteBuffer()
@@ -59,7 +52,16 @@ public class Binary
 
     public final int hashCode()
     {
-        return _hashCode;
+        int hc = _hashCode;
+        if(hc == 0)
+        {
+            for (int i = 0; i < _length; i++)
+            {
+                hc = 31*hc + (0xFF & _data[_offset + i]);
+            }
+            _hashCode = hc;
+        }
+        return hc;
     }
 
     public final boolean equals(Object o)
