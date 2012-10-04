@@ -1,0 +1,68 @@
+# Rakefile for Qpid -*- ruby -*-
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+require "rubygems"
+require "rubygems/package_task"
+
+require "rake/clean"
+
+CLOBBER.include("ext/cproton/cproton.c")
+
+load "lib/qpid_proton/version.rb"
+
+task :package => :swig
+
+task :swig do
+  system "swig -ruby -I../../include -o ext/cproton/cproton.c ruby.i"
+end
+
+# Gem specification and packaging
+spec = Gem::Specification.new do |s|
+  s.name = Qpid::Proton::NAME
+  s.version = Qpid::Proton::VERSION
+  s.platform = Gem::Platform::RUBY
+
+  s.author = "Darryl L. Pierce"
+  s.email = "dpierce@redhat.com"
+  s.homepage = "http://qpid.apache.org/proton"
+  s.license = "ASL"
+
+  s.summary = "Ruby language bindings for the Qpid Proton messaging framework"
+  s.description = <<-EOF
+Proton is a high performance, lightweight messaging library. It can be used in
+the widest range of messaging applications including brokers, client libraries,
+routers, bridges, proxies, and more. Proton is based on the AMQP 1.0 messaging
+standard.
+EOF
+  s.rubyforge_project = "qpid_proton"
+
+  s.requirements << "none"
+  s.require_path = "lib"
+  s.extensions << "ext/cproton/extconf.rb"
+
+  s.files = Dir[
+                "ext/cproton/*.rb",
+                "ext/cproton/*.c",
+                "lib/**/*.rb"
+                ]
+end
+
+Gem::PackageTask.new(spec) do |pkg|
+end
