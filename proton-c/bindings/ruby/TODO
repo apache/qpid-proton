@@ -9,3 +9,6 @@ enhacements to be fixed by going to Apache Proton JIRA instance:
 Fixes & Improvements
 ========================================================================
 * Fix the data mangling that occurs at specific lengths.
+* Find a better way to map between nil/empty strings for pn_atom_t.
+* Fill out the remaining tests for Qpid::Proton::Messenger
+

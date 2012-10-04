@@ -45,6 +45,116 @@ typedef int int32_t;
   $result = rb_str_new($1.start, $1.size);
 }
 
+%typemap(in) pn_atom_t
+{
+  if ($input == Qnil)
+    {
+      $1.type = PN_NULL;
+    }
+  else
+    {
+      switch(TYPE($input))
+        {
+        case T_TRUE:
+          $1.type = PN_BOOL;
+          $1.u.as_bool = true;
+          break;
+
+        case T_FALSE:
+          $1.type = PN_BOOL;
+          $1.u.as_bool = false;
+          break;
+
+        case T_FLOAT:
+          $1.type = PN_FLOAT;
+          $1.u.as_float = NUM2DBL($input);
+          break;
+
+        case T_STRING:
+          $1.type = PN_STRING;
+          $1.u.as_string.start = RSTRING_PTR($input);
+          if ($1.u.as_string.start)
+            {
+              $1.u.as_string.size = RSTRING_LEN($input);
+            }
+          else
+            {
+              $1.u.as_string.size = 0;
+            }
+          break;
+
+        case T_FIXNUM:
+          $1.type = PN_INT;
+          $1.u.as_int = FIX2LONG($input);
+          break;
+
+        case T_BIGNUM:
+          $1.type = PN_LONG;
+          $1.u.as_long = NUM2LL($input);
+          break;
+
+        }
+    }
+}
+
+%typemap(out) pn_atom_t
+{
+  switch($1.type)
+    {
+    case PN_NULL:
+      $result = Qnil;
+      break;
+
+    case PN_BOOL:
+      $result = $1.u.as_bool ? Qtrue : Qfalse;
+      break;
+
+    case PN_BYTE:
+      $result = INT2NUM($1.u.as_byte);
+      break;
+
+    case PN_UBYTE:
+      $result = UINT2NUM($1.u.as_ubyte);
+      break;
+
+    case PN_SHORT:
+      $result = INT2NUM($1.u.as_short);
+      break;
+
+    case PN_USHORT:
+      $result = UINT2NUM($1.u.as_ushort);
+      break;
+
+    case PN_INT:
+      $result = INT2NUM($1.u.as_int);
+      break;
+
+     case PN_UINT:
+      $result = UINT2NUM($1.u.as_uint);
+      break;
+
+    case PN_LONG:
+      $result = LL2NUM($1.u.as_long);
+      break;
+
+    case PN_ULONG:
+      $result = ULL2NUM($1.u.as_ulong);
+      break;
+
+    case PN_FLOAT:
+      $result = rb_float_new($1.u.as_float);
+      break;
+
+    case PN_DOUBLE:
+      $result = rb_float_new($1.u.as_double);
+      break;
+
+    case PN_STRING:
+      $result = rb_str_new($1.u.as_string.start, $1.u.as_string.size);
+      break;
+    }
+}
+
 %typemap (in) void *
 {
   $1 = (void *) $input;

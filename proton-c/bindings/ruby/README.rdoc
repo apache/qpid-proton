@@ -1,0 +1,7 @@
+Qpid Proton Ruby Language Bindings
+==================================
+
+KNOWN ISSUES
+============
+
+ * Setting a pn_atom_t of type String to a nil returns an empty string.

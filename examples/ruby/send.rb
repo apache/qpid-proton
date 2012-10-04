@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-require 'cproton'
+require 'qpid_proton'
 require 'optparse'
 
 options = {}
@@ -25,7 +25,7 @@ messages = []
 
 OptionParser.new do |opts|
   opts.banner = "Usage: send.rb [options] <msg1> ... <msgn>"
-  opts.on("-a", "--address [addr]", "The receiver's address (def. //0.0.0.0)") do |f|
+  opts.on("-a", "--address [addr]", "The receiver's address (def. 0.0.0.0)") do |f|
     options[:address] = f
   end
 
@@ -34,32 +34,33 @@ OptionParser.new do |opts|
   messages = ARGV
 end
 
-options[:address] = "//0.0.0.0" unless options[:address]
+options[:address] = "0.0.0.0" unless options[:address]
 messages << "Hello world!" if messages.empty?
 
-mng = Cproton::pn_messenger nil
-
-Cproton::pn_messenger_start mng
-
-msg = Cproton::pn_message
+messenger = Qpid::Proton::Messenger.new
+messenger.start
+msg = Qpid::Proton::Message.new
 
 messages.each do |message|
-  Cproton::pn_message_set_address msg, options[:address]
-#  Cproton::pn_message_set_subject msg, "Message sent on #{Time.new}"
-  Cproton::pn_message_load msg, message
-
-  if Cproton::pn_messenger_put(mng, msg).nonzero?
-    puts "ERROR: #{Cproton::pn_messenger_error mng}"
+  msg.address = options[:address]
+  msg.subject = "The time is #{Time.new}"
+  msg.content = message
+  begin
+    messenger.put(msg)
+  rescue Qpid::Proton::ProtonError => error
+    puts "ERROR: #{error.message}"
     exit
   end
 end
 
-if Cproton::pn_messenger_send(mng).nonzero?
-  puts "ERROR: #{Cproton::pn_messenger_error mng}"
+begin
+  messenger.send
+rescue Qpid::Proton::ProtonError => error
+  puts "ERROR: #{error.message}"
+  puts error.backtrace.join("\n")
   exit
-else
-  puts "SENT: " + messages.join(",")
 end
 
-Cproton::pn_messenger_stop mng
-Cproton::pn_messenger_free mng
+puts "SENT: " + messages.join(",")
+
+messenger.stop

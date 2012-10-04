@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-require 'cproton'
+require 'qpid_proton'
 require 'optparse'
 
 addresses = []
@@ -29,42 +29,52 @@ OptionParser.new do |opts|
   addresses = ARGV
 end
 
-addresses = ["//~0.0.0.0"] if addresses.empty?
+addresses = ["~0.0.0.0"] if addresses.empty?
 
-mng = Cproton::pn_messenger nil
+messenger = Qpid::Proton::Messenger.new
 
-if Cproton::pn_messenger_start(mng).nonzero?
-  puts "ERROR: #{Cproton::pn_messenger_error mng}"
+begin
+  messenger.start
+rescue ProtonError => error
+  puts "ERROR: #{error.message}"
+  puts error.backtrace.join("\n")
+  exit
 end
 
 addresses.each do |address|
-  if Cproton::pn_messenger_subscribe(mng, address).nonzero?
-    puts "ERROR: #{Cproton::pn_messenger_error(mng)}"
+  begin
+    messenger.subscribe(address)
+  rescue Qpid::Proton::ProtonError => error
+    puts "ERROR: #{error.message}"
     exit
   end
 end
 
-msg = Cproton::pn_message
+msg = Qpid::Proton::Message.new
 
 loop do
-  if Cproton::pn_messenger_recv(mng, 10).nonzero?
-    puts "ERROR: #{Cproton::pn_messenger_error mng}"
+  begin
+    messenger.receive(10)
+  rescue Qpid::Proton::ProtonError => error
+    puts "ERROR: #{error.message}"
     exit
   end
 
-  while Cproton::pn_messenger_incoming(mng).nonzero?
-    if Cproton::pn_messenger_get(mng, msg).nonzero?
-      puts "ERROR: #{Cproton::pn_messenger_error mng}"
+  while messenger.incoming.nonzero?
+    begin
+      messenger.get(msg)
+    rescue Qpid::Proton::Error => error
+      puts "ERROR: #{error.message}"
       exit
-    else
-      (cd, body) = Cproton::pn_message_save(msg, 1024)
-      puts "Address: #{Cproton::pn_message_get_address msg}"
-      subject = Cproton::pn_message_get_subject(msg) || "(no subject)"
-      puts "Subject: #{subject}"
-      puts "Content: #{body}"
     end
+
+    (cd, body) = msg.content
+    puts "Address: #{msg.address}"
+    subject = msg.subject || "(no subject)"
+    puts "Subject: #{subject}"
+    puts "Content: #{body}"
   end
 end
 
-Cproton::pn_messenger_stop mng
-Cproton::pn_messenger_free mng
+messenger.stop
+

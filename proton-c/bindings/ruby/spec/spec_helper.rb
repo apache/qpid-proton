@@ -23,9 +23,17 @@ begin
 
   SimpleCov.start do
     add_filter "/lib/*/*.rb"
+    add_filter "message_format.rb"
   end
 
 rescue
   puts "simplecov not available"
+end
+
+require "qpid_proton"
+
+# Generates a random string of the specified length
+def random_string(length = 8)
+  (0...length).map{65.+(rand(25)).chr}.join
 end
 
