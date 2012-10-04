@@ -352,9 +352,9 @@ class LinkTest(Test):
     self.snd.close()
     self.pump()
 
-  def test_source_target(self):
-    self.snd.source = "source"
-    self.snd.target = "target"
+  def _test_source_target(self, source, target):
+    self.snd.source = source
+    self.snd.target = target
     self.snd.open()
     self.pump()
     assert self.rcv.remote_source == self.snd.source
@@ -365,6 +365,15 @@ class LinkTest(Test):
     self.pump()
     assert self.snd.remote_target == self.snd.target
     assert self.snd.remote_source == self.snd.source
+
+  def test_source_target(self):
+    self._test_source_target("source", "target")
+
+  def test_source(self):
+    self._test_source_target("source", None)
+
+  def test_target(self):
+    self._test_source_target(None, "target")
 
 class TransferTest(Test):
 

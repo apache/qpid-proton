@@ -2319,7 +2319,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         pn_data_enter(data);
         scanned = true;
       } else {
-        resume_count = 2;
+        if (!suspend) {
+          resume_count = 3;
+          count_level = level;
+        }
         scanned = false;
       }
       if (resume_count && level == count_level) resume_count--;
@@ -2341,7 +2344,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         scanned = true;
         at = true;
       } else {
-        if (!resume_count) resume_count = 2;
+        if (!suspend) {
+          resume_count = 3;
+          count_level = level;
+        }
         scanned = false;
       }
       if (resume_count && level == count_level) resume_count--;
@@ -2356,7 +2362,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
           pn_data_enter(data);
           scanned = true;
         } else {
-          if (!resume_count) resume_count = 1;
+          if (!suspend) {
+            resume_count = 1;
+            count_level = level;
+          }
           scanned = false;
         }
       }
@@ -2368,7 +2377,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         pn_data_enter(data);
         scanned = true;
       } else {
-        if (!resume_count) resume_count = 1;
+        if (resume_count) {
+          resume_count = 1;
+          count_level = level;
+        }
         scanned = false;
       }
       level++;
