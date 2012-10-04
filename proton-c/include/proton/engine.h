@@ -225,6 +225,8 @@ pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
  */
 pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
 
+bool pn_connection_writable(pn_connection_t *connection);
+
 void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
 void pn_connection_free(pn_connection_t *connection);
@@ -284,6 +286,7 @@ pn_delivery_t *pn_link_current(pn_link_t *link);
 bool pn_link_advance(pn_link_t *link);
 int pn_link_credit(pn_link_t *link);
 int pn_link_queued(pn_link_t *link);
+int pn_link_available(pn_link_t *link);
 
 int pn_link_unsettled(pn_link_t *link);
 pn_delivery_t *pn_unsettled_head(pn_link_t *link);
@@ -296,7 +299,7 @@ void *pn_link_get_context(pn_link_t *link);
 void pn_link_set_context(pn_link_t *link, void *context);
 
 // sender
-//void pn_link_offer(pn_sender_t *sender, int credits);
+void pn_link_offered(pn_link_t *sender, int credit);
 ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
 void pn_link_drained(pn_link_t *sender);
 //void pn_link_abort(pn_sender_t *sender);

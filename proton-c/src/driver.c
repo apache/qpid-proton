@@ -687,9 +687,10 @@ static void pn_driver_rebuild(pn_driver_t *d)
   for (int i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
+      bool has_writable_links = c->connection ? pn_connection_writable(c->connection) : false;
       d->fds[d->nfds].fd = c->fd;
       d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
-        (c->status & PN_SEL_WR ? POLLOUT : 0);
+        ((has_writable_links || (c->status & PN_SEL_WR)) ? POLLOUT : 0);
       d->fds[d->nfds].revents = 0;
       c->idx = d->nfds;
       d->nfds++;

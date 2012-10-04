@@ -1273,6 +1273,10 @@ class Connection(Endpoint):
   def state(self):
     return pn_connection_state(self._conn)
 
+  @property
+  def writable(self):
+    return pn_connection_writable(self._conn)
+
   def session(self):
     return wrap_session(pn_session(self._conn))
 
@@ -1414,6 +1418,10 @@ class Link(Endpoint):
     return pn_link_credit(self._link)
 
   @property
+  def available(self):
+    return pn_link_available(self._link)
+
+  @property
   def queued(self):
     return pn_link_queued(self._link)
 
@@ -1421,6 +1429,9 @@ class Link(Endpoint):
     return wrap_link(pn_link_next(self._link, mask))
 
 class Sender(Link):
+
+  def offered(self, n):
+    pn_link_offered(self._link, n)
 
   def send(self, bytes):
     return self._check(pn_link_send(self._link, bytes))

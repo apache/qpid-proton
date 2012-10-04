@@ -490,6 +490,28 @@ class CreditTest(Test):
   def teardown(self):
     self.cleanup()
 
+  def testOffered1(self):
+    credit = self.snd.credit
+    assert credit == 0, credit
+    assert not self.c1.writable  # No credit, no offer
+    self.snd.offered(5)
+    self.pump()
+    assert not self.c1.writable  # Offered but no receiver credit
+    self.rcv.flow(10)
+    self.pump()
+    assert self.c1.writable      # Offered and receiver credit
+
+  def testOffered2(self):
+    credit = self.snd.credit
+    assert credit == 0, credit
+    assert not self.c1.writable  # No credit, no offer
+    self.rcv.flow(10)
+    self.pump()
+    assert not self.c1.writable  # Receiver credit but no offer
+    self.snd.offered(5)
+    self.pump()
+    assert self.c1.writable      # Offered and receiver credit
+
   def testCreditSender(self):
     credit = self.snd.credit
     assert credit == 0, credit

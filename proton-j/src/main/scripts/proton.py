@@ -96,6 +96,10 @@ class Connection(Endpoint):
   def __init__(self, _impl=None):
     self.impl = _impl or ConnectionImpl()
 
+  @property
+  def writable(self):
+    raise Skipped()
+
   def session(self):
     return wrap_session(self.impl.session())
 
@@ -212,6 +216,10 @@ class Link(Endpoint):
     return self.impl.getCredit()
 
   @property
+  def available(self):
+    raise Skipped()
+
+  @property
   def queued(self):
     return self.impl.getQueued()
 
@@ -219,6 +227,9 @@ class Link(Endpoint):
     return self.impl.next(*self._enums(mask))
 
 class Sender(Link):
+
+  def offered(self, n):
+    raise Skipped()
 
   def send(self, bytes):
     return self.impl.send(bytes, 0, len(bytes))

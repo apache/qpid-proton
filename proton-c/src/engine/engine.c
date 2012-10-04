@@ -654,6 +654,25 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
   return NULL;
 }
 
+bool pn_connection_writable(pn_connection_t *conn)
+{
+  if (!conn)
+    return false;
+
+  pn_endpoint_t *endpoint = conn->endpoint_head;
+
+  while (endpoint) {
+    if (pn_matches(endpoint, SENDER, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)) {
+      pn_link_t *link = (pn_link_t*) endpoint;
+      if ((link->available > 0) && (pn_link_credit(link) > 0))
+        return true;
+    }
+    endpoint = endpoint->endpoint_next;
+  }
+
+  return false;
+}
+
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   if (!conn) return NULL;
@@ -814,6 +833,7 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *
   link->settled_head = link->settled_tail = NULL;
   link->unsettled_head = link->unsettled_tail = link->current = NULL;
   link->unsettled_count = 0;
+  link->available = 0;
   link->credit = 0;
   link->queued = 0;
   link->drain = false;
@@ -1070,6 +1090,11 @@ bool pn_link_advance(pn_link_t *link)
 int pn_link_credit(pn_link_t *link)
 {
   return link ? link->credit : 0;
+}
+
+int pn_link_available(pn_link_t *link)
+{
+  return link ? link->available : 0;
 }
 
 int pn_link_queued(pn_link_t *link)
@@ -1660,7 +1685,7 @@ int pn_post_flow(pn_transport_t *transport, pn_session_state_t *ssn_state, pn_li
 {
   ssn_state->incoming_window = pn_delivery_buffer_available(&ssn_state->incoming);
   bool link = (bool) state;
-  return pn_post_frame(transport->disp, ssn_state->local_channel, "DL[?IIII?I?I?In?o]", FLOW,
+  return pn_post_frame(transport->disp, ssn_state->local_channel, "DL[?IIII?I?I?II?o]", FLOW,
                        (int16_t) ssn_state->remote_channel >= 0, ssn_state->incoming_transfer_count,
                        ssn_state->incoming_window,
                        ssn_state->outgoing.next,
@@ -2070,6 +2095,11 @@ void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
   if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
   if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
   transport->disp->trace = trace;
+}
+
+void pn_link_offered(pn_link_t *sender, int credit)
+{
+  sender->available = credit;
 }
 
 ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)

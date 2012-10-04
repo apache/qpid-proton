@@ -155,6 +155,7 @@ struct pn_link_t {
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
   size_t unsettled_count;
+  pn_sequence_t available;
   pn_sequence_t credit;
   pn_sequence_t queued;
   bool drain;
