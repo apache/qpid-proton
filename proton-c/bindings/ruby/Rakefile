@@ -22,6 +22,29 @@ require "rubygems"
 require "rubygems/package_task"
 
 require "rake/clean"
+require "rake/extensiontask"
+require "rake/rdoctask"
+
+CPROTON_BUILD=ENV["CPROTON_BUILD"].nil? ? nil : "#{ENV['CPROTON_BUILD']}/bindings/ruby"
+
+if CPROTON_BUILD.nil?
+  puts "********************************************************"
+  puts "Please set CPROTON_BUILD to build the native extensions."
+  puts "********************************************************"
+  puts ""
+end
+
+PROTON_HOME=ENV["PROTON_HOME"]
+
+if PROTON_HOME.nil?
+  puts "*************************************************************"
+  puts "Please source the config.sh file to set the PROTON_HOME path."
+  puts "*************************************************************"
+  puts ""
+end
+
+
+require "rspec/core/rake_task"
 
 CLOBBER.include("ext/cproton/cproton.c")
 
@@ -31,6 +54,24 @@ task :package => :swig
 
 task :swig do
   system "swig -ruby -I../../include -o ext/cproton/cproton.c ruby.i"
+end
+
+RSpec::Core::RakeTask.new(:rspec) do |t|
+  t.ruby_opts = [
+                 "-I #{CPROTON_BUILD}",
+                 "-I lib"
+                 ]
+  t.rspec_opts = [
+                  "--color",
+                  "--format",
+                  "progress"
+                 ]
+end
+
+Rake::RDocTask.new do |rd|
+  rd.main = "README.rdoc"
+  rd.rdoc_files.include("README.rdoc",
+                        "lib/**/*.rb")
 end
 
 # Gem specification and packaging
@@ -58,10 +99,18 @@ EOF
   s.extensions << "ext/cproton/extconf.rb"
 
   s.files = Dir[
+                "TODO",
+                "ChangeLog",
                 "ext/cproton/*.rb",
                 "ext/cproton/*.c",
-                "lib/**/*.rb"
+                "lib/**/*.rb",
+                "features/**/*.rb"
                 ]
+end
+
+Rake::ExtensionTask.new("cproton", spec) do |t|
+  t.config_options << "--with-qpid-proton-lib=${CPROTON_BUILD}"
+  t.config_options << "--with-qpid-proton-include=#{PROTON_HOME}/proton-c/include"
 end
 
 Gem::PackageTask.new(spec) do |pkg|

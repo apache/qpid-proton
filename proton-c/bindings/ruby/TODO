@@ -1,0 +1,11 @@
+Proton Ruby bindings TODO List
+========================================================================
+
+Beyond this simple laundry list, you can find the list of bugs and
+enhacements to be fixed by going to Apache Proton JIRA instance:
+
+    https://issues.apache.org/jira/browse/PROTON
+
+Fixes & Improvements
+========================================================================
+* Fix the data mangling that occurs at specific lengths.
