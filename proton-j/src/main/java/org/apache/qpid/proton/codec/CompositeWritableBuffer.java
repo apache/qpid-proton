@@ -153,7 +153,7 @@ public class CompositeWritableBuffer implements WritableBuffer
             else
             {
                 int relativePosition = currentPosition-position;
-                if(relativePosition >= _second.position())
+                if(relativePosition <= _second.position())
                 {
                     _second.position(_second.position()-relativePosition);
                 }

@@ -55,6 +55,7 @@ public class DeliveryImpl implements Delivery
     private boolean _complete;
     private boolean _updated;
     private boolean _done;
+    private int _offset;
 
     public DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
     {
@@ -168,7 +169,8 @@ public class DeliveryImpl implements Delivery
             //TODO - should only be if no bytes left
             consumed = Math.min(size, _dataSize);
 
-            System.arraycopy(_data, 0, bytes, offset, consumed);
+            System.arraycopy(_data, _offset, bytes, offset, consumed);
+            _offset += consumed;
             _dataSize -= consumed;
         }
         else
@@ -298,10 +300,6 @@ public class DeliveryImpl implements Delivery
 
     void setTransportWorkNext(DeliveryImpl transportWorkNext)
     {
-        if(transportWorkNext == this)
-        {
-            (new Exception("Aaaargh")).printStackTrace();
-        }
         _transportWorkNext = transportWorkNext;
     }
 
@@ -340,11 +338,11 @@ public class DeliveryImpl implements Delivery
         {
             byte[] oldData = _data;
             _data = new byte[oldData.length + _dataSize];
-            System.arraycopy(oldData,0,_data,0,_dataSize);
+            System.arraycopy(oldData,_offset,_data,0,_dataSize);
+            _offset = 0;
         }
-        System.arraycopy(bytes,offset,_data,_dataSize,length);
+        System.arraycopy(bytes,offset,_data,_dataSize+_offset,length);
         _dataSize+=length;
-//        addToWorkList();
         addToTransportWorkList();
         return length;  //TODO - Implement.
     }
@@ -356,7 +354,7 @@ public class DeliveryImpl implements Delivery
 
     int getDataOffset()
     {
-        return 0;  //TODO - Implement.
+        return _offset;
     }
 
     int getDataLength()
@@ -376,7 +374,7 @@ public class DeliveryImpl implements Delivery
 
     public void setDataOffset(int arrayOffset)
     {
-        // TODO - implement
+        _offset = arrayOffset;
     }
 
     public boolean isWritable()
