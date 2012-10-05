@@ -235,8 +235,10 @@ public class MailServer
        {
            link.close();
            _logger.debug("Link Closed");
-           link = con.linkHead(EnumSet.of(EndpointState.ACTIVE),
-                   EnumSet.of(EndpointState.CLOSED));
+           //link = con.linkHead(EnumSet.of(EndpointState.ACTIVE),
+           //        EnumSet.of(EndpointState.CLOSED));
+           link = link.next(EnumSet.of(EndpointState.ACTIVE),
+                   EnumSet.of(EndpointState.CLOSED));                   
        }
 
        // teardown any terminating sessions

@@ -211,6 +211,11 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return linkNode == null ? null : linkNode.getValue();
 
     }
+    
+    public LinkNode<LinkImpl> getLinkNode()
+    {
+        return _node;
+    }
 
     abstract TransportLink getTransportLink();
 

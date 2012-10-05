@@ -44,6 +44,36 @@ PN_AMQP = MessageFormat.AMQP
 PN_TEXT = MessageFormat.TEXT
 PN_DATA = MessageFormat.DATA
 
+PN_SASL_OK =  Sasl.SaslOutcome.PN_SASL_OK
+
+class PNSasl:
+  def __init__(self):
+    self.mechs = None
+    self.initial_data = None
+    self.impl = None
+
+  def set_mechs(self,mechs):
+    self.mechs = mechs
+
+  def get_mechs(self):
+    return [self.mechs]
+
+  def set_initial_data(self, data):
+    self.initial_data = data
+
+  def get_initial_data(self):
+    return self.initial_data
+
+  def set_impl(self,impl):
+    self.impl = impl
+
+  def get_impl(self):
+    return self.impl
+
+def sasl_outcome(oc):
+   return Sasl.SaslOutcome(oc)
+
+
 def enums(mask):
   local = []
   if (PN_LOCAL_UNINIT | mask):
@@ -66,6 +96,9 @@ def enums(mask):
 def state(endpoint):
   local = endpoint.getLocalState()
   remote = endpoint.getRemoteState()
+
+  print "con local", local
+  print "con remote", remote
 
   result = 0
 
@@ -138,6 +171,10 @@ def pn_session_head(c, mask):
   local, remote = enums(mask)
   return c.sessionHead(local, remote)
 
+def pn_link_head(c,mask):
+  local, remote = enums(mask)
+  return c.linkHead(local, remote)
+
 def pn_sender(ssn, name):
   return ssn.sender(name)
 
@@ -149,6 +186,12 @@ def pn_link_free(lnk):
 
 def pn_link_state(lnk):
   return state(lnk)
+
+def pn_link_next(lnk,mask):
+  nx = lnk.getLinkNode()
+  print nx
+  local, remote = enums(mask) 
+  return lnk.next(local, remote)
 
 def pn_link_open(lnk):
   return lnk.open()
@@ -419,3 +462,23 @@ def pn_message_clear(m):
 
 def pn_message_error(m):
     return m.getError().ordinal()
+
+def pn_sasl():
+    return PNSasl()
+
+def pn_sasl_client(sasl):
+    client = impl.SaslClientImpl()
+    client.setMechanisms(sasl.get_mechs())
+    sasl.set_impl(client)
+
+def pn_sasl_mechanisms(sasl, mech):
+    sasl.set_mechs(mech); 
+
+def pn_sasl_server(sasl):
+    server = impl.SaslServerImpl()
+    server.setMechanisms(sasl.get_mechs())
+    sasl.set_impl(server)
+
+def pn_sasl_done(sasl, outcome):
+    server = sasl.get_impl()
+    server.done(outcome)

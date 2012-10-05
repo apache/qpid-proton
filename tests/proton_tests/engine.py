@@ -321,6 +321,8 @@ class LinkTest(Test):
     while l:
       pn_link_open(l)
       l = pn_link_next(l, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE)
+      if l==l:
+        break
     self.pump()
 
     assert self.snd
@@ -515,6 +517,7 @@ class CreditTest(Test):
     return result
 
   def testBuffering(self):
+    print "PN_SESSION_WINDOW ",PN_SESSION_WINDOW
     pn_flow(self.rcv, PN_SESSION_WINDOW + 10)
     self.pump()
 
@@ -541,16 +544,21 @@ class CreditTest(Test):
 
     for i in range(10):
       d = pn_current(self.rcv)
+      print "d =",d
       assert pn_delivery_tag(d) == "tag%s" % i, pn_delivery_tag(d)
       assert pn_advance(self.rcv)
       pn_settle(d)
       self.pump()
+      print "queued : ", pn_queued(self.rcv)
       assert pn_queued(self.rcv) == PN_SESSION_WINDOW - (i+1), pn_queued(self.rcv)
 
     tags = self.settle()
+    print "tags=", tags
     assert tags == ["tag%s" % i for i in range(10)], tags
     self.pump()
 
+    print "queued : ", pn_queued(self.rcv)
+    print "PN_SESSION_WINDOW",PN_SESSION_WINDOW
     assert pn_queued(self.rcv) == PN_SESSION_WINDOW, pn_queued(self.rcv)
 
     for i in range(PN_SESSION_WINDOW):
@@ -820,7 +828,7 @@ class PipelineTest(Test):
 
     pn_link_close(snd)
     pn_session_close(ssn)
-    pn_connection_close(self.c1)
+    #pn_connection_close(self.c1)
 
     self.pump()
 
