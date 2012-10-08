@@ -218,6 +218,12 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
     return -4;
   }
 
+  if (SSL_CTX_check_private_key(ssl->ctx) != 1) {
+    _log_error("The key file %s is not consistent with the certificate %s\n",
+               private_key_file, certificate_file);
+    return -5;
+  }
+
   _log( ssl, "Configured local certificate file %s\n", certificate_file );
   return 0;
 }
