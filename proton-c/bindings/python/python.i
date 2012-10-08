@@ -46,6 +46,38 @@ typedef int int32_t;
   $result = Py_BuildValue("NN", $result, PyString_FromStringAndSize(temp$argnum.start, temp$argnum.size));
 }
 
+%typemap(in) pn_decimal128_t {
+  memmove($1.bytes, PyString_AsString($input), 16);
+}
+
+%typemap(out) pn_decimal128_t {
+  $result = PyString_FromStringAndSize($1.bytes, 16);
+}
+
+%typemap(in, numinputs=0) pn_decimal128_t * (pn_decimal128_t temp) {
+  $1 = &temp;
+}
+
+%typemap(argout) pn_decimal128_t * {
+  $result = Py_BuildValue("NN", $result, PyString_FromStringAndSize(temp$argnum.bytes, 16));
+}
+
+%typemap(in) pn_uuid_t {
+  memmove($1.bytes, PyString_AsString($input), 16);
+}
+
+%typemap(out) pn_uuid_t {
+  $result = PyString_FromStringAndSize($1.bytes, 16);
+}
+
+%typemap(in, numinputs=0) pn_uuid_t * (pn_uuid_t temp) {
+  $1 = &temp;
+}
+
+%typemap(argout) pn_uuid_t * {
+  $result = Py_BuildValue("NN", $result, PyString_FromStringAndSize(temp$argnum.bytes, 16));
+}
+
 int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
 %ignore pn_message_load;
 

@@ -31,6 +31,7 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
+import uuid
 
 class ProtonException(Exception):
   """
@@ -667,6 +668,10 @@ class Data:
   TIMESTAMP = PN_TIMESTAMP; "A timestamp value."
   FLOAT = PN_FLOAT; "A float value."
   DOUBLE = PN_DOUBLE; "A double value."
+  DECIMAL32 = PN_DECIMAL32; "A DECIMAL32 value."
+  DECIMAL64 = PN_DECIMAL64; "A DECIMAL64 value."
+  DECIMAL128 = PN_DECIMAL128; "A DECIMAL128 value."
+  UUID = PN_UUID; "A UUID value."
   BINARY = PN_BINARY; "A binary string."
   STRING = PN_STRING; "A unicode string."
   SYMBOL = PN_SYMBOL; "A symbolic string."
@@ -944,6 +949,38 @@ class Data:
     """
     self._check(pn_data_put_double(self._data, d))
 
+  def put_decimal32(self, d):
+    """
+    Puts a decimal32 value.
+
+    @param d: a decimal32 value
+    """
+    self._check(pn_data_put_decimal32(self._data, d))
+
+  def put_decimal64(self, d):
+    """
+    Puts a decimal64 value.
+
+    @param d: a decimal64 value
+    """
+    self._check(pn_data_put_decimal64(self._data, d))
+
+  def put_decimal128(self, d):
+    """
+    Puts a decimal128 value.
+
+    @param d: a decimal128 value
+    """
+    self._check(pn_data_put_decimal128(self._data, d))
+
+  def put_uuid(self, u):
+    """
+    Puts a UUID value.
+
+    @param u: a uuid value
+    """
+    self._check(pn_data_put_uuid(self._data, u.bytes))
+
   def put_binary(self, b):
     """
     Puts a binary value.
@@ -1170,6 +1207,45 @@ class Data:
     err, value = pn_data_get_double(self._data)
     self._check(err)
     return value
+
+  # XXX: need to convert
+  def get_decimal32(self):
+    """
+    If the current node is a decimal32, returns its value, raises an
+    exception otherwise.
+    """
+    err, value = pn_data_get_decimal32(self._data)
+    self._check(err)
+    return value
+
+  # XXX: need to convert
+  def get_decimal64(self):
+    """
+    If the current node is a decimal64, returns its value, raises an
+    exception otherwise.
+    """
+    err, value = pn_data_get_decimal64(self._data)
+    self._check(err)
+    return value
+
+  # XXX: need to convert
+  def get_decimal128(self):
+    """
+    If the current node is a decimal128, returns its value, raises an
+    exception otherwise.
+    """
+    err, value = pn_data_get_decimal128(self._data)
+    self._check(err)
+    return value
+
+  def get_uuid(self):
+    """
+    If the current node is a UUID, returns its value, raises an
+    exception otherwise.
+    """
+    err, value = pn_data_get_uuid(self._data)
+    self._check(err)
+    return uuid.UUID(bytes=value)
 
   def get_binary(self):
     """

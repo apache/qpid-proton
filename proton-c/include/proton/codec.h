@@ -47,6 +47,10 @@ typedef enum {
   PN_TIMESTAMP,
   PN_FLOAT,
   PN_DOUBLE,
+  PN_DECIMAL32,
+  PN_DECIMAL64,
+  PN_DECIMAL128,
+  PN_UUID,
   PN_BINARY,
   PN_STRING,
   PN_SYMBOL,
@@ -73,6 +77,10 @@ typedef struct {
     pn_timestamp_t as_timestamp;
     float as_float;
     double as_double;
+    pn_decimal32_t as_decimal32;
+    pn_decimal64_t as_decimal64;
+    pn_decimal128_t as_decimal128;
+    pn_uuid_t as_uuid;
     pn_bytes_t as_binary;
     pn_bytes_t as_string;
     pn_bytes_t as_symbol;
@@ -125,6 +133,10 @@ int pn_data_put_long(pn_data_t *data, int64_t l);
 int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
 int pn_data_put_float(pn_data_t *data, float f);
 int pn_data_put_double(pn_data_t *data, double d);
+int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d);
+int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d);
+int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d);
+int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
 int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
 int pn_data_put_string(pn_data_t *data, pn_bytes_t string);
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol);
@@ -147,6 +159,10 @@ int pn_data_get_long(pn_data_t *data, int64_t *l);
 int pn_data_get_timestamp(pn_data_t *data, pn_timestamp_t *l);
 int pn_data_get_float(pn_data_t *data, float *f);
 int pn_data_get_double(pn_data_t *data, double *d);
+int pn_data_get_decimal32(pn_data_t *data, pn_decimal32_t *d);
+int pn_data_get_decimal64(pn_data_t *data, pn_decimal64_t *d);
+int pn_data_get_decimal128(pn_data_t *data, pn_decimal128_t *d);
+int pn_data_get_uuid(pn_data_t *data, pn_uuid_t *u);
 int pn_data_get_binary(pn_data_t *data, pn_bytes_t *bytes);
 int pn_data_get_string(pn_data_t *data, pn_bytes_t *string);
 int pn_data_get_symbol(pn_data_t *data, pn_bytes_t *symbol);

@@ -19,6 +19,7 @@
 
 import os, common
 from proton import *
+from uuid import uuid3, NAMESPACE_OID
 
 class Test(common.Test):
 
@@ -177,3 +178,16 @@ class DataTest(Test):
 
   def testChar(self):
     self._test("char", 'a', 'b', 'c', u'\u1234')
+
+  def testUUID(self):
+    self._test("uuid", uuid3(NAMESPACE_OID, "test1"), uuid3(NAMESPACE_OID, "test2"),
+               uuid3(NAMESPACE_OID, "test3"))
+
+  def testDecimal32(self):
+    self._test("decimal32", 0, 1, 2, 3, 4, 2**30)
+
+  def testDecimal64(self):
+    self._test("decimal64", 0, 1, 2, 3, 4, 2**60)
+
+  def testDecimal128(self):
+    self._test("decimal128", "fdsaasdf;lkjjkl;", "x"*16 )

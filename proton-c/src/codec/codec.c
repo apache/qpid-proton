@@ -83,6 +83,10 @@ const char *pn_type_str(pn_type_t type)
   case PN_TIMESTAMP: return "PN_TIMESTAMP";
   case PN_FLOAT: return "PN_FLOAT";
   case PN_DOUBLE: return "PN_DOUBLE";
+  case PN_DECIMAL32: return "PN_DECIMAL32";
+  case PN_DECIMAL64: return "PN_DECIMAL64";
+  case PN_DECIMAL128: return "PN_DECIMAL128";
+  case PN_UUID: return "PN_UUID";
   case PN_BINARY: return "PN_BINARY";
   case PN_STRING: return "PN_STRING";
   case PN_SYMBOL: return "PN_SYMBOL";
@@ -167,6 +171,46 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
     return pn_bytes_format(bytes, "%g", atom.u.as_float);
   case PN_DOUBLE:
     return pn_bytes_format(bytes, "%g", atom.u.as_double);
+  case PN_DECIMAL32:
+    return pn_bytes_format(bytes, "D32(%" PRIu32 ")", atom.u.as_decimal32);
+  case PN_DECIMAL64:
+    return pn_bytes_format(bytes, "D64(%" PRIu64 ")", atom.u.as_decimal64);
+  case PN_DECIMAL128:
+    return pn_bytes_format(bytes, "D128(%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x)",
+                           atom.u.as_decimal128.bytes[0],
+                           atom.u.as_decimal128.bytes[1],
+                           atom.u.as_decimal128.bytes[2],
+                           atom.u.as_decimal128.bytes[3],
+                           atom.u.as_decimal128.bytes[4],
+                           atom.u.as_decimal128.bytes[5],
+                           atom.u.as_decimal128.bytes[6],
+                           atom.u.as_decimal128.bytes[7],
+                           atom.u.as_decimal128.bytes[8],
+                           atom.u.as_decimal128.bytes[9],
+                           atom.u.as_decimal128.bytes[10],
+                           atom.u.as_decimal128.bytes[11],
+                           atom.u.as_decimal128.bytes[12],
+                           atom.u.as_decimal128.bytes[13],
+                           atom.u.as_decimal128.bytes[14],
+                           atom.u.as_decimal128.bytes[15]);
+  case PN_UUID:
+    return pn_bytes_format(bytes, "UUID(%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x)",
+                           atom.u.as_uuid.bytes[0],
+                           atom.u.as_uuid.bytes[1],
+                           atom.u.as_uuid.bytes[2],
+                           atom.u.as_uuid.bytes[3],
+                           atom.u.as_uuid.bytes[4],
+                           atom.u.as_uuid.bytes[5],
+                           atom.u.as_uuid.bytes[6],
+                           atom.u.as_uuid.bytes[7],
+                           atom.u.as_uuid.bytes[8],
+                           atom.u.as_uuid.bytes[9],
+                           atom.u.as_uuid.bytes[10],
+                           atom.u.as_uuid.bytes[11],
+                           atom.u.as_uuid.bytes[12],
+                           atom.u.as_uuid.bytes[13],
+                           atom.u.as_uuid.bytes[14],
+                           atom.u.as_uuid.bytes[15]);
   case PN_BINARY:
   case PN_STRING:
   case PN_SYMBOL:
@@ -412,6 +456,10 @@ uint8_t pn_type2code(pn_type_t type)
   case PN_LONG: return PNE_LONG;
   case PN_TIMESTAMP: return PNE_MS64;
   case PN_DOUBLE: return PNE_DOUBLE;
+  case PN_DECIMAL32: return PNE_DECIMAL32;
+  case PN_DECIMAL64: return PNE_DECIMAL64;
+  case PN_DECIMAL128: return PNE_DECIMAL128;
+  case PN_UUID: return PNE_UUID;
   case PN_ULONG: return PNE_ULONG;
   case PN_BINARY: return PNE_VBIN32;
   case PN_STRING: return PNE_STR32_UTF8;
@@ -482,6 +530,16 @@ int pn_bytes_writef64(pn_bytes_t *bytes, uint64_t value) {
   }
 }
 
+int pn_bytes_writef128(pn_bytes_t *bytes, char *value) {
+  if (bytes->size < 16) {
+    return PN_OVERFLOW;
+  } else {
+    memmove(bytes->start, value, 16);
+    pn_bytes_ltrim(bytes, 16);
+    return 0;
+  }
+}
+
 int pn_bytes_writev32(pn_bytes_t *bytes, const pn_bytes_t *value)
 {
   if (bytes->size < 4 + value->size) {
@@ -542,6 +600,10 @@ int pn_encode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, pn_type_t type)
   case PN_TIMESTAMP: return pn_bytes_writef64(bytes, atom->u.as_timestamp);
   case PN_FLOAT: c.f = atom->u.as_float; return pn_bytes_writef32(bytes, c.i);
   case PN_DOUBLE: c.d = atom->u.as_double; return pn_bytes_writef64(bytes, c.l);
+  case PN_DECIMAL32: return pn_bytes_writef32(bytes, atom->u.as_decimal32);
+  case PN_DECIMAL64: return pn_bytes_writef64(bytes, atom->u.as_decimal64);
+  case PN_DECIMAL128: return pn_bytes_writef128(bytes, atom->u.as_decimal128.bytes);
+  case PN_UUID: return pn_bytes_writef128(bytes, atom->u.as_uuid.bytes);
   case PN_BINARY: return pn_bytes_writev32(bytes, &atom->u.as_binary);
   case PN_STRING: return pn_bytes_writev32(bytes, &atom->u.as_string);
   case PN_SYMBOL: return pn_bytes_writev32(bytes, &atom->u.as_symbol);
@@ -658,6 +720,14 @@ pn_type_t pn_code2type(uint8_t code)
     return PN_TIMESTAMP;
   case PNE_DOUBLE:
     return PN_DOUBLE;
+  case PNE_DECIMAL32:
+    return PN_DECIMAL32;
+  case PNE_DECIMAL64:
+    return PN_DECIMAL64;
+  case PNE_DECIMAL128:
+    return PN_DECIMAL128;
+  case PNE_UUID:
+    return PN_UUID;
   case PNE_ULONG0:
   case PNE_SMALLULONG:
   case PNE_SMALLLONG:
@@ -771,10 +841,16 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
     atom.type=PN_FLOAT, atom.u.as_float=conv.f;
     pn_bytes_ltrim(bytes, 4);
     break;
+  case PNE_DECIMAL32:
+    if (bytes->size < 4) return PN_UNDERFLOW;
+    atom.type=PN_DECIMAL32, atom.u.as_decimal32=ntohl(*((uint32_t *) (bytes->start)));
+    pn_bytes_ltrim(bytes, 4);
+    break;
   case PNE_ULONG:
   case PNE_LONG:
   case PNE_MS64:
   case PNE_DOUBLE:
+  case PNE_DECIMAL64:
     if (bytes->size < 8) return PN_UNDERFLOW;
 
     {
@@ -798,6 +874,9 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
       // XXX: this assumes the platform uses IEEE floats
       atom.type=PN_DOUBLE, atom.u.as_double=conv.d;
       break;
+    case PNE_DECIMAL64:
+      atom.type=PN_DECIMAL64, atom.u.as_decimal64=conv.l;
+      break;
     default:
       return PN_ARG_ERR;
     }
@@ -816,6 +895,18 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
     if (!bytes->size) return PN_UNDERFLOW;
     atom.type=PN_LONG, atom.u.as_long=*((int8_t *) (bytes->start));
     pn_bytes_ltrim(bytes, 1);
+    break;
+  case PNE_DECIMAL128:
+    if (bytes->size < 16) return PN_UNDERFLOW;
+    atom.type = PN_DECIMAL128;
+    memmove(&atom.u.as_decimal128.bytes, bytes->start, 16);
+    pn_bytes_ltrim(bytes, 16);
+    break;
+  case PNE_UUID:
+    if (bytes->size < 16) return PN_UNDERFLOW;
+    atom.type = PN_UUID;
+    memmove(atom.u.as_uuid.bytes, bytes->start, 16);
+    pn_bytes_ltrim(bytes, 16);
     break;
   case PNE_VBIN8:
   case PNE_STR8_UTF8:
@@ -2767,6 +2858,22 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
       pn_data_put_double(data, atom.u.as_double);
       count++;
       break;
+    case PN_DECIMAL32:
+      pn_data_put_decimal32(data, atom.u.as_decimal32);
+      count++;
+      break;
+    case PN_DECIMAL64:
+      pn_data_put_decimal64(data, atom.u.as_decimal64);
+      count++;
+      break;
+    case PN_DECIMAL128:
+      pn_data_put_decimal128(data, atom.u.as_decimal128);
+      count++;
+      break;
+    case PN_UUID:
+      pn_data_put_uuid(data, atom.u.as_uuid);
+      count++;
+      break;
     case PN_BINARY:
       pn_data_put_binary(data, atom.u.as_binary);
       count++;
@@ -3027,6 +3134,38 @@ int pn_data_put_double(pn_data_t *data, double d)
   return 0;
 }
 
+int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom.type = PN_DECIMAL32;
+  node->atom.u.as_decimal32 = d;
+  return 0;
+}
+
+int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom.type = PN_DECIMAL64;
+  node->atom.u.as_decimal64 = d;
+  return 0;
+}
+
+int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom.type = PN_DECIMAL128;
+  memmove(node->atom.u.as_decimal128.bytes, d.bytes, 16);
+  return 0;
+}
+
+int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom.type = PN_UUID;
+  memmove(node->atom.u.as_uuid.bytes, u.bytes, 16);
+  return 0;
+}
+
 int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes)
 {
   pn_node_t *node = pn_data_add(data);
@@ -3267,6 +3406,54 @@ int pn_data_get_double(pn_data_t *data, double *d)
     return 0;
   } else {
     *d = 0;
+    return PN_ERR;
+  }
+}
+
+int pn_data_get_decimal32(pn_data_t *data, pn_decimal32_t *d)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node->atom.type == PN_DECIMAL32) {
+    *d = node->atom.u.as_decimal32;
+    return 0;
+  } else {
+    *d = 0;
+    return PN_ERR;
+  }
+}
+
+int pn_data_get_decimal64(pn_data_t *data, pn_decimal64_t *d)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node->atom.type == PN_DECIMAL64) {
+    *d = node->atom.u.as_decimal64;
+    return 0;
+  } else {
+    *d = 0;
+    return PN_ERR;
+  }
+}
+
+int pn_data_get_decimal128(pn_data_t *data, pn_decimal128_t *d)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node->atom.type == PN_DECIMAL128) {
+    memmove(d->bytes, node->atom.u.as_decimal128.bytes, 16);
+    return 0;
+  } else {
+    memset(d->bytes, 0, 16);
+    return PN_ERR;
+  }
+}
+
+int pn_data_get_uuid(pn_data_t *data, pn_uuid_t *u)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node->atom.type == PN_UUID) {
+    memmove(u->bytes, node->atom.u.as_uuid.bytes, 16);
+    return 0;
+  } else {
+    memset(u->bytes, 0, 16);
     return PN_ERR;
   }
 }

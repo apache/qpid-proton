@@ -33,6 +33,14 @@ typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
 typedef uint64_t pn_timestamp_t;
 typedef uint32_t pn_char_t;
+typedef uint32_t pn_decimal32_t;
+typedef uint64_t pn_decimal64_t;
+typedef struct {
+  char bytes[16];
+} pn_decimal128_t;
+typedef struct {
+  char bytes[16];
+} pn_uuid_t;
 
 typedef struct {
   size_t size;
