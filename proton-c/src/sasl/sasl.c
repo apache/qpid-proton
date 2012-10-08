@@ -60,6 +60,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
   if (!transport->sasl) {
     pn_sasl_t *sasl = malloc(sizeof(pn_sasl_t));
     sasl->disp = pn_dispatcher(1, sasl);
+    sasl->disp->batch = false;
 
     pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
     pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
