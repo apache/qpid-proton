@@ -8,13 +8,13 @@ use them in either a peer to peer or a brokered scenario.
 
 For brokered usage:
 
-  recv.py //<broker>/<queue>
+  recv.py amqp://<broker>/<queue>
 
-  send.py -a //<broker>/<queue> msg_1 ... msg_n
+  send.py -a amqp://<broker>/<queue> msg_1 ... msg_n
 
 For peer to peer usage:
 
   # execute on <host> to receive messages from all local network interfaces
-  recv.py //~0.0.0.0
+  recv.py amqp://~0.0.0.0
 
-  send.py -a //<host> msg_1 ... msg_n
+  send.py -a amqp://<host> msg_1 ... msg_n
