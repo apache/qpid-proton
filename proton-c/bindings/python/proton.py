@@ -1659,10 +1659,48 @@ class SASL(object):
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
+class SSLException(TransportException):
+  pass
+
 class SSL(object):
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, SSLException)
+      raise exc("SSL failure.")
+    else:
+      return err
 
   def __init__(self, transport):
     self._ssl = pn_ssl(transport._trans)
+
+  MODE_CLIENT = PN_SSL_MODE_CLIENT
+  MODE_SERVER = PN_SSL_MODE_SERVER
+
+  def init(self, mode):
+    return self._check( pn_ssl_init(self._ssl, mode) )
+
+  def set_credentials(self, cert_file, key_file, password):
+    return self._check( pn_ssl_set_credentials(self._ssl, cert_file, key_file,
+                                               password) )
+
+  def set_trusted_ca_db(self, certificate_db):
+    return self._check( pn_ssl_set_trusted_ca_db(self._ssl, certificate_db) )
+
+  def allow_unsecured_client(self):
+    return self._check( pn_ssl_allow_unsecured_client(self._ssl) )
+
+  VERIFY_PEER = PN_SSL_VERIFY_PEER
+  NO_VERIFY_PEER = PN_SSL_NO_VERIFY_PEER
+
+  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
+    return self._check( pn_ssl_set_peer_authentication(self._ssl, verify_mode,
+                                                       trusted_CAs) )
+
+  def peer_authentication(self):
+    # @TODO: fix up buffer return value...
+    pass
+
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",

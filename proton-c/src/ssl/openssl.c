@@ -121,7 +121,7 @@ static void _log_ssl_error(pn_ssl_t *ssl)
   unsigned long err = ERR_get_error();
   while (err) {
     ERR_error_string_n(err, buf, sizeof(buf));
-    _log(ssl, "%s\n", buf);
+    _log_error("%s\n", buf);
     err = ERR_get_error();
   }
 }
@@ -204,6 +204,7 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
 
   if (SSL_CTX_use_certificate_chain_file(ssl->ctx, certificate_file) != 1) {
     _log_error("SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
+    _log_ssl_error(ssl);
     return -3;
   }
 
@@ -215,12 +216,14 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
 
   if (SSL_CTX_use_PrivateKey_file(ssl->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
     _log_error("SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
+    _log_ssl_error(ssl);
     return -4;
   }
 
   if (SSL_CTX_check_private_key(ssl->ctx) != 1) {
     _log_error("The key file %s is not consistent with the certificate %s\n",
                private_key_file, certificate_file);
+    _log_ssl_error(ssl);
     return -5;
   }
 
@@ -509,38 +512,41 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
   _log( ssl, "process_input_ssl( data size=%d )\n",available );
 
   ssize_t consumed = 0;
+  bool work_pending;
+  bool shutdown_input = (available == 0);  // caller is closed
 
-  // Write to network bio as much as possible, consuming bytes/available
+  do {
+    work_pending = false;
 
-  if (available > 0) {
-    int written = BIO_write( ssl->bio_net_io, input_data, available );
-    if (written > 0) {
-      input_data += written;
-      available -= written;
-      consumed += written;
-      ssl->read_blocked = false;
-      _log( ssl, "Wrote %d bytes to BIO Layer, %d left over\n", written, available );
-    }
-  } else if (available == 0) {
-    // lower layer (caller) has closed.  Close the WRITE side of the BIO.  This will cause
-    // an EOF to be passed to SSL once all pending inbound data has been consumed.
-    _log( ssl, "Lower layer closed - shutting down BIO write side\n");
-    (void)BIO_shutdown_wr( ssl->bio_net_io );
-  }
+    // Write to network bio as much as possible, consuming bytes/available
 
-  // Read all available data from the SSL socket
-
-  if (!ssl->ssl_closed) {
-    //int pending = BIO_pending(ssl->bio_ssl);
-    //int available = pn_min( (APP_BUF_SIZE - ssl->in_count), pending );
-    int available = APP_BUF_SIZE - ssl->in_count;
-    while (available > 0) {
-      int written = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], available );
+    if (available > 0) {
+      int written = BIO_write( ssl->bio_net_io, input_data, available );
       if (written > 0) {
-        _log( ssl, "Read %d bytes from SSL socket for app\n", written );
-        _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], written );
-        ssl->in_count += written;
+        input_data += written;
         available -= written;
+        consumed += written;
+        ssl->read_blocked = false;
+        work_pending = (available > 0);
+        _log( ssl, "Wrote %d bytes to BIO Layer, %d left over\n", written, available );
+      }
+    } else if (shutdown_input) {
+      // lower layer (caller) has closed.  Close the WRITE side of the BIO.  This will cause
+      // an EOF to be passed to SSL once all pending inbound data has been consumed.
+      _log( ssl, "Lower layer closed - shutting down BIO write side\n");
+      (void)BIO_shutdown_wr( ssl->bio_net_io );
+      shutdown_input = false;
+    }
+
+    // Read all available data from the SSL socket
+
+    if (!ssl->ssl_closed && ssl->in_count < APP_BUF_SIZE) {
+      int read = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], APP_BUF_SIZE - ssl->in_count );
+      if (read > 0) {
+        _log( ssl, "Read %d bytes from SSL socket for app\n", read );
+        _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
+        ssl->in_count += read;
+        work_pending = work_pending || ssl->in_count < APP_BUF_SIZE;
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
           _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
@@ -557,47 +563,47 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
             _log(ssl, "Detected read-blocked\n");
           }
         }
-        break;
       }
     }
-  }
 
-  // write incoming data to app layer
+    // write incoming data to app layer
 
-  if (!ssl->app_input_closed) {
-    char *data = ssl->inbuf;
-    while (ssl->in_count > 0 || ssl->ssl_closed) {  /* if ssl_closed, send 0 count */
-      ssize_t consumed = transport->process_input(transport, data, ssl->in_count);
-      if (consumed > 0) {
-        ssl->in_count -= consumed;
-        data += consumed;
-        _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
-      } else {
-        if (consumed < 0) {
-          _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
-               (int) consumed, (int)ssl->in_count);
-          ssl->in_count = 0;    // discard any pending input
-          ssl->app_input_closed = consumed;
-          if (ssl->app_output_closed && ssl->out_count) {
-            // both sides of app closed, and no more app output pending:
-            start_ssl_shutdown(ssl);
-          }
-          /* @todo: fix this - duplicate code - transport does the same */
-          if (consumed == PN_EOS) {
-            if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-              pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
-          } else {
-            pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
-                                pn_error_code(transport->error),
-                                pn_error_text(transport->error));
+    if (!ssl->app_input_closed) {
+      char *data = ssl->inbuf;
+      if (ssl->in_count > 0 || ssl->ssl_closed) {  /* if ssl_closed, send 0 count */
+        ssize_t consumed = transport->process_input(transport, data, ssl->in_count);
+        if (consumed > 0) {
+          ssl->in_count -= consumed;
+          data += consumed;
+          work_pending = work_pending || ssl->in_count > 0;
+          _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
+        } else {
+          if (consumed < 0) {
+            _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
+                 (int) consumed, (int)ssl->in_count);
+            ssl->in_count = 0;    // discard any pending input
+            ssl->app_input_closed = consumed;
+            if (ssl->app_output_closed && ssl->out_count) {
+              // both sides of app closed, and no more app output pending:
+              start_ssl_shutdown(ssl);
+            }
+            /* @todo: fix this - duplicate code - transport does the same */
+            if (consumed == PN_EOS) {
+              if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+                pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
+            } else {
+              pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
+                                  pn_error_code(transport->error),
+                                  pn_error_text(transport->error));
+            }
           }
         }
-        break;
       }
+      if (ssl->in_count > 0 && data != ssl->inbuf)
+        memmove( ssl->inbuf, data, ssl->in_count );
     }
-    if (ssl->in_count > 0 && data != ssl->inbuf)
-      memmove( ssl->inbuf, data, ssl->in_count );
-  }
+
+  } while (work_pending);
 
   //_log(ssl, "ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d\n",
   //     ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed );
@@ -619,14 +625,17 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
   if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_ERR;
 
   ssize_t written = 0;
+  bool work_pending;
 
-  // first, get any pending application output, if possible
+  do {
+    work_pending = false;
+    // first, get any pending application output, if possible
 
-  if (!ssl->app_output_closed) {
-    while (ssl->out_count < APP_BUF_SIZE) {
+    if (!ssl->app_output_closed && ssl->out_count < APP_BUF_SIZE) {
       ssize_t app_bytes = transport->process_output(transport, &ssl->outbuf[ssl->out_count], APP_BUF_SIZE - ssl->out_count);
       if (app_bytes > 0) {
         ssl->out_count += app_bytes;
+        work_pending = ssl->out_count < APP_BUF_SIZE;
         _log( ssl, "Gathered %d bytes from app to send to peer\n", app_bytes );
       } else {
         if (app_bytes < 0) {
@@ -642,64 +651,65 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
                                   pn_error_text(transport->error));
           }
         }
-        break;
       }
     }
-  }
 
-  // now push any pending app data into the socket
+    // now push any pending app data into the socket
 
-  if (!ssl->ssl_closed) {
-    char *data = ssl->outbuf;
-    while (ssl->out_count > 0) {
-      int written = BIO_write( ssl->bio_ssl, data, ssl->out_count );
-      if (written > 0) {
-        data += written;
-        ssl->out_count -= written;
-        _log( ssl, "Wrote %d bytes from app to socket\n", written );
-      } else {
-        if (!BIO_should_retry(ssl->bio_ssl)) {
-          _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
-          _log_ssl_error(ssl);
-          start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
-          ssl->out_count = 0;       // can no longer write to socket, so erase app output data
-          ssl->ssl_closed = true;
+    if (!ssl->ssl_closed) {
+      char *data = ssl->outbuf;
+      if (ssl->out_count > 0) {
+        int wrote = BIO_write( ssl->bio_ssl, data, ssl->out_count );
+        if (wrote > 0) {
+          data += wrote;
+          ssl->out_count -= wrote;
+          work_pending = work_pending || ssl->out_count > 0;
+          _log( ssl, "Wrote %d bytes from app to socket\n", wrote );
         } else {
-          if (BIO_should_read( ssl->bio_ssl )) {
-            ssl->read_blocked = true;
-            _log(ssl, "Detected read-blocked\n");
-          }
-          if (BIO_should_write( ssl->bio_ssl )) {
-            ssl->write_blocked = true;
-            _log(ssl, "Detected write-blocked\n");
+          if (!BIO_should_retry(ssl->bio_ssl)) {
+            _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
+            _log_ssl_error(ssl);
+            start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
+            ssl->out_count = 0;       // can no longer write to socket, so erase app output data
+            ssl->ssl_closed = true;
+          } else {
+            if (BIO_should_read( ssl->bio_ssl )) {
+              ssl->read_blocked = true;
+              _log(ssl, "Detected read-blocked\n");
+            }
+            if (BIO_should_write( ssl->bio_ssl )) {
+              ssl->write_blocked = true;
+              _log(ssl, "Detected write-blocked\n");
+            }
           }
         }
-        break;
+      }
+
+      if (ssl->out_count == 0) {
+        if (ssl->app_input_closed && ssl->app_output_closed) {
+          // application is done sending/receiving data, and all buffered output data has
+          // been written to the SSL socket
+          start_ssl_shutdown(ssl);
+        }
+      } else if (data != ssl->outbuf) {
+        memmove( ssl->outbuf, data, ssl->out_count );
       }
     }
 
-    if (ssl->out_count == 0) {
-      if (ssl->app_input_closed && ssl->app_output_closed) {
-        // application is done sending/receiving data, and all buffered output data has
-        // been written to the SSL socket
-        start_ssl_shutdown(ssl);
+    // read from the network bio as much as possible, filling the buffer
+    if (max_len) {
+      int available = BIO_read( ssl->bio_net_io, buffer, max_len );
+      if (available > 0) {
+        max_len -= available;
+        buffer += available;
+        written += available;
+        ssl->write_blocked = false;
+        work_pending = work_pending || max_len > 0;
+        _log( ssl, "Read %d bytes from BIO Layer\n", available );
       }
-    } else if (data != ssl->outbuf) {
-      memmove( ssl->outbuf, data, ssl->out_count );
     }
-  }
 
-  // read from the network bio as much as possible, filling the buffer
-  if (max_len) {
-    int available = BIO_read( ssl->bio_net_io, buffer, max_len );
-    if (available > 0) {
-      max_len -= available;
-      buffer += available;
-      written += available;
-      ssl->write_blocked = false;
-      _log( ssl, "Read %d bytes from BIO Layer\n", available );
-    }
-  }
+  } while (work_pending);
 
   //_log(ssl, "written=%d ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d bio_pend=%d\n",
   //     written, ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed, BIO_pending(ssl->bio_net_io) );
