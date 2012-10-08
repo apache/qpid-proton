@@ -1,3 +1,11 @@
+typedef unsigned int size_t;
+typedef signed int ssize_t;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef unsigned long int uint64_t;
+typedef int int32_t;
+typedef long int int64_t;
+
 /* Parse these interface header files to generate APIs for script languages */
 %include "proton/types.h"
 %ignore pn_error_format;
@@ -1302,20 +1310,5 @@
 %ignore pn_vscan_atoms;
 %ignore pn_data_vfill;
 %ignore pn_data_vscan;
-
-%include <typemaps.i>
-%apply int *OUTPUT {pn_type_t *type};
-%apply bool *OUTPUT {bool *};
-%apply unsigned char *OUTPUT {uint8_t *};
-%apply signed char *OUTPUT {int8_t *};
-%apply unsigned short *OUTPUT {uint16_t *};
-%apply short *OUTPUT {int16_t *};
-%apply unsigned int *OUTPUT {uint32_t *};
-%apply int *OUTPUT {int32_t *};
-%apply uint64_t *OUTPUT {uint64_t *};
-%apply long *OUTPUT {int64_t *};
-%apply float *OUTPUT {float *};
-%apply double *OUTPUT {double *};
-%apply size_t *OUTPUT {size_t *count};
 
 %include "proton/codec.h"

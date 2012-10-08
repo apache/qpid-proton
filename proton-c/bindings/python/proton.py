@@ -707,9 +707,9 @@ class Data:
     type. If there is no next sibling the current node remains
     unchanged and None is returned.
     """
-    found, dtype = pn_data_next(self._data)
+    found = pn_data_next(self._data)
     if found:
-      return dtype
+      return self.type()
     else:
       return None
 
@@ -719,9 +719,9 @@ class Data:
     type. If there is no previous sibling the current node remains
     unchanged and None is returned.
     """
-    found, dtype = pn_data_prev(self._data)
+    found = pn_data_prev(self._data)
     if found:
-      return dtype
+      return self.type()
     else:
       return None
 
@@ -737,6 +737,16 @@ class Data:
     its own parent.
     """
     return pn_data_exit(self._data)
+
+  def type(self):
+    """
+    Returns the type of the current node.
+    """
+    dtype = pn_data_type(self._data)
+    if dtype == -1:
+      return None
+    else:
+      return dtype
 
   def encode(self):
     """
@@ -1011,8 +1021,8 @@ class Data:
   def get_list(self):
     """
     If the current node is a list, return the number of elements,
-    otherwise raise an error. List elements can be accessed by
-    entering the list.
+    otherwise return zero. List elements can be accessed by entering
+    the list.
 
       >>> count = data.get_list()
       >>> data.enter()
@@ -1024,15 +1034,13 @@ class Data:
       ...     ...
       >>> data.exit()
     """
-    err, count = pn_data_get_list(self._data)
-    self._check(err)
-    return count
+    return pn_data_get_list(self._data)
 
   def get_map(self):
     """
     If the current node is a map, return the number of child elements,
-    otherwise raise an error. Key value pairs can be accessed by
-    entering the map.
+    otherwise return zero. Key value pairs can be accessed by entering
+    the map.
 
       >>> count = data.get_map()
       >>> data.enter()
@@ -1044,16 +1052,14 @@ class Data:
       ...     ...
       >>> data.exit()
     """
-    err, count = pn_data_get_map(self._data)
-    self._check(err)
-    return count
+    return pn_data_get_map(self._data)
 
   def get_array(self):
     """
     If the current node is an array, return a tuple of the element
     count, a boolean indicating whether the array is described, and
-    the type of each element. Array data can be accessed by entering
-    the array.
+    the type of each element, otherwise return (0, False, None). Array
+    data can be accessed by entering the array.
 
       >>> # read an array of strings with a symbolic descriptor
       >>> count, described, type = data.get_array()
@@ -1065,214 +1071,178 @@ class Data:
       ...    print "Element:", data.get_string()
       >>> data.exit()
     """
-    err, count, described, type = pn_data_get_array(self._data)
-    self._check(err)
+    count = pn_data_get_array(self._data)
+    described = pn_data_is_array_described(self._data)
+    type = pn_data_get_array_type(self._data)
+    if type == -1:
+      type = None
     return count, described, type
 
-  def get_described(self):
+  def is_described(self):
     """
-    Checks if the current node is a described value, raises an
-    exception otherwise. The descriptor and value may be accessed by
-    entering the described value.
+    Checks if the current node is a described value. The descriptor
+    and value may be accessed by entering the described value.
 
       >>> # read a symbolically described string
-      >>> data.get_described() # will error if the current node is not described
+      >>> assert data.is_described() # will error if the current node is not described
       >>> data.enter()
       >>> print data.get_symbol()
       >>> print data.get_string()
       >>> data.exit()
     """
-    self._check(pn_data_get_described(self._data))
+    return pn_data_is_described(self._data)
 
-  def get_null(self):
+  def is_null(self):
     """
-    Checks if the current node is a null, raises an exception
-    otherwise.
+    Checks if the current node is a null.
     """
     self._check(pn_data_get_null(self._data))
 
   def get_bool(self):
     """
-    If the current node is a boolean, returns its value, raises an
-    exception otherwise.
+    If the current node is a boolean, returns its value, returns False
+    otherwise.
     """
-    err, b = pn_data_get_bool(self._data)
-    self._check(err)
-    return b
+    return pn_data_get_bool(self._data)
 
   def get_ubyte(self):
     """
-    If the current node is an unsigned byte, returns its value, raises
-    an exception otherwise.
+    If the current node is an unsigned byte, returns its value,
+    returns 0 otherwise.
     """
-    err, value = pn_data_get_ubyte(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_ubyte(self._data)
 
   def get_byte(self):
     """
-    If the current node is a signed byte, returns its value, raises an
-    exception otherwise.
+    If the current node is a signed byte, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_byte(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_byte(self._data)
 
   def get_ushort(self):
     """
     If the current node is an unsigned short, returns its value,
-    raises an exception otherwise.
+    returns 0 otherwise.
     """
-    err, value = pn_data_get_ushort(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_ushort(self._data)
 
   def get_short(self):
     """
-    If the current node is a signed short, returns its value, raises
-    an exception otherwise.
+    If the current node is a signed short, returns its value, returns
+    0 otherwise.
     """
-    err, value = pn_data_get_short(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_short(self._data)
 
   def get_uint(self):
     """
-    If the current node is an unsigned int, returns its value, raises
-    an exception otherwise.
+    If the current node is an unsigned int, returns its value, returns
+    0 otherwise.
     """
-    err, value = pn_data_get_uint(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_uint(self._data)
 
   def get_int(self):
     """
-    If the current node is a signed int, returns its value, raises an
-    exception otherwise.
+    If the current node is a signed int, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_int(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_int(self._data)
 
   def get_char(self):
     """
-    If the current node is a char, returns its value, raises an
-    exception otherwise.
+    If the current node is a char, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_char(self._data)
-    self._check(err)
-    return unichr(value)
+    return unichr(pn_data_get_char(self._data))
 
   def get_ulong(self):
     """
-    If the current node is an unsigned long, returns its value, raises
-    an exception otherwise.
+    If the current node is an unsigned long, returns its value,
+    returns 0 otherwise.
     """
-    err, value = pn_data_get_ulong(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_ulong(self._data)
 
   def get_long(self):
     """
-    If the current node is an signed long, returns its value, raises
-    an exception otherwise.
+    If the current node is an signed long, returns its value, returns
+    0 otherwise.
     """
-    err, value = pn_data_get_long(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_long(self._data)
 
   def get_timestamp(self):
     """
-    If the current node is a timestamp, returns its value, raises
-    an exception otherwise.
+    If the current node is a timestamp, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_timestamp(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_timestamp(self._data)
 
   def get_float(self):
     """
-    If the current node is a float, returns its value, raises an
-    exception otherwise.
+    If the current node is a float, returns its value, raises 0
+    otherwise.
     """
-    err, value = pn_data_get_float(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_float(self._data)
 
   def get_double(self):
     """
-    If the current node is a double, returns its value, raises an
-    exception otherwise.
+    If the current node is a double, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_double(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_double(self._data)
 
   # XXX: need to convert
   def get_decimal32(self):
     """
-    If the current node is a decimal32, returns its value, raises an
-    exception otherwise.
+    If the current node is a decimal32, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_decimal32(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_decimal32(self._data)
 
   # XXX: need to convert
   def get_decimal64(self):
     """
-    If the current node is a decimal64, returns its value, raises an
-    exception otherwise.
+    If the current node is a decimal64, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_decimal64(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_decimal64(self._data)
 
   # XXX: need to convert
   def get_decimal128(self):
     """
-    If the current node is a decimal128, returns its value, raises an
-    exception otherwise.
+    If the current node is a decimal128, returns its value, returns 0
+    otherwise.
     """
-    err, value = pn_data_get_decimal128(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_decimal128(self._data)
 
   def get_uuid(self):
     """
-    If the current node is a UUID, returns its value, raises an
-    exception otherwise.
+    If the current node is a UUID, returns its value, returns None
+    otherwise.
     """
-    err, value = pn_data_get_uuid(self._data)
-    self._check(err)
-    return uuid.UUID(bytes=value)
+    if pn_data_type(self._data) == Data.UUID:
+      return uuid.UUID(bytes=pn_data_get_uuid(self._data))
+    else:
+      return None
 
   def get_binary(self):
     """
-    If the current node is binary, returns its value, raises an
-    exception otherwise.
+    If the current node is binary, returns its value, returns ""
+    otherwise.
     """
-    err, value = pn_data_get_binary(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_binary(self._data)
 
   def get_string(self):
     """
-    If the current node is a string, returns its value, raises an
-    exception otherwise.
+    If the current node is a string, returns its value, returns ""
+    otherwise.
     """
-    err, value = pn_data_get_string(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_string(self._data)
 
   def get_symbol(self):
     """
-    If the current node is a symbol, returns its value, raises an
-    exception otherwise.
+    If the current node is a symbol, returns its value, returns ""
+    otherwise.
     """
-    err, value = pn_data_get_symbol(self._data)
-    self._check(err)
-    return value
+    return pn_data_get_symbol(self._data)
 
   def dump(self):
     pn_data_dump(self._data)

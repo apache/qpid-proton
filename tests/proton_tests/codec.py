@@ -117,6 +117,62 @@ class DataTest(Test):
     assert self.data.get_list() == 1
     assert not self.data.exit()
 
+  def _testArray(self, dtype, descriptor, atype, *values):
+    if dtype: dTYPE = getattr(self.data, dtype.upper())
+    aTYPE = getattr(self.data, atype.upper())
+    self.data.put_array(dtype is not None, aTYPE)
+    self.data.enter()
+    if dtype is not None:
+      putter = getattr(self.data, "put_%s" % dtype)
+      putter(descriptor)
+    putter = getattr(self.data, "put_%s" % atype)
+    for v in values:
+      putter(v)
+    self.data.exit()
+    self.data.rewind()
+    assert self.data.next() == Data.ARRAY
+    count, described, type = self.data.get_array()
+    assert count == len(values), count
+    if dtype is None:
+      assert described == False
+    else:
+      assert described == True
+    assert type == aTYPE, type
+    assert self.data.enter()
+    if described:
+      assert self.data.next() == dTYPE
+      getter = getattr(self.data, "get_%s" % dtype)
+      gotten = getter()
+      assert gotten == descriptor, gotten
+    if values:
+      getter = getattr(self.data, "get_%s" % atype)
+      for v in values:
+        assert self.data.next() == aTYPE
+        gotten = getter()
+        assert gotten == v, gotten
+    assert self.data.next() is None
+    assert self.data.exit()
+
+  def testStringArray(self):
+    self._testArray(None, None, "string", "one", "two", "three")
+
+  def testDescribedStringArray(self):
+    self._testArray("symbol", "url", "string", "one", "two", "three")
+
+  def testIntArray(self):
+    self._testArray(None, None, "int", 1, 2, 3)
+
+  def testUUIDArray(self):
+    self._testArray(None, None, "uuid", uuid3(NAMESPACE_OID, "one"),
+                    uuid3(NAMESPACE_OID, "one"),
+                    uuid3(NAMESPACE_OID, "three"))
+
+  def testEmptyArray(self):
+    self._testArray(None, None, "null")
+
+  def testDescribedEmptyArray(self):
+    self._testArray("long", 0, "null")
+
   def _test(self, dtype, *values, **kwargs):
     eq=kwargs.get("eq", lambda x, y: x == y)
     ntype = getattr(Data, dtype.upper())
