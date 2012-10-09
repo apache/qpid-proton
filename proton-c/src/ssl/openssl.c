@@ -28,6 +28,7 @@
 #include "../util.h"
 
 #include <openssl/ssl.h>
+#include <openssl/dh.h>
 #include <openssl/err.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,10 +50,11 @@ struct pn_ssl_t {
   SSL_CTX *ctx;
   SSL *ssl;
   pn_ssl_mode_t mode;
-  bool allow_unsecured;
-  bool ca_db;           // true when CA database configured
+  bool allow_unsecured; // allow non-SSL connections
+  bool has_ca_db;       // true when CA database configured
+  bool has_certificate; // true when certificate configured
   char *keyfile_pw;
-  pn_ssl_verify_mode_t verify_mode;    // NEED INIT
+  pn_ssl_verify_mode_t verify_mode;
   char *trusted_CAs;
 
   pn_transport_t *transport;
@@ -82,6 +84,10 @@ struct pn_ssl_t {
   pn_trace_t trace;
 };
 
+// define two sets of allowable ciphers: those that require authentication, and those
+// that do not require authentication (anonymous).  See ciphers(1).
+#define CIPHERS_AUTHENTICATE    "ALL:!aNULL:!eNULL:@STRENGTH"
+#define CIPHERS_ANONYMOUS       "ALL:+aNULL:!eNULL:@STRENGTH"
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
@@ -115,9 +121,18 @@ static void _log(pn_ssl_t *ssl, const char *fmt, ...)
   }
 }
 
-static void _log_ssl_error(pn_ssl_t *ssl)
+// log an error and dump the SSL error stack
+static void _log_ssl_error(pn_ssl_t *ssl, const char *fmt, ...)
 {
   char buf[128];        // see "man ERR_error_string_n()"
+  va_list ap;
+
+  if (fmt) {
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+  }
+
   unsigned long err = ERR_get_error();
   while (err) {
     ERR_error_string_n(err, buf, sizeof(buf));
@@ -186,6 +201,46 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 #endif
 
 
+// this code was generated using the command:
+// "openssl dhparam -C -2 2048"
+static DH *get_dh2048()
+{
+  static unsigned char dh2048_p[]={
+    0xAE,0xF7,0xE9,0x66,0x26,0x7A,0xAC,0x0A,0x6F,0x1E,0xCD,0x81,
+    0xBD,0x0A,0x10,0x7E,0xFA,0x2C,0xF5,0x2D,0x98,0xD4,0xE7,0xD9,
+    0xE4,0x04,0x8B,0x06,0x85,0xF2,0x0B,0xA3,0x90,0x15,0x56,0x0C,
+    0x8B,0xBE,0xF8,0x48,0xBB,0x29,0x63,0x75,0x12,0x48,0x9D,0x7E,
+    0x7C,0x24,0xB4,0x3A,0x38,0x7E,0x97,0x3C,0x77,0x95,0xB0,0xA2,
+    0x72,0xB6,0xE9,0xD8,0xB8,0xFA,0x09,0x1B,0xDC,0xB3,0x80,0x6E,
+    0x32,0x0A,0xDA,0xBB,0xE8,0x43,0x88,0x5B,0xAB,0xC3,0xB2,0x44,
+    0xE1,0x95,0x85,0x0A,0x0D,0x13,0xE2,0x02,0x1E,0x96,0x44,0xCF,
+    0xA0,0xD8,0x46,0x32,0x68,0x63,0x7F,0x68,0xB3,0x37,0x52,0xCE,
+    0x3A,0x4E,0x48,0x08,0x7F,0xD5,0x53,0x00,0x59,0xA8,0x2C,0xCB,
+    0x51,0x64,0x3D,0x5F,0xEF,0x0E,0x5F,0xE6,0xAF,0xD9,0x1E,0xA2,
+    0x35,0x64,0x37,0xD7,0x4C,0xC9,0x24,0xFD,0x2F,0x75,0xBB,0x3A,
+    0x15,0x82,0x76,0x4D,0xC2,0x8B,0x1E,0xB9,0x4B,0xA1,0x33,0xCF,
+    0xAA,0x3B,0x7C,0xC2,0x50,0x60,0x6F,0x45,0x69,0xD3,0x6B,0x88,
+    0x34,0x9B,0xE4,0xF8,0xC6,0xC7,0x5F,0x10,0xA1,0xBA,0x01,0x8C,
+    0xDA,0xD1,0xA3,0x59,0x9C,0x97,0xEA,0xC3,0xF6,0x02,0x55,0x5C,
+    0x92,0x1A,0x39,0x67,0x17,0xE2,0x9B,0x27,0x8D,0xE8,0x5C,0xE9,
+    0xA5,0x94,0xBB,0x7E,0x16,0x6F,0x53,0x5A,0x6D,0xD8,0x03,0xC2,
+    0xAC,0x7A,0xCD,0x22,0x98,0x8E,0x33,0x2A,0xDE,0xAB,0x12,0xC0,
+    0x0B,0x7C,0x0C,0x20,0x70,0xD9,0x0B,0xAE,0x0B,0x2F,0x20,0x9B,
+    0xA4,0xED,0xFD,0x49,0x0B,0xE3,0x4A,0xF6,0x28,0xB3,0x98,0xB0,
+    0x23,0x1C,0x09,0x33,
+  };
+  static unsigned char dh2048_g[]={
+    0x02,
+  };
+  DH *dh;
+
+  if ((dh=DH_new()) == NULL) return(NULL);
+  dh->p=BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
+  dh->g=BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
+  if ((dh->p == NULL) || (dh->g == NULL))
+    { DH_free(dh); return(NULL); }
+  return(dh);
+}
 
 
 /** Public API - visible to application code */
@@ -203,8 +258,7 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
   }
 
   if (SSL_CTX_use_certificate_chain_file(ssl->ctx, certificate_file) != 1) {
-    _log_error("SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
-    _log_ssl_error(ssl);
+    _log_ssl_error(ssl, "SSL_CTX_use_certificate_chain_file( %s ) failed\n", certificate_file);
     return -3;
   }
 
@@ -215,16 +269,24 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
   }
 
   if (SSL_CTX_use_PrivateKey_file(ssl->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
-    _log_error("SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
-    _log_ssl_error(ssl);
+    _log_ssl_error(ssl, "SSL_CTX_use_PrivateKey_file( %s ) failed\n", private_key_file);
     return -4;
   }
 
   if (SSL_CTX_check_private_key(ssl->ctx) != 1) {
-    _log_error("The key file %s is not consistent with the certificate %s\n",
-               private_key_file, certificate_file);
-    _log_ssl_error(ssl);
+    _log_ssl_error(ssl, "The key file %s is not consistent with the certificate %s\n",
+                   private_key_file, certificate_file);
     return -5;
+  }
+
+  ssl->has_certificate = true;
+
+  // Now that a certificate is configured, we can eliminate those ciphers that do not
+  // authenticate as they are vulnerable to Man in the Middle attacks.
+  if (ssl->verify_mode == PN_SSL_ANONYMOUS_PEER) {
+    if (pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL)) {
+      return -2;
+    }
   }
 
   _log( ssl, "Configured local certificate file %s\n", certificate_file );
@@ -260,9 +322,11 @@ int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
   }
 
   if (SSL_CTX_load_verify_locations( ssl->ctx, file, dir ) != 1) {
-    _log_error("SSL_CTX_load_verify_locations( %s ) failed\n", certificate_db);
+    _log_ssl_error(ssl, "SSL_CTX_load_verify_locations( %s ) failed\n", certificate_db);
     return -1;
   }
+
+  ssl->has_ca_db = true;
 
   _log( ssl, "loaded trusted CA database: file=%s dir=%s\n", file, dir );
   return 0;
@@ -322,12 +386,36 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
-    ssl->verify_mode = PN_SSL_VERIFY_PEER;
+
+    // Since we require the peer to authenticate, we should avoid anonymous ciphers (KAG:
+    // is this a reasonable approach?)
+    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
+      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
+      return -2;
+    }
+    _log( ssl, "Peer authentication mode set to VERIFY-PEER\n");
     break;
 
   case PN_SSL_NO_VERIFY_PEER:
     SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
-    ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
+
+    // Still require authenticating ciphers, since they are stronger than anonymous (KAG:
+    // again - ok?)
+    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
+      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
+      return -2;
+    }
+    _log( ssl, "Peer authentication mode set to NO-VERIFY-PEER\n");
+    break;
+
+  case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
+
+    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_ANONYMOUS )) {
+      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_ANONYMOUS);
+      return -2;
+    }
+    _log( ssl, "Peer authentication mode set to ANONYMOUS-PEER\n");
     break;
 
   default:
@@ -335,8 +423,8 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
     return -1;
   }
 
-    _log( ssl, "Peer authentication mode set to %s\n", (ssl->verify_mode == PN_SSL_VERIFY_PEER) ? "VERIFY-PEER" : "NO-VERIFY-PEER");
-    return 0;
+  ssl->verify_mode = mode;
+  return 0;
 }
 
 
@@ -378,32 +466,44 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
   switch (mode) {
   case PN_SSL_MODE_CLIENT:
     _log( ssl, "Setting up Client SSL object.\n" );
+    ssl->mode = PN_SSL_MODE_CLIENT;
     ssl->ctx = SSL_CTX_new(SSLv23_client_method());
     if (!ssl->ctx) {
       _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
       return -1;
     }
-    // default: always verify the remote server
-    ssl->verify_mode = PN_SSL_VERIFY_PEER;
-    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL );
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(ssl->ctx, 1);
-#endif
+
+    // default: always verify the remote server, and only use ciphers that authenticate.
+    // This can be changed by pn_ssl_set_peer_authentication().
+    if (pn_ssl_set_peer_authentication( ssl, PN_SSL_VERIFY_PEER, NULL)) {
+      return -2;
+    }
     break;
 
   case PN_SSL_MODE_SERVER:
     _log( ssl, "Setting up Server SSL object.\n" );
+    ssl->mode = PN_SSL_MODE_SERVER;
     ssl->ctx = SSL_CTX_new(SSLv23_server_method());
     if (!ssl->ctx) {
       _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
       return -1;
     }
-    // default: no client authentication
-    ssl->verify_mode = PN_SSL_NO_VERIFY_PEER;
-    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
-    ssl->mode = PN_SSL_MODE_SERVER;
+
+    // default: no client authentication, allow ciphers that do not support
+    // authentication (until a certificate is configured).
+    if (pn_ssl_set_peer_authentication( ssl, PN_SSL_ANONYMOUS_PEER, NULL )) {
+      return -2;
+    }
     break;
   }
+
+  DH *dh = get_dh2048();
+  if (dh) {
+    SSL_CTX_set_tmp_dh(ssl->ctx, dh);
+    DH_free(dh);
+    SSL_CTX_set_options(ssl->ctx, SSL_OP_SINGLE_DH_USE);
+  }
+
   return 0;
 }
 
@@ -550,7 +650,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
           _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
-          _log_ssl_error(ssl);
+          _log_ssl_error(ssl, NULL);
           start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
           ssl->ssl_closed = true;
         } else {
@@ -668,7 +768,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
         } else {
           if (!BIO_should_retry(ssl->bio_ssl)) {
             _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
-            _log_ssl_error(ssl);
+            _log_ssl_error(ssl, NULL);
             start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
             ssl->out_count = 0;       // can no longer write to socket, so erase app output data
             ssl->ssl_closed = true;

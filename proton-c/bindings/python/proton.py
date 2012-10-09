@@ -1692,6 +1692,7 @@ class SSL(object):
 
   VERIFY_PEER = PN_SSL_VERIFY_PEER
   NO_VERIFY_PEER = PN_SSL_NO_VERIFY_PEER
+  ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
 
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
     return self._check( pn_ssl_set_peer_authentication(self._ssl, verify_mode,

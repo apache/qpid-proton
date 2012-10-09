@@ -72,6 +72,21 @@ class SslTest(common.Test):
         server_conn.close()
         self._pump()
 
+    def test_server_anonymous(self):
+        """ Simple SSL connection without configuring a server certificate, and
+        configuring the client to accept an unverified peer.
+        """
+        self.client.set_peer_authentication( SSL.ANONYMOUS_PEER )
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+        client_conn.close()
+        server_conn.close()
+        self._pump()
 
     def test_client_authentication(self):
         """ @TODO: fix

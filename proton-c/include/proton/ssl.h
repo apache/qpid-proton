@@ -128,10 +128,25 @@ int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
 int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl);
 
 
-/** Determines the level of peer certificate validation. */
+/** Determines the level of peer validation.
+ *
+ *  VERIFY_PEER will only connect to those peers that provide a valid identifying
+ *  certificate signed by a trusted CA and are using an authenticated cipher.
+ *  NO_VERIFY_PEER does not require the peer to provide a certificate, but does require
+ *  use of an authenticated ciper.  ANONYMOUS_PEER not only does not require a valid
+ *  certificate, but it permits use of ciphers that do not provide authentication.
+ *
+ *  By default, a client will use VERIFY_PEER.
+ *
+ *  A server will initially use ANONYMOUS_PEER until a certificate is configured via
+ *  ::pn_ssl_set_credentials(), then the server will use NO_VERIFY_PEER.
+ *
+ *  These default settings can be changed via ::pn_ssl_set_peer_authentication()
+ */
 typedef enum {
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
-  PN_SSL_NO_VERIFY_PEER  /**< do not require peer to provide an identifying certificate */
+  PN_SSL_NO_VERIFY_PEER,  /**< do not require peer to provide an identifying certificate */
+  PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
 } pn_ssl_verify_mode_t;
 
 
