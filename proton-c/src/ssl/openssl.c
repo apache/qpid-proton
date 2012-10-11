@@ -150,6 +150,18 @@ static void _log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
   }
 }
 
+// unrecoverable SSL failure occured, notify transport and generate error code.
+static int ssl_failed(pn_ssl_t *ssl)
+{
+  // try to grab the first SSL error to add to the failure log
+  char buf[128] = "Unknown error.";
+  unsigned long ssl_err = ERR_get_error();
+  if (ssl_err) {
+    ERR_error_string_n( ssl_err, buf, sizeof(buf) );
+  }
+  return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
+}
+
 // @todo replace with a "reasonable" default (?), allow application to register its own
 // callback.
 #if 0
@@ -635,10 +647,18 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         work_pending = work_pending || ssl->in_count < APP_BUF_SIZE;
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
-          _log(ssl, "Read from SSL socket failed - SSL connection closed!!\n");
-          _log_ssl_error(ssl, NULL);
-          start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
-          ssl->ssl_closed = true;
+          int reason = SSL_get_error( ssl->ssl, read );
+          switch (reason) {
+          case SSL_ERROR_ZERO_RETURN:
+            // SSL closed cleanly
+            _log(ssl, "SSL connection has closed\n");
+            start_ssl_shutdown(ssl);  // KAG: not sure - this may not be necessary
+            ssl->ssl_closed = true;
+            break;
+          default:
+            // unexpected error
+            return (ssize_t)ssl_failed(ssl);
+          }
         } else {
           if (BIO_should_write( ssl->bio_ssl )) {
             ssl->write_blocked = true;
@@ -753,11 +773,19 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
           _log( ssl, "Wrote %d bytes from app to socket\n", wrote );
         } else {
           if (!BIO_should_retry(ssl->bio_ssl)) {
-            _log(ssl, "Write to SSL socket failed - SSL connection closed!!\n");
-            _log_ssl_error(ssl, NULL);
-            start_ssl_shutdown(ssl);      // KAG: not sure - this may be necessary
-            ssl->out_count = 0;       // can no longer write to socket, so erase app output data
-            ssl->ssl_closed = true;
+            int reason = SSL_get_error( ssl->ssl, wrote );
+            switch (reason) {
+            case SSL_ERROR_ZERO_RETURN:
+              // SSL closed cleanly
+              _log(ssl, "SSL connection has closed\n");
+              start_ssl_shutdown(ssl); // KAG: not sure - this may not be necessary
+              ssl->out_count = 0;      // can no longer write to socket, so erase app output data
+              ssl->ssl_closed = true;
+              break;
+            default:
+              // unexpected error
+              return (ssize_t)ssl_failed(ssl);
+            }
           } else {
             if (BIO_should_read( ssl->bio_ssl )) {
               ssl->read_blocked = true;
