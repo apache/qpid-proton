@@ -400,22 +400,11 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
-
-    // Since we will exchange certificates, we must avoid anonymous ciphers.
-    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
-      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
-      return -2;
-    }
     _log( ssl, "Peer authentication mode set to VERIFY-PEER\n");
     break;
 
   case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
     SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
-
-    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_ANONYMOUS )) {
-      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_ANONYMOUS);
-      return -2;
-    }
     _log( ssl, "Peer authentication mode set to ANONYMOUS-PEER\n");
     break;
 
@@ -524,6 +513,12 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
   }
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
+  if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_ANONYMOUS )) {
+    _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_ANONYMOUS);
+    return -2;
+  }
+
+  // ditto: by default do not authenticate the peer (can be done by SASL).
   if (pn_ssl_set_peer_authentication( ssl, PN_SSL_ANONYMOUS_PEER, NULL )) {
     return -2;
   }
