@@ -55,15 +55,25 @@ class SslTest(common.Test):
 
     def test_defaults(self):
         """ By default, both the server and the client support anonymous
-        ciphers.
+        ciphers - they should connect without need for a certificate.
         """
         client_conn = Connection()
         self.t_client.bind(client_conn)
         server_conn = Connection()
         self.t_server.bind(server_conn)
+
+        # check that no SSL connection exists
+        assert not self.server.cipher_name()
+        assert not self.client.protocol_name()
+
         client_conn.open()
         server_conn.open()
         self._pump()
+
+        # now SSL should be active
+        assert self.server.cipher_name() is not None
+        assert self.client.protocol_name() is not None
+
         client_conn.close()
         server_conn.close()
         self._pump()
@@ -83,6 +93,7 @@ class SslTest(common.Test):
         client_conn.open()
         server_conn.open()
         self._pump()
+        assert self.client.protocol_name() is not None
         client_conn.close()
         server_conn.close()
         self._pump()
@@ -104,6 +115,7 @@ class SslTest(common.Test):
         client_conn.open()
         server_conn.open()
         self._pump()
+        assert self.client.protocol_name() is not None
         client_conn.close()
         server_conn.close()
         self._pump()
@@ -133,6 +145,7 @@ class SslTest(common.Test):
         client_conn.open()
         server_conn.open()
         self._pump()
+        assert self.client.protocol_name() is not None
         client_conn.close()
         server_conn.close()
         self._pump()
@@ -161,6 +174,7 @@ class SslTest(common.Test):
         client_conn.open()
         server_conn.open()
         self._pump()
+        assert self.client.protocol_name() is not None
         client_conn.close()
         server_conn.close()
         self._pump()

@@ -13,6 +13,7 @@
 
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
+%cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
 %typemap(in) pn_bytes_t {
   if ($input == Py_None) {
@@ -392,5 +393,12 @@ ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 
 int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_data_format;
+
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
+%ignore pn_ssl_get_cipher_name;
+
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
+%ignore pn_ssl_get_protocol_name;
+
 
 %include "proton/cproton.i"

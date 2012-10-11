@@ -179,13 +179,37 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
  * returned.
  * @param[in,out] trusted_CAs_size on input set to the number of octets in trusted_CAs.
  * on output, set to the number of octets needed to hold the value of trusted_CAs plus a
- * null byte.  @return 0 on success
+ * null byte.
+ * @return 0 on success
  */
 int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
                                    pn_ssl_verify_mode_t *mode,
                                    char *trusted_CAs, size_t *trusted_CAs_size);
 
+/** Get the name of the Cipher that is currently in use.
+ *
+ * Gets a text description of the cipher that is currently active, or returns FALSE if SSL
+ * is not active (no cipher).  Note that the cipher in use may change over time due to
+ * renegotiation or other changes to the SSL state.
+ *
+ * @param[in] ssl the ssl client/server to query.
+ * @param[in,out] buffer buffer of size bytes to hold cipher name
+ * @param[in] size maximum number of bytes in buffer.
+ * @return True if cipher name written to buffer, False if no cipher in use.
+ */
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
+/** Get the name of the SSL protocol that is currently in use.
+ *
+ * Gets a text description of the SSL protocol that is currently active, or returns FALSE if SSL
+ * is not active.  Note that the protocol may change over time due to renegotiation.
+ *
+ * @param[in] ssl the ssl client/server to query.
+ * @param[in,out] buffer buffer of size bytes to hold the version identifier
+ * @param[in] size maximum number of bytes in buffer.
+ * @return True if the version information was to buffer, False if SSL connection not ready.
+ */
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
 #ifdef __cplusplus
 }
 #endif

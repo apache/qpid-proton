@@ -20,6 +20,7 @@ typedef int int32_t;
 
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
+%cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
 %{
 #if !defined(RSTRING_LEN)
@@ -264,5 +265,12 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
   }
 %}
 %ignore pn_message_data;
+
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
+%ignore pn_ssl_get_cipher_name;
+
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
+%ignore pn_ssl_get_protocol_name;
+
 
 %include "proton/cproton.i"

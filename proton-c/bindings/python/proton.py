@@ -1825,6 +1825,17 @@ class SSL(object):
     # @TODO: fix up buffer return value...
     pass
 
+  def cipher_name(self):
+    rc, name = pn_ssl_get_cipher_name( self._ssl, 128 )
+    if rc:
+      return name
+    return None
+
+  def protocol_name(self):
+    rc, name = pn_ssl_get_protocol_name( self._ssl, 128 )
+    if rc:
+      return name
+    return None
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",

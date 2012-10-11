@@ -451,6 +451,39 @@ int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
   return 0;
 }
 
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
+{
+  const SSL_CIPHER *c;
+
+  if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
+    const char *v = SSL_CIPHER_get_name(c);
+    if (v) {
+      size_t len = pn_min( strlen(v), size );
+      strncpy(buffer, v, len);
+      buffer[len] = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
+{
+  const SSL_CIPHER *c;
+
+  if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
+    const char *v = SSL_CIPHER_get_version(c);
+    if (v) {
+      size_t len = pn_min( strlen(v), size );
+      strncpy(buffer, v, len);
+      buffer[len] = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+
 
 int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
 {
