@@ -87,7 +87,7 @@ struct pn_ssl_t {
 // define two sets of allowable ciphers: those that require authentication, and those
 // that do not require authentication (anonymous).  See ciphers(1).
 #define CIPHERS_AUTHENTICATE    "ALL:!aNULL:!eNULL:@STRENGTH"
-#define CIPHERS_ANONYMOUS       "ALL:+aNULL:!eNULL:@STRENGTH"
+#define CIPHERS_ANONYMOUS       "ALL:aNULL:!eNULL:@STRENGTH"
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
@@ -281,14 +281,6 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
 
   ssl->has_certificate = true;
 
-  // Now that a certificate is configured, we can eliminate those ciphers that do not
-  // authenticate as they are vulnerable to Man in the Middle attacks.
-  if (ssl->verify_mode == PN_SSL_ANONYMOUS_PEER) {
-    if (pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL)) {
-      return -2;
-    }
-  }
-
   _log( ssl, "Configured local certificate file %s\n", certificate_file );
   return 0;
 }
@@ -362,12 +354,22 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
 
+    if (!ssl->has_ca_db) {
+      _log_error("Error: cannot verify peer without a trusted CA configured.\n"
+                 "       Use pn_ssl_set_trusted_ca_db()\n");
+      return -1;
+    }
+
     if (ssl->mode == PN_SSL_MODE_SERVER) {
       // openssl requires that server connections supply a list of trusted CAs which is
       // sent to the client
       if (!trusted_CAs) {
         _log_error("Error: a list of trusted CAs must be provided.\n");
         return -1;
+      }
+      if (!ssl->has_certificate) {
+      _log_error("Error: Server cannot verify peer without configuring a certificate.\n"
+                 "       Use pn_ssl_set_credentials()\n");
       }
 
       ssl->trusted_CAs = pn_strdup( trusted_CAs );
@@ -387,8 +389,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
     SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
 
-    // Since we require the peer to authenticate, we should avoid anonymous ciphers (KAG:
-    // is this a reasonable approach?)
+    // Since we will exchange certificates, we must avoid anonymous ciphers.
     if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
       _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
       return -2;
@@ -397,6 +398,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
     break;
 
   case PN_SSL_NO_VERIFY_PEER:
+    // @todo - punt this setting?
     SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
 
     // Still require authenticating ciphers, since they are stronger than anonymous (KAG:
@@ -472,12 +474,6 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
       _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
       return -1;
     }
-
-    // default: always verify the remote server, and only use ciphers that authenticate.
-    // This can be changed by pn_ssl_set_peer_authentication().
-    if (pn_ssl_set_peer_authentication( ssl, PN_SSL_VERIFY_PEER, NULL)) {
-      return -2;
-    }
     break;
 
   case PN_SSL_MODE_SERVER:
@@ -488,13 +484,16 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
       _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
       return -1;
     }
-
-    // default: no client authentication, allow ciphers that do not support
-    // authentication (until a certificate is configured).
-    if (pn_ssl_set_peer_authentication( ssl, PN_SSL_ANONYMOUS_PEER, NULL )) {
-      return -2;
-    }
     break;
+
+  default:
+    _log_error("Invalid valid for pn_ssl_mode_t: %d\n", mode);
+    return -1;
+  }
+
+  // by default, allow anonymous ciphers so certificates are not required 'out of the box'
+  if (pn_ssl_set_peer_authentication( ssl, PN_SSL_ANONYMOUS_PEER, NULL )) {
+    return -2;
   }
 
   DH *dh = get_dh2048();

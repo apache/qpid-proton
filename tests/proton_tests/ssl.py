@@ -53,14 +53,10 @@ class SslTest(common.Test):
         return os.path.join(os.path.dirname(__file__),
                             "ssl_db/%s" % file)
 
-    def test_server_authentication(self):
-        """ Simple SSL connection with authentication of the server
+    def test_defaults(self):
+        """ By default, both the server and the client support anonymous
+        ciphers.
         """
-        self.server.set_credentials(self._testpath("server-certificate.pem"),
-                                    self._testpath("server-private-key.pem"),
-                                    "server-password")
-        self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-
         client_conn = Connection()
         self.t_client.bind(client_conn)
         server_conn = Connection()
@@ -72,11 +68,35 @@ class SslTest(common.Test):
         server_conn.close()
         self._pump()
 
-    def test_server_anonymous(self):
-        """ Simple SSL connection without configuring a server certificate, and
-        configuring the client to accept an unverified peer.
+
+    def test_server_certificate(self):
+        """ Test that anonymous clients can still connect to a server that has
+        a certificate configured.
         """
-        self.client.set_peer_authentication( SSL.ANONYMOUS_PEER )
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+        client_conn.close()
+        server_conn.close()
+        self._pump()
+
+    def test_server_authentication(self):
+        """ Simple SSL connection with authentication of the server
+        """
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+
+        self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client.set_peer_authentication( SSL.VERIFY_PEER )
+
         client_conn = Connection()
         self.t_client.bind(client_conn)
         server_conn = Connection()
@@ -89,16 +109,50 @@ class SslTest(common.Test):
         self._pump()
 
     def test_client_authentication(self):
-        """ @TODO: fix
+        """ Force the client to authenticate.
+        """
+        # note: when requesting client auth, the server _must_ send its
+        # certificate, so make sure we configure one!
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        self.server.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server.set_peer_authentication( SSL.VERIFY_PEER,
+                                             self._testpath("ca-certificate.pem") )
+
+        # give the client a certificate, but let's not require server authentication
+        self.client.set_credentials(self._testpath("client-certificate.pem"),
+                                    self._testpath("client-private-key.pem"),
+                                    "client-password")
+        self.client.set_peer_authentication( SSL.ANONYMOUS_PEER )
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+        client_conn.close()
+        server_conn.close()
+        self._pump()
+
+
+    def test_client_server_authentication(self):
+        """ Require both client and server to mutually identify themselves.
         """
         self.server.set_credentials(self._testpath("server-certificate.pem"),
                                     self._testpath("server-private-key.pem"),
                                     "server-password")
         self.server.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server.set_peer_authentication( SSL.VERIFY_PEER,
+                                             self._testpath("ca-certificate.pem") )
+
         self.client.set_credentials(self._testpath("client-certificate.pem"),
                                     self._testpath("client-private-key.pem"),
                                     "client-password")
         self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client.set_peer_authentication( SSL.VERIFY_PEER )
 
         client_conn = Connection()
         self.t_client.bind(client_conn)

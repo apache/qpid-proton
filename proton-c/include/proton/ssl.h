@@ -156,6 +156,12 @@ typedef enum {
  * SSL servers do not attempt to verify their peers (PN_SSL_NO_VERIFY), and SSL clients
  * require the remote to provide a valid certificate (PN_SSL_VERIFY_PEER).
  *
+ * @note In order to verify a peer, a trusted CA must be configured. See
+ * ::pn_ssl_set_trusted_ca_db().
+ *
+ * @note Servers must provide their own certificate when verifying a peer.  See
+ * ::pn_ssl_set_credentials().
+ *
  * @param[in] ssl the ssl client/server to configure.
  * @param[in] mode the level of validation to apply to the peer's certificate.
  * @param[in] trusted_CAs path to a database of trusted CAs that the server will advertise
