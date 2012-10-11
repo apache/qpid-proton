@@ -397,19 +397,6 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
     _log( ssl, "Peer authentication mode set to VERIFY-PEER\n");
     break;
 
-  case PN_SSL_NO_VERIFY_PEER:
-    // @todo - punt this setting?
-    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
-
-    // Still require authenticating ciphers, since they are stronger than anonymous (KAG:
-    // again - ok?)
-    if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
-      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
-      return -2;
-    }
-    _log( ssl, "Peer authentication mode set to NO-VERIFY-PEER\n");
-    break;
-
   case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
     SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_NONE, NULL );
 

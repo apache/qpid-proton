@@ -132,20 +132,15 @@ int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl);
  *
  *  VERIFY_PEER will only connect to those peers that provide a valid identifying
  *  certificate signed by a trusted CA and are using an authenticated cipher.
- *  NO_VERIFY_PEER does not require the peer to provide a certificate, but does require
- *  use of an authenticated ciper.  ANONYMOUS_PEER not only does not require a valid
- *  certificate, but it permits use of ciphers that do not provide authentication.
+ *  ANONYMOUS_PEER does not require a valid certificate, and permits use of ciphers that
+ *  do not provide authentication.
  *
- *  By default, a client will use VERIFY_PEER.
+ *  ANONYMOUS_PEER is configured by default.
  *
- *  A server will initially use ANONYMOUS_PEER until a certificate is configured via
- *  ::pn_ssl_set_credentials(), then the server will use NO_VERIFY_PEER.
- *
- *  These default settings can be changed via ::pn_ssl_set_peer_authentication()
+ *  These settings can be changed via ::pn_ssl_set_peer_authentication()
  */
 typedef enum {
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
-  PN_SSL_NO_VERIFY_PEER,  /**< do not require peer to provide an identifying certificate */
   PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
 } pn_ssl_verify_mode_t;
 
@@ -153,8 +148,8 @@ typedef enum {
 /** Configure the level of verification used on the peer certificate.
  *
  * This method controls how the peer's certificate is validated, if at all.  By default,
- * SSL servers do not attempt to verify their peers (PN_SSL_NO_VERIFY), and SSL clients
- * require the remote to provide a valid certificate (PN_SSL_VERIFY_PEER).
+ * neither servers nor clients attempt to verify their peers (PN_SSL_ANONYMOUS_PEER).
+ * Once certificates and trusted CAs are configured, peer verification can be enabled.
  *
  * @note In order to verify a peer, a trusted CA must be configured. See
  * ::pn_ssl_set_trusted_ca_db().
@@ -163,7 +158,7 @@ typedef enum {
  * ::pn_ssl_set_credentials().
  *
  * @param[in] ssl the ssl client/server to configure.
- * @param[in] mode the level of validation to apply to the peer's certificate.
+ * @param[in] mode the level of validation to apply to the peer
  * @param[in] trusted_CAs path to a database of trusted CAs that the server will advertise
  * to the peer client if the server has been configured to verify its peer.
  * @return 0 on success
@@ -176,7 +171,6 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
  *
  * Access the current peer certificate validation level.  See
  * ::pn_ssl_set_peer_authentication().
- *
  *
  * @param[in] ssl the ssl client/server to query.
  * @param[out] mode the level of validation that will be applied to the peer's certificate.
