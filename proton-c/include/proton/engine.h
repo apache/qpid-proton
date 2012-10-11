@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
+#include <proton/codec.h>
 #include <proton/error.h>
 
 #ifdef __cplusplus
@@ -41,6 +42,24 @@ typedef struct pn_transport_t pn_transport_t;
 typedef struct pn_connection_t pn_connection_t; /**< Connection */
 typedef struct pn_session_t pn_session_t;       /**< Session */
 typedef struct pn_link_t pn_link_t;             /**< Link */
+typedef struct pn_terminus_t pn_terminus_t;
+typedef enum {
+  PN_UNSPECIFIED = 0,
+  PN_SOURCE = 1,
+  PN_TARGET = 2,
+  PN_COORDINATOR = 3
+} pn_terminus_type_t;
+typedef enum {
+  PN_NONDURABLE = 0,
+  PN_CONFIGURATION = 1,
+  PN_DELIVERIES = 2
+} pn_durability_t;
+typedef enum {
+  PN_LINK_CLOSE,
+  PN_SESSION_CLOSE,
+  PN_CONNECTION_CLOSE,
+  PN_NEVER,
+} pn_expiry_policy_t;
 typedef struct pn_delivery_t pn_delivery_t;
 
 typedef struct pn_delivery_tag_t {
@@ -276,12 +295,10 @@ bool pn_link_is_receiver(pn_link_t *link);
 pn_state_t pn_link_state(pn_link_t *link);
 pn_error_t *pn_link_error(pn_link_t *link);
 pn_session_t *pn_link_session(pn_link_t *link);
-const char *pn_link_get_target(pn_link_t *link);
-const char *pn_link_get_source(pn_link_t *link);
-void pn_link_set_source(pn_link_t *link, const char *source);
-void pn_link_set_target(pn_link_t *link, const char *target);
-const char *pn_link_remote_source(pn_link_t *link);
-const char *pn_link_remote_target(pn_link_t *link);
+pn_terminus_t *pn_link_source(pn_link_t *link);
+pn_terminus_t *pn_link_target(pn_link_t *link);
+pn_terminus_t *pn_link_remote_source(pn_link_t *link);
+pn_terminus_t *pn_link_remote_target(pn_link_t *link);
 pn_delivery_t *pn_link_current(pn_link_t *link);
 bool pn_link_advance(pn_link_t *link);
 int pn_link_credit(pn_link_t *link);
@@ -308,6 +325,27 @@ void pn_link_drained(pn_link_t *sender);
 void pn_link_flow(pn_link_t *receiver, int credit);
 void pn_link_drain(pn_link_t *receiver, int credit);
 ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
+
+// terminus
+pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus);
+int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type);
+
+const char *pn_terminus_get_address(pn_terminus_t *terminus);
+int pn_terminus_set_address(pn_terminus_t *terminus, const char *address);
+pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus);
+int pn_terminus_set_durability(pn_terminus_t *terminus,
+                               pn_durability_t durability);
+pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
+int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
+pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus);
+int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t);
+bool pn_terminus_is_dynamic(pn_terminus_t *terminus);
+int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic);
+pn_data_t *pn_terminus_properties(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_filter(pn_terminus_t *terminus);
+int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src);
 
 // delivery
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);

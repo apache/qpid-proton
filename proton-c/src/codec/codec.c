@@ -176,7 +176,7 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
   case PN_DECIMAL64:
     return pn_bytes_format(bytes, "D64(%" PRIu64 ")", atom.u.as_decimal64);
   case PN_DECIMAL128:
-    return pn_bytes_format(bytes, "D128(%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x)",
+    return pn_bytes_format(bytes, "D128(%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx)",
                            atom.u.as_decimal128.bytes[0],
                            atom.u.as_decimal128.bytes[1],
                            atom.u.as_decimal128.bytes[2],
@@ -194,7 +194,9 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
                            atom.u.as_decimal128.bytes[14],
                            atom.u.as_decimal128.bytes[15]);
   case PN_UUID:
-    return pn_bytes_format(bytes, "UUID(%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x)",
+    return pn_bytes_format(bytes, "UUID(%02hhx%02hhx%02hhx%02hhx-"
+                           "%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-"
+                           "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx)",
                            atom.u.as_uuid.bytes[0],
                            atom.u.as_uuid.bytes[1],
                            atom.u.as_uuid.bytes[2],
@@ -1834,9 +1836,16 @@ struct pn_data_t {
   pn_buffer_t *buf;
   size_t parent;
   size_t current;
+  size_t base_parent;
+  size_t base_current;
   size_t extras;
   pn_error_t *error;
 };
+
+typedef struct {
+  size_t parent;
+  size_t current;
+} pn_point_t;
 
 pn_data_t *pn_data(size_t capacity)
 {
@@ -1847,6 +1856,8 @@ pn_data_t *pn_data(size_t capacity)
   data->buf = pn_buffer(64);
   data->parent = 0;
   data->current = 0;
+  data->base_parent = 0;
+  data->base_current = 0;
   data->extras = 0;
   data->error = pn_error();
   return data;
@@ -1884,6 +1895,8 @@ void pn_data_clear(pn_data_t *data)
     data->extras = 0;
     data->parent = 0;
     data->current = 0;
+    data->base_parent = 0;
+    data->base_current = 0;
     pn_buffer_clear(data->buf);
   }
 }
@@ -2097,6 +2110,18 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
+    case 'C':
+      {
+        pn_data_t *src = va_arg(ap, pn_data_t *);
+        if (src && pn_data_size(src) > 0) {
+          err = pn_data_appendn(data, src, 1);
+          if (err) return err;
+        } else {
+          err = pn_data_put_null(data);
+          if (err) return err;
+        }
+      }
+      break;
     default:
       fprintf(stderr, "unrecognized fill code: 0x%.2X '%c'\n", code, code);
       return PN_ARG_ERR;
@@ -2153,6 +2178,8 @@ static bool pn_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
     }
   }
 }
+
+pn_node_t *pn_data_peek(pn_data_t *data);
 
 int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
 {
@@ -2495,6 +2522,28 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
         return pn_error_format(data->error, PN_ARG_ERR, "codes must follow a ?");
       scanarg = va_arg(ap, bool *);
       break;
+    case 'C':
+      {
+        pn_data_t *dst = va_arg(ap, pn_data_t *);
+        if (!suspend) {
+          size_t old = pn_data_size(dst);
+          pn_node_t *next = pn_data_peek(data);
+          if (next && next->atom.type != PN_NULL) {
+            pn_data_narrow(data);
+            int err = pn_data_appendn(dst, data, 1);
+            pn_data_widen(data);
+            if (err) return err;
+            scanned = pn_data_size(dst) > old;
+          } else {
+            scanned = false;
+          }
+          pn_data_next(data);
+        } else {
+          scanned = false;
+        }
+      }
+      if (resume_count && level == count_level) resume_count--;
+      break;
     default:
       return pn_error_format(data->error, PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
@@ -2578,13 +2627,59 @@ pn_node_t *pn_data_new(pn_data_t *data)
 
 void pn_data_rewind(pn_data_t *data)
 {
-  data->parent = 0;
-  data->current = 0;
+  data->parent = data->base_parent;
+  data->current = data->base_current;
 }
 
 pn_node_t *pn_data_current(pn_data_t *data)
 {
   return pn_data_node(data, data->current);
+}
+
+void pn_data_narrow(pn_data_t *data)
+{
+  data->base_parent = data->parent;
+  data->base_current = data->current;
+}
+
+void pn_data_widen(pn_data_t *data)
+{
+  data->base_parent = 0;
+  data->base_current = 0;
+}
+
+pn_point_t pn_data_point(pn_data_t *data)
+{
+  pn_point_t point;
+  point.parent = data->parent;
+  point.current = data->current;
+  return point;
+}
+
+bool pn_data_restore(pn_data_t *data, pn_point_t point)
+{
+  if (point.current && point.current <= data->size) {
+    data->current = point.current;
+    pn_node_t *current = pn_data_current(data);
+    data->parent = current->parent;
+    return true;
+  } else if (point.parent && point.parent <= data->size) {
+    data->parent = point.parent;
+    data->current = 0;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+pn_node_t *pn_data_peek(pn_data_t *data)
+{
+  pn_node_t *current = pn_data_current(data);
+  if (current) {
+    return pn_data_node(data, current->next);
+  } else {
+    return NULL;
+  }
 }
 
 bool pn_data_next(pn_data_t *data)
@@ -3459,4 +3554,175 @@ pn_bytes_t pn_data_get_symbol(pn_data_t *data)
   } else {
     return (pn_bytes_t) {0};
   }
+}
+
+int pn_data_copy(pn_data_t *data, pn_data_t *src)
+{
+  pn_data_clear(data);
+  int err = pn_data_append(data, src);
+  pn_data_rewind(data);
+  return err;
+}
+
+int pn_data_append(pn_data_t *data, pn_data_t *src)
+{
+  return pn_data_appendn(data, src, -1);
+}
+
+int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
+{
+  int err;
+  int level = 0, count = 0;
+  bool stop = false;
+  pn_point_t point = pn_data_point(src);
+  pn_data_rewind(src);
+
+  while (true) {
+    while (!pn_data_next(src)) {
+      if (level > 0) {
+        pn_data_exit(data);
+        pn_data_exit(src);
+        level--;
+      }
+
+      if (!pn_data_next(src)) {
+        stop = true;
+        break;
+      }
+    }
+
+    if (stop) break;
+
+    if (level == 0 && count == limit)
+      break;
+
+    pn_type_t type = pn_data_type(src);
+    switch (type) {
+    case PN_NULL:
+      err = pn_data_put_null(data);
+      if (level == 0) count++;
+      break;
+    case PN_BOOL:
+      err = pn_data_put_bool(data, pn_data_get_bool(src));
+      if (level == 0) count++;
+      break;
+    case PN_UBYTE:
+      err = pn_data_put_ubyte(data, pn_data_get_ubyte(src));
+      if (level == 0) count++;
+      break;
+    case PN_BYTE:
+      err = pn_data_put_byte(data, pn_data_get_byte(src));
+      if (level == 0) count++;
+      break;
+    case PN_USHORT:
+      err = pn_data_put_ushort(data, pn_data_get_ushort(src));
+      if (level == 0) count++;
+      break;
+    case PN_SHORT:
+      err = pn_data_put_short(data, pn_data_get_short(src));
+      if (level == 0) count++;
+      break;
+    case PN_UINT:
+      err = pn_data_put_uint(data, pn_data_get_uint(src));
+      if (level == 0) count++;
+      break;
+    case PN_INT:
+      err = pn_data_put_int(data, pn_data_get_int(src));
+      if (level == 0) count++;
+      break;
+    case PN_CHAR:
+      err = pn_data_put_char(data, pn_data_get_char(src));
+      if (level == 0) count++;
+      break;
+    case PN_ULONG:
+      err = pn_data_put_ulong(data, pn_data_get_ulong(src));
+      if (level == 0) count++;
+      break;
+    case PN_LONG:
+      err = pn_data_put_long(data, pn_data_get_long(src));
+      if (level == 0) count++;
+      break;
+    case PN_TIMESTAMP:
+      err = pn_data_put_timestamp(data, pn_data_get_timestamp(src));
+      if (level == 0) count++;
+      break;
+    case PN_FLOAT:
+      err = pn_data_put_float(data, pn_data_get_float(src));
+      if (level == 0) count++;
+      break;
+    case PN_DOUBLE:
+      err = pn_data_put_double(data, pn_data_get_double(src));
+      if (level == 0) count++;
+      break;
+    case PN_DECIMAL32:
+      err = pn_data_put_decimal32(data, pn_data_get_decimal32(src));
+      if (level == 0) count++;
+      break;
+    case PN_DECIMAL64:
+      err = pn_data_put_decimal64(data, pn_data_get_decimal64(src));
+      if (level == 0) count++;
+      break;
+    case PN_DECIMAL128:
+      err = pn_data_put_decimal128(data, pn_data_get_decimal128(src));
+      if (level == 0) count++;
+      break;
+    case PN_UUID:
+      err = pn_data_put_uuid(data, pn_data_get_uuid(src));
+      if (level == 0) count++;
+      break;
+    case PN_BINARY:
+      err = pn_data_put_binary(data, pn_data_get_binary(src));
+      if (level == 0) count++;
+      break;
+    case PN_STRING:
+      err = pn_data_put_string(data, pn_data_get_string(src));
+      if (level == 0) count++;
+      break;
+    case PN_SYMBOL:
+      err = pn_data_put_symbol(data, pn_data_get_symbol(src));
+      if (level == 0) count++;
+      break;
+    case PN_DESCRIPTOR:
+      err = pn_data_put_described(data);
+      if (level == 0) count++;
+      if (err) { pn_data_restore(src, point); return err; }
+      pn_data_enter(data);
+      pn_data_enter(src);
+      level++;
+      break;
+    case PN_ARRAY:
+      err = pn_data_put_array(data, pn_data_is_array_described(src),
+                              pn_data_get_array_type(src));
+      if (level == 0) count++;
+      if (err) { pn_data_restore(src, point); return err; }
+      pn_data_enter(data);
+      pn_data_enter(src);
+      level++;
+      break;
+    case PN_LIST:
+      err = pn_data_put_list(data);
+      if (level == 0) count++;
+      if (err) { pn_data_restore(src, point); return err; }
+      pn_data_enter(data);
+      pn_data_enter(src);
+      level++;
+      break;
+    case PN_MAP:
+      err = pn_data_put_map(data);
+      if (level == 0) count++;
+      if (err) { pn_data_restore(src, point); return err; }
+      pn_data_enter(data);
+      pn_data_enter(src);
+      level++;
+      break;
+    case PN_TYPE:
+      return PN_ERR;
+    }
+
+    if (err) { pn_data_restore(src, point); return err; }
+  }
+
+  pn_data_restore(src, point);
+
+  return 0;
 }

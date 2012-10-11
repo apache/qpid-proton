@@ -67,6 +67,9 @@ struct pn_message_t {
   pn_buffer_t *reply_to_group_id;
 
   pn_data_t *data;
+  pn_data_t *instructions;
+  pn_data_t *annotations;
+  pn_data_t *properties;
   pn_data_t *body;
 
   pn_format_t format;
@@ -95,8 +98,11 @@ pn_message_t *pn_message()
   msg->group_id = NULL;
   msg->group_sequence = 0;
   msg->reply_to_group_id = NULL;
-  msg->data = NULL;
-  msg->body = NULL;
+  msg->data = pn_data(16);
+  msg->instructions = pn_data(16);
+  msg->annotations = pn_data(16);
+  msg->properties = pn_data(16);
+  msg->body = pn_data(16);
   msg->format = PN_DATA;
   msg->parser = NULL;
   msg->error = pn_error();
@@ -115,6 +121,9 @@ void pn_message_free(pn_message_t *msg)
     pn_buffer_free(msg->group_id);
     pn_buffer_free(msg->reply_to_group_id);
     pn_data_free(msg->data);
+    pn_data_free(msg->instructions);
+    pn_data_free(msg->annotations);
+    pn_data_free(msg->properties);
     pn_data_free(msg->body);
     pn_parser_free(msg->parser);
     pn_error_free(msg->error);
@@ -142,8 +151,11 @@ void pn_message_clear(pn_message_t *msg)
   if (msg->group_id) pn_buffer_clear(msg->group_id);
   msg->group_sequence = 0;
   if (msg->reply_to_group_id) pn_buffer_clear(msg->reply_to_group_id);
-  if (msg->data) pn_data_clear(msg->data);
-  if (msg->body) pn_data_clear(msg->body);
+  pn_data_clear(msg->data);
+  pn_data_clear(msg->instructions);
+  pn_data_clear(msg->annotations);
+  pn_data_clear(msg->properties);
+  pn_data_clear(msg->body);
 }
 
 int pn_message_errno(pn_message_t *msg)
@@ -414,14 +426,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   if (!msg || !bytes || !size) return PN_ARG_ERR;
 
-  if (!msg->data) {
-    msg->data = pn_data(64);
-  }
-  if (!msg->body) {
-    msg->body = pn_data(64);
-  }
-
-  pn_data_clear(msg->body);
+  pn_message_clear(msg);
 
   while (size) {
     pn_data_clear(msg->data);
@@ -435,9 +440,14 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
     if (err) return pn_error_format(msg->error, err, "data error: %s",
                                     pn_data_error(msg->data));
-    if (!scanned){
+    if (!scanned) {
       desc = 0;
     }
+
+    pn_data_rewind(msg->data);
+    pn_data_next(msg->data);
+    pn_data_enter(msg->data);
+    pn_data_next(msg->data);
 
     switch (desc) {
     case HEADER:
@@ -475,14 +485,23 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       }
       break;
     case DELIVERY_ANNOTATIONS:
+      pn_data_narrow(msg->data);
+      err = pn_data_copy(msg->instructions, msg->data);
+      if (err) return err;
+      break;
     case MESSAGE_ANNOTATIONS:
+      pn_data_narrow(msg->data);
+      err = pn_data_copy(msg->annotations, msg->data);
+      if (err) return err;
+      break;
+    case APPLICATION_PROPERTIES:
+      pn_data_narrow(msg->data);
+      err = pn_data_copy(msg->properties, msg->data);
+      if (err) return err;
       break;
     default:
-      {
-        pn_data_t *data = msg->body;
-        msg->body = msg->data;
-        msg->data = data;
-      }
+      err = pn_data_copy(msg->body, msg->data);
+      if (err) return err;
       break;
     }
   }
@@ -510,6 +529,30 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_data_error(msg->data));
 
+  if (pn_data_size(msg->instructions)) {
+    pn_data_put_described(msg->data);
+    pn_data_enter(msg->data);
+    pn_data_put_ulong(msg->data, DELIVERY_ANNOTATIONS);
+    pn_data_rewind(msg->instructions);
+    err = pn_data_append(msg->data, msg->instructions);
+    if (err)
+      return pn_error_format(msg->error, err, "data error: %s",
+                             pn_data_error(msg->data));
+    pn_data_exit(msg->data);
+  }
+
+  if (pn_data_size(msg->annotations)) {
+    pn_data_put_described(msg->data);
+    pn_data_enter(msg->data);
+    pn_data_put_ulong(msg->data, MESSAGE_ANNOTATIONS);
+    pn_data_rewind(msg->annotations);
+    err = pn_data_append(msg->data, msg->annotations);
+    if (err)
+      return pn_error_format(msg->error, err, "data error: %s",
+                             pn_data_error(msg->data));
+    pn_data_exit(msg->data);
+  }
+
   err = pn_data_fill(msg->data, "DL[nzSSSnssttSIS]", PROPERTIES,
                      pn_buffer_bytes(msg->user_id),
                      pn_buffer_str(msg->address),
@@ -526,23 +569,38 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_data_error(msg->data));
 
+  if (pn_data_size(msg->properties)) {
+    pn_data_put_described(msg->data);
+    pn_data_enter(msg->data);
+    pn_data_put_ulong(msg->data, APPLICATION_PROPERTIES);
+    pn_data_rewind(msg->properties);
+    err = pn_data_append(msg->data, msg->properties);
+    if (err)
+      return pn_error_format(msg->error, err, "data error: %s",
+                             pn_data_error(msg->data));
+    pn_data_exit(msg->data);
+  }
+
   size_t remaining = *size;
-  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
-  if (encoded < 0)
-    return pn_error_format(msg->error, encoded, "data error: %s",
-                           pn_data_error(msg->data));
+  ssize_t encoded;
 
-  bytes += encoded;
-  remaining -= encoded;
+  pn_data_t *sections[2] = {
+    msg->data, msg->body
+  };
 
-  encoded = pn_data_encode(msg->body, bytes, remaining);
-  if (encoded < 0)
-    return pn_error_format(msg->error, encoded, "data error: %s",
-                           pn_data_error(msg->body));
-  bytes += encoded;
-  remaining -= encoded;
+  for (int i = 0; i < 2; i++) {
+    encoded = pn_data_encode(sections[i], bytes, remaining);
+    if (encoded < 0)
+      return pn_error_format(msg->error, encoded, "data error: %s",
+                             pn_data_error(sections[i]));
+
+    bytes += encoded;
+    remaining -= encoded;
+  }
 
   *size -= remaining;
+
+  pn_data_clear(msg->data);
 
   return 0;
 }
@@ -683,7 +741,7 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
 {
   if (!msg) return PN_ARG_ERR;
 
-  if (!msg->body) {
+  if (pn_data_size(msg->body) == 0) {
     *size = 0;
     return 0;
   }
@@ -731,4 +789,24 @@ int pn_message_save_json(pn_message_t *msg, char *data, size_t *size)
   // XXX: unsupported format
 
   return PN_ERR;
+}
+
+pn_data_t *pn_message_instructions(pn_message_t *msg)
+{
+  return msg ? msg->instructions : NULL;
+}
+
+pn_data_t *pn_message_annotations(pn_message_t *msg)
+{
+  return msg ? msg->annotations : NULL;
+}
+
+pn_data_t *pn_message_properties(pn_message_t *msg)
+{
+  return msg ? msg->properties : NULL;
+}
+
+pn_data_t *pn_message_body(pn_message_t *msg)
+{
+  return msg ? msg->body : NULL;
 }

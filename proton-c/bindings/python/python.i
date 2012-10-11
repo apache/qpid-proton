@@ -390,5 +390,7 @@ ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %}
 %ignore pn_sasl_recv;
 
+int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_data_format;
 
 %include "proton/cproton.i"

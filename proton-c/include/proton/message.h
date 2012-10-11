@@ -103,22 +103,6 @@ int            pn_message_set_group_sequence    (pn_message_t *msg, pn_sequence_
 const char *   pn_message_get_reply_to_group_id (pn_message_t *msg);
 int            pn_message_set_reply_to_group_id (pn_message_t *msg, const char *reply_to_group_id);
 
-/* path based getters/setters, allows access to delivery-annotations,
-   message-annotations, application-properties, footer */
-
-/*
-uint32_t       pn_message_get_uint32            (pn_message_t *msg, const char *path);
-int            pn_message_set_uint32            (pn_message_t *msg, const char *path, uint32_t value);
-
-// ...
-
-int            pn_message_get_data              (pn_message_t *msg, const char *path, pn_data_t *data);
-int            pn_message_set_data              (pn_message_t *msg, const char *path, pn_data_t *data);
-
-int            pn_message_get_json              (pn_message_t *msg, const char *path, char *bytes, size_t *size);
-int            pn_message_set_json              (pn_message_t *msg, const char *path, const char *bytes);
-*/
-
 pn_format_t pn_message_get_format(pn_message_t *message);
 int pn_message_set_format(pn_message_t *message, pn_format_t format);
 
@@ -133,6 +117,11 @@ int pn_message_save_data(pn_message_t *message, char *data, size_t *size);
 int pn_message_save_text(pn_message_t *message, char *data, size_t *size);
 int pn_message_save_amqp(pn_message_t *message, char *data, size_t *size);
 int pn_message_save_json(pn_message_t *message, char *data, size_t *size);
+
+pn_data_t *pn_message_instructions(pn_message_t *msg);
+pn_data_t *pn_message_annotations(pn_message_t *msg);
+pn_data_t *pn_message_properties(pn_message_t *msg);
+pn_data_t *pn_message_body(pn_message_t *msg);
 
 // TODO:
 // bind vars

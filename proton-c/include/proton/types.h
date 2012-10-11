@@ -31,6 +31,7 @@ extern "C" {
 
 typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
+typedef uint32_t pn_seconds_t;
 typedef uint64_t pn_timestamp_t;
 typedef uint32_t pn_char_t;
 typedef uint32_t pn_decimal32_t;

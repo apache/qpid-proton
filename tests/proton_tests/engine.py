@@ -352,28 +352,85 @@ class LinkTest(Test):
     self.snd.close()
     self.pump()
 
-  def _test_source_target(self, source, target):
-    self.snd.source = source
-    self.snd.target = target
+  def assertEqualTermini(self, t1, t2):
+    assert t1.type == t2.type, (t1.type, t2.type)
+    assert t1.address == t2.address, (t1.address, t2.address)
+    assert t1.durability == t2.durability, (t1.durability, t2.durability)
+    assert t1.expiry_policy == t2.expiry_policy, (t1.expiry_policy, t2.expiry_policy)
+    assert t1.timeout == t2.timeout, (t1.timeout, t2.timeout)
+    assert t1.dynamic == t2.dynamic, (t1.dynamic, t2.dynamic)
+    for attr in ["properties", "capabilities", "outcomes", "filter"]:
+      d1 = getattr(t1, attr)
+      d2 = getattr(t2, attr)
+      assert d1.format() == d2.format(), (attr, d1.format(), d2.format())
+
+  def _test_source_target(self, config_source, config_target):
+    if config_source is None:
+      self.snd.source.type = Terminus.UNSPECIFIED
+    else:
+      config_source(self.snd.source)
+    if config_target is None:
+      self.snd.target.type = Terminus.UNSPECIFIED
+    else:
+      config_target(self.snd.target)
     self.snd.open()
     self.pump()
-    assert self.rcv.remote_source == self.snd.source
-    assert self.rcv.remote_target == self.snd.target
-    self.rcv.target = self.rcv.remote_target
-    self.rcv.source = self.rcv.remote_source
+    self.assertEqualTermini(self.rcv.remote_source, self.snd.source)
+    self.assertEqualTermini(self.rcv.remote_target, self.snd.target)
+    self.rcv.target.copy(self.rcv.remote_target)
+    self.rcv.source.copy(self.rcv.remote_source)
     self.rcv.open()
     self.pump()
-    assert self.snd.remote_target == self.snd.target
-    assert self.snd.remote_source == self.snd.source
+    self.assertEqualTermini(self.snd.remote_target, self.snd.target)
+    self.assertEqualTermini(self.snd.remote_source, self.snd.source)
 
   def test_source_target(self):
-    self._test_source_target("source", "target")
+    self._test_source_target(TerminusConfig(address="source"),
+                             TerminusConfig(address="target"))
 
   def test_source(self):
-    self._test_source_target("source", None)
+    self._test_source_target(TerminusConfig(address="source"), None)
 
   def test_target(self):
-    self._test_source_target(None, "target")
+    self._test_source_target(None, TerminusConfig(address="target"))
+
+  def test_source_target_full(self):
+    self._test_source_target(TerminusConfig(address="source",
+                                            timeout=3,
+                                            filter=[("int", 1), ("symbol", "two"), ("string", "three")],
+                                            capabilities=["one", "two", "three"]),
+                             TerminusConfig(address="source",
+                                            timeout=7,
+                                            capabilities=[]))
+
+class TerminusConfig:
+
+  def __init__(self, address=None, timeout=None, durability=None, filter=None,
+               capabilities=None):
+    self.address = address
+    self.timeout = timeout
+    self.durability = durability
+    self.filter = filter
+    self.capabilities = capabilities
+
+  def __call__(self, terminus):
+    if self.address is not None:
+      terminus.address = self.address
+    if self.timeout is not None:
+      terminus.timeout = self.timeout
+    if self.durability is not None:
+      terminus.durability = self.durability
+    if self.capabilities is not None:
+      terminus.capabilities.put_array(False, Data.SYMBOL)
+      terminus.capabilities.enter()
+      for c in self.capabilities:
+        terminus.capabilities.put_symbol(c)
+    if self.filter is not None:
+      terminus.filter.put_list()
+      terminus.filter.enter()
+      for (t, v) in self.filter:
+        setter = getattr(terminus.filter, "put_%s" % t)
+        setter(v)
 
 class TransferTest(Test):
 

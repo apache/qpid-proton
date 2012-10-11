@@ -595,6 +595,22 @@ The format of the message.
         self._check(err)
         return data
 
+  @property
+  def instructions(self):
+    return Data(_data=pn_message_instructions(self._msg))
+
+  @property
+  def annotations(self):
+    return Data(_data=pn_message_annotations(self._msg))
+
+  @property
+  def properties(self):
+    return Data(_data=pn_message_properties(self._msg))
+
+  @property
+  def body(self):
+    return Data(_data=pn_message_body(self._msg))
+
 class DataException(ProtonException):
   """
   The DataException class is the root of the Data exception hierarchy.
@@ -680,11 +696,16 @@ class Data:
   LIST = PN_LIST; "A list value."
   MAP = PN_MAP; "A map value."
 
-  def __init__(self, capacity=16):
-    self._data = pn_data(capacity)
+  def __init__(self, capacity=16, _data=None):
+    if _data:
+      self._data = _data or pn_data(capacity)
+      self._free = False
+    else:
+      self._data = pn_data(capacity)
+      self._free = True
 
   def __del__(self):
-    if hasattr(self, "_data"):
+    if self._free and hasattr(self, "_data"):
       pn_data_free(self._data)
       del self._data
 
@@ -1244,6 +1265,20 @@ class Data:
     """
     return pn_data_get_symbol(self._data)
 
+  def copy(self, src):
+    self._check(pn_data_copy(self._data, src._data))
+
+  def format(self):
+    sz = 16
+    while True:
+      err, result = pn_data_format(self._data, sz)
+      if err == PN_OVERFLOW:
+        sz *= 2
+        continue
+      else:
+        self._check(err)
+        return result
+
   def dump(self):
     pn_data_dump(self._data)
 
@@ -1422,24 +1457,20 @@ class Link(Endpoint):
   def state(self):
     return pn_link_state(self._link)
 
-  def _set_source(self, source):
-    pn_link_set_source(self._link, source)
-  def _get_source(self):
-    return pn_link_get_source(self._link)
-  source = property(_get_source, _set_source)
+  @property 
+  def source(self):
+    return Terminus(pn_link_source(self._link))
 
-  def _set_target(self, target):
-    pn_link_set_target(self._link, target)
-  def _get_target(self):
-    return pn_link_get_target(self._link)
-  target = property(_get_target, _set_target)
+  @property
+  def target(self):
+    return Terminus(pn_link_target(self._link))
 
   @property
   def remote_source(self):
-    return pn_link_remote_source(self._link)
+    return Terminus(pn_link_remote_source(self._link))
   @property
   def remote_target(self):
-    return pn_link_remote_target(self._link)
+    return Terminus(pn_link_remote_target(self._link))
 
   @property
   def session(self):
@@ -1473,6 +1504,83 @@ class Link(Endpoint):
 
   def next(self, mask):
     return wrap_link(pn_link_next(self._link, mask))
+
+class Terminus(object):
+
+  UNSPECIFIED = PN_UNSPECIFIED
+  SOURCE = PN_SOURCE
+  TARGET = PN_TARGET
+  COORDINATOR = PN_COORDINATOR
+
+  NONDURABLE = PN_NONDURABLE
+  CONFIGURATION = PN_CONFIGURATION
+  DELIVERIES = PN_DELIVERIES
+
+  def __init__(self, impl):
+    self._impl = impl
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, LinkException)
+      raise exc("[%s]" % err)
+    else:
+      return err
+
+  def _get_type(self):
+    return pn_terminus_get_type(self._impl)
+  def _set_type(self, type):
+    self._check(pn_terminus_set_type(self._impl, type))
+  type = property(_get_type, _set_type)
+
+  def _get_address(self):
+    return pn_terminus_get_address(self._impl)
+  def _set_address(self, address):
+    self._check(pn_terminus_set_address(self._impl, address))
+  address = property(_get_address, _set_address)
+
+  def _get_durability(self):
+    return pn_terminus_get_durability(self._impl)
+  def _set_durability(self, seconds):
+    self._check(pn_terminus_set_durability(self._impl, seconds))
+  durability = property(_get_durability, _set_durability)
+
+  def _get_expiry_policy(self):
+    return pn_terminus_get_expiry_policy(self._impl)
+  def _set_expiry_policy(self, seconds):
+    self._check(pn_terminus_set_expiry_policy(self._impl, seconds))
+  expiry_policy = property(_get_expiry_policy, _set_expiry_policy)
+
+  def _get_timeout(self):
+    return pn_terminus_get_timeout(self._impl)
+  def _set_timeout(self, seconds):
+    self._check(pn_terminus_set_timeout(self._impl, seconds))
+  timeout = property(_get_timeout, _set_timeout)
+
+  def _is_dynamic(self):
+    return pn_terminus_is_dynamic(self._impl)
+  def _set_dynamic(self, dynamic):
+    self._check(pn_terminus_set_dynamic(self._impl, dynamic))
+  dynamic = property(_is_dynamic, _set_dynamic)
+
+  @property
+  def properties(self):
+    return Data(_data = pn_terminus_properties(self._impl))
+
+  @property
+  def capabilities(self):
+    return Data(_data = pn_terminus_capabilities(self._impl))
+
+  @property
+  def outcomes(self):
+    return Data(_data = pn_terminus_outcomes(self._impl))
+
+  @property
+  def filter(self):
+    return Data(_data = pn_terminus_filter(self._impl))
+
+  def copy(self, src):
+    self._check(pn_terminus_copy(self._impl, src._impl))
+
 
 class Sender(Link):
 
@@ -1705,5 +1813,6 @@ class SSL(object):
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
-           "Session", "Link", "Sender", "Receiver", "Delivery", "Transport",
-           "TransportException", "SASL", "SSL", "PN_SESSION_WINDOW"]
+           "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
+           "Transport", "TransportException", "SASL", "SSL",
+           "PN_SESSION_WINDOW"]

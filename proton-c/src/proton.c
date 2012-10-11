@@ -147,10 +147,10 @@ void server_callback(pn_connector_t *ctor)
 
   pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT | PN_REMOTE_ACTIVE);
   while (link) {
-    printf("%s, %s\n", pn_link_remote_source(link),
-           pn_link_remote_target(link));
-    pn_link_set_source(link, pn_link_remote_source(link));
-    pn_link_set_target(link, pn_link_remote_target(link));
+    printf("%s, %s\n", pn_terminus_get_address(pn_link_remote_source(link)),
+           pn_terminus_get_address(pn_link_remote_target(link)));
+    pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
+    pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
     pn_link_open(link);
     if (pn_link_is_receiver(link)) {
       pn_link_flow(link, 100);
@@ -297,7 +297,7 @@ void client_callback(pn_connector_t *ctor)
 
     if (ctx->send_count) {
       pn_link_t *snd = pn_sender(ssn, "sender");
-      pn_link_set_target(snd, ctx->address);
+      pn_terminus_set_address(pn_link_target(snd), ctx->address);
       pn_link_open(snd);
 
       char buf[16];
@@ -309,7 +309,7 @@ void client_callback(pn_connector_t *ctor)
 
     if (ctx->recv_count) {
       pn_link_t *rcv = pn_receiver(ssn, "receiver");
-      pn_link_set_source(rcv, ctx->address);
+      pn_terminus_set_address(pn_link_source(rcv), ctx->address);
       pn_link_open(rcv);
       pn_link_flow(rcv, ctx->recv_count < ctx->high ? ctx->recv_count : ctx->high);
     }

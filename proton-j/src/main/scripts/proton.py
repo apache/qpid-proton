@@ -174,24 +174,20 @@ class Link(Endpoint):
   def __init__(self, impl):
     self.impl = impl
 
-  def _set_source(self, source):
-    self.impl.setLocalSourceAddress(source)
-  def _get_source(self):
-    return self.impl.getLocalSourceAddress()
-  source = property(_get_source, _set_source)
+  @property
+  def source(self):
+    return Terminus(self.impl, "LocalSource")
 
-  def _set_target(self, target):
-    self.impl.setLocalTargetAddress(target)
-  def _get_target(self):
-    return self.impl.getLocalTargetAddress()
-  target = property(_get_target, _set_target)
+  @property
+  def target(self):
+    return Terminus(self.impl, "LocalTarget")
 
   @property
   def remote_source(self):
-    return self.impl.getRemoteSourceAddress()
+    return Terminus(self.impl, "RemoteSource")
   @property
   def remote_target(self):
-    return self.impl.getRemoteTargetAddress()
+    return Terminus(self.impl, "RemoteTarget")
 
   @property
   def session(self):
@@ -225,6 +221,40 @@ class Link(Endpoint):
 
   def next(self, mask):
     return self.impl.next(*self._enums(mask))
+
+class DataDummy:
+
+  def format(self):
+    pass
+
+  def put_array(self, *args, **kwargs):
+    raise Skipped()
+
+class Terminus(object):
+
+  UNSPECIFIED = None
+
+  def __init__(self, impl, prefix):
+    self.impl = impl
+    self.prefix = prefix
+    self.type = None
+    self.timeout = None
+    self.durability = None
+    self.expiry_policy = None
+    self.dynamic = None
+    self.properties = DataDummy()
+    self.outcomes = DataDummy()
+    self.filter = DataDummy()
+    self.capabilities = DataDummy()
+
+  def _get_address(self):
+    return getattr(self.impl, "get%sAddress" % self.prefix)()
+  def _set_address(self, address):
+    getattr(self.impl, "set%sAddress" % self.prefix)(address)
+  address = property(_get_address, _set_address)
+
+  def copy(self, src):
+    self.address = src.address
 
 class Sender(Link):
 
@@ -348,6 +378,8 @@ class Transport(object):
     return self.impl.input(bytes, 0, len(bytes))
 
 class Data(object):
+
+  SYMBOL = None
 
   def __init__(self, *args, **kwargs):
     raise Skipped()
@@ -514,5 +546,6 @@ class SSL(object):
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
-           "Session", "Link", "Sender", "Receiver", "Delivery", "Transport",
-           "TransportException", "SASL", "SSL", "PN_SESSION_WINDOW"]
+           "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
+           "Transport", "TransportException", "SASL", "SSL",
+           "PN_SESSION_WINDOW"]

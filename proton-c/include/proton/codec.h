@@ -171,6 +171,12 @@ pn_bytes_t pn_data_get_binary(pn_data_t *data);
 pn_bytes_t pn_data_get_string(pn_data_t *data);
 pn_bytes_t pn_data_get_symbol(pn_data_t *data);
 
+int pn_data_copy(pn_data_t *data, pn_data_t *src);
+int pn_data_append(pn_data_t *data, pn_data_t *src);
+int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
+void pn_data_narrow(pn_data_t *data);
+void pn_data_widen(pn_data_t *data);
+
 void pn_data_dump(pn_data_t *data);
 
 #ifdef __cplusplus

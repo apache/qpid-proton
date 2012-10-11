@@ -350,14 +350,23 @@ void pn_link_close(pn_link_t *link)
   if (link) pn_close((pn_endpoint_t *) link);
 }
 
+void pn_terminus_free(pn_terminus_t *terminus)
+{
+  free(terminus->address);
+  pn_data_free(terminus->properties);
+  pn_data_free(terminus->capabilities);
+  pn_data_free(terminus->outcomes);
+  pn_data_free(terminus->filter);
+}
+
 void pn_link_free(pn_link_t *link)
 {
   if (!link) return;
 
-  free(link->local_source);
-  free(link->local_target);
-  free(link->remote_source);
-  free(link->remote_target);
+  pn_terminus_free(&link->source);
+  pn_terminus_free(&link->target);
+  pn_terminus_free(&link->remote_source);
+  pn_terminus_free(&link->remote_target);
   pn_remove_link(link->session, link);
   while (link->settled_head) {
     pn_delivery_t *d = link->settled_head;
@@ -821,15 +830,29 @@ pn_error_t *pn_transport_error(pn_transport_t *transport)
   return transport->error;
 }
 
+void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
+{
+  terminus->type = type;
+  terminus->address = NULL;
+  terminus->durability = PN_NONDURABLE;
+  terminus->expiry_policy = PN_SESSION_CLOSE;
+  terminus->timeout = 0;
+  terminus->dynamic = false;
+  terminus->properties = pn_data(16);
+  terminus->capabilities = pn_data(16);
+  terminus->outcomes = pn_data(16);
+  terminus->filter = pn_data(16);
+}
+
 void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *name)
 {
   pn_endpoint_init(&link->endpoint, type, session->connection);
   pn_add_link(session, link);
   link->name = pn_strdup(name);
-  link->local_source = NULL;
-  link->local_target = NULL;
-  link->remote_source = NULL;
-  link->remote_target = NULL;
+  pn_terminus_init(&link->source, PN_SOURCE);
+  pn_terminus_init(&link->target, PN_TARGET);
+  pn_terminus_init(&link->remote_source, PN_UNSPECIFIED);
+  pn_terminus_init(&link->remote_target, PN_UNSPECIFIED);
   link->settled_head = link->settled_tail = NULL;
   link->unsettled_head = link->unsettled_tail = link->current = NULL;
   link->unsettled_count = 0;
@@ -841,38 +864,154 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *
   link->context = 0;
 }
 
-const char *pn_link_get_source(pn_link_t *link)
+pn_terminus_t *pn_link_source(pn_link_t *link)
 {
-  return link ? link->local_source : NULL;
+  return link ? &link->source : NULL;
 }
 
-const char *pn_link_get_target(pn_link_t *link)
+pn_terminus_t *pn_link_target(pn_link_t *link)
 {
-  return link ? link->local_target : NULL;
+  return link ? &link->target : NULL;
 }
 
-void pn_link_set_source(pn_link_t *link, const char *source)
+pn_terminus_t *pn_link_remote_source(pn_link_t *link)
 {
-  if (!link) return;
-  if (link->local_source) free(link->local_source);
-  link->local_source = pn_strdup(source);
+  return link ? &link->remote_source : NULL;
 }
 
-void pn_link_set_target(pn_link_t *link, const char *target)
+pn_terminus_t *pn_link_remote_target(pn_link_t *link)
 {
-  if (!link) return;
-  if (link->local_target) free(link->local_target);
-  link->local_target = pn_strdup(target);
+  return link ? &link->remote_target : NULL;
 }
 
-const char *pn_link_remote_source(pn_link_t *link)
+int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type)
 {
-  return link ? link->remote_source : NULL;
+  if (!terminus) return PN_ARG_ERR;
+  terminus->type = type;
+  return 0;
 }
 
-const char *pn_link_remote_target(pn_link_t *link)
+pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus)
 {
-  return link ? link->remote_target : NULL;
+  return terminus ? terminus->type : 0;
+}
+
+const char *pn_terminus_get_address(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->address : NULL;
+}
+
+int pn_terminus_set_address(pn_terminus_t *terminus, const char *address)
+{
+  if (!terminus) return PN_ARG_ERR;
+  if (terminus->address) free(terminus->address);
+  terminus->address = pn_strdup(address);
+  return 0;
+}
+
+char *pn_bytes_strdup(pn_bytes_t str)
+{
+  return pn_strndup(str.start, str.size);
+}
+
+int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
+{
+  if (!terminus) return PN_ARG_ERR;
+  if (terminus->address) free(terminus->address);
+  terminus->address = pn_bytes_strdup(address);
+  return 0;
+}
+
+pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->durability : 0;
+}
+
+int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durability)
+{
+  if (!terminus) return PN_ARG_ERR;
+  terminus->durability = durability;
+  return 0;
+}
+
+pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->expiry_policy : 0;
+}
+
+int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t expiry_policy)
+{
+  if (!terminus) return PN_ARG_ERR;
+  terminus->expiry_policy = expiry_policy;
+  return 0;
+}
+
+pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->timeout : 0;
+}
+
+int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t timeout)
+{
+  if (!terminus) return PN_ARG_ERR;
+  terminus->timeout = timeout;
+  return 0;
+}
+
+bool pn_terminus_is_dynamic(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->dynamic : false;
+}
+
+int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic)
+{
+  if (!terminus) return PN_ARG_ERR;
+  terminus->dynamic = dynamic;
+  return 0;
+}
+
+pn_data_t *pn_terminus_properties(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->properties : NULL;
+}
+
+pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->capabilities : NULL;
+}
+
+pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->outcomes : NULL;
+}
+
+pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
+{
+  return terminus ? terminus->filter : NULL;
+}
+
+int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
+{
+  if (!terminus || !src) {
+    return PN_ARG_ERR;
+  }
+
+  terminus->type = src->type;
+  int err = pn_terminus_set_address(terminus, pn_terminus_get_address(src));
+  if (err) return err;
+  terminus->durability = src->durability;
+  terminus->expiry_policy = src->expiry_policy;
+  terminus->timeout = src->timeout;
+  terminus->dynamic = src->dynamic;
+  err = pn_data_copy(terminus->properties, src->properties);
+  if (err) return err;
+  err = pn_data_copy(terminus->capabilities, src->capabilities);
+  if (err) return err;
+  err = pn_data_copy(terminus->outcomes, src->outcomes);
+  if (err) return err;
+  err = pn_data_copy(terminus->filter, src->filter);
+  if (err) return err;
+  return 0;
 }
 
 pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *link)
@@ -1163,11 +1302,6 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   return PN_ERR;
 }
 
-char *pn_bytes_strdup(pn_bytes_t str)
-{
-  return pn_strndup(str.start, str.size);
-}
-
 int pn_do_open(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = disp->context;
@@ -1236,17 +1370,40 @@ pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_bytes_t name, bo
   return NULL;
 }
 
+static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
+{
+  if (!symbol.start)
+    return PN_SESSION_CLOSE;
+
+  if (!strncmp(symbol.start, "link-detach", symbol.size))
+    return PN_LINK_CLOSE;
+  if (!strncmp(symbol.start, "session-end", symbol.size))
+    return PN_SESSION_CLOSE;
+  if (!strncmp(symbol.start, "connection-close", symbol.size))
+    return PN_CONNECTION_CLOSE;
+  if (!strncmp(symbol.start, "never", symbol.size))
+    return PN_NEVER;
+
+  return PN_SESSION_CLOSE;
+}
+
 int pn_do_attach(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = disp->context;
   pn_bytes_t name;
   uint32_t handle;
   bool is_sender;
-  pn_bytes_t source;
-  pn_bytes_t target;
+  pn_bytes_t source, target;
+  pn_durability_t src_dr, tgt_dr;
+  pn_bytes_t src_exp, tgt_exp;
+  pn_seconds_t src_timeout, tgt_timeout;
+  bool src_dynamic, tgt_dynamic;
   pn_sequence_t idc;
-  int err = pn_scan_args(disp, "D.[SIo..D.[S]D.[S]..I]", &name, &handle,
-                         &is_sender, &source, &target, &idc);
+  int err = pn_scan_args(disp, "D.[SIo..D.[SIsIo]D.[SIsIo]..I]", &name, &handle,
+                         &is_sender,
+                         &source, &src_dr, &src_exp, &src_timeout, &src_dynamic,
+                         &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
+                         &idc);
   if (err) return err;
   char strname[name.size + 1];
   strncpy(strname, name.start, name.size);
@@ -1254,22 +1411,65 @@ int pn_do_attach(pn_dispatcher_t *disp)
 
   pn_session_state_t *ssn_state = pn_channel_state(transport, disp->channel);
   pn_link_state_t *link_state = pn_find_link(ssn_state, name, is_sender);
+  pn_link_t *link;
   if (!link_state) {
-    pn_link_t *link;
     if (is_sender) {
       link = (pn_link_t *) pn_sender(ssn_state->session, strname);
     } else {
       link = (pn_link_t *) pn_receiver(ssn_state->session, strname);
     }
     link_state = pn_link_get_state(ssn_state, link);
+  } else {
+    link = link_state->link;
   }
 
   pn_map_handle(ssn_state, handle, link_state);
-  PN_SET_REMOTE(link_state->link->endpoint.state, PN_REMOTE_ACTIVE);
-  if (source.start)
-    link_state->link->remote_source = pn_bytes_strdup(source);
-  if (target.start)
-    link_state->link->remote_target = pn_bytes_strdup(target);
+  PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_ACTIVE);
+  pn_terminus_t *rsrc = &link_state->link->remote_source;
+  if (source.start) {
+    pn_terminus_set_type(rsrc, PN_SOURCE);
+    pn_terminus_set_address_bytes(rsrc, source);
+    pn_terminus_set_durability(rsrc, src_dr);
+    pn_terminus_set_expiry_policy(rsrc, symbol2policy(src_exp));
+    pn_terminus_set_timeout(rsrc, src_timeout);
+    pn_terminus_set_dynamic(rsrc, src_dynamic);
+  } else {
+    pn_terminus_set_type(rsrc, PN_UNSPECIFIED);
+  }
+  pn_terminus_t *rtgt = &link_state->link->remote_target;
+  if (target.start) {
+    pn_terminus_set_type(rtgt, PN_TARGET);
+    pn_terminus_set_address_bytes(rtgt, target);
+    pn_terminus_set_durability(rtgt, tgt_dr);
+    pn_terminus_set_expiry_policy(rtgt, symbol2policy(tgt_exp));
+    pn_terminus_set_timeout(rtgt, tgt_timeout);
+    pn_terminus_set_dynamic(rtgt, tgt_dynamic);
+  } else {
+    pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
+  }
+
+  pn_data_clear(link->remote_source.properties);
+  pn_data_clear(link->remote_source.filter);
+  pn_data_clear(link->remote_source.outcomes);
+  pn_data_clear(link->remote_source.capabilities);
+  pn_data_clear(link->remote_target.properties);
+  pn_data_clear(link->remote_target.capabilities);
+
+  err = pn_scan_args(disp, "D.[.....D.[.....C.C.CC]D.[.....CC]",
+                     link->remote_source.properties,
+                     link->remote_source.filter,
+                     link->remote_source.outcomes,
+                     link->remote_source.capabilities,
+                     link->remote_target.properties,
+                     link->remote_target.capabilities);
+  if (err) return err;
+
+  pn_data_rewind(link->remote_source.properties);
+  pn_data_rewind(link->remote_source.filter);
+  pn_data_rewind(link->remote_source.outcomes);
+  pn_data_rewind(link->remote_source.capabilities);
+  pn_data_rewind(link->remote_target.properties);
+  pn_data_rewind(link->remote_target.capabilities);
 
   if (!is_sender) {
     link_state->delivery_count = idc;
@@ -1286,9 +1486,11 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   pn_transport_t *transport = disp->context;
   uint32_t handle;
   pn_bytes_t tag;
+  bool id_present;
   pn_sequence_t id;
   bool more;
-  int err = pn_scan_args(disp, "D.[IIz..o]", &handle, &id, &tag, &more);
+  int err = pn_scan_args(disp, "D.[I?Iz..o]", &handle, &id_present, &id, &tag,
+                         &more);
   if (err) return err;
   pn_session_state_t *ssn_state = pn_channel_state(transport, disp->channel);
   pn_link_state_t *link_state = pn_handle_state(ssn_state, handle);
@@ -1311,7 +1513,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
     pn_delivery_state_t *state = pn_delivery_buffer_push(incoming, delivery);
     delivery->transport_context = state;
-    if (id != state->id) {
+    if (id_present && id != state->id) {
       int err = pn_do_error(transport, "amqp:session:invalid-field",
                             "sequencing error, expected delivery-id %u, got %u",
                             state->id, id);
@@ -1653,6 +1855,22 @@ int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
   return 0;
 }
 
+static const char *expiry_symbol(pn_expiry_policy_t policy)
+{
+  switch (policy)
+  {
+  case PN_LINK_CLOSE:
+    return "link-detach";
+  case PN_SESSION_CLOSE:
+    return NULL;
+  case PN_CONNECTION_CLOSE:
+    return "connection-close";
+  case PN_NEVER:
+    return "never";
+  }
+  return NULL;
+}
+
 int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (transport->open_sent && (endpoint->type == SENDER ||
@@ -1667,12 +1885,28 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       // XXX
       state->local_handle = link->id;
       int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                              "DL[SIonn?DL[S]?DL[S]nnI]", ATTACH,
+                              "DL[SIonn?DL[SIsIoCnCnCC]?DL[SIsIoCC]nnI]", ATTACH,
                               link->name,
                               state->local_handle,
                               endpoint->type == RECEIVER,
-                              (bool) link->local_source, SOURCE, link->local_source,
-                              (bool) link->local_target, TARGET, link->local_target,
+                              (bool) link->source.type, SOURCE,
+                              link->source.address,
+                              link->source.durability,
+                              expiry_symbol(link->source.expiry_policy),
+                              link->source.timeout,
+                              link->source.dynamic,
+                              link->source.properties,
+                              link->source.filter,
+                              link->source.outcomes,
+                              link->source.capabilities,
+                              (bool) link->target.type, TARGET,
+                              link->target.address,
+                              link->target.durability,
+                              expiry_symbol(link->target.expiry_policy),
+                              link->target.timeout,
+                              link->target.dynamic,
+                              link->target.properties,
+                              link->target.capabilities,
                               0);
       if (err) return err;
     }

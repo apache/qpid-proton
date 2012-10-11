@@ -213,8 +213,8 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn)
 
   pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT);
   while (link) {
-    pn_link_set_source(link, pn_link_remote_source(link));
-    pn_link_set_target(link, pn_link_remote_target(link));
+    pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
+    pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
     pn_link_open(link);
     link = pn_link_next(link, PN_LOCAL_UNINIT);
   }
@@ -286,7 +286,6 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
                                messenger->private_key,
                                messenger->password);
       }
-      pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL);
       if (!(scheme && !strcmp(scheme, "amqps"))) {
         pn_ssl_allow_unsecured_client(ssl);
       }
@@ -429,7 +428,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
       pn_ssl_set_trusted_ca_db(ssl, messenger->trusted_certificates);
       pn_ssl_set_peer_authentication(ssl, PN_SSL_VERIFY_PEER, NULL);
     } else {
-      pn_ssl_set_peer_authentication(ssl, PN_SSL_NO_VERIFY_PEER, NULL);
+      pn_ssl_set_peer_authentication(ssl, PN_SSL_ANONYMOUS_PEER, NULL);
     }
   }
 
@@ -465,7 +464,8 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   while (link) {
     if (pn_link_is_sender(link) == sender) {
       const char *terminus = pn_link_is_sender(link) ?
-        pn_link_get_target(link) : pn_link_get_source(link);
+        pn_terminus_get_address(pn_link_target(link)) :
+        pn_terminus_get_address(pn_link_source(link));
       if (pn_streq(name, terminus))
         return link;
     }
@@ -477,11 +477,11 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
   // XXX
   if (sender) {
-    pn_link_set_target(link, name);
-    pn_link_set_source(link, name);
+    pn_terminus_set_address(pn_link_target(link), name);
+    pn_terminus_set_address(pn_link_source(link), name);
   } else {
-    pn_link_set_target(link, name);
-    pn_link_set_source(link, name);
+    pn_terminus_set_address(pn_link_target(link), name);
+    pn_terminus_set_address(pn_link_source(link), name);
   }
   pn_link_open(link);
   return link;
@@ -683,6 +683,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
           return pn_error_format(messenger->error, n, "didn't receive pending bytes: %zi", n);
         }
         n = pn_link_recv(l, encoded + pending, 1);
+        pn_delivery_update(d, PN_ACCEPTED);
         pn_delivery_settle(d);
         if (n != PN_EOS) {
           return pn_error_format(messenger->error, n, "PN_EOS expected");

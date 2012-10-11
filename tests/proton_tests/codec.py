@@ -247,3 +247,17 @@ class DataTest(Test):
 
   def testDecimal128(self):
     self._test("decimal128", "fdsaasdf;lkjjkl;", "x"*16 )
+
+  def testCopy(self):
+    self.data.put_described()
+    self.data.enter()
+    self.data.put_ulong(123)
+    self.data.put_map()
+    self.data.enter()
+    self.data.put_string("pi")
+    self.data.put_double(3.14159265359)
+
+    dst = Data()
+    dst.copy(self.data)
+
+    assert dst.format() == self.data.format()

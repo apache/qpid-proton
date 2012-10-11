@@ -141,14 +141,27 @@ struct pn_session_t {
   void *context;
 };
 
+struct pn_terminus_t {
+  pn_terminus_type_t type;
+  char *address;
+  pn_durability_t durability;
+  pn_expiry_policy_t expiry_policy;
+  pn_seconds_t timeout;
+  bool dynamic;
+  pn_data_t *properties;
+  pn_data_t *capabilities;
+  pn_data_t *outcomes;
+  pn_data_t *filter;
+};
+
 struct pn_link_t {
   pn_endpoint_t endpoint;
   char *name;
   pn_session_t *session;
-  char *local_source;
-  char *local_target;
-  char *remote_source;
-  char *remote_target;
+  pn_terminus_t source;
+  pn_terminus_t target;
+  pn_terminus_t remote_source;
+  pn_terminus_t remote_target;
   pn_delivery_t *unsettled_head;
   pn_delivery_t *unsettled_tail;
   pn_delivery_t *current;
