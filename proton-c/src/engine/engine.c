@@ -201,6 +201,8 @@ void pn_connection_free(pn_connection_t *connection)
   free(connection->sessions);
   free(connection->container);
   free(connection->hostname);
+  pn_data_free(connection->offered_capabilities);
+  pn_data_free(connection->desired_capabilities);
   pn_endpoint_tini(&connection->endpoint);
   free(connection);
 }
@@ -241,6 +243,8 @@ void pn_transport_free(pn_transport_t *transport)
   }
   free(transport->remote_container);
   free(transport->remote_hostname);
+  pn_data_free(transport->remote_offered_capabilities);
+  pn_data_free(transport->remote_desired_capabilities);
   pn_error_free(transport->error);
   free(transport->sessions);
   free(transport->channels);
@@ -434,6 +438,8 @@ pn_connection_t *pn_connection()
   conn->tpwork_tail = NULL;
   conn->container = NULL;
   conn->hostname = NULL;
+  conn->offered_capabilities = pn_data(16);
+  conn->desired_capabilities = pn_data(16);
 
   return conn;
 }
@@ -470,6 +476,28 @@ void pn_connection_set_hostname(pn_connection_t *connection, const char *hostnam
   if (!connection) return;
   if (connection->hostname) free(connection->hostname);
   connection->hostname = pn_strdup(hostname);
+}
+
+pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
+{
+  return connection->offered_capabilities;
+}
+
+pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection)
+{
+  return connection->desired_capabilities;
+}
+
+pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection)
+{
+  if (!connection) return NULL;
+  return connection->transport ? connection->transport->remote_offered_capabilities : NULL;
+}
+
+pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection)
+{
+  if (!connection) return NULL;
+  return connection->transport ? connection->transport->remote_desired_capabilities : NULL;
 }
 
 const char *pn_connection_remote_container(pn_connection_t *connection)
@@ -752,6 +780,8 @@ void pn_transport_init(pn_transport_t *transport)
   transport->close_rcvd = false;
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
+  transport->remote_offered_capabilities = pn_data(16);
+  transport->remote_desired_capabilities = pn_data(16);
   transport->error = pn_error();
 
   transport->sessions = NULL;
@@ -1308,8 +1338,12 @@ int pn_do_open(pn_dispatcher_t *disp)
   pn_connection_t *conn = transport->connection;
   bool container_q, hostname_q;
   pn_bytes_t remote_container, remote_hostname;
-  int err = pn_scan_args(disp, "D.[?S?S]", &container_q, &remote_container,
-                         &hostname_q, &remote_hostname);
+  pn_data_clear(transport->remote_offered_capabilities);
+  pn_data_clear(transport->remote_desired_capabilities);
+  int err = pn_scan_args(disp, "D.[?S?S.....CC]", &container_q,
+                         &remote_container, &hostname_q, &remote_hostname,
+                         transport->remote_offered_capabilities,
+                         transport->remote_desired_capabilities);
   if (err) return err;
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
@@ -1823,7 +1857,11 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
-      int err = pn_post_frame(transport->disp, 0, "DL[SS]", OPEN, connection->container, connection->hostname);
+      int err = pn_post_frame(transport->disp, 0, "DL[SSnnnnnCC]", OPEN,
+                              connection->container,
+                              connection->hostname,
+                              connection->offered_capabilities,
+                              connection->desired_capabilities);
       if (err) return err;
       transport->open_sent = true;
     }

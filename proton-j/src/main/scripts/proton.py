@@ -139,6 +139,9 @@ class Connection(Endpoint):
       self.impl.setRemoteHostname(hostname)
   remote_hostname = property(_get_remote_hostname, _set_remote_hostname)
 
+  @property
+  def offered_capabilities(self):
+    return DataDummy()
 
 
 def wrap_session(impl):

@@ -103,6 +103,8 @@ struct pn_transport_t {
   bool close_rcvd;
   char *remote_container;
   char *remote_hostname;
+  pn_data_t *remote_offered_capabilities;
+  pn_data_t *remote_desired_capabilities;
   pn_error_t *error;
   pn_session_state_t *sessions;
   size_t session_capacity;
@@ -128,6 +130,8 @@ struct pn_connection_t {
   pn_delivery_t *tpwork_tail;
   char *container;
   char *hostname;
+  pn_data_t *offered_capabilities;
+  pn_data_t *desired_capabilities;
   void *context;
 };
 

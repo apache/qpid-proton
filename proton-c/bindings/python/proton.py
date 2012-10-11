@@ -1344,6 +1344,22 @@ class Connection(Endpoint):
   def remote_hostname(self):
     return pn_connection_remote_hostname(self._conn)
 
+  @property
+  def offered_capabilities(self):
+    return Data(_data=pn_connection_offered_capabilities(self._conn))
+
+  @property
+  def desired_capabilities(self):
+    return Data(_data=pn_connection_desired_capabilities(self._conn))
+
+  @property
+  def remote_offered_capabilities(self):
+    return Data(_data=pn_connection_remote_offered_capabilities(self._conn))
+
+  @property
+  def remote_desired_capabilities(self):
+    return Data(_data=pn_connection_remote_desired_capabilities(self._conn))
+
   def open(self):
     pn_connection_open(self._conn)
 
