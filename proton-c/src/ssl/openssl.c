@@ -444,12 +444,11 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
 {
   const SSL_CIPHER *c;
 
+  *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_name(c);
     if (v) {
-      size_t len = pn_min( strlen(v), size );
-      strncpy(buffer, v, len);
-      buffer[len] = 0;
+      snprintf( buffer, size, "%s", v );
       return true;
     }
   }
@@ -460,12 +459,11 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
 {
   const SSL_CIPHER *c;
 
+  *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_version(c);
     if (v) {
-      size_t len = pn_min( strlen(v), size );
-      strncpy(buffer, v, len);
-      buffer[len] = 0;
+      snprintf( buffer, size, "%s", v );
       return true;
     }
   }

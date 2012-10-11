@@ -96,4 +96,13 @@ ssize_t pn_ssl_output(pn_ssl_t *ssl, char *buffer, size_t max_size)
   return PN_EOS;
 }
 
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size)
+{
+  return false;
+}
+
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size)
+{
+  return false;
+}
 
