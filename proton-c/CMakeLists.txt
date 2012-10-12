@@ -8,16 +8,9 @@ set (PN_VERSION_MINOR 1)
 set (PREFIX ${CMAKE_INSTALL_PREFIX})
 set (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX})
 
-if ("${LIB_INSTALL_DIR}" STREQUAL "")
-    set (PROTON_INSTALL_LIBDIR lib CACHE STRING
-         "Directory where library files are installed")
-else()
-    set (PROTON_INSTALL_LIBDIR ${LIB_INSTALL_DIR} CACHE STRING
-         "Directory where library files are installed")
-endif()
-
-set (LIBDIR ${CMAKE_INSTALL_PREFIX}/${PROTON_INSTALL_LIBDIR} CACHE STRING
-     "Library directory")
+set (ARCHLIBDIR lib CACHE STRING
+         "Architecture specific library directory")
+set (LIBDIR ${CMAKE_INSTALL_PREFIX}/${ARCHLIBDIR})
 set (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
