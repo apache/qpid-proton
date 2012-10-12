@@ -1957,7 +1957,7 @@ int pn_post_flow(pn_transport_t *transport, pn_session_state_t *ssn_state, pn_li
 {
   ssn_state->incoming_window = pn_delivery_buffer_available(&ssn_state->incoming);
   bool link = (bool) state;
-  return pn_post_frame(transport->disp, ssn_state->local_channel, "DL[?IIII?I?I?II?o]", FLOW,
+  return pn_post_frame(transport->disp, ssn_state->local_channel, "DL[?IIII?I?I?In?o]", FLOW,
                        (int16_t) ssn_state->remote_channel >= 0, ssn_state->incoming_transfer_count,
                        ssn_state->incoming_window,
                        ssn_state->outgoing.next,
