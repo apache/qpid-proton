@@ -715,12 +715,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     TransportSession transportSession = getTransportState(session);
                     if(session.getLocalState() != EndpointState.UNINITIALIZED && !transportSession.beginSent())
                     {
-                        int channelId = allocateLocalChannel();
-                        transportSession.setLocalChannel(channelId);
-                        _localSessions[channelId] = transportSession;
-
+                        int channelId = allocateLocalChannel(transportSession);
                         Begin begin = new Begin();
-
 
                         if(session.getRemoteState() != EndpointState.UNINITIALIZED)
                         {
@@ -768,9 +764,26 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return transportLink;
     }
 
-    private int allocateLocalChannel()
+    private int allocateLocalChannel(TransportSession transportSession) 
     {
-        return 0;  //TODO - Implement
+        for( int i=0; i < _localSessions.length; i++) 
+        {
+            if( _localSessions[i] == null ) 
+            {
+                _localSessions[i] = transportSession;
+                transportSession.setLocalChannel(i);
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int freeLocalChannel(TransportSession transportSession)
+    {
+        final int channel = transportSession.getLocalChannel();
+        _localSessions[channel] = null;
+        transportSession.freeLocalChannel();
+        return channel;
     }
 
     private int processEnd(WritableBuffer buffer)
@@ -789,17 +802,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                    && (transportSession = session.getTransportSession()).isLocalChannelSet()
                    && !hasSendableMessages(session))
                 {
-                    int channel = transportSession.getLocalChannel();
-                    transportSession.freeLocalChannel();
-                    _localSessions[channel] = null;
-
-
+                    int channel = freeLocalChannel(transportSession);
                     End end = new End();
-
                     int frameBytes = writeFrame(buffer, channel, end, null, null);
                     written += frameBytes;
                     endpoint.clearModified();
-
                 }
 
                 endpoint = endpoint.transportNext();
