@@ -276,6 +276,7 @@ operations performed by the L{Messenger}.
     @type message: Message
     @param message: the message to place in the outgoing queue
     """
+    message._pre_encode()
     self._check(pn_messenger_put(self._mng, message._msg))
 
   def send(self):
@@ -304,6 +305,7 @@ operations performed by the L{Messenger}.
     @param message: the destination message object
     """
     self._check(pn_messenger_get(self._mng, message._msg))
+    message._post_decode()
 
   @property
   def outgoing(self):
@@ -322,6 +324,15 @@ operations performed by the L{Messenger}.
 class Message(object):
   """
   The L{Message} class is a mutable holder of message content.
+
+  @ivar instructions: delivery instructions for the message
+  @type instructions: dict
+  @ivar annotations: infrastructure defined message annotations
+  @type annotations: dict
+  @ivar properties: application defined message properties
+  @type properties: dict
+  @ivar body: message body
+  @type body: bytes | unicode | dict | list | int | long | float | UUID
   """
 
   DATA = PN_DATA
@@ -333,6 +344,10 @@ class Message(object):
 
   def __init__(self):
     self._msg = pn_message()
+    self.instructions = None
+    self.annotations = None
+    self.properties = None
+    self.body = None
 
   def __del__(self):
     if hasattr(self, "_msg"):
@@ -346,12 +361,51 @@ class Message(object):
     else:
       return err
 
+  def _pre_encode(self):
+    inst = Data(_data = pn_message_instructions(self._msg))
+    ann = Data(_data = pn_message_annotations(self._msg))
+    props = Data(_data = pn_message_properties(self._msg))
+#    body = Data(_data = pn_message_body(self._msg))
+
+    inst.clear()
+    if self.instructions is not None:
+      inst.put_object(self.instructions)
+    ann.clear()
+    if self.annotations is not None:
+      ann.put_object(self.annotations)
+    props.clear()
+    if self.properties is not None:
+      props.put_object(self.properties)
+
+  def _post_decode(self):
+    inst = Data(_data = pn_message_instructions(self._msg))
+    ann = Data(_data = pn_message_annotations(self._msg))
+    props = Data(_data = pn_message_properties(self._msg))
+#    body = Data(_data = pn_message_body(self._msg))
+
+    if inst.next():
+      self.instructions = inst.get_object()
+    else:
+      self.instructions = None
+    if ann.next():
+      self.annotations = ann.get_object()
+    else:
+      self.annotations = None
+    if props.next():
+      self.properties = props.get_object()
+    else:
+      self.properties = None
+
   def clear(self):
     """
     Clears the contents of the L{Message}. All fields will be reset to
     their default values.
     """
     pn_message_clear(self._msg)
+    self.instructions = None
+    self.annotations = None
+    self.properties = None
+    self.body = None
 
   def _is_durable(self):
     return pn_message_is_durable(self._msg)
@@ -568,6 +622,7 @@ The format of the message.
 """)
 
   def encode(self):
+    self._pre_encode()
     sz = 16
     while True:
       err, data = pn_message_encode(self._msg, sz)
@@ -579,7 +634,8 @@ The format of the message.
         return data
 
   def decode(self, data):
-    return self._check(pn_message_decode(self._msg, data, len(data)))
+    self._check(pn_message_decode(self._msg, data, len(data)))
+    self._post_decode()
 
   def load(self, data):
     self._check(pn_message_load(self._msg, data))
@@ -594,22 +650,6 @@ The format of the message.
       else:
         self._check(err)
         return data
-
-  @property
-  def instructions(self):
-    return Data(_data=pn_message_instructions(self._msg))
-
-  @property
-  def annotations(self):
-    return Data(_data=pn_message_annotations(self._msg))
-
-  @property
-  def properties(self):
-    return Data(_data=pn_message_properties(self._msg))
-
-  @property
-  def body(self):
-    return Data(_data=pn_message_body(self._msg))
 
 class DataException(ProtonException):
   """
@@ -715,6 +755,12 @@ class Data:
       raise exc("[%s]: %s" % (err, "xxx"))
     else:
       return err
+
+  def clear(self):
+    """
+    Clears the data object.
+    """
+    pn_data_clear(self._data)
 
   def rewind(self):
     """
@@ -1028,7 +1074,7 @@ class Data:
     @type s: unicode
     @param s: a unicode value
     """
-    self._check(pn_data_put_string(self._data, s))
+    self._check(pn_data_put_string(self._data, s.encode("utf8")))
 
   def put_symbol(self, s):
     """
@@ -1256,7 +1302,7 @@ class Data:
     If the current node is a string, returns its value, returns ""
     otherwise.
     """
-    return pn_data_get_string(self._data)
+    return pn_data_get_string(self._data).decode("utf8")
 
   def get_symbol(self):
     """
@@ -1281,6 +1327,92 @@ class Data:
 
   def dump(self):
     pn_data_dump(self._data)
+
+  def put_dict(self, d):
+    self.put_map()
+    self.enter()
+    try:
+      for k, v in d.items():
+        self.put_object(k)
+        self.put_object(v)
+    finally:
+      self.exit()
+
+  def get_dict(self):
+    if self.enter():
+      try:
+        result = {}
+        while self.next():
+          k = self.get_object()
+          if self.next():
+            v = self.get_object()
+          else:
+            v = None
+          result[k] = v
+      finally:
+        self.exit()
+      return result
+
+  def put_sequence(self, s):
+    self.put_list()
+    self.enter()
+    try:
+      for o in s:
+        self.put_object(o)
+    finally:
+      self.exit()
+
+  def get_sequence(self):
+    if self.enter():
+      try:
+        result = []
+        while self.next():
+          result.append(self.get_object())
+      finally:
+        self.exit()
+      return result
+
+  put_mappings = {
+    None.__class__: put_null,
+    dict: put_dict,
+    list: put_sequence,
+    tuple: put_sequence,
+    unicode: put_string,
+    bytes: put_binary,
+    int: put_long,
+    long: put_long,
+    float: put_double,
+    uuid.UUID: put_uuid
+    }
+  get_mappings = {
+    NULL: lambda s, _: None,
+    MAP: get_dict,
+    LIST: get_sequence,
+    STRING: get_string,
+    BINARY: get_binary,
+    BYTE: get_byte,
+    UBYTE: get_ubyte,
+    SHORT: get_short,
+    USHORT: get_ushort,
+    INT: get_int,
+    UINT: get_uint,
+    LONG: get_long,
+    ULONG: get_ulong,
+    FLOAT: get_float,
+    DOUBLE: get_double,
+    UUID: get_uuid
+    }
+
+  def put_object(self, obj):
+    putter = self.put_mappings[obj.__class__]
+    putter(self, obj)
+
+  def get_object(self):
+    type = self.type()
+    if type is None: return None
+    getter = self.get_mappings[type]
+    return getter(self)
+
 
 class ConnectionException(ProtonException):
   pass
