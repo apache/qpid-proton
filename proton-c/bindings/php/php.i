@@ -55,6 +55,19 @@
     t_output_helper(&$result, tmp);     // append it to output array
 }
 
+%typemap(in) pn_bytes_t {
+  if (ZVAL_IS_NULL(*$input)) {
+    $1.start = NULL;
+    $1.size = 0;
+  } else {
+    $1.start = Z_STRVAL_PP($input);
+    $1.size = Z_STRLEN_PP($input);
+  }
+}
+
+%typemap(out) pn_bytes_t {
+  ZVAL_STRINGL($result, $1.start, $1.size, 1);
+}
 
 // The PHP SWIG typedefs define the typemap STRING, LENGTH to be binary safe (allow
 // embedded \0's).
@@ -98,16 +111,30 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %ignore pn_sasl_recv;
 
 %rename(pn_transport_output) wrap_pn_transport_output;
-// in PHP:   array = pn_output(transport, MAXLEN);
+// in PHP:   array = pn_transport_output(transport, MAXLEN);
 //           array[0] = size || error code
 //           array[1] = native string containing binary data
 %inline %{
     void wrap_pn_transport_output(pn_transport_t *transport, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
         *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
-        *OUTPUT_LEN = pn_output(transport, *OUTPUT_BUFFER, maxCount);
+        *OUTPUT_LEN = pn_transport_output(transport, *OUTPUT_BUFFER, maxCount);
     }
 %}
 %ignore pn_transport_output;
+
+%rename(pn_message_encode) wrap_pn_message_encode;
+%inline %{
+    void wrap_pn_message_encode(pn_message_t *message, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
+        *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
+        *OUTPUT_LEN = maxCount;
+        int err = pn_message_encode(message, *OUTPUT_BUFFER, OUTPUT_LEN);
+        if (err) {
+          *OUTPUT_LEN = err;
+          efree(*OUTPUT_BUFFER);
+        }
+    }
+%}
+%ignore pn_message_encode;
 
 %rename(pn_message_data) wrap_pn_message_data;
 // in PHP:  array = pn_message_data("binary message data", MAXLEN);
