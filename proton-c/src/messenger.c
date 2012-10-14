@@ -522,7 +522,7 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
                              "unable to subscribe to source: %s (%s)", source,
                              pn_driver_error(messenger->driver));
     }
-  } else if (scheme) {
+  } else {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (src) {
       return 0;
@@ -531,8 +531,6 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
                              "unable to subscribe to source: %s (%s)", source,
                              pn_driver_error(messenger->driver));
     }
-  } else {
-    return 0;
   }
 }
 
