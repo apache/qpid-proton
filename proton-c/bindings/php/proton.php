@@ -402,7 +402,7 @@ class Message {
   }
 
   public function load($data) {
-    $this->_check(pn_message_load($this->impl, $data));
+    $this->_check(pn_message_load($this->impl, $data, strlen($data)));
   }
 
   public function save() {

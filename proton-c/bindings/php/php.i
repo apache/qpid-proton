@@ -136,6 +136,20 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %}
 %ignore pn_message_encode;
 
+%rename(pn_message_save) wrap_pn_message_save;
+%inline %{
+    void wrap_pn_message_save(pn_message_t *message, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
+        *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
+        *OUTPUT_LEN = maxCount;
+        int err = pn_message_save(message, *OUTPUT_BUFFER, OUTPUT_LEN);
+        if (err) {
+          *OUTPUT_LEN = err;
+          efree(*OUTPUT_BUFFER);
+        }
+    }
+%}
+%ignore pn_message_save;
+
 %rename(pn_message_data) wrap_pn_message_data;
 // in PHP:  array = pn_message_data("binary message data", MAXLEN);
 //          array[0] = size || error code
