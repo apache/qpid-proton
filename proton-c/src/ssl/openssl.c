@@ -670,7 +670,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         _log( ssl, "Read %d bytes from SSL socket for app\n", read );
         _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
         ssl->in_count += read;
-        work_pending = work_pending || ssl->in_count < APP_BUF_SIZE;
+        work_pending = true;
       } else {
         if (!BIO_should_retry(ssl->bio_ssl)) {
           int reason = SSL_get_error( ssl->ssl, read );
@@ -707,7 +707,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
         if (consumed > 0) {
           ssl->in_count -= consumed;
           data += consumed;
-          work_pending = work_pending || ssl->in_count > 0;
+          work_pending = true;
           _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
         } else {
           if (consumed < 0) {
@@ -767,7 +767,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
       ssize_t app_bytes = transport->process_output(transport, &ssl->outbuf[ssl->out_count], APP_BUF_SIZE - ssl->out_count);
       if (app_bytes > 0) {
         ssl->out_count += app_bytes;
-        work_pending = ssl->out_count < APP_BUF_SIZE;
+        work_pending = true;
         _log( ssl, "Gathered %d bytes from app to send to peer\n", app_bytes );
       } else {
         if (app_bytes < 0) {
@@ -795,7 +795,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
         if (wrote > 0) {
           data += wrote;
           ssl->out_count -= wrote;
-          work_pending = work_pending || ssl->out_count > 0;
+          work_pending = true;
           _log( ssl, "Wrote %d bytes from app to socket\n", wrote );
         } else {
           if (!BIO_should_retry(ssl->bio_ssl)) {
