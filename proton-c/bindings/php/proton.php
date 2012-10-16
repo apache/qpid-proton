@@ -29,7 +29,7 @@ class MessengerException extends ProtonException {}
 
 class MessageException extends ProtonException {}
 
-$EXCEPTIONS = array(PN_TIMEOUT => Timeout);
+$EXCEPTIONS = array(PN_TIMEOUT => "Timeout");
 
 class Messenger
 {
@@ -50,7 +50,7 @@ class Messenger
   private function _check($value) {
     if ($value < 0) {
       $exc = $EXCEPTIONS[$value];
-      if ($exc == null) $exc = MessengerException;
+      if ($exc == null) $exc = "MessengerException";
       throw new $exc("[$value]: " . pn_messenger_error($this->impl));
     } else {
       return $value;
@@ -162,7 +162,7 @@ class Message {
   private function _check($value) {
     if ($value < 0) {
       $exc = $EXCEPTIONS[$value];
-      if ($exc == null) $exc = MessageException;
+      if ($exc == null) $exc = "MessageException";
       throw new $exc("[$value]: " . pn_message_error($this->impl));
     } else {
       return $value;
@@ -471,7 +471,7 @@ class Data {
   public function _check($value) {
     if ($value < 0) {
       $exc = $EXCEPTIONS[$value];
-      if ($exc == null) $exc = DataException;
+      if ($exc == null) $exc = "DataException";
       throw new $exc("[$value]");
     } else {
       return $value;
