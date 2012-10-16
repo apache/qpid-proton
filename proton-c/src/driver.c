@@ -578,6 +578,7 @@ void pn_connector_process(pn_connector_t *c) {
     if (c->pending_write) {
       c->write(c);
       c->pending_write = false;
+      pn_connector_process_output(c);  // XXX: review this - there's a better way to determine if the WR flag should be re-set
     }
     if (c->output_size == 0 && c->input_done && c->output_done) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
