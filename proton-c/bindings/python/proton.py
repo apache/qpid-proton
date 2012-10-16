@@ -1389,6 +1389,7 @@ class Data:
     MAP: get_dict,
     LIST: get_sequence,
     STRING: get_string,
+    SYMBOL: get_symbol,
     BINARY: get_binary,
     BYTE: get_byte,
     UBYTE: get_ubyte,
