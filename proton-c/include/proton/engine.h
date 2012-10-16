@@ -58,7 +58,7 @@ typedef enum {
   PN_LINK_CLOSE,
   PN_SESSION_CLOSE,
   PN_CONNECTION_CLOSE,
-  PN_NEVER,
+  PN_NEVER
 } pn_expiry_policy_t;
 typedef struct pn_delivery_t pn_delivery_t;
 
