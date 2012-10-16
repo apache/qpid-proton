@@ -658,6 +658,14 @@ class DataException(ProtonException):
   """
   pass
 
+class UnmappedType:
+
+  def __init__(self, msg):
+    self.msg = msg
+
+  def __repr__(self):
+    return "UnmappedType(%s)" % self.msg
+
 class Data:
   """
   The L{Data} class provides an interface for decoding, extracting,
@@ -1411,8 +1419,11 @@ class Data:
   def get_object(self):
     type = self.type()
     if type is None: return None
-    getter = self.get_mappings[type]
-    return getter(self)
+    getter = self.get_mappings.get(type)
+    if getter:
+      return getter(self)
+    else:
+      return UnmappedType(str(type))
 
 
 class ConnectionException(ProtonException):
