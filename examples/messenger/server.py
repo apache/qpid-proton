@@ -26,7 +26,7 @@ parser = optparse.OptionParser(usage="usage: %prog <addr_1> ... <addr_n>",
 opts, args = parser.parse_args()
 
 if not args:
-  args = ["//~0.0.0.0"]
+  args = ["amqp://~0.0.0.0"]
 
 mng = Messenger()
 mng.start()
@@ -35,8 +35,10 @@ for a in args:
   mng.subscribe(a)
 
 def dispatch(request, response):
-  response.subject = "Re: %s" % request.subject
-  print "Dispatched %s" % request.subject
+  if request.subject:
+    response.subject = "Re: %s %s" % request.subject
+  response.properties = request.properties
+  print "Dispatched %s %s" % (request.subject, request.properties)
 
 msg = Message()
 reply = Message()
@@ -50,6 +52,7 @@ while True:
     if msg.reply_to:
       reply.address = msg.reply_to
       reply.correlation_id = msg.correlation_id
+      reply.load(msg.save())
     dispatch(msg, reply)
     mng.put(reply)
     mng.send()
