@@ -381,6 +381,7 @@ static const char *default_port(const char *scheme)
 
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, char **name)
 {
+  char domain[strlen(address) + 1];
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
@@ -388,7 +389,6 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
   char *port = NULL;
   parse_url(address, &scheme, &user, &pass, &host, &port, name);
 
-  char domain[strlen(address) + 1];
   domain[0] = '\0';
 
   if (user) {
