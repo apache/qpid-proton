@@ -17,21 +17,19 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.EnumSet;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Accepted;
 import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.DeliveryState;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.FrameTransport;
-import org.apache.qpid.proton.engine.SaslClient;
-import org.apache.qpid.proton.engine.SaslServer;
-import org.apache.qpid.proton.engine.Sender;
-import org.apache.qpid.proton.engine.Session;
+import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportInput;
@@ -41,8 +39,6 @@ import org.apache.qpid.proton.type.Binary;
 import org.apache.qpid.proton.type.DescribedType;
 import org.apache.qpid.proton.type.UnsignedInteger;
 import org.apache.qpid.proton.type.UnsignedShort;
-import org.apache.qpid.proton.type.messaging.Source;
-import org.apache.qpid.proton.type.messaging.Target;
 import org.apache.qpid.proton.type.transport.Attach;
 import org.apache.qpid.proton.type.transport.Begin;
 import org.apache.qpid.proton.type.transport.Close;
@@ -54,10 +50,6 @@ import org.apache.qpid.proton.type.transport.FrameBody;
 import org.apache.qpid.proton.type.transport.Open;
 import org.apache.qpid.proton.type.transport.Role;
 import org.apache.qpid.proton.type.transport.Transfer;
-
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 
 public class TransportImpl extends EndpointImpl implements Transport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
 {
@@ -216,20 +208,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-    @Override
-    public SaslClient saslClient()
+    public Sasl sasl()
     {
-        SaslClientImpl saslClient = new SaslClientImpl();
-        _sasl = saslClient;
-        return saslClient;
-    }
+        if(_sasl == null)
+        {
+            _sasl = new SaslImpl();
+        }
+        return _sasl;
 
-    @Override
-    public SaslServer saslServer()
-    {
-        SaslServerImpl saslServer = new SaslServerImpl();
-        _sasl = saslServer;
-        return saslServer;
     }
 
     private void clearTransportWorkList()
@@ -620,18 +606,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                             attach.setHandle(localHandle);
                             attach.setName(transportLink.getName());
 
-                            if(link.getLocalSourceAddress() != null)
+                            if(link.getSource() != null)
                             {
-                                Source source = new Source();
-                                source.setAddress(link.getLocalSourceAddress());
-                                attach.setSource(source);
+                                attach.setSource(link.getSource());
                             }
 
-                            if(link.getLocalTargetAddress() != null)
+                            if(link.getTarget() != null)
                             {
-                                Target target = new Target();
-                                target.setAddress(link.getLocalTargetAddress());
-                                attach.setTarget(target);
+                                attach.setTarget(link.getTarget());
                             }
 
                             attach.setRole(endpoint instanceof ReceiverImpl ? Role.RECEIVER : Role.SENDER);
@@ -764,11 +746,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return transportLink;
     }
 
-    private int allocateLocalChannel(TransportSession transportSession) 
+    private int allocateLocalChannel(TransportSession transportSession)
     {
-        for( int i=0; i < _localSessions.length; i++) 
+        for( int i=0; i < _localSessions.length; i++)
         {
-            if( _localSessions[i] == null ) 
+            if( _localSessions[i] == null )
             {
                 _localSessions[i] = transportSession;
                 transportSession.setLocalChannel(i);
@@ -1010,16 +992,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 }
 
                 link.setRemoteState(EndpointState.ACTIVE);
-                Source source = (Source) attach.getSource();
-                if(source != null)
-                {
-                    link.setRemoteSourceAddress(source.getAddress());
-                }
-                Target target = (Target) attach.getTarget();
-                if(target != null)
-                {
-                    link.setRemoteTargetAddress(target.getAddress());
-                }
+                link.setRemoteSource(attach.getSource());
+                link.setRemoteTarget(attach.getTarget());
 
                 transportLink.setName(attach.getName());
                 transportLink.setRemoteHandle(attach.getHandle());
@@ -1123,7 +1097,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
-    @Override
     public boolean input(TransportFrame frame)
     {
         if(_connectionEndpoint != null || getRemoteState() == EndpointState.UNINITIALIZED)
@@ -1146,7 +1119,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             _transfer = transfer;
         }
 
-        @Override
         public void run()
         {
             _transfer.setMore(true);

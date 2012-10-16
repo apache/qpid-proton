@@ -101,4 +101,32 @@ public interface Sasl
     int send(byte[] bytes, int offset, int size);
 
 
+    /** Set the outcome of SASL negotiation
+     *
+     * Used by the server to set the result of the negotiation process.
+     *
+     * @todo
+     */
+    void done(SaslOutcome outcome);
+
+
+    /** Configure the SASL layer to use the "PLAIN" mechanism.
+     *
+     * A utility function to configure a simple client SASL layer using
+     * PLAIN authentication.
+     *
+     * @param username credential for the PLAIN authentication
+     *                     mechanism
+     * @param password credential for the PLAIN authentication
+     *                     mechanism
+     */
+    void plain(String username, String password);
+
+    /** Retrieve the outcome of SASL negotiation.
+     *
+     */
+    SaslOutcome getOutcome();
+
+
+
 }

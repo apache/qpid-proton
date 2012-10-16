@@ -52,7 +52,6 @@ public interface Transport extends Endpoint
     public int output(byte[] bytes, int offset, int size);
 
 
-    SaslClient saslClient();
+    Sasl sasl();
 
-    SaslServer saslServer();
 }

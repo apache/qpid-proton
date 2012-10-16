@@ -23,6 +23,8 @@ package org.apache.qpid.proton.engine.impl;
 import java.util.EnumSet;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.type.transport.Source;
+import org.apache.qpid.proton.type.transport.Target;
 
 public abstract class LinkImpl extends EndpointImpl implements Link
 {
@@ -33,10 +35,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     DeliveryImpl _tail;
     DeliveryImpl _current;
     private String _name;
-    private String _localSourceAddress;
-    private String _remoteSourceAddress;
-    private String _localTargetAddress;
-    private String _remoteTargetAddress;
+    private Source _source;
+    private Source _remoteSource;
+    private Target _target;
+    private Target _remoteTarget;
     private int _queued;
     private int _credit;
     private int _unsettled;
@@ -158,47 +160,47 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _session;
     }
 
-    public String getRemoteSourceAddress()
+    public Source getRemoteSource()
     {
-        return _remoteSourceAddress;
+        return _remoteSource;
     }
 
-    void setRemoteSourceAddress(String sourceAddress)
+    void setRemoteSource(Source source)
     {
-        _remoteSourceAddress = sourceAddress;
+        _remoteSource = source;
     }
 
-    public String getRemoteTargetAddress()
+    public Target getRemoteTarget()
     {
-        return _remoteTargetAddress;
+        return _remoteTarget;
     }
 
-    void setRemoteTargetAddress(String targetAddress)
+    void setRemoteTarget(Target target)
     {
-        _remoteTargetAddress = targetAddress;
+        _remoteTarget = target;
     }
 
-    public String getLocalSourceAddress()
+    public Source getSource()
     {
-        return _localSourceAddress;
+        return _source;
     }
 
-    public void setLocalSourceAddress(String localSourceAddress)
+    public void setSource(Source source)
     {
         // TODO - should be an error if local state is ACTIVE
-        _localSourceAddress = localSourceAddress;
+        _source = source;
         modified();
     }
 
-    public String getLocalTargetAddress()
+    public Target getTarget()
     {
-        return _localTargetAddress;
+        return _target;
     }
 
-    public void setLocalTargetAddress(String localTargetAddress)
+    public void setTarget(Target target)
     {
         // TODO - should be an error if local state is ACTIVE
-        _localTargetAddress = localTargetAddress;
+        _target = target;
         modified();
     }
 

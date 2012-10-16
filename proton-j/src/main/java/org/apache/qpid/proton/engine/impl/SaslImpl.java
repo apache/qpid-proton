@@ -8,9 +8,11 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.type.AMQPDefinedTypes;
 import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.security.SaslFrameBody;
+import org.apache.qpid.proton.type.Symbol;
+import org.apache.qpid.proton.type.UnsignedByte;
+import org.apache.qpid.proton.type.security.*;
 
-public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
+public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 {
     public static final byte SASL_FRAME_TYPE = (byte) 1;
 
@@ -34,6 +36,20 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
     private Binary _challengeResponse;
     private SaslFrameParser _frameParser;
 
+    enum Role { CLIENT, SERVER };
+
+    private SaslOutcome _outcome = SaslOutcome.PN_SASL_NONE;
+    private SaslState _state = SaslState.PN_SASL_IDLE;
+
+    private String _hostname;
+    private boolean _done;
+    private Symbol[] _mechanisms;
+
+    private Symbol _chosenMechanism;
+
+
+    private Role _role;
+
     public SaslImpl()
     {
         _frameParser = new SaslFrameParser(this);
@@ -41,8 +57,10 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
         _overflowBuffer.flip();
     }
 
-    public abstract boolean isDone();
-
+    public boolean isDone()
+    {
+        return _done;
+    }
 
     public final int input(byte[] bytes, int offset, int size)
     {
@@ -82,7 +100,54 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
     }
 
 
-    protected abstract int process(WritableBuffer buffer);
+    protected int process(WritableBuffer buffer)
+    {
+        int written = processHeader(buffer);
+
+        if(_role == Role.SERVER)
+        {
+
+            if(getState()== SaslState.PN_SASL_IDLE && _mechanisms != null)
+            {
+                SaslMechanisms mechanisms = new SaslMechanisms();
+
+                mechanisms.setSaslServerMechanisms(_mechanisms);
+                written += writeFrame(buffer, mechanisms);
+            }
+            else if(getChallengeResponse() != null)
+            {
+                SaslChallenge challenge = new SaslChallenge();
+                challenge.setChallenge(getChallengeResponse());
+                written+=writeFrame(buffer, challenge);
+                setChallengeResponse(null);
+            }
+            else if(_done)
+            {
+                org.apache.qpid.proton.type.security.SaslOutcome outcome =
+                        new org.apache.qpid.proton.type.security.SaslOutcome();
+                outcome.setCode(UnsignedByte.valueOf(_outcome.getCode()));
+                written+=writeFrame(buffer, outcome);
+            }
+            return written;
+        }
+        else if(_role == Role.CLIENT)
+        {
+            if(getState() == SaslState.PN_SASL_IDLE && _chosenMechanism != null)
+            {
+                written += processInit(buffer);
+                _state = SaslState.PN_SASL_STEP;
+            }
+            if(getState() == SaslState.PN_SASL_STEP && getChallengeResponse() != null)
+            {
+                written += processResponse(buffer);
+            }
+            return written;
+        }
+        else
+        {
+            throw new IllegalStateException("Client or server must be chosen");
+        }
+    }
 
     int writeFrame(WritableBuffer buffer, SaslFrameBody frameBody)
     {
@@ -148,6 +213,10 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
         _pending = pending;
     }
 
+    public SaslState getState()
+    {
+        return _state;
+    }
 
 
     final DecoderImpl getDecoder()
@@ -171,4 +240,166 @@ public abstract class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandl
     }
 
 
+
+    public void setMechanisms(String[] mechanisms)
+    {
+        if(_role == Role.SERVER)
+        {
+            if(mechanisms != null)
+            {
+                _mechanisms = new Symbol[mechanisms.length];
+                for(int i = 0; i < mechanisms.length; i++)
+                {
+                    _mechanisms[i] = Symbol.valueOf(mechanisms[i]);
+                }
+            }
+        }
+        else if(_role == Role.CLIENT)
+        {
+            assert mechanisms != null;
+            assert mechanisms.length == 1;
+
+            _chosenMechanism = Symbol.valueOf(mechanisms[0]);
+        }
+    }
+
+    public String[] getRemoteMechanisms()
+    {
+        if(_role == Role.SERVER)
+        {
+            return new String[] { _chosenMechanism.toString() };
+        }
+        else if(_role == Role.CLIENT)
+        {
+            String[] remoteMechanisms = new String[_mechanisms.length];
+            for(int i = 0; i < _mechanisms.length; i++)
+            {
+                remoteMechanisms[i] = _mechanisms[i].toString();
+            }
+            return remoteMechanisms;
+        }
+        else
+        {
+            throw new IllegalStateException();
+        }
+    }
+
+    public void setMechanism(Symbol mechanism)
+    {
+        _chosenMechanism = mechanism;
+    }
+
+    public void setResponse(Binary initialResponse)
+    {
+        setPending(initialResponse.asByteBuffer());
+    }
+
+
+    public void handleInit(SaslInit saslInit, Binary payload, Void context)
+    {
+        _hostname = saslInit.getHostname();
+        if(saslInit.getInitialResponse() != null)
+        {
+            setPending(saslInit.getInitialResponse().asByteBuffer());
+        }
+    }
+
+
+    public void handleResponse(SaslResponse saslResponse, Binary payload, Void context)
+    {
+        setPending(saslResponse.getResponse()  == null ? null : saslResponse.getResponse().asByteBuffer());
+    }
+
+
+    public void done(SaslOutcome outcome)
+    {
+        checkRole(Role.SERVER);
+        _outcome = outcome;
+        _done = true;
+        _state = outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
+    }
+
+    private void checkRole(Role role)
+    {
+        if(role != _role)
+        {
+            throw new IllegalStateException();
+        }
+    }
+
+
+    public void handleMechanisms(SaslMechanisms saslMechanisms, Binary payload, Void context)
+    {
+        _mechanisms = saslMechanisms.getSaslServerMechanisms();
+    }
+
+
+    public void handleChallenge(SaslChallenge saslChallenge, Binary payload, Void context)
+    {
+        setPending(saslChallenge.getChallenge()  == null ? null : saslChallenge.getChallenge().asByteBuffer());
+    }
+
+
+    public void handleOutcome(org.apache.qpid.proton.type.security.SaslOutcome saslOutcome,
+                              Binary payload,
+                              Void context)
+    {
+        for(SaslOutcome outcome : SaslOutcome.values())
+        {
+            if(outcome.getCode() == saslOutcome.getCode().byteValue())
+            {
+                _outcome = outcome;
+                break;
+            }
+        }
+        _done = true;
+    }
+    private int processResponse(WritableBuffer buffer)
+    {
+        SaslResponse response = new SaslResponse();
+        response.setResponse(getChallengeResponse());
+        setChallengeResponse(null);
+        return writeFrame(buffer, response);
+    }
+
+    private int processInit(WritableBuffer buffer)
+    {
+        SaslInit init = new SaslInit();
+        init.setHostname(_hostname);
+        init.setMechanism(_chosenMechanism);
+        if(getChallengeResponse() != null)
+        {
+            init.setInitialResponse(getChallengeResponse());
+            setChallengeResponse(null);
+        }
+        return writeFrame(buffer, init);
+    }
+
+    public void plain(String username, String password)
+    {
+        _chosenMechanism = Symbol.valueOf("PLAIN");
+        byte[] usernameBytes = username.getBytes();
+        byte[] passwordBytes = password.getBytes();
+        byte[] data = new byte[usernameBytes.length+passwordBytes.length+2];
+        System.arraycopy(usernameBytes, 0, data, 1, usernameBytes.length);
+        System.arraycopy(passwordBytes, 0, data, 2+usernameBytes.length, passwordBytes.length);
+
+        setChallengeResponse(new Binary(data));
+
+    }
+
+    public SaslOutcome getOutcome()
+    {
+        return _outcome;
+    }
+
+    public void client()
+    {
+        _role = Role.CLIENT;
+    }
+
+    public void server()
+    {
+        _role = Role.SERVER;
+    }
 }
