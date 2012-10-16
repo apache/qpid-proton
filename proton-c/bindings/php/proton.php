@@ -838,7 +838,7 @@ class Data {
     if ($type == null) return null;
     $getter = $this->get_mappings[$type];
     if ($getter == null)
-      throw new DataException("unknown type: $type");
+      return new DataException("unknown type: $type");
     return $this->$getter();
   }
 
