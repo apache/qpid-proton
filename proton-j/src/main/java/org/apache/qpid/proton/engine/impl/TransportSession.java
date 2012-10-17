@@ -328,7 +328,7 @@ class TransportSession
             {
                 if(disposition.getState() != null)
                 {
-                    delivery.setRemoteDeliveryState(DeliveryStateConverter.convert(disposition.getState()));
+                    delivery.setRemoteDeliveryState(disposition.getState());
                 }
                 if(Boolean.TRUE.equals(disposition.getSettled()))
                 {

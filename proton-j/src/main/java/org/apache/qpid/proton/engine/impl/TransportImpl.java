@@ -24,9 +24,7 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.engine.Accepted;
 import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.DeliveryState;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.FrameTransport;
 import org.apache.qpid.proton.engine.Sasl;
@@ -339,15 +337,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     {
                         transportDelivery.settled();
                     }
-                    DeliveryState deliveryState = delivery.getLocalState();
-                    if(deliveryState == Accepted.getInstance())
-                    {
-                        disposition.setState(ACCEPTED);
-                    }
-                    else
-                    {
-                        // TODO
-                    }
+                    disposition.setState(delivery.getLocalState());
                     int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
                                                                       .getTransportSession().getLocalChannel(),
                                        disposition, null, null);
@@ -467,15 +457,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     disposition.setLast(transportDelivery.getDeliveryId());
                     disposition.setRole(Role.RECEIVER);
                     disposition.setSettled(delivery.isSettled());
-                    DeliveryState deliveryState = delivery.getLocalState();
-                    if(deliveryState == Accepted.getInstance())
-                    {
-                        disposition.setState(ACCEPTED);
-                    }
-                    else
-                    {
-                        // TODO
-                    }
+
+                    disposition.setState(delivery.getLocalState());
                     int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
                                                                       .getTransportSession().getLocalChannel(),
                                        disposition, null, null);
@@ -605,6 +588,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                             Attach attach = new Attach();
                             attach.setHandle(localHandle);
                             attach.setName(transportLink.getName());
+
+                            if(link.getSenderSettleMode() != null)
+                            {
+                                attach.setSndSettleMode(link.getSenderSettleMode());
+                            }
+
+                            if(link.getReceiverSettleMode() != null)
+                            {
+                                attach.setRcvSettleMode(link.getReceiverSettleMode());
+                            }
 
                             if(link.getSource() != null)
                             {
@@ -994,6 +987,9 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                 link.setRemoteState(EndpointState.ACTIVE);
                 link.setRemoteSource(attach.getSource());
                 link.setRemoteTarget(attach.getTarget());
+
+                link.setRemoteReceiverSettleMode(attach.getRcvSettleMode());
+                link.setRemoteSenderSettleMode(attach.getSndSettleMode());
 
                 transportLink.setName(attach.getName());
                 transportLink.setRemoteHandle(attach.getHandle());

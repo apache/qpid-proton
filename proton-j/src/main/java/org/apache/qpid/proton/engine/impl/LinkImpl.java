@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 import java.util.EnumSet;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.type.UnsignedByte;
 import org.apache.qpid.proton.type.transport.Source;
 import org.apache.qpid.proton.type.transport.Target;
 
@@ -42,6 +43,13 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private int _queued;
     private int _credit;
     private int _unsettled;
+
+
+    private UnsignedByte _senderSettleMode;
+    private UnsignedByte _remoteSenderSettleMode;
+    private UnsignedByte _receiverSettleMode;
+    private UnsignedByte _remoteReceiverSettleMode;
+
 
     private final LinkNode<LinkImpl> _node;
     private boolean _drain;
@@ -288,4 +296,43 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _drain;
     }
 
+    public UnsignedByte getSenderSettleMode()
+    {
+        return _senderSettleMode;
+    }
+
+    public void setSenderSettleMode(UnsignedByte senderSettleMode)
+    {
+        _senderSettleMode = senderSettleMode;
+    }
+
+    public UnsignedByte getRemoteSenderSettleMode()
+    {
+        return _remoteSenderSettleMode;
+    }
+
+    void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode)
+    {
+        _remoteSenderSettleMode = remoteSenderSettleMode;
+    }
+
+    public UnsignedByte getReceiverSettleMode()
+    {
+        return _receiverSettleMode;
+    }
+
+    public void setReceiverSettleMode(UnsignedByte receiverSettleMode)
+    {
+        _receiverSettleMode = receiverSettleMode;
+    }
+
+    public UnsignedByte getRemoteReceiverSettleMode()
+    {
+        return _remoteReceiverSettleMode;
+    }
+
+    void setRemoteReceiverSettleMode(UnsignedByte remoteReceiverSettleMode)
+    {
+        _remoteReceiverSettleMode = remoteReceiverSettleMode;
+    }
 }

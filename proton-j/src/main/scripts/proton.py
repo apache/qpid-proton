@@ -17,11 +17,12 @@
 # under the License.
 #
 
-from org.apache.qpid.proton.engine import EndpointState, Accepted, TransportException
+from org.apache.qpid.proton.engine import EndpointState, TransportException
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
 from org.apache.qpid.proton.message import Message as MessageImpl, \
     MessageFormat
+from org.apache.qpid.proton.type.messaging import Source, Target, Accepted
 from jarray import zeros
 from java.util import EnumSet
 
@@ -179,11 +180,15 @@ class Link(Endpoint):
 
   @property
   def source(self):
-    return Terminus(self.impl, "LocalSource")
+    if self.impl.getSource() is None:
+        self.impl.setSource( Source() )
+    return Terminus(self.impl, "Source")
 
   @property
   def target(self):
-    return Terminus(self.impl, "LocalTarget")
+    if self.impl.getTarget() is None:
+        self.impl.setTarget( Target() )
+    return Terminus(self.impl, "Target")
 
   @property
   def remote_source(self):
@@ -251,9 +256,9 @@ class Terminus(object):
     self.capabilities = DataDummy()
 
   def _get_address(self):
-    return getattr(self.impl, "get%sAddress" % self.prefix)()
+    return getattr(self.impl, "get%s" % self.prefix)().getAddress()
   def _set_address(self, address):
-    getattr(self.impl, "set%sAddress" % self.prefix)(address)
+    getattr(self.impl, "get%s" % self.prefix)().setAddress(address)
   address = property(_get_address, _set_address)
 
   def copy(self, src):

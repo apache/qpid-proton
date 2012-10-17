@@ -34,6 +34,8 @@ import org.apache.qpid.proton.type.*;
 public class Accepted
       implements DescribedType , org.apache.qpid.proton.type.transport.DeliveryState, Outcome
 {
+    private static final Accepted INSTANCE = new Accepted();
+
     private static final Object[] DESCRIPTORS =
     {
         UnsignedLong.valueOf(0x0000000000000024L), Symbol.valueOf("amqp:accepted:list"),
@@ -85,6 +87,7 @@ public class Accepted
 
     private static class AcceptedConstructor implements DescribedTypeConstructor<Accepted>
     {
+
         public Accepted newInstance(Object described)
         {
             List l = (List) described;
@@ -92,7 +95,7 @@ public class Accepted
             Accepted o = new Accepted();
 
 
-            return o;
+            return INSTANCE;
         }
 
         public Class<Accepted> getTypeClass()
@@ -115,5 +118,10 @@ public class Accepted
     public String toString()
     {
         return "Accepted{}";
+    }
+
+    public static Accepted getInstance()
+    {
+        return INSTANCE;
     }
 }
