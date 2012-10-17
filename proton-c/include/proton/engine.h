@@ -249,8 +249,6 @@ pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
  */
 pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
 
-bool pn_connection_writable(pn_connection_t *connection);
-
 void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
 void pn_connection_free(pn_connection_t *connection);

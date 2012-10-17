@@ -528,6 +528,21 @@ static void pn_connector_process_output(pn_connector_t *ctor)
   }
 }
 
+
+void pn_connector_activate(pn_connector_t *ctor, pn_activate_criteria_t crit)
+{
+    switch (crit) {
+    case PN_CONNECTOR_WRITABLE :
+        ctor->status |= PN_SEL_WR;
+        break;
+
+    case PN_CONNECTOR_READABLE :
+        ctor->status |= PN_SEL_RD;
+        break;
+    }
+}
+
+
 static void pn_connector_write(pn_connector_t *ctor)
 {
   if (ctor->output_size > 0) {
@@ -688,10 +703,8 @@ static void pn_driver_rebuild(pn_driver_t *d)
   for (int i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
-      bool has_writable_links = c->connection ? pn_connection_writable(c->connection) : false;
       d->fds[d->nfds].fd = c->fd;
-      d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) |
-        ((has_writable_links || (c->status & PN_SEL_WR)) ? POLLOUT : 0);
+      d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) | (c->status & PN_SEL_WR ? POLLOUT : 0);
       d->fds[d->nfds].revents = 0;
       c->idx = d->nfds;
       d->nfds++;

@@ -50,6 +50,11 @@ typedef struct pn_driver_t pn_driver_t;
 typedef struct pn_listener_t pn_listener_t;
 typedef struct pn_connector_t pn_connector_t;
 
+typedef enum {
+  PN_CONNECTOR_WRITABLE,
+  PN_CONNECTOR_READABLE
+} pn_activate_criteria_t;
+
 /** Construct a driver
  *
  *  Call pn_driver_free() to release the driver object.
@@ -336,6 +341,16 @@ bool pn_connector_closed(pn_connector_t *connector);
  *                      valid on return
  */
 void pn_connector_free(pn_connector_t *connector);
+
+/** Activate a connector when a criteria is met
+ *
+ * Set a criteria for a connector (i.e. it's transport is writable) that, once met,
+ * the connector shall be placed in the driver's work queue.
+ *
+ * @param[in] connector The connector object to activate
+ * @param[in] criteria  The criteria that must be met prior to activating the connector
+ */
+void pn_connector_activate(pn_connector_t *connector, pn_activate_criteria_t criteria);
 
 
 #ifdef __cplusplus

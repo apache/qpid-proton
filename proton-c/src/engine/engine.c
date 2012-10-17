@@ -691,25 +691,6 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
   return NULL;
 }
 
-bool pn_connection_writable(pn_connection_t *conn)
-{
-  if (!conn)
-    return false;
-
-  pn_endpoint_t *endpoint = conn->endpoint_head;
-
-  while (endpoint) {
-    if (pn_matches(endpoint, SENDER, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)) {
-      pn_link_t *link = (pn_link_t*) endpoint;
-      if ((link->available > 0) && (pn_link_credit(link) > 0))
-        return true;
-    }
-    endpoint = endpoint->endpoint_next;
-  }
-
-  return false;
-}
-
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   if (!conn) return NULL;
