@@ -896,7 +896,6 @@ class Data:
       >>> data.put_array(True, Data.DOUBLE)
       >>> data.enter()
       >>> data.put_symbol("array-descriptor")
-      >>> data.enter()
       >>> data.put_double(1.1)
       >>> data.put_double(1.2)
       >>> data.put_double(1.3)
