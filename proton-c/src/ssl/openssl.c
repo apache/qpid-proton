@@ -153,12 +153,15 @@ static void _log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
 // unrecoverable SSL failure occured, notify transport and generate error code.
 static int ssl_failed(pn_ssl_t *ssl)
 {
+  ssl->ssl_closed = true;
+  ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
   // try to grab the first SSL error to add to the failure log
   char buf[128] = "Unknown error.";
   unsigned long ssl_err = ERR_get_error();
   if (ssl_err) {
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
   }
+  _log_ssl_error(ssl, NULL);    // spit out any remaining errors to the log file
   return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
 }
 
