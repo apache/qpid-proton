@@ -296,36 +296,43 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _drain;
     }
 
+    @Override
     public UnsignedByte getSenderSettleMode()
     {
         return _senderSettleMode;
     }
 
+    @Override
     public void setSenderSettleMode(UnsignedByte senderSettleMode)
     {
         _senderSettleMode = senderSettleMode;
     }
 
+    @Override
     public UnsignedByte getRemoteSenderSettleMode()
     {
         return _remoteSenderSettleMode;
     }
 
-    void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode)
+    @Override
+    public void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode)
     {
         _remoteSenderSettleMode = remoteSenderSettleMode;
     }
 
+    @Override
     public UnsignedByte getReceiverSettleMode()
     {
         return _receiverSettleMode;
     }
 
+    @Override
     public void setReceiverSettleMode(UnsignedByte receiverSettleMode)
     {
         _receiverSettleMode = receiverSettleMode;
     }
 
+    @Override
     public UnsignedByte getRemoteReceiverSettleMode()
     {
         return _remoteReceiverSettleMode;

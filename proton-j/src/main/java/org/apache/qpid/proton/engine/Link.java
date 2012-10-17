@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import org.apache.qpid.proton.type.UnsignedByte;
 import org.apache.qpid.proton.type.transport.Source;
 import org.apache.qpid.proton.type.transport.Target;
 
@@ -73,4 +74,17 @@ public interface Link extends Endpoint
 
     public Session getSession();
 
+    UnsignedByte getSenderSettleMode();
+
+    void setSenderSettleMode(UnsignedByte senderSettleMode);
+
+    UnsignedByte getRemoteSenderSettleMode();
+
+    void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode);
+
+    UnsignedByte getReceiverSettleMode();
+
+    void setReceiverSettleMode(UnsignedByte receiverSettleMode);
+
+    UnsignedByte getRemoteReceiverSettleMode();
 }
