@@ -715,7 +715,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
                  (int) consumed, (int)ssl->in_count);
             ssl->in_count = 0;    // discard any pending input
             ssl->app_input_closed = consumed;
-            if (ssl->app_output_closed && ssl->out_count) {
+            if (ssl->app_output_closed && ssl->out_count == 0) {
               // both sides of app closed, and no more app output pending:
               start_ssl_shutdown(ssl);
             }
@@ -743,8 +743,8 @@ static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, s
   // tell transport our input side is closed if the SSL socket cannot be read from any
   // longer, AND any pending input has been written up to the application (or the
   // application is closed)
-  if (ssl->ssl_closed && ssl->in_count == 0) {
-    consumed = ssl->app_input_closed ? ssl->app_input_closed : PN_EOS;
+  if (ssl->ssl_closed && ssl->app_input_closed == 0) {
+    consumed = ssl->app_input_closed;
   }
   _log(ssl, "process_input_ssl() returning %d\n", (int) consumed);
   return consumed;
