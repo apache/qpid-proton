@@ -35,12 +35,12 @@ typedef struct {
   uint8_t type;
   uint16_t channel;
   size_t ex_size;
-  char *extended;
+  const char *extended;
   size_t size;
-  char *payload;
+  const char *payload;
 } pn_frame_t;
 
-size_t pn_read_frame(pn_frame_t *frame, char *bytes, size_t available);
+size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available);
 size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
 
 #ifdef __cplusplus

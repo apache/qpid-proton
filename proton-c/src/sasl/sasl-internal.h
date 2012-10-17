@@ -13,7 +13,7 @@
  * @param[in] available number of octets of data in 'bytes'
  * @return the number of bytes consumed, or error code if < 0
  */
-ssize_t pn_sasl_input(pn_sasl_t *sasl, char *bytes, size_t available);
+ssize_t pn_sasl_input(pn_sasl_t *sasl, const char *bytes, size_t available);
 
 /** Gather output frames from the layer.
  *

@@ -746,10 +746,10 @@ int pn_do_detach(pn_dispatcher_t *disp);
 int pn_do_end(pn_dispatcher_t *disp);
 int pn_do_close(pn_dispatcher_t *disp);
 
-static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, char *bytes, size_t available);
-static ssize_t pn_input_read_sasl(pn_transport_t *transport, char *bytes, size_t available);
-static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, char *bytes, size_t available);
-static ssize_t pn_input_read_amqp(pn_transport_t *transport, char *bytes, size_t available);
+static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, const char *bytes, size_t available);
+static ssize_t pn_input_read_sasl(pn_transport_t *transport, const char *bytes, size_t available);
+static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, const char *bytes, size_t available);
+static ssize_t pn_input_read_amqp(pn_transport_t *transport, const char *bytes, size_t available);
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, char *bytes, size_t available);
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, char *bytes, size_t available);
 static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, char *bytes, size_t available);
@@ -1722,7 +1722,7 @@ int pn_do_close(pn_dispatcher_t *disp)
   return 0;
 }
 
-ssize_t pn_transport_input(pn_transport_t *transport, char *bytes, size_t available)
+ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available)
 {
   if (!transport) return PN_ARG_ERR;
 
@@ -1759,9 +1759,9 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *bytes, size_t availa
 
 #define SASL_HEADER ("AMQP\x03\x01\x00\x00")
 
-static ssize_t pn_input_read_header(pn_transport_t *transport, char *bytes, size_t available,
+static ssize_t pn_input_read_header(pn_transport_t *transport, const char *bytes, size_t available,
                                     const char *header, size_t size, const char *protocol,
-                                    ssize_t (*next)(pn_transport_t *, char *, size_t))
+                                    ssize_t (*next)(pn_transport_t *, const char *, size_t))
 {
   const char *point = header + transport->header_count;
   int delta = pn_min(available, size - transport->header_count);
@@ -1783,12 +1783,12 @@ static ssize_t pn_input_read_header(pn_transport_t *transport, char *bytes, size
   }
 }
 
-static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, char *bytes, size_t available)
+static ssize_t pn_input_read_sasl_header(pn_transport_t *transport, const char *bytes, size_t available)
 {
   return pn_input_read_header(transport, bytes, available, SASL_HEADER, 8, "SASL", pn_input_read_sasl);
 }
 
-static ssize_t pn_input_read_sasl(pn_transport_t *transport, char *bytes, size_t available)
+static ssize_t pn_input_read_sasl(pn_transport_t *transport, const char *bytes, size_t available)
 {
   pn_sasl_t *sasl = transport->sasl;
   ssize_t n = pn_sasl_input(sasl, bytes, available);
@@ -1802,13 +1802,13 @@ static ssize_t pn_input_read_sasl(pn_transport_t *transport, char *bytes, size_t
 
 #define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
 
-static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, char *bytes, size_t available)
+static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, const char *bytes, size_t available)
 {
   return pn_input_read_header(transport, bytes, available, AMQP_HEADER, 8,
                               "AMQP", pn_input_read_amqp);
 }
 
-static ssize_t pn_input_read_amqp(pn_transport_t *transport, char *bytes, size_t available)
+static ssize_t pn_input_read_amqp(pn_transport_t *transport, const char *bytes, size_t available)
 {
   if (transport->close_rcvd) {
     if (available > 0) {

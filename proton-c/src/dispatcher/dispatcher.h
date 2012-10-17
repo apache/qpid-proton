@@ -43,7 +43,7 @@ struct pn_dispatcher_t {
   uint16_t channel;
   uint8_t code;
   pn_data_t *args;
-  char *payload;
+  const char *payload;
   size_t size;
   pn_data_t *output_args;
   const char *output_payload;
@@ -64,7 +64,7 @@ void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...);
 void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size);
 int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);
-ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available);
+ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available);
 ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size);
 void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...);
 

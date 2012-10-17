@@ -78,7 +78,7 @@ struct pn_ssl_t {
   size_t in_count;
 
   // process cleartext i/o "above" the SSL layer
-  ssize_t (*process_input)(pn_transport_t *, char *, size_t);
+  ssize_t (*process_input)(pn_transport_t *, const char *, size_t);
   ssize_t (*process_output)(pn_transport_t *, char *, size_t);
 
   pn_trace_t trace;
@@ -91,11 +91,11 @@ struct pn_ssl_t {
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
-static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_data, size_t len);
 static ssize_t process_output_ssl( pn_transport_t *transport, char *input_data, size_t len);
-static ssize_t process_input_cleartext(pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_input_cleartext(pn_transport_t *transport, const char *input_data, size_t len);
 static ssize_t process_output_cleartext(pn_transport_t *transport, char *buffer, size_t max_len);
-static ssize_t process_input_unknown(pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_input_unknown(pn_transport_t *transport, const char *input_data, size_t len);
 static ssize_t process_output_unknown(pn_transport_t *transport, char *input_data, size_t len);
 static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
 static int init_ssl_socket( pn_ssl_t * );
@@ -580,7 +580,7 @@ void pn_ssl_free( pn_ssl_t *ssl)
 }
 
 // move data received from the network into the SSL layer
-ssize_t pn_ssl_input(pn_ssl_t *ssl, char *bytes, size_t available)
+ssize_t pn_ssl_input(pn_ssl_t *ssl, const char *bytes, size_t available)
 {
   return ssl->process_input( ssl->transport, bytes, available );
 }
@@ -627,7 +627,7 @@ static int setup_ssl_connection( pn_ssl_t *ssl )
 
 // take data from the network, and pass it into SSL.  Attempt to read decrypted data from
 // SSL socket and pass it to the application.
-static ssize_t process_input_ssl( pn_transport_t *transport, char *input_data, size_t available)
+static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_data, size_t available)
 {
   pn_ssl_t *ssl = transport->ssl;
   if (!ssl) return PN_ERR;
@@ -902,7 +902,7 @@ static int init_ssl_socket( pn_ssl_t *ssl )
 
 //////// CLEARTEXT CONNECTIONS
 
-static ssize_t process_input_cleartext(pn_transport_t *transport, char *input_data, size_t len)
+static ssize_t process_input_cleartext(pn_transport_t *transport, const char *input_data, size_t len)
 {
   // just write directly to layer "above" SSL
   return transport->process_input( transport, input_data, len );
@@ -927,7 +927,7 @@ static int setup_cleartext_connection( pn_ssl_t *ssl )
 
 // until we determine if the client is using SSL or not:
 
-static ssize_t process_input_unknown(pn_transport_t *transport, char *input_data, size_t len)
+static ssize_t process_input_unknown(pn_transport_t *transport, const char *input_data, size_t len)
 {
   switch (check_for_ssl_connection( input_data, len )) {
   case SSL_CONNECTION:

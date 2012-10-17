@@ -24,7 +24,7 @@
 #include <arpa/inet.h>
 #include <proton/framing.h>
 
-size_t pn_read_frame(pn_frame_t *frame, char *bytes, size_t available)
+size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available)
 {
   if (available >= AMQP_HEADER_SIZE) {
     size_t size = htonl(*((uint32_t *) bytes));

@@ -86,7 +86,7 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
 {
 }
 
-ssize_t pn_ssl_input(pn_ssl_t *ssl, char *bytes, size_t available)
+ssize_t pn_ssl_input(pn_ssl_t *ssl, const char *bytes, size_t available)
 {
   return PN_EOS;
 }

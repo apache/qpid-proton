@@ -90,7 +90,7 @@ typedef struct {
 #include <proton/ssl.h>
 
 struct pn_transport_t {
-  ssize_t (*process_input)(pn_transport_t *, char *, size_t);
+  ssize_t (*process_input)(pn_transport_t *, const char *, size_t);
   ssize_t (*process_output)(pn_transport_t *, char *, size_t);
   size_t header_count;
   pn_sasl_t *sasl;

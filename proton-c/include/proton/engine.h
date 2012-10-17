@@ -275,7 +275,7 @@ void pn_connection_set_context(pn_connection_t *connection, void *context);
 
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
-ssize_t pn_transport_input(pn_transport_t *transport, char *bytes, size_t available);
+ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
 ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
 time_t pn_transport_tick(pn_transport_t *transport, time_t now);
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);

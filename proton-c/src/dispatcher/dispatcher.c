@@ -152,7 +152,7 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
   return err;
 }
 
-ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, char *bytes, size_t available)
+ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available)
 {
   size_t leftover = pn_buffer_size(disp->input);
   if (leftover) {

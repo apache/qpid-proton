@@ -430,7 +430,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
   while (size) {
     pn_data_clear(msg->data);
-    ssize_t used = pn_data_decode(msg->data, (char *) bytes, size);
+    ssize_t used = pn_data_decode(msg->data, bytes, size);
     if (used < 0) return pn_error_format(msg->error, used, "data error: %s",
                                          pn_data_error(msg->data));
     size -= used;

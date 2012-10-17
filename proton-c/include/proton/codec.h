@@ -115,7 +115,7 @@ pn_type_t pn_data_type(pn_data_t *data);
 int pn_data_print(pn_data_t *data);
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
-ssize_t pn_data_decode(pn_data_t *data, char *bytes, size_t size);
+ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size);
 
 int pn_data_put_list(pn_data_t *data);
 int pn_data_put_map(pn_data_t *data);

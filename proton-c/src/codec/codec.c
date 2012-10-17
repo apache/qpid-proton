@@ -2296,7 +2296,7 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
   return i - offset;
 }
 
-ssize_t pn_data_decode(pn_data_t *data, char *bytes, size_t size)
+ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   size_t asize = 64;
   pn_atoms_t latoms;
@@ -2307,7 +2307,7 @@ ssize_t pn_data_decode(pn_data_t *data, char *bytes, size_t size)
     latoms.size = asize;
     latoms.start = atoms;
     lbytes.size = size;
-    lbytes.start = bytes;
+    lbytes.start = (char *)bytes;  // PROTON-77
 
     int err = pn_decode_one(&lbytes, &latoms);
 
