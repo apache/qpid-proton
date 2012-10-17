@@ -38,11 +38,13 @@ export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/scripts:$PROTON_
 
 # PHP
 export PHP_BINDINGS=$PROTON_BINDINGS/php
-cat <<EOF > $PHP_BINDINGS/php.ini
+if [ -d $PHP_BINDINGS ]; then
+    cat <<EOF > $PHP_BINDINGS/php.ini
 include_path="$PHP_BINDINGS:$PROTON_HOME/proton-c/bindings/php"
 extension="$PHP_BINDINGS/cproton.so"
 EOF
-export PHPRC=$PHP_BINDINGS/php.ini
+    export PHPRC=$PHP_BINDINGS/php.ini
+fi
 
 # Ruby
 export RUBY_BINDINGS=$PROTON_BINDINGS/ruby
