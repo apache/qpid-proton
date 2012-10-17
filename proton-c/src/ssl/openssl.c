@@ -743,10 +743,17 @@ static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_d
   //_log(ssl, "ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d\n",
   //     ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed );
 
+  // PROTON-82: Instead, close the input side as soon as we've completed enough of the SSL
+  // shutdown handshake to send the close_notify.  We're not requiring the response, as
+  // some implementations never reply.
+  // ---
   // tell transport our input side is closed if the SSL socket cannot be read from any
   // longer, AND any pending input has been written up to the application (or the
   // application is closed)
-  if (ssl->ssl_closed && ssl->app_input_closed) {
+  //if (ssl->ssl_closed && ssl->app_input_closed) {
+  //  consumed = ssl->app_input_closed;
+  //}
+  if (ssl->app_input_closed && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) ) {
     consumed = ssl->app_input_closed;
   }
   _log(ssl, "process_input_ssl() returning %d\n", (int) consumed);
@@ -857,9 +864,15 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
   //_log(ssl, "written=%d ssl_closed=%d in_count=%d app_input_closed=%d app_output_closed=%d bio_pend=%d\n",
   //     written, ssl->ssl_closed, ssl->in_count, ssl->app_input_closed, ssl->app_output_closed, BIO_pending(ssl->bio_net_io) );
 
+  // PROTON-82: close the output side as soon as we've sent the SSL close_notify.
+  // We're not requiring the response, as some implementations never reply.
+  // ----
   // Once no more data is available "below" the SSL socket, tell the transport we are
   // done.
-  if (written == 0 && ssl->ssl_closed && BIO_pending(ssl->bio_net_io) == 0) {
+  //if (written == 0 && ssl->ssl_closed && BIO_pending(ssl->bio_net_io) == 0) {
+  //  written = ssl->app_output_closed ? ssl->app_output_closed : PN_EOS;
+  //}
+  if (written == 0 && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) && BIO_pending(ssl->bio_net_io) == 0) {
     written = ssl->app_output_closed ? ssl->app_output_closed : PN_EOS;
   }
   _log(ssl, "process_output_ssl() returning %d\n", (int) written);
