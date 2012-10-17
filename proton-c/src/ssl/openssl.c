@@ -743,7 +743,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_d
   // tell transport our input side is closed if the SSL socket cannot be read from any
   // longer, AND any pending input has been written up to the application (or the
   // application is closed)
-  if (ssl->ssl_closed && ssl->app_input_closed == 0) {
+  if (ssl->ssl_closed && ssl->app_input_closed) {
     consumed = ssl->app_input_closed;
   }
   _log(ssl, "process_input_ssl() returning %d\n", (int) consumed);
