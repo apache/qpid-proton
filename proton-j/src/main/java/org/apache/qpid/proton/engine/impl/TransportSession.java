@@ -231,8 +231,10 @@ class TransportSession
             TransportDelivery transportDelivery = new TransportDelivery(_currentDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);
             _unsettledIncomingDeliveriesById.put(_currentDeliveryId, delivery);
-
-
+        }
+        if( transfer.getState()!=null ) 
+        {
+            delivery.setRemoteDeliveryState(transfer.getState());
         }
         _unsettledIncomingSize++;
         // TODO - should this be a copy?
