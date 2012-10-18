@@ -160,4 +160,21 @@ public class Binary
     {
         return new Binary(_data, _offset+offset, length);
     }
+
+    public static Binary create(ByteBuffer buffer) 
+    {
+        if( buffer == null )
+            return null;
+        if( buffer.isDirect() ) 
+        {
+            byte data[] = new byte [buffer.remaining()];
+            ByteBuffer dup = buffer.duplicate();
+            dup.get(data);
+            return new Binary(data);
+        }
+        else 
+        {
+            return new Binary(buffer.array(), buffer.arrayOffset()+buffer.position(), buffer.remaining());
+        }
+    }
 }

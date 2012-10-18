@@ -95,7 +95,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private Open _open;
     private SaslImpl _sasl;
     private TransportException _inputException;
-
+    private ProtocolTracer _protocolTracer = null;
 
     {
         AMQPDefinedTypes.registerAllTypes(_decoder);
@@ -839,6 +839,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                            ByteBuffer payload,
                            Runnable onPayloadTooLarge)
     {
+        if( _protocolTracer!=null ) 
+        {
+            ByteBuffer originalPayload = null;
+            if( payload!=null ) 
+            {
+                originalPayload = payload.duplicate();
+            }
+            _protocolTracer.sentFrame(new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload)));
+        }
+
         int oldPosition = buffer.position();
         buffer.position(buffer.position()+8);
         _encoder.setByteBuffer(buffer);
@@ -1094,6 +1104,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     public boolean input(TransportFrame frame)
     {
+        if( _protocolTracer!=null ) 
+        {
+            _protocolTracer.receivedFrame(frame);
+        }
         if(_connectionEndpoint != null || getRemoteState() == EndpointState.UNINITIALIZED)
         {
             frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
@@ -1120,4 +1134,13 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-   }
+    public ProtocolTracer getProtocolTracer() 
+    {
+        return _protocolTracer;
+    }
+
+    public void setProtocolTracer(ProtocolTracer protocolTracer) 
+    {
+        this._protocolTracer = protocolTracer;
+    }
+}
