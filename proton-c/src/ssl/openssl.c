@@ -722,15 +722,6 @@ static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_d
               // both sides of app closed, and no more app output pending:
               start_ssl_shutdown(ssl);
             }
-            /* @todo: fix this - duplicate code - transport does the same */
-            if (consumed == PN_EOS) {
-              if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-                pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
-            } else {
-              pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
-                                  pn_error_code(transport->error),
-                                  pn_error_text(transport->error));
-            }
           }
         }
       }
@@ -784,14 +775,6 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
           _log(ssl, "Application layer closed its output, error=%d (%d bytes pending send)\n",
                (int) app_bytes, (int) ssl->out_count);
           ssl->app_output_closed = app_bytes;
-          if (app_bytes == PN_EOS) {
-            if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-              pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
-          } else {
-            if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-              pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", app_bytes,
-                                  pn_error_text(transport->error));
-          }
         }
       }
     }
