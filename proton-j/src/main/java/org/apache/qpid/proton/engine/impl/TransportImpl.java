@@ -197,7 +197,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
 
 
-        return written;
+        return written - _overflowBuffer.remaining();
         }
         catch (RuntimeException e)
         {
