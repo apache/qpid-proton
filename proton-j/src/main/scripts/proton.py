@@ -228,7 +228,7 @@ class Link(Endpoint):
     return self.impl.getQueued()
 
   def next(self, mask):
-    return self.impl.next(*self._enums(mask))
+    return wrap_link(self.impl.next(*self._enums(mask)))
 
 class DataDummy:
 
