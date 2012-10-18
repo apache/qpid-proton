@@ -577,8 +577,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
                             SessionImpl session = link.getSession();
                             TransportSession transportSession = getTransportState(session);
-                            UnsignedInteger localHandle = transportSession.allocateLocalHandle();
-                            transportLink.setLocalHandle(localHandle);
+                            UnsignedInteger localHandle = transportSession.allocateLocalHandle(transportLink);
 
                             if(link.getRemoteState() == EndpointState.UNINITIALIZED)
                             {

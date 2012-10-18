@@ -159,13 +159,16 @@ class TransportSession
         return _remoteHandleMap[handle.intValue()];
     }
 
-    public UnsignedInteger allocateLocalHandle()
+    public UnsignedInteger allocateLocalHandle(TransportLink transportLink)
     {
         for(int i = 0; i < _localHandleMap.length; i++)
         {
             if(_localHandleMap[i] == null)
             {
-                return UnsignedInteger.valueOf(i);
+                UnsignedInteger rc = UnsignedInteger.valueOf(i);
+                _localHandleMap[i] = transportLink;
+                transportLink.setLocalHandle(rc);
+                return rc;
             }
         }
         // TODO - error
