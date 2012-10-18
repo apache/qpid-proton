@@ -23,6 +23,7 @@ from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
 from org.apache.qpid.proton.message import Message as MessageImpl, \
     MessageFormat
 from org.apache.qpid.proton.type.messaging import Source, Target, Accepted
+from org.apache.qpid.proton.type import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet
 
@@ -181,21 +182,21 @@ class Link(Endpoint):
   @property
   def source(self):
     if self.impl.getSource() is None:
-        self.impl.setSource( Source() )
-    return Terminus(self.impl, "Source")
+      self.impl.setSource(Source())
+    return Terminus(self.impl.getSource())
 
   @property
   def target(self):
     if self.impl.getTarget() is None:
-        self.impl.setTarget( Target() )
-    return Terminus(self.impl, "Target")
+      self.impl.setTarget(Target())
+    return Terminus(self.impl.getTarget())
 
   @property
   def remote_source(self):
-    return Terminus(self.impl, "RemoteSource")
+    return Terminus(self.impl.getRemoteSource())
   @property
   def remote_target(self):
-    return Terminus(self.impl, "RemoteTarget")
+    return Terminus(self.impl.getRemoteTarget())
 
   @property
   def session(self):
@@ -242,9 +243,8 @@ class Terminus(object):
 
   UNSPECIFIED = None
 
-  def __init__(self, impl, prefix):
+  def __init__(self, impl):
     self.impl = impl
-    self.prefix = prefix
     self.type = None
     self.timeout = None
     self.durability = None
@@ -256,10 +256,18 @@ class Terminus(object):
     self.capabilities = DataDummy()
 
   def _get_address(self):
-    return getattr(self.impl, "get%s" % self.prefix)().getAddress()
+    return self.impl.getAddress()
   def _set_address(self, address):
-    getattr(self.impl, "get%s" % self.prefix)().setAddress(address)
+    self.impl.setAddress(address)
   address = property(_get_address, _set_address)
+
+  def _get_timeout(self):
+    return self.impl.getTimeout()
+  def _set_timeout(self, t):
+    if t is not None:
+      t = UnsignedInteger(t)
+    return self.impl.setTimeout(t)
+  timeout = property(_get_timeout, _set_timeout)
 
   def copy(self, src):
     self.address = src.address
