@@ -36,7 +36,7 @@ for a in args:
 
 def dispatch(request, response):
   if request.subject:
-    response.subject = "Re: %s %s" % request.subject
+    response.subject = "Re: %s" % request.subject
   response.properties = request.properties
   print "Dispatched %s %s" % (request.subject, request.properties)
 
