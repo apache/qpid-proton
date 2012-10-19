@@ -344,6 +344,8 @@ class Message(object):
 
   def __init__(self):
     self._msg = pn_message()
+    self._id = Data(pn_message_id(self._msg))
+    self._correlation_id = Data(pn_message_correlation_id(self._msg))
     self.instructions = None
     self.annotations = None
     self.properties = None
@@ -362,10 +364,10 @@ class Message(object):
       return err
 
   def _pre_encode(self):
-    inst = Data(_data = pn_message_instructions(self._msg))
-    ann = Data(_data = pn_message_annotations(self._msg))
-    props = Data(_data = pn_message_properties(self._msg))
-#    body = Data(_data = pn_message_body(self._msg))
+    inst = Data(pn_message_instructions(self._msg))
+    ann = Data(pn_message_annotations(self._msg))
+    props = Data(pn_message_properties(self._msg))
+#    body = Data(pn_message_body(self._msg))
 
     inst.clear()
     if self.instructions is not None:
@@ -378,10 +380,10 @@ class Message(object):
       props.put_object(self.properties)
 
   def _post_decode(self):
-    inst = Data(_data = pn_message_instructions(self._msg))
-    ann = Data(_data = pn_message_annotations(self._msg))
-    props = Data(_data = pn_message_properties(self._msg))
-#    body = Data(_data = pn_message_body(self._msg))
+    inst = Data(pn_message_instructions(self._msg))
+    ann = Data(pn_message_annotations(self._msg))
+    props = Data(pn_message_properties(self._msg))
+#    body = Data(pn_message_body(self._msg))
 
     if inst.next():
       self.instructions = inst.get_object()
@@ -464,13 +466,14 @@ True iff the recipient is the first to acquire the message.
 The number of delivery attempts made for this message.
 """)
 
-  # XXX
+
   def _get_id(self):
-    return pn_message_get_id(self._msg)
-
+    return self._id.get_object()
   def _set_id(self, value):
-    self._check(pn_message_set_id(self._msg, value))
-
+    if type(value) in (int, long):
+      value = ulong(value)
+    self._id.rewind()
+    self._id.put_object(value)
   id = property(_get_id, _set_id,
                 doc="""
 The id of the message.
@@ -520,12 +523,13 @@ The subject of the message.
 The reply-to address for the message.
 """)
 
-  # XXX
   def _get_correlation_id(self):
-    return pn_message_get_correlation_id(self._msg)
-
+    return self._correlation_id.get_object()
   def _set_correlation_id(self, value):
-    self._check(pn_message_set_correlation_id(self._msg, value))
+    if type(value) in (int, long):
+      value = ulong(value)
+    self._correlation_id.rewind()
+    self._correlation_id.put_object(value)
 
   correlation_id = property(_get_correlation_id, _set_correlation_id,
                             doc="""
@@ -666,6 +670,9 @@ class UnmappedType:
   def __repr__(self):
     return "UnmappedType(%s)" % self.msg
 
+class ulong(long):
+  pass
+
 class Data:
   """
   The L{Data} class provides an interface for decoding, extracting,
@@ -739,18 +746,18 @@ class Data:
   BINARY = PN_BINARY; "A binary string."
   STRING = PN_STRING; "A unicode string."
   SYMBOL = PN_SYMBOL; "A symbolic string."
-  DESCRIBED = PN_DESCRIPTOR; "A described value."
+  DESCRIBED = PN_DESCRIBED; "A described value."
   ARRAY = PN_ARRAY; "An array value."
   LIST = PN_LIST; "A list value."
   MAP = PN_MAP; "A map value."
 
-  def __init__(self, capacity=16, _data=None):
-    if _data:
-      self._data = _data or pn_data(capacity)
-      self._free = False
-    else:
+  def __init__(self, capacity=16):
+    if type(capacity) in (int, long):
       self._data = pn_data(capacity)
       self._free = True
+    else:
+      self._data = capacity
+      self._free = False
 
   def __del__(self):
     if self._free and hasattr(self, "_data"):
@@ -1233,7 +1240,7 @@ class Data:
     If the current node is an unsigned long, returns its value,
     returns 0 otherwise.
     """
-    return pn_data_get_ulong(self._data)
+    return ulong(pn_data_get_ulong(self._data))
 
   def get_long(self):
     """
@@ -1380,7 +1387,7 @@ class Data:
       return result
 
   put_mappings = {
-    None.__class__: put_null,
+    None.__class__: lambda s, _: s.put_null(),
     dict: put_dict,
     list: put_sequence,
     tuple: put_sequence,
@@ -1388,11 +1395,12 @@ class Data:
     bytes: put_binary,
     int: put_long,
     long: put_long,
+    ulong: put_ulong,
     float: put_double,
     uuid.UUID: put_uuid
     }
   get_mappings = {
-    NULL: lambda s, _: None,
+    NULL: lambda s: None,
     MAP: get_dict,
     LIST: get_sequence,
     STRING: get_string,
@@ -1489,19 +1497,19 @@ class Connection(Endpoint):
 
   @property
   def offered_capabilities(self):
-    return Data(_data=pn_connection_offered_capabilities(self._conn))
+    return Data(pn_connection_offered_capabilities(self._conn))
 
   @property
   def desired_capabilities(self):
-    return Data(_data=pn_connection_desired_capabilities(self._conn))
+    return Data(pn_connection_desired_capabilities(self._conn))
 
   @property
   def remote_offered_capabilities(self):
-    return Data(_data=pn_connection_remote_offered_capabilities(self._conn))
+    return Data(pn_connection_remote_offered_capabilities(self._conn))
 
   @property
   def remote_desired_capabilities(self):
-    return Data(_data=pn_connection_remote_desired_capabilities(self._conn))
+    return Data(pn_connection_remote_desired_capabilities(self._conn))
 
   def open(self):
     pn_connection_open(self._conn)
@@ -1723,19 +1731,19 @@ class Terminus(object):
 
   @property
   def properties(self):
-    return Data(_data = pn_terminus_properties(self._impl))
+    return Data(pn_terminus_properties(self._impl))
 
   @property
   def capabilities(self):
-    return Data(_data = pn_terminus_capabilities(self._impl))
+    return Data(pn_terminus_capabilities(self._impl))
 
   @property
   def outcomes(self):
-    return Data(_data = pn_terminus_outcomes(self._impl))
+    return Data(pn_terminus_outcomes(self._impl))
 
   @property
   def filter(self):
-    return Data(_data = pn_terminus_filter(self._impl))
+    return Data(pn_terminus_filter(self._impl))
 
   def copy(self, src):
     self._check(pn_terminus_copy(self._impl, src._impl))

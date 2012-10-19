@@ -35,20 +35,51 @@
 #include "encodings.h"
 #include "../util.h"
 
+#define PN_DESCRIPTOR (PN_DESCRIBED)
+#define PN_TYPE (64)
+
+typedef struct {
+  pn_type_t type;
+  union {
+    bool as_bool;
+    uint8_t as_ubyte;
+    int8_t as_byte;
+    uint16_t as_ushort;
+    int16_t as_short;
+    uint32_t as_uint;
+    int32_t as_int;
+    pn_char_t as_char;
+    uint64_t as_ulong;
+    int64_t as_long;
+    pn_timestamp_t as_timestamp;
+    float as_float;
+    double as_double;
+    pn_decimal32_t as_decimal32;
+    pn_decimal64_t as_decimal64;
+    pn_decimal128_t as_decimal128;
+    pn_uuid_t as_uuid;
+    pn_bytes_t as_binary;
+    pn_bytes_t as_string;
+    pn_bytes_t as_symbol;
+    size_t count;
+    pn_type_t type;
+  } u;
+} pn_iatom_t;
+
 typedef struct {
   size_t size;
-  pn_atom_t *start;
+  pn_iatom_t *start;
 } pn_atoms_t;
 
 int pn_decode_atoms(pn_bytes_t *bytes, pn_atoms_t *atoms);
 int pn_encode_atoms(pn_bytes_t *bytes, pn_atoms_t *atoms);
 int pn_decode_one(pn_bytes_t *bytes, pn_atoms_t *atoms);
 
-int pn_print_atom(pn_atom_t atom);
+int pn_print_atom(pn_iatom_t atom);
 const char *pn_type_str(pn_type_t type);
 int pn_print_atoms(const pn_atoms_t *atoms);
 ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms);
-int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom);
+int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom);
 
 typedef union {
   uint32_t i;
@@ -60,6 +91,8 @@ typedef union {
 
 const char *pn_type_str(pn_type_t type)
 {
+  if (type == PN_TYPE) return "PN_TYPE";
+
   switch (type)
   {
   case PN_NULL: return "PN_NULL";
@@ -87,7 +120,6 @@ const char *pn_type_str(pn_type_t type)
   case PN_ARRAY: return "PN_ARRAY";
   case PN_LIST: return "PN_LIST";
   case PN_MAP: return "PN_MAP";
-  case PN_TYPE: return "PN_TYPE";
   }
 
   return "<UNKNOWN>";
@@ -111,7 +143,7 @@ int pn_bytes_format(pn_bytes_t *bytes, const char *fmt, ...)
   }
 }
 
-int pn_print_atom(pn_atom_t atom)
+int pn_print_atom(pn_iatom_t atom)
 {
   size_t size = 4;
   while (true) {
@@ -132,8 +164,12 @@ int pn_print_atom(pn_atom_t atom)
   }
 }
 
-int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
+int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom)
 {
+  if (atom.type == PN_TYPE) {
+    return pn_bytes_format(bytes, "%s", pn_type_str(atom.u.type));
+  }
+
   switch (atom.type)
   {
   case PN_NULL:
@@ -257,8 +293,6 @@ int pn_format_atom(pn_bytes_t *bytes, pn_atom_t atom)
     return pn_bytes_format(bytes, "list[%zu]", atom.u.count);
   case PN_MAP:
     return pn_bytes_format(bytes, "map[%zu]", atom.u.count);
-  case PN_TYPE:
-    return pn_bytes_format(bytes, "%s", pn_type_str(atom.u.type));
   }
 
   return PN_ARG_ERR;
@@ -296,7 +330,7 @@ size_t pn_atoms_ltrim(pn_atoms_t *atoms, size_t size)
 int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level)
 {
   if (!atoms->size) return PN_UNDERFLOW;
-  pn_atom_t *atom = atoms->start;
+  pn_iatom_t *atom = atoms->start;
   pn_atoms_ltrim(atoms, 1);
   int err, count;
 
@@ -552,7 +586,7 @@ int pn_encode_type(pn_bytes_t *bytes, pn_atoms_t *atoms, pn_type_t *type)
 {
   if (!atoms->size) return PN_UNDERFLOW;
 
-  pn_atom_t *atom = atoms->start;
+  pn_iatom_t *atom = atoms->start;
   if (atom->type == PN_DESCRIPTOR)
   {
     pn_atoms_ltrim(atoms, 1);
@@ -572,7 +606,7 @@ int pn_encode_type(pn_bytes_t *bytes, pn_atoms_t *atoms, pn_type_t *type)
 
 int pn_encode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, pn_type_t type)
 {
-  pn_atom_t *atom = atoms->start;
+  pn_iatom_t *atom = atoms->start;
   int e;
   conv_t c;
 
@@ -668,7 +702,7 @@ int pn_decode_type(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t *code)
     pn_bytes_ltrim(bytes, 1);
     return 0;
   } else {
-    atoms->start[0] = (pn_atom_t) {.type=PN_DESCRIPTOR};
+    atoms->start[0] = (pn_iatom_t) {.type=PN_DESCRIPTOR};
     pn_bytes_ltrim(bytes, 1);
     pn_atoms_ltrim(atoms, 1);
     int e = pn_decode_atom(bytes, atoms);
@@ -761,7 +795,7 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
 
   if (!atoms->size) return PN_OVERFLOW;
 
-  pn_atom_t atom;
+  pn_iatom_t atom;
 
   switch (code)
   {
@@ -983,7 +1017,7 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
     case PNE_ARRAY32:
       {
         if (!atoms->size) return PN_OVERFLOW;
-        atoms->start[0] = (pn_atom_t) {.type=PN_ARRAY, .u.count=count};
+        atoms->start[0] = (pn_iatom_t) {.type=PN_ARRAY, .u.count=count};
         pn_atoms_ltrim(atoms, 1);
         uint8_t acode;
         int e = pn_decode_type(bytes, atoms, &acode);
@@ -991,7 +1025,7 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
         if (!atoms->size) return PN_OVERFLOW;
         pn_type_t type = pn_code2type(acode);
         if (type < 0) return type;
-        atoms->start[0] = (pn_atom_t) {.type=PN_TYPE, .u.type=type};
+        atoms->start[0] = (pn_iatom_t) {.type=PN_TYPE, .u.type=type};
         pn_atoms_ltrim(atoms, 1);
         for (int i = 0; i < count; i++)
         {
@@ -1003,13 +1037,13 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
     case PNE_LIST8:
     case PNE_LIST32:
       if (!atoms->size) return PN_OVERFLOW;
-      atoms->start[0] = (pn_atom_t) {.type=PN_LIST, .u.count=count};
+      atoms->start[0] = (pn_iatom_t) {.type=PN_LIST, .u.count=count};
       pn_atoms_ltrim(atoms, 1);
       break;
     case PNE_MAP8:
     case PNE_MAP32:
       if (!atoms->size) return PN_OVERFLOW;
-      atoms->start[0] = (pn_atom_t) {.type=PN_MAP, .u.count=count};
+      atoms->start[0] = (pn_iatom_t) {.type=PN_MAP, .u.count=count};
       pn_atoms_ltrim(atoms, 1);
       break;
     default:
@@ -1054,7 +1088,7 @@ typedef struct {
   size_t down;
   size_t parent;
   size_t children;
-  pn_atom_t atom;
+  pn_iatom_t atom;
   // for arrays
   bool described;
   pn_type_t type;
@@ -1174,6 +1208,7 @@ void pn_data_rebase(pn_data_t *data, char *base)
 int pn_data_intern_node(pn_data_t *data, pn_node_t *node)
 {
   pn_bytes_t *bytes = pn_data_bytes(data, node);
+  if (!bytes) return 0;
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pn_data_intern(data, bytes->start, bytes->size);
   if (offset < 0) return offset;
@@ -1804,7 +1839,7 @@ int pn_data_as_atoms(pn_data_t *data, pn_atoms_t *atoms);
 
 int pn_data_print(pn_data_t *data)
 {
-  pn_atom_t atoms[data->size + data->extras];
+  pn_iatom_t atoms[data->size + data->extras];
   pn_atoms_t latoms = {.size=data->size + data->extras, .start=atoms};
   pn_data_as_atoms(data, &latoms);
   return pn_print_atoms(&latoms);
@@ -1812,7 +1847,7 @@ int pn_data_print(pn_data_t *data)
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  pn_atom_t atoms[data->size + data->extras];
+  pn_iatom_t atoms[data->size + data->extras];
   pn_atoms_t latoms = {.size=data->size + data->extras, .start=atoms};
   pn_data_as_atoms(data, &latoms);
 
@@ -1911,9 +1946,14 @@ pn_node_t *pn_data_peek(pn_data_t *data)
   pn_node_t *current = pn_data_current(data);
   if (current) {
     return pn_data_node(data, current->next);
-  } else {
-    return NULL;
   }
+
+  pn_node_t *parent = pn_data_node(data, data->parent);
+  if (parent) {
+    return pn_data_node(data, parent->down);
+  }
+
+  return NULL;
 }
 
 bool pn_data_next(pn_data_t *data)
@@ -2078,16 +2118,16 @@ int pn_data_as_atoms(pn_data_t *data, pn_atoms_t *atoms)
 
     if (node->atom.type == PN_ARRAY) {
       if (node->described) {
-        atoms->start[natoms++] = (pn_atom_t) {.type=PN_DESCRIPTOR};
+        atoms->start[natoms++] = (pn_iatom_t) {.type=PN_DESCRIPTOR};
       } else {
-        atoms->start[natoms++] = (pn_atom_t) {.type=PN_TYPE, .u.type=node->type};
+        atoms->start[natoms++] = (pn_iatom_t) {.type=PN_TYPE, .u.type=node->type};
       }
     }
 
     pn_node_t *parent = pn_data_node(data, node->parent);
     if (parent && parent->atom.type == PN_ARRAY && parent->described &&
         parent->down == pn_data_id(data, node)) {
-      atoms->start[natoms++] = (pn_atom_t) {.type=PN_TYPE, .u.type=parent->type};
+      atoms->start[natoms++] = (pn_iatom_t) {.type=PN_TYPE, .u.type=parent->type};
     }
 
     size_t next = 0;
@@ -2115,7 +2155,7 @@ int pn_data_as_atoms(pn_data_t *data, pn_atoms_t *atoms)
 
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
-  pn_atom_t atoms[data->size + data->extras];
+  pn_iatom_t atoms[data->size + data->extras];
 
   pn_atoms_t latoms = {.size=data->size + data->extras, .start=atoms};
   pn_data_as_atoms(data, &latoms);
@@ -2133,7 +2173,8 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
 
   for (i = offset; i < atoms.size; i++) {
     if (count == limit) return i - offset;
-    pn_atom_t atom = atoms.start[i];
+    pn_iatom_t atom = atoms.start[i];
+    if (atom.type == PN_TYPE) return PN_ERR;
     switch (atom.type)
     {
     case PN_NULL:
@@ -2287,9 +2328,6 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
       pn_data_exit(data);
       count++;
       break;
-    case PN_TYPE:
-      return PN_ERR;
-      break;
     }
   }
 
@@ -2303,7 +2341,7 @@ ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
   pn_bytes_t lbytes;
 
   while (true) {
-    pn_atom_t atoms[asize];
+    pn_iatom_t atoms[asize];
     latoms.size = asize;
     latoms.start = atoms;
     lbytes.size = size;
@@ -2360,7 +2398,7 @@ int pn_data_put_described(pn_data_t *data)
 int pn_data_put_null(pn_data_t *data)
 {
   pn_node_t *node = pn_data_add(data);
-  node->atom = (pn_atom_t) {.type=PN_NULL};
+  node->atom = (pn_iatom_t) {.type=PN_NULL};
   return 0;
 }
 
@@ -2521,6 +2559,13 @@ int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
   pn_node_t *node = pn_data_add(data);
   node->atom.type = PN_SYMBOL;
   node->atom.u.as_symbol = symbol;
+  return pn_data_intern_node(data, node);
+}
+
+int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
+{
+  pn_node_t *node = pn_data_add(data);
+  node->atom = *((pn_iatom_t *) (&atom));
   return pn_data_intern_node(data, node);
 }
 
@@ -2790,6 +2835,24 @@ pn_bytes_t pn_data_get_symbol(pn_data_t *data)
   }
 }
 
+pn_bytes_t pn_data_get_bytes(pn_data_t *data)
+{
+  pn_node_t *node = pn_data_current(data);
+  if (node && (node->atom.type == PN_BINARY ||
+               node->atom.type == PN_STRING ||
+               node->atom.type == PN_SYMBOL)) {
+    return node->atom.u.as_binary;
+  } else {
+    return (pn_bytes_t) {0};
+  }
+}
+
+pn_atom_t pn_data_get_atom(pn_data_t *data)
+{
+  pn_node_t *node = pn_data_current(data);
+  return *((pn_atom_t *) &node->atom);
+}
+
 int pn_data_copy(pn_data_t *data, pn_data_t *src)
 {
   pn_data_clear(data);
@@ -2949,8 +3012,6 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
       pn_data_enter(src);
       level++;
       break;
-    case PN_TYPE:
-      return PN_ERR;
     }
 
     if (err) { pn_data_restore(src, point); return err; }

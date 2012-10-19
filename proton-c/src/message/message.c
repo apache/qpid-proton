@@ -52,12 +52,12 @@ struct pn_message_t {
   pn_millis_t ttl;
   bool first_acquirer;
   uint32_t delivery_count;
-  pn_atom_t id;
+  pn_data_t *id;
   pn_buffer_t *user_id;
   pn_buffer_t *address;
   pn_buffer_t *subject;
   pn_buffer_t *reply_to;
-  pn_atom_t correlation_id;
+  pn_data_t *correlation_id;
   pn_buffer_t *content_type;
   pn_buffer_t *content_encoding;
   pn_timestamp_t expiry_time;
@@ -85,12 +85,12 @@ pn_message_t *pn_message()
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
-  msg->id.type = PN_NULL;
+  msg->id = pn_data(1);
   msg->user_id = NULL;
   msg->address = NULL;
   msg->subject = NULL;
   msg->reply_to = NULL;
-  msg->correlation_id.type = PN_NULL;
+  msg->correlation_id = pn_data(1);
   msg->content_type = NULL;
   msg->content_encoding = NULL;
   msg->expiry_time = 0;
@@ -120,6 +120,8 @@ void pn_message_free(pn_message_t *msg)
     pn_buffer_free(msg->content_encoding);
     pn_buffer_free(msg->group_id);
     pn_buffer_free(msg->reply_to_group_id);
+    pn_data_free(msg->id);
+    pn_data_free(msg->correlation_id);
     pn_data_free(msg->data);
     pn_data_free(msg->instructions);
     pn_data_free(msg->annotations);
@@ -138,12 +140,12 @@ void pn_message_clear(pn_message_t *msg)
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
-  msg->id.type = PN_NULL;
+  pn_data_clear(msg->id);
   if (msg->user_id) pn_buffer_clear(msg->user_id);
   if (msg->address) pn_buffer_clear(msg->address);
   if (msg->subject) pn_buffer_clear(msg->subject);
   if (msg->reply_to) pn_buffer_clear(msg->reply_to);
-  msg->correlation_id.type = PN_NULL;
+  pn_data_clear(msg->correlation_id);
   if (msg->content_type) pn_buffer_clear(msg->content_type);
   if (msg->content_encoding) pn_buffer_clear(msg->content_encoding);
   msg->expiry_time = 0;
@@ -240,16 +242,20 @@ int pn_message_set_delivery_count(pn_message_t *msg, uint32_t count)
   return 0;
 }
 
+pn_data_t *pn_message_id(pn_message_t *msg)
+{
+  return msg ? msg->id : NULL;
+}
 pn_atom_t pn_message_get_id(pn_message_t *msg)
 {
-  return msg ? msg->id : (pn_atom_t) {.type=PN_NULL};
+  return msg ? pn_data_get_atom(msg->id) : (pn_atom_t) {.type=PN_NULL};
 }
 int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
 {
   if (!msg) return PN_ARG_ERR;
 
-  msg->id = id;
-  return 0;
+  pn_data_rewind(msg->id);
+  return pn_data_put_atom(msg->id, id);
 }
 
 static int pn_buffer_set_bytes(pn_buffer_t **buf, pn_bytes_t bytes)
@@ -337,16 +343,20 @@ int pn_message_set_reply_to(pn_message_t *msg, const char *reply_to)
   return pn_buffer_set_str(&msg->reply_to, reply_to);
 }
 
+pn_data_t *pn_message_correlation_id(pn_message_t *msg)
+{
+  return msg ? msg->correlation_id : NULL;
+}
 pn_atom_t pn_message_get_correlation_id(pn_message_t *msg)
 {
-  return msg ? msg->correlation_id : (pn_atom_t) {.type=PN_NULL};
+  return msg ? pn_data_get_atom(msg->correlation_id) : (pn_atom_t) {.type=PN_NULL};
 }
 int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t atom)
 {
   if (!msg) return PN_ARG_ERR;
 
-  msg->correlation_id = atom;
-  return 0;
+  pn_data_rewind(msg->correlation_id);
+  return pn_data_put_atom(msg->correlation_id, atom);
 }
 
 const char *pn_message_get_content_type(pn_message_t *msg)
@@ -458,8 +468,11 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       {
         pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
           group_id, reply_to_group_id;
-        err = pn_data_scan(msg->data, "D.[.zSSS.ssttSIS]", &user_id, &address,
-                           &subject, &reply_to, &ctype, &cencoding,
+        pn_data_clear(msg->id);
+        pn_data_clear(msg->correlation_id);
+        err = pn_data_scan(msg->data, "D.[CzSSSCssttSIS]", msg->id,
+                           &user_id, &address, &subject, &reply_to,
+                           msg->correlation_id, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
         if (err) return pn_error_format(msg->error, err, "data error: %s",
@@ -553,11 +566,13 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     pn_data_exit(msg->data);
   }
 
-  err = pn_data_fill(msg->data, "DL[nzSSSnssttSIS]", PROPERTIES,
+  err = pn_data_fill(msg->data, "DL[CzSSSCssttSIS]", PROPERTIES,
+                     msg->id,
                      pn_buffer_bytes(msg->user_id),
                      pn_buffer_str(msg->address),
                      pn_buffer_str(msg->subject),
                      pn_buffer_str(msg->reply_to),
+                     msg->correlation_id,
                      pn_buffer_str(msg->content_type),
                      pn_buffer_str(msg->content_encoding),
                      msg->expiry_time,

@@ -73,14 +73,14 @@ typedef int int32_t;
 
         case T_STRING:
           $1.type = PN_STRING;
-          $1.u.as_string.start = RSTRING_PTR($input);
-          if ($1.u.as_string.start)
+          $1.u.as_bytes.start = RSTRING_PTR($input);
+          if ($1.u.as_bytes.start)
             {
-              $1.u.as_string.size = RSTRING_LEN($input);
+              $1.u.as_bytes.size = RSTRING_LEN($input);
             }
           else
             {
-              $1.u.as_string.size = 0;
+              $1.u.as_bytes.size = 0;
             }
           break;
 
@@ -151,7 +151,7 @@ typedef int int32_t;
       break;
 
     case PN_STRING:
-      $result = rb_str_new($1.u.as_string.start, $1.u.as_string.size);
+      $result = rb_str_new($1.u.as_bytes.start, $1.u.as_bytes.size);
       break;
     }
 }

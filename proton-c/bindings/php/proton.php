@@ -153,6 +153,8 @@ class Message {
   const DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY;
 
   var $impl;
+  var $_id;
+  var $_correlation_id;
   public $instructions = null;
   public $annotations = null;
   public $properties = null;
@@ -160,6 +162,8 @@ class Message {
 
   public function __construct() {
     $this->impl = pn_message();
+    $this->_id = new Data(pn_message_id($this->impl));
+    $this->_correlation_id = new Data(pn_message_correlation_id($this->impl));
   }
 
   public function __destruct() {
@@ -273,13 +277,13 @@ class Message {
     $this->_check(pn_message_set_delivery_count($this->impl, $value));
   }
 
-  # XXX
   private function _get_id() {
-    return pn_message_get_id($this->impl);
+    return $this->_id->get_object();
   }
 
   private function _set_id($value) {
-    $this->_check(pn_message_set_id($this->impl, $value));
+    $this->_id->rewind();
+    $this->_id->put_object($value);
   }
 
   private function _get_user_id() {
@@ -314,13 +318,13 @@ class Message {
     $this->_check(pn_message_set_reply_to($this->impl, $value));
   }
 
-  # XXX
   private function _get_correlation_id() {
-    return pn_message_get_correlation_id($this->impl);
+    return $this->_correlation_id->get_object();
   }
 
   private function _set_correlation_id($value) {
-    $this->_check(pn_message_set_correlation_id($this->impl, $value));
+    $this->_correlation_id->rewind();
+    $this->_correlation_id->put_object($value);
   }
 
   private function _get_content_type() {

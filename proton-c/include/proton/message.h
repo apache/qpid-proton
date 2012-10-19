@@ -64,6 +64,7 @@ int            pn_message_set_first_acquirer    (pn_message_t *msg, bool first);
 uint32_t       pn_message_get_delivery_count    (pn_message_t *msg);
 int            pn_message_set_delivery_count    (pn_message_t *msg, uint32_t count);
 
+pn_data_t *    pn_message_id                    (pn_message_t *msg);
 pn_atom_t      pn_message_get_id                (pn_message_t *msg);
 int            pn_message_set_id                (pn_message_t *msg, pn_atom_t id);
 
@@ -79,6 +80,7 @@ int            pn_message_set_subject           (pn_message_t *msg, const char *
 const char *   pn_message_get_reply_to          (pn_message_t *msg);
 int            pn_message_set_reply_to          (pn_message_t *msg, const char *reply_to);
 
+pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
 pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
 int            pn_message_set_correlation_id    (pn_message_t *msg, pn_atom_t atom);
 
@@ -122,14 +124,6 @@ pn_data_t *pn_message_instructions(pn_message_t *msg);
 pn_data_t *pn_message_annotations(pn_message_t *msg);
 pn_data_t *pn_message_properties(pn_message_t *msg);
 pn_data_t *pn_message_body(pn_message_t *msg);
-
-// TODO:
-// bind vars
-//int pn_message_set(pn_message_t *message, int i, pn_atom_t *atom);
-//pn_atom_t *pn_message_get(pn_message_t *message, int i);
-// querying
-// could separate query from getting results
-//int pn_message_scan(pn_message_t *message, const char *query, pn_atom_t *atom);
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size);
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);

@@ -19,6 +19,7 @@
 
 import os, common
 from proton import *
+from uuid import uuid3, NAMESPACE_OID
 
 class Test(common.Test):
 
@@ -44,6 +45,12 @@ class AccessorsTest(Test):
 
   def _test_time(self, name):
     self._test(name, 0, (0, 123456789, 987654321))
+
+  def testId(self):
+    self._test("id", None, ("bytes", None, 123, u"string", uuid3(NAMESPACE_OID, "blah")))
+
+  def testCorrelationId(self):
+    self._test("correlation_id", None, ("bytes", None, 123, u"string", uuid3(NAMESPACE_OID, "blah")))
 
   def testDurable(self):
     self._test("durable", False, (True, False))
@@ -96,6 +103,8 @@ class AccessorsTest(Test):
 class CodecTest(Test):
 
   def testRoundTrip(self):
+    self.msg.id = "asdf"
+    self.msg.correlation_id = uuid3(NAMESPACE_OID, "bleh")
     self.msg.ttl = 3
     self.msg.priority = 100
     self.msg.address = "address"
@@ -108,6 +117,8 @@ class CodecTest(Test):
     msg2 = Message()
     msg2.decode(data)
 
+    assert self.msg.id == msg2.id, (self.msg.id, msg2.id)
+    assert self.msg.correlation_id == msg2.correlation_id, (self.msg.correlation_id, msg2.correlation_id)
     assert self.msg.ttl == msg2.ttl, (self.msg.ttl, msg2.ttl)
     assert self.msg.priority == msg2.priority, (self.msg.priority, msg2.priority)
     assert self.msg.address == msg2.address, (self.msg.address, msg2.address)

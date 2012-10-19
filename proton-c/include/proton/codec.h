@@ -54,11 +54,10 @@ typedef enum {
   PN_BINARY,
   PN_STRING,
   PN_SYMBOL,
-  PN_DESCRIPTOR,
+  PN_DESCRIBED,
   PN_ARRAY,
   PN_LIST,
-  PN_MAP,
-  PN_TYPE
+  PN_MAP
 } pn_type_t;
 
 typedef struct {
@@ -81,11 +80,8 @@ typedef struct {
     pn_decimal64_t as_decimal64;
     pn_decimal128_t as_decimal128;
     pn_uuid_t as_uuid;
-    pn_bytes_t as_binary;
-    pn_bytes_t as_string;
-    pn_bytes_t as_symbol;
-    size_t count;
-    pn_type_t type;
+    pn_bytes_t as_bytes;
+    size_t as_count;
   } u;
 } pn_atom_t;
 
@@ -142,6 +138,7 @@ int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
 int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
 int pn_data_put_string(pn_data_t *data, pn_bytes_t string);
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol);
+int pn_data_put_atom(pn_data_t *data, pn_atom_t atom);
 
 size_t pn_data_get_list(pn_data_t *data);
 size_t pn_data_get_map(pn_data_t *data);
@@ -170,6 +167,8 @@ pn_uuid_t pn_data_get_uuid(pn_data_t *data);
 pn_bytes_t pn_data_get_binary(pn_data_t *data);
 pn_bytes_t pn_data_get_string(pn_data_t *data);
 pn_bytes_t pn_data_get_symbol(pn_data_t *data);
+pn_bytes_t pn_data_get_bytes(pn_data_t *data);
+pn_atom_t pn_data_get_atom(pn_data_t *data);
 
 int pn_data_copy(pn_data_t *data, pn_data_t *src);
 int pn_data_append(pn_data_t *data, pn_data_t *src);
