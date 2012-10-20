@@ -25,7 +25,7 @@ if (DOXYGEN_FOUND)
 
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-           DESTINATION docs/api
+           DESTINATION ${PROTON_INSTALL_DATADIR}/docs/api
            COMPONENT documentation
            OPTIONAL)
   # if (CPACK_GENERATOR STREQUAL "NSIS")

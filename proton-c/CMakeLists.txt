@@ -13,6 +13,8 @@ set (ARCHLIBDIR lib CACHE STRING
 set (LIBDIR ${CMAKE_INSTALL_PREFIX}/${ARCHLIBDIR})
 set (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
+set (PROTON_INSTALL_DATADIR share/proton CACHE STRING
+     "Directory to install read-only arch-independent data")
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
@@ -115,6 +117,10 @@ install (TARGETS proton proton-dump qpid-proton
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION include/proton)
+
+# Install documentation files
+install (FILES LICENSE README TODO
+         DESTINATION ${PROTON_INSTALL_DATADIR})
 
 # Pkg config file
 

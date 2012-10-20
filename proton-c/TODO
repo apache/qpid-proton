@@ -1,8 +1,0 @@
- - fill in fake codecs
- - uuid, timestamp
- - tests: swig/python? mains?
- - eliminate exported structs
- - bug in driver when selectable set is modified from handler?
- - temporary failure in name reslution?
- - eliminate useless codegen in favor of a single reused arg list
-   + finish this by adding stack thingy to engine for nested structures
