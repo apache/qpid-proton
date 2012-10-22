@@ -76,6 +76,10 @@ class Messenger
       return pn_messenger_get_password($this->impl);
     case "trusted_certificates":
       return pn_messenger_get_trusted_certificates($this->impl);
+    case "incoming":
+      return $this->incoming();
+    case "outgoing":
+      return $this->outgoing();
     default:
       throw new Exception("unknown property: " . $name);
     }
@@ -740,7 +744,7 @@ class Data {
 
   public function get_uuid() {
     if (pn_data_type($this->impl) == Data::UUID)
-      return uuid.UUID($bytes=pn_data_get_uuid($this->impl));
+      return pn_data_get_uuid($this->impl);
     else
       return null;
   }
@@ -779,7 +783,56 @@ class Data {
     pn_data_dump($this->impl);
   }
 
-  public function put_php_array($ary) {
+  public function get_null() {
+    return null;
+  }
+
+  public function get_php_described() {
+    if ($this->enter()) {
+      try {
+        $result = array();
+        while ($this->next()) {
+          $result[] = $this->get_object();
+        }
+      } catch (Exception $e) {
+        $this->exit();
+        throw $e;
+      }
+      return $result;
+    }
+  }
+
+  public function get_php_array() {
+    if ($this->enter()) {
+      try {
+        $result = array();
+        while ($this->next()) {
+          $result[] = $this->get_object();
+        }
+      } catch (Exception $e) {
+        $this->exit();
+        throw $e;
+      }
+      return $result;
+    }
+  }
+
+  public function get_php_list() {
+    if ($this->enter()) {
+      try {
+        $result = array();
+        while ($this->next()) {
+          $result[] = $this->get_object();
+        }
+      } catch (Exception $e) {
+        $this->exit();
+        throw $e;
+      }
+      return $result;
+    }
+  }
+
+  public function put_php_map($ary) {
     $this->put_map();
     $this->enter();
     try {
@@ -794,7 +847,7 @@ class Data {
     }
   }
 
-  public function get_php_array() {
+  public function get_php_map() {
     if ($this->enter()) {
       try {
         $result = array();
@@ -823,18 +876,31 @@ class Data {
      "double" => "put_double");
   private $get_mappings = array
     (Data::NULL => "get_null",
-     Data::MAP => "get_php_array",
-     Data::STRING => "get_string",
-     Data::BYTE => "get_byte",
+     Data::BOOL => "get_bool",
      Data::UBYTE => "get_ubyte",
-     Data::SHORT => "get_short",
+     Data::BYTE => "get_byte",
      Data::USHORT => "get_ushort",
-     Data::INT => "get_int",
+     Data::SHORT => "get_short",
      Data::UINT => "get_uint",
-     Data::LONG => "get_long",
+     Data::INT => "get_int",
+     Data::CHAR => "get_char",
      Data::ULONG => "get_ulong",
+     Data::LONG => "get_long",
+     Data::TIMESTAMP => "get_timestamp",
      Data::FLOAT => "get_float",
-     Data::DOUBLE => "get_double");
+     Data::DOUBLE => "get_double",
+     Data::DECIMAL32 => "get_decimal32",
+     Data::DECIMAL64 => "get_decimal64",
+     Data::DECIMAL128 => "get_decimal128",
+     Data::UUID => "get_uuid",
+     Data::BINARY => "get_binary",
+     Data::STRING => "get_string",
+     Data::SYMBOL => "get_symbol",
+     Data::DESCRIBED => "get_php_described",
+     Data::ARY => "get_php_array",
+     Data::LST => "get_php_list",
+     Data::MAP => "get_php_map"
+     );
 
   public function put_object($obj) {
     $type = gettype($obj);
@@ -848,8 +914,6 @@ class Data {
     $type = $this->type();
     if ($type == null) return null;
     $getter = $this->get_mappings[$type];
-    if ($getter == null)
-      return new DataException("unknown type: $type");
     return $this->$getter();
   }
 

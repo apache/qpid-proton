@@ -69,6 +69,22 @@
   ZVAL_STRINGL($result, $1.start, $1.size, 1);
 }
 
+%typemap(in) pn_uuid_t {
+  memmove($1.bytes, Z_STRVAL_PP($input), 16);
+}
+
+%typemap(out) pn_uuid_t {
+  ZVAL_STRINGL($result, $1.bytes, 16, 1);
+}
+
+%typemap(in) pn_decimal128_t {
+  memmove($1.bytes, Z_STRVAL_PP($input), 16);
+}
+
+%typemap(out) pn_decimal128_t {
+  ZVAL_STRINGL($result, $1.bytes, 16, 1);
+}
+
 // The PHP SWIG typedefs define the typemap STRING, LENGTH to be binary safe (allow
 // embedded \0's).
 //
