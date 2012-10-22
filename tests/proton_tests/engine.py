@@ -584,7 +584,7 @@ class MaxFrameTransferTest(Test):
     self.rcv.open()
     self.pump()
     assert self.rcv.session.connection._transport.max_frame_size == 512
-    assert self.snd.session.connection._transport.peer_max_frame_size() == 512
+    assert self.snd.session.connection._transport.remote_max_frame_size == 512
 
     self.rcv.flow(1)
     self.snd.delivery("tag")
@@ -613,7 +613,7 @@ class MaxFrameTransferTest(Test):
     self.rcv.open()
     self.pump()
     assert self.rcv.session.connection._transport.max_frame_size == 521
-    assert self.snd.session.connection._transport.peer_max_frame_size() == 521
+    assert self.snd.session.connection._transport.remote_max_frame_size == 521
 
     self.rcv.flow(2)
     self.snd.delivery("tag")

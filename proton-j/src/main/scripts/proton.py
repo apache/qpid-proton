@@ -393,6 +393,24 @@ class Transport(object):
   def input(self, bytes):
     return self.impl.input(bytes, 0, len(bytes))
 
+  def _get_max_frame_size(self):
+    #return pn_transport_get_max_frame(self._trans)
+    raise Skipped()
+
+  def _set_max_frame_size(self, value):
+    #pn_transport_set_max_frame(self._trans, value)
+    raise Skipped()
+
+  max_frame_size = property(_get_max_frame_size, _set_max_frame_size,
+                            doc="""
+Sets the maximum size for received frames (in bytes).
+""")
+
+  @property
+  def remote_max_frame_size(self):
+    #return pn_transport_get_remote_max_frame(self._trans)
+    raise Skipped()
+
 class Data(object):
 
   SYMBOL = None

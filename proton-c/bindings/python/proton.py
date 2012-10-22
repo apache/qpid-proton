@@ -1903,8 +1903,9 @@ class Transport(object):
 Sets the maximum size for received frames (in bytes).
 """)
 
-  def peer_max_frame_size(self):
-    return pn_transport_get_peer_max_frame(self._trans)
+  @property
+  def remote_max_frame_size(self):
+    return pn_transport_get_remote_max_frame(self._trans)
 
 class SASLException(TransportException):
   pass

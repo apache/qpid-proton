@@ -2380,7 +2380,7 @@ void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
   transport->local_max_frame = size;
 }
 
-uint32_t pn_transport_get_peer_max_frame(pn_transport_t *transport)
+uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport)
 {
   return transport->remote_max_frame;
 }

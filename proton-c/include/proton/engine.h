@@ -280,7 +280,7 @@ void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 // max frame of zero means "unlimited"
 uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
 void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
-uint32_t pn_transport_get_peer_max_frame(pn_transport_t *transport);
+uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
 void pn_transport_free(pn_transport_t *transport);
 
 // session
