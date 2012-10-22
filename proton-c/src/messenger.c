@@ -540,7 +540,7 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
   int len = address ? strlen(address) : 0;
   if (len > 1 && address[0] == '~' && address[1] == '/') {
     char buf[len + strlen(mng->name) + 9];
-    sprintf(buf, "amqp://%s/%s", mng->name, address);
+    sprintf(buf, "amqp://%s/%s", mng->name, address + 2);
     pn_message_set_reply_to(msg, buf);
   } else if (len == 0) {
     char buf[strlen(mng->name) + 8];

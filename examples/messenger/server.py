@@ -50,9 +50,10 @@ while True:
   if mng.incoming > 0:
     mng.get(msg)
     if msg.reply_to:
+      print msg.reply_to
       reply.address = msg.reply_to
       reply.correlation_id = msg.correlation_id
-      reply.load(msg.save())
+      reply.body = msg.body
     dispatch(msg, reply)
     mng.put(reply)
     mng.send()

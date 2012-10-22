@@ -200,7 +200,7 @@ class Message {
     $inst = new Data(pn_message_instructions($this->impl));
     $ann = new Data(pn_message_annotations($this->impl));
     $props = new Data(pn_message_properties($this->impl));
-    //$body = Data(pn_message_body($this->impl));
+    $body = new Data(pn_message_body($this->impl));
 
     $inst->clear();
     if ($this->instructions != null)
@@ -211,13 +211,15 @@ class Message {
     $props->clear();
     if ($this->properties != null)
       $props->put_object($this->properties);
+    if ($this->body != null)
+      $body->put_object($this->body);
   }
 
   function _post_decode() {
     $inst = new Data(pn_message_instructions($this->impl));
     $ann = new Data(pn_message_annotations($this->impl));
     $props = new Data(pn_message_properties($this->impl));
-    //$body = new Data(pn_message_body($this->impl));
+    $body = new Data(pn_message_body($this->impl));
 
     if ($inst->next())
       $this->instructions = $inst.get_object();
@@ -231,10 +233,10 @@ class Message {
       $this->properties = $props->get_object();
     else
       $this->properties = null;
-    /*if ($body->next())
+    if ($body->next())
       $this->body = $body->get_object();
     else
-    $this->body = null;*/
+      $this->body = null;
   }
 
   public function clear() {
@@ -245,12 +247,20 @@ class Message {
     $this->body = null;
   }
 
-  private function _is_durable() {
+  private function _get_inferred() {
+    return pn_message_is_inferred($this->impl);
+  }
+
+  private function _set_inferred($value) {
+    $this->_check(pn_message_set_inferred($this->impl, $value));
+  }
+
+  private function _get_durable() {
     return pn_message_is_durable($this->impl);
   }
 
   private function _set_durable($value) {
-    $this->_check(pn_message_set_durable($this->impl, bool($value)));
+    $this->_check(pn_message_set_durable($this->impl, $value));
   }
 
   private function _get_priority() {
@@ -269,12 +279,12 @@ class Message {
     $this->_check(pn_message_set_ttl($this->impl, $value));
   }
 
-  private function _is_first_acquirer() {
+  private function _get_first_acquirer() {
     return pn_message_is_first_acquirer($this->impl);
   }
 
   private function _set_first_acquirer($value) {
-    $this->_check(pn_message_set_first_acquirer($this->impl, bool($value)));
+    $this->_check(pn_message_set_first_acquirer($this->impl, $value));
   }
 
   private function _get_delivery_count() {
@@ -448,7 +458,7 @@ class Binary {
   }
 
   public function __tostring() {
-    return $this->bytes;
+    return "Binary($this->bytes)";
   }
 
 }
@@ -462,7 +472,7 @@ class Symbol {
   }
 
   public function __tostring() {
-    return $this->name;
+    return "Symbol($this->name)";
   }
 
 }
@@ -484,7 +494,7 @@ class UUID {
 
 }
 
-class Lst {
+class PList {
 
   public $elements;
 
@@ -493,7 +503,7 @@ class Lst {
   }
 
   public function __tostring() {
-    return "Lst(" . implode(", ", $this->elements) . ")";
+    return "PList(" . implode(", ", $this->elements) . ")";
   }
 
 }
@@ -506,6 +516,10 @@ class Described {
   public function __construct($descriptor, $value) {
     $this->descriptor = $descriptor;
     $this->value = $value;
+  }
+
+  public function __tostring() {
+    return "Described($this->descriptor, $this->value)";
   }
 
 }
@@ -535,9 +549,9 @@ class Data {
   const BINARY = PN_BINARY;
   const STRING = PN_STRING;
   const SYMBOL = PN_SYMBOL;
-  const DESCRIBED = PN_DESCRIPTOR;
-  const ARY = PN_ARRAY;
-  const LST = PN_LIST;
+  const DESCRIBED = PN_DESCRIBED;
+  const PARRAY = PN_ARRAY;
+  const PLIST = PN_LIST;
   const MAP = PN_MAP;
 
   private $impl;
@@ -920,7 +934,7 @@ class Data {
   public function get_php_list() {
     if ($this->enter()) {
       try {
-        $result = new Lst();
+        $result = new PList();
         while ($this->next()) {
           $result->elements[] = $this->get_object();
         }
@@ -980,7 +994,7 @@ class Data {
      "integer" => "put_long",
      "double" => "put_double",
      "Described" => "put_php_described",
-     "Lst" => "put_php_list",
+     "PList" => "put_php_list",
      "array" => "put_php_map"
      );
   private $get_mappings = array
@@ -1006,8 +1020,8 @@ class Data {
      Data::STRING => "get_string",
      Data::SYMBOL => "get_symbol",
      Data::DESCRIBED => "get_php_described",
-     Data::ARY => "get_php_array",
-     Data::LST => "get_php_list",
+     Data::PARRAY => "get_php_array",
+     Data::PLIST => "get_php_list",
      Data::MAP => "get_php_map"
      );
 

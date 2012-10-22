@@ -174,4 +174,4 @@ class LoadSaveTest(Test):
     self.msg.clear()
     self.msg.load(None)
     saved = self.msg.save()
-    assert saved == ""
+    assert saved == "", repr(saved)

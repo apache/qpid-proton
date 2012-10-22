@@ -44,7 +44,7 @@ msg.reply_to = opts.reply_to
 mng.put(msg)
 mng.send()
 
-if opts.reply_to[:2] != "~/":
+if opts.reply_to[:2] == "~/":
   mng.recv(1)
   try:
     mng.get(msg)

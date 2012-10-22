@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 typedef struct pn_message_t pn_message_t;
+
 typedef enum {
   PN_DATA,
   PN_TEXT,
@@ -47,6 +48,9 @@ void           pn_message_free(pn_message_t *msg);
 void           pn_message_clear(pn_message_t *msg);
 int            pn_message_errno(pn_message_t *msg);
 const char *   pn_message_error(pn_message_t *msg);
+
+bool           pn_message_is_inferred(pn_message_t *msg);
+int            pn_message_set_inferred(pn_message_t *msg, bool inferred);
 
 // standard message headers and properties
 bool           pn_message_is_durable            (pn_message_t *msg);

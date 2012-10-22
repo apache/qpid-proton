@@ -49,11 +49,6 @@ while True:
     except Exception, e:
       print e
     else:
-      try:
-        body = msg.save()
-      except Exception, e:
-        print e
-      else:
-        print msg.address, msg.subject or "(no subject)", msg.properties, body
+      print msg.address, msg.subject or "(no subject)", msg.properties, msg.body
 
 mng.stop()

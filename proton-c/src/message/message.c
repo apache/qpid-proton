@@ -66,6 +66,7 @@ struct pn_message_t {
   pn_sequence_t group_sequence;
   pn_buffer_t *reply_to_group_id;
 
+  bool inferred;
   pn_data_t *data;
   pn_data_t *instructions;
   pn_data_t *annotations;
@@ -98,11 +99,14 @@ pn_message_t *pn_message()
   msg->group_id = NULL;
   msg->group_sequence = 0;
   msg->reply_to_group_id = NULL;
+
+  msg->inferred = false;
   msg->data = pn_data(16);
   msg->instructions = pn_data(16);
   msg->annotations = pn_data(16);
   msg->properties = pn_data(16);
   msg->body = pn_data(16);
+
   msg->format = PN_DATA;
   msg->parser = NULL;
   msg->error = pn_error();
@@ -153,6 +157,7 @@ void pn_message_clear(pn_message_t *msg)
   if (msg->group_id) pn_buffer_clear(msg->group_id);
   msg->group_sequence = 0;
   if (msg->reply_to_group_id) pn_buffer_clear(msg->reply_to_group_id);
+  msg->inferred = false;
   pn_data_clear(msg->data);
   pn_data_clear(msg->instructions);
   pn_data_clear(msg->annotations);
@@ -176,6 +181,18 @@ const char *pn_message_error(pn_message_t *msg)
   } else {
     return NULL;
   }
+}
+
+bool pn_message_is_inferred(pn_message_t *msg)
+{
+  return msg ? msg->inferred : false;
+}
+
+int pn_message_set_inferred(pn_message_t *msg, bool inferred)
+{
+  if (!msg) return PN_ARG_ERR;
+  msg->inferred = inferred;
+  return 0;
 }
 
 pn_parser_t *pn_message_parser(pn_message_t *msg)
@@ -512,6 +529,13 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       err = pn_data_copy(msg->properties, msg->data);
       if (err) return err;
       break;
+    case DATA:
+    case AMQP_SEQUENCE:
+    case AMQP_VALUE:
+      pn_data_narrow(msg->data);
+      err = pn_data_copy(msg->body, msg->data);
+      if (err) return err;
+      break;
     default:
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
@@ -526,12 +550,6 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 {
   if (!msg || !bytes || !size || !*size) return PN_ARG_ERR;
-  if (!msg->data) {
-    msg->data = pn_data(64);
-  }
-  if (!msg->body) {
-    msg->body = pn_data(64);
-  }
 
   pn_data_clear(msg->data);
 
@@ -596,22 +614,40 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     pn_data_exit(msg->data);
   }
 
-  size_t remaining = *size;
-  ssize_t encoded;
+  if (pn_data_size(msg->body)) {
+    pn_data_rewind(msg->body);
+    pn_data_next(msg->body);
+    pn_type_t body_type = pn_data_type(msg->body);
+    pn_data_rewind(msg->body);
 
-  pn_data_t *sections[2] = {
-    msg->data, msg->body
-  };
-
-  for (int i = 0; i < 2; i++) {
-    encoded = pn_data_encode(sections[i], bytes, remaining);
-    if (encoded < 0)
-      return pn_error_format(msg->error, encoded, "data error: %s",
-                             pn_data_error(sections[i]));
-
-    bytes += encoded;
-    remaining -= encoded;
+    pn_data_put_described(msg->data);
+    pn_data_enter(msg->data);
+    if (msg->inferred) {
+      switch (body_type) {
+      case PN_BINARY:
+        pn_data_put_ulong(msg->data, DATA);
+        break;
+      case PN_LIST:
+        pn_data_put_ulong(msg->data, AMQP_SEQUENCE);
+        break;
+      default:
+        pn_data_put_ulong(msg->data, AMQP_VALUE);
+        break;
+      }
+    } else {
+      pn_data_put_ulong(msg->data, AMQP_VALUE);
+    }
+    pn_data_append(msg->data, msg->body);
   }
+
+  size_t remaining = *size;
+  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
+  if (encoded < 0)
+    return pn_error_format(msg->error, encoded, "data error: %s",
+                           pn_data_error(msg->data));
+
+  bytes += encoded;
+  remaining -= encoded;
 
   *size -= remaining;
 
@@ -650,12 +686,9 @@ int pn_message_load(pn_message_t *msg, const char *data, size_t size)
 int pn_message_load_data(pn_message_t *msg, const char *data, size_t size)
 {
   if (!msg) return PN_ARG_ERR;
-  if (!msg->body) {
-    msg->body = pn_data(64);
-  }
 
   pn_data_clear(msg->body);
-  int err = pn_data_fill(msg->body, "DLz", DATA, size, data);
+  int err = pn_data_fill(msg->body, "z", size, data);
   if (err) {
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_data_error(msg->body));
@@ -667,12 +700,9 @@ int pn_message_load_data(pn_message_t *msg, const char *data, size_t size)
 int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
 {
   if (!msg) return PN_ARG_ERR;
-  if (!msg->body) {
-    msg->body = pn_data(64);
-  }
 
   pn_data_clear(msg->body);
-  int err = pn_data_fill(msg->body, "DLS", AMQP_VALUE, data);
+  int err = pn_data_fill(msg->body, "S", data);
   if (err) {
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_data_error(msg->body));
@@ -684,10 +714,6 @@ int pn_message_load_text(pn_message_t *msg, const char *data, size_t size)
 int pn_message_load_amqp(pn_message_t *msg, const char *data, size_t size)
 {
   if (!msg) return PN_ARG_ERR;
-
-  if (!msg->body) {
-    msg->body = pn_data(64);
-  }
 
   pn_parser_t *parser = pn_message_parser(msg);
 
@@ -733,13 +759,12 @@ int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
     return 0;
   }
 
-  uint64_t desc;
-  pn_bytes_t bytes;
   bool scanned;
-  int err = pn_data_scan(msg->body, "DL?z", &desc, &scanned, &bytes);
+  pn_bytes_t bytes;
+  int err = pn_data_scan(msg->body, "?z", &scanned, &bytes);
   if (err) return pn_error_format(msg->error, err, "data error: %s",
                                   pn_data_error(msg->body));
-  if (desc == DATA && scanned) {
+  if (scanned) {
     if (bytes.size > *size) {
       return PN_OVERFLOW;
     } else {
@@ -756,28 +781,31 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
 {
   if (!msg) return PN_ARG_ERR;
 
-  if (pn_data_size(msg->body) == 0) {
-    *size = 0;
-    return 0;
-  }
-
-  uint64_t desc;
-  pn_bytes_t str = {0,0};
-  bool scanned, dscanned;
-  int err = pn_data_scan(msg->body, "?DL?S", &dscanned, &desc, &scanned, &str);
-  if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                  pn_data_error(msg->body));
-  if (dscanned && desc == AMQP_VALUE) {
-    if (scanned && str.size >= *size) {
-      return PN_OVERFLOW;
-    } else {
-      memcpy(data, str.start, str.size);
-      data[str.size] = '\0';
-      *size = str.size;
+  pn_data_rewind(msg->body);
+  if (pn_data_next(msg->body)) {
+    switch (pn_data_type(msg->body)) {
+    case PN_STRING:
+      {
+        pn_bytes_t str = pn_data_get_bytes(msg->body);
+        if (str.size >= *size) {
+          return PN_OVERFLOW;
+        } else {
+          memcpy(data, str.start, str.size);
+          data[str.size] = '\0';
+          *size = str.size;
+          return 0;
+        }
+      }
+      break;
+    case PN_NULL:
+      *size = 0;
       return 0;
+    default:
+      return PN_STATE_ERR;
     }
   } else {
-    return PN_STATE_ERR;
+    *size = 0;
+    return 0;
   }
 }
 

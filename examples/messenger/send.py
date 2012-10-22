@@ -32,10 +32,12 @@ if not args:
 mng = Messenger()
 mng.start()
 
+import uuid
+
 msg = Message()
 for m in args:
   msg.address = opts.address
-  msg.load(m)
+  msg.body = unicode(m)
   mng.put(msg)
 
 mng.send()

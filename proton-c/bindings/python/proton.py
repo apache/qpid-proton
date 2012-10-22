@@ -367,7 +367,7 @@ class Message(object):
     inst = Data(pn_message_instructions(self._msg))
     ann = Data(pn_message_annotations(self._msg))
     props = Data(pn_message_properties(self._msg))
-#    body = Data(pn_message_body(self._msg))
+    body = Data(pn_message_body(self._msg))
 
     inst.clear()
     if self.instructions is not None:
@@ -378,12 +378,14 @@ class Message(object):
     props.clear()
     if self.properties is not None:
       props.put_object(self.properties)
+    if self.body is not None:
+      body.put_object(self.body)
 
   def _post_decode(self):
     inst = Data(pn_message_instructions(self._msg))
     ann = Data(pn_message_annotations(self._msg))
     props = Data(pn_message_properties(self._msg))
-#    body = Data(pn_message_body(self._msg))
+    body = Data(pn_message_body(self._msg))
 
     if inst.next():
       self.instructions = inst.get_object()
@@ -397,6 +399,10 @@ class Message(object):
       self.properties = props.get_object()
     else:
       self.properties = None
+    if body.next():
+      self.body = body.get_object()
+    else:
+      self.body = None
 
   def clear(self):
     """
@@ -408,6 +414,14 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = None
+
+  def _is_inferred(self):
+    return pn_message_is_inferred(self._msg)
+
+  def _set_inferred(self, value):
+    self._check(pn_message_set_inferred(self._msg, bool(value)))
+
+  inferred = property(_is_inferred, _set_inferred)
 
   def _is_durable(self):
     return pn_message_is_durable(self._msg)
@@ -1430,6 +1444,7 @@ class Data:
     if getter:
       return getter(self)
     else:
+      self.dump()
       return UnmappedType(str(type))
 
 
