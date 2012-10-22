@@ -217,7 +217,7 @@ class Message {
     $inst = new Data(pn_message_instructions($this->impl));
     $ann = new Data(pn_message_annotations($this->impl));
     $props = new Data(pn_message_properties($this->impl));
-    //$body = Data(pn_message_body($this->impl));
+    //$body = new Data(pn_message_body($this->impl));
 
     if ($inst->next())
       $this->instructions = $inst.get_object();
@@ -231,6 +231,10 @@ class Message {
       $this->properties = $props->get_object();
     else
       $this->properties = null;
+    /*if ($body->next())
+      $this->body = $body->get_object();
+    else
+    $this->body = null;*/
   }
 
   public function clear() {
@@ -435,6 +439,77 @@ class Message {
   }
 }
 
+class Binary {
+
+  public $bytes;
+
+  public function __construct($bytes) {
+    $this->bytes = $bytes;
+  }
+
+  public function __tostring() {
+    return $this->bytes;
+  }
+
+}
+
+class Symbol {
+
+  public $name;
+
+  public function __construct($name) {
+    $this->name = $name;
+  }
+
+  public function __tostring() {
+    return $this->name;
+  }
+
+}
+
+class UUID {
+
+  public $bytes;
+
+  public function __construct($bytes) {
+    if (strlen($bytes) != 16) {
+      throw new Exception("invalid argument: exactly 16 bytes required");
+    }
+    $this->bytes = $bytes;
+  }
+
+  public function __tostring() {
+    return "UUID($this->bytes)";
+  }
+
+}
+
+class Lst {
+
+  public $elements;
+
+  public function __construct() {
+    $this->elements = func_get_args();
+  }
+
+  public function __tostring() {
+    return "Lst(" . implode(", ", $this->elements) . ")";
+  }
+
+}
+
+class Described {
+
+  public $descriptor;
+  public $value;
+
+  public function __construct($descriptor, $value) {
+    $this->descriptor = $descriptor;
+    $this->value = $value;
+  }
+
+}
+
 class DataException extends ProtonException {}
 
 class Data {
@@ -635,10 +710,16 @@ class Data {
   }
 
   public function put_uuid($u) {
-    $this->_check(pn_data_put_uuid($this->impl, $u->bytes));
+    if ($u instanceof UUID) {
+      $u = $u->bytes;
+    }
+    $this->_check(pn_data_put_uuid($this->impl, $u));
   }
 
   public function put_binary($b) {
+    if ($b instanceof Binary) {
+      $b = $b->bytes;
+    }
     $this->_check(pn_data_put_binary($this->impl, $b));
   }
 
@@ -647,6 +728,9 @@ class Data {
   }
 
   public function put_symbol($s) {
+    if ($s instanceof Symbol) {
+      $s = $s->name;
+    }
     $this->_check(pn_data_put_symbol($this->impl, $s));
   }
 
@@ -744,13 +828,13 @@ class Data {
 
   public function get_uuid() {
     if (pn_data_type($this->impl) == Data::UUID)
-      return pn_data_get_uuid($this->impl);
+      return new UUID(pn_data_get_uuid($this->impl));
     else
       return null;
   }
 
   public function get_binary() {
-    return pn_data_get_binary($this->impl);
+    return new Binary(pn_data_get_binary($this->impl));
   }
 
   public function get_string() {
@@ -758,7 +842,7 @@ class Data {
   }
 
   public function get_symbol() {
-    return pn_data_get_symbol($this->impl);
+    return new Symbol(pn_data_get_symbol($this->impl));
   }
 
   public function copy($src) {
@@ -790,15 +874,16 @@ class Data {
   public function get_php_described() {
     if ($this->enter()) {
       try {
-        $result = array();
-        while ($this->next()) {
-          $result[] = $this->get_object();
-        }
+        $this->next();
+        $descriptor = $this->get_object();
+        $this->next();
+        $value = $this->get_object();
+        $this->exit_();
       } catch (Exception $e) {
-        $this->exit();
+        $this->exit_();
         throw $e;
       }
-      return $result;
+      return new Described($descriptor, $value);
     }
   }
 
@@ -809,25 +894,42 @@ class Data {
         while ($this->next()) {
           $result[] = $this->get_object();
         }
+        $this->exit_();
       } catch (Exception $e) {
-        $this->exit();
+        $this->exit_();
         throw $e;
       }
       return $result;
     }
   }
 
+  public function put_php_list($lst) {
+    $this->put_list();
+    $this->enter();
+    try {
+      foreach ($lst->elements as $e) {
+        $this->put_object($e);
+      }
+      $this->exit_();
+    } catch (Exception $e) {
+      $this->exit_();
+      throw $e;
+    }
+  }
+
   public function get_php_list() {
     if ($this->enter()) {
       try {
-        $result = array();
+        $result = new Lst();
         while ($this->next()) {
-          $result[] = $this->get_object();
+          $result->elements[] = $this->get_object();
         }
+        $this->exit_();
       } catch (Exception $e) {
-        $this->exit();
+        $this->exit_();
         throw $e;
       }
+
       return $result;
     }
   }
@@ -869,11 +971,18 @@ class Data {
   }
 
   private $put_mappings = array
-    ("null" => "put_null",
-     "array" => "put_php_array",
+    ("NULL" => "put_null",
+     "boolean" => "put_bool",
+     "UUID" => "put_uuid",
      "string" => "put_string",
+     "Binary" => "put_binary",
+     "Symbol" => "put_symbol",
      "integer" => "put_long",
-     "double" => "put_double");
+     "double" => "put_double",
+     "Described" => "put_php_described",
+     "Lst" => "put_php_list",
+     "array" => "put_php_map"
+     );
   private $get_mappings = array
     (Data::NULL => "get_null",
      Data::BOOL => "get_bool",
@@ -904,6 +1013,9 @@ class Data {
 
   public function put_object($obj) {
     $type = gettype($obj);
+    if ($type == "object") {
+      $type = get_class($obj);
+    }
     $putter = $this->put_mappings[$type];
     if ($putter == null)
       throw new DataException("unknown type: $type");
