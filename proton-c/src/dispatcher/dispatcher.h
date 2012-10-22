@@ -56,7 +56,7 @@ struct pn_dispatcher_t {
   void *context;
   bool halt;
   bool batch;
-  char scratch[SCRATCH];        // ? Rafi - can I use this instead of frame (size for remote-max-frame?)
+  char scratch[SCRATCH];
 };
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context);

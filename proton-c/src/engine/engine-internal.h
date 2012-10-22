@@ -89,9 +89,6 @@ typedef struct {
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 
-// minimum allowable max-frame
-#define PN_MIN_MAX_FRAME_SIZE ((uint32_t)512)
-
 struct pn_transport_t {
   ssize_t (*process_input)(pn_transport_t *, const char *, size_t);
   ssize_t (*process_output)(pn_transport_t *, char *, size_t);

@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #define AMQP_HEADER_SIZE (8)
+#define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
 
 typedef struct {
   uint8_t type;

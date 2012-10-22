@@ -46,6 +46,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->size = 0;
 
   disp->output_args = pn_data(16);
+  disp->frame = pn_buffer( 4*1024 );
   // XXX
   disp->capacity = 4*1024;
   disp->output = malloc(disp->capacity);
@@ -222,50 +223,37 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 
   pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, disp->output_size);
 
-  size_t size = 1024;
+ encode_performatives:
+  pn_buffer_clear( disp->frame );
+  pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+  buf.size = pn_buffer_available( disp->frame );
 
-  while (true) {
-    char buf[size];
-    ssize_t wr = pn_data_encode(disp->output_args, buf, size);
-    if (wr < 0)
-    {
-      if (wr == PN_OVERFLOW) {
-        size *= 2;
-        continue;
-      } else {
-        fprintf(stderr, "error posting frame: %s", pn_code(wr));
-        return PN_ERR;
-      }
-    } else if (size - wr < disp->output_size) {
-      size += wr + disp->output_size - size;
-      continue;
-    } else {
-      if (disp->output_size) {
-        memmove(buf + wr, disp->output_payload, disp->output_size);
-        wr += disp->output_size;
-        disp->output_payload = NULL;
-        disp->output_size = 0;
-      }
-
-      pn_frame_t frame = {disp->frame_type};
-      frame.channel = ch;
-      frame.payload = buf;
-      frame.size = wr;
-      size_t n;
-      while (!(n = pn_write_frame(disp->output + disp->available,
-                                  disp->capacity - disp->available, frame))) {
-        disp->capacity *= 2;
-        disp->output = realloc(disp->output, disp->capacity);
-      }
-      if (disp->trace & PN_TRACE_RAW) {
-        fprintf(stderr, "RAW: \"");
-        pn_fprint_data(stderr, disp->output + disp->available, n);
-        fprintf(stderr, "\"\n");
-      }
-      disp->available += n;
-      break;
+  ssize_t wr = pn_data_encode( disp->output_args, buf.start, buf.size );
+  if (wr < 0) {
+    if (wr == PN_OVERFLOW) {
+      pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
+      goto encode_performatives;
     }
+    fprintf(stderr, "error posting frame: %s", pn_code(wr));
+    return PN_ERR;
   }
+
+  pn_frame_t frame = {disp->frame_type};
+  frame.channel = ch;
+  frame.payload = buf.start;
+  frame.size = wr;
+  size_t n;
+  while (!(n = pn_write_frame(disp->output + disp->available,
+                              disp->capacity - disp->available, frame))) {
+    disp->capacity *= 2;
+    disp->output = realloc(disp->output, disp->capacity);
+  }
+  if (disp->trace & PN_TRACE_RAW) {
+    fprintf(stderr, "RAW: \"");
+    pn_fprint_data(stderr, disp->output + disp->available, n);
+    fprintf(stderr, "\"\n");
+  }
+  disp->available += n;
 
   return 0;
 }
@@ -289,53 +277,70 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
                            bool settled,
                            bool more)
 {
+  bool more_flag = more;
 
-  if (!disp->remote_max_frame)  // "unlimited" frame size accepted
-    return pn_post_frame( disp, ch, "DL[IIzIoo]", TRANSFER,
-                          handle, id, tag->size, tag->start,
-                          message_format,
-                          settled, more);
+  // create preformatives, assuming 'more' flag need not change
 
-  bool more_flag = true;        // optimize: check against hard-code size of performative
-  do {
-    pn_data_clear(disp->output_args);
-    int err = pn_data_fill(disp->output_args, "DL[IIzIoo]", TRANSFER,
-                           handle, id, tag->size, tag->start,
-                           message_format,
-                           settled, more_flag);
-    if (err) {
-      fprintf(stderr, "error posting transfer frame: %s: %s\n", pn_code(err), pn_data_error(disp->output_args));
-      return PN_ERR;
-    }
+ compute_performatives:
+  pn_data_clear(disp->output_args);
+  int err = pn_data_fill(disp->output_args, "DL[IIzIoo]", TRANSFER,
+                         handle, id, tag->size, tag->start,
+                         message_format,
+                         settled, more_flag);
+  if (err) {
+    fprintf(stderr, "error posting transfer frame: %s: %s\n", pn_code(err), pn_data_error(disp->output_args));
+    return PN_ERR;
+  }
 
-    pn_buffer_clear(disp->frame);
-    pn_bytes_t frame_buf = pn_buffer_bytes( disp->frame );
-    ssize_t wr = pn_data_encode(disp->output_args, frame_buf.start,
-                                pn_buffer_available( disp->frame ));
+  do { // send as many frames as possible without changing the 'more' flag...
+
+  encode_performatives:
+    pn_buffer_clear( disp->frame );
+    pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+    buf.size = pn_buffer_available( disp->frame );
+
+    ssize_t wr = pn_data_encode(disp->output_args, buf.start, buf.size);
     if (wr < 0) {
+      if (wr == PN_OVERFLOW) {
+        pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
+        goto encode_performatives;
+      }
       fprintf(stderr, "error posting frame: %s", pn_code(wr));
       return PN_ERR;
     }
-    frame_buf.size = wr;
+    buf.size = wr;
 
-    if (more == false && (frame_buf.size + disp->output_size) <= disp->remote_max_frame) {
-      more_flag = false;
-      continue;         // rebuild performative with new value for more flag
+    // check if we need to break up the outbound frame
+    size_t available = disp->output_size;
+    if (disp->remote_max_frame) {
+      if ((available + buf.size) > disp->remote_max_frame) {
+        available = disp->remote_max_frame - buf.size;
+        if (more_flag == false) {
+          more_flag = true;
+          goto compute_performatives;  // deal with flag change
+        }
+      } else if (more_flag == true && more == false) {
+        // caller has no more, and this is the last frame
+        more_flag = false;
+        goto compute_performatives;
+      }
     }
 
-    size_t available = disp->remote_max_frame - frame_buf.size;
-    if (available > disp->output_size) available = disp->output_size;
-    memmove(frame_buf.start + frame_buf.size, disp->output_payload, available);
-    frame_buf.size += available;
-    //disp->output_payload = NULL;
+    if (pn_buffer_available( disp->frame ) < (available + buf.size)) {
+      // not enough room for payload - try again...
+      pn_buffer_ensure( disp->frame, available + buf.size );
+      goto encode_performatives;
+    }
+    memmove( buf.start + buf.size, disp->output_payload, available);
     disp->output_size -= available;
-
-    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, available);
+    buf.size += available;
 
     pn_frame_t frame = {disp->frame_type};
     frame.channel = ch;
-    frame.payload = frame_buf.start;
-    frame.size = frame_buf.size;
+    frame.payload = buf.start;
+    frame.size = buf.size;
+
+    pn_do_trace(disp, ch, OUT, disp->output_args, frame.payload, frame.size);
 
     size_t n;
     while (!(n = pn_write_frame(disp->output + disp->available,

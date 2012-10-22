@@ -1330,14 +1330,14 @@ int pn_do_open(pn_dispatcher_t *disp)
                          transport->remote_desired_capabilities);
   if (err) return err;
   if (transport->remote_max_frame > 0) {
-    if (transport->remote_max_frame < PN_MIN_MAX_FRAME_SIZE) {
+    if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
       fprintf(stderr, "Peer advertised bad max-frame (%u), forcing to %u\n",
-              transport->remote_max_frame, PN_MIN_MAX_FRAME_SIZE);
-      transport->remote_max_frame = PN_MIN_MAX_FRAME_SIZE;
+              transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
+      transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
     disp->remote_max_frame = transport->remote_max_frame;
-    if (disp->frame) pn_buffer_free( disp->frame );
-    disp->frame = pn_buffer( disp->remote_max_frame );
+    pn_buffer_clear( disp->frame );
+    pn_buffer_ensure( disp->frame, disp->remote_max_frame );
   }
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
@@ -2375,8 +2375,8 @@ uint32_t pn_transport_get_max_frame(pn_transport_t *transport)
 
 void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
 {
-  if (size && size < PN_MIN_MAX_FRAME_SIZE)
-    size = PN_MIN_MAX_FRAME_SIZE;
+  if (size && size < AMQP_MIN_MAX_FRAME_SIZE)
+    size = AMQP_MIN_MAX_FRAME_SIZE;
   transport->local_max_frame = size;
 }
 
