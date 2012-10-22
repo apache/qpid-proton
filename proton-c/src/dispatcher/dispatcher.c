@@ -24,7 +24,9 @@
 #include <string.h>
 #include <proton/framing.h>
 #include <proton/engine.h>
+#include <proton/buffer.h>
 #include "dispatcher.h"
+#include "protocol.h"
 #include "../util.h"
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
@@ -277,3 +279,79 @@ ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size)
   // XXX: need to check for errors
   return n;
 }
+
+
+int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
+                           uint32_t handle,
+                           pn_sequence_t id,
+                           const pn_bytes_t *tag,
+                           uint32_t message_format,
+                           bool settled,
+                           bool more)
+{
+
+  if (!disp->remote_max_frame)  // "unlimited" frame size accepted
+    return pn_post_frame( disp, ch, "DL[IIzIoo]", TRANSFER,
+                          handle, id, tag->size, tag->start,
+                          message_format,
+                          settled, more);
+
+  bool more_flag = true;        // optimize: check against hard-code size of performative
+  do {
+    pn_data_clear(disp->output_args);
+    int err = pn_data_fill(disp->output_args, "DL[IIzIoo]", TRANSFER,
+                           handle, id, tag->size, tag->start,
+                           message_format,
+                           settled, more_flag);
+    if (err) {
+      fprintf(stderr, "error posting transfer frame: %s: %s\n", pn_code(err), pn_data_error(disp->output_args));
+      return PN_ERR;
+    }
+
+    pn_buffer_clear(disp->frame);
+    pn_bytes_t frame_buf = pn_buffer_bytes( disp->frame );
+    ssize_t wr = pn_data_encode(disp->output_args, frame_buf.start,
+                                pn_buffer_available( disp->frame ));
+    if (wr < 0) {
+      fprintf(stderr, "error posting frame: %s", pn_code(wr));
+      return PN_ERR;
+    }
+    frame_buf.size = wr;
+
+    if (more == false && (frame_buf.size + disp->output_size) <= disp->remote_max_frame) {
+      more_flag = false;
+      continue;         // rebuild performative with new value for more flag
+    }
+
+    size_t available = disp->remote_max_frame - frame_buf.size;
+    if (available > disp->output_size) available = disp->output_size;
+    memmove(frame_buf.start + frame_buf.size, disp->output_payload, available);
+    frame_buf.size += available;
+    //disp->output_payload = NULL;
+    disp->output_size -= available;
+
+    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, available);
+
+    pn_frame_t frame = {disp->frame_type};
+    frame.channel = ch;
+    frame.payload = frame_buf.start;
+    frame.size = frame_buf.size;
+
+    size_t n;
+    while (!(n = pn_write_frame(disp->output + disp->available,
+                                disp->capacity - disp->available, frame))) {
+      disp->capacity *= 2;
+      disp->output = realloc(disp->output, disp->capacity);
+    }
+    if (disp->trace & PN_TRACE_RAW) {
+      fprintf(stderr, "RAW: \"");
+      pn_fprint_data(stderr, disp->output + disp->available, n);
+      fprintf(stderr, "\"\n");
+    }
+    disp->available += n;
+  } while (disp->output_size > 0);
+
+  disp->output_payload = NULL;
+  return 0;
+}
+

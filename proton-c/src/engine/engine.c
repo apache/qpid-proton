@@ -761,6 +761,8 @@ void pn_transport_init(pn_transport_t *transport)
   transport->close_rcvd = false;
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
+  transport->local_max_frame = 0;
+  transport->remote_max_frame = 0;
   transport->remote_offered_capabilities = pn_data(16);
   transport->remote_desired_capabilities = pn_data(16);
   transport->error = pn_error();
@@ -1321,11 +1323,22 @@ int pn_do_open(pn_dispatcher_t *disp)
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
-  int err = pn_scan_args(disp, "D.[?S?S.....CC]", &container_q,
+  int err = pn_scan_args(disp, "D.[?S?SI....CC]", &container_q,
                          &remote_container, &hostname_q, &remote_hostname,
+                         &transport->remote_max_frame,
                          transport->remote_offered_capabilities,
                          transport->remote_desired_capabilities);
   if (err) return err;
+  if (transport->remote_max_frame > 0) {
+    if (transport->remote_max_frame < PN_MIN_MAX_FRAME_SIZE) {
+      fprintf(stderr, "Peer advertised bad max-frame (%u), forcing to %u\n",
+              transport->remote_max_frame, PN_MIN_MAX_FRAME_SIZE);
+      transport->remote_max_frame = PN_MIN_MAX_FRAME_SIZE;
+    }
+    disp->remote_max_frame = transport->remote_max_frame;
+    if (disp->frame) pn_buffer_free( disp->frame );
+    disp->frame = pn_buffer( disp->remote_max_frame );
+  }
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
   } else {
@@ -1838,9 +1851,11 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
-      int err = pn_post_frame(transport->disp, 0, "DL[SSnnnnnCC]", OPEN,
+      int err = pn_post_frame(transport->disp, 0, "DL[SS?InnnnCC]", OPEN,
                               connection->container,
                               connection->hostname,
+                              // if not zero, advertise our max frame size
+                              (bool)transport->local_max_frame, transport->local_max_frame,
                               connection->offered_capabilities,
                               connection->desired_capabilities);
       if (err) return err;
@@ -2012,10 +2027,13 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
       pn_set_payload(transport->disp, bytes.start, bytes.size);
       pn_buffer_clear(delivery->bytes);
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-      int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[IIzIoo]", TRANSFER,
-                              link_state->local_handle, state->id,
-                              tag.size, tag.start, 0, delivery->local_settled,
-                              !delivery->done);
+      int err = pn_post_transfer_frame(transport->disp,
+                                       ssn_state->local_channel,
+                                       link_state->local_handle,
+                                       state->id, &tag,
+                                       0, // message-format
+                                       delivery->local_settled,
+                                       !delivery->done);
       if (err) return err;
       ssn_state->outgoing_transfer_count++;
       ssn_state->outgoing_window--;
@@ -2348,6 +2366,23 @@ void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
   if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
   if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
   transport->disp->trace = trace;
+}
+
+uint32_t pn_transport_get_max_frame(pn_transport_t *transport)
+{
+  return transport->local_max_frame;
+}
+
+void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
+{
+  if (size && size < PN_MIN_MAX_FRAME_SIZE)
+    size = PN_MIN_MAX_FRAME_SIZE;
+  transport->local_max_frame = size;
+}
+
+uint32_t pn_transport_get_peer_max_frame(pn_transport_t *transport)
+{
+  return transport->remote_max_frame;
 }
 
 void pn_link_offered(pn_link_t *sender, int credit)

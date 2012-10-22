@@ -277,6 +277,10 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
 time_t pn_transport_tick(pn_transport_t *transport, time_t now);
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
+// max frame of zero means "unlimited"
+uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
+void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
+uint32_t pn_transport_get_peer_max_frame(pn_transport_t *transport);
 void pn_transport_free(pn_transport_t *transport);
 
 // session

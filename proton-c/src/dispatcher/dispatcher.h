@@ -48,13 +48,15 @@ struct pn_dispatcher_t {
   pn_data_t *output_args;
   const char *output_payload;
   size_t output_size;
+  size_t remote_max_frame;
+  pn_buffer_t *frame;  // frame under construction
   size_t capacity;
   size_t available;
   char *output;
   void *context;
   bool halt;
   bool batch;
-  char scratch[SCRATCH];
+  char scratch[SCRATCH];        // ? Rafi - can I use this instead of frame (size for remote-max-frame?)
 };
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context);
@@ -67,5 +69,12 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available);
 ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size);
 void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...);
-
+int pn_post_transfer_frame(pn_dispatcher_t *disp,
+                           uint16_t local_channel,
+                           uint32_t handle,
+                           pn_sequence_t delivery_id,
+                           const pn_bytes_t *delivery_tag,
+                           uint32_t message_format,
+                           bool settled,
+                           bool more);
 #endif /* dispatcher.h */
