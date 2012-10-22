@@ -445,6 +445,18 @@ class Message(object):
   def decode(self, data):
     self.impl.decode(data,0,len(data))
 
+  def _get_id(self):
+    return self.impl.getMessageId()
+  def _set_id(self, value):
+    return self.impl.setMessageId(value)
+  id = property(_get_id, _set_id)
+
+  def _get_correlation_id(self):
+    return self.impl.getCorrelationId()
+  def _set_correlation_id(self, value):
+    return self.impl.setCorrelationId(value)
+  correlation_id = property(_get_correlation_id, _set_correlation_id)
+
   def _get_ttl(self):
     return self.impl.getTtl()
   def _set_ttl(self, ttl):
