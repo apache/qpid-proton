@@ -1892,6 +1892,20 @@ class Transport(object):
     else:
       return self._check(n)
 
+  def _get_max_frame_size(self):
+    return pn_transport_get_max_frame(self._trans)
+
+  def _set_max_frame_size(self, value):
+    pn_transport_set_max_frame(self._trans, value)
+
+  max_frame_size = property(_get_max_frame_size, _set_max_frame_size,
+                            doc="""
+Sets the maximum size for received frames (in bytes).
+""")
+
+  def peer_max_frame_size(self):
+    return pn_transport_get_peer_max_frame(self._trans)
+
 class SASLException(TransportException):
   pass
 

@@ -55,8 +55,10 @@ class Test(common.Test):
     c2 = Connection()
     t1 = Transport()
     t1.bind(c1)
+    c1._transport = t1
     t2 = Transport()
     t2.bind(c2)
+    c2._transport = t2
     self._wires.append((c1, t1, c2, t2))
     trc = os.environ.get("PN_TRACE_FRM")
     if trc and trc.lower() in ("1", "2", "yes", "true"):
@@ -65,8 +67,11 @@ class Test(common.Test):
       t2.trace(Transport.TRACE_FRM)
     return c1, c2
 
-  def link(self, name):
+  def link(self, name, max_frame=None):
     c1, c2 = self.connection()
+    if max_frame:
+      c1._transport.max_frame_size = max_frame[0]
+      c2._transport.max_frame_size = max_frame[1]
     c1.open()
     c2.open()
     ssn1 = c1.session()
@@ -558,6 +563,91 @@ class TransferTest(Test):
     self.pump()
 
     assert sd.local_state == rd.remote_state == Delivery.ACCEPTED
+
+class MaxFrameTransferTest(Test):
+
+  def setup(self):
+    pass
+
+  def teardown(self):
+    self.cleanup()
+
+  def testMinFrame(self):
+    """
+    Configure receiver to support minimum max-frame as defined by AMQP-1.0.
+    Verify transfer of messages larger than 512.
+    """
+    self.snd, self.rcv = self.link("test-link", max_frame=[0,512])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.session.connection._transport.max_frame_size == 512
+    assert self.snd.session.connection._transport.peer_max_frame_size() == 512
+
+    self.rcv.flow(1)
+    self.snd.delivery("tag")
+    msg = "X" * 513
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    assert self.snd.advance()
+
+    self.pump()
+
+    bytes = self.rcv.recv(513)
+    assert bytes == msg
+
+    bytes = self.rcv.recv(1024)
+    assert bytes == None
+
+  def testOddFrame(self):
+    """
+    Test an odd sized max limit with data that will require multiple frames to
+    be transfered.
+    """
+    self.snd, self.rcv = self.link("test-link", max_frame=[0,521])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.session.connection._transport.max_frame_size == 521
+    assert self.snd.session.connection._transport.peer_max_frame_size() == 521
+
+    self.rcv.flow(2)
+    self.snd.delivery("tag")
+    msg = "X" * 1699
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    assert self.snd.advance()
+
+    self.pump()
+
+    bytes = self.rcv.recv(1699)
+    assert bytes == msg
+
+    bytes = self.rcv.recv(1024)
+    assert bytes == None
+
+    self.rcv.advance()
+
+    self.snd.delivery("gat")
+    msg = "Y" * 1426
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    assert self.snd.advance()
+
+    self.pump()
+
+    bytes = self.rcv.recv(1426)
+    assert bytes == msg
+
+    self.pump()
+
+    bytes = self.rcv.recv(1024)
+    assert bytes == None
+
 
 class CreditTest(Test):
 
