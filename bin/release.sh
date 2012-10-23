@@ -35,13 +35,15 @@ die()
 URL="http://svn.apache.org/repos/asf/qpid/proton"
 BRANCH="trunk"
 VERSION=""
+REVISION=""
 
 usage()
 {
-    echo "Usage: ${ME} -v VERSION [-u URL] [-b BRANCH] [-c]"
+    echo "Usage: ${ME} -v VERSION [-u URL] [-b BRANCH] [-r REVISION]"
     echo "-v VERSION  Specifies the release version; e.g., 3.14"
     echo "-u URL      The base URL for the repository (def. ${URL})"
     echo "-b BRANCH   The branch to check out (def. ${BRANCH})"
+    echo "-r REVISION The revision to check out (def. HEAD)"
     echo ""
     exit 0
 }
@@ -57,6 +59,8 @@ while getopts "hu:b:v:" OPTION; do
 
         b) BRANCH=$OPTARG;;
 
+        r) REVISION=$OPTARG;;
+
         \?) usage;;
     esac
 done
@@ -65,51 +69,50 @@ if [[ -z "${VERSION}" ]]; then
     die "You need to specify a version."
 fi
 
+if [[ -z "${REVISION}" ]]; then
+    # grab a consistent revision to use for all exports
+    REVISION=$(svn info http://svn.apache.org/repos/asf/qpid/proton | fgrep Revision: | awk '{ print $2 }')
+fi
+
+echo "Using svn revision $REVISION for all exports."
+
 ##
 ## Create the C Tarball
 ##
-rootname="qpid-proton-c-${VERSION}"
+rootname="proton-c-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export ${URL}/${BRANCH} ${WORKDIR}/${rootname} >/dev/null
+    svn export -qr $REVISION ${URL}/${BRANCH}/proton-c ${rootname}
+    svn export -qr $REVISION ${URL}/${BRANCH}/tests ${rootname}/tests
+    svn export -qr $REVISION ${URL}/${BRANCH}/examples ${rootname}/examples
+
+    echo $REVISION > ${rootname}/SVNREVISION
 
     ##
-    ## Remove content not for the C tarball
+    ## Remove content not for release
     ##
-    rm -f  ${rootname}/.gitignore
-    rm -f  ${rootname}/config.sh
-    rm -rf ${rootname}/bin
     rm -rf ${rootname}/examples/broker
     rm -rf ${rootname}/examples/mailbox
-    rm -rf ${rootname}/proton-j
-    rm -rf ${rootname}/design
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
+    tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
 )
 
 ##
 ## Create the Java Tarball
 ##
-rootname="qpid-proton-java-${VERSION}"
+rootname="proton-j-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export ${URL}/${BRANCH} ${WORKDIR}/${rootname} >/dev/null
+    svn export -qr $REVISION ${URL}/${BRANCH}/proton-j ${rootname}
+    svn export -qr $REVISION ${URL}/${BRANCH}/tests ${rootname}/tests
 
-    ##
-    ## Remove content not for the Java tarball
-    ##
-    rm -f  ${rootname}/.gitignore
-    rm -f  ${rootname}/config.sh
-    rm -rf ${rootname}/bin
-    rm -rf ${rootname}/examples
-    rm -rf ${rootname}/proton-c
-    rm -rf ${rootname}/design
+    echo $REVISION > ${rootname}/SVNREVISION
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
+    tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
 )
