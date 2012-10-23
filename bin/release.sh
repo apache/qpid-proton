@@ -28,7 +28,7 @@ ME=$(basename ${0})
 CURRDIR=$PWD
 die()
 {
-    printf "ERROR: %s\n", "$*"
+    printf "ERROR: %s\n" "$*"
     exit 1
 }
 
@@ -74,7 +74,7 @@ if [[ -z "${REVISION}" ]]; then
     REVISION=$(svn info http://svn.apache.org/repos/asf/qpid/proton | fgrep Revision: | awk '{ print $2 }')
 fi
 
-echo "Using svn revision $REVISION for all exports."
+echo "Using svn revision ${REVISION} for all exports."
 
 ##
 ## Create the C Tarball
@@ -84,11 +84,15 @@ WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export -qr $REVISION ${URL}/${BRANCH}/proton-c ${rootname}
-    svn export -qr $REVISION ${URL}/${BRANCH}/tests ${rootname}/tests
-    svn export -qr $REVISION ${URL}/${BRANCH}/examples ${rootname}/examples
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/tests ${rootname}/tests
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/examples ${rootname}/examples
 
-    echo $REVISION > ${rootname}/SVNREVISION
+    cat <<EOF > ${rootname}/SVN_INFO
+Repo: ${URL}
+Branch: ${BRANCH}
+Revision: ${REVISION}
+EOF
 
     ##
     ## Remove content not for release
@@ -96,7 +100,7 @@ mkdir -p "${WORKDIR}"
     rm -rf ${rootname}/examples/broker
     rm -rf ${rootname}/examples/mailbox
 
-    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
+    echo "Generating Archive: ${CURRDIR}/qpid-${rootname}.tar.gz"
     tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
 )
 
@@ -108,11 +112,15 @@ WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export -qr $REVISION ${URL}/${BRANCH}/proton-j ${rootname}
-    svn export -qr $REVISION ${URL}/${BRANCH}/tests ${rootname}/tests
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-j ${rootname}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/tests ${rootname}/tests
 
-    echo $REVISION > ${rootname}/SVNREVISION
+    cat <<EOF > ${rootname}/SVN_INFO
+Repo: ${URL}
+Branch: ${BRANCH}
+Revision: ${REVISION}
+EOF
 
-    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
+    echo "Generating Archive: ${CURRDIR}/qpid-${rootname}.tar.gz"
     tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
 )
