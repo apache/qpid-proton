@@ -27,7 +27,8 @@ if (DOXYGEN_FOUND)
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
            DESTINATION ${PROTON_SHARE}/docs/api-c
-           COMPONENT documentation)
+           COMPONENT documentation
+           OPTIONAL)
   # if (CPACK_GENERATOR STREQUAL "NSIS")
   #     set (CPACK_NSIS_MENU_LINKS
   #          "${QPID_INSTALL_HTMLDIR}/index.html" "Qpid C++ API Documentation"
