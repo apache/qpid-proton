@@ -39,7 +39,7 @@ VERSION=""
 usage()
 {
     echo "Usage: ${ME} -v VERSION [-u URL] [-b BRANCH] [-c]"
-    echo "-v VERSION  Specifies the release version; i.e., 0.18"
+    echo "-v VERSION  Specifies the release version; e.g., 3.14"
     echo "-u URL      The base URL for the repository (def. ${URL})"
     echo "-b BRANCH   The branch to check out (def. ${BRANCH})"
     echo ""
