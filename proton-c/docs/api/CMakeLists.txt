@@ -21,13 +21,13 @@ find_package(Doxygen)
 if (DOXYGEN_FOUND)
   configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
                   ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
-  add_custom_target (docs COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+  add_custom_target (docs-c COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+  add_dependencies (docs docs-c)
 
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-           DESTINATION ${PROTON_SHARE}/docs/api
-           COMPONENT documentation
-           OPTIONAL)
+           DESTINATION ${PROTON_SHARE}/docs/api-c
+           COMPONENT documentation)
   # if (CPACK_GENERATOR STREQUAL "NSIS")
   #     set (CPACK_NSIS_MENU_LINKS
   #          "${QPID_INSTALL_HTMLDIR}/index.html" "Qpid C++ API Documentation"

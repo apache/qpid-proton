@@ -14,17 +14,18 @@ package for that language:
   # dependencies needed for bindings
   yum install swig python-devel ruby-devel php-devel
 
+  # dependencies needed for python docs
+  yum install epydoc
+
 From the directory where you found this README file:
 
   mkdir build
   cd build
 
-  # Depending on your system you may want to adjust the install prefix
-  # and/or adjust the lib dir.
-  #
-  # cmake -DCMAKE_INSTALL_PREFIX=/usr -DLIB_INSTALL_DIR=lib64 ..
+  # depending on your system you may want to adjust the install prefix
   cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 
-  make install
+  # omit the docs target if you do not wish to install documentation
+  make all docs install
 
 Note that all installed files are stored in the install_manifest.txt file.

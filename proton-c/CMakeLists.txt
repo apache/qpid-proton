@@ -15,12 +15,23 @@ set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 # So make these cached variables and the specific variables non cached
 # and derived from them.
 
+if (NOT DEFINED LIB_SUFFIX)
+    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+    if (${LIB64} STREQUAL "TRUE")
+        set(LIB_SUFFIX 64)
+    else()
+        set(LIB_SUFFIX "")
+    endif()
+endif()
+
 set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
-set (LIB_INSTALL_DIR lib CACHE PATH "Library object file directory")
+set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
 set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
+
+add_custom_target(docs)
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
@@ -134,4 +145,3 @@ configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
          ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)
 install (FILES ${PROJECT_BINARY_DIR}/libqpid-proton.pc
          DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-

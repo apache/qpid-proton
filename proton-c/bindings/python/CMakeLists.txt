@@ -19,6 +19,16 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile proton.
                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile proton.py
                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
+
+find_program(EPYDOC_EXE epydoc)
+if (EPYDOC_EXE)
+   add_custom_target(docs-py COMMAND ${EPYDOC_EXE} --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html proton)
+   add_dependencies(docs docs-py)
+   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
+           DESTINATION ${PROTON_SHARE}/docs/api-py
+           COMPONENT documentation)
+endif (EPYDOC_EXE)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyc
               ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyo
