@@ -4,17 +4,23 @@ project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
-
-set (PREFIX ${CMAKE_INSTALL_PREFIX})
-set (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX})
-
-set (ARCHLIBDIR lib CACHE STRING
-         "Architecture specific library directory")
-set (LIBDIR ${CMAKE_INSTALL_PREFIX}/${ARCHLIBDIR})
-set (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
-set (PROTON_INSTALL_DATADIR share/proton CACHE STRING
-     "Directory to install read-only arch-independent data")
+
+# In rpm builds the build sets some variables:
+#  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
+#  INCLUDE_INSTALL_DIR
+#  LIB_INSTALL_DIR
+#  SYSCONF_INSTALL_DIR
+#  SHARE_INSTALL_DIR
+# So make these cached variables and the specific variables non cached
+# and derived from them.
+
+set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
+set (LIB_INSTALL_DIR lib CACHE PATH "Library object file directory")
+set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
+set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
+
+set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
@@ -112,20 +118,20 @@ set_target_properties (
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton
          RUNTIME DESTINATION bin
-         LIBRARY DESTINATION ${LIBDIR})
+         LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
-install (FILES ${headers} DESTINATION include/proton)
+install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
 # Install documentation files
 install (FILES LICENSE README TODO
-         DESTINATION ${PROTON_INSTALL_DATADIR})
+         DESTINATION ${PROTON_SHARE})
 
 # Pkg config file
 
 configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
          ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)
 install (FILES ${PROJECT_BINARY_DIR}/libqpid-proton.pc
-         DESTINATION ${LIBDIR}/pkgconfig)
+         DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 

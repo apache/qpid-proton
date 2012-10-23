@@ -29,7 +29,7 @@ execute_process(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RbConfig::CONFIG
                 OUTPUT_VARIABLE RUBY_PREFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-string(REPLACE ${RUBY_PREFIX} ${CMAKE_INSTALL_PREFIX} RUBY_PFX_ARCH_DIR ${RUBY_ARCH_DIR})
+string(REPLACE "${RUBY_PREFIX}/" "" RUBY_PFX_ARCH_DIR ${RUBY_ARCH_DIR})
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
         RENAME cproton.so

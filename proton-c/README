@@ -1,0 +1,30 @@
+
+== Build Instructions ==
+
+The following prerequesuites are required to do a full build. If you
+do not wish to build a given language binding you can ommit the -devel
+package for that language:
+
+  # required dependencies
+  yum install gcc cmake libuuid-devel
+
+  # dependencies needed for ssl support
+  yum install openssl-devel
+
+  # dependencies needed for bindings
+  yum install swig python-devel ruby-devel php-devel
+
+From the directory where you found this README file:
+
+  mkdir build
+  cd build
+
+  # Depending on your system you may want to adjust the install prefix
+  # and/or adjust the lib dir.
+  #
+  # cmake -DCMAKE_INSTALL_PREFIX=/usr -DLIB_INSTALL_DIR=lib64 ..
+  cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+
+  make install
+
+Note that all installed files are stored in the install_manifest.txt file.
