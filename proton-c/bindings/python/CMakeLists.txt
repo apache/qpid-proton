@@ -26,8 +26,8 @@ if (EPYDOC_EXE)
                      -o ${CMAKE_CURRENT_BINARY_DIR}/html
                      ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
    add_dependencies(docs docs-py)
-   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-           DESTINATION ${PROTON_SHARE}/docs/api-py
+   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
+           DESTINATION "${PROTON_SHARE}/docs/api-py"
            COMPONENT documentation
            OPTIONAL)
 endif (EPYDOC_EXE)

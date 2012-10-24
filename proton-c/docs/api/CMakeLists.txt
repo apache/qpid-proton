@@ -25,8 +25,8 @@ if (DOXYGEN_FOUND)
   add_dependencies (docs docs-c)
 
   # HTML files are generated to ./html - put those in the install.
-  install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-           DESTINATION ${PROTON_SHARE}/docs/api-c
+  install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
+           DESTINATION "${PROTON_SHARE}/docs/api-c"
            COMPONENT documentation
            OPTIONAL)
   # if (CPACK_GENERATOR STREQUAL "NSIS")
