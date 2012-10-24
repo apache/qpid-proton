@@ -17,6 +17,7 @@
 # under the License.
 #
 
+from uuid import UUID
 from org.apache.qpid.proton.engine import EndpointState, TransportException
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
@@ -25,7 +26,7 @@ from org.apache.qpid.proton.message import Message as MessageImpl, \
 from org.apache.qpid.proton.type.messaging import Source, Target, Accepted
 from org.apache.qpid.proton.type import UnsignedInteger
 from jarray import zeros
-from java.util import EnumSet
+from java.util import EnumSet, UUID as JUUID
 
 class Skipped(Exception):
   skipped = True
@@ -464,14 +465,24 @@ class Message(object):
     self.impl.decode(data,0,len(data))
 
   def _get_id(self):
-    return self.impl.getMessageId()
+    id = self.impl.getMessageId()
+    if isinstance(id, JUUID):
+      id = UUID( id.toString() )
+    return id
   def _set_id(self, value):
+    if isinstance(value, UUID):
+      value = JUUID.fromString( str(value) )
     return self.impl.setMessageId(value)
   id = property(_get_id, _set_id)
 
   def _get_correlation_id(self):
-    return self.impl.getCorrelationId()
+    id = self.impl.getCorrelationId()
+    if isinstance(id, JUUID):
+      id = UUID( id.toString() )
+    return id
   def _set_correlation_id(self, value):
+    if isinstance(value, UUID):
+      value = JUUID.fromString( str(value) )
     return self.impl.setCorrelationId(value)
   correlation_id = property(_get_correlation_id, _set_correlation_id)
 
