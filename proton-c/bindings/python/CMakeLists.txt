@@ -29,7 +29,7 @@ if (EPYDOC_EXE)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"
            COMPONENT documentation
-           OPTIONAL)
+           ${OPTIONAL_ARG})
 endif (EPYDOC_EXE)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py

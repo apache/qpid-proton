@@ -31,7 +31,13 @@ set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 
-add_custom_target(docs)
+if (${CMAKE_VERSION} VERSION_LESS "2.8.0")
+    set (OPTIONAL_ARG "")
+    add_custom_target(docs ALL)
+else()
+    set (OPTIONAL_ARG OPTIONAL)
+    add_custom_target(docs)
+endif()
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
