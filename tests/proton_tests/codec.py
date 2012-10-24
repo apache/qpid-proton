@@ -261,3 +261,18 @@ class DataTest(Test):
     dst.copy(self.data)
 
     assert dst.format() == self.data.format()
+
+  def testRoundTrip(self):
+    obj = {symbol("key"): timestamp(1234),
+           ulong(123): "blah",
+           char("c"): "bleh",
+           u"desc": Described(symbol("url"), u"http://example.org"),
+           u"array": Array(UNDESCRIBED, Data.INT, 1, 2, 3)}
+    self.data.put_object(obj)
+    enc = self.data.encode()
+    data = Data()
+    data.decode(enc)
+    data.rewind()
+    assert data.next()
+    copy = data.get_object()
+    assert copy == obj, (copy, obj)

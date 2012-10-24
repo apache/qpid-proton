@@ -685,7 +685,70 @@ class UnmappedType:
     return "UnmappedType(%s)" % self.msg
 
 class ulong(long):
-  pass
+
+  def __repr__(self):
+    return "ulong(%s)" % long.__repr__(self)
+
+class timestamp(long):
+
+  def __repr__(self):
+    return "timestamp(%s)" % long.__repr__(self)
+
+class symbol(unicode):
+
+  def __repr__(self):
+    return "symbol(%s)" % unicode.__repr__(self)
+
+class char(unicode):
+
+  def __repr__(self):
+    return "char(%s)" % unicode.__repr__(self)
+
+class Described(object):
+
+  def __init__(self, descriptor, value):
+    self.descriptor = descriptor
+    self.value = value
+
+  def __repr__(self):
+    return "Described(%r, %r)" % (self.descriptor, self.value)
+
+  def __eq__(self, o):
+    if isinstance(o, Described):
+      return self.descriptor == o.descriptor and self.value == o.value
+    else:
+      return False
+
+class Constant(object):
+
+  def __init__(self, name):
+    self.name = name
+
+  def __repr__(self):
+    return self.name
+
+UNDESCRIBED = Constant("UNDESCRIBED")
+
+class Array(object):
+
+  def __init__(self, descriptor, type, *elements):
+    self.descriptor = descriptor
+    self.type = type
+    self.elements = elements
+
+  def __repr__(self):
+    if self.elements:
+      els = ", %s"  % (", ".join(map(repr, self.elements)))
+    else:
+      els = ""
+    return "Array(%r, %r%s)" % (self.descriptor, self.type, els)
+
+  def __eq__(self, o):
+    if isinstance(o, Array):
+      return self.descriptor == o.descriptor and \
+          self.type == o.type and self.elements == o.elements
+    else:
+      return False
 
 class Data:
   """
@@ -1247,7 +1310,7 @@ class Data:
     If the current node is a char, returns its value, returns 0
     otherwise.
     """
-    return unichr(pn_data_get_char(self._data))
+    return char(unichr(pn_data_get_char(self._data)))
 
   def get_ulong(self):
     """
@@ -1268,7 +1331,7 @@ class Data:
     If the current node is a timestamp, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_timestamp(self._data)
+    return timestamp(pn_data_get_timestamp(self._data))
 
   def get_float(self):
     """
@@ -1337,7 +1400,7 @@ class Data:
     If the current node is a symbol, returns its value, returns ""
     otherwise.
     """
-    return pn_data_get_symbol(self._data)
+    return symbol(pn_data_get_symbol(self._data))
 
   def copy(self, src):
     self._check(pn_data_copy(self._data, src._data))
@@ -1400,6 +1463,51 @@ class Data:
         self.exit()
       return result
 
+  def get_py_described(self):
+    if self.enter():
+      try:
+        self.next()
+        descriptor = self.get_object()
+        self.next()
+        value = self.get_object()
+      finally:
+        self.exit()
+      return Described(descriptor, value)
+
+  def put_py_described(self, d):
+    self.put_described()
+    self.enter()
+    try:
+      self.put_object(d.descriptor)
+      self.put_object(d.value)
+    finally:
+      self.exit()
+
+  def get_py_array(self):
+    count, described, type = self.get_array()
+    if self.enter():
+      try:
+        if described:
+          self.next()
+          descriptor = self.get_object()
+        else:
+          descriptor = UNDESCRIBED
+        elements = []
+        while self.next():
+          elements.append(self.get_object())
+      finally:
+        self.exit()
+      return Array(descriptor, type, *elements)
+
+  def put_py_array(self, a):
+    self.put_array(a.descriptor != UNDESCRIBED, a.type)
+    self.enter()
+    try:
+      for e in a.elements:
+        self.put_object(e)
+    finally:
+      self.exit()
+
   put_mappings = {
     None.__class__: lambda s, _: s.put_null(),
     dict: put_dict,
@@ -1407,30 +1515,43 @@ class Data:
     tuple: put_sequence,
     unicode: put_string,
     bytes: put_binary,
+    symbol: put_symbol,
     int: put_long,
+    char: put_char,
     long: put_long,
     ulong: put_ulong,
+    timestamp: put_timestamp,
     float: put_double,
-    uuid.UUID: put_uuid
+    uuid.UUID: put_uuid,
+    Described: put_py_described,
+    Array: put_py_array
     }
   get_mappings = {
     NULL: lambda s: None,
-    MAP: get_dict,
-    LIST: get_sequence,
-    STRING: get_string,
-    SYMBOL: get_symbol,
-    BINARY: get_binary,
+    BOOL: get_bool,
     BYTE: get_byte,
     UBYTE: get_ubyte,
     SHORT: get_short,
     USHORT: get_ushort,
     INT: get_int,
     UINT: get_uint,
+    CHAR: get_char,
     LONG: get_long,
     ULONG: get_ulong,
+    TIMESTAMP: get_timestamp,
     FLOAT: get_float,
     DOUBLE: get_double,
-    UUID: get_uuid
+    DECIMAL32: get_decimal32,
+    DECIMAL64: get_decimal64,
+    DECIMAL128: get_decimal128,
+    UUID: get_uuid,
+    BINARY: get_binary,
+    STRING: get_string,
+    SYMBOL: get_symbol,
+    DESCRIBED: get_py_described,
+    ARRAY: get_py_array,
+    LIST: get_sequence,
+    MAP: get_dict
     }
 
   def put_object(self, obj):
@@ -2021,5 +2142,6 @@ class SSL(object):
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
-           "Transport", "TransportException", "SASL", "SSL",
+           "Transport", "TransportException", "SASL", "SSL", "Described",
+           "Array", "symbol", "char", "timestamp", "ulong", "UNDESCRIBED",
            "PN_SESSION_WINDOW"]
