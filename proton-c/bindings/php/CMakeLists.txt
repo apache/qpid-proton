@@ -49,7 +49,7 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
 string(REPLACE "${PHP_PFX}/" "" PHP_REL_EXT_DIR ${PHP_EXT_DIR})
 
 set(GET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/get_include_dir.php)
-execute_process(COMMAND ${PHP_EXE} ${GET_INCLUDE_DIR} ${PHP_PFX}
+execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${PHP_PFX}
                 OUTPUT_VARIABLE PHP_INCLUDE_DIR
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 string(REPLACE "${PHP_PFX}/" "" PHP_REL_INCLUDE_DIR ${PHP_INCLUDE_DIR})
