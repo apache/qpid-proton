@@ -79,7 +79,7 @@ echo "Using svn revision ${REVISION} for all exports."
 ##
 ## Create the C Tarball
 ##
-rootname="proton-c-${VERSION}"
+rootname="qpid-proton-c-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
@@ -100,14 +100,14 @@ EOF
     rm -rf ${rootname}/examples/broker
     rm -rf ${rootname}/examples/mailbox
 
-    echo "Generating Archive: ${CURRDIR}/qpid-${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
+    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
+    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
 
 ##
 ## Create the Java Tarball
 ##
-rootname="proton-j-${VERSION}"
+rootname="qpid-proton-j-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
@@ -121,6 +121,9 @@ Branch: ${BRANCH}
 Revision: ${REVISION}
 EOF
 
-    echo "Generating Archive: ${CURRDIR}/qpid-${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/qpid-${rootname}.tar.gz ${rootname}
+    mvn org.codehaus.mojo:versions-maven-plugin:1.2:set org.codehaus.mojo:versions-maven-plugin:1.2:commit -DnewVersion="${VERSION}" -f ${WORKDIR}/${rootname}/pom.xml
+
+    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
+    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
+
