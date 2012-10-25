@@ -207,7 +207,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connector_set_context) wrap_pn_connector_set_context;
 %inline {
   void wrap_pn_connector_set_context(pn_connector_t *ctor, PyObject *context) {
-    Py_XDECREF(pn_connector_context(ctor));
+    Py_XDECREF((PyObject *)pn_connector_context(ctor));
     Py_XINCREF(context);
     pn_connector_set_context(ctor, context);
   }
@@ -241,7 +241,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connection_set_context) wrap_pn_connection_set_context;
 %inline {
   void wrap_pn_connection_set_context(pn_connection_t *c, PyObject *context) {
-    Py_XDECREF(pn_connection_get_context(c));
+    Py_XDECREF((PyObject *)pn_connection_get_context(c));
     Py_XINCREF(context);
     pn_connection_set_context(c, context);
   }
@@ -275,7 +275,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_session_set_context) wrap_pn_session_set_context;
 %inline {
   void wrap_pn_session_set_context(pn_session_t *s, PyObject *context) {
-    Py_XDECREF(pn_session_get_context(s));
+    Py_XDECREF((PyObject *)pn_session_get_context(s));
     Py_XINCREF(context);
     pn_session_set_context(s, context);
   }
@@ -309,7 +309,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_link_set_context) wrap_pn_link_set_context;
 %inline {
   void wrap_pn_link_set_context(pn_link_t *l, PyObject *context) {
-    Py_XDECREF(pn_link_get_context(l));
+    Py_XDECREF((PyObject *)pn_link_get_context(l));
     Py_XINCREF(context);
     pn_link_set_context(l, context);
   }
@@ -343,7 +343,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_delivery_set_context) wrap_pn_delivery_set_context;
 %inline {
   void wrap_pn_delivery_set_context(pn_delivery_t *d, PyObject *context) {
-    Py_XDECREF(pn_delivery_get_context(d));
+    Py_XDECREF((PyObject *)pn_delivery_get_context(d));
     Py_XINCREF(context);
     pn_delivery_set_context(d, context);
   }
