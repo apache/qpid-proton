@@ -72,13 +72,13 @@ struct pn_listener_t {
 };
 
 #define IO_BUF_SIZE (4*1024)
-#define NAME_MAX (256)
+#define PN_NAME_MAX (256)
 
 struct pn_connector_t {
   pn_driver_t *driver;
   pn_connector_t *connector_next;
   pn_connector_t *connector_prev;
-  char name[256];
+  char name[PN_NAME_MAX];
   int idx;
   bool pending_tick;
   bool pending_read;
@@ -251,7 +251,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
       if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
         fprintf(stderr, "Accepted from %s:%s\n", host, serv);
       pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
-      snprintf(c->name, NAME_MAX, "%s:%s", host, serv);
+      snprintf(c->name, PN_NAME_MAX, "%s:%s", host, serv);
       c->listener = l;
       return c;
     }
@@ -328,7 +328,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   freeaddrinfo(addr);
 
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
-  snprintf(c->name, NAME_MAX, "%s:%s", host, port);
+  snprintf(c->name, PN_NAME_MAX, "%s:%s", host, port);
   if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
     fprintf(stderr, "Connected to %s\n", c->name);
   return c;
