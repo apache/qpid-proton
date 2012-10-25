@@ -104,6 +104,15 @@ public class SaslOutcome
 
     }
 
+    @Override
+    public String toString()
+    {
+        return "SaslOutcome{" +
+               "_code=" + _code +
+               ", _additionalData=" + _additionalData +
+               '}';
+    }
+
     public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
     {
         handler.handleOutcome(this, payload, context);

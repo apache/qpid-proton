@@ -119,6 +119,16 @@ public class SaslInit
 
     }
 
+    @Override
+    public String toString()
+    {
+        return "SaslInit{" +
+               "mechanism=" + _mechanism +
+               ", initialResponse=" + _initialResponse +
+               ", hostname=" + (_hostname == null ? "null":'\''+ _hostname + '\'') +
+               '}';
+    }
+
     public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
     {
         handler.handleInit(this, payload, context);

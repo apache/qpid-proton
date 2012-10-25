@@ -31,6 +31,8 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportInput;
+import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.TransportWrapper;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.type.AMQPDefinedTypes;
 import org.apache.qpid.proton.type.Binary;
@@ -78,7 +80,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private TransportSession[] _remoteSessions;
     private TransportSession[] _localSessions;
 
-    private final TransportInput _inputProcessor;
+    private TransportInput _inputProcessor;
+    private TransportOutput _outputProcessor;
 
     private Map<SessionImpl, TransportSession> _transportSessionState = new HashMap<SessionImpl, TransportSession>();
     private Map<LinkImpl, TransportLink> _transportLinkState = new HashMap<LinkImpl, TransportLink>();
@@ -107,6 +110,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         FrameParser frameParser = new FrameParser(this);
 
         _inputProcessor = frameParser;
+        _outputProcessor = new TransportOutput()
+                    {
+                        @Override
+                        public int output(byte[] bytes, int offset, int size)
+                        {
+                            return transportOutput(bytes, offset, size);
+                        }
+                    };
     }
 
     public void bind(Connection conn)
@@ -163,6 +174,17 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     {
         try
         {
+            return _outputProcessor.output(bytes, offset, size);
+        }
+        catch (RuntimeException e)
+        {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    private int transportOutput(byte[] bytes, int offset, int size)
+    {
         int written = 0;
 
         if(_overflowBuffer.hasRemaining())
@@ -186,7 +208,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             written += processAttach(outputBuffer);
             written += processReceiverFlow(outputBuffer);
             written += processReceiverDisposition(outputBuffer);
-            written += processReceiverFlow(outputBuffer);       // TODO
+            written += processReceiverFlow(outputBuffer);
             written += processMessageData(outputBuffer);
             written += processSenderDisposition(outputBuffer);
             written += processSenderFlow(outputBuffer);
@@ -198,12 +220,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
 
         return written - _overflowBuffer.remaining();
-        }
-        catch (RuntimeException e)
-        {
-            e.printStackTrace();
-            throw e;
-        }
     }
 
     public Sasl sasl()
@@ -211,6 +227,9 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         if(_sasl == null)
         {
             _sasl = new SaslImpl();
+            TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
         }
         return _sasl;
 

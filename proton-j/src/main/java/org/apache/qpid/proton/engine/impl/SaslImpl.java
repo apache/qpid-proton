@@ -6,6 +6,9 @@ import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.TransportInput;
+import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.TransportWrapper;
 import org.apache.qpid.proton.type.AMQPDefinedTypes;
 import org.apache.qpid.proton.type.Binary;
 import org.apache.qpid.proton.type.Symbol;
@@ -35,6 +38,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     private boolean _headerWritten;
     private Binary _challengeResponse;
     private SaslFrameParser _frameParser;
+    private boolean _initReceived;
+    private boolean _mechanismsSent;
+
 
     enum Role { CLIENT, SERVER };
 
@@ -57,9 +63,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         _overflowBuffer.flip();
     }
 
-    public boolean isDone()
+    boolean isDone()
     {
-        return _done;
+        return _done && (_role==Role.CLIENT || _initReceived);
     }
 
     public final int input(byte[] bytes, int offset, int size)
@@ -86,7 +92,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
         if(!_overflowBuffer.hasRemaining())
         {
-            _overflowBuffer.clear();
+            _overflowBuffer.rewind();
 
             CompositeWritableBuffer outputBuffer =
                     new CompositeWritableBuffer(
@@ -107,28 +113,31 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         if(_role == Role.SERVER)
         {
 
-            if(getState()== SaslState.PN_SASL_IDLE && _mechanisms != null)
+            if(!_mechanismsSent && _mechanisms != null)
             {
                 SaslMechanisms mechanisms = new SaslMechanisms();
 
                 mechanisms.setSaslServerMechanisms(_mechanisms);
                 written += writeFrame(buffer, mechanisms);
+                _mechanismsSent = true;
+                _state = SaslState.PN_SASL_STEP;
             }
-            else if(getChallengeResponse() != null)
+
+            if(getState() == SaslState.PN_SASL_STEP && getChallengeResponse() != null)
             {
                 SaslChallenge challenge = new SaslChallenge();
                 challenge.setChallenge(getChallengeResponse());
                 written+=writeFrame(buffer, challenge);
                 setChallengeResponse(null);
             }
-            else if(_done)
+
+            if(_done)
             {
                 org.apache.qpid.proton.type.security.SaslOutcome outcome =
                         new org.apache.qpid.proton.type.security.SaslOutcome();
                 outcome.setCode(UnsignedByte.valueOf(_outcome.getCode()));
                 written+=writeFrame(buffer, outcome);
             }
-            return written;
         }
         else if(_role == Role.CLIENT)
         {
@@ -141,12 +150,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             {
                 written += processResponse(buffer);
             }
-            return written;
         }
-        else
-        {
-            throw new IllegalStateException("Client or server must be chosen");
-        }
+
+        return written;
     }
 
     int writeFrame(WritableBuffer buffer, SaslFrameBody frameBody)
@@ -170,6 +176,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     final public int recv(byte[] bytes, int offset, int size)
     {
+        if(_pending == null)
+        {
+            return -1;
+        }
         final int written = Math.min(size, _pending.remaining());
         _pending.get(bytes, offset, written);
         if(!_pending.hasRemaining())
@@ -243,18 +253,16 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     public void setMechanisms(String[] mechanisms)
     {
-        if(_role == Role.SERVER)
+        if(mechanisms != null)
         {
-            if(mechanisms != null)
+            _mechanisms = new Symbol[mechanisms.length];
+            for(int i = 0; i < mechanisms.length; i++)
             {
-                _mechanisms = new Symbol[mechanisms.length];
-                for(int i = 0; i < mechanisms.length; i++)
-                {
-                    _mechanisms[i] = Symbol.valueOf(mechanisms[i]);
-                }
+                _mechanisms[i] = Symbol.valueOf(mechanisms[i]);
             }
         }
-        else if(_role == Role.CLIENT)
+
+        if(_role == Role.CLIENT)
         {
             assert mechanisms != null;
             assert mechanisms.length == 1;
@@ -297,16 +305,24 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     public void handleInit(SaslInit saslInit, Binary payload, Void context)
     {
+        if(_role == null)
+        {
+            server();
+        }
+        checkRole(Role.SERVER);
         _hostname = saslInit.getHostname();
+        _initReceived = true;
         if(saslInit.getInitialResponse() != null)
         {
             setPending(saslInit.getInitialResponse().asByteBuffer());
+
         }
     }
 
 
     public void handleResponse(SaslResponse saslResponse, Binary payload, Void context)
     {
+        checkRole(Role.SERVER);
         setPending(saslResponse.getResponse()  == null ? null : saslResponse.getResponse().asByteBuffer());
     }
 
@@ -323,19 +339,25 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     {
         if(role != _role)
         {
-            throw new IllegalStateException();
+            throw new IllegalStateException("Role is " + _role + " but should be " + role);
         }
     }
 
 
     public void handleMechanisms(SaslMechanisms saslMechanisms, Binary payload, Void context)
     {
+        if(_role == null)
+        {
+            client();
+        }
+        checkRole(Role.CLIENT);
         _mechanisms = saslMechanisms.getSaslServerMechanisms();
     }
 
 
     public void handleChallenge(SaslChallenge saslChallenge, Binary payload, Void context)
     {
+        checkRole(Role.CLIENT);
         setPending(saslChallenge.getChallenge()  == null ? null : saslChallenge.getChallenge().asByteBuffer());
     }
 
@@ -344,6 +366,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
                               Binary payload,
                               Void context)
     {
+        checkRole(Role.CLIENT);
         for(SaslOutcome outcome : SaslOutcome.values())
         {
             if(outcome.getCode() == saslOutcome.getCode().byteValue())
@@ -377,6 +400,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     public void plain(String username, String password)
     {
+        client();
         _chosenMechanism = Symbol.valueOf("PLAIN");
         byte[] usernameBytes = username.getBytes();
         byte[] passwordBytes = password.getBytes();
@@ -396,10 +420,57 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     public void client()
     {
         _role = Role.CLIENT;
+        if(_mechanisms != null)
+        {
+            assert _mechanisms.length == 1;
+
+            _chosenMechanism = _mechanisms[0];
+        }
     }
 
     public void server()
     {
         _role = Role.SERVER;
+    }
+
+
+    public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
+    {
+        return new TransportWrapper()
+        {
+            private boolean _outputComplete;
+
+            @Override
+            public int input(byte[] bytes, int offset, int size)
+            {
+                if(_role == null || (_role == Role.CLIENT && !_done) ||(_role == Role.SERVER && (!_initReceived || !_done)))
+                {
+                    return SaslImpl.this.input(bytes, offset, size);
+                }
+                else
+                {
+                    return input.input(bytes, offset, size);
+                }
+            }
+
+
+            @Override
+            public int output(byte[] bytes, int offset, int size)
+            {
+                if(_role == null || (_role == Role.CLIENT && !_done) || (_role == Role.SERVER && !_outputComplete))
+                {
+                    int written = SaslImpl.this.output(bytes, offset, size);
+                    if(_done && !_overflowBuffer.hasRemaining())
+                    {
+                        _outputComplete = true;
+                    }
+                    return written;
+                }
+                else
+                {
+                    return output.output(bytes, offset, size);
+                }
+            }
+        };
     }
 }

@@ -22,14 +22,17 @@
 
 
 package org.apache.qpid.proton.type.security;
-import java.util.List;
+
 import java.util.AbstractList;
-
-
+import java.util.Arrays;
+import java.util.List;
 import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
-import org.apache.qpid.proton.type.*;
+import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.type.DescribedType;
+import org.apache.qpid.proton.type.Symbol;
+import org.apache.qpid.proton.type.UnsignedLong;
 
 
 public class SaslMechanisms
@@ -157,5 +160,14 @@ public class SaslMechanisms
         {
             decoder.register(descriptor, constructor);
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "SaslMechanisms{" +
+               "saslServerMechanisms=" + (_saslServerMechanisms == null ? null : Arrays.asList(_saslServerMechanisms))
+               +
+               '}';
     }
 }

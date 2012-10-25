@@ -150,4 +150,12 @@ public class SaslChallenge
             decoder.register(descriptor, constructor);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return "SaslChallenge{" +
+               "challenge=" + _challenge +
+               '}';
+    }
 }

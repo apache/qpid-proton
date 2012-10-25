@@ -89,6 +89,13 @@ public class SaslResponse
 
     }
 
+    @Override
+    public String toString()
+    {
+        return "SaslResponse{response=" + _response +
+               '}';
+    }
+
     public <E> void invoke(SaslFrameBodyHandler<E> handler, Binary payload, E context)
     {
         handler.handleResponse(this, payload, context);

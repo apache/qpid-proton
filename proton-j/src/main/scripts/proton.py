@@ -18,7 +18,7 @@
 #
 
 from uuid import UUID
-from org.apache.qpid.proton.engine import EndpointState, TransportException
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
 from org.apache.qpid.proton.message import Message as MessageImpl, \
@@ -592,8 +592,51 @@ class Message(object):
 
 class SASL(object):
 
-  def __init__(self, *args, **kwargs):
-    raise Skipped()
+  OK = Sasl.PN_SASL_OK
+  AUTH = Sasl.PN_SASL_AUTH
+
+  def __init__(self,transport):
+    self._sasl = transport.impl.sasl()
+
+  def mechanisms(self, mechanisms):
+    self._sasl.setMechanisms(mechanisms.split())
+
+  def client(self):
+    self._sasl.client()
+
+  def server(self):
+    self._sasl.server()
+
+  def send(self, data):
+    self._sasl.send(data, 0, len(data))
+
+  def recv(self):
+    size = 4096
+    output = zeros(size, "b")
+    n = self._sasl.recv(output, 0, size)
+    if n >= 0:
+      return output.tostring()[:n]
+    elif n == TransportImpl.END_OF_STREAM:
+      return None
+    else:
+      raise Exception(n)
+
+  def _get_outcome(self):
+    value = self._sasl.getOutcome()
+    if value == Sasl.PN_SASL_NONE:
+      return None
+    else:
+      return value
+  def _set_outcome(self, outcome):
+    self.impl.setOutcome(outcome)
+
+  outcome = property(_get_outcome, _set_outcome)
+
+  def done(self, outcome):
+    self._sasl.done(outcome)
+
+  def plain(self, user, password):
+    self._sasl.plain(user,password)
 
 class SSL(object):
 

@@ -35,6 +35,13 @@ public interface Sasl
         }
     }
 
+    public static SaslOutcome PN_SASL_NONE = SaslOutcome.PN_SASL_NONE;
+    public static SaslOutcome PN_SASL_OK = SaslOutcome.PN_SASL_OK;
+    public static SaslOutcome PN_SASL_AUTH = SaslOutcome.PN_SASL_AUTH;
+    public static SaslOutcome PN_SASL_SYS = SaslOutcome.PN_SASL_SYS;
+    public static SaslOutcome PN_SASL_PERM = SaslOutcome.PN_SASL_PERM;
+    public static SaslOutcome PN_SASL_TEMP = SaslOutcome.PN_SASL_TEMP;
+
     public int END_OF_STREAM = -1;
     /**
      * @param bytes input bytes for consumption
@@ -128,5 +135,7 @@ public interface Sasl
     SaslOutcome getOutcome();
 
 
+    void client();
+    void server();
 
 }
