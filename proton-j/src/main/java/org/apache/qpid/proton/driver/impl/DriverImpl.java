@@ -216,7 +216,7 @@ public class DriverImpl implements Driver
 
     public <C> Connector<C> createConnector(SelectableChannel c, C context)
     {
-        SelectionKey key = registerInterest(c,SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
         Connector<C> co = new ConnectorImpl<C>(this, null, new SaslClientImpl(),(SocketChannel)c, context, key);
         key.attach(co);
         return co;
@@ -224,7 +224,7 @@ public class DriverImpl implements Driver
 
     protected <C> Connector<C> createServerConnector(SelectableChannel c, C context, Listener<C> l)
     {
-        SelectionKey key = registerInterest(c,SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
         Connector<C> co = new ConnectorImpl<C>(this, l, new SaslServerImpl(),(SocketChannel)c, context, key);
         key.attach(co);
         return co;

@@ -96,11 +96,7 @@ class ConnectorImpl<C> implements Connector<C>
         {
             read();
         }
-
-        if (_key.isWritable())
-        {
-            write();
-        }
+        write();
     }
 
     void read()
@@ -153,6 +149,14 @@ class ConnectorImpl<C> implements Connector<C>
                 {
                     _writeBuffer.clear();
                     _bytesNotWritten = 0;
+                }
+                if (_bytesNotWritten > 0) // couldn't write all the data, need to know when we could write again.
+                {
+                    _key.interestOps(_key.interestOps() | SelectionKey.OP_WRITE);
+                }
+                else if ((_key.interestOps() & SelectionKey.OP_WRITE) != 0)
+                {
+                    _key.interestOps(_key.interestOps() & ~SelectionKey.OP_WRITE);                    
                 }
             }
         }
