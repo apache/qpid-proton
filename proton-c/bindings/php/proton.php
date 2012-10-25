@@ -212,6 +212,8 @@ class Message {
     if ($this->properties != null)
       $props->put_object($this->properties);
     if ($this->body != null)
+      // XXX: move this out when load/save are gone
+      $body->clear();
       $body->put_object($this->body);
   }
 

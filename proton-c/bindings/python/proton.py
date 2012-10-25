@@ -379,6 +379,8 @@ class Message(object):
     if self.properties is not None:
       props.put_object(self.properties)
     if self.body is not None:
+      # XXX: move this out when load/save are gone
+      body.clear()
       body.put_object(self.body)
 
   def _post_decode(self):
