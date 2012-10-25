@@ -37,7 +37,7 @@ set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_F
 swig_link_libraries(cproton ${BINDING_DEPS})
 
 execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
-                OUTPUT_VARIABLE PHP_EXT_DIR
+                OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
                 OUTPUT_VARIABLE PHP_PFX
@@ -46,31 +46,41 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
                 OUTPUT_VARIABLE PHP_OPTS
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-string(REPLACE "${PHP_PFX}/" "" PHP_REL_EXT_DIR ${PHP_EXT_DIR})
-
 set(GET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/get_include_dir.php)
 execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${PHP_PFX}
-                OUTPUT_VARIABLE PHP_INCLUDE_DIR
+                OUTPUT_VARIABLE PHP_INCLUDE_DIR_DEFAULT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REPLACE "${PHP_PFX}/" "" PHP_REL_INCLUDE_DIR ${PHP_INCLUDE_DIR})
+
+if ("${PHP_INCLUDE_DIR_DEFAULT}" STREQUAL "")
+  set(PHP_INCLUDE_DIR_DEFAULT "/usr/share/php")
+endif()
 
 string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
-set (PHP_SCAN_DIR ${CMAKE_MATCH_1})
-if (IS_ABSOLUTE "${PHP_SCAN_DIR}" AND (NOT (IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})))
-  string(SUBSTRING ${PHP_SCAN_DIR} 1 -1 PHP_SCAN_DIR)
+set (PHP_INI_DIR_DEFAULT ${CMAKE_MATCH_1})
+
+if ("${PHP_INI_DIR_DEFAULT}" STREQUAL "")
+  set(PHP_INI_DIR_DEFAULT "/etc/php.d")
+endif()
+
+if (IS_ABSOLUTE "${PHP_INI_DIR_DEFAULT}" AND (NOT (IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})))
+  string(SUBSTRING ${PHP_INI_DIR_DEFAULT} 1 -1 PHP_INI_DIR_DEFAULT)
+  string(SUBSTRING ${PHP_EXT_DIR_DEFAULT} 1 -1 PHP_EXT_DIR_DEFAULT)
+  string(SUBSTRING ${PHP_INCLUDE_DIR_DEFAULT} 1 -1 PHP_INCLUDE_DIR_DEFAULT)
 endif ()
 
+set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
+set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
+set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
-        DESTINATION ${PHP_REL_EXT_DIR}
+        DESTINATION ${PHP_EXT_DIR}
         COMPONENT PHP)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.php
-        DESTINATION ${PHP_REL_INCLUDE_DIR}
+        DESTINATION ${PHP_INCLUDE_DIR}
         COMPONENT PHP)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/proton.php
-        DESTINATION ${PHP_REL_INCLUDE_DIR}
+        DESTINATION ${PHP_INCLUDE_DIR}
         COMPONENT PHP)
-
-set (PHP_INI_DIR ${PHP_SCAN_DIR} CACHE PATH "Directory scanned for PHP ini files.")
 
 if (NOT ${PHP_INI_DIR} STREQUAL "")
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cproton.ini
