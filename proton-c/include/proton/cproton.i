@@ -1,10 +1,10 @@
 typedef unsigned int size_t;
 typedef signed int ssize_t;
 typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long int uint64_t;
-typedef int int32_t;
-typedef long int int64_t;
+typedef unsigned long int uint32_t;
+typedef unsigned long long int uint64_t;
+typedef long int int32_t;
+typedef long long int int64_t;
 
 /* Parse these interface header files to generate APIs for script languages */
 %include "proton/types.h"
