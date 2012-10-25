@@ -183,4 +183,30 @@ class SslTest(common.Test):
         server_conn.close()
         self._pump()
 
+    def test_server_only_authentication(self):
+        """ Client verifies server, but server does not verify client.
+        """
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        self.server.set_peer_authentication( SSL.ANONYMOUS_PEER )
+
+        self.client.set_credentials(self._testpath("client-certificate.pem"),
+                                    self._testpath("client-private-key.pem"),
+                                    "client-password")
+        self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client.set_peer_authentication( SSL.VERIFY_PEER )
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+        assert self.client.protocol_name() is not None
+        client_conn.close()
+        server_conn.close()
+        self._pump()
+
 

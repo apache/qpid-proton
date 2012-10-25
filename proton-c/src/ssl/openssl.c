@@ -296,6 +296,14 @@ int pn_ssl_set_credentials( pn_ssl_t *ssl,
 
   ssl->has_certificate = true;
 
+  // bug in older versions of OpenSSL: servers may request client cert even if anonymous
+  // cipher was negotiated.  TLSv1 will reject such a request.  Hack: once a cert is
+  // configured, allow only authenticated ciphers.
+  if (!SSL_CTX_set_cipher_list( ssl->ctx, CIPHERS_AUTHENTICATE )) {
+      _log_ssl_error(ssl, "Failed to set cipher list to %s\n", CIPHERS_AUTHENTICATE);
+      return -6;
+  }
+
   _log( ssl, "Configured local certificate file %s\n", certificate_file );
   return 0;
 }
@@ -543,6 +551,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
     ssl_initialized = 1;
     SSL_library_init();
     SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
   }
 
   pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
