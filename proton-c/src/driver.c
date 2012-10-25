@@ -667,10 +667,17 @@ void pn_driver_free(pn_driver_t *d)
   free(d);
 }
 
-void pn_driver_wakeup(pn_driver_t *d)
+int pn_driver_wakeup(pn_driver_t *d)
 {
   if (d) {
-    write(d->ctrl[1], "x", 1);
+    ssize_t count = write(d->ctrl[1], "x", 1);
+    if (count <= 0) {
+      return count;
+    } else {
+      return 0;
+    }
+  } else {
+    return PN_ARG_ERR;
   }
 }
 

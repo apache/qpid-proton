@@ -89,8 +89,10 @@ void pn_driver_trace(pn_driver_t *driver, pn_trace_t trace);
 /** Force pn_driver_wait() to return
  *
  * @param[in] driver the driver to wake up
+ *
+ * @return zero on success, an error code on failure
  */
-void pn_driver_wakeup(pn_driver_t *driver);
+int pn_driver_wakeup(pn_driver_t *driver);
 
 /** Wait for an active connector or listener
  *
