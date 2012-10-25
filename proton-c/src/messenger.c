@@ -39,6 +39,7 @@ struct pn_messenger_t {
   int timeout;
   pn_driver_t *driver;
   int credit;
+  int distributed;
   uint64_t next_tag;
   pn_buffer_t *buffer;
   pn_error_t *error;
@@ -70,6 +71,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->timeout = -1;
     m->driver = pn_driver();
     m->credit = 0;
+    m->distributed = 0;
     m->next_tag = 0;
     m->buffer = pn_buffer(1024);
     m->error = pn_error();
@@ -189,6 +191,7 @@ void pn_messenger_flow(pn_messenger_t *messenger)
         if (pn_link_is_receiver(link)) {
           pn_link_flow(link, 1);
           messenger->credit--;
+          messenger->distributed++;
         }
         link = pn_link_next(link, PN_LOCAL_ACTIVE);
       }
@@ -243,7 +246,9 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
   pn_link_t *link = pn_link_head(conn, 0);
   while (link) {
     if (pn_link_is_receiver(link) && pn_link_credit(link) > 0) {
-      messenger->credit += pn_link_credit(link);
+      int credit = pn_link_credit(link);
+      messenger->credit += credit;
+      messenger->distributed -= credit;
     }
     link = pn_link_next(link, 0);
   }
@@ -654,7 +659,9 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
   if (!messenger) return PN_ARG_ERR;
   if (!pn_listener_head(messenger->driver) && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
-  messenger->credit += n;
+  int total = messenger->credit + messenger->distributed;
+  if (n > total)
+    messenger->credit += (n - total);
   pn_messenger_flow(messenger);
   return pn_messenger_sync(messenger, pn_messenger_rcvd);
 }
@@ -683,6 +690,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         n = pn_link_recv(l, encoded + pending, 1);
         pn_delivery_update(d, PN_ACCEPTED);
         pn_delivery_settle(d);
+        messenger->distributed--;
         if (n != PN_EOS) {
           return pn_error_format(messenger->error, n, "PN_EOS expected");
         }
