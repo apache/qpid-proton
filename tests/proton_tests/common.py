@@ -21,3 +21,6 @@ class Test:
 
   def __init__(self, name):
     self.name = name
+
+class Skipped(Exception):
+  skipped = True

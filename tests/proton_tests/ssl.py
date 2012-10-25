@@ -20,6 +20,7 @@
 import os, common
 import subprocess
 from proton import *
+from common import Skipped
 
 
 class SslTest(common.Test):
@@ -28,12 +29,15 @@ class SslTest(common.Test):
         common.Test.__init__(self, *args)
 
     def setup(self):
-        self.t_server = Transport()
-        self.server = SSL(self.t_server)
-        self.server.init(SSL.MODE_SERVER)
-        self.t_client = Transport()
-        self.client = SSL(self.t_client)
-        self.client.init(SSL.MODE_CLIENT)
+        try:
+            self.t_server = Transport()
+            self.server = SSL(self.t_server)
+            self.server.init(SSL.MODE_SERVER)
+            self.t_client = Transport()
+            self.client = SSL(self.t_client)
+            self.client.init(SSL.MODE_CLIENT)
+        except SSLUnavailable, e:
+            raise Skipped(e)
 
     def teardown(self):
         self.t_client = None

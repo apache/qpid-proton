@@ -2088,6 +2088,9 @@ class SASL(object):
 class SSLException(TransportException):
   pass
 
+class SSLUnavailable(SSLException):
+  pass
+
 class SSL(object):
 
   def _check(self, err):
@@ -2099,6 +2102,8 @@ class SSL(object):
 
   def __init__(self, transport):
     self._ssl = pn_ssl(transport._trans)
+    if self._ssl is None:
+      raise SSLUnavailable()
 
   MODE_CLIENT = PN_SSL_MODE_CLIENT
   MODE_SERVER = PN_SSL_MODE_SERVER
@@ -2144,4 +2149,4 @@ __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
            "Transport", "TransportException", "SASL", "SSL", "Described",
            "Array", "symbol", "char", "timestamp", "ulong", "UNDESCRIBED",
-           "PN_SESSION_WINDOW"]
+           "SSLUnavailable", "PN_SESSION_WINDOW"]
