@@ -318,6 +318,11 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         _chosenMechanism = mechanism;
     }
 
+    public Symbol getChosenMechanism()
+    {
+        return _chosenMechanism;
+    }
+
     public void setResponse(Binary initialResponse)
     {
         setPending(initialResponse.asByteBuffer());
@@ -332,6 +337,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
         checkRole(Role.SERVER);
         _hostname = saslInit.getHostname();
+        _chosenMechanism = saslInit.getMechanism();
         _initReceived = true;
         if(saslInit.getInitialResponse() != null)
         {
