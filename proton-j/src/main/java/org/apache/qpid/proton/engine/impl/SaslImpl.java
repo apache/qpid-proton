@@ -296,16 +296,23 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     {
         if(_role == Role.SERVER)
         {
-            return new String[] { _chosenMechanism.toString() };
+            return _chosenMechanism == null ? new String[0] : new String[] { _chosenMechanism.toString() };
         }
         else if(_role == Role.CLIENT)
         {
-            String[] remoteMechanisms = new String[_mechanisms.length];
-            for(int i = 0; i < _mechanisms.length; i++)
+            if(_mechanisms == null)
             {
-                remoteMechanisms[i] = _mechanisms[i].toString();
+                return new String[0];
             }
-            return remoteMechanisms;
+            else
+            {
+                String[] remoteMechanisms = new String[_mechanisms.length];
+                for(int i = 0; i < _mechanisms.length; i++)
+                {
+                    remoteMechanisms[i] = _mechanisms[i].toString();
+                }
+                return remoteMechanisms;
+            }
         }
         else
         {
