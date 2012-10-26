@@ -638,6 +638,12 @@ class SASL(object):
   def plain(self, user, password):
     self._sasl.plain(user,password)
 
+class SSLException(Exception):
+  pass
+
+class SSLUnavailable(SSLException):
+  pass
+
 class SSL(object):
 
   def __init__(self, *args, **kwargs):
@@ -647,5 +653,5 @@ class SSL(object):
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
-           "Transport", "TransportException", "SASL", "SSL",
-           "PN_SESSION_WINDOW"]
+           "Transport", "TransportException", "SASL", "SSL", "SSLException",
+           "SSLUnavailable", "PN_SESSION_WINDOW"]
