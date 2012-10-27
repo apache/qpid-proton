@@ -1512,6 +1512,7 @@ class Data:
 
   put_mappings = {
     None.__class__: lambda s, _: s.put_null(),
+    bool: put_bool,
     dict: put_dict,
     list: put_sequence,
     tuple: put_sequence,
