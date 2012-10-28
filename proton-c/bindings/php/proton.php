@@ -971,6 +971,27 @@ class Data {
         $result = array();
         while ($this->next()) {
           $k = $this->get_object();
+          switch ($this->type()) {
+          case Data::BINARY:
+            $k = $k->bytes;
+            break;
+          case Data::SYMBOL:
+            $k = $k->name;
+            break;
+          case Data::STRING:
+          case Data::UBYTE:
+          case Data::BYTE:
+          case Data::USHORT:
+          case Data::SHORT:
+          case Data::UINT:
+          case Data::INT:
+          case Data::ULONG:
+          case Data::LONG:
+            break;
+          default:
+            $k = "$k";
+            break;
+          }
           if ($this->next())
             $v = $this->get_object();
           else
