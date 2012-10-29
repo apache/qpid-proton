@@ -639,7 +639,7 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
 
     pn_delivery_t *d = pn_work_head(conn);
     while (d) {
-      if (pn_delivery_readable(d)) {
+      if (pn_delivery_readable(d) && !pn_delivery_partial(d)) {
         return true;
       }
       d = pn_work_next(d);

@@ -313,8 +313,8 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
     // check if we need to break up the outbound frame
     size_t available = disp->output_size;
     if (disp->remote_max_frame) {
-      if ((available + buf.size) > disp->remote_max_frame) {
-        available = disp->remote_max_frame - buf.size;
+      if ((available + buf.size) > disp->remote_max_frame - 8) {
+        available = disp->remote_max_frame - 8 - buf.size;
         if (more_flag == false) {
           more_flag = true;
           goto compute_performatives;  // deal with flag change
@@ -331,7 +331,11 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
       pn_buffer_ensure( disp->frame, available + buf.size );
       goto encode_performatives;
     }
+
+    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, disp->output_size);
+
     memmove( buf.start + buf.size, disp->output_payload, available);
+    disp->output_payload += available;
     disp->output_size -= available;
     buf.size += available;
 
@@ -339,8 +343,6 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
     frame.channel = ch;
     frame.payload = buf.start;
     frame.size = buf.size;
-
-    pn_do_trace(disp, ch, OUT, disp->output_args, frame.payload, frame.size);
 
     size_t n;
     while (!(n = pn_write_frame(disp->output + disp->available,

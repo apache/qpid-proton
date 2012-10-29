@@ -572,6 +572,12 @@ class MaxFrameTransferTest(Test):
   def teardown(self):
     self.cleanup()
 
+  def message(self, size):
+    parts = []
+    for i in range(size):
+      parts.append(str(i))
+    return "/".join(parts)[:size]
+
   def testMinFrame(self):
     """
     Configure receiver to support minimum max-frame as defined by AMQP-1.0.
@@ -588,7 +594,7 @@ class MaxFrameTransferTest(Test):
 
     self.rcv.flow(1)
     self.snd.delivery("tag")
-    msg = "X" * 513
+    msg = self.message(513)
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -633,7 +639,7 @@ class MaxFrameTransferTest(Test):
     self.rcv.advance()
 
     self.snd.delivery("gat")
-    msg = "Y" * 1426
+    msg = self.message(1426)
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()

@@ -363,6 +363,7 @@ pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery);
 pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery);
 bool pn_delivery_settled(pn_delivery_t *delivery);
 size_t pn_delivery_pending(pn_delivery_t *delivery);
+bool pn_delivery_partial(pn_delivery_t *delivery);
 bool pn_delivery_writable(pn_delivery_t *delivery);
 bool pn_delivery_readable(pn_delivery_t *delivery);
 bool pn_delivery_updated(pn_delivery_t *delivery);

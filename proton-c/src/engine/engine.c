@@ -2509,3 +2509,8 @@ size_t pn_delivery_pending(pn_delivery_t *delivery)
 {
   return pn_buffer_size(delivery->bytes);
 }
+
+bool pn_delivery_partial(pn_delivery_t *delivery)
+{
+  return !delivery->done;
+}
