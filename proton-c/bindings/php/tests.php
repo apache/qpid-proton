@@ -38,6 +38,7 @@ function round_trip($body) {
   $msg->properties["symbol"] = new Symbol("symbol");
   $msg->properties["uuid"] = new UUID("1234123412341234");
   $msg->properties["list"] = new PList(1, 2, 3, 4);
+  $msg->properties["char"] = new Char(321);
   $msg->body = $body;
   assert($msg->id == 10);
   assert($msg->correlation_id == "asdf");

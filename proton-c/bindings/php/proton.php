@@ -211,10 +211,11 @@ class Message {
     $props->clear();
     if ($this->properties != null)
       $props->put_object($this->properties);
-    if ($this->body != null)
+    if ($this->body != null) {
       // XXX: move this out when load/save are gone
       $body->clear();
       $body->put_object($this->body);
+    }
   }
 
   function _post_decode() {
@@ -510,6 +511,20 @@ class PList {
 
 }
 
+class Char {
+
+  public $codepoint;
+
+  public function __construct($codepoint) {
+    $this->codepoint = $codepoint;
+  }
+
+  public function __tostring() {
+    return "Char($this->codepoint)";
+  }
+
+}
+
 class Described {
 
   public $descriptor;
@@ -690,7 +705,12 @@ class Data {
   }
 
   public function put_char($c) {
-    $this->_check(pn_data_put_char($this->impl, ord($c)));
+    if ($c instanceof Char) {
+      $c = $c->codepoint;
+    } else {
+      $c = ord($c);
+    }
+    $this->_check(pn_data_put_char($this->impl, $c));
   }
 
   public function put_ulong($ul) {
@@ -804,7 +824,7 @@ class Data {
   }
 
   public function get_char() {
-    return unichr(pn_data_get_char($this->impl));
+    return new Char(pn_data_get_char($this->impl));
   }
 
   public function get_ulong() {
@@ -1015,6 +1035,7 @@ class Data {
      "Binary" => "put_binary",
      "Symbol" => "put_symbol",
      "integer" => "put_long",
+     "Char" => "put_char",
      "double" => "put_double",
      "Described" => "put_php_described",
      "PList" => "put_php_list",
