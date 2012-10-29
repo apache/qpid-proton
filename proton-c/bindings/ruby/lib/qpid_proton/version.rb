@@ -22,7 +22,7 @@ module Qpid
   module Proton
 
     NAME = "qpid_proton"
-    VERSION = "0.0.1"
+    VERSION = "0.1"
 
   end
 
