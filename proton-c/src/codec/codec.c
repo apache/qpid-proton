@@ -2882,7 +2882,9 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
         level--;
       }
 
-      if (!pn_data_next(src)) {
+      if (pn_data_next(src)) {
+        break;
+      } else {
         stop = true;
         break;
       }
