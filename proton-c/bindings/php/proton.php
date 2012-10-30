@@ -492,7 +492,11 @@ class UUID {
   }
 
   public function __tostring() {
-    return "UUID($this->bytes)";
+    $b = $this->bytes;
+    return sprintf("UUID(%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x)",
+                   ord($b[0]), ord($b[1]), ord($b[2]), ord($b[3]),
+                   ord($b[4]), ord($b[5]), ord($b[6]), ord($b[7]), ord($b[8]), ord($b[9]),
+                   ord($b[10]), ord($b[11]), ord($b[12]), ord($b[13]), ord($b[14]), ord($b[15]));
   }
 
 }
