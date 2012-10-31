@@ -47,7 +47,7 @@ set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file director
 set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
+set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 
 if (${CMAKE_VERSION} VERSION_LESS "2.8.0")
     set (OPTIONAL_ARG "")
