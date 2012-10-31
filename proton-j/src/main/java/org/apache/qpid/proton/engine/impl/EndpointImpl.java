@@ -94,7 +94,7 @@ public abstract class EndpointImpl implements Endpoint
         _remoteState = remoteState;
     }
 
-    void setLocalError(EndpointError localError)
+    public void setLocalError(EndpointError localError)
     {
         _localError = localError;
     }

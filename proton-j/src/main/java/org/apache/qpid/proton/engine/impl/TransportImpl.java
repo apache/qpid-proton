@@ -24,21 +24,9 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.FrameTransport;
-import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportInput;
-import org.apache.qpid.proton.engine.TransportOutput;
-import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.framing.TransportFrame;
-import org.apache.qpid.proton.type.AMQPDefinedTypes;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.DescribedType;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.UnsignedShort;
+import org.apache.qpid.proton.type.*;
 import org.apache.qpid.proton.type.transport.Attach;
 import org.apache.qpid.proton.type.transport.Begin;
 import org.apache.qpid.proton.type.transport.Close;
@@ -278,6 +266,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
                             Detach detach = new Detach();
                             detach.setHandle(localHandle);
+
+                            EndpointError localError = link.getLocalError();
+                            if( localError !=null ) {
+                                org.apache.qpid.proton.type.transport.Error error = new org.apache.qpid.proton.type.transport.Error();
+                                error.setCondition(Symbol.getSymbol(localError.getName()));
+                                error.setDescription(localError.getDescription());
+                                detach.setError(error);
+                            }
 
 
                             int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null, null);
