@@ -24,6 +24,8 @@ set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 1)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
+include(soversion.cmake)
+
 # In rpm builds the build sets some variables:
 #  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
 #  INCLUDE_INSTALL_DIR
@@ -145,7 +147,15 @@ add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
-  qpid-proton proton proton-dump
+  qpid-proton
+  PROPERTIES
+  COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
+  VERSION   ${PN_VERSION}
+  SOVERSION ${PN_SOVERSION}
+)
+
+set_target_properties (
+   proton proton-dump
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
 )

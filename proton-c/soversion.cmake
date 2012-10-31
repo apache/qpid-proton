@@ -1,0 +1,1 @@
+set (PN_SOVERSION "1.0.0")
