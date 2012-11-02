@@ -33,6 +33,14 @@ The proton APIs consist of the following classes:
 from cproton import *
 import uuid
 
+class Constant(object):
+
+  def __init__(self, name):
+    self.name = name
+
+  def __repr__(self):
+    return self.name
+
 class ProtonException(Exception):
   """
   The root of the proton exception hierarchy. All proton exception
@@ -64,6 +72,29 @@ class MessageException(ProtonException):
 
 EXCEPTIONS = {
   PN_TIMEOUT: Timeout
+  }
+
+PENDING = Constant("PENDING")
+ACCEPTED = Constant("ACCEPTED")
+REJECTED = Constant("REJECTED")
+
+STATUSES = {
+  PN_STATUS_ACCEPTED: ACCEPTED,
+  PN_STATUS_REJECTED: REJECTED,
+  PN_STATUS_PENDING: PENDING,
+  PN_STATUS_UNKNOWN: None
+  }
+
+AUTOMATIC = Constant("AUTOMATIC")
+MANUAL = Constant("MANUAL")
+
+_ACCEPT_MODE2CONST = {
+  PN_ACCEPT_MODE_AUTO: AUTOMATIC,
+  PN_ACCEPT_MODE_MANUAL: MANUAL
+  }
+_CONST2ACCEPT_MODE = {
+  AUTOMATIC: PN_ACCEPT_MODE_AUTO,
+  MANUAL: PN_ACCEPT_MODE_MANUAL
   }
 
 class Messenger(object):
@@ -226,6 +257,43 @@ The timeout property contains the default timeout for blocking
 operations performed by the L{Messenger}.
 """)
 
+  def _get_accept_mode(self):
+    return _ACCEPT_MODE2CONST(pn_messenger_get_accept_mode(self._mng))
+
+  def _set_accept_mode(self, mode):
+    mode = _CONST2ACCEPT_MODE[mode]
+    self._check(pn_messenger_set_accept_mode(self._mng, mode))
+
+  accept_mode = property(_get_accept_mode, _set_accept_mode,
+                         doc="""
+The accept mode for the messenger. Can be set to AUTOMATIC or MANUAL.
+The default is AUTOMATIC.
+""")
+
+  def _get_incoming_window(self):
+    return pn_messenger_get_incoming_window(self._mng)
+
+  def _set_incoming_window(self, window):
+    self._check(pn_messenger_set_incoming_window(self._mng, window))
+
+  incoming_window = property(_get_incoming_window, _set_incoming_window,
+                             doc="""
+The incoming tracking window for the messenger. The messenger will
+track the status of this many incoming deliveries. Defaults to zero.
+""")
+
+  def _get_outgoing_window(self):
+    return pn_messenger_get_outgoing_window(self._mng)
+
+  def _set_outgoing_window(self, window):
+    self._check(pn_messenger_set_outgoing_window(self._mng, window))
+
+  outgoing_window = property(_get_outgoing_window, _set_outgoing_window,
+                             doc="""
+The outgoing tracking window for the messenger. The messenger will
+track the status of this many outgoing deliveries. Defaults to zero.
+""")
+
   def start(self):
     """
     Transitions the L{Messenger} to an active state. A L{Messenger} is
@@ -278,6 +346,19 @@ operations performed by the L{Messenger}.
     """
     message._pre_encode()
     self._check(pn_messenger_put(self._mng, message._msg))
+    return pn_messenger_outgoing_tracker(self._mng)
+
+  def status(self, tracker):
+    disp = pn_messenger_status(self._mng, tracker);
+    return STATUSES.get(disp, disp)
+
+  def settle(self, tracker=None):
+    if tracker is None:
+      tracker = pn_messenger_outgoing_tracker(self._mng)
+      flags = PN_CUMULATIVE
+    else:
+      flags = 0
+    self._check(pn_messenger_settle(self._mng, tracker, flags))
 
   def send(self):
     """
@@ -295,7 +376,7 @@ operations performed by the L{Messenger}.
     """
     self._check(pn_messenger_recv(self._mng, n))
 
-  def get(self, message):
+  def get(self, message=None):
     """
     Moves the message from the head of the incoming message queue into
     the supplied message object. Any content in the message will be
@@ -304,8 +385,30 @@ operations performed by the L{Messenger}.
     @type message: Message
     @param message: the destination message object
     """
-    self._check(pn_messenger_get(self._mng, message._msg))
-    message._post_decode()
+    if message is None:
+      impl = None
+    else:
+      impl = message._msg
+    self._check(pn_messenger_get(self._mng, impl))
+    if message is not None:
+      message._post_decode()
+    return pn_messenger_incoming_tracker(self._mng)
+
+  def accept(self, tracker=None):
+    if tracker is None:
+      tracker = pn_messenger_incoming_tracker(self._mng)
+      flags = PN_CUMULATIVE
+    else:
+      flags = 0
+    self._check(pn_messenger_accept(self._mng, tracker, flags))
+
+  def reject(self, tracker=None):
+    if tracker is None:
+      tracker = pn_messenger_incoming_tracker(self._mng)
+      flags = PN_CUMULATIVE
+    else:
+      flags = 0
+    self._check(pn_messenger_reject(self._mng, tracker, flags))
 
   @property
   def outgoing(self):
@@ -720,14 +823,6 @@ class Described(object):
       return self.descriptor == o.descriptor and self.value == o.value
     else:
       return False
-
-class Constant(object):
-
-  def __init__(self, name):
-    self.name = name
-
-  def __repr__(self):
-    return self.name
 
 UNDESCRIBED = Constant("UNDESCRIBED")
 
@@ -2152,4 +2247,5 @@ __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
            "Transport", "TransportException", "SASL", "SSL", "Described",
            "Array", "symbol", "char", "timestamp", "ulong", "UNDESCRIBED",
-           "SSLUnavailable", "PN_SESSION_WINDOW"]
+           "SSLUnavailable", "PN_SESSION_WINDOW", "AUTOMATIC", "MANUAL",
+           "PENDING", "ACCEPTED", "REJECTED"]

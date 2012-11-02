@@ -34,6 +34,19 @@ extern "C" {
  */
 
 typedef struct pn_messenger_t pn_messenger_t; /**< Messenger*/
+typedef int64_t pn_tracker_t;
+
+typedef enum {
+  PN_ACCEPT_MODE_AUTO,
+  PN_ACCEPT_MODE_MANUAL
+} pn_accept_mode_t;
+
+typedef enum {
+  PN_STATUS_UNKNOWN = 0,
+  PN_STATUS_PENDING = 1,
+  PN_STATUS_ACCEPTED = 2,
+  PN_STATUS_REJECTED = 3
+} pn_status_t;
 
 /** Construct a new Messenger with the given name. The name is global.
  * If a NULL name is supplied, a UUID based name will be chosen.
@@ -159,6 +172,18 @@ int pn_messenger_errno(pn_messenger_t *messenger);
  */
 const char *pn_messenger_error(pn_messenger_t *messenger);
 
+pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
+
+int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode);
+
+int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
+
+int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
+
+int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
+
+int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
+
 /** Starts a messenger. A messenger cannot send or recv messages until
  * it is started.
  *
@@ -199,8 +224,30 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
  */
 int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
 
+/** Gets the last known remote state of the delivery associated with
+ * the given tracker.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] tracker the tracker identify the delivery
+ *
+ * @return a status code for the delivery
+ */
+pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+
+int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+
+/** Gets the tracker for the message most recently provided to
+ * pn_messenger_put.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return a pn_tracker_t or an undefined value if pn_messenger_get
+ *         has never been called for the given messenger
+ */
+pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
+
 /** Sends any messages in the outgoing message queue for a messenger.
- * This will blocks until the messages have been sent.
+ * This will block until the messages have been sent.
  *
  * @param[in] messenger the messager
  *
@@ -231,6 +278,40 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n);
  * @see error.h
  */
 int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
+
+/** Gets the tracker for the message most recently fetched by
+ * pn_messenger_get.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return a pn_tracker_t or an undefined value if pn_messenger_get
+ *         has never been called for the given messenger
+ */
+pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
+
+#define PN_CUMULATIVE (0x1)
+
+/** Accepts the incoming messages identified by the tracker. Use the
+ * PN_CUMULATIVE flag to accept everything prior to the supplied
+ * tracker.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return an error code or zero on success
+ * @see error.h
+ */
+int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+
+/** Rejects the incoming messages identified by the tracker. Use the
+ * PN_CUMULATIVE flag to reject everything prior to the supplied
+ * tracker.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return an error code or zero on success
+ * @see error.h
+ */
+int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /** Returns the number of messages in the outgoing message queue of a messenger.
  *

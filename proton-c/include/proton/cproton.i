@@ -1289,7 +1289,6 @@ typedef long long int int64_t;
 {
  require:
   messenger != NULL;
-  msg != NULL;
 }
 
 %contract pn_messenger_outgoing(pn_messenger_t *messenger)
