@@ -64,6 +64,7 @@ void pn_dispatcher_free(pn_dispatcher_t *disp)
     pn_buffer_free(disp->input);
     pn_data_free(disp->args);
     pn_data_free(disp->output_args);
+    pn_buffer_free(disp->frame);
     free(disp->output);
     free(disp);
   }
