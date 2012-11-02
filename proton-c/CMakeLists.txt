@@ -155,8 +155,8 @@ set_target_properties (
   qpid-proton
   PROPERTIES
   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
-  VERSION   ${PN_VERSION}
-  SOVERSION ${PN_SOVERSION}
+  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
+  SOVERSION "${PN_LIB_SOMAJOR}"
 )
 
 set_target_properties (
