@@ -151,8 +151,10 @@ target_link_libraries (proton qpid-proton)
 add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
+# Set any additional platform specific C compiler flags
+set (PN_EXTRA_C_FLAGS "")
 if (CMAKE_COMPILER_IS_GNUCC)
-   set (PN_EXTRA_C_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC")
+   set (PN_EXTRA_C_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -fPIC")
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 set_target_properties (
