@@ -88,6 +88,7 @@ typedef struct {
   bool disp_type;
   pn_sequence_t disp_first;
   pn_sequence_t disp_last;
+  bool disp;
 } pn_session_state_t;
 
 #define SCRATCH (1024)

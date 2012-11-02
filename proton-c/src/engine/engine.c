@@ -1994,7 +1994,7 @@ int pn_flush_disp(pn_transport_t *transport, pn_session_state_t *ssn_state)
 {
   uint64_t code = ssn_state->disp_code;
   uint64_t settled = ssn_state->disp_settled;
-  if (code || settled) {
+  if (ssn_state->disp) {
     int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[oIIo?DL[]]", DISPOSITION,
                             ssn_state->disp_type, ssn_state->disp_first, ssn_state->disp_last,
                             settled, (bool)code, code);
@@ -2004,6 +2004,7 @@ int pn_flush_disp(pn_transport_t *transport, pn_session_state_t *ssn_state)
     ssn_state->disp_settled = 0;
     ssn_state->disp_first = 0;
     ssn_state->disp_last = 0;
+    ssn_state->disp = false;
   }
   return 0;
 }
@@ -2031,7 +2032,12 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
     code = 0;
   }
 
-  if (code == ssn_state->disp_code && delivery->local_settled == ssn_state->disp_settled &&
+  if (!code && !delivery->local_settled) {
+    return 0;
+  }
+
+  if (ssn_state->disp && code == ssn_state->disp_code &&
+      delivery->local_settled == ssn_state->disp_settled &&
       ssn_state->disp_type == (link->endpoint.type == RECEIVER)) {
     if (state->id == ssn_state->disp_first - 1) {
       ssn_state->disp_first = state->id;
@@ -2042,14 +2048,17 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
     }
   }
 
-  int err = pn_flush_disp(transport, ssn_state);
-  if (err) return err;
+  if (ssn_state->disp) {
+    int err = pn_flush_disp(transport, ssn_state);
+    if (err) return err;
+  }
 
   ssn_state->disp_type = (link->endpoint.type == RECEIVER);
   ssn_state->disp_code = code;
   ssn_state->disp_settled = delivery->local_settled;
   ssn_state->disp_first = state->id;
   ssn_state->disp_last = state->id;
+  ssn_state->disp = true;
 
   return 0;
 }
