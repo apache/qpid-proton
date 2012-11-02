@@ -305,9 +305,9 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     {
                         TransportSender transportLink = sender.getTransportLink();
                         TransportSession transportSession = sender.getSession().getTransportSession();
-                        int credits = sender.getCredit();
-                        sender.setCredit(0);
-                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(UnsignedInteger.valueOf(credits)));
+                        UnsignedInteger credits = transportLink.getLinkCredit();
+                        transportLink.setLinkCredit(UnsignedInteger.valueOf(0));
+                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(credits));
                         transportLink.setLinkCredit(UnsignedInteger.ZERO);
 
                         Flow flow = new Flow();
