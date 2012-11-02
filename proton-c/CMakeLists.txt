@@ -83,13 +83,13 @@ include_directories ("${PROJECT_SOURCE_DIR}/include")
 
 add_custom_command (
   OUTPUT ${PROJECT_BINARY_DIR}/encodings.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py -s ${PROJECT_SOURCE_DIR} > ${PROJECT_BINARY_DIR}/encodings.h
+  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py > ${PROJECT_BINARY_DIR}/encodings.h
   DEPENDS ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py
 )
 
 add_custom_command (
   OUTPUT ${PROJECT_BINARY_DIR}/protocol.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/src/protocol.h.py -s ${PROJECT_SOURCE_DIR} > ${PROJECT_BINARY_DIR}/protocol.h
+  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
 
@@ -152,33 +152,22 @@ add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 if (CMAKE_COMPILER_IS_GNUCC)
-   set (WARNING_FLAGS "-Wall -Werror -pedantic-errors")
-   set (CMAKE_C_FLAGS "${WARNING_FLAGS} -std=c99 -Iinclude -fPIC")
-   set (CMAKE_C_FLAGS_DEBUG          "-O -g")
-   set (CMAKE_C_FLAGS_RELEASE        "-O2 -g -DNDEBUG")
-   set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
+   set (PN_EXTRA_C_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC")
 endif (CMAKE_COMPILER_IS_GNUCC)
-
-if (MSVC)
-   set (WARNING_FLAGS "/Wall")
-   set (CMAKE_C_FLAGS "${WARNING_FLAGS} /Iinclude")
-   set (CMAKE_C_FLAGS_DEBUG          "/MDd /Od /Zi")
-   set (CMAKE_C_FLAGS_RELEASE        "/MD /Ox /D NDEBUG")
-   set (CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Ox /Zi")
-endif (MSVC)
 
 set_target_properties (
   qpid-proton
   PROPERTIES
+  COMPILE_FLAGS ${PN_EXTRA_C_FLAGS}
   VERSION   ${PN_VERSION}
   SOVERSION ${PN_SOVERSION}
 )
 
-# set_target_properties (
-#    proton proton-dump
-#   PROPERTIES
-#   COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
-# )
+set_target_properties (
+   proton proton-dump
+  PROPERTIES
+  COMPILE_FLAGS ${PN_EXTRA_C_FLAGS}
+)
 
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton

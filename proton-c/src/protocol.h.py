@@ -18,16 +18,6 @@
 # under the License.
 #
 
-import optparse, sys
-
-parser = optparse.OptionParser(usage="usage: %prog [options]")
-parser.add_option("-s", "--srcpath", action="store", type="string",
-                  help="Path to the top of the source tree.")
-opts, outfile = parser.parse_args()   # uses sys.argv[1:]
-
-if opts.srcpath:
-  sys.path.append( opts.srcpath )
-
 from protocol import *
 
 print "/* generated */"
