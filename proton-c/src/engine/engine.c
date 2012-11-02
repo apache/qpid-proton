@@ -1151,12 +1151,20 @@ int pn_link_unsettled(pn_link_t *link)
 
 pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 {
-  return link->unsettled_head;
+  pn_delivery_t *d = link->unsettled_head;
+  while (d && d->local_settled) {
+    d = d->unsettled_next;
+  }
+  return d;
 }
 
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
 {
-  return delivery->unsettled_next;
+  pn_delivery_t *d = delivery->unsettled_next;
+  while (d && d->local_settled) {
+    d = d->unsettled_next;
+  }
+  return d;
 }
 
 bool pn_is_current(pn_delivery_t *delivery)
@@ -1982,10 +1990,29 @@ int pn_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
   return 0;
 }
 
+int pn_flush_disp(pn_transport_t *transport, pn_session_state_t *ssn_state)
+{
+  uint64_t code = ssn_state->disp_code;
+  uint64_t settled = ssn_state->disp_settled;
+  if (code || settled) {
+    int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[oIIo?DL[]]", DISPOSITION,
+                            ssn_state->disp_type, ssn_state->disp_first, ssn_state->disp_last,
+                            settled, (bool)code, code);
+    if (err) return err;
+    ssn_state->disp_type = 0;
+    ssn_state->disp_code = 0;
+    ssn_state->disp_settled = 0;
+    ssn_state->disp_first = 0;
+    ssn_state->disp_last = 0;
+  }
+  return 0;
+}
+
 int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
+  pn_modified(transport->connection, &link->session->endpoint);
   // XXX: check for null state
   pn_delivery_state_t *state = delivery->transport_context;
   uint64_t code;
@@ -1996,16 +2023,34 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   case PN_RELEASED:
     code = RELEASED;
     break;
+  case PN_REJECTED:
+    code = REJECTED;
+    break;
     //TODO: rejected and modified (both take extra data which may need to be passed through somehow) e.g. change from enum to discriminated union?
   default:
     code = 0;
   }
 
-  if (code || delivery->local_settled)
-    return pn_post_frame(transport->disp, ssn_state->local_channel, "DL[oIIo?DL[]]", DISPOSITION,
-                         link->endpoint.type == RECEIVER, state->id, state->id,
-                         delivery->local_settled,
-                         (bool)code, code);
+  if (code == ssn_state->disp_code && delivery->local_settled == ssn_state->disp_settled &&
+      ssn_state->disp_type == (link->endpoint.type == RECEIVER)) {
+    if (state->id == ssn_state->disp_first - 1) {
+      ssn_state->disp_first = state->id;
+      return 0;
+    } else if (state->id == ssn_state->disp_last + 1) {
+      ssn_state->disp_last = state->id;
+      return 0;
+    }
+  }
+
+  int err = pn_flush_disp(transport, ssn_state);
+  if (err) return err;
+
+  ssn_state->disp_type = (link->endpoint.type == RECEIVER);
+  ssn_state->disp_code = code;
+  ssn_state->disp_settled = delivery->local_settled;
+  ssn_state->disp_first = state->id;
+  ssn_state->disp_last = state->id;
+
   return 0;
 }
 
@@ -2106,6 +2151,21 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
       }
 
       delivery = delivery->tpwork_next;
+    }
+  }
+
+  return 0;
+}
+
+int pn_process_flush_disp(pn_transport_t *transport, pn_endpoint_t *endpoint)
+{
+  if (endpoint->type == SESSION) {
+    pn_session_t *session = (pn_session_t *) endpoint;
+    pn_session_state_t *state = pn_session_get_state(transport, session);
+    if ((int16_t) state->local_channel >= 0 && !transport->close_sent)
+    {
+      int err = pn_flush_disp(transport, state);
+      if (err) return err;
     }
   }
 
@@ -2250,6 +2310,8 @@ int pn_process(pn_transport_t *transport)
   // second pass
   if ((err = pn_phase(transport, pn_process_tpwork))) return err;
   if ((err = pn_phase(transport, pn_process_tpwork))) return err;
+
+  if ((err = pn_phase(transport, pn_process_flush_disp))) return err;
 
   if ((err = pn_phase(transport, pn_process_flow_sender))) return err;
   if ((err = pn_phase(transport, pn_process_link_teardown))) return err;

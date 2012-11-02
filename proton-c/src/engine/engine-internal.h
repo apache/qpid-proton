@@ -82,6 +82,12 @@ typedef struct {
   size_t link_capacity;
   pn_link_state_t **handles;
   size_t handle_capacity;
+
+  uint64_t disp_code;
+  bool disp_settled;
+  bool disp_type;
+  pn_sequence_t disp_first;
+  pn_sequence_t disp_last;
 } pn_session_state_t;
 
 #define SCRATCH (1024)
@@ -215,20 +221,6 @@ struct pn_delivery_t {
   (OLD) = ((OLD) & PN_LOCAL_MASK) | (NEW)
 
 void pn_link_dump(pn_link_t *link);
-
-#define PN_ENSURE(ARRAY, CAPACITY, COUNT)                      \
-  while ((CAPACITY) < (COUNT)) {                                \
-    (CAPACITY) = (CAPACITY) ? 2 * (CAPACITY) : 16;              \
-    (ARRAY) = realloc((ARRAY), (CAPACITY) * sizeof (*(ARRAY))); \
-  }                                                             \
-
-#define PN_ENSUREZ(ARRAY, CAPACITY, COUNT)                \
-  {                                                        \
-    size_t _old_capacity = (CAPACITY);                     \
-    PN_ENSURE((ARRAY), (CAPACITY), (COUNT));              \
-    memset((ARRAY) + _old_capacity, 0,                     \
-           sizeof(*(ARRAY))*((CAPACITY) - _old_capacity)); \
-  }
 
 void pn_dump(pn_connection_t *conn);
 void pn_transport_sasl_init(pn_transport_t *transport);
