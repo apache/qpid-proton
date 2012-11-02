@@ -21,7 +21,7 @@ cmake_minimum_required (VERSION 2.6)
 project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
-set (PN_VERSION_MINOR 1)
+set (PN_VERSION_MINOR 2)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 include(soversion.cmake)
