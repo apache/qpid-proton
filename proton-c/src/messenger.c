@@ -55,8 +55,17 @@ struct pn_messenger_t {
   pn_queue_t outgoing;
   pn_queue_t incoming;
   pn_accept_mode_t accept_mode;
+  pn_subscription_t *subscriptions;
+  size_t sub_capacity;
+  size_t sub_count;
+  pn_subscription_t *incoming_subscription;
   pn_buffer_t *buffer;
   pn_error_t *error;
+};
+
+struct pn_subscription_t {
+  char *scheme;
+  void *context;
 };
 
 void pn_queue_init(pn_queue_t *queue)
@@ -241,6 +250,10 @@ pn_messenger_t *pn_messenger(const char *name)
     pn_queue_init(&m->outgoing);
     pn_queue_init(&m->incoming);
     m->accept_mode = PN_ACCEPT_MODE_AUTO;
+    m->subscriptions = NULL;
+    m->sub_capacity = 0;
+    m->sub_count = 0;
+    m->incoming_subscription = NULL;
     m->buffer = pn_buffer(1024);
     m->error = pn_error();
   }
@@ -326,6 +339,10 @@ void pn_messenger_free(pn_messenger_t *messenger)
     pn_error_free(messenger->error);
     pn_queue_tini(&messenger->incoming);
     pn_queue_tini(&messenger->outgoing);
+    for (int i = 0; i < messenger->sub_count; i++) {
+      free(messenger->subscriptions[i].scheme);
+    }
+    free(messenger->subscriptions);
     free(messenger);
   }
 }
@@ -461,7 +478,8 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {
-      char *scheme = pn_listener_context(l);
+      pn_subscription_t *sub = pn_listener_context(l);
+      char *scheme = sub->scheme;
       pn_connector_t *c = pn_listener_accept(l);
       pn_transport_t *t = pn_connector_transport(c);
       pn_ssl_t *ssl = pn_ssl(t);
@@ -545,7 +563,6 @@ int pn_messenger_stop(pn_messenger_t *messenger)
     pn_listener_close(l);
     pn_listener_t *prev = l;
     l = pn_listener_next(l);
-    free(pn_listener_context(prev));
     pn_listener_free(prev);
   }
 
@@ -635,6 +652,27 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
   return connection;
 }
 
+pn_subscription_t *pn_subscription(pn_messenger_t *messenger, const char *scheme)
+{
+  PN_ENSURE(messenger->subscriptions, messenger->sub_capacity, messenger->sub_count + 1);
+  pn_subscription_t *sub = messenger->subscriptions + messenger->sub_count++;
+  sub->scheme = pn_strdup(scheme);
+  sub->context = NULL;
+  return sub;
+}
+
+void *pn_subscription_get_context(pn_subscription_t *sub)
+{
+  assert(sub);
+  return sub->context;
+}
+
+void pn_subscription_set_context(pn_subscription_t *sub, void *context)
+{
+  assert(sub);
+  sub->context = context;
+}
+
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
 {
   char copy[(address ? strlen(address) : 0) + 1];
@@ -663,12 +701,11 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   pn_session_open(ssn);
   link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
   // XXX
-  if (sender) {
-    pn_terminus_set_address(pn_link_target(link), name);
-    pn_terminus_set_address(pn_link_source(link), name);
-  } else {
-    pn_terminus_set_address(pn_link_target(link), name);
-    pn_terminus_set_address(pn_link_source(link), name);
+  pn_terminus_set_address(pn_link_target(link), name);
+  pn_terminus_set_address(pn_link_source(link), name);
+  if (!sender) {
+    pn_subscription_t *sub = pn_subscription(messenger, NULL);
+    pn_link_set_context(link, sub);
   }
   pn_link_open(link);
   return link;
@@ -684,7 +721,7 @@ pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
   return pn_messenger_link(messenger, target, true);
 }
 
-int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
+pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
   char copy[strlen(source) + 1];
   strcpy(copy, source);
@@ -700,23 +737,27 @@ int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 
   if (host[0] == '~') {
     pn_listener_t *lnr = pn_listener(messenger->driver, host + 1,
-                                     port ? port : default_port(scheme),
-                                     pn_strdup(scheme));
+                                     port ? port : default_port(scheme), NULL);
     if (lnr) {
-      return 0;
+      pn_subscription_t *sub = pn_subscription(messenger, scheme);
+      pn_listener_set_context(lnr, sub);
+      return sub;
     } else {
-      return pn_error_format(messenger->error, PN_ERR,
-                             "unable to subscribe to source: %s (%s)", source,
-                             pn_driver_error(messenger->driver));
+      pn_error_format(messenger->error, PN_ERR,
+                      "unable to subscribe to source: %s (%s)", source,
+                      pn_driver_error(messenger->driver));
+      return NULL;
     }
   } else {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (src) {
-      return 0;
+      pn_subscription_t *sub = pn_link_get_context(src);
+      return sub;
     } else {
-      return pn_error_format(messenger->error, PN_ERR,
-                             "unable to subscribe to source: %s (%s)", source,
-                             pn_driver_error(messenger->driver));
+      pn_error_format(messenger->error, PN_ERR,
+                      "unable to subscribe to source: %s (%s)", source,
+                      pn_driver_error(messenger->driver));
+      return NULL;
     }
   }
 }
@@ -962,6 +1003,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
     while (d) {
       if (pn_delivery_readable(d) && !pn_delivery_partial(d)) {
         pn_link_t *l = pn_delivery_link(d);
+        pn_subscription_t *sub = pn_link_get_context(l);
         size_t pending = pn_delivery_pending(d);
         pn_buffer_t *buf = messenger->buffer;
         int err = pn_buffer_ensure(buf, pending + 1);
@@ -978,6 +1020,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
           return pn_error_format(messenger->error, n, "PN_EOS expected");
         }
         pn_queue_add(&messenger->incoming, d);
+        messenger->incoming_subscription = sub;
         if (msg) {
           int err = pn_message_decode(msg, encoded, pending);
           if (err) {
@@ -1016,6 +1059,12 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
 {
   return pn_tracker(INCOMING, messenger->incoming.hwm - 1);
+}
+
+pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger)
+{
+  assert(messenger);
+  return messenger->incoming_subscription;
 }
 
 int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)

@@ -21,6 +21,7 @@
 
 #define _POSIX_C_SOURCE 1
 
+#include <assert.h>
 #include <poll.h>
 #include <stdio.h>
 #include <time.h>
@@ -208,6 +209,12 @@ void pn_listener_trace(pn_listener_t *l, pn_trace_t trace) {
 
 void *pn_listener_context(pn_listener_t *l) {
   return l ? l->context : NULL;
+}
+
+void pn_listener_set_context(pn_listener_t *listener, void *context)
+{
+  assert(listener);
+  listener->context = context;
 }
 
 static void pn_configure_sock(int sock) {

@@ -329,7 +329,9 @@ track the status of this many outgoing deliveries. Defaults to zero.
     @type source: string
     @param source: the source of messages to subscribe to
     """
-    self._check(pn_messenger_subscribe(self._mng, source))
+    sub_impl = pn_messenger_subscribe(self._mng, source)
+    if not sub_impl:
+      self._check(PN_ERR)
 
   def put(self, message):
     """

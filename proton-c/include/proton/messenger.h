@@ -34,6 +34,7 @@ extern "C" {
  */
 
 typedef struct pn_messenger_t pn_messenger_t; /**< Messenger*/
+typedef struct pn_subscription_t pn_subscription_t; /**< Subscription*/
 typedef int64_t pn_tracker_t;
 
 typedef enum {
@@ -209,10 +210,13 @@ int pn_messenger_stop(pn_messenger_t *messenger);
  * @param[in] messenger the messenger to subscribe
  * @param[in] source
  *
- * @return an error code or zero on success
- * @see error.h
+ * @return a subscription
  */
-int pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
+pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
+
+void *pn_subscription_get_context(pn_subscription_t *sub);
+
+void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
 /** Puts a message on the outgoing message queue for a messenger.
  *
@@ -288,6 +292,8 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
  *         has never been called for the given messenger
  */
 pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
+
+pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 #define PN_CUMULATIVE (0x1)
 
