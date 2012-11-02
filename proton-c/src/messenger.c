@@ -862,6 +862,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
       } else {
         pn_link_advance(sender);
         pn_queue_add(&messenger->outgoing, d);
+        // XXX: doing this every time is slow, need to be smarter
         //pn_messenger_tsync(messenger, false_pred, 0);
         return 0;
       }
