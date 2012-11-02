@@ -152,7 +152,6 @@ add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 # Set any additional platform specific C compiler flags
-set (PN_EXTRA_C_FLAGS "")
 if (CMAKE_COMPILER_IS_GNUCC)
    set (PN_EXTRA_C_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -fPIC")
 endif (CMAKE_COMPILER_IS_GNUCC)
@@ -160,7 +159,7 @@ endif (CMAKE_COMPILER_IS_GNUCC)
 set_target_properties (
   qpid-proton
   PROPERTIES
-  COMPILE_FLAGS ${PN_EXTRA_C_FLAGS}
+  COMPILE_FLAGS "${PN_EXTRA_C_FLAGS}"
   VERSION   ${PN_VERSION}
   SOVERSION ${PN_SOVERSION}
 )
@@ -168,7 +167,7 @@ set_target_properties (
 set_target_properties (
    proton proton-dump
   PROPERTIES
-  COMPILE_FLAGS ${PN_EXTRA_C_FLAGS}
+  COMPILE_FLAGS "${PN_EXTRA_C_FLAGS}"
 )
 
 # Install executables and libraries
