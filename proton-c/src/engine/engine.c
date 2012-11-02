@@ -1993,7 +1993,7 @@ int pn_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
 int pn_flush_disp(pn_transport_t *transport, pn_session_state_t *ssn_state)
 {
   uint64_t code = ssn_state->disp_code;
-  uint64_t settled = ssn_state->disp_settled;
+  bool settled = ssn_state->disp_settled;
   if (ssn_state->disp) {
     int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[oIIo?DL[]]", DISPOSITION,
                             ssn_state->disp_type, ssn_state->disp_first, ssn_state->disp_last,
