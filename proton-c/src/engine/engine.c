@@ -1669,10 +1669,12 @@ int pn_do_disposition(pn_dispatcher_t *disp)
     if (id < lwm) continue;
     pn_delivery_state_t *state = pn_delivery_buffer_get(deliveries, id - lwm);
     pn_delivery_t *delivery = state->delivery;
-    delivery->remote_state = dispo;
-    delivery->remote_settled = settled;
-    delivery->updated = true;
-    pn_work_update(transport->connection, delivery);
+    if (delivery) {
+      delivery->remote_state = dispo;
+      delivery->remote_settled = settled;
+      delivery->updated = true;
+      pn_work_update(transport->connection, delivery);
+    }
   }
 
   return 0;
@@ -2146,6 +2148,10 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_delivery_t *delivery = conn->tpwork_head;
     while (delivery)
     {
+      if (!delivery->transport_context && transport->disp->available > 0) {
+        break;
+      }
+
       pn_link_t *link = delivery->link;
       if (pn_link_is_sender(link)) {
         int err = pn_process_tpwork_sender(transport, delivery);

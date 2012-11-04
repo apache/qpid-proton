@@ -141,13 +141,11 @@ void pn_queue_del(pn_queue_t *queue, pn_delivery_t *delivery)
     pn_connection_t *conn =
       pn_session_connection(pn_link_session(pn_delivery_link(delivery)));
     pn_decref(conn);
-    pn_queue_gc(queue);
   }
 }
 
 pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
 {
-  pn_queue_gc(queue);
   pn_sequence_t id = queue->hwm++;
   size_t offset = id - queue->lwm;
   PN_ENSUREZ(queue->deliveries, queue->capacity, offset + 1);
@@ -158,6 +156,22 @@ pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
     pn_session_connection(pn_link_session(pn_delivery_link(delivery)));
   pn_incref(conn);
   return id;
+}
+
+void pn_queue_slide(pn_queue_t *queue)
+{
+  if (queue->window >= 0) {
+    while (queue->hwm - queue->mwm > queue->window) {
+      pn_delivery_t *d = pn_queue_get(queue, queue->lwm);
+      if (d) {
+        pn_delivery_settle(d);
+        pn_queue_del(queue, d);
+      } else {
+        pn_queue_gc(queue);
+      }
+    }
+  }
+  pn_queue_gc(queue);
 }
 
 int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
@@ -201,13 +215,7 @@ int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
     }
   }
 
-  if (queue->window >= 0) {
-    while (queue->hwm - queue->mwm > queue->window) {
-      pn_delivery_t *d = pn_queue_get(queue, queue->lwm);
-      pn_delivery_settle(d);
-      pn_queue_del(queue, d);
-    }
-  }
+  pn_queue_slide(queue);
 
   return 0;
 }
@@ -397,9 +405,15 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn)
 
   pn_delivery_t *d = pn_work_head(conn);
   while (d) {
+    pn_link_t *link = pn_delivery_link(d);
+    if (pn_delivery_updated(d) && pn_link_is_sender(link)) {
+      pn_delivery_update(d, pn_delivery_remote_state(d));
+    }
     pn_delivery_clear(d);
     d = pn_work_next(d);
   }
+
+  pn_queue_slide(&messenger->outgoing);
 
   if (pn_work_head(conn)) {
     return;
@@ -780,7 +794,7 @@ int pn_messenger_get_outgoing_window(pn_messenger_t *messenger)
 
 int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window)
 {
-  if (window > PN_SESSION_WINDOW) {
+  if (window >= PN_SESSION_WINDOW) {
     return pn_error_format(messenger->error, PN_ARG_ERR,
                            "specified window (%i) exceeds max (%i)",
                            window, PN_SESSION_WINDOW);
@@ -797,7 +811,7 @@ int pn_messenger_get_incoming_window(pn_messenger_t *messenger)
 
 int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window)
 {
-  if (window > PN_SESSION_WINDOW) {
+  if (window >= PN_SESSION_WINDOW) {
     return pn_error_format(messenger->error, PN_ARG_ERR,
                            "specified window (%i) exceeds max (%i)",
                            window, PN_SESSION_WINDOW);
@@ -973,11 +987,7 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
 
 int pn_messenger_send(pn_messenger_t *messenger)
 {
-  int err = pn_messenger_sync(messenger, pn_messenger_sent);
-  if (err) return err;
-  return pn_queue_update(&messenger->outgoing,
-                         messenger->outgoing.hwm - 1,
-                         0, PN_CUMULATIVE, false, true);
+  return pn_messenger_sync(messenger, pn_messenger_sent);
 }
 
 int pn_messenger_recv(pn_messenger_t *messenger, int n)
