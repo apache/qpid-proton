@@ -64,6 +64,8 @@ else()
     add_custom_target(docs)
 endif()
 
+set (PN_COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99")
+
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
@@ -107,6 +109,7 @@ if (SWIG_FOUND)
 endif (SWIG_FOUND)
 
 add_subdirectory(docs/api)
+add_subdirectory(examples/messenger/c)
 
 # Should really be finding the uuid library appropriate for the platform
 # in lieu of doing this set the library name directly.
@@ -154,15 +157,15 @@ target_link_libraries (proton-dump qpid-proton)
 set_target_properties (
   qpid-proton
   PROPERTIES
-  COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
+  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
 )
 
 set_target_properties (
-   proton proton-dump
+  proton proton-dump
   PROPERTIES
-  COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -Iinclude -fPIC"
+  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
 )
 
 # Install executables and libraries
