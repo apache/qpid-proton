@@ -59,8 +59,6 @@ else()
     add_custom_target(docs)
 endif()
 
-set (PN_COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99")
-
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
@@ -110,14 +108,16 @@ add_subdirectory(examples/messenger/c)
 # in lieu of doing this set the library name directly.
 set (UUID_LIB uuid)
 
+set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+
 set (qpid-proton-platform
   src/driver.c
   ${pn_driver_ssl_impl}
 )
 
-add_library (
-  qpid-proton SHARED
-
+set (qpid-proton-core
   src/util.c
   src/error.c
   src/buffer.c
@@ -136,12 +136,37 @@ add_library (
 
   src/messenger.c
 
-  ${qpid-proton-platform}
-
   ${PROJECT_BINARY_DIR}/encodings.h
   ${PROJECT_BINARY_DIR}/protocol.h
 )
+
+set_source_files_properties (
+    ${qpid-proton-core}
+    PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+)
+
+set_source_files_properties (
+    ${qpid-proton-platform}
+    PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+)
+
+add_library (
+  qpid-proton SHARED
+
+  ${qpid-proton-core}
+  ${qpid-proton-platform}
+)
+
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB})
+
+set_target_properties (
+  qpid-proton
+  PROPERTIES
+  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
+  SOVERSION "${PN_LIB_SOMAJOR}"
+)
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpid-proton)
@@ -150,17 +175,9 @@ add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
-  qpid-proton
-  PROPERTIES
-  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
-  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
-  SOVERSION "${PN_LIB_SOMAJOR}"
-)
-
-set_target_properties (
-  proton proton-dump
-  PROPERTIES
-  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
+    proton proton-dump
+    PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
 )
 
 # Install executables and libraries

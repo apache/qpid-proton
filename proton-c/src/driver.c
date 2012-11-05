@@ -19,8 +19,6 @@
  *
  */
 
-#define _POSIX_C_SOURCE 1
-
 #include <assert.h>
 #include <poll.h>
 #include <stdio.h>
