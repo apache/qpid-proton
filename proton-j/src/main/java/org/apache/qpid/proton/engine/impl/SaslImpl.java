@@ -61,6 +61,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     private SaslFrameParser _frameParser;
     private boolean _initReceived;
     private boolean _mechanismsSent;
+    private boolean _initSent;
 
 
     enum Role { CLIENT, SERVER };
@@ -429,6 +430,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             init.setInitialResponse(getChallengeResponse());
             setChallengeResponse(null);
         }
+        _initSent = true;
         return writeFrame(buffer, init);
     }
 
@@ -491,7 +493,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             @Override
             public int output(byte[] bytes, int offset, int size)
             {
-                if(_role == null || (_role == Role.CLIENT && !_done) || (_role == Role.SERVER && !_outputComplete))
+                if(_role == null || (_role == Role.CLIENT && (!_done || !_initSent)) || (_role == Role.SERVER && !_outputComplete))
                 {
                     int written = SaslImpl.this.output(bytes, offset, size);
                     if(_done && !_overflowBuffer.hasRemaining())
