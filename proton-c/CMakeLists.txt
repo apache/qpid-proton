@@ -101,9 +101,6 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
-add_subdirectory(docs/api)
-add_subdirectory(examples/messenger/c)
-
 # Should really be finding the uuid library appropriate for the platform
 # in lieu of doing this set the library name directly.
 set (UUID_LIB uuid)
@@ -114,6 +111,9 @@ if (CMAKE_COMPILER_IS_GNUCC)
    set (COMPILE_LANGUAGE_FLAGS "-std=c99")
    set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 endif (CMAKE_COMPILER_IS_GNUCC)
+
+add_subdirectory(docs/api)
+add_subdirectory(examples/messenger/c)
 
 set (qpid-proton-platform
   src/driver.c

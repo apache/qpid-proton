@@ -26,5 +26,5 @@ target_link_libraries(send qpid-proton)
 set_target_properties (
   recv send
   PROPERTIES
-  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
 )
