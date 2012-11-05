@@ -26,11 +26,6 @@ set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 include(soversion.cmake)
 
-# Disable rpath
-if (DEFINED PROTON_DISABLE_RPATH)
-  set (CMAKE_SKIP_RPATH ${PROTON_DISABLE_RPATH})
-endif()
-
 # In rpm builds the build sets some variables:
 #  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
 #  INCLUDE_INSTALL_DIR

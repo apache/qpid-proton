@@ -18,8 +18,8 @@
 #
 set(CMAKE_SWIG_FLAGS "-threads")
 
-swig_add_module(cproton python python.i)
 include_directories (${PYTHON_INCLUDE_PATH})
+swig_add_module(cproton python python.i)
 swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES})
 
 find_package(PythonInterp REQUIRED)
@@ -58,7 +58,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/_cproton.so
-        RENAME _cproton.so
+install(TARGETS _cproton
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
