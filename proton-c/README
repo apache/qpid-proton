@@ -25,7 +25,7 @@ Proton is multi-lingual:
 
 Please see http://qpid.apache.org/proton for a more info.
 
-== Build Instructions ==
+== Build Instructions (Linux) ==
 
 The following prerequesuites are required to do a full build. If you
 do not wish to build a given language binding you can ommit the -devel
@@ -63,3 +63,59 @@ From the directory where you found this README file:
 
 Note that all installed files are stored in the install_manifest.txt
 file.
+
+
+== Build Instructions (Windows) ==
+
+This describes how to build the Proton library on Windows using Microsoft Visual C++ 2010
+Express (VC10).
+
+The Proton build uses the cmake tool to generate the Visual Studio project files.  These
+project files can then be loaded into Express and used to build the Proton library.
+
+Note that these instructions were created using a 32 bit version of Windows 7
+Professional. These instructions assume use of a command shell.
+
+The following packages must be installed:
+
+    Visual Studio 2010 Express (or equivalent)
+    Python (www.python.org)
+    Cmake (www.cmake.org)
+
+    Notes:
+        - Be sure to install MSVC Express 2010 Service Pack 1 also!
+        - python.exe _must_ be in your path
+        - cmake.exe _must_ be in your path
+
+
+Step 1: Create a 'build' directory - this must be at the same level as the 'src'
+        directory.  Example:
+
+     $ cd proton-c
+     $ mkdir build
+
+Step 2: cd into the build directory
+
+     $ cd build
+
+Step 3: Generate the Visual Studio project files using cmake.  You must provide:
+
+        1) the name of the compiler you are using [see cmake documentation],
+        2) the path to the _directory_ that contains the "CMakeLists.txt"
+           file (the parent directory, in this case).
+     Example:
+
+     $ cmake -G "Visual Studio 10" ..
+
+     Refer to the cmake documentation for more information.
+
+Step 4: Load the ALL_BUILD project into Visual C++ Express.
+
+     4a: Run the Microsoft Visual C++ Express IDE
+     4b: From within the IDE, open the ALL_BUILD project file - it should be in the
+         'build' directory you created above.
+
+Step 5: Build the ALL_BUILD project.
+
+
+

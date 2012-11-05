@@ -37,7 +37,7 @@ include(soversion.cmake)
 
 if (NOT DEFINED LIB_SUFFIX)
     get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-    if (${LIB64} STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
+    if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
         set(LIB_SUFFIX 64)
     else()
         set(LIB_SUFFIX "")
@@ -78,13 +78,13 @@ include_directories ("${PROJECT_SOURCE_DIR}/include")
 
 add_custom_command (
   OUTPUT ${PROJECT_BINARY_DIR}/encodings.h
-  COMMAND PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py > ${PROJECT_BINARY_DIR}/encodings.h
+  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py > ${PROJECT_BINARY_DIR}/encodings.h
   DEPENDS ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py
 )
 
 add_custom_command (
   OUTPUT ${PROJECT_BINARY_DIR}/protocol.h
-  COMMAND PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
+  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
 
@@ -108,9 +108,12 @@ add_subdirectory(examples/messenger/c)
 # in lieu of doing this set the library name directly.
 set (UUID_LIB uuid)
 
-set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
-set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+# Set any additional platform specific C compiler flags
+if (CMAKE_COMPILER_IS_GNUCC)
+   set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+   set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+   set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+endif (CMAKE_COMPILER_IS_GNUCC)
 
 set (qpid-proton-platform
   src/driver.c
