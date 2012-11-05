@@ -2369,7 +2369,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t *transport, char *bytes, size
   ssize_t n = pn_sasl_output(sasl, bytes, size);
   if (n == PN_EOS) {
     transport->process_output = pn_output_write_amqp_header;
-    return 0;
+    return transport->process_output(transport, bytes, size);
   } else {
     return n;
   }

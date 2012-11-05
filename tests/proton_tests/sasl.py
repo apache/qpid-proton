@@ -84,3 +84,25 @@ class SaslTest(Test):
     self.s1.plain("secundus", "trustno1")
     self.pump()
     assert self.s2.recv() == "\x00secundus\x00trustno1"
+
+  def testPipelined2(self):
+    self.s1.mechanisms("ANONYMOUS")
+    self.s1.client()
+
+    out1 = self.t1.output(1024)
+    n = self.t2.input(out1)
+    assert n == len(out1)
+
+    self.s2.mechanisms("ANONYMOUS")
+    self.s2.server()
+    self.s2.done(SASL.OK)
+    c2 = Connection()
+    c2.open()
+    self.t2.bind(c2)
+
+    out2 = self.t2.output(1024)
+    n = self.t1.input(out2)
+    assert n == len(out2)
+
+    out1 = self.t1.output(1024)
+    assert len(out1) > 0
