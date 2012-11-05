@@ -108,12 +108,11 @@ add_subdirectory(examples/messenger/c)
 # in lieu of doing this set the library name directly.
 set (UUID_LIB uuid)
 
-set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
-set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
-   set (PN_EXTRA_C_FLAGS "-Wall -Werror -pedantic-errors -std=c99 -g -fPIC")
+   set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+   set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+   set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 set (qpid-proton-platform
