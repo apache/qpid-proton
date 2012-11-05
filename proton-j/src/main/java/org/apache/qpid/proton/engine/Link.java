@@ -34,6 +34,13 @@ public interface Link extends Endpoint
 {
 
     /**
+     * Returns the name of the link
+     *
+     * @return the link name
+     */
+    String getName();
+
+    /**
      *
      * @param tag a tag for the delivery
      * @param offset

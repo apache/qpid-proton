@@ -75,7 +75,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         modified();
     }
 
-    String getName()
+    public String getName()
     {
         return _name;
     }

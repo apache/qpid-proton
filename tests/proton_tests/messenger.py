@@ -29,11 +29,14 @@ class Test(common.Test):
     self.server.start()
     self.server.subscribe("amqp://~0.0.0.0:12345")
     self.thread = Thread(name="server-thread", target=self.run)
+    self.thread.daemon = True
     self.running = True
-    self.thread.start()
 
     self.client = Messenger("client")
     self.client.timeout=1000
+
+  def start(self):
+    self.thread.start()
     self.client.start()
 
   def teardown(self):
@@ -48,6 +51,8 @@ class Test(common.Test):
     self.client = None
     self.server = None
 
+REJECT_ME = "*REJECT-ME*"
+
 class MessengerTest(Test):
 
   def run(self):
@@ -57,15 +62,21 @@ class MessengerTest(Test):
         self.server.recv(10)
         while self.server.incoming:
           self.server.get(msg)
-          if msg.reply_to:
-            msg.address = msg.reply_to
-            self.server.put(msg)
+          if msg.body == REJECT_ME:
+            self.server.reject()
+          else:
+            self.server.accept()
+            if msg.reply_to:
+              msg.address = msg.reply_to
+              self.server.put(msg)
+              self.server.settle()
     except Timeout:
       print "server timed out"
     self.server.stop()
     self.running = False
 
   def _testSendReceive(self, size=None):
+    self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
     msg.subject="Hello World!"
@@ -109,6 +120,7 @@ class MessengerTest(Test):
     self._testSendReceive(1024*1024)
 
   def testSendBogus(self):
+    self.start()
     msg = Message()
     msg.address="totally-bogus-address"
     try:
@@ -116,3 +128,96 @@ class MessengerTest(Test):
     except MessengerException, exc:
       err = str(exc)
       assert "unable to send to address: totally-bogus-address (" in err, err
+
+  def testOutgoingWindow(self):
+    self.server.accept_mode = MANUAL
+    self.start()
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.subject="Hello World!"
+
+    trackers = []
+    for i in range(10):
+      trackers.append(self.client.put(msg))
+
+    self.client.send()
+
+    for t in trackers:
+      assert self.client.status(t) is None
+
+    self.client.outgoing_window = 5
+
+    trackers = []
+    for i in range(10):
+      trackers.append(self.client.put(msg))
+
+    for t in trackers:
+      assert self.client.status(t) is PENDING
+
+    self.client.send()
+
+    count = 0
+    for t in trackers:
+      count += 1
+      if count > 5:
+        assert self.client.status(t) is ACCEPTED
+      else:
+        assert self.client.status(t) is None
+
+  def testReject(self):
+    self.server.accept_mode = MANUAL
+    self.start()
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.subject="Hello World!"
+
+    self.client.outgoing_window = 10
+    trackers = []
+    rejected = []
+    for i in range(10):
+      if i == 5:
+        msg.body = REJECT_ME
+      else:
+        msg.body = "Yay!"
+      trackers.append(self.client.put(msg))
+      if msg.body == REJECT_ME:
+        rejected.append(trackers[-1])
+
+    self.client.send()
+
+    for t in trackers:
+      if t in rejected:
+        assert self.client.status(t) is REJECTED
+      else:
+        assert self.client.status(t) is ACCEPTED
+
+  def testIncomingWindow(self):
+    self.server.accept_mode = MANUAL
+    self.server.outgoing_window = 10
+    self.start()
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.subject="Hello World!"
+
+    self.client.outgoing_window = 10
+    trackers = []
+    for i in range(10):
+      trackers.append(self.client.put(msg))
+
+    self.client.send()
+
+    for t in trackers:
+      assert self.client.status(t) is ACCEPTED
+
+    self.client.incoming_window = 10
+
+    remaining = 10
+
+    trackers = []
+    while remaining:
+      self.client.recv(remaining)
+      while self.client.incoming:
+        trackers.append(self.client.get())
+        remaining -= 1
+    for t in trackers:
+      assert self.client.status(t) is ACCEPTED

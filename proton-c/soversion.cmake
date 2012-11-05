@@ -1,1 +1,2 @@
-set (PN_SOVERSION "1.0.0")
+set (PN_LIB_SOMAJOR 1)
+set (PN_LIB_SOMINOR "0.0")

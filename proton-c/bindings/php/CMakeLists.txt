@@ -72,7 +72,7 @@ set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
 set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
 set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.so
+install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}
         COMPONENT PHP)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.php

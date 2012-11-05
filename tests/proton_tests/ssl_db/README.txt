@@ -16,6 +16,7 @@ the CA.
 server-private-key.pem - encrypted key used to create server-certificate.pem. Password is
 "server-password"
 
+bad-server-certificate.pem, bad-server-private-key.pem - a certificate/key that is not trusted by the client, for negative test.
 
 These certificates have been created using the OpenSSL tool.
 
@@ -32,4 +33,5 @@ The following commands were used to create these certificates:
  openssl req -newkey rsa:2048 -keyout client-private-key.pem -passout pass:client-password -out client-request.pem -subj "/O=Client/CN=127.0.0.1"
  openssl x509 -req -in client-request.pem -CA ca-certificate.pem -CAkey ca-private-key.pem -CAcreateserial -passin pass:ca-password -days 99999 -out client-certificate.pem
 
-
+# Create a "bad" certificate - not signed by a trusted authority
+ openssl req -x509 -newkey rsa:2048 -keyout bad-server-private-key.pem -passout pass:server-password -out bad-server-certificate.pem  -days 99999 -subj "/O=Not Trusted, Inc/CN=127.0.0.1"

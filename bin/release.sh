@@ -86,7 +86,6 @@ mkdir -p "${WORKDIR}"
     cd ${WORKDIR}
     svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
     svn export -qr ${REVISION} ${URL}/${BRANCH}/tests ${rootname}/tests
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/examples ${rootname}/examples
 
     cat <<EOF > ${rootname}/SVN_INFO
 Repo: ${URL}
@@ -97,7 +96,6 @@ EOF
     ##
     ## Remove content not for release
     ##
-    rm -rf ${rootname}/examples/broker
     rm -rf ${rootname}/examples/mailbox
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"

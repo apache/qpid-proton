@@ -189,6 +189,8 @@ pn_connector_t *pn_listener_accept(pn_listener_t *listener);
  */
 void *pn_listener_context(pn_listener_t *listener);
 
+void pn_listener_set_context(pn_listener_t *listener, void *context);
+
 /** Close the socket used by the listener.
  *
  * @param[in] listener the listener whose socket will be closed.

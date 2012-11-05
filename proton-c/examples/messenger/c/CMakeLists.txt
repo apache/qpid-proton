@@ -17,25 +17,14 @@
 # under the License.
 #
 
-class SizeGraph:
+add_executable(recv recv.c)
+add_executable(send send.c)
 
-  def __init__(self, queue):
-    self.queue = queue
+target_link_libraries(recv qpid-proton)
+target_link_libraries(send qpid-proton)
 
-  def draw(self, cr, width, height):
-    if self.queue.threshold is None:
-      level = self.queue.size/1000.0
-    else:
-      level = (self.queue.size/(self.queue.threshold*1.1))
-
-    cr.set_source_rgb(0.0, 0.0, 0.8)
-    cr.rectangle(0, 0, 1, level)
-    cr.fill()
-
-    cr.set_source_rgb(0.5, 0.5, 0.5)
-    cr.set_line_width(0.01)
-    cr.rectangle(0, 0, 1, 1)
-    if self.queue.threshold is not None:
-      cr.move_to(0, 1/1.1)
-      cr.line_to(1, 1/1.1)
-    cr.stroke()
+set_target_properties (
+  recv send
+  PROPERTIES
+  COMPILE_FLAGS "${PN_COMPILE_FLAGS}"
+)
