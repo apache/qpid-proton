@@ -227,7 +227,7 @@ int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
 #define pn_tracker_direction(tracker) ((tracker) & (0x1000000000000000))
 #define pn_tracker_sequence(tracker) ((pn_sequence_t) ((tracker) & (0x00000000FFFFFFFF)))
 
-char *build_name(const char *name)
+static char *build_name(const char *name)
 {
   if (name) {
     return pn_strdup(name);
@@ -465,7 +465,7 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
   }
 }
 
-long int millis(struct timeval tv)
+static long int millis(struct timeval tv)
 {
   return tv.tv_sec * 1000 + tv.tv_usec/1000;
 }
@@ -583,7 +583,7 @@ int pn_messenger_stop(pn_messenger_t *messenger)
   return pn_messenger_sync(messenger, pn_messenger_stopped);
 }
 
-bool pn_streq(const char *a, const char *b)
+static bool pn_streq(const char *a, const char *b)
 {
   return a == b || (a && b && !strcmp(a, b));
 }
@@ -836,7 +836,7 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
   }
 }
 
-bool false_pred(pn_messenger_t *messenger) { return false; }
+// static bool false_pred(pn_messenger_t *messenger) { return false; }
 
 int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 {
@@ -900,7 +900,7 @@ pn_queue_t *pn_tracker_queue(pn_messenger_t *messenger, pn_tracker_t tracker)
   }
 }
 
-pn_status_t disp2status(pn_disposition_t disp)
+static pn_status_t disp2status(pn_disposition_t disp)
 {
   if (!disp) return PN_STATUS_PENDING;
 

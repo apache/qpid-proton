@@ -612,7 +612,7 @@ static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata)
 }
 
 
-int start_ssl_shutdown( pn_ssl_t *ssl )
+static int start_ssl_shutdown( pn_ssl_t *ssl )
 {
   if (!ssl->ssl_shutdown) {
     _log(ssl, "Shutting down SSL connection...\n");
