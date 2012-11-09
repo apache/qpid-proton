@@ -717,7 +717,7 @@ pn_type_t pn_code2type(uint8_t code)
   switch (code)
   {
   case PNE_DESCRIPTOR:
-    return PN_ARG_ERR;
+    return (pn_type_t) PN_ARG_ERR;
   case PNE_NULL:
     return PN_NULL;
   case PNE_TRUE:
@@ -783,7 +783,7 @@ pn_type_t pn_code2type(uint8_t code)
     return PN_MAP;
   default:
     printf("Unrecognised typecode: %u\n", code);
-    return PN_ARG_ERR;
+    return (pn_type_t) PN_ARG_ERR;
   }
 }
 
@@ -1117,10 +1117,10 @@ typedef struct {
 
 pn_data_t *pn_data(size_t capacity)
 {
-  pn_data_t *data = malloc(sizeof(pn_data_t));
+  pn_data_t *data = (pn_data_t *) malloc(sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
-  data->nodes = capacity ? malloc(capacity * sizeof(pn_node_t)) : NULL;
+  data->nodes = capacity ? (pn_node_t *) malloc(capacity * sizeof(pn_node_t)) : NULL;
   data->buf = pn_buffer(64);
   data->parent = 0;
   data->current = 0;
@@ -1172,7 +1172,7 @@ void pn_data_clear(pn_data_t *data)
 int pn_data_grow(pn_data_t *data)
 {
   data->capacity = 2*(data->capacity ? data->capacity : 16);
-  data->nodes = realloc(data->nodes, data->capacity * sizeof(pn_node_t));
+  data->nodes = (pn_node_t *) realloc(data->nodes, data->capacity * sizeof(pn_node_t));
   return 0;
 }
 
@@ -1364,7 +1364,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         {
         case 's':
           {
-            char **sptr = ptr;
+            char **sptr = (char **) ptr;
             for (int i = 0; i < count; i++)
             {
               char *sym = *(sptr++);
@@ -1997,7 +1997,7 @@ pn_type_t pn_data_type(pn_data_t *data)
   if (node) {
     return node->atom.type;
   } else {
-    return -1;
+    return (pn_type_t) -1;
   }
 }
 
@@ -2619,7 +2619,7 @@ pn_type_t pn_data_get_array_type(pn_data_t *data)
   if (node && node->atom.type == PN_ARRAY) {
     return node->type;
   } else {
-    return -1;
+    return (pn_type_t) -1;
   }
 }
 

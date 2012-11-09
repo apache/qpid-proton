@@ -341,7 +341,7 @@ ssize_t pn_sasl_output(pn_sasl_t *sasl, char *bytes, size_t size)
 
 int pn_do_init(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = disp->context;
+  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
   pn_bytes_t mech;
   pn_bytes_t recv;
   int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
@@ -354,7 +354,7 @@ int pn_do_init(pn_dispatcher_t *disp)
 
 int pn_do_mechanisms(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = disp->context;
+  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
   sasl->rcvd_init = true;
   return 0;
 }

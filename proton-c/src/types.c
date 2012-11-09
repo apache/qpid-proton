@@ -32,7 +32,7 @@ pn_bytes_t pn_bytes_dup(size_t size, const char *start)
 {
   if (size && start)
   {
-    char *dup = malloc(size);
+    char *dup = (char *) malloc(size);
     memmove(dup, start, size);
     return pn_bytes(size, dup);
   } else {

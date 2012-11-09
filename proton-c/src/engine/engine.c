@@ -419,7 +419,7 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint)
 
 pn_connection_t *pn_connection()
 {
-  pn_connection_t *conn = malloc(sizeof(pn_connection_t));
+  pn_connection_t *conn = (pn_connection_t *) malloc(sizeof(pn_connection_t));
   if (!conn) return NULL;
 
   conn->context = NULL;
@@ -694,7 +694,7 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   if (!conn) return NULL;
-  pn_session_t *ssn = malloc(sizeof(pn_session_t));
+  pn_session_t *ssn = (pn_session_t *) malloc(sizeof(pn_session_t));
   if (!ssn) return NULL;
 
   pn_endpoint_init(&ssn->endpoint, SESSION, conn);
@@ -808,7 +808,7 @@ void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_stat
 
 pn_transport_t *pn_transport()
 {
-  pn_transport_t *transport = malloc(sizeof(pn_transport_t));
+  pn_transport_t *transport = (pn_transport_t *) malloc(sizeof(pn_transport_t));
   if (!transport) return NULL;
 
   transport->connection = NULL;
@@ -906,7 +906,7 @@ int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type)
 
 pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->type : 0;
+  return terminus ? terminus->type : (pn_terminus_type_t) 0;
 }
 
 const char *pn_terminus_get_address(pn_terminus_t *terminus)
@@ -937,7 +937,7 @@ int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
 
 pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->durability : 0;
+  return terminus ? terminus->durability : (pn_durability_t) 0;
 }
 
 int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durability)
@@ -949,7 +949,7 @@ int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durabili
 
 pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->expiry_policy : 0;
+  return terminus ? terminus->expiry_policy : (pn_expiry_policy_t) 0;
 }
 
 int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t expiry_policy)
@@ -1057,7 +1057,7 @@ pn_link_state_t *pn_handle_state(pn_session_state_t *ssn_state, uint32_t handle)
 pn_link_t *pn_sender(pn_session_t *session, const char *name)
 {
   if (!session) return NULL;
-  pn_link_t *snd = malloc(sizeof(pn_link_t));
+  pn_link_t *snd = (pn_link_t *) malloc(sizeof(pn_link_t));
   if (!snd) return NULL;
   pn_link_init(snd, SENDER, session, name);
   return snd;
@@ -1066,7 +1066,7 @@ pn_link_t *pn_sender(pn_session_t *session, const char *name)
 pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 {
   if (!session) return NULL;
-  pn_link_t *rcv = malloc(sizeof(pn_link_t));
+  pn_link_t *rcv = (pn_link_t *) malloc(sizeof(pn_link_t));
   if (!rcv) return NULL;
   pn_link_init(rcv, RECEIVER, session, name);
   return rcv;
@@ -1108,7 +1108,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled);
   if (!delivery) {
-    delivery = malloc(sizeof(pn_delivery_t));
+    delivery = (pn_delivery_t *) malloc(sizeof(pn_delivery_t));
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
@@ -1275,7 +1275,7 @@ void pn_real_settle(pn_delivery_t *delivery)
 
 void pn_full_settle(pn_delivery_buffer_t *db, pn_delivery_t *delivery)
 {
-  pn_delivery_state_t *state = delivery->transport_context;
+  pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
   delivery->transport_context = NULL;
   if (state) state->delivery = NULL;
   pn_real_settle(delivery);
@@ -1325,7 +1325,7 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
 
 int pn_do_open(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_connection_t *conn = transport->connection;
   bool container_q, hostname_q;
   pn_bytes_t remote_container, remote_hostname;
@@ -1368,7 +1368,7 @@ int pn_do_open(pn_dispatcher_t *disp)
 
 int pn_do_begin(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
@@ -1425,7 +1425,7 @@ static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
 
 int pn_do_attach(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_bytes_t name;
   uint32_t handle;
   bool is_sender;
@@ -1519,7 +1519,7 @@ int pn_post_flow(pn_transport_t *transport, pn_session_state_t *ssn_state, pn_li
 int pn_do_transfer(pn_dispatcher_t *disp)
 {
   // XXX: multi transfer
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   uint32_t handle;
   pn_bytes_t tag;
   bool id_present;
@@ -1578,7 +1578,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
 
 int pn_do_flow(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_sequence_t onext, inext, delivery_count;
   uint32_t iwin, owin, link_credit;
   uint32_t handle;
@@ -1682,7 +1682,7 @@ int pn_do_disposition(pn_dispatcher_t *disp)
 
 int pn_do_detach(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   uint32_t handle;
   bool closed;
   int err = pn_scan_args(disp, "D.[Io]", &handle, &closed);
@@ -1709,7 +1709,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
 
 int pn_do_end(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_session_state_t *ssn_state = pn_channel_state(transport, disp->channel);
   pn_session_t *session = ssn_state->session;
 
@@ -1720,7 +1720,7 @@ int pn_do_end(pn_dispatcher_t *disp)
 
 int pn_do_close(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   transport->close_rcvd = true;
   PN_SET_REMOTE(transport->connection->endpoint.state, PN_REMOTE_CLOSED);
   return 0;
@@ -1843,7 +1843,7 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   if (delivery->settled) return false;
   if (pn_link_is_sender(delivery->link)) {
-    pn_delivery_state_t *state = delivery->transport_context;
+    pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
     if (state) {
       return (delivery->done && !state->sent) || pn_buffer_size(delivery->bytes) > 0;
     } else {
@@ -2017,7 +2017,7 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
   pn_modified(transport->connection, &link->session->endpoint);
   // XXX: check for null state
-  pn_delivery_state_t *state = delivery->transport_context;
+  pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
   uint64_t code;
   switch(delivery->local_state) {
   case PN_ACCEPTED:
@@ -2071,7 +2071,7 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
   pn_link_state_t *link_state = pn_link_get_state(ssn_state, link);
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    pn_delivery_state_t *state = delivery->transport_context;
+    pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
     if (!state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
       state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
       delivery->transport_context = state;
@@ -2102,7 +2102,7 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
     }
   }
 
-  pn_delivery_state_t *state = delivery->transport_context;
+  pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
   // XXX: need to prevent duplicate disposition sending
   if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
       && state && state->sent) {
@@ -2533,12 +2533,12 @@ pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 
 pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery)
 {
-  return delivery->local_state;
+  return (pn_disposition_t) delivery->local_state;
 }
 
 pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery)
 {
-  return delivery->remote_state;
+  return (pn_disposition_t) delivery->remote_state;
 }
 
 bool pn_delivery_settled(pn_delivery_t *delivery)

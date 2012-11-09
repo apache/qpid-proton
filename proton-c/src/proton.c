@@ -239,7 +239,7 @@ struct client_context {
 
 void client_callback(pn_connector_t *ctor)
 {
-  struct client_context *ctx = pn_connector_context(ctor);
+  struct client_context *ctx = (struct client_context *) pn_connector_context(ctor);
   if (pn_connector_closed(ctor)) {
     ctx->done = true;
   }

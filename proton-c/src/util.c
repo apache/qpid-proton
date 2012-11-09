@@ -140,7 +140,7 @@ bool pn_env_bool(const char *name)
 char *pn_strdup(const char *src)
 {
   if (src) {
-    char *dest = malloc((strlen(src)+1)*sizeof(char));
+    char *dest = (char *) malloc((strlen(src)+1)*sizeof(char));
     if (!dest) return NULL;
     return strcpy(dest, src);
   } else {
@@ -156,7 +156,7 @@ char *pn_strndup(const char *src, size_t n)
       size++;
     }
 
-    char *dest = malloc(size + 1);
+    char *dest = (char *) malloc(size + 1);
     if (!dest) return NULL;
     strncpy(dest, src, n);
     dest[size] = '\0';

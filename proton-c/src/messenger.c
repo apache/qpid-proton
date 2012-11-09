@@ -242,7 +242,7 @@ static char *build_name(const char *name)
 
 pn_messenger_t *pn_messenger(const char *name)
 {
-  pn_messenger_t *m = malloc(sizeof(pn_messenger_t));
+  pn_messenger_t *m = (pn_messenger_t *) malloc(sizeof(pn_messenger_t));
 
   if (m) {
     m->name = build_name(name);
@@ -492,7 +492,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {
-      pn_subscription_t *sub = pn_listener_context(l);
+      pn_subscription_t *sub = (pn_subscription_t *) pn_listener_context(l);
       char *scheme = sub->scheme;
       pn_connector_t *c = pn_listener_accept(l);
       pn_transport_t *t = pn_connector_transport(c);

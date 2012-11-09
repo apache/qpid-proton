@@ -31,7 +31,7 @@
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 {
-  pn_dispatcher_t *disp = calloc(sizeof(pn_dispatcher_t), 1);
+  pn_dispatcher_t *disp = (pn_dispatcher_t *) calloc(sizeof(pn_dispatcher_t), 1);
 
   disp->frame_type = frame_type;
   disp->context = context;
@@ -49,7 +49,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->frame = pn_buffer( 4*1024 );
   // XXX
   disp->capacity = 4*1024;
-  disp->output = malloc(disp->capacity);
+  disp->output = (char *) malloc(disp->capacity);
   disp->available = 0;
 
   disp->halt = false;
@@ -247,7 +247,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
   while (!(n = pn_write_frame(disp->output + disp->available,
                               disp->capacity - disp->available, frame))) {
     disp->capacity *= 2;
-    disp->output = realloc(disp->output, disp->capacity);
+    disp->output = (char *) realloc(disp->output, disp->capacity);
   }
   if (disp->trace & PN_TRACE_RAW) {
     fprintf(stderr, "RAW: \"");

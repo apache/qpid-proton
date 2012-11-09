@@ -36,11 +36,11 @@ struct pn_buffer_t {
 
 pn_buffer_t *pn_buffer(size_t capacity)
 {
-  pn_buffer_t *buf = malloc(sizeof(pn_buffer_t));
+  pn_buffer_t *buf = (pn_buffer_t *) malloc(sizeof(pn_buffer_t));
   buf->capacity = capacity;
   buf->start = 0;
   buf->size = 0;
-  buf->bytes = capacity ? malloc(capacity) : NULL;
+  buf->bytes = capacity ? (char *) malloc(capacity) : NULL;
   return buf;
 }
 

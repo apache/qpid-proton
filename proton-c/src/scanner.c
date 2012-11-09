@@ -71,7 +71,7 @@ const char *pn_token_type(pn_token_type_t type)
 
 pn_scanner_t *pn_scanner()
 {
-  pn_scanner_t *scanner = malloc(sizeof(pn_scanner_t));
+  pn_scanner_t *scanner = (pn_scanner_t *) malloc(sizeof(pn_scanner_t));
   if (scanner) {
     scanner->input = NULL;
     scanner->error = pn_error();

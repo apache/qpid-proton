@@ -80,7 +80,7 @@ struct pn_message_t {
 
 pn_message_t *pn_message()
 {
-  pn_message_t *msg = malloc(sizeof(pn_message_t));
+  pn_message_t *msg = (pn_message_t *) malloc(sizeof(pn_message_t));
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;
   msg->ttl = 0;

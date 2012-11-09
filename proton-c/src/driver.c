@@ -178,7 +178,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
 {
   if (!driver) return NULL;
 
-  pn_listener_t *l = malloc(sizeof(pn_listener_t));
+  pn_listener_t *l = (pn_listener_t *) malloc(sizeof(pn_listener_t));
   if (!l) return NULL;
   l->driver = driver;
   l->listener_next = NULL;
@@ -348,7 +348,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 {
   if (!driver) return NULL;
 
-  pn_connector_t *c = malloc(sizeof(pn_connector_t));
+  pn_connector_t *c = (pn_connector_t *) malloc(sizeof(pn_connector_t));
   if (!c) return NULL;
   c->driver = driver;
   c->connector_next = NULL;
@@ -614,7 +614,7 @@ void pn_connector_process(pn_connector_t *c) {
 
 pn_driver_t *pn_driver()
 {
-  pn_driver_t *d = malloc(sizeof(pn_driver_t));
+  pn_driver_t *d = (pn_driver_t *) malloc(sizeof(pn_driver_t));
   if (!d) return NULL;
   d->error = pn_error();
   d->listener_head = NULL;
@@ -692,7 +692,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   size_t size = d->listener_count + d->connector_count;
   while (d->capacity < size + 1) {
     d->capacity = d->capacity ? 2*d->capacity : 16;
-    d->fds = realloc(d->fds, d->capacity*sizeof(struct pollfd));
+    d->fds = (struct pollfd *) realloc(d->fds, d->capacity*sizeof(struct pollfd));
   }
 
   d->nfds = 0;

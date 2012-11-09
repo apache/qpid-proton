@@ -36,7 +36,7 @@ struct pn_parser_t {
 
 pn_parser_t *pn_parser()
 {
-  pn_parser_t *parser = malloc(sizeof(pn_parser_t));
+  pn_parser_t *parser = (pn_parser_t *) malloc(sizeof(pn_parser_t));
   parser->scanner = pn_scanner();
   parser->atoms = NULL;
   parser->size = 0;
@@ -48,7 +48,7 @@ void pn_parser_ensure(pn_parser_t *parser, size_t size)
 {
   while (parser->capacity - parser->size < size) {
     parser->capacity = parser->capacity ? 2 * parser->capacity : 1024;
-    parser->atoms = realloc(parser->atoms, parser->capacity);
+    parser->atoms = (char *) realloc(parser->atoms, parser->capacity);
   }
 }
 
