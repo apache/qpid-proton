@@ -912,6 +912,8 @@ static pn_status_t disp2status(pn_disposition_t disp)
   default:
     assert(0);
   }
+
+  return 0;
 }
 
 pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)

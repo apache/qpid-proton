@@ -71,7 +71,7 @@ struct pn_listener_t {
   void *context;
 };
 
-#define IO_BUF_SIZE (4*1024)
+#define IO_BUF_SIZE (64*1024)
 #define PN_NAME_MAX (256)
 
 struct pn_connector_t {

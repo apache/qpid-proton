@@ -40,6 +40,7 @@ struct pn_dispatcher_t {
   uint8_t frame_type;
   pn_trace_t trace;
   pn_buffer_t *input;
+  size_t fragment;
   uint16_t channel;
   uint8_t code;
   pn_data_t *args;
