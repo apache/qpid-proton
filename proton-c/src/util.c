@@ -23,11 +23,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
+#include <strings.h> // For non C89/C99 strcasecmp
 #include <proton/error.h>
 #include <proton/util.h>
 
@@ -85,20 +85,20 @@ void parse_url(char *url, char **scheme, char **user, char **pass, char **host, 
       url = scheme_end + 3;
     }
 
-    char *at = index(url, '@');
+    char *at = strchr(url, '@');
     if (at) {
       *at = '\0';
       char *up = url;
       *user = up;
       url = at + 1;
-      char *colon = index(up, ':');
+      char *colon = strchr(up, ':');
       if (colon) {
         *colon = '\0';
         *pass = colon + 1;
       }
     }
 
-    char *slash = index(url, '/');
+    char *slash = strchr(url, '/');
     if (slash) {
       *slash = '\0';
       *host = url;
@@ -108,7 +108,7 @@ void parse_url(char *url, char **scheme, char **user, char **pass, char **host, 
       *host = url;
     }
 
-    char *colon = index(*host, ':');
+    char *colon = strchr(*host, ':');
     if (colon) {
       *colon = '\0';
       *port = colon + 1;
