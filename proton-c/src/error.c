@@ -92,7 +92,10 @@ int pn_error_from_errno(pn_error_t *error, const char *msg)
 {
   char err[1024];
   strerror_r(errno, err, 1024);
-  return pn_error_format(error, PN_ERR, "%s: %s", msg, err);
+  int code = PN_ERR;
+  if (errno == EINTR)
+      code = PN_INTR;
+  return pn_error_format(error, code, "%s: %s", msg, err);
 }
 
 int pn_error_code(pn_error_t *error)
@@ -116,6 +119,8 @@ const char *pn_code(int code)
   case PN_UNDERFLOW: return "PN_UNDERFLOW";
   case PN_STATE_ERR: return "PN_STATE_ERR";
   case PN_ARG_ERR: return "PN_ARG_ERR";
+  case PN_TIMEOUT: return "PN_TIMEOUT";
+  case PN_INTR: return "PN_INTR";
   default: return "<unknown>";
   }
 }
