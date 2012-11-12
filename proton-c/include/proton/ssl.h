@@ -89,9 +89,9 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode);
  * both SSL servers and SSL clients (if client authentication is required by the server).
  *
  * @param[in] ssl the ssl server/client will provide this certificate.
- * @param[in] certificate_path path to file/database containing the identifying
+ * @param[in] certificate_file path to file/database containing the identifying
  * certificate.
- * @param[in] private_key_path path to file/database containing the private key used to
+ * @param[in] private_key_file path to file/database containing the private key used to
  * sign the certificate
  * @param[in] password the password used to sign the key, else NULL if key is not
  * protected.

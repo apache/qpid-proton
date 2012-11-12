@@ -40,7 +40,7 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile prot
 
 find_program(EPYDOC_EXE epydoc)
 if (EPYDOC_EXE)
-   add_custom_target(docs-py COMMAND ${EPYDOC_EXE} --no-private --html
+   add_custom_target(docs-py COMMAND ${EPYDOC_EXE} -v --no-private --html
                      -o ${CMAKE_CURRENT_BINARY_DIR}/html
                      ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
    add_dependencies(docs docs-py)

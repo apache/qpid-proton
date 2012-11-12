@@ -84,7 +84,7 @@ const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
 
 /** Sets the private key file for a Messenger.
  *
- * @param[in] messenger the messenger
+ * @param[in] messenger the Messenger
  * @param[in] private_key a path to a private key file
  *
  * @return an error code of zero if there is no error
@@ -134,7 +134,7 @@ const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
  * infinite.
  *
  * @param[in] messenger the messenger
- * @param[timeout] the new timeout for the messenger, in milliseconds
+ * @param[in] timeout the new timeout for the messenger, in milliseconds
  *
  * @return an error code or zero if there is no error
  */
@@ -164,7 +164,7 @@ void pn_messenger_free(pn_messenger_t *messenger);
  */
 int pn_messenger_errno(pn_messenger_t *messenger);
 
-/** Returns the error info for the Messenger.
+/** Returns the error info for a Messenger.
  *
  * @param[in] messenger the messenger to check for errors
  *
@@ -173,16 +173,73 @@ int pn_messenger_errno(pn_messenger_t *messenger);
  */
 const char *pn_messenger_error(pn_messenger_t *messenger);
 
+/** Gets the accept mode for a Messenger. @see
+ * ::pn_messenger_set_accept_mode
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return one of PN_ACCEPT_MODE_AUTO or PN_ACCEPT_MODE_MANUAL
+ */
 pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
 
+/** Set the accept mode for a Messenger. If set to
+ * PN_ACCEPT_MODE_AUTO, the messenger will automatically accept every
+ * message as it is returned by pn_messenger_get(). If set to
+ * PN_ACCEPT_MODE_MANUAL, incoming messages must be manually accepted
+ * or rejected (either individually or cumulatively) via
+ * pn_messenger_accept() and/or pn_messenger_reject().
+ *
+ * @param[in] messenger the messenger to set the accept mode for
+ * @param[in] mode one of PN_ACCEPT_MODE_AUTO or PN_ACCEPT_MODE_MANUAL
+ *
+ * @return an error code or zero on success
+ * @see error.h
+ */
 int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode);
 
+/** Gets the outgoing window for a Messenger. @see
+ * ::pn_messenger_set_outgoing_window
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return the outgoing window
+ */
 int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
 
+/** Sets the outgoing window for a Messenger. If the outgoing window
+ *  is set to a positive value, then after each call to
+ *  pn_messenger_send, the Messenger will track the status of that
+ *  many deliveries. @see ::pn_messenger_status
+ *
+ * @param[in] messenger the Messenger
+ * @param[in] window the number of deliveries to track
+ *
+ * @return an error or zero on success
+ * @see error.h
+ */
 int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
 
+/** Gets the incoming window for a Messenger. @see
+ * ::pn_messenger_set_incoming_window
+ *
+ * @param[in] messenger the Messenger
+ *
+ * @return the incoming window
+ */
 int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
 
+/** Sets the incoming window for a Messenger. If the incoming window
+ *  is set to a positive value, then after each call to
+ *  pn_messenger_accept or pn_messenger_reject, the Messenger will
+ *  track the status of that many deliveries. @see
+ *  ::pn_messenger_status
+ *
+ * @param[in] messenger the Messenger
+ * @param[in] window the number of deliveries to track
+ *
+ * @return an error or zero on success
+ * @see error.h
+ */
 int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
 
 /** Starts a messenger. A messenger cannot send or recv messages until
@@ -238,6 +295,17 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  */
 pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
 
+/** Frees a Messenger from tracking the status associated with a given
+ * tracker. Use the PN_CUMULATIVE flag to indicate everything up to
+ * (and including) the given tracker.
+ *
+ * @param[in] messenger the Messenger
+ * @param[in] tracker identifies a delivery
+ * @param[in] flags 0 or PN_CUMULATIVE
+ *
+ * @return an error code or zero on success
+ * @see error.h
+ */
 int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /** Gets the tracker for the message most recently provided to
@@ -302,6 +370,8 @@ pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger)
  * tracker.
  *
  * @param[in] messenger the messenger
+ * @param[in] tracker an incoming tracker
+ * @param[in] flags 0 or PN_CUMULATIVE
  *
  * @return an error code or zero on success
  * @see error.h
@@ -312,7 +382,9 @@ int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
  * PN_CUMULATIVE flag to reject everything prior to the supplied
  * tracker.
  *
- * @param[in] messenger the messenger
+ * @param[in] messenger the Messenger
+ * @param[in] tracker an incoming tracker
+ * @param[in] flags 0 or PN_CUMULATIVE
  *
  * @return an error code or zero on success
  * @see error.h
@@ -321,7 +393,7 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
 
 /** Returns the number of messages in the outgoing message queue of a messenger.
  *
- * @param[in] the messenger
+ * @param[in] messenger the Messenger
  *
  * @return the outgoing queue depth
  */
@@ -329,7 +401,7 @@ int pn_messenger_outgoing(pn_messenger_t *messenger);
 
 /** Returns the number of messages in the incoming message queue of a messenger.
  *
- * @param[in] the messenger
+ * @param[in] messenger the Messenger
  *
  * @return the incoming queue depth
  */

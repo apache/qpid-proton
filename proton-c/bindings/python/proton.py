@@ -267,7 +267,9 @@ operations performed by the L{Messenger}.
   accept_mode = property(_get_accept_mode, _set_accept_mode,
                          doc="""
 The accept mode for the messenger. Can be set to AUTOMATIC or MANUAL.
-The default is AUTOMATIC.
+The default is AUTOMATIC. If set to MANUAL, then every incoming
+message must be accepted or rejected (either individually or
+cummulatively) via the accept and reject methods.
 """)
 
   def _get_incoming_window(self):
@@ -279,7 +281,8 @@ The default is AUTOMATIC.
   incoming_window = property(_get_incoming_window, _set_incoming_window,
                              doc="""
 The incoming tracking window for the messenger. The messenger will
-track the status of this many incoming deliveries. Defaults to zero.
+track the remote status of this many incoming deliveries after they
+have been accepted or rejected. Defaults to zero.
 """)
 
   def _get_outgoing_window(self):
@@ -291,7 +294,8 @@ track the status of this many incoming deliveries. Defaults to zero.
   outgoing_window = property(_get_outgoing_window, _set_outgoing_window,
                              doc="""
 The outgoing tracking window for the messenger. The messenger will
-track the status of this many outgoing deliveries. Defaults to zero.
+track the remote status of this many outgoing deliveries after calling
+send. Defaults to zero.
 """)
 
   def start(self):
@@ -345,12 +349,22 @@ track the status of this many outgoing deliveries. Defaults to zero.
 
     @type message: Message
     @param message: the message to place in the outgoing queue
+    @return: a tracker
     """
     message._pre_encode()
     self._check(pn_messenger_put(self._mng, message._msg))
     return pn_messenger_outgoing_tracker(self._mng)
 
   def status(self, tracker):
+    """
+    Gets the last known remote state of the delivery associated with
+    the given tracker.
+
+    @type tracker: tracker
+    @param tracker: the tracker whose status is to be retrieved
+
+    @return: one of None, PENDING, REJECTED, or ACCEPTED
+    """
     disp = pn_messenger_status(self._mng, tracker);
     return STATUSES.get(disp, disp)
 
@@ -386,6 +400,7 @@ track the status of this many outgoing deliveries. Defaults to zero.
 
     @type message: Message
     @param message: the destination message object
+    @return: a tracker
     """
     if message is None:
       impl = None
@@ -397,6 +412,12 @@ track the status of this many outgoing deliveries. Defaults to zero.
     return pn_messenger_incoming_tracker(self._mng)
 
   def accept(self, tracker=None):
+    """
+    Accepts messages retreived from the incoming message queue.
+
+    @type tracker: tracker
+    @param tracker: a tracker as returned by get
+    """
     if tracker is None:
       tracker = pn_messenger_incoming_tracker(self._mng)
       flags = PN_CUMULATIVE
@@ -405,6 +426,12 @@ track the status of this many outgoing deliveries. Defaults to zero.
     self._check(pn_messenger_accept(self._mng, tracker, flags))
 
   def reject(self, tracker=None):
+    """
+    Rejects messages retreived from the incoming message queue.
+
+    @type tracker: tracker
+    @param tracker: a tracker as returned by get
+    """
     if tracker is None:
       tracker = pn_messenger_incoming_tracker(self._mng)
       flags = PN_CUMULATIVE

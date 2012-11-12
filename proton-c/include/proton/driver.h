@@ -37,12 +37,12 @@ extern "C" {
  * The driver library provides a simple implementation of a driver for
  * the proton engine. A driver is responsible for providing input,
  * output, and tick events to the bottom half of the engine API. See
- * ::pn_input, ::pn_output, and ::pn_tick. The driver also provides an
- * interface for the application to access the top half of the API
- * when the state of the engine may have changed due to I/O or timing
- * events. Additionally the driver incorporates the SASL engine as
- * well in order to provide a complete network stack: AMQP over SASL
- * over TCP.
+ * ::pn_transport_input, ::pn_transport_output, and
+ * ::pn_transport_tick. The driver also provides an interface for the
+ * application to access the top half of the API when the state of the
+ * engine may have changed due to I/O or timing events. Additionally
+ * the driver incorporates the SASL engine as well in order to provide
+ * a complete network stack: AMQP over SASL over TCP.
  *
  */
 
@@ -298,7 +298,7 @@ pn_connection_t *pn_connector_connection(pn_connector_t *connector);
  * @param[in] connection the connection to associate with the
  *                       connector
  */
-void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection);
+void pn_connector_set_connection(pn_connector_t *connector, pn_connection_t *connection);
 
 /** Access the application context that is associated with the
  *  connector.
