@@ -46,17 +46,12 @@ bool pn_env_bool(const char *name);
 
 #define DIE_IFE(EXPR)                                                   \
   do {                                                                  \
-    int __code__;                                                       \
-    do {                                                                \
-      __code__ = 0;                                                     \
-      if ((EXPR) == -1) {                                               \
-        __code__ = errno;                                               \
-        if (__code__ == EINTR) continue;                                \
-        fprintf(stderr, "%s:%d: %s: %s (%d)\n", __FILE__, __LINE__,     \
-                #EXPR, strerror(__code__), __code__);                   \
-        exit(-1);                                                       \
-      }                                                                 \
-    } while (__code__ == EINTR);                                        \
+    if ((EXPR) == -1) {                                                 \
+      int __code__ = errno;                                             \
+      fprintf(stderr, "%s:%d: %s: %s (%d)\n", __FILE__, __LINE__,       \
+              #EXPR, strerror(__code__), __code__);                     \
+      exit(-1);                                                         \
+    }                                                                   \
   } while (0)
 
 
