@@ -99,8 +99,10 @@ int pn_driver_wakeup(pn_driver_t *driver);
  * @param[in] driver the driver to wait on
  * @param[in] timeout maximum time in milliseconds to wait, -1 means
  *                    infinite wait
+ *
+ * @return zero on success, an error code on failure
  */
-void pn_driver_wait(pn_driver_t *driver, int timeout);
+int pn_driver_wait(pn_driver_t *driver, int timeout);
 
 /** Get the next listener with pending data in the driver.
  *

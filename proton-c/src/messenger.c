@@ -488,7 +488,9 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     int remaining = deadline - millis(now);
     if (pred || (timeout >= 0 && remaining < 0)) break;
 
-    pn_driver_wait(messenger->driver, remaining);
+    int error = pn_driver_wait(messenger->driver, remaining);
+    if (error)
+        return error;
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {

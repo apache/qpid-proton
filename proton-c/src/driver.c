@@ -731,9 +731,11 @@ void pn_driver_wait_1(pn_driver_t *d)
   pn_driver_rebuild(d);
 }
 
-void pn_driver_wait_2(pn_driver_t *d, int timeout)
+int pn_driver_wait_2(pn_driver_t *d, int timeout)
 {
-  DIE_IFE(poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout));
+    if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
+        return pn_error_from_errno(d->error, "poll");
+    return 0;
 }
 
 void pn_driver_wait_3(pn_driver_t *d)
@@ -778,11 +780,14 @@ void pn_driver_wait_3(pn_driver_t *d)
 //       This workaround will eventually be replaced by a more elegant solution
 //       to the problem.
 //
-void pn_driver_wait(pn_driver_t *d, int timeout)
+int pn_driver_wait(pn_driver_t *d, int timeout)
 {
     pn_driver_wait_1(d);
-    pn_driver_wait_2(d, timeout);
+    int error = pn_driver_wait_2(d, timeout);
+    if (error)
+        return error;
     pn_driver_wait_3(d);
+    return 0;
 }
 
 pn_listener_t *pn_driver_listener(pn_driver_t *d) {
