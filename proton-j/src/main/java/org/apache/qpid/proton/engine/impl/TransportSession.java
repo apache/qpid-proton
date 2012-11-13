@@ -338,7 +338,7 @@ class TransportSession
                 if(Boolean.TRUE.equals(disposition.getSettled()))
                 {
                     delivery.setRemoteSettled(true);
-
+                    unsettledDeliveries.remove(id);
                 }
                 delivery.addToWorkList();
             }
@@ -371,12 +371,14 @@ class TransportSession
     {
         if(transportDelivery.getTransportLink().getLink() instanceof ReceiverImpl)
         {
+            _unsettledIncomingDeliveriesById.remove(transportDelivery.getDeliveryId());
             _incomingWindowSize = _incomingWindowSize.add( UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
             _incomingWindowSizeChange = true;
             getSession().modified();
         }
         else
         {
+            _unsettledOutgoingDeliveriesById.remove(transportDelivery.getDeliveryId());
             _outgoingWindowSize = _outgoingWindowSize.add(UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
             _outgoingWindowSizeChange = true;
             getSession().modified();
