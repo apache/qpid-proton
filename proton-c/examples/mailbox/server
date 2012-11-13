@@ -239,34 +239,22 @@ class MailboxServer(object):
     def setupLink(self, link):
         """ Configure a link coming from a client.
         """
-        r_tgt = pn_link_remote_target(link)
-        r_src = pn_link_remote_source(link)
+        pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
+        pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
 
         if pn_link_is_sender(link):
-            mbox = pn_terminus_get_address(r_src)
+            mbox = pn_terminus_get_address(pn_link_source(link))
             self.log("Opening Link to read from mailbox: %s" % mbox)
-            if mbox not in self.mailboxes:
-                print("Error: mailbox %s does not exist!" % mbox)
-                mbox = None  # indicate to remote the mailbox does not exist
-        else:
-            mbox = pn_terminus_get_address(r_tgt)
-            self.log("Opening Link to write to mailbox: %s" % mbox)
-            if mbox not in self.mailboxes:
-                self.mailboxes[mbox] = []     # create a new mailbox
-
-        pn_terminus_set_address(pn_link_target(link),
-                                pn_terminus_get_address(r_tgt))
-        pn_terminus_set_address(pn_link_source(link),
-                                pn_terminus_get_address(r_src))
-
-        if pn_link_is_sender(link):
-            # grant a delivery to the link - it will become "writable" when the
-            # driver can accept messages for the sender.
             pn_delivery(link, "server-delivery-%d" % self.counter)
             self.counter += 1
         else:
+            mbox = pn_terminus_get_address(pn_link_target(link))
+            self.log("Opening Link to write to mailbox: %s" % mbox)
             # Grant enough credit to the receiver to allow one inbound message
             pn_link_flow(link, 1)
+
+        if mbox not in self.mailboxes:
+            self.mailboxes[mbox] = []     # create a new mailbox
 
         pn_link_open(link)
 
@@ -353,16 +341,12 @@ class MailboxServer(object):
         message data, process it, then accept the message.
         """
         link = pn_delivery_link(delivery)
-        tgt = pn_link_remote_target(link)
-        mbox = pn_terminus_get_address(tgt)
+        mbox = pn_terminus_get_address(pn_link_target(link))
         rc, msg = pn_link_recv(link, 1024);
         self.log("Msg Received %d" % rc);
         while rc >= 0:
-            if mbox not in self.mailboxes:
-                print("Error: cannot sent to mailbox %s - dropping message." % mbox)
-            else:
-                self.mailboxes[mbox].append(msg)
-                self.log("Mailbox %s contains: %s" % (mbox, str(self.mailboxes[mbox])))
+            self.mailboxes[mbox].append(msg)
+            self.log("Mailbox %s contains: %s" % (mbox, str(self.mailboxes[mbox])))
             rc, msg = pn_link_recv(link, 1024);
 
         # now that we hit the end of the message, update the
@@ -386,15 +370,15 @@ class MailboxServer(object):
         remote accepts it (and updates the delivery's disposition).
         """
         link = pn_delivery_link(delivery)
-        r_src = pn_link_remote_source(link)
-        mbox = pn_terminus_get_address(r_src)
+        mbox = pn_terminus_get_address(pn_link_source(link))
         self.log("Request for Mailbox=%s" % str(mbox))
         if mbox in self.mailboxes and self.mailboxes[mbox]:
             msg = self.mailboxes[mbox].pop(0)
-            self.log("Fetching message %s" % str(msg))
+            self.log("Fetched message %s" % str(msg))
+            msg = "%s=%s" % (mbox, msg)
         else:
             print("Warning: mailbox %s is empty, sending empty message." % mbox)
-            msg = ""
+            msg = "<EMPTY>"
         sent = pn_link_send(link, msg)
         assert(sent == len(msg))
         self.log("Msg Sent %d" % sent);
