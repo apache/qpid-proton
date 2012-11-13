@@ -102,7 +102,10 @@ public class DeliveryImpl implements Delivery
     public void disposition(final DeliveryState state)
     {
         _deliveryState = state;
-        setTransportFlag(DELIVERY_STATE_CHANGED);
+        if(!_remoteSettled)
+        {
+            setTransportFlag(DELIVERY_STATE_CHANGED);
+        }
     }
 
     public void settle()
