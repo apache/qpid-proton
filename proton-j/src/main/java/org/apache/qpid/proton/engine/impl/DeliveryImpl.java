@@ -114,15 +114,7 @@ public class DeliveryImpl implements Delivery
         {
             _link.advance();
         }
-    }
 
-    DeliveryImpl getLinkNext()
-    {
-        return _linkNext;
-    }
-
-    public void free()
-    {
         _link.remove(this);
         if(_linkPrevious != null)
         {
@@ -132,6 +124,17 @@ public class DeliveryImpl implements Delivery
         {
             _linkNext._linkPrevious = _linkPrevious;
         }
+        clearWork();
+    }
+
+    DeliveryImpl getLinkNext()
+    {
+        return _linkNext;
+    }
+
+    public void free()
+    {
+
     }
 
     DeliveryImpl getLinkPrevious()
@@ -205,7 +208,6 @@ public class DeliveryImpl implements Delivery
             _workNext.setWorkPrev(_workPrev);
 
         }
-        _workNext = null;
         _workPrev = null;
     }
 
