@@ -97,7 +97,7 @@ module Qpid
 
       it "rejects a negative priority" do
         expect {
-          @message.priority = (0 - (rand(256)))
+          @message.priority = (0 - (rand(255) + 1))
         }.to raise_error(RangeError)
       end
 
