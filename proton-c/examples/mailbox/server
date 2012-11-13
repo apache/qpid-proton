@@ -169,27 +169,28 @@ class MailboxServer(object):
         while cxtr:
             self.log("Process Connector")
 
-            # process any data coming from the network, this will update the
-            # engine's view of the state of the remote clients
-            pn_connector_process(cxtr)
-
-            state = pn_connector_context(cxtr)
-            if state == AUTHENTICATING:
-                # connection has not passed SASL authentication yet
-                self.authenticateConnector(cxtr)
-            elif state == CONNECTION_UP:
-                # active connection, service any engine events
-                self.serviceConnector(cxtr)
-            else:
-                print("Error: Unknown Connection state=%s" % state)
-
-            # now generate any outbound network data generated in reponse to
-            # any work done by the engine.
-            pn_connector_process(cxtr)
-
+            # weed out any connector that has been closed
             if pn_connector_closed(cxtr):
                 self.log("Closing connector")
                 pn_connector_free(cxtr)
+            else:
+                # process any data coming from the network, this will update the
+                # engine's view of the state of the remote clients
+                pn_connector_process(cxtr)
+
+                state = pn_connector_context(cxtr)
+                if state == AUTHENTICATING:
+                    # connection has not passed SASL authentication yet
+                    self.authenticateConnector(cxtr)
+                elif state == CONNECTION_UP:
+                    # active connection, service any engine events
+                    self.serviceConnector(cxtr)
+                else:
+                    print("Error: Unknown Connection state=%s" % state)
+
+                # now generate any outbound network data generated in reponse to
+                # any work done by the engine.
+                pn_connector_process(cxtr)
 
             cxtr = pn_driver_connector(self.driver)
 
