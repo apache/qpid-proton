@@ -110,7 +110,8 @@ class FetchClient(object):
         self.log("Fetching from mailbox = %s" % self.mailbox)
         self.ssn = pn_session(self.conn)
         self.link = pn_receiver(self.ssn, "receiver")
-        pn_set_source(self.link, self.mailbox)
+        src = pn_link_source(self.link)
+        pn_terminus_set_address(src, self.mailbox)
 
         # now open all the engine endpoints
         pn_connection_open(self.conn)
@@ -161,11 +162,11 @@ class FetchClient(object):
         """
         # locally settle any remotely settled deliveries
         d = pn_unsettled_head(self.link)
-        while d and not pn_readable(d):    # can stop when we hit first
+        while d and not pn_delivery_readable(d):    # can stop when we hit first
             # delivery that has not yet been read
             _next = pn_unsettled_next(d)
-            if pn_remote_settled(d):   # remote has seen our ack (or doesn't care)
-                pn_settle(d)   # now free it
+            if pn_delivery_settled(d):   # remote has seen our ack (or doesn't care)
+                pn_delivery_settle(d)   # now free it
             d = _next
 
 
@@ -222,40 +223,40 @@ def main():
             return -1;
 
     # check if the server recognizes the mailbox, fail if it does not
-    if pn_remote_source(receiver.link) != options.mailbox:
+    if pn_link_remote_source(receiver.link) != options.mailbox:
         print("Error: mailbox %s does not exist!" % options.mailbox)
         return -2
 
     # Allow the server to send "count" messages to the receiver by setting
     # the credit to the expected count
-    pn_flow(receiver.link, options.count)
+    pn_link_flow(receiver.link, options.count)
 
     # main loop: continue fetching messages until 'count' messages have been
     # retrieved
 
-    while pn_credit(receiver.link) > 0 and not receiver.closed():    # while all msgs have not arrived
-        if pn_queued(receiver.link) == 0:  # wait for some to arrive
+    while pn_link_credit(receiver.link) > 0 and not receiver.closed():    # while all msgs have not arrived
+        if pn_link_queued(receiver.link) == 0:  # wait for some to arrive
             receiver.wait()
 
         # read all queued deliveries
-        while pn_queued(receiver.link):
-            delivery = pn_current(receiver.link)
+        while pn_link_queued(receiver.link):
+            delivery = pn_link_current(receiver.link)
             # read all bytes of message
-            rc, msg = pn_recv(receiver.link, pn_pending(delivery))
+            rc, msg = pn_link_recv(receiver.link, pn_delivery_pending(delivery))
             receiver.log("Received count/status=%d" % rc)
             if rc < 0:
                 print("Error: Receive failed (%s), exiting..." % rc)
                 return -3
             print("%s" % msg)
             # let the server know we accept the message
-            pn_disposition(delivery, PN_ACCEPTED)
-            pn_advance(receiver.link)      # next delivery
+            pn_delivery_update(delivery, PN_ACCEPTED)
+            pn_link_advance(receiver.link)      # next delivery
 
         # settle any deliveries that the server has seen
         receiver.settle()
 
     # block until any leftover deliveries are settled
-    while pn_unsettled(receiver.link) > 0 and not receiver.closed():
+    while pn_link_unsettled(receiver.link) > 0 and not receiver.closed():
         receiver.wait()
         receiver.settle()
 

@@ -155,7 +155,7 @@ class MailboxServer(object):
 
                 # TODO: client authentication incomplete, for now skip peer verification
                 rc = pn_ssl_set_peer_authentication(ssl_server,
-                                                    PN_SSL_NO_VERIFY_PEER,
+                                                    PN_SSL_ANONYMOUS_PEER,
                                                     None)
                 assert(rc == 0)
 
@@ -238,10 +238,10 @@ class MailboxServer(object):
     def setupLink(self, link):
         """ Configure a link coming from a client.
         """
-        r_tgt = pn_remote_target(link)
-        r_src = pn_remote_source(link)
+        r_tgt = pn_link_remote_target(link)
+        r_src = pn_link_remote_source(link)
 
-        if pn_is_sender(link):
+        if pn_link_is_sender(link):
             self.log("Opening Link to read from mailbox: %s" % r_src)
             if r_src not in self.mailboxes:
                 print("Error: mailbox %s does not exist!" % r_src)
@@ -251,17 +251,17 @@ class MailboxServer(object):
             if r_tgt not in self.mailboxes:
                 self.mailboxes[r_tgt] = []     # create a new mailbox
 
-        pn_set_target(link, r_tgt)
-        pn_set_source(link, r_src)
+        #pn_set_target(link, r_tgt)
+        #pn_set_source(link, r_src)
 
-        if pn_is_sender(link):
+        if pn_link_is_sender(link):
             # grant a delivery to the link - it will become "writable" when the
             # driver can accept messages for the sender.
             pn_delivery(link, "server-delivery-%d" % self.counter)
             self.counter += 1
         else:
             # Grant enough credit to the receiver to allow one inbound message
-            pn_flow(link, 1)
+            pn_link_flow(link, 1)
 
         pn_link_open(link)
 
@@ -303,19 +303,19 @@ class MailboxServer(object):
         while delivery:
             self.log("Process delivery %s." % pn_delivery_tag(delivery))
 
-            if pn_readable(delivery):   # inbound data available
+            if pn_delivery_readable(delivery):   # inbound data available
                 self.processReceive(delivery)
-            elif pn_writable(delivery): # can send a message
+            elif pn_delivery_writable(delivery): # can send a message
                 self.sendMessage(delivery)
 
-            if pn_updated(delivery):
+            if pn_delivery_updated(delivery):
                 # check to see if the remote has accepted message we sent
                 self.log("remote disposition for %s: %s " % (str(pn_delivery_tag(delivery)),
-                                                             str(pn_remote_disposition(delivery))))
-                if pn_remote_disposition(delivery):
+                                                             str(pn_delivery_remote_state(delivery))))
+                if pn_delivery_remote_state(delivery):
                     # once we know the remote has seen the message, we can
                     # release the delivery.
-                    pn_settle(delivery)
+                    pn_delivery_settle(delivery)
 
             delivery = pn_work_next(delivery)
 
@@ -347,9 +347,10 @@ class MailboxServer(object):
         """ A delivery has indicated that message data is available.  Read the
         message data, process it, then accept the message.
         """
-        link = pn_link(delivery)
-        mbox = pn_remote_target(link)
-        rc, msg = pn_recv(link, 1024);
+        link = pn_delivery_link(delivery)
+        tgt = pn_link_remote_target(link)
+        mbox = pn_terminus_get_address(tgt)
+        rc, msg = pn_link_recv(link, 1024);
         self.log("Msg Received %d" % rc);
         while rc >= 0:
             if mbox not in self.mailboxes:
@@ -357,21 +358,21 @@ class MailboxServer(object):
             else:
                 self.mailboxes[mbox].append(msg)
                 self.log("Mailbox %s contains: %s" % (mbox, str(self.mailboxes[mbox])))
-            rc, msg = pn_recv(link, 1024);
+            rc, msg = pn_link_recv(link, 1024);
 
         # now that we hit the end of the message, update the
         # disposition to let the remote know we accepted it.
         self.log("Msg Accepted.");
-        pn_disposition(delivery, PN_ACCEPTED)
+        pn_delivery_update(delivery, PN_ACCEPTED)
 
         # since we no longer have any more work to do on this delivery, finish
         # it and move to the next.
-        pn_settle(delivery)
-        pn_advance(link)
+        pn_delivery_settle(delivery)
+        pn_link_advance(link)
 
         # if more credit is needed, grant it
-        if pn_credit(link) == 0:
-            pn_flow(link, 1)
+        if pn_link_credit(link) == 0:
+            pn_link_flow(link, 1)
 
 
     def sendMessage(self, delivery):
@@ -379,8 +380,8 @@ class MailboxServer(object):
         message.  Send a message over the link, but do not settle it until the
         remote accepts it (and updates the delivery's disposition).
         """
-        link = pn_link(delivery)
-        mbox = pn_remote_source(link)
+        link = pn_delivery_link(delivery)
+        mbox = pn_link_remote_source(link)
         self.log("Request for Mailbox=%s" % str(mbox))
         if mbox in self.mailboxes and self.mailboxes[mbox]:
             msg = self.mailboxes[mbox].pop(0)
@@ -388,13 +389,13 @@ class MailboxServer(object):
         else:
             print("Warning: mailbox %s is empty, sending empty message." % mbox)
             msg = ""
-        sent = pn_send(link, msg)
+        sent = pn_link_send(link, msg)
         assert(sent == len(msg))
         self.log("Msg Sent %d" % sent);
 
         # if the link can accept more ???RAFI, is that correct????, grant
         # another delivery
-        if pn_advance(link):
+        if pn_link_advance(link):
             pn_delivery(link, "server-delivery-%d" % self.counter)
             self.counter += 1
 

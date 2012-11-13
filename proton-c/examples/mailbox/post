@@ -111,7 +111,8 @@ class PostClient(object):
         self.log("Posting to mailbox = %s" % self.mailbox)
         self.ssn = pn_session(self.conn)
         self.link = pn_sender(self.ssn, "sender")
-        pn_set_target(self.link, self.mailbox)
+        dst = pn_link_target(self.link)
+        pn_terminus_set_address(dst, self.mailbox)
 
         # now open all the engine endpoints
         pn_connection_open(self.conn)
@@ -165,11 +166,11 @@ class PostClient(object):
             _next = pn_unsettled_next(d)
             # if the remote has either settled this delivery OR set the
             # disposition, we consider the message received.
-            disp = pn_remote_disposition(d)
+            disp = pn_delivery_remote_state(d)
             if disp and disp != PN_ACCEPTED:
                 print("Warning: message was not accepted by the remote!")
-            if disp or pn_remote_settled(d):
-                pn_settle(d)
+            if disp or pn_delivery_settled(d):
+                pn_delivery_settle(d)
             d = _next
 
 
@@ -223,27 +224,27 @@ def main():
     pendingSends = list(options.messages)
     while pendingSends:
         # wait until the server grants us some send credit
-        if pn_credit(sender.link) == 0:
+        if pn_link_credit(sender.link) == 0:
             sender.log("wait for credit")
             sender.wait()
 
-        while pn_credit(sender.link) > 0 and not sender.closed():
+        while pn_link_credit(sender.link) > 0 and not sender.closed():
             msg = pendingSends.pop(0)
             sender.log("sending %s" % msg)
             d = pn_delivery(sender.link, "post-delivery-%s" % len(pendingSends))
-            rc = pn_send(sender.link, msg)
+            rc = pn_link_send(sender.link, msg)
             if (rc < 0):
                 print("Error: sending message: %s" % rc)
                 return -2
             assert rc == len(msg)
-            pn_advance(sender.link)  # deliver the message
+            pn_link_advance(sender.link)  # deliver the message
 
         # settle any deliveries that the server has accepted
         sender.settle()
 
     # done sending, now block until any pending deliveries are settled
     sender.log("Done sending messages, waiting for deliveries to settle...");
-    while pn_unsettled(sender.link) > 0 and not sender.closed():
+    while pn_link_unsettled(sender.link) > 0 and not sender.closed():
         sender.wait()
         sender.settle()
 
