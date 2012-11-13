@@ -391,7 +391,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     UnsignedInteger deliveryId = transportLink.getDeliveryCount();
                     TransportDelivery transportDelivery = new TransportDelivery(deliveryId, delivery, transportLink);
                     delivery.setTransportDelivery(transportDelivery);
-                    sender.getSession().getTransportSession().addUnsettledOutgoing(deliveryId, delivery);
 
                     final Transfer transfer = new Transfer();
                     transfer.setDeliveryId(deliveryId);
@@ -402,6 +401,11 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     {
                         transfer.setSettled(Boolean.TRUE);
                     }
+                    else
+                    {
+                        sender.getSession().getTransportSession().addUnsettledOutgoing(deliveryId, delivery);
+                    }
+
                     if(delivery.getLink().current() == delivery)
                     {
                         transfer.setMore(true);
