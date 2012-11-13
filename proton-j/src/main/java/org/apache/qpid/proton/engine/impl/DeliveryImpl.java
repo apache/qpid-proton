@@ -109,7 +109,14 @@ public class DeliveryImpl implements Delivery
     {
         _settled = true;
         _link.decrementUnsettled();
-        setTransportFlag(DELIVERY_STATE_CHANGED);
+        if(!_remoteSettled)
+        {
+            setTransportFlag(DELIVERY_STATE_CHANGED);
+        }
+        else
+        {
+            _transportDelivery.settled();
+        }
         if(_link.current() == this)
         {
             _link.advance();
