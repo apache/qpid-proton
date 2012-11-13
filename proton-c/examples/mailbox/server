@@ -242,17 +242,21 @@ class MailboxServer(object):
         r_src = pn_link_remote_source(link)
 
         if pn_link_is_sender(link):
-            self.log("Opening Link to read from mailbox: %s" % r_src)
-            if r_src not in self.mailboxes:
-                print("Error: mailbox %s does not exist!" % r_src)
-                r_src = None  # indicate to remote the mailbox does not exist
+            mbox = pn_terminus_get_address(r_src)
+            self.log("Opening Link to read from mailbox: %s" % mbox)
+            if mbox not in self.mailboxes:
+                print("Error: mailbox %s does not exist!" % mbox)
+                mbox = None  # indicate to remote the mailbox does not exist
         else:
-            self.log("Opening Link to write to mailbox: %s" % r_tgt)
-            if r_tgt not in self.mailboxes:
-                self.mailboxes[r_tgt] = []     # create a new mailbox
+            mbox = pn_terminus_get_address(r_tgt)
+            self.log("Opening Link to write to mailbox: %s" % mbox)
+            if mbox not in self.mailboxes:
+                self.mailboxes[mbox] = []     # create a new mailbox
 
-        #pn_set_target(link, r_tgt)
-        #pn_set_source(link, r_src)
+        pn_terminus_set_address(pn_link_target(link),
+                                pn_terminus_get_address(r_tgt))
+        pn_terminus_set_address(pn_link_source(link),
+                                pn_terminus_get_address(r_src))
 
         if pn_link_is_sender(link):
             # grant a delivery to the link - it will become "writable" when the
@@ -381,7 +385,8 @@ class MailboxServer(object):
         remote accepts it (and updates the delivery's disposition).
         """
         link = pn_delivery_link(delivery)
-        mbox = pn_link_remote_source(link)
+        r_src = pn_link_remote_source(link)
+        mbox = pn_terminus_get_address(r_src)
         self.log("Request for Mailbox=%s" % str(mbox))
         if mbox in self.mailboxes and self.mailboxes[mbox]:
             msg = self.mailboxes[mbox].pop(0)

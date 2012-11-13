@@ -223,7 +223,8 @@ def main():
             return -1;
 
     # check if the server recognizes the mailbox, fail if it does not
-    if pn_link_remote_source(receiver.link) != options.mailbox:
+    r_tgt = pn_link_remote_source(receiver.link)
+    if pn_terminus_get_address(r_tgt) != options.mailbox:
         print("Error: mailbox %s does not exist!" % options.mailbox)
         return -2
 
