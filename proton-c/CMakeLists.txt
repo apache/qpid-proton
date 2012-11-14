@@ -101,9 +101,10 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
-# Should really be finding the uuid library appropriate for the platform
+# Should really be finding the library appropriate for the platform
 # in lieu of doing this set the library name directly.
 set (UUID_LIB uuid)
+set (TIME_LIB rt)
 
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -162,7 +163,7 @@ add_library (
   ${qpid-proton-platform}
 )
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB})
 
 set_target_properties (
   qpid-proton

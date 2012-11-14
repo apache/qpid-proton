@@ -285,8 +285,8 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
  * @param[in] transport the transport to process.
  *
  * @return if non-zero, then the expiration time of the next pending timer event for the
- * transport.  The caller must invoke pn_transport_tick again prior to the expiration of
- * this deadline.
+ * transport.  The caller must invoke pn_transport_tick again at least once at or before
+ * this deadline occurs.
  */
 pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now);
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
