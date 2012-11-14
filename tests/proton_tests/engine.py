@@ -671,20 +671,6 @@ class IdleTimeoutTest(Test):
       parts.append(str(i))
     return "/".join(parts)[:size]
 
-  def testDefaults(self):
-    """
-    Verify the default value of the Connection idle timeout.
-    """
-
-    self.snd, self.rcv = self.link("test-link")
-    self.c1 = self.snd.session.connection
-    self.c2 = self.rcv.session.connection
-    self.snd.open()
-    self.rcv.open()
-    self.pump()
-    assert self.rcv.session.connection._transport.idle_timeout == 0
-    assert self.snd.session.connection._transport.idle_timeout == 0
-
   def testGetSet(self):
     """
     Verify the configuration and negotiation of the idle timeout.
