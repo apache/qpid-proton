@@ -194,7 +194,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             written += processOpen(outputBuffer);
             written += processBegin(outputBuffer);
             written += processAttach(outputBuffer);
-            written += processReceiverFlow(outputBuffer);
             written += processReceiverDisposition(outputBuffer);
             written += processReceiverFlow(outputBuffer);
             written += processMessageData(outputBuffer);
