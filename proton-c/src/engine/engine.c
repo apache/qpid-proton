@@ -1876,16 +1876,17 @@ static pn_timestamp_t pn_process_tick(pn_transport_t *transport, pn_timestamp_t 
   if (transport->remote_idle_timeout && !transport->close_sent) {
     if (transport->keepalive_deadline == 0 ||
         transport->last_bytes_output != transport->bytes_output) {
-        transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
-        transport->last_bytes_output = transport->bytes_output;
-      } else if (transport->keepalive_deadline <= now) {
-        transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
-        if (transport->disp->available == 0) {    // no outbound data ready
-          pn_post_frame(transport->disp, 0, "");  // so send empty frame
-          transport->last_bytes_output += 8;      // and account for it!
+      transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+      transport->last_bytes_output = transport->bytes_output;
+    } else if (transport->keepalive_deadline <= now) {
+      transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+      if (transport->disp->available == 0) {    // no outbound data pending
+        // so send empty frame (and account for it!)
+        pn_post_frame(transport->disp, 0, "");
+        transport->last_bytes_output += transport->disp->available;
       }
     }
-    timeout = pn_timestamp_next_expire( timeout, transport->keepalive_deadline );
+    timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
   }
 
   return timeout;

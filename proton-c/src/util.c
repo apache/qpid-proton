@@ -169,7 +169,7 @@ char *pn_strndup(const char *src, size_t n)
 }
 
 // which timestamp will expire next, or zero if none set
-pn_timestamp_t pn_timestamp_next_expire( pn_timestamp_t a, pn_timestamp_t b )
+pn_timestamp_t pn_timestamp_min( pn_timestamp_t a, pn_timestamp_t b )
 {
   if (a && b) return pn_min(a, b);
   if (a) return a;

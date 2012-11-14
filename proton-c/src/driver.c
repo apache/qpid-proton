@@ -722,7 +722,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   for (int i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
-      d->wakeup = pn_timestamp_next_expire(d->wakeup, c->wakeup);
+      d->wakeup = pn_timestamp_min(d->wakeup, c->wakeup);
       d->fds[d->nfds].fd = c->fd;
       d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) | (c->status & PN_SEL_WR ? POLLOUT : 0);
       d->fds[d->nfds].revents = 0;
