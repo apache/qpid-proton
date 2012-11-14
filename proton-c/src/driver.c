@@ -731,7 +731,10 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
 {
   if (d->wakeup) {
     pn_timestamp_t now = pn_driver_now(d);
-    timeout = (now >= d->wakeup) ? 0 : pn_min(timeout, d->wakeup - now);
+    if (now >= d->wakeup)
+      timeout = 0;
+    else
+      timeout = (timeout < 0) ? d->wakeup-now : pn_min(timeout, d->wakeup - now);
   }
   if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
     return pn_error_from_errno(d->error, "poll");
