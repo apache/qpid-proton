@@ -337,6 +337,47 @@ module Qpid
         Cproton.pn_messenger_settle(@impl, tracker.impl, flag)
       end
 
+      # Sets the incoming window.
+      #
+      # If the incoming window is set to a positive value, then after each
+      # call to #accept or #reject, the object will track the status of that
+      # many deliveries.
+      #
+      # ==== Options
+      #
+      # * window - the window size
+      #
+      def incoming_window=(window)
+        raise TypeError.new("invalid window: #{window}") unless valid_window?(window)
+        check_for_error(Cproton.pn_messenger_set_incoming_window(@impl, window))
+      end
+
+      # Returns the incoming window.
+      #
+      def incoming_window
+        Cproton.pn_messenger_get_incoming_window(@impl)
+      end
+
+      #Sets the outgoing window.
+      #
+      # If the outgoing window is set to a positive value, then after each call
+      # to #send, the object will track the status of that  many deliveries.
+      #
+      # ==== Options
+      #
+      # * window - the window size
+      #
+      def outgoing_window=(window)
+        raise TypeError.new("invalid window: #{window}") unless valid_window?(window)
+        check_for_error(Cproton.pn_messenger_set_outgoing_window(@impl, window))
+      end
+
+      # Returns the outgoing window.
+      #
+      def outgoing_window
+        Cproton.pn_messenger_get_outgoing_window(@impl)
+      end
+
       private
 
       def valid_tracker?(tracker)
@@ -345,6 +386,10 @@ module Qpid
 
       def valid_mode?(mode)
         [ACCEPT_MODE_AUTO, ACCEPT_MODE_MANUAL].include?(mode)
+      end
+
+      def valid_window?(window)
+        !window.nil? && [Float, Fixnum].include?(window.class)
       end
 
     end

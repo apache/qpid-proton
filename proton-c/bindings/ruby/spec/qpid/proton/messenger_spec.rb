@@ -177,6 +177,66 @@ module Qpid
         @messenger.accept_mode.should equal(mode)
       end
 
+      it "raises an error on a nil outgoing window" do
+        expect {
+          @messenger.outgoing_window = nil
+        }.to raise_error(TypeError)
+      end
+
+      it "raises an error on a non-numeric outgoing window" do
+        expect {
+          @messenger.outgoing_window = random_string(16)
+        }.to raise_error(TypeError)
+      end
+
+      it "can have a negative outgoing window" do
+        window = 0 - (rand(256) + 1)
+        @messenger.outgoing_window = window
+        @messenger.outgoing_window.should eq(window)
+      end
+
+      it "can have a positive outgoing window" do
+        window = (rand(256) + 1)
+        @messenger.outgoing_window = window
+        @messenger.outgoing_window.should eq(window)
+      end
+
+      it "can have a zero outgoing window" do
+        window = 0
+        @messenger.outgoing_window = window
+        @messenger.outgoing_window.should eq(window)
+      end
+
+      it "raises an error on a nil incoming window" do
+        expect {
+          @messenger.incoming_window = nil
+        }.to raise_error(TypeError)
+      end
+
+      it "raises an error on a non-numeric incoming window" do
+        expect {
+          @messenger.incoming_window = random_string(16)
+        }.to raise_error(TypeError)
+      end
+
+      it "can have a negative incoming window" do
+        window = 0 - (rand(256) + 1)
+        @messenger.incoming_window = window
+        @messenger.incoming_window.should eq(window)
+      end
+
+      it "can have a positive incoming window" do
+        window = (rand(256) + 1)
+        @messenger.incoming_window = window
+        @messenger.incoming_window.should eq(window)
+      end
+
+      it "can have a zero incoming window" do
+        window = 0
+        @messenger.incoming_window = window
+        @messenger.incoming_window.should eq(window)
+      end
+
       describe "once started" do
 
         before (:each) do
