@@ -17,13 +17,30 @@
 # under the License.
 #
 
-require "cproton"
+module Qpid
 
-require "qpid_proton/version"
-require "qpid_proton/exceptions"
-require "qpid_proton/exception_handling"
-require "qpid_proton/message_format"
-require "qpid_proton/message"
-require "qpid_proton/tracker_status"
-require "qpid_proton/tracker"
-require "qpid_proton/messenger"
+  module Proton
+
+    # A +Tracker+ is used to track the disposition of a +Message+.
+    #
+    class Tracker
+
+      CUMULATIVE = Cproton::PN_CUMULATIVE
+
+      def initialize(impl) # :nodoc:
+        @impl = impl
+      end
+
+      def impl # :nodoc:
+        @impl
+      end
+
+      def self.valid_flag?(flag) # :nodoc:
+        [0, CUMULATIVE].include?(flag)
+      end
+
+    end
+
+  end
+
+end

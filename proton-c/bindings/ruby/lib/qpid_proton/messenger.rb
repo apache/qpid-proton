@@ -28,6 +28,14 @@ module Qpid
     #
     class Messenger
 
+      # Automatically accept every message as it is returned by #get
+      #
+      ACCEPT_MODE_AUTO = Cproton::PN_ACCEPT_MODE_AUTO
+
+      # Messages must be manually accepted or rejected using #accept
+      #
+      ACCEPT_MODE_MANUAL = Cproton::PN_ACCEPT_MODE_MANUAL
+
       include Qpid::Proton::ExceptionHandling
 
       # Creates a new +Messenger+.
@@ -233,6 +241,108 @@ module Qpid
       #
       def incoming
         Cproton.pn_messenger_incoming(@impl)
+      end
+
+      # Returns a +Tracker+ for the message most recently sent via the put
+      # method.
+      #
+      def outgoing_tracker
+        impl = Cproton.pn_messenger_outgoing_tracker(@impl)
+        return nil if impl == -1
+        Qpid::Proton::Tracker.new(impl)
+      end
+
+      # Returns a +Tracker+ for the most recently received message.
+      #
+      def incoming_tracker
+        impl = Cproton.pn_messenger_incoming_tracker(@impl)
+        return nil if impl == -1
+        Qpid::Proton::Tracker.new(impl)
+      end
+
+      # Set the accept mode for the Messenger. See #ACCEPT_MODE_AUTO and
+      # #ACCEPT_MODE_MANUAL for more details
+      #
+      # ==== Options
+      #
+      # * mode - the acceptance mode
+      #
+      # ==== Examples
+      #
+      #  @messenger.accept_mode = Qpid::Proton::Messenger::ACCEPT_MODE_AUTO
+      #
+      def accept_mode=(mode)
+        raise TypeError.new("Invalid mode: #{mode}") unless valid_mode?(mode)
+        Cproton.pn_messenger_set_accept_mode(@impl, mode)
+      end
+
+      # Returns the current acceptance mode for the Messenger.
+      #
+      def accept_mode
+        Cproton.pn_messenger_get_accept_mode(@impl)
+      end
+
+      # Accepts the incoming message identified by the tracker.
+      #
+      # ==== Options
+      #
+      # * tracker - the tracker
+      # * flag - the flag
+      #
+      def accept(tracker, flag)
+        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
+        raise TypeError.new("invalid flag: #{flag}") unless Qpid::Proton::Tracker.valid_flag?(flag)
+        check_for_error(Cproton.pn_messenger_accept(@impl, tracker.impl, flag))
+      end
+
+      # Rejects the incoming message identified by the tracker.
+      #
+      # ==== Options
+      #
+      # * tracker - the tracker
+      # * flag - the flag
+      #
+      def reject(tracker, flag)
+        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
+        check_for_error(Cproton.pn_messenger_reject(@impl, tracker.impl, flag))
+      end
+
+      # Gets the last known remote state of the delivery associated with
+      # the given tracker. See TrackerStatus for details on the values
+      # returned.
+      #
+      # ==== Options
+      #
+      # * tracker - the tracker
+      #
+      def status(tracker)
+        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
+        Qpid::Proton::TrackerStatus.by_value(Cproton.pn_messenger_status(@impl, tracker.impl))
+      end
+
+      # Settles messages for a tracker.
+      #
+      # ==== Options
+      #
+      # * tracker - the tracker
+      # * flag - the flag
+      #
+      # ==== Examples
+      #
+      def settle(tracker, flag)
+        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
+        raise TypeError.new("invalid flag: #{flag}") unless Qpid::Proton::Tracker.valid_flag?(flag)
+        Cproton.pn_messenger_settle(@impl, tracker.impl, flag)
+      end
+
+      private
+
+      def valid_tracker?(tracker)
+        !tracker.nil? && tracker.is_a?(Qpid::Proton::Tracker)
+      end
+
+      def valid_mode?(mode)
+        [ACCEPT_MODE_AUTO, ACCEPT_MODE_MANUAL].include?(mode)
       end
 
     end

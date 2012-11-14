@@ -152,6 +152,31 @@ module Qpid
         @messenger.trusted_certificates.should eq(certs)
       end
 
+      it "raises an error when setting a nil accept mode" do
+        expect {
+          @messenger.accept_mode = nil
+        }.to raise_error(TypeError)
+      end
+
+      it "raises an error when setting an invalid accept mode" do
+        mode = random_string(16)
+        expect {
+          @messenger.accept_mode = mode
+        }.to raise_error(TypeError)
+      end
+
+      it "can have an automatic acceptance mode" do
+        mode = Qpid::Proton::Messenger::ACCEPT_MODE_AUTO
+        @messenger.accept_mode = mode
+        @messenger.accept_mode.should equal(mode)
+      end
+
+      it "can have a manual acceptance mode" do
+        mode = Qpid::Proton::Messenger::ACCEPT_MODE_MANUAL
+        @messenger.accept_mode = mode
+        @messenger.accept_mode.should equal(mode)
+      end
+
       describe "once started" do
 
         before (:each) do
@@ -170,6 +195,24 @@ module Qpid
           expect{
             @messenger.subscribe("amqp://~0.0.0.0")
           }.to_not raise_error
+        end
+
+        it "does not return a tracker before sending messages" do
+          @messenger.outgoing_tracker.should be_nil
+        end
+
+        it "returns a tracker's status"
+
+        it "raises an error when settling with a nil flag" do
+          expect {
+            @messenger.settle(@tracker, nil)
+          }.to raise_error(TypeError)
+        end
+
+        it "raises an error when settling with an invalid flag" do
+          expect {
+            @messenger.settle(@tracker, rand(256) + 2)
+          }.to raise_error(TypeError)
         end
 
         describe "and subscribed to an address" do
@@ -219,6 +262,113 @@ module Qpid
           end
 
           it "can send with an empty queue"
+
+          describe "with a an outgoing tracker" do
+
+            before(:each) do
+              @messenger.put(@msg)
+              @tracker = @messenger.outgoing_tracker
+            end
+
+            it "has an outgoing tracker" do
+              @tracker.should_not be_nil
+            end
+
+            it "returns a tracker's status"
+
+            it "raises an error when settling with a nil tracker" do
+              expect {
+                @messenger.settle(nil, Qpid::Proton::Tracker::CUMULATIVE)
+              }.to raise_error(TypeError)
+            end
+
+            it "raises an error when settling with a nil flag" do
+              expect {
+                @messenger.settle(@tracker, nil)
+              }.to raise_error(TypeError)
+            end
+
+            it "raises an error when settling with an invalid flag" do
+              expect {
+                @messenger.settle(@tracker, "farkle")
+              }.to raise_error(TypeError)
+            end
+
+            it "can settle a tracker's status" do
+              @messenger.settle(@tracker, Qpid::Proton::Tracker::CUMULATIVE)
+            end
+
+            it "raises an error when checking status on a nil tracker" do
+              expect {
+                @messenger.status(nil)
+              }.to raise_error(TypeError)
+            end
+
+            it "raises an error when checking status on an invalid tracker" do
+              expect {
+                @messenger.status(random_string(16))
+              }.to raise_error(TypeError)
+            end
+
+            it "can check the status of a tracker" do
+              @messenger.status(@tracker).should_not be_nil
+            end
+
+          end
+
+          it "has a nil incoming tracker when no messages are received" do
+            @messenger.incoming_tracker.should be_nil
+          end
+
+          it "has an incoming tracker"
+
+          it "raises an error when rejecting with a nil flag" do
+            expect {
+              @messenger.accept(@tracker, nil)
+            }.to raise_error(TypeError)
+          end
+
+          it "raises an error when rejecting with an invalid flag" do
+            flag = -1
+            expect {
+              @messenger.accept(@tracker, flag)
+            }.to raise_error(TypeError)
+          end
+
+          it "can reject an incoming message"
+
+          it "raises an error when accepting with a nil tracker" do
+            expect {
+              @messenger.reject(nil, Qpid::Proton::Tracker::CUMULATIVE)
+            }.to raise_error(TypeError)
+          end
+
+          it "raises an error when accepting with an invalid tracker" do
+            expect {
+              @messenger.accept(random_string(16), Qpid::Proton::Tracker::CUMULATIVE)
+            }.to raise_error(TypeError)
+          end
+
+          it "raises an error when accepting with a nil flag" do
+            expect {
+              @messenger.accept(@tracker, nil)
+            }.to raise_error(TypeError)
+          end
+
+          it "raises an error when accepting with an invalid flag"
+          it "can accept a message"
+
+          it "raises an error when rejecting with a nil tracker" do
+            expect {
+              @messenger.accept(nil, Qpid::Proton::Tracker::CUMULATIVE)
+            }.to raise_error(TypeError)
+          end
+
+          it "raises an error when rejecting with an invalid tracker" do
+            expect {
+              @messenger.accept(random_string(16), Qpid::Proton::Tracker::CUMULATIVE)
+            }.to raise_error(TypeError)
+          end
 
           describe "with messages sent" do
 
