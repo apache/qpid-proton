@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/time.h>
 #include <uuid/uuid.h>
 #include "util.h"
 
@@ -471,26 +472,21 @@ static long int millis(struct timeval tv)
 
 int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
 {
-  pn_timestamp_t ctor_tick = 0;
-  pn_timestamp_t now = pn_driver_timestamp(messenger->driver);
-  pn_timestamp_t deadline = (timeout < 0) ? 0 : now + timeout;
-
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
-    ctor_tick = pn_timestamp_next_expire( pn_connector_process(ctor, now), ctor_tick );
+    pn_connector_process(ctor);
     ctor = pn_connector_next(ctor);
   }
 
+  struct timeval now;
+  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+  long int deadline = millis(now) + timeout;
   bool pred;
-  do {
-    pred = predicate(messenger);
-    if (pred) break;
 
-    int remaining = -1;
-    pn_timestamp_t next_deadline = pn_timestamp_next_expire(deadline, ctor_tick);
-    if (next_deadline) {
-      remaining = (next_deadline > now) ? next_deadline - now : 0;
-    }
+  while (true) {
+    pred = predicate(messenger);
+    int remaining = deadline - millis(now);
+    if (pred || (timeout >= 0 && remaining < 0)) break;
 
     int error = pn_driver_wait(messenger->driver, remaining);
     if (error)
@@ -522,11 +518,9 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       pn_connector_set_connection(c, conn);
     }
 
-    now = pn_driver_timestamp(messenger->driver);
-    ctor_tick = 0;
     pn_connector_t *c;
     while ((c = pn_driver_connector(messenger->driver))) {
-      (void) pn_connector_process(c, now);  // timeout ignored - we call it again below
+      pn_connector_process(c);
       pn_connection_t *conn = pn_connector_connection(c);
       pn_messenger_endpoints(messenger, conn);
       if (pn_connector_closed(c)) {
@@ -535,11 +529,14 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
         pn_decref(conn);
         pn_messenger_flow(messenger);
       } else {
-        ctor_tick = pn_timestamp_next_expire( pn_connector_process(c, now), ctor_tick );
+        pn_connector_process(c);
       }
     }
-    now = pn_driver_timestamp(messenger->driver);
-  } while (!deadline || deadline > now);
+
+    if (timeout >= 0) {
+      if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+    }
+  }
 
   return pred ? 0 : PN_TIMEOUT;
 }

@@ -61,6 +61,7 @@ struct pn_driver_t {
   size_t nfds;
   int ctrl[2]; //pipe for updating selectable status
   pn_trace_t trace;
+  pn_timestamp_t wakeup;
 };
 
 struct pn_listener_t {
@@ -89,7 +90,7 @@ struct pn_connector_t {
   int status;
   pn_trace_t trace;
   bool closed;
-  time_t wakeup;
+  pn_timestamp_t wakeup;
   void (*read)(pn_connector_t *);
   void (*write) (pn_connector_t *);
   size_t input_size;
@@ -107,6 +108,8 @@ struct pn_connector_t {
 };
 
 /* Impls */
+
+static pn_timestamp_t pn_driver_now(pn_driver_t *driver);
 
 // listener
 
@@ -575,12 +578,10 @@ static pn_timestamp_t pn_connector_tick(pn_connector_t *ctor, time_t now)
   return pn_transport_tick(ctor->transport, now);
 }
 
-pn_timestamp_t pn_connector_process(pn_connector_t *c, pn_timestamp_t now)
+void pn_connector_process(pn_connector_t *c)
 {
-  pn_timestamp_t next_timeout = 0;
-
   if (c) {
-    if (c->closed) return 0;
+    if (c->closed) return;
 
     if (c->pending_read) {
       c->read(c);
@@ -588,8 +589,7 @@ pn_timestamp_t pn_connector_process(pn_connector_t *c, pn_timestamp_t now)
     }
     pn_connector_process_input(c);
 
-    next_timeout = pn_connector_tick(c, now);
-    c->pending_tick = (next_timeout != 0);
+    c->wakeup = pn_connector_tick(c, pn_driver_now(c->driver));
 
     pn_connector_process_output(c);
     if (c->pending_write) {
@@ -602,13 +602,19 @@ pn_timestamp_t pn_connector_process(pn_connector_t *c, pn_timestamp_t now)
         fprintf(stderr, "Closed %s\n", c->name);
       }
       pn_connector_close(c);
-      return 0;
     }
   }
-  return next_timeout;
 }
 
 // driver
+
+static pn_timestamp_t pn_driver_now(pn_driver_t *driver)
+{
+  struct timeval now;
+  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+
+  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
+}
 
 pn_driver_t *pn_driver()
 {
@@ -632,6 +638,7 @@ pn_driver_t *pn_driver()
   d->trace = ((pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
               (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
               (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF));
+  d->wakeup = 0;
 
   // XXX
   if (pipe(d->ctrl)) {
@@ -693,6 +700,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
     d->fds = (struct pollfd *) realloc(d->fds, d->capacity*sizeof(struct pollfd));
   }
 
+  d->wakeup = 0;
   d->nfds = 0;
 
   d->fds[d->nfds].fd = d->ctrl[0];
@@ -714,6 +722,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   for (int i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
+      d->wakeup = pn_timestamp_next_expire(d->wakeup, c->wakeup);
       d->fds[d->nfds].fd = c->fd;
       d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) | (c->status & PN_SEL_WR ? POLLOUT : 0);
       d->fds[d->nfds].revents = 0;
@@ -731,9 +740,13 @@ void pn_driver_wait_1(pn_driver_t *d)
 
 int pn_driver_wait_2(pn_driver_t *d, int timeout)
 {
-    if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
-        return pn_error_from_errno(d->error, "poll");
-    return 0;
+  if (d->wakeup) {
+    pn_timestamp_t now = pn_driver_now(d);
+    timeout = (now >= d->wakeup) ? 0 : pn_min(timeout, d->wakeup - now);
+  }
+  if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
+    return pn_error_from_errno(d->error, "poll");
+  return 0;
 }
 
 void pn_driver_wait_3(pn_driver_t *d)
@@ -750,6 +763,7 @@ void pn_driver_wait_3(pn_driver_t *d)
     l = l->listener_next;
   }
 
+  pn_timestamp_t now = pn_driver_now(d);
   pn_connector_t *c = d->connector_head;
   while (c) {
     if (c->closed) {
@@ -760,6 +774,7 @@ void pn_driver_wait_3(pn_driver_t *d)
       int idx = c->idx;
       c->pending_read = (idx && d->fds[idx].revents & POLLIN);
       c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
+      c->pending_tick = (c->wakeup &&  c->wakeup <= now);
     }
     c = c->connector_next;
   }
@@ -817,13 +832,4 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   }
 
   return NULL;
-}
-
-
-pn_timestamp_t pn_driver_timestamp(pn_driver_t *driver)
-{
-  struct timeval now;
-  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
-
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }

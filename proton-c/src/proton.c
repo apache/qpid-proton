@@ -453,10 +453,6 @@ int main(int argc, char **argv)
 
   parse_url(url, &scheme, &user, &pass, &host, &port, &path);
 
-  pn_timestamp_t c_deadline = 0;
-  pn_timestamp_t now;
-  int timeout;
-
   pn_driver_t *drv = pn_driver();
   if (url) {
     struct client_context ctx = {false, false, count, count, drv, quiet, size, high, low};
@@ -469,36 +465,24 @@ int main(int argc, char **argv)
     if (!ctor) pn_fatal("connector failed\n");
     pn_connector_set_connection(ctor, pn_connection());
     while (!ctx.done) {
-      timeout = -1;
-      now = pn_driver_timestamp(drv);
-      if (c_deadline) {
-        timeout = (c_deadline > now) ? c_deadline - now : 0;
-      }
-      pn_driver_wait(drv, timeout);
+      pn_driver_wait(drv, -1);
       pn_connector_t *c;
       while ((c = pn_driver_connector(drv))) {
-        (void) pn_connector_process(c, now);
+        pn_connector_process(c);
         client_callback(c);
         if (pn_connector_closed(c)) {
 	  pn_connection_free(pn_connector_connection(c));
           pn_connector_free(c);
         } else {
-          c_deadline = pn_timestamp_next_expire(pn_connector_process(c, now),
-                                                c_deadline);
+          pn_connector_process(c);
         }
       }
     }
   } else {
     struct server_context ctx = {0, quiet, size};
     if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
-    pn_timestamp_t c_deadline = 0;
     while (true) {
-      timeout = -1;
-      now = pn_driver_timestamp(drv);
-      if (c_deadline) {
-        timeout = (c_deadline > now) ? c_deadline - now : 0;
-      }
-      pn_driver_wait(drv, timeout);
+      pn_driver_wait(drv, -1);
       pn_listener_t *l;
       pn_connector_t *c;
 
@@ -508,14 +492,13 @@ int main(int argc, char **argv)
       }
 
       while ((c = pn_driver_connector(drv))) {
-        (void) pn_connector_process(c, now);
+        pn_connector_process(c);
         server_callback(c);
         if (pn_connector_closed(c)) {
 	  pn_connection_free(pn_connector_connection(c));
           pn_connector_free(c);
         } else {
-          c_deadline = pn_timestamp_next_expire(pn_connector_process(c, now),
-                                                c_deadline);
+          pn_connector_process(c);
         }
       }
     }
