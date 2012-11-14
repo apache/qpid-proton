@@ -465,11 +465,6 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
   }
 }
 
-static long int millis(struct timeval tv)
-{
-  return tv.tv_sec * 1000 + tv.tv_usec/1000;
-}
-
 int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
 {
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
@@ -478,14 +473,13 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     ctor = pn_connector_next(ctor);
   }
 
-  struct timeval now;
-  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
-  long int deadline = millis(now) + timeout;
+  pn_timestamp_t now = pn_driver_now(messenger->driver);
+  long int deadline = now + timeout;
   bool pred;
 
   while (true) {
     pred = predicate(messenger);
-    int remaining = deadline - millis(now);
+    int remaining = deadline - now;
     if (pred || (timeout >= 0 && remaining < 0)) break;
 
     int error = pn_driver_wait(messenger->driver, remaining);
@@ -534,7 +528,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     }
 
     if (timeout >= 0) {
-      if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+      now = pn_driver_now(messenger->driver);
     }
   }
 

@@ -121,6 +121,16 @@ pn_listener_t *pn_driver_listener(pn_driver_t *driver);
  */
 pn_connector_t *pn_driver_connector(pn_driver_t *driver);
 
+/** Get the current time in pn_timestamp_t format.
+ *
+ * Returns current time in milliseconds since Unix Epoch,
+ * as defined by AMQP 1.0
+ *
+ * @param[in] driver the driver
+ * @return current time
+ */
+pn_timestamp_t pn_driver_now(pn_driver_t *driver);
+
 /** Free the driver allocated via pn_driver, and all associated
  *  listeners and connectors.
  *

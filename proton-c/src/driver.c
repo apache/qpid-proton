@@ -109,8 +109,6 @@ struct pn_connector_t {
 
 /* Impls */
 
-static pn_timestamp_t pn_driver_now(pn_driver_t *driver);
-
 // listener
 
 static void pn_driver_add_listener(pn_driver_t *d, pn_listener_t *l)
@@ -608,14 +606,6 @@ void pn_connector_process(pn_connector_t *c)
 
 // driver
 
-static pn_timestamp_t pn_driver_now(pn_driver_t *driver)
-{
-  struct timeval now;
-  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
-
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
-}
-
 pn_driver_t *pn_driver()
 {
   pn_driver_t *d = (pn_driver_t *) malloc(sizeof(pn_driver_t));
@@ -832,4 +822,12 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   }
 
   return NULL;
+}
+
+pn_timestamp_t pn_driver_now(pn_driver_t *driver)
+{
+  struct timeval now;
+  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+
+  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
