@@ -120,7 +120,9 @@ module Qpid
       #
       def subscribe(address)
         raise TypeError.new("invalid address: #{address}") if address.nil?
-        check_for_error(Cproton.pn_messenger_subscribe(@impl, address))
+        subscription = Cproton.pn_messenger_subscribe(@impl, address)
+        raise Qpid::Proton::ProtonError.new("Subscribe failed") if subscription.nil?
+        Qpid::Proton::Subscription.new(subscription)
       end
 
       # Path to a certificate file for the +Messenger+.

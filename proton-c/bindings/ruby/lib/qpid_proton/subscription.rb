@@ -17,14 +17,25 @@
 # under the License.
 #
 
-require "cproton"
+module Qpid
 
-require "qpid_proton/version"
-require "qpid_proton/exceptions"
-require "qpid_proton/exception_handling"
-require "qpid_proton/message_format"
-require "qpid_proton/message"
-require "qpid_proton/subscription"
-require "qpid_proton/tracker_status"
-require "qpid_proton/tracker"
-require "qpid_proton/messenger"
+  module Proton
+
+    # A +Subscription+ is an opaque object for working with a +Messenger+'s
+    # subscriptions.
+    #
+    class Subscription
+
+      def initialize(impl) # :nodoc:
+          @impl = impl
+      end
+
+      def impl # :nodoc:
+          @impl
+      end
+
+    end
+
+  end
+
+end

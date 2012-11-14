@@ -192,9 +192,7 @@ module Qpid
         end
 
         it "can subscribe to an address" do
-          expect{
-            @messenger.subscribe("amqp://~0.0.0.0")
-          }.to_not raise_error
+          @messenger.subscribe("amqp://~0.0.0.0").should_not be_nil
         end
 
         it "does not return a tracker before sending messages" do
