@@ -412,6 +412,35 @@ Sets the maximum size for received frames (in bytes).
     #return pn_transport_get_remote_max_frame(self._trans)
     raise Skipped()
 
+  # AMQP 1.0 idle-time-out
+  def _get_idle_timeout(self):
+    #return pn_transport_get_idle_timeout(self._trans)
+    raise Skipped()
+
+  def _set_idle_timeout(self, value):
+    #pn_transport_set_idle_timeout(self._trans, value)
+    raise Skipped()
+
+  idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
+                          doc="""
+The idle timeout of the connection (in milliseconds).
+""")
+
+  @property
+  def remote_idle_timeout(self):
+    #return pn_transport_get_remote_idle_timeout(self._trans)
+    raise Skipped()
+
+  @property
+  def frames_output(self):
+    #return pn_transport_get_frames_output(self._trans)
+    raise Skipped()
+
+  @property
+  def frames_input(self):
+    #return pn_transport_get_frames_input(self._trans)
+    raise Skipped()
+
 class Data(object):
 
   SYMBOL = None

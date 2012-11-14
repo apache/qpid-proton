@@ -735,11 +735,13 @@ static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, char *byte
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, char *bytes, size_t available);
 static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, char *bytes, size_t available);
 static ssize_t pn_output_write_amqp(pn_transport_t *transport, char *bytes, size_t available);
+static pn_timestamp_t pn_process_tick(pn_transport_t *transport, pn_timestamp_t now);
 
 void pn_transport_init(pn_transport_t *transport)
 {
   transport->process_input = pn_input_read_amqp_header;
   transport->process_output = pn_output_write_amqp_header;
+  transport->process_tick = NULL;
   transport->header_count = 0;
   transport->sasl = NULL;
   transport->ssl = NULL;
@@ -763,6 +765,12 @@ void pn_transport_init(pn_transport_t *transport)
   transport->remote_hostname = NULL;
   transport->local_max_frame = 0;
   transport->remote_max_frame = 0;
+  transport->local_idle_timeout = 0;
+  transport->dead_remote_deadline = 0;
+  transport->last_bytes_input = 0;
+  transport->remote_idle_timeout = 0;
+  transport->keepalive_deadline = 0;
+  transport->last_bytes_output = 0;
   transport->remote_offered_capabilities = pn_data(16);
   transport->remote_desired_capabilities = pn_data(16);
   transport->error = pn_error();
@@ -774,6 +782,9 @@ void pn_transport_init(pn_transport_t *transport)
   transport->channel_capacity = 0;
 
   transport->condition = NULL;
+
+  transport->bytes_input = 0;
+  transport->bytes_output = 0;
 }
 
 pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t *ssn)
@@ -1331,9 +1342,10 @@ int pn_do_open(pn_dispatcher_t *disp)
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
-  int err = pn_scan_args(disp, "D.[?S?SI....CC]", &container_q,
+  int err = pn_scan_args(disp, "D.[?S?SI.I..CC]", &container_q,
                          &remote_container, &hostname_q, &remote_hostname,
                          &transport->remote_max_frame,
+                         &transport->remote_idle_timeout,
                          transport->remote_offered_capabilities,
                          transport->remote_desired_capabilities);
   if (err) return err;
@@ -1362,6 +1374,8 @@ int pn_do_open(pn_dispatcher_t *disp)
   } else {
     transport->disp->halt = true;
   }
+  if (transport->remote_idle_timeout)
+    transport->process_tick = pn_process_tick;  // enable timeouts
   transport->open_rcvd = true;
   return 0;
 }
@@ -1758,6 +1772,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
     }
   }
 
+  transport->bytes_input += consumed;
   return consumed;
 }
 
@@ -1839,6 +1854,43 @@ static ssize_t pn_input_read_amqp(pn_transport_t *transport, const char *bytes, 
   }
 }
 
+/* process AMQP related timer events */
+static pn_timestamp_t pn_process_tick(pn_transport_t *transport, pn_timestamp_t now)
+{
+  pn_timestamp_t timeout = 0;
+
+  if (transport->local_idle_timeout) {
+    if (transport->dead_remote_deadline == 0 ||
+        transport->last_bytes_input != transport->bytes_input) {
+      transport->dead_remote_deadline = now + transport->local_idle_timeout;
+      transport->last_bytes_input = transport->bytes_input;
+    } else if (transport->dead_remote_deadline <= now) {
+      transport->dead_remote_deadline = now + transport->local_idle_timeout;
+      // Note: AMQP-1.0 really should define a generic "timeout" error, but does not.
+      pn_do_error(transport, "amqp:resource-limit-exceeded", "local-idle-timeout expired");
+    }
+    timeout = transport->dead_remote_deadline;
+  }
+
+  // Prevent remote idle timeout as describe by AMQP 1.0:
+  if (transport->remote_idle_timeout && !transport->close_sent) {
+    if (transport->keepalive_deadline == 0 ||
+        transport->last_bytes_output != transport->bytes_output) {
+        transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+        transport->last_bytes_output = transport->bytes_output;
+      } else if (transport->keepalive_deadline <= now) {
+        transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+        if (transport->disp->available == 0) {    // no outbound data ready
+          pn_post_frame(transport->disp, 0, "");  // so send empty frame
+          transport->last_bytes_output += 8;      // and account for it!
+      }
+    }
+    timeout = pn_timestamp_next_expire( timeout, transport->keepalive_deadline );
+  }
+
+  return timeout;
+}
+
 bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   if (delivery->settled) return false;
@@ -1861,11 +1913,12 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
-      int err = pn_post_frame(transport->disp, 0, "DL[SS?InnnnCC]", OPEN,
+      int err = pn_post_frame(transport->disp, 0, "DL[SS?In?InnCC]", OPEN,
                               connection->container,
                               connection->hostname,
-                              // if not zero, advertise our max frame size
+                              // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
+                              (bool)transport->local_idle_timeout, transport->local_idle_timeout,
                               connection->offered_capabilities,
                               connection->desired_capabilities);
       if (err) return err;
@@ -2421,7 +2474,7 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
       break;
     } else if (n == PN_EOS) {
       if (total > 0) {
-        return total;
+        break;
       } else {
         if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
           pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
@@ -2435,6 +2488,7 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
     }
   }
 
+  transport->bytes_output += total;
   return total;
 }
 
@@ -2460,6 +2514,22 @@ void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
 uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport)
 {
   return transport->remote_max_frame;
+}
+
+pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport)
+{
+  return transport->local_idle_timeout;
+}
+
+void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout)
+{
+  transport->local_idle_timeout = timeout;
+  transport->process_tick = pn_process_tick;
+}
+
+pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
+{
+  return transport->remote_idle_timeout;
 }
 
 void pn_link_offered(pn_link_t *sender, int credit)
@@ -2520,8 +2590,24 @@ void pn_link_drain(pn_link_t *receiver, int credit)
   }
 }
 
-time_t pn_transport_tick(pn_transport_t *engine, time_t now)
+pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now)
 {
+  if (transport && transport->process_tick)
+    return transport->process_tick( transport, now );
+  return 0;
+}
+
+uint64_t pn_transport_get_frames_output(const pn_transport_t *transport)
+{
+  if (transport && transport->disp)
+    return transport->disp->output_frames_ct;
+  return 0;
+}
+
+uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
+{
+  if (transport && transport->disp)
+    return transport->disp->input_frames_ct;
   return 0;
 }
 

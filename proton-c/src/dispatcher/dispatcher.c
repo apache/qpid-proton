@@ -115,6 +115,12 @@ void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...)
 
 int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
 {
+  if (frame.size == 0) { // ignore null frames
+    if (disp->trace & PN_TRACE_FRM)
+      pn_dispatcher_trace(disp, frame.channel, "<- (EMPTY FRAME)\n");
+    return 0;
+  }
+
   ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
   if (dsize < 0) {
     fprintf(stderr, "Error decoding frame: %s %s\n", pn_code(dsize),
@@ -182,6 +188,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t ava
 
     size_t n = pn_read_frame(&frame, bytes + read, available - read);
     if (n) {
+      disp->input_frames_ct += 1;
       int e = pn_dispatch_frame(disp, frame);
       if (e) return e;
       read += n;
@@ -272,6 +279,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
     disp->capacity *= 2;
     disp->output = (char *) realloc(disp->output, disp->capacity);
   }
+  disp->output_frames_ct += 1;
   if (disp->trace & PN_TRACE_RAW) {
     fprintf(stderr, "RAW: \"");
     pn_fprint_data(stderr, disp->output + disp->available, n);
@@ -374,6 +382,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
       disp->capacity *= 2;
       disp->output = realloc(disp->output, disp->capacity);
     }
+    disp->output_frames_ct += 1;
     if (disp->trace & PN_TRACE_RAW) {
       fprintf(stderr, "RAW: \"");
       pn_fprint_data(stderr, disp->output + disp->available, n);
@@ -385,4 +394,3 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
   disp->output_payload = NULL;
   return 0;
 }
-

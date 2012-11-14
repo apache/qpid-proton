@@ -275,12 +275,31 @@ void pn_connection_set_context(pn_connection_t *connection, void *context);
 pn_error_t *pn_transport_error(pn_transport_t *transport);
 ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
 ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
-time_t pn_transport_tick(pn_transport_t *transport, time_t now);
+/** Process any pending transport timer events.
+ *
+ * This method should be called after all pending input has been processed by the
+ * transport (see ::pn_transport_input), and before generating output (see
+ * ::pn_transport_output).  It returns the deadline for the next pending timer event, if
+ * any are present.
+ *
+ * @param[in] transport the transport to process.
+ *
+ * @return if non-zero, then the expiration time of the next pending timer event for the
+ * transport.  The caller must invoke pn_transport_tick again prior to the expiration of
+ * this deadline.
+ */
+pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now);
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 // max frame of zero means "unlimited"
 uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
 void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
 uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
+/* timeout of zero means "no timeout" */
+pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
+void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
+pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
+uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
+uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
 void pn_transport_free(pn_transport_t *transport);
 
 // session

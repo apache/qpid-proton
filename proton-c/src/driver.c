@@ -30,11 +30,13 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
 
 #include <proton/driver.h>
 #include <proton/error.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
+#include <proton/util.h>
 #include "util.h"
 #include "ssl/ssl-internal.h"
 
@@ -90,7 +92,6 @@ struct pn_connector_t {
   time_t wakeup;
   void (*read)(pn_connector_t *);
   void (*write) (pn_connector_t *);
-  time_t (*tick)(pn_connector_t *sel, time_t now);
   size_t input_size;
   char input[IO_BUF_SIZE];
   bool input_eos;
@@ -342,7 +343,6 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
 
 static void pn_connector_read(pn_connector_t *ctor);
 static void pn_connector_write(pn_connector_t *ctor);
-static time_t pn_connector_tick(pn_connector_t *ctor, time_t now);
 
 pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
 {
@@ -365,7 +365,6 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->wakeup = 0;
   c->read = pn_connector_read;
   c->write = pn_connector_write;
-  c->tick = pn_connector_tick;
   c->input_size = 0;
   c->input_eos = false;
   c->output_size = 0;
@@ -570,31 +569,28 @@ static void pn_connector_write(pn_connector_t *ctor)
     ctor->status &= ~PN_SEL_WR;
 }
 
-static time_t pn_connector_tick(pn_connector_t *ctor, time_t now)
+static pn_timestamp_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
   if (!ctor->transport) return 0;
-  // XXX: should probably have a function pointer for this and switch it with different layers
-  time_t result = pn_transport_tick(ctor->transport, now);
-  pn_connector_process_input(ctor);
-  pn_connector_process_output(ctor);
-  return result;
+  return pn_transport_tick(ctor->transport, now);
 }
 
-void pn_connector_process(pn_connector_t *c) {
-  if (c) {
-    if (c->closed) return;
+pn_timestamp_t pn_connector_process(pn_connector_t *c, pn_timestamp_t now)
+{
+  pn_timestamp_t next_timeout = 0;
 
-    if (c->pending_tick) {
-      // XXX: should handle timing also
-      c->tick(c, 0);
-      c->pending_tick = false;
-    }
+  if (c) {
+    if (c->closed) return 0;
 
     if (c->pending_read) {
       c->read(c);
       c->pending_read = false;
     }
     pn_connector_process_input(c);
+
+    next_timeout = pn_connector_tick(c, now);
+    c->pending_tick = (next_timeout != 0);
+
     pn_connector_process_output(c);
     if (c->pending_write) {
       c->write(c);
@@ -606,8 +602,10 @@ void pn_connector_process(pn_connector_t *c) {
         fprintf(stderr, "Closed %s\n", c->name);
       }
       pn_connector_close(c);
+      return 0;
     }
   }
+  return next_timeout;
 }
 
 // driver
@@ -819,4 +817,13 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   }
 
   return NULL;
+}
+
+
+pn_timestamp_t pn_driver_timestamp(pn_driver_t *driver)
+{
+  struct timeval now;
+  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+
+  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }

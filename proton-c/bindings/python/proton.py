@@ -2140,6 +2140,7 @@ class Transport(object):
     else:
       return self._check(n)
 
+  # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):
     return pn_transport_get_max_frame(self._trans)
 
@@ -2154,6 +2155,30 @@ Sets the maximum size for received frames (in bytes).
   @property
   def remote_max_frame_size(self):
     return pn_transport_get_remote_max_frame(self._trans)
+
+  # AMQP 1.0 idle-time-out
+  def _get_idle_timeout(self):
+    return pn_transport_get_idle_timeout(self._trans)
+
+  def _set_idle_timeout(self, value):
+    pn_transport_set_idle_timeout(self._trans, value)
+
+  idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
+                          doc="""
+The idle timeout of the connection (in milliseconds).
+""")
+
+  @property
+  def remote_idle_timeout(self):
+    return pn_transport_get_remote_idle_timeout(self._trans)
+
+  @property
+  def frames_output(self):
+    return pn_transport_get_frames_output(self._trans)
+
+  @property
+  def frames_input(self):
+    return pn_transport_get_frames_input(self._trans)
 
 class SASLException(TransportException):
   pass

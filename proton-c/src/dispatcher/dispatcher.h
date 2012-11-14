@@ -52,11 +52,13 @@ struct pn_dispatcher_t {
   size_t remote_max_frame;
   pn_buffer_t *frame;  // frame under construction
   size_t capacity;
-  size_t available;
+  size_t available; /* number of raw bytes pending output */
   char *output;
   void *context;
   bool halt;
   bool batch;
+  uint64_t output_frames_ct;
+  uint64_t input_frames_ct;
   char scratch[SCRATCH];
 };
 

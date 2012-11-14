@@ -30,6 +30,8 @@
 #include <strings.h> // For non C89/C99 strcasecmp
 #include <proton/error.h>
 #include <proton/util.h>
+#include <proton/types.h>
+#include "util.h"
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {
@@ -165,3 +167,12 @@ char *pn_strndup(const char *src, size_t n)
     return NULL;
   }
 }
+
+// which timestamp will expire next, or zero if none set
+pn_timestamp_t pn_timestamp_next_expire( pn_timestamp_t a, pn_timestamp_t b )
+{
+  if (a && b) return pn_min(a, b);
+  if (a) return a;
+  return b;
+}
+

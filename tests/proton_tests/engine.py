@@ -67,11 +67,14 @@ class Test(common.Test):
       t2.trace(Transport.TRACE_FRM)
     return c1, c2
 
-  def link(self, name, max_frame=None):
+  def link(self, name, max_frame=None, idle_timeout=None):
     c1, c2 = self.connection()
     if max_frame:
       c1._transport.max_frame_size = max_frame[0]
       c2._transport.max_frame_size = max_frame[1]
+    if idle_timeout:
+      c1._transport.idle_timeout = idle_timeout[0]
+      c2._transport.idle_timeout = idle_timeout[1]
     c1.open()
     c2.open()
     ssn1 = c1.session()
@@ -654,6 +657,113 @@ class MaxFrameTransferTest(Test):
     bytes = self.rcv.recv(1024)
     assert bytes == None
 
+class IdleTimeoutTest(Test):
+
+  def setup(self):
+    pass
+
+  def teardown(self):
+    self.cleanup()
+
+  def message(self, size):
+    parts = []
+    for i in range(size):
+      parts.append(str(i))
+    return "/".join(parts)[:size]
+
+  def testDefaults(self):
+    """
+    Verify the default value of the Connection idle timeout.
+    """
+
+    self.snd, self.rcv = self.link("test-link")
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.session.connection._transport.idle_timeout == 0
+    assert self.snd.session.connection._transport.idle_timeout == 0
+
+  def testGetSet(self):
+    """
+    Verify the configuration and negotiation of the idle timeout.
+    """
+
+    self.snd, self.rcv = self.link("test-link", idle_timeout=[1000,2000])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.session.connection._transport.idle_timeout == 2000
+    assert self.rcv.session.connection._transport.remote_idle_timeout == 1000
+    assert self.snd.session.connection._transport.idle_timeout == 1000
+    assert self.snd.session.connection._transport.remote_idle_timeout == 2000
+
+  def testTimeout(self):
+    """
+    Verify the AMQP Connection idle timeout.
+    """
+
+    # snd will timeout the Connection if no frame is received within 1000 ticks
+    self.snd, self.rcv = self.link("test-link", idle_timeout=[1000,0])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+
+    t_snd = self.snd.session.connection._transport
+    t_rcv = self.rcv.session.connection._transport
+    assert t_rcv.idle_timeout == 0
+    assert t_rcv.remote_idle_timeout == 1000
+    assert t_snd.idle_timeout == 1000
+    assert t_snd.remote_idle_timeout == 0
+
+    sndr_frames_in = t_snd.frames_input
+    rcvr_frames_out = t_rcv.frames_output
+
+    # at t+1, nothing should happen:
+    clock = 1
+    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 501,  "deadline to send keepalive"
+    self.pump()
+    assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
+
+    # at one tick from expected idle frame send, nothing should happen:
+    clock = 500
+    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 501,  "deadline to send keepalive"
+    self.pump()
+    assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
+
+    # this should cause rcvr to expire and send a keepalive
+    clock = 502
+    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 1002, "deadline to send keepalive"
+    self.pump()
+    sndr_frames_in += 1
+    rcvr_frames_out += 1
+    assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
+    assert rcvr_frames_out == t_rcv.frames_output, "unexpected frame"
+
+    # since a keepalive was received, sndr will rebase its clock against this tick:
+    # and the receiver should not change its deadline
+    clock = 503
+    assert t_snd.tick(clock) == 1503, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 1002, "deadline to send keepalive"
+    self.pump()
+    assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
+
+    # now expire sndr
+    clock = 1504
+    t_snd.tick(clock)
+    try:
+      self.pump()
+      assert False, "Expected connection timeout did not happen!"
+    except TransportException:
+      pass
 
 class CreditTest(Test):
 

@@ -99,6 +99,7 @@ typedef struct {
 struct pn_transport_t {
   ssize_t (*process_input)(pn_transport_t *, const char *, size_t);
   ssize_t (*process_output)(pn_transport_t *, char *, size_t);
+  pn_timestamp_t (*process_tick)(pn_transport_t *, pn_timestamp_t);
   size_t header_count;
   pn_sasl_t *sasl;
   pn_ssl_t *ssl;
@@ -114,6 +115,17 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
+
+  /* dead remote detection */
+  pn_millis_t local_idle_timeout;
+  pn_timestamp_t dead_remote_deadline;
+  uint64_t last_bytes_input;
+
+  /* keepalive */
+  pn_millis_t remote_idle_timeout;
+  pn_timestamp_t keepalive_deadline;
+  uint64_t last_bytes_output;
+
   pn_error_t *error;
   pn_session_state_t *sessions;
   size_t session_capacity;
@@ -121,6 +133,10 @@ struct pn_transport_t {
   size_t channel_capacity;
   const char *condition;
   char scratch[SCRATCH];
+
+  /* statistics */
+  uint64_t bytes_input;
+  uint64_t bytes_output;
 };
 
 struct pn_connection_t {

@@ -121,6 +121,15 @@ pn_listener_t *pn_driver_listener(pn_driver_t *driver);
  */
 pn_connector_t *pn_driver_connector(pn_driver_t *driver);
 
+/** Get the current time as an AMQP timestamp
+ *
+ * Returns the current local time in AMQP 1.0 format: milliseconds since Unix Epoch.
+ *
+ * @param[in] driver the driver
+ * @return timestamp
+ */
+pn_timestamp_t pn_driver_timestamp(pn_driver_t *driver);
+
 /** Free the driver allocated via pn_driver, and all associated
  *  listeners and connectors.
  *
@@ -261,12 +270,17 @@ void pn_connector_trace(pn_connector_t *connector, pn_trace_t trace);
 
 /** Service the given connector.
  *
- * Handle any inbound data, outbound data, or timing events pending on
- * the connector.
+ * Handle any inbound data, outbound data, or timing events pending on the connector.  If
+ * there are any pending timeouts that will need to be processed in the future, then
+ * return the deadline for the next outstanding timeout.
  *
  * @param[in] connector the connector to process.
+ * @param[in] now the current time in msec offset from Unix Epoch (see AMQP 1.0)
+ *
+ * @return if non-zero: a deadline - pn_connector_process must be invoked again
+ * for the given connector at least once before this deadline expires.
  */
-void pn_connector_process(pn_connector_t *connector);
+pn_timestamp_t pn_connector_process(pn_connector_t *connector, pn_timestamp_t now);
 
 /** Access the listener which opened this connector.
  *
