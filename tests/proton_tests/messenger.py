@@ -60,20 +60,26 @@ class MessengerTest(Test):
     try:
       while self.running:
         self.server.recv(10)
-        while self.server.incoming:
-          self.server.get(msg)
-          if msg.body == REJECT_ME:
-            self.server.reject()
-          else:
-            self.server.accept()
-            if msg.reply_to:
-              msg.address = msg.reply_to
-              self.server.put(msg)
-              self.server.settle()
+        self.process_incoming(msg)
     except Timeout:
       print "server timed out"
     self.server.stop()
     self.running = False
+
+  def process_incoming(self, msg):
+    while self.server.incoming:
+      self.server.get(msg)
+      if msg.body == REJECT_ME:
+        self.server.reject()
+      else:
+        self.server.accept()
+      self.dispatch(msg)
+
+  def dispatch(self, msg):
+    if msg.reply_to:
+      msg.address = msg.reply_to
+      self.server.put(msg)
+      self.server.settle()
 
   def _testSendReceive(self, size=None):
     self.start()
@@ -164,7 +170,9 @@ class MessengerTest(Test):
       else:
         assert self.client.status(t) is None
 
-  def testReject(self):
+  def testReject(self, process_incoming=None):
+    if process_incoming:
+      self.process_incoming = process_incoming
     self.server.accept_mode = MANUAL
     self.start()
     msg = Message()
@@ -187,9 +195,23 @@ class MessengerTest(Test):
 
     for t in trackers:
       if t in rejected:
-        assert self.client.status(t) is REJECTED
+        assert self.client.status(t) is REJECTED, (t, self.client.status(t))
       else:
-        assert self.client.status(t) is ACCEPTED
+        assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
+
+  def testRejectIndividual(self):
+    self.testReject(self.reject_individual)
+
+  def reject_individual(self, msg):
+    if self.server.incoming < 10:
+      return
+    while self.server.incoming:
+      t = self.server.get(msg)
+      if msg.body == REJECT_ME:
+        self.server.reject(t)
+      self.dispatch(msg)
+    self.server.accept()
+
 
   def testIncomingWindow(self):
     self.server.accept_mode = MANUAL

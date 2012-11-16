@@ -36,7 +36,6 @@ typedef struct {
   size_t capacity;
   int window;
   pn_sequence_t lwm;
-  pn_sequence_t mwm;
   pn_sequence_t hwm;
   pn_delivery_t **deliveries;
 } pn_queue_t;
@@ -73,7 +72,6 @@ void pn_queue_init(pn_queue_t *queue)
   queue->capacity = 1024;
   queue->window = 0;
   queue->lwm = 0;
-  queue->mwm = 0;
   queue->hwm = 0;
   queue->deliveries = calloc(queue->capacity, sizeof(pn_delivery_t *));
 }
@@ -110,9 +108,6 @@ void pn_queue_gc(pn_queue_t *queue)
 
   memmove(queue->deliveries, queue->deliveries + delta, (count - delta)*sizeof(pn_delivery_t *));
   queue->lwm += delta;
-  if (queue->mwm - queue->lwm < 0) {
-    queue->mwm = queue->lwm;
-  }
 }
 
 void pn_incref(pn_connection_t *conn)
@@ -161,11 +156,15 @@ pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
 void pn_queue_slide(pn_queue_t *queue)
 {
   if (queue->window >= 0) {
-    while (queue->hwm - queue->mwm > queue->window) {
+    while (queue->hwm - queue->lwm > queue->window) {
       pn_delivery_t *d = pn_queue_get(queue, queue->lwm);
       if (d) {
-        pn_delivery_settle(d);
-        pn_queue_del(queue, d);
+        if (pn_delivery_local_state(d)) {
+          pn_delivery_settle(d);
+          pn_queue_del(queue, d);
+        } else {
+          break;
+        }
       } else {
         pn_queue_gc(queue);
       }
@@ -182,7 +181,7 @@ int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
   }
 
   size_t start;
-  if (PN_CUMULATIVE | flags) {
+  if (PN_CUMULATIVE & flags) {
     start = queue->lwm;
   } else {
     start = id;
@@ -191,22 +190,21 @@ int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
   for (pn_sequence_t i = start; i <= id; i++) {
     pn_delivery_t *d = pn_queue_get(queue, i);
     if (d) {
-      if (match) {
-        pn_delivery_update(d, pn_delivery_remote_state(d));
-      } else {
-        switch (status) {
-        case PN_STATUS_ACCEPTED:
-          pn_delivery_update(d, PN_ACCEPTED);
-          break;
-        case PN_STATUS_REJECTED:
-          pn_delivery_update(d, PN_REJECTED);
-          break;
-        default:
-          break;
+      if (!pn_delivery_local_state(d)) {
+        if (match) {
+          pn_delivery_update(d, pn_delivery_remote_state(d));
+        } else {
+          switch (status) {
+          case PN_STATUS_ACCEPTED:
+            pn_delivery_update(d, PN_ACCEPTED);
+            break;
+          case PN_STATUS_REJECTED:
+            pn_delivery_update(d, PN_REJECTED);
+            break;
+          default:
+            break;
+          }
         }
-      }
-      if (pn_delivery_local_state(d) && i - queue->mwm < 0) {
-        queue->mwm = i;
       }
       if (settle) {
         pn_delivery_settle(d);
