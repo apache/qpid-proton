@@ -395,7 +395,7 @@ void pn_messenger_flow(pn_messenger_t *messenger)
   }
 }
 
-void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn)
+void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn_connector_t *ctor)
 {
   if (pn_connection_state(conn) | PN_LOCAL_UNINIT) {
     pn_connection_open(conn);
@@ -428,6 +428,10 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn)
     pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
     pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
     pn_link_open(link);
+    if (pn_link_is_receiver(link)) {
+      pn_listener_t *listener = pn_connector_listener(ctor);
+      pn_link_set_context(link, pn_listener_context(listener));
+    }
     link = pn_link_next(link, PN_LOCAL_UNINIT);
   }
 
@@ -514,7 +518,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     while ((c = pn_driver_connector(messenger->driver))) {
       pn_connector_process(c);
       pn_connection_t *conn = pn_connector_connection(c);
-      pn_messenger_endpoints(messenger, conn);
+      pn_messenger_endpoints(messenger, conn, c);
       if (pn_connector_closed(c)) {
         pn_connector_free(c);
         pn_messenger_reclaim(messenger, conn);
