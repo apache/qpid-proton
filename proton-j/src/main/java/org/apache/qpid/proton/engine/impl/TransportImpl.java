@@ -181,7 +181,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             _overflowBuffer.get(bytes, offset, overflowWritten);
             written+=overflowWritten;
         }
-        if(!_overflowBuffer.hasRemaining())
+        else if(!_overflowBuffer.hasRemaining())
         {
             _overflowBuffer.clear();
 
@@ -203,10 +203,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             written += processEnd(outputBuffer);
             written += processClose(outputBuffer);
             _overflowBuffer.flip();
+            written -= _overflowBuffer.remaining();
         }
 
-
-        return written - _overflowBuffer.remaining();
+        return written;
     }
 
     public Sasl sasl()

@@ -656,6 +656,33 @@ class MaxFrameTransferTest(Test):
 
     bytes = self.rcv.recv(1024)
     assert bytes == None
+    
+  def testBigMessage(self):
+    """
+    Test transfering a big message.
+    """
+    self.snd, self.rcv = self.link("test-link")
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+
+    self.rcv.flow(2)
+    self.snd.delivery("tag")
+    msg = self.message(1024*256)
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    assert self.snd.advance()
+
+    self.pump()
+
+    bytes = self.rcv.recv(1024*256)
+    assert bytes == msg
+
+    bytes = self.rcv.recv(1024)
+    assert bytes == None
+
 
 class IdleTimeoutTest(Test):
 
