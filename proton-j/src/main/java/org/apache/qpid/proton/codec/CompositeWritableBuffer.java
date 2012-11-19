@@ -64,6 +64,7 @@ public class CompositeWritableBuffer implements WritableBuffer
         {
             ByteBuffer wrap = ByteBuffer.wrap(new byte[2]);
             wrap.putShort(s);
+            wrap.flip();
             put(wrap);
         }
     }
@@ -83,6 +84,7 @@ public class CompositeWritableBuffer implements WritableBuffer
         {
             ByteBuffer wrap = ByteBuffer.wrap(new byte[4]);
             wrap.putInt(i);
+            wrap.flip();
             put(wrap);
         }
     }
@@ -102,6 +104,7 @@ public class CompositeWritableBuffer implements WritableBuffer
         {
             ByteBuffer wrap = ByteBuffer.wrap(new byte[8]);
             wrap.putLong(l);
+            wrap.flip();
             put(wrap);
         }
     }
