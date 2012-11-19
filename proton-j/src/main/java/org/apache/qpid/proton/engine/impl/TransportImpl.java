@@ -181,7 +181,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             _overflowBuffer.get(bytes, offset, overflowWritten);
             written+=overflowWritten;
         }
-        else if(!_overflowBuffer.hasRemaining())
+        if(!_overflowBuffer.hasRemaining())
         {
             _overflowBuffer.clear();
 
@@ -190,18 +190,20 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                        new WritableBuffer.ByteBufferWrapper(ByteBuffer.wrap(bytes, offset + written, size - written)),
                        new WritableBuffer.ByteBufferWrapper(_overflowBuffer));
 
-            written += processHeader(outputBuffer);
-            written += processOpen(outputBuffer);
-            written += processBegin(outputBuffer);
-            written += processAttach(outputBuffer);
-            written += processReceiverDisposition(outputBuffer);
-            written += processReceiverFlow(outputBuffer);
-            written += processMessageData(outputBuffer);
-            written += processSenderDisposition(outputBuffer);
-            written += processSenderFlow(outputBuffer);
-            written += processDetach(outputBuffer);
-            written += processEnd(outputBuffer);
-            written += processClose(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processHeader(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processOpen(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processBegin(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processAttach(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processReceiverDisposition(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processReceiverFlow(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processMessageData(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processSenderDisposition(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processSenderFlow(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processDetach(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processEnd(outputBuffer);
+            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processClose(outputBuffer);
+            }}}}}}}}}}}}
+
             _overflowBuffer.flip();
             written -= _overflowBuffer.remaining();
         }
