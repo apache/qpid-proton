@@ -857,18 +857,8 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                            ByteBuffer payload,
                            Runnable onPayloadTooLarge)
     {
-        if( _protocolTracer!=null ) 
-        {
-            ByteBuffer originalPayload = null;
-            if( payload!=null ) 
-            {
-                originalPayload = payload.duplicate();
-            }
-            _protocolTracer.sentFrame(new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload)));
-        }
-
         int oldPosition = buffer.position();
-        buffer.position(buffer.position()+8);
+        buffer.position(oldPosition+8);
         _encoder.setByteBuffer(buffer);
 
         if(payload == null || payload.remaining() < _maxFrameSize)
@@ -884,6 +874,16 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
             }
             buffer.position(oldPosition+8);
             _encoder.writeDescribedType(frameBody);
+        }
+
+        if( _protocolTracer!=null )
+        {
+            ByteBuffer originalPayload = null;
+            if( payload!=null )
+            {
+                originalPayload = payload.duplicate();
+            }
+            _protocolTracer.sentFrame(new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload)));
         }
 
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize - (buffer.position() - oldPosition));
