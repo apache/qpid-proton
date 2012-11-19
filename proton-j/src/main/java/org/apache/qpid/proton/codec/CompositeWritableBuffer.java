@@ -51,9 +51,14 @@ public class CompositeWritableBuffer implements WritableBuffer
 
     public void putShort(short s)
     {
-        if(_first.remaining() >= 2)
+        int remaining = _first.remaining();
+        if(remaining >= 2)
         {
             _first.putShort(s);
+        }
+        else if(remaining ==0 )
+        {
+            _second.putShort(s);
         }
         else
         {
@@ -65,9 +70,14 @@ public class CompositeWritableBuffer implements WritableBuffer
 
     public void putInt(int i)
     {
-        if(_first.remaining() >= 4)
+        int remaining = _first.remaining();
+        if(remaining >= 4)
         {
             _first.putInt(i);
+        }
+        else if(remaining ==0 )
+        {
+            _second.putInt(i);
         }
         else
         {
@@ -79,9 +89,14 @@ public class CompositeWritableBuffer implements WritableBuffer
 
     public void putLong(long l)
     {
-        if(_first.remaining() >= 8)
+        int remaining = _first.remaining();
+        if(remaining >= 8)
         {
             _first.putLong(l);
+        }
+        else if(remaining ==0 )
+        {
+            _second.putLong(l);
         }
         else
         {
