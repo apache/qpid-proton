@@ -49,6 +49,8 @@ public interface WritableBuffer
 
     void put(ByteBuffer payload);
 
+    int limit();
+
     class ByteBufferWrapper implements WritableBuffer
     {
         private final ByteBuffer _buf;
@@ -116,6 +118,17 @@ public interface WritableBuffer
         public void put(ByteBuffer src)
         {
             _buf.put(src);
+        }
+
+        public int limit()
+        {
+            return _buf.limit();
+        }
+
+        @Override
+        public String toString()
+        {
+            return String.format("[pos: %d, limit: %d, remaining:%d]", _buf.position(), _buf.limit(), _buf.remaining());
         }
     }
 }

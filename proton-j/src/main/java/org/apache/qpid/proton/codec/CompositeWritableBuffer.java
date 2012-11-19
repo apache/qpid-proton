@@ -49,40 +49,17 @@ public class CompositeWritableBuffer implements WritableBuffer
         putLong(Double.doubleToRawLongBits(d));
     }
 
-    public void put(byte[] src, int offset, int length)
+    public void putShort(short s)
     {
-        final int remaining = _first.remaining();
-        if(length > remaining)
+        if(_first.remaining() >= 2)
         {
-            if(remaining == 0)
-            {
-                 _second.put(src,offset,length);
-            }
-            else
-            {
-                _first.put(src,offset, remaining);
-                _second.put(src,offset+ remaining,length - remaining);
-            }
+            _first.putShort(s);
         }
         else
         {
-            _first.put(src,offset,length);
-        }
-    }
-
-    public void putShort(short s)
-    {
-        switch(_first.remaining())
-        {
-            case 0:
-                _second.putShort(s);
-                break;
-            case 1:
-                _first.put((byte)(s >>> 8));
-                _second.put((byte)s);
-                break;
-            default:
-                _first.putShort(s);
+            ByteBuffer wrap = ByteBuffer.wrap(new byte[2]);
+            wrap.putShort(s);
+            put(wrap);
         }
     }
 
@@ -94,16 +71,9 @@ public class CompositeWritableBuffer implements WritableBuffer
         }
         else
         {
-            int j = 3;
-            while(_first.hasRemaining() && j != 0)
-            {
-                _first.put((byte)(i >>> (8*j)));
-                j--;
-            }
-            while(j != 0)
-            {
-                _second.put((byte)(i >>> (8*j)));
-            }
+            ByteBuffer wrap = ByteBuffer.wrap(new byte[4]);
+            wrap.putInt(i);
+            put(wrap);
         }
     }
 
@@ -115,16 +85,9 @@ public class CompositeWritableBuffer implements WritableBuffer
         }
         else
         {
-            int j = 7;
-            while(_first.hasRemaining() && j != 0)
-            {
-                _first.put((byte)(l >>> (8*j)));
-                j--;
-            }
-            while(j != 0)
-            {
-                _second.put((byte)(l >>> (8*j)));
-            }
+            ByteBuffer wrap = ByteBuffer.wrap(new byte[8]);
+            wrap.putLong(l);
+            put(wrap);
         }
     }
 
@@ -143,71 +106,68 @@ public class CompositeWritableBuffer implements WritableBuffer
         return _first.position()+_second.position();
     }
 
+    public int limit()
+    {
+        return _first.limit() + _second.limit();
+    }
+
     public void position(int position)
     {
-        int currentPosition = position();
-        if(position > currentPosition)
+        int first_limit = _first.limit();
+        if( position <= first_limit )
         {
-            int relativePosition = position - currentPosition;
-            if(_first.hasRemaining())
-            {
-                final int firstRemaining = _first.remaining();
-                if(relativePosition > firstRemaining)
-                {
-                    _first.position(_first.position()+ firstRemaining);
-                    relativePosition -= firstRemaining;
-                }
-                else
-                {
-                    _first.position(_first.position()+relativePosition);
-                    return;
-                }
-            }
-            _second.position(_second.position()+relativePosition);
+            _first.position(position);
+            _second.position(0);
         }
-        else if(position < currentPosition)
+        else
         {
-            if(_first.hasRemaining())
+            _first.position(first_limit);
+            _second.position(position - first_limit);
+        }
+    }
+
+    public void put(byte[] src, int offset, int length)
+    {
+        final int firstRemaining = _first.remaining();
+        if(firstRemaining > 0)
+        {
+            if(firstRemaining >= length)
             {
-                _first.position(position);
+                _first.put(src, offset, length);
+                return;
             }
             else
             {
-                int relativePosition = currentPosition-position;
-                if(relativePosition <= _second.position())
-                {
-                    _second.position(_second.position()-relativePosition);
-                }
-                else
-                {
-                    relativePosition -= _second.position();
-                    _second.position(0);
-                    _first.position(_first.position()-relativePosition);
-                }
+                _first.put(src,offset, firstRemaining);
             }
         }
+        _second.put(src, offset+firstRemaining, length-firstRemaining);
     }
 
     public void put(ByteBuffer payload)
     {
-        if(_first.hasRemaining())
+        int firstRemaining = _first.remaining();
+        if(firstRemaining > 0)
         {
-            if(_first.remaining() >= payload.remaining())
+            if(firstRemaining >= payload.remaining())
             {
                 _first.put(payload);
+                return;
             }
             else
             {
                 int limit = payload.limit();
-                payload.limit(payload.position()+_first.remaining());
+                payload.limit(payload.position()+firstRemaining);
                 _first.put(payload);
                 payload.limit(limit);
-                _second.put(payload);
             }
         }
-        else
-        {
-            _second.put(payload);
-        }
+        _second.put(payload);
+    }
+
+    @Override
+    public String toString()
+    {
+        return _first.toString() + " + "+_second.toString();
     }
 }
