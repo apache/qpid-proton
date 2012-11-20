@@ -863,10 +863,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         buffer.position(oldPosition+8);
         _encoder.setByteBuffer(buffer);
 
-        if(payload == null || payload.remaining() < _maxFrameSize)
-        {
-            _encoder.writeDescribedType(frameBody);
-        }
+        _encoder.writeDescribedType(frameBody);
 
         if(payload != null && (payload.remaining() + buffer.position() - oldPosition) > _maxFrameSize)
         {
