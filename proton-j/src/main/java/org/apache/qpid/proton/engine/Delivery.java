@@ -53,6 +53,8 @@ public interface Delivery
      */
     public void settle();
 
+    public boolean isSettled();
+
     public void free();
 
     public Delivery getWorkNext();
@@ -64,4 +66,6 @@ public interface Delivery
     public void setContext(Object o);
 
     public Object getContext();
+
+    public boolean isUpdated();
 }

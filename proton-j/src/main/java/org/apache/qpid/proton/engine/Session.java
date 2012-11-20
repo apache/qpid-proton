@@ -40,5 +40,5 @@ public interface Session extends Endpoint
 
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
-
+    public Connection getConnection();
 }
