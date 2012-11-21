@@ -190,7 +190,8 @@ public class Detach
     public String toString()
     {
         return "Detach{" +
-               "closed=" + _closed +
+               "handle=" + _handle +
+               ", closed=" + _closed +
                ", error=" + _error +
                '}';
     }
