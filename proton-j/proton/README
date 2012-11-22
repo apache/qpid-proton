@@ -1,0 +1,45 @@
+Proton is library for speaking AMQP, including:
+
+  + The AMQP Messenger API, a simple but powerful interface to send
+    and receive messages over AMQP.
+
+  + The AMQP Protocol Engine, a succinct encapsulation of the full
+    AMQP protocol machinery.
+
+Proton is designed for maximum embeddability:
+
+  + minimal dependencies
+
+  + minimal assumptions about application threading model
+
+Proton is designed to scale up and down:
+
+  + transparently supports both simple peer to peer messaging and
+    complex globally federated topologies
+
+Proton is multi-lingual:
+
+  + designed for easy language bindings
+     - includes full fidelity data exchange:
+         maps, lists, strings, custom data structures, and more
+
+Please see http://qpid.apache.org/proton for a more info.
+
+== Build Instructions ==
+
+To use the java implementation via jython, follow these instructions
+from the directory containing this file:
+
+  mvn compile
+  export JYTHON_PATH=$PWD/target/classes
+
+Once this is done you can run the python test suite via jython to
+validate the java implementation:
+
+  tests/jython-test
+
+You can also set the PROTON_TESTS environment variable if you wish to
+run the test suite as part of the maven build:
+
+  export PROTON_TESTS=$PWD/tests
+  mvn test
