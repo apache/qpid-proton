@@ -24,32 +24,16 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.qpid</groupId>
-  <artifactId>proton-core</artifactId>
+  <artifactId>proton</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <properties>
-    <junit-version>4.10</junit-version>
-  </properties>
-
-  <prerequisites>
-    <maven>3.0</maven>
-  </prerequisites>
-
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit-version}</version>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
         <groupId>org.python</groupId>
         <artifactId>jython-standalone</artifactId>
         <version>2.5.3</version>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
 
   <build> 
@@ -61,21 +45,6 @@
         <directory>${basedir}/src/main/scripts</directory>
       </resource>
     </resources>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
-          <optimize>true</optimize>
-          <debug>true</debug>
-          <showDeprecation>true</showDeprecation>
-          <showWarnings>true</showWarnings>
-        </configuration>
-      </plugin>
-    </plugins>
-
   </build>
 
 </project>
