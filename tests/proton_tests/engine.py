@@ -60,11 +60,19 @@ class Test(common.Test):
     t2.bind(c2)
     c2._transport = t2
     self._wires.append((c1, t1, c2, t2))
-    trc = os.environ.get("PN_TRACE_FRM")
-    if trc and trc.lower() in ("1", "2", "yes", "true"):
-      t1.trace(Transport.TRACE_FRM)
-    if trc == "2":
-      t2.trace(Transport.TRACE_FRM)
+
+    mask1 = 0
+    mask2 = 0
+
+    for cat in ("TRACE_FRM", "TRACE_RAW"):
+      trc = os.environ.get("PN_%s" % cat)
+      if trc and trc.lower() in ("1", "2", "yes", "true"):
+        mask1 = mask1 | getattr(Transport, cat)
+      if trc == "2":
+        mask2 = mask2 | getattr(Transport, cat)
+    t1.trace(mask1)
+    t2.trace(mask2)
+
     return c1, c2
 
   def link(self, name, max_frame=None, idle_timeout=None):
