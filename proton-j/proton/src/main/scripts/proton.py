@@ -376,7 +376,8 @@ class Transport(object):
     self.impl = TransportImpl()
 
   def trace(self, mask):
-    self.impl.trace(mask)
+    # XXX: self.impl.trace(mask)
+    pass
 
   def bind(self, connection):
     self.impl.bind(connection.impl)
