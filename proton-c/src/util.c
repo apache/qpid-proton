@@ -121,7 +121,7 @@ void parse_url(char *url, char **scheme, char **user, char **pass, char **host, 
 void pn_vfatal(char *fmt, va_list ap)
 {
   vfprintf(stderr, fmt, ap);
-  exit(EXIT_FAILURE);
+  abort();
 }
 
 void pn_fatal(char *fmt, ...)
