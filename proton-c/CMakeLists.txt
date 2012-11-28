@@ -18,6 +18,9 @@
 #
 cmake_minimum_required (VERSION 2.6)
 
+include(CheckLibraryExists)
+include(CheckSymbolExists)
+
 project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
@@ -101,16 +104,34 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
-# Should really be finding the library appropriate for the platform
-# in lieu of doing this set the library name directly.
-set (UUID_LIB uuid)
-set (TIME_LIB rt)
+# When checking for clock_gettime etc. first check whether the symbol
+# is present in the library that it may be in, if it is not then check
+# whether the symbol works using just the regular C library
+CHECK_LIBRARY_EXISTS (rt clock_gettime "" CLOCK_GETTIME_IN_RT)
+if (CLOCK_GETTIME_IN_RT)
+  set (TIME_LIB rt)
+else (CLOCK_GETTIME_IN_RT)
+  CHECK_SYMBOL_EXISTS(clock_gettime "time.h" HAVE_CLOCK_GETTIME)
+  if (NOT HAVE_CLOCK_GETTIME)
+    message(FATAL_ERROR "clock_gettime() not found")
+  endif (NOT HAVE_CLOCK_GETTIME)
+endif (CLOCK_GETTIME_IN_RT)
+
+CHECK_LIBRARY_EXISTS (uuid uuid_generate "" UUID_GENERATE_IN_UUID)
+if (UUID_GENERATE_IN_UUID)
+  set (UUID_LIB uuid)
+else (UUID_GENERATE_IN_UUID)
+  CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" HAVE_UUID_GENERATE)
+  if (NOT HAVE_UUID_GENERATE)
+    message(FATAL_ERROR "uuid_generate() not found")
+  endif (NOT HAVE_UUID_GENERATE)
+endif (UUID_GENERATE_IN_UUID)
 
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
-   set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
-   set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-   set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+  set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+  set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 add_subdirectory(docs/api)
