@@ -24,7 +24,6 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <error.h>
 #include <ctype.h>
 
 #define check(messenger)                                         \
