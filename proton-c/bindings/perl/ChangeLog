@@ -2,3 +2,4 @@ version 0.2: (TBA)
 	* First implementation of the stable APIs on top of swig.
 	* Provides the qpid::proton::Message class.
 	* Provides the qpid::proton::Messenger class.
+	* Provides a send and recv example for the Perl bindings.
