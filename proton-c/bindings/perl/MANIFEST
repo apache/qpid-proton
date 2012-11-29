@@ -1,0 +1,12 @@
+ChangeLog
+CMakeLists.txt
+lib/qpid/proton/Message.pm
+lib/qpid/proton/Messenger.pm
+lib/qpid/proton/Version.pm
+lib/qpid_proton.pm
+LICENSE
+Makefile.PL
+MANIFEST
+perl.i
+README
+TODO
