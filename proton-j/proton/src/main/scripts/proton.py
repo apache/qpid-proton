@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,7 +17,7 @@
 #
 
 from uuid import UUID
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
 from org.apache.qpid.proton.message import Message as MessageImpl, \
@@ -383,6 +382,8 @@ class Transport(object):
     self.impl.bind(connection.impl)
 
   def output(self, size):
+    """ has the transport produce up to size bytes returning what was
+        produced to the caller"""
     output = zeros(size, "b")
     n = self.impl.output(output, 0, size)
     if n >= 0:
@@ -676,9 +677,36 @@ class SSLUnavailable(SSLException):
 
 class SSL(object):
 
-  def __init__(self, *args, **kwargs):
-    raise Skipped()
+  MODE_SERVER = Ssl.Mode.SERVER
+  MODE_CLIENT = Ssl.Mode.CLIENT
+  VERIFY_PEER = Ssl.VerifyMode.VERIFY_PEER
+  ANONYMOUS_PEER = Ssl.VerifyMode.ANONYMOUS_PEER
 
+  def __init__(self,transport):
+    self._ssl = transport.impl.ssl()
+
+  def init(self, mode):
+    self._ssl.init(mode)
+
+  def set_credentials(self, cert_file,key_file,password):
+    self._ssl.setCredentials(cert_file,key_file,password)
+
+  def set_trusted_ca_db(self, certificate_db):
+    self._ssl.setTrustedCaDb(certificate_db)
+
+  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
+    self._ssl.setPeerAuthentication(verify_mode)
+    if trusted_CAs is not None:
+      self._ssl.setTrustedCaDb(trusted_CAs)
+
+  def cipher_name(self):
+    return self._ssl.getCipherName()
+
+  def protocol_name(self):
+    return self._ssl.getProtocolName()
+
+  def allow_unsecured_client(self):
+     self._ssl.allowUnsecuredClient(True)
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",

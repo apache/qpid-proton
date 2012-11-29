@@ -5,6 +5,8 @@
 *.iml
 *.ipr
 *.iws
+*.class
+*.pyc
 target
 .DS_Store
 .project

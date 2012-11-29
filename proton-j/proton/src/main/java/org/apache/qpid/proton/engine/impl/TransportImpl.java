@@ -24,7 +24,17 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.engine.*;
+import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.FrameTransport;
+import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.TransportInput;
+import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.TransportWrapper;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.type.*;
 import org.apache.qpid.proton.type.transport.Attach;
@@ -85,8 +95,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     private boolean _closeReceived;
     private Open _open;
     private SaslImpl _sasl;
+    private SslImpl _ssl;
     private TransportException _inputException;
     private ProtocolTracer _protocolTracer = null;
+
 
     {
         AMQPDefinedTypes.registerAllTypes(_decoder);
@@ -222,6 +234,19 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
         return _sasl;
 
+    }
+
+    @Override
+    public Ssl ssl()
+    {
+        if (_ssl == null)
+        {
+            _ssl = new SslImpl();
+            TransportWrapper transportWrapper = _ssl.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
+        }
+        return _ssl;
     }
 
     private void clearTransportWorkList()
@@ -1121,7 +1146,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     public boolean input(TransportFrame frame)
     {
-        if( _protocolTracer!=null ) 
+        if( _protocolTracer!=null )
         {
             _protocolTracer.receivedFrame(frame);
         }
@@ -1151,13 +1176,14 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
-    public ProtocolTracer getProtocolTracer() 
+    public ProtocolTracer getProtocolTracer()
     {
         return _protocolTracer;
     }
 
-    public void setProtocolTracer(ProtocolTracer protocolTracer) 
+    public void setProtocolTracer(ProtocolTracer protocolTracer)
     {
         this._protocolTracer = protocolTracer;
     }
+
 }

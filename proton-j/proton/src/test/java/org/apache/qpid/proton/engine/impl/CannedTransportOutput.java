@@ -18,9 +18,30 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
+import static org.junit.Assert.assertNotNull;
+import java.nio.ByteBuffer;
 
-public interface TransportWrapper extends TransportInput, TransportOutput
+import org.apache.qpid.proton.engine.TransportOutput;
+
+public class CannedTransportOutput implements TransportOutput
 {
+
+    private ByteBuffer _cannedOutput;
+
+    @Override
+    public int output(byte[] destination, int offset, int size)
+    {
+        assertNotNull(_cannedOutput);
+        int sizeToGet = Math.min(size, _cannedOutput.remaining());
+        _cannedOutput.get(destination, offset, sizeToGet);
+        return sizeToGet;
+    }
+
+    public void setOutput(String output)
+    {
+        _cannedOutput = ByteBuffer.wrap(output.getBytes());
+    }
+
 }

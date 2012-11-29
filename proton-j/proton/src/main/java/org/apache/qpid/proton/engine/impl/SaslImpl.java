@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 
 
 import java.nio.ByteBuffer;
+
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;

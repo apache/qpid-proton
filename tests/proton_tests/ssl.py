@@ -82,7 +82,6 @@ class SslTest(common.Test):
         server_conn.close()
         self._pump()
 
-
     def test_server_certificate(self):
         """ Test that anonymous clients can still connect to a server that has
         a certificate configured.
@@ -233,4 +232,48 @@ class SslTest(common.Test):
         except TransportException, e:
             pass
 
+    def test_allow_unsecured_client(self):
+        """ Client is allows to connect unsecured to secured client
+        """
+        self.t_client = Transport()
+
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        self.server.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server.set_peer_authentication( SSL.VERIFY_PEER,
+                                             self._testpath("ca-certificate.pem") )
+        self.server.allow_unsecured_client()
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+
+    def test_disallow_unsecured_client(self):
+        """ Client is disallowed from connecting unsecured to secured client
+        """
+        self.t_client = Transport()
+
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        self.server.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server.set_peer_authentication( SSL.VERIFY_PEER,
+                                             self._testpath("ca-certificate.pem") )
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        try:
+            self._pump()
+            assert False, "Expecting exception"
+        except TransportException:
+            assert True
 

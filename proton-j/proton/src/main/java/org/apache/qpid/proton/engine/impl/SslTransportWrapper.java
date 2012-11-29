@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +17,12 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.TransportWrapper;
 
-public interface TransportWrapper extends TransportInput, TransportOutput
+public interface SslTransportWrapper extends TransportWrapper
 {
+    String getCipherName();
+    String getProtocolName();
 }

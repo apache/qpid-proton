@@ -43,15 +43,22 @@ public interface Transport extends Endpoint
     public int input(byte[] bytes, int offset, int size);
 
     /**
-     * @param bytes array for output bytes
+     * Has the transport produce up to size bytes placing the result
+     * into dest beginning at position offset.
+     *
+     *
+     *
+     * @param dest array for output bytes
      * @param offset the offset within bytes where output begins
-     * @param size the number of bytes available for output
+     * @param size the maximum number of bytes to be output
      *
      * @return the number of bytes written
      */
-    public int output(byte[] bytes, int offset, int size);
+    public int output(byte[] dest, int offset, int size);
 
 
     Sasl sasl();
+
+    Ssl ssl();
 
 }
