@@ -17,34 +17,18 @@
 # under the License.
 #
 
-include(UseSWIG)
+include_directories("${PERL_INCLUDE_PATH}")
 
-set (BINDING_DEPS qpid-proton)
+# Need to pass in the same compiler flags used to build Perl itself
+execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
+                OUTPUT_VARIABLE PERLCFLAGS)
+set (CMAKE_C_FLAGS ${PERLCFLAGS})
 
-# Build wrapper for Python:
-find_package (PythonLibs)
-if (PYTHONLIBS_FOUND)
-  add_subdirectory(python)
-endif (PYTHONLIBS_FOUND)
+swig_add_module(cproton_perl perl perl.i)
+swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
-# Build wrapper for Ruby:
-find_package(Ruby)
-if (RUBY_FOUND)
-  add_subdirectory(ruby)
-endif (RUBY_FOUND)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
+              ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.pm
+        DESTINATION ${PERL_ARCHLIB}
+        COMPONENT Perl)
 
-# Build wrapper for PHP
-# For now, assume PHP support if the 'php-config' tool is present.
-# @todo: allow user to specify which php-config if multiple PHP sources installed!
-find_program(PHP_CONFIG_EXE php-config)
-if (PHP_CONFIG_EXE)
-  find_program(PHP_EXE php)
-  if (PHP_EXE)
-    add_subdirectory(php)
-  endif (PHP_EXE)
-endif (PHP_CONFIG_EXE)
-
-include(FindPerlLibs)
-if (PERLLIBS_FOUND)
-  add_subdirectory(perl)
-endif (PERLLIBS_FOUND)
