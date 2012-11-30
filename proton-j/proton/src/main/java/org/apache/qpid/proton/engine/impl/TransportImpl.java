@@ -305,6 +305,10 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                             int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null, null);
                             written += frameBytes;
                             endpoint.clearModified();
+
+                            // TODO - temporary hack for PROTON-154, this line should be removed and replaced
+                            //        with proper handling for closed links
+                            link.free();
                         }
                     }
 
