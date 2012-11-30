@@ -51,7 +51,7 @@ set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
 set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
 set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
-set (MAN_INSTALL_DIR man CACHE PATH "Manpage directory")
+set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 
