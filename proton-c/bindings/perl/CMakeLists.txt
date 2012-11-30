@@ -27,7 +27,7 @@ set (CMAKE_C_FLAGS ${PERLCFLAGS})
 swig_add_module(cproton_perl perl perl.i)
 swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcproton_perl.so
               ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.pm
         DESTINATION ${PERL_ARCHLIB}
         COMPONENT Perl)
