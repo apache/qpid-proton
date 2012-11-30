@@ -636,7 +636,7 @@ public class Message
         }
         if(getMessageAnnotations() != null)
         {
-            encoder.writeObject(getDeliveryAnnotations());
+            encoder.writeObject(getMessageAnnotations());
         }
         if(getProperties() != null)
         {
