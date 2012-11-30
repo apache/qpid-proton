@@ -1,6 +1,9 @@
 package org.apache.qpid.proton.jms;
 
 import javax.jms.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -21,7 +24,15 @@ abstract public class JMSVendor {
 
     public abstract void setJMSXUserID(Message msg, String value);
 
-    public abstract Destination createDestination(String name);
+    @Deprecated
+    public Destination createDestination(String name) {
+        return null;
+    }
+
+    @SuppressWarnings("deprecation")
+    public <T extends Destination> T createDestination(String name, Class<T> kind) {
+        return kind.cast(createDestination(name));
+    }
 
     public abstract void setJMSXGroupID(Message msg, String groupId);
 

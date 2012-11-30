@@ -130,9 +130,13 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         }
         if( msg.getJMSDestination()!=null ) {
             props.setTo(vendor.toAddress(msg.getJMSDestination()));
+            if( maMap==null ) maMap = new HashMap();
+            maMap.put("x-opt-to-type", destinationAttributes(msg.getJMSDestination()));
         }
         if( msg.getJMSReplyTo()!=null ) {
-            props.setReplyTo(vendor.toAddress(msg.getJMSDestination()));
+            props.setReplyTo(vendor.toAddress(msg.getJMSReplyTo()));
+            if( maMap==null ) maMap = new HashMap();
+            maMap.put("x-opt-reply-type", destinationAttributes(msg.getJMSReplyTo()));
         }
         if( msg.getJMSCorrelationID()!=null ) {
             props.setCorrelationId(msg.getJMSCorrelationID());
@@ -154,11 +158,18 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             } else if( key.startsWith("JMSXDeliveryCount") ) {
                 header.setDeliveryCount(new UnsignedInteger(msg.getIntProperty(key)));
             } else if( key.startsWith("JMSXUserID") ) {
-                props.setUserId(new Binary(msg.getStringProperty(key).getBytes("UTF-8")));
+                String value = msg.getStringProperty(key);
+                props.setUserId(new Binary(value.getBytes("UTF-8")));
             } else if( key.startsWith("JMSXGroupID") ) {
-                props.setGroupId(msg.getStringProperty(key));
+                String value = msg.getStringProperty(key);
+                props.setGroupId(value);
+                if( apMap==null ) apMap = new HashMap();
+                apMap.put(key, value);
             } else if( key.startsWith("JMSXGroupSeq") ) {
-                props.setGroupSequence(new UnsignedInteger(msg.getIntProperty(key)));
+                UnsignedInteger value = new UnsignedInteger(msg.getIntProperty(key));
+                props.setGroupSequence(value);
+                if( apMap==null ) apMap = new HashMap();
+                apMap.put(key, value);
             } else if( key.startsWith(prefixDeliveryAnnotationsKey) ) {
                 if( daMap == null ) daMap = new HashMap();
                 String name = key.substring(prefixDeliveryAnnotationsKey.length());
@@ -206,5 +217,23 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         }
 
         return new EncodedMessage(messageFormat, buffer.array(), 0, c);
+    }
+
+    private static String destinationAttributes(Destination destination) {
+        if( destination instanceof Queue ) {
+            if( destination instanceof TemporaryQueue ) {
+                return "temporary,queue";
+            } else {
+                return "queue";
+            }
+        }
+        if( destination instanceof Topic ) {
+            if( destination instanceof TemporaryTopic ) {
+                return "temporary,topic";
+            } else {
+                return "topic";
+            }
+        }
+        return "";
     }
 }
