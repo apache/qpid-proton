@@ -102,6 +102,7 @@ int main(int argc, char** argv)
 
   pn_messenger_stop(messenger);
   pn_messenger_free(messenger);
+  pn_message_free(message);
 
   return 0;
 }
