@@ -2119,16 +2119,18 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
-int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
+int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery, bool* allocation_blocked)
 {
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = pn_session_get_state(transport, link->session);
   pn_link_state_t *link_state = pn_link_get_state(ssn_state, link);
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
-    if (!state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
+    if (!(*allocation_blocked) && !state && pn_delivery_buffer_available(&ssn_state->outgoing)) {
       state = pn_delivery_buffer_push(&ssn_state->outgoing, delivery);
       delivery->transport_context = state;
+    } else {
+      *allocation_blocked = true;
     }
 
     if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
@@ -2200,6 +2202,7 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
   {
     pn_connection_t *conn = (pn_connection_t *) endpoint;
     pn_delivery_t *delivery = conn->tpwork_head;
+    bool allocation_blocked = false;
     while (delivery)
     {
       if (!delivery->transport_context && transport->disp->available > 0) {
@@ -2208,7 +2211,7 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
 
       pn_link_t *link = delivery->link;
       if (pn_link_is_sender(link)) {
-        int err = pn_process_tpwork_sender(transport, delivery);
+        int err = pn_process_tpwork_sender(transport, delivery, &allocation_blocked);
         if (err) return err;
       } else {
         int err = pn_process_tpwork_receiver(transport, delivery);
