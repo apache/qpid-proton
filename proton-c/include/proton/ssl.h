@@ -140,6 +140,7 @@ int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl);
  *  These settings can be changed via ::pn_ssl_set_peer_authentication()
  */
 typedef enum {
+  PN_SSL_VERIFY_NULL=0,   /**< internal use only */
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
   PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
 } pn_ssl_verify_mode_t;
@@ -210,6 +211,36 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
  * @return True if the version information was to buffer, False if SSL connection not ready.
  */
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
+
+
+  /* the new stuff */
+typedef struct pn_ssl_domain_t pn_ssl_domain_t;
+typedef struct pn_ssl_state_t pn_ssl_state_t;
+
+pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t );
+void pn_ssl_domain_free( pn_ssl_domain_t * );
+
+pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *, pn_transport_t *);
+
+int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
+                               const char *certificate_file,
+                               const char *private_key_file,
+                               const char *password);
+
+int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
+                                const char *certificate_db);
+
+int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
+                                                  const pn_ssl_verify_mode_t mode,
+                                                  const char *trusted_CAs);
+
+
+pn_ssl_state_t *pn_ssl_get_state( pn_ssl_t *);
+int pn_ssl_resume_state( pn_ssl_t *, pn_ssl_state_t * );
+bool pn_ssl_state_resumed_ok( pn_ssl_t * );
+void pn_ssl_state_free( pn_ssl_state_t * );
+  
+
 #ifdef __cplusplus
 }
 #endif

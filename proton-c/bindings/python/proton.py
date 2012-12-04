@@ -2243,6 +2243,31 @@ class SSLException(TransportException):
 class SSLUnavailable(SSLException):
   pass
 
+class SSLDomain(object):
+  def __init__(self, mode):
+    self._domain = pn_ssl_domain(mode)
+    if self._domain is None:
+      raise SSLUnavailable()
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, SSLException)
+      raise exc("SSL failure.")
+    else:
+      return err
+
+  def set_credentials(self, cert_file, key_file, password):
+    return self._check( pn_ssl_domain_set_credentials(self._domain,
+                                                      cert_file, key_file,
+                                                      password) )
+  def set_trusted_ca_db(self, certificate_db):
+    return self._check( pn_ssl_domain_set_trusted_ca_db(self._domain,
+                                                        certificate_db) )
+  def set_default_peer_authentication(self, verify_mode, trusted_CAs=None):
+    return self._check( pn_ssl_domain_set_default_peer_authentication(self._domain,
+                                                                      verify_mode,
+                                                                      trusted_CAs) )
+
 class SSL(object):
 
   def _check(self, err):
@@ -2252,8 +2277,11 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport):
-    self._ssl = pn_ssl(transport._trans)
+  def __init__(self, transport, domain=None):
+    if domain:
+      self._ssl = pn_ssl_new( domain._domain, transport._trans )
+    else:   # old api:
+      self._ssl = pn_ssl(transport._trans)
     if self._ssl is None:
       raise SSLUnavailable()
 
@@ -2296,10 +2324,32 @@ class SSL(object):
       return name
     return None
 
+  def get_state(self):
+    return SSLState( self )
+
+  def resume_state(self, state):
+    return pn_ssl_resume_state( self._ssl, state._state )
+
+  def state_resumed_ok(self):
+    return pn_ssl_state_resumed_ok( self._ssl )
+
+class SSLState(object):
+  """ State to store an SSL session.  Used to resume previous session on a new
+  SSL connection.
+  """
+  def __init__(self, ssl_obj):
+    self._state = pn_ssl_get_state( ssl_obj._ssl )
+
+  def __del__(self):
+    if hasattr(self, "_state"):
+      pn_ssl_state_free( self._state )
+      del self._state
+
+
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
-           "Transport", "TransportException", "SASL", "SSL", "Described",
-           "Array", "symbol", "char", "timestamp", "ulong", "UNDESCRIBED",
-           "SSLUnavailable", "PN_SESSION_WINDOW", "AUTOMATIC", "MANUAL",
-           "PENDING", "ACCEPTED", "REJECTED"]
+           "Transport", "TransportException", "SASL", "UNDESCRIBED", "SSL",
+           "SSLDomain", "SSLState", "Described", "Array", "symbol", "char",
+           "timestamp", "ulong", "SSLUnavailable", "PN_SESSION_WINDOW",
+           "AUTOMATIC", "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]

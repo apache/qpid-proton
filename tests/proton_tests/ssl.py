@@ -44,11 +44,14 @@ class SslTest(common.Test):
         self.t_server = None
 
     def _pump(self):
+        self._pump2(self.t_client, self.t_server)
+
+    def _pump2(self, client, server):
         while True:
-            out_client = self.t_client.output(1024)
-            out_server = self.t_server.output(1024)
-            if out_client: self.t_server.input(out_client)
-            if out_server: self.t_client.input(out_server)
+            out_client = client.output(1024)
+            out_server = server.output(1024)
+            if out_client: server.input(out_client)
+            if out_server: client.input(out_server)
             if not out_client and not out_server: break
 
     def _testpath(self, file):
@@ -276,4 +279,155 @@ class SslTest(common.Test):
             assert False, "Expecting exception"
         except TransportException:
             assert True
+
+    def test_domain_server_authentication(self):
+        """ Simple SSL connection with authentication of the server
+        """
+        server_domain = SSLDomain(SSL.MODE_SERVER)
+        server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        server_transport = Transport()
+        server_ssl = SSL( server_transport, server_domain)
+
+        client_domain = SSLDomain(SSL.MODE_CLIENT)
+        client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        client_domain.set_default_peer_authentication( SSL.VERIFY_PEER )
+        client_transport = Transport()
+        client_ssl = SSL( client_transport, client_domain )
+
+        client_conn = Connection()
+        client_transport.bind(client_conn)
+
+        server_conn = Connection()
+        server_transport.bind(server_conn)
+
+        client_conn.open()
+        server_conn.open()
+        self._pump2( client_transport, server_transport )
+        assert client_ssl.protocol_name() is not None
+        client_conn.close()
+        server_conn.close()
+        self._pump2( client_transport, server_transport )
+
+
+    def test_domain_bad_server_certificate(self):
+        """ A server with a self-signed certificate that is not trusted by the
+        client.  The client should reject the server.
+        """
+
+        server_domain = SSLDomain(SSL.MODE_SERVER)
+        server_domain.set_credentials(self._testpath("bad-server-certificate.pem"),
+                                      self._testpath("bad-server-private-key.pem"),
+                                      "server-password")
+        server_domain.set_default_peer_authentication( SSL.ANONYMOUS_PEER )
+
+        # by default, clients will allow connections to the server with the bad cert
+        client_domain = SSLDomain(SSL.MODE_CLIENT)
+        client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        client_domain.set_default_peer_authentication( SSL.ANONYMOUS_PEER )
+
+        # create a server listener
+        server_transport = Transport()
+        server_ssl = SSL( server_transport, server_domain)
+        server_conn = Connection()
+        server_transport.bind(server_conn)
+
+        # create a client using anonymous
+        bad_client_transport = Transport()
+        bad_client_ssl = SSL( bad_client_transport, client_domain )
+        bad_client_conn = Connection()
+        bad_client_transport.bind(bad_client_conn)
+
+        # client will allow connection to server:
+        bad_client_conn.open()
+        server_conn.open()
+        self._pump2( bad_client_transport, server_transport )
+        assert bad_client_ssl.protocol_name() is not None
+        bad_client_conn.close()
+        server_conn.close()
+
+        # now instantiate new client using same domain, but override to verify
+        # peer:
+        good_client_transport = Transport()
+        good_client_ssl = SSL( good_client_transport, client_domain )
+        good_client_ssl.set_peer_authentication( SSL.VERIFY_PEER )
+        good_client_conn = Connection()
+        good_client_transport.bind(good_client_conn)
+
+        server_transport = Transport()
+        server_ssl = SSL( server_transport, server_domain)
+        server_conn = Connection()
+        server_transport.bind(server_conn)
+
+        good_client_conn.open()
+        server_conn.open()
+        try:
+            self._pump2( good_client_transport, server_transport )
+            assert False, "Client failed to reject bad certificate."
+        except TransportException, e:
+            pass
+        good_client_conn.close()
+        server_conn.close()
+
+    def test_session_resume(self):
+        """ Test resume of client session.
+        """
+        # server config
+        server_domain = SSLDomain(SSL.MODE_SERVER)
+        server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        # client config
+        client_domain = SSLDomain(SSL.MODE_CLIENT)
+        client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        client_domain.set_default_peer_authentication( SSL.VERIFY_PEER )
+
+        # setup first client session
+        client_transport = Transport()
+        client_ssl = SSL( client_transport, client_domain )
+        client_conn = Connection()
+        client_transport.bind(client_conn)
+
+        # create server session to connect to
+        server_transport = Transport()
+        server_ssl = SSL( server_transport, server_domain)
+        server_conn = Connection()
+        server_transport.bind(server_conn)
+
+        #client_transport.trace(Transport.TRACE_DRV)
+
+        # bring up the connection and store its state
+        client_conn.open()
+        server_conn.open()
+        self._pump2( client_transport, server_transport )
+        assert client_ssl.protocol_name() is not None
+        ssl_state = client_ssl.get_state()
+        client_conn.close()
+        server_conn.close()
+        self._pump2( client_transport, server_transport )
+
+        # now create a new set of connections
+        client_transport = Transport()
+        client_ssl = SSL( client_transport, client_domain )
+        client_conn = Connection()
+        client_transport.bind(client_conn)
+
+        server_transport = Transport()
+        server_ssl = SSL( server_transport, server_domain)
+        server_conn = Connection()
+        server_transport.bind(server_conn)
+
+        client_ssl.resume_state( ssl_state )
+        client_conn.open()
+        server_conn.open()
+        self._pump2( client_transport, server_transport )
+        assert client_ssl.protocol_name() is not None
+        assert client_ssl.state_resumed_ok()
+        #newstate = client_ssl.get_state()
+
+        del ssl_state
+        client_conn.close()
+        server_conn.close()
+        self._pump2( client_transport, server_transport )
 

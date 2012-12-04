@@ -104,3 +104,56 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size)
   return false;
 }
 
+pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode)
+{
+  return NULL;
+}
+void pn_ssl_domain_free( pn_ssl_domain_t *d )
+{
+}
+
+pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *d, pn_transport_t *t)
+{
+  return NULL;
+}
+
+int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
+                               const char *certificate_file,
+                               const char *private_key_file,
+                               const char *password)
+{
+  return -1;
+}
+
+int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
+                                const char *certificate_db)
+{
+  return -1;
+}
+
+int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
+                                                  const pn_ssl_verify_mode_t mode,
+                                                  const char *trusted_CAs)
+{
+  return -1;
+}
+
+pn_ssl_state_t *pn_ssl_get_state( pn_ssl_t *s)
+{
+  return NULL;
+}
+
+int pn_ssl_resume_state( pn_ssl_t *s, pn_ssl_state_t *t )
+{
+  return -1;
+}
+
+bool pn_ssl_state_resumed_ok( pn_ssl_t *s )
+{
+  return false;
+}
+
+void pn_ssl_state_free( pn_ssl_state_t *s )
+{
+}
+
