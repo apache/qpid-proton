@@ -1,4 +1,4 @@
-version 0.1 (TBA):
+version 0.2 (30 November 2012):
 	* First implementation of the stable APIs on top of swig.
 	* Wrote the Rspec tests to test the new APIs.
 	* Added SimpleCov support to monitor Rspec test coverage.
