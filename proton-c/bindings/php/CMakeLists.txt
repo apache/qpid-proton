@@ -32,9 +32,13 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --includes
 
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/php.i PROPERTIES SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}/include")
 swig_add_module(cproton php ${CMAKE_CURRENT_SOURCE_DIR}/php.i)
-set_target_properties(cproton PROPERTIES PREFIX "")
 set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_FLAGS "${PHP_INCLUDES}")
 swig_link_libraries(cproton ${BINDING_DEPS})
+# PHP modules must be linked with unresolved symbols as they are presumably satisfied only when loaded by php itself
+set_target_properties(cproton
+    PROPERTIES
+    PREFIX ""
+    LINK_FLAGS "${ALLOW_UNDEFINED}")
 
 execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
                 OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT

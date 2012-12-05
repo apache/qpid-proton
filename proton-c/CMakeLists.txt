@@ -100,11 +100,6 @@ else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
 endif (SSL_IMPL STREQUAL openssl)
 
-find_package(SWIG)
-if (SWIG_FOUND)
-  add_subdirectory(bindings)
-endif (SWIG_FOUND)
-
 # First check whether we get clock_gettime without any special library linked
 CHECK_SYMBOL_EXISTS(clock_gettime "time.h" CLOCK_GETTIME_IN_LIBC)
 if (CLOCK_GETTIME_IN_LIBC)
@@ -138,17 +133,26 @@ else (UUID_GENERATE_IN_LIBC)
 endif (UUID_GENERATE_IN_LIBC)
 
 option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ON)
+option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ON)
 
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
-    set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
-  else (ENABLE_WARNING_ERROR)
-    set (COMPILE_WARNING_FLAGS "-Wall -pedantic-errors")
+    set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
+  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
   set (COMPILE_LANGUAGE_FLAGS "-std=c99")
   set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+  if (ENABLE_UNDEFINED_ERROR)
+    set (CATCH_UNDEFINED "-Wl,--no-undefined")
+    set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
+  endif (ENABLE_UNDEFINED_ERROR)
 endif (CMAKE_COMPILER_IS_GNUCC)
+
+find_package(SWIG)
+if (SWIG_FOUND)
+  add_subdirectory(bindings)
+endif (SWIG_FOUND)
 
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
@@ -210,6 +214,7 @@ set_target_properties (
   PROPERTIES
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
+  LINK_FLAGS "${CATCH_UNDEFINED}"
 )
 
 add_executable (proton src/proton.c)
