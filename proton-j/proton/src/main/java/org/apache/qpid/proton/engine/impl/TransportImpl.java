@@ -35,6 +35,7 @@ import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportInput;
 import org.apache.qpid.proton.engine.TransportOutput;
 import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.type.*;
 import org.apache.qpid.proton.type.transport.Attach;

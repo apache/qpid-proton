@@ -16,18 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.assertArrayUntouchedExcept;
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.assertByteBufferContents;
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.createFilledBuffer;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertArrayUntouchedExcept;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertByteBufferContents;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.createFilledBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.impl.ByteHolder;
+import org.apache.qpid.proton.engine.impl.ssl.ByteHolder;
 import org.junit.Test;
 
 public class ByteHolderTest

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
 import static org.junit.Assert.assertEquals;
 

@@ -24,12 +24,12 @@ import org.apache.qpid.proton.engine.TransportInput;
 import org.apache.qpid.proton.engine.TransportOutput;
 import org.apache.qpid.proton.engine.TransportWrapper;
 
-class PlainTransportWrapper implements TransportWrapper
+public class PlainTransportWrapper implements TransportWrapper
 {
     private final TransportOutput _outputProcessor;
     private final TransportInput _inputProcessor;
 
-    PlainTransportWrapper(TransportOutput outputProcessor,
+    public PlainTransportWrapper(TransportOutput outputProcessor,
             TransportInput inputProcessor)
     {
         _outputProcessor = outputProcessor;

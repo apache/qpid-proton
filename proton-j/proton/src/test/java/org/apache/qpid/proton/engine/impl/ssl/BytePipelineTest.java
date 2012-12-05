@@ -16,14 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.assertByteBufferContents;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertByteBufferContents;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.impl.BytePipeline;
+import org.apache.qpid.proton.engine.impl.ssl.BytePipeline;
 import org.junit.Test;
 
 public class BytePipelineTest

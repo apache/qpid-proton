@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -30,7 +30,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 
-import org.apache.qpid.proton.engine.impl.SslEngineFacade;
+import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacade;
 
 
 /**

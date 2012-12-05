@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +18,39 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
-import org.apache.qpid.proton.engine.TransportWrapper;
+import static org.junit.Assert.assertNotNull;
+import java.nio.ByteBuffer;
 
-public interface SslTransportWrapper extends TransportWrapper
+import org.apache.qpid.proton.engine.TransportOutput;
+
+public class CannedTransportOutput implements TransportOutput
 {
-    String getCipherName();
-    String getProtocolName();
+
+    private ByteBuffer _cannedOutput;
+
+    public CannedTransportOutput()
+    {
+    }
+
+    public CannedTransportOutput(String output)
+    {
+        setOutput(output);
+    }
+
+    @Override
+    public int output(byte[] destination, int offset, int size)
+    {
+        assertNotNull(_cannedOutput);
+        int sizeToGet = Math.min(size, _cannedOutput.remaining());
+        _cannedOutput.get(destination, offset, sizeToGet);
+        return sizeToGet;
+    }
+
+    public void setOutput(String output)
+    {
+        _cannedOutput = ByteBuffer.wrap(output.getBytes());
+    }
+
 }

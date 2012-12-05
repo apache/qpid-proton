@@ -18,18 +18,18 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.assertArrayUntouchedExcept;
-import static org.apache.qpid.proton.engine.impl.ByteTestHelper.createFilledBuffer;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertArrayUntouchedExcept;
+import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.createFilledBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.engine.Ssl;
-import org.apache.qpid.proton.engine.impl.SimpleSslTransportWrapper;
-import org.apache.qpid.proton.engine.impl.SslEngineFacadeFactory;
+import org.apache.qpid.proton.engine.impl.ssl.SimpleSslTransportWrapper;
+import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacadeFactory;
 import org.junit.Before;
 import org.junit.Test;
 

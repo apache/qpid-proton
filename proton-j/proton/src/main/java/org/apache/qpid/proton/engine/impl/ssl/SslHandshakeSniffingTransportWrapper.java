@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.TransportWrapper;
 

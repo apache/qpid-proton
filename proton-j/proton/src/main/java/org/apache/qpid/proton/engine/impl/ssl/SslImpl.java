@@ -18,12 +18,13 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.TransportInput;
 import org.apache.qpid.proton.engine.TransportOutput;
 import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 
 /*
  * Enables the JSSE system debugging system property:
@@ -115,7 +116,7 @@ public class SslImpl implements Ssl
         return _certificateFile;
     }
 
-    TransportWrapper wrap(TransportInput inputProcessor, TransportOutput outputProcessor)
+    public TransportWrapper wrap(TransportInput inputProcessor, TransportOutput outputProcessor)
     {
         if (_unsecureClientAwareTransportWrapper != null)
         {
