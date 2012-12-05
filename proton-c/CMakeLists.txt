@@ -127,7 +127,12 @@ else (UUID_GENERATE_IN_LIBC)
     if (UUID_CREATE_IN_LIBC)
       list(APPEND PLATFORM_DEFINITIONS "USE_UUID_CREATE")
     else (UUID_CREATE_IN_LIBC)
-      message(FATAL_ERROR "neither uuid_generate() nor uuid_create() found")
+      CHECK_SYMBOL_EXISTS(UuidToString "rpc.h" WIN_UUID)
+      if (WIN_UUID)
+        list(APPEND PLATFORM_DEFINITIONS "USE_WIN_UUID")
+      else (WIN_UUID)
+        message(FATAL_ERROR "No Uuid API found")
+      endif (WIN_UUID)
     endif (UUID_CREATE_IN_LIBC)
   endif (UUID_GENERATE_IN_UUID)
 endif (UUID_GENERATE_IN_LIBC)
@@ -247,7 +252,7 @@ target_link_libraries (proton-dump qpid-proton)
 set_target_properties (
     proton proton-dump
     PROPERTIES
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
 )
 
 # Install executables and libraries

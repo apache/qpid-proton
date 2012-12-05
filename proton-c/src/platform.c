@@ -49,7 +49,7 @@ char* pn_i_genuuid(void) {
     char *generated = malloc(37*sizeof(char));
     uuid_t uuid;
     uuid_generate(uuid);
-    uuid_unparse_lower(uuid, generated);
+    uuid_unparse(uuid, generated);
     return generated;
 }
 #elif USE_UUID_CREATE
@@ -59,8 +59,20 @@ char* pn_i_genuuid(void) {
     uuid_t uuid;
     uint32_t rc;
     uuid_create(&uuid, &rc);
+    // Under FreeBSD the returned string is newly allocated from the heap
     uuid_to_string(&uuid, &generated, &rc);
-    return pn_strdup(generated);
+    return generated;
+}
+#elif USE_WIN_UUID
+#include <rpc.h>
+char* pn_i_genuuid(void) {
+    RPC_CSTR generated;
+    UUID uuid;
+    UuidCreate(&uuid);
+    UuidToString(&uuid, &generated);
+    char* r = pn_strdup((const char*)generated);
+    RpcStringFree(&generated);
+    return r;
 }
 #else
 #error "Don't know how to generate uuid strings on this platform"
