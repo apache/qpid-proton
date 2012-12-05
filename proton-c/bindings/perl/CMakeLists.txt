@@ -19,6 +19,13 @@
 
 include_directories("${PERL_INCLUDE_PATH}")
 
+# honor the install prefix
+execute_process(COMMAND ${PERL_EXECUTABLE} "-V::prefix:"
+                OUTPUT_VARIABLE QPERL_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(REGEX REPLACE "'(.*)'" "\\1" PERL_PREFIX ${QPERL_PREFIX})
+string(REPLACE ${PERL_PREFIX} ${CMAKE_INSTALL_PREFIX} PERL_PFX_ARCHLIB ${PERL_ARCHLIB})
+
 # Need to pass in the same compiler flags used to build Perl itself
 execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
                 OUTPUT_VARIABLE PERLCFLAGS)
@@ -29,6 +36,6 @@ swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcproton_perl.so
               ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.pm
-        DESTINATION ${PERL_ARCHLIB}
+        DESTINATION ${PERL_PFX_ARCHLIB}
         COMPONENT Perl)
 
