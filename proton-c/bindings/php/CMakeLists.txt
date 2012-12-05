@@ -23,7 +23,6 @@
 
 # Uses the php-config command line tool from PHP to extract the location of the PHP header
 # files
-
 execute_process(COMMAND ${PHP_CONFIG_EXE} --includes
                 OUTPUT_VARIABLE PHP_INCLUDES
                 RESULT_VARIABLE retval
@@ -44,20 +43,28 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
                 OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
-                OUTPUT_VARIABLE PHP_PFX
+                OUTPUT_VARIABLE QPHP_PREFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
                 OUTPUT_VARIABLE PHP_OPTS
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+# prepend install prefix to the extension directory
+string(REPLACE ${QPHP_PREFIX} ${CMAKE_INSTALL_PREFIX}
+       PHP_PFX_EXT_DIR ${PHP_EXT_DIR_DEFAULT})
+
 set(GET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/get_include_dir.php)
-execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${PHP_PFX}
+execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${QPHP_PREFIX}
                 OUTPUT_VARIABLE PHP_INCLUDE_DIR_DEFAULT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if ("${PHP_INCLUDE_DIR_DEFAULT}" STREQUAL "")
   set(PHP_INCLUDE_DIR_DEFAULT "/usr/share/php")
 endif()
+
+# prepend install prefix to the include directory
+string(REPLACE ${QPHP_PREFIX} ${CMAKE_INSTALL_PREFIX}
+       PHP_PFX_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT})
 
 string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
 set (PHP_INI_DIR_DEFAULT ${CMAKE_MATCH_1})
@@ -68,13 +75,13 @@ endif()
 
 if (IS_ABSOLUTE "${PHP_INI_DIR_DEFAULT}" AND (NOT (IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})))
   string(SUBSTRING ${PHP_INI_DIR_DEFAULT} 1 -1 PHP_INI_DIR_DEFAULT)
-  string(SUBSTRING ${PHP_EXT_DIR_DEFAULT} 1 -1 PHP_EXT_DIR_DEFAULT)
-  string(SUBSTRING ${PHP_INCLUDE_DIR_DEFAULT} 1 -1 PHP_INCLUDE_DIR_DEFAULT)
+  string(SUBSTRING ${PHP_PFX_EXT_DIR}     1 -1 PHP_PFX_EXT_DIR)
+  string(SUBSTRING ${PHP_PFX_INCLUDE_DIR} 1 -1 PHP_PFX_INCLUDE_DIR)
 endif ()
 
-set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
+set(PHP_EXT_DIR ${PHP_PFX_EXT_DIR} CACHE PATH "PHP extensions directory.")
 set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
-set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
+set(PHP_INCLUDE_DIR ${PHP_PFX_INCLUDE_DIR} CACHE PATH "PHP include directory.")
 
 install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}
