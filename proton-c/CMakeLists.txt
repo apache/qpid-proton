@@ -105,28 +105,37 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
-# When checking for clock_gettime etc. first check whether the symbol
-# is present in the library that it may be in, if it is not then check
-# whether the symbol works using just the regular C library
-CHECK_LIBRARY_EXISTS (rt clock_gettime "" CLOCK_GETTIME_IN_RT)
-if (CLOCK_GETTIME_IN_RT)
-  set (TIME_LIB rt)
-else (CLOCK_GETTIME_IN_RT)
-  CHECK_SYMBOL_EXISTS(clock_gettime "time.h" HAVE_CLOCK_GETTIME)
-  if (NOT HAVE_CLOCK_GETTIME)
-    message(FATAL_ERROR "clock_gettime() not found")
-  endif (NOT HAVE_CLOCK_GETTIME)
-endif (CLOCK_GETTIME_IN_RT)
+# First check whether we get clock_gettime without any special library linked
+CHECK_SYMBOL_EXISTS(clock_gettime "time.h" CLOCK_GETTIME_IN_LIBC)
+if (CLOCK_GETTIME_IN_LIBC)
+  list(APPEND PLATFORM_DEFINITIONS "USE_CLOCK_GETTIME")
+else (CLOCK_GETTIME_IN_LIBC)
+  CHECK_LIBRARY_EXISTS (rt clock_gettime "" CLOCK_GETTIME_IN_RT)
+  if (CLOCK_GETTIME_IN_RT)
+    set (TIME_LIB rt)
+    list(APPEND PLATFORM_DEFINITIONS "USE_CLOCK_GETTIME")
+  else (CLOCK_GETTIME_IN_RT)
+    list(APPEND PLATFORM_DEFINITIONS "USE_GETTIMEOFDAY")
+  endif (CLOCK_GETTIME_IN_RT)
+endif (CLOCK_GETTIME_IN_LIBC)
 
-CHECK_LIBRARY_EXISTS (uuid uuid_generate "" UUID_GENERATE_IN_UUID)
-if (UUID_GENERATE_IN_UUID)
-  set (UUID_LIB uuid)
-else (UUID_GENERATE_IN_UUID)
-  CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" HAVE_UUID_GENERATE)
-  if (NOT HAVE_UUID_GENERATE)
-    message(FATAL_ERROR "uuid_generate() not found")
-  endif (NOT HAVE_UUID_GENERATE)
-endif (UUID_GENERATE_IN_UUID)
+CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" UUID_GENERATE_IN_LIBC)
+if (UUID_GENERATE_IN_LIBC)
+  list(APPEND PLATFORM_DEFINITIONS "USE_UUID_GENERATE")
+else (UUID_GENERATE_IN_LIBC)
+  CHECK_LIBRARY_EXISTS (uuid uuid_generate "" UUID_GENERATE_IN_UUID)
+  if (UUID_GENERATE_IN_UUID)
+    set (UUID_LIB uuid)
+    list(APPEND PLATFORM_DEFINITIONS "USE_UUID_GENERATE")
+  else (UUID_GENERATE_IN_UUID)
+    CHECK_SYMBOL_EXISTS(uuid_create "uuid.h" UUID_CREATE_IN_LIBC)
+    if (UUID_CREATE_IN_LIBC)
+      list(APPEND PLATFORM_DEFINITIONS "USE_UUID_CREATE")
+    else (UUID_CREATE_IN_LIBC)
+      message(FATAL_ERROR "neither uuid_generate() nor uuid_create() found")
+    endif (UUID_CREATE_IN_LIBC)
+  endif (UUID_GENERATE_IN_UUID)
+endif (UUID_GENERATE_IN_LIBC)
 
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -141,6 +150,7 @@ add_subdirectory(examples/messenger/c)
 
 set (qpid-proton-platform
   src/driver.c
+  src/platform.c
   ${pn_driver_ssl_impl}
 )
 
@@ -177,6 +187,7 @@ set_source_files_properties (
     ${qpid-proton-platform}
     PROPERTIES
     COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+    COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
 )
 
 add_library (

@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <poll.h>
 #include <stdio.h>
-#include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,6 +36,7 @@
 #include <proton/ssl.h>
 #include <proton/util.h>
 #include "util.h"
+#include "platform.h"
 #include "ssl/ssl-internal.h"
 
 /* Decls */
@@ -615,7 +615,7 @@ void pn_connector_process(pn_connector_t *c)
     }
     pn_connector_process_input(c);
 
-    c->wakeup = pn_connector_tick(c, pn_driver_now(c->driver));
+    c->wakeup = pn_connector_tick(c, pn_i_now());
 
     pn_connector_process_output(c);
     if (c->pending_write) {
@@ -759,7 +759,7 @@ void pn_driver_wait_1(pn_driver_t *d)
 int pn_driver_wait_2(pn_driver_t *d, int timeout)
 {
   if (d->wakeup) {
-    pn_timestamp_t now = pn_driver_now(d);
+    pn_timestamp_t now = pn_i_now();
     if (now >= d->wakeup)
       timeout = 0;
     else
@@ -784,7 +784,7 @@ void pn_driver_wait_3(pn_driver_t *d)
     l = l->listener_next;
   }
 
-  pn_timestamp_t now = pn_driver_now(d);
+  pn_timestamp_t now = pn_i_now();
   pn_connector_t *c = d->connector_head;
   while (c) {
     if (c->closed) {
@@ -853,11 +853,4 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   }
 
   return NULL;
-}
-
-pn_timestamp_t pn_driver_now(pn_driver_t *driver)
-{
-  struct timespec now;
-  if (clock_gettime(CLOCK_REALTIME, &now)) pn_fatal("clock_gettime() failed\n");
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
