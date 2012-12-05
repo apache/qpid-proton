@@ -36,6 +36,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -54,6 +56,8 @@ import org.bouncycastle.openssl.PasswordFinder;
 
 public class SslEngineFacadeFactory
 {
+    private static final Logger _logger = Logger.getLogger(SslEngineFacadeFactory.class.getName());
+
     /**
      * The protocol name used to create an {@link SSLContext}, taken from Java's list of
      * standard names at http://docs.oracle.com/javase/6/docs/technotes/guides/security/StandardNames.html
@@ -101,7 +105,10 @@ public class SslEngineFacadeFactory
             }
         }
 
-        System.out.println(sslConfiguration.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.log(Level.FINE, sslConfiguration.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
+        }
 
         boolean useClientMode = sslConfiguration.getMode() == Mode.CLIENT ? true : false;
         sslEngine.setUseClientMode(useClientMode);
@@ -165,10 +172,11 @@ public class SslEngineFacadeFactory
             {
                 String caCertAlias = "cacert";
 
-                System.out.println("_sslParams.getTrustedCaDb() : "
-                        + sslConfiguration.getTrustedCaDb());
-                Certificate trustedCaCert = (Certificate) readPemObject(sslConfiguration
-                        .getTrustedCaDb());
+                if(_logger.isLoggable(Level.FINE))
+                {
+                    _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslConfiguration.getTrustedCaDb());
+                }
+                Certificate trustedCaCert = (Certificate) readPemObject(sslConfiguration.getTrustedCaDb());
                 keystore.setCertificateEntry(caCertAlias, trustedCaCert);
             }
 
@@ -256,7 +264,7 @@ public class SslEngineFacadeFactory
         }
         catch(PEMException e)
         {
-            System.err.println("Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?");
+            _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
             throw new RuntimeException(e);
         }
         catch (IOException e)

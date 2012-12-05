@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -41,6 +43,8 @@ import org.apache.qpid.proton.engine.TransportOutput;
  */
 public class SimpleSslTransportWrapper implements SslTransportWrapper
 {
+    private static final Logger _logger = Logger.getLogger(SimpleSslTransportWrapper.class.getName());
+
     /**
      * Our testing has shown that application buffers need to be a bit larger
      * than that provided by {@link SSLSession#getApplicationBufferSize()} otherwise
@@ -130,7 +134,10 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 runDelegatedTasks(result);
                 updateCipherAndProtocolName(result);
 
-                System.out.println(_sslParams.getMode() + " input " + resultToString(result));
+                if(_logger.isLoggable(Level.FINEST))
+                {
+                    _logger.log(Level.FINEST, _sslParams.getMode() + " input " + resultToString(result));
+                }
 
                 Status sslResultStatus = result.getStatus();
                 HandshakeStatus handshakeStatus = result.getHandshakeStatus();
@@ -155,7 +162,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 {
                     if(handshakeStatus != HandshakeStatus.NOT_HANDSHAKING)
                     {
-                        System.out.println("WARN unexpectedly produced bytes for the underlying input when handshaking");
+                        _logger.warning("WARN unexpectedly produced bytes for the underlying input when handshaking");
                     }
 
                     allAcceptedByUnderlyingInput = _decodedInputHolder.readInto(_underlyingInput);
@@ -308,4 +315,9 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
     }
 
+    public static void main(String[] args)
+    {
+        _logger.info("PHDEBUG in main");
+        _logger.info("PHDEBUG in main2");
+    }
 }
