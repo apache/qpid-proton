@@ -137,9 +137,15 @@ else (UUID_GENERATE_IN_LIBC)
   endif (UUID_GENERATE_IN_UUID)
 endif (UUID_GENERATE_IN_LIBC)
 
+option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ON)
+
 # Set any additional platform specific C compiler flags
 if (CMAKE_COMPILER_IS_GNUCC)
-  set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+  if (ENABLE_WARNING_ERROR)
+    set (COMPILE_WARNING_FLAGS "-Wall -Werror -pedantic-errors")
+  else (ENABLE_WARNING_ERROR)
+    set (COMPILE_WARNING_FLAGS "-Wall -pedantic-errors")
+  endif (ENABLE_WARNING_ERROR)
   set (COMPILE_LANGUAGE_FLAGS "-std=c99")
   set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 endif (CMAKE_COMPILER_IS_GNUCC)
