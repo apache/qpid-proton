@@ -25,6 +25,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.impl.SslHandshakeSniffingTransportWrapper;
+import org.apache.qpid.proton.engine.impl.SslTransportWrapper;
 import org.junit.Test;
 
 public class SslHandshakeSniffingTransportWrapperTest

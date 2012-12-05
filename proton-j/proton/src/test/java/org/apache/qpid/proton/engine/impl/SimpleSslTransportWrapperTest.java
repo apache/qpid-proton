@@ -20,14 +20,16 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import static org.apache.qpid.proton.engine.impl.ByteTestHelper.assertArrayUntouchedExcept;
+import static org.apache.qpid.proton.engine.impl.ByteTestHelper.createFilledBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
-
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.impl.SimpleSslTransportWrapper;
+import org.apache.qpid.proton.engine.impl.SslEngineFacadeFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -364,29 +366,4 @@ public class SimpleSslTransportWrapperTest
         assertEquals(expectedOutputProduced.length(), numberProduced);
         assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes);
     }
-
-
-    private void assertArrayUntouchedExcept(String expectedString, byte[] actualBytes)
-    {
-        assertArrayUntouchedExcept(expectedString, actualBytes, 0);
-    }
-
-    private void assertArrayUntouchedExcept(String expectedString, byte[] actualBytes, int offset)
-    {
-        byte[] string = expectedString.getBytes();
-
-        byte[] expectedBytes = createFilledBuffer(actualBytes.length);
-        System.arraycopy(string, 0, expectedBytes, offset, string.length);
-
-        assertEquals(new String(expectedBytes), new String(actualBytes));
-
-    }
-
-    private byte[] createFilledBuffer(int length)
-    {
-        byte[] expectedBytes = new byte[length];
-        Arrays.fill(expectedBytes, (byte)'@');
-        return expectedBytes;
-    }
-
 }

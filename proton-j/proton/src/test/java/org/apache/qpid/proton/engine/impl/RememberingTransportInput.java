@@ -31,11 +31,10 @@ class RememberingTransportInput implements TransportInput
     @Override
     public int input(byte[] bytes, int offset, int size)
     {
-        final int returnSize;
+        final String newInput;
         if (!_hasAcceptedLimit)
         {
-            _receivedInput.append(new String(bytes, offset, size));
-            returnSize = size;
+            newInput = new String(bytes, offset, size);
         }
         else
         {
@@ -48,10 +47,11 @@ class RememberingTransportInput implements TransportInput
                         + " with accept limit of " + _acceptLimit + ". Test error??");
             }
             int effectiveSize = Math.min(size, spareCapacity);
-            _receivedInput.append(new String(bytes, offset, effectiveSize));
-            returnSize = effectiveSize;
+            newInput = new String(bytes, offset, effectiveSize);
         }
-        return returnSize;
+
+        _receivedInput.append(newInput);
+        return newInput.length();
     }
 
     public void removeAcceptLimit()
@@ -70,4 +70,9 @@ class RememberingTransportInput implements TransportInput
         return _receivedInput.toString();
     }
 
+    @Override
+    public String toString()
+    {
+        return "[RememberingTransportInput receivedInput (length " + _receivedInput.length() + ") is:" + _receivedInput.toString() + "]";
+    }
 }

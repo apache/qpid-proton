@@ -30,6 +30,8 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 
+import org.apache.qpid.proton.engine.impl.SslEngineFacade;
+
 
 /**
  * A simpler implementation of an SSLEngine that has predictable human-readable output, and that allows us to

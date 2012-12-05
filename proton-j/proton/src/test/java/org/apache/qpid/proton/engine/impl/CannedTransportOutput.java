@@ -30,6 +30,15 @@ public class CannedTransportOutput implements TransportOutput
 
     private ByteBuffer _cannedOutput;
 
+    public CannedTransportOutput()
+    {
+    }
+
+    public CannedTransportOutput(String output)
+    {
+        setOutput(output);
+    }
+
     @Override
     public int output(byte[] destination, int offset, int size)
     {

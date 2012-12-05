@@ -37,6 +37,7 @@ import org.apache.qpid.proton.engine.TransportOutput;
 /**
  * TODO close the SSLEngine when told to, and modify {@link #input(byte[], int, int)} and {@link #output(byte[], int, int)}
  * to respond appropriately thereafter.
+ * TODO move SSL and possible byte management classes into separate package
  */
 public class SimpleSslTransportWrapper implements SslTransportWrapper
 {
@@ -54,18 +55,17 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
     private SslEngineFacade _sslEngine;
 
-    private byte[] _clearOutputBuf;
-    private int _clearOutputBufOffset;
-    /** how many bytes of leftover clear output we've got */
-    private int _clearOutputBufSize;
-    private ByteBuffer _encodedOutputBuf;
+    /** Used by {@link #output(byte[], int, int)}. Acts as a buffer for the output from underlyingOutput */
+    private ByteHolder _clearOutputHolder;
 
-    private byte[] _encodedLeftovers = new byte[0];
+    /** Used by {@link #output(byte[], int, int)}. Caches the output from SSLEngine.wrap */
+    private ByteHolder _encodedOutputHolder;
 
-    private byte[] _clearLeftoverInput;
-    private int _clearLeftovertInputOffset;
-    private int _clearLeftoverInputSize;
+    /** Used by {@link #input(byte[], int, int)}. A buffer for the decoded bytes that will be passed to _underlyingInput */
+    private ByteHolder _decodedInputHolder;
 
+    /** used by {@link #input(byte[], int, int)} to cache the left over bytes not yet decoded due to buffer underflow. */
+    private final BytePipeline _encodedLeftoversPipeline = new BytePipeline();
 
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _cipherName;
@@ -89,78 +89,68 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         _underlyingOutput = underlyingOutput;
         _sslEngineFacadeFactory = sslEngineFacadeFactory;
         _sslEngine = _sslEngineFacadeFactory.createSslEngineFacade(sslConfiguration);
-        createBuffers(_sslEngine);
+        createByteHolders();
     }
 
-    private void createBuffers(SslEngineFacade sslEngine)
+    private void createByteHolders()
     {
-        int appBufferMax = sslEngine.getApplicationBufferSize();
-        int packetBufferMax = sslEngine.getPacketBufferSize();
+        int appBufferMax = _sslEngine.getApplicationBufferSize();
+        int packetBufferMax = _sslEngine.getPacketBufferSize();
 
-        _clearOutputBuf = new byte[appBufferMax + APPLICATION_BUFFER_EXTRA];
-        _clearLeftoverInput = new byte[appBufferMax + APPLICATION_BUFFER_EXTRA];
+        _clearOutputHolder = new ByteHolder(appBufferMax + APPLICATION_BUFFER_EXTRA);
+        _decodedInputHolder = new ByteHolder(appBufferMax + APPLICATION_BUFFER_EXTRA);
+        _decodedInputHolder.prepareToRead();
 
-        _encodedOutputBuf = ByteBuffer.allocate(packetBufferMax);
-        _encodedOutputBuf.limit(0);
+        _encodedOutputHolder = new ByteHolder(packetBufferMax);
+        _encodedOutputHolder.prepareToRead();
     }
 
     @Override
     public int input(byte[] encodedBytes, int offset, int size)
     {
-        final int initialSizeOfEncodedLeftovers = getSizeOfEncodedLeftovers();
-        final byte[] oldPlusNewEncodedBytes = buildLeftoversPlusNewEncodedBytes(encodedBytes, offset, size);
-        final ByteBuffer oldPlusNewEncodedByteBuffer = ByteBuffer.wrap(oldPlusNewEncodedBytes);
-        clearEncodedLeftovers();
+        final int initialSizeOfEncodedLeftovers =  _encodedLeftoversPipeline.getSize();
+        final ByteBuffer oldPlusNewEncodedByteBuffer = _encodedLeftoversPipeline.appendAndClear(encodedBytes, offset, size);
 
-        if (_clearLeftoverInputSize > 0)
+        if(!_decodedInputHolder.readInto(_underlyingInput))
         {
-            int numberAccepted = _underlyingInput.input(_clearLeftoverInput, _clearLeftovertInputOffset, _clearLeftoverInputSize);
-            if (numberAccepted < _clearLeftoverInputSize)
-            {
-                // underlying input couldn't accept all existing leftovers so we return without trying to decode any new data
-                _clearLeftoverInputSize -= numberAccepted;
-                _clearLeftovertInputOffset += numberAccepted;
-                return 0;
-            }
-            else
-            {
-                _clearLeftoverInputSize = 0;
-                _clearLeftovertInputOffset = 0;
-            }
+            // underlying input couldn't accept all existing leftovers so we return without trying to decode any new data
+            return 0;
         }
 
         try
         {
             boolean keepLooping = true;
-
-            byte[] clearBytes = new byte[_sslEngine.getApplicationBufferSize() + APPLICATION_BUFFER_EXTRA];
-            ByteBuffer clearByteBuffer = ByteBuffer.wrap(clearBytes);
-            int totalBytesConsumed = 0;
+            int totalBytesDecoded = 0;
 
             do
             {
-                SSLEngineResult result = _sslEngine.unwrap(oldPlusNewEncodedByteBuffer, clearByteBuffer);
+                SSLEngineResult result = _sslEngine.unwrap(oldPlusNewEncodedByteBuffer, _decodedInputHolder.prepareToWrite());
+                _decodedInputHolder.prepareToRead();
 
                 runDelegatedTasks(result);
                 updateCipherAndProtocolName(result);
 
-                System.out.println(_sslParams.getMode() + " input " + sslEngineResultToString(result));
+                System.out.println(_sslParams.getMode() + " input " + resultToString(result));
 
-                if(result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW)
+                Status sslResultStatus = result.getStatus();
+                HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+
+                if(sslResultStatus == SSLEngineResult.Status.OK)
                 {
-                    cacheEncodedLeftovers(oldPlusNewEncodedBytes, totalBytesConsumed);
+                    totalBytesDecoded += result.bytesConsumed();
                 }
-                else if(result.getStatus() == SSLEngineResult.Status.OK)
+                else if(sslResultStatus == SSLEngineResult.Status.BUFFER_UNDERFLOW)
                 {
-                    totalBytesConsumed += result.bytesConsumed();
+                    // Not an error. We store the not-yet-decoded bytes which will hopefully be augmented by some more
+                    // in a subsequent invocation of this method, allowing decoding to be done.
+                    _encodedLeftoversPipeline.set(oldPlusNewEncodedByteBuffer, totalBytesDecoded);
                 }
                 else
                 {
-                    throw new IllegalStateException("Unexpected SSL Engine state " + result.getStatus());
+                    throw new IllegalStateException("Unexpected SSL Engine state " + sslResultStatus);
                 }
 
-                HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                int sizeOfClearLeftovers = 0;
+                boolean allAcceptedByUnderlyingInput = true;
                 if(result.bytesProduced() > 0)
                 {
                     if(handshakeStatus != HandshakeStatus.NOT_HANDSHAKING)
@@ -168,26 +158,17 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                         System.out.println("WARN unexpectedly produced bytes for the underlying input when handshaking");
                     }
 
-                    int numberAccepted = _underlyingInput.input(clearBytes, 0, result.bytesProduced());
-                    sizeOfClearLeftovers = result.bytesProduced() - numberAccepted;
-                    if (sizeOfClearLeftovers > 0)
-                    {
-                        System.arraycopy(clearBytes, numberAccepted, _clearLeftoverInput, 0, sizeOfClearLeftovers);
-                        _clearLeftovertInputOffset = 0;
-                        _clearLeftoverInputSize = sizeOfClearLeftovers;
-                    }
-
-                    clearByteBuffer.clear();
+                    allAcceptedByUnderlyingInput = _decodedInputHolder.readInto(_underlyingInput);
                 }
 
                 keepLooping = handshakeStatus == HandshakeStatus.NOT_HANDSHAKING
-                            && result.getStatus() != Status.BUFFER_UNDERFLOW
-                            && sizeOfClearLeftovers == 0;
+                            && sslResultStatus != Status.BUFFER_UNDERFLOW
+                            && allAcceptedByUnderlyingInput;
             }
             while(keepLooping);
 
-            int newEncodedLeftovers = getSizeOfEncodedLeftovers();
-            int sizeToReportConsumed = totalBytesConsumed - initialSizeOfEncodedLeftovers + newEncodedLeftovers;
+            int newEncodedLeftovers = _encodedLeftoversPipeline.getSize();
+            int sizeToReportConsumed = totalBytesDecoded + newEncodedLeftovers - initialSizeOfEncodedLeftovers;
             return sizeToReportConsumed;
         }
         catch(SSLException e)
@@ -196,7 +177,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
     }
 
-    private String sslEngineResultToString(SSLEngineResult result)
+    private String resultToString(SSLEngineResult result)
     {
         return new StringBuilder("[SSLEngineResult status = ").append(result.getStatus())
                 .append(" handshakeStatus = ").append(result.getHandshakeStatus())
@@ -205,157 +186,85 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 .append("]").toString();
     }
 
-    private void clearEncodedLeftovers()
-    {
-        _encodedLeftovers = new byte[0];
-    }
-
-    private int getSizeOfEncodedLeftovers()
-    {
-        return _encodedLeftovers.length;
-    }
-
-    private byte[] buildLeftoversPlusNewEncodedBytes(byte[] encodedBytes, int offset, int size)
-    {
-        // TODO revisit code below and consider avoiding the multiple byte array allocations.
-        int sizeOfResult = _encodedLeftovers.length + size;
-        byte[] resultBytes = new byte[sizeOfResult];
-
-        System.arraycopy(_encodedLeftovers, 0, resultBytes, 0, _encodedLeftovers.length);
-
-        int destPos = _encodedLeftovers.length;
-        System.arraycopy(encodedBytes, offset, resultBytes, destPos, size);
-
-        return resultBytes;
-    }
-
-
-    private void cacheEncodedLeftovers(byte[] encodedBytes, int numberAlreadyConsumed)
-    {
-        int leftoverSize = encodedBytes.length - numberAlreadyConsumed;
-        _encodedLeftovers = new byte[leftoverSize];
-        System.arraycopy(encodedBytes, numberAlreadyConsumed, _encodedLeftovers, 0, leftoverSize);
-    }
-
-    /*
-     * The state of _encodedOutputBuf is interesting.
+    /**
+     * Write encoded output to the supplied destination.
      *
-     * Pre-condition: it may contain stuff. It is ready for this stuff to be read into encodedBytesDestination
-     * Post-condition: it may contain stuff. It is ready for this stuff to be read into encodedBytesDestination
+     * The following conditions hold before and after this method call:
+     * {@link #_encodedOutputHolder} is readable.
+     * {@link #_clearOutputHolder} is writeable.
      */
     @Override
-    public int output(byte[] encodedBytesDestination, int offset, final int size)
+    public int output(byte[] destination, int offset, final int size)
     {
         try
         {
-            int numberOfEncodedLeftovers = 0;
-            if(_encodedOutputBuf.hasRemaining())
+            int totalBytesWrittenToDestination = _encodedOutputHolder.readInto(destination, offset, size);
+            if(totalBytesWrittenToDestination == size)
             {
-                // We already had some data ready encoded from the last call
-                numberOfEncodedLeftovers = _encodedOutputBuf.remaining();
-                if(numberOfEncodedLeftovers >= size)
-                {
-                    // our leftovers are sufficient to satisfy the "size" requested so fill the destination and return
-                    _encodedOutputBuf.get(encodedBytesDestination,offset,size);
-                    return size;
-                }
-                else
-                {
-                    // copy in the bytes we have leaving the byte buffer in a reading state
-                    _encodedOutputBuf.get(encodedBytesDestination,offset,numberOfEncodedLeftovers);
-                }
+                return size;
             }
 
-            int totalNumberOfBytesWrittenToEncodedBytesDestination = numberOfEncodedLeftovers;
             boolean keepLooping = true;
             do
             {
-                if(_clearOutputBufSize < _clearOutputBuf.length)
+                if (_clearOutputHolder.hasSpace())
                 {
-                    // Get some more clear bytes from the underlying output
-                    int outSize = _underlyingOutput.output(_clearOutputBuf, _clearOutputBufOffset, _clearOutputBuf.length - _clearOutputBufOffset);
-                    if(outSize > 0)
+                    int numberOfBytesInClearOutputHolder = _clearOutputHolder.writeOutputFrom(_underlyingOutput);
+                    if (numberOfBytesInClearOutputHolder == 0)
                     {
-                        _clearOutputBufSize += outSize;
+                        break; // no output to wrap
                     }
-                    if (_clearOutputBufSize == 0)
-                    {
-                        // No output to wrap.
-                        break;
-                    }
-
                 }
 
-                ByteBuffer src = ByteBuffer.wrap(_clearOutputBuf,_clearOutputBufOffset,_clearOutputBufSize);
-
-                final ByteBuffer dst;
-                int availableDestinationSize = size - totalNumberOfBytesWrittenToEncodedBytesDestination;
-                boolean wrappingIntoEncodedOutputBuf = availableDestinationSize < _sslEngine.getPacketBufferSize();
-                if (wrappingIntoEncodedOutputBuf)
+                int availableDestinationSize = size - totalBytesWrittenToDestination;
+                // SSLEngine will wrap directly into the provided destination byte[] if there is space, or into _encodedOutputHolder otherwise.
+                boolean wrappingIntoEncodedOutputHolder = availableDestinationSize < _sslEngine.getPacketBufferSize();
+                final ByteBuffer sslWrapDst;
+                if (wrappingIntoEncodedOutputHolder)
                 {
-                    dst = _encodedOutputBuf;
-                    _encodedOutputBuf.clear(); // get ready to write to it
+                    sslWrapDst = _encodedOutputHolder.prepareToWrite();
                 }
                 else
                 {
-                    dst = ByteBuffer.wrap(encodedBytesDestination, offset+totalNumberOfBytesWrittenToEncodedBytesDestination, availableDestinationSize);
+                    sslWrapDst = ByteBuffer.wrap(destination, offset+totalBytesWrittenToDestination, availableDestinationSize);
                 }
 
-                SSLEngineResult result = _sslEngine.wrap(src, dst);
-                _clearOutputBufOffset += _clearOutputBufSize - src.remaining();
+                SSLEngineResult result = _sslEngine.wrap(_clearOutputHolder.prepareToRead(), sslWrapDst);
+                _clearOutputHolder.prepareToWrite();
 
-                if(result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW)
+                Status sslResultStatus = result.getStatus();
+                if(sslResultStatus == SSLEngineResult.Status.BUFFER_OVERFLOW)
                 {
-                    // Should not happen as _encodedOutputBuf is sized by getPacketBufferSize or
-                    // encodedBytesDestination has sufficient space for one packet
-                    throw new IllegalStateException("Insufficient space to perform wrap into encoded output buffer that has " + dst.remaining() + " remaining bytes");
+                    throw new IllegalStateException("Insufficient space to perform wrap into encoded output buffer that has " + sslWrapDst.remaining() + " remaining bytes. wrappingIntoEncodedOutputHolder=" + wrappingIntoEncodedOutputHolder);
+                }
+                else if(sslResultStatus != SSLEngineResult.Status.OK)
+                {
+                    throw new RuntimeException("Unexpected SSLEngineResult status " + sslResultStatus);
                 }
 
-                System.out.println(_sslParams.getMode() + " output " + sslEngineResultToString(result) + " dst buf len " + _clearOutputBufSize);
                 runDelegatedTasks(result);
                 updateCipherAndProtocolName(result);
 
                 final int numberOfNewlyEncodedBytesWritten = Math.min(availableDestinationSize, result.bytesProduced());
-                if(wrappingIntoEncodedOutputBuf)
+                if(wrappingIntoEncodedOutputHolder)
                 {
-                    _encodedOutputBuf.flip(); // get ready to read from it
-
-                    // Now take as many bytes as we can into encodedBytesDestination (up to numberOfNewlyEncodedBytesWritten)
-                    // leaving the remainder to be read from _encodedOutputBuf on the next invocation
-                    _encodedOutputBuf.get(encodedBytesDestination, offset+totalNumberOfBytesWrittenToEncodedBytesDestination, numberOfNewlyEncodedBytesWritten);
+                    _encodedOutputHolder.prepareToRead();
+                    _encodedOutputHolder.readInto(destination, offset+totalBytesWrittenToDestination, numberOfNewlyEncodedBytesWritten);
                 }
 
-                if(result.getStatus() != SSLEngineResult.Status.OK)
-                {
-                    throw new RuntimeException("Output Uh Oh! " + result.getStatus());
-                }
+                totalBytesWrittenToDestination += numberOfNewlyEncodedBytesWritten;
 
-
-                if(_clearOutputBufOffset == _clearOutputBufSize)
-                {
-                    _clearOutputBufOffset = _clearOutputBufSize = 0;
-                }
-
-                totalNumberOfBytesWrittenToEncodedBytesDestination += numberOfNewlyEncodedBytesWritten;
-
-                HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-
-                keepLooping = handshakeStatus == HandshakeStatus.NOT_HANDSHAKING
-                        && totalNumberOfBytesWrittenToEncodedBytesDestination < size;
+                keepLooping = result.getHandshakeStatus() == HandshakeStatus.NOT_HANDSHAKING
+                        && totalBytesWrittenToDestination < size;
             }
             while(keepLooping);
-            return totalNumberOfBytesWrittenToEncodedBytesDestination;
 
+            return totalBytesWrittenToDestination;
         }
         catch(SSLException e)
         {
             throw new TransportException("Mode " + _sslParams.getMode(), e);
         }
-
-        // first write remaining encoded output into passed buffers (bytes)
-        // if anything left in plain output, run through ssl engine into encoded output, then write into passed buffers (bytes)
-        // if still space in bytes, then call output on underlying transport to fill plain output, and repeat step above
-
     }
 
     /** @return the cipher name, which is null until the SSL handshaking is completed */
