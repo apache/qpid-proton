@@ -20,10 +20,10 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.util.Iterator;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Sender;
-import org.apache.qpid.proton.engine.Sequence;
 
 public class SenderImpl  extends LinkImpl implements Sender
 {
@@ -60,7 +60,7 @@ public class SenderImpl  extends LinkImpl implements Sender
         //TODO.
     }
 
-    public Sequence<Delivery> unsettled()
+    public Iterator<Delivery> unsettled()
     {
         return null;  //TODO.
     }

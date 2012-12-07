@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.type.transport.Open;
@@ -328,7 +329,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         }
     }
 
-    public Sequence<DeliveryImpl> getWorkSequence()
+    public Iterator<DeliveryImpl> getWorkSequence()
     {
         return new WorkSequence(_workHead);
     }
@@ -343,13 +344,25 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _bound;
     }
 
-    private class WorkSequence implements Sequence<DeliveryImpl>
+    private class WorkSequence implements Iterator<DeliveryImpl>
     {
         private DeliveryImpl _next;
 
         public WorkSequence(DeliveryImpl workHead)
         {
             _next = workHead;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return _next != null;
+        }
+
+        @Override
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
         }
 
         public DeliveryImpl next()

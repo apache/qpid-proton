@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import java.util.Iterator;
 import org.apache.qpid.proton.type.UnsignedByte;
 import org.apache.qpid.proton.type.transport.Source;
 import org.apache.qpid.proton.type.transport.Target;
@@ -51,7 +52,7 @@ public interface Link extends Endpoint
     /**
      * @return the unsettled deliveries for this link
      */
-    public Sequence<Delivery> unsettled();
+    public Iterator<Delivery> unsettled();
 
     /**
      * @return return the current delivery
