@@ -21,6 +21,9 @@ set(CMAKE_SWIG_FLAGS "-threads")
 include_directories (${PYTHON_INCLUDE_PATH})
 swig_add_module(cproton python python.i)
 swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES})
+set_target_properties(_cproton
+    PROPERTIES
+    LINK_FLAGS "${CATCH_UNDEFINED}")
 
 find_package(PythonInterp REQUIRED)
 

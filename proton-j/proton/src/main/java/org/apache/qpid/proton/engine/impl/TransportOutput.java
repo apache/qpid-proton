@@ -18,15 +18,20 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
 
-/**
- * Released
- *
- */
-
-public interface Released extends Outcome
+public interface TransportOutput
 {
+
+    /**
+     * @param bytes input bytes for consumption
+     * @param offset the offset within bytes where input begins
+     * @param size the number of bytes available for input
+     *
+     * @return the number of bytes consumed
+     */
+    public int output(byte[] bytes, int offset, int size);
+
 
 }

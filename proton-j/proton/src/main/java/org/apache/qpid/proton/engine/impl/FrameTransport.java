@@ -18,15 +18,11 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.framing.TransportFrame;
 
-/**
- * Rejected
- *
- */
-
-public interface Rejected extends Outcome
+public interface FrameTransport
 {
-
+    boolean input(TransportFrame frame);
 }

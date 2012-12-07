@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,12 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
-/**
- * DeliveryBuffer
- *
- */
-
-public interface DeliveryBuffer
+public interface SslTransportWrapper extends TransportWrapper
 {
-
-    int next = 0;
-
-    public int getCapacity();
-
-    public int getSize();
-
+    String getCipherName();
+    String getProtocolName();
 }

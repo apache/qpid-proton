@@ -18,11 +18,9 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.framing.TransportFrame;
 
-public interface FrameTransport
+public interface TransportWrapper extends TransportInput, TransportOutput
 {
-    boolean input(TransportFrame frame);
 }

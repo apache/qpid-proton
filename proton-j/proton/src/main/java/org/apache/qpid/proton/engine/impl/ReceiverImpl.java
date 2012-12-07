@@ -20,9 +20,9 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.util.Iterator;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
-import org.apache.qpid.proton.engine.Sequence;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
 {
@@ -73,7 +73,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return _current.recv(bytes, offset, size);
     }
 
-    public Sequence<Delivery> unsettled()
+    public Iterator<Delivery> unsettled()
     {
         return null;  //TODO.
     }

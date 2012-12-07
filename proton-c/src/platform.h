@@ -1,3 +1,6 @@
+#ifndef PROTON_PLATFORM_H
+#define PROTON_PLATFORM_H 1
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,9 +22,35 @@
  *
  */
 
-package org.apache.qpid.proton.engine;
+#include "proton/types.h"
 
-public interface Sequence<E>
-{
-    E next();
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Get the current time in pn_timestamp_t format.
+ *
+ * Returns current time in milliseconds since Unix Epoch,
+ * as defined by AMQP 1.0
+ *
+ * @return current time
+ * @internal
+ */
+pn_timestamp_t pn_i_now(void);
+
+/** Generate a UUID in string format.
+ *
+ * Returns a newly generated UUID in the standard 36 char format.
+ * The returned char* array is zero terminated.
+ * (eg. d797830d-0f5b-49d4-a83f-adaa78425125)
+ *
+ * @return newly generated stringised UUID
+ * @internal
+ */
+char* pn_i_genuuid(void);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* driver.h */

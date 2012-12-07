@@ -29,8 +29,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include <uuid/uuid.h>
 #include "util.h"
+#include "platform.h"
 
 typedef struct {
   size_t capacity;
@@ -230,11 +230,7 @@ static char *build_name(const char *name)
   if (name) {
     return pn_strdup(name);
   } else {
-    char *generated = malloc(37*sizeof(char));
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, generated);
-    return generated;
+    return pn_i_genuuid();
   }
 }
 
@@ -475,7 +471,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     ctor = pn_connector_next(ctor);
   }
 
-  pn_timestamp_t now = pn_driver_now(messenger->driver);
+  pn_timestamp_t now = pn_i_now();
   long int deadline = now + timeout;
   bool pred;
 
@@ -530,7 +526,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     }
 
     if (timeout >= 0) {
-      now = pn_driver_now(messenger->driver);
+      now = pn_i_now();
     }
   }
 

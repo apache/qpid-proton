@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <poll.h>
 #include <stdio.h>
-#include <time.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,12 +36,42 @@
 #include <proton/ssl.h>
 #include <proton/util.h>
 #include "util.h"
+#include "platform.h"
 #include "ssl/ssl-internal.h"
 
 /* Decls */
 
 #define PN_SEL_RD (0x0001)
 #define PN_SEL_WR (0x0002)
+
+/* Abstract away turning off SIGPIPE */
+#ifdef MSG_NOSIGNAL
+static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
+    return send(sockfd, buf, len, MSG_NOSIGNAL);
+}
+
+static inline int pn_create_socket() {
+    return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+}
+#elif defined(SO_NOSIGPIPE)
+static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
+    return send(sockfd, buf, len, 0);
+}
+
+static inline int pn_create_socket() {
+    int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+    if (sock == -1) return sock;
+
+    int optval = 1;
+    if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
+        close(sock);
+        return -1;
+    }
+    return sock;
+}
+#else
+#error "Don't know how to turn off SIGPIPE on this platform"
+#endif
 
 struct pn_driver_t {
   pn_error_t *error;
@@ -143,9 +172,9 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
     return NULL;
   }
 
-  int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  int sock = pn_create_socket();
   if (sock == -1) {
-    pn_error_from_errno(driver->error, "socket");
+    pn_error_from_errno(driver->error, "pn_create_socket");
     return NULL;
   }
 
@@ -319,9 +348,9 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
     return NULL;
   }
 
-  int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  int sock = pn_create_socket();
   if (sock == -1) {
-    pn_error_from_errno(driver->error, "socket");
+    pn_error_from_errno(driver->error, "pn_create_socket");
     return NULL;
   }
 
@@ -551,7 +580,7 @@ void pn_connector_activate(pn_connector_t *ctor, pn_activate_criteria_t crit)
 static void pn_connector_write(pn_connector_t *ctor)
 {
   if (ctor->output_size > 0) {
-    ssize_t n = send(ctor->fd, ctor->output, ctor->output_size, MSG_NOSIGNAL);
+    ssize_t n = pn_send(ctor->fd, ctor->output, ctor->output_size);
     if (n < 0) {
       // XXX
         if (errno != EAGAIN) {
@@ -586,7 +615,7 @@ void pn_connector_process(pn_connector_t *c)
     }
     pn_connector_process_input(c);
 
-    c->wakeup = pn_connector_tick(c, pn_driver_now(c->driver));
+    c->wakeup = pn_connector_tick(c, pn_i_now());
 
     pn_connector_process_output(c);
     if (c->pending_write) {
@@ -730,7 +759,7 @@ void pn_driver_wait_1(pn_driver_t *d)
 int pn_driver_wait_2(pn_driver_t *d, int timeout)
 {
   if (d->wakeup) {
-    pn_timestamp_t now = pn_driver_now(d);
+    pn_timestamp_t now = pn_i_now();
     if (now >= d->wakeup)
       timeout = 0;
     else
@@ -755,7 +784,7 @@ void pn_driver_wait_3(pn_driver_t *d)
     l = l->listener_next;
   }
 
-  pn_timestamp_t now = pn_driver_now(d);
+  pn_timestamp_t now = pn_i_now();
   pn_connector_t *c = d->connector_head;
   while (c) {
     if (c->closed) {
@@ -824,11 +853,4 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
   }
 
   return NULL;
-}
-
-pn_timestamp_t pn_driver_now(pn_driver_t *driver)
-{
-  struct timespec now;
-  if (clock_gettime(CLOCK_REALTIME, &now)) pn_fatal("clock_gettime() failed\n");
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }

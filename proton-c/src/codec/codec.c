@@ -19,8 +19,6 @@
  *
  */
 
-#define _GNU_SOURCE
-
 #include <proton/codec.h>
 #include <proton/error.h>
 #include <proton/buffer.h>
