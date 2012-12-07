@@ -21,9 +21,9 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.Ssl;
-import org.apache.qpid.proton.engine.TransportInput;
-import org.apache.qpid.proton.engine.TransportOutput;
-import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.impl.TransportInput;
+import org.apache.qpid.proton.engine.impl.TransportOutput;
+import org.apache.qpid.proton.engine.impl.TransportWrapper;
 import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 
 /*

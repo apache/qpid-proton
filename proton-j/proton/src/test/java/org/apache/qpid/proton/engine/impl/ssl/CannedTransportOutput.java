@@ -23,7 +23,7 @@ package org.apache.qpid.proton.engine.impl.ssl;
 import static org.junit.Assert.assertNotNull;
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.impl.TransportOutput;
 
 public class CannedTransportOutput implements TransportOutput
 {

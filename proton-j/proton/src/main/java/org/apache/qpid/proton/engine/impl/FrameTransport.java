@@ -18,21 +18,11 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.framing.TransportFrame;
 
-/**
- * DeliveryBuffer
- *
- */
-
-public interface DeliveryBuffer
+public interface FrameTransport
 {
-
-    int next = 0;
-
-    public int getCapacity();
-
-    public int getSize();
-
+    boolean input(TransportFrame frame);
 }

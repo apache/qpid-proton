@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import org.apache.qpid.proton.engine.TransportWrapper;
+import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
 public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
 {

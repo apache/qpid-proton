@@ -20,8 +20,8 @@ package org.apache.qpid.proton.engine.impl.ssl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportInput;
-import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.impl.TransportInput;
+import org.apache.qpid.proton.engine.impl.TransportOutput;
 
 /**
  * I thinly wrap a {@link ByteBuffer} to facilitate its usage e.g. in {@link SimpleSslTransportWrapper}.

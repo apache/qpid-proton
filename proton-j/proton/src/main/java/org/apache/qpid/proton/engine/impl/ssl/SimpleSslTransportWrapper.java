@@ -33,8 +33,8 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportInput;
-import org.apache.qpid.proton.engine.TransportOutput;
+import org.apache.qpid.proton.engine.impl.TransportInput;
+import org.apache.qpid.proton.engine.impl.TransportOutput;
 
 /**
  * TODO close the SSLEngine when told to, and modify {@link #input(byte[], int, int)} and {@link #output(byte[], int, int)}

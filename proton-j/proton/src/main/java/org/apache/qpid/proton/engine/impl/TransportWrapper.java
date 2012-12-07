@@ -18,15 +18,9 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
 
-/**
- * Rejected
- *
- */
-
-public interface Rejected extends Outcome
+public interface TransportWrapper extends TransportInput, TransportOutput
 {
-
 }

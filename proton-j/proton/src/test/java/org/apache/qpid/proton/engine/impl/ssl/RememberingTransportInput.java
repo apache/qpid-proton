@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import org.apache.qpid.proton.engine.TransportInput;
+import org.apache.qpid.proton.engine.impl.TransportInput;
 
 class RememberingTransportInput implements TransportInput
 {

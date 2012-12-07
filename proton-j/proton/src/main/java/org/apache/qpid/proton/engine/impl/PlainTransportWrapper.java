@@ -20,10 +20,6 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.TransportInput;
-import org.apache.qpid.proton.engine.TransportOutput;
-import org.apache.qpid.proton.engine.TransportWrapper;
-
 public class PlainTransportWrapper implements TransportWrapper
 {
     private final TransportOutput _outputProcessor;

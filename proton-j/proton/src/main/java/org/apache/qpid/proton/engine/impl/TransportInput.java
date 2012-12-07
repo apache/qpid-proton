@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl;
 
 
 public interface TransportInput

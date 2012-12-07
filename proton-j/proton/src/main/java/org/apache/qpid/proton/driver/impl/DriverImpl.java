@@ -38,8 +38,7 @@ import java.util.logging.Logger;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
-import org.apache.qpid.proton.engine.impl.SaslClientImpl;
-import org.apache.qpid.proton.engine.impl.SaslServerImpl;
+import org.apache.qpid.proton.engine.impl.SaslImpl;
 
 public class DriverImpl implements Driver
 {
@@ -217,7 +216,9 @@ public class DriverImpl implements Driver
     public <C> Connector<C> createConnector(SelectableChannel c, C context)
     {
         SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
-        Connector<C> co = new ConnectorImpl<C>(this, null, new SaslClientImpl(),(SocketChannel)c, context, key);
+        SaslImpl sasl = new SaslImpl();
+        sasl.client();
+        Connector<C> co = new ConnectorImpl<C>(this, null, sasl,(SocketChannel)c, context, key);
         key.attach(co);
         return co;
     }
@@ -225,7 +226,9 @@ public class DriverImpl implements Driver
     protected <C> Connector<C> createServerConnector(SelectableChannel c, C context, Listener<C> l)
     {
         SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
-        Connector<C> co = new ConnectorImpl<C>(this, l, new SaslServerImpl(),(SocketChannel)c, context, key);
+        SaslImpl sasl = new SaslImpl();
+        sasl.server();
+        Connector<C> co = new ConnectorImpl<C>(this, l, sasl,(SocketChannel)c, context, key);
         key.attach(co);
         return co;
     }
