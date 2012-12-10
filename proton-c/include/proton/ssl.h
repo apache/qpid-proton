@@ -75,7 +75,6 @@ extern "C" {
 
 typedef struct pn_ssl_domain_t pn_ssl_domain_t;
 typedef struct pn_ssl_t pn_ssl_t;
-typedef struct pn_ssl_state_t pn_ssl_state_t;
 
 /** Determines the type of SSL endpoint. */
 typedef enum {
@@ -200,7 +199,9 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
  * @return a pointer to the SSL object configured for this transport.  Returns NULL if SSL
  * cannot be provided, which would occur if no SSL support is available.
  */
-pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain, pn_transport_t *transport);
+pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain,
+                      pn_transport_t *transport,
+                      const char *session_id);
 
 /** Permit a server to accept connection requests from non-SSL clients.
  *
@@ -274,40 +275,6 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
  */
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
-/** Obtain a handle to the SSL parameters negotiated for this SSL session.
- *
- * Used for client session resume.  Returns a handle to the negotiated SSL parameters
- * that may be restored on a later connection attempt to the same peer.  See
- * ::pn_ssl_resume_state.  Must be released by calling :pn_ssl_state_free when done.
- *
- * @note The state is only valid once an SSL session has been sucessfully established. It
- * is therefore recommended to retrieve the state after the transport has successfully
- * exchanged data with the peer, prior to shutting down the connection.
- *
- * @param[in] ssl the session whose negotiated parameters are to be restored at a later date.
- * @return a pointer to the negotated state, or NULL if session resume is not supported.
- */
-pn_ssl_state_t *pn_ssl_get_state( pn_ssl_t *ssl );
-
-/** Resume previously negotiated parameters on a new session.
- *
- * Used for client session resume.  State can only be resumed on new connections to the
- * same peer as the original session and using the same configuration parameters. See
- * ::pn_ssl_get_state.
- *
- * @note This method must be called prior to allowing traffic over the connection.
- *
- * @note This is a best-effort service - there is no guarantee that the remote server will
- * accept the resumed parameters.  The remote server may choose to ignore these
- * parameters, and request a re-negotiation instead.
- *
- * @param[in] ssl the session for with the parameters should be used.
- * @param[in] state the previously negotiated parameters to use.
- * @return 0 if the ssl session will accept the state parameter.  This does not guarantee
- * that the remote will allow the state to be resumed (see ::pn_ssl_state_resumed_ok).
- */
-int pn_ssl_resume_state( pn_ssl_t *ssl, pn_ssl_state_t *state );
-
 /** Check whether the state has been resumed.
  *
  * Used for client session resume.  When called on an active session, indicates whether
@@ -321,19 +288,12 @@ int pn_ssl_resume_state( pn_ssl_t *ssl, pn_ssl_state_t *state );
  * @return true if the ssl session was resumed, false if the Server required a
  * re-negotiation instead.
  */
-bool pn_ssl_state_resumed_ok( pn_ssl_t *ssl );
-
-/** Release a state handle previously obtained via ::pn_ssl_get_state.
- *
- * Used for client session resume.  Once obtained, the state remains valid until it is
- * freed using this method.  This allows the state to remain valid after the original SSL
- * session-related objects (pn_ssl_t and/or pn_ssl_domain_t) have been closed/deallocated.
- *
- * @param[in] state the state object that will be released.
- */
-void pn_ssl_state_free( pn_ssl_state_t *state );
-
-
+typedef enum {
+  PN_SSL_RESUME_UNKNOWN,
+  PN_SSL_RESUME_NEW,
+  PN_SSL_RESUME_REUSED
+} pn_ssl_resume_status_t;
+pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
 
   /** original API: */

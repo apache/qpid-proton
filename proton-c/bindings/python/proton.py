@@ -2277,9 +2277,11 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport, domain=None):
+  def __init__(self, transport, domain=None, session_id=None):
     if domain:
-      self._ssl = pn_ssl_new( domain._domain, transport._trans )
+      if session_id:
+        session_id = str(session_id)
+      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_id )
     else:   # old api:
       self._ssl = pn_ssl(transport._trans)
     if self._ssl is None:
@@ -2324,32 +2326,18 @@ class SSL(object):
       return name
     return None
 
-  def get_state(self):
-    return SSLState( self )
+  RESUME_UNKNOWN = PN_SSL_RESUME_UNKNOWN
+  RESUME_NEW = PN_SSL_RESUME_NEW
+  RESUME_REUSED = PN_SSL_RESUME_REUSED
 
-  def resume_state(self, state):
-    return pn_ssl_resume_state( self._ssl, state._state )
-
-  def state_resumed_ok(self):
-    return pn_ssl_state_resumed_ok( self._ssl )
-
-class SSLState(object):
-  """ State to store an SSL session.  Used to resume previous session on a new
-  SSL connection.
-  """
-  def __init__(self, ssl_obj):
-    self._state = pn_ssl_get_state( ssl_obj._ssl )
-
-  def __del__(self):
-    if hasattr(self, "_state"):
-      pn_ssl_state_free( self._state )
-      del self._state
+  def resume_status(self):
+    return pn_ssl_resume_status( self._ssl )
 
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Data", "Endpoint", "Connection",
            "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
            "Transport", "TransportException", "SASL", "UNDESCRIBED", "SSL",
-           "SSLDomain", "SSLState", "Described", "Array", "symbol", "char",
+           "SSLDomain", "Described", "Array", "symbol", "char",
            "timestamp", "ulong", "SSLUnavailable", "PN_SESSION_WINDOW",
            "AUTOMATIC", "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]

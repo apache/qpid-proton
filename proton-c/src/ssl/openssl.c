@@ -23,6 +23,7 @@
 #include "./ssl-internal.h"
 #include <proton/engine.h>
 #include "../engine/engine-internal.h"
+#include "../platform.h"
 #include "../util.h"
 
 #include <openssl/ssl.h>
@@ -43,6 +44,7 @@
 static int ssl_initialized;
 
 typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
+typedef struct pn_ssl_session_t pn_ssl_session_t;
 
 struct pn_ssl_domain_t {
   int   ref_count;
@@ -57,6 +59,10 @@ struct pn_ssl_domain_t {
   // settings used for all connections
   char *default_trusted_CAs;
   pn_ssl_verify_mode_t default_verify_mode;
+
+  // session cache
+  pn_ssl_session_t *ssn_cache_head;
+  pn_ssl_session_t *ssn_cache_tail;
 };
 
 
@@ -65,11 +71,11 @@ struct pn_ssl_t {
   pn_ssl_domain_t       *domain;
   bool private_domain;  // domain used exclusive to this SSL
   SSL *ssl;
-  SSL_SESSION   *session;
 
   bool allow_unsecured; // allow non-SSL connections
   pn_ssl_verify_mode_t verify_mode;  // can be overridden
-  char *trusted_CAs;    // for this connection
+  const char *trusted_CAs;    // for this connection
+  const char *session_id;
 
   pn_transport_t *transport;
 
@@ -98,6 +104,14 @@ struct pn_ssl_t {
   pn_trace_t trace;
 };
 
+struct pn_ssl_session_t {
+  const char       *id;
+  SSL_SESSION      *session;
+  pn_ssl_session_t *ssn_cache_next;
+  pn_ssl_session_t *ssn_cache_prev;
+};
+
+
 // define two sets of allowable ciphers: those that require authentication, and those
 // that do not require authentication (anonymous).  See ciphers(1).
 #define CIPHERS_AUTHENTICATE    "ALL:!aNULL:!eNULL:@STRENGTH"
@@ -114,6 +128,8 @@ static ssize_t process_output_unknown(pn_transport_t *transport, char *input_dat
 static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
 static int init_ssl_socket( pn_ssl_t * );
 static void release_ssl_socket( pn_ssl_t * );
+static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
+static void ssl_session_free( pn_ssl_session_t *);
 
 
 // @todo: used to avoid littering the code with calls to printf...
@@ -272,6 +288,39 @@ static DH *get_dh2048()
   return(dh);
 }
 
+static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *domain, const char *id )
+{
+  pn_timestamp_t now_msec = pn_i_now();
+  long now_sec = (long)(now_msec / 1000);
+  pn_ssl_session_t *ssn = LL_HEAD( domain, ssn_cache );
+  while (ssn) {
+    long expire = SSL_SESSION_get_time( ssn->session )
+      + SSL_SESSION_get_timeout( ssn->session );
+    if (expire < now_sec) {
+      pn_ssl_session_t *next = ssn->ssn_cache_next;
+      LL_REMOVE( domain, ssn_cache, ssn );
+      ssl_session_free( ssn );
+      ssn = next;
+      continue;
+    }
+
+    if (!strcmp(ssn->id, id)) {
+      break;
+    }
+    ssn = ssn->ssn_cache_next;
+  }
+  return ssn;
+}
+
+static void ssl_session_free( pn_ssl_session_t *ssn)
+{
+  if (ssn) {
+    if (ssn->id) free( (void *)ssn->id );
+    if (ssn->session) SSL_SESSION_free( ssn->session );
+    free( ssn );
+  }
+}
+
 
 /** Public API - visible to application code */
 
@@ -341,6 +390,15 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
   if (--domain->ref_count == 0) {
+
+    pn_ssl_session_t *ssn = LL_HEAD( domain, ssn_cache );
+    while (ssn) {
+      pn_ssl_session_t *next = ssn->ssn_cache_next;
+      LL_REMOVE( domain, ssn_cache, ssn );
+      ssl_session_free( ssn );
+      ssn = next;
+    }
+
     if (domain->ctx) SSL_CTX_free(domain->ctx);
     if (domain->keyfile_pw) free(domain->keyfile_pw);
     if (domain->default_trusted_CAs) free(domain->default_trusted_CAs);
@@ -486,7 +544,7 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
 }
 
 
-pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain, pn_transport_t *transport)
+pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain, pn_transport_t *transport, const char *session_id)
 {
   if (!transport || !domain) return NULL;
   if (transport->ssl) return transport->ssl;
@@ -496,6 +554,8 @@ pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain, pn_transport_t *transport)
 
   ssl->domain = domain;
   domain->ref_count++;
+  if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
+    ssl->session_id = pn_strdup(session_id);
 
   if (init_ssl_socket(ssl)) {
     pn_ssl_free(ssl);
@@ -563,7 +623,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
                  "       Use pn_ssl_domain_set_credentials()\n");
       }
 
-      if (ssl->trusted_CAs) free(ssl->trusted_CAs);
+      if (ssl->trusted_CAs) free( (void *)ssl->trusted_CAs);
       ssl->trusted_CAs = pn_strdup( trusted_CAs );
       STACK_OF(X509_NAME) *cert_names;
       cert_names = SSL_load_client_CA_file( ssl->trusted_CAs );
@@ -605,7 +665,7 @@ int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
   if (!ssl) return -1;
 
   pn_ssl_verify_mode_t my_mode = ssl->verify_mode;
-  char *my_trusted_CAs = ssl->trusted_CAs;
+  const char *my_trusted_CAs = ssl->trusted_CAs;
 
   if (ssl->verify_mode == PN_SSL_VERIFY_NULL && ssl->domain) {
     // using the parent domain's values:
@@ -666,7 +726,8 @@ void pn_ssl_free( pn_ssl_t *ssl)
   _log( ssl, "SSL socket freed.\n" );
   release_ssl_socket( ssl );
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
-  if (ssl->trusted_CAs) free(ssl->trusted_CAs);
+  if (ssl->trusted_CAs) free((void *)ssl->trusted_CAs);
+  if (ssl->session_id) free((void *)ssl->session_id);
 
   free(ssl);
 }
@@ -814,6 +875,20 @@ static int start_ssl_shutdown( pn_ssl_t *ssl )
 {
   if (!ssl->ssl_shutdown) {
     _log(ssl, "Shutting down SSL connection...\n");
+    if (ssl->session_id) {
+      // save the negotiated credentials before we close the connection
+      pn_ssl_session_t *ssn = (pn_ssl_session_t *)calloc( 1, sizeof(pn_ssl_session_t));
+      if (ssn) {
+        ssn->id = pn_strdup( ssl->session_id );
+        ssn->session = SSL_get1_session( ssl->ssl );
+        if (ssn->session) {
+          _log( ssl, "Saving SSL session as %s\n", ssl->session_id );
+          LL_ADD( ssl->domain, ssn_cache, ssn );
+        } else {
+          ssl_session_free( ssn );
+        }
+      }
+    }
     ssl->ssl_shutdown = true;
     BIO_ssl_shutdown( ssl->bio_ssl );
   }
@@ -1077,6 +1152,20 @@ static int init_ssl_socket( pn_ssl_t *ssl )
     return -1;
   }
 
+  // restore session, if available
+  if (ssl->session_id) {
+    pn_ssl_session_t *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
+    if (ssn) {
+      _log( ssl, "Restoring previous session id=%s\n", ssn->id );
+      int rc = SSL_set_session( ssl->ssl, ssn->session );
+      if (rc != 1) {
+        _log( ssl, "Session restore failed, id=%s\n", ssn->id );
+      }
+      LL_REMOVE( ssl->domain, ssn_cache, ssn );
+      ssl_session_free( ssn );
+    }
+  }
+
   // now layer a BIO over the SSL socket
   ssl->bio_ssl = BIO_new(BIO_f_ssl());
   if (!ssl->bio_ssl) {
@@ -1224,30 +1313,14 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
   ssl->trace = trace;
 }
 
-
-/* the new stuff */
-
-pn_ssl_state_t *pn_ssl_get_state( pn_ssl_t *ssl)
+pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
 {
-  if (!ssl || !ssl->ssl) return NULL;
-  return (pn_ssl_state_t *)SSL_get1_session(ssl->ssl);
+  if (!ssl || !ssl->ssl) return PN_SSL_RESUME_UNKNOWN;
+  switch (SSL_session_reused( ssl->ssl )) {
+  case 0: return PN_SSL_RESUME_NEW;
+  case 1: return PN_SSL_RESUME_REUSED;
+  default: break;
+  }
+  return PN_SSL_RESUME_UNKNOWN;
 }
 
-int pn_ssl_resume_state( pn_ssl_t *ssl, pn_ssl_state_t *state )
-{
-  if (!ssl || !ssl->ssl) return -1;
-  int rc = SSL_set_session( ssl->ssl, (SSL_SESSION *)state);
-  if (rc == 1) return 0;
-  return -1;
-}
-
-bool pn_ssl_state_resumed_ok( pn_ssl_t *ssl )
-{
-  if (!ssl || !ssl->ssl) return false;
-  return SSL_session_reused( ssl->ssl ) == 1;
-}
-
-void pn_ssl_state_free( pn_ssl_state_t *state )
-{
-  SSL_SESSION_free( (SSL_SESSION *)state );
-}

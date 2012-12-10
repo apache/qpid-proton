@@ -42,7 +42,7 @@ class SslTest(common.Test):
     class SslTestConnection(object):
         """ Represents a single SSL connection.
         """
-        def __init__(self, domain=None):
+        def __init__(self, domain=None, session_id=None):
             try:
                 self.ssl = None
                 self.domain = domain
@@ -50,7 +50,7 @@ class SslTest(common.Test):
                 self.connection = Connection()
                 self.transport.bind(self.connection)
                 if domain:
-                    self.ssl = SSL( self.transport, self.domain )
+                    self.ssl = SSL( self.transport, self.domain, session_id )
             except SSLUnavailable, e:
                 raise Skipped(e)
 
@@ -365,35 +365,26 @@ class SslTest(common.Test):
         self.client_domain.set_default_peer_authentication( SSL.VERIFY_PEER )
 
         server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain )
+        client = SslTest.SslTestConnection( self.client_domain, "my-session-id" )
 
         # bring up the connection and store its state
         client.connection.open()
         server.connection.open()
         self._pump( client, server )
         assert client.ssl.protocol_name() is not None
-        ssl_state = client.ssl.get_state()
 
         # cleanly shutdown the connection
         client.connection.close()
         server.connection.close()
         self._pump( client, server )
 
-        # destroy the existing clients, and client domain
+        # destroy the existing clients
         del client
         del server
-        del self.client_domain
 
-        # now create a new set of connections
-        self.client_domain = SSLDomain(SSL.MODE_CLIENT)
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_default_peer_authentication( SSL.VERIFY_PEER )
-
+        # now create a new set of connections, use last session id
         server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain )
-
-        # resume the client state before attempting to connect
-        client.ssl.resume_state( ssl_state )
+        client = SslTest.SslTestConnection( self.client_domain, "my-session-id" )
 
         #client.transport.trace(Transport.TRACE_DRV)
         #server.transport.trace(Transport.TRACE_DRV)
@@ -402,7 +393,25 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump( client, server )
         assert server.ssl.protocol_name() is not None
-        assert client.ssl.state_resumed_ok()
+        assert client.ssl.resume_status() == SSL.RESUME_REUSED
+        client.connection.close()
+        server.connection.close()
+        self._pump( client, server )
+
+        # now try to resume using an unknown session-id, expect resume to fail
+        # and a new session is negotiated
+
+        del client
+        del server
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain, "some-other-session-id" )
+
+        client.connection.open()
+        server.connection.open()
+        self._pump( client, server )
+        assert server.ssl.protocol_name() is not None
+        assert client.ssl.resume_status() == SSL.RESUME_NEW
         client.connection.close()
         server.connection.close()
         self._pump( client, server )
