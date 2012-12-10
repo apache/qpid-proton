@@ -183,6 +183,25 @@ class ConnectionTest(Test):
     assert self.c2.remote_offered_capabilities.format() == self.c1.offered_capabilities.format()
     assert self.c2.remote_desired_capabilities.format() == self.c1.desired_capabilities.format()
 
+  def test_condition(self):
+    self.c1.open()
+    self.c2.open()
+    self.pump()
+    assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    cond = Condition("blah:bleh", "this is a description", {symbol("foo"): "bar"})
+    self.c1.condition = cond
+    self.c1.close()
+
+    self.pump()
+
+    assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+    rcond = self.c2.remote_condition
+    assert rcond == cond
+
 class SessionTest(Test):
 
   def setup(self):
