@@ -1058,7 +1058,9 @@ ssize_t pn_data_intern(pn_data_t *data, char *start, size_t size)
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
   if (err) return err;
-  else return offset;
+  err = pn_buffer_append(data->buf, "\0", 1);
+  if (err) return err;
+  return offset;
 }
 
 pn_bytes_t *pn_data_bytes(pn_data_t *data, pn_node_t *node)
