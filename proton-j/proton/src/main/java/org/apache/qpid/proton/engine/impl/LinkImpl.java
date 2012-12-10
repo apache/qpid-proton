@@ -80,11 +80,16 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _name;
     }
 
-
+    public DeliveryImpl delivery(byte[] tag)
+    {
+        return delivery(tag, 0, tag.length);
+    }
 
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
-
+        if (offset != 0 || length != tag.length) {
+            throw new IllegalArgumentException("At present delivery tag must be the whole byte array");
+        }
         incrementQueued();
         try
         {

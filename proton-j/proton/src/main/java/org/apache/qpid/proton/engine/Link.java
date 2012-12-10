@@ -42,10 +42,23 @@ public interface Link extends Endpoint
     String getName();
 
     /**
+     * Create a delivery object based on the specified tag.
      *
      * @param tag a tag for the delivery
-     * @param offset
-     *@param length @return a Delivery object
+     * @return a Delivery object
+     */
+    public Delivery delivery(byte[] tag);
+    /**
+     * Create a delivery object based on the specified tag. This form
+     * of the method is intended to allow the tag to be formed from a
+     * subsequence of the byte array passed in. This might allow more
+     * optimsation options in future but at present is not
+     * implemented.
+     *
+     * @param tag a tag for the delivery
+     * @param offset (currently ignored and must be 0)
+     * @param length (currently ignored and must be the length of the <code>tag</code> array
+     * @return a Delivery object
      */
     public Delivery delivery(byte[] tag, int offset, int length);
 
