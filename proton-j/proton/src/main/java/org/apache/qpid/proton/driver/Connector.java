@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.driver;
 
+import java.io.IOException;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
 
@@ -36,7 +37,7 @@ public interface Connector<C>
      * the connector.
      *
      */
-    void process();
+    void process() throws IOException;
 
     /** Access the listener which opened this connector.
      *

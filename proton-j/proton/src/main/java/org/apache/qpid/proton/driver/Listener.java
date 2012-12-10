@@ -49,13 +49,5 @@ public interface Listener<C>
      * Close the socket used by the listener.
      *
      */
-    void close();
-
-    /**
-     * Destructor for the given listener.
-     *
-     * Assumes the listener's socket has been closed prior to call.
-     *
-     */
-    void destroy();
+    void close() throws java.io.IOException;
 }

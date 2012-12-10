@@ -51,7 +51,7 @@ public interface Driver
      * @param timeout maximum time in milliseconds to wait.
      *                0 means infinite wait
      */
-    void doWait(int timeout);
+    void doWait(long timeout);
 
     /**
      * Get the next listener with pending data in the driver.
@@ -120,4 +120,14 @@ public interface Driver
      * @return a new connector to the given host:port, NULL if error.
      */
     <C> Connector<C> createConnector(SelectableChannel fd, C context);
+
+    /**
+     * Return an iterator over all listeners.
+     */
+    Iterable<Listener> listeners();
+    /**
+     * Return an iterator over all connectors.
+     */
+    Iterable<Connector> connectors();
+
 }

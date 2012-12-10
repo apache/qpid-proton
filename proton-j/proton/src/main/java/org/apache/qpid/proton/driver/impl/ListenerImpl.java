@@ -66,20 +66,8 @@ class ListenerImpl<C> implements Listener<C>
         return _context;
     }
 
-    public void close()
+    public void close() throws IOException
     {
-        try
-        {
-            _channel.close();
-        }
-        catch (IOException e)
-        {
-            _logger.log(Level.SEVERE, "Exception when closing listener",e);
-        }
-    }
-
-    public void destroy()
-    {
-        close();
+        _channel.socket().close();
     }
 }

@@ -29,8 +29,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,12 +40,13 @@ import java.util.logging.Logger;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
-import org.apache.qpid.proton.engine.impl.SaslImpl;
 
 public class DriverImpl implements Driver
 {
     private Selector _selector;
     private Set<SelectionKey> _selectedKeys = Collections.emptySet();
+    private Collection<Listener> _listeners = new LinkedList();
+    private Collection<Connector> _connectors = new LinkedList();
     private Logger _logger = Logger.getLogger("proton.driver");
 
     public DriverImpl() throws IOException
@@ -56,7 +59,7 @@ public class DriverImpl implements Driver
         _selector.wakeup();
     }
 
-    public void doWait(int timeout)
+    public void doWait(long timeout)
     {
         try
         {
@@ -146,8 +149,9 @@ public class DriverImpl implements Driver
             selectedIter.remove();
             if(key.isReadable() || key.isWritable())
             {
-                return (Connector) key.attachment();
-
+                ConnectorImpl c = (ConnectorImpl) key.attachment();
+                c.selected();
+                return c;
             }
         }
         return null;
@@ -165,6 +169,8 @@ public class DriverImpl implements Driver
             _logger.log(Level.SEVERE, "Exception when closing selector",e);
             throw new RuntimeException(e);
         }
+        _listeners.clear();
+        _connectors.clear();
     }
 
     public <C> Listener<C> createListener(String host, int port, C context)
@@ -193,6 +199,7 @@ public class DriverImpl implements Driver
         Listener<C> l = new ListenerImpl<C>(this, c, context);
         SelectionKey key = registerInterest(c,SelectionKey.OP_ACCEPT);
         key.attach(l);
+        _listeners.add(l);
         return l;
     }
 
@@ -215,21 +222,34 @@ public class DriverImpl implements Driver
 
     public <C> Connector<C> createConnector(SelectableChannel c, C context)
     {
-        SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
-        SaslImpl sasl = new SaslImpl();
-        sasl.client();
-        Connector<C> co = new ConnectorImpl<C>(this, null, sasl,(SocketChannel)c, context, key);
+        SelectionKey key = registerInterest(c, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        Connector<C> co = new ConnectorImpl<C>(this, null, (SocketChannel)c, context, key);
         key.attach(co);
+        _connectors.add(co);
         return co;
+    }
+
+    public <C> void removeConnector(Connector<C> c)
+    {
+        _connectors.remove(c);
+    }
+
+    public Iterable<Listener> listeners()
+    {
+        return _listeners;
+    }
+
+    public Iterable<Connector> connectors()
+    {
+        return _connectors;
     }
 
     protected <C> Connector<C> createServerConnector(SelectableChannel c, C context, Listener<C> l)
     {
-        SelectionKey key = registerInterest(c,SelectionKey.OP_READ);
-        SaslImpl sasl = new SaslImpl();
-        sasl.server();
-        Connector<C> co = new ConnectorImpl<C>(this, l, sasl,(SocketChannel)c, context, key);
+        SelectionKey key = registerInterest(c, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        Connector<C> co = new ConnectorImpl<C>(this, l, (SocketChannel)c, context, key);
         key.attach(co);
+        _connectors.add(co);
         return co;
     }
 
