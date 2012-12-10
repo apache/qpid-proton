@@ -82,6 +82,13 @@ typedef enum {
   PN_SSL_MODE_SERVER    /**< Local connection endpoint is an SSL server */
 } pn_ssl_mode_t;
 
+/** Indicates whether an SSL session has been resumed. */
+typedef enum {
+  PN_SSL_RESUME_UNKNOWN,        /**< Session resume state unknown/not supported */
+  PN_SSL_RESUME_NEW,            /**< Session renegotiated - not resumed */
+  PN_SSL_RESUME_REUSED          /**< Session resumed from previous session. */
+} pn_ssl_resume_status_t;
+
 /** Create an SSL configuration domain
  *
  * This method allocates an SSL domain object.  This object is used to hold the SSL
@@ -196,6 +203,9 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
  *
  * @param[in] domain the ssl domain used to configure the SSL session.
  * @param[in] transport the transport that will use the SSL session.
+ * @param[in] session_id if supplied, attempt to resume a previous SSL session that used
+ * the same session_id.  The resulting session will be identified by the given session_id
+ * and stored for future session restore.
  * @return a pointer to the SSL object configured for this transport.  Returns NULL if SSL
  * cannot be provided, which would occur if no SSL support is available.
  */
@@ -285,18 +295,12 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
  * parameters, and request a re-negotiation instead.
  *
  * @param[in] ssl the ssl session to check
- * @return true if the ssl session was resumed, false if the Server required a
- * re-negotiation instead.
+ * @return status code indicating whether or not the session has been resumed.
  */
-typedef enum {
-  PN_SSL_RESUME_UNKNOWN,
-  PN_SSL_RESUME_NEW,
-  PN_SSL_RESUME_REUSED
-} pn_ssl_resume_status_t;
 pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
 
-  /** original API: */
+/** original API: */
 
 /** Get the SSL session object associated with a transport.
  *
