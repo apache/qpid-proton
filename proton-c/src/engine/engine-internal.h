@@ -32,10 +32,20 @@ typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER, TRANSPOR
 
 typedef struct pn_endpoint_t pn_endpoint_t;
 
+#define COND_NAME_MAX (256)
+#define COND_DESC_MAX (1024)
+
+struct pn_condition_t {
+  char name[COND_NAME_MAX];
+  char description[COND_DESC_MAX];
+  pn_data_t *info;
+};
+
 struct pn_endpoint_t {
   pn_endpoint_type_t type;
   pn_state_t state;
   pn_error_t *error;
+  pn_condition_t condition;
   pn_endpoint_t *endpoint_next;
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;
@@ -115,6 +125,7 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
+  pn_condition_t remote_condition;
 
   /* dead remote detection */
   pn_millis_t local_idle_timeout;
@@ -131,7 +142,6 @@ struct pn_transport_t {
   size_t session_capacity;
   pn_session_state_t **channels;
   size_t channel_capacity;
-  const char *condition;
   char scratch[SCRATCH];
 
   /* statistics */

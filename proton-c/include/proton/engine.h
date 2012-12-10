@@ -43,6 +43,8 @@ typedef struct pn_connection_t pn_connection_t; /**< Connection */
 typedef struct pn_session_t pn_session_t;       /**< Session */
 typedef struct pn_link_t pn_link_t;             /**< Link */
 typedef struct pn_terminus_t pn_terminus_t;
+typedef struct pn_condition_t pn_condition_t;
+
 typedef enum {
   PN_UNSPECIFIED = 0,
   PN_SOURCE = 1,
@@ -189,6 +191,8 @@ pn_transport_t *pn_transport(void);
 
 int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
 
+int pn_transport_unbind(pn_transport_t *transport);
+
 /** Retrieve the first Session that matches the given state mask.
  *
  * Examines the state of each session owned by the connection, and
@@ -249,6 +253,7 @@ pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
  */
 pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
 
+void pn_connection_reset(pn_connection_t *connection);
 void pn_connection_open(pn_connection_t *connection);
 void pn_connection_close(pn_connection_t *connection);
 void pn_connection_free(pn_connection_t *connection);
@@ -393,6 +398,22 @@ void pn_delivery_settle(pn_delivery_t *delivery);
 void pn_delivery_dump(pn_delivery_t *delivery);
 void *pn_delivery_get_context(pn_delivery_t *delivery);
 void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
+
+pn_condition_t *pn_connection_condition(pn_connection_t *connection);
+pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
+
+bool pn_condition_is_set(pn_condition_t *condition);
+void pn_condition_clear(pn_condition_t *condition);
+
+const char *pn_condition_get_name(pn_condition_t *condition);
+int pn_condition_set_name(pn_condition_t *condition, const char *name);
+
+const char *pn_condition_get_description(pn_condition_t *condition);
+int pn_condition_set_description(pn_condition_t *condition, const char *description);
+
+pn_data_t *pn_condition_info(pn_condition_t *condition);
+
+bool pn_condition_is_redirect(pn_condition_t *condition);
 
 #ifdef __cplusplus
 }

@@ -41,6 +41,13 @@ class Endpoint(object):
   REMOTE_ACTIVE = 16
   REMOTE_CLOSED = 32
 
+  def __init__(self):
+    self.condition = None
+
+  @property
+  def remote_condition(self):
+    raise Skipped()
+
   @property
   def state(self):
     local = self.impl.getLocalState()
@@ -89,6 +96,24 @@ class Endpoint(object):
 
   def close(self):
     self.impl.close()
+
+class Condition:
+
+  def __init__(self, name, description=None, info=None):
+    self.name = name
+    self.description = description
+    self.info = info
+
+  def __repr__(self):
+    return "Condition(%s)" % ", ".join([repr(x) for x in
+                                        (self.name, self.description, self.info)
+                                        if x])
+
+  def __eq__(self, o):
+    if not isinstance(o, Condition): return False
+    return self.name == o.name and \
+        self.description == o.description and \
+        self.info == o.info
 
 def wrap_connection(impl):
   if impl: return Connection(_impl = impl)
@@ -443,6 +468,11 @@ The idle timeout of the connection (in milliseconds).
     #return pn_transport_get_frames_input(self._trans)
     raise Skipped()
 
+class symbol(unicode):
+
+  def __repr__(self):
+    return "symbol(%s)" % unicode.__repr__(self)
+
 class Data(object):
 
   SYMBOL = None
@@ -709,7 +739,7 @@ class SSL(object):
      self._ssl.allowUnsecuredClient(True)
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Data", "Endpoint", "Connection",
-           "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
-           "Transport", "TransportException", "SASL", "SSL", "SSLException",
-           "SSLUnavailable", "PN_SESSION_WINDOW"]
+           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
+           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
+           "Delivery", "Transport", "TransportException", "SASL", "SSL",
+           "SSLException", "SSLUnavailable", "PN_SESSION_WINDOW", "symbol"]

@@ -1708,6 +1708,27 @@ class Endpoint(object):
   LOCAL_CLOSED = PN_LOCAL_CLOSED
   REMOTE_CLOSED  = PN_REMOTE_CLOSED
 
+  def __init__(self):
+    self.condition = None
+
+class Condition:
+
+  def __init__(self, name, description=None, info=None):
+    self.name = name
+    self.description = description
+    self.info = info
+
+  def __repr__(self):
+    return "Condition(%s)" % ", ".join([repr(x) for x in
+                                        (self.name, self.description, self.info)
+                                        if x])
+
+  def __eq__(self, o):
+    if not isinstance(o, Condition): return False
+    return self.name == o.name and \
+        self.description == o.description and \
+        self.info == o.info
+
 def wrap_connection(conn):
   if not conn: return None
   ctx = pn_connection_get_context(conn)
@@ -1718,6 +1739,7 @@ def wrap_connection(conn):
 class Connection(Endpoint):
 
   def __init__(self, _conn=None):
+    Endpoint.__init__(self)
     if _conn:
       self._conn = _conn
     else:
@@ -1735,6 +1757,19 @@ class Connection(Endpoint):
       raise exc("[%s]: %s" % (err, pn_connection_error(self._conn)))
     else:
       return err
+
+  @property
+  def remote_condition(self):
+    impl = pn_connection_remote_condition(self._conn)
+    if pn_condition_is_set(impl):
+      info_impl = Data(pn_condition_info(impl))
+      info_impl.rewind()
+      info_impl.next()
+      info = info_impl.get_object()
+      info_impl.rewind()
+      return Condition(pn_condition_get_name(impl),
+                       pn_condition_get_description(impl),
+                       info)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
@@ -1778,6 +1813,14 @@ class Connection(Endpoint):
     pn_connection_open(self._conn)
 
   def close(self):
+    if self.condition:
+      impl = pn_connection_condition(self._conn)
+      pn_condition_clear(impl)
+      pn_condition_set_name(impl, self.condition.name)
+      pn_condition_set_description(impl, self.condition.description)
+      info = Data(pn_condition_info(impl))
+      if self.condition.info:
+        info.put_object(self.condition.info)
     pn_connection_close(self._conn)
 
   @property
@@ -1817,6 +1860,7 @@ def wrap_session(ssn):
 class Session(Endpoint):
 
   def __init__(self, ssn):
+    Endpoint.__init__(self)
     self._ssn = ssn
 
   def __del__(self):
@@ -1863,6 +1907,7 @@ def wrap_link(link):
 class Link(Endpoint):
 
   def __init__(self, link):
+    Endpoint.__init__(self)
     self._link = link
 
   def __del__(self):
@@ -1887,7 +1932,7 @@ class Link(Endpoint):
   def state(self):
     return pn_link_state(self._link)
 
-  @property 
+  @property
   def source(self):
     return Terminus(pn_link_source(self._link))
 
@@ -2297,9 +2342,9 @@ class SSL(object):
     return None
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Data", "Endpoint", "Connection",
-           "Session", "Link", "Terminus", "Sender", "Receiver", "Delivery",
-           "Transport", "TransportException", "SASL", "SSL", "Described",
-           "Array", "symbol", "char", "timestamp", "ulong", "UNDESCRIBED",
-           "SSLUnavailable", "PN_SESSION_WINDOW", "AUTOMATIC", "MANUAL",
-           "PENDING", "ACCEPTED", "REJECTED"]
+           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
+           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
+           "Delivery", "Transport", "TransportException", "SASL", "SSL",
+           "Described", "Array", "symbol", "char", "timestamp", "ulong",
+           "UNDESCRIBED", "SSLUnavailable", "PN_SESSION_WINDOW", "AUTOMATIC",
+           "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]
