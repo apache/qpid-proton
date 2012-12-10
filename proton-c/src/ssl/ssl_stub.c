@@ -112,7 +112,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *d )
 {
 }
 
-pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *d, pn_transport_t *t)
+pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *d, pn_transport_t *t, const char *i)
 {
   return NULL;
 }
@@ -138,22 +138,8 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
   return -1;
 }
 
-pn_ssl_state_t *pn_ssl_get_state( pn_ssl_t *s)
+pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *s )
 {
-  return NULL;
-}
-
-int pn_ssl_resume_state( pn_ssl_t *s, pn_ssl_state_t *t )
-{
-  return -1;
-}
-
-bool pn_ssl_state_resumed_ok( pn_ssl_t *s )
-{
-  return false;
-}
-
-void pn_ssl_state_free( pn_ssl_state_t *s )
-{
+  return PN_SSL_RESUME_UNKNOWN;
 }
 
