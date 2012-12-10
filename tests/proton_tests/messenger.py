@@ -133,7 +133,7 @@ class MessengerTest(Test):
       self.client.put(msg)
     except MessengerException, exc:
       err = str(exc)
-      assert "unable to send to address: totally-bogus-address (" in err, err
+      assert "unable to send to address: totally-bogus-address" in err, err
 
   def testOutgoingWindow(self):
     self.server.accept_mode = MANUAL
