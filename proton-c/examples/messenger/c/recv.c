@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 
       printf("Address: %s\n", pn_message_get_address(message));
       const char* subject = pn_message_get_subject(message);
-      printf("Subject: %s\n", !subject ? subject : "(no subject)");
+      printf("Subject: %s\n", subject ? subject : "(no subject)");
       printf("Content: %s\n", buffer);
     }
   }
