@@ -354,13 +354,16 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
     return NULL;
   }
 
+  pn_configure_sock(sock);
+
   if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    pn_error_from_errno(driver->error, "connect");
-    freeaddrinfo(addr);
-    return NULL;
+    if (errno != EINPROGRESS) {
+      pn_error_from_errno(driver->error, "connect");
+      freeaddrinfo(addr);
+      return NULL;
+    }
   }
 
-  pn_configure_sock(sock);
   freeaddrinfo(addr);
 
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
@@ -796,6 +799,8 @@ void pn_driver_wait_3(pn_driver_t *d)
       c->pending_read = (idx && d->fds[idx].revents & POLLIN);
       c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
       c->pending_tick = (c->wakeup &&  c->wakeup <= now);
+      if (idx && d->fds[idx].revents & POLLERR)
+          pn_connector_close(c);
     }
     c = c->connector_next;
   }
