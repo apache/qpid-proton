@@ -158,7 +158,7 @@ class MessengerTest(Test):
       trackers.append(self.client.put(msg))
 
     for t in trackers:
-      assert self.client.status(t) is PENDING
+      assert self.client.status(t) is PENDING, (t, self.client.status(t))
 
     self.client.send()
 
@@ -229,7 +229,7 @@ class MessengerTest(Test):
     self.client.send()
 
     for t in trackers:
-      assert self.client.status(t) is ACCEPTED
+      assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
     self.client.incoming_window = 10
 
@@ -242,4 +242,4 @@ class MessengerTest(Test):
         trackers.append(self.client.get())
         remaining -= 1
     for t in trackers:
-      assert self.client.status(t) is ACCEPTED
+      assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
