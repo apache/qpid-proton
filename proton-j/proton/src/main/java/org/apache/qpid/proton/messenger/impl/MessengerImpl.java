@@ -486,7 +486,7 @@ public class MessengerImpl implements Messenger
         while (first || (!done && wait))
         {
             if (wait && !done && !first) {
-                _driver.doWait(deadline - System.currentTimeMillis());
+                _driver.doWait(timeout < 0 ? 0 : deadline - System.currentTimeMillis());
             }
             processActive();
             wait = deadline > System.currentTimeMillis();
