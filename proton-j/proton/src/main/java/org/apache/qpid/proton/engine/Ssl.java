@@ -20,6 +20,9 @@ package org.apache.qpid.proton.engine;
  *
  */
 
+/**
+ * PHTODO summarise use, also deprecate methods now on SslDomain
+ */
 public interface Ssl
 {
     public enum Mode
@@ -27,7 +30,6 @@ public interface Ssl
         CLIENT,    /** Local connection endpoint is an SSL client */
         SERVER     /** Local connection endpoint is an SSL server */
     }
-
 
     /** Initialize the pn_ssl_t object.
      *
@@ -53,10 +55,10 @@ public interface Ssl
      * sign the certificate
      * @param password the password used to sign the key, else NULL if key is not
      * protected.
+     *
+     * @deprecated in favour of {@link SslDomain#setCredentials(String, String, String)}
      */
-     void setCredentials( String certificate_file,
-                         String private_key_file,
-                         String password);
+     void setCredentials(String certificate_file, String private_key_file, String password);
 
      String getPrivateKeyFile(); // TODO
      String getPrivateKeyPassword();
@@ -70,8 +72,9 @@ public interface Ssl
      * trusted CAs that will be used to verify the signature of the remote's certificate.
      *
      * @param certificate_db database of trusted CAs, used to authenticate the peer.
+     *
+     * @deprecated in favour of {@link SslDomain#setTrustedCaDb(String)}
      */
-
     void setTrustedCaDb(String certificate_db);
 
     String getTrustedCaDb();
@@ -81,7 +84,6 @@ public interface Ssl
      * This configures the server to "sniff" the incoming client data stream, and dynamically
      * determine whether SSL/TLS is being used.  This option is disabled by default: only
      * clients using SSL/TLS are accepted.
-     *
      */
     void allowUnsecuredClient(boolean allowUnsecured);
 
@@ -139,10 +141,5 @@ public interface Ssl
      * @return the name of the protocol in use, or null if none
      */
     String getProtocolName();
-
-
-
-
-
 
 }

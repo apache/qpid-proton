@@ -55,7 +55,6 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
     private final TransportInput _underlyingInput;
     private final TransportOutput _underlyingOutput;
-    private final Ssl _sslParams;
 
     private SslEngineFacade _sslEngine;
 
@@ -77,22 +76,13 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _protocolName;
 
-    private final SslEngineFacadeFactory _sslEngineFacadeFactory;
+    private Ssl.Mode _mode; // PHTODO
 
-    public SimpleSslTransportWrapper(Ssl sslConfiguration, TransportInput underlyingInput, TransportOutput underlyingOutput)
+    SimpleSslTransportWrapper(SslEngineFacade sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
     {
-        this(sslConfiguration, underlyingInput, underlyingOutput, new SslEngineFacadeFactory());
-    }
-
-    SimpleSslTransportWrapper(Ssl sslConfiguration,
-            TransportInput underlyingInput, TransportOutput underlyingOutput,
-            SslEngineFacadeFactory sslEngineFacadeFactory)
-    {
-        _sslParams = sslConfiguration;
         _underlyingInput = underlyingInput;
         _underlyingOutput = underlyingOutput;
-        _sslEngineFacadeFactory = sslEngineFacadeFactory;
-        _sslEngine = _sslEngineFacadeFactory.createSslEngineFacade(sslConfiguration);
+        _sslEngine = sslEngine;
         createByteHolders();
     }
 
@@ -136,7 +126,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
                 if(_logger.isLoggable(Level.FINEST))
                 {
-                    _logger.log(Level.FINEST, _sslParams.getMode() + " input " + resultToString(result));
+                    _logger.log(Level.FINEST, _mode + " input " + resultToString(result));
                 }
 
                 Status sslResultStatus = result.getStatus();
@@ -270,7 +260,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
         catch(SSLException e)
         {
-            throw new TransportException("Mode " + _sslParams.getMode(), e);
+            throw new TransportException("Mode " + _mode, e);
         }
     }
 

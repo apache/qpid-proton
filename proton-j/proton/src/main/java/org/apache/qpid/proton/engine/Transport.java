@@ -59,6 +59,12 @@ public interface Transport extends Endpoint
 
     Sasl sasl();
 
+    /** PHTODO */
+    Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails);
     Ssl ssl();
 
+    /**
+     * As per {@link #ssl(SslDomain, SslPeerDetails)} but no attempt is made to resume a previous SSL session.
+     */
+    Ssl ssl(SslDomain sslDomain);
 }

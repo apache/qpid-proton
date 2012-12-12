@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
@@ -42,6 +44,16 @@ public class SslImpl implements Ssl
     private boolean _allowUnsecuredClient;
 
     private SslTransportWrapper _unsecureClientAwareTransportWrapper;
+
+    private final SslDomain _domain;
+
+    private final SslPeerDetails _peerDetails;
+
+    public SslImpl(SslDomain domain, SslPeerDetails peerDetails)
+    {
+        _domain = domain;
+        _peerDetails = peerDetails;
+    }
 
     @Override
     public void init(Mode mode)
@@ -206,7 +218,7 @@ public class SslImpl implements Ssl
         {
             if (_transportWrapper == null)
             {
-                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(SslImpl.this, _inputProcessor, _outputProcessor);
+                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(_domain.getSslEngineFacade(_peerDetails), _inputProcessor, _outputProcessor);
                 if (_allowUnsecuredClient)
                 {
                     TransportWrapper plainTransportWrapper = new PlainTransportWrapper(_outputProcessor, _inputProcessor);

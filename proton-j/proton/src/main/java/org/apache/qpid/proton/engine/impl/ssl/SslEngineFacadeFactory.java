@@ -46,9 +46,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.Ssl.Mode;
 import org.apache.qpid.proton.engine.Ssl.VerifyMode;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PEMReader;
@@ -81,25 +82,28 @@ public class SslEngineFacadeFactory
             "SSL_DH_anon_WITH_DES_CBC_SHA",
             "SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
 
-    public SslEngineFacade createSslEngineFacade(Ssl sslConfiguration)
+    /** lazily initialized */
+    private SSLContext _sslContext;
+
+    public SslEngineFacade createSslEngineFacade(SslDomain domain, SslPeerDetails peerDetails)
     {
-        SSLEngine engine = createSslEngine(sslConfiguration);
+        SSLEngine engine = createAndInitialiseSslEngine(domain, peerDetails);
         return new DefaultSslEngineFacade(engine);
     }
 
-    private SSLEngine createSslEngine(Ssl sslConfiguration)
+    private SSLEngine createAndInitialiseSslEngine(SslDomain domain, SslPeerDetails peerDetails)
     {
-        SSLEngine sslEngine;
 
-        SSLContext sslContext = createSslContext(sslConfiguration);
-        sslEngine = sslContext.createSSLEngine();
-        if (sslConfiguration.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
+        SSLContext sslContext = getOrCreateSslContext(domain);
+        SSLEngine sslEngine = createSslEngine(sslContext, peerDetails);
+
+        if (domain.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
         {
             addAnonymousCipherSuites(sslEngine);
         }
         else
         {
-            if (sslConfiguration.getMode() == Mode.SERVER)
+            if (domain.getMode() == Mode.SERVER)
             {
                 sslEngine.setNeedClientAuth(true);
             }
@@ -107,87 +111,111 @@ public class SslEngineFacadeFactory
 
         if(_logger.isLoggable(Level.FINE))
         {
-            _logger.log(Level.FINE, sslConfiguration.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
+            _logger.log(Level.FINE, domain.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
         }
 
-        boolean useClientMode = sslConfiguration.getMode() == Mode.CLIENT ? true : false;
+        boolean useClientMode = domain.getMode() == Mode.CLIENT ? true : false;
         sslEngine.setUseClientMode(useClientMode);
 
         return sslEngine;
     }
 
-    private SSLContext createSslContext(Ssl sslConfiguration)
+    /**
+     * @param sslPeerDetails is allowed to be null. A non-null value is used to hint that SSL resumption
+     * should be attempted
+     */
+    private SSLEngine createSslEngine(SSLContext sslContext, SslPeerDetails sslPeerDetails)
     {
-        final char[] dummyPassword = "unused-passphrase".toCharArray(); // Dummy password required by KeyStore and KeyManagerFactory, but never referred to again
-
-        try
+        final SSLEngine sslEngine;
+        if(sslPeerDetails == null)
         {
-            SSLContext sslContext = SSLContext.getInstance(TLS_PROTOCOL);
-            KeyStore ksKeys = createKeyStoreFrom(sslConfiguration, dummyPassword);
-
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(ksKeys, dummyPassword);
-
-            final TrustManager[] trustManagers;
-            if (sslConfiguration.getTrustedCaDb() == null && sslConfiguration.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
-            {
-                trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
-            }
-            else
-            {
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(ksKeys);
-                trustManagers = tmf.getTrustManagers();
-            }
-
-            sslContext.init(kmf.getKeyManagers(), trustManagers, null);
-            return sslContext;
+            sslEngine = sslContext.createSSLEngine();
         }
-        catch (NoSuchAlgorithmException e)
+        else
         {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            sslEngine = sslContext.createSSLEngine(sslPeerDetails.getHostname(), sslPeerDetails.getPort());
         }
-        catch (KeyStoreException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
-        catch (UnrecoverableKeyException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
-        catch (KeyManagementException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
+        return sslEngine;
     }
 
-    private KeyStore createKeyStoreFrom(Ssl sslConfiguration, char[] dummyPassword)
+    private SSLContext getOrCreateSslContext(SslDomain sslDomain)
+    {
+        if(_sslContext == null)
+        {
+            // lazily initialize _sslContext
+
+            final char[] dummyPassword = "unused-passphrase".toCharArray(); // Dummy password required by KeyStore and KeyManagerFactory, but never referred to again
+
+            try
+            {
+                SSLContext sslContext = SSLContext.getInstance(TLS_PROTOCOL);
+                KeyStore ksKeys = createKeyStoreFrom(sslDomain, dummyPassword);
+
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(ksKeys, dummyPassword);
+
+                final TrustManager[] trustManagers;
+                if (sslDomain.getTrustedCaDb() == null && sslDomain.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
+                {
+                    trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
+                }
+                else
+                {
+                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    tmf.init(ksKeys);
+                    trustManagers = tmf.getTrustManagers();
+                }
+
+                sslContext.init(kmf.getKeyManagers(), trustManagers, null);
+                _sslContext = sslContext;
+            }
+            catch (NoSuchAlgorithmException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (KeyStoreException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (UnrecoverableKeyException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (KeyManagementException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+        }
+        return _sslContext;
+    }
+
+    private KeyStore createKeyStoreFrom(SslDomain sslDomain, char[] dummyPassword)
     {
         try
         {
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(null, null);
 
-            if (sslConfiguration.getTrustedCaDb() != null)
+            if (sslDomain.getTrustedCaDb() != null)
             {
                 String caCertAlias = "cacert";
 
                 if(_logger.isLoggable(Level.FINE))
                 {
-                    _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslConfiguration.getTrustedCaDb());
+                    _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslDomain.getTrustedCaDb());
                 }
-                Certificate trustedCaCert = (Certificate) readPemObject(sslConfiguration.getTrustedCaDb());
+                Certificate trustedCaCert = (Certificate) readPemObject(sslDomain.getTrustedCaDb());
                 keystore.setCertificateEntry(caCertAlias, trustedCaCert);
             }
 
-            if (sslConfiguration.getCertificateFile() != null
-                    && sslConfiguration.getPrivateKeyFile() != null)
+            if (sslDomain.getCertificateFile() != null
+                    && sslDomain.getPrivateKeyFile() != null)
             {
                 String clientPrivateKeyAlias = "clientPrivateKey";
-                Certificate clientCertificate = (Certificate) readPemObject(sslConfiguration.getCertificateFile());
+                Certificate clientCertificate = (Certificate) readPemObject(sslDomain.getCertificateFile());
                 Key clientPrivateKey = (Key) readPemObject(
-                        sslConfiguration.getPrivateKeyFile(),
-                        sslConfiguration.getPrivateKeyPassword());
+                        sslDomain.getPrivateKeyFile(),
+                        sslDomain.getPrivateKeyPassword());
 
                 keystore.setKeyEntry(clientPrivateKeyAlias, clientPrivateKey,
                         dummyPassword, new Certificate[] { clientCertificate });
@@ -314,4 +342,5 @@ public class SslEngineFacadeFactory
             // Do not check certificate
         }
     }
+
 }

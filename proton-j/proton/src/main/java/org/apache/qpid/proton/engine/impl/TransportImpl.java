@@ -29,6 +29,8 @@ import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
@@ -233,17 +235,37 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    /**
+     * PHTODO remove?
+     */
     @Override
     public Ssl ssl()
     {
+        return ssl(null, null);
+    }
+
+    /**
+     * PHTODO
+     * @param sslDomain may be null
+     * @param sslPeerDetails may be null
+     */
+    @Override
+    public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
+    {
         if (_ssl == null)
         {
-            _ssl = new SslImpl();
+            _ssl = new SslImpl(sslDomain, sslPeerDetails);
             TransportWrapper transportWrapper = _ssl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
         }
         return _ssl;
+    }
+
+    @Override
+    public Ssl ssl(SslDomain sslDomain)
+    {
+        return ssl(sslDomain, null);
     }
 
     private void clearTransportWorkList()
