@@ -24,7 +24,6 @@
 package org.apache.qpid.proton.amqp.transport;
 
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 
 public final class Transfer implements FrameBody

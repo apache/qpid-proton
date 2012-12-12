@@ -28,8 +28,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.engine.Ssl;
-import org.apache.qpid.proton.engine.impl.ssl.SimpleSslTransportWrapper;
-import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacadeFactory;
 import org.junit.Before;
 import org.junit.Test;
 

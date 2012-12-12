@@ -23,7 +23,6 @@
 
 package org.apache.qpid.proton.codec.security;
 
-import java.util.AbstractList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.qpid.proton.amqp.Binary;

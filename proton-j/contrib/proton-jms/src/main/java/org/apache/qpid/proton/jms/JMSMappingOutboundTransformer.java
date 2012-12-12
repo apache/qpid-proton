@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -207,7 +208,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         Footer footer=null;
         if( footerMap!=null ) footer = new Footer(footerMap);
 
-        org.apache.qpid.proton.message.Message amqp = new org.apache.qpid.proton.message.Message(header, da, ma, props, ap, body, footer);
+        MessageImpl amqp = new MessageImpl(header, da, ma, props, ap, body, footer);
 
         ByteBuffer buffer = ByteBuffer.wrap(new byte[1024*4]);
         final DroppingWritableBuffer overflow = new DroppingWritableBuffer();

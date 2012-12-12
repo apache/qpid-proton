@@ -42,6 +42,7 @@ import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.driver.impl.DriverImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.apache.qpid.proton.messenger.AcceptMode;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
@@ -190,7 +191,7 @@ public class MessengerImpl implements Messenger
                 {
                     _logger.log(Level.FINE, "Readable delivery found: " + delivery);
                     int size = read((Receiver) delivery.getLink());
-                    Message message = new Message();
+                    Message message = new MessageImpl();
                     message.decode(_buffer, 0, size);
                     _incoming.add(delivery);
                     if (_acceptMode == AcceptMode.AUTO) {

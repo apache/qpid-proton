@@ -1,4 +1,4 @@
-package org.apache.qpid.proton.message;
+package org.apache.qpid.proton.message.impl;
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -27,14 +27,14 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
-import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.amqp.messaging.*;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.amqp.messaging.*;
+import org.apache.qpid.proton.message.*;
 
-public class Message
+public class MessageImpl implements Message
 {
     public static final short DEFAULT_PRIORITY = 4;
 
@@ -49,12 +49,12 @@ public class Message
     private Footer _footer;
     private MessageFormat _format = MessageFormat.DATA;
 
-    public Message()
+    public MessageImpl()
     {
     }
 
-    public Message(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
-                   Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
+    public MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+                       Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
     {
         _header = header;
         _deliveryAnnotations = deliveryAnnotations;
@@ -65,18 +65,21 @@ public class Message
         _footer = footer;
     }
 
+    @Override
     public boolean isDurable()
     {
         return (_header == null || _header.getDurable() == null) ? false : _header.getDurable();
     }
 
 
+    @Override
     public long getDeliveryCount()
     {
         return (_header == null || _header.getDeliveryCount() == null) ? 0l : _header.getDeliveryCount().longValue();
     }
 
 
+    @Override
     public short getPriority()
     {
         return (_header == null || _header.getPriority() == null)
@@ -84,16 +87,19 @@ public class Message
                        : _header.getPriority().shortValue();
     }
 
+    @Override
     public boolean isFirstAcquirer()
     {
         return (_header == null || _header.getFirstAcquirer() == null) ? false : _header.getFirstAcquirer();
     }
 
+    @Override
     public long getTtl()
     {
         return (_header == null || _header.getTtl() == null) ? 0l : _header.getTtl().longValue();
     }
 
+    @Override
     public void setDurable(boolean durable)
     {
         if (_header == null)
@@ -110,6 +116,7 @@ public class Message
         _header.setDurable(durable);
     }
 
+    @Override
     public void setTtl(long ttl)
     {
 
@@ -127,6 +134,7 @@ public class Message
         _header.setTtl(UnsignedInteger.valueOf(ttl));
     }
 
+    @Override
     public void setDeliveryCount(long deliveryCount)
     {
         if (_header == null)
@@ -141,6 +149,7 @@ public class Message
     }
 
 
+    @Override
     public void setFirstAcquirer(boolean firstAcquirer)
     {
 
@@ -155,6 +164,7 @@ public class Message
         _header.setFirstAcquirer(firstAcquirer);
     }
 
+    @Override
     public void setPriority(short priority)
     {
 
@@ -169,31 +179,37 @@ public class Message
         _header.setPriority(UnsignedByte.valueOf((byte) priority));
     }
 
+    @Override
     public Object getMessageId()
     {
         return _properties == null ? null : _properties.getMessageId();
     }
 
+    @Override
     public long getGroupSequence()
     {
         return (_properties == null || _properties.getGroupSequence() == null) ? 0l : _properties.getGroupSequence().intValue();
     }
 
+    @Override
     public String getReplyToGroupId()
     {
         return _properties == null ? null : _properties.getReplyToGroupId();
     }
 
+    @Override
     public long getCreationTime()
     {
         return (_properties == null || _properties.getCreationTime() == null) ? 0l : _properties.getCreationTime().getTime();
     }
 
+    @Override
     public String getAddress()
     {
         return _properties == null ? null : _properties.getTo();
     }
 
+    @Override
     public byte[] getUserId()
     {
         if(_properties == null || _properties.getUserId() == null)
@@ -210,41 +226,49 @@ public class Message
 
     }
 
+    @Override
     public String getReplyTo()
     {
         return _properties == null ? null : _properties.getReplyTo();
     }
 
+    @Override
     public String getGroupId()
     {
         return _properties == null ? null : _properties.getGroupId();
     }
 
+    @Override
     public String getContentType()
     {
         return (_properties == null || _properties.getContentType() == null) ? null : _properties.getContentType().toString();
     }
 
+    @Override
     public long getExpiryTime()
     {
         return (_properties == null || _properties.getAbsoluteExpiryTime() == null) ? 0l : _properties.getAbsoluteExpiryTime().getTime();
     }
 
+    @Override
     public Object getCorrelationId()
     {
         return (_properties == null) ? null : _properties.getCorrelationId();
     }
 
+    @Override
     public String getContentEncoding()
     {
         return (_properties == null || _properties.getContentEncoding() == null) ? null : _properties.getContentEncoding().toString();
     }
 
+    @Override
     public String getSubject()
     {
         return _properties == null ? null : _properties.getSubject();
     }
 
+    @Override
     public void setGroupSequence(long groupSequence)
     {
         if(_properties == null)
@@ -261,6 +285,7 @@ public class Message
         _properties.setGroupSequence(UnsignedInteger.valueOf((int) groupSequence));
     }
 
+    @Override
     public void setUserId(byte[] userId)
     {
         if(userId == null)
@@ -283,6 +308,7 @@ public class Message
         }
     }
 
+    @Override
     public void setCreationTime(long creationTime)
     {
         if(_properties == null)
@@ -297,6 +323,7 @@ public class Message
         _properties.setCreationTime(new Date(creationTime));
     }
 
+    @Override
     public void setSubject(String subject)
     {
         if(_properties == null)
@@ -310,6 +337,7 @@ public class Message
         _properties.setSubject(subject);
     }
 
+    @Override
     public void setGroupId(String groupId)
     {
         if(_properties == null)
@@ -323,6 +351,7 @@ public class Message
         _properties.setGroupId(groupId);
     }
 
+    @Override
     public void setAddress(String to)
     {
         if(_properties == null)
@@ -336,6 +365,7 @@ public class Message
         _properties.setTo(to);
     }
 
+    @Override
     public void setExpiryTime(long absoluteExpiryTime)
     {
         if(_properties == null)
@@ -350,6 +380,7 @@ public class Message
         _properties.setAbsoluteExpiryTime(new Date(absoluteExpiryTime));
     }
 
+    @Override
     public void setReplyToGroupId(String replyToGroupId)
     {
         if(_properties == null)
@@ -363,6 +394,7 @@ public class Message
         _properties.setReplyToGroupId(replyToGroupId);
     }
 
+    @Override
     public void setContentEncoding(String contentEncoding)
     {
         if(_properties == null)
@@ -376,6 +408,7 @@ public class Message
         _properties.setContentEncoding(Symbol.valueOf(contentEncoding));
     }
 
+    @Override
     public void setContentType(String contentType)
     {
         if(_properties == null)
@@ -389,6 +422,7 @@ public class Message
         _properties.setContentType(Symbol.valueOf(contentType));
     }
 
+    @Override
     public void setReplyTo(String replyTo)
     {
 
@@ -403,6 +437,7 @@ public class Message
         _properties.setReplyTo(replyTo);
     }
 
+    @Override
     public void setCorrelationId(Object correlationId)
     {
 
@@ -417,6 +452,7 @@ public class Message
         _properties.setCorrelationId(correlationId);
     }
 
+    @Override
     public void setMessageId(Object messageId)
     {
 
@@ -432,76 +468,91 @@ public class Message
     }
 
 
+    @Override
     public Header getHeader()
     {
         return _header;
     }
 
+    @Override
     public DeliveryAnnotations getDeliveryAnnotations()
     {
         return _deliveryAnnotations;
     }
 
+    @Override
     public MessageAnnotations getMessageAnnotations()
     {
         return _messageAnnotations;
     }
 
+    @Override
     public Properties getProperties()
     {
         return _properties;
     }
 
+    @Override
     public ApplicationProperties getApplicationProperties()
     {
         return _applicationProperties;
     }
 
+    @Override
     public Section getBody()
     {
         return _body;
     }
 
+    @Override
     public Footer getFooter()
     {
         return _footer;
     }
 
+    @Override
     public void setHeader(Header header)
     {
         _header = header;
     }
 
+    @Override
     public void setDeliveryAnnotations(DeliveryAnnotations deliveryAnnotations)
     {
         _deliveryAnnotations = deliveryAnnotations;
     }
 
+    @Override
     public void setMessageAnnotations(MessageAnnotations messageAnnotations)
     {
         _messageAnnotations = messageAnnotations;
     }
 
+    @Override
     public void setProperties(Properties properties)
     {
         _properties = properties;
     }
 
+    @Override
     public void setApplicationProperties(ApplicationProperties applicationProperties)
     {
         _applicationProperties = applicationProperties;
     }
 
+    @Override
     public void setBody(Section body)
     {
         _body = body;
     }
 
+    @Override
     public void setFooter(Footer footer)
     {
         _footer = footer;
     }
 
+    @Override
     public int decode(byte[] data, int offset, int length)
     {
         DecoderImpl decoder = new DecoderImpl();
@@ -617,6 +668,7 @@ public class Message
 
     }
 
+    @Override
     public int encode(byte[] data, int offset, int length)
     {
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
@@ -663,6 +715,7 @@ public class Message
         return length - buffer.remaining();
     }
 
+    @Override
     public void load(Object data)
     {
         switch (_format)
@@ -703,6 +756,7 @@ public class Message
 
     }
 
+    @Override
     public Object save()
     {
         switch (_format)
@@ -734,33 +788,39 @@ public class Message
         }
     }
 
-    private String toAMQPFormat(Object value)
+    @Override
+    public String toAMQPFormat(Object value)
     {
         return _parser.encode(value);
     }
 
-    private Object parseAMQPFormat(String value)
+    @Override
+    public Object parseAMQPFormat(String value)
     {
 
         Object obj = _parser.format(value);
         return obj;
     }
 
+    @Override
     public void setMessageFormat(MessageFormat format)
     {
         _format = format;
     }
 
+    @Override
     public MessageFormat getMessageFormat()
     {
         return _format;
     }
 
+    @Override
     public void clear()
     {
         _body = null;
     }
 
+    @Override
     public MessageError getError()
     {
         return MessageError.OK;

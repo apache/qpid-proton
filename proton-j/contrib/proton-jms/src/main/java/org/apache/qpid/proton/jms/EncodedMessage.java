@@ -16,9 +16,9 @@
  */
 package org.apache.qpid.proton.jms;
 
-import java.nio.ByteBuffer;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -39,7 +39,7 @@ public class EncodedMessage
     }
 
     public Message decode() throws Exception {
-        Message amqp = new Message();
+        Message amqp = new MessageImpl();
 
         int offset = getArrayOffset();
         int len = getLength();

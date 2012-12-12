@@ -32,8 +32,6 @@ import org.apache.qpid.proton.amqp.transport.End;
 import org.apache.qpid.proton.amqp.transport.Flow;
 import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.amqp.transport.Transfer;
-import org.apache.qpid.proton.codec.Decoder;
-import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.messaging.*;
 import org.apache.qpid.proton.codec.security.*;
 import org.apache.qpid.proton.codec.transaction.*;

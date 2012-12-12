@@ -31,7 +31,6 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.security.*;
 
 public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>

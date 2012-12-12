@@ -23,15 +23,10 @@
 
 package org.apache.qpid.proton.amqp.messaging;
 
-import java.util.AbstractList;
 import java.util.Date;
-import java.util.List;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
-import org.apache.qpid.proton.amqp.UnsignedLong;
-import org.apache.qpid.proton.codec.Decoder;
-import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 
 
 public final class Properties

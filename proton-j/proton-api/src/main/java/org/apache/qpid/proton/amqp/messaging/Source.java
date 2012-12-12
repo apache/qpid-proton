@@ -26,7 +26,6 @@ package org.apache.qpid.proton.amqp.messaging;
 import java.util.Arrays;
 import java.util.Map;
 import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.UnsignedInteger;
 
 public final class Source extends Terminus
       implements org.apache.qpid.proton.amqp.transport.Source

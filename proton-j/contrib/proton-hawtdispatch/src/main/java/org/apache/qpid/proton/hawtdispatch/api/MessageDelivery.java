@@ -25,6 +25,7 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
 
@@ -36,12 +37,12 @@ import java.nio.ByteBuffer;
 public abstract class MessageDelivery extends WatchBase {
 
     final int initialSize;
-    private Message message;
+    private MessageImpl message;
     private Buffer encoded;
     public DeliveryImpl delivery;
     private int sizeHint = 1024*4;
 
-    static Buffer encode(Message message, int sizeHint) {
+    static Buffer encode(MessageImpl message, int sizeHint) {
         ByteBuffer buffer = ByteBuffer.wrap(new byte[sizeHint]);
         DroppingWritableBuffer overflow = new DroppingWritableBuffer();
         int c = message.encode(new CompositeWritableBuffer(new WritableBuffer.ByteBufferWrapper(buffer), overflow));
@@ -52,8 +53,8 @@ public abstract class MessageDelivery extends WatchBase {
         return new Buffer(buffer.array(), 0, c);
     }
 
-    static Message decode(Buffer buffer) {
-        Message msg = new Message();
+    static MessageImpl decode(Buffer buffer) {
+        MessageImpl msg = new MessageImpl();
         int offset = buffer.offset;
         int len = buffer.length;
         while( len > 0 ) {
@@ -65,7 +66,7 @@ public abstract class MessageDelivery extends WatchBase {
         return msg;
     }
 
-    public MessageDelivery(Message message) {
+    public MessageDelivery(MessageImpl message) {
         this(message, encode(message, 1024*4));
     }
 
@@ -73,7 +74,7 @@ public abstract class MessageDelivery extends WatchBase {
         this(null, encoded);
     }
 
-    public MessageDelivery(Message message, Buffer encoded) {
+    public MessageDelivery(MessageImpl message, Buffer encoded) {
         this.message = message;
         this.encoded = encoded;
         sizeHint = this.encoded.length;

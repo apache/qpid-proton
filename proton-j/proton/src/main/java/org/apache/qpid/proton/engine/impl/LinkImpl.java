@@ -25,7 +25,6 @@ import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
-import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.amqp.transport.Target;
 

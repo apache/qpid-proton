@@ -20,8 +20,8 @@ from uuid import UUID
 from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
-from org.apache.qpid.proton.message import Message as MessageImpl, \
-    MessageFormat
+from org.apache.qpid.proton.message import MessageFormat
+from org.apache.qpid.proton.message.impl import MessageImpl
 from org.apache.qpid.proton.messenger import AcceptMode, MessengerException, Status
 from org.apache.qpid.proton.messenger.impl import MessengerImpl
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue

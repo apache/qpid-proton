@@ -30,6 +30,7 @@ import org.apache.qpid.proton.amqp.messaging.*;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 
 import java.util.UUID;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -122,7 +123,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createTextMessage(String value) {
-        Message msg = new Message();
+        Message msg = new MessageImpl();
         Section body = new AmqpValue(value);
         msg.setBody(body);
         return msg;
@@ -133,7 +134,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createBinaryMessage(byte value[], int offset, int len) {
-        Message msg = new Message();
+        Message msg = new MessageImpl();
         Data body = new Data(new Binary(value, offset,len));
         msg.setBody(body);
         return msg;

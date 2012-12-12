@@ -25,6 +25,7 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageFormatException;
 import java.nio.ByteBuffer;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -68,7 +69,7 @@ public class AMQPNativeOutboundTransformer extends OutboundTransformer {
             if( count > 1 ) {
 
                 // decode...
-                org.apache.qpid.proton.message.Message amqp = new org.apache.qpid.proton.message.Message();
+                MessageImpl amqp = new MessageImpl();
                 int offset = 0;
                 int len = data.length;
                 while( len > 0 ) {
