@@ -22,9 +22,11 @@ package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
 import java.util.Iterator;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.transport.Source;
-import org.apache.qpid.proton.type.transport.Target;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
+import org.apache.qpid.proton.amqp.transport.Source;
+import org.apache.qpid.proton.amqp.transport.Target;
 
 /**
  * Link
@@ -95,17 +97,17 @@ public interface Link extends Endpoint
 
     public Session getSession();
 
-    UnsignedByte getSenderSettleMode();
+    SenderSettleMode getSenderSettleMode();
 
-    void setSenderSettleMode(UnsignedByte senderSettleMode);
+    void setSenderSettleMode(SenderSettleMode senderSettleMode);
 
-    UnsignedByte getRemoteSenderSettleMode();
+    SenderSettleMode getRemoteSenderSettleMode();
 
-    void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode);
+    void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
 
-    UnsignedByte getReceiverSettleMode();
+    ReceiverSettleMode getReceiverSettleMode();
 
-    void setReceiverSettleMode(UnsignedByte receiverSettleMode);
+    void setReceiverSettleMode(ReceiverSettleMode receiverSettleMode);
 
-    UnsignedByte getRemoteReceiverSettleMode();
+    ReceiverSettleMode getRemoteReceiverSettleMode();
 }

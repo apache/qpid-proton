@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedByte;
 
 import java.util.Collection;
 import java.util.Collections;

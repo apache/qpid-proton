@@ -21,8 +21,8 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.transport.Flow;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.transport.Flow;
 
 class TransportSender extends TransportLink<SenderImpl>
 {

@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.Decimal64;
+import org.apache.qpid.proton.amqp.Decimal64;
 
 import java.util.Collection;
 import java.util.Collections;

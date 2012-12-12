@@ -21,7 +21,7 @@ import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.engine.impl.ReceiverImpl;
-import org.apache.qpid.proton.type.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
 

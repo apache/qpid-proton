@@ -21,11 +21,13 @@
 package org.apache.qpid.proton.engine.impl;
 
 import java.util.EnumSet;
+import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.transport.Source;
-import org.apache.qpid.proton.type.transport.Target;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.transport.Source;
+import org.apache.qpid.proton.amqp.transport.Target;
 
 public abstract class LinkImpl extends EndpointImpl implements Link
 {
@@ -45,10 +47,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private int _unsettled;
 
 
-    private UnsignedByte _senderSettleMode;
-    private UnsignedByte _remoteSenderSettleMode;
-    private UnsignedByte _receiverSettleMode;
-    private UnsignedByte _remoteReceiverSettleMode;
+    private SenderSettleMode _senderSettleMode;
+    private SenderSettleMode _remoteSenderSettleMode;
+    private ReceiverSettleMode _receiverSettleMode;
+    private ReceiverSettleMode _remoteReceiverSettleMode;
 
 
     private final LinkNode<LinkImpl> _node;
@@ -302,48 +304,48 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     }
 
     @Override
-    public UnsignedByte getSenderSettleMode()
+    public SenderSettleMode getSenderSettleMode()
     {
         return _senderSettleMode;
     }
 
     @Override
-    public void setSenderSettleMode(UnsignedByte senderSettleMode)
+    public void setSenderSettleMode(SenderSettleMode senderSettleMode)
     {
         _senderSettleMode = senderSettleMode;
     }
 
     @Override
-    public UnsignedByte getRemoteSenderSettleMode()
+    public SenderSettleMode getRemoteSenderSettleMode()
     {
         return _remoteSenderSettleMode;
     }
 
     @Override
-    public void setRemoteSenderSettleMode(UnsignedByte remoteSenderSettleMode)
+    public void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode)
     {
         _remoteSenderSettleMode = remoteSenderSettleMode;
     }
 
     @Override
-    public UnsignedByte getReceiverSettleMode()
+    public ReceiverSettleMode getReceiverSettleMode()
     {
         return _receiverSettleMode;
     }
 
     @Override
-    public void setReceiverSettleMode(UnsignedByte receiverSettleMode)
+    public void setReceiverSettleMode(ReceiverSettleMode receiverSettleMode)
     {
         _receiverSettleMode = receiverSettleMode;
     }
 
     @Override
-    public UnsignedByte getRemoteReceiverSettleMode()
+    public ReceiverSettleMode getRemoteReceiverSettleMode()
     {
         return _remoteReceiverSettleMode;
     }
 
-    void setRemoteReceiverSettleMode(UnsignedByte remoteReceiverSettleMode)
+    void setRemoteReceiverSettleMode(ReceiverSettleMode remoteReceiverSettleMode)
     {
         _remoteReceiverSettleMode = remoteReceiverSettleMode;
     }

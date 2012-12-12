@@ -28,11 +28,11 @@ import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.type.AMQPDefinedTypes;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.Symbol;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.security.*;
+import org.apache.qpid.proton.codec.AMQPDefinedTypes;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.security.*;
 
 public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 {
@@ -79,7 +79,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     public SaslImpl()
     {
         _frameParser = new SaslFrameParser(this);
-        AMQPDefinedTypes.registerAllTypes(_decoder);
+        AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);
         _overflowBuffer.flip();
     }
 
@@ -153,9 +153,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
             if(_done)
             {
-                org.apache.qpid.proton.type.security.SaslOutcome outcome =
-                        new org.apache.qpid.proton.type.security.SaslOutcome();
-                outcome.setCode(UnsignedByte.valueOf(_outcome.getCode()));
+                org.apache.qpid.proton.amqp.security.SaslOutcome outcome =
+                        new org.apache.qpid.proton.amqp.security.SaslOutcome();
+                outcome.setCode(SaslCode.values()[_outcome.getCode()]);
                 written+=writeFrame(buffer, outcome);
             }
         }
@@ -180,7 +180,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         int oldPosition = buffer.position();
         buffer.position(buffer.position()+8);
         _encoder.setByteBuffer(buffer);
-        _encoder.writeDescribedType(frameBody);
+        _encoder.writeObject(frameBody);
 
         int frameSize = buffer.position() - oldPosition;
         int limit = buffer.position();
@@ -395,14 +395,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
     }
 
 
-    public void handleOutcome(org.apache.qpid.proton.type.security.SaslOutcome saslOutcome,
+    public void handleOutcome(org.apache.qpid.proton.amqp.security.SaslOutcome saslOutcome,
                               Binary payload,
                               Void context)
     {
         checkRole(Role.CLIENT);
         for(SaslOutcome outcome : SaslOutcome.values())
         {
-            if(outcome.getCode() == saslOutcome.getCode().byteValue())
+            if(outcome.getCode() == saslOutcome.getCode().ordinal())
             {
                 _outcome = outcome;
                 break;

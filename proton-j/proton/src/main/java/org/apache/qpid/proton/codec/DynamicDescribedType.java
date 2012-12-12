@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.DescribedType;
+import org.apache.qpid.proton.amqp.DescribedType;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -119,7 +119,7 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
 
         public int getValueSize(final Object val)
         {
-            return _underlyingEncoding.getValueSize(((DescribedType)val).getDescribed());
+            return _underlyingEncoding.getValueSize(((DescribedType) val).getDescribed());
         }
 
         public boolean isFixedSizeVal()
@@ -134,19 +134,11 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
                                                                    ._underlyingEncoding));
         }
 
-        public Object readValue()
-        {
-            return _underlyingEncoding.readValue();
-        }
-
+        @Override
         public boolean encodesJavaPrimitive()
         {
             return false;
         }
 
-        public Class getTypeClass()
-        {
-            return _underlyingEncoding.getTypeClass();
-        }
     }
 }

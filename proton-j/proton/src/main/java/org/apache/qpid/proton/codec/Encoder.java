@@ -20,7 +20,16 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.*;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Decimal128;
+import org.apache.qpid.proton.amqp.Decimal32;
+import org.apache.qpid.proton.amqp.Decimal64;
+import org.apache.qpid.proton.amqp.DescribedType;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.amqp.UnsignedShort;
 
 import java.util.Date;
 import java.util.List;
@@ -106,4 +115,7 @@ public interface Encoder
 
     void writeObject(Object o);
 
+    <V> void register(AMQPType<V> type);
+
+    AMQPType getType(Object element);
 }

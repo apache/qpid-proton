@@ -25,9 +25,9 @@ import java.math.BigDecimal;
 import java.nio.CharBuffer;
 import java.text.DecimalFormat;
 import java.util.*;
-import org.apache.qpid.proton.type.DescribedType;
-import org.apache.qpid.proton.type.Symbol;
-import org.apache.qpid.proton.type.transport.Flow;
+import org.apache.qpid.proton.amqp.DescribedType;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.Flow;
 
 public class AMQPMessageFormat
 {

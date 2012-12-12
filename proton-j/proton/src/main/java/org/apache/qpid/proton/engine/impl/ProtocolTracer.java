@@ -21,11 +21,6 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.framing.TransportFrame;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.DescribedType;
-import org.apache.qpid.proton.type.transport.FrameBody;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

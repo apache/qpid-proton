@@ -26,13 +26,13 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
-import org.apache.qpid.proton.type.messaging.Accepted;
-import org.apache.qpid.proton.type.messaging.Rejected;
-import org.apache.qpid.proton.type.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 class TrackerQueue
 {
-    private static final Accepted ACCEPTED = new Accepted();
+    private static final Accepted ACCEPTED = Accepted.getInstance();
     private static final Rejected REJECTED = new Rejected();
     private int _window = 0;
     private int _hwm = 0;

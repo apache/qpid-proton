@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.UnsignedLong;
+import org.apache.qpid.proton.amqp.UnsignedLong;
 
 import java.util.Arrays;
 import java.util.Collection;

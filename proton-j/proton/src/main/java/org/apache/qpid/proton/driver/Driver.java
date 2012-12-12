@@ -113,7 +113,7 @@ public interface Driver
     /**
      * Create a connector using the existing file descriptor.
      *
-     * @param c   existing SocketChannel for listener to listen on
+     * @param fd   existing SocketChannel for listener to listen on
      * @param context application-supplied, can be accessed via
      *                {@link Connector#getContext() getContext()} method on a listener.
      *

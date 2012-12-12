@@ -24,8 +24,8 @@ from org.apache.qpid.proton.message import Message as MessageImpl, \
     MessageFormat
 from org.apache.qpid.proton.messenger import AcceptMode, MessengerException, Status
 from org.apache.qpid.proton.messenger.impl import MessengerImpl
-from org.apache.qpid.proton.type.messaging import Source, Target, Accepted, AmqpValue
-from org.apache.qpid.proton.type import UnsignedInteger
+from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
+from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet, UUID as JUUID
 

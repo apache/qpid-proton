@@ -20,11 +20,19 @@
  */
 package org.apache.qpid.proton.codec;
 
-import java.awt.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.List;
-import org.apache.qpid.proton.type.*;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Decimal128;
+import org.apache.qpid.proton.amqp.Decimal32;
+import org.apache.qpid.proton.amqp.Decimal64;
+import org.apache.qpid.proton.amqp.DescribedType;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.amqp.UnsignedShort;
 
 public final class EncoderImpl implements ByteBufferEncoder
 {
@@ -132,6 +140,7 @@ public final class EncoderImpl implements ByteBufferEncoder
     }
 
 
+    @Override
     public AMQPType getType(final Object element)
     {
         if(element instanceof DescribedType)
@@ -182,6 +191,12 @@ public final class EncoderImpl implements ByteBufferEncoder
             _typeRegistry.put(clazz, amqpType);
         }
         return amqpType;
+    }
+
+    @Override
+    public <V> void register(AMQPType<V> type)
+    {
+        register(type.getTypeClass(), type);
     }
 
     <T> void register(Class<T> clazz, AMQPType<T> type)
@@ -719,7 +734,7 @@ public final class EncoderImpl implements ByteBufferEncoder
         }
     }
 
-    void writeRaw(final byte b)
+    public void writeRaw(final byte b)
     {
         _buffer.put(b);
     }

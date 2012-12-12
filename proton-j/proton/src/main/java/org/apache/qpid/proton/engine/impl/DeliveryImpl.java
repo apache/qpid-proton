@@ -21,7 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.type.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 public class DeliveryImpl implements Delivery
 {

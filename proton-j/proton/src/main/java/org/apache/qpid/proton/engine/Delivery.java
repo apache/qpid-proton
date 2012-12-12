@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.type.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 /**
  * Delivery

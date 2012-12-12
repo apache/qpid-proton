@@ -23,11 +23,12 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.transport.Disposition;
-import org.apache.qpid.proton.type.transport.Flow;
-import org.apache.qpid.proton.type.transport.Transfer;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.transport.Disposition;
+import org.apache.qpid.proton.amqp.transport.Flow;
+import org.apache.qpid.proton.amqp.transport.Role;
+import org.apache.qpid.proton.amqp.transport.Transfer;
 
 class TransportSession
 {
@@ -323,7 +324,7 @@ class TransportSession
         UnsignedInteger id = disposition.getFirst();
         UnsignedInteger last = disposition.getLast() == null ? id : disposition.getLast();
         final Map<UnsignedInteger, DeliveryImpl> unsettledDeliveries =
-                disposition.getRole() ? _unsettledOutgoingDeliveriesById
+                disposition.getRole() == Role.RECEIVER ? _unsettledOutgoingDeliveriesById
                         : _unsettledIncomingDeliveriesById;
 
         while(id.compareTo(last)<=0)

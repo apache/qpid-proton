@@ -23,11 +23,16 @@ package org.apache.qpid.proton.message;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.type.*;
-import org.apache.qpid.proton.type.messaging.*;
+import org.apache.qpid.proton.amqp.messaging.*;
 
 public class Message
 {
@@ -502,7 +507,7 @@ public class Message
         DecoderImpl decoder = new DecoderImpl();
         EncoderImpl encoder = new EncoderImpl(decoder);
 
-        AMQPDefinedTypes.registerAllTypes(decoder);
+        AMQPDefinedTypes.registerAllTypes(decoder, encoder);
         final ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
         decoder.setByteBuffer(buffer);
 
@@ -623,7 +628,7 @@ public class Message
         int length = buffer.remaining();
         DecoderImpl decoder = new DecoderImpl();
         EncoderImpl encoder = new EncoderImpl(decoder);
-        AMQPDefinedTypes.registerAllTypes(decoder);
+        AMQPDefinedTypes.registerAllTypes(decoder, encoder);
         encoder.setByteBuffer(buffer);
 
         if(getHeader() != null)

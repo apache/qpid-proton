@@ -18,7 +18,7 @@ package org.apache.qpid.proton.jms;
 
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.type.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
 
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;

@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.Symbol;
+import org.apache.qpid.proton.amqp.Symbol;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

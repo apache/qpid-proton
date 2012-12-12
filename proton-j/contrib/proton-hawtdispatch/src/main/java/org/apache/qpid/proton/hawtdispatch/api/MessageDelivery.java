@@ -24,7 +24,7 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.type.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
 

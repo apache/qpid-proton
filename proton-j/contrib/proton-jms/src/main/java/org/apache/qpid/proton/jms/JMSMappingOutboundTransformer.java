@@ -16,13 +16,14 @@
  */
 package org.apache.qpid.proton.jms;
 
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.Symbol;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.messaging.*;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.messaging.*;
 
 import javax.jms.*;
 import java.io.UnsupportedEncodingException;

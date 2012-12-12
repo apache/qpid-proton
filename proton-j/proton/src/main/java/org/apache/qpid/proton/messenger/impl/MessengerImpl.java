@@ -47,9 +47,9 @@ import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
-import org.apache.qpid.proton.type.messaging.Accepted;
-import org.apache.qpid.proton.type.messaging.Source;
-import org.apache.qpid.proton.type.messaging.Target;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Source;
+import org.apache.qpid.proton.amqp.messaging.Target;
 
 public class MessengerImpl implements Messenger
 {
@@ -132,7 +132,10 @@ public class MessengerImpl implements Messenger
         try
         {
             URI address = new URI(m.getAddress());
-            if (address.getHost() == null) throw new MessengerException("unable to send to address: " + m.getAddress());
+            if (address.getHost() == null)
+            {
+                throw new MessengerException("unable to send to address: " + m.getAddress());
+            }
             int port = address.getPort() < 0 ? defaultPort(address.getScheme()) : address.getPort();
             Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getPath()));
 
