@@ -2323,7 +2323,7 @@ class SSLDomain(object):
 
   def allow_unsecured_client(self, allow_unsecured = True):
     return self._check( pn_ssl_domain_allow_unsecured_client(self._domain,
-                                                             allow_unsecured )
+                                                             allow_unsecured ))
 
 class SSL(object):
 
@@ -2336,8 +2336,10 @@ class SSL(object):
 
   def __init__(self, transport, domain=None, session_details=None):
     if domain:
+      session_id = None
       if session_details:
-      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_details.get_session_id() )
+        session_id = session_details.get_session_id()
+      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_id )
     else:   # old api:
       self._ssl = pn_ssl(transport._trans)
     if self._ssl is None:
@@ -2374,7 +2376,7 @@ class SSLSessionDetails(object):
     self._session_id = session_id
 
   def get_session_id(self):
-    return self.session_id
+    return self._session_id
 
 __all__ = [
            "LANGUAGE",
@@ -2383,7 +2385,7 @@ __all__ = [
            "AUTOMATIC",
            "PENDING",
            "MANUAL",
-           "REJECTED"
+           "REJECTED",
            "UNDESCRIBED",
            "Array",
            "Condition",

@@ -179,7 +179,7 @@ public class SslEngineFacadeFactory
                 kmf.init(ksKeys, dummyPassword);
 
                 final TrustManager[] trustManagers;
-                if (sslDomain.getTrustedCaDb() == null && sslDomain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
+                if (sslDomain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
                 {
                     trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
                 }

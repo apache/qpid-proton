@@ -144,16 +144,16 @@ class SslTest(common.Test):
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        server = SslTest.SslTestConnection( self.server_domain )
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
+        server = SslTest.SslTestConnection( self.server_domain )
 
         # give the client a certificate, but let's not require server authentication
         self.client_domain.set_credentials(self._testpath("client-certificate.pem"),
                                            self._testpath("client-private-key.pem"),
                                            "client-password")
-        client = SslTest.SslTestConnection( self.client_domain )
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
+        client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
         server.connection.open()
@@ -172,15 +172,15 @@ class SslTest(common.Test):
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        server = SslTest.SslTestConnection( self.server_domain )
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
+        server = SslTest.SslTestConnection( self.server_domain )
 
         self.client_domain.set_credentials(self._testpath("bad-server-certificate.pem"),
                                            self._testpath("bad-server-private-key.pem"),
                                            "server-password")
-        client = SslTest.SslTestConnection( self.client_domain )
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
+        client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
         server.connection.open()
@@ -200,12 +200,12 @@ class SslTest(common.Test):
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        server = SslTest.SslTestConnection( self.server_domain )
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
+        server = SslTest.SslTestConnection( self.server_domain )
 
-        client = SslTest.SslTestConnection( self.client_domain )
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
+        client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
         server.connection.open()
@@ -295,7 +295,6 @@ class SslTest(common.Test):
 
         # now re-try with a client that does not require peer verification
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
-        self.client_domain.set_trusted_ca_db( None ) # proton-j only allows ANONYMOUS if there is no CA DB.
 
         client = SslTest.SslTestConnection( self.client_domain )
         server = SslTest.SslTestConnection( self.server_domain )

@@ -757,13 +757,6 @@ class SSL(object):
   def get_session_details(self):
     return self._session_details
 
-  RESUME_REUSED = "unused-for-java"
-
-  def resume_status(self):
-    # Java has no way to determine if an SSL session is being reused
-    return SSL.RESUME_REUSED
-
-
   def cipher_name(self):
     return self._ssl.getCipherName()
 
