@@ -33,6 +33,8 @@ The proton APIs consist of the following classes:
 from cproton import *
 import uuid
 
+LANGUAGE = "C"
+
 class Constant(object):
 
   def __init__(self, name):
@@ -2322,11 +2324,10 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport, domain=None, session_id=None):
+  def __init__(self, transport, domain=None, session_details=None):
     if domain:
-      if session_id:
-        session_id = str(session_id)
-      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_id )
+      if session_details:
+      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_details.get_session_id() )
     else:   # old api:
       self._ssl = pn_ssl(transport._trans)
     if self._ssl is None:
@@ -2378,11 +2379,53 @@ class SSL(object):
   def resume_status(self):
     return pn_ssl_resume_status( self._ssl )
 
+class SSLSessionDetails(object):
+  """ Unique identifier for the SSL session.  Used to resume previous session on a new
+  SSL connection.
+  """
 
-__all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
-           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
-           "Delivery", "Transport", "TransportException", "SASL", "SSL",
-           "SSLDomain", "Described", "Array", "symbol", "char", "timestamp",
-           "ulong", "UNDESCRIBED", "SSLUnavailable", "PN_SESSION_WINDOW",
-           "AUTOMATIC", "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]
+  def __init__(self, session_id):
+    self._session_id = session_id
+
+  def get_session_id(self):
+    return self.session_id
+
+__all__ = [
+           "LANGUAGE",
+           "PN_SESSION_WINDOW",
+           "ACCEPTED",
+           "AUTOMATIC",
+           "PENDING",
+           "MANUAL",
+           "REJECTED"
+           "UNDESCRIBED",
+           "Array",
+           "Condition",
+           "Connection",
+           "Data",
+           "Delivery",
+           "Described",
+           "Endpoint",
+           "Link",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "Terminus",
+           "Timeout",
+           "Transport",
+           "TransportException",
+           "char",
+           "symbol",
+           "timestamp",
+           "ulong"
+           ]

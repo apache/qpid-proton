@@ -42,7 +42,7 @@ class SslTest(common.Test):
     class SslTestConnection(object):
         """ Represents a single SSL connection.
         """
-        def __init__(self, domain=None, session_id=None):
+        def __init__(self, domain=None, session_details=None):
             try:
                 self.ssl = None
                 self.domain = domain
@@ -50,7 +50,7 @@ class SslTest(common.Test):
                 self.connection = Connection()
                 self.transport.bind(self.connection)
                 if domain:
-                    self.ssl = SSL( self.transport, self.domain, session_id )
+                    self.ssl = SSL( self.transport, self.domain, session_details )
             except SSLUnavailable, e:
                 raise Skipped(e)
 
@@ -364,8 +364,11 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_default_peer_authentication( SSL.VERIFY_PEER )
 
+        # details will be used in initial and subsequent connections to allow session to be resumed
+        initial_session_details = SSLSessionDetails("my-session-id")
+
         server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain, "my-session-id" )
+        client = SslTest.SslTestConnection( self.client_domain, initial_session_details )
 
         # bring up the connection and store its state
         client.connection.open()
@@ -384,7 +387,8 @@ class SslTest(common.Test):
 
         # now create a new set of connections, use last session id
         server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain, "my-session-id" )
+        # provide the details of the last session, allowing it to be resumed 
+        client = SslTest.SslTestConnection( self.client_domain, initial_session_details )
 
         #client.transport.trace(Transport.TRACE_DRV)
         #server.transport.trace(Transport.TRACE_DRV)
@@ -393,7 +397,12 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump( client, server )
         assert server.ssl.protocol_name() is not None
-        assert client.ssl.resume_status() == SSL.RESUME_REUSED
+        if(LANGUAGE=="C"):
+            assert client.ssl.resume_status() == SSL.RESUME_REUSED
+        else:
+            # Java gives no way to check whether a previous session has been resumed
+            pass
+
         client.connection.close()
         server.connection.close()
         self._pump( client, server )
@@ -405,13 +414,15 @@ class SslTest(common.Test):
         del server
 
         server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain, "some-other-session-id" )
+        client = SslTest.SslTestConnection( self.client_domain, SSLSessionDetails("some-other-session-id") )
 
         client.connection.open()
         server.connection.open()
         self._pump( client, server )
         assert server.ssl.protocol_name() is not None
-        assert client.ssl.resume_status() == SSL.RESUME_NEW
+        if(LANGUAGE=="C"):
+            assert client.ssl.resume_status() == SSL.RESUME_NEW
+
         client.connection.close()
         server.connection.close()
         self._pump( client, server )

@@ -17,15 +17,20 @@
 #
 
 from uuid import UUID
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl
+
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl, SslPeerDetails
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
+from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl
+
 from org.apache.qpid.proton.message import Message as MessageImpl, \
     MessageFormat
 from org.apache.qpid.proton.type.messaging import Source, Target, Accepted
 from org.apache.qpid.proton.type import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet, UUID as JUUID
+
+LANGUAGE = "Java"
 
 class Skipped(Exception):
   skipped = True
@@ -705,6 +710,28 @@ class SSLException(Exception):
 class SSLUnavailable(SSLException):
   pass
 
+class SSLDomain(object):
+  def __init__(self, mode):
+    self._domain = SslDomainImpl()
+    self._domain.setMode(mode)
+
+  def set_credentials(self, cert_file, key_file, password):
+    self._domain.setCredentials(cert_file, key_file, password)
+
+  def set_trusted_ca_db(self, certificate_db):
+    self._domain.setTrustedCaDb(certificate_db)
+
+  def set_default_peer_authentication(self, verify_mode, trusted_CAs=None):
+    # PHTODO rename to setDefault...
+    self._domain.setPeerAuthentication(verify_mode)
+    if trusted_CAs is not None:
+      self._domain.setTrustedCaDb(trusted_CAs)
+
+class SSLSessionDetails(object):
+
+  def __init__(self, session_id):
+    self._session_details = SslPeerDetails(session_id, 1)
+
 class SSL(object):
 
   MODE_SERVER = Ssl.Mode.SERVER
@@ -712,11 +739,28 @@ class SSL(object):
   VERIFY_PEER = Ssl.VerifyMode.VERIFY_PEER
   ANONYMOUS_PEER = Ssl.VerifyMode.ANONYMOUS_PEER
 
-  def __init__(self,transport):
-    self._ssl = transport.impl.ssl()
+  def __init__(self, transport, domain=None, session_details=None):
+    # PHTODO is it ok to pass potentially null paramters in for domain and session_details?
+
+    internal_session_details = None
+    if session_details:
+      internal_session_details = session_details._session_details
+    
+    self._ssl = transport.impl.ssl(domain._domain, internal_session_details)
+    self._session_details = session_details
 
   def init(self, mode):
     self._ssl.init(mode)
+
+  def get_session_details(self):
+    return self._session_details
+
+  RESUME_REUSED = "unused-for-java"
+
+  def resume_status(self):
+    # Java has no way to determine if an SSL session is being reused
+    return SSL.RESUME_REUSED
+
 
   def set_credentials(self, cert_file,key_file,password):
     self._ssl.setCredentials(cert_file,key_file,password)
@@ -738,8 +782,31 @@ class SSL(object):
   def allow_unsecured_client(self):
      self._ssl.allowUnsecuredClient(True)
 
-__all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
-           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
-           "Delivery", "Transport", "TransportException", "SASL", "SSL",
-           "SSLException", "SSLUnavailable", "PN_SESSION_WINDOW", "symbol"]
+__all__ = [
+           "LANGUAGE",
+           "PN_SESSION_WINDOW",
+           "Condition",
+           "Connection",
+           "Data",
+           "Delivery",
+           "Endpoint",
+           "Link",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLException",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "Terminus",
+           "Timeout",
+           "Transport",
+           "TransportException",
+           "symbol"]
