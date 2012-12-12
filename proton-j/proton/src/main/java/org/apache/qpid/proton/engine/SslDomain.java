@@ -25,6 +25,9 @@ import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacade;
  */
 public interface SslDomain
 {
+    /**
+     * Determines whether the endpoint acts as a client or server.
+     */
     public enum Mode
     {
         /** Local connection endpoint is an SSL client */
@@ -37,26 +40,25 @@ public interface SslDomain
     /**
      * Determines the level of peer validation.
      *
-     * VERIFY_PEER will only connect to those peers that provide a valid identifying
-     * certificate signed by a trusted CA and are using an authenticated cipher.
-     * ANONYMOUS_PEER does not require a valid certificate, and permits use of ciphers that
-     * do not provide authentication.
-     *
-     * ANONYMOUS_PEER is configured by default.
-     *
-     * These settings can be changed via ::pn_ssl_set_peer_authentication()
+     * {@link #ANONYMOUS_PEER} is configured by default.
      */
     public enum VerifyMode
     {
-        /** require peer to provide a valid identifying certificate */
+        /**
+         * will only connect to those peers that provide a valid identifying certificate signed
+         * by a trusted CA and are using an authenticated cipher
+         */
         VERIFY_PEER,
 
-        /** do not require a certificate nor cipher authorization */
+        /**
+         * does not require a valid certificate, and permits use of ciphers that
+         * do not provide authentication
+         */
         ANONYMOUS_PEER,
     }
 
     /**
-     * Initialize the pn_ssl_t object.
+     * Initialize the ssl domain object.
      *
      * An SSL object be either an SSL server or an SSL client. It cannot be both. Those
      * transports that will be used to accept incoming connection requests must be configured
@@ -75,16 +77,16 @@ public interface SslDomain
      * remote if the remote needs to verify the identity of this node. This may be used for
      * both SSL servers and SSL clients (if client authentication is required by the server).
      *
-     * @param certificate_file path to file/database containing the identifying
+     * @param certificateFile path to file/database containing the identifying
      * certificate.
-     * @param private_key_file path to file/database containing the private key used to
+     * @param privateKeyFile path to file/database containing the private key used to
      * sign the certificate
-     * @param password the password used to sign the key, else NULL if key is not
+     * @param password the password used to sign the key, else null if key is not
      * protected.
      */
-    void setCredentials(String certificate_file, String private_key_file, String password);
+    void setCredentials(String certificateFile, String privateKeyFile, String password);
 
-    String getPrivateKeyFile(); // TODO
+    String getPrivateKeyFile();
 
     String getPrivateKeyPassword();
 
@@ -97,9 +99,9 @@ public interface SslDomain
      * validate the signature of the remote's certificate. This function sets the database of
      * trusted CAs that will be used to verify the signature of the remote's certificate.
      *
-     * @param certificate_db database of trusted CAs, used to authenticate the peer.
+     * @param certificateDb database of trusted CAs, used to authenticate the peer.
      */
-    void setTrustedCaDb(String certificate_db);
+    void setTrustedCaDb(String certificateDb);
 
     String getTrustedCaDb();
 
@@ -107,14 +109,14 @@ public interface SslDomain
      * Configure the level of verification used on the peer certificate.
      *
      * This method controls how the peer's certificate is validated, if at all. By default,
-     * neither servers nor clients attempt to verify their peers (PN_SSL_ANONYMOUS_PEER).
+     * neither servers nor clients attempt to verify their peers ({@link VerifyMode#ANONYMOUS_PEER}).
      * Once certificates and trusted CAs are configured, peer verification can be enabled.
      *
      * In order to verify a peer, a trusted CA must be configured. See
-     * #setTrustedCaDb().
+     * {@link #setTrustedCaDb(String)}.
      *
      * @note Servers must provide their own certificate when verifying a peer. See
-     * #setCredentials().
+     * {@link #setCredentials(String, String, String)}).
      *
      * @param mode the level of validation to apply to the peer
      */

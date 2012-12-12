@@ -30,8 +30,6 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 
-import org.apache.qpid.proton.engine.SslDomain.Mode;
-
 
 /**
  * A simpler implementation of an SSLEngine that has predictable human-readable output, and that allows us to
@@ -225,8 +223,8 @@ public class CapitalisingDummySslEngine implements SslEngineFacade
     }
 
     @Override
-    public Mode getMode()
+    public boolean getUseClientMode()
     {
-        return Mode.CLIENT;
+        return true;
     }
 }

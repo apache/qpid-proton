@@ -31,7 +31,6 @@ import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
@@ -121,10 +120,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 runDelegatedTasks(result);
                 updateCipherAndProtocolName(result);
 
-                if(_logger.isLoggable(Level.FINEST))
-                {
-                    _logger.log(Level.FINEST, _sslEngine.getMode() + " input " + resultToString(result));
-                }
+                logEngineClientModeAndResult(result, "input");
 
                 Status sslResultStatus = result.getStatus();
                 HandshakeStatus handshakeStatus = result.getHandshakeStatus();
@@ -167,17 +163,8 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
         catch(SSLException e)
         {
-            throw new TransportException("Problem during input. Mode: " + _sslEngine.getMode(), e);
+            throw new TransportException("Problem during input. useClientMode: " + _sslEngine.getUseClientMode(), e);
         }
-    }
-
-    private String resultToString(SSLEngineResult result)
-    {
-        return new StringBuilder("[SSLEngineResult status = ").append(result.getStatus())
-                .append(" handshakeStatus = ").append(result.getHandshakeStatus())
-                .append(" bytesConsumed = ").append(result.bytesConsumed())
-                .append(" bytesProduced = ").append(result.bytesProduced())
-                .append("]").toString();
     }
 
     /**
@@ -224,6 +211,8 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 }
 
                 SSLEngineResult result = _sslEngine.wrap(_clearOutputHolder.prepareToRead(), sslWrapDst);
+                logEngineClientModeAndResult(result, "output");
+
                 _clearOutputHolder.prepareToWrite();
 
                 Status sslResultStatus = result.getStatus();
@@ -257,7 +246,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
         catch(SSLException e)
         {
-            throw new TransportException("Problem during output. Mode: " + _sslEngine.getMode(), e);
+            throw new TransportException("Problem during output. useClientMode: " + _sslEngine.getUseClientMode(), e);
         }
     }
 
@@ -300,5 +289,23 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 throw new RuntimeException("handshake shouldn't need additional tasks");
             }
         }
+    }
+
+    private void logEngineClientModeAndResult(SSLEngineResult result, String direction)
+    {
+        if(_logger.isLoggable(Level.FINEST))
+        {
+            _logger.log(Level.FINEST, "useClientMode = " + _sslEngine.getUseClientMode() + " direction = " + direction
+                    + " " + resultToString(result));
+        }
+    }
+
+    private String resultToString(SSLEngineResult result)
+    {
+        return new StringBuilder("[SSLEngineResult status = ").append(result.getStatus())
+                .append(" handshakeStatus = ").append(result.getHandshakeStatus())
+                .append(" bytesConsumed = ").append(result.bytesConsumed())
+                .append(" bytesProduced = ").append(result.bytesProduced())
+                .append("]").toString();
     }
 }

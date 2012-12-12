@@ -97,7 +97,7 @@ public class SslEngineFacadeFactory
         {
             _logger.fine("Created SSL engine: " + engineToString(engine));
         }
-        return new DefaultSslEngineFacade(engine, domain.getMode());
+        return new DefaultSslEngineFacade(engine);
     }
 
 
