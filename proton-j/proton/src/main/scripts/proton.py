@@ -511,7 +511,8 @@ class Timeout(Exception):
 class Messenger(object):
 
   def __init__(self, *args, **kwargs):
-    #raise Skipped()
+    #comment out or remove line below to enable messenger tests
+    raise Skipped()
     self.impl = MessengerImpl()
 
   def start(self):
