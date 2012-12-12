@@ -2291,6 +2291,12 @@ class SSLUnavailable(SSLException):
   pass
 
 class SSLDomain(object):
+
+  MODE_CLIENT = PN_SSL_MODE_CLIENT
+  MODE_SERVER = PN_SSL_MODE_SERVER
+  VERIFY_PEER = PN_SSL_VERIFY_PEER
+  ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
+
   def __init__(self, mode):
     self._domain = pn_ssl_domain(mode)
     if self._domain is None:
@@ -2310,10 +2316,14 @@ class SSLDomain(object):
   def set_trusted_ca_db(self, certificate_db):
     return self._check( pn_ssl_domain_set_trusted_ca_db(self._domain,
                                                         certificate_db) )
-  def set_default_peer_authentication(self, verify_mode, trusted_CAs=None):
+  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
     return self._check( pn_ssl_domain_set_default_peer_authentication(self._domain,
                                                                       verify_mode,
                                                                       trusted_CAs) )
+
+  def allow_unsecured_client(self, allow_unsecured = True):
+    return self._check( pn_ssl_domain_allow_unsecured_client(self._domain,
+                                                             allow_unsecured )
 
 class SSL(object):
 
@@ -2333,32 +2343,8 @@ class SSL(object):
     if self._ssl is None:
       raise SSLUnavailable()
 
-  MODE_CLIENT = PN_SSL_MODE_CLIENT
-  MODE_SERVER = PN_SSL_MODE_SERVER
-
   def init(self, mode):
     return self._check( pn_ssl_init(self._ssl, mode) )
-
-  def set_credentials(self, cert_file, key_file, password):
-    return self._check( pn_ssl_set_credentials(self._ssl, cert_file, key_file,
-                                               password) )
-
-  def set_trusted_ca_db(self, certificate_db):
-    return self._check( pn_ssl_set_trusted_ca_db(self._ssl, certificate_db) )
-
-  def allow_unsecured_client(self):
-    return self._check( pn_ssl_allow_unsecured_client(self._ssl) )
-
-  VERIFY_PEER = PN_SSL_VERIFY_PEER
-  ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
-
-  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    return self._check( pn_ssl_set_peer_authentication(self._ssl, verify_mode,
-                                                       trusted_CAs) )
-
-  def peer_authentication(self):
-    # @TODO: fix up buffer return value...
-    pass
 
   def cipher_name(self):
     rc, name = pn_ssl_get_cipher_name( self._ssl, 128 )

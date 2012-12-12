@@ -18,15 +18,54 @@
  */
 package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.Ssl.Mode;
-import org.apache.qpid.proton.engine.Ssl.VerifyMode;
 import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacade;
 
 /**
- * PHTODO
+ * I store the details used to create SSL sessions.
  */
 public interface SslDomain
 {
+    public enum Mode
+    {
+        /** Local connection endpoint is an SSL client */
+        CLIENT,
+
+        /** Local connection endpoint is an SSL server */
+        SERVER
+    }
+
+    /**
+     * Determines the level of peer validation.
+     *
+     * VERIFY_PEER will only connect to those peers that provide a valid identifying
+     * certificate signed by a trusted CA and are using an authenticated cipher.
+     * ANONYMOUS_PEER does not require a valid certificate, and permits use of ciphers that
+     * do not provide authentication.
+     *
+     * ANONYMOUS_PEER is configured by default.
+     *
+     * These settings can be changed via ::pn_ssl_set_peer_authentication()
+     */
+    public enum VerifyMode
+    {
+        /** require peer to provide a valid identifying certificate */
+        VERIFY_PEER,
+
+        /** do not require a certificate nor cipher authorization */
+        ANONYMOUS_PEER,
+    }
+
+    /**
+     * Initialize the pn_ssl_t object.
+     *
+     * An SSL object be either an SSL server or an SSL client. It cannot be both. Those
+     * transports that will be used to accept incoming connection requests must be configured
+     * as an SSL server. Those transports that will be used to initiate outbound connections
+     * must be configured as an SSL client.
+     *
+     */
+    void init(Mode mode);
+
     Mode getMode();
 
     /**
@@ -78,12 +117,26 @@ public interface SslDomain
      * #setCredentials().
      *
      * @param mode the level of validation to apply to the peer
-     *
-     * PHTODO rename to setDefaultPeerAuthentication?
      */
     void setPeerAuthentication(VerifyMode mode);
 
     VerifyMode getPeerAuthentication();
 
-    SslEngineFacade getSslEngineFacade(SslPeerDetails sslPeerDetails);
+    /**
+     * Permit a server to accept connection requests from non-SSL clients.
+     *
+     * This configures the server to "sniff" the incoming client data stream, and dynamically
+     * determine whether SSL/TLS is being used. This option is disabled by default: only
+     * clients using SSL/TLS are accepted.
+     */
+    void allowUnsecuredClient(boolean allowUnsecured);
+
+    boolean allowUnsecuredClient();
+
+    /**
+     * Returns an SSL engine. Only intended to be used inside {@link Transport#ssl(SslDomain, SslPeerDetailsImpl)}.
+     *
+     * @param sslPeerDetails the details of the remote peer. If non-null, may be used to assist SSL session resumption.
+     */
+    SslEngineFacade createSslEngine(SslPeerDetails sslPeerDetails);
 }

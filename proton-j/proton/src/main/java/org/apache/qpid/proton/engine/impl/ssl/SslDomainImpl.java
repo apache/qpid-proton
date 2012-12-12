@@ -18,8 +18,6 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import org.apache.qpid.proton.engine.Ssl.Mode;
-import org.apache.qpid.proton.engine.Ssl.VerifyMode;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
@@ -31,12 +29,21 @@ public class SslDomainImpl implements SslDomain
     private String _privateKeyFile;
     private String _privateKeyPassword;
     private String _trustedCaDb;
+    private boolean _allowUnsecuredClient;
 
     private final SslEngineFacadeFactory _sslEngineFacadeFactory = new SslEngineFacadeFactory();
 
-    public void setMode(Mode mode)
+    @Override
+    public void init(Mode mode)
     {
+        _sslEngineFacadeFactory.resetCache();
         _mode = mode;
+    }
+
+    @Override
+    public Mode getMode()
+    {
+        return _mode;
     }
 
     @Override
@@ -45,12 +52,14 @@ public class SslDomainImpl implements SslDomain
         _certificateFile = certificateFile;
         _privateKeyFile = privateKeyFile;
         _privateKeyPassword = privateKeyPassword;
+        _sslEngineFacadeFactory.resetCache();
     }
 
     @Override
     public void setTrustedCaDb(String certificateDb)
     {
         _trustedCaDb = certificateDb;
+        _sslEngineFacadeFactory.resetCache();
     }
 
     @Override
@@ -63,18 +72,13 @@ public class SslDomainImpl implements SslDomain
     public void setPeerAuthentication(VerifyMode verifyMode)
     {
         _verifyMode = verifyMode;
+        _sslEngineFacadeFactory.resetCache();
     }
 
     @Override
     public VerifyMode getPeerAuthentication()
     {
         return _verifyMode;
-    }
-
-    @Override
-    public Mode getMode()
-    {
-        return _mode;
     }
 
     @Override
@@ -96,9 +100,35 @@ public class SslDomainImpl implements SslDomain
     }
 
     @Override
-    public SslEngineFacade getSslEngineFacade(SslPeerDetails peerDetails)
+    public void allowUnsecuredClient(boolean allowUnsecured)
     {
-        return _sslEngineFacadeFactory.createSslEngineFacade(this, peerDetails);
+        _allowUnsecuredClient = allowUnsecured;
+        _sslEngineFacadeFactory.resetCache();
     }
 
+    @Override
+    public boolean allowUnsecuredClient()
+    {
+        return _allowUnsecuredClient;
+    }
+
+    @Override
+    public SslEngineFacade createSslEngine(SslPeerDetails peerDetails)
+    {
+        return _sslEngineFacadeFactory.createProtonSslEngine(this, peerDetails);
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("SslDomainImpl [_mode=").append(_mode)
+            .append(", _verifyMode=").append(_verifyMode)
+            .append(", _certificateFile=").append(_certificateFile)
+            .append(", _privateKeyFile=").append(_privateKeyFile)
+            .append(", _trustedCaDb=").append(_trustedCaDb)
+            .append(", _allowUnsecuredClient=").append(_allowUnsecuredClient)
+            .append("]");
+        return builder.toString();
+    }
 }

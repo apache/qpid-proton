@@ -235,20 +235,6 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
-    /**
-     * PHTODO remove?
-     */
-    @Override
-    public Ssl ssl()
-    {
-        return ssl(null, null);
-    }
-
-    /**
-     * PHTODO
-     * @param sslDomain may be null
-     * @param sslPeerDetails may be null
-     */
     @Override
     public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
     {

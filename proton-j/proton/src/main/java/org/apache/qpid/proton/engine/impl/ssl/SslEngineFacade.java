@@ -27,6 +27,8 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 
+import org.apache.qpid.proton.engine.SslDomain;
+
 /**
  * Thin wrapper around an {@link SSLEngine}.
  */
@@ -60,4 +62,5 @@ public interface SslEngineFacade
     int getPacketBufferSize();
     String getCipherSuite();
     String getProtocol();
+    SslDomain.Mode getMode();
 }

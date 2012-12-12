@@ -26,13 +26,17 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 
+import org.apache.qpid.proton.engine.SslDomain;
+
 class DefaultSslEngineFacade implements SslEngineFacade
 {
     private final SSLEngine _sslEngine;
+    private final SslDomain.Mode _mode;
 
-    public DefaultSslEngineFacade(SSLEngine sslEngine)
+    public DefaultSslEngineFacade(SSLEngine sslEngine, SslDomain.Mode mode)
     {
         _sslEngine = sslEngine;
+        _mode = mode;
     }
 
     @Override
@@ -81,5 +85,11 @@ class DefaultSslEngineFacade implements SslEngineFacade
     public HandshakeStatus getHandshakeStatus()
     {
         return _sslEngine.getHandshakeStatus();
+    }
+
+    @Override
+    public SslDomain.Mode getMode()
+    {
+        return _mode;
     }
 }

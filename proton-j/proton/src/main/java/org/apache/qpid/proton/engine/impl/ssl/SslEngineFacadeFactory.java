@@ -46,8 +46,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.qpid.proton.engine.Ssl.Mode;
-import org.apache.qpid.proton.engine.Ssl.VerifyMode;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -85,25 +83,48 @@ public class SslEngineFacadeFactory
     /** lazily initialized */
     private SSLContext _sslContext;
 
-    public SslEngineFacade createSslEngineFacade(SslDomain domain, SslPeerDetails peerDetails)
+
+    /**
+     * Returns a {@link SslEngineFacade}. May cache the domain's settings so callers should invoke
+     * {@link #resetCache()} if the domain changes.
+     *
+     * @param peerDetails may be used to return an engine that supports SSL resume.
+     */
+    public SslEngineFacade createProtonSslEngine(SslDomain domain, SslPeerDetails peerDetails)
     {
         SSLEngine engine = createAndInitialiseSslEngine(domain, peerDetails);
-        return new DefaultSslEngineFacade(engine);
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine("Created SSL engine: " + engineToString(engine));
+        }
+        return new DefaultSslEngineFacade(engine, domain.getMode());
     }
+
+
+    /**
+     * Guarantees that no cached settings are used in subsequent calls to
+     * {@link #createProtonSslEngine(SslDomain, SslPeerDetails)}.
+     */
+    public void resetCache()
+    {
+        _sslContext = null;
+    }
+
 
     private SSLEngine createAndInitialiseSslEngine(SslDomain domain, SslPeerDetails peerDetails)
     {
+        SslDomain.Mode mode = domain.getMode();
 
         SSLContext sslContext = getOrCreateSslContext(domain);
         SSLEngine sslEngine = createSslEngine(sslContext, peerDetails);
 
-        if (domain.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
+        if (domain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
         {
             addAnonymousCipherSuites(sslEngine);
         }
         else
         {
-            if (domain.getMode() == Mode.SERVER)
+            if (mode == SslDomain.Mode.SERVER)
             {
                 sslEngine.setNeedClientAuth(true);
             }
@@ -111,10 +132,10 @@ public class SslEngineFacadeFactory
 
         if(_logger.isLoggable(Level.FINE))
         {
-            _logger.log(Level.FINE, domain.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
+            _logger.log(Level.FINE, mode + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
         }
 
-        boolean useClientMode = domain.getMode() == Mode.CLIENT ? true : false;
+        boolean useClientMode = mode == SslDomain.Mode.CLIENT ? true : false;
         sslEngine.setUseClientMode(useClientMode);
 
         return sslEngine;
@@ -142,7 +163,10 @@ public class SslEngineFacadeFactory
     {
         if(_sslContext == null)
         {
-            // lazily initialize _sslContext
+            if(_logger.isLoggable(Level.FINE))
+            {
+                _logger.fine("lazily creating new SSLContext using domain " + sslDomain);
+            }
 
             final char[] dummyPassword = "unused-passphrase".toCharArray(); // Dummy password required by KeyStore and KeyManagerFactory, but never referred to again
 
@@ -155,7 +179,7 @@ public class SslEngineFacadeFactory
                 kmf.init(ksKeys, dummyPassword);
 
                 final TrustManager[] trustManagers;
-                if (sslDomain.getTrustedCaDb() == null && sslDomain.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
+                if (sslDomain.getTrustedCaDb() == null && sslDomain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
                 {
                     trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
                 }
@@ -254,23 +278,43 @@ public class SslEngineFacadeFactory
     {
         List<String> newEnabled = new ArrayList<String>(currentEnabled);
 
-        boolean addedAnonymousCipherSuite = false;
+        int addedAnonymousCipherSuites = 0;
         for (String anonymousCipherSuiteName : anonymousCipherSuites)
         {
             if (supportedSuites.contains(anonymousCipherSuiteName))
             {
                 newEnabled.add(anonymousCipherSuiteName);
-                addedAnonymousCipherSuite = true;
+                addedAnonymousCipherSuites++;
             }
         }
 
-        if (!addedAnonymousCipherSuite)
+        if (addedAnonymousCipherSuites == 0)
         {
             throw new IllegalStateException("None of " + anonymousCipherSuites
                     + " anonymous cipher suites are within the supported list "
                     + supportedSuites);
         }
+
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine("There are now " + newEnabled.size()
+                    + " cipher suites enabled (previously " + currentEnabled.size()
+                    + "), including " + addedAnonymousCipherSuites + " out of the "
+                    + anonymousCipherSuites.size() + " requested anonymous ones." );
+        }
+
         return newEnabled;
+    }
+
+    private String engineToString(SSLEngine engine)
+    {
+        return new StringBuilder("[ " )
+            .append(engine)
+            .append(", needClientAuth=").append(engine.getNeedClientAuth())
+            .append(", useClientMode=").append(engine.getUseClientMode())
+            .append(", peerHost=").append(engine.getPeerHost())
+            .append(", peerPort=").append(engine.getPeerPort())
+            .append(" ]").toString();
     }
 
     private Object readPemObject(String pemFile, final String privateKeyPassword)
@@ -342,5 +386,4 @@ public class SslEngineFacadeFactory
             // Do not check certificate
         }
     }
-
 }

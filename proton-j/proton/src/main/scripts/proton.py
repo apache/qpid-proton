@@ -18,10 +18,10 @@
 
 from uuid import UUID
 
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl, SslPeerDetails
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, SslDomain
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
-from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl
+from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
 
 from org.apache.qpid.proton.message import Message as MessageImpl, \
     MessageFormat
@@ -711,9 +711,15 @@ class SSLUnavailable(SSLException):
   pass
 
 class SSLDomain(object):
+
+  MODE_SERVER = SslDomain.Mode.SERVER
+  MODE_CLIENT = SslDomain.Mode.CLIENT
+  VERIFY_PEER = SslDomain.VerifyMode.VERIFY_PEER
+  ANONYMOUS_PEER = SslDomain.VerifyMode.ANONYMOUS_PEER
+
   def __init__(self, mode):
     self._domain = SslDomainImpl()
-    self._domain.setMode(mode)
+    self._domain.init(mode)
 
   def set_credentials(self, cert_file, key_file, password):
     self._domain.setCredentials(cert_file, key_file, password)
@@ -721,31 +727,27 @@ class SSLDomain(object):
   def set_trusted_ca_db(self, certificate_db):
     self._domain.setTrustedCaDb(certificate_db)
 
-  def set_default_peer_authentication(self, verify_mode, trusted_CAs=None):
-    # PHTODO rename to setDefault...
+  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
     self._domain.setPeerAuthentication(verify_mode)
     if trusted_CAs is not None:
       self._domain.setTrustedCaDb(trusted_CAs)
 
+  def allow_unsecured_client(self, allow_unsecured = True):
+    self._domain.allowUnsecuredClient(allow_unsecured)
+
 class SSLSessionDetails(object):
 
   def __init__(self, session_id):
-    self._session_details = SslPeerDetails(session_id, 1)
+    self._session_details = SslPeerDetailsImpl(session_id, 1)
 
 class SSL(object):
 
-  MODE_SERVER = Ssl.Mode.SERVER
-  MODE_CLIENT = Ssl.Mode.CLIENT
-  VERIFY_PEER = Ssl.VerifyMode.VERIFY_PEER
-  ANONYMOUS_PEER = Ssl.VerifyMode.ANONYMOUS_PEER
-
-  def __init__(self, transport, domain=None, session_details=None):
-    # PHTODO is it ok to pass potentially null paramters in for domain and session_details?
+  def __init__(self, transport, domain, session_details=None):
 
     internal_session_details = None
     if session_details:
       internal_session_details = session_details._session_details
-    
+
     self._ssl = transport.impl.ssl(domain._domain, internal_session_details)
     self._session_details = session_details
 
@@ -762,25 +764,11 @@ class SSL(object):
     return SSL.RESUME_REUSED
 
 
-  def set_credentials(self, cert_file,key_file,password):
-    self._ssl.setCredentials(cert_file,key_file,password)
-
-  def set_trusted_ca_db(self, certificate_db):
-    self._ssl.setTrustedCaDb(certificate_db)
-
-  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    self._ssl.setPeerAuthentication(verify_mode)
-    if trusted_CAs is not None:
-      self._ssl.setTrustedCaDb(trusted_CAs)
-
   def cipher_name(self):
     return self._ssl.getCipherName()
 
   def protocol_name(self):
     return self._ssl.getProtocolName()
-
-  def allow_unsecured_client(self):
-     self._ssl.allowUnsecuredClient(True)
 
 __all__ = [
            "LANGUAGE",

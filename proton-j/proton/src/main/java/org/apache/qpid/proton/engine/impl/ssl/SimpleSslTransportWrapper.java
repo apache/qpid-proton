@@ -39,7 +39,6 @@ import org.apache.qpid.proton.engine.impl.TransportOutput;
 /**
  * TODO close the SSLEngine when told to, and modify {@link #input(byte[], int, int)} and {@link #output(byte[], int, int)}
  * to respond appropriately thereafter.
- * TODO move SSL and possible byte management classes into separate package
  */
 public class SimpleSslTransportWrapper implements SslTransportWrapper
 {
@@ -75,8 +74,6 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _protocolName;
-
-    private Ssl.Mode _mode; // PHTODO
 
     SimpleSslTransportWrapper(SslEngineFacade sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
     {
@@ -126,7 +123,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
                 if(_logger.isLoggable(Level.FINEST))
                 {
-                    _logger.log(Level.FINEST, _mode + " input " + resultToString(result));
+                    _logger.log(Level.FINEST, _sslEngine.getMode() + " input " + resultToString(result));
                 }
 
                 Status sslResultStatus = result.getStatus();
@@ -170,7 +167,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
         catch(SSLException e)
         {
-            throw new TransportException(e);
+            throw new TransportException("Problem during input. Mode: " + _sslEngine.getMode(), e);
         }
     }
 
@@ -260,7 +257,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
         catch(SSLException e)
         {
-            throw new TransportException("Mode " + _mode, e);
+            throw new TransportException("Problem during output. Mode: " + _sslEngine.getMode(), e);
         }
     }
 
@@ -303,11 +300,5 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 throw new RuntimeException("handshake shouldn't need additional tasks");
             }
         }
-    }
-
-    public static void main(String[] args)
-    {
-        _logger.info("PHDEBUG in main");
-        _logger.info("PHDEBUG in main2");
     }
 }

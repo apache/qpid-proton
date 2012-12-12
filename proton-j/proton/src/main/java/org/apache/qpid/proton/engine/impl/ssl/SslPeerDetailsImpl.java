@@ -16,18 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl.ssl;
 
-/**
- * The details of the remote peer involved in an SSL session.
- *
- * Used when creating an SSL session to hint that the underlying SSL implementation
- * should attempt to resume a previous session if one exists for the same peer details,
- * e.g. using session identifiers (http://tools.ietf.org/html/rfc5246) or session tickets
- * (http://tools.ietf.org/html/rfc5077).
- */
-public interface SslPeerDetails
+import org.apache.qpid.proton.engine.SslPeerDetails;
+
+public class SslPeerDetailsImpl implements SslPeerDetails
 {
-    String getHostname();
-    int getPort();
+    private final String _hostname;
+    private final int _port;
+
+    public SslPeerDetailsImpl(String hostname, int port)
+    {
+        _hostname = hostname;
+        _port = port;
+    }
+
+    @Override
+    public String getHostname()
+    {
+        return _hostname;
+    }
+
+    @Override
+    public int getPort()
+    {
+        return _port;
+    }
 }
