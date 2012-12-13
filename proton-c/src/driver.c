@@ -580,6 +580,28 @@ void pn_connector_activate(pn_connector_t *ctor, pn_activate_criteria_t crit)
 }
 
 
+bool pn_connector_activated(pn_connector_t *ctor, pn_activate_criteria_t crit)
+{
+    bool result = false;
+
+    switch (crit) {
+    case PN_CONNECTOR_WRITABLE :
+        result = ctor->pending_write;
+        ctor->pending_write = false;
+        ctor->status &= ~PN_SEL_WR;
+        break;
+
+    case PN_CONNECTOR_READABLE :
+        result = ctor->pending_read;
+        ctor->pending_read = false;
+        ctor->status &= ~PN_SEL_RD;
+        break;
+    }
+
+    return result;
+}
+
+
 static void pn_connector_write(pn_connector_t *ctor)
 {
   if (ctor->output_size > 0) {
