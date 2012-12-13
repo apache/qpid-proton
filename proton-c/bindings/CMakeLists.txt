@@ -20,7 +20,7 @@
 include(UseSWIG)
 
 # Add any new bindings here - the directory name must be the same as the binding name
-set (BINDINGS python ruby php perl)
+set (BINDINGS python ruby php perl java)
 
 set (BINDING_DEPS qpid-proton)
 
@@ -57,6 +57,15 @@ include(FindPerlLibs)
 if (PERLLIBS_FOUND)
   set (DEFAULT_PERL ON)
 endif (PERLLIBS_FOUND)
+
+# Prerequisites for Java
+find_package( Java )
+if (JAVA_FOUND)
+  find_package( JNI )
+  if (JNI_FOUND)
+    set (DEFAULT_JAVA ON)
+  endif (JNI_FOUND)
+endif (JAVA_FOUND)
 
 # Shouldn't need to modify below here when adding new language binding
 foreach(BINDING ${BINDINGS})
