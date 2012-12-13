@@ -57,8 +57,12 @@ set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
 if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
+    # OPTIONAL does not exist in install before 2.8 so always make docs and install
     set (OPTIONAL_ARG "")
     add_custom_target(docs ALL)
+    # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
+    # so turn off unknown symbol warnings
+    set (NOENABLE_UNDEFINED_ERROR ON)
 else()
     set (OPTIONAL_ARG OPTIONAL)
     add_custom_target(docs)
