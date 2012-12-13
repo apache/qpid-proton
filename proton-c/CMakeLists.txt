@@ -55,7 +55,8 @@ set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 
-if (${CMAKE_VERSION} VERSION_LESS "2.8.0")
+# Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
+if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
     set (OPTIONAL_ARG "")
     add_custom_target(docs ALL)
 else()
