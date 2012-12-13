@@ -18,79 +18,90 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.jms;
-
-import org.apache.qpid.proton.codec.WritableBuffer;
+package org.apache.qpid.proton.codec;
 
 import java.nio.ByteBuffer;
 
 public class DroppingWritableBuffer implements WritableBuffer
 {
-    int pos = 0;
+    private int _pos = 0;
 
     @Override
-    public boolean hasRemaining() {
+    public boolean hasRemaining() 
+    {
         return true;
     }
 
     @Override
-    public void put(byte b) {
-        pos += 1;
+    public void put(byte b)
+    {
+        _pos += 1;
     }
 
     @Override
-    public void putFloat(float f) {
-        pos += 4;
+    public void putFloat(float f)
+    {
+        _pos += 4;
     }
 
     @Override
-    public void putDouble(double d) {
-        pos += 8;
+    public void putDouble(double d)
+    {
+        _pos += 8;
     }
 
     @Override
-    public void put(byte[] src, int offset, int length) {
-        pos += length;
+    public void put(byte[] src, int offset, int length)
+    {
+        _pos += length;
     }
 
     @Override
-    public void putShort(short s) {
-        pos += 2;
+    public void putShort(short s)
+    {
+        _pos += 2;
     }
 
     @Override
-    public void putInt(int i) {
-        pos += 4;
+    public void putInt(int i)
+    {
+        _pos += 4;
     }
 
     @Override
-    public void putLong(long l) {
-        pos += 8;
+    public void putLong(long l)
+    {
+        _pos += 8;
     }
 
     @Override
-    public int remaining() {
-        return Integer.MAX_VALUE - pos;
+    public int remaining()
+    {
+        return Integer.MAX_VALUE - _pos;
     }
 
     @Override
-    public int position() {
-        return pos;
+    public int position()
+    {
+        return _pos;
     }
 
     @Override
-    public void position(int position) {
-        pos = position;
+    public void position(int position)
+    {
+        _pos = position;
     }
 
     @Override
-    public void put(ByteBuffer payload) {
-        pos += payload.remaining();
+    public void put(ByteBuffer payload)
+    {
+        _pos += payload.remaining();
         payload.position(payload.limit());
     }
 
     @Override
-    public int limit() {
+    public int limit()
+    {
         return Integer.MAX_VALUE;
     }
 }

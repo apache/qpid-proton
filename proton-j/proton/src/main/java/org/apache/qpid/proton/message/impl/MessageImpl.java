@@ -28,10 +28,8 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.messaging.*;
-import org.apache.qpid.proton.codec.AMQPDefinedTypes;
-import org.apache.qpid.proton.codec.DecoderImpl;
-import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.codec.WritableBuffer;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.codec.*;
 import org.apache.qpid.proton.message.*;
 
 public class MessageImpl implements Message
@@ -673,6 +671,17 @@ public class MessageImpl implements Message
     {
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
         return encode(new WritableBuffer.ByteBufferWrapper(buffer));
+    }
+
+    public int encode2(byte[] data, int offset, int length)
+    {
+        ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
+        WritableBuffer.ByteBufferWrapper first = new WritableBuffer.ByteBufferWrapper(buffer);
+        DroppingWritableBuffer second = new DroppingWritableBuffer();
+        CompositeWritableBuffer composite = new CompositeWritableBuffer(first, second);
+        int start = composite.position();
+        encode(composite);
+        return composite.position() - start;
     }
 
     public int encode(WritableBuffer buffer)
