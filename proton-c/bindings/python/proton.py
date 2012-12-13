@@ -1711,6 +1711,29 @@ class Endpoint(object):
   def __init__(self):
     self.condition = None
 
+  def _update_cond(self):
+    impl = self._get_cond_impl()
+    pn_condition_clear(impl)
+    if self.condition:
+      pn_condition_set_name(impl, self.condition.name)
+      pn_condition_set_description(impl, self.condition.description)
+      info = Data(pn_condition_info(impl))
+      if self.condition.info:
+        info.put_object(self.condition.info)
+
+  @property
+  def remote_condition(self):
+    impl = self._get_remote_cond_impl()
+    if pn_condition_is_set(impl):
+      info_impl = Data(pn_condition_info(impl))
+      info_impl.rewind()
+      info_impl.next()
+      info = info_impl.get_object()
+      info_impl.rewind()
+      return Condition(pn_condition_get_name(impl),
+                       pn_condition_get_description(impl),
+                       info)
+
 class Condition:
 
   def __init__(self, name, description=None, info=None):
@@ -1758,18 +1781,11 @@ class Connection(Endpoint):
     else:
       return err
 
-  @property
-  def remote_condition(self):
-    impl = pn_connection_remote_condition(self._conn)
-    if pn_condition_is_set(impl):
-      info_impl = Data(pn_condition_info(impl))
-      info_impl.rewind()
-      info_impl.next()
-      info = info_impl.get_object()
-      info_impl.rewind()
-      return Condition(pn_condition_get_name(impl),
-                       pn_condition_get_description(impl),
-                       info)
+  def _get_cond_impl(self):
+    return pn_connection_condition(self._conn)
+
+  def _get_remote_cond_impl(self):
+    return pn_connection_remote_condition(self._conn)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
@@ -1813,14 +1829,7 @@ class Connection(Endpoint):
     pn_connection_open(self._conn)
 
   def close(self):
-    if self.condition:
-      impl = pn_connection_condition(self._conn)
-      pn_condition_clear(impl)
-      pn_condition_set_name(impl, self.condition.name)
-      pn_condition_set_description(impl, self.condition.description)
-      info = Data(pn_condition_info(impl))
-      if self.condition.info:
-        info.put_object(self.condition.info)
+    self._update_cond()
     pn_connection_close(self._conn)
 
   @property
@@ -1868,10 +1877,17 @@ class Session(Endpoint):
       pn_session_free(self._ssn)
       del self._ssn
 
+  def _get_cond_impl(self):
+    return pn_session_condition(self._ssn)
+
+  def _get_remote_cond_impl(self):
+    return pn_session_remote_condition(self._ssn)
+
   def open(self):
     pn_session_open(self._ssn)
 
   def close(self):
+    self._update_cond()
     pn_session_close(self._ssn)
 
   @property
@@ -1922,10 +1938,17 @@ class Link(Endpoint):
     else:
       return err
 
+  def _get_cond_impl(self):
+    return pn_link_condition(self._link)
+
+  def _get_remote_cond_impl(self):
+    return pn_link_remote_condition(self._link)
+
   def open(self):
     pn_link_open(self._link)
 
   def close(self):
+    self._update_cond()
     pn_link_close(self._link)
 
   @property
