@@ -104,3 +104,12 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size)
   return false;
 }
 
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
+{
+  return -1;
+}
+
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+{
+  return -1;
+}

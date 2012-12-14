@@ -56,9 +56,7 @@ struct pn_ssl_t {
   char *keyfile_pw;
   pn_ssl_verify_mode_t verify_mode;
   char *trusted_CAs;
-
   const char *peer_hostname;
-  bool check_cert_host; // if true: check hostname in cert.
 
   pn_transport_t *transport;
 
@@ -244,7 +242,11 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
     return 0;  // fail connection
   }
 
-  if (!ssl->peer_hostname || !ssl->check_cert_host) return preverify_ok;
+  if (ssl->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
+  if (!ssl->peer_hostname) {
+    _log_error("Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!\n");
+    return 0;  // fail connection
+  }
 
   _log( ssl, "Checking identifying name in peer cert against '%s'\n", ssl->peer_hostname);
 
@@ -464,6 +466,7 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
 
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
+  case PN_SSL_VERIFY_PEER_NAME:
 
     if (!ssl->has_ca_db) {
       _log_error("Error: cannot verify peer without a trusted CA configured.\n"
@@ -976,7 +979,7 @@ static int init_ssl_socket( pn_ssl_t *ssl )
   SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, ssl);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-  if (ssl->peer_hostname) {
+  if (ssl->peer_hostname && ssl->mode == PN_SSL_MODE_CLIENT) {
     SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
   }
 #endif
@@ -1113,20 +1116,38 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
   ssl->trace = trace;
 }
 
-void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname, bool check_cert)
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
 {
-  if (!ssl) return;
+  if (!ssl) return -1;
 
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
   ssl->peer_hostname = NULL;
-  ssl->check_cert_host = false;
   if (hostname) {
     ssl->peer_hostname = pn_strdup(hostname);
-    ssl->check_cert_host = check_cert;
+    if (!ssl->peer_hostname) return -2;
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-    if (ssl->ssl) {
+    if (ssl->ssl && ssl->mode == PN_SSL_MODE_CLIENT) {
       SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
     }
 #endif
   }
+  return 0;
 }
+
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+{
+  if (!ssl) return -1;
+  if (!ssl->peer_hostname) {
+    *bufsize = 0;
+    if (hostname) *hostname = '\0';
+    return 0;
+  }
+  int len = strlen(ssl->peer_hostname);
+  if (hostname) {
+    if (len >= *bufsize) return -1;
+    strcpy( hostname, ssl->peer_hostname );
+  }
+  *bufsize = len;
+  return 0;
+}
+

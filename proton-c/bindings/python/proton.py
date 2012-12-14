@@ -2342,6 +2342,7 @@ class SSL(object):
     return self._check( pn_ssl_allow_unsecured_client(self._ssl) )
 
   VERIFY_PEER = PN_SSL_VERIFY_PEER
+  VERIFY_PEER_NAME = PN_SSL_VERIFY_PEER_NAME
   ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
 
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
@@ -2364,8 +2365,16 @@ class SSL(object):
       return name
     return None
 
-  def set_peer_hostname(self, hostname, check=True):
-    pn_ssl_set_peer_hostname( self._ssl, hostname, check )
+  def _set_peer_hostname(self, hostname):
+    self._check(pn_ssl_set_peer_hostname( self._ssl, hostname ))
+  def _get_peer_hostname(self):
+    err, name = pn_ssl_get_peer_hostname( self._ssl, 1024 )
+    self._check(err)
+    return name
+  peer_hostname = property(_get_peer_hostname, _set_peer_hostname,
+                           doc="""
+Manage the expected name of the remote peer.  Used to authenticate the remote.
+""")
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Condition", "Data", "Endpoint",
