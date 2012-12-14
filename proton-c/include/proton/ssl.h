@@ -210,6 +210,16 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
  * @return True if the version information was to buffer, False if SSL connection not ready.
  */
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
+
+
+void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
+
+typedef enum {
+  PN_SSL_MATCH_EXACT,
+  PN_SSL_MATCH_WILDCARD
+} pn_ssl_match_flag;
+int pn_ssl_set_peer_hostname_match( pn_ssl_t *ssl, const char *pattern, pn_ssl_match_flag flag);
+
 #ifdef __cplusplus
 }
 #endif

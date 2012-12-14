@@ -277,3 +277,52 @@ class SslTest(common.Test):
         except TransportException:
             assert True
 
+    def test_server_hostname_authentication(self):
+        """ Simple SSL connection with authentication of the server and check
+        of its hostname.
+        """
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+
+        #self.t_client.trace( Transport.TRACE_DRV )
+        self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client.set_peer_authentication( SSL.VERIFY_PEER )
+        self.client.set_peer_hostname( "127.0.0.1" )
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        self._pump()
+        assert self.client.protocol_name() is not None
+        client_conn.close()
+        server_conn.close()
+        self._pump()
+
+
+    def test_server_hostname_authentication_fail(self):
+        """ Should fail due to mismatched peer hostname
+        """
+        self.server.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+
+        #self.t_client.trace( Transport.TRACE_DRV )
+        self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client.set_peer_authentication( SSL.VERIFY_PEER )
+        self.client.set_peer_hostname( "127.0.0.1x" )
+
+        client_conn = Connection()
+        self.t_client.bind(client_conn)
+        server_conn = Connection()
+        self.t_server.bind(server_conn)
+        client_conn.open()
+        server_conn.open()
+        try:
+            self._pump()
+            assert False, "Expected connection to fail due to hostname mismatch"
+        except TransportException:
+            pass

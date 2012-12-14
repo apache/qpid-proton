@@ -2364,6 +2364,9 @@ class SSL(object):
       return name
     return None
 
+  def set_peer_hostname(self, hostname):
+    pn_ssl_set_peer_hostname( self._ssl, hostname )
+
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Condition", "Data", "Endpoint",
            "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",

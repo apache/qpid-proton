@@ -41,6 +41,7 @@
  */
 
 static int ssl_initialized;
+static int ssl_ex_data_index;
 
 typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
 
@@ -54,6 +55,10 @@ struct pn_ssl_t {
   char *keyfile_pw;
   pn_ssl_verify_mode_t verify_mode;
   char *trusted_CAs;
+
+  char *peer_hostname;
+  char *peer_match_pattern;
+  pn_ssl_match_flag     match_type;
 
   pn_transport_t *transport;
 
@@ -163,55 +168,69 @@ static int ssl_failed(pn_ssl_t *ssl)
   return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
 }
 
-// @todo replace with a "reasonable" default (?), allow application to register its own
-// callback.
-#if 0
+// Certificate chain verification callback: return 1 if verified,
+// 0 if remote cannot be verified (fail handshake).
+//
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
-    fprintf(stderr, "VERIFY_CALLBACK: pre-verify-ok=%d\n", preverify_ok);
+  if (!preverify_ok || X509_STORE_CTX_get_error_depth(ctx) != 0)
+    // already failed, or not at peer cert in chain
+    return preverify_ok;
 
-           char    buf[256];
-           X509   *err_cert;
-           int     err, depth;
+  X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
+  SSL *ssn = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+  if (!ssn) {
+    _log_error("Error: unexpected error - SSL session info not available for peer verify!\n");
+    return 0;  // fail connection
+  }
 
-           err_cert = X509_STORE_CTX_get_current_cert(ctx);
-           err = X509_STORE_CTX_get_error(ctx);
-           depth = X509_STORE_CTX_get_error_depth(ctx);
+  pn_ssl_t *ssl = (pn_ssl_t *)SSL_get_ex_data(ssn, ssl_ex_data_index);
+  if (!ssl) {
+    _log_error("Error: unexpected error - SSL context info not available for peer verify!\n");
+    return 0;  // fail connection
+  }
 
-           /*
-            * Retrieve the pointer to the SSL of the connection currently treated
-            * and the application specific data stored into the SSL object.
-            */
+  if (!ssl->peer_match_pattern) return preverify_ok;
 
-           X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+  _log( ssl, "Checking commonName in peer cert against host pattern (%s)\n", ssl->peer_match_pattern);
 
-           /*
-            * Catch a too long certificate chain. The depth limit set using
-            * SSL_CTX_set_verify_depth() is by purpose set to "limit+1" so
-            * that whenever the "depth>verify_depth" condition is met, we
-            * have violated the limit and want to log this error condition.
-            * We must do it here, because the CHAIN_TOO_LONG error would not
-            * be found explicitly; only errors introduced by cutting off the
-            * additional certificates would be logged.
-            */
-           if (!preverify_ok) {
-               printf("verify error:num=%d:%s:depth=%d:%s\n", err,
-                        X509_verify_cert_error_string(err), depth, buf);
-           }
+  X509_NAME *name = X509_get_subject_name(cert);
+  int i = -1;
+  bool matched = false;
+  while (!matched && (i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
+    X509_NAME_ENTRY *ne = X509_NAME_get_entry(name, i);
+    ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
+    if (name_asn1) {
+      unsigned char *str;
+      int len = ASN1_STRING_to_UTF8( &str, name_asn1);
+      if (len >= 0) {
+        _log( ssl, "commonName from peer cert = '%.*s'\n", len, str );
+        switch (ssl->match_type) {
+        case PN_SSL_MATCH_EXACT:
+          matched = (len == strlen(ssl->peer_match_pattern) &&
+                     strncasecmp( (const char *)str, ssl->peer_match_pattern, len ) == 0);
+          break;
+        case PN_SSL_MATCH_WILDCARD:
+          // TBD
+          break;
+        }
+        OPENSSL_free(str);
+      }
+    }
+  }
 
-           /*
-            * At this point, err contains the last verification error. We can use
-            * it for something special
-            */
-           if (!preverify_ok && (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT))
-           {
-             X509_NAME_oneline(X509_get_issuer_name(ctx->current_cert), buf, 256);
-             printf("issuer= %s\n", buf);
-           }
-
-    return 1;
-}
+  if (!matched) {
+    _log( ssl, "Error: no commonName matching %s found - peer is invalid.\n",
+          ssl->peer_match_pattern);
+    preverify_ok = 0;
+#ifdef X509_V_ERR_APPLICATION_VERIFICATION
+    X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
 #endif
+  } else {
+    _log( ssl, "commonName matched - peer is valid.\n" );
+  }
+  return preverify_ok;
+}
 
 
 // this code was generated using the command:
@@ -404,8 +423,8 @@ int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
       }
     }
 
-    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-    // verify_callback /*?verify callback?*/ );
+    SSL_CTX_set_verify( ssl->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                        verify_callback);
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(ssl->ctx, 1);
 #endif
@@ -550,6 +569,8 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
+    ssl_ex_data_index = SSL_get_ex_new_index( 0, "org.apache.qpid.proton.ssl",
+                                              NULL, NULL, NULL);
   }
 
   pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
@@ -585,6 +606,8 @@ void pn_ssl_free( pn_ssl_t *ssl)
 
   if (ssl->keyfile_pw) free(ssl->keyfile_pw);
   if (ssl->trusted_CAs) free(ssl->trusted_CAs);
+  if (ssl->peer_hostname) free(ssl->peer_hostname);
+  if (ssl->peer_match_pattern) free(ssl->peer_match_pattern);
 
   free(ssl);
 }
@@ -879,6 +902,15 @@ static int init_ssl_socket( pn_ssl_t *ssl )
     return -1;
   }
 
+  // store backpointer to pn_ssl_t in SSL object:
+  SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, ssl);
+
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+  if (ssl->peer_hostname) {
+    SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
+  }
+#endif
+
   // now layer a BIO over the SSL socket
   ssl->bio_ssl = BIO_new(BIO_f_ssl());
   if (!ssl->bio_ssl) {
@@ -1009,4 +1041,36 @@ static connection_mode_t check_for_ssl_connection( const char *data, size_t len 
 void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
 {
   ssl->trace = trace;
+}
+
+void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
+{
+  if (!ssl) return;
+
+  if (ssl->peer_hostname) free(ssl->peer_hostname);
+  ssl->peer_hostname = NULL;
+  if (hostname) {
+    ssl->peer_hostname = pn_strdup(hostname);
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+    if (ssl->ssl) {
+      SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
+    }
+#endif
+    if (!ssl->peer_match_pattern)
+      pn_ssl_set_peer_hostname_match( ssl, hostname, PN_SSL_MATCH_EXACT );
+  }
+}
+
+// uses RFC1034, Sec 3.5 host name syntax
+int pn_ssl_set_peer_hostname_match( pn_ssl_t *ssl, const char *pattern, pn_ssl_match_flag flag)
+{
+  if (!ssl) return -1;
+
+  if (ssl->peer_match_pattern) free(ssl->peer_match_pattern);
+  ssl->peer_match_pattern = NULL;
+  if (pattern) {
+    ssl->peer_match_pattern = strdup(pattern);
+    ssl->match_type = flag;
+  }
+  return 0;
 }
