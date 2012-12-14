@@ -833,6 +833,7 @@ class SSL(object):
   MODE_CLIENT = Ssl.Mode.CLIENT
   VERIFY_PEER = Ssl.VerifyMode.VERIFY_PEER
   ANONYMOUS_PEER = Ssl.VerifyMode.ANONYMOUS_PEER
+  VERIFY_PEER_NAME = None  # TBD
 
   def __init__(self,transport):
     self._ssl = transport.impl.ssl()
@@ -859,6 +860,12 @@ class SSL(object):
 
   def allow_unsecured_client(self):
      self._ssl.allowUnsecuredClient(True)
+
+  def _set_peer_hostname(self, hostname):
+    raise Skipped()
+  def _get_peer_hostname(self):
+    raise Skipped()
+  peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
 
 __all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
            "MessageException", "Timeout", "Condition", "Data", "Endpoint",
