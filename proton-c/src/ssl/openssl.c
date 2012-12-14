@@ -1061,10 +1061,11 @@ void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
   }
 }
 
-// uses RFC1034, Sec 3.5 host name syntax
 int pn_ssl_set_peer_hostname_match( pn_ssl_t *ssl, const char *pattern, pn_ssl_match_flag flag)
 {
   if (!ssl) return -1;
+
+  if (flag != PN_SSL_MATCH_EXACT) return -1;  // @todo support for wildcard
 
   if (ssl->peer_match_pattern) free(ssl->peer_match_pattern);
   ssl->peer_match_pattern = NULL;

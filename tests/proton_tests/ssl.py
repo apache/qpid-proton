@@ -288,7 +288,7 @@ class SslTest(common.Test):
         #self.t_client.trace( Transport.TRACE_DRV )
         self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client.set_peer_authentication( SSL.VERIFY_PEER )
-        self.client.set_peer_hostname( "127.0.0.1" )
+        self.client.set_peer_hostname( "a1.good.server.domain.com" )
 
         client_conn = Connection()
         self.t_client.bind(client_conn)
@@ -313,7 +313,7 @@ class SslTest(common.Test):
         #self.t_client.trace( Transport.TRACE_DRV )
         self.client.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client.set_peer_authentication( SSL.VERIFY_PEER )
-        self.client.set_peer_hostname( "127.0.0.1x" )
+        self.client.set_peer_hostname( "A1.Good.Server.domain.comx" )
 
         client_conn = Connection()
         self.t_client.bind(client_conn)

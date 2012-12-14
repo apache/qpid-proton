@@ -4,6 +4,9 @@ ca-certificate.pem - contains the public certificate identifying a "trusted" Cer
 Authority.  This certificate is used to sign the certificates that identify the SSL
 servers and clients run by the tests.
 
+ca-private-key.pem - encrypted key used to sign certificate requests.  Password is
+"ca-password"
+
 client-certificate.pem - the public certificate used to identify the client.  Signed by
 the CA.
 
@@ -11,7 +14,7 @@ client-private-key.pem - encrypted key used to create client-certificate.pem.  P
 "client-password"
 
 server-certificate.pem - the public certificate used to identify the server.  Signed by
-the CA.
+the CA.  The CommonName is "A1.Good.Server.domain.com", and is checked by some unit tests.
 
 server-private-key.pem - encrypted key used to create server-certificate.pem. Password is
 "server-password"
