@@ -57,9 +57,8 @@ struct pn_ssl_t {
   pn_ssl_verify_mode_t verify_mode;
   char *trusted_CAs;
 
-  char *peer_hostname;
-  char *peer_match_pattern;
-  pn_ssl_match_flag     match_type;
+  const char *peer_hostname;
+  bool check_cert_host; // if true: check hostname in cert.
 
   pn_transport_t *transport;
 
@@ -169,6 +168,60 @@ static int ssl_failed(pn_ssl_t *ssl)
   return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
 }
 
+/* match the DNS name pattern from the peer certificate against our configured peer
+   hostname */
+static bool match_dns_pattern( const char *hostname,
+                               const char *pattern, int plen )
+{
+
+  if (memchr( pattern, '*', plen ) == NULL)
+    return (plen == strlen(hostname) &&
+            strncasecmp( pattern, hostname, plen ) == 0);
+
+  /* dns wildcarded pattern - RFC2818 */
+  char plabel[64];   /* max label length < 63 - RFC1034 */
+  char slabel[64];
+  int slen = strlen(hostname);
+
+  while (plen > 0 && slen > 0) {
+    const char *cptr;
+    int len;
+
+    cptr = memchr( pattern, '.', plen );
+    len = (cptr) ? cptr - pattern : plen;
+    if (len > sizeof(plabel) - 1) return false;
+    memcpy( plabel, pattern, len );
+    plabel[len] = 0;
+    pattern = cptr + 1;
+    plen -= len;
+
+    cptr = memchr( hostname, '.', slen );
+    len = (cptr) ? cptr - hostname : slen;
+    if (len > sizeof(slabel) - 1) return false;
+    memcpy( slabel, hostname, len );
+    slabel[len] = 0;
+    hostname = cptr + 1;
+    slen -= len;
+
+    char *star = strchr( plabel, '*' );
+    if (!star) {
+      if (strcasecmp( plabel, slabel )) return false;
+    } else {
+      *star = '\0';
+      char *prefix = plabel;
+      int prefix_len = strlen(prefix);
+      char *suffix = star + 1;
+      int suffix_len = strlen(suffix);
+      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && strncasecmp( suffix,
+                                     slabel + (strlen(slabel) - suffix_len),
+                                     suffix_len )) return false;
+    }
+  }
+
+  return plen == slen;
+}
+
 // Certificate chain verification callback: return 1 if verified,
 // 0 if remote cannot be verified (fail handshake).
 //
@@ -191,9 +244,9 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
     return 0;  // fail connection
   }
 
-  if (!ssl->peer_match_pattern) return preverify_ok;
+  if (!ssl->peer_hostname || !ssl->check_cert_host) return preverify_ok;
 
-  _log( ssl, "Checking commonName in peer cert against host pattern (%s)\n", ssl->peer_match_pattern);
+  _log( ssl, "Checking identifying name in peer cert against '%s'\n", ssl->peer_hostname);
 
   bool matched = false;
 
@@ -211,15 +264,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
           int len = ASN1_STRING_to_UTF8( &str, asn1 );
           if (len >= 0) {
             _log( ssl, "SubjectAltName (dns) from peer cert = '%.*s'\n", len, str );
-            switch (ssl->match_type) {
-            case PN_SSL_MATCH_EXACT:
-              matched = (len == strlen(ssl->peer_match_pattern) &&
-                         strncasecmp( (const char *)str, ssl->peer_match_pattern, len ) == 0);
-              break;
-            case PN_SSL_MATCH_WILDCARD:
-              // TBD
-              break;
-            }
+            matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
             OPENSSL_free( str );
           }
         }
@@ -239,15 +284,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
       int len = ASN1_STRING_to_UTF8( &str, name_asn1);
       if (len >= 0) {
         _log( ssl, "commonName from peer cert = '%.*s'\n", len, str );
-        switch (ssl->match_type) {
-        case PN_SSL_MATCH_EXACT:
-          matched = (len == strlen(ssl->peer_match_pattern) &&
-                     strncasecmp( (const char *)str, ssl->peer_match_pattern, len ) == 0);
-          break;
-        case PN_SSL_MATCH_WILDCARD:
-          // TBD
-          break;
-        }
+        matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
         OPENSSL_free(str);
       }
     }
@@ -255,13 +292,13 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
   if (!matched) {
     _log( ssl, "Error: no name matching %s found in peer cert - rejecting handshake.\n",
-          ssl->peer_match_pattern);
+          ssl->peer_hostname);
     preverify_ok = 0;
 #ifdef X509_V_ERR_APPLICATION_VERIFICATION
     X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
 #endif
   } else {
-    _log( ssl, "commonName matched - peer is valid.\n" );
+    _log( ssl, "Name from peer cert matched - peer is valid.\n" );
   }
   return preverify_ok;
 }
@@ -640,8 +677,7 @@ void pn_ssl_free( pn_ssl_t *ssl)
 
   if (ssl->keyfile_pw) free(ssl->keyfile_pw);
   if (ssl->trusted_CAs) free(ssl->trusted_CAs);
-  if (ssl->peer_hostname) free(ssl->peer_hostname);
-  if (ssl->peer_match_pattern) free(ssl->peer_match_pattern);
+  if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
 
   free(ssl);
 }
@@ -1077,35 +1113,20 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
   ssl->trace = trace;
 }
 
-void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
+void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname, bool check_cert)
 {
   if (!ssl) return;
 
-  if (ssl->peer_hostname) free(ssl->peer_hostname);
+  if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
   ssl->peer_hostname = NULL;
+  ssl->check_cert_host = false;
   if (hostname) {
     ssl->peer_hostname = pn_strdup(hostname);
+    ssl->check_cert_host = check_cert;
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
     if (ssl->ssl) {
       SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
     }
 #endif
-    if (!ssl->peer_match_pattern)
-      pn_ssl_set_peer_hostname_match( ssl, hostname, PN_SSL_MATCH_EXACT );
   }
-}
-
-int pn_ssl_set_peer_hostname_match( pn_ssl_t *ssl, const char *pattern, pn_ssl_match_flag flag)
-{
-  if (!ssl) return -1;
-
-  if (flag != PN_SSL_MATCH_EXACT) return -1;  // @todo support for wildcard
-
-  if (ssl->peer_match_pattern) free(ssl->peer_match_pattern);
-  ssl->peer_match_pattern = NULL;
-  if (pattern) {
-    ssl->peer_match_pattern = strdup(pattern);
-    ssl->match_type = flag;
-  }
-  return 0;
 }

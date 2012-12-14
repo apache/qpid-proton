@@ -216,49 +216,22 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
  *
  * Setting this name causes the client to 1) send this name to the server during the
  * handshake (if Server Name Indication is supported), and 2) check this name against the
- * CommonName provided in the server's certificate. If the supplied name does not exactly
- * match a CommonName entry in the server's certificate, the server is considered
- * unauthenticated, and the SSL connection is aborted.
+ * identifying name provided in the server's certificate. If the supplied name does not
+ * exactly match a SubjectAltName (type DNS name), or the CommonName entry in the server's
+ * certificate, the server is considered unauthenticated, and the SSL connection is
+ * aborted.
  *
- * @note Verification of the CommonName is only done if PN_SSL_VERIFY_PEER is enabled.
+ * @note Verification of the hostname is only done if PN_SSL_VERIFY_PEER is enabled.
  * See ::pn_ssl_set_peer_authentication.
- *
- * @note the CommonName check algorithm can be modified using
- * ::pn_ssl_set_peer_hostname_match.
  *
  * @param[in] ssl the ssl client
  * @param[in] hostname the value to check against the peer's CommonName field.  Expected
  * to conform to the syntax as given in RFC1034, Section 3.5.
+ * @param[in] check_cert - if true, check hostname against the SubjectAltName (dns) or the
+ * CommonName fields in the peer's certificate.  If no match is found, reject the
+ * connection.
  */
-void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
-
-/** Specify how to match the server's CommonName field
- *
- * Expects the CommonName field to contain a DNS name as described in RFC1034, Sec 3.5
- * Host Name Syntax.
- */
-typedef enum {
-  PN_SSL_MATCH_EXACT,   /**< case insensitive text match */
-  PN_SSL_MATCH_WILDCARD /**< domain label wildcard match */
-} pn_ssl_match_flag;
-
-/** Check the server's CommonName field to ensure authenticity.
- *
- * Controls how the SSL client will check the CommonName field in the server's
- * certificate.  This check must be used in order to ensure the certificate belongs to the
- * expected target.  If the check fails, the SSL connection is aborted.
- *
- * @note Verification of the CommonName is only done if PN_SSL_VERIFY_PEER is enabled.
- * See ::pn_ssl_set_peer_authentication.
- *
- * @param[in] ssl the ssl client
- * @param[in] pattern if not NULL the pattern to use to check against the peer's
- * CommonName field, based on the match flag.  If NULL, CommonName checking is disabled.
- * @param[in] flag describes how pattern should be used to match against the CommonName
- * field
- * @return 0 if pattern/flag is valid, < 0 if error.
- */
-int pn_ssl_set_peer_hostname_match( pn_ssl_t *ssl, const char *pattern, pn_ssl_match_flag flag);
+void pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname, bool check_cert );
 
 #ifdef __cplusplus
 }
