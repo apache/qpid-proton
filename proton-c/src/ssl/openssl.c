@@ -28,6 +28,7 @@
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -194,9 +195,42 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
   _log( ssl, "Checking commonName in peer cert against host pattern (%s)\n", ssl->peer_match_pattern);
 
+  bool matched = false;
+
+  /* first check any SubjectAltName entries, as per RFC2818 */
+  GENERAL_NAMES *sans = (GENERAL_NAMES *) X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+  if (sans) {
+    int name_ct = sk_GENERAL_NAME_num( sans );
+    int i;
+    for (i = 0; !matched && i < name_ct; ++i) {
+      GENERAL_NAME *name = sk_GENERAL_NAME_value( sans, i );
+      if (name->type == GEN_DNS) {
+        ASN1_STRING *asn1 = name->d.dNSName;
+        if (asn1 && asn1->data && asn1->length) {
+          unsigned char *str;
+          int len = ASN1_STRING_to_UTF8( &str, asn1 );
+          if (len >= 0) {
+            _log( ssl, "SubjectAltName (dns) from peer cert = '%.*s'\n", len, str );
+            switch (ssl->match_type) {
+            case PN_SSL_MATCH_EXACT:
+              matched = (len == strlen(ssl->peer_match_pattern) &&
+                         strncasecmp( (const char *)str, ssl->peer_match_pattern, len ) == 0);
+              break;
+            case PN_SSL_MATCH_WILDCARD:
+              // TBD
+              break;
+            }
+            OPENSSL_free( str );
+          }
+        }
+      }
+    }
+    GENERAL_NAMES_free( sans );
+  }
+
+  /* if no general names match, try the CommonName from the subject */
   X509_NAME *name = X509_get_subject_name(cert);
   int i = -1;
-  bool matched = false;
   while (!matched && (i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
     X509_NAME_ENTRY *ne = X509_NAME_get_entry(name, i);
     ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
@@ -220,7 +254,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   }
 
   if (!matched) {
-    _log( ssl, "Error: no commonName matching %s found - peer is invalid.\n",
+    _log( ssl, "Error: no name matching %s found in peer cert - rejecting handshake.\n",
           ssl->peer_match_pattern);
     preverify_ok = 0;
 #ifdef X509_V_ERR_APPLICATION_VERIFICATION
