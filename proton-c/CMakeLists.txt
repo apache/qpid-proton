@@ -269,6 +269,11 @@ install (FILES LICENSE README TODO
          DESTINATION ${PROTON_SHARE})
 
 # Pkg config file
+# Compatible variable names used in the pkg config files also for autoconf
+get_filename_component (PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
+get_filename_component (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
+get_filename_component (LIBDIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR} ABSOLUTE)
+get_filename_component (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${INCLUDE_INSTALL_DIR} ABSOLUTE)
 
 configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
          ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)

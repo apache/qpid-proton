@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-interface EncodingCodes
+public interface EncodingCodes
 {
     public static final byte DESCRIBED_TYPE_INDICATOR = (byte) 0x00;
 

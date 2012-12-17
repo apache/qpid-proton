@@ -21,7 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.type.transport.Flow;
+import org.apache.qpid.proton.amqp.transport.Flow;
 
 class TransportReceiver extends TransportLink<ReceiverImpl>
 {

@@ -47,6 +47,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslEngineFacade;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;

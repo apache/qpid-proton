@@ -23,15 +23,15 @@ These certificates have been created using the OpenSSL tool.
 The following commands were used to create these certificates:
 
 # Create a self-signed certificate for the CA, and a private key to sign certificate requests:
- openssl req -x509 -newkey rsa:2048 -keyout ca-private-key.pem -passout pass:ca-password -out ca-certificate.pem  -days 99999 -subj "/O=Trust Me, Inc/CN=127.0.0.1"
+ openssl req -x509 -newkey rsa:512 -keyout ca-private-key.pem -passout pass:ca-password -out ca-certificate.pem  -days 99999 -subj "/O=Trust Me, Inc/CN=127.0.0.1"
 
 # Create a certificate request for the server certificate.  Use the CA's certificate to sign it:
- openssl req -newkey rsa:2048 -keyout server-private-key.pem -passout pass:server-password -out server-request.pem -subj "/O=Server/CN=127.0.0.1"
+ openssl req -newkey rsa:512 -keyout server-private-key.pem -passout pass:server-password -out server-request.pem -subj "/O=Server/CN=127.0.0.1"
  openssl x509 -req -in server-request.pem -CA ca-certificate.pem -CAkey ca-private-key.pem -CAcreateserial -passin pass:ca-password -days 99999 -out server-certificate.pem
 
 # Create a certificate request for the client certificate.  Use the CA's certificate to sign it:
- openssl req -newkey rsa:2048 -keyout client-private-key.pem -passout pass:client-password -out client-request.pem -subj "/O=Client/CN=127.0.0.1"
+ openssl req -newkey rsa:512 -keyout client-private-key.pem -passout pass:client-password -out client-request.pem -subj "/O=Client/CN=127.0.0.1"
  openssl x509 -req -in client-request.pem -CA ca-certificate.pem -CAkey ca-private-key.pem -CAcreateserial -passin pass:ca-password -days 99999 -out client-certificate.pem
 
 # Create a "bad" certificate - not signed by a trusted authority
- openssl req -x509 -newkey rsa:2048 -keyout bad-server-private-key.pem -passout pass:server-password -out bad-server-certificate.pem  -days 99999 -subj "/O=Not Trusted, Inc/CN=127.0.0.1"
+ openssl req -x509 -newkey rsa:512 -keyout bad-server-private-key.pem -passout pass:server-password -out bad-server-certificate.pem  -days 99999 -subj "/O=Not Trusted, Inc/CN=127.0.0.1"

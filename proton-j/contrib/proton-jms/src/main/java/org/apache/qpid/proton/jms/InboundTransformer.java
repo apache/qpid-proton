@@ -16,13 +16,13 @@
  */
 package org.apache.qpid.proton.jms;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.messaging.ApplicationProperties;
-import org.apache.qpid.proton.type.messaging.DeliveryAnnotations;
-import org.apache.qpid.proton.type.messaging.Footer;
-import org.apache.qpid.proton.type.messaging.Header;
-import org.apache.qpid.proton.type.messaging.MessageAnnotations;
-import org.apache.qpid.proton.type.messaging.Properties;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Footer;
+import org.apache.qpid.proton.amqp.messaging.Header;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Properties;
 
 import javax.jms.*;
 import javax.jms.JMSException;

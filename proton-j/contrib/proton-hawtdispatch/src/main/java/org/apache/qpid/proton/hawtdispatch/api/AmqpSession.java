@@ -17,17 +17,20 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
+import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.impl.ReceiverImpl;
 import org.apache.qpid.proton.engine.impl.SenderImpl;
 import org.apache.qpid.proton.engine.impl.SessionImpl;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.messaging.*;
-import org.apache.qpid.proton.type.transport.SenderSettleMode;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.*;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 
 import java.util.UUID;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -106,21 +109,21 @@ public class AmqpSession extends AmqpEndpointBase {
         switch (qos) {
             case AT_MOST_ONCE:
                 link.setSenderSettleMode(SenderSettleMode.SETTLED);
-                link.setReceiverSettleMode(SenderSettleMode.UNSETTLED);
+                link.setReceiverSettleMode(ReceiverSettleMode.FIRST);
                 break;
             case AT_LEAST_ONCE:
                 link.setSenderSettleMode(SenderSettleMode.UNSETTLED);
-                link.setReceiverSettleMode(SenderSettleMode.SETTLED);
+                link.setReceiverSettleMode(ReceiverSettleMode.FIRST);
                 break;
             case EXACTLY_ONCE:
                 link.setSenderSettleMode(SenderSettleMode.UNSETTLED);
-                link.setReceiverSettleMode(SenderSettleMode.MIXED);
+                link.setReceiverSettleMode(ReceiverSettleMode.SECOND);
                 break;
         }
     }
 
     public Message createTextMessage(String value) {
-        Message msg = new Message();
+        Message msg = new MessageImpl();
         Section body = new AmqpValue(value);
         msg.setBody(body);
         return msg;
@@ -131,7 +134,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createBinaryMessage(byte value[], int offset, int len) {
-        Message msg = new Message();
+        Message msg = new MessageImpl();
         Data body = new Data(new Binary(value, offset,len));
         msg.setBody(body);
         return msg;

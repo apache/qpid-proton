@@ -25,7 +25,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.qpid.proton.engine.*;
-import org.apache.qpid.proton.type.transport.Open;
+import org.apache.qpid.proton.amqp.transport.Open;
 
 public class ConnectionImpl extends EndpointImpl implements Connection
 {

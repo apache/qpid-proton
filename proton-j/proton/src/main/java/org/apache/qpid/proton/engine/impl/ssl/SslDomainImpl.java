@@ -19,6 +19,7 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslEngineFacade;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
 public class SslDomainImpl implements SslDomain

@@ -16,8 +16,9 @@
  */
 package org.apache.qpid.proton.jms;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.messaging.*;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.amqp.messaging.*;
 
 import javax.jms.*;
 import java.io.Serializable;

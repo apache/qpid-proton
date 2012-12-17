@@ -25,8 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.Formatter;
 import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.engine.EndpointError;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.security.SaslFrameBody;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.security.SaslFrameBody;
 
 class SaslFrameParser
 {

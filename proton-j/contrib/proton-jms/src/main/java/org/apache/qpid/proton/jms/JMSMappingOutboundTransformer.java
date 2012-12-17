@@ -16,13 +16,14 @@
  */
 package org.apache.qpid.proton.jms;
 
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.Symbol;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.messaging.*;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.messaging.*;
 
 import javax.jms.*;
 import java.io.UnsupportedEncodingException;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -206,7 +208,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         Footer footer=null;
         if( footerMap!=null ) footer = new Footer(footerMap);
 
-        org.apache.qpid.proton.message.Message amqp = new org.apache.qpid.proton.message.Message(header, da, ma, props, ap, body, footer);
+        MessageImpl amqp = new MessageImpl(header, da, ma, props, ap, body, footer);
 
         ByteBuffer buffer = ByteBuffer.wrap(new byte[1024*4]);
         final DroppingWritableBuffer overflow = new DroppingWritableBuffer();

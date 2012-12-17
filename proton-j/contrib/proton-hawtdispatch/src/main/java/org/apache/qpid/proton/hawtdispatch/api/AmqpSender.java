@@ -23,11 +23,12 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.engine.impl.SenderImpl;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.type.messaging.Accepted;
-import org.apache.qpid.proton.type.messaging.Modified;
-import org.apache.qpid.proton.type.messaging.Rejected;
-import org.apache.qpid.proton.type.messaging.Released;
-import org.apache.qpid.proton.type.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.amqp.messaging.Modified;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.fusesource.hawtbuf.Buffer;
 
 import java.io.UnsupportedEncodingException;
@@ -75,7 +76,7 @@ public class AmqpSender extends AmqpLink {
     final LinkedList<MessageDelivery> outbound = new LinkedList<MessageDelivery>();
     long outboundBufferSize;
 
-    public MessageDelivery send(Message message) {
+    public MessageDelivery send(MessageImpl message) {
         assertExecuting();
         MessageDelivery rc = new MessageDelivery(message) {
             @Override

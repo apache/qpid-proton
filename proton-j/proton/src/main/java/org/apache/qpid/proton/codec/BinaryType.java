@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.amqp.Binary;
 
 import java.util.Arrays;
 import java.util.Collection;

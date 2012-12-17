@@ -20,10 +20,8 @@
  */
 package org.apache.qpid.proton.framing;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.transport.FrameBody;
-
-import java.nio.ByteBuffer;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.transport.FrameBody;
 
 public class TransportFrame
 {

@@ -20,9 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.DescribedType;
-
-public interface DescribedTypeConstructor<V extends DescribedType>
+public interface DescribedTypeConstructor<V>
 {
     V newInstance(Object described);
 

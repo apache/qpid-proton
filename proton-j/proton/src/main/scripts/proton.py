@@ -22,11 +22,12 @@ from org.apache.qpid.proton.engine import EndpointState, TransportException, Sas
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
 from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
-
-from org.apache.qpid.proton.message import Message as MessageImpl, \
-    MessageFormat
-from org.apache.qpid.proton.type.messaging import Source, Target, Accepted
-from org.apache.qpid.proton.type import UnsignedInteger
+from org.apache.qpid.proton.message import MessageFormat
+from org.apache.qpid.proton.message.impl import MessageImpl
+from org.apache.qpid.proton.messenger import AcceptMode, MessengerException, Status
+from org.apache.qpid.proton.messenger.impl import MessengerImpl
+from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
+from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet, UUID as JUUID
 
@@ -36,6 +37,29 @@ class Skipped(Exception):
   skipped = True
 
 PN_SESSION_WINDOW = TransportImpl.SESSION_WINDOW
+
+PENDING = "PENDING"
+ACCEPTED = "ACCEPTED"
+REJECTED = "REJECTED"
+
+STATUSES = {
+  Status.ACCEPTED: ACCEPTED,
+  Status.REJECTED: REJECTED,
+  Status.PENDING: PENDING,
+  Status.UNKNOWN: None
+  }
+
+MANUAL = "MANUAL"
+AUTOMATIC = "AUTOMATIC"
+
+_ACCEPT_MODE2CONST = {
+  AcceptMode.AUTO: AUTOMATIC,
+  AcceptMode.MANUAL: MANUAL
+  }
+_CONST2ACCEPT_MODE = {
+  AUTOMATIC: AcceptMode.AUTO,
+  MANUAL: AcceptMode.MANUAL
+  }
 
 class Endpoint(object):
 
@@ -233,7 +257,7 @@ class Link(Endpoint):
     return wrap_session(self.impl.getSession())
 
   def delivery(self, tag):
-    return wrap_delivery(self.impl.delivery(tag, 0, len(tag)))
+    return wrap_delivery(self.impl.delivery(tag))
 
   @property
   def current(self):
@@ -485,10 +509,96 @@ class Data(object):
   def __init__(self, *args, **kwargs):
     raise Skipped()
 
+class Timeout(Exception):
+  pass
+
 class Messenger(object):
 
   def __init__(self, *args, **kwargs):
+    #comment out or remove line below to enable messenger tests
     raise Skipped()
+    self.impl = MessengerImpl()
+
+  def start(self):
+    self.impl.start()
+
+  def stop(self):
+    self.impl.stop()
+
+  def subscribe(self, source):
+    self.impl.subscribe(source)
+
+  def put(self, message):
+    self.impl.put(message.impl)
+    return self.impl.outgoingTracker()
+
+  def send(self):
+    self.impl.send()
+
+  def recv(self, n):
+    self.impl.recv(n)
+
+  def get(self, message=None):
+    if message is None:
+      self.impl.get()
+    else:
+      message.impl = self.impl.get()
+    return self.impl.incomingTracker()
+
+  @property
+  def outgoing(self):
+    return self.impl.outgoing()
+
+  @property
+  def incoming(self):
+    return self.impl.incoming()
+
+  def _get_accept_mode(self):
+    return _ACCEPT_MODE2CONST(self.impl.getAcceptMode())
+  def _set_accept_mode(self, mode):
+    mode = _CONST2ACCEPT_MODE[mode]
+    self.impl.setAcceptMode(mode)
+  accept_mode = property(_get_accept_mode, _set_accept_mode)
+
+  def accept(self, tracker=None):
+    if tracker is None:
+      tracker = self.impl.incomingTracker()
+      flags = self.impl.CUMULATIVE
+    else:
+      flags = 0
+    self.impl.accept(tracker, flags)
+
+  def reject(self, tracker=None):
+    if tracker is None:
+      tracker = self.impl.incomingTracker()
+      flags = self.impl.CUMULATIVE
+    else:
+      flags = 0
+    self.impl.reject(tracker, flags)
+
+  def settle(self, tracker=None):
+    if tracker is None:
+      tracker = self.impl.outgoingTracker()
+      flags = self.impl.CUMULATIVE
+    else:
+      flags = 0
+    self.impl.settle(tracker, flags)
+
+  def status(self, tracker):
+    return STATUSES[self.impl.getStatus(tracker)]
+
+  def _get_incoming_window(self):
+    return self.impl.getIncomingWindow()
+  def _set_incoming_window(self, window):
+    self.impl.setIncomingWindow(window)
+  incoming_window = property(_get_incoming_window, _set_incoming_window)
+
+  def _get_outgoing_window(self):
+    return self.impl.getOutgoingWindow()
+  def _set_outgoing_window(self, window):
+    self.impl.setOutgoingWindow(window)
+  outgoing_window = property(_get_outgoing_window, _set_outgoing_window)
+
 
 class Message(object):
 
@@ -656,6 +766,17 @@ class Message(object):
     self.impl.setMessageFormat(format)
   format = property(_get_format, _set_format)
 
+  def _get_body(self):
+    body = self.impl.getBody()
+    if isinstance(body, AmqpValue):
+      return body.getValue()
+    else:
+      return body
+  def _set_body(self, body):
+    self.impl.setBody(AmqpValue(body))
+  body = property(_get_body, _set_body)
+
+
 class SASL(object):
 
   OK = Sasl.PN_SASL_OK
@@ -765,6 +886,9 @@ class SSL(object):
 
 __all__ = [
            "LANGUAGE",
+           "MANUAL",
+           "PENDING",
+           "REJECTED",
            "PN_SESSION_WINDOW",
            "Condition",
            "Connection",

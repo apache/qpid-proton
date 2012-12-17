@@ -20,12 +20,12 @@
  */
 package org.apache.qpid.proton.codec;
 
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.Symbol;
-import org.apache.qpid.proton.type.UnsignedByte;
-import org.apache.qpid.proton.type.UnsignedInteger;
-import org.apache.qpid.proton.type.UnsignedLong;
-import org.apache.qpid.proton.type.UnsignedShort;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.amqp.UnsignedShort;
 
 public interface Data
 {

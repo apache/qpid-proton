@@ -29,9 +29,9 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.framing.TransportFrame;
-import org.apache.qpid.proton.type.AMQPDefinedTypes;
-import org.apache.qpid.proton.type.Binary;
-import org.apache.qpid.proton.type.transport.FrameBody;
+import org.apache.qpid.proton.codec.AMQPDefinedTypes;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.transport.FrameBody;
 
 import java.nio.ByteBuffer;
 import java.util.Formatter;
@@ -88,7 +88,7 @@ class FrameParser implements TransportInput
     private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
     {
-        AMQPDefinedTypes.registerAllTypes(_decoder);
+        AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
     }
 
 

@@ -32,12 +32,15 @@ import org.junit.Test;
 
 public class ByteHolderTest
 {
-    private ByteHolder _byteHolder = new ByteHolder(10);
+    private static final int CAPACITY = 10;
+    private ByteHolder _byteHolder = new ByteHolder(CAPACITY);
 
     @Test
     public void testEmptyOutput()
     {
-        _byteHolder.writeOutputFrom(new CannedTransportOutput(""));
+        int bytesContained = _byteHolder.writeOutputFrom(new CannedTransportOutput(""));
+
+        assertEquals(0, bytesContained);
         assertByteBufferContents(_byteHolder.prepareToRead(), "");
     }
 
@@ -47,8 +50,9 @@ public class ByteHolderTest
         String smallOutput = "1234";
         assertTrue(smallOutput.length() < _byteHolder.getCapacity());
 
-        _byteHolder.writeOutputFrom(new CannedTransportOutput(smallOutput));
+        int bytesContained = _byteHolder.writeOutputFrom(new CannedTransportOutput(smallOutput));
 
+        assertEquals(smallOutput.length(), bytesContained);
         assertTrue(_byteHolder.hasSpace());
         assertByteBufferContents(_byteHolder.prepareToRead(), smallOutput);
     }
@@ -59,7 +63,9 @@ public class ByteHolderTest
         String bigOutput = "1234567890xxxxx";
         assertTrue(bigOutput.length() > _byteHolder.getCapacity());
 
-        _byteHolder.writeOutputFrom(new CannedTransportOutput(bigOutput));
+        int bytesContained = _byteHolder.writeOutputFrom(new CannedTransportOutput(bigOutput));
+
+        assertEquals(CAPACITY, bytesContained);
         assertFalse(_byteHolder.hasSpace());
         assertByteBufferContents(_byteHolder.prepareToRead(), "1234567890");
     }
@@ -70,7 +76,9 @@ public class ByteHolderTest
         String bigOutput = "1234567890";
         assertTrue("Neither too big nor too small - the Goldilocks case", bigOutput.length() == _byteHolder.getCapacity());
 
-        _byteHolder.writeOutputFrom(new CannedTransportOutput(bigOutput));
+        int bytesContained = _byteHolder.writeOutputFrom(new CannedTransportOutput(bigOutput));
+
+        assertEquals(bigOutput.length(), bytesContained);
         assertFalse(_byteHolder.hasSpace());
         assertByteBufferContents(_byteHolder.prepareToRead(), "1234567890");
     }

@@ -26,6 +26,8 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 
+import org.apache.qpid.proton.engine.SslEngineFacade;
+
 class DefaultSslEngineFacade implements SslEngineFacade
 {
     private final SSLEngine _sslEngine;

@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-public interface TypeEncoding<V> extends TypeConstructor<V>
+public interface TypeEncoding<V>
 {
     AMQPType<V> getType();
 

@@ -17,17 +17,20 @@
 package org.apache.qpid.proton.jms;
 
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.type.Binary;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class EncodedMessage extends Binary {
+public class EncodedMessage
+{
 
+    private final Binary data;
     final long messageFormat;
 
     public EncodedMessage(long messageFormat, byte[] data, int offset, int length) {
-        super(data, offset, length);
+        this.data = new Binary(data, offset, length);
         this.messageFormat = messageFormat;
     }
 
@@ -36,7 +39,7 @@ public class EncodedMessage extends Binary {
     }
 
     public Message decode() throws Exception {
-        Message amqp = new Message();
+        Message amqp = new MessageImpl();
 
         int offset = getArrayOffset();
         int len = getLength();
@@ -48,5 +51,26 @@ public class EncodedMessage extends Binary {
         }
 
         return amqp;
+    }
+
+    public int getLength()
+    {
+        return data.getLength();
+    }
+
+    public int getArrayOffset()
+    {
+        return data.getArrayOffset();
+    }
+
+    public byte[] getArray()
+    {
+        return data.getArray();
+    }
+
+    @Override
+    public String toString()
+    {
+        return data.toString();
     }
 }

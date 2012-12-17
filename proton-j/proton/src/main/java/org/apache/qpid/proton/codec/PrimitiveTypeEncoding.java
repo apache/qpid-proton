@@ -20,7 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-public interface PrimitiveTypeEncoding<T> extends TypeEncoding<T>
+public interface PrimitiveTypeEncoding<T> extends TypeEncoding<T>, TypeConstructor<T>
 {
     PrimitiveType<T> getType();
 

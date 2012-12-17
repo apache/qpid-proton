@@ -21,7 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.type.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
 
 public class TransportDelivery
 {
