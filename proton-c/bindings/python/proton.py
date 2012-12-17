@@ -2317,13 +2317,12 @@ class SSLDomain(object):
     return self._check( pn_ssl_domain_set_trusted_ca_db(self._domain,
                                                         certificate_db) )
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    return self._check( pn_ssl_domain_set_default_peer_authentication(self._domain,
-                                                                      verify_mode,
-                                                                      trusted_CAs) )
+    return self._check( pn_ssl_domain_set_peer_authentication(self._domain,
+                                                              verify_mode,
+                                                              trusted_CAs) )
 
-  def allow_unsecured_client(self, allow_unsecured = True):
-    return self._check( pn_ssl_domain_allow_unsecured_client(self._domain,
-                                                             allow_unsecured ))
+  def allow_unsecured_client(self):
+    return self._check( pn_ssl_domain_allow_unsecured_client(self._domain) )
 
 class SSL(object):
 
@@ -2334,19 +2333,14 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport, domain=None, session_details=None):
-    if domain:
-      session_id = None
-      if session_details:
-        session_id = session_details.get_session_id()
-      self._ssl = pn_ssl_new( domain._domain, transport._trans, session_id )
-    else:   # old api:
-      self._ssl = pn_ssl(transport._trans)
+  def __init__(self, transport, domain, session_details=None):
+    session_id = None
+    if session_details:
+      session_id = session_details.get_session_id()
+    self._ssl = pn_ssl( transport._trans )
     if self._ssl is None:
       raise SSLUnavailable()
-
-  def init(self, mode):
-    return self._check( pn_ssl_init(self._ssl, mode) )
+    pn_ssl_init( self._ssl, domain._domain, session_id )
 
   def cipher_name(self):
     rc, name = pn_ssl_get_cipher_name( self._ssl, 128 )

@@ -872,9 +872,6 @@ class SSL(object):
     self._ssl = transport.impl.ssl(domain._domain, internal_session_details)
     self._session_details = session_details
 
-  def init(self, mode):
-    self._ssl.init(mode)
-
   def get_session_details(self):
     return self._session_details
 

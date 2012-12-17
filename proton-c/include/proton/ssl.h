@@ -177,10 +177,6 @@ typedef enum {
  * @note Servers must provide their own certificate when verifying a peer.  See
  * ::pn_ssl_set_credentials().
  *
- * @note This method sets the default behavior for all SSL sessions associated with
- * this domain. This attribute can be overridden on a per-session basis if desired (see
- * ::pn_ssl_set_default_peer_authentication)
- *
  * @note This setting effects only those pn_ssl_t objects created after this call
  * returns.  pn_ssl_t objects created before invoking this method will use the domain's
  * previous setting.
@@ -191,27 +187,9 @@ typedef enum {
  * to the peer client if the server has been configured to verify its peer.
  * @return 0 on success
  */
-int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
-                                                  const pn_ssl_verify_mode_t mode,
-                                                  const char *trusted_CAs);
-
-/** Create an SSL session for a given transport.
- *
- * A transport must have an SSL object in order to "speak" SSL over its connection. This
- * method allocates an SSL object using the given domain, and associates it with the
- * transport.
- *
- * @param[in] domain the ssl domain used to configure the SSL session.
- * @param[in] transport the transport that will use the SSL session.
- * @param[in] session_id if supplied, attempt to resume a previous SSL session that used
- * the same session_id.  The resulting session will be identified by the given session_id
- * and stored for future session restore.
- * @return a pointer to the SSL object configured for this transport.  Returns NULL if SSL
- * cannot be provided, which would occur if no SSL support is available.
- */
-pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain,
-                      pn_transport_t *transport,
-                      const char *session_id);
+int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
+                                          const pn_ssl_verify_mode_t mode,
+                                          const char *trusted_CAs);
 
 /** Permit a server to accept connection requests from non-SSL clients.
  *
@@ -219,45 +197,37 @@ pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain,
  * determine whether SSL/TLS is being used.  This option is disabled by default: only
  * clients using SSL/TLS are accepted.
  *
- * @param[in] ssl the SSL server that will accept the client connection.
+ * @param[in] domain the domain (server) that will accept the client connections.
  * @return 0 on success
  */
-int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl);
+int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
 
-/** Override the default verification level for this session.
+/** Create a new SSL session object associated with a transport.
  *
- * This method can be used to override the default verification level provided by the
- * parent domain. See ::pn_ssl_domain_set_default_peer_authentication. It must be called
- * before the session is used to transfer data.
+ * A transport must have an SSL object in order to "speak" SSL over its connection. This
+ * method allocates an SSL object associates it with the transport.
  *
- * @param[in] ssl the ssl client/server to configure.
- * @param[in] mode the level of validation to apply to the peer
- * @param[in] trusted_CAs path to a database of trusted CAs that the server will advertise
- * to the peer client if the server has been configured to verify its peer.
- * @return 0 on success
+ * @param[in] transport the transport that will own the new SSL session.
+ * @return a pointer to the SSL object configured for this transport.  Returns NULL if
+ * no SSL session is associated with the transport.
  */
-int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
-                                   const pn_ssl_verify_mode_t mode,
-                                   const char *trusted_CAs);
+pn_ssl_t *pn_ssl(pn_transport_t *transport);
 
-/** Get the level of verification to be used on the peer certificate.
+/** Initialize an SSL session.
  *
- * Access the current peer certificate validation level.  See
- * ::pn_ssl_set_peer_authentication().
+ * This method configures an SSL object using the configuration provided by the given
+ * domain.
  *
- * @param[in] ssl the ssl client/server to query.
- * @param[out] mode the level of validation that will be applied to the peer's certificate.
- * @param[out] trusted_CAs set to a buffer to hold the path to the database of trusted CAs
- * that the server will advertise to the peer client. If NULL, the path will not be
- * returned.
- * @param[in,out] trusted_CAs_size on input set to the number of octets in trusted_CAs.
- * on output, set to the number of octets needed to hold the value of trusted_CAs plus a
- * null byte.
- * @return 0 on success
+ * @param[in] ssl the ssl session to configured.
+ * @param[in] domain the ssl domain used to configure the SSL session.
+ * @param[in] session_id if supplied, attempt to resume a previous SSL session that used
+ * the same session_id.  The resulting session will be identified by the given session_id
+ * and stored for future session restore.
+ * @return 0 on success, else an error code.
  */
-int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
-                                   pn_ssl_verify_mode_t *mode,
-                                   char *trusted_CAs, size_t *trusted_CAs_size);
+int pn_ssl_init( pn_ssl_t *ssl,
+                 pn_ssl_domain_t *domain,
+                 const char *session_id);
 
 /** Get the name of the Cipher that is currently in use.
  *
@@ -300,31 +270,6 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
 pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
 
-/** original API: */
-
-/** Get the SSL session object associated with a transport.
- *
- * This method returns the SSL object associated with the transport.
- *
- * @return a pointer to the SSL object configured for this transport.  Returns NULL if
- * no SSL session is associated with the transport.
- *
- * @deprecated The semantics have changed - need to deprecate old behavior.
- */
-pn_ssl_t *pn_ssl(pn_transport_t *transport);
-
-/** @deprecated see ::pn_ssl_domain, ::pn_ssl_new */
-int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode);
-/** @deprecated see ::pn_ssl_domain_set_credentails */
-int pn_ssl_set_credentials( pn_ssl_t *ssl,
-                            const char *certificate_file,
-                            const char *private_key_file,
-                            const char *password);
-/** @deprecated see ::pn_ssl_domain_set_trusted_ca_db */
-int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
-                             const char *certificate_db);
-
-  
 #ifdef __cplusplus
 }
 #endif

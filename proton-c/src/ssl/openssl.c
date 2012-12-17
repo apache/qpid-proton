@@ -57,8 +57,9 @@ struct pn_ssl_domain_t {
   char *keyfile_pw;
 
   // settings used for all connections
-  char *default_trusted_CAs;
-  pn_ssl_verify_mode_t default_verify_mode;
+  char *trusted_CAs;
+  pn_ssl_verify_mode_t verify_mode;
+  bool allow_unsecured;
 
   // session cache
   pn_ssl_session_t *ssn_cache_head;
@@ -68,16 +69,10 @@ struct pn_ssl_domain_t {
 
 struct pn_ssl_t {
 
-  pn_ssl_domain_t       *domain;
-  bool private_domain;  // domain used exclusive to this SSL
+  pn_transport_t   *transport;
+  pn_ssl_domain_t  *domain;
+  const char    *session_id;
   SSL *ssl;
-
-  bool allow_unsecured; // allow non-SSL connections
-  pn_ssl_verify_mode_t verify_mode;  // can be overridden
-  const char *trusted_CAs;    // for this connection
-  const char *session_id;
-
-  pn_transport_t *transport;
 
   BIO *bio_ssl;         // i/o from/to SSL socket layer
   BIO *bio_ssl_io;      // SSL "half" of network-facing BIO
@@ -372,7 +367,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   }
 
   // ditto: by default do not authenticate the peer (can be done by SASL).
-  if (pn_ssl_domain_set_default_peer_authentication( domain, PN_SSL_ANONYMOUS_PEER, NULL )) {
+  if (pn_ssl_domain_set_peer_authentication( domain, PN_SSL_ANONYMOUS_PEER, NULL )) {
     pn_ssl_domain_free(domain);
     return NULL;
   }
@@ -401,7 +396,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 
     if (domain->ctx) SSL_CTX_free(domain->ctx);
     if (domain->keyfile_pw) free(domain->keyfile_pw);
-    if (domain->default_trusted_CAs) free(domain->default_trusted_CAs);
+    if (domain->trusted_CAs) free(domain->trusted_CAs);
     free(domain);
   }
 }
@@ -484,9 +479,9 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
 }
 
 
-int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
-                                                  const pn_ssl_verify_mode_t mode,
-                                                  const char *trusted_CAs)
+int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
+                                          const pn_ssl_verify_mode_t mode,
+                                          const char *trusted_CAs)
 {
   if (!domain) return -1;
 
@@ -511,10 +506,10 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
                  "       Use pn_ssl_domain_set_credentials()\n");
       }
 
-      if (domain->default_trusted_CAs) free(domain->default_trusted_CAs);
-      domain->default_trusted_CAs = pn_strdup( trusted_CAs );
+      if (domain->trusted_CAs) free(domain->trusted_CAs);
+      domain->trusted_CAs = pn_strdup( trusted_CAs );
       STACK_OF(X509_NAME) *cert_names;
-      cert_names = SSL_load_client_CA_file( domain->default_trusted_CAs );
+      cert_names = SSL_load_client_CA_file( domain->trusted_CAs );
       if (cert_names != NULL)
         SSL_CTX_set_client_CA_list(domain->ctx, cert_names);
       else {
@@ -539,155 +534,43 @@ int pn_ssl_domain_set_default_peer_authentication(pn_ssl_domain_t *domain,
     return -1;
   }
 
-  domain->default_verify_mode = mode;
+  domain->verify_mode = mode;
   return 0;
 }
 
 
-pn_ssl_t *pn_ssl_new( pn_ssl_domain_t *domain, pn_transport_t *transport, const char *session_id)
+int pn_ssl_init( pn_ssl_t *ssl, pn_ssl_domain_t *domain, const char *session_id)
 {
-  if (!transport || !domain) return NULL;
-  if (transport->ssl) return transport->ssl;
-
-  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
-  if (!ssl) return NULL;
+  if (!ssl || !domain || ssl->domain) return -1;
 
   ssl->domain = domain;
   domain->ref_count++;
+  if (domain->allow_unsecured) {
+    ssl->process_input = process_input_unknown;
+    ssl->process_output = process_output_unknown;
+  } else {
+    ssl->process_input = process_input_ssl;
+    ssl->process_output = process_output_ssl;
+  }
+
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
-  if (init_ssl_socket(ssl)) {
-    pn_ssl_free(ssl);
-    return NULL;
-  }
-
-  ssl->transport = transport;
-  ssl->process_input = process_input_ssl;
-  ssl->process_output = process_output_ssl;
-  transport->ssl = ssl;
-
-  ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
-
-  return ssl;
+  return init_ssl_socket(ssl);
 }
 
 
-int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl)
+int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 {
-  if (ssl) {
-    if (ssl->domain && ssl->domain->mode != PN_SSL_MODE_SERVER) {
-      _log_error("Cannot permit unsecured clients - not a server.\n");
-      return -1;
-    }
-    ssl->allow_unsecured = true;
-    ssl->process_input = process_input_unknown;
-    ssl->process_output = process_output_unknown;
-    _log( ssl, "Allowing connections from unsecured clients.\n" );
-  }
-  return 0;
-}
-
-
-
-int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
-                                   const pn_ssl_verify_mode_t mode,
-                                   const char *trusted_CAs)
-{
-  if (!ssl) return -1;
-  if (!ssl->domain) return -1;
-  pn_ssl_domain_t *domain = ssl->domain;
-  if (!ssl->ssl) {
-    int rc = init_ssl_socket(ssl);
-    if (rc) return rc;
-  }
-
-  switch (mode) {
-  case PN_SSL_VERIFY_PEER:
-
-    if (!domain->has_ca_db) {
-      _log_error("Error: cannot verify peer without a trusted CA configured.\n"
-                 "       Use pn_ssl_domain_set_trusted_ca_db()\n");
-      return -1;
-    }
-
-    if (domain->mode == PN_SSL_MODE_SERVER) {
-      // openssl requires that server connections supply a list of trusted CAs which is
-      // sent to the client
-      if (!trusted_CAs) {
-        _log_error("Error: a list of trusted CAs must be provided.\n");
-        return -1;
-      }
-      if (!domain->has_certificate) {
-      _log_error("Error: Server cannot verify peer without configuring a certificate.\n"
-                 "       Use pn_ssl_domain_set_credentials()\n");
-      }
-
-      if (ssl->trusted_CAs) free( (void *)ssl->trusted_CAs);
-      ssl->trusted_CAs = pn_strdup( trusted_CAs );
-      STACK_OF(X509_NAME) *cert_names;
-      cert_names = SSL_load_client_CA_file( ssl->trusted_CAs );
-      if (cert_names != NULL)
-        SSL_set_client_CA_list(ssl->ssl, cert_names);
-      else {
-        _log_error("Unable to process file of trusted CAs: %s\n", trusted_CAs);
-        return -1;
-      }
-    }
-
-    SSL_set_verify( ssl->ssl, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-    // verify_callback /*?verify callback?*/ );
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_set_verify_depth(ssl->ssl, 1);
-#endif
-    _log( ssl, "Peer authentication mode set to VERIFY-PEER\n");
-    break;
-
-  case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
-    SSL_set_verify( ssl->ssl, SSL_VERIFY_NONE, NULL );
-    _log( ssl, "Peer authentication mode set to ANONYMOUS-PEER\n");
-    break;
-
-  default:
-    _log_error( "Invalid peer authentication mode given.\n" );
+  if (!domain) return -1;
+  if (domain->mode != PN_SSL_MODE_SERVER) {
+    _log_error("Cannot permit unsecured clients - not a server.\n");
     return -1;
   }
-
-  ssl->verify_mode = mode;
+  domain->allow_unsecured = true;
   return 0;
 }
 
-
-int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
-                                   pn_ssl_verify_mode_t *mode,
-                                   char *trusted_CAs, size_t *trusted_CAs_size)
-{
-  if (!ssl) return -1;
-
-  pn_ssl_verify_mode_t my_mode = ssl->verify_mode;
-  const char *my_trusted_CAs = ssl->trusted_CAs;
-
-  if (ssl->verify_mode == PN_SSL_VERIFY_NULL && ssl->domain) {
-    // using the parent domain's values:
-    my_mode = ssl->domain->default_verify_mode;
-    my_trusted_CAs = ssl->domain->default_trusted_CAs;
-  }
-
-  if (mode) *mode = my_mode;
-  if (trusted_CAs && trusted_CAs_size && *trusted_CAs_size) {
-    if (my_trusted_CAs) {
-      strncpy( trusted_CAs, my_trusted_CAs, *trusted_CAs_size );
-      trusted_CAs[*trusted_CAs_size - 1] = '\0';
-      *trusted_CAs_size = strlen(my_trusted_CAs) + 1;
-    } else {
-      *trusted_CAs = '\0';
-      *trusted_CAs_size = 0;
-    }
-  } else if (trusted_CAs_size) {
-    *trusted_CAs_size = (my_trusted_CAs) ? strlen(my_trusted_CAs) + 1 : 0;
-  }
-  return 0;
-}
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
 {
@@ -726,7 +609,6 @@ void pn_ssl_free( pn_ssl_t *ssl)
   _log( ssl, "SSL socket freed.\n" );
   release_ssl_socket( ssl );
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
-  if (ssl->trusted_CAs) free((void *)ssl->trusted_CAs);
   if (ssl->session_id) free((void *)ssl->session_id);
 
   free(ssl);
@@ -745,118 +627,18 @@ ssize_t pn_ssl_output(pn_ssl_t *ssl, char *buffer, size_t max_size)
 }
 
 
-
-// Deprecated (old non-domain based api)
-int pn_ssl_set_credentials( pn_ssl_t *ssl,
-                            const char *certificate_file,
-                            const char *private_key_file,
-                            const char *password)
-{
-  if (!ssl || !ssl->domain) return -1;
-  if (!ssl->private_domain) {
-    _log_error("Error: use pn_ssl_domain_set_credentials() instead\n");
-    return -1;
-  }
-  if (ssl->ssl) {
-    _log_error("Error: attempting to set credentials while SSL in use.\n");
-    return -1;
-  }
-
-  int rc = pn_ssl_domain_set_credentials( ssl->domain, certificate_file, private_key_file, password );
-  _log( ssl, "Configured local certificate file %s (%d)\n", certificate_file, rc );
-  return rc;
-}
-
-
-// Deprecated (old non-domain based api)
-int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
-                             const char *certificate_db)
-{
-  if (!ssl || !ssl->domain) return -1;
-  if (!ssl->private_domain) {
-    _log_error("Error: use pn_ssl_domain_trusted_ca_db() instead.\n");
-    return -1;
-  }
-  if (ssl->ssl) {
-    _log_error("Error: attempting to set trusted CA db after SSL connection initialized.\n");
-    return -1;
-  }
-
-  int rc = pn_ssl_domain_set_trusted_ca_db( ssl->domain, certificate_db );
-  if (!rc) _log( ssl, "loaded trusted CA database %s\n", certificate_db );
-  return rc;
-}
-
-
-// Deprecated (old non-domain based api)
-int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
-{
-  if (!ssl) return -1;
-  if (!ssl->private_domain) {
-    _log_error("Error: deprecated, use pn_ssl_domain_*() api instead.\n");
-    return -1;
-  }
-  if (ssl->domain && ssl->domain->mode == mode) return 0;      // already set
-
-  // if changing modes, must teardown any exising configuration
-  if (ssl->ssl) pn_ssl_free( ssl );
-  if (ssl->domain) pn_ssl_domain_free( ssl->domain );
-
-  switch (mode) {
-  case PN_SSL_MODE_CLIENT:
-    _log( ssl, "Setting up Client SSL object.\n" );
-    ssl->domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
-    if (!ssl->domain) {
-      _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-      return -1;
-    }
-    break;
-
-  case PN_SSL_MODE_SERVER:
-    _log( ssl, "Setting up Server SSL object.\n" );
-    ssl->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
-    if (!ssl->domain) {
-      _log_error("Unable to initialize SSL context: %s\n", strerror(errno));
-      return -1;
-    }
-    break;
-
-  default:
-    _log_error("Invalid valid for pn_ssl_mode_t: %d\n", mode);
-    return -1;
-  }
-  return 0;
-}
-
-// Deprecated (old non-domain based api)
 pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
   if (!transport) return NULL;
   if (transport->ssl) return transport->ssl;
 
-  if (!ssl_initialized) {
-    ssl_initialized = 1;
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_all_algorithms();
-  }
-
   pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
   if (!ssl) return NULL;
-
-  ssl->private_domain = true;
   ssl->transport = transport;
-  ssl->process_input = process_input_ssl;
-  ssl->process_output = process_output_ssl;
   transport->ssl = ssl;
 
-  ssl->trace = PN_TRACE_OFF;
+  ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
 
-  // default mode is client
-  if (pn_ssl_init(ssl, PN_SSL_MODE_CLIENT)) {
-    free(ssl);
-    return NULL;
-  }
   return ssl;
 }
 
@@ -1145,6 +927,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
 static int init_ssl_socket( pn_ssl_t *ssl )
 {
   if (ssl->ssl) return 0;
+  if (!ssl->domain) return -1;
 
   ssl->ssl = SSL_new(ssl->domain->ctx);
   if (!ssl->ssl) {
