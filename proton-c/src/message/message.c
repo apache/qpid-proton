@@ -536,6 +536,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
       break;
+    case FOOTER:
+      break;
     default:
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
