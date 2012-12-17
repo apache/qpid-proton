@@ -31,7 +31,6 @@ import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import org.apache.qpid.proton.engine.SslEngineFacade;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
@@ -55,7 +54,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     private final TransportInput _underlyingInput;
     private final TransportOutput _underlyingOutput;
 
-    private SslEngineFacade _sslEngine;
+    private ProtonSslEngine _sslEngine;
 
     /** Used by {@link #output(byte[], int, int)}. Acts as a buffer for the output from underlyingOutput */
     private ByteHolder _clearOutputHolder;
@@ -75,7 +74,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _protocolName;
 
-    SimpleSslTransportWrapper(SslEngineFacade sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
+    SimpleSslTransportWrapper(ProtonSslEngine sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
     {
         _underlyingInput = underlyingInput;
         _underlyingOutput = underlyingOutput;

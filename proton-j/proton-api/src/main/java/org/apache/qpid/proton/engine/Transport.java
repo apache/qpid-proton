@@ -62,6 +62,7 @@ public interface Transport extends Endpoint
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.
      *
+     * @param sslDomain the SSL settings to use
      * @param sslPeerDetails may be null, in which case SSL session resume will not be attempted
      * @return an {@link Ssl} object representing the SSL session.
      */

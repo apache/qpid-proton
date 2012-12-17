@@ -47,7 +47,6 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.qpid.proton.engine.SslDomain;
-import org.apache.qpid.proton.engine.SslEngineFacade;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
@@ -86,12 +85,12 @@ public class SslEngineFacadeFactory
 
 
     /**
-     * Returns a {@link SslEngineFacade}. May cache the domain's settings so callers should invoke
+     * Returns a {@link ProtonSslEngine}. May cache the domain's settings so callers should invoke
      * {@link #resetCache()} if the domain changes.
      *
      * @param peerDetails may be used to return an engine that supports SSL resume.
      */
-    public SslEngineFacade createProtonSslEngine(SslDomain domain, SslPeerDetails peerDetails)
+    public ProtonSslEngine createProtonSslEngine(SslDomain domain, SslPeerDetails peerDetails)
     {
         SSLEngine engine = createAndInitialiseSslEngine(domain, peerDetails);
         if(_logger.isLoggable(Level.FINE))

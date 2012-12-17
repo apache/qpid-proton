@@ -38,6 +38,7 @@ import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.amqp.transport.Attach;
@@ -240,6 +241,13 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
+     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
+     * public Proton API.</p>
+     */
     @Override
     public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
     {

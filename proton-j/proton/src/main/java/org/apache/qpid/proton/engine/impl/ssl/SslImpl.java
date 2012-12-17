@@ -33,12 +33,19 @@ public class SslImpl implements Ssl
     private SslTransportWrapper _unsecureClientAwareTransportWrapper;
 
     private final SslDomain _domain;
+    private final ProtonSslEngineProvider _protonSslEngineProvider;
 
     private final SslPeerDetails _peerDetails;
 
+    /**
+     * @param sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
+     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
+     * public Proton API.</p>
+     */
     public SslImpl(SslDomain domain, SslPeerDetails peerDetails)
     {
         _domain = domain;
+        _protonSslEngineProvider = (ProtonSslEngineProvider)domain;
         _peerDetails = peerDetails;
     }
 
@@ -132,7 +139,11 @@ public class SslImpl implements Ssl
         {
             if (_transportWrapper == null)
             {
-                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(_domain.createSslEngine(_peerDetails), _inputProcessor, _outputProcessor);
+                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(
+                        _protonSslEngineProvider.createSslEngine(_peerDetails),
+                        _inputProcessor,
+                        _outputProcessor);
+
                 if (_domain.allowUnsecuredClient())
                 {
                     TransportWrapper plainTransportWrapper = new PlainTransportWrapper(_outputProcessor, _inputProcessor);

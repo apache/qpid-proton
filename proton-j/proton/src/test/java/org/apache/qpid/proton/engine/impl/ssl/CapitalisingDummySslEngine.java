@@ -30,7 +30,6 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 
-import org.apache.qpid.proton.engine.SslEngineFacade;
 
 
 /**
@@ -39,7 +38,7 @@ import org.apache.qpid.proton.engine.SslEngineFacade;
  *
  * Using a true SSLEngine for this would be impractical.
  */
-public class CapitalisingDummySslEngine implements SslEngineFacade
+public class CapitalisingDummySslEngine implements ProtonSslEngine
 {
     static final int SHORT_ENCODED_CHUNK_SIZE = 2;
     private static final int MAX_ENCODED_CHUNK_SIZE = 5;

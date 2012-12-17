@@ -19,10 +19,9 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.SslDomain;
-import org.apache.qpid.proton.engine.SslEngineFacade;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
-public class SslDomainImpl implements SslDomain
+public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
 {
     private Mode _mode;
     private VerifyMode _verifyMode = VerifyMode.ANONYMOUS_PEER;
@@ -114,7 +113,7 @@ public class SslDomainImpl implements SslDomain
     }
 
     @Override
-    public SslEngineFacade createSslEngine(SslPeerDetails peerDetails)
+    public ProtonSslEngine createSslEngine(SslPeerDetails peerDetails)
     {
         return _sslEngineFacadeFactory.createProtonSslEngine(this, peerDetails);
     }

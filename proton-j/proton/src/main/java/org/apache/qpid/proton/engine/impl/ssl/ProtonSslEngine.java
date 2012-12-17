@@ -17,7 +17,7 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.engine.impl.ssl;
 
 import java.nio.ByteBuffer;
 
@@ -30,7 +30,7 @@ import javax.net.ssl.SSLException;
 /**
  * Thin wrapper around an {@link SSLEngine}.
  */
-public interface SslEngineFacade
+public interface ProtonSslEngine
 {
     /**
      * @see SSLEngine#wrap(ByteBuffer, ByteBuffer)

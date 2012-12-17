@@ -132,11 +132,4 @@ public interface SslDomain
     void allowUnsecuredClient(boolean allowUnsecured);
 
     boolean allowUnsecuredClient();
-
-    /**
-     * Returns an SSL engine. Only intended to be used inside {@link Transport#ssl(SslDomain, SslPeerDetailsImpl)}.
-     *
-     * @param sslPeerDetails the details of the remote peer. If non-null, may be used to assist SSL session resumption.
-     */
-    SslEngineFacade createSslEngine(SslPeerDetails sslPeerDetails);
 }
