@@ -70,6 +70,18 @@ class SslTest(common.Test):
         return os.path.join(os.path.dirname(__file__),
                             "ssl_db/%s" % file)
 
+    def _do_handshake(self, client, server):
+        """ Attempt to connect client to server. Will throw a TransportException if the SSL
+        handshake fails.
+        """
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+        assert client.ssl.protocol_name() is not None
+        client.connection.close()
+        server.connection.close()
+        self._pump(client, server)
+
     def test_defaults(self):
         """ By default, both the server and the client support anonymous
         ciphers - they should connect without need for a certificate.
@@ -465,3 +477,161 @@ class SslTest(common.Test):
             s[0].connection.close()
             self._pump( s[1], s[0] )
 
+    def test_server_hostname_authentication(self):
+        """ Test authentication of the names held in the server's certificate
+        against various configured hostnames.
+        """
+
+        # Check the CommonName matches (case insensitive).
+        # Assumes certificate contains "CN=A1.Good.Server.domain.com"
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "a1.good.server.domain.com"
+        assert client.ssl.peer_hostname == "a1.good.server.domain.com"
+        self._do_handshake( client, server )
+        del server
+        del client
+        self.teardown()
+
+        # Should fail on CN name mismatch:
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "A1.Good.Server.domain.comX"
+        try:
+            self._do_handshake( client, server )
+            assert False, "Expected connection to fail due to hostname mismatch"
+        except TransportException:
+            pass
+        del server
+        del client
+        self.teardown()
+
+        # Wildcarded Certificate
+        # Assumes:
+        #   1) certificate contains Server Alternate Names:
+        #        "alternate.name.one.com" and "another.name.com"
+        #   2) certificate has wildcarded CommonName "*.prefix*.domain.com"
+        #
+
+        # Pass: match an alternate
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                           self._testpath("server-wc-private-key.pem"),
+                                           "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "alternate.Name.one.com"
+        self._do_handshake( client, server )
+        del client
+        del server
+        self.teardown()
+
+        # Pass: match an alternate
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "ANOTHER.NAME.COM"
+        self._do_handshake(client, server)
+        del client
+        del server
+        self.teardown()
+
+        # Pass: match the pattern
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "SOME.PREfix.domain.COM"
+        self._do_handshake( client, server )
+        del client
+        del server
+        self.teardown()
+
+        # Pass: match the pattern
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "FOO.PREfixZZZ.domain.com"
+        self._do_handshake( client, server )
+        del client
+        del server
+        self.teardown()
+
+        # Fail: must match prefix on wildcard
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "FOO.PREfi.domain.com"
+        try:
+            self._do_handshake( client, server )
+            assert False, "Expected connection to fail due to hostname mismatch"
+        except TransportException:
+            pass
+        del server
+        del client
+        self.teardown()
+
+        # Fail: leading wildcards are not optional
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.ssl.peer_hostname = "PREfix.domain.COM"
+        try:
+            self._do_handshake( client, server )
+            assert False, "Expected connection to fail due to hostname mismatch"
+        except TransportException:
+            pass
+        self.teardown()

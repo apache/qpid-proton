@@ -23,11 +23,12 @@ package org.apache.qpid.proton.engine.impl.ssl;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.security.Key;
 import java.security.KeyManagementException;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -228,7 +229,7 @@ public class SslEngineFacadeFactory
                 {
                     _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslDomain.getTrustedCaDb());
                 }
-                Certificate trustedCaCert = (Certificate) readPemObject(sslDomain.getTrustedCaDb());
+                Certificate trustedCaCert = (Certificate) readPemObject(sslDomain.getTrustedCaDb(), null, Certificate.class);
                 keystore.setCertificateEntry(caCertAlias, trustedCaCert);
             }
 
@@ -236,10 +237,25 @@ public class SslEngineFacadeFactory
                     && sslDomain.getPrivateKeyFile() != null)
             {
                 String clientPrivateKeyAlias = "clientPrivateKey";
-                Certificate clientCertificate = (Certificate) readPemObject(sslDomain.getCertificateFile());
-                Key clientPrivateKey = (Key) readPemObject(
+                Certificate clientCertificate = (Certificate) readPemObject(sslDomain.getCertificateFile(), null, Certificate.class);
+                Object keyOrKeyPair = readPemObject(
                         sslDomain.getPrivateKeyFile(),
-                        sslDomain.getPrivateKeyPassword());
+                        sslDomain.getPrivateKeyPassword(), PrivateKey.class, KeyPair.class);
+
+                final PrivateKey clientPrivateKey;
+                if (keyOrKeyPair instanceof PrivateKey)
+                {
+                    clientPrivateKey = (PrivateKey)keyOrKeyPair;
+                }
+                else if (keyOrKeyPair instanceof KeyPair)
+                {
+                    clientPrivateKey = ((KeyPair)keyOrKeyPair).getPrivate();
+                }
+                else
+                {
+                    // Should not happen - readPemObject will have already verified key type
+                    throw new IllegalStateException("Unexpected key type " + keyOrKeyPair);
+                }
 
                 keystore.setKeyEntry(clientPrivateKeyAlias, clientPrivateKey,
                         dummyPassword, new Certificate[] { clientCertificate });
@@ -317,31 +333,40 @@ public class SslEngineFacadeFactory
             .append(" ]").toString();
     }
 
-    private Object readPemObject(String pemFile, final String privateKeyPassword)
+    private Object readPemObject(String pemFile, String keyPassword, @SuppressWarnings("rawtypes") Class... expectedInterfaces)
     {
-        PasswordFinder passwordFinder = new PasswordFinder()
+        final PasswordFinder passwordFinder;
+        if (keyPassword != null)
         {
-            @Override
-            public char[] getPassword()
-            {
-                return privateKeyPassword.toCharArray();
-            }
-        };
+            passwordFinder = getPasswordFinderFor(keyPassword);
+        }
+        else
+        {
+            passwordFinder = null;
+        }
 
         Reader reader = null;
         try
         {
             reader = new FileReader(pemFile);
-            return new PEMReader(reader, privateKeyPassword == null ? null : passwordFinder).readObject();
+            PEMReader pemReader = new PEMReader(reader, passwordFinder);
+            Object pemObject = pemReader.readObject();
+            if (!checkPemObjectIsOfAllowedTypes(pemObject, expectedInterfaces))
+            {
+                throw new IllegalStateException("File " + pemFile + " does not provide a object of the required type."
+                        + " Read an object of class " + pemObject.getClass().getName()
+                        + " whilst expecting an implementation of one of the following  : " + Arrays.asList(expectedInterfaces));
+            }
+            return pemObject;
         }
         catch(PEMException e)
         {
             _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Unable to read PEM object from file " + pemFile, e);
         }
         catch (IOException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Unable to read PEM object from file " + pemFile, e);
         }
         finally
         {
@@ -359,9 +384,35 @@ public class SslEngineFacadeFactory
         }
     }
 
-    private Object readPemObject(String pemFile)
+    @SuppressWarnings("rawtypes")
+    private boolean checkPemObjectIsOfAllowedTypes(Object pemObject,  Class... expectedInterfaces)
     {
-        return readPemObject(pemFile, null);
+        if (expectedInterfaces.length == 0)
+        {
+            throw new IllegalArgumentException("Must be at least one expectedKeyTypes");
+        }
+
+        for (Class keyInterface : expectedInterfaces)
+        {
+            if (keyInterface.isInstance(pemObject))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private PasswordFinder getPasswordFinderFor(final String keyPassword)
+    {
+        PasswordFinder passwordFinder = new PasswordFinder()
+        {
+            @Override
+            public char[] getPassword()
+            {
+                return keyPassword.toCharArray();
+            }
+        };
+        return passwordFinder;
     }
 
     private final class AlwaysTrustingTrustManager implements X509TrustManager

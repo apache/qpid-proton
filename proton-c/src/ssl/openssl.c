@@ -29,6 +29,7 @@
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -42,6 +43,7 @@
  */
 
 static int ssl_initialized;
+static int ssl_ex_data_index;
 
 typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
 typedef struct pn_ssl_session_t pn_ssl_session_t;
@@ -72,6 +74,7 @@ struct pn_ssl_t {
   pn_transport_t   *transport;
   pn_ssl_domain_t  *domain;
   const char    *session_id;
+  const char *peer_hostname;
   SSL *ssl;
 
   BIO *bio_ssl;         // i/o from/to SSL socket layer
@@ -191,55 +194,144 @@ static int ssl_failed(pn_ssl_t *ssl)
   return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
 }
 
-// @todo replace with a "reasonable" default (?), allow application to register its own
-// callback.
-#if 0
+/* match the DNS name pattern from the peer certificate against our configured peer
+   hostname */
+static bool match_dns_pattern( const char *hostname,
+                               const char *pattern, int plen )
+{
+
+  if (memchr( pattern, '*', plen ) == NULL)
+    return (plen == strlen(hostname) &&
+            strncasecmp( pattern, hostname, plen ) == 0);
+
+  /* dns wildcarded pattern - RFC2818 */
+  char plabel[64];   /* max label length < 63 - RFC1034 */
+  char slabel[64];
+  int slen = strlen(hostname);
+
+  while (plen > 0 && slen > 0) {
+    const char *cptr;
+    int len;
+
+    cptr = memchr( pattern, '.', plen );
+    len = (cptr) ? cptr - pattern : plen;
+    if (len > sizeof(plabel) - 1) return false;
+    memcpy( plabel, pattern, len );
+    plabel[len] = 0;
+    pattern = cptr + 1;
+    plen -= len;
+
+    cptr = memchr( hostname, '.', slen );
+    len = (cptr) ? cptr - hostname : slen;
+    if (len > sizeof(slabel) - 1) return false;
+    memcpy( slabel, hostname, len );
+    slabel[len] = 0;
+    hostname = cptr + 1;
+    slen -= len;
+
+    char *star = strchr( plabel, '*' );
+    if (!star) {
+      if (strcasecmp( plabel, slabel )) return false;
+    } else {
+      *star = '\0';
+      char *prefix = plabel;
+      int prefix_len = strlen(prefix);
+      char *suffix = star + 1;
+      int suffix_len = strlen(suffix);
+      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && strncasecmp( suffix,
+                                     slabel + (strlen(slabel) - suffix_len),
+                                     suffix_len )) return false;
+    }
+  }
+
+  return plen == slen;
+}
+
+// Certificate chain verification callback: return 1 if verified,
+// 0 if remote cannot be verified (fail handshake).
+//
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
-    fprintf(stderr, "VERIFY_CALLBACK: pre-verify-ok=%d\n", preverify_ok);
+  if (!preverify_ok || X509_STORE_CTX_get_error_depth(ctx) != 0)
+    // already failed, or not at peer cert in chain
+    return preverify_ok;
 
-           char    buf[256];
-           X509   *err_cert;
-           int     err, depth;
+  X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
+  SSL *ssn = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+  if (!ssn) {
+    _log_error("Error: unexpected error - SSL session info not available for peer verify!\n");
+    return 0;  // fail connection
+  }
 
-           err_cert = X509_STORE_CTX_get_current_cert(ctx);
-           err = X509_STORE_CTX_get_error(ctx);
-           depth = X509_STORE_CTX_get_error_depth(ctx);
+  pn_ssl_t *ssl = (pn_ssl_t *)SSL_get_ex_data(ssn, ssl_ex_data_index);
+  if (!ssl) {
+    _log_error("Error: unexpected error - SSL context info not available for peer verify!\n");
+    return 0;  // fail connection
+  }
 
-           /*
-            * Retrieve the pointer to the SSL of the connection currently treated
-            * and the application specific data stored into the SSL object.
-            */
+  if (ssl->domain->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
+  if (!ssl->peer_hostname) {
+    _log_error("Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!\n");
+    return 0;  // fail connection
+  }
 
-           X509_NAME_oneline(X509_get_subject_name(err_cert), buf, 256);
+  _log( ssl, "Checking identifying name in peer cert against '%s'\n", ssl->peer_hostname);
 
-           /*
-            * Catch a too long certificate chain. The depth limit set using
-            * SSL_CTX_set_verify_depth() is by purpose set to "limit+1" so
-            * that whenever the "depth>verify_depth" condition is met, we
-            * have violated the limit and want to log this error condition.
-            * We must do it here, because the CHAIN_TOO_LONG error would not
-            * be found explicitly; only errors introduced by cutting off the
-            * additional certificates would be logged.
-            */
-           if (!preverify_ok) {
-               printf("verify error:num=%d:%s:depth=%d:%s\n", err,
-                        X509_verify_cert_error_string(err), depth, buf);
-           }
+  bool matched = false;
 
-           /*
-            * At this point, err contains the last verification error. We can use
-            * it for something special
-            */
-           if (!preverify_ok && (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT))
-           {
-             X509_NAME_oneline(X509_get_issuer_name(ctx->current_cert), buf, 256);
-             printf("issuer= %s\n", buf);
-           }
+  /* first check any SubjectAltName entries, as per RFC2818 */
+  GENERAL_NAMES *sans = (GENERAL_NAMES *) X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+  if (sans) {
+    int name_ct = sk_GENERAL_NAME_num( sans );
+    int i;
+    for (i = 0; !matched && i < name_ct; ++i) {
+      GENERAL_NAME *name = sk_GENERAL_NAME_value( sans, i );
+      if (name->type == GEN_DNS) {
+        ASN1_STRING *asn1 = name->d.dNSName;
+        if (asn1 && asn1->data && asn1->length) {
+          unsigned char *str;
+          int len = ASN1_STRING_to_UTF8( &str, asn1 );
+          if (len >= 0) {
+            _log( ssl, "SubjectAltName (dns) from peer cert = '%.*s'\n", len, str );
+            matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
+            OPENSSL_free( str );
+          }
+        }
+      }
+    }
+    GENERAL_NAMES_free( sans );
+  }
 
-    return 1;
-}
+  /* if no general names match, try the CommonName from the subject */
+  X509_NAME *name = X509_get_subject_name(cert);
+  int i = -1;
+  while (!matched && (i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
+    X509_NAME_ENTRY *ne = X509_NAME_get_entry(name, i);
+    ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
+    if (name_asn1) {
+      unsigned char *str;
+      int len = ASN1_STRING_to_UTF8( &str, name_asn1);
+      if (len >= 0) {
+        _log( ssl, "commonName from peer cert = '%.*s'\n", len, str );
+        matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
+        OPENSSL_free(str);
+      }
+    }
+  }
+
+  if (!matched) {
+    _log( ssl, "Error: no name matching %s found in peer cert - rejecting handshake.\n",
+          ssl->peer_hostname);
+    preverify_ok = 0;
+#ifdef X509_V_ERR_APPLICATION_VERIFICATION
+    X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
 #endif
+  } else {
+    _log( ssl, "Name from peer cert matched - peer is valid.\n" );
+  }
+  return preverify_ok;
+}
 
 
 // this code was generated using the command:
@@ -326,6 +418,8 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
+    ssl_ex_data_index = SSL_get_ex_new_index( 0, "org.apache.qpid.proton.ssl",
+                                              NULL, NULL, NULL);
   }
 
   pn_ssl_domain_t *domain = calloc(1, sizeof(pn_ssl_domain_t));
@@ -487,6 +581,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
+  case PN_SSL_VERIFY_PEER_NAME:
 
     if (!domain->has_ca_db) {
       _log_error("Error: cannot verify peer without a trusted CA configured.\n"
@@ -518,8 +613,8 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       }
     }
 
-    SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-    // verify_callback /*?verify callback?*/ );
+    SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                        verify_callback);
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(domain->ctx, 1);
 #endif
@@ -610,6 +705,7 @@ void pn_ssl_free( pn_ssl_t *ssl)
   release_ssl_socket( ssl );
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
   if (ssl->session_id) free((void *)ssl->session_id);
+  if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
 
   free(ssl);
 }
@@ -935,6 +1031,15 @@ static int init_ssl_socket( pn_ssl_t *ssl )
     return -1;
   }
 
+  // store backpointer to pn_ssl_t in SSL object:
+  SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, ssl);
+
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+  if (ssl->peer_hostname && ssl->domain->mode == PN_SSL_MODE_CLIENT) {
+    SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
+  }
+#endif
+
   // restore session, if available
   if (ssl->session_id) {
     pn_ssl_session_t *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
@@ -1096,6 +1201,7 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
   ssl->trace = trace;
 }
 
+
 pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
 {
   if (!ssl || !ssl->ssl) return PN_SSL_RESUME_UNKNOWN;
@@ -1107,3 +1213,38 @@ pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
   return PN_SSL_RESUME_UNKNOWN;
 }
 
+
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
+{
+  if (!ssl) return -1;
+
+  if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
+  ssl->peer_hostname = NULL;
+  if (hostname) {
+    ssl->peer_hostname = pn_strdup(hostname);
+    if (!ssl->peer_hostname) return -2;
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+    if (ssl->ssl && ssl->domain && ssl->domain->mode == PN_SSL_MODE_CLIENT) {
+      SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
+    }
+#endif
+  }
+  return 0;
+}
+
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+{
+  if (!ssl) return -1;
+  if (!ssl->peer_hostname) {
+    *bufsize = 0;
+    if (hostname) *hostname = '\0';
+    return 0;
+  }
+  int len = strlen(ssl->peer_hostname);
+  if (hostname) {
+    if (len >= *bufsize) return -1;
+    strcpy( hostname, ssl->peer_hostname );
+  }
+  *bufsize = len;
+  return 0;
+}

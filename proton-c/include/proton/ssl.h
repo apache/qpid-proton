@@ -152,10 +152,14 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
 
 /** Determines the level of peer validation.
  *
- *  VERIFY_PEER will only connect to those peers that provide a valid identifying
- *  certificate signed by a trusted CA and are using an authenticated cipher.
  *  ANONYMOUS_PEER does not require a valid certificate, and permits use of ciphers that
  *  do not provide authentication.
+ *
+ *  VERIFY_PEER will only connect to those peers that provide a valid identifying
+ *  certificate signed by a trusted CA and are using an authenticated cipher.
+ *
+ *  VERIFY_PEER_NAME is like VERIFY_PEER, but also requires the peer's identity as
+ *  contained in the certificate to be valid (see ::pn_ssl_set_peer_hostname).
  *
  *  ANONYMOUS_PEER is configured by default.
  */
@@ -163,6 +167,7 @@ typedef enum {
   PN_SSL_VERIFY_NULL=0,   /**< internal use only */
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
   PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
+  PN_SSL_VERIFY_PEER_NAME,/**< require valid certificate and matching name */
 } pn_ssl_verify_mode_t;
 
 /** Configure the level of verification used on the peer certificate.
@@ -269,6 +274,39 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
  */
 pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
+/** Set the expected identity of the remote peer.
+ *
+ * The hostname is used for two purposes: 1) when set on an SSL client, it is sent to the
+ * server during the handshake (if Server Name Indication is supported), and 2) it is used
+ * to check against the identifying name provided in the peer's certificate. If the
+ * supplied name does not exactly match a SubjectAltName (type DNS name), or the
+ * CommonName entry in the peer's certificate, the peer is considered unauthenticated
+ * (potential imposter), and the SSL connection is aborted.
+ *
+ * @note Verification of the hostname is only done if PN_SSL_VERIFY_PEER_NAME is enabled.
+ * See ::pn_ssl_set_peer_authentication.
+ *
+ * @param[in] ssl the ssl session.
+ * @param[in] hostname the expected identity of the remote. Must conform to the syntax as
+ * given in RFC1034, Section 3.5.
+ * @return 0 on success.
+ */
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
+
+
+/** Access the configured peer identity.
+ *
+ * Return the expected identity of the remote peer, as set by ::pn_ssl_set_peer_hostname.
+ *
+ * @param[in] ssl the ssl session.
+ * @param[out] hostname buffer to hold the null-terminated name string. If null, no string
+ * is written.
+ * @param[in,out] bufsize on input set to the number of octets in hostname. On output, set
+ * to the number of octets needed to hold the value of hostname plus a null byte.  Zero if
+ * no hostname set.
+ * @return 0 on success.
+ */
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
 
 #ifdef __cplusplus
 }

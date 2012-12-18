@@ -402,6 +402,12 @@ void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
 pn_condition_t *pn_connection_condition(pn_connection_t *connection);
 pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
 
+pn_condition_t *pn_session_condition(pn_session_t *session);
+pn_condition_t *pn_session_remote_condition(pn_session_t *session);
+
+pn_condition_t *pn_link_condition(pn_link_t *link);
+pn_condition_t *pn_link_remote_condition(pn_link_t *link);
+
 bool pn_condition_is_set(pn_condition_t *condition);
 void pn_condition_clear(pn_condition_t *condition);
 
@@ -414,6 +420,8 @@ int pn_condition_set_description(pn_condition_t *condition, const char *descript
 pn_data_t *pn_condition_info(pn_condition_t *condition);
 
 bool pn_condition_is_redirect(pn_condition_t *condition);
+const char *pn_condition_redirect_host(pn_condition_t *condition);
+int pn_condition_redirect_port(pn_condition_t *condition);
 
 #ifdef __cplusplus
 }

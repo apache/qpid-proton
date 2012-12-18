@@ -132,11 +132,20 @@ void pn_fatal(char *fmt, ...)
   va_end(ap);
 }
 
+static bool pn_i_eq_nocase(const char *a, const char *b)
+{
+    while (*b) {
+        if (tolower(*a++) != tolower(*b++))
+            return false;
+    }
+    return !(*a);
+}
+
 bool pn_env_bool(const char *name)
 {
   char *v = getenv(name);
-  return v && (!strcasecmp(v, "true") || !strcasecmp(v, "1") ||
-               !strcasecmp(v, "yes"));
+  return v && (pn_i_eq_nocase(v, "true") || pn_i_eq_nocase(v, "1") ||
+               pn_i_eq_nocase(v, "yes") || pn_i_eq_nocase(v, "on"));
 }
 
 char *pn_strdup(const char *src)

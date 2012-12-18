@@ -358,6 +358,22 @@ void pn_connector_free(pn_connector_t *connector);
  */
 void pn_connector_activate(pn_connector_t *connector, pn_activate_criteria_t criteria);
 
+/** Return the activation status of the connector for a criteria
+ *
+ * Return the activation status (i.e. readable, writable) for the connector.  This function
+ * has the side-effect of canceling the activation of the criteria.
+ *
+ * Please note that this function must not be used for normal AMQP connectors.  It is only
+ * used for connectors created so the driver can track non-AMQP file descriptors.  Such
+ * connectors are never passed into pn_connector_process.
+ *
+ * @param[in] connector The connector object to activate
+ * @param[in] criteria  The criteria to test.  "Is this the reason the connector appeared
+ *                      in the work list?"
+ * @return true iff the criteria is activated on the connector.
+ */
+bool pn_connector_activated(pn_connector_t *connector, pn_activate_criteria_t criteria);
+
 
 #ifdef __cplusplus
 }

@@ -837,6 +837,7 @@ class SSLDomain(object):
   MODE_CLIENT = SslDomain.Mode.CLIENT
   VERIFY_PEER = SslDomain.VerifyMode.VERIFY_PEER
   ANONYMOUS_PEER = SslDomain.VerifyMode.ANONYMOUS_PEER
+  VERIFY_PEER_NAME = None  # TBD
 
   def __init__(self, mode):
     self._domain = SslDomainImpl()
@@ -881,7 +882,14 @@ class SSL(object):
   def protocol_name(self):
     return self._ssl.getProtocolName()
 
+  def _set_peer_hostname(self, hostname):
+    raise Skipped()
+  def _get_peer_hostname(self):
+    raise Skipped()
+  peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
+
 __all__ = [
+           "ACCEPTED",
            "LANGUAGE",
            "MANUAL",
            "PENDING",
@@ -907,8 +915,8 @@ __all__ = [
            "SSLException",
            "SSLSessionDetails",
            "SSLUnavailable",
+           "symbol",
            "Terminus",
            "Timeout",
            "Transport",
-           "TransportException",
-           "symbol"]
+           "TransportException"]

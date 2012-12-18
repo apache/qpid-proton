@@ -17,19 +17,14 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
-import org.apache.qpid.proton.hawtdispatch.impl.DroppingWritableBuffer;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.hawtdispatch.impl.WatchBase;
-import org.apache.qpid.proton.codec.CompositeWritableBuffer;
-import org.apache.qpid.proton.codec.WritableBuffer;
-import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -37,24 +32,23 @@ import java.nio.ByteBuffer;
 public abstract class MessageDelivery extends WatchBase {
 
     final int initialSize;
-    private MessageImpl message;
+    private Message message;
     private Buffer encoded;
     public DeliveryImpl delivery;
     private int sizeHint = 1024*4;
 
-    static Buffer encode(MessageImpl message, int sizeHint) {
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[sizeHint]);
-        DroppingWritableBuffer overflow = new DroppingWritableBuffer();
-        int c = message.encode(new CompositeWritableBuffer(new WritableBuffer.ByteBufferWrapper(buffer), overflow));
-        if( overflow.position() > 0 ) {
-            buffer = ByteBuffer.wrap(new byte[sizeHint+overflow.position()]);
-            c = message.encode(new WritableBuffer.ByteBufferWrapper(buffer));
+    static Buffer encode(Message message, int sizeHint) {
+        byte[] buffer = new byte[sizeHint];
+        int size = ((MessageImpl)message).encode2(buffer, 0, sizeHint);
+        if( size > sizeHint ) {
+            buffer = new byte[size];
+            size = message.encode(buffer, 0, size);
         }
-        return new Buffer(buffer.array(), 0, c);
+        return new Buffer(buffer, 0, size);
     }
 
-    static MessageImpl decode(Buffer buffer) {
-        MessageImpl msg = new MessageImpl();
+    static Message decode(Buffer buffer) {
+        Message msg = new MessageImpl();
         int offset = buffer.offset;
         int len = buffer.length;
         while( len > 0 ) {
@@ -66,7 +60,7 @@ public abstract class MessageDelivery extends WatchBase {
         return msg;
     }
 
-    public MessageDelivery(MessageImpl message) {
+    public MessageDelivery(Message message) {
         this(message, encode(message, 1024*4));
     }
 
@@ -74,7 +68,7 @@ public abstract class MessageDelivery extends WatchBase {
         this(null, encoded);
     }
 
-    public MessageDelivery(MessageImpl message, Buffer encoded) {
+    public MessageDelivery(Message message, Buffer encoded) {
         this.message = message;
         this.encoded = encoded;
         sizeHint = this.encoded.length;

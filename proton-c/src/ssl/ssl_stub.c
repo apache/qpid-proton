@@ -109,3 +109,12 @@ pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *s )
   return PN_SSL_RESUME_UNKNOWN;
 }
 
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
+{
+  return -1;
+}
+
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+{
+  return -1;
+}

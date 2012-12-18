@@ -200,7 +200,7 @@ class ConnectionTest(Test):
     assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
     rcond = self.c2.remote_condition
-    assert rcond == cond
+    assert rcond == cond, (rcond, cond)
 
 class SessionTest(Test):
 
@@ -290,6 +290,28 @@ class SessionTest(Test):
     self.ssn.close()
     self.pump()
 
+  def test_condition(self):
+    self.ssn.open()
+    self.pump()
+    ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
+    assert ssn != None
+    ssn.open()
+    self.pump()
+
+    assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    cond = Condition("blah:bleh", "this is a description", {symbol("foo"): "bar"})
+    self.ssn.condition = cond
+    self.ssn.close()
+
+    self.pump()
+
+    assert self.ssn.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+    rcond = ssn.remote_condition
+    assert rcond == cond, (rcond, cond)
 
 class LinkTest(Test):
 
@@ -462,6 +484,26 @@ class LinkTest(Test):
                              TerminusConfig(address="source",
                                             timeout=7,
                                             capabilities=[]))
+
+  def test_condition(self):
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+
+    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    cond = Condition("blah:bleh", "this is a description", {symbol("foo"): "bar"})
+    self.snd.condition = cond
+    self.snd.close()
+
+    self.pump()
+
+    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE
+    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+    rcond = self.rcv.remote_condition
+    assert rcond == cond, (rcond, cond)
 
 class TerminusConfig:
 
