@@ -59,6 +59,17 @@ public interface Transport extends Endpoint
 
     Sasl sasl();
 
-    Ssl ssl();
+    /**
+     * Wrap this transport's output and input to apply SSL encryption and decryption respectively.
+     *
+     * @param sslDomain the SSL settings to use
+     * @param sslPeerDetails may be null, in which case SSL session resume will not be attempted
+     * @return an {@link Ssl} object representing the SSL session.
+     */
+    Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails);
 
+    /**
+     * As per {@link #ssl(SslDomain, SslPeerDetails)} but no attempt is made to resume a previous SSL session.
+     */
+    Ssl ssl(SslDomain sslDomain);
 }

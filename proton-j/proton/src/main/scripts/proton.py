@@ -17,9 +17,11 @@
 #
 
 from uuid import UUID
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, Ssl
+
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, SslDomain
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
     SenderImpl, ReceiverImpl, TransportImpl
+from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
 from org.apache.qpid.proton.message import MessageFormat
 from org.apache.qpid.proton.message.impl import MessageImpl
 from org.apache.qpid.proton.messenger import AcceptMode, MessengerException, Status
@@ -28,6 +30,8 @@ from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, Amqp
 from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet, UUID as JUUID
+
+LANGUAGE = "Java"
 
 class Skipped(Exception):
   skipped = True
@@ -827,30 +831,50 @@ class SSLException(Exception):
 class SSLUnavailable(SSLException):
   pass
 
-class SSL(object):
+class SSLDomain(object):
 
-  MODE_SERVER = Ssl.Mode.SERVER
-  MODE_CLIENT = Ssl.Mode.CLIENT
-  VERIFY_PEER = Ssl.VerifyMode.VERIFY_PEER
-  ANONYMOUS_PEER = Ssl.VerifyMode.ANONYMOUS_PEER
+  MODE_SERVER = SslDomain.Mode.SERVER
+  MODE_CLIENT = SslDomain.Mode.CLIENT
+  VERIFY_PEER = SslDomain.VerifyMode.VERIFY_PEER
+  ANONYMOUS_PEER = SslDomain.VerifyMode.ANONYMOUS_PEER
   VERIFY_PEER_NAME = None  # TBD
 
-  def __init__(self,transport):
-    self._ssl = transport.impl.ssl()
+  def __init__(self, mode):
+    self._domain = SslDomainImpl()
+    self._domain.init(mode)
 
-  def init(self, mode):
-    self._ssl.init(mode)
-
-  def set_credentials(self, cert_file,key_file,password):
-    self._ssl.setCredentials(cert_file,key_file,password)
+  def set_credentials(self, cert_file, key_file, password):
+    self._domain.setCredentials(cert_file, key_file, password)
 
   def set_trusted_ca_db(self, certificate_db):
-    self._ssl.setTrustedCaDb(certificate_db)
+    self._domain.setTrustedCaDb(certificate_db)
 
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    self._ssl.setPeerAuthentication(verify_mode)
+    self._domain.setPeerAuthentication(verify_mode)
     if trusted_CAs is not None:
-      self._ssl.setTrustedCaDb(trusted_CAs)
+      self._domain.setTrustedCaDb(trusted_CAs)
+
+  def allow_unsecured_client(self, allow_unsecured = True):
+    self._domain.allowUnsecuredClient(allow_unsecured)
+
+class SSLSessionDetails(object):
+
+  def __init__(self, session_id):
+    self._session_details = SslPeerDetailsImpl(session_id, 1)
+
+class SSL(object):
+
+  def __init__(self, transport, domain, session_details=None):
+
+    internal_session_details = None
+    if session_details:
+      internal_session_details = session_details._session_details
+
+    self._ssl = transport.impl.ssl(domain._domain, internal_session_details)
+    self._session_details = session_details
+
+  def get_session_details(self):
+    return self._session_details
 
   def cipher_name(self):
     return self._ssl.getCipherName()
@@ -858,19 +882,41 @@ class SSL(object):
   def protocol_name(self):
     return self._ssl.getProtocolName()
 
-  def allow_unsecured_client(self):
-     self._ssl.allowUnsecuredClient(True)
-
   def _set_peer_hostname(self, hostname):
     raise Skipped()
   def _get_peer_hostname(self):
     raise Skipped()
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
 
-__all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
-           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
-           "Delivery", "Transport", "TransportException", "SASL", "SSL",
-           "SSLException", "SSLUnavailable", "PN_SESSION_WINDOW", "symbol",
-           "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]
-
+__all__ = [
+           "ACCEPTED",
+           "LANGUAGE",
+           "MANUAL",
+           "PENDING",
+           "REJECTED",
+           "PN_SESSION_WINDOW",
+           "Condition",
+           "Connection",
+           "Data",
+           "Delivery",
+           "Endpoint",
+           "Link",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLException",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "symbol",
+           "Terminus",
+           "Timeout",
+           "Transport",
+           "TransportException"]

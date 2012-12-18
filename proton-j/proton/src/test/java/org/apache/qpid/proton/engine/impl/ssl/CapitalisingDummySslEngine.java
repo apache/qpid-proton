@@ -26,11 +26,10 @@ import static org.junit.Assert.assertTrue;
 import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
 
-import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacade;
 
 
 /**
@@ -39,7 +38,7 @@ import org.apache.qpid.proton.engine.impl.ssl.SslEngineFacade;
  *
  * Using a true SSLEngine for this would be impractical.
  */
-public class CapitalisingDummySslEngine implements SslEngineFacade
+public class CapitalisingDummySslEngine implements ProtonSslEngine
 {
     static final int SHORT_ENCODED_CHUNK_SIZE = 2;
     private static final int MAX_ENCODED_CHUNK_SIZE = 5;
@@ -222,5 +221,11 @@ public class CapitalisingDummySslEngine implements SslEngineFacade
     {
         assertTrue("Clear text character " + uncapitalisedChar + " must be lowercase", Character.isLowerCase(uncapitalisedChar));
         assertEquals("Unexpected clear text pad", Character.toString(CLEARTEXT_PADDING), Character.toString(underscore));
+    }
+
+    @Override
+    public boolean getUseClientMode()
+    {
+        return true;
     }
 }

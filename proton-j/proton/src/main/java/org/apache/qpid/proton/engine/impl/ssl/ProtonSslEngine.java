@@ -30,7 +30,7 @@ import javax.net.ssl.SSLException;
 /**
  * Thin wrapper around an {@link SSLEngine}.
  */
-public interface SslEngineFacade
+public interface ProtonSslEngine
 {
     /**
      * @see SSLEngine#wrap(ByteBuffer, ByteBuffer)
@@ -60,4 +60,5 @@ public interface SslEngineFacade
     int getPacketBufferSize();
     String getCipherSuite();
     String getProtocol();
+    boolean getUseClientMode();
 }

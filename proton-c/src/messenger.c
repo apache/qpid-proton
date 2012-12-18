@@ -414,19 +414,21 @@ static void pn_transport_config(pn_messenger_t *messenger,
   pn_connection_ctx_t *ctx = pn_connection_get_context(connection);
   pn_transport_t *transport = pn_connector_transport(connector);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
-    pn_ssl_t *ssl = pn_ssl(transport);
-    pn_ssl_init(ssl, PN_SSL_MODE_CLIENT);
+    pn_ssl_domain_t *d = pn_ssl_domain( PN_SSL_MODE_CLIENT );
     if (messenger->certificate && messenger->private_key) {
-      pn_ssl_set_credentials(ssl, messenger->certificate,
-                             messenger->private_key,
-                             messenger->password);
+      pn_ssl_domain_set_credentials( d, messenger->certificate,
+                                     messenger->private_key,
+                                     messenger->password);
     }
     if (messenger->trusted_certificates) {
-      pn_ssl_set_trusted_ca_db(ssl, messenger->trusted_certificates);
-      pn_ssl_set_peer_authentication(ssl, PN_SSL_VERIFY_PEER, NULL);
+      pn_ssl_domain_set_trusted_ca_db(d, messenger->trusted_certificates);
+      pn_ssl_domain_set_peer_authentication(d, PN_SSL_VERIFY_PEER, NULL);
     } else {
-      pn_ssl_set_peer_authentication(ssl, PN_SSL_ANONYMOUS_PEER, NULL);
+      pn_ssl_domain_set_peer_authentication(d, PN_SSL_ANONYMOUS_PEER, NULL);
     }
+    pn_ssl_t *ssl = pn_ssl(transport);
+    pn_ssl_init(ssl, d, NULL);
+    pn_ssl_domain_free( d );
   }
 
   pn_sasl_t *sasl = pn_sasl(transport);
@@ -596,16 +598,20 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       char *scheme = sub->scheme;
       pn_connector_t *c = pn_listener_accept(l);
       pn_transport_t *t = pn_connector_transport(c);
-      pn_ssl_t *ssl = pn_ssl(t);
-      pn_ssl_init(ssl, PN_SSL_MODE_SERVER);
+
+      pn_ssl_domain_t *d = pn_ssl_domain( PN_SSL_MODE_SERVER );
       if (messenger->certificate) {
-        pn_ssl_set_credentials(ssl, messenger->certificate,
-                               messenger->private_key,
-                               messenger->password);
+        pn_ssl_domain_set_credentials(d, messenger->certificate,
+                                      messenger->private_key,
+                                      messenger->password);
       }
       if (!(scheme && !strcmp(scheme, "amqps"))) {
-        pn_ssl_allow_unsecured_client(ssl);
+        pn_ssl_domain_allow_unsecured_client(d);
       }
+      pn_ssl_t *ssl = pn_ssl(t);
+      pn_ssl_init(ssl, d, NULL);
+      pn_ssl_domain_free( d );
+
       pn_sasl_t *sasl = pn_sasl(t);
       pn_sasl_mechanisms(sasl, "ANONYMOUS");
       pn_sasl_server(sasl);

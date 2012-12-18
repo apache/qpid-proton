@@ -35,43 +35,8 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   return NULL;
 }
 
-int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_mode_t mode)
-{
-  return -1;
-}
-
-
-int pn_ssl_set_credentials(pn_ssl_t *ssl,
-                           const char *certificate_file,
-                           const char *private_key_file,
-                           const char *password)
-{
-  return -1;
-}
-
-int pn_ssl_set_trusted_ca_db(pn_ssl_t *ssl,
-                             const char *certificate_db)
-{
-  return -1;
-}
-
-int pn_ssl_allow_unsecured_client(pn_ssl_t *ssl)
-{
-  return -1;
-}
-
-
-int pn_ssl_set_peer_authentication(pn_ssl_t *ssl,
-                                   const pn_ssl_verify_mode_t mode,
-                                   const char *trusted_CAs)
-{
-  return -1;
-}
-
-
-int pn_ssl_get_peer_authentication(pn_ssl_t *ssl,
-                                   pn_ssl_verify_mode_t *mode,
-                                   char *trusted_CAs, size_t *trusted_CAs_size)
+int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_domain_t *domain,
+                const char *session_id)
 {
   return -1;
 }
@@ -102,6 +67,46 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size)
 {
   return false;
+}
+
+pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode)
+{
+  return NULL;
+}
+
+void pn_ssl_domain_free( pn_ssl_domain_t *d )
+{
+}
+
+int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
+                               const char *certificate_file,
+                               const char *private_key_file,
+                               const char *password)
+{
+  return -1;
+}
+
+int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
+                                const char *certificate_db)
+{
+  return -1;
+}
+
+int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
+                                   const pn_ssl_verify_mode_t mode,
+                                   const char *trusted_CAs)
+{
+  return -1;
+}
+
+int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
+{
+  return -1;
+}
+
+pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *s )
+{
+  return PN_SSL_RESUME_UNKNOWN;
 }
 
 int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
