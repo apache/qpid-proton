@@ -181,12 +181,14 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
     pn_error_from_errno(driver->error, "setsockopt");
+    close(sock);
     return NULL;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     pn_error_from_errno(driver->error, "bind");
     freeaddrinfo(addr);
+    close(sock);
     return NULL;
   }
 
@@ -194,6 +196,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 
   if (listen(sock, 50) == -1) {
     pn_error_from_errno(driver->error, "listen");
+    close(sock);
     return NULL;
   }
 
@@ -360,6 +363,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
     if (errno != EINPROGRESS) {
       pn_error_from_errno(driver->error, "connect");
       freeaddrinfo(addr);
+      close(sock);
       return NULL;
     }
   }
