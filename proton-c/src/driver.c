@@ -794,9 +794,10 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
     else
       timeout = (timeout < 0) ? d->wakeup-now : pn_min(timeout, d->wakeup - now);
   }
-  if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
-    return pn_error_from_errno(d->error, "poll");
-  return 0;
+  int result = poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout);
+  if (result == -1)
+    pn_error_from_errno(d->error, "poll");
+  return result;
 }
 
 void pn_driver_wait_3(pn_driver_t *d)
@@ -848,9 +849,9 @@ void pn_driver_wait_3(pn_driver_t *d)
 int pn_driver_wait(pn_driver_t *d, int timeout)
 {
     pn_driver_wait_1(d);
-    int error = pn_driver_wait_2(d, timeout);
-    if (error)
-        return error;
+    int result = pn_driver_wait_2(d, timeout);
+    if (result == -1)
+        return pn_error_code(d->error);
     pn_driver_wait_3(d);
     return 0;
 }
