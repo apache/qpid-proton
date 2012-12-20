@@ -145,9 +145,6 @@ public interface Messenger
      */
     int incoming();
 
-    AcceptMode getAcceptMode();
-    void setAcceptMode(AcceptMode mode);
-
     int getIncomingWindow();
     void setIncomingWindow(int window);
 

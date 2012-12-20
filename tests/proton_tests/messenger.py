@@ -136,7 +136,7 @@ class MessengerTest(Test):
       assert "unable to send to address: totally-bogus-address" in err, err
 
   def testOutgoingWindow(self):
-    self.server.accept_mode = MANUAL
+    self.server.incoming_window = 10
     self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
@@ -157,23 +157,28 @@ class MessengerTest(Test):
     for i in range(10):
       trackers.append(self.client.put(msg))
 
-    for t in trackers:
+    for i in range(5):
+      t = trackers[i]
+      assert self.client.status(t) is None, (t, self.client.status(t))
+
+    for i in range(5, 10):
+      t = trackers[i]
       assert self.client.status(t) is PENDING, (t, self.client.status(t))
 
     self.client.send()
 
-    count = 0
-    for t in trackers:
-      count += 1
-      if count > 5:
-        assert self.client.status(t) is ACCEPTED
-      else:
-        assert self.client.status(t) is None
+    for i in range(5):
+      t = trackers[i]
+      assert self.client.status(t) is None
+
+    for i in range(5, 10):
+      t = trackers[i]
+      assert self.client.status(t) is ACCEPTED
 
   def testReject(self, process_incoming=None):
     if process_incoming:
       self.process_incoming = process_incoming
-    self.server.accept_mode = MANUAL
+    self.server.incoming_window = 10
     self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
@@ -214,7 +219,7 @@ class MessengerTest(Test):
 
 
   def testIncomingWindow(self):
-    self.server.accept_mode = MANUAL
+    self.server.incoming_window = 10
     self.server.outgoing_window = 10
     self.start()
     msg = Message()
@@ -232,14 +237,15 @@ class MessengerTest(Test):
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
     self.client.incoming_window = 10
-
     remaining = 10
 
     trackers = []
     while remaining:
       self.client.recv(remaining)
       while self.client.incoming:
-        trackers.append(self.client.get())
+        t = self.client.get()
+        trackers.append(t)
+        self.client.accept(t)
         remaining -= 1
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))

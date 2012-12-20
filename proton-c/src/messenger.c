@@ -155,6 +155,25 @@ void pn_queue_del(pn_queue_t *queue, pn_delivery_t *delivery)
   }
 }
 
+void pn_queue_slide(pn_queue_t *queue)
+{
+  if (queue->window >= 0) {
+    while (queue->hwm - queue->lwm > queue->window) {
+      pn_delivery_t *d = pn_queue_get(queue, queue->lwm);
+      if (d) {
+        if (!pn_delivery_local_state(d)) {
+          pn_delivery_update(d, PN_ACCEPTED);
+        }
+        pn_delivery_settle(d);
+        pn_queue_del(queue, d);
+      } else {
+        pn_queue_gc(queue);
+      }
+    }
+  }
+  pn_queue_gc(queue);
+}
+
 pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
 {
   pn_sequence_t id = queue->hwm++;
@@ -166,27 +185,8 @@ pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
   pn_connection_t *conn =
     pn_session_connection(pn_link_session(pn_delivery_link(delivery)));
   pn_incref(conn);
+  pn_queue_slide(queue);
   return id;
-}
-
-void pn_queue_slide(pn_queue_t *queue)
-{
-  if (queue->window >= 0) {
-    while (queue->hwm - queue->lwm > queue->window) {
-      pn_delivery_t *d = pn_queue_get(queue, queue->lwm);
-      if (d) {
-        if (pn_delivery_local_state(d)) {
-          pn_delivery_settle(d);
-          pn_queue_del(queue, d);
-        } else {
-          break;
-        }
-      } else {
-        pn_queue_gc(queue);
-      }
-    }
-  }
-  pn_queue_gc(queue);
 }
 
 int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
@@ -229,7 +229,7 @@ int pn_queue_update(pn_queue_t *queue, pn_sequence_t id, pn_status_t status,
     }
   }
 
-  pn_queue_slide(queue);
+  pn_queue_gc(queue);
 
   return 0;
 }
@@ -471,8 +471,6 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
     pn_delivery_clear(d);
     d = pn_work_next(d);
   }
-
-  pn_queue_slide(&messenger->outgoing);
 
   if (pn_work_head(conn)) {
     return;
@@ -989,7 +987,7 @@ pn_queue_t *pn_tracker_queue(pn_messenger_t *messenger, pn_tracker_t tracker)
 
 static pn_status_t disp2status(pn_disposition_t disp)
 {
-  if (!disp) return PN_STATUS_PENDING;
+  if (!disp) return PN_STATUS_UNKNOWN;
 
   switch (disp) {
   case PN_ACCEPTED:
@@ -1127,22 +1125,10 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
             return pn_error_format(messenger->error, err, "error decoding message: %s",
                                    pn_message_error(msg));
           } else {
-            if (messenger->accept_mode == PN_ACCEPT_MODE_AUTO) {
-              return pn_messenger_accept(messenger,
-                                         pn_messenger_incoming_tracker(messenger),
-                                         0);
-            } else {
-              return 0;
-            }
-          }
-        } else {
-          if (messenger->accept_mode == PN_ACCEPT_MODE_AUTO) {
-            return pn_messenger_accept(messenger,
-                                       pn_messenger_incoming_tracker(messenger),
-                                       0);
-          } else {
             return 0;
           }
+        } else {
+          return 0;
         }
       }
       d = pn_work_next(d);

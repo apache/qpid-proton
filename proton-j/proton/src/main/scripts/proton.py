@@ -24,7 +24,7 @@ from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
 from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
 from org.apache.qpid.proton.message import MessageFormat
 from org.apache.qpid.proton.message.impl import MessageImpl
-from org.apache.qpid.proton.messenger import AcceptMode, MessengerException, Status
+from org.apache.qpid.proton.messenger import MessengerException, Status
 from org.apache.qpid.proton.messenger.impl import MessengerImpl
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger
@@ -51,15 +51,6 @@ STATUSES = {
 
 MANUAL = "MANUAL"
 AUTOMATIC = "AUTOMATIC"
-
-_ACCEPT_MODE2CONST = {
-  AcceptMode.AUTO: AUTOMATIC,
-  AcceptMode.MANUAL: MANUAL
-  }
-_CONST2ACCEPT_MODE = {
-  AUTOMATIC: AcceptMode.AUTO,
-  MANUAL: AcceptMode.MANUAL
-  }
 
 class Endpoint(object):
 
@@ -553,12 +544,11 @@ class Messenger(object):
   def incoming(self):
     return self.impl.incoming()
 
-  def _get_accept_mode(self):
-    return _ACCEPT_MODE2CONST(self.impl.getAcceptMode())
-  def _set_accept_mode(self, mode):
-    mode = _CONST2ACCEPT_MODE[mode]
-    self.impl.setAcceptMode(mode)
-  accept_mode = property(_get_accept_mode, _set_accept_mode)
+  def _get_timeout(self):
+    return self.impl.getTimeout()
+  def _set_timeout(self, t):
+    self.impl.setTimeout(t)
+  timeout = property(_get_timeout, _set_timeout)
 
   def accept(self, tracker=None):
     if tracker is None:

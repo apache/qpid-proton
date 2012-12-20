@@ -77,6 +77,7 @@ class TrackerQueue
         }
         int sequence = _hwm++;
         _deliveries.add(delivery);
+        slide();
     }
 
     Status getStatus(Tracker tracker)
@@ -139,7 +140,7 @@ class TrackerQueue
                 Delivery d = _deliveries.get(0);
                 if (d.getLocalState() == null)
                 {
-                    return;
+                    d.disposition(ACCEPTED);
                 }
 
                 d.settle();
@@ -186,7 +187,6 @@ class TrackerQueue
                 operation.apply(d);
             }
         }
-        slide();
     }
 
     private static interface DeliveryOperation

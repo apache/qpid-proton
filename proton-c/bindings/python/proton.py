@@ -90,15 +90,6 @@ STATUSES = {
 AUTOMATIC = Constant("AUTOMATIC")
 MANUAL = Constant("MANUAL")
 
-_ACCEPT_MODE2CONST = {
-  PN_ACCEPT_MODE_AUTO: AUTOMATIC,
-  PN_ACCEPT_MODE_MANUAL: MANUAL
-  }
-_CONST2ACCEPT_MODE = {
-  AUTOMATIC: PN_ACCEPT_MODE_AUTO,
-  MANUAL: PN_ACCEPT_MODE_MANUAL
-  }
-
 class Messenger(object):
   """
   The L{Messenger} class defines a high level interface for sending
@@ -257,21 +248,6 @@ will not be verified.
                      doc="""
 The timeout property contains the default timeout for blocking
 operations performed by the L{Messenger}.
-""")
-
-  def _get_accept_mode(self):
-    return _ACCEPT_MODE2CONST(pn_messenger_get_accept_mode(self._mng))
-
-  def _set_accept_mode(self, mode):
-    mode = _CONST2ACCEPT_MODE[mode]
-    self._check(pn_messenger_set_accept_mode(self._mng, mode))
-
-  accept_mode = property(_get_accept_mode, _set_accept_mode,
-                         doc="""
-The accept mode for the messenger. Can be set to AUTOMATIC or MANUAL.
-The default is AUTOMATIC. If set to MANUAL, then every incoming
-message must be accepted or rejected (either individually or
-cummulatively) via the accept and reject methods.
 """)
 
   def _get_incoming_window(self):

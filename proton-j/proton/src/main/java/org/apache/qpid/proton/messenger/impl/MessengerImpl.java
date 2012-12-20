@@ -43,7 +43,6 @@ import org.apache.qpid.proton.driver.impl.DriverImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.impl.MessageImpl;
-import org.apache.qpid.proton.messenger.AcceptMode;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
 import org.apache.qpid.proton.messenger.Status;
@@ -68,7 +67,6 @@ public class MessengerImpl implements Messenger
     private Driver _driver;
     private int _credit;
     private int _distributed;
-    private AcceptMode _acceptMode = AcceptMode.AUTO;
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
 
@@ -194,9 +192,6 @@ public class MessengerImpl implements Messenger
                     Message message = new MessageImpl();
                     message.decode(_buffer, 0, size);
                     _incoming.add(delivery);
-                    if (_acceptMode == AcceptMode.AUTO) {
-                        _incoming.accept(incomingTracker());
-                    }
                     _distributed--;
                     delivery.getLink().advance();
                     return message;
@@ -249,15 +244,6 @@ public class MessengerImpl implements Messenger
         return queued(false);
     }
 
-
-    public AcceptMode getAcceptMode()
-    {
-        return _acceptMode;
-    }
-    public void setAcceptMode(AcceptMode mode)
-    {
-        _acceptMode = mode;
-    }
 
     public int getIncomingWindow()
     {
