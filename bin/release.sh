@@ -124,21 +124,3 @@ EOF
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
     tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
-
-##
-## Create the Perl Tarball
-##
-rootname="perl-qpid-proton-${VERSION}"
-WORKDIR=$(mktemp -d)
-mkdir -p "${WORKDIR}"
-(
-    cd ${WORKDIR}
-    svn export ${URL}/${BRANCH}/proton-c/bindings/perl ${WORKDIR}/${rootname} >/dev/null
-
-    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
-    perl Makefile.PL
-    make dist
-
-    mv qpid-perl-${VERSION}.tar.gz ${CURRDIR}
-)
-
