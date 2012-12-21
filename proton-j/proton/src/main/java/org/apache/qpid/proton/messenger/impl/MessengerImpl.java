@@ -105,6 +105,7 @@ public class MessengerImpl implements Messenger
             try
             {
                 c.process();
+                c.close();
             }
             catch (IOException e)
             {
