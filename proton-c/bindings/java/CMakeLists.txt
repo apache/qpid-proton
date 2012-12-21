@@ -26,3 +26,5 @@ swig_add_module(protonjni java java.i)
 include_directories(${JNI_INCLUDE_DIRS})
 swig_link_libraries(protonjni ${BINDING_DEPS} ${JNI_LIBRARIES} )
 
+add_custom_target(protonjnioutdir ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR} COMMENT "Creating outputdir for proton jni sources")
+add_dependencies(protonjni protonjnioutdir)
