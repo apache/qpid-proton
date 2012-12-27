@@ -63,6 +63,12 @@ else()
     add_custom_target(docs)
 endif()
 
+# Used to allow the building of the Java bindings when CMAKE_VERSION < 2.6.8
+if ( ${CMAKE_VERSION} VERSION_LESS "2.8.6" )
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+endif ()
+
+
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
