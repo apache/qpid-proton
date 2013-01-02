@@ -24,7 +24,7 @@ include(CheckSymbolExists)
 project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
-set (PN_VERSION_MINOR 2)
+set (PN_VERSION_MINOR 3)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 include(soversion.cmake)
