@@ -8,9 +8,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -127,3 +127,21 @@ EOF
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
     tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
+
+##
+## Create the Ruby GEM
+##
+rootname="qpid-proton-${VERSION}"
+WORKDIR=$(mktemp -d)
+mkdir -p "${WORKDIR}"
+(
+    cd ${WORKDIR}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
+    echo "In ${PWD}:"
+    ls -l
+    cd ${rootname}/bindings/ruby
+    rake swig
+    rake package
+    cp pkg/qpid_proton-*gem ${CURRDIR}
+)
+
