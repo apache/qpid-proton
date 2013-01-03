@@ -44,12 +44,13 @@ usage()
     echo "-u URL      The base URL for the repository (def. ${URL})"
     echo "-b BRANCH   The branch to check out (def. ${BRANCH})"
     echo "-r REVISION The revision to check out (def. HEAD)"
+    echo "-d          Show verbose debugging output"
     echo ""
     exit 0
 }
 
 
-while getopts "hu:b:v:" OPTION; do
+while getopts "hu:b:r:v:d" OPTION; do
     case $OPTION in
         h) usage;;
 
@@ -60,6 +61,8 @@ while getopts "hu:b:v:" OPTION; do
         b) BRANCH=$OPTARG;;
 
         r) REVISION=$OPTARG;;
+
+        d) set -v;;
 
         \?) usage;;
     esac
