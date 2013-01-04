@@ -27,9 +27,17 @@ add_subdirectory(api)
 SET(CMAKE_SWIG_FLAGS -package org.apache.qpid.proton.jni)
 SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/jni/src/main/java/org/apache/qpid/proton/jni)
 
+message( "JNI_LIBRARIES" ${JNI_LIBRARIES} )
+message( "JAVA_AWT_LIBRARY" ${JAVA_AWT_LIBRARY} )
+
+
 swig_add_module(proton-swig java java.i)
 include_directories(${JNI_INCLUDE_DIRS})
-swig_link_libraries(proton-swig ${BINDING_DEPS} ${JNI_LIBRARIES} )
+swig_link_libraries(proton-swig ${BINDING_DEPS}  )
+
+set_target_properties(proton-swig
+    PROPERTIES
+    PREFIX "lib")
 
 add_custom_command(OUTPUT ${CMAKE_SWIG_OUTDIR} COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR} COMMENT "Creating target directory for Proton-JNI sources")
 add_custom_target(protonjnioutdir ALL DEPENDS ${CMAKE_SWIG_OUTDIR})
@@ -45,5 +53,7 @@ set(CMAKE_JAVA_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR}/api/proton-api-${PN_VERS
 
 # TODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
 add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
+
+add_custom_command(TARGET proton-jni POST_BUILD COMMAND ${Java_JAR_EXECUTABLE} uvf proton-jni-${PN_VERSION}.jar -C ${PROJECT_SOURCE_DIR}/jni/src/main/resources META-INF)
 
 add_dependencies(proton-jni proton-api proton-swig)
