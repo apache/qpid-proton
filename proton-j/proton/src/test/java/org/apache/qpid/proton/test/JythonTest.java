@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.test;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -30,6 +31,8 @@ import java.io.File;
 /**
  * Runs all the python tests.
  */
+// PHTODO reinstate python
+@Ignore
 public class JythonTest
 {
 
