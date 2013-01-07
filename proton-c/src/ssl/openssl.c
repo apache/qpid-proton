@@ -123,6 +123,8 @@ static ssize_t process_input_cleartext(pn_transport_t *transport, const char *in
 static ssize_t process_output_cleartext(pn_transport_t *transport, char *buffer, size_t max_len);
 static ssize_t process_input_unknown(pn_transport_t *transport, const char *input_data, size_t len);
 static ssize_t process_output_unknown(pn_transport_t *transport, char *input_data, size_t len);
+static ssize_t process_input_done(pn_transport_t *transport, const char *input_data, size_t len);
+static ssize_t process_output_done(pn_transport_t *transport, char *input_data, size_t len);
 static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
 static int init_ssl_socket( pn_ssl_t * );
 static void release_ssl_socket( pn_ssl_t * );
@@ -904,6 +906,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, const char *input_d
   //}
   if (ssl->app_input_closed && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) ) {
     consumed = ssl->app_input_closed;
+    ssl->process_input = process_input_done;
   }
   _log(ssl, "process_input_ssl() returning %d\n", (int) consumed);
   return consumed;
@@ -1015,6 +1018,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, char *buffer, size
   //}
   if (written == 0 && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) && BIO_pending(ssl->bio_net_io) == 0) {
     written = ssl->app_output_closed ? ssl->app_output_closed : PN_EOS;
+    ssl->process_output = process_output_done;
   }
   _log(ssl, "process_output_ssl() returning %d\n", (int) written);
   return written;
@@ -1247,4 +1251,13 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
   }
   *bufsize = len;
   return 0;
+}
+
+static ssize_t process_input_done(pn_transport_t *transport, const char *input_data, size_t len)
+{
+  return PN_EOS;
+}
+static ssize_t process_output_done(pn_transport_t *transport, char *input_data, size_t len)
+{
+  return PN_EOS;
 }
