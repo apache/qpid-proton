@@ -4,6 +4,7 @@
     <groupId>org.apache.qpid</groupId>
     <artifactId>proton-project</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>proton-system-tests</artifactId>
