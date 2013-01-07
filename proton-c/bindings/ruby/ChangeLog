@@ -1,7 +1,9 @@
-version 0.3 (TBA):
+version 0.3 (January 2013):
 	* No language-specific features developed in this release.
+	* Dropped the Rakefile in favor of packaging with a gemspec.
+	* Removed the qpid_proton/version.rb file as unused.
 
-version 0.2 (30 November 2012):
+version 0.2 (November 2012):
 	* First implementation of the stable APIs on top of swig.
 	* Wrote the Rspec tests to test the new APIs.
 	* Added SimpleCov support to monitor Rspec test coverage.

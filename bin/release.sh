@@ -127,3 +127,20 @@ EOF
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
     tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
+
+##
+## Create the Ruby GEM
+##
+rootname="qpid-proton-${VERSION}"
+WORKDIR=$(mktemp -d)
+mkdir -p "${WORKDIR}"
+(
+    cd ${WORKDIR}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
+    echo "In ${PWD}:"
+    ls -l
+    cd ${rootname}/bindings/ruby
+    gem build qpid_proton.gemspec
+    cp qpid_proton-*gem ${CURRDIR}
+)
+
