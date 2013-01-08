@@ -56,9 +56,7 @@ From the directory where you found this README file:
   # documentation.
   make all docs
 
-  # Note that if you have configured cmake with a system prefix such
-  # as the one show above (/usr), this step will require root
-  # privileges.
+  # Note that this step will require root privileges.
   make install
 
 Note that all installed files are stored in the install_manifest.txt
