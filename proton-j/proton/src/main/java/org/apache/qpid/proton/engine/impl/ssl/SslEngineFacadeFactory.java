@@ -23,11 +23,12 @@ package org.apache.qpid.proton.engine.impl.ssl;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.security.Key;
 import java.security.KeyManagementException;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -46,9 +47,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.qpid.proton.engine.Ssl;
-import org.apache.qpid.proton.engine.Ssl.Mode;
-import org.apache.qpid.proton.engine.Ssl.VerifyMode;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.PEMReader;
@@ -81,25 +81,51 @@ public class SslEngineFacadeFactory
             "SSL_DH_anon_WITH_DES_CBC_SHA",
             "SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA");
 
-    public SslEngineFacade createSslEngineFacade(Ssl sslConfiguration)
+    /** lazily initialized */
+    private SSLContext _sslContext;
+
+
+    /**
+     * Returns a {@link ProtonSslEngine}. May cache the domain's settings so callers should invoke
+     * {@link #resetCache()} if the domain changes.
+     *
+     * @param peerDetails may be used to return an engine that supports SSL resume.
+     */
+    public ProtonSslEngine createProtonSslEngine(SslDomain domain, SslPeerDetails peerDetails)
     {
-        SSLEngine engine = createSslEngine(sslConfiguration);
+        SSLEngine engine = createAndInitialiseSslEngine(domain, peerDetails);
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine("Created SSL engine: " + engineToString(engine));
+        }
         return new DefaultSslEngineFacade(engine);
     }
 
-    private SSLEngine createSslEngine(Ssl sslConfiguration)
-    {
-        SSLEngine sslEngine;
 
-        SSLContext sslContext = createSslContext(sslConfiguration);
-        sslEngine = sslContext.createSSLEngine();
-        if (sslConfiguration.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
+    /**
+     * Guarantees that no cached settings are used in subsequent calls to
+     * {@link #createProtonSslEngine(SslDomain, SslPeerDetails)}.
+     */
+    public void resetCache()
+    {
+        _sslContext = null;
+    }
+
+
+    private SSLEngine createAndInitialiseSslEngine(SslDomain domain, SslPeerDetails peerDetails)
+    {
+        SslDomain.Mode mode = domain.getMode();
+
+        SSLContext sslContext = getOrCreateSslContext(domain);
+        SSLEngine sslEngine = createSslEngine(sslContext, peerDetails);
+
+        if (domain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
         {
             addAnonymousCipherSuites(sslEngine);
         }
         else
         {
-            if (sslConfiguration.getMode() == Mode.SERVER)
+            if (mode == SslDomain.Mode.SERVER)
             {
                 sslEngine.setNeedClientAuth(true);
             }
@@ -107,87 +133,129 @@ public class SslEngineFacadeFactory
 
         if(_logger.isLoggable(Level.FINE))
         {
-            _logger.log(Level.FINE, sslConfiguration.getMode() + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
+            _logger.log(Level.FINE, mode + " Enabled cipher suites " + Arrays.asList(sslEngine.getEnabledCipherSuites()));
         }
 
-        boolean useClientMode = sslConfiguration.getMode() == Mode.CLIENT ? true : false;
+        boolean useClientMode = mode == SslDomain.Mode.CLIENT ? true : false;
         sslEngine.setUseClientMode(useClientMode);
 
         return sslEngine;
     }
 
-    private SSLContext createSslContext(Ssl sslConfiguration)
+    /**
+     * @param sslPeerDetails is allowed to be null. A non-null value is used to hint that SSL resumption
+     * should be attempted
+     */
+    private SSLEngine createSslEngine(SSLContext sslContext, SslPeerDetails sslPeerDetails)
     {
-        final char[] dummyPassword = "unused-passphrase".toCharArray(); // Dummy password required by KeyStore and KeyManagerFactory, but never referred to again
-
-        try
+        final SSLEngine sslEngine;
+        if(sslPeerDetails == null)
         {
-            SSLContext sslContext = SSLContext.getInstance(TLS_PROTOCOL);
-            KeyStore ksKeys = createKeyStoreFrom(sslConfiguration, dummyPassword);
-
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(ksKeys, dummyPassword);
-
-            final TrustManager[] trustManagers;
-            if (sslConfiguration.getTrustedCaDb() == null && sslConfiguration.getPeerAuthentication() == VerifyMode.ANONYMOUS_PEER)
-            {
-                trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
-            }
-            else
-            {
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(ksKeys);
-                trustManagers = tmf.getTrustManagers();
-            }
-
-            sslContext.init(kmf.getKeyManagers(), trustManagers, null);
-            return sslContext;
+            sslEngine = sslContext.createSSLEngine();
         }
-        catch (NoSuchAlgorithmException e)
+        else
         {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            sslEngine = sslContext.createSSLEngine(sslPeerDetails.getHostname(), sslPeerDetails.getPort());
         }
-        catch (KeyStoreException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
-        catch (UnrecoverableKeyException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
-        catch (KeyManagementException e)
-        {
-            throw new IllegalStateException("Unexpected exception creating SSLContext", e);
-        }
+        return sslEngine;
     }
 
-    private KeyStore createKeyStoreFrom(Ssl sslConfiguration, char[] dummyPassword)
+    private SSLContext getOrCreateSslContext(SslDomain sslDomain)
+    {
+        if(_sslContext == null)
+        {
+            if(_logger.isLoggable(Level.FINE))
+            {
+                _logger.fine("lazily creating new SSLContext using domain " + sslDomain);
+            }
+
+            final char[] dummyPassword = "unused-passphrase".toCharArray(); // Dummy password required by KeyStore and KeyManagerFactory, but never referred to again
+
+            try
+            {
+                SSLContext sslContext = SSLContext.getInstance(TLS_PROTOCOL);
+                KeyStore ksKeys = createKeyStoreFrom(sslDomain, dummyPassword);
+
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(ksKeys, dummyPassword);
+
+                final TrustManager[] trustManagers;
+                if (sslDomain.getPeerAuthentication() == SslDomain.VerifyMode.ANONYMOUS_PEER)
+                {
+                    trustManagers = new TrustManager[] { new AlwaysTrustingTrustManager() };
+                }
+                else
+                {
+                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    tmf.init(ksKeys);
+                    trustManagers = tmf.getTrustManagers();
+                }
+
+                sslContext.init(kmf.getKeyManagers(), trustManagers, null);
+                _sslContext = sslContext;
+            }
+            catch (NoSuchAlgorithmException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (KeyStoreException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (UnrecoverableKeyException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+            catch (KeyManagementException e)
+            {
+                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+            }
+        }
+        return _sslContext;
+    }
+
+    private KeyStore createKeyStoreFrom(SslDomain sslDomain, char[] dummyPassword)
     {
         try
         {
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(null, null);
 
-            if (sslConfiguration.getTrustedCaDb() != null)
+            if (sslDomain.getTrustedCaDb() != null)
             {
                 String caCertAlias = "cacert";
 
                 if(_logger.isLoggable(Level.FINE))
                 {
-                    _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslConfiguration.getTrustedCaDb());
+                    _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslDomain.getTrustedCaDb());
                 }
-                Certificate trustedCaCert = (Certificate) readPemObject(sslConfiguration.getTrustedCaDb());
+                Certificate trustedCaCert = (Certificate) readPemObject(sslDomain.getTrustedCaDb(), null, Certificate.class);
                 keystore.setCertificateEntry(caCertAlias, trustedCaCert);
             }
 
-            if (sslConfiguration.getCertificateFile() != null
-                    && sslConfiguration.getPrivateKeyFile() != null)
+            if (sslDomain.getCertificateFile() != null
+                    && sslDomain.getPrivateKeyFile() != null)
             {
                 String clientPrivateKeyAlias = "clientPrivateKey";
-                Certificate clientCertificate = (Certificate) readPemObject(sslConfiguration.getCertificateFile());
-                Key clientPrivateKey = (Key) readPemObject(
-                        sslConfiguration.getPrivateKeyFile(),
-                        sslConfiguration.getPrivateKeyPassword());
+                Certificate clientCertificate = (Certificate) readPemObject(sslDomain.getCertificateFile(), null, Certificate.class);
+                Object keyOrKeyPair = readPemObject(
+                        sslDomain.getPrivateKeyFile(),
+                        sslDomain.getPrivateKeyPassword(), PrivateKey.class, KeyPair.class);
+
+                final PrivateKey clientPrivateKey;
+                if (keyOrKeyPair instanceof PrivateKey)
+                {
+                    clientPrivateKey = (PrivateKey)keyOrKeyPair;
+                }
+                else if (keyOrKeyPair instanceof KeyPair)
+                {
+                    clientPrivateKey = ((KeyPair)keyOrKeyPair).getPrivate();
+                }
+                else
+                {
+                    // Should not happen - readPemObject will have already verified key type
+                    throw new IllegalStateException("Unexpected key type " + keyOrKeyPair);
+                }
 
                 keystore.setKeyEntry(clientPrivateKeyAlias, clientPrivateKey,
                         dummyPassword, new Certificate[] { clientCertificate });
@@ -226,50 +294,79 @@ public class SslEngineFacadeFactory
     {
         List<String> newEnabled = new ArrayList<String>(currentEnabled);
 
-        boolean addedAnonymousCipherSuite = false;
+        int addedAnonymousCipherSuites = 0;
         for (String anonymousCipherSuiteName : anonymousCipherSuites)
         {
             if (supportedSuites.contains(anonymousCipherSuiteName))
             {
                 newEnabled.add(anonymousCipherSuiteName);
-                addedAnonymousCipherSuite = true;
+                addedAnonymousCipherSuites++;
             }
         }
 
-        if (!addedAnonymousCipherSuite)
+        if (addedAnonymousCipherSuites == 0)
         {
             throw new IllegalStateException("None of " + anonymousCipherSuites
                     + " anonymous cipher suites are within the supported list "
                     + supportedSuites);
         }
+
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine("There are now " + newEnabled.size()
+                    + " cipher suites enabled (previously " + currentEnabled.size()
+                    + "), including " + addedAnonymousCipherSuites + " out of the "
+                    + anonymousCipherSuites.size() + " requested anonymous ones." );
+        }
+
         return newEnabled;
     }
 
-    private Object readPemObject(String pemFile, final String privateKeyPassword)
+    private String engineToString(SSLEngine engine)
     {
-        PasswordFinder passwordFinder = new PasswordFinder()
+        return new StringBuilder("[ " )
+            .append(engine)
+            .append(", needClientAuth=").append(engine.getNeedClientAuth())
+            .append(", useClientMode=").append(engine.getUseClientMode())
+            .append(", peerHost=").append(engine.getPeerHost())
+            .append(", peerPort=").append(engine.getPeerPort())
+            .append(" ]").toString();
+    }
+
+    private Object readPemObject(String pemFile, String keyPassword, @SuppressWarnings("rawtypes") Class... expectedInterfaces)
+    {
+        final PasswordFinder passwordFinder;
+        if (keyPassword != null)
         {
-            @Override
-            public char[] getPassword()
-            {
-                return privateKeyPassword.toCharArray();
-            }
-        };
+            passwordFinder = getPasswordFinderFor(keyPassword);
+        }
+        else
+        {
+            passwordFinder = null;
+        }
 
         Reader reader = null;
         try
         {
             reader = new FileReader(pemFile);
-            return new PEMReader(reader, privateKeyPassword == null ? null : passwordFinder).readObject();
+            PEMReader pemReader = new PEMReader(reader, passwordFinder);
+            Object pemObject = pemReader.readObject();
+            if (!checkPemObjectIsOfAllowedTypes(pemObject, expectedInterfaces))
+            {
+                throw new IllegalStateException("File " + pemFile + " does not provide a object of the required type."
+                        + " Read an object of class " + pemObject.getClass().getName()
+                        + " whilst expecting an implementation of one of the following  : " + Arrays.asList(expectedInterfaces));
+            }
+            return pemObject;
         }
         catch(PEMException e)
         {
             _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Unable to read PEM object from file " + pemFile, e);
         }
         catch (IOException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Unable to read PEM object from file " + pemFile, e);
         }
         finally
         {
@@ -287,9 +384,35 @@ public class SslEngineFacadeFactory
         }
     }
 
-    private Object readPemObject(String pemFile)
+    @SuppressWarnings("rawtypes")
+    private boolean checkPemObjectIsOfAllowedTypes(Object pemObject,  Class... expectedInterfaces)
     {
-        return readPemObject(pemFile, null);
+        if (expectedInterfaces.length == 0)
+        {
+            throw new IllegalArgumentException("Must be at least one expectedKeyTypes");
+        }
+
+        for (Class keyInterface : expectedInterfaces)
+        {
+            if (keyInterface.isInstance(pemObject))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private PasswordFinder getPasswordFinderFor(final String keyPassword)
+    {
+        PasswordFinder passwordFinder = new PasswordFinder()
+        {
+            @Override
+            public char[] getPassword()
+            {
+                return keyPassword.toCharArray();
+            }
+        };
+        return passwordFinder;
     }
 
     private final class AlwaysTrustingTrustManager implements X509TrustManager

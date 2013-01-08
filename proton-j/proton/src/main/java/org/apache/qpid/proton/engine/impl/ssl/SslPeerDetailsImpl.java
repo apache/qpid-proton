@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,31 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
-*/
-package org.apache.qpid.proton.messenger;
+ */
+package org.apache.qpid.proton.engine.impl.ssl;
 
-public enum AcceptMode
+import org.apache.qpid.proton.engine.SslPeerDetails;
+
+public class SslPeerDetailsImpl implements SslPeerDetails
 {
-    AUTO,
-    MANUAL
-}
+    private final String _hostname;
+    private final int _port;
 
+    public SslPeerDetailsImpl(String hostname, int port)
+    {
+        _hostname = hostname;
+        _port = port;
+    }
+
+    @Override
+    public String getHostname()
+    {
+        return _hostname;
+    }
+
+    @Override
+    public int getPort()
+    {
+        return _port;
+    }
+}

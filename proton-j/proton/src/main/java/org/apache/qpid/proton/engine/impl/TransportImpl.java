@@ -34,8 +34,11 @@ import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.amqp.transport.Attach;
@@ -238,17 +241,30 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
+     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
+     * public Proton API.</p>
+     */
     @Override
-    public Ssl ssl()
+    public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
     {
         if (_ssl == null)
         {
-            _ssl = new SslImpl();
+            _ssl = new SslImpl(sslDomain, sslPeerDetails);
             TransportWrapper transportWrapper = _ssl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
         }
         return _ssl;
+    }
+
+    @Override
+    public Ssl ssl(SslDomain sslDomain)
+    {
+        return ssl(sslDomain, null);
     }
 
     private void clearTransportWorkList()

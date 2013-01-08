@@ -21,99 +21,32 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 
-/*
- * Enables the JSSE system debugging system property:
- *
- *     -Djavax.net.debug=all
- */
 public class SslImpl implements Ssl
 {
-    private Mode _mode;
-    private VerifyMode _verifyMode = VerifyMode.ANONYMOUS_PEER;
-    private String _certificateFile;
-    private String _privateKeyFile;
-    private String _privateKeyPassword;
-    private String _trustedCaDb;
-    private boolean _allowUnsecuredClient;
-
     private SslTransportWrapper _unsecureClientAwareTransportWrapper;
 
-    @Override
-    public void init(Mode mode)
-    {
-        _mode = mode;
-    }
+    private final SslDomain _domain;
+    private final ProtonSslEngineProvider _protonSslEngineProvider;
 
-    @Override
-    public void setCredentials(String certificateFile,
-            String privateKeyFile, String privateKeyPassword)
-    {
-        _certificateFile = certificateFile;
-        _privateKeyFile = privateKeyFile;
-        _privateKeyPassword = privateKeyPassword;
-    }
+    private final SslPeerDetails _peerDetails;
 
-    @Override
-    public void setTrustedCaDb(String certificateDb)
+    /**
+     * @param sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
+     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
+     * public Proton API.</p>
+     */
+    public SslImpl(SslDomain domain, SslPeerDetails peerDetails)
     {
-        _trustedCaDb = certificateDb;
-    }
-
-    @Override
-    public String getTrustedCaDb()
-    {
-        return _trustedCaDb;
-    }
-
-    @Override
-    public void allowUnsecuredClient(boolean allowUnsecuredClient)
-    {
-        if (_mode == Mode.CLIENT)
-        {
-            throw new IllegalArgumentException("Only servers may allow unsecured clients");
-        }
-        _allowUnsecuredClient = allowUnsecuredClient;
-    }
-
-    @Override
-    public void setPeerAuthentication(VerifyMode verifyMode)
-    {
-        _verifyMode = verifyMode;
-    }
-
-    @Override
-    public VerifyMode getPeerAuthentication()
-    {
-        return _verifyMode;
-    }
-
-    @Override
-    public Mode getMode()
-    {
-        return _mode;
-    }
-
-    @Override
-    public String getPrivateKeyFile()
-    {
-        return _privateKeyFile;
-    }
-
-    @Override
-    public String getPrivateKeyPassword()
-    {
-        return _privateKeyPassword;
-    }
-
-    @Override
-    public String getCertificateFile()
-    {
-        return _certificateFile;
+        _domain = domain;
+        _protonSslEngineProvider = (ProtonSslEngineProvider)domain;
+        _peerDetails = peerDetails;
     }
 
     public TransportWrapper wrap(TransportInput inputProcessor, TransportOutput outputProcessor)
@@ -206,8 +139,12 @@ public class SslImpl implements Ssl
         {
             if (_transportWrapper == null)
             {
-                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(SslImpl.this, _inputProcessor, _outputProcessor);
-                if (_allowUnsecuredClient)
+                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(
+                        _protonSslEngineProvider.createSslEngine(_peerDetails),
+                        _inputProcessor,
+                        _outputProcessor);
+
+                if (_domain.allowUnsecuredClient())
                 {
                     TransportWrapper plainTransportWrapper = new PlainTransportWrapper(_outputProcessor, _inputProcessor);
                     _transportWrapper = new SslHandshakeSniffingTransportWrapper(sslTransportWrapper, plainTransportWrapper);

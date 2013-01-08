@@ -33,6 +33,8 @@ The proton APIs consist of the following classes:
 from cproton import *
 import uuid
 
+LANGUAGE = "C"
+
 class Constant(object):
 
   def __init__(self, name):
@@ -87,15 +89,6 @@ STATUSES = {
 
 AUTOMATIC = Constant("AUTOMATIC")
 MANUAL = Constant("MANUAL")
-
-_ACCEPT_MODE2CONST = {
-  PN_ACCEPT_MODE_AUTO: AUTOMATIC,
-  PN_ACCEPT_MODE_MANUAL: MANUAL
-  }
-_CONST2ACCEPT_MODE = {
-  AUTOMATIC: PN_ACCEPT_MODE_AUTO,
-  MANUAL: PN_ACCEPT_MODE_MANUAL
-  }
 
 class Messenger(object):
   """
@@ -255,21 +248,6 @@ will not be verified.
                      doc="""
 The timeout property contains the default timeout for blocking
 operations performed by the L{Messenger}.
-""")
-
-  def _get_accept_mode(self):
-    return _ACCEPT_MODE2CONST(pn_messenger_get_accept_mode(self._mng))
-
-  def _set_accept_mode(self, mode):
-    mode = _CONST2ACCEPT_MODE[mode]
-    self._check(pn_messenger_set_accept_mode(self._mng, mode))
-
-  accept_mode = property(_get_accept_mode, _set_accept_mode,
-                         doc="""
-The accept mode for the messenger. Can be set to AUTOMATIC or MANUAL.
-The default is AUTOMATIC. If set to MANUAL, then every incoming
-message must be accepted or rejected (either individually or
-cummulatively) via the accept and reject methods.
 """)
 
   def _get_incoming_window(self):
@@ -1711,6 +1689,29 @@ class Endpoint(object):
   def __init__(self):
     self.condition = None
 
+  def _update_cond(self):
+    impl = self._get_cond_impl()
+    pn_condition_clear(impl)
+    if self.condition:
+      pn_condition_set_name(impl, self.condition.name)
+      pn_condition_set_description(impl, self.condition.description)
+      info = Data(pn_condition_info(impl))
+      if self.condition.info:
+        info.put_object(self.condition.info)
+
+  @property
+  def remote_condition(self):
+    impl = self._get_remote_cond_impl()
+    if pn_condition_is_set(impl):
+      info_impl = Data(pn_condition_info(impl))
+      info_impl.rewind()
+      info_impl.next()
+      info = info_impl.get_object()
+      info_impl.rewind()
+      return Condition(pn_condition_get_name(impl),
+                       pn_condition_get_description(impl),
+                       info)
+
 class Condition:
 
   def __init__(self, name, description=None, info=None):
@@ -1758,18 +1759,11 @@ class Connection(Endpoint):
     else:
       return err
 
-  @property
-  def remote_condition(self):
-    impl = pn_connection_remote_condition(self._conn)
-    if pn_condition_is_set(impl):
-      info_impl = Data(pn_condition_info(impl))
-      info_impl.rewind()
-      info_impl.next()
-      info = info_impl.get_object()
-      info_impl.rewind()
-      return Condition(pn_condition_get_name(impl),
-                       pn_condition_get_description(impl),
-                       info)
+  def _get_cond_impl(self):
+    return pn_connection_condition(self._conn)
+
+  def _get_remote_cond_impl(self):
+    return pn_connection_remote_condition(self._conn)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
@@ -1813,14 +1807,7 @@ class Connection(Endpoint):
     pn_connection_open(self._conn)
 
   def close(self):
-    if self.condition:
-      impl = pn_connection_condition(self._conn)
-      pn_condition_clear(impl)
-      pn_condition_set_name(impl, self.condition.name)
-      pn_condition_set_description(impl, self.condition.description)
-      info = Data(pn_condition_info(impl))
-      if self.condition.info:
-        info.put_object(self.condition.info)
+    self._update_cond()
     pn_connection_close(self._conn)
 
   @property
@@ -1868,10 +1855,17 @@ class Session(Endpoint):
       pn_session_free(self._ssn)
       del self._ssn
 
+  def _get_cond_impl(self):
+    return pn_session_condition(self._ssn)
+
+  def _get_remote_cond_impl(self):
+    return pn_session_remote_condition(self._ssn)
+
   def open(self):
     pn_session_open(self._ssn)
 
   def close(self):
+    self._update_cond()
     pn_session_close(self._ssn)
 
   @property
@@ -1922,10 +1916,17 @@ class Link(Endpoint):
     else:
       return err
 
+  def _get_cond_impl(self):
+    return pn_link_condition(self._link)
+
+  def _get_remote_cond_impl(self):
+    return pn_link_remote_condition(self._link)
+
   def open(self):
     pn_link_open(self._link)
 
   def close(self):
+    self._update_cond()
     pn_link_close(self._link)
 
   @property
@@ -2288,6 +2289,41 @@ class SSLException(TransportException):
 class SSLUnavailable(SSLException):
   pass
 
+class SSLDomain(object):
+
+  MODE_CLIENT = PN_SSL_MODE_CLIENT
+  MODE_SERVER = PN_SSL_MODE_SERVER
+  VERIFY_PEER = PN_SSL_VERIFY_PEER
+  VERIFY_PEER_NAME = PN_SSL_VERIFY_PEER_NAME
+  ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
+
+  def __init__(self, mode):
+    self._domain = pn_ssl_domain(mode)
+    if self._domain is None:
+      raise SSLUnavailable()
+
+  def _check(self, err):
+    if err < 0:
+      exc = EXCEPTIONS.get(err, SSLException)
+      raise exc("SSL failure.")
+    else:
+      return err
+
+  def set_credentials(self, cert_file, key_file, password):
+    return self._check( pn_ssl_domain_set_credentials(self._domain,
+                                                      cert_file, key_file,
+                                                      password) )
+  def set_trusted_ca_db(self, certificate_db):
+    return self._check( pn_ssl_domain_set_trusted_ca_db(self._domain,
+                                                        certificate_db) )
+  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
+    return self._check( pn_ssl_domain_set_peer_authentication(self._domain,
+                                                              verify_mode,
+                                                              trusted_CAs) )
+
+  def allow_unsecured_client(self):
+    return self._check( pn_ssl_domain_allow_unsecured_client(self._domain) )
+
 class SSL(object):
 
   def _check(self, err):
@@ -2297,37 +2333,14 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport):
-    self._ssl = pn_ssl(transport._trans)
+  def __init__(self, transport, domain, session_details=None):
+    session_id = None
+    if session_details:
+      session_id = session_details.get_session_id()
+    self._ssl = pn_ssl( transport._trans )
     if self._ssl is None:
       raise SSLUnavailable()
-
-  MODE_CLIENT = PN_SSL_MODE_CLIENT
-  MODE_SERVER = PN_SSL_MODE_SERVER
-
-  def init(self, mode):
-    return self._check( pn_ssl_init(self._ssl, mode) )
-
-  def set_credentials(self, cert_file, key_file, password):
-    return self._check( pn_ssl_set_credentials(self._ssl, cert_file, key_file,
-                                               password) )
-
-  def set_trusted_ca_db(self, certificate_db):
-    return self._check( pn_ssl_set_trusted_ca_db(self._ssl, certificate_db) )
-
-  def allow_unsecured_client(self):
-    return self._check( pn_ssl_allow_unsecured_client(self._ssl) )
-
-  VERIFY_PEER = PN_SSL_VERIFY_PEER
-  ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
-
-  def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    return self._check( pn_ssl_set_peer_authentication(self._ssl, verify_mode,
-                                                       trusted_CAs) )
-
-  def peer_authentication(self):
-    # @TODO: fix up buffer return value...
-    pass
+    pn_ssl_init( self._ssl, domain._domain, session_id )
 
   def cipher_name(self):
     rc, name = pn_ssl_get_cipher_name( self._ssl, 128 )
@@ -2341,10 +2354,72 @@ class SSL(object):
       return name
     return None
 
-__all__ = ["Messenger", "Message", "ProtonException", "MessengerException",
-           "MessageException", "Timeout", "Condition", "Data", "Endpoint",
-           "Connection", "Session", "Link", "Terminus", "Sender", "Receiver",
-           "Delivery", "Transport", "TransportException", "SASL", "SSL",
-           "Described", "Array", "symbol", "char", "timestamp", "ulong",
-           "UNDESCRIBED", "SSLUnavailable", "PN_SESSION_WINDOW", "AUTOMATIC",
-           "MANUAL", "PENDING", "ACCEPTED", "REJECTED"]
+  RESUME_UNKNOWN = PN_SSL_RESUME_UNKNOWN
+  RESUME_NEW = PN_SSL_RESUME_NEW
+  RESUME_REUSED = PN_SSL_RESUME_REUSED
+
+  def resume_status(self):
+    return pn_ssl_resume_status( self._ssl )
+
+  def _set_peer_hostname(self, hostname):
+    self._check(pn_ssl_set_peer_hostname( self._ssl, hostname ))
+  def _get_peer_hostname(self):
+    err, name = pn_ssl_get_peer_hostname( self._ssl, 1024 )
+    self._check(err)
+    return name
+  peer_hostname = property(_get_peer_hostname, _set_peer_hostname,
+                           doc="""
+Manage the expected name of the remote peer.  Used to authenticate the remote.
+""")
+
+
+class SSLSessionDetails(object):
+  """ Unique identifier for the SSL session.  Used to resume previous session on a new
+  SSL connection.
+  """
+
+  def __init__(self, session_id):
+    self._session_id = session_id
+
+  def get_session_id(self):
+    return self._session_id
+
+__all__ = [
+           "LANGUAGE",
+           "PN_SESSION_WINDOW",
+           "ACCEPTED",
+           "AUTOMATIC",
+           "PENDING",
+           "MANUAL",
+           "REJECTED",
+           "UNDESCRIBED",
+           "Array",
+           "Condition",
+           "Connection",
+           "Data",
+           "Delivery",
+           "Described",
+           "Endpoint",
+           "Link",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "Terminus",
+           "Timeout",
+           "Transport",
+           "TransportException",
+           "char",
+           "symbol",
+           "timestamp",
+           "ulong"
+           ]

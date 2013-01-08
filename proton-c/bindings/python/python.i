@@ -418,5 +418,8 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
+int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_ssl_get_peer_hostname;
+
 
 %include "proton/cproton.i"

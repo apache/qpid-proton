@@ -24,10 +24,7 @@ import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertArrayU
 import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.createFilledBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import org.apache.qpid.proton.engine.Ssl;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,9 +34,6 @@ import org.junit.Test;
  */
 public class SimpleSslTransportWrapperTest
 {
-    private Ssl _sslConfiguration = mock(Ssl.class);
-    private SslEngineFacadeFactory _dummySslEngineFacadeFactory = mock(SslEngineFacadeFactory.class);
-
     private RememberingTransportInput _underlyingInput = new RememberingTransportInput();
     private CannedTransportOutput _underlyingOutput = new CannedTransportOutput();
 
@@ -50,8 +44,7 @@ public class SimpleSslTransportWrapperTest
     @Before
     public void setUp()
     {
-        when(_dummySslEngineFacadeFactory.createSslEngineFacade(_sslConfiguration)).thenReturn(_dummySslEngine);
-        _transportWrapper = new SimpleSslTransportWrapper(_sslConfiguration, _underlyingInput, _underlyingOutput, _dummySslEngineFacadeFactory);
+        _transportWrapper = new SimpleSslTransportWrapper(_dummySslEngine, _underlyingInput, _underlyingOutput);
     }
 
     @Test

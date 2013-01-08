@@ -26,12 +26,6 @@ set_target_properties(cproton-ruby
     OUTPUT_NAME "cproton"
     LINK_FLAGS "${CATCH_UNDEFINED}" )
 
-execute_process(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "puts RbConfig::CONFIG['prefix']"
-                OUTPUT_VARIABLE RUBY_PREFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-string(REPLACE "${RUBY_PREFIX}/" "" RUBY_PFX_ARCH_DIR ${RUBY_ARCH_DIR})
-
 install(TARGETS cproton-ruby
-        DESTINATION ${RUBY_PFX_ARCH_DIR}
+        DESTINATION ${RUBY_ARCH_DIR}
         COMPONENT Ruby)

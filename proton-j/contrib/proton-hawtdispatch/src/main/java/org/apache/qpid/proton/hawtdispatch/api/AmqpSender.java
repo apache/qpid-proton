@@ -76,7 +76,7 @@ public class AmqpSender extends AmqpLink {
     final LinkedList<MessageDelivery> outbound = new LinkedList<MessageDelivery>();
     long outboundBufferSize;
 
-    public MessageDelivery send(MessageImpl message) {
+    public MessageDelivery send(Message message) {
         assertExecuting();
         MessageDelivery rc = new MessageDelivery(message) {
             @Override

@@ -28,7 +28,7 @@
 #include "../dispatcher/dispatcher.h"
 #include "../util.h"
 
-typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER, TRANSPORT} pn_endpoint_type_t;
+typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
 
 typedef struct pn_endpoint_t pn_endpoint_t;
 
@@ -46,6 +46,7 @@ struct pn_endpoint_t {
   pn_state_t state;
   pn_error_t *error;
   pn_condition_t condition;
+  pn_condition_t remote_condition;
   pn_endpoint_t *endpoint_next;
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;

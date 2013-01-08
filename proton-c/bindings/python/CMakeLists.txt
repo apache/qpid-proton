@@ -28,7 +28,7 @@ set_target_properties(_cproton
 find_package(PythonInterp REQUIRED)
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True, prefix='')"
+                -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
                 OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 

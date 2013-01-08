@@ -181,12 +181,14 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
     pn_error_from_errno(driver->error, "setsockopt");
+    close(sock);
     return NULL;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     pn_error_from_errno(driver->error, "bind");
     freeaddrinfo(addr);
+    close(sock);
     return NULL;
   }
 
@@ -194,6 +196,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 
   if (listen(sock, 50) == -1) {
     pn_error_from_errno(driver->error, "listen");
+    close(sock);
     return NULL;
   }
 
@@ -360,6 +363,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
     if (errno != EINPROGRESS) {
       pn_error_from_errno(driver->error, "connect");
       freeaddrinfo(addr);
+      close(sock);
       return NULL;
     }
   }
@@ -580,6 +584,28 @@ void pn_connector_activate(pn_connector_t *ctor, pn_activate_criteria_t crit)
 }
 
 
+bool pn_connector_activated(pn_connector_t *ctor, pn_activate_criteria_t crit)
+{
+    bool result = false;
+
+    switch (crit) {
+    case PN_CONNECTOR_WRITABLE :
+        result = ctor->pending_write;
+        ctor->pending_write = false;
+        ctor->status &= ~PN_SEL_WR;
+        break;
+
+    case PN_CONNECTOR_READABLE :
+        result = ctor->pending_read;
+        ctor->pending_read = false;
+        ctor->status &= ~PN_SEL_RD;
+        break;
+    }
+
+    return result;
+}
+
+
 static void pn_connector_write(pn_connector_t *ctor)
 {
   if (ctor->output_size > 0) {
@@ -768,9 +794,10 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
     else
       timeout = (timeout < 0) ? d->wakeup-now : pn_min(timeout, d->wakeup - now);
   }
-  if (poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout) == -1)
-    return pn_error_from_errno(d->error, "poll");
-  return 0;
+  int result = poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout);
+  if (result == -1)
+    pn_error_from_errno(d->error, "poll");
+  return result;
 }
 
 void pn_driver_wait_3(pn_driver_t *d)
@@ -822,9 +849,9 @@ void pn_driver_wait_3(pn_driver_t *d)
 int pn_driver_wait(pn_driver_t *d, int timeout)
 {
     pn_driver_wait_1(d);
-    int error = pn_driver_wait_2(d, timeout);
-    if (error)
-        return error;
+    int result = pn_driver_wait_2(d, timeout);
+    if (result == -1)
+        return pn_error_code(d->error);
     pn_driver_wait_3(d);
     return 0;
 }

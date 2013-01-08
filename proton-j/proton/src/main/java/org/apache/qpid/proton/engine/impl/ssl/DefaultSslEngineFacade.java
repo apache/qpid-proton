@@ -26,7 +26,8 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 
-class DefaultSslEngineFacade implements SslEngineFacade
+
+class DefaultSslEngineFacade implements ProtonSslEngine
 {
     private final SSLEngine _sslEngine;
 
@@ -81,5 +82,11 @@ class DefaultSslEngineFacade implements SslEngineFacade
     public HandshakeStatus getHandshakeStatus()
     {
         return _sslEngine.getHandshakeStatus();
+    }
+
+    @Override
+    public boolean getUseClientMode()
+    {
+        return _sslEngine.getUseClientMode();
     }
 }
