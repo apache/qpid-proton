@@ -131,7 +131,7 @@ EOF
 ##
 ## Create the Ruby GEM
 ##
-rootname="qpid-proton-${VERSION}"
+rootname="qpid-proton-ruby-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
@@ -140,7 +140,9 @@ mkdir -p "${WORKDIR}"
     echo "In ${PWD}:"
     ls -l
     cd ${rootname}/bindings/ruby
-    gem build qpid_proton.gemspec
-    cp qpid_proton-*gem ${CURRDIR}
+    tar zcf  ${CURRDIR}/${rootname}.tar.gz ${rootname} \
+      --exclude=spec \
+      --exclude=CMakeLists.txt \
+      --exclude=.gitignore
 )
 
