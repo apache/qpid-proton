@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_connection_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_error_t;
+import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_transport_t;
 
 public class JNITransport implements Transport
@@ -86,14 +87,33 @@ public class JNITransport implements Transport
     }
 
     @Override
-    public Ssl ssl()
+    public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
     {
-        // TODO
         if(_ssl == null)
         {
-            _ssl = new JNISsl( Proton.pn_ssl( _impl ));
+            // TODO move this code to SslPeerDetails or its factory
+            final String sessionId;
+            if (sslPeerDetails == null)
+            {
+                sessionId = null;
+            }
+            else
+            {
+                sessionId = sslPeerDetails.getHostname() + ":" + sslPeerDetails.getPort();
+            }
+            
+            SWIGTYPE_p_pn_ssl_t pn_ssl = Proton.pn_ssl( _impl );
+            _ssl = new JNISsl( pn_ssl);
+            Proton.pn_ssl_init(pn_ssl, ((JNISslDomain)sslDomain).getImpl(), sessionId);
+            // TODO is the returned int an error code??
         }
         return _ssl;
+    }
+
+    @Override
+    public Ssl ssl(SslDomain sslDomain)
+    {
+        return ssl(sslDomain, null);
     }
 
     @Override
@@ -188,4 +208,5 @@ public class JNITransport implements Transport
         }
         while(len != 0 || len2 != 0);
     }
+
 }
