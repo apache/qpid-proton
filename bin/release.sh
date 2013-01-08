@@ -136,14 +136,13 @@ WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c/bindings/ruby ${rootname}
 
     cat <<EOF > ${rootname}/SVN_INFO
 Repo: ${URL}
 Branch: ${BRANCH}
 Revision: ${REVISION}
 EOF
-
 
     tar zcf  ${CURRDIR}/${rootname}.tar.gz ${rootname} \
       --exclude=spec \
