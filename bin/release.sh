@@ -137,9 +137,14 @@ mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
     svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
-    echo "In ${PWD}:"
-    ls -l
-    cd ${rootname}/bindings/ruby
+
+    cat <<EOF > ${rootname}/SVN_INFO
+Repo: ${URL}
+Branch: ${BRANCH}
+Revision: ${REVISION}
+EOF
+
+
     tar zcf  ${CURRDIR}/${rootname}.tar.gz ${rootname} \
       --exclude=spec \
       --exclude=CMakeLists.txt \
