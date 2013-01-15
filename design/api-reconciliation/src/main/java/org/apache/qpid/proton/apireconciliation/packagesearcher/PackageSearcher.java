@@ -58,7 +58,7 @@ public class PackageSearcher
                 {
                     Class implementingClass = (Class) implementingClassObj;
                     LOGGER.fine("Found implementation " + implementingClass.getName() + " for " + apiInterface.getName());
-    
+
                     for (Method apiMethod : apiMethodList)
                     {
                         Method implMethod = findImplMethodOfApiMethod(apiMethod, implementingClass);

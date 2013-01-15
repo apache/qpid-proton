@@ -40,7 +40,7 @@ public class AnnotationAccessor
         {
             throw new IllegalArgumentException("Couldn't find annotation class " + annotationClassName, e);
         }
-        
+
         try
         {
             _functionNameMethod = _annotationClass.getMethod(VALUE_METHOD);

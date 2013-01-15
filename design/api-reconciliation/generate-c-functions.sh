@@ -18,6 +18,8 @@
 # under the License.
 #
 
+# Script to generate a list of proton-c functions for use as input to the api-reconciliation tool.
+
 BASE_DIR=`dirname $0`
 INCLUDE_DIR=$BASE_DIR/../../proton-c/include/proton
 OUTPUT_DIR=$BASE_DIR/target

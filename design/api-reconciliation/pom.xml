@@ -28,7 +28,6 @@
     <proton-c-build-dir>${basedir}/../../proton-c/build</proton-c-build-dir>
     <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
   </properties>
-  
   <build>
     <plugins>
       <plugin>
@@ -60,13 +59,11 @@
             <scope>system</scope>
             <systemPath>${jni-jar}</systemPath>
           </dependency>
-          <!-- 
           <dependency>
             <groupId>org.apache.qpid</groupId>
-            <artifactId>proton-j-impl</artifactId>
+            <artifactId>proton-api</artifactId>
             <version>1.0-SNAPSHOT</version>
           </dependency>
-          -->
         </dependencies>
       </plugin>
     </plugins>
@@ -77,11 +74,6 @@
       <artifactId>junit</artifactId>
       <version>4.10</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>proton-api</artifactId>
-      <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
@@ -99,4 +91,11 @@
       <version>2.4</version>
     </dependency>
   </dependencies>
+  <description>Tool to generate a report mapping proton-c functions to proton-j class methods.
+Can be run using sensible defaults using &quot;mvn exec:java&quot;</description>
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>12</version>
+  </parent>
 </project>

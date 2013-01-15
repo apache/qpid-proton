@@ -50,9 +50,9 @@ public class JoinerTest
         _method2 = getClass().getMethod("javaMethodWithMapping2");
         _methodSharingFunctionNameAnnotationWithMethod2 = getClass().getMethod("javaMethodSharingFunctionNameAnnotationWithMethod2");
         _methodWithoutAnnotation = getClass().getMethod("javaMethodWithoutAnnotation");
-        
+
         AnnotationAccessor annotationAccessor = new AnnotationAccessor(TestAnnotation.class.getName());
-        
+
         _joiner = new Joiner(annotationAccessor);
     }
 

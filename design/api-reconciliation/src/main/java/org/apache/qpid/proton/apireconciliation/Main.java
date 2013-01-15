@@ -31,7 +31,8 @@ public class Main
     {
         if (args.length != 4)
         {
-            System.err.println("Unexpected number of arguments");
+            System.err.println("Unexpected number of arguments. Usage:");
+            System.err.println("    java " + Main.class.getName() + " packageRootName cFunctionFile annotationClassName outputFile");
             Runtime.getRuntime().exit(-1);
         }
 

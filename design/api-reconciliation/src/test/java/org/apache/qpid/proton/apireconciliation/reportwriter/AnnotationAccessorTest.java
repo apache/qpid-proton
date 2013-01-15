@@ -32,7 +32,7 @@ public class AnnotationAccessorTest
     private static final String ANNOTATION_VALUE_1 = "value1";
     private static final String ANNOTATED_METHOD_NAME = "annotatedMethod";
     private static final String UNANNOTATED_METHOD_NAME = "unannotatedMethod";
-    
+
     private Method _annotatedMethod;
     private Method _unannotatedMethod;
 
@@ -65,7 +65,7 @@ public class AnnotationAccessorTest
     public void annotatedMethod()
     {
     }
-    
+
     public void unannotatedMethod()
     {
     }
