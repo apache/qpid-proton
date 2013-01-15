@@ -15,16 +15,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.apireconciliation.testdata;
+package org.apache.qpid.proton.apireconciliation.packagesearcher.testdata.manyimpls;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
-
-public interface InterfaceA
+public class Impl1 implements InterfaceWithManyImpls
 {
-    String cFunction1 = "function1";
-    String methodA1 = "methodA1";
 
-    @ProtonCEquivalent(functionName=cFunction1)
-    void methodA1();
+    public void method()
+    {
+    }
+
 }

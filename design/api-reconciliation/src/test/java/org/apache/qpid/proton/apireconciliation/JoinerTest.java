@@ -18,19 +18,18 @@
  */
 package org.apache.qpid.proton.apireconciliation;
 
-import static org.junit.Assert.*;
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.lang.reflect.Method;
-import static java.util.Arrays.asList;
-
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.apireconciliation.reportwriter.AnnotationAccessor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,7 +37,7 @@ public class JoinerTest
 {
     private static final String C_FUNCTION1 = "cFunction1";
     private static final String C_FUNCTION2 = "cFunction2";
-    private Joiner _joiner = new Joiner();
+    private Joiner _joiner;
     private Method _method1 = null;
     private Method _method2 = null;
     private Method _methodSharingFunctionNameAnnotationWithMethod2 = null;
@@ -51,6 +50,10 @@ public class JoinerTest
         _method2 = getClass().getMethod("javaMethodWithMapping2");
         _methodSharingFunctionNameAnnotationWithMethod2 = getClass().getMethod("javaMethodSharingFunctionNameAnnotationWithMethod2");
         _methodWithoutAnnotation = getClass().getMethod("javaMethodWithoutAnnotation");
+        
+        AnnotationAccessor annotationAccessor = new AnnotationAccessor(TestAnnotation.class.getName());
+        
+        _joiner = new Joiner(annotationAccessor);
     }
 
     @Test
@@ -142,17 +145,17 @@ public class JoinerTest
         assertEquals(expectedMethod, row.getJavaMethod());
     }
 
-    @ProtonCEquivalent(functionName=C_FUNCTION1)
+    @TestAnnotation(C_FUNCTION1)
     public void javaMethodWithMapping1()
     {
     }
 
-    @ProtonCEquivalent(functionName=C_FUNCTION2)
+    @TestAnnotation(C_FUNCTION2)
     public void javaMethodWithMapping2()
     {
     }
 
-    @ProtonCEquivalent(functionName=C_FUNCTION2)
+    @TestAnnotation(C_FUNCTION2)
     public void javaMethodSharingFunctionNameAnnotationWithMethod2()
     {
     }

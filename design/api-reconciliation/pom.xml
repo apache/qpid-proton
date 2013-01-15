@@ -24,6 +24,11 @@
   <groupId>org.apache.qpid</groupId>
   <artifactId>proton-api-reconciliation</artifactId>
   <version>1.0-SNAPSHOT</version>
+  <properties>
+    <proton-c-build-dir>${basedir}/../../proton-c/build</proton-c-build-dir>
+    <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
+  </properties>
+  
   <build>
     <plugins>
       <plugin>
@@ -39,12 +44,30 @@
         </executions>
         <configuration>
           <mainClass>org.apache.qpid.proton.apireconciliation.Main</mainClass>
+          <includePluginDependencies>true</includePluginDependencies>
           <arguments>
             <argument>org.apache.qpid.proton</argument>
             <argument>target/cfunctions.txt</argument>
+            <argument>org.apache.qpid.proton.ProtonCEquivalent</argument>
             <argument>target/apireconciliation.csv</argument>
           </arguments>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.qpid</groupId>
+            <artifactId>proton-jni</artifactId>
+            <version>${project.version}</version>
+            <scope>system</scope>
+            <systemPath>${jni-jar}</systemPath>
+          </dependency>
+          <!-- 
+          <dependency>
+            <groupId>org.apache.qpid</groupId>
+            <artifactId>proton-j-impl</artifactId>
+            <version>1.0-SNAPSHOT</version>
+          </dependency>
+          -->
+        </dependencies>
       </plugin>
     </plugins>
   </build>

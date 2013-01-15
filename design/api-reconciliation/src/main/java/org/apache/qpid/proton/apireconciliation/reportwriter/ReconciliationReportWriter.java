@@ -20,6 +20,7 @@
 package org.apache.qpid.proton.apireconciliation.reportwriter;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.defaultString;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.apireconciliation.ReconciliationReport;
 import org.apache.qpid.proton.apireconciliation.ReportRow;
 
@@ -37,6 +37,12 @@ public class ReconciliationReportWriter
 {
     private static final String ROW_FORMAT="%s,%s,%s";
     private static final String REPORT_TITLE = format(ROW_FORMAT, "C function","Java Method","Java Annotation");
+    private final AnnotationAccessor _annotationAccessor;
+
+    public ReconciliationReportWriter(AnnotationAccessor annotationAccessor)
+    {
+        _annotationAccessor = annotationAccessor;
+    }
 
     public void write(String outputFile, ReconciliationReport report) throws IOException
     {
@@ -50,38 +56,24 @@ public class ReconciliationReportWriter
         {
             ReportRow row = itr.next();
             Method javaMethod = row.getJavaMethod();
-            String cFunction = row.getCFunction() == null ? "" : row.getCFunction();
-            String fullyQualifiedMethodName = createFullyQualifiedJavaMethodName(javaMethod);
-            String annotationCFunction = extractCFunctionNameFromAnnotation(javaMethod);
+            String cFunction = defaultString(row.getCFunction());
 
+            String fullyQualifiedMethodName = "";
+            String annotationCFunction = "";
+            if (javaMethod != null)
+            {
+                fullyQualifiedMethodName = createFullyQualifiedJavaMethodName(javaMethod);
+                annotationCFunction = defaultString(_annotationAccessor.getAnnotationValue(javaMethod));
+            }
             reportLines.add(format(ROW_FORMAT, cFunction, fullyQualifiedMethodName, annotationCFunction));
         }
 
         FileUtils.writeLines(output, reportLines);
     }
 
-    private String extractCFunctionNameFromAnnotation(Method javaMethod)
-    {
-        if (javaMethod != null && javaMethod.getAnnotation(ProtonCEquivalent.class) != null)
-        {
-            return javaMethod.getAnnotation(ProtonCEquivalent.class).functionName();
-        }
-        else
-        {
-            return "";
-        }
-    }
-
     private String createFullyQualifiedJavaMethodName(Method javaMethod)
     {
-        if (javaMethod != null)
-        {
-            return javaMethod.getDeclaringClass().getName() +  "#" + javaMethod.getName();
-        }
-        else
-        {
-            return "";
-        }
+        return javaMethod.getDeclaringClass().getName() +  "#" + javaMethod.getName();
     }
 
 }

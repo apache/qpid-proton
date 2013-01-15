@@ -54,6 +54,15 @@ set(CMAKE_JAVA_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR}/api/proton-api-${PN_VERS
 # TODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
 add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
 
-add_custom_command(TARGET proton-jni POST_BUILD COMMAND ${Java_JAR_EXECUTABLE} uvf proton-jni-${PN_VERSION}.jar -C ${PROJECT_SOURCE_DIR}/jni/src/main/resources META-INF)
+message("CMAKE_CURRENT_BINARY_DIR " ${CMAKE_CURRENT_BINARY_DIR})
+message("CMAKE_JAVA_CLASS_OUTPUT_PATH" ${CMAKE_JAVA_CLASS_OUTPUT_PATH})
+
+# We need to rebuild the JAR to a) include the resources b) include the 'structural' directory entries that are
+# excluded by Cmake's add_jar command.  The latter is required by Google Reflections.
+add_custom_command(TARGET proton-jni POST_BUILD
+                   COMMAND ${Java_JAR_EXECUTABLE} cf proton-jni-${PN_VERSION}.jar
+                              -C ${PROJECT_SOURCE_DIR}/jni/src/main/resources META-INF
+                              -C ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/proton-jni.dir/ org
+                   COMMENT "Rebuilding JAR to include missing resources")
 
 add_dependencies(proton-jni proton-api proton-swig)

@@ -21,6 +21,7 @@ package org.apache.qpid.proton.apireconciliation;
 
 import java.util.List;
 
+import org.apache.qpid.proton.apireconciliation.reportwriter.AnnotationAccessor;
 import org.apache.qpid.proton.apireconciliation.reportwriter.ReconciliationReportWriter;
 
 public class Main
@@ -28,7 +29,7 @@ public class Main
 
     public static void main(String[] args) throws Exception
     {
-        if (args.length != 3)
+        if (args.length != 4)
         {
             System.err.println("Unexpected number of arguments");
             Runtime.getRuntime().exit(-1);
@@ -36,16 +37,18 @@ public class Main
 
         String packageRootName = args[0];
         String cFunctionFile = args[1];
-        String outputFile = args[2];
+        String annotationClassName = args[2];
+        String outputFile = args[3];
 
         CFunctionNameListReader cFunctionNameListReader = new CFunctionNameListReader();
 
-        Reconciliation reconciliation = new Reconciliation();
+        AnnotationAccessor annotationAccessor = new AnnotationAccessor(annotationClassName);
+        Reconciliation reconciliation = new Reconciliation(annotationAccessor);
 
         List<String> cFunctionNames = cFunctionNameListReader.readCFunctionNames(cFunctionFile);
         ReconciliationReport report = reconciliation.reconcile(cFunctionNames, packageRootName);
 
-        ReconciliationReportWriter writer = new ReconciliationReportWriter();
+        ReconciliationReportWriter writer = new ReconciliationReportWriter(annotationAccessor);
         writer.write(outputFile, report);
         System.err.println("Written : " + outputFile);
     }

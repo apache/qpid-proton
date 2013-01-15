@@ -15,13 +15,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.apireconciliation.testdata;
+package org.apache.qpid.proton.apireconciliation.packagesearcher.testdata.tree.leaf;
 
-
-public interface InterfaceB
+public class ImplAtLeaf implements InterfaceAtLeaf
 {
-    String methodWithoutAnnotation = "methodWithoutAnnotation";
 
-    void methodWithoutAnnotation();
+    public void method()
+    {
+    }
+
 }

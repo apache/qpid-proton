@@ -27,15 +27,22 @@ import java.net.URISyntaxException;
 import java.net.URL;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.apireconciliation.ReconciliationReport;
+import org.apache.qpid.proton.apireconciliation.TestAnnotation;
+import org.junit.Before;
 import org.junit.Test;
 
 
 public class ReconciliationReportWriterTest
 {
-    private ReconciliationReportWriter _writer = new ReconciliationReportWriter();
+    private ReconciliationReportWriter _writer;
     private ReconciliationReport _report = new ReconciliationReport();
+
+    @Before
+    public void setUp()
+    {
+        _writer = new ReconciliationReportWriter(new AnnotationAccessor(TestAnnotation.class.getName()));
+    }
 
     @Test
     public void testReportWithSingleFullyMappedRow() throws Exception
@@ -87,12 +94,12 @@ public class ReconciliationReportWriterTest
                 FileUtils.readFileToString(actualReport));
     }
 
-    @ProtonCEquivalent(functionName="function1")
+    @TestAnnotation("function1")
     public void methodWithMapping()
     {
     }
 
-    @ProtonCEquivalent(functionName="function2")
+    @TestAnnotation("function2")
     public void anotherMethodWithMapping()
     {
     }

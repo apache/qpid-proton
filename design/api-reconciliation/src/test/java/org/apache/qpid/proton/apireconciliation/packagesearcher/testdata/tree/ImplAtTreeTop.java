@@ -15,17 +15,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.apireconciliation.testdata;
+package org.apache.qpid.proton.apireconciliation.packagesearcher.testdata.tree;
 
-import org.apache.qpid.proton.apireconciliation.PackageSearcher;
-
-/**
- * Methods on classes should be ignored by {@link PackageSearcher}
- */
-public class DummyClass
+public class ImplAtTreeTop implements InterfaceAtTreeTop
 {
-    public void dummyClassMethod()
+
+    public void method()
     {
-    };
+    }
+
 }

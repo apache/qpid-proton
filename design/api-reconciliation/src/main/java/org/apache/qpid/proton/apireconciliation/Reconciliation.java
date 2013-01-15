@@ -22,10 +22,18 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.qpid.proton.apireconciliation.packagesearcher.PackageSearcher;
+import org.apache.qpid.proton.apireconciliation.reportwriter.AnnotationAccessor;
+
 public class Reconciliation
 {
-    private PackageSearcher _packageSearcher = new PackageSearcher();
-    private Joiner _joiner = new Joiner();
+    private final PackageSearcher _packageSearcher = new PackageSearcher();
+    private final Joiner _joiner;
+
+    public Reconciliation(AnnotationAccessor annotationAccessor)
+    {
+        _joiner = new Joiner(annotationAccessor);
+    }
 
     public ReconciliationReport reconcile(List<String> protonCFunctions, String packageRootName)
     {

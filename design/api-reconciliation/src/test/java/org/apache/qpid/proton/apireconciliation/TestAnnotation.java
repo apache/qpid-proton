@@ -15,16 +15,18 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.apireconciliation.testdata.subpackage;
+package org.apache.qpid.proton.apireconciliation;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface InterfaceInSubPackage
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface TestAnnotation
 {
-    String cFunction = "subpackageFunction";
-    String methodWithinSubpackage = "methodWithinSubpackage";
-
-    @ProtonCEquivalent(functionName = cFunction)
-    void methodWithinSubpackage();
+    String value();
 }

@@ -25,13 +25,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.apireconciliation.reportwriter.AnnotationAccessor;
 
 public class Joiner
 {
+    private final AnnotationAccessor _annotationAccessor;
+
+    public Joiner(AnnotationAccessor annotationAccessor)
+    {
+        _annotationAccessor = annotationAccessor;
+    }
+
     /**
      * Does an outer join of the supplied C functions with those named by the
-     * {@link ProtonCEquivalent} annotations on the Java methods.
+     * annotations on the Java methods.
      */
     public ReconciliationReport join(List<String> protonCFunctions, Set<Method> javaMethods)
     {
@@ -69,10 +76,9 @@ public class Joiner
 
         for (Method method : javaMethods)
         {
-            ProtonCEquivalent protonCEquivalent = method.getAnnotation(ProtonCEquivalent.class);
-            if (protonCEquivalent != null)
+            String functionName = _annotationAccessor.getAnnotationValue(method);
+            if (functionName != null)
             {
-                String functionName = protonCEquivalent.functionName();
                 if (annotatedNameToMethod.containsKey(functionName))
                 {
                     functionsWithDuplicateJavaMappings.add(functionName);
