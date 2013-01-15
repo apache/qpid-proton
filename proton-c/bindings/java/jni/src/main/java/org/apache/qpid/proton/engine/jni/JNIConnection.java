@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.jni;
 
 import java.util.EnumSet;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointError;
@@ -52,24 +54,28 @@ public class JNIConnection implements Connection
 
 
     @Override
+    @ProtonCEquivalent("pn_session")
     public Session session()
     {
         return new JNISession(Proton.pn_session(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_head")
     public Session sessionHead(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         return JNISession.getSession(Proton.pn_session_head(_impl, StateConverter.getStateMask(local, remote)));
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_head")
     public Link linkHead(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         return JNILink.getLink(Proton.pn_link_head(_impl, StateConverter.getStateMask(local, remote)));
     }
 
     @Override
+    @ProtonCEquivalent("pn_work_head")
     public Delivery getWorkHead()
     {
         return JNIDelivery.getDelivery(Proton.pn_work_head(_impl));
@@ -77,24 +83,28 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_set_container")
     public void setContainer(String container)
     {
         Proton.pn_connection_set_container(_impl, container);
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_set_hostname")
     public void setHostname(String hostname)
     {
         Proton.pn_connection_set_hostname(_impl, hostname);
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_remote_container")
     public String getRemoteContainer()
     {
         return Proton.pn_connection_remote_container(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_remote_hostname")
     public String getRemoteHostname()
     {
         return Proton.pn_connection_remote_hostname(_impl);
@@ -127,6 +137,7 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_free")
     public void free()
     {
         if(_impl != null)
@@ -138,24 +149,29 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_open")
     public void open()
     {
         Proton.pn_connection_open(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_close")
     public void close()
     {
         Proton.pn_connection_close(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_set_context")
+
     public void setContext(Object o)
     {
         _context = o;
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_get_context")
     public Object getContext()
     {
         return _context;

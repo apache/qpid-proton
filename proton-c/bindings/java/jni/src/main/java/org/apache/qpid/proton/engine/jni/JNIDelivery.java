@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.jni.Proton;
@@ -60,13 +61,14 @@ public class JNIDelivery implements Delivery
         return null;
     }
 
-
+    @ProtonCEquivalent("pn_delivery_get_context")
     public Object getContext()
     {
         return _context;
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_tag")
     public byte[] getTag()
     {
         // TODO - pn_delivery_tag_t should be bytes not string
@@ -75,18 +77,21 @@ public class JNIDelivery implements Delivery
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_link")
     public Link getLink()
     {
         return _link;
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_local_state")
     public DeliveryState getLocalState()
     {
         return convertDisposition(Proton.pn_delivery_local_state(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_remote_state")
     public DeliveryState getRemoteState()
     {
         return convertDisposition(Proton.pn_delivery_remote_state(_impl));
@@ -166,6 +171,7 @@ public class JNIDelivery implements Delivery
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_settle")
     public void settle()
     {
         Proton.pn_delivery_settle(_impl);
@@ -189,29 +195,34 @@ public class JNIDelivery implements Delivery
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_writable")
     public boolean isWritable()
     {
         return Proton.pn_delivery_writable(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_readable")
     public boolean isReadable()
     {
         return Proton.pn_delivery_readable(_impl);
     }
 
+    @ProtonCEquivalent("pn_delivery_set_context")
     public void setContext(Object context)
     {
         _context = context;
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_updated")
     public boolean isUpdated()
     {
         return Proton.pn_delivery_updated(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_settled")
     public boolean isSettled()
     {
         return Proton.pn_delivery_settled(_impl);

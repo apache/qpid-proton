@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.jni;
 
 import java.nio.ByteBuffer;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_link_t;
@@ -34,12 +36,14 @@ public class JNISender extends JNILink implements Sender
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_offered")
     public void offer(int credits)
     {
         // TODO
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_send")
     public int send(byte[] bytes, int offset, int length)
     {
         return Proton.pn_link_send(getImpl(), ByteBuffer.wrap(bytes,offset,length));
@@ -52,6 +56,7 @@ public class JNISender extends JNILink implements Sender
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_drained")
     public void drained()
     {
         Proton.pn_link_drained(getImpl());

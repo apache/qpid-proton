@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.UUID;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_data_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
@@ -63,68 +65,78 @@ public class JNIMessage implements Message
         _impl = Proton.pn_message();
     }
 
-
     @Override
+    @ProtonCEquivalent("pn_message_is_durable")
     public boolean isDurable()
     {
         return Proton.pn_message_is_durable(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_delivery_count")
     public long getDeliveryCount()
     {
         return Proton.pn_message_get_delivery_count(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_priority")
     public short getPriority()
     {
         return Proton.pn_message_get_priority(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_is_first_acquirer")
     public boolean isFirstAcquirer()
     {
         return Proton.pn_message_is_first_acquirer(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_ttl")
     public long getTtl()
     {
         return Proton.pn_message_get_ttl(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_durable")
     public void setDurable(boolean durable)
     {
         Proton.pn_message_set_durable(_impl, durable);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_ttl")
     public void setTtl(long ttl)
     {
         Proton.pn_message_set_ttl(_impl, ttl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_delivery_count")
     public void setDeliveryCount(long deliveryCount)
     {
         Proton.pn_message_set_delivery_count(_impl, deliveryCount);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_first_acquirer")
     public void setFirstAcquirer(boolean firstAcquirer)
     {
         Proton.pn_message_set_first_acquirer(_impl, firstAcquirer);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_priority")
     public void setPriority(short priority)
     {
         Proton.pn_message_set_priority(_impl, priority);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_id")
     public Object getMessageId()
     {
         return convert(Proton.pn_message_get_id(_impl));
@@ -390,30 +402,35 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_group_sequence")
     public long getGroupSequence()
     {
         return Proton.pn_message_get_group_sequence(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_reply_to_group_id")
     public String getReplyToGroupId()
     {
         return Proton.pn_message_get_reply_to_group_id(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_creation_time")
     public long getCreationTime()
     {
         return Proton.pn_message_get_creation_time(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_address")
     public String getAddress()
     {
         return Proton.pn_message_get_address(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_user_id")
     public byte[] getUserId()
     {
 
@@ -422,54 +439,63 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_reply_to")
     public String getReplyTo()
     {
         return Proton.pn_message_get_reply_to(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_group_id")
     public String getGroupId()
     {
         return Proton.pn_message_get_group_id(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_content_type")
     public String getContentType()
     {
         return Proton.pn_message_get_content_type(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_expiry_time")
     public long getExpiryTime()
     {
         return Proton.pn_message_get_expiry_time(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_expiry_time")
     public Object getCorrelationId()
     {
         return convert(Proton.pn_message_get_correlation_id(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_content_encoding")
     public String getContentEncoding()
     {
         return Proton.pn_message_get_content_encoding(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_subject")
     public String getSubject()
     {
         return Proton.pn_message_get_subject(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_group_sequence")
     public void setGroupSequence(long groupSequence)
     {
         Proton.pn_message_set_group_sequence(_impl, (int) groupSequence);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_user_id")
     public void setUserId(byte[] userId)
     {
         pn_bytes_t val = Proton.pn_bytes(userId.length, userId);
@@ -480,66 +506,77 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_creation_time")
     public void setCreationTime(long creationTime)
     {
         Proton.pn_message_set_creation_time(_impl, creationTime);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_subject")
     public void setSubject(String subject)
     {
         Proton.pn_message_set_subject(_impl, subject);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_group_id")
     public void setGroupId(String groupId)
     {
         Proton.pn_message_set_group_id(_impl, groupId);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_address")
     public void setAddress(String to)
     {
         Proton.pn_message_set_address(_impl, to);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_expiry_time")
     public void setExpiryTime(long absoluteExpiryTime)
     {
         Proton.pn_message_set_expiry_time(_impl,absoluteExpiryTime);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_reply_to_group_id")
     public void setReplyToGroupId(String replyToGroupId)
     {
         Proton.pn_message_set_reply_to_group_id(_impl, replyToGroupId);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_content_encoding")
     public void setContentEncoding(String contentEncoding)
     {
         Proton.pn_message_set_content_encoding(_impl, contentEncoding);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_content_type")
     public void setContentType(String contentType)
     {
         Proton.pn_message_set_content_type(_impl, contentType);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_reply_to")
     public void setReplyTo(String replyTo)
     {
         Proton.pn_message_set_reply_to(_impl, replyTo);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_correlation_id")
     public void setCorrelationId(Object correlationId)
     {
         Proton.pn_message_set_correlation_id(_impl, convertToAtom(correlationId));
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_id")
     public void setMessageId(Object messageId)
     {
 
@@ -548,12 +585,14 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_decode")
     public int decode(byte[] data, int offset, int length)
     {
         return Proton.pn_message_decode(_impl, ByteBuffer.wrap(data,offset,length));
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_encode")
     public int encode(byte[] data, int offset, int length)
     {
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
@@ -563,6 +602,7 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_set_format")
     public void setMessageFormat(MessageFormat format)
     {
         Proton.pn_message_set_format(_impl, convertMessageFormat(format));
@@ -586,6 +626,7 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_get_format")
     public MessageFormat getMessageFormat()
     {
         return convertMessageFormat(Proton.pn_message_get_format(_impl));
@@ -614,12 +655,14 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_clear")
     public void clear()
     {
         Proton.pn_message_clear(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_error")
     public MessageError getError()
     {
         return null;  //To change body of implemented methods use File | Settings | File Templates.
@@ -627,6 +670,7 @@ public class JNIMessage implements Message
 
 
     @Override
+    @ProtonCEquivalent("pn_message_load")
     public void load(Object data)
     {
         byte[] bytes;
@@ -664,6 +708,7 @@ public class JNIMessage implements Message
     }
 
     @Override
+    @ProtonCEquivalent("pn_message_save")
     public Object save()
     {
 
@@ -687,55 +732,66 @@ public class JNIMessage implements Message
         return rval;
     }
 
+    @Override
     public String toAMQPFormat(Object value)
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public Object parseAMQPFormat(String value)
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void setFooter(Footer footer)
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
-
+    @Override
     public Header getHeader()
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public DeliveryAnnotations getDeliveryAnnotations()
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    @ProtonCEquivalent("pn_message_annotations")
     public MessageAnnotations getMessageAnnotations()
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    @ProtonCEquivalent("pn_message_properties")
     public Properties getProperties()
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public ApplicationProperties getApplicationProperties()
     {
         //TODO
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    @ProtonCEquivalent("pn_message_body")
     public Section getBody()
     {
         //TODO

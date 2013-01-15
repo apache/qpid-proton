@@ -20,6 +20,7 @@ package org.apache.qpid.proton.engine.jni;
 
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Transport;
@@ -40,6 +41,7 @@ public class JNIEngineFactory implements EngineFactory
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection")
     public Connection createConnection()
     {
         return new JNIConnection();

@@ -48,9 +48,9 @@ public interface Sender extends Link
     /**
      * Abort the current delivery.
      *
+     * Note "pn_link_abort" is commented out in the .h
      */
     public void abort();
-
 
     public void drained();
 }

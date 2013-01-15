@@ -56,6 +56,7 @@ public interface Message
 
     String getReplyToGroupId();
 
+
     long getCreationTime();
 
     String getAddress();

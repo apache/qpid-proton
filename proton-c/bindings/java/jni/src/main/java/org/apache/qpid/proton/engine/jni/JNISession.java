@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.jni;
 
 import java.util.EnumSet;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
@@ -44,12 +46,14 @@ public class JNISession implements Session
     }
 
     @Override
+    @ProtonCEquivalent("pn_sender")
     public Sender sender(String name)
     {
         return new JNISender(Proton.pn_sender(_impl, name));
     }
 
     @Override
+    @ProtonCEquivalent("pn_receiver")
     public Receiver receiver(String name)
     {
         //TODO
@@ -57,6 +61,7 @@ public class JNISession implements Session
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_next")
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         SWIGTYPE_p_pn_session_t session = Proton.pn_session_next(_impl, StateConverter.getStateMask(local, remote));
@@ -68,18 +73,21 @@ public class JNISession implements Session
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_connection")
     public Connection getConnection()
     {
         return _connection;
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_state")
     public EndpointState getLocalState()
     {
         return StateConverter.getLocalState(Proton.pn_session_state(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_state")
     public EndpointState getRemoteState()
     {
         return StateConverter.getRemoteState(Proton.pn_session_state(_impl));
@@ -100,6 +108,7 @@ public class JNISession implements Session
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_free")
     public void free()
     {
         if(_impl != null)
@@ -112,24 +121,28 @@ public class JNISession implements Session
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_open")
     public void open()
     {
         Proton.pn_session_open(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_close")
     public void close()
     {
         Proton.pn_session_close(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_set_context")
     public void setContext(Object o)
     {
         _context = o;
     }
 
     @Override
+    @ProtonCEquivalent("pn_session_get_context")
     public Object getContext()
     {
         return _context;

@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.jni;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_connection_t;
@@ -45,6 +46,7 @@ public class JNITransport implements Transport
     }
 
     @Override
+    @ProtonCEquivalent("pn_transport_bind")
     public void bind(Connection connection)
     {
         JNIConnection jniConn = (JNIConnection)connection;
@@ -53,6 +55,7 @@ public class JNITransport implements Transport
     }
 
     @Override
+    @ProtonCEquivalent("pn_transport_input")
     public int input(byte[] bytes, int offset, int size)
     {
         int i = Proton.pn_transport_input(_impl, ByteBuffer.wrap(bytes, offset, size));
@@ -76,6 +79,7 @@ public class JNITransport implements Transport
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl")
     public Sasl sasl()
     {
         if(_sasl == null)
@@ -87,6 +91,7 @@ public class JNITransport implements Transport
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl")
     public Ssl ssl(SslDomain sslDomain, SslPeerDetails sslPeerDetails)
     {
         if(_ssl == null)

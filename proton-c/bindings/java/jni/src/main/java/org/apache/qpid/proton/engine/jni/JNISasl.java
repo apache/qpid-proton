@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_sasl_t;
@@ -52,6 +54,7 @@ public class JNISasl implements Sasl
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_state")
     public SaslState getState()
     {
         return convertState(Proton.pn_sasl_state(_impl));
@@ -74,6 +77,7 @@ public class JNISasl implements Sasl
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_mechanisms")
     public void setMechanisms(String[] mechanisms)
     {
         StringBuilder build = new StringBuilder();
@@ -91,6 +95,7 @@ public class JNISasl implements Sasl
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_remote_mechanisms")
     public String[] getRemoteMechanisms()
     {
         String mechs = Proton.pn_sasl_remote_mechanisms(_impl);
@@ -98,24 +103,28 @@ public class JNISasl implements Sasl
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_pending")
     public int pending()
     {
         return (int) Proton.pn_sasl_pending(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_recv")
     public int recv(byte[] bytes, int offset, int size)
     {
         return Proton.pn_sasl_recv(_impl, ByteBuffer.wrap(bytes, offset, size));
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_send")
     public int send(byte[] bytes, int offset, int size)
     {
         return Proton.pn_sasl_send(_impl, ByteBuffer.wrap(bytes, offset, size));
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_done")
     public void done(SaslOutcome outcome)
     {
         Proton.pn_sasl_done(_impl, convertOutcome(outcome));
@@ -150,24 +159,29 @@ public class JNISasl implements Sasl
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_plain")
+
     public void plain(String username, String password)
     {
         Proton.pn_sasl_plain(_impl, username, password);
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_outcome")
     public SaslOutcome getOutcome()
     {
         return _pn_outcomes.get(Proton.pn_sasl_outcome(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_client")
     public void client()
     {
         Proton.pn_sasl_client(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_sasl_server")
     public void server()
     {
         Proton.pn_sasl_server(_impl);

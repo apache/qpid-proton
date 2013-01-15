@@ -22,6 +22,8 @@ package org.apache.qpid.proton.engine.jni;
 
 import java.util.EnumSet;
 import java.util.Iterator;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
@@ -59,6 +61,7 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_name")
     public String getName()
     {
         return Proton.pn_link_name(_impl);
@@ -92,18 +95,22 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_advance")
     public boolean advance()
     {
         return Proton.pn_link_advance(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_source")
     public Source getSource()
     {
         return convertSource(Proton.pn_link_source(_impl));
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_target")
+
     public Target getTarget()
     {
         return convertTarget(Proton.pn_link_target(_impl));
@@ -197,6 +204,7 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_remote_source")
     public Source getRemoteSource()
     {
         return convertSource(Proton.pn_link_remote_source(_impl));
@@ -267,6 +275,7 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_remote_target")
     public Target getRemoteTarget()
     {
         return convertTarget(Proton.pn_link_remote_target(_impl));
@@ -304,6 +313,7 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_next")
     public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         return getLink(Proton.pn_link_next(_impl, StateConverter.getStateMask(local, remote)));
@@ -333,24 +343,28 @@ abstract class JNILink implements Link
 
 
     @Override
+    @ProtonCEquivalent("pn_link_credit")
     public int getCredit()
     {
         return Proton.pn_link_credit(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_queued")
     public int getQueued()
     {
         return Proton.pn_link_queued(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_unsettled")
     public int getUnsettled()
     {
         return Proton.pn_link_unsettled(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_session")
     public Session getSession()
     {
         return _session;
@@ -400,12 +414,14 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_state")
     public EndpointState getLocalState()
     {
         return StateConverter.getLocalState(Proton.pn_link_state(_impl));        
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_state")
     public EndpointState getRemoteState()
     {
         return StateConverter.getRemoteState(Proton.pn_link_state(_impl));                
@@ -424,6 +440,7 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_free")
     public void free()
     {
         if(_impl != null)
@@ -436,24 +453,28 @@ abstract class JNILink implements Link
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_open")
     public void open()
     {
         Proton.pn_link_open(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_close")
     public void close()
     {
         Proton.pn_link_close(_impl);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_set_context")
     public void setContext(Object o)
     {
         _context = o;
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_get_context")
     public Object getContext()
     {
         return _context;

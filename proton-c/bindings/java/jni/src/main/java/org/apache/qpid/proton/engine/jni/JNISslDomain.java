@@ -19,6 +19,7 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_domain_t;
@@ -37,6 +38,7 @@ public class JNISslDomain implements SslDomain
     private boolean _allowUnsecured;
 
     @Override
+    @ProtonCEquivalent("pn_ssl_init")
     public void init(Mode mode)
     {
         _impl = Proton.pn_ssl_domain(convertMode(mode));
@@ -65,6 +67,7 @@ public class JNISslDomain implements SslDomain
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl_domain_set_credentials")
     public void setCredentials(String certificate_file, String private_key_file, String password)
     {
         _certificateFile = certificate_file;
@@ -93,6 +96,7 @@ public class JNISslDomain implements SslDomain
 
 
     @Override
+    @ProtonCEquivalent("pn_ssl_domain_set_trusted_ca_db")
     public void setTrustedCaDb(String certificate_db)
     {
         Proton.pn_ssl_domain_set_trusted_ca_db(_impl, certificate_db);
@@ -106,6 +110,7 @@ public class JNISslDomain implements SslDomain
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl_domain_allow_unsecured_client")
     public void allowUnsecuredClient(boolean unused)
     {
         _allowUnsecured = true;
@@ -120,6 +125,7 @@ public class JNISslDomain implements SslDomain
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl_domain_set_peer_authentication")
     public void setPeerAuthentication(VerifyMode mode)
     {
         _verifyMode = mode;

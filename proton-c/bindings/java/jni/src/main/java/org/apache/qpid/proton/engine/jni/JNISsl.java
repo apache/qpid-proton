@@ -24,6 +24,7 @@ package org.apache.qpid.proton.engine.jni;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_t;
@@ -38,6 +39,7 @@ class JNISsl implements Ssl
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl_get_cipher_name")
     public String getCipherName()
     {
         byte[] data = new byte[1024];
@@ -54,6 +56,7 @@ class JNISsl implements Ssl
     }
 
     @Override
+    @ProtonCEquivalent("pn_ssl_get_protocol_name")
     public String getProtocolName()
     {
         byte[] data = new byte[1024];

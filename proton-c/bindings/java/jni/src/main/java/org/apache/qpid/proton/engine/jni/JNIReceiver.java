@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine.jni;
 
 import java.nio.ByteBuffer;
+
+import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_link_t;
@@ -33,18 +35,21 @@ public class JNIReceiver extends JNILink implements Receiver
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_flow")
     public void flow(int credits)
     {
         Proton.pn_link_flow(getImpl(), credits);
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_recv")
     public int recv(byte[] bytes, int offset, int size)
     {
         return Proton.pn_link_recv(getImpl(), ByteBuffer.wrap(bytes,offset,size));
     }
 
     @Override
+    @ProtonCEquivalent("pn_link_drain")
     public void drain(int credit)
     {
         Proton.pn_link_drain(getImpl(), credit);

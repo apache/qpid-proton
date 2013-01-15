@@ -36,7 +36,7 @@
     <maven>3.0</maven>
   </prerequisites>
 
-  <build>    
+  <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
