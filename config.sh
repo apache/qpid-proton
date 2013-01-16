@@ -51,3 +51,7 @@ fi
 # Ruby
 export RUBY_BINDINGS=$PROTON_BINDINGS/ruby
 export RUBYLIB=$RUBY_BINDINGS
+
+# Perl
+export PERL_BINDINGS=$PROTON_BINDINGS/perl
+export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
