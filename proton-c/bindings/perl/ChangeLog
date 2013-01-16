@@ -1,4 +1,7 @@
-version 0.3: (TBA)
+version 0.4: (TBD)
+	* Unit tests for qpid::proton::Message.
+
+version 0.3: (15 January 2013)
 	* No language-specific features developed in this release.
 
 version 0.2: (30 November 2012)
