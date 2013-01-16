@@ -20,14 +20,10 @@
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.apache.qpid</groupId>
-    <artifactId>proton-project</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
-  </parent>
 
+  <groupId>org.apache.qpid</groupId>
   <artifactId>proton-system-tests</artifactId>
+  <version>1.0-SNAPSHOT</version>
 
   <description><![CDATA[The Proton system tests execute against either the Java or the C implementations, based on the chosen profile.
 
@@ -38,17 +34,34 @@ To override this, run Maven like so: "mvn test -P proton-c -Dproton-c-build-dir=
 ]]>
   </description>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+          <optimize>true</optimize>
+          <debug>true</debug>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>${junit-version}</version>
+      <version>4.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.qpid</groupId>
       <artifactId>proton-api</artifactId>
-      <version>${project.parent.version}</version>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 
@@ -62,7 +75,7 @@ To override this, run Maven like so: "mvn test -P proton-c -Dproton-c-build-dir=
         <dependency>
           <groupId>org.apache.qpid</groupId>
           <artifactId>proton-j-impl</artifactId>
-          <version>${project.parent.version}</version>
+          <version>1.0-SNAPSHOT</version>
           <scope>runtime</scope>
         </dependency>
       </dependencies>
