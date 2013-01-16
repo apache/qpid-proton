@@ -19,6 +19,11 @@
 
 package qpid::proton::Message;
 
+our $DATA_FORMAT = $cproton_perl::PN_DATA;
+our $TEXT_FORMAT = $cproton_perl::PN_TEXT;
+our $AMQP_FORMAT = $cproton_perl::PN_AMQP;
+our $JSON_FORMAT = $cproton_perl::PN_JSON;
+
 sub new {
     my ($class) = @_;
     my ($self) = {};
@@ -32,7 +37,9 @@ sub new {
 
 sub DESTROY {
     my ($self) = @_;
-    cproton_perl::pn_message_free($self->{_impl});
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_message_free($impl);
 }
 
 sub get_impl {
@@ -62,7 +69,7 @@ sub set_durable {
 
 sub get_durable {
     my ($self) = @_;
-    return cproton_perl::pn_message_get_durable($self->{_impl});
+    return cproton_perl::pn_message_is_durable($self->{_impl});
 }
 
 sub set_priority {
@@ -92,7 +99,7 @@ sub set_first_acquirer {
 
 sub get_first_acquirer {
     my ($self) = @_;
-    return cproton_perl::pn_message_get_first_acquirer($self->{_impl});
+    return cproton_perl::pn_message_is_first_acquirer($self->{_impl});
 }
 
 sub set_delivery_count {
@@ -107,22 +114,34 @@ sub get_delivery_count {
 
 sub set_id {
     my ($self) = @_;
-    cproton_perl::pn_message_set_id($self->{_impl}, $_[1]);
+    my $id = $_[1];
+
+    die "Message id must be defined" if !defined($id);
+
+    cproton_perl::pn_message_set_id($self->{_impl}, $id);
 }
 
 sub get_id {
     my ($self) = @_;
-    return cproton_perl::pn_message_get_id($self->{_impl});
+    my $id = cproton_perl::pn_message_get_id($self->{_impl});
+
+    return $id;
 }
 
 sub set_user_id {
     my ($self) = @_;
-    cproton_perl::pn_message_set_user_id($self->{_impl}, $_[1]);
+    my $user_id = $_[1];
+
+    die "User id must be defined" if !defined($user_id);
+
+    cproton_perl::pn_message_set_user_id($self->{_impl}, $user_id);
 }
 
 sub get_user_id {
     my ($self) = @_;
-    return cproton_perl::pn_message_get_user_id($self->{_impl}, $_[1]);
+    my $user_id = cproton_perl::pn_message_get_user_id($self->{_impl});
+
+    return $user_id;
 }
 
 sub set_address {
@@ -167,7 +186,11 @@ sub get_correlation_id {
 
 sub set_format {
     my ($self) = @_;
-    cproton_perl::pn_message_set_format($self->{_impl}, $_[1]);
+    my $format = $_[1];
+
+    die "Format must be defined" if !defined($format);
+
+    cproton_perl::pn_message_set_format($self->{_impl}, $format);
 }
 
 sub get_format {
@@ -187,12 +210,15 @@ sub get_content_type {
 
 sub set_content {
     my ($self) = @_;
-    my ($content) = $_[1];
+    my $content = $_[1];
+
     cproton_perl::pn_message_load($self->{_impl}, $content);
 }
 
 sub get_content {
     my ($self) = @_;
+    my $content = cproton_perl::pn_message_save($self->{_impl}, 1024);
+
     return cproton_perl::pn_message_save($self->{_impl}, 1024);
 }
 
@@ -206,19 +232,35 @@ sub get_content_encoding {
     return cproton_perl::pn_message_get_content_encoding($self->{_impl});
 }
 
-sub set_expires {
+sub set_expiry_time {
     my ($self) = @_;
-    cproton_perl::pn_message_set_expires($self->{_impl}, $_[1]);
+    my $expiry_time = $_[1];
+
+    die "Expiry time must be defined" if !defined($expiry_time);
+
+    $expiry_time = int($expiry_time);
+
+    die "Expiry time must be non-negative" if $expiry_time < 0;
+
+    cproton_perl::pn_message_set_expiry_time($self->{_impl}, $expiry_time);
 }
 
-sub get_expires {
+sub get_expiry_time {
     my ($self) = @_;
-    return cproton_perl::pn_message_get_expires($self->{_impl});
+    return cproton_perl::pn_message_get_expiry_time($self->{_impl});
 }
 
 sub set_creation_time {
     my ($self) = @_;
-    cproton_perl::pn_message_set_creation_time($self->{_impl}, $_[1]);
+    my $creation_time = $_[1];
+
+    die "Creation time must be defined" if !defined($creation_time);
+
+    $creation_time = int($creation_time);
+
+    die "Creation time must be non-negative" if $creation_time < 0;
+
+    cproton_perl::pn_message_set_creation_time($self->{_impl}, $creation_time);
 }
 
 sub get_creation_time {
@@ -238,7 +280,11 @@ sub get_group_id {
 
 sub set_group_sequence {
     my ($self) = @_;
-    cproton_perl::pn_message_set_group_sequence($self->{_impl}, $_[1]);
+    my $group_sequence = $_[1];
+
+    die "Group sequence must be defined" if !defined($group_sequence);
+
+    cproton_perl::pn_message_set_group_sequence($self->{_impl}, int($_[1]));
 }
 
 sub get_group_sequence {

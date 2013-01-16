@@ -18,6 +18,105 @@ typedef int int32_t;
 
 %include <cstring.i>
 
+%typemap(in) pn_atom_t
+{
+  if(!$input)
+    {
+      $1.type = PN_NULL;
+    }
+  else
+    {
+      if(SvIOK($input)) // an integer value
+        {
+          $1.type = PN_LONG;
+          $1.u.as_long = SvIV($input);
+        }
+      else if(SvNOK($input)) // a floating point value
+        {
+          $1.type = PN_FLOAT;
+          $1.u.as_float = SvNV($input);
+        }
+      else if(SvPOK($input)) // a string type
+        {
+          STRLEN len;
+          char* ptr;
+
+          ptr = SvPV($input, len);
+          $1.type = PN_STRING;
+          $1.u.as_bytes.start = ptr;
+          $1.u.as_bytes.size = strlen(ptr); // len;
+        }
+    }
+}
+
+%typemap(out) pn_atom_t
+{
+  SV* obj = sv_newmortal();
+
+  switch($1.type)
+    {
+    case PN_NULL:
+      sv_setsv(obj, &PL_sv_undef);
+      break;
+
+    case PN_BYTE:
+      sv_setiv(obj, (IV)$1.u.as_byte);
+      break;
+
+    case PN_INT:
+      sv_setiv(obj, (IV)$1.u.as_int);
+      break;
+
+    case PN_LONG:
+      sv_setiv(obj, (IV)$1.u.as_long);
+      break;
+
+    case PN_STRING:
+      {
+        if($1.u.as_bytes.size > 0)
+          {
+            sv_setpvn(obj, $1.u.as_bytes.start, $1.u.as_bytes.size);
+          }
+        else
+          {
+            sv_setsv(obj, &PL_sv_undef);
+          }
+      }
+      break;
+    }
+
+  $result = obj;
+  // increment the hidden stack reference before returning
+  argvi++;
+}
+
+%typemap(in) pn_bytes_t
+{
+  STRLEN len;
+  char* ptr;
+
+  ptr = SvPV($input, len);
+  $1.start = ptr;
+  $1.size = strlen(ptr);
+}
+
+%typemap(out) pn_bytes_t
+{
+  SV* obj = sv_newmortal();
+
+  if($1.size > 0)
+    {
+      sv_setpvn(obj, $1.start, $1.size);
+    }
+  else
+    {
+      sv_setsv(obj, &PL_sv_undef);
+    }
+
+  $result = obj;
+  argvi++;
+}
+
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 
