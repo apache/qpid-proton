@@ -36,9 +36,9 @@
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/util.h>
-#include "util.h"
-#include "platform.h"
-#include "ssl/ssl-internal.h"
+#include "../util.h"
+#include "../platform.h"
+#include "../ssl/ssl-internal.h"
 
 /* Decls */
 

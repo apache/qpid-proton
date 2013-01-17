@@ -108,7 +108,7 @@ add_custom_command (
 if(PN_WINAPI)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
-  set (pn_driver_impl src/driver.c)
+  set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
 
 # Link in openssl if present
