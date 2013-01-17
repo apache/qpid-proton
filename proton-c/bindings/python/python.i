@@ -19,10 +19,14 @@
 %module cproton
 %{
 /* Includes the header in the wrapper code */
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#include <winsock2.h>
+#endif
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
 #include <proton/driver.h>
+#include <proton/driver_extras.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 %}

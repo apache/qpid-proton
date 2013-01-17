@@ -66,7 +66,7 @@ char* pn_i_genuuid(void) {
 #elif USE_WIN_UUID
 #include <rpc.h>
 char* pn_i_genuuid(void) {
-    RPC_CSTR generated;
+    unsigned char *generated;
     UUID uuid;
     UuidCreate(&uuid);
     UuidToString(&uuid, &generated);
@@ -77,3 +77,34 @@ char* pn_i_genuuid(void) {
 #else
 #error "Don't know how to generate uuid strings on this platform"
 #endif
+
+#ifdef USE_STRERROR_R
+#include <string.h>
+static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
+  if (strerror_r(errnum, buf, buflen) != 0) pn_fatal("strerror_r() failed\n");
+}
+#elif USE_STRERROR_S
+#include <string.h>
+static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
+  if (strerror_s(buf, buflen, errnum) != 0) pn_fatal("strerror_s() failed\n");
+}
+#elif USE_OLD_STRERROR
+// This is thread safe on some platforms, and the only option on others
+#include <string.h>
+static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
+  strncpy(buf, strerror(errnum), buflen);
+}
+#else
+#error "Don't know a safe strerror equivalent for this platform"
+#endif
+
+int pn_i_error_from_errno(pn_error_t *error, const char *msg)
+{
+  char err[1024];
+  pn_i_strerror(errno, err, 1024);
+  int code = PN_ERR;
+  if (errno == EINTR)
+      code = PN_INTR;
+  return pn_error_format(error, code, "%s: %s", msg, err);
+}
+

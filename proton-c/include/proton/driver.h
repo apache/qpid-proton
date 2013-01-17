@@ -144,16 +144,6 @@ void pn_driver_free(pn_driver_t *driver);
 pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
                            const char *port, void* context);
 
-/** Create a listener using the existing file descriptor.
- *
- * @param[in] driver driver that will 'own' this listener
- * @param[in] fd existing file descriptor for listener to listen on
- * @param[in] context application-supplied, can be accessed via
- *                    pn_listener_context()
- * @return a new listener on the given host:port, NULL if error
- */
-pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context);
-
 /** Access the head listener for a driver.
  *
  * @param[in] driver the driver whose head listener will be returned
@@ -224,16 +214,6 @@ void pn_listener_free(pn_listener_t *listener);
  */
 pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
                              const char *port, void* context);
-
-/** Create a connector using the existing file descriptor.
- *
- * @param[in] driver driver that will 'own' this connector.
- * @param[in] fd existing file descriptor to use for this connector.
- * @param[in] context application-supplied, can be accessed via
- *                    pn_connector_context()
- * @return a new connector to the given host:port, NULL if error.
- */
-pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context);
 
 /** Access the head connector for a driver.
  *

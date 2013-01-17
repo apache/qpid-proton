@@ -29,6 +29,13 @@ set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 include(soversion.cmake)
 
+if(WIN32 AND NOT CYGWIN)
+  # linking against Windows native libraries, including mingw
+  set (PN_WINAPI TRUE)
+  set (PLATFORM_LIBS ws2_32 Rpcrt4)
+endif(WIN32 AND NOT CYGWIN)
+
+
 # In rpm builds the build sets some variables:
 #  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
 #  INCLUDE_INSTALL_DIR
@@ -97,6 +104,13 @@ add_custom_command (
   DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
 )
 
+# Select driver
+if(PN_WINAPI)
+  set (pn_driver_impl src/windows/driver.c)
+else(PN_WINAPI)
+  set (pn_driver_impl src/driver.c)
+endif(PN_WINAPI)
+
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/openssl.c)
@@ -141,6 +155,23 @@ else (UUID_GENERATE_IN_LIBC)
     endif (UUID_CREATE_IN_LIBC)
   endif (UUID_GENERATE_IN_UUID)
 endif (UUID_GENERATE_IN_LIBC)
+
+if (PN_WINAPI)
+CHECK_SYMBOL_EXISTS(strerror_s "string.h" STRERROR_S_IN_WINAPI)
+if (STRERROR_S_IN_WINAPI)
+  list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_S")
+else (STRERROR_S_IN_WINAPI)
+if (MINGW)
+  message (STATUS, "NOTE: your MinGW version lacks a thread safe strerror")
+  list(APPEND PLATFORM_DEFINITIONS "USE_OLD_STRERROR")
+endif (MINGW)
+endif (STRERROR_S_IN_WINAPI)
+else (PN_WINAPI)
+CHECK_SYMBOL_EXISTS(strerror_r "string.h" STRERROR_R_IN_LIBC)
+if (STRERROR_R_IN_LIBC)
+  list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_R")
+endif (STRERROR_R_IN_LIBC)
+endif (PN_WINAPI)
 
 # Try to keep any platform specific overrides together here:
 
@@ -190,7 +221,7 @@ add_subdirectory(docs/man)
 add_subdirectory(examples/messenger/c)
 
 set (qpid-proton-platform
-  src/driver.c
+  ${pn_driver_impl}
   src/platform.c
   ${pn_driver_ssl_impl}
 )
@@ -238,7 +269,7 @@ add_library (
   ${qpid-proton-platform}
 )
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
 set_target_properties (
   qpid-proton

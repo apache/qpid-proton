@@ -19,7 +19,6 @@
  *
  */
 
-#include <err.h>
 #include <stdio.h>
 #include <proton/buffer.h>
 #include <proton/codec.h>
@@ -27,10 +26,19 @@
 #include <proton/framing.h>
 #include "util.h"
 
+void fatal_error(const char *msg, const char *arg, int err)
+{
+  fprintf(stderr, msg, arg);
+  fflush(stderr);
+  errno = err;
+  perror(" , exiting");
+  exit(1);
+}
+
 int dump(const char *file)
 {
   FILE *in = fopen(file, "r");
-  if (!in) err(1, "%s", file);
+  if (!in) fatal_error("proton-dump: dump: opening %s", file, errno);
 
   pn_buffer_t *buf = pn_buffer(1024);
   pn_data_t *data = pn_data(16);
@@ -77,7 +85,7 @@ int dump(const char *file)
     }
   }
 
-  if (ferror(in)) err(1, "%s", file);
+  if (ferror(in)) fatal_error("proton-dump: dump: reading %s", file, errno);
   if (pn_buffer_size(buf) > 0) {
     fprintf(stderr, "Trailing data: ");
     pn_bytes_t b = pn_buffer_bytes(buf);

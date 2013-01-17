@@ -1201,6 +1201,7 @@ typedef long long int int64_t;
 
 
 %include "proton/driver.h"
+%include "proton/driver_extras.h"
 
 %contract pn_messenger(const char *name)
 {

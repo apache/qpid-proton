@@ -47,7 +47,6 @@ void pn_error_clear(pn_error_t *error);
 int pn_error_set(pn_error_t *error, int code, const char *text);
 int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
 int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
-int pn_error_from_errno(pn_error_t *error, const char *msg);
 int pn_error_code(pn_error_t *error);
 const char *pn_error_text(pn_error_t *error);
 
