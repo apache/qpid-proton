@@ -34,7 +34,7 @@
 
   <modules>
     <module>proton-j</module>
-    <module>tests/proton-system-tests</module>
+    <module>tests</module>
   </modules>
     
 </project>

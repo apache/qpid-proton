@@ -18,58 +18,47 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.test;
+package org.apache.qpid.proton;
+
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.logging.Logger;
 
 import org.junit.Test;
-import static org.junit.Assert.*;
-
 import org.python.core.PyException;
 import org.python.util.PythonInterpreter;
-import java.io.File;
 
 /**
  * Runs all the python tests.
  */
 public class JythonTest
 {
-
-    static final private String PROTON_TESTS = "PROTON_TESTS";
+    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test"; // PHTODO rename script??
+    private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
     @Test
     public void test() throws Exception
     {
+        // PHTODO check whether we still need jproton-test and if so, does it need refactoring?
+        // ditto config.sh
 
-        File basedir = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getFile(), "../../..").getCanonicalFile();
-        File testDir;
-        String protonTestsVar = System.getenv(PROTON_TESTS);
-        if( protonTestsVar != null && protonTestsVar.trim().length()>0 )
-        {
-            testDir = new File(protonTestsVar).getCanonicalFile();
-            assertTrue(PROTON_TESTS + " env variable set incorrectly: " + protonTestsVar, testDir.isDirectory());
-        }
-        else
-        {
-            testDir = new File(basedir, "../tests");
-            if( !testDir.isDirectory() )
-            {
-                // The tests might not be there if the proton-j module is released independently
-                // from the main proton project.
-                return;
-            }
-        }
+        File protonScriptFile = getPythonTestScript();
+        String parentDirectory = protonScriptFile.getParent();
 
-        File classesDir = new File(basedir, "target/classes");
         PythonInterpreter interp = new PythonInterpreter();
+
+        LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory: " + parentDirectory + " added to Jython path");
 
         interp.exec(
         "import sys\n"+
-        "sys.path.insert(0,\""+classesDir.getCanonicalPath()+"\")\n"+
-        "sys.path.insert(0,\""+testDir.getCanonicalPath()+"\")\n"
+        "sys.path.insert(0,\""+parentDirectory+"\")\n"
         );
 
         try
         {
-            interp.execfile(new File(testDir, "proton-test").getCanonicalPath());
+            String protonTestPyPath = protonScriptFile.getAbsolutePath();
+            interp.execfile(protonTestPyPath);
         }
         catch (PyException e)
         {
@@ -82,6 +71,14 @@ public class JythonTest
                 throw e;
             }
         }
+    }
+
+
+    private File getPythonTestScript() throws URISyntaxException
+    {
+        URL protonScriptUrl = getClass().getResource(PROTON_TEST_SCRIPT_CLASSPATH_LOCATION);
+        File protonScriptFile = new File(protonScriptUrl.toURI());
+        return protonScriptFile;
     }
 
 }
