@@ -23,6 +23,9 @@ use cproton_perl;
 
 package qpid::proton::Messenger;
 
+our $AUTO_ACCEPT   = $cproton_perl::PN_ACCEPT_MODE_AUTO;
+our $MANUAL_ACCEPT = $cproton_perl::PN_ACCEPT_MODE_MANUAL;
+
 sub new {
     my ($class) = @_;
     my ($self) = {};
@@ -42,17 +45,66 @@ sub DESTROY {
 
 sub get_name {
     my ($self) = @_;
-    return cproton_perl::pn_messenger_get_name($self->{_impl});
+    return cproton_perl::pn_messenger_name($self->{_impl});
 }
 
 sub set_timeout {
     my ($self) = @_;
-    cproton_perl::pn_messenger_set_timeout($self->{_impl}, $_[1]);
+    my $timeout = $_[1];
+
+    $timeout = 0 if !defined($timeout);
+    $timeout = int($timeout);
+
+    cproton_perl::pn_messenger_set_timeout($self->{_impl}, $timeout);
 }
 
 sub get_timeout {
     my ($self) = @_;
     return cproton_perl::pn_messenger_get_timeout($self->{_impl});
+}
+
+sub set_accept_mode {
+    my ($self) = @_;
+    my $mode = $_[1];
+
+    die "acccept mode must be defined" if !defined($mode);
+
+    cproton_perl::pn_messenger_set_accept_mode($self->{_impl}, $mode);
+}
+
+sub get_accept_mode {
+    my ($self) = @_;
+    return cproton_perl::pn_messenger_get_accept_mode($self->{_impl});
+}
+
+sub set_outgoing_window {
+    my ($self) = @_;
+    my $window = $_[1];
+
+    $window = 0 if !defined($window);
+    $window = int($window);
+
+    cproton_perl::pn_messenger_set_outgoing_window($self->{_impl}, $window);
+}
+
+sub get_outgoing_window {
+    my ($self) = @_;
+    return cproton_perl::pn_messenger_get_outgoing_window($self->{_impl});
+}
+
+sub set_incoming_window {
+    my ($self) = @_;
+    my $window = $_[1];
+
+    $window = 0 if !defined($window);
+    $window = int($window);
+
+    cproton_perl::pn_messenger_set_incoming_window($self->{_impl}, $window);
+}
+
+sub get_incoming_window {
+    my ($self) = @_;
+    return cproton_perl::pn_messenger_get_incoming_window($self->{_impl});
 }
 
 sub get_error {
@@ -98,6 +150,17 @@ sub set_private_key {
 sub get_private_key {
     my ($self) = @_;
     return cproton_perl::pn_messenger_get_private_key($self->{_impl});
+}
+
+sub set_password {
+    my ($self) = @_;
+
+    cproton_perl::pn_messenger_set_password($self->{_impl}, $_[1]);
+}
+
+sub get_password {
+    my ($self) = @_;
+    return cproton_perl::pn_messenger_get_password($self->{_impl});
 }
 
 sub set_trusted_certificates {
