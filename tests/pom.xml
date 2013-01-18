@@ -43,7 +43,6 @@ To override this, run Maven like so: "mvn test -P proton-c -Dproton-c-build-dir=
           <source>1.6</source>
           <target>1.6</target>
           <optimize>true</optimize>
-          <debug>true</debug>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
         </configuration>
