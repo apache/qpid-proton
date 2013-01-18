@@ -1,15 +1,27 @@
 *~
 *.swp
+
+# Start of IntelliJ IDE files
 .idea
 .idea/*
 *.iml
 *.ipr
 *.iws
+# End of IntelliJ IDE files
+
 *.class
 *.pyc
 target
+
 .DS_Store
+
+# Start of Eclipse IDE files
 .project
 .classpath
 .settings
+.cproject
 eclipse-classes
+# End of Eclipse IDE files
+
+# The usual location for proton-c build files
+proton-c/build
