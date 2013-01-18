@@ -16,36 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.jni;
+package org.apache.qpid.proton.message.jni;
 
-import java.util.logging.Logger;
-
-import org.apache.qpid.proton.ProtonCEquivalent;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.jni.JNIFactory;
+import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message.MessageFactory;
 
-public class JNIEngineFactory extends JNIFactory implements EngineFactory
+public class JNIMessageFactory extends JNIFactory implements MessageFactory
 {
-    private static final Logger LOGGER = Logger.getLogger(JNIEngineFactory.class.getName());
 
     @Override
-    @ProtonCEquivalent("pn_connection")
-    public Connection createConnection()
+    public Message createMessage()
     {
-        LOGGER.info("PHDEBUG about to create JNIConnection");
-
-        JNIConnection jniConnection = new JNIConnection();
-        LOGGER.info("PHDEBUG created JNIConnection");
-
-        return jniConnection;
-    }
-
-    @Override
-    public Transport createTransport()
-    {
-        return new JNITransport();
+        throw new UnsupportedOperationException("PHTODO not implemented yet");
     }
 
 }

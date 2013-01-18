@@ -16,36 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.jni;
+package org.apache.qpid.proton.jni;
 
 import java.util.logging.Logger;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.jni.JNIFactory;
-
-public class JNIEngineFactory extends JNIFactory implements EngineFactory
+public abstract class JNIFactory
 {
-    private static final Logger LOGGER = Logger.getLogger(JNIEngineFactory.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(JNIFactory.class.getName());
 
-    @Override
-    @ProtonCEquivalent("pn_connection")
-    public Connection createConnection()
+    static
     {
-        LOGGER.info("PHDEBUG about to create JNIConnection");
+        String libname = "proton-swig";
 
-        JNIConnection jniConnection = new JNIConnection();
-        LOGGER.info("PHDEBUG created JNIConnection");
+        LOGGER.info("About to load library " + libname);
 
-        return jniConnection;
-    }
+        System.loadLibrary(libname);
 
-    @Override
-    public Transport createTransport()
-    {
-        return new JNITransport();
+        LOGGER.info("Successfully loaded library " + libname);
     }
 
 }

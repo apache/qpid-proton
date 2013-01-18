@@ -18,14 +18,13 @@
 
 from uuid import UUID
 
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, SslDomain
-from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
-    SenderImpl, ReceiverImpl, TransportImpl
-from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
-from org.apache.qpid.proton.message import MessageFormat
-from org.apache.qpid.proton.message.impl import MessageImpl
+from org.apache.qpid.proton import ProtonFactoryLoader
+from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, SslDomain, EngineFactory
+#from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
+from org.apache.qpid.proton.message import MessageFormat, MessageFactory
+#from org.apache.qpid.proton.message.impl import MessageImpl
 from org.apache.qpid.proton.messenger import MessengerException, Status
-from org.apache.qpid.proton.messenger.impl import MessengerImpl
+#from org.apache.qpid.proton.messenger.impl import MessengerImpl
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
@@ -36,7 +35,9 @@ LANGUAGE = "Java"
 class Skipped(Exception):
   skipped = True
 
-PN_SESSION_WINDOW = TransportImpl.SESSION_WINDOW
+# PHTODO resolve hardcoding
+#PN_SESSION_WINDOW = TransportImpl.SESSION_WINDOW
+PN_SESSION_WINDOW = 1024
 
 PENDING = "PENDING"
 ACCEPTED = "ACCEPTED"
@@ -51,6 +52,12 @@ STATUSES = {
 
 MANUAL = "MANUAL"
 AUTOMATIC = "AUTOMATIC"
+
+print "PHDEBUG about to load factories"
+protonFactoryLoader = ProtonFactoryLoader()
+engineFactory = protonFactoryLoader.loadFactory(EngineFactory)
+messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
+print "PHDEBUG engineFactory = %s " % engineFactory
 
 class Endpoint(object):
 
@@ -141,7 +148,7 @@ def wrap_connection(impl):
 class Connection(Endpoint):
 
   def __init__(self, _impl=None):
-    self.impl = _impl or ConnectionImpl()
+    self.impl = _impl or engineFactory.createConnection()
 
   @property
   def writable(self):
@@ -417,7 +424,7 @@ class Transport(object):
   TRACE_DRV = 4
 
   def __init__(self):
-    self.impl = TransportImpl()
+    self.impl = engineFactory.createTransport()
 
   def trace(self, mask):
     # XXX: self.impl.trace(mask)
@@ -433,7 +440,7 @@ class Transport(object):
     n = self.impl.output(output, 0, size)
     if n >= 0:
       return output.tostring()[:n]
-    elif n == TransportImpl.END_OF_STREAM:
+    elif n == Transport.END_OF_STREAM:
       return None
     else:
       raise Exception("XXX: %s" % n)
@@ -597,10 +604,12 @@ class Message(object):
   DATA = MessageFormat.DATA
   JSON = MessageFormat.JSON
 
-  DEFAULT_PRIORITY = MessageImpl.DEFAULT_PRIORITY
+  # PHTODO remove hardcoding
+  #DEFAULT_PRIORITY = MessageImpl.DEFAULT_PRIORITY
+  DEFAULT_PRIORITY = 4
 
   def __init__(self):
-    self.impl = MessageImpl()
+    self.impl = messageFactory.createMessage()
 
   def clear(self):
     self.impl.clear()
@@ -793,7 +802,7 @@ class SASL(object):
     n = self._sasl.recv(output, 0, size)
     if n >= 0:
       return output.tostring()[:n]
-    elif n == TransportImpl.END_OF_STREAM:
+    elif n == Transport.END_OF_STREAM:
       return None
     else:
       raise Exception(n)

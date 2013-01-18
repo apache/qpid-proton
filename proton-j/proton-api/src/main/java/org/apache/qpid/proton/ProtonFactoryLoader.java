@@ -16,36 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.jni;
+package org.apache.qpid.proton;
 
+import java.util.Iterator;
+import java.util.ServiceLoader;
 import java.util.logging.Logger;
 
-import org.apache.qpid.proton.ProtonCEquivalent;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.jni.JNIFactory;
-
-public class JNIEngineFactory extends JNIFactory implements EngineFactory
+public class ProtonFactoryLoader<C>
 {
-    private static final Logger LOGGER = Logger.getLogger(JNIEngineFactory.class.getName());
-
-    @Override
-    @ProtonCEquivalent("pn_connection")
-    public Connection createConnection()
+    private static final Logger LOGGER = Logger.getLogger(ProtonFactoryLoader.class.getName());
+    
+    public C loadFactory(Class<C> factoryInterface)
     {
-        LOGGER.info("PHDEBUG about to create JNIConnection");
-
-        JNIConnection jniConnection = new JNIConnection();
-        LOGGER.info("PHDEBUG created JNIConnection");
-
-        return jniConnection;
-    }
-
-    @Override
-    public Transport createTransport()
-    {
-        return new JNITransport();
+        ServiceLoader<C> serviceLoader = ServiceLoader.load(factoryInterface);
+        Iterator<C> serviceLoaderIterator = serviceLoader.iterator();
+        if(!serviceLoaderIterator.hasNext())
+        {
+            throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName());
+        }
+        C factory = serviceLoaderIterator.next();
+        LOGGER.info("loadFactory returning " + factory);
+        return factory;
     }
 
 }
