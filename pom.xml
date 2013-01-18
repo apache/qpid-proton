@@ -32,9 +32,21 @@
     <maven>3.0</maven>
   </prerequisites>
 
-  <modules>
-    <module>proton-j</module>
-    <module>tests</module>
-  </modules>
-    
+  <profiles>
+    <profile>
+      <id>proton-c</id>
+      <modules>
+        <module>proton-j/proton-api</module>
+        <module>tests</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>proton-j</id>
+      <modules>
+        <module>proton-j</module>
+        <module>tests</module>
+      </modules>
+    </profile>
+  </profiles>
+
 </project>

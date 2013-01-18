@@ -20,6 +20,7 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>12</version>
+    <relativePath></relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 

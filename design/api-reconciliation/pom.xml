@@ -108,5 +108,6 @@ Can be run using sensible defaults using &quot;mvn exec:java&quot;</description>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>12</version>
+    <relativePath></relativePath>
   </parent>
 </project>

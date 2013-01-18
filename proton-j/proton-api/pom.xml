@@ -25,4 +25,15 @@
 
   <artifactId>proton-api</artifactId>
 
+  <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/scripts</directory>
+      </resource>
+    </resources>
+  </build>
+
 </project>
