@@ -27,15 +27,20 @@ import java.util.logging.Logger;
 
 import org.junit.Test;
 import org.python.core.PyException;
+import org.python.core.PyString;
+import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
 
 /**
- * Runs all the python tests.
+ * Runs all the python tests, or just those that match the system property {@value #TEST_PATTERN_SYSTEM_PROPERTY}
+ * if it exists
  */
 public class JythonTest
 {
-    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test"; // PHTODO rename script??
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
+
+    private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
+    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test"; // PHTODO rename script??
 
     @Test
     public void test() throws Exception
@@ -46,9 +51,9 @@ public class JythonTest
         File protonScriptFile = getPythonTestScript();
         String parentDirectory = protonScriptFile.getParent();
 
-        PythonInterpreter interp = new PythonInterpreter();
+        PythonInterpreter interp = createInterpreterWithArgs();
 
-        LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory: " + parentDirectory + " added to Jython path");
+        LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory added to Jython path");
 
         interp.exec(
         "import sys\n"+
@@ -73,6 +78,17 @@ public class JythonTest
         }
     }
 
+    private PythonInterpreter createInterpreterWithArgs()
+    {
+        PySystemState systemState = new PySystemState();
+        String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
+        if(testPattern != null)
+        {
+            systemState.argv.append(new PyString(testPattern));
+        }
+        PythonInterpreter interp = new PythonInterpreter(null, systemState);
+        return interp;
+    }
 
     private File getPythonTestScript() throws URISyntaxException
     {
@@ -80,5 +96,4 @@ public class JythonTest
         File protonScriptFile = new File(protonScriptUrl.toURI());
         return protonScriptFile;
     }
-
 }
