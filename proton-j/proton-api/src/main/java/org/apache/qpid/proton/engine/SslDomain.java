@@ -47,7 +47,7 @@ public interface SslDomain
          * by a trusted CA and are using an authenticated cipher
          */
         VERIFY_PEER,
-
+        VERIFY_PEER_NAME,
         /**
          * does not require a valid certificate, and permits use of ciphers that
          * do not provide authentication

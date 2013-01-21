@@ -18,34 +18,53 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
-import java.util.logging.Logger;
-
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.jni.JNIFactory;
 
 public class JNIEngineFactory extends JNIFactory implements EngineFactory
 {
-    private static final Logger LOGGER = Logger.getLogger(JNIEngineFactory.class.getName());
-
     @Override
     @ProtonCEquivalent("pn_connection")
     public Connection createConnection()
     {
-        LOGGER.info("PHDEBUG about to create JNIConnection");
-
-        JNIConnection jniConnection = new JNIConnection();
-        LOGGER.info("PHDEBUG created JNIConnection");
-
-        return jniConnection;
+        return new JNIConnection();
     }
 
     @Override
     public Transport createTransport()
     {
         return new JNITransport();
+    }
+
+    @Override
+    public SslDomain createSslDomain()
+    {
+        return new JNISslDomain();
+    }
+
+    @Override
+    public SslPeerDetails createSslPeerDetails(final String hostname, final int port)
+    {
+        return new SslPeerDetails()
+        {
+
+            @Override
+            public int getPort()
+            {
+                return port;
+            }
+
+            @Override
+            public String getHostname()
+            {
+                return hostname;
+            }
+        };
     }
 
 }

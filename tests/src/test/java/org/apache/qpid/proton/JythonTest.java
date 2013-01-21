@@ -20,9 +20,12 @@
  */
 package org.apache.qpid.proton;
 
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.junit.Test;
@@ -73,7 +76,11 @@ public class JythonTest
             }
             else
             {
-                throw e;
+                if (LOGGER.isLoggable(Level.FINE))
+                {
+                    LOGGER.log(Level.FINE, "Jython interpreter failed. Test failures?", e);
+                }
+                fail(e.getMessage());
             }
         }
     }

@@ -20,7 +20,11 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
+import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
 
 public class EngineFactoryImpl implements EngineFactory
 {
@@ -35,6 +39,18 @@ public class EngineFactoryImpl implements EngineFactory
     public Transport createTransport()
     {
         return new TransportImpl();
+    }
+
+    @Override
+    public SslDomain createSslDomain()
+    {
+        return new SslDomainImpl();
+    }
+
+    @Override
+    public SslPeerDetails createSslPeerDetails(String hostname, int port)
+    {
+        return new SslPeerDetailsImpl(hostname, port);
     }
 
 }

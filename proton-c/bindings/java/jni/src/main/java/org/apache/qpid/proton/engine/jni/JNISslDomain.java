@@ -19,8 +19,12 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_domain_t;
 import org.apache.qpid.proton.jni.pn_ssl_mode_t;
@@ -28,11 +32,13 @@ import org.apache.qpid.proton.jni.pn_ssl_verify_mode_t;
 
 public class JNISslDomain implements SslDomain
 {
+    private static final Logger LOGGER = Logger.getLogger(JNISslDomain.class.getName());
 
     private SWIGTYPE_p_pn_ssl_domain_t _impl;
     private Mode _mode;
     private VerifyMode _verifyMode;
     private String _certificateFile;
+    private String _trustedCaDb;
     private String _privateKeyFile;
     private String _privateKeyPassword;
     private boolean _allowUnsecured;
@@ -73,7 +79,20 @@ public class JNISslDomain implements SslDomain
         _certificateFile = certificate_file;
         _privateKeyFile = private_key_file;
         _privateKeyPassword = password;
-        Proton.pn_ssl_domain_set_credentials(_impl,certificate_file,private_key_file,password);
+        int retVal = Proton.pn_ssl_domain_set_credentials(_impl,certificate_file,private_key_file,password);
+        checkProtonCReturnValue(retVal);
+    }
+
+    private void checkProtonCReturnValue(int retVal)
+    {
+        if(retVal != 0)
+        {
+            if(LOGGER.isLoggable(Level.FINE))
+            {
+                LOGGER.log(Level.FINE, "Non-zero return value: " + retVal, new Exception("<dummy exception to generate stack trace>"));
+            }
+            throw new TransportException("Unexpected return value: " + retVal);
+        }
     }
 
     @Override
@@ -99,14 +118,15 @@ public class JNISslDomain implements SslDomain
     @ProtonCEquivalent("pn_ssl_domain_set_trusted_ca_db")
     public void setTrustedCaDb(String certificate_db)
     {
-        Proton.pn_ssl_domain_set_trusted_ca_db(_impl, certificate_db);
-
+        _trustedCaDb = certificate_db;
+        int retVal = Proton.pn_ssl_domain_set_trusted_ca_db(_impl, certificate_db);
+        checkProtonCReturnValue(retVal);
     }
 
     @Override
     public String getTrustedCaDb()
     {
-        return _certificateFile;
+        return _trustedCaDb;
     }
 
     @Override
@@ -114,8 +134,8 @@ public class JNISslDomain implements SslDomain
     public void allowUnsecuredClient(boolean unused)
     {
         _allowUnsecured = true;
-        Proton.pn_ssl_domain_allow_unsecured_client(_impl);
-
+        int retVal = Proton.pn_ssl_domain_allow_unsecured_client(_impl);
+        checkProtonCReturnValue(retVal);
     }
 
     @Override
@@ -129,8 +149,8 @@ public class JNISslDomain implements SslDomain
     public void setPeerAuthentication(VerifyMode mode)
     {
         _verifyMode = mode;
-        Proton.pn_ssl_domain_set_peer_authentication(_impl,convertVerifyMode(mode),_certificateFile);
-
+        int retVal = Proton.pn_ssl_domain_set_peer_authentication(_impl,convertVerifyMode(mode),_trustedCaDb);
+        checkProtonCReturnValue(retVal);
     }
 
     private pn_ssl_verify_mode_t convertVerifyMode(VerifyMode mode)
@@ -144,6 +164,11 @@ public class JNISslDomain implements SslDomain
             case VERIFY_PEER:
                 cMode = pn_ssl_verify_mode_t.PN_SSL_VERIFY_PEER;
                 break;
+            case VERIFY_PEER_NAME:
+                cMode = pn_ssl_verify_mode_t.PN_SSL_VERIFY_PEER_NAME;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported verify mode " + mode);
         }
 
         return cMode;

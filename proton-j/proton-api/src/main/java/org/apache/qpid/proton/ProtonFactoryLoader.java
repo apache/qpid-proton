@@ -20,6 +20,7 @@ package org.apache.qpid.proton;
 
 import java.util.Iterator;
 import java.util.ServiceLoader;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ProtonFactoryLoader<C>
@@ -35,7 +36,10 @@ public class ProtonFactoryLoader<C>
             throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName());
         }
         C factory = serviceLoaderIterator.next();
-        LOGGER.info("loadFactory returning " + factory);
+        if(LOGGER.isLoggable(Level.FINE))
+        {
+            LOGGER.fine("loadFactory returning " + factory);
+        }
         return factory;
     }
 

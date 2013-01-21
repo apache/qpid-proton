@@ -19,12 +19,12 @@
 from uuid import UUID
 
 from org.apache.qpid.proton import ProtonFactoryLoader
-from org.apache.qpid.proton.engine import EndpointState, TransportException, Sasl, SslDomain, EngineFactory
-#from org.apache.qpid.proton.engine.impl.ssl import SslDomainImpl, SslPeerDetailsImpl
+from org.apache.qpid.proton.engine import \
+    EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
+    Sasl, SslDomain as JSslDomain, \
+    EndpointState, TransportException
 from org.apache.qpid.proton.message import MessageFormat, MessageFactory
-#from org.apache.qpid.proton.message.impl import MessageImpl
 from org.apache.qpid.proton.messenger import MessengerException, Status
-#from org.apache.qpid.proton.messenger.impl import MessengerImpl
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
@@ -53,11 +53,10 @@ STATUSES = {
 MANUAL = "MANUAL"
 AUTOMATIC = "AUTOMATIC"
 
-print "PHDEBUG about to load factories"
 protonFactoryLoader = ProtonFactoryLoader()
 engineFactory = protonFactoryLoader.loadFactory(EngineFactory)
 messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
-print "PHDEBUG engineFactory = %s " % engineFactory
+
 
 class Endpoint(object):
 
@@ -219,9 +218,9 @@ class Session(Endpoint):
 
 def wrap_link(impl):
   if impl is None: return None
-  elif isinstance(impl, SenderImpl):
+  elif isinstance(impl, JSender):
     return Sender(impl)
-  elif isinstance(impl, ReceiverImpl):
+  elif isinstance(impl, JReceiver):
     return Receiver(impl)
   else:
     raise Exception("unknown type")
@@ -348,7 +347,7 @@ class Receiver(Link):
     n = self.impl.recv(output, 0, size)
     if n >= 0:
       return output.tostring()[:n]
-    elif n == TransportImpl.END_OF_STREAM:
+    elif n == JTransport.END_OF_STREAM:
       return None
     else:
       raise Exception(n)
@@ -440,13 +439,19 @@ class Transport(object):
     n = self.impl.output(output, 0, size)
     if n >= 0:
       return output.tostring()[:n]
-    elif n == Transport.END_OF_STREAM:
+    elif n == JTransport.END_OF_STREAM:
       return None
     else:
-      raise Exception("XXX: %s" % n)
+      raise Exception("Unexpected return value from output: %s" % n)
 
   def input(self, bytes):
-    return self.impl.input(bytes, 0, len(bytes))
+    n = self.impl.input(bytes, 0, len(bytes))
+    if n >= 0:
+      return n
+    elif n == JTransport.END_OF_STREAM:
+      return None
+    else:
+      raise Exception("Unexpected return value from input: %s" % n)
 
   def _get_max_frame_size(self):
     #return pn_transport_get_max_frame(self._trans)
@@ -802,7 +807,7 @@ class SASL(object):
     n = self._sasl.recv(output, 0, size)
     if n >= 0:
       return output.tostring()[:n]
-    elif n == Transport.END_OF_STREAM:
+    elif n == JTransport.END_OF_STREAM:
       return None
     else:
       raise Exception(n)
@@ -832,14 +837,14 @@ class SSLUnavailable(SSLException):
 
 class SSLDomain(object):
 
-  MODE_SERVER = SslDomain.Mode.SERVER
-  MODE_CLIENT = SslDomain.Mode.CLIENT
-  VERIFY_PEER = SslDomain.VerifyMode.VERIFY_PEER
-  ANONYMOUS_PEER = SslDomain.VerifyMode.ANONYMOUS_PEER
-  VERIFY_PEER_NAME = None  # TBD
+  MODE_SERVER = JSslDomain.Mode.SERVER
+  MODE_CLIENT = JSslDomain.Mode.CLIENT
+  VERIFY_PEER = JSslDomain.VerifyMode.VERIFY_PEER
+  VERIFY_PEER_NAME = JSslDomain.VerifyMode.VERIFY_PEER_NAME
+  ANONYMOUS_PEER = JSslDomain.VerifyMode.ANONYMOUS_PEER
 
   def __init__(self, mode):
-    self._domain = SslDomainImpl()
+    self._domain = engineFactory.createSslDomain()
     self._domain.init(mode)
 
   def set_credentials(self, cert_file, key_file, password):
@@ -849,9 +854,11 @@ class SSLDomain(object):
     self._domain.setTrustedCaDb(certificate_db)
 
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    self._domain.setPeerAuthentication(verify_mode)
+    # PHTODO the following two method calls have to occur in the following order
+    # otherwise tests fail with proton-jni.  It is not clear yet why.
     if trusted_CAs is not None:
       self._domain.setTrustedCaDb(trusted_CAs)
+    self._domain.setPeerAuthentication(verify_mode)
 
   def allow_unsecured_client(self, allow_unsecured = True):
     self._domain.allowUnsecuredClient(allow_unsecured)
@@ -859,7 +866,7 @@ class SSLDomain(object):
 class SSLSessionDetails(object):
 
   def __init__(self, session_id):
-    self._session_details = SslPeerDetailsImpl(session_id, 1)
+    self._session_details = engineFactory.createSslPeerDetails(session_id, 1)
 
 class SSL(object):
 

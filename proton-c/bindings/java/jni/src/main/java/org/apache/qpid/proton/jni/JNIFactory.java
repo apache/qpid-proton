@@ -18,6 +18,7 @@
  */
 package org.apache.qpid.proton.jni;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public abstract class JNIFactory
@@ -28,11 +29,17 @@ public abstract class JNIFactory
     {
         String libname = "proton-swig";
 
-        LOGGER.info("About to load library " + libname);
+        if(LOGGER.isLoggable(Level.FINE))
+        {
+            LOGGER.fine("About to load library " + libname);
+        }
 
         System.loadLibrary(libname);
 
-        LOGGER.info("Successfully loaded library " + libname);
+        if(LOGGER.isLoggable(Level.FINE))
+        {
+            LOGGER.fine("Successfully loaded library " + libname);
+        }
     }
 
 }

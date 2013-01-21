@@ -180,6 +180,7 @@ public class JNITransport implements Transport
         super.finalize();    
     }
 
+    // PHTODO delete main/pump
     public static void main(String args[])
     {
         System.loadLibrary("protonjni");
@@ -189,7 +190,6 @@ public class JNITransport implements Transport
         JNIConnection conn2 = new JNIConnection();
         t1.bind(conn1);
         t2.bind(conn2);
-
         conn1.open();
         conn2.open();
 
