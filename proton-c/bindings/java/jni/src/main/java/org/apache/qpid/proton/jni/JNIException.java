@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,30 +17,17 @@
  * under the License.
  *
  */
-
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton.jni;
 
 import org.apache.qpid.proton.ProtonException;
 
-public class TransportException extends ProtonException
+/**
+ * Indicates that a Proton function called via JNI returned an error code.
+ */
+public class JNIException extends ProtonException
 {
-    public TransportException()
+    public JNIException(int returnValue)
     {
+        super("Unexpected Proton C return value: " + returnValue);
     }
-
-    public TransportException(String message)
-    {
-        super(message);
-    }
-
-    public TransportException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public TransportException(Throwable cause)
-    {
-        super(cause);
-    }
-
 }

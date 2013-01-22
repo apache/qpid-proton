@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.engine;
+package org.apache.qpid.proton;
 
 public class ProtonException extends RuntimeException
 {

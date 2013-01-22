@@ -18,7 +18,7 @@
 
 from uuid import UUID
 
-from org.apache.qpid.proton import ProtonFactoryLoader
+from org.apache.qpid.proton import ProtonFactoryLoader, ProtonUnsupportedOperationException
 from org.apache.qpid.proton.engine import \
     EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
@@ -886,9 +886,17 @@ class SSL(object):
     return self._ssl.getProtocolName()
 
   def _set_peer_hostname(self, hostname):
-    raise Skipped()
+    try:
+      self._ssl.setPeerHostname(hostname)
+    except ProtonUnsupportedOperationException:
+      raise Skipped()
+
   def _get_peer_hostname(self):
-    raise Skipped()
+    try:
+      return self._ssl.getPeerHostname()
+    except ProtonUnsupportedOperationException:
+      raise Skipped()
+
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
 
 __all__ = [

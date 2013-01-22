@@ -21,6 +21,8 @@
 
 package org.apache.qpid.proton.engine.jni;
 
+import static org.apache.qpid.proton.jni.ExceptionHelper.checkProtonCReturnValue;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
@@ -52,7 +54,14 @@ class JNISsl implements Ssl
     {
         int i = -1;
         while(data[++i] != 0);
-        return new String(data,0,i,Charset.forName("US-ASCII"));
+        if(i == 0)
+        {
+            return null;
+        }
+        else
+        {
+            return new String(data,0,i,Charset.forName("US-ASCII"));
+        }
     }
 
     @Override
@@ -62,5 +71,21 @@ class JNISsl implements Ssl
         byte[] data = new byte[1024];
         boolean b = Proton.pn_ssl_get_protocol_name(_impl, ByteBuffer.wrap(data));
         return b ? asString(data) : null;
+    }
+
+    @Override
+    public void setPeerHostname(String hostname)
+    {
+        int retVal = Proton.pn_ssl_set_peer_hostname(_impl, hostname);
+        checkProtonCReturnValue(retVal);
+    }
+
+    @Override
+    public String getPeerHostname()
+    {
+        byte[] data = new byte[256]; // hostnames are a maximum of 255 characters long (see http://tools.ietf.org/html/rfc1034#section-3.1)
+        int retVal = Proton.pn_ssl_get_peer_hostname(_impl, ByteBuffer.wrap(data));
+        checkProtonCReturnValue(retVal);
+        return asString(data);
     }
 }

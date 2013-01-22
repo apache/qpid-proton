@@ -19,12 +19,10 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import static org.apache.qpid.proton.jni.ExceptionHelper.checkProtonCReturnValue;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.SslDomain;
-import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_domain_t;
 import org.apache.qpid.proton.jni.pn_ssl_mode_t;
@@ -32,8 +30,6 @@ import org.apache.qpid.proton.jni.pn_ssl_verify_mode_t;
 
 public class JNISslDomain implements SslDomain
 {
-    private static final Logger LOGGER = Logger.getLogger(JNISslDomain.class.getName());
-
     private SWIGTYPE_p_pn_ssl_domain_t _impl;
     private Mode _mode;
     private VerifyMode _verifyMode;
@@ -81,18 +77,6 @@ public class JNISslDomain implements SslDomain
         _privateKeyPassword = password;
         int retVal = Proton.pn_ssl_domain_set_credentials(_impl,certificate_file,private_key_file,password);
         checkProtonCReturnValue(retVal);
-    }
-
-    private void checkProtonCReturnValue(int retVal)
-    {
-        if(retVal != 0)
-        {
-            if(LOGGER.isLoggable(Level.FINE))
-            {
-                LOGGER.log(Level.FINE, "Non-zero return value: " + retVal, new Exception("<dummy exception to generate stack trace>"));
-            }
-            throw new TransportException("Unexpected return value: " + retVal);
-        }
     }
 
     @Override

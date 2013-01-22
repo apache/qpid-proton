@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,30 +17,29 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.jni;
 
-package org.apache.qpid.proton.engine;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import org.apache.qpid.proton.ProtonException;
-
-public class TransportException extends ProtonException
+public class ExceptionHelper
 {
-    public TransportException()
-    {
-    }
+    private static final Logger LOGGER = Logger.getLogger(ExceptionHelper.class.getName());
 
-    public TransportException(String message)
+    /**
+     * Check the return value from a Proton function call and throw
+     * an exception if it's non-zero.
+     * @throws JNIException
+     */
+    public static void checkProtonCReturnValue(int retVal)
     {
-        super(message);
+        if(retVal != 0)
+        {
+            if(LOGGER.isLoggable(Level.FINE))
+            {
+                LOGGER.log(Level.FINE, "Non-zero return value: " + retVal, new Exception("<dummy exception to generate stack trace>"));
+            }
+            throw new JNIException(retVal);
+        }
     }
-
-    public TransportException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public TransportException(Throwable cause)
-    {
-        super(cause);
-    }
-
 }

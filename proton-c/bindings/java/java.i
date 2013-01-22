@@ -425,7 +425,8 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *DATA, size_t SIZE);
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *DATA, size_t SIZE);
 %ignore pn_ssl_get_protocol_name;
 
-
+int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *DATA, size_t *SIZE);
+%ignore pn_ssl_get_peer_hostname;
 
 
 %include "proton/cproton.i"

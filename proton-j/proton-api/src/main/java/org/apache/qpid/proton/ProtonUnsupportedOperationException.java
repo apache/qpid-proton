@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,28 +17,29 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton;
 
-package org.apache.qpid.proton.engine;
-
-import org.apache.qpid.proton.ProtonException;
-
-public class TransportException extends ProtonException
+/**
+ * Use to indicate that a feature of the Proton API is not supported by a particular implementation
+ * (e.g. proton-j or proton-c-via-JNI).
+ */
+public class ProtonUnsupportedOperationException extends UnsupportedOperationException
 {
-    public TransportException()
+    public ProtonUnsupportedOperationException()
     {
     }
 
-    public TransportException(String message)
+    public ProtonUnsupportedOperationException(String message)
     {
         super(message);
     }
 
-    public TransportException(String message, Throwable cause)
+    public ProtonUnsupportedOperationException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
-    public TransportException(Throwable cause)
+    public ProtonUnsupportedOperationException(Throwable cause)
     {
         super(cause);
     }

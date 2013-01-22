@@ -18,6 +18,7 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
@@ -71,6 +72,10 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
     @Override
     public void setPeerAuthentication(VerifyMode verifyMode)
     {
+        if(verifyMode == VerifyMode.VERIFY_PEER_NAME)
+        {
+            throw new ProtonUnsupportedOperationException();
+        }
         _verifyMode = verifyMode;
         _sslEngineFacadeFactory.resetCache();
     }

@@ -44,4 +44,8 @@ public interface Ssl
      * @return the name of the protocol in use, or null if none
      */
     String getProtocolName();
+
+    void setPeerHostname(String hostname);
+
+    String getPeerHostname();
 }
