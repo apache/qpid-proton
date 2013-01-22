@@ -20,15 +20,26 @@
  */
 package org.apache.qpid.proton.message.jni;
 
-import java.io.DataInput;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.UUID;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.UnsignedByte;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.UnsignedLong;
+import org.apache.qpid.proton.amqp.UnsignedShort;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Footer;
+import org.apache.qpid.proton.amqp.messaging.Header;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Properties;
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.jni.Proton;
-import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_data_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
 import org.apache.qpid.proton.jni.pn_atom_t;
 import org.apache.qpid.proton.jni.pn_atom_t_u;
@@ -38,20 +49,6 @@ import org.apache.qpid.proton.jni.pn_type_t;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageError;
 import org.apache.qpid.proton.message.MessageFormat;
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.Decimal128;
-import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.UnsignedByte;
-import org.apache.qpid.proton.amqp.UnsignedInteger;
-import org.apache.qpid.proton.amqp.UnsignedLong;
-import org.apache.qpid.proton.amqp.UnsignedShort;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Header;
-import org.apache.qpid.proton.amqp.messaging.Footer;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Properties;
-import org.apache.qpid.proton.amqp.messaging.Section;
 
 public class JNIMessage implements Message
 {
@@ -139,7 +136,8 @@ public class JNIMessage implements Message
     @ProtonCEquivalent("pn_message_get_id")
     public Object getMessageId()
     {
-        return convert(Proton.pn_message_get_id(_impl));
+        throw new RuntimeException("TODO: This method causes a segfault when running the tests.");
+        //return convert(Proton.pn_message_get_id(_impl));
     }
 
     private pn_atom_t convertToAtom(Object o)
@@ -467,10 +465,11 @@ public class JNIMessage implements Message
     }
 
     @Override
-    @ProtonCEquivalent("pn_message_get_expiry_time")
+    @ProtonCEquivalent("pn_message_get_correlation_id")
     public Object getCorrelationId()
     {
-        return convert(Proton.pn_message_get_correlation_id(_impl));
+        throw new RuntimeException("TODO: This method causes a segfault when running the tests.");
+        //return convert(Proton.pn_message_get_correlation_id(_impl));
     }
 
     @Override

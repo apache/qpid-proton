@@ -28,7 +28,7 @@ public class JNIMessageFactory extends JNIFactory implements MessageFactory
     @Override
     public Message createMessage()
     {
-        throw new UnsupportedOperationException("PHTODO not implemented yet");
+        return new JNIMessage();
     }
 
 }
