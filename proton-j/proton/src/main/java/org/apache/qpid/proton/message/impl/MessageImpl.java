@@ -34,8 +34,6 @@ import org.apache.qpid.proton.message.*;
 
 public class MessageImpl implements Message
 {
-    public static final short DEFAULT_PRIORITY = 4;
-
     private final AMQPMessageFormat _parser = new AMQPMessageFormat();
 
     private Header _header;

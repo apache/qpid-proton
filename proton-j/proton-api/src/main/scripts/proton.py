@@ -23,7 +23,8 @@ from org.apache.qpid.proton.engine import \
     EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
     EndpointState, TransportException
-from org.apache.qpid.proton.message import MessageFormat, MessageFactory
+from org.apache.qpid.proton.message import \
+    MessageFormat, MessageFactory, Message as JMessage
 from org.apache.qpid.proton.messenger import MessengerException, Status
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger
@@ -35,9 +36,7 @@ LANGUAGE = "Java"
 class Skipped(Exception):
   skipped = True
 
-# PHTODO resolve hardcoding
-#PN_SESSION_WINDOW = TransportImpl.SESSION_WINDOW
-PN_SESSION_WINDOW = 1024
+PN_SESSION_WINDOW = JTransport.SESSION_WINDOW
 
 PENDING = "PENDING"
 ACCEPTED = "ACCEPTED"
@@ -609,9 +608,7 @@ class Message(object):
   DATA = MessageFormat.DATA
   JSON = MessageFormat.JSON
 
-  # PHTODO remove hardcoding
-  #DEFAULT_PRIORITY = MessageImpl.DEFAULT_PRIORITY
-  DEFAULT_PRIORITY = 4
+  DEFAULT_PRIORITY = JMessage.DEFAULT_PRIORITY
 
   def __init__(self):
     self.impl = messageFactory.createMessage()

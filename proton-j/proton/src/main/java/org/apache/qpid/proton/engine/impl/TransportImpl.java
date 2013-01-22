@@ -56,8 +56,6 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 
 public class TransportImpl extends EndpointImpl implements Transport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
 {
-    public static final int SESSION_WINDOW = 1024;
-
     public static final byte[] HEADER = new byte[8];
     public static final org.apache.qpid.proton.amqp.messaging.Accepted ACCEPTED =
             new org.apache.qpid.proton.amqp.messaging.Accepted();

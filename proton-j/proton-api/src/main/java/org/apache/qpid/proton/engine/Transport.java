@@ -29,6 +29,7 @@ package org.apache.qpid.proton.engine;
 public interface Transport extends Endpoint
 {
 
+    public int SESSION_WINDOW = 1024;
     public int END_OF_STREAM = -1;
 
     public void bind(Connection connection);

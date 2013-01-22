@@ -30,6 +30,8 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 
 public interface Message
 {
+    short DEFAULT_PRIORITY = 4;
+
     boolean isDurable();
 
     long getDeliveryCount();
