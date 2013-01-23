@@ -19,7 +19,6 @@
 
 require "cproton"
 
-require "qpid_proton/version"
 require "qpid_proton/exceptions"
 require "qpid_proton/exception_handling"
 require "qpid_proton/message_format"

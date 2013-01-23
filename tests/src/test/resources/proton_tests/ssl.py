@@ -54,15 +54,35 @@ class SslTest(common.Test):
             except SSLUnavailable, e:
                 raise Skipped(e)
 
-    def _pump(self, ssl1, ssl2):
+    def _pump(self, ssl_client, ssl_server, buffer_size=1024):
         """ Allow two SslTestConnections to transfer data until done.
         """
+        out_client_leftover_by_server = ""
+        out_server_leftover_by_client = ""
+        i = 0
+
         while True:
-            out1 = ssl1.transport.output(1024)
-            out2 = ssl2.transport.output(1024)
-            if out1: ssl2.transport.input(out1)
-            if out2: ssl1.transport.input(out2)
-            if not out1 and not out2: break
+            out_client = out_client_leftover_by_server + (ssl_client.transport.output(buffer_size) or "")
+            out_server = out_server_leftover_by_client + (ssl_server.transport.output(buffer_size) or "")
+
+            if out_client:
+                number_server_consumed = ssl_server.transport.input(out_client)
+                if number_server_consumed is None:
+                    # special None return value means input is closed so discard the leftovers
+                    out_client_leftover_by_server = ""
+                else:
+                    out_client_leftover_by_server = out_client[number_server_consumed:]
+
+            if out_server:
+                number_client_consumed = ssl_client.transport.input(out_server)
+                if number_client_consumed is None:
+                    # special None return value means input is closed so discard the leftovers
+                    out_server_leftover_by_client = ""
+                else:
+                    out_server_leftover_by_client = out_server[number_client_consumed:]
+
+            if not out_client and not out_server: break
+            i = i + 1
 
     def _testpath(self, file):
         """ Set the full path to the certificate,keyfile, etc. for the test.
@@ -107,6 +127,28 @@ class SslTest(common.Test):
         client.connection.close()
         server.connection.close()
         self._pump( client, server )
+
+    def test_ssl_with_small_buffer(self):
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
+
+        server = SslTest.SslTestConnection( self.server_domain )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.connection.open()
+        server.connection.open()
+
+        small_buffer_size = 1
+        self._pump( client, server, small_buffer_size )
+
+        assert client.ssl.protocol_name() is not None
+        client.connection.close()
+        server.connection.close()
+        self._pump( client, server )
+
 
     def test_server_certificate(self):
         """ Test that anonymous clients can still connect to a server that has

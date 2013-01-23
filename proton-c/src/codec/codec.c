@@ -2919,7 +2919,11 @@ pn_bytes_t pn_data_get_bytes(pn_data_t *data)
 pn_atom_t pn_data_get_atom(pn_data_t *data)
 {
   pn_node_t *node = pn_data_current(data);
-  return *((pn_atom_t *) &node->atom);
+  if (node) {
+    return *((pn_atom_t *) &node->atom);
+  } else {
+    return (pn_atom_t) {.type=PN_NULL};
+  }
 }
 
 int pn_data_copy(pn_data_t *data, pn_data_t *src)

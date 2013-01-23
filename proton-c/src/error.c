@@ -19,8 +19,6 @@
  *
  */
 
-#define _POSIX_C_SOURCE (200112)
-
 #include <proton/error.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,16 +84,6 @@ int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
   int rcode = pn_error_vformat(error, code, fmt, ap);
   va_end(ap);
   return rcode;
-}
-
-int pn_error_from_errno(pn_error_t *error, const char *msg)
-{
-  char err[1024];
-  strerror_r(errno, err, 1024);
-  int code = PN_ERR;
-  if (errno == EINTR)
-      code = PN_INTR;
-  return pn_error_format(error, code, "%s: %s", msg, err);
 }
 
 int pn_error_code(pn_error_t *error)

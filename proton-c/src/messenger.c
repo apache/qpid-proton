@@ -440,6 +440,11 @@ static void pn_transport_config(pn_messenger_t *messenger,
   }
 }
 
+static void pn_error_report(const char *pfx, const char *error)
+{
+  fprintf(stderr, "%s ERROR %s\n", pfx, error);
+}
+
 static void pn_condition_report(const char *pfx, pn_condition_t *condition)
 {
   if (pn_condition_is_redirect(condition)) {
@@ -449,10 +454,11 @@ static void pn_condition_report(const char *pfx, pn_condition_t *condition)
             pn_condition_redirect_host(condition),
             pn_condition_redirect_port(condition));
   } else if (pn_condition_is_set(condition)) {
-    fprintf(stderr, "%s ERROR (%s) %s\n",
-            pfx,
-            pn_condition_get_name(condition),
-            pn_condition_get_description(condition));
+    char error[1024];
+    snprintf(error, 1024, "(%s) %s",
+             pn_condition_get_name(condition),
+             pn_condition_get_description(condition));
+    pn_error_report(pfx, error);
   }
 }
 
@@ -528,6 +534,8 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
       pn_transport_config(messenger, connector, conn);
       pn_connector_set_connection(connector, conn);
     }
+  } else if (pn_connector_closed(ctor) && !(pn_connection_state(conn) & PN_REMOTE_CLOSED)) {
+    pn_error_report("CONNECTION", "connection aborted");
   }
 }
 

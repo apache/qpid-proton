@@ -30,6 +30,7 @@
 #include <proton/ssl.h>
 
 #include <proton/driver.h>
+#include <proton/driver_extras.h>
 #include <proton/messenger.h>
 
 %}

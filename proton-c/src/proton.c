@@ -19,6 +19,11 @@
  *
  */
 
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#define NOGDI
+#include <winsock2.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <proton/driver.h>

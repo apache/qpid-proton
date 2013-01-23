@@ -1,6 +1,30 @@
 Qpid Proton Ruby Language Bindings
 ==================================
 
+The Ruby code contained here provides Ruby language bindings for working
+with the Proton messaging framework.
+
+
+Creating The Bindings
+=====================
+
+To generate the bindings, you will need to have the Proton messaging
+libraries installed. You will also need to have Swig [1].
+
+To generate the bindings, simply type:
+
+    gem build qpid_proton.gemspec
+
+This will generate the Ruby wrapper for the C libraries and bundle them,
+along with the public APIs, into a gemfile. You can then install that
+gem file using:
+
+    gem install qpid_proton-##.gem
+
+where ## is the release version.
+
+[1] http://www.swig.org/
+
 KNOWN ISSUES
 ============
 

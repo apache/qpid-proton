@@ -28,6 +28,7 @@
 #include <proton/types.h>
 #include <proton/message.h>
 #include <proton/driver.h>
+#include <proton/driver_extras.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 

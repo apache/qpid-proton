@@ -31,13 +31,14 @@
 #include <fcntl.h>
 
 #include <proton/driver.h>
+#include <proton/driver_extras.h>
 #include <proton/error.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/util.h>
-#include "util.h"
-#include "platform.h"
-#include "ssl/ssl-internal.h"
+#include "../util.h"
+#include "../platform.h"
+#include "../ssl/ssl-internal.h"
 
 /* Decls */
 
@@ -174,19 +175,19 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 
   int sock = pn_create_socket();
   if (sock == -1) {
-    pn_error_from_errno(driver->error, "pn_create_socket");
+    pn_i_error_from_errno(driver->error, "pn_create_socket");
     return NULL;
   }
 
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-    pn_error_from_errno(driver->error, "setsockopt");
+    pn_i_error_from_errno(driver->error, "setsockopt");
     close(sock);
     return NULL;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    pn_error_from_errno(driver->error, "bind");
+    pn_i_error_from_errno(driver->error, "bind");
     freeaddrinfo(addr);
     close(sock);
     return NULL;
@@ -195,7 +196,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   freeaddrinfo(addr);
 
   if (listen(sock, 50) == -1) {
-    pn_error_from_errno(driver->error, "listen");
+    pn_i_error_from_errno(driver->error, "listen");
     close(sock);
     return NULL;
   }
@@ -353,7 +354,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
 
   int sock = pn_create_socket();
   if (sock == -1) {
-    pn_error_from_errno(driver->error, "pn_create_socket");
+    pn_i_error_from_errno(driver->error, "pn_create_socket");
     return NULL;
   }
 
@@ -361,7 +362,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
 
   if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     if (errno != EINPROGRESS) {
-      pn_error_from_errno(driver->error, "connect");
+      pn_i_error_from_errno(driver->error, "connect");
       freeaddrinfo(addr);
       close(sock);
       return NULL;
@@ -796,7 +797,7 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
   }
   int result = poll(d->fds, d->nfds, d->closed_count > 0 ? 0 : timeout);
   if (result == -1)
-    pn_error_from_errno(d->error, "poll");
+    pn_i_error_from_errno(d->error, "poll");
   return result;
 }
 

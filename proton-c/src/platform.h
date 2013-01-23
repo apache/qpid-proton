@@ -23,6 +23,7 @@
  */
 
 #include "proton/types.h"
+#include "proton/error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,19 @@ pn_timestamp_t pn_i_now(void);
  * @internal
  */
 char* pn_i_genuuid(void);
+
+/** Generate system error message.
+ *
+ * Populate the proton error structure based on the last system error
+ * code.
+ *
+ * @param[in] error the proton error structure
+ * @param[in] msg the descriptive context message
+ * @return error->code
+ *
+ * @internal
+ */
+int pn_i_error_from_errno(pn_error_t *error, const char *msg);
 
 #ifdef __cplusplus
 }

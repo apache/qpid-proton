@@ -127,3 +127,26 @@ EOF
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
     tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
 )
+
+##
+## Create the Ruby GEM
+##
+rootname="qpid-proton-ruby-${VERSION}"
+WORKDIR=$(mktemp -d)
+mkdir -p "${WORKDIR}"
+(
+    cd ${WORKDIR}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c/bindings/ruby ${rootname}
+
+    cat <<EOF > ${rootname}/SVN_INFO
+Repo: ${URL}
+Branch: ${BRANCH}
+Revision: ${REVISION}
+EOF
+
+    tar zcf  ${CURRDIR}/${rootname}.tar.gz ${rootname} \
+      --exclude=spec \
+      --exclude=CMakeLists.txt \
+      --exclude=.gitignore
+)
+
