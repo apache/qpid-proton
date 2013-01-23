@@ -136,8 +136,7 @@ public class JNIMessage implements Message
     @ProtonCEquivalent("pn_message_get_id")
     public Object getMessageId()
     {
-        throw new RuntimeException("TODO: This method causes a segfault when running the tests.");
-        //return convert(Proton.pn_message_get_id(_impl));
+        return convert(Proton.pn_message_get_id(_impl));
     }
 
     private pn_atom_t convertToAtom(Object o)
@@ -468,8 +467,7 @@ public class JNIMessage implements Message
     @ProtonCEquivalent("pn_message_get_correlation_id")
     public Object getCorrelationId()
     {
-        throw new RuntimeException("TODO: This method causes a segfault when running the tests.");
-        //return convert(Proton.pn_message_get_correlation_id(_impl));
+        return convert(Proton.pn_message_get_correlation_id(_impl));
     }
 
     @Override
