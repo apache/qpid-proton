@@ -851,11 +851,15 @@ class SSLDomain(object):
     self._domain.setTrustedCaDb(certificate_db)
 
   def set_peer_authentication(self, verify_mode, trusted_CAs=None):
-    # PHTODO the following two method calls have to occur in the following order
-    # otherwise tests fail with proton-jni.  It is not clear yet why.
+    # PHTODO the method calls (setTrustedCaDb/setPeerAuthentication) have to occur in
+    # that order otherwise tests fail with proton-jni.  It is not clear yet why.
     if trusted_CAs is not None:
       self._domain.setTrustedCaDb(trusted_CAs)
-    self._domain.setPeerAuthentication(verify_mode)
+    try:
+      self._domain.setPeerAuthentication(verify_mode)
+    except ProtonUnsupportedOperationException:
+      # PHTODO: Move logic to skip on encountering an ProtonUnsupportedOperationException to common location
+      raise Skipped()
 
   def allow_unsecured_client(self, allow_unsecured = True):
     self._domain.allowUnsecuredClient(allow_unsecured)
@@ -889,6 +893,7 @@ class SSL(object):
     try:
       self._ssl.setPeerHostname(hostname)
     except ProtonUnsupportedOperationException:
+      # PHTODO: Move logic to skip on encountering an ProtonUnsupportedOperationException to common location
       raise Skipped()
 
   def _get_peer_hostname(self):
