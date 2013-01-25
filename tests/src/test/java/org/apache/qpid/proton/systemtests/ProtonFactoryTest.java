@@ -18,22 +18,35 @@
  */
 package org.apache.qpid.proton.systemtests;
 
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertNotNull;
 
 import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.junit.Test;
 
-public class FactoryTest
+public class ProtonFactoryTest
 {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testLoadFactoryWithExplicitClass()
+    {
+        ProtonFactoryLoader factoryLoader = new ProtonFactoryLoader();
+        MessageFactory messageFactory = (MessageFactory) factoryLoader.loadFactory(MessageFactory.class);
+        assertNotNull(messageFactory);
+    }
 
     @Test
     public void testMessageFactory()
     {
-        MessageFactory messageFactory = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class).loadFactory();
-        assertNotNull(messageFactory);
+        ProtonFactoryLoader<MessageFactory> factoryLoader = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class);
+        assertNotNull(factoryLoader.loadFactory());
     }
 
+    @Test
+    public void testEngineFactory()
+    {
+        ProtonFactoryLoader<EngineFactory> factoryLoader = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class);
+        assertNotNull(factoryLoader.loadFactory());
+    }
 }

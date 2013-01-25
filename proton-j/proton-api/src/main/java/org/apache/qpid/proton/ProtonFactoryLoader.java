@@ -23,23 +23,50 @@ import java.util.ServiceLoader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * A thin wrapper around {@link ServiceLoader} intended for loading Proton object factories.
+ */
 public class ProtonFactoryLoader<C>
 {
     private static final Logger LOGGER = Logger.getLogger(ProtonFactoryLoader.class.getName());
     private Class<C> _factoryInterface;
-    
+
+    /**
+     * Use this constructor if you intend to explicitly provide factory interface later,
+     * i.e. by calling {@link #loadFactory(Class)}. This is useful if you want to use the same
+     * ProtonFactoryLoader instance for loading multiple factory types.
+     */
+    public ProtonFactoryLoader()
+    {
+    }
+
+    /**
+     * @param factoryInterface will be used as the factory interface class in calls to {@link #loadFactory()}.
+     */
     public ProtonFactoryLoader(Class<C> factoryInterface)
     {
         _factoryInterface = factoryInterface;
     }
 
+    /**
+     * Returns the Proton factory that implements the stored {@link ProtonFactoryLoader#_factoryInterface} class.
+     */
     public C loadFactory()
     {
-        ServiceLoader<C> serviceLoader = ServiceLoader.load(_factoryInterface);
+        return loadFactory(_factoryInterface);
+    }
+
+    public C loadFactory(Class<C> factoryInterface)
+    {
+        if(factoryInterface == null)
+        {
+            throw new IllegalStateException("factoryInterface has not been set.");
+        }
+        ServiceLoader<C> serviceLoader = ServiceLoader.load(factoryInterface);
         Iterator<C> serviceLoaderIterator = serviceLoader.iterator();
         if(!serviceLoaderIterator.hasNext())
         {
-            throw new IllegalStateException("Can't find service loader for " + _factoryInterface.getName());
+            throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName());
         }
         C factory = serviceLoaderIterator.next();
         if(LOGGER.isLoggable(Level.FINE))
