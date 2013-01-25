@@ -18,6 +18,8 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.engine.ProtonJSslPeerDetails;
+
 
 public class SslPeerDetailsImpl implements ProtonJSslPeerDetails
 {

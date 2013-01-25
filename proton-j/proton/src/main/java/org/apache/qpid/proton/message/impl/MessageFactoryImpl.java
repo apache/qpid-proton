@@ -27,6 +27,7 @@ import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
+import org.apache.qpid.proton.message.ProtonJMessage;
 
 public class MessageFactoryImpl implements MessageFactory
 {

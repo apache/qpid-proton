@@ -17,14 +17,16 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.message;
 
-import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.codec.WritableBuffer;
+import org.apache.qpid.proton.message.Message;
 
-public interface ProtonJEndpoint extends Endpoint
+public interface ProtonJMessage extends Message
 {
 
-    void setLocalError(EndpointError localError);
+    int encode2(byte[] data, int offset, int length);
+
+    int encode(WritableBuffer buffer);
 
 }

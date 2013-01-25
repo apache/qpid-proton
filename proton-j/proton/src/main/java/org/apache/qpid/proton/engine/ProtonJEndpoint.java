@@ -15,17 +15,16 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.Endpoint;
+import org.apache.qpid.proton.engine.EndpointError;
 
-/**
- * Extends {@link Transport} with functionality that is specific to proton-j
- */
-public interface ProtonJTransport extends Transport
+public interface ProtonJEndpoint extends Endpoint
 {
-    void setProtocolTracer(ProtocolTracer protocolTracer);
 
-    ProtocolTracer getProtocolTracer();
+    void setLocalError(EndpointError localError);
+
 }

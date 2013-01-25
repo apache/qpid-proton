@@ -27,8 +27,8 @@ import javax.jms.Message;
 import javax.jms.MessageFormatException;
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.message.ProtonJMessage;
 import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
-import org.apache.qpid.proton.message.impl.ProtonJMessage;
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
 */

@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.ProtonJEndpoint;
 
 public abstract class EndpointImpl implements ProtonJEndpoint
 {

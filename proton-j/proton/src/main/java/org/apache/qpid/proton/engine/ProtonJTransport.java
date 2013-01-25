@@ -16,19 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.impl.ProtocolTracer;
 
 /**
- * Extends {@link Connection} with functionality that is specific to proton-j
+ * Extends {@link Transport} with functionality that is specific to proton-j
  */
-public interface ProtonJConnection extends Connection, ProtonJEndpoint
+public interface ProtonJTransport extends Transport
 {
-    void setLocalContainerId(String localContainerId);
+    void setProtocolTracer(ProtocolTracer protocolTracer);
 
-    @Override
-    ProtonJSession session();
-
-    int getMaxChannels();
+    ProtocolTracer getProtocolTracer();
 }

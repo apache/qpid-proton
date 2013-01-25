@@ -16,15 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.Sender;
-import org.apache.qpid.proton.engine.Session;
+import org.apache.qpid.proton.engine.SslPeerDetails;
 
 /**
- * Extends {@link Session} with functionality that is specific to proton-j
+ * Extends {@link SslPeerDetails} with functionality specific to proton-j
  */
-public interface ProtonJSession extends Session, ProtonJEndpoint
+public interface ProtonJSslPeerDetails extends SslPeerDetails
 {
-    Sender sender(String name);
+
 }

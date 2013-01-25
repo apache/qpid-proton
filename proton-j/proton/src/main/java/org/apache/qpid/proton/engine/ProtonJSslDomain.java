@@ -16,14 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.engine.impl.ssl;
+package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.SslPeerDetails;
+import org.apache.qpid.proton.engine.SslDomain;
 
 /**
- * Extends {@link SslPeerDetails} with functionality specific to proton-j
+ * Extends {@link SslDomain} with functionality that is specific to proton-j
  */
-public interface ProtonJSslPeerDetails extends SslPeerDetails
+public interface ProtonJSslDomain extends SslDomain
 {
 
 }

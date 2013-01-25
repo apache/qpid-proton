@@ -22,8 +22,8 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.hawtdispatch.impl.WatchBase;
 import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message.ProtonJMessage;
 import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
-import org.apache.qpid.proton.message.impl.ProtonJMessage;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
 

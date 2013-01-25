@@ -29,9 +29,9 @@ import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
-import org.apache.qpid.proton.engine.impl.ProtonJSession;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 

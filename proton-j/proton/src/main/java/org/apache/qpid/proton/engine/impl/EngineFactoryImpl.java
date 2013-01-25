@@ -19,8 +19,10 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonJSslDomain;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonJSslPeerDetails;
+import org.apache.qpid.proton.engine.ProtonJConnection;
+import org.apache.qpid.proton.engine.ProtonJSslDomain;
+import org.apache.qpid.proton.engine.ProtonJSslPeerDetails;
+import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
 import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
 

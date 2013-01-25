@@ -22,9 +22,9 @@ import org.apache.qpid.proton.hawtdispatch.impl.AmqpTransport;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.engine.ProtonJConnection;
+import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
-import org.apache.qpid.proton.engine.impl.ProtonJConnection;
-import org.apache.qpid.proton.engine.impl.ProtonJSession;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.Task;
 

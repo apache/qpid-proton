@@ -24,8 +24,6 @@ import org.apache.qpid.proton.hawtdispatch.api.TransportState;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.engine.impl.EngineFactoryImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
-import org.apache.qpid.proton.engine.impl.ProtonJConnection;
-import org.apache.qpid.proton.engine.impl.ProtonJTransport;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.fusesource.hawtbuf.UTF8Buffer;
