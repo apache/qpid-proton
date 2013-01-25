@@ -22,7 +22,6 @@ import java.util.LinkedList;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
-import org.apache.qpid.proton.engine.impl.DeliveryImpl;
 import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
@@ -99,7 +98,7 @@ public class AmqpReceiver extends AmqpLink {
                 drain();
             }
         };
-        md.delivery = (DeliveryImpl) delivery;
+        md.delivery = delivery;
         delivery.setContext(md);
         inbound.add(md);
         drainInbound();

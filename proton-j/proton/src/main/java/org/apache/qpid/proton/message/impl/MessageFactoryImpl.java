@@ -18,6 +18,13 @@
  */
 package org.apache.qpid.proton.message.impl;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Footer;
+import org.apache.qpid.proton.amqp.messaging.Header;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Properties;
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
 
@@ -25,8 +32,20 @@ public class MessageFactoryImpl implements MessageFactory
 {
 
     @Override
-    public Message createMessage()
+    public ProtonJMessage createMessage()
     {
         return new MessageImpl();
+    }
+
+    @Override
+    public ProtonJMessage createMessage(Header header,
+                                 DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+                                 Properties properties, ApplicationProperties applicationProperties,
+                                 Section body, Footer footer)
+    {
+        return new MessageImpl(header,
+                               deliveryAnnotations, messageAnnotations,
+                               properties, applicationProperties,
+                               body, footer);
     }
 }

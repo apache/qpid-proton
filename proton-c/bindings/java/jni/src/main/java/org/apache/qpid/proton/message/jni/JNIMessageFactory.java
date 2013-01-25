@@ -18,6 +18,13 @@
  */
 package org.apache.qpid.proton.message.jni;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Footer;
+import org.apache.qpid.proton.amqp.messaging.Header;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
+import org.apache.qpid.proton.amqp.messaging.Properties;
+import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.jni.JNIFactory;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
@@ -29,6 +36,24 @@ public class JNIMessageFactory extends JNIFactory implements MessageFactory
     public Message createMessage()
     {
         return new JNIMessage();
+    }
+
+    @Override
+    public Message createMessage(Header header,
+                                 DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+                                 Properties properties, ApplicationProperties applicationProperties,
+                                 Section body, Footer footer)
+    {
+        Message message = new JNIMessage();
+        message.setHeader(header);
+        message.setDeliveryAnnotations(deliveryAnnotations);
+        message.setMessageAnnotations(messageAnnotations);
+        message.setProperties(properties);
+        message.setApplicationProperties(applicationProperties);
+        message.setBody(body);
+        message.setFooter(footer);
+
+        return message;
     }
 
 }

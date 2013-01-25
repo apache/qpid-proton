@@ -21,11 +21,10 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 
-public abstract class EndpointImpl implements Endpoint
+public abstract class EndpointImpl implements ProtonJEndpoint
 {
     private EndpointState _localState = EndpointState.UNINITIALIZED;
     private EndpointState _remoteState = EndpointState.UNINITIALIZED;
@@ -94,6 +93,7 @@ public abstract class EndpointImpl implements Endpoint
         _remoteState = remoteState;
     }
 
+    @Override
     public void setLocalError(EndpointError localError)
     {
         _localError = localError;

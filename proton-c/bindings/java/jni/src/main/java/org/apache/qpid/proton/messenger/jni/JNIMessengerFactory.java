@@ -15,12 +15,26 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.messenger.jni;
 
-import org.apache.qpid.proton.engine.Sender;
+import org.apache.qpid.proton.messenger.Messenger;
+import org.apache.qpid.proton.messenger.MessengerFactory;
 
-public interface ProtonJSender extends Sender
+public class JNIMessengerFactory implements MessengerFactory
 {
+
+    @Override
+    public Messenger createMessenger()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Messenger createMessenger(String name)
+    {
+        throw new UnsupportedOperationException();
+    }
 
 }

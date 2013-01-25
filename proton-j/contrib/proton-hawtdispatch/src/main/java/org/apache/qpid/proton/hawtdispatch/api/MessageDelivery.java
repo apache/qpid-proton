@@ -22,7 +22,8 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.hawtdispatch.impl.WatchBase;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.impl.MessageImpl;
+import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
+import org.apache.qpid.proton.message.impl.ProtonJMessage;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
 
@@ -31,6 +32,7 @@ import org.fusesource.hawtdispatch.Task;
  */
 public abstract class MessageDelivery extends WatchBase {
 
+    private static final  MessageFactoryImpl MESSAGE_FACTORY = new MessageFactoryImpl();
     final int initialSize;
     private Message message;
     private Buffer encoded;
@@ -39,7 +41,7 @@ public abstract class MessageDelivery extends WatchBase {
 
     static Buffer encode(Message message, int sizeHint) {
         byte[] buffer = new byte[sizeHint];
-        int size = ((MessageImpl)message).encode2(buffer, 0, sizeHint);
+        int size = ((ProtonJMessage)message).encode2(buffer, 0, sizeHint);
         if( size > sizeHint ) {
             buffer = new byte[size];
             size = message.encode(buffer, 0, size);
@@ -48,7 +50,7 @@ public abstract class MessageDelivery extends WatchBase {
     }
 
     static Message decode(Buffer buffer) {
-        Message msg = new MessageImpl();
+        Message msg = MESSAGE_FACTORY.createMessage();
         int offset = buffer.offset;
         int len = buffer.length;
         while( len > 0 ) {

@@ -15,20 +15,16 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.Endpoint;
+import org.apache.qpid.proton.engine.EndpointError;
 
-/**
- * Extends {@link Connection} with functionality that is specific to proton-j
- */
-public interface ProtonJConnection extends Connection, ProtonJEndpoint
+public interface ProtonJEndpoint extends Endpoint
 {
-    void setLocalContainerId(String localContainerId);
 
-    @Override
-    ProtonJSession session();
+    void setLocalError(EndpointError localError);
 
-    int getMaxChannels();
 }

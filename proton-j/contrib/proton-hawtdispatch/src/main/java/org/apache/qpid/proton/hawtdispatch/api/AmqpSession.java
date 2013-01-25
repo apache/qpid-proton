@@ -30,16 +30,17 @@ import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
-import org.apache.qpid.proton.engine.impl.ProtonJSender;
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.impl.ProtonJSession;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.impl.MessageImpl;
+import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class AmqpSession extends AmqpEndpointBase {
 
+    private final MessageFactoryImpl messageFactory = new MessageFactoryImpl();
     final AmqpConnection parent;
     final ProtonJSession session;
 
@@ -70,7 +71,7 @@ public class AmqpSession extends AmqpEndpointBase {
 
     public AmqpSender createSender(Target target, QoS qos, String name) {
         assertExecuting();
-        ProtonJSender sender = session.sender(name);
+        Sender sender = session.sender(name);
         attach();
 //        Source source = new Source();
 //        source.setAddress(UUID.randomUUID().toString());
@@ -126,7 +127,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createTextMessage(String value) {
-        Message msg = new MessageImpl();
+        Message msg = messageFactory.createMessage();
         Section body = new AmqpValue(value);
         msg.setBody(body);
         return msg;
@@ -137,7 +138,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createBinaryMessage(byte value[], int offset, int len) {
-        Message msg = new MessageImpl();
+        Message msg = messageFactory.createMessage();
         Data body = new Data(new Binary(value, offset,len));
         msg.setBody(body);
         return msg;

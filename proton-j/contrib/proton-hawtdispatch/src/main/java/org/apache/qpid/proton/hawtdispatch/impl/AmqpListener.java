@@ -23,7 +23,7 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.engine.impl.EndpointImpl;
+import org.apache.qpid.proton.engine.impl.ProtonJEndpoint;
 import org.apache.qpid.proton.engine.impl.ProtonJTransport;
 import org.fusesource.hawtdispatch.Task;
 
@@ -41,7 +41,7 @@ public class AmqpListener {
     }
 
     public void processRemoteOpen(Endpoint endpoint, Task onComplete) {
-        ((EndpointImpl)endpoint).setLocalError(new EndpointError("error", "Not supported"));
+        ((ProtonJEndpoint)endpoint).setLocalError(new EndpointError("error", "Not supported"));
         endpoint.close();
         onComplete.run();
     }

@@ -18,12 +18,13 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
 
 /**
  * Extends {@link Session} with functionality that is specific to proton-j
  */
-public interface ProtonJSession extends Session
+public interface ProtonJSession extends Session, ProtonJEndpoint
 {
-    ProtonJSender sender(String name);
+    Sender sender(String name);
 }

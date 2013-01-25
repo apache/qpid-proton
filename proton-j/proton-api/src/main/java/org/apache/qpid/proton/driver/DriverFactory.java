@@ -15,20 +15,13 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.driver;
 
-import org.apache.qpid.proton.engine.Connection;
+import java.io.IOException;
 
-/**
- * Extends {@link Connection} with functionality that is specific to proton-j
- */
-public interface ProtonJConnection extends Connection, ProtonJEndpoint
+public interface DriverFactory
 {
-    void setLocalContainerId(String localContainerId);
-
-    @Override
-    ProtonJSession session();
-
-    int getMaxChannels();
+    Driver createDriver() throws IOException;
 }

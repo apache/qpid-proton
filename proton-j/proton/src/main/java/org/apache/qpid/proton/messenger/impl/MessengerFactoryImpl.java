@@ -15,20 +15,26 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.messenger.impl;
 
-import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.messenger.Messenger;
+import org.apache.qpid.proton.messenger.MessengerFactory;
 
-/**
- * Extends {@link Connection} with functionality that is specific to proton-j
- */
-public interface ProtonJConnection extends Connection, ProtonJEndpoint
+public class MessengerFactoryImpl implements MessengerFactory
 {
-    void setLocalContainerId(String localContainerId);
 
     @Override
-    ProtonJSession session();
+    public Messenger createMessenger()
+    {
+        return new MessengerImpl();
+    }
 
-    int getMaxChannels();
+    @Override
+    public Messenger createMessenger(String name)
+    {
+        return new MessengerImpl(name);
+    }
+
 }

@@ -20,16 +20,13 @@ package org.apache.qpid.proton.hawtdispatch.api;
 import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.impl.DeliveryImpl;
-import org.apache.qpid.proton.engine.impl.ProtonJSender;
-import org.apache.qpid.proton.engine.impl.SenderImpl;
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.apache.qpid.proton.message.impl.MessageImpl;
 import org.fusesource.hawtbuf.Buffer;
 
 import java.io.UnsupportedEncodingException;
@@ -48,9 +45,9 @@ public class AmqpSender extends AmqpLink {
 
     final AmqpSession parent;
     private final QoS qos;
-    final ProtonJSender sender;
+    final Sender sender;
 
-    public AmqpSender(AmqpSession parent, ProtonJSender sender2, QoS qos) {
+    public AmqpSender(AmqpSession parent, Sender sender2, QoS qos) {
         this.parent = parent;
         this.sender = sender2;
         this.qos = qos;
@@ -65,7 +62,7 @@ public class AmqpSender extends AmqpLink {
     }
 
     @Override
-    protected ProtonJSender getEndpoint() {
+    protected Sender getEndpoint() {
         return sender;
     }
 

@@ -15,20 +15,18 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.engine.impl;
+package org.apache.qpid.proton.message.impl;
 
-import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.codec.WritableBuffer;
+import org.apache.qpid.proton.message.Message;
 
-/**
- * Extends {@link Connection} with functionality that is specific to proton-j
- */
-public interface ProtonJConnection extends Connection, ProtonJEndpoint
+public interface ProtonJMessage extends Message
 {
-    void setLocalContainerId(String localContainerId);
 
-    @Override
-    ProtonJSession session();
+    int encode2(byte[] data, int offset, int length);
 
-    int getMaxChannels();
+    int encode(WritableBuffer buffer);
+
 }

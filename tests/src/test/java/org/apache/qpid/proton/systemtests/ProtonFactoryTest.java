@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.message.MessageFactory;
+import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.junit.Test;
 
 public class ProtonFactoryTest
@@ -47,6 +48,13 @@ public class ProtonFactoryTest
     public void testEngineFactory()
     {
         ProtonFactoryLoader<EngineFactory> factoryLoader = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class);
+        assertNotNull(factoryLoader.loadFactory());
+    }
+
+    @Test
+    public void testMessengerFactory()
+    {
+        ProtonFactoryLoader<MessengerFactory> factoryLoader = new ProtonFactoryLoader<MessengerFactory>(MessengerFactory.class);
         assertNotNull(factoryLoader.loadFactory());
     }
 }
