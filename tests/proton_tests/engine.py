@@ -1374,8 +1374,7 @@ class ServerTest(Test):
       self.driver.wait(1)
       self.cxtr.process()
 
-    assert(self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE),
-           "Connection failed")
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
 
     # wait up to 3x the idle timeout
     old_count = self.cxtr.transport.frames_input
@@ -1386,10 +1385,8 @@ class ServerTest(Test):
       self.driver.wait(10 * duration * 1000)
       self.cxtr.process()
 
-    assert(self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE),
-           "Connection terminated")
-
-    assert(self.cxtr.transport.frames_input > old_count, "No idle frames received")
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+    assert self.cxtr.transport.frames_input > old_count, "No idle frames received"
 
     self.server.stop()
 
@@ -1417,8 +1414,7 @@ class ServerTest(Test):
       self.driver.wait(10 * 1000)
       self.cxtr.process()
 
-    assert(self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE),
-           "Connection failed")
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
 
     # verify the connection stays up even if we don't explicitly send stuff
     # wait up to 3x the idle timeout
@@ -1430,10 +1426,8 @@ class ServerTest(Test):
       self.driver.wait(10 * duration * 1000)
       self.cxtr.process()
 
-    assert(self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE),
-           "Connection terminated")
-
-    assert(self.cxtr.transport.frames_output > old_count, "No idle frames sent")
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+    assert self.cxtr.transport.frames_output > old_count, "No idle frames sent"
 
     # now wait to explicitly cause the other side to expire:
 
@@ -1442,14 +1436,12 @@ class ServerTest(Test):
     # and check that the remote killed the connection:
 
     timeout = time() + 10
-    while self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
-          and time() <= timeout:
+    while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= timeout:
       self.cxtr.process()
       self.driver.wait(10*1000)
       self.cxtr.process()
 
-    assert(self.conn.state == (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED),
-           "Connection failed to close")
+    assert self.conn.state & Endpoint.REMOTE_CLOSED, "Connection failed to close"
 
     self.server.stop()
 
