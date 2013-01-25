@@ -17,16 +17,8 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
-import java.util.UUID;
-
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
-import org.apache.qpid.proton.amqp.messaging.Source;
-import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
-import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.ProtonJSession;
@@ -34,6 +26,11 @@ import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.*;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
+
+import java.util.UUID;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

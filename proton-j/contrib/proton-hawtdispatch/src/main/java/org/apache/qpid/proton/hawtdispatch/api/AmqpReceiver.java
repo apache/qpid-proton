@@ -17,14 +17,14 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
-import java.util.LinkedList;
-
-import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
-import org.apache.qpid.proton.hawtdispatch.impl.Defer;
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
+
+import java.util.LinkedList;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

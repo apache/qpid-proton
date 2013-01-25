@@ -17,15 +17,11 @@
 
 package org.apache.qpid.proton.hawtdispatch.impl;
 
+import org.apache.qpid.proton.engine.*;
+import org.fusesource.hawtdispatch.Task;
+
 import java.io.IOException;
 
-import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointError;
-import org.apache.qpid.proton.engine.ProtonJEndpoint;
-import org.apache.qpid.proton.engine.ProtonJTransport;
-import org.apache.qpid.proton.engine.Sasl;
-import org.fusesource.hawtdispatch.Task;
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>

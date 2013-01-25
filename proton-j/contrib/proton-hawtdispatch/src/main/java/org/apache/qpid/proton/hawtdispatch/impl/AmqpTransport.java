@@ -16,7 +16,6 @@
  */
 package org.apache.qpid.proton.hawtdispatch.impl;
 
-import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.hawtdispatch.api.AmqpConnectOptions;
 import org.apache.qpid.proton.hawtdispatch.api.Callback;
 import org.apache.qpid.proton.hawtdispatch.api.ChainedCallback;
