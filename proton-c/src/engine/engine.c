@@ -2569,17 +2569,15 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
       break;
     } else {
       if (total > 0)
-        break;
-      if (n == PN_EOS) {
-        if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+        break;   // return what was output
+      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
+        if (n == PN_EOS)
           pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
-        return PN_EOS;
-      } else {
-        if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+        else
           pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", n,
                               pn_error_text(transport->error));
-        return n;
       }
+      return n;
     }
   }
 

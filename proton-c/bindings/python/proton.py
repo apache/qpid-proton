@@ -2445,11 +2445,6 @@ class Connector(object):
   def __init__(self, _cxtr):
     self._cxtr = _cxtr
 
-  #def __del__(self):
-  #  if hasattr(self, "_cxtr"):
-  #    pn_connector_free(self._cxtr)
-  #    del self._cxtr
-
   def next(self):
     return wrap_connector(pn_connector_next(self._cxtr))
 
@@ -2502,11 +2497,6 @@ def wrap_listener(lsnr):
 class Listener(object):
   def __init__(self, _lsnr=None):
     self._lsnr = _lsnr
-
-  #def __del__(self):
-  #  if hasattr(self, "_lsnr"):
-  #    pn_listener_free(self._lsnr)
-  #    del self._lsnr
 
   def next(self):
     return wrap_listener(pn_listener_next(self._lsnr))
