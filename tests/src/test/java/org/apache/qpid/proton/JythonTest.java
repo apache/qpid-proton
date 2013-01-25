@@ -80,7 +80,10 @@ public class JythonTest
                 {
                     LOGGER.log(Level.FINE, "Jython interpreter failed. Test failures?", e);
                 }
-                fail(e.getMessage());
+
+                // This unusual code is necessary because PyException toString() contains the useful Python traceback
+                // and getMessage() is usually null
+                fail("Caught PyException: " + e.toString() + " with message: " + e.getMessage());
             }
         }
     }

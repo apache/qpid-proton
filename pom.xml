@@ -34,16 +34,19 @@
 
   <profiles>
     <profile>
-      <id>proton-c</id>
+      <id>proton-j</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <modules>
-        <module>proton-j/proton-api</module>
+        <module>proton-j</module>
         <module>tests</module>
       </modules>
     </profile>
     <profile>
-      <id>proton-j</id>
+      <id>proton-c</id>
       <modules>
-        <module>proton-j</module>
+        <module>proton-j/proton-api</module>
         <module>tests</module>
       </modules>
     </profile>
