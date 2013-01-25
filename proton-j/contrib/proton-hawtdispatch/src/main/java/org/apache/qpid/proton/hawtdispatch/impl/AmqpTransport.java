@@ -53,7 +53,7 @@ public class AmqpTransport extends WatchBase {
     final DispatchQueue queue;
     final ConnectionImpl connection = new ConnectionImpl();
     Transport hawtdispatchTransport;
-    TransportImpl protonTransport;
+    Transport protonTransport;
     Throwable failure;
     CustomDispatchSource<Defer,LinkedList<Defer>> defers;
 

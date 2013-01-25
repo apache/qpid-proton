@@ -28,12 +28,15 @@ import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sasl;
@@ -69,6 +72,7 @@ public class MessengerImpl implements Messenger
     private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
+    private EngineFactory _engineFactory;
 
     public MessengerImpl()
     {
@@ -77,7 +81,20 @@ public class MessengerImpl implements Messenger
 
     public MessengerImpl(String name)
     {
+        this(name, defaultEngineFactory());
+    }
+
+
+    public MessengerImpl(String name, EngineFactory engineFactory)
+    {
         _name = name;
+        _engineFactory = engineFactory;
+    }
+
+    private static EngineFactory defaultEngineFactory()
+    {
+        ProtonFactoryLoader<EngineFactory> engineFactoryLoader = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class);
+        return engineFactoryLoader.loadFactory();
     }
 
     public void setTimeout(long timeInMillis)
@@ -368,7 +385,7 @@ public class MessengerImpl implements Messenger
         for (Listener l = _driver.listener(); l != null; l = _driver.listener())
         {
             Connector c = l.accept();
-            Connection connection = new ConnectionImpl();
+            Connection connection = _engineFactory.createConnection();
             connection.setContainer(_name);
             c.setConnection(connection);
             //TODO: SSL and full SASL
@@ -699,7 +716,7 @@ public class MessengerImpl implements Messenger
         {
             Connector connector = _driver.createConnector(host, port, null);
             _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
-            connection = new ConnectionImpl();
+            connection = _engineFactory.createConnection();
             connection.setContainer(_name);
             connection.setHostname(host);
             connection.setContext(service);

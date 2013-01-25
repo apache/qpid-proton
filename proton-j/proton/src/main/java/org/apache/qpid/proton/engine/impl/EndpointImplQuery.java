@@ -29,7 +29,7 @@ class EndpointImplQuery<T extends EndpointImpl> implements LinkNode.Query<T>
     private final EnumSet<EndpointState> _local;
     private final EnumSet<EndpointState> _remote;
 
-    public EndpointImplQuery(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
+    EndpointImplQuery(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         _local = local;
         _remote = remote;

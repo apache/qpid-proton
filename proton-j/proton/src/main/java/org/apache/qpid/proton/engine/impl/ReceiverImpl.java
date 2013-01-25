@@ -47,7 +47,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     private int _unsentCredits;
 
 
-    public ReceiverImpl(SessionImpl session, String name)
+    ReceiverImpl(SessionImpl session, String name)
     {
         super(session, name);
     }

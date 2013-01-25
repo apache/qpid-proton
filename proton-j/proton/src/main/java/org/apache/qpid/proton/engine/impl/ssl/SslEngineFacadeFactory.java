@@ -71,6 +71,10 @@ public class SslEngineFacadeFactory
         Security.addProvider(new BouncyCastleProvider());
     }
 
+    SslEngineFacadeFactory()
+    {
+    }
+
     /**
      * This is a list of all anonymous cipher suites supported by Java 6, excluding those that
      * use MD5.  These are all supported by both Oracle's and IBM's Java 6 implementation.

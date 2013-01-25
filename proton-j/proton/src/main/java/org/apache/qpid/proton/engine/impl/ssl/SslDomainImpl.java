@@ -34,6 +34,10 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
 
     private final SslEngineFacadeFactory _sslEngineFacadeFactory = new SslEngineFacadeFactory();
 
+    SslDomainImpl()
+    {
+    }
+
     @Override
     public void init(Mode mode)
     {

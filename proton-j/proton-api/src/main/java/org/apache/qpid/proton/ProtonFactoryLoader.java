@@ -26,14 +26,20 @@ import java.util.logging.Logger;
 public class ProtonFactoryLoader<C>
 {
     private static final Logger LOGGER = Logger.getLogger(ProtonFactoryLoader.class.getName());
+    private Class<C> _factoryInterface;
     
-    public C loadFactory(Class<C> factoryInterface)
+    public ProtonFactoryLoader(Class<C> factoryInterface)
     {
-        ServiceLoader<C> serviceLoader = ServiceLoader.load(factoryInterface);
+        _factoryInterface = factoryInterface;
+    }
+
+    public C loadFactory()
+    {
+        ServiceLoader<C> serviceLoader = ServiceLoader.load(_factoryInterface);
         Iterator<C> serviceLoaderIterator = serviceLoader.iterator();
         if(!serviceLoaderIterator.hasNext())
         {
-            throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName());
+            throw new IllegalStateException("Can't find service loader for " + _factoryInterface.getName());
         }
         C factory = serviceLoaderIterator.next();
         if(LOGGER.isLoggable(Level.FINE))

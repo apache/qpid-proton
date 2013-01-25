@@ -57,7 +57,7 @@ public class DeliveryImpl implements Delivery
     private boolean _done;
     private int _offset;
 
-    public DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
+    DeliveryImpl(final byte[] tag, final LinkImpl link, DeliveryImpl previous)
     {
         _tag = tag;
         _link = link;

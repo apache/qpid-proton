@@ -33,7 +33,7 @@ public class SimpleTest
     @Test
     public void test()
     {
-        EngineFactory engineFactory = new ProtonFactoryLoader<EngineFactory>().loadFactory(EngineFactory.class);
+        EngineFactory engineFactory = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class).loadFactory();
 
         Connection connection1 = engineFactory.createConnection();
         Connection connection2 = engineFactory.createConnection();;

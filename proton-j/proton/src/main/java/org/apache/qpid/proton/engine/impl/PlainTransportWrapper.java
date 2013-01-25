@@ -25,7 +25,7 @@ public class PlainTransportWrapper implements TransportWrapper
     private final TransportOutput _outputProcessor;
     private final TransportInput _inputProcessor;
 
-    public PlainTransportWrapper(TransportOutput outputProcessor,
+    PlainTransportWrapper(TransportOutput outputProcessor,
             TransportInput inputProcessor)
     {
         _outputProcessor = outputProcessor;

@@ -108,7 +108,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         _overflowBuffer.flip();
     }
 
-    public TransportImpl()
+    TransportImpl()
     {
         FrameParser frameParser = new FrameParser(this);
 

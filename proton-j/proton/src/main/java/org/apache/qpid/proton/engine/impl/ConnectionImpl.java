@@ -55,7 +55,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     private String _remoteContainer;
     private String _remoteHostname;
 
-    public ConnectionImpl()
+    ConnectionImpl()
     {
     }
 

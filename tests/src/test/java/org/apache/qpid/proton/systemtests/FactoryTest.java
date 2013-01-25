@@ -32,7 +32,7 @@ public class FactoryTest
     @Test
     public void testMessageFactory()
     {
-        MessageFactory messageFactory = new ProtonFactoryLoader<MessageFactory>().loadFactory(MessageFactory.class);
+        MessageFactory messageFactory = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class).loadFactory();
         assertNotNull(messageFactory);
     }
 

@@ -25,7 +25,7 @@ public class SslPeerDetailsImpl implements SslPeerDetails
     private final String _hostname;
     private final int _port;
 
-    public SslPeerDetailsImpl(String hostname, int port)
+    SslPeerDetailsImpl(String hostname, int port)
     {
         _hostname = hostname;
         _port = port;

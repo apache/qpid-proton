@@ -30,7 +30,7 @@ public class TransportDelivery
     private TransportLink _transportLink;
     private int _sessionSize = 1;
 
-    public TransportDelivery(UnsignedInteger currentDeliveryId, DeliveryImpl delivery, TransportLink transportLink)
+    TransportDelivery(UnsignedInteger currentDeliveryId, DeliveryImpl delivery, TransportLink transportLink)
     {
         _deliveryId = currentDeliveryId;
         _delivery = delivery;

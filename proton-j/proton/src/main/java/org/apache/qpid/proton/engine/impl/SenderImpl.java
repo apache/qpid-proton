@@ -31,7 +31,7 @@ public class SenderImpl  extends LinkImpl implements Sender
     private TransportSender _transportLink;
     private boolean _drained;
 
-    public SenderImpl(SessionImpl session, String name)
+    SenderImpl(SessionImpl session, String name)
     {
         super(session, name);
     }

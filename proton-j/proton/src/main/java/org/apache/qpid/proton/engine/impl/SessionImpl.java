@@ -35,7 +35,7 @@ public class SessionImpl extends EndpointImpl implements Session
     private LinkNode<SessionImpl> _node;
 
 
-    public SessionImpl(ConnectionImpl connection)
+    SessionImpl(ConnectionImpl connection)
     {
         _connection = connection;
         _node = _connection.addSessionEndpoint(this);

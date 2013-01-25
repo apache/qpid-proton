@@ -25,6 +25,10 @@ import org.apache.qpid.proton.engine.Transport;
 
 class TransportFactoryImpl extends TransportFactory
 {
+    TransportFactoryImpl()
+    {
+    }
+
     public Transport transport(Connection c)
     {
         TransportImpl t = new TransportImpl();
