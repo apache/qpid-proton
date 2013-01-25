@@ -18,7 +18,7 @@
 package org.apache.qpid.proton.hawtdispatch.api;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.apache.qpid.proton.engine.impl.DeliveryImpl;
+import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.hawtdispatch.impl.WatchBase;
 import org.apache.qpid.proton.message.Message;
@@ -34,7 +34,7 @@ public abstract class MessageDelivery extends WatchBase {
     final int initialSize;
     private Message message;
     private Buffer encoded;
-    public DeliveryImpl delivery;
+    public Delivery delivery;
     private int sizeHint = 1024*4;
 
     static Buffer encode(Message message, int sizeHint) {

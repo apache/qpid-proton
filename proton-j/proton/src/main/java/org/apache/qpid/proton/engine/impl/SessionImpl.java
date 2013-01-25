@@ -24,7 +24,7 @@ import java.util.*;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Session;
 
-public class SessionImpl extends EndpointImpl implements Session
+public class SessionImpl extends EndpointImpl implements ProtonJSession
 {
     private final ConnectionImpl _connection;
 

@@ -18,36 +18,17 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonJSslDomain;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonJSslPeerDetails;
-import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
-import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
+import org.apache.qpid.proton.engine.Connection;
 
-public class EngineFactoryImpl implements EngineFactory
+/**
+ * Extends {@link Connection} with functionality that is specific to proton-j
+ */
+public interface ProtonJConnection extends Connection
 {
-    @Override
-    public ProtonJConnection createConnection()
-    {
-        return new ConnectionImpl();
-    }
+    void setLocalContainerId(String localContainerId);
 
     @Override
-    public ProtonJTransport createTransport()
-    {
-        return new TransportImpl();
-    }
+    ProtonJSession session();
 
-    @Override
-    public ProtonJSslDomain createSslDomain()
-    {
-        return new SslDomainImpl();
-    }
-
-    @Override
-    public ProtonJSslPeerDetails createSslPeerDetails(String hostname, int port)
-    {
-        return new SslPeerDetailsImpl(hostname, port);
-    }
-
+    int getMaxChannels();
 }

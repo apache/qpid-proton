@@ -22,7 +22,7 @@ import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
-public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
+public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider, ProtonJSslDomain
 {
     private Mode _mode;
     private VerifyMode _verifyMode = VerifyMode.ANONYMOUS_PEER;
@@ -34,7 +34,7 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
 
     private final SslEngineFacadeFactory _sslEngineFacadeFactory = new SslEngineFacadeFactory();
 
-    SslDomainImpl()
+    public SslDomainImpl()
     {
     }
 

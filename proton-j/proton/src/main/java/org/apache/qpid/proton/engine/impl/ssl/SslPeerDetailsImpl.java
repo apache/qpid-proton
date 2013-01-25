@@ -18,14 +18,13 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import org.apache.qpid.proton.engine.SslPeerDetails;
 
-public class SslPeerDetailsImpl implements SslPeerDetails
+public class SslPeerDetailsImpl implements ProtonJSslPeerDetails
 {
     private final String _hostname;
     private final int _port;
 
-    SslPeerDetailsImpl(String hostname, int port)
+    public SslPeerDetailsImpl(String hostname, int port)
     {
         _hostname = hostname;
         _port = port;

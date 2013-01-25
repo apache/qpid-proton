@@ -43,7 +43,7 @@ public class SslImpl implements Ssl
      * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
      * public Proton API.</p>
      */
-    SslImpl(SslDomain domain, SslPeerDetails peerDetails)
+    public SslImpl(SslDomain domain, SslPeerDetails peerDetails)
     {
         _domain = domain;
         _protonSslEngineProvider = (ProtonSslEngineProvider)domain;

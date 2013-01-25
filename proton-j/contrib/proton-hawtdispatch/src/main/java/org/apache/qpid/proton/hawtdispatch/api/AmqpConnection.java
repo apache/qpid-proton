@@ -24,6 +24,8 @@ import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
+import org.apache.qpid.proton.engine.impl.ProtonJConnection;
+import org.apache.qpid.proton.engine.impl.ProtonJSession;
 import org.apache.qpid.proton.engine.impl.SessionImpl;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.Task;
@@ -37,7 +39,7 @@ import java.util.HashSet;
 public class AmqpConnection extends AmqpEndpointBase  {
 
     AmqpTransport transport;
-    ConnectionImpl connection;
+    ProtonJConnection connection;
     HashSet<AmqpSender> senders = new HashSet<AmqpSender>();
     boolean closing = false;
 
@@ -106,7 +108,7 @@ public class AmqpConnection extends AmqpEndpointBase  {
 
     public AmqpSession createSession() {
         assertExecuting();
-        SessionImpl session = connection.session();
+        ProtonJSession session = connection.session();
         session.open();
         pumpOut();
         return new AmqpSession(this, session);

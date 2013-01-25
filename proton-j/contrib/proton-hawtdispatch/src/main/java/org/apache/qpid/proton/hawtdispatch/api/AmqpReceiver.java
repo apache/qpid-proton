@@ -17,15 +17,15 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
-import org.apache.qpid.proton.hawtdispatch.impl.Defer;
-import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.impl.DeliveryImpl;
-import org.apache.qpid.proton.engine.impl.ReceiverImpl;
+import java.util.LinkedList;
+
 import org.apache.qpid.proton.amqp.messaging.Accepted;
+import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Receiver;
+import org.apache.qpid.proton.engine.impl.DeliveryImpl;
+import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.ByteArrayOutputStream;
-
-import java.util.LinkedList;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
@@ -33,16 +33,16 @@ import java.util.LinkedList;
 public class AmqpReceiver extends AmqpLink {
 
     final AmqpSession parent;
-    final ReceiverImpl receiver;
+    final Receiver receiver;
 
-    public AmqpReceiver(AmqpSession parent, ReceiverImpl receiver, QoS qos) {
+    public AmqpReceiver(AmqpSession parent, Receiver receiver2, QoS qos) {
         this.parent = parent;
-        this.receiver = receiver;
+        this.receiver = receiver2;
         attach();
     }
 
     @Override
-    protected ReceiverImpl getEndpoint() {
+    protected Receiver getEndpoint() {
         return receiver;
     }
     @Override

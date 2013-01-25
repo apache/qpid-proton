@@ -17,19 +17,22 @@
 
 package org.apache.qpid.proton.hawtdispatch.impl;
 
-import org.apache.qpid.proton.engine.*;
-import org.apache.qpid.proton.engine.impl.EndpointImpl;
-import org.apache.qpid.proton.engine.impl.TransportImpl;
-import org.fusesource.hawtdispatch.Task;
-
 import java.io.IOException;
+
+import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Endpoint;
+import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.impl.EndpointImpl;
+import org.apache.qpid.proton.engine.impl.ProtonJTransport;
+import org.fusesource.hawtdispatch.Task;
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
 */
 public class AmqpListener {
 
-    public Sasl processSaslConnect(TransportImpl transport) {
+    public Sasl processSaslConnect(ProtonJTransport protonTransport) {
         return null;
     }
 

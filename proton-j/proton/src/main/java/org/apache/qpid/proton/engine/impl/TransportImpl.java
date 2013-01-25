@@ -36,7 +36,6 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
@@ -54,7 +53,7 @@ import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.amqp.transport.Role;
 import org.apache.qpid.proton.amqp.transport.Transfer;
 
-public class TransportImpl extends EndpointImpl implements Transport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
+public class TransportImpl extends EndpointImpl implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
 {
     public static final byte[] HEADER = new byte[8];
     public static final org.apache.qpid.proton.amqp.messaging.Accepted ACCEPTED =
@@ -123,6 +122,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
                     };
     }
 
+    @Override
     public void bind(Connection conn)
     {
         // TODO - check if already bound
@@ -145,6 +145,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public int input(byte[] bytes, int offset, int length)
     {
         if(_inputException != null)
@@ -172,7 +173,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     //==================================================================================================================
     // Process model state to generate output
 
-
+    @Override
     public int output(byte[] bytes, final int offset, final int size)
     {
         try
@@ -958,6 +959,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         return _connectionEndpoint;
     }
 
+    @Override
     public void free()
     {
         super.free();
@@ -967,6 +969,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
     // handle incoming amqp data
 
 
+    @Override
     public void handleOpen(Open open, Binary payload, Integer channel)
     {
         setRemoteState(EndpointState.ACTIVE);
@@ -985,6 +988,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleBegin(Begin begin, Binary payload, Integer channel)
     {
         // TODO - check channel < max_channel
@@ -1018,6 +1022,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    @Override
     public void handleAttach(Attach attach, Binary payload, Integer channel)
     {
         TransportSession transportSession = _remoteSessions[channel];
@@ -1070,6 +1075,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleFlow(Flow flow, Binary payload, Integer channel)
     {
         TransportSession transportSession = _remoteSessions[channel];
@@ -1084,6 +1090,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    @Override
     public void handleTransfer(Transfer transfer, Binary payload, Integer channel)
     {
         // TODO - check channel < max_channel
@@ -1098,6 +1105,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleDisposition(Disposition disposition, Binary payload, Integer channel)
     {
         TransportSession transportSession = _remoteSessions[channel];
@@ -1111,6 +1119,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleDetach(Detach detach, Binary payload, Integer channel)
     {
         TransportSession transportSession = _remoteSessions[channel];
@@ -1137,6 +1146,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleEnd(End end, Binary payload, Integer channel)
     {
         TransportSession transportSession = _remoteSessions[channel];
@@ -1153,6 +1163,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public void handleClose(Close close, Binary payload, Integer channel)
     {
         _closeReceived = true;
@@ -1164,6 +1175,7 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
 
     }
 
+    @Override
     public boolean input(TransportFrame frame)
     {
         if( _protocolTracer!=null )
@@ -1196,11 +1208,13 @@ public class TransportImpl extends EndpointImpl implements Transport, FrameBody.
         }
     }
 
+    @Override
     public ProtocolTracer getProtocolTracer()
     {
         return _protocolTracer;
     }
 
+    @Override
     public void setProtocolTracer(ProtocolTracer protocolTracer)
     {
         this._protocolTracer = protocolTracer;

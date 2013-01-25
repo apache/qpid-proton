@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +15,12 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 package org.apache.qpid.proton.engine.impl;
 
-public class PlainTransportWrapper implements TransportWrapper
+import org.apache.qpid.proton.engine.Sender;
+
+public interface ProtonJSender extends Sender
 {
-    private final TransportOutput _outputProcessor;
-    private final TransportInput _inputProcessor;
 
-    public PlainTransportWrapper(TransportOutput outputProcessor,
-            TransportInput inputProcessor)
-    {
-        _outputProcessor = outputProcessor;
-        _inputProcessor = inputProcessor;
-    }
-
-    @Override
-    public int output(byte[] bytes, int offset, int size)
-    {
-        return _outputProcessor.output(bytes, offset, size);
-    }
-
-    @Override
-    public int input(byte[] bytes, int offset, int size)
-    {
-        return _inputProcessor.input(bytes, offset, size);
-    }
 }

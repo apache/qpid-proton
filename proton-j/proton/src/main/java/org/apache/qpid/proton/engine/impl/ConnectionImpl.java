@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.amqp.transport.Open;
 
-public class ConnectionImpl extends EndpointImpl implements Connection
+public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 {
 
     public static final int MAX_CHANNELS = 255;
@@ -242,6 +242,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _localContainerId;
     }
 
+    @Override
     public void setLocalContainerId(String localContainerId)
     {
         _localContainerId = localContainerId;

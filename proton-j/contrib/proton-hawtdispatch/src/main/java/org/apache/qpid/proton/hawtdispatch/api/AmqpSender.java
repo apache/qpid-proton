@@ -21,6 +21,7 @@ import org.apache.qpid.proton.hawtdispatch.impl.Defer;
 import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.impl.DeliveryImpl;
+import org.apache.qpid.proton.engine.impl.ProtonJSender;
 import org.apache.qpid.proton.engine.impl.SenderImpl;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -47,11 +48,11 @@ public class AmqpSender extends AmqpLink {
 
     final AmqpSession parent;
     private final QoS qos;
-    final SenderImpl sender;
+    final ProtonJSender sender;
 
-    public AmqpSender(AmqpSession parent, SenderImpl sender, QoS qos) {
+    public AmqpSender(AmqpSession parent, ProtonJSender sender2, QoS qos) {
         this.parent = parent;
-        this.sender = sender;
+        this.sender = sender2;
         this.qos = qos;
         attach();
         getConnection().senders.add(this);
@@ -64,7 +65,7 @@ public class AmqpSender extends AmqpLink {
     }
 
     @Override
-    protected SenderImpl getEndpoint() {
+    protected ProtonJSender getEndpoint() {
         return sender;
     }
 
@@ -100,7 +101,7 @@ public class AmqpSender extends AmqpLink {
     }
 
     Buffer currentBuffer;
-    DeliveryImpl currentDelivery;
+    Delivery currentDelivery;
 
     Defer deferedPumpDeliveries = new Defer() {
         public void run() {
@@ -121,7 +122,7 @@ public class AmqpSender extends AmqpLink {
                         int sent = sender.send(currentBuffer.data, currentBuffer.offset, currentBuffer.length);
                         currentBuffer.moveHead(sent);
                         if( currentBuffer.length == 0 ) {
-                            DeliveryImpl current = currentDelivery;
+                            Delivery current = currentDelivery;
                             MessageDelivery md = (MessageDelivery) current.getContext();
                             currentBuffer = null;
                             currentDelivery = null;
