@@ -2567,19 +2567,19 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
       total += n;
     } else if (n == 0) {
       break;
-    } else if (n == PN_EOS) {
-      if (total > 0) {
+    } else {
+      if (total > 0)
         break;
-      } else {
+      if (n == PN_EOS) {
         if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
           pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
         return PN_EOS;
+      } else {
+        if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+          pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", n,
+                              pn_error_text(transport->error));
+        return n;
       }
-    } else {
-      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-        pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", n,
-                            pn_error_text(transport->error));
-      return n;
     }
   }
 
