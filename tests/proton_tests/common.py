@@ -41,7 +41,7 @@ class TestServer(object):
     if "host" in kwargs:
       self.host = kwargs["host"]
     if "port" in kwargs:
-      self.port = kwargs["port"] 
+      self.port = kwargs["port"]
     self.driver_timeout = -1
     self.credit_batch = 10
     self.thread = Thread(name="server-thread", target=self.run)

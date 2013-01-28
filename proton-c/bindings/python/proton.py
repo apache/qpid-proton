@@ -36,7 +36,6 @@ try:
   bytes()
 except NameError:
   bytes = str
-  
 
 LANGUAGE = "C"
 
