@@ -32,6 +32,11 @@ The proton APIs consist of the following classes:
 
 from cproton import *
 import uuid
+try:
+  bytes()
+except NameError:
+  bytes = str
+  
 
 LANGUAGE = "C"
 

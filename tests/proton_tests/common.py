@@ -36,8 +36,12 @@ class TestServer(object):
   def __init__(self, **kwargs):
     self.args = kwargs
     self.driver = Driver()
-    self.host = kwargs["host"] if "host" in kwargs else "127.0.0.1"
-    self.port = kwargs["port"] if "port" in kwargs else 0
+    self.host = "127.0.0.1"
+    self.port = 0
+    if "host" in kwargs:
+      self.host = kwargs["host"]
+    if "port" in kwargs:
+      self.port = kwargs["port"] 
     self.driver_timeout = -1
     self.credit_batch = 10
     self.thread = Thread(name="server-thread", target=self.run)
