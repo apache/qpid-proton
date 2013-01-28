@@ -94,7 +94,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-c -Dproton-c-build
       <properties>
         <!-- Uses the JNI jar and the native libraries, neither of which are built by Maven,
              therefore their location needs to be set explicitly in the following properties. -->
-        <proton-c-build-dir>${basedir}/../proton-c/build</proton-c-build-dir>
+        <proton-c-build-dir>${basedir}/../build/proton-c</proton-c-build-dir>
         <jni-native-path>${proton-c-build-dir}:${proton-c-build-dir}/bindings/java</jni-native-path>
         <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
       </properties>

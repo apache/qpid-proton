@@ -58,11 +58,7 @@ if (PERLLIBS_FOUND)
   set (DEFAULT_PERL ON)
 endif (PERLLIBS_FOUND)
 
-# Prerequisites for Java
-find_package( Java )
-# we have to check two variables below because older versions of cmake (such as v2.6)
-# include FindJava.cmake and FindJNI.cmake modules that don't set XXX_FOUND
-if (JAVA_FOUND OR JAVA_RUNTIME)
+if (JAVA_FOUND)
   find_package( JNI )
   if (JNI_FOUND OR JNI_LIBRARIES)
     set (DEFAULT_JAVA ON)

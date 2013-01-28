@@ -1,2 +1,0 @@
-This is Andreas Schneider's CMake Java Support.  We have our own local copy merely to allow us to build the Java bindings
-with older versions of cmake (<2.8.6).  If cmake 2.8.6 is in use, these files will not be used.

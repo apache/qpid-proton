@@ -162,6 +162,11 @@ find_program(Java_JAVADOC_EXECUTABLE
 #include(${CMAKE_CURRENT_LIST_DIR}/FindPackageHandleStandardArgs.cmake)
 include(FindPackageHandleStandardArgs)
 if(Java_FIND_COMPONENTS)
+
+  # Apache Qpid Proton doesn't support this because of find_package_handle_standard_args
+  # differences (see comment below)
+  message(FATAL_ERROR "Apache Qpid Proton FindJava does not support Java_FIND_COMPONENTS")
+
   foreach(component ${Java_FIND_COMPONENTS})
     # User just want to execute some Java byte-compiled
     if(component STREQUAL "Runtime")
@@ -182,10 +187,14 @@ if(Java_FIND_COMPONENTS)
   endforeach()
 else()
   # Check for everything
-  find_package_handle_standard_args(Java
-    REQUIRED_VARS Java_JAVA_EXECUTABLE Java_JAR_EXECUTABLE Java_JAVAC_EXECUTABLE
+
+  # Apache Qpid Proton local change: the line below has been tweaked because
+  # the signature of find_package_handle_standard_args in cmake 2.6 lacks the
+  # REQUIRED_VARS and VERSION_VAR parameters, and specifies the error message differently.
+
+  find_package_handle_standard_args(Java DEFAULT_MSG
+                  Java_JAVA_EXECUTABLE Java_JAR_EXECUTABLE Java_JAVAC_EXECUTABLE
                   Java_JAVAH_EXECUTABLE Java_JAVADOC_EXECUTABLE
-    VERSION_VAR Java_VERSION
     )
 endif()
 

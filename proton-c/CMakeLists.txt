@@ -75,12 +75,6 @@ else()
     add_custom_target(docs)
 endif()
 
-# Used to allow the building of the Java bindings when CMAKE_VERSION < 2.6.8
-if ( ${CMAKE_VERSION} VERSION_LESS "2.8.6" )
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-endif ()
-
-
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
@@ -91,23 +85,23 @@ endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
-  "${PROJECT_SOURCE_DIR}/pn_config.h.in"
-  "${PROJECT_BINARY_DIR}/pn_config.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pn_config.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/pn_config.h"
 )
 
-include_directories ("${PROJECT_BINARY_DIR}")
-include_directories ("${PROJECT_SOURCE_DIR}/include")
+include_directories ("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 add_custom_command (
-  OUTPUT ${PROJECT_BINARY_DIR}/encodings.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py > ${PROJECT_BINARY_DIR}/encodings.h
-  DEPENDS ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
 )
 
 add_custom_command (
-  OUTPUT ${PROJECT_BINARY_DIR}/protocol.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
-  DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
 )
 
 # Select driver
@@ -251,8 +245,8 @@ set (qpid-proton-core
 
   src/messenger.c
 
-  ${PROJECT_BINARY_DIR}/encodings.h
-  ${PROJECT_BINARY_DIR}/protocol.h
+  ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
 )
 
 set_source_files_properties (
@@ -317,7 +311,7 @@ get_filename_component (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 get_filename_component (LIBDIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR} ABSOLUTE)
 get_filename_component (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${INCLUDE_INSTALL_DIR} ABSOLUTE)
 
-configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
-         ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)
-install (FILES ${PROJECT_BINARY_DIR}/libqpid-proton.pc
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
+         ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
          DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)

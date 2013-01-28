@@ -22,13 +22,10 @@ include(UseJava)
 
 project (Proton-JNI Java)
 
-add_subdirectory(api)
-
 SET(CMAKE_SWIG_FLAGS -package org.apache.qpid.proton.jni)
 SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/jni/src/main/java/org/apache/qpid/proton/jni)
 
-message( "JNI_LIBRARIES" ${JNI_LIBRARIES} )
-message( "JAVA_AWT_LIBRARY" ${JAVA_AWT_LIBRARY} )
+message( "PHDEBUG JNI_LIBRARIES: ${JNI_LIBRARIES}" )
 
 
 swig_add_module(proton-swig java java.i)
@@ -48,14 +45,12 @@ set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
 file(GLOB_RECURSE THUNKING_SOURCES_ABS "jni/src/main/java/*.java")
 
 # TODO: Why do we need to explicitly set the classpath?  Why is the fact that we depend on
-# protonapi not sufficient?
-set(CMAKE_JAVA_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR}/api/proton-api-${PN_VERSION}.jar)
+# proton-api not sufficient?
+set(CMAKE_JAVA_INCLUDE_PATH ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
+
 
 # TODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
 add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
-
-message("CMAKE_CURRENT_BINARY_DIR " ${CMAKE_CURRENT_BINARY_DIR})
-message("CMAKE_JAVA_CLASS_OUTPUT_PATH" ${CMAKE_JAVA_CLASS_OUTPUT_PATH})
 
 # We need to rebuild the JAR to a) include the resources b) include the 'structural' directory entries that are
 # excluded by Cmake's add_jar command.  The latter is required by Google Reflections.
