@@ -36,7 +36,7 @@ fi
 export PYTHON_BINDINGS=$PROTON_BINDINGS/python
 export COMMON_PYPATH=$PROTON_HOME/tests
 export PYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-c/bindings/python:$PYTHON_BINDINGS
-export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/scripts:$PROTON_HOME/proton-j/target/qpid-proton-1.0-SNAPSHOT.jar
+export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/proton/src/main/scripts:$PROTON_HOME/proton-j/proton/target/classes:$PROTON_HOME/proton-j/proton-api/target/classes
 
 # PHP
 export PHP_BINDINGS=$PROTON_BINDINGS/php
