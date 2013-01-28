@@ -31,7 +31,7 @@ To use the java implementation via jython, follow these instructions
 from the directory containing this file:
 
   mvn compile
-  export JYTHON_PATH=$PWD/target/classes
+  export JYTHONPATH=$PWD/target/classes
 
 Once this is done you can run the python test suite via jython to
 validate the java implementation:
