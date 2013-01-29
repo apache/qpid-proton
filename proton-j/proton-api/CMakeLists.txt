@@ -22,3 +22,4 @@ set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
 file(GLOB_RECURSE SOURCES_ABS "src/main/java/*.java")
 
 add_jar(proton-api ${SOURCES_ABS})
+rebuild_jar(proton-api proton-api-${PN_VERSION}.jar)

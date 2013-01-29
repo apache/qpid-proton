@@ -29,6 +29,8 @@ set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 # Location of proton-api jar created by the build; used by proton-jni and proton-j-impl
 set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
+set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
+      "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
 # Used to allow the building of the Java bindings when CMAKE_VERSION < 2.6.8
 if ( ${CMAKE_VERSION} VERSION_LESS "2.8.6" )

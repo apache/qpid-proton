@@ -17,13 +17,13 @@
 # under the License.
 #
 
-# Adds a custom command to rebuild the JAR to include META-INF resources and the
+# Adds a custom command to rebuild the JAR to include resources and the
 # directory entries that are missed by add_jar()
 
 function (rebuild_jar upstream_target jar_name)
   add_custom_command(TARGET ${upstream_target} POST_BUILD
                      COMMAND ${Java_JAR_EXECUTABLE} cf ${jar_name}
-                                -C ${CMAKE_CURRENT_SOURCE_DIR}/src/main/resources META-INF
+                                -C ${CMAKE_CURRENT_SOURCE_DIR}/src/main/resources .
                                 -C ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${upstream_target}.dir/ org
                      COMMENT "Rebuilding ${jar_name} to include missing resources")
 endfunction ()

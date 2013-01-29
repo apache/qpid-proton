@@ -17,15 +17,16 @@
 # under the License.
 #
 
-set(BOUNCYCASTLE_VERSION 1.47)
+set(BOUNCYCASTLE_VERSION 1.47 CACHE STRING "Version of Bouncycastle to compile proton-j-impl against")
+
 find_jar(BOUNCYCASTLE_BCPKIX_JAR
          NAMES bcpkix-jdk15on
-         PATHS $ENV{PROTON_JAR_DEPEND_DIR}
+         PATHS ${PROTON_JAR_DEPEND_DIR}
          VERSIONS ${BOUNCYCASTLE_VERSION}
          DOC "Full path to Bouncycastle PKIX jar")
 find_jar(BOUNCYCASTLE_BCPROV_JAR
          NAMES bcprov-jdk15on
-         PATHS $ENV{PROTON_JAR_DEPEND_DIR}
+         PATHS ${PROTON_JAR_DEPEND_DIR}
          VERSIONS ${BOUNCYCASTLE_VERSION}
          DOC "Full path to Bouncycastle Provider jar")
 
@@ -55,5 +56,5 @@ if (BOUNCYCASTLE_FOUND)
 
   add_dependencies(proton-j-impl proton-api)
 else()
-    message("Won't build proton-j-impl because one or more Bouncycastle jars were not found")
+    message("Won't build proton-j-impl because one or more Bouncycastle jars were not found. PROTON_JAR_DEPEND_DIR was: ${PROTON_JAR_DEPEND_DIR}")
 endif()

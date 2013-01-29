@@ -1,7 +1,0 @@
-Contains the Proton system tests, which are written in Java but can be
-used to test either the Java or C implementations.
-
-To run the tests from a clean checkout:
-
-* If you want to test proton-c, build it using the instructions in ./proton-c/README
-* run "mvn test -P proton-c" or "mvn test -P proton-j"

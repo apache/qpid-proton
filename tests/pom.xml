@@ -25,18 +25,16 @@
   <artifactId>tests</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <description>
-The Proton system tests execute against either the Java or the C implementations, based on the chosen profile.
+  <description>The Proton system tests execute against either the Java or the C implementations, based on the chosen profile.
 
-To execute, run either &quot;mvn test -P proton-j&quot; or &quot;mvn test -P proton-c&quot;.
+To execute, run either &quot;mvn test -P proton-j&quot; or &quot;mvn test -P proton-jni&quot;.
 
 To reduce the set of Python tests run, set system property proton.pythontest.pattern, for example:
 
 mvn test -Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*'
 
-The proton-c profile looks for the JNI jar and native libraries under directory &lt;basedir&gt;/proton-c/build.
-To override this, run Maven like so: &quot;mvn test -P proton-c -Dproton-c-build-dir=/path/to/build/dir&quot;.
-</description>
+The proton-jni profile looks for the JNI jar and native libraries under directory &lt;basedir&gt;/build/proton-c.
+To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-build-dir=/path/to/build/dir&quot;.</description>
 
   <build>
     <plugins>
@@ -90,7 +88,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-c -Dproton-c-build
       </dependencies>
     </profile>
     <profile>
-      <id>proton-c</id>
+      <id>proton-jni</id>
       <properties>
         <!-- Uses the JNI jar and the native libraries, neither of which are built by Maven,
              therefore their location needs to be set explicitly in the following properties. -->

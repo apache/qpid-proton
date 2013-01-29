@@ -44,7 +44,7 @@
       </modules>
     </profile>
     <profile>
-      <id>proton-c</id>
+      <id>proton-jni</id>
       <modules>
         <module>proton-j/proton-api</module>
         <module>tests</module>

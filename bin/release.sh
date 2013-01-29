@@ -19,7 +19,8 @@
 # under the License.
 #
 
-#
+# TODO modify this script to create the correct artefacts from the top level (i.e. not from separate proton-c/proton-j subfolders)
+
 # release.sh - Creates release tarballs from the upstream source
 # repository.
 #

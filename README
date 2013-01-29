@@ -23,12 +23,24 @@ Proton is multi-lingual:
      - includes full fidelity data exchange:
          maps, lists, strings, custom data structures, and more
 
+PHTOD mention that two implementations exist - proton-c and proton-j.
+
 Please see http://qpid.apache.org/proton for a more info.
+
+========================
+== Build Instructions ==
+========================
+
+PHTODO mention that cmake and maven exist. 
+
+========================
+== cmake ==
 
 == Build Instructions (Linux) ==
 
+
 The following prerequesuites are required to do a full build. If you
-do not wish to build a given language binding you can ommit the -devel
+do not wish to build a given language binding you can omit the -devel
 package for that language:
 
   # required dependencies
@@ -117,3 +129,20 @@ Step 5: Build the ALL_BUILD project.
 
 
 
+
+========================
+== maven ==
+
+
+========================
+== testing ==
+
+TODO tidy up the following
+
+Contains the Proton system tests, which are written in Java but can be
+used to test either the Java or C implementations.
+
+To run the tests from a clean checkout:
+
+* If you want to test proton-c, build it using the instructions in ./proton-c/README
+* run "mvn test -P proton-c" or "mvn test -P proton-j"
