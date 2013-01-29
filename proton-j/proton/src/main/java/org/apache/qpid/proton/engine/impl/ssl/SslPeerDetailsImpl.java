@@ -18,6 +18,7 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.ProtonJSslPeerDetails;
 
 
@@ -26,7 +27,11 @@ public class SslPeerDetailsImpl implements ProtonJSslPeerDetails
     private final String _hostname;
     private final int _port;
 
-    public SslPeerDetailsImpl(String hostname, int port)
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public SslPeerDetailsImpl(String hostname, int port)
     {
         _hostname = hostname;
         _port = port;

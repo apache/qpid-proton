@@ -9,6 +9,7 @@
 *.iws
 # End of IntelliJ IDE files
 
+/build/
 *.class
 *.pyc
 target

@@ -32,6 +32,7 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -108,7 +109,11 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         _overflowBuffer.flip();
     }
 
-    TransportImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public TransportImpl()
     {
         FrameParser frameParser = new FrameParser(this);
 

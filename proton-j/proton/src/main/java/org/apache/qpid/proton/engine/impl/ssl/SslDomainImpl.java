@@ -19,6 +19,7 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
+import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.ProtonJSslDomain;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
@@ -35,7 +36,11 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider, Proton
 
     private final SslEngineFacadeFactory _sslEngineFacadeFactory = new SslEngineFacadeFactory();
 
-    public SslDomainImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public SslDomainImpl()
     {
     }
 

@@ -25,19 +25,20 @@ import org.apache.qpid.proton.amqp.messaging.Header;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
-import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.message.ProtonJMessage;
 
 public class MessageFactoryImpl implements MessageFactory
 {
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJMessage createMessage()
     {
         return new MessageImpl();
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJMessage createMessage(Header header,
                                  DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,

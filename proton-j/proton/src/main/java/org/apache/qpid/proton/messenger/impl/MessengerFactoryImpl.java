@@ -24,13 +24,14 @@ import org.apache.qpid.proton.messenger.MessengerFactory;
 
 public class MessengerFactoryImpl implements MessengerFactory
 {
-
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public Messenger createMessenger()
     {
         return new MessengerImpl();
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public Messenger createMessenger(String name)
     {

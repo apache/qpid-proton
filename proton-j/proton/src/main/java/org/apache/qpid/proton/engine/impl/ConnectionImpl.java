@@ -55,7 +55,11 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private String _remoteContainer;
     private String _remoteHostname;
 
-    ConnectionImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public ConnectionImpl()
     {
     }
 

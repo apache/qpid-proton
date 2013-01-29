@@ -45,11 +45,19 @@ public class MessageImpl implements ProtonJMessage
     private Footer _footer;
     private MessageFormat _format = MessageFormat.DATA;
 
-    MessageImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessageFactory} instead
+     */
+    @Deprecated public MessageImpl()
     {
     }
 
-    MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessageFactory} instead
+     */
+    @Deprecated public MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
                        Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
     {
         _header = header;

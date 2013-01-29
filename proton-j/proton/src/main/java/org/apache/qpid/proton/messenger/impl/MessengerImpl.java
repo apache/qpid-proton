@@ -47,6 +47,7 @@ import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
+import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -78,17 +79,29 @@ public class MessengerImpl implements Messenger
     private TrackerQueue _outgoing = new TrackerQueue();
 
 
-    MessengerImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl()
     {
         this(java.util.UUID.randomUUID().toString());
     }
 
-    MessengerImpl(String name)
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl(String name)
     {
         this(name, defaultEngineFactory(), defaultDriverFactory(), defaultMessageFactory());
     }
 
-    MessengerImpl(String name, EngineFactory engineFactory, DriverFactory driverFactory, MessageFactory messageFactory)
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl(String name, EngineFactory engineFactory, DriverFactory driverFactory, MessageFactory messageFactory)
     {
         _name = name;
         _engineFactory = engineFactory;

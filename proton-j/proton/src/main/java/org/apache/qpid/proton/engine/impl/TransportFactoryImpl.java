@@ -29,6 +29,7 @@ class TransportFactoryImpl extends TransportFactory
     {
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     public Transport transport(Connection c)
     {
         TransportImpl t = new TransportImpl();

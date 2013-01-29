@@ -28,24 +28,28 @@ import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
 
 public class EngineFactoryImpl implements EngineFactory
 {
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJConnection createConnection()
     {
         return new ConnectionImpl();
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJTransport createTransport()
     {
         return new TransportImpl();
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJSslDomain createSslDomain()
     {
         return new SslDomainImpl();
     }
 
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJSslPeerDetails createSslPeerDetails(String hostname, int port)
     {
