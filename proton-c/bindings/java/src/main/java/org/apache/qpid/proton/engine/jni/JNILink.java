@@ -417,14 +417,14 @@ abstract class JNILink implements Link
     @ProtonCEquivalent("pn_link_state")
     public EndpointState getLocalState()
     {
-        return StateConverter.getLocalState(Proton.pn_link_state(_impl));        
+        return StateConverter.getLocalState(Proton.pn_link_state(_impl));
     }
 
     @Override
     @ProtonCEquivalent("pn_link_state")
     public EndpointState getRemoteState()
     {
-        return StateConverter.getRemoteState(Proton.pn_link_state(_impl));                
+        return StateConverter.getRemoteState(Proton.pn_link_state(_impl));
     }
 
     @Override
@@ -449,7 +449,7 @@ abstract class JNILink implements Link
             Proton.pn_link_free(_impl);
             _impl = null;
         }
-       
+
     }
 
     @Override

@@ -51,7 +51,7 @@ public class JNITransport implements Transport
     {
         JNIConnection jniConn = (JNIConnection)connection;
         SWIGTYPE_p_pn_connection_t connImpl = jniConn.getImpl();
-        Proton.pn_transport_bind(_impl, connImpl);        
+        Proton.pn_transport_bind(_impl, connImpl);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class JNITransport implements Transport
             {
                 sessionId = sslPeerDetails.getHostname() + ":" + sslPeerDetails.getPort();
             }
-            
+
             SWIGTYPE_p_pn_ssl_t pn_ssl = Proton.pn_ssl( _impl );
             _ssl = new JNISsl( pn_ssl);
             Proton.pn_ssl_init(pn_ssl, ((JNISslDomain)sslDomain).getImpl(), sessionId);
@@ -164,7 +164,7 @@ public class JNITransport implements Transport
     @Override
     public void setContext(Object o)
     {
-        _context = o;        
+        _context = o;
     }
 
     @Override
@@ -177,7 +177,7 @@ public class JNITransport implements Transport
     protected void finalize() throws Throwable
     {
         free();
-        super.finalize();    
+        super.finalize();
     }
 
     // PHTODO delete main/pump

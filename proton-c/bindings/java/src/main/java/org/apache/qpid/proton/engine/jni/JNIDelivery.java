@@ -185,7 +185,7 @@ public class JNIDelivery implements Delivery
             Proton.pn_delivery_set_context(_impl, null);
 //            Proton.pn_delivery_free(_impl);
             _impl = null;
-        }        
+        }
     }
 
     @Override

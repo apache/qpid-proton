@@ -1,4 +1,15 @@
-This is Andreas Schneider's CMake Java Support.  We have our own local copy merely
+CMake Modules
+=============
+
+Contents:
+
+UseJava, UseJavaSymLinks, UseJavaClassFilelist:
+
+These are Andreas Schneider's CMake Java Support.  We have our own local copy merely
 to allow us to build the Java bindings with older versions of cmake (<2.8.6). Local modifications
 are commented with "Apache Qpid Proton...".
 If cmake 2.8.6 is in use, these files will not be used.
+
+UseProtonJava:
+
+Custom support functions for the Proton Java modules

@@ -27,6 +27,9 @@ set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 3)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
+# Location of proton-api jar created by the build; used by proton-jni and proton-j-impl
+set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
+
 # Used to allow the building of the Java bindings when CMAKE_VERSION < 2.6.8
 if ( ${CMAKE_VERSION} VERSION_LESS "2.8.6" )
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -35,12 +38,12 @@ endif ()
 find_package( Java )
 if (JAVA_FOUND)
   message("Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
+  include(UseJava)
+  include(UseProtonJava)
+
+  add_subdirectory(proton-j/proton-api)
+  add_subdirectory(proton-j/proton)
 endif()
 
 add_subdirectory(proton-c)
-
-if (JAVA_FOUND)
-  add_subdirectory(proton-j/proton-api)
-endif ()
-
 

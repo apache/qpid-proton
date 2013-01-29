@@ -16,14 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required (VERSION 2.6)
-
-include(UseJava)
-
-project (Proton-JNI Java)
 
 SET(CMAKE_SWIG_FLAGS -package org.apache.qpid.proton.jni)
-SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/jni/src/main/java/org/apache/qpid/proton/jni)
+SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/src/main/java/org/apache/qpid/proton/jni)
 
 message( "PHDEBUG JNI_LIBRARIES: ${JNI_LIBRARIES}" )
 
@@ -42,22 +37,14 @@ add_dependencies(proton-swig protonjnioutdir)
 
 set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
 
-file(GLOB_RECURSE THUNKING_SOURCES_ABS "jni/src/main/java/*.java")
+file(GLOB_RECURSE THUNKING_SOURCES_ABS "src/main/java/*.java")
 
-# TODO: Why do we need to explicitly set the classpath?  Why is the fact that we depend on
-# proton-api not sufficient?
-set(CMAKE_JAVA_INCLUDE_PATH ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
+set(CMAKE_JAVA_INCLUDE_PATH ${PROTON_API_TARGET_JAR})
 
-
-# TODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
+# PHTODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
 add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
 
-# We need to rebuild the JAR to a) include the resources b) include the 'structural' directory entries that are
-# excluded by Cmake's add_jar command.  The latter is required by Google Reflections.
-add_custom_command(TARGET proton-jni POST_BUILD
-                   COMMAND ${Java_JAR_EXECUTABLE} cf proton-jni-${PN_VERSION}.jar
-                              -C ${PROJECT_SOURCE_DIR}/jni/src/main/resources META-INF
-                              -C ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/proton-jni.dir/ org
-                   COMMENT "Rebuilding JAR to include missing resources")
+include(UseProtonJava)
+rebuild_jar(proton-jni proton-jni-${PN_VERSION}.jar)
 
 add_dependencies(proton-jni proton-api proton-swig)

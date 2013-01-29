@@ -142,11 +142,11 @@ public class JNIMessage implements Message
     private pn_atom_t convertToAtom(Object o)
     {
         pn_atom_t atom = new pn_atom_t();
-        
+
 //PN_NULL
         if(o == null)
         {
-            atom.setType(pn_type_t.PN_NULL);            
+            atom.setType(pn_type_t.PN_NULL);
         }
 //PN_BOOL
         else if(o instanceof Boolean)
@@ -283,7 +283,7 @@ public class JNIMessage implements Message
 
         return atom;
     }
-    
+
     private Object convert(pn_atom_t atom)
     {
         if(atom != null)
@@ -825,7 +825,7 @@ public class JNIMessage implements Message
         throw new UnsupportedOperationException();
     }
 
-    public void setApplicationProperties(ApplicationProperties applicationProperties)   
+    public void setApplicationProperties(ApplicationProperties applicationProperties)
     {
         //TODO
         throw new UnsupportedOperationException();
