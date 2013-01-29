@@ -18,9 +18,6 @@
 #
 cmake_minimum_required (VERSION 2.6)
 
-include(CheckLibraryExists)
-include(CheckSymbolExists)
-
 project (Proton)
 
 set (PN_VERSION_MAJOR 0)

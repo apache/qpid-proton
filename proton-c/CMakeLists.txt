@@ -20,11 +20,6 @@
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 
-# PHTODO remove verion numbers
-set (PN_VERSION_MAJOR 0)
-set (PN_VERSION_MINOR 3)
-set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
-
 include(soversion.cmake)
 
 if(WIN32 AND NOT CYGWIN)

@@ -37,6 +37,11 @@ The proton-jni profile looks for the JNI jar and native libraries under director
 To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-build-dir=/path/to/build/dir&quot;.</description>
 
   <build>
+    <!-- System tests are arranged by language, hence the non-default location of the JUnit tests. -->
+    <testSourceDirectory>java</testSourceDirectory>
+    <resources>
+      <resource><directory>python</directory></resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
