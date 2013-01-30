@@ -3,7 +3,7 @@
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    NAME         => 'qpid::cproton',
+    NAME         => 'cproton_perl',
     DISTNAME     => 'perl-qpid_proton',
     VERSION      => '0.3',
     PREREQ_PM    => {},
