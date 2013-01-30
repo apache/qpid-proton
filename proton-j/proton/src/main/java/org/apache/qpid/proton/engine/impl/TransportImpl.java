@@ -315,6 +315,8 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
 
                             Detach detach = new Detach();
                             detach.setHandle(localHandle);
+                            // TODO - need an API for detaching rather than closing the link
+                            detach.setClosed(true);
 
                             EndpointError localError = link.getLocalError();
                             if( localError !=null ) {

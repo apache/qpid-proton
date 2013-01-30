@@ -32,6 +32,10 @@ The proton APIs consist of the following classes:
 
 from cproton import *
 import uuid
+try:
+  bytes()
+except NameError:
+  bytes = str
 
 LANGUAGE = "C"
 
@@ -1831,6 +1835,10 @@ class Connection(Endpoint):
   def work_head(self):
     return wrap_delivery(pn_work_head(self._conn))
 
+  @property
+  def error(self):
+    return pn_error_code(pn_connection_error(self._conn))
+
 class SessionException(ProtonException):
   pass
 
@@ -1867,6 +1875,9 @@ class Session(Endpoint):
   def close(self):
     self._update_cond()
     pn_session_close(self._ssn)
+
+  def next(self, mask):
+    return wrap_session(pn_session_next(self._ssn, mask))
 
   @property
   def state(self):
@@ -1980,6 +1991,15 @@ class Link(Endpoint):
 
   def next(self, mask):
     return wrap_link(pn_link_next(self._link, mask))
+
+  @property
+  def is_sender(self):
+    return pn_link_is_sender(self._link)
+
+  @property
+  def is_receiver(self):
+    return pn_link_is_receiver(self._link)
+
 
 class Terminus(object):
 
@@ -2138,6 +2158,11 @@ class Delivery(object):
   def work_next(self):
     return wrap_delivery(pn_work_next(self._dlv))
 
+  @property
+  def link(self):
+    return wrap_link(pn_delivery_link(self._dlv))
+
+
 class TransportException(ProtonException):
   pass
 
@@ -2147,12 +2172,17 @@ class Transport(object):
   TRACE_FRM = PN_TRACE_FRM
   TRACE_RAW = PN_TRACE_RAW
 
-  def __init__(self):
-    self._trans = pn_transport()
+  def __init__(self, _trans=None):
+    if not _trans:
+      self._trans = pn_transport()
+    else:
+      self._shared_trans = True
+      self._trans = _trans
 
   def __del__(self):
     if hasattr(self, "_trans"):
-      pn_transport_free(self._trans)
+      if not hasattr(self, "_shared_trans"):
+        pn_transport_free(self._trans)
       del self._trans
 
   def _check(self, err):
@@ -2283,6 +2313,17 @@ class SASL(object):
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
+  STATE_CONF = PN_SASL_CONF
+  STATE_IDLE = PN_SASL_IDLE
+  STATE_STEP = PN_SASL_STEP
+  STATE_PASS = PN_SASL_PASS
+  STATE_FAIL = PN_SASL_FAIL
+
+  @property
+  def state(self):
+    return pn_sasl_state(self._sasl)
+
+
 class SSLException(TransportException):
   pass
 
@@ -2384,6 +2425,127 @@ class SSLSessionDetails(object):
   def get_session_id(self):
     return self._session_id
 
+
+###
+# Driver
+###
+
+class DriverException(ProtonException):
+  """
+  The DriverException class is the root of the driver exception hierarchy.
+  """
+  pass
+
+
+def wrap_connector(cxtr):
+  if not cxtr: return None
+  ctx = pn_connector_context(cxtr)
+  if ctx: return ctx
+  wrapper = Connector(_cxtr=cxtr)
+  pn_connector_set_context(cxtr, wrapper)
+  return wrapper
+
+class Connector(object):
+  def __init__(self, _cxtr):
+    self._cxtr = _cxtr
+
+  def next(self):
+    return wrap_connector(pn_connector_next(self._cxtr))
+
+  def process(self):
+    pn_connector_process(self._cxtr)
+
+  def listener(self):
+    return wrap_listener(pn_connector_listener(self._cxtr))
+
+  def sasl(self):
+    ## seems easier just to grab the SASL associated with the transport:
+    trans = self.transport
+    if trans:
+      return SASL(self.transport)
+    return None
+
+  @property
+  def transport(self):
+    trans = pn_connector_transport(self._cxtr)
+    if trans:
+      return Transport(trans)
+    return None
+
+  def close(self):
+    return pn_connector_close(self._cxtr)
+
+  @property
+  def closed(self):
+    return pn_connector_closed(self._cxtr)
+
+  def _get_connection(self):
+    return wrap_connection(pn_connector_connection(self._cxtr))
+
+  def _set_connection(self, conn):
+    pn_connector_set_connection(self._cxtr, conn._conn)
+
+  connection = property(_get_connection, _set_connection,
+                        doc="""
+Associate a Connection with this Connector.
+""")
+
+def wrap_listener(lsnr):
+  if not lsnr: return None
+  ctx = pn_listener_context(lsnr)
+  if ctx: return ctx
+  wrapper = Listener(_lsnr=lsnr)
+  pn_listener_set_context(lsnr, wrapper)
+  return wrapper
+
+class Listener(object):
+  def __init__(self, _lsnr=None):
+    self._lsnr = _lsnr
+
+  def next(self):
+    return wrap_listener(pn_listener_next(self._lsnr))
+
+  def accept(self):
+    cxtr = pn_listener_accept(self._lsnr)
+    return wrap_connector(cxtr)
+
+  def close(self):
+    pn_listener_close(self._lsnr)
+
+class Driver(object):
+  def __init__(self):
+    self._driver = pn_driver()
+
+  def __del__(self):
+    if hasattr(self, "_driver"):
+      pn_driver_free(self._driver)
+      del self._driver
+
+  def wait(self, timeout):
+    return pn_driver_wait(self._driver, timeout)
+
+  def wakeup(self):
+    return pn_driver_wakeup(self._driver)
+
+  def listener(self, host, port):
+    return wrap_listener(pn_listener(self._driver, host, port, None))
+
+  def pending_listener(self):
+    return wrap_listener(pn_driver_listener(self._driver))
+
+  def head_listener(self):
+    return wrap_listener(pn_listener_head(self._driver))
+
+  def connector(self, host, port):
+    return wrap_connector(pn_connector(self._driver, host, port, None))
+
+  def head_connector(self):
+    return wrap_connector(pn_connector_head(self._driver))
+
+  def pending_connector(self):
+    return wrap_connector(pn_driver_connector(self._driver))
+
+
 __all__ = [
            "LANGUAGE",
            "PN_SESSION_WINDOW",
@@ -2396,11 +2558,15 @@ __all__ = [
            "Array",
            "Condition",
            "Connection",
+           "Connector",
            "Data",
            "Delivery",
            "Described",
+           "Driver",
+           "DriverException",
            "Endpoint",
            "Link",
+           "Listener",
            "Message",
            "MessageException",
            "Messenger",

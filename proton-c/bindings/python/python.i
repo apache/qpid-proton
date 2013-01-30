@@ -193,6 +193,16 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 }
 %ignore pn_listener_context;
 
+%rename(pn_listener_set_context) wrap_pn_listener_set_context;
+%inline {
+  void wrap_pn_listener_set_context(pn_listener_t *l, PyObject *context) {
+    Py_XDECREF((PyObject *)pn_listener_context(l));
+    Py_XINCREF(context);
+    pn_listener_set_context(l, context);
+  }
+}
+%ignore pn_listener_set_context;
+
 %rename(pn_listener_free) wrap_pn_listener_free;
 %inline %{
   void wrap_pn_listener_free(pn_listener_t *l) {

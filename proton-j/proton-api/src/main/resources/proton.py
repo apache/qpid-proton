@@ -904,6 +904,20 @@ class SSL(object):
 
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
 
+
+class Driver(object):
+  """ Proton-c platform abstraction - not needed."""
+  def __init__(self, *args, **kwargs):
+    raise Skipped()
+class Connector(object):
+  """ Proton-c platform abstraction - not needed."""
+  def __init__(self, *args, **kwargs):
+    raise Skipped()
+class Listener(object):
+  """ Proton-c platform abstraction - not needed."""
+  def __init__(self, *args, **kwargs):
+    raise Skipped()
+
 __all__ = [
            "ACCEPTED",
            "LANGUAGE",
@@ -913,10 +927,13 @@ __all__ = [
            "PN_SESSION_WINDOW",
            "Condition",
            "Connection",
+           "Connector",
            "Data",
            "Delivery",
+           "Driver",
            "Endpoint",
            "Link",
+           "Listener",
            "Message",
            "MessageException",
            "Messenger",

@@ -34,6 +34,9 @@
 #define SCRATCH (1024)
 
 struct pn_sasl_t {
+  pn_transport_t *transport;
+  pn_io_layer_t *io_layer;
+  size_t header_count;
   pn_dispatcher_t *disp;
   bool client;
   bool configured;
@@ -48,6 +51,11 @@ struct pn_sasl_t {
   bool rcvd_done;
   char scratch[SCRATCH];
 };
+
+static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *bytes, size_t available);
+static ssize_t pn_input_read_sasl(pn_io_layer_t *io_layer, const char *bytes, size_t available);
+static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes, size_t available);
+static ssize_t pn_output_write_sasl(pn_io_layer_t *io_layer, char *bytes, size_t available);
 
 int pn_do_init(pn_dispatcher_t *disp);
 int pn_do_mechanisms(pn_dispatcher_t *disp);
@@ -81,8 +89,14 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->rcvd_done = false;
 
     transport->sasl = sasl;
+    sasl->transport = transport;
+    sasl->io_layer = &transport->io_layers[PN_IO_SASL];
+    sasl->io_layer->context = sasl;
+    sasl->io_layer->process_input = pn_input_read_sasl_header;
+    sasl->io_layer->process_output = pn_output_write_sasl_header;
+    sasl->io_layer->process_tick = pn_io_layer_tick_passthru;
 
-    pn_transport_sasl_init(transport);
+    sasl->header_count = 0;
   }
 
   return transport->sasl;
@@ -300,7 +314,7 @@ void pn_sasl_process(pn_sasl_t *sasl)
   }
 }
 
-ssize_t pn_sasl_input(pn_sasl_t *sasl, char *bytes, size_t available)
+ssize_t pn_sasl_input(pn_sasl_t *sasl, const char *bytes, size_t available)
 {
   ssize_t n = pn_dispatcher_input(sasl->disp, bytes, available);
   if (n < 0) return n;
@@ -391,3 +405,66 @@ int pn_do_outcome(pn_dispatcher_t *disp)
   disp->halt = true;
   return 0;
 }
+
+#define SASL_HEADER ("AMQP\x03\x01\x00\x00")
+#define SASL_HEADER_LEN 8
+
+static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *bytes, size_t available)
+{
+  pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
+  const char *point = SASL_HEADER + sasl->header_count;
+  int delta = pn_min(available, SASL_HEADER_LEN - sasl->header_count);
+  if (!available || memcmp(bytes, point, delta)) {
+    char quoted[1024];
+    pn_quote_data(quoted, 1024, bytes, available);
+    return pn_error_format(sasl->transport->error, PN_ERR,
+                           "%s header mismatch: '%s'", "SASL", quoted);
+  } else {
+    sasl->header_count += delta;
+    if (sasl->header_count == SASL_HEADER_LEN) {
+      sasl->io_layer->process_input = pn_input_read_sasl;
+      if (sasl->disp->trace & PN_TRACE_FRM)
+        fprintf(stderr, "    <- %s\n", "SASL");
+    }
+    return delta;
+  }
+}
+
+static ssize_t pn_input_read_sasl(pn_io_layer_t *io_layer, const char *bytes, size_t available)
+{
+  pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
+  ssize_t n = pn_sasl_input(sasl, bytes, available);
+  if (n == PN_EOS) {
+    sasl->io_layer->process_input = pn_io_layer_input_passthru;
+    pn_io_layer_t *io_next = sasl->io_layer->next;
+    return io_next->process_input( io_next, bytes, available );
+  }
+  return n;
+}
+
+static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes, size_t size)
+{
+  pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
+  if (sasl->disp->trace & PN_TRACE_FRM)
+    fprintf(stderr, "    -> %s\n", "SASL");
+  if (size >= SASL_HEADER_LEN) {
+    memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
+    sasl->io_layer->process_output = pn_output_write_sasl;
+    return SASL_HEADER_LEN;
+  } else {
+    return pn_error_format(sasl->transport->error, PN_UNDERFLOW, "underflow writing %s header", "SASL");
+  }
+}
+
+static ssize_t pn_output_write_sasl(pn_io_layer_t *io_layer, char *bytes, size_t size)
+{
+  pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
+  ssize_t n = pn_sasl_output(sasl, bytes, size);
+  if (n == PN_EOS) {
+    sasl->io_layer->process_output = pn_io_layer_output_passthru;
+    pn_io_layer_t *io_next = sasl->io_layer->next;
+    return io_next->process_output( io_next, bytes, size );
+  }
+  return n;
+}
+

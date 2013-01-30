@@ -18,6 +18,7 @@
 #
 
 import os, common
+from time import time, sleep
 from proton import *
 
 # future test areas
@@ -1342,3 +1343,107 @@ class PipelineTest(Test):
       d.settle()
 
     assert rcv.queued == 0, rcv.queued
+
+class ServerTest(Test):
+
+  def testKeepalive(self):
+    """ Verify that idle frames are sent to keep a Connection alive
+    """
+    idle_timeout_secs = 1
+    self.server = common.TestServerDrain()
+    self.server.start()
+    self.driver = Driver()
+    self.cxtr = self.driver.connector(self.server.host, self.server.port)
+    self.cxtr.transport.idle_timeout = idle_timeout_secs * 1000  #msecs
+    self.cxtr.sasl().mechanisms("ANONYMOUS")
+    self.cxtr.sasl().client()
+    self.conn = Connection()
+    self.cxtr.connection = self.conn
+    self.conn.open()
+    #self.session = self.conn.session()
+    #self.session.open()
+    #self.link = self.session.sender("test-sender")
+    #self.link.open()
+
+    # wait for the connection to come up
+
+    timeout = time() + 10
+    while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
+          and time() <= timeout:
+      self.cxtr.process()
+      self.driver.wait(1)
+      self.cxtr.process()
+
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
+
+    # wait up to 3x the idle timeout
+    old_count = self.cxtr.transport.frames_input
+    duration = 3 * idle_timeout_secs
+    timeout = time() + duration
+    while time() <= timeout:
+      self.cxtr.process()
+      self.driver.wait(10 * duration * 1000)
+      self.cxtr.process()
+
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+    assert self.cxtr.transport.frames_input > old_count, "No idle frames received"
+
+    self.server.stop()
+
+  def testIdleTimeout(self):
+    """ Verify that a Connection is terminated properly when Idle frames do not
+    arrive in a timely manner.
+    """
+    idle_timeout_secs = 1
+    self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs * 1000)
+    self.server.start()
+    self.driver = Driver()
+    self.cxtr = self.driver.connector(self.server.host, self.server.port)
+    self.cxtr.sasl().mechanisms("ANONYMOUS")
+    self.cxtr.sasl().client()
+    self.conn = Connection()
+    self.cxtr.connection = self.conn
+    self.conn.open()
+
+    # wait for the connection to come up
+
+    timeout = time() + 10
+    while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
+          and time() <= timeout:
+      self.cxtr.process()
+      self.driver.wait(10 * 1000)
+      self.cxtr.process()
+
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
+
+    # verify the connection stays up even if we don't explicitly send stuff
+    # wait up to 3x the idle timeout
+    old_count = self.cxtr.transport.frames_output
+    duration = 3 * idle_timeout_secs
+    timeout = time() + duration
+    while time() <= timeout:
+      self.cxtr.process()
+      self.driver.wait(10 * duration * 1000)
+      self.cxtr.process()
+
+    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+    assert self.cxtr.transport.frames_output > old_count, "No idle frames sent"
+
+    # now wait to explicitly cause the other side to expire:
+
+    sleep(idle_timeout_secs * 3)
+
+    # and check that the remote killed the connection:
+
+    timeout = time() + 10
+    while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= timeout:
+      self.cxtr.process()
+      self.driver.wait(10*1000)
+      self.cxtr.process()
+
+    assert self.conn.state & Endpoint.REMOTE_CLOSED, "Connection failed to close"
+
+    self.server.stop()
+
+
+

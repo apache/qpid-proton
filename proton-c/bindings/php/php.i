@@ -278,6 +278,18 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *PHP_CONTEXT);
 }
 %ignore pn_listener_context;
 
+%rename(pn_listener_set_context) wrap_pn_listener_set_context;
+%inline {
+    void wrap_pn_listener_set_context(pn_listener_t *l, void *PHP_CONTEXT) {
+        zval *old = pn_listener_context(l);
+        if (old) {
+            zval_ptr_dtor(&old);  // drop the reference taken on input
+        }
+        pn_listener_set_context(l, PHP_CONTEXT);
+    }
+}
+%ignore pn_listener_set_context;
+
 %rename(pn_listener_free) wrap_pn_listener_free;
 %inline %{
   void wrap_pn_listener_free(pn_listener_t *l) {

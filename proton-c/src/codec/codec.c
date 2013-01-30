@@ -1353,10 +1353,10 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
   while (*fmt) {
     char code = *(fmt++);
 
-    bool found;
+    bool found = false;
     pn_type_t type;
 
-    bool scanned;
+    bool scanned = false;
     bool suspend = resume_count > 0;
 
     switch (code) {
