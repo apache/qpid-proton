@@ -47,14 +47,6 @@ if (NOT DEFINED LIB_SUFFIX)
     endif()
 endif()
 
-set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
-set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
-set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
-set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
-set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
-
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
-
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
 if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
     # OPTIONAL does not exist in install before 2.8 so always make docs and install
@@ -292,10 +284,6 @@ install (TARGETS proton proton-dump qpid-proton
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
-
-# Install documentation files
-install (FILES LICENSE README TODO
-         DESTINATION ${PROTON_SHARE})
 
 # Pkg config file
 # Compatible variable names used in the pkg config files also for autoconf

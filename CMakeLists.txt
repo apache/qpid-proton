@@ -24,6 +24,16 @@ set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 3)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
+# Start of variables used during install
+set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
+set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
+set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
+set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
+set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
+
+set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
+# End of variables used during install
+
 # Location of proton-api jar created by the build; used by proton-jni and proton-j-impl
 set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
 set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
@@ -45,4 +55,7 @@ if (JAVA_FOUND)
 endif()
 
 add_subdirectory(proton-c)
+
+install (FILES LICENSE README TODO
+         DESTINATION ${PROTON_SHARE})
 
