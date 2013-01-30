@@ -12,6 +12,7 @@
 /build/
 *.class
 *.pyc
+*.pyo
 target
 
 .DS_Store
