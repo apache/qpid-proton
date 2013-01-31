@@ -151,3 +151,23 @@ EOF
       --exclude=.gitignore
 )
 
+##
+## Create the Perl tarball
+##
+rootname="perl-qpid_proton-${VERSION}"
+WORKDIR=$(mktemp -d)
+mkdir -p "${WORKDIR}"
+(
+    cd ${WORKDIR}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c/bindings/perl ${rootname}
+
+    cat <<EOF > ${rootname}/SVN_INFO
+Repo: ${URL}
+Branch: ${BRANCH}
+Revision: ${REVISION}
+EOF
+
+tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname} \
+    --exclude=CMakeLists.txt \
+    --exclude=.gitignore
+)
