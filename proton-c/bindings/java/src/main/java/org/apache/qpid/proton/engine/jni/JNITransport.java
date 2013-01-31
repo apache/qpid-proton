@@ -179,39 +179,4 @@ public class JNITransport implements Transport
         free();
         super.finalize();
     }
-
-    // PHTODO delete main/pump
-    public static void main(String args[])
-    {
-        System.loadLibrary("protonjni");
-        JNITransport t1 = new JNITransport();
-        JNITransport t2 = new JNITransport();
-        JNIConnection conn1 = new JNIConnection();
-        JNIConnection conn2 = new JNIConnection();
-        t1.bind(conn1);
-        t2.bind(conn2);
-        conn1.open();
-        conn2.open();
-
-        pump(t1, t2);
-
-
-
-    }
-
-    private static void pump(JNITransport t1, JNITransport t2)
-    {
-        int len = 0;
-        int len2 = 0;
-        byte[] buf = new byte[10240];
-        do
-        {
-        len = t1.output(buf,0,10240);
-        if(len>0) t2.input(buf,0,len);
-        len2 = t2.output(buf,0,10240);
-        if(len2>0) t1.input(buf,0,len2);
-        }
-        while(len != 0 || len2 != 0);
-    }
-
 }

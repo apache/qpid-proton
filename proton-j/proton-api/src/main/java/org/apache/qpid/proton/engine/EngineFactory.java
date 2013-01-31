@@ -23,9 +23,5 @@ public interface EngineFactory
     Connection createConnection();
     Transport createTransport();
     SslDomain createSslDomain();
-    /**
-     * PHTODO consider overloading createSslPeerDetails(sessionId)
-     * for better fit with the C world
-     */
     SslPeerDetails createSslPeerDetails(String hostname, int port);
 }

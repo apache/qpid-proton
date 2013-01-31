@@ -43,14 +43,11 @@ public class JythonTest
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
     private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
-    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test"; // PHTODO rename script??
+    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test";
 
     @Test
     public void test() throws Exception
     {
-        // PHTODO check whether we still need jproton-test and if so, does it need refactoring?
-        // ditto config.sh
-
         File protonScriptFile = getPythonTestScript();
         String parentDirectory = protonScriptFile.getParent();
 

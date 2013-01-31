@@ -648,7 +648,6 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-# PHTODO avoid relative path
 INPUT = @CMAKE_SOURCE_DIR@/proton-c/include
 
 # This tag can be used to specify the character encoding of the source files

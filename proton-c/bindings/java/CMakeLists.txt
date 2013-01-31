@@ -20,8 +20,7 @@
 SET(CMAKE_SWIG_FLAGS -package org.apache.qpid.proton.jni)
 SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/src/main/java/org/apache/qpid/proton/jni)
 
-message( "PHDEBUG JNI_LIBRARIES: ${JNI_LIBRARIES}" )
-
+message( "Using JNI libraries: ${JNI_LIBRARIES}" )
 
 swig_add_module(proton-swig java java.i)
 include_directories(${JNI_INCLUDE_DIRS})
@@ -41,7 +40,6 @@ file(GLOB_RECURSE THUNKING_SOURCES_ABS "src/main/java/*.java")
 
 set(CMAKE_JAVA_INCLUDE_PATH ${PROTON_API_TARGET_JAR})
 
-# PHTODO: We are relying on shell expansion to find the swig generated sources. Surely there is a better way?
 add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
 
 include(UseProtonJava)
