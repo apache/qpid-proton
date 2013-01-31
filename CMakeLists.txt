@@ -18,7 +18,7 @@
 #
 cmake_minimum_required (VERSION 2.6)
 
-project (Proton)
+project (Proton C)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 3)
