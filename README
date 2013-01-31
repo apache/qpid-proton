@@ -25,7 +25,7 @@ Please see http://qpid.apache.org/proton for a more info.
 
 ==== Build Instructions ====
 
-Proton has two separate build systems reflecting the nature of the its
+Proton has two separate build systems reflecting the nature of its
 two implementations.
 
    + Proton-C and the language bindings use CMake.
