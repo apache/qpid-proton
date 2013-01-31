@@ -39,10 +39,8 @@ set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${
 set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
       "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
-# Used to allow the building of the Java bindings when CMAKE_VERSION < 2.6.8
-if ( ${CMAKE_VERSION} VERSION_LESS "2.8.6" )
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-endif ()
+# Pull in local cmake modules
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 find_package( Java )
 if (JAVA_FOUND)
