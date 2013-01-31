@@ -28,9 +28,25 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <prerequisites>
-    <maven>3.0</maven>
-  </prerequisites>
+  <properties>
+    <junit-version>4.10</junit-version>
+  </properties>
+
+  <build>
+    <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <source>1.6</source>
+        <target>1.6</target>
+        <optimize>true</optimize>
+        <showDeprecation>true</showDeprecation>
+        <showWarnings>true</showWarnings>
+      </configuration>
+    </plugin>
+    </plugins>
+  </build>
 
   <profiles>
     <profile>
