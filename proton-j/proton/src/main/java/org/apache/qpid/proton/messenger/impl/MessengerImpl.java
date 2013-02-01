@@ -144,7 +144,7 @@ public class MessengerImpl implements Messenger
                 throw new MessengerException("unable to send to address: " + m.getAddress());
             }
             int port = address.getPort() < 0 ? defaultPort(address.getScheme()) : address.getPort();
-            Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getPath()));
+            Sender sender = getLink(address.getHost(), port, new SenderFinder(cleanPath(address.getPath())));
 
             adjustReplyTo(m);
 
@@ -232,7 +232,7 @@ public class MessengerImpl implements Messenger
             }
             else
             {
-                getLink(address.getHost(), port, new ReceiverFinder(address.getPath()));
+                getLink(address.getHost(), port, new ReceiverFinder(cleanPath(address.getPath())));
             }
         }
         catch (URISyntaxException e)
@@ -688,7 +688,11 @@ public class MessengerImpl implements Messenger
 
         public Sender create(Session session)
         {
-            return session.sender(_path);
+            Sender sender = session.sender(_path);
+            Target target = new Target();
+            target.setAddress(_path);
+            sender.setTarget(target);
+            return sender;
         }
     }
 
@@ -715,7 +719,11 @@ public class MessengerImpl implements Messenger
 
         public Receiver create(Session session)
         {
-            return session.receiver(_path);
+            Receiver receiver = session.receiver(_path);
+            Source source = new Source();
+            source.setAddress(_path);
+            receiver.setSource(source);
+            return receiver;
         }
     }
 
@@ -873,6 +881,19 @@ public class MessengerImpl implements Messenger
         else if (original.startsWith("~/"))
         {
             m.setReplyTo("amqp://" + _name + "/" + original.substring(2));
+        }
+    }
+
+    private static String cleanPath(String path)
+    {
+        //remove leading '/'
+        if (path != null && path.length() > 0 && path.charAt(0) == '/')
+        {
+            return path.substring(1);
+        }
+        else
+        {
+            return path;
         }
     }
 
