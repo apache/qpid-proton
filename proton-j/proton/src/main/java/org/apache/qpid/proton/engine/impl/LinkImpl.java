@@ -56,7 +56,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private boolean _drain;
 
 
-    public LinkImpl(SessionImpl session, String name)
+    LinkImpl(SessionImpl session, String name)
     {
         _session = session;
         _name = name;

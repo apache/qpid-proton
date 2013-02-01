@@ -26,12 +26,15 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageFormatException;
 import java.nio.ByteBuffer;
-import org.apache.qpid.proton.message.impl.MessageImpl;
 
+import org.apache.qpid.proton.message.ProtonJMessage;
+import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
 */
 public class AMQPNativeOutboundTransformer extends OutboundTransformer {
+
+    private static final MessageFactoryImpl MESSAGE_FACTORY = new MessageFactoryImpl();
 
     public AMQPNativeOutboundTransformer(JMSVendor vendor) {
         super(vendor);
@@ -70,7 +73,7 @@ public class AMQPNativeOutboundTransformer extends OutboundTransformer {
             if( count > 1 ) {
 
                 // decode...
-                MessageImpl amqp = new MessageImpl();
+                ProtonJMessage amqp = MESSAGE_FACTORY.createMessage();
                 int offset = 0;
                 int len = data.length;
                 while( len > 0 ) {

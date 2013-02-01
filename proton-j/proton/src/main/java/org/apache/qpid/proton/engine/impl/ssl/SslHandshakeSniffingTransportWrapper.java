@@ -30,7 +30,7 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     private boolean _determinationMade = false;
     private boolean _isSecure;
 
-    public SslHandshakeSniffingTransportWrapper(
+    SslHandshakeSniffingTransportWrapper(
             SslTransportWrapper secureTransportWrapper,
             TransportWrapper plainTransportWrapper)
     {

@@ -18,10 +18,13 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
+import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.ProtonJSslDomain;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 
-public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
+public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider, ProtonJSslDomain
 {
     private Mode _mode;
     private VerifyMode _verifyMode = VerifyMode.ANONYMOUS_PEER;
@@ -32,6 +35,14 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
     private boolean _allowUnsecuredClient;
 
     private final SslEngineFacadeFactory _sslEngineFacadeFactory = new SslEngineFacadeFactory();
+
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public SslDomainImpl()
+    {
+    }
 
     @Override
     public void init(Mode mode)
@@ -71,6 +82,10 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider
     @Override
     public void setPeerAuthentication(VerifyMode verifyMode)
     {
+        if(verifyMode == VerifyMode.VERIFY_PEER_NAME)
+        {
+            throw new ProtonUnsupportedOperationException();
+        }
         _verifyMode = verifyMode;
         _sslEngineFacadeFactory.resetCache();
     }

@@ -18,18 +18,17 @@
 package org.apache.qpid.proton.hawtdispatch.impl;
 
 import org.apache.qpid.proton.engine.*;
-import org.apache.qpid.proton.engine.impl.EndpointImpl;
-import org.apache.qpid.proton.engine.impl.TransportImpl;
 import org.fusesource.hawtdispatch.Task;
 
 import java.io.IOException;
+
 
 /**
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
 */
 public class AmqpListener {
 
-    public Sasl processSaslConnect(TransportImpl transport) {
+    public Sasl processSaslConnect(ProtonJTransport protonTransport) {
         return null;
     }
 
@@ -38,7 +37,7 @@ public class AmqpListener {
     }
 
     public void processRemoteOpen(Endpoint endpoint, Task onComplete) {
-        ((EndpointImpl)endpoint).setLocalError(new EndpointError("error", "Not supported"));
+        ((ProtonJEndpoint)endpoint).setLocalError(new EndpointError("error", "Not supported"));
         endpoint.close();
         onComplete.run();
     }

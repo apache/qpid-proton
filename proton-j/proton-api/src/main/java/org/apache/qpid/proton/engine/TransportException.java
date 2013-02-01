@@ -21,6 +21,8 @@
 
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.ProtonException;
+
 public class TransportException extends ProtonException
 {
     public TransportException()

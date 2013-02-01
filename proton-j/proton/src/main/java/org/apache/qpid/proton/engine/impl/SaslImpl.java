@@ -75,7 +75,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     private Role _role;
 
-    public SaslImpl()
+    SaslImpl()
     {
         _frameParser = new SaslFrameParser(this);
         AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);

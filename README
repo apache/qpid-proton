@@ -1,0 +1,178 @@
+Proton is a library for speaking AMQP, including:
+
+  + The AMQP Messenger API, a simple but powerful interface to send and receive
+    messages over AMQP.
+  + The AMQP Protocol Engine, a succinct encapsulation of the full
+    AMQP protocol machinery.
+
+Proton is designed for maximum embeddability:
+
+  + minimal dependencies
+  + minimal assumptions about application threading model
+
+Proton is designed to scale up and down:
+
+  + transparently supports both simple peer to peer messaging and complex
+    globally federated topologies
+
+Proton is multi-lingual:
+
+  + Proton-C - a C implementation with lanuage bindings in Python, Php, Perl,
+    Ruby, and Java (via JNI).
+  + Proton-J - a pure Java implementation
+
+Please see http://qpid.apache.org/proton for a more info.
+
+==== Build Instructions ====
+
+Proton has two separate build systems reflecting the nature of its
+two implementations.
+
+   + Proton-C and the language bindings use CMake.
+   + Proton-J uses Maven.
+
+The two build systems are independent of one and other, that is, Proton-C
+may be built independently of Proton-J, and vice-versa.
+
+=== Proton-C ===
+
+== Build Instructions (Linux) ==
+
+The following prerequesuites are required to do a full build. If you do not
+wish to build a given language binding you can omit the package for that
+language:
+
+  # required dependencies
+  yum install gcc cmake libuuid-devel
+
+  # dependencies needed for ssl support
+  yum install openssl-devel
+
+  # dependencies needed for bindings
+  yum install swig python-devel ruby-devel php-devel java-1.6.0-openjdk
+
+  # dependencies needed for python docs
+  yum install epydoc
+
+From the directory where you found this README file:
+
+  mkdir build
+  cd build
+
+  # Set the install prefix. You may need to adjust depending on your
+  # system.
+  cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+
+  # Omit the docs target if you do not wish to build or install
+  # documentation.
+  make all docs
+
+  # Note that this step will require root privileges.
+  make install
+
+Note that all installed files are stored in the install_manifest.txt
+file.
+
+== Build Instructions (Windows) ==
+
+This describes how to build the Proton library on Windows using Microsoft
+Visual C++ 2010 Express (VC10).
+
+The Proton build uses the cmake tool to generate the Visual Studio project
+files.  These project files can then be loaded into Express and used to build
+the Proton library.
+
+Note that these instructions were created using a 32 bit version of Windows 7
+Professional. These instructions assume use of a command shell.
+
+The following packages must be installed:
+
+    Visual Studio 2010 Express (or equivalent)
+    Python (www.python.org)
+    Cmake (www.cmake.org)
+
+    Notes:
+        - Be sure to install MSVC Express 2010 Service Pack 1 also!
+        - python.exe _must_ be in your path
+        - cmake.exe _must_ be in your path
+
+
+Step 1: Create a 'build' directory - this must be at the same level as the 'src'
+        directory.  Example:
+
+     $ cd proton-c
+     $ mkdir build
+
+Step 2: cd into the build directory
+
+     $ cd build
+
+Step 3: Generate the Visual Studio project files using cmake.  You must provide:
+
+        1) the name of the compiler you are using [see cmake documentation],
+        2) the path to the _directory_ that contains the "CMakeLists.txt"
+           file (the parent directory, in this case).
+     Example:
+
+     $ cmake -G "Visual Studio 10" ..
+
+     Refer to the cmake documentation for more information.
+
+Step 4: Load the ALL_BUILD project into Visual C++ Express.
+
+     4a: Run the Microsoft Visual C++ Express IDE
+     4b: From within the IDE, open the ALL_BUILD project file - it should be in
+         the 'build' directory you created above.
+
+Step 5: Build the ALL_BUILD project.
+
+=== Proton-J ===
+
+== Build Instructions (All platforms) ==
+
+The following prerequesuites are required to do a full build.
+
+  + Apache Maven 3.0 (or higher) (http://maven.apache.org/)
+
+From the directory where you found this README file:
+
+  # To compile and package all Java modules (omitting the tests)
+  mvn -DskipTests package
+
+  # To install the packages in the local Maven repository (usually ~/.m2/repo)
+  mvn -DskipTests install
+
+=== Testing ===
+
+To test Proton, run the system tests (located in the tests subdirectory).
+The system tests are applicable to both the Proton-C and Proton-J
+implementations.
+
+== Test Instructions (Proton-C only) ==
+
+To run the system tests against Proton-C, from the directory where you found this
+README file:
+
+  # Source conifig.sh to set-up the Python path.
+  . config.sh
+
+  # Execute the tests
+  ./tests/python/proton-test
+
+== Test Instructions (Proton-J and Proton-C) ==
+
+To run the system tests, execute Maven specifying profile 'proton-j' to
+test Proton-J, and 'proton-jni' to test the Proton-C implementation via the
+JNI bindings.  (To test Proton-C via the JNI Bindings the JNI Binding must have
+been built with Cmake as described above).
+
+  # To test Proton-J
+  mvn test -P proton-j
+
+  # To test Proton-C via the JNI Bindings
+  mvn test -P proton-jni
+
+  # To produce a nicely formated report containing the test results
+  # (in tests/target/site/surefire-report.html)
+  mvn surefire-report:report
+

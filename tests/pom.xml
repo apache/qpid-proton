@@ -1,0 +1,118 @@
+<!--
+ -
+ - Licensed to the Apache Software Foundation (ASF) under one
+ - or more contributor license agreements.  See the NOTICE file
+ - distributed with this work for additional information
+ - regarding copyright ownership.  The ASF licenses this file
+ - to you under the Apache License, Version 2.0 (the
+ - "License"); you may not use this file except in compliance
+ - with the License.  You may obtain a copy of the License at
+ -
+ -   http://www.apache.org/licenses/LICENSE-2.0
+ -
+ - Unless required by applicable law or agreed to in writing,
+ - software distributed under the License is distributed on an
+ - "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ - KIND, either express or implied.  See the License for the
+ - specific language governing permissions and limitations
+ - under the License.
+ -
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <artifactId>tests</artifactId>
+
+  <description>The Proton system tests execute against either the Java or the C implementations, based on the chosen profile.
+
+To execute, run either &quot;mvn test -P proton-j&quot; or &quot;mvn test -P proton-jni&quot;.
+
+To reduce the set of Python tests run, set system property proton.pythontest.pattern, for example:
+
+mvn test -Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*'
+
+The proton-jni profile looks for the JNI jar and native libraries under directory &lt;basedir&gt;/build/proton-c.
+To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-build-dir=/path/to/build/dir&quot;.</description>
+
+  <build>
+    <!-- System tests are arranged by language, hence the non-default location of the JUnit tests. -->
+    <testSourceDirectory>java</testSourceDirectory>
+    <resources>
+      <resource><directory>python</directory></resource>
+    </resources>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>proton-api</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>org.python</groupId>
+        <artifactId>jython-standalone</artifactId>
+        <version>2.5.3</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>proton-j</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.qpid</groupId>
+          <artifactId>proton-j-impl</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>proton-jni</id>
+      <properties>
+        <!-- Uses the JNI jar and the native libraries, neither of which are built by Maven,
+             therefore their location needs to be set explicitly in the following properties. -->
+        <proton-c-build-dir>${basedir}/../build/proton-c</proton-c-build-dir>
+        <jni-native-path>${proton-c-build-dir}:${proton-c-build-dir}/bindings/java</jni-native-path>
+        <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <forkMode>once</forkMode>
+              <argLine>-Djava.library.path=${jni-native-path}</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.qpid</groupId>
+          <artifactId>proton-jni</artifactId>
+          <version>${project.parent.version}</version>
+          <scope>system</scope>
+          <systemPath>${jni-jar}</systemPath>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
+  <parent>
+    <groupId>org.apache.qpid</groupId>
+    <artifactId>proton-project</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+</project>

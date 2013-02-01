@@ -19,7 +19,6 @@
 # under the License.
 #
 
-#
 # release.sh - Creates release tarballs from the upstream source
 # repository.
 #
@@ -77,44 +76,17 @@ if [[ -z "${REVISION}" ]]; then
     REVISION=$(svn info http://svn.apache.org/repos/asf/qpid/proton | fgrep Revision: | awk '{ print $2 }')
 fi
 
-echo "Using svn revision ${REVISION} for all exports."
+echo "Using svn revision ${REVISION}."
 
 ##
-## Create the C Tarball
+## Create the tarball
 ##
-rootname="qpid-proton-c-${VERSION}"
+rootname="qpid-proton-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c ${rootname}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/tests ${rootname}/tests
-
-    cat <<EOF > ${rootname}/SVN_INFO
-Repo: ${URL}
-Branch: ${BRANCH}
-Revision: ${REVISION}
-EOF
-
-    ##
-    ## Remove content not for release
-    ##
-    rm -rf ${rootname}/examples/mailbox
-
-    echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
-)
-
-##
-## Create the Java Tarball
-##
-rootname="qpid-proton-j-${VERSION}"
-WORKDIR=$(mktemp -d)
-mkdir -p "${WORKDIR}"
-(
-    cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-j ${rootname}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/tests ${rootname}/tests
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/ ${rootname}
 
     cat <<EOF > ${rootname}/SVN_INFO
 Repo: ${URL}
@@ -123,6 +95,12 @@ Revision: ${REVISION}
 EOF
 
     mvn org.codehaus.mojo:versions-maven-plugin:1.2:set org.codehaus.mojo:versions-maven-plugin:1.2:commit -DnewVersion="${VERSION}" -f ${WORKDIR}/${rootname}/pom.xml
+
+    ##
+    ## Remove content not for release
+    ##
+    rm -r ${rootname}/proton-c/examples/mailbox
+    rm -r ${rootname}/design
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
     tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}

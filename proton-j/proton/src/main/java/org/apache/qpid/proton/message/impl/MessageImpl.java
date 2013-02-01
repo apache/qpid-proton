@@ -1,4 +1,3 @@
-package org.apache.qpid.proton.message.impl;
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,6 +19,7 @@ package org.apache.qpid.proton.message.impl;
  *
 */
 
+package org.apache.qpid.proton.message.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -32,10 +32,8 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.codec.*;
 import org.apache.qpid.proton.message.*;
 
-public class MessageImpl implements Message
+public class MessageImpl implements ProtonJMessage
 {
-    public static final short DEFAULT_PRIORITY = 4;
-
     private final AMQPMessageFormat _parser = new AMQPMessageFormat();
 
     private Header _header;
@@ -47,11 +45,19 @@ public class MessageImpl implements Message
     private Footer _footer;
     private MessageFormat _format = MessageFormat.DATA;
 
-    public MessageImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessageFactory} instead
+     */
+    @Deprecated public MessageImpl()
     {
     }
 
-    public MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessageFactory} instead
+     */
+    @Deprecated public MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
                        Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)
     {
         _header = header;
@@ -673,6 +679,7 @@ public class MessageImpl implements Message
         return encode(new WritableBuffer.ByteBufferWrapper(buffer));
     }
 
+    @Override
     public int encode2(byte[] data, int offset, int length)
     {
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
@@ -684,6 +691,7 @@ public class MessageImpl implements Message
         return composite.position() - start;
     }
 
+    @Override
     public int encode(WritableBuffer buffer)
     {
         int length = buffer.remaining();

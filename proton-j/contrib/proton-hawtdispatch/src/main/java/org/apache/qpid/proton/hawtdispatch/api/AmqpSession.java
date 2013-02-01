@@ -21,27 +21,28 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.Link;
-import org.apache.qpid.proton.engine.impl.ReceiverImpl;
-import org.apache.qpid.proton.engine.impl.SenderImpl;
-import org.apache.qpid.proton.engine.impl.SessionImpl;
+import org.apache.qpid.proton.engine.ProtonJSession;
+import org.apache.qpid.proton.engine.Receiver;
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.*;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 
 import java.util.UUID;
-import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class AmqpSession extends AmqpEndpointBase {
 
+    private final MessageFactoryImpl messageFactory = new MessageFactoryImpl();
     final AmqpConnection parent;
-    final SessionImpl session;
+    final ProtonJSession session;
 
 
-    public AmqpSession(AmqpConnection parent, SessionImpl session) {
+    public AmqpSession(AmqpConnection parent, ProtonJSession session) {
         this.parent = parent;
         this.session = session;
         attach();
@@ -67,7 +68,7 @@ public class AmqpSession extends AmqpEndpointBase {
 
     public AmqpSender createSender(Target target, QoS qos, String name) {
         assertExecuting();
-        SenderImpl sender = session.sender(name);
+        Sender sender = session.sender(name);
         attach();
 //        Source source = new Source();
 //        source.setAddress(UUID.randomUUID().toString());
@@ -93,7 +94,7 @@ public class AmqpSession extends AmqpEndpointBase {
 
     public AmqpReceiver createReceiver(Source source, QoS qos, int prefetch, String name) {
         assertExecuting();
-        ReceiverImpl receiver = session.receiver(name);
+        Receiver receiver = session.receiver(name);
         receiver.setSource(source);
 //        Target target = new Target();
 //        target.setAddress(UUID.randomUUID().toString());
@@ -123,7 +124,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createTextMessage(String value) {
-        Message msg = new MessageImpl();
+        Message msg = messageFactory.createMessage();
         Section body = new AmqpValue(value);
         msg.setBody(body);
         return msg;
@@ -134,7 +135,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createBinaryMessage(byte value[], int offset, int len) {
-        Message msg = new MessageImpl();
+        Message msg = messageFactory.createMessage();
         Data body = new Data(new Binary(value, offset,len));
         msg.setBody(body);
         return msg;

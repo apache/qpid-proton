@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
@@ -155,5 +156,25 @@ public class SslImpl implements Ssl
                 }
             }
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * @throws ProtonUnsupportedOperationException
+     */
+    @Override
+    public void setPeerHostname(String hostname)
+    {
+        throw new ProtonUnsupportedOperationException();
+    }
+
+    /**
+     * {@inheritDoc}
+     * @throws ProtonUnsupportedOperationException
+     */
+    @Override
+    public String getPeerHostname()
+    {
+        throw new ProtonUnsupportedOperationException();
     }
 }

@@ -21,9 +21,8 @@ import org.apache.qpid.proton.hawtdispatch.api.Callback;
 import org.apache.qpid.proton.hawtdispatch.api.ChainedCallback;
 import org.apache.qpid.proton.hawtdispatch.api.TransportState;
 import org.apache.qpid.proton.engine.*;
-import org.apache.qpid.proton.engine.impl.ConnectionImpl;
+import org.apache.qpid.proton.engine.impl.EngineFactoryImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
-import org.apache.qpid.proton.engine.impl.TransportImpl;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.fusesource.hawtbuf.UTF8Buffer;
@@ -51,9 +50,10 @@ public class AmqpTransport extends WatchBase {
     private TransportState state = CREATED;
 
     final DispatchQueue queue;
-    final ConnectionImpl connection = new ConnectionImpl();
+    final ProtonJConnection connection;
+    private final EngineFactoryImpl engineFactory = new EngineFactoryImpl();
     Transport hawtdispatchTransport;
-    TransportImpl protonTransport;
+    ProtonJTransport protonTransport;
     Throwable failure;
     CustomDispatchSource<Defer,LinkedList<Defer>> defers;
 
@@ -61,6 +61,8 @@ public class AmqpTransport extends WatchBase {
 
     private AmqpTransport(DispatchQueue queue) {
         this.queue = queue;
+        this.connection = engineFactory.createConnection();
+
         defers = Dispatch.createSource(EventAggregators.<Defer>linkedList(), this.queue);
         defers.setEventHandler(new Task(){
             public void run() {
@@ -315,7 +317,7 @@ public class AmqpTransport extends WatchBase {
 
     private void bind(final Transport transport) {
         this.hawtdispatchTransport = transport;
-        this.protonTransport = new TransportImpl();
+        this.protonTransport = engineFactory.createTransport();
         this.protonTransport.bind(connection);
         if( transport.getProtocolCodec()==null ) {
             try {
@@ -411,7 +413,7 @@ public class AmqpTransport extends WatchBase {
     }
 
 
-    public ConnectionImpl connection() {
+    public ProtonJConnection connection() {
         return connection;
     }
 

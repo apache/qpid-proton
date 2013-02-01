@@ -28,23 +28,26 @@ import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
+import org.apache.qpid.proton.driver.DriverFactory;
 import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.driver.impl.DriverImpl;
-import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.impl.MessageImpl;
+import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
+import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -53,6 +56,8 @@ import org.apache.qpid.proton.amqp.messaging.Target;
 
 public class MessengerImpl implements Messenger
 {
+    private static ProtonFactoryLoader protonFactoryLoader = new ProtonFactoryLoader();
+
     private static final EnumSet<EndpointState> UNINIT = EnumSet.of(EndpointState.UNINITIALIZED);
     private static final EnumSet<EndpointState> ACTIVE = EnumSet.of(EndpointState.ACTIVE);
     private static final EnumSet<EndpointState> CLOSED = EnumSet.of(EndpointState.CLOSED);
@@ -61,6 +66,9 @@ public class MessengerImpl implements Messenger
 
     private final Logger _logger = Logger.getLogger("proton.messenger");
     private final String _name;
+    private final EngineFactory _engineFactory;
+    private final DriverFactory _driverFactory;
+    private final MessageFactory _messageFactory;
     private long _timeout = -1;
     private long _nextTag = 1;
     private byte[] _buffer = new byte[5*1024];
@@ -70,14 +78,35 @@ public class MessengerImpl implements Messenger
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
 
-    public MessengerImpl()
+
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl()
     {
         this(java.util.UUID.randomUUID().toString());
     }
 
-    public MessengerImpl(String name)
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl(String name)
+    {
+        this(name, defaultEngineFactory(), defaultDriverFactory(), defaultMessageFactory());
+    }
+
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link MessengerFactory} instead
+     */
+    @Deprecated public MessengerImpl(String name, EngineFactory engineFactory, DriverFactory driverFactory, MessageFactory messageFactory)
     {
         _name = name;
+        _engineFactory = engineFactory;
+        _driverFactory = driverFactory;
+        _messageFactory = messageFactory;
     }
 
     public void setTimeout(long timeInMillis)
@@ -92,7 +121,7 @@ public class MessengerImpl implements Messenger
 
     public void start() throws IOException
     {
-        _driver = new DriverImpl();
+        _driver = _driverFactory.createDriver();
     }
 
     public void stop()
@@ -197,7 +226,7 @@ public class MessengerImpl implements Messenger
                 {
                     _logger.log(Level.FINE, "Readable delivery found: " + delivery);
                     int size = read((Receiver) delivery.getLink());
-                    Message message = new MessageImpl();
+                    Message message = _messageFactory.createMessage();
                     message.decode(_buffer, 0, size);
                     _incoming.add(delivery);
                     _distributed--;
@@ -375,7 +404,7 @@ public class MessengerImpl implements Messenger
         for (Listener l = _driver.listener(); l != null; l = _driver.listener())
         {
             Connector c = l.accept();
-            Connection connection = new ConnectionImpl();
+            Connection connection = _engineFactory.createConnection();
             connection.setContainer(_name);
             c.setConnection(connection);
             //TODO: SSL and full SASL
@@ -735,7 +764,7 @@ public class MessengerImpl implements Messenger
         {
             Connector connector = _driver.createConnector(host, port, null);
             _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
-            connection = new ConnectionImpl();
+            connection = _engineFactory.createConnection();
             connection.setContainer(_name);
             connection.setHostname(host);
             connection.setContext(service);
@@ -914,4 +943,20 @@ public class MessengerImpl implements Messenger
         if ("amqps".equals(scheme)) return 5671;
         else return 5672;
     }
+
+    private static EngineFactory defaultEngineFactory()
+    {
+        return (EngineFactory) protonFactoryLoader.loadFactory(EngineFactory.class);
+    }
+
+    private static DriverFactory defaultDriverFactory()
+    {
+        return (DriverFactory) protonFactoryLoader.loadFactory(DriverFactory.class);
+    }
+
+    private static MessageFactory defaultMessageFactory()
+    {
+        return (MessageFactory) protonFactoryLoader.loadFactory(MessageFactory.class);
+    }
+
 }

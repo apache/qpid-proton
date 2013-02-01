@@ -23,8 +23,8 @@ export PROTON_HOME=$(pwd)
 cd - > /dev/null
 
 if [ -z "$CPROTON_BUILD" ]; then
-    if [ -d $PROTON_HOME/proton-c/build ]; then
-        PROTON_BINDINGS=$PROTON_HOME/proton-c/build/bindings
+    if [ -d $PROTON_HOME/build/proton-c ]; then
+        PROTON_BINDINGS=$PROTON_HOME/build/proton-c/bindings
     else
         PROTON_BINDINGS=$PROTON_HOME/proton-c/bindings
     fi
@@ -34,9 +34,8 @@ fi
 
 # Python & Jython
 export PYTHON_BINDINGS=$PROTON_BINDINGS/python
-export COMMON_PYPATH=$PROTON_HOME/tests
+export COMMON_PYPATH=$PROTON_HOME/tests/python
 export PYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-c/bindings/python:$PYTHON_BINDINGS
-export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/proton/src/main/scripts:$PROTON_HOME/proton-j/proton/target/classes:$PROTON_HOME/proton-j/proton-api/target/classes
 
 # PHP
 export PHP_BINDINGS=$PROTON_BINDINGS/php

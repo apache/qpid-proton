@@ -34,7 +34,7 @@ public class ByteHolder
     private final ByteBuffer _bytes;
 
     /** Creates me, initially in a writeable state */
-    public ByteHolder(int capacity)
+    ByteHolder(int capacity)
     {
         _bytes = ByteBuffer.allocate(capacity);
     }

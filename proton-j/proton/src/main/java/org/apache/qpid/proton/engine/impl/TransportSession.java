@@ -62,7 +62,7 @@ class TransportSession
     private boolean _endReceived;
     private boolean _beginSent;
 
-    public TransportSession(SessionImpl session)
+    TransportSession(SessionImpl session)
     {
         _session = session;
     }

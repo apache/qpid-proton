@@ -25,6 +25,11 @@ import org.apache.qpid.proton.engine.Transport;
 
 class TransportFactoryImpl extends TransportFactory
 {
+    TransportFactoryImpl()
+    {
+    }
+
+    @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     public Transport transport(Connection c)
     {
         TransportImpl t = new TransportImpl();

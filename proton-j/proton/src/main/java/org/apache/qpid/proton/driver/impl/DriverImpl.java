@@ -49,7 +49,7 @@ public class DriverImpl implements Driver
     private Collection<Connector> _connectors = new LinkedList();
     private Logger _logger = Logger.getLogger("proton.driver");
 
-    public DriverImpl() throws IOException
+    DriverImpl() throws IOException
     {
         _selector = Selector.open();
     }

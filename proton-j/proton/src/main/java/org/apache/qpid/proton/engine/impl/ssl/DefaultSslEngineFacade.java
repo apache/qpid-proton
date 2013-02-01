@@ -31,7 +31,7 @@ class DefaultSslEngineFacade implements ProtonSslEngine
 {
     private final SSLEngine _sslEngine;
 
-    public DefaultSslEngineFacade(SSLEngine sslEngine)
+    DefaultSslEngineFacade(SSLEngine sslEngine)
     {
         _sslEngine = sslEngine;
     }

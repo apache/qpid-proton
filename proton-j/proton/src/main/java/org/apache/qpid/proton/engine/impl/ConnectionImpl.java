@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.amqp.transport.Open;
 
-public class ConnectionImpl extends EndpointImpl implements Connection
+public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 {
 
     public static final int MAX_CHANNELS = 255;
@@ -55,7 +55,11 @@ public class ConnectionImpl extends EndpointImpl implements Connection
     private String _remoteContainer;
     private String _remoteHostname;
 
-    public ConnectionImpl()
+    /**
+     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
+     * Client code outside this module should use a {@link EngineFactory} instead
+     */
+    @Deprecated public ConnectionImpl()
     {
     }
 
@@ -242,6 +246,7 @@ public class ConnectionImpl extends EndpointImpl implements Connection
         return _localContainerId;
     }
 
+    @Override
     public void setLocalContainerId(String localContainerId)
     {
         _localContainerId = localContainerId;

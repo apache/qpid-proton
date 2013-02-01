@@ -16,16 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required (VERSION 2.6)
 
 include(CheckLibraryExists)
 include(CheckSymbolExists)
-
-project (Proton C)
-
-set (PN_VERSION_MAJOR 0)
-set (PN_VERSION_MINOR 3)
-set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
 include(soversion.cmake)
 
@@ -54,14 +47,6 @@ if (NOT DEFINED LIB_SUFFIX)
     endif()
 endif()
 
-set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
-set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
-set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
-set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
-set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
-
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
-
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
 if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
     # OPTIONAL does not exist in install before 2.8 so always make docs and install
@@ -85,23 +70,23 @@ endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
-  "${PROJECT_SOURCE_DIR}/pn_config.h.in"
-  "${PROJECT_BINARY_DIR}/pn_config.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/pn_config.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/pn_config.h"
 )
 
-include_directories ("${PROJECT_BINARY_DIR}")
-include_directories ("${PROJECT_SOURCE_DIR}/include")
+include_directories ("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 add_custom_command (
-  OUTPUT ${PROJECT_BINARY_DIR}/encodings.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py > ${PROJECT_BINARY_DIR}/encodings.h
-  DEPENDS ${PROJECT_SOURCE_DIR}/src/codec/encodings.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
 )
 
 add_custom_command (
-  OUTPUT ${PROJECT_BINARY_DIR}/protocol.h
-  COMMAND python ${PROJECT_SOURCE_DIR}/env.py PYTHONPATH=${PROJECT_SOURCE_DIR} python ${PROJECT_SOURCE_DIR}/src/protocol.h.py > ${PROJECT_BINARY_DIR}/protocol.h
-  DEPENDS ${PROJECT_SOURCE_DIR}/src/protocol.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
 )
 
 # Select driver
@@ -245,8 +230,8 @@ set (qpid-proton-core
 
   src/messenger.c
 
-  ${PROJECT_BINARY_DIR}/encodings.h
-  ${PROJECT_BINARY_DIR}/protocol.h
+  ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
 )
 
 set_source_files_properties (
@@ -300,10 +285,6 @@ install (TARGETS proton proton-dump qpid-proton
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
-# Install documentation files
-install (FILES LICENSE README TODO
-         DESTINATION ${PROTON_SHARE})
-
 # Pkg config file
 # Compatible variable names used in the pkg config files also for autoconf
 get_filename_component (PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
@@ -311,7 +292,7 @@ get_filename_component (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
 get_filename_component (LIBDIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR} ABSOLUTE)
 get_filename_component (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${INCLUDE_INSTALL_DIR} ABSOLUTE)
 
-configure_file(${PROJECT_SOURCE_DIR}/src/libqpid-proton.pc.in
-         ${PROJECT_BINARY_DIR}/libqpid-proton.pc @ONLY)
-install (FILES ${PROJECT_BINARY_DIR}/libqpid-proton.pc
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
+         ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
          DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)

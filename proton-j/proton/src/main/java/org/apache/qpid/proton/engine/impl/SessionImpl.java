@@ -22,9 +22,10 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.*;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Session;
 
-public class SessionImpl extends EndpointImpl implements Session
+public class SessionImpl extends EndpointImpl implements ProtonJSession
 {
     private final ConnectionImpl _connection;
 
@@ -35,7 +36,7 @@ public class SessionImpl extends EndpointImpl implements Session
     private LinkNode<SessionImpl> _node;
 
 
-    public SessionImpl(ConnectionImpl connection)
+    SessionImpl(ConnectionImpl connection)
     {
         _connection = connection;
         _node = _connection.addSessionEndpoint(this);
