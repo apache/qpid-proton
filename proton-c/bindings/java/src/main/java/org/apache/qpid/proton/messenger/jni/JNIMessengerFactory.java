@@ -19,6 +19,7 @@
  */
 package org.apache.qpid.proton.messenger.jni;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerFactory;
 
@@ -28,13 +29,13 @@ public class JNIMessengerFactory implements MessengerFactory
     @Override
     public Messenger createMessenger()
     {
-        throw new UnsupportedOperationException();
+        throw new ProtonUnsupportedOperationException();
     }
 
     @Override
     public Messenger createMessenger(String name)
     {
-        throw new UnsupportedOperationException();
+        throw new ProtonUnsupportedOperationException();
     }
 
 }

@@ -25,11 +25,12 @@ from org.apache.qpid.proton.engine import \
     EndpointState, TransportException
 from org.apache.qpid.proton.message import \
     MessageFormat, MessageFactory, Message as JMessage
-from org.apache.qpid.proton.messenger import MessengerException, Status
+from org.apache.qpid.proton.messenger import MessengerFactory, MessengerException, Status
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger
 from jarray import zeros
 from java.util import EnumSet, UUID as JUUID
+from java.util.concurrent import TimeoutException as Timeout
 
 LANGUAGE = "Java"
 
@@ -55,6 +56,7 @@ AUTOMATIC = "AUTOMATIC"
 protonFactoryLoader = ProtonFactoryLoader()
 engineFactory = protonFactoryLoader.loadFactory(EngineFactory)
 messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
+messengerFactory = protonFactoryLoader.loadFactory(MessengerFactory)
 
 
 class Endpoint(object):
@@ -511,15 +513,14 @@ class Data(object):
   def __init__(self, *args, **kwargs):
     raise Skipped()
 
-class Timeout(Exception):
-  pass
-
 class Messenger(object):
 
   def __init__(self, *args, **kwargs):
-    #comment out or remove line below to enable messenger tests
-    raise Skipped()
-    self.impl = MessengerImpl()
+    try:
+      self.impl = messengerFactory.createMessenger()
+    except ProtonUnsupportedOperationException:
+      raise Skipped()
+
 
   def start(self):
     self.impl.start()
@@ -541,10 +542,9 @@ class Messenger(object):
     self.impl.recv(n)
 
   def get(self, message=None):
-    if message is None:
-      self.impl.get()
-    else:
-      message.impl = self.impl.get()
+    result = self.impl.get()
+    if message and result:
+      message.impl = result
     return self.impl.incomingTracker()
 
   @property

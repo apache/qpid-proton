@@ -55,7 +55,7 @@ class ConnectorImpl<C> implements Connector<C>
 
     private ByteBuffer _readBuffer = ByteBuffer.allocate(readBufferSize);
     private ByteBuffer _writeBuffer = ByteBuffer.allocate(writeBufferSize);
-    private boolean _readPending;
+    private boolean _readPending = true;
 
     ConnectorImpl(DriverImpl driver, Listener<C> listener, SocketChannel c, C context, SelectionKey key)
     {
@@ -81,33 +81,56 @@ class ConnectorImpl<C> implements Connector<C>
                 _readPending = false;
                 if (isClosed()) return;
             }
+            else
+            {
+                processInput();
+            }
             write();
         }
     }
 
-    void read() throws IOException
+    private void read() throws IOException
     {
         int bytesRead = 0;
         while ((bytesRead = _channel.read(_readBuffer)) > 0)
         {
-            _readBuffer.flip();
-            int consumed = _transport.input(_readBuffer.array(), _readBuffer.position(), _readBuffer.limit());
-            _readBuffer.position(consumed == Transport.END_OF_STREAM ? _readBuffer.limit() : consumed);
-            if (_logger.isLoggable(Level.FINE))
-            {
-                _logger.log(Level.FINE, "consumed " + consumed + " bytes, " + _readBuffer.remaining() + " available");
-            }
-            _readBuffer.compact();
+            processInput();
         }
         if (bytesRead == -1) {
             close();
         }
     }
 
-    void write() throws IOException
+    private int processInput() throws IOException
+    {
+        _readBuffer.flip();
+        int total = 0;
+        while (_readBuffer.hasRemaining())
+        {
+            int consumed = _transport.input(_readBuffer.array(), _readBuffer.position(), _readBuffer.remaining());
+            if (consumed == Transport.END_OF_STREAM)
+            {
+                continue;
+            }
+            else if (consumed == 0)
+            {
+                break;
+            }
+            _readBuffer.position(_readBuffer.position() + consumed);
+            if (_logger.isLoggable(Level.FINE))
+            {
+                _logger.log(Level.FINE, "consumed " + consumed + " bytes, " + _readBuffer.remaining() + " available");
+            }
+            total += consumed;
+        }
+        _readBuffer.compact();
+        return total;
+    }
+
+    private void write() throws IOException
     {
         int interest = _key.interestOps();
-        int start = _writeBuffer.position();
+        boolean empty = _writeBuffer.position() == 0;
         boolean done = false;
         while (!done)
         {
@@ -119,19 +142,20 @@ class ConnectorImpl<C> implements Connector<C>
             {
                 _logger.log(Level.FINE, "wrote " + wrote + " bytes, " + _writeBuffer.remaining() + " remaining");
             }
-            _writeBuffer.compact();
-            if (_writeBuffer.position() > 0)
+            if (_writeBuffer.hasRemaining())
             {
                 //weren't able to write all available data, ask to be notfied when we can write again
+                _writeBuffer.compact();
                 interest |= SelectionKey.OP_WRITE;
                 done = true;
             }
             else
             {
-                //we are done if buffer was empty to begin with and we did not produce enough to fill it
+                //we are done if buffer was empty to begin with and we did not produce anything
+                _writeBuffer.clear();
                 interest &= ~SelectionKey.OP_WRITE;
-                done = start == 0 && produced < _writeBuffer.capacity();
-                start = 0;
+                done = empty && produced == 0;
+                empty = true;
             }
         }
         _key.interestOps(interest);

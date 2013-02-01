@@ -134,7 +134,6 @@ public class MessengerImpl implements Messenger
             try
             {
                 c.process();
-                c.close();
             }
             catch (IOException e)
             {
@@ -152,6 +151,14 @@ public class MessengerImpl implements Messenger
             {
                 _logger.log(Level.WARNING, "Error while closing listener", e);
             }
+        }
+        try
+        {
+            waitUntil(_allClosed);
+        }
+        catch(TimeoutException e)
+        {
+            _logger.log(Level.WARNING, "Timed out while waiting for close", e);
         }
         _driver.destroy();
     }
@@ -215,7 +222,7 @@ public class MessengerImpl implements Messenger
             Delivery delivery = connection.getWorkHead();
             while (delivery != null)
             {
-                if (delivery.isReadable())
+                if (delivery.isReadable() && !delivery.isPartial())
                 {
                     _logger.log(Level.FINE, "Readable delivery found: " + delivery);
                     int size = read((Receiver) delivery.getLink());
@@ -463,9 +470,16 @@ public class MessengerImpl implements Messenger
             {
                 session.close();
             }
-            if (connection.getLocalState() == EndpointState.ACTIVE && connection.getRemoteState() == EndpointState.CLOSED)
+            if (connection.getRemoteState() == EndpointState.CLOSED)
             {
-                connection.close();
+                if (connection.getLocalState() == EndpointState.ACTIVE)
+                {
+                    connection.close();
+                }
+                else if (connection.getLocalState() == EndpointState.CLOSED)
+                {
+                    c.close();
+                }
             }
 
             if (c.isClosed())
@@ -501,7 +515,7 @@ public class MessengerImpl implements Messenger
 
         boolean wait = deadline > System.currentTimeMillis();
         boolean first = true;
-        boolean done = condition.test();
+        boolean done = false;
 
         while (first || (!done && wait))
         {
@@ -512,6 +526,10 @@ public class MessengerImpl implements Messenger
             wait = deadline > System.currentTimeMillis();
             done = done || condition.test();
             first = false;
+        }
+        if (!done)
+        {
+            throw new TimeoutException();
         }
     }
 
@@ -581,7 +599,7 @@ public class MessengerImpl implements Messenger
             for (Connector c : _driver.connectors())
             {
                 Connection connection = c.getConnection();
-                for (Link link : new Links(connection, ACTIVE, ACTIVE))
+                for (Link link : new Links(connection, ACTIVE, ANY))
                 {
                     if (link instanceof Sender)
                     {
@@ -642,9 +660,8 @@ public class MessengerImpl implements Messenger
                 Delivery delivery = connection.getWorkHead();
                 while (delivery != null)
                 {
-                    if (delivery.isReadable())
+                    if (delivery.isReadable() && !delivery.isPartial())
                     {
-                        //TODO: check for partial delivery?
                         return true;
                     }
                     else
@@ -657,8 +674,19 @@ public class MessengerImpl implements Messenger
         }
     }
 
+    private class AllClosed implements Predicate
+    {
+        public boolean test()
+        {
+            if (_driver.connectors().iterator().hasNext()) return false;
+            else return true;
+        }
+
+    }
+
     private final SentSettled _sentSettled = new SentSettled();
     private final MessageAvailable _messageAvailable = new MessageAvailable();
+    private final AllClosed _allClosed = new AllClosed();
 
     private interface LinkFinder<C extends Link>
     {

@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.jni;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.jni.Proton;
@@ -219,6 +220,12 @@ public class JNIDelivery implements Delivery
     public boolean isUpdated()
     {
         return Proton.pn_delivery_updated(_impl);
+    }
+
+    @Override
+    public boolean isPartial()
+    {
+        throw new ProtonUnsupportedOperationException();
     }
 
     @Override

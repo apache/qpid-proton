@@ -408,6 +408,11 @@ public class DeliveryImpl implements Delivery
         _complete = true;
     }
 
+    public boolean isPartial()
+    {
+        return !_complete;
+    }
+
     void setRemoteDeliveryState(DeliveryState remoteDeliveryState)
     {
         _remoteDeliveryState = remoteDeliveryState;

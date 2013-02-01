@@ -68,4 +68,6 @@ public interface Delivery
     public Object getContext();
 
     public boolean isUpdated();
+
+    public boolean isPartial();
 }
