@@ -1,11 +1,11 @@
-version 0.4: (TBD)
+version 0.4:
 	* Unit tests for qpid::proton::Message.
 	* Unit tests for qpid::proton::Messenger.
 
-version 0.3: (15 January 2013)
+version 0.3:
 	* No language-specific features developed in this release.
 
-version 0.2: (30 November 2012)
+version 0.2:
 	* First implementation of the stable APIs on top of swig.
 	* Provides the qpid::proton::Message class.
 	* Provides the qpid::proton::Messenger class.
