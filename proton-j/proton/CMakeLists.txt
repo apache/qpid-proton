@@ -20,12 +20,12 @@
 set(BOUNCYCASTLE_VERSION 1.47 CACHE STRING "Version of Bouncycastle to compile proton-j-impl against")
 
 find_jar(BOUNCYCASTLE_BCPKIX_JAR
-         NAMES bcpkix-jdk15on
+         NAMES bcpkix-jdk15on bcpkix
          PATHS ${PROTON_JAR_DEPEND_DIR}
          VERSIONS ${BOUNCYCASTLE_VERSION}
          DOC "Full path to Bouncycastle PKIX jar")
 find_jar(BOUNCYCASTLE_BCPROV_JAR
-         NAMES bcprov-jdk15on
+         NAMES bcprov-jdk15on bcprov
          PATHS ${PROTON_JAR_DEPEND_DIR}
          VERSIONS ${BOUNCYCASTLE_VERSION}
          DOC "Full path to Bouncycastle Provider jar")
