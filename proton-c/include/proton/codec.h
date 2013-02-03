@@ -23,9 +23,12 @@
  */
 
 #include <proton/types.h>
+#ifndef __cplusplus
 #include <stdbool.h>
 #include <stdint.h>
-#include <unistd.h>
+#else
+#include <proton/type_compat.h>
+#endif
 #include <stdarg.h>
 
 #ifdef __cplusplus

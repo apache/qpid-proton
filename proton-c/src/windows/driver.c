@@ -40,7 +40,6 @@
 #if _WIN32_WINNT < 0x0501
 #error "Proton requires Windows API support for XP or later."
 #endif
-#include <w32api.h>
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #define PN_WINAPI
@@ -49,7 +48,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <fcntl.h>
 
 #include "../platform.h"
@@ -106,7 +104,7 @@ static inline pn_socket_t pn_create_socket() {
 }
 #elif defined(PN_WINAPI)
 static inline ssize_t pn_send(pn_socket_t sockfd, const void *buf, size_t len) {
-    return send(sockfd, buf, len, 0);
+    return send(sockfd, (const char *) buf, len, 0);
 }
 
 static inline pn_socket_t pn_create_socket() {
@@ -782,7 +780,7 @@ void pn_driver_free(pn_driver_t *d)
 int pn_driver_wakeup(pn_driver_t *d)
 {
   if (d) {
-    ssize_t count = write(d->ctrl[1], "x", 1);
+      ssize_t count = send(d->ctrl[1], "x", 1, 0);
     if (count <= 0) {
       return count;
     } else {
@@ -807,7 +805,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   // if (d->ctrl[0] > d->max_fds) d->max_fds = d->ctrl[0];
 
   pn_listener_t *l = d->listener_head;
-  for (int i = 0; i < d->listener_count; i++) {
+  for (unsigned i = 0; i < d->listener_count; i++) {
     if (r_avail) {
       FD_SET(l->fd, &d->readfds);
       // if (l->fd > d->max_fds) d->max_fds = l->fd;
@@ -821,7 +819,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   }
 
   pn_connector_t *c = d->connector_head;
-  for (int i = 0; i < d->connector_count; i++)
+  for (unsigned i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
       d->wakeup = pn_timestamp_min(d->wakeup, c->wakeup);
@@ -888,7 +886,7 @@ void pn_driver_wait_3(pn_driver_t *d)
   if (FD_ISSET(d->ctrl[0], &d->readfds)) {
     //clear the pipe
     char buffer[512];
-    while (read(d->ctrl[0], buffer, 512) == 512);
+    while (recv(d->ctrl[0], buffer, 512, 0) == 512);
   }
 
   pn_listener_t *l = d->listener_head;
@@ -974,7 +972,7 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
 static int pn_socket_pair (SOCKET sv[2]) {
   // no socketpair on windows.  provide pipe() semantics using sockets
 
-  int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  SOCKET sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
   if (sock == INVALID_SOCKET) {
     perror("socket");
     return -1;

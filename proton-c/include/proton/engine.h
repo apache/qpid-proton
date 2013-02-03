@@ -22,7 +22,9 @@
  *
  */
 
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #include <stddef.h>
 #include <sys/types.h>
 #include <proton/codec.h>

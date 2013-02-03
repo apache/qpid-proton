@@ -28,9 +28,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <sys/time.h>
 #include "util.h"
 #include "platform.h"
+#include "platform_fmt.h"
 
 typedef struct {
   size_t capacity;
@@ -1132,7 +1132,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         char *encoded = pn_buffer_bytes(buf).start;
         ssize_t n = pn_link_recv(l, encoded, pending);
         if (n != (ssize_t) pending) {
-          return pn_error_format(messenger->error, n, "didn't receive pending bytes: %zi", n);
+          return pn_error_format(messenger->error, n, "didn't receive pending bytes: %" PN_ZI, n);
         }
         n = pn_link_recv(l, encoded + pending, 1);
         pn_link_advance(l);

@@ -2552,7 +2552,7 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
         if (n == PN_EOS)
           pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
         else
-          pn_dispatcher_trace(transport->disp, 0, "-> EOS (%zi) %s\n", n,
+          pn_dispatcher_trace(transport->disp, 0, "-> EOS (%" PN_ZI ") %s\n", n,
                               pn_error_text(transport->error));
       }
       return n;

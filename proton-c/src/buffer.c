@@ -21,7 +21,9 @@
 
 #include <proton/buffer.h>
 #include <proton/error.h>
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

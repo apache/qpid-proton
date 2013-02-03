@@ -283,11 +283,11 @@ int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom)
   case PN_DESCRIPTOR:
     return pn_bytes_format(bytes, "descriptor");
   case PN_ARRAY:
-    return pn_bytes_format(bytes, "array[%zu]", atom.u.count);
+    return pn_bytes_format(bytes, "array[%" PN_ZU "]", atom.u.count);
   case PN_LIST:
-    return pn_bytes_format(bytes, "list[%zu]", atom.u.count);
+    return pn_bytes_format(bytes, "list[%" PN_ZU "]", atom.u.count);
   case PN_MAP:
-    return pn_bytes_format(bytes, "map[%zu]", atom.u.count);
+    return pn_bytes_format(bytes, "map[%" PN_ZU "]", atom.u.count);
   }
 
   return PN_ARG_ERR;
@@ -1923,13 +1923,14 @@ bool pn_data_exit(pn_data_t *data)
 void pn_data_dump(pn_data_t *data)
 {
   char buf[1024];
-  printf("{current=%zi, parent=%zi}\n", data->current, data->parent);
+  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", data->current, data->parent);
   for (unsigned i = 0; i < data->size; i++)
   {
     pn_node_t *node = &data->nodes[i];
     pn_bytes_t bytes = pn_bytes(1024, buf);
     pn_format_atom(&bytes, node->atom);
-    printf("Node %i: prev=%zi, next=%zi, parent=%zi, down=%zi, children=%zi, type=%i (%s)\n",
+    printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
+           ", children=%" PN_ZI ", type=%i (%s)\n",
            i + 1, node->prev, node->next, node->parent, node->down, node->children, node->atom.type,
            buf);
   }

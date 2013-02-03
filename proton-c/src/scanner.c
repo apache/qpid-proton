@@ -21,11 +21,13 @@
 
 #include <proton/scanner.h>
 #include <proton/error.h>
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>
+#include "platform.h"
 
 #define ERROR_SIZE (1024)
 

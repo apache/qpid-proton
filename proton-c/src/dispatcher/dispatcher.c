@@ -28,6 +28,7 @@
 #include "dispatcher.h"
 #include "protocol.h"
 #include "../util.h"
+#include "../platform_fmt.h"
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
 {
@@ -95,7 +96,7 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
     if (size) {
       char buf[1024];
       int e = pn_quote_data(buf, 1024, payload, size);
-      fprintf(stderr, " (%zu) \"%s\"%s\n", size, buf,
+      fprintf(stderr, " (%" PN_ZU ") \"%s\"%s\n", size, buf,
               e == PN_OVERFLOW ? "... (truncated)" : "");
     } else {
       fprintf(stderr, "\n");

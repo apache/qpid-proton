@@ -20,14 +20,17 @@
  */
 
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#ifndef __cplusplus
 #include <stdint.h>
+#include <stdbool.h>
+#else
+#include <proton/type_compat.h>
+#endif
 #include <ctype.h>
 #include <string.h>
-#include <strings.h> // For non C89/C99 strcasecmp
 #include <proton/error.h>
 #include <proton/util.h>
 #include <proton/types.h>

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "platform.h"
 
 struct pn_parser_t {
   pn_scanner_t *scanner;
@@ -244,7 +245,7 @@ int pn_parser_number(pn_parser_t *parser, pn_data_t *data)
     err = pn_data_put_double(data, value);
     if (err) return pn_parser_err(parser, err, "error writing double");
   } else {
-    int64_t value = atoll(number);
+    int64_t value = pn_i_atoll(number);
     if (negate) {
       value = -value;
     }

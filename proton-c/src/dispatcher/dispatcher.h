@@ -23,7 +23,9 @@
  */
 
 #include <sys/types.h>
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #include <proton/buffer.h>
 #include <proton/codec.h>
 

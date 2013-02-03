@@ -63,8 +63,24 @@ char* pn_i_genuuid(void);
  */
 int pn_i_error_from_errno(pn_error_t *error, const char *msg);
 
+/** Provide C99 atoll functinality.
+ *
+ * @param[in] num the string representation of the number.
+ * @return the integer value.
+ *
+ * @internal
+ */
+int64_t pn_i_atoll(const char* num);
+
+#ifdef _MSC_VER
+// TODO: PROTON-212
+#define snprintf _snprintf
+#endif
+
+
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* driver.h */
+#endif /* platform.h */

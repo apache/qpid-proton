@@ -19,6 +19,11 @@
 cmake_minimum_required (VERSION 2.6)
 
 option(BUILD_WITH_CXX "Compile Proton using C++" OFF)
+if ("${CMAKE_GENERATOR}" MATCHES "^Visual Studio")
+  # No C99 capability, use C++
+  set(BUILD_WITH_CXX ON)
+endif ("${CMAKE_GENERATOR}" MATCHES "^Visual Studio")
+
 if (BUILD_WITH_CXX)
   project (Proton C CXX)
 else (BUILD_WITH_CXX)
