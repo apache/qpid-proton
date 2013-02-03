@@ -386,8 +386,8 @@ void client_callback(pn_connector_t *ctor)
 int main(int argc, char **argv)
 {
   char *url = NULL;
-  char *address = "queue";
-  char *mechanism = "ANONYMOUS";
+  char *address = (char *) "queue";
+  char *mechanism = (char *) "ANONYMOUS";
   int count = 1;
   bool quiet = false;
   int high = 100;
@@ -450,8 +450,8 @@ int main(int argc, char **argv)
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
-  char *host = "0.0.0.0";
-  char *port = "5672";
+  char *host = (char *) "0.0.0.0";
+  char *port = (char *) "5672";
   char *path = NULL;
 
   parse_url(url, &scheme, &user, &pass, &host, &port, &path);

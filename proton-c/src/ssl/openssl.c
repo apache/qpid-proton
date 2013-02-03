@@ -415,7 +415,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
-    ssl_ex_data_index = SSL_get_ex_new_index( 0, "org.apache.qpid.proton.ssl",
+    ssl_ex_data_index = SSL_get_ex_new_index( 0, (void *) "org.apache.qpid.proton.ssl",
                                               NULL, NULL, NULL);
   }
 

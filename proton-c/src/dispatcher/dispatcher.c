@@ -103,7 +103,7 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
   }
 }
 
-void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...)
+void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 {
   va_list ap;
   fprintf(stderr, "[%p:%u] ", (void *) disp, ch);

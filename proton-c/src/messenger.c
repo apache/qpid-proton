@@ -714,7 +714,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
-  char *host = "0.0.0.0";
+  char *host = (char *) "0.0.0.0";
   char *port = NULL;
   parse_url(address, &scheme, &user, &pass, &host, &port, name);
 
@@ -836,7 +836,7 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
-  char *host = "0.0.0.0";
+  char *host = (char *) "0.0.0.0";
   char *port = NULL;
   char *path = NULL;
 

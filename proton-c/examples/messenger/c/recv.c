@@ -55,7 +55,7 @@ int main(int argc, char** argv)
   char* certificate = NULL;
   char* privatekey = NULL;
   char* password = NULL;
-  char* address = "amqp://~0.0.0.0";
+  char* address = (char *) "amqp://~0.0.0.0";
   int c;
   opterr = 0;
 

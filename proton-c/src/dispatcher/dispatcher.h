@@ -71,7 +71,7 @@ void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size);
 int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available);
 ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size);
-void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, char *fmt, ...);
+void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);
 int pn_post_transfer_frame(pn_dispatcher_t *disp,
                            uint16_t local_channel,
                            uint32_t handle,

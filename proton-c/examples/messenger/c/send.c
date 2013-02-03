@@ -53,8 +53,8 @@ int main(int argc, char** argv)
 {
   int c;
   opterr = 0;
-  char * address = "amqp://0.0.0.0";
-  char * msgtext = "Hello World!";
+  char * address = (char *) "amqp://0.0.0.0";
+  char * msgtext = (char *) "Hello World!";
 
   while((c = getopt(argc, argv, "ha:b:c:")) != -1)
   {
