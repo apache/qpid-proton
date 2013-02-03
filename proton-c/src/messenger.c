@@ -710,7 +710,8 @@ static const char *default_port(const char *scheme)
 }
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, char **name)
 {
-  char domain[strlen(address) + 1];
+  char domain[256];
+  if (sizeof(domain) < strlen(address) + 1) return NULL;
   char *scheme = NULL;
   char *user = NULL;
   char *pass = NULL;
@@ -782,7 +783,8 @@ void pn_subscription_set_context(pn_subscription_t *sub, void *context)
 
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
 {
-  char copy[(address ? strlen(address) : 0) + 1];
+  char copy[256];
+  if (sizeof(copy) <= (address ? strlen(address) : 0)) return NULL;
   if (address) {
     strcpy(copy, address);
   } else {
@@ -830,7 +832,8 @@ pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
 
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
-  char copy[strlen(source) + 1];
+  char copy[256];
+  if (strlen(source) >= sizeof(copy)) return NULL;
   strcpy(copy, source);
 
   char *scheme = NULL;
@@ -916,17 +919,29 @@ int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window)
 
 static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
 {
+  char stackbuf[256];
+  char *heapbuf = NULL;
+  char *buf = stackbuf;
   const char *address = pn_message_get_reply_to(msg);
   int len = address ? strlen(address) : 0;
   if (len > 1 && address[0] == '~' && address[1] == '/') {
-    char buf[len + strlen(mng->name) + 9];
+    unsigned needed = len + strlen(mng->name) + 9;
+    if (needed > sizeof(stackbuf)) {
+      heapbuf = (char *) malloc(needed);
+      buf = heapbuf;
+    }
     sprintf(buf, "amqp://%s/%s", mng->name, address + 2);
     pn_message_set_reply_to(msg, buf);
   } else if (len == 0) {
-    char buf[strlen(mng->name) + 8];
+    unsigned needed = strlen(mng->name) + 8;
+    if (needed > sizeof(stackbuf)) {
+      heapbuf = (char *) malloc(needed);
+      buf = heapbuf;
+    }
     sprintf(buf, "amqp://%s", mng->name);
     pn_message_set_reply_to(msg, buf);
   }
+  if (heapbuf) free (heapbuf);
 }
 
 // static bool false_pred(pn_messenger_t *messenger) { return false; }

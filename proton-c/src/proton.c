@@ -39,6 +39,19 @@
 #include <inttypes.h>
 #include "protocol.h"
 
+typedef struct {
+  char *buf;
+  size_t capacity;
+} heap_buffer;
+
+heap_buffer client_msg, client_data, server_data, server_iresp;
+void free_heap_buffers() {
+  free(client_msg.buf);
+  free(client_data.buf);
+  free(server_data.buf);
+  free(server_iresp.buf);
+}
+
 int buffer(int argc, char **argv)
 {
   pn_buffer_t *buf = pn_buffer(16);
@@ -112,7 +125,8 @@ void server_callback(pn_connector_t *ctor)
     case PN_SASL_STEP:
       {
         size_t n = pn_sasl_pending(sasl);
-        char iresp[n];
+        PN_ENSURE(server_iresp.buf, server_iresp.capacity, n, char);
+        char *iresp = server_iresp.buf;
         pn_sasl_recv(sasl, iresp, n);
         printf("%s", pn_sasl_remote_mechanisms(sasl));
         printf(" response = ");
@@ -133,7 +147,8 @@ void server_callback(pn_connector_t *ctor)
   struct server_context *ctx = (struct server_context *) pn_connector_context(ctor);
   char tagstr[1024];
   char msg[10*1024];
-  char data[ctx->size + 16];
+  PN_ENSURE(server_data.buf, server_data.capacity, (size_t) ctx->size + 16, char);
+  char *data = server_data.buf;
   for (int i = 0; i < ctx->size; i++) {
     msg[i] = 'x';
   }
@@ -279,8 +294,10 @@ void client_callback(pn_connector_t *ctor)
 
   pn_connection_t *connection = pn_connector_connection(ctor);
   char tagstr[1024];
-  char msg[ctx->size];
-  char data[ctx->size + 16];
+  PN_ENSURE(client_msg.buf, client_msg.capacity, (size_t) ctx->size, char);
+  char *msg = client_msg.buf;
+  PN_ENSURE(client_data.buf, client_data.capacity, (size_t) ctx->size + 16, char);
+  char *data = client_data.buf;
   for (int i = 0; i < ctx->size; i++) {
     msg[i] = 'x';
   }
@@ -508,6 +525,7 @@ int main(int argc, char **argv)
   }
 
   pn_driver_free(drv);
+  free_heap_buffers();
 
   return 0;
 }

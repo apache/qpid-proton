@@ -194,7 +194,7 @@ void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password)
   size_t usize = strlen(user);
   size_t psize = strlen(pass);
   size_t size = usize + psize + 2;
-  char iresp[size];
+  char *iresp = (char *) malloc(size);
 
   iresp[0] = 0;
   memmove(iresp + 1, user, usize);
@@ -204,6 +204,7 @@ void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password)
   pn_sasl_mechanisms(sasl, "PLAIN");
   pn_sasl_send(sasl, iresp, size);
   pn_sasl_client(sasl);
+  free(iresp);
 }
 
 void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome)

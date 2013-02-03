@@ -62,13 +62,17 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 
 void pn_fprint_data(FILE *stream, const char *bytes, size_t size)
 {
-  size_t capacity = 4*size + 1;
-  char buf[capacity];
-  ssize_t n = pn_quote_data(buf, capacity, bytes, size);
+  char buf[256];
+  ssize_t n = pn_quote_data(buf, 256, bytes, size);
   if (n >= 0) {
     fputs(buf, stream);
   } else {
-    fprintf(stderr, "pn_quote_data: %zi\n", n);
+    if (n == PN_OVERFLOW) {
+      fputs(buf, stream);
+      fputs("... (truncated)", stream);
+    }
+    else
+      fprintf(stderr, "pn_quote_data: %s\n", pn_code(n));
   }
 }
 

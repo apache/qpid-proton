@@ -1506,7 +1506,9 @@ int pn_do_attach(pn_dispatcher_t *disp)
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
                          &idc);
   if (err) return err;
-  char strname[name.size + 1];
+  char strbuf[128];      // avoid malloc for most link names
+  char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
+  char *strname = strheap ? strheap : strbuf;
   strncpy(strname, name.start, name.size);
   strname[name.size] = '\0';
 
@@ -1522,6 +1524,10 @@ int pn_do_attach(pn_dispatcher_t *disp)
     link_state = pn_link_get_state(ssn_state, link);
   } else {
     link = link_state->link;
+  }
+
+  if (strheap) {
+    free(strheap);
   }
 
   pn_map_handle(ssn_state, handle, link_state);

@@ -141,23 +141,16 @@ int pn_bytes_format(pn_bytes_t *bytes, const char *fmt, ...)
 
 int pn_print_atom(pn_iatom_t atom)
 {
-  size_t size = 4;
-  while (true) {
-    char buf[size];
-    pn_bytes_t bytes = pn_bytes(size, buf);
-    int err = pn_format_atom(&bytes, atom);
-    if (err) {
-      if (err == PN_OVERFLOW) {
-        size *= 2;
-        continue;
-      } else {
-        return err;
-      }
-    } else {
-      printf("%.*s", (int) (size - bytes.size), buf);
-      return 0;
-    }
-  }
+  char buf[256];
+  unsigned size = 256;
+  pn_bytes_t bytes = pn_bytes(size, buf);
+  int err = pn_format_atom(&bytes, atom);
+  if (err && err != PN_OVERFLOW)
+    return err;
+  printf("%.*s", (int) (size - bytes.size), buf);
+  if (err)
+    printf("... (truncated)");
+  return 0;
 }
 
 int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom)
@@ -400,24 +393,15 @@ ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms)
 
 int pn_print_atoms(const pn_atoms_t *atoms)
 {
-  int size = 128;
-
-  while (true)
-  {
-    char buf[size];
-    ssize_t n = pn_format_atoms(buf, size, *atoms);
-    if (n < 0) {
-      if (n == PN_OVERFLOW) {
-        size *= 2;
-        continue;
-      } else {
-        return n;
-      }
-    } else {
-      printf("%.*s", (int) n, buf);
-      return 0;
-    }
-  }
+  char buf[512];
+  memset(buf, 0, sizeof(buf));
+  ssize_t n = pn_format_atoms(buf, sizeof(buf) - 1, *atoms);
+  if (n < 0 && n != PN_OVERFLOW)
+    return n;
+  printf("%s", buf);
+  if (n == PN_OVERFLOW)
+    printf("... (truncated)");
+  return 0;
 }
 
 int pn_decode_atom(pn_bytes_t *bytes, pn_atoms_t *atoms);
@@ -991,6 +975,8 @@ struct pn_data_t {
   size_t size;
   pn_node_t *nodes;
   pn_buffer_t *buf;
+  pn_iatom_t *iatoms;
+  size_t iatom_capacity;
   size_t parent;
   size_t current;
   size_t base_parent;
@@ -1011,6 +997,8 @@ pn_data_t *pn_data(size_t capacity)
   data->size = 0;
   data->nodes = capacity ? (pn_node_t *) malloc(capacity * sizeof(pn_node_t)) : NULL;
   data->buf = pn_buffer(64);
+  data->iatoms = 0;
+  data->iatom_capacity = 0;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -1026,6 +1014,7 @@ void pn_data_free(pn_data_t *data)
     free(data->nodes);
     pn_buffer_free(data->buf);
     pn_error_free(data->error);
+    free(data->iatoms);
     free(data);
   }
 }
@@ -1730,16 +1719,18 @@ int pn_data_as_atoms(pn_data_t *data, pn_atoms_t *atoms);
 
 int pn_data_print(pn_data_t *data)
 {
-  pn_iatom_t atoms[data->size + data->extras];
-  pn_atoms_t latoms = {.size=data->size + data->extras, .start=atoms};
+  size_t count = data->size + data->extras;
+  PN_ENSURE(data->iatoms, data->iatom_capacity, count, pn_iatom_t);
+  pn_atoms_t latoms = {count, data->iatoms};
   pn_data_as_atoms(data, &latoms);
   return pn_print_atoms(&latoms);
 }
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  pn_iatom_t atoms[data->size + data->extras];
-  pn_atoms_t latoms = {.size=data->size + data->extras, .start=atoms};
+  size_t count = data->size + data->extras;
+  PN_ENSURE(data->iatoms, data->iatom_capacity, count, pn_iatom_t);
+  pn_atoms_t latoms = {count, data->iatoms};
   pn_data_as_atoms(data, &latoms);
 
   ssize_t sz = pn_format_atoms(bytes, *size, latoms);
@@ -2410,9 +2401,9 @@ ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
   pn_bytes_t lbytes;
 
   while (true) {
-    pn_iatom_t atoms[asize];
+    PN_ENSURE(data->iatoms, data->iatom_capacity, asize, pn_iatom_t);
     latoms.size = asize;
-    latoms.start = atoms;
+    latoms.start = data->iatoms;
     lbytes.size = size;
     lbytes.start = (char *)bytes;  // PROTON-77
 

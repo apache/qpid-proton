@@ -135,8 +135,8 @@ int main(int argc, char** argv)
       pn_messenger_get(messenger, message);
       check(messenger);
 
-      size_t buffsize = 1024;
-      char buffer[buffsize];
+      char buffer[1024];
+      size_t buffsize = sizeof(buffer);
       pn_data_t *body = pn_message_body(message);
       pn_data_format(body, buffer, &buffsize);
 
