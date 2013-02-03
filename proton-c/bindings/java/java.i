@@ -32,8 +32,24 @@
 #include <proton/driver.h>
 #include <proton/driver_extras.h>
 #include <proton/messenger.h>
-
 %}
+/* Swig makes the assumption that all char[x] definitions have 0 as their last element... this is not true for Proton */
+%typemap(memberin) char [ANY] {
+  if($input) {
+    memcpy((char*)$1, (const char *)$input, $1_dim0);
+  } else {
+    $1[0] = 0;
+  }
+}
+
+%typemap(globalin) char [ANY] {
+  if($input) {
+    memcpy((char*)$1, (const char *)$input, $1_dim0);
+  } else {
+    $1[0] = 0;
+  }
+}
+
 /* SWIG 1.x does not include the following necessary typemaps */
 #if (SWIG_VERSION  >> 16) < 2
 %typemap(jni)     (char *STRING, size_t LENGTH) "jbyteArray"
@@ -51,6 +67,10 @@
 %apply (char *STRING, size_t LENGTH) { (char *STRING, int LENGTH) }
 
 #endif
+JAVA_ARRAYS_DECL(char, jbyte, Byte, Byte)
+JAVA_ARRAYS_IMPL(char, jbyte, Byte, Byte)
+JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
+
 %typemap(in) (char *DATA, size_t SIZE) (char *data, jobject arr, jboolean isDirect) {
   /* %typemap(in) void * */
   jclass bbclass = JCALL1(GetObjectClass,jenv, $input);
@@ -434,6 +454,9 @@ int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 
 int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_save_json;
+
+int pn_data_format(pn_data_t *data, char *DATA, size_t *SIZE);
+%ignore pn_data_format;
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *DATA, size_t SIZE);
 %ignore pn_ssl_get_cipher_name;

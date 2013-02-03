@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +18,17 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.messenger.jni;
+package org.apache.qpid.proton.codec.jni;
 
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.messenger.Messenger;
-import org.apache.qpid.proton.messenger.MessengerFactory;
+import org.apache.qpid.proton.codec.Data;
+import org.apache.qpid.proton.codec.DataFactory;
+import org.apache.qpid.proton.jni.JNIFactory;
 
-public class JNIMessengerFactory implements MessengerFactory
+public class JNIDataFactory extends JNIFactory implements DataFactory
 {
-
     @Override
-    public Messenger createMessenger()
+    public Data createData(long capacity)
     {
-        return new JNIMessenger();
+        return new JNIData(capacity);
     }
-
-    @Override
-    public Messenger createMessenger(String name)
-    {
-        return new JNIMessenger(name);
-    }
-
 }

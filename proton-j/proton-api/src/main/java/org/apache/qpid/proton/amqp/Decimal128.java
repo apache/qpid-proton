@@ -22,6 +22,7 @@
 package org.apache.qpid.proton.amqp;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 
 public final class Decimal128 extends Number
 {
@@ -45,6 +46,16 @@ public final class Decimal128 extends Number
 
         _underlying = calculateBigDecimal(msb, lsb);
 
+    }
+
+    public Decimal128(byte[] data)
+    {
+        this(ByteBuffer.wrap(data));
+    }
+
+    private Decimal128(final ByteBuffer buffer)
+    {
+        this(buffer.getLong(),buffer.getLong());
     }
 
     private static long calculateMostSignificantBits(final BigDecimal underlying)
@@ -94,5 +105,48 @@ public final class Decimal128 extends Number
     public long getLeastSignificantBits()
     {
         return _lsb;
+    }
+
+    public byte[] asBytes()
+    {
+        byte[] bytes = new byte[16];
+        ByteBuffer buf = ByteBuffer.wrap(bytes);
+        buf.putLong(getMostSignificantBits());
+        buf.putLong(getLeastSignificantBits());
+        return bytes;
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        final Decimal128 that = (Decimal128) o;
+
+        if (_lsb != that._lsb)
+        {
+            return false;
+        }
+        if (_msb != that._msb)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = (int) (_msb ^ (_msb >>> 32));
+        result = 31 * result + (int) (_lsb ^ (_lsb >>> 32));
+        return result;
     }
 }

@@ -81,4 +81,32 @@ public final class Decimal64 extends Number
     {
         return _bits;
     }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        final Decimal64 decimal64 = (Decimal64) o;
+
+        if (_bits != decimal64._bits)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return (int) (_bits ^ (_bits >>> 32));
+    }
 }

@@ -18,66 +18,29 @@
  * under the License.
  *
  */
-
 package org.apache.qpid.proton.amqp;
 
-import java.math.BigDecimal;
-
-public final class Decimal32 extends Number
+public class UnknownDescribedType implements DescribedType
 {
-    private final BigDecimal _underlying;
-    private final int _bits;
+    private final Object _descriptor;
+    private final Object _described;
 
-    public Decimal32(BigDecimal underlying)
+    public UnknownDescribedType(final Object descriptor, final Object described)
     {
-        _underlying = underlying;
-        _bits = calculateBits( underlying );
-    }
-
-    public Decimal32(final int bits)
-    {
-        _bits = bits;
-        _underlying = calculateBigDecimal(bits);
-    }
-
-    static int calculateBits(final BigDecimal underlying)
-    {
-        return 0;  //TODO.
-    }
-
-    static BigDecimal calculateBigDecimal(int bits)
-    {
-        return BigDecimal.ZERO; // TODO
-    }
-
-
-    @Override
-    public int intValue()
-    {
-        return _underlying.intValue();
+        _descriptor = descriptor;
+        _described = described;
     }
 
     @Override
-    public long longValue()
+    public Object getDescriptor()
     {
-        return _underlying.longValue();
+        return _descriptor;
     }
 
     @Override
-    public float floatValue()
+    public Object getDescribed()
     {
-        return _underlying.floatValue();
-    }
-
-    @Override
-    public double doubleValue()
-    {
-        return _underlying.doubleValue();
-    }
-
-    public int getBits()
-    {
-        return _bits;
+        return _described;
     }
 
     @Override
@@ -92,9 +55,13 @@ public final class Decimal32 extends Number
             return false;
         }
 
-        final Decimal32 decimal32 = (Decimal32) o;
+        final UnknownDescribedType that = (UnknownDescribedType) o;
 
-        if (_bits != decimal32._bits)
+        if (_described != null ? !_described.equals(that._described) : that._described != null)
+        {
+            return false;
+        }
+        if (_descriptor != null ? !_descriptor.equals(that._descriptor) : that._descriptor != null)
         {
             return false;
         }
@@ -105,6 +72,17 @@ public final class Decimal32 extends Number
     @Override
     public int hashCode()
     {
-        return _bits;
+        int result = _descriptor != null ? _descriptor.hashCode() : 0;
+        result = 31 * result + (_described != null ? _described.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "UnknownDescribedType{" +
+               "descriptor=" + _descriptor +
+               ", described=" + _described +
+               '}';
     }
 }

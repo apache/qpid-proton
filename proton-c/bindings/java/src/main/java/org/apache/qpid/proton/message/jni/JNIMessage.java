@@ -32,14 +32,20 @@ import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.UnsignedShort;
+import org.apache.qpid.proton.amqp.messaging.AmqpSequence;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Footer;
 import org.apache.qpid.proton.amqp.messaging.Header;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
+import org.apache.qpid.proton.codec.jni.JNIData;
+import org.apache.qpid.proton.codec.jni.JNIDataFactory;
 import org.apache.qpid.proton.jni.Proton;
+import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_data_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
 import org.apache.qpid.proton.jni.pn_atom_t;
 import org.apache.qpid.proton.jni.pn_atom_t_u;
@@ -60,6 +66,11 @@ public class JNIMessage implements Message
     JNIMessage()
     {
         _impl = Proton.pn_message();
+    }
+
+    public JNIMessage(SWIGTYPE_p_pn_message_t impl)
+    {
+        _impl = impl;
     }
 
     @Override
@@ -791,8 +802,12 @@ public class JNIMessage implements Message
     @ProtonCEquivalent("pn_message_body")
     public Section getBody()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        SWIGTYPE_p_pn_data_t body = Proton.pn_message_body(_impl);
+        JNIData data = new JNIData(body);
+        data.rewind();
+
+        // TODO
+        return data.next() == null ? null : new AmqpValue(data.getObject());
     }
 
     public Footer getFooter()
@@ -804,38 +819,64 @@ public class JNIMessage implements Message
     public void setHeader(Header header)
     {
         //TODO
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     public void setDeliveryAnnotations(DeliveryAnnotations deliveryAnnotations)
     {
         //TODO
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     public void setMessageAnnotations(MessageAnnotations messageAnnotations)
     {
         //TODO
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     public void setProperties(Properties properties)
     {
         //TODO
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     public void setApplicationProperties(ApplicationProperties applicationProperties)
     {
         //TODO
-        throw new UnsupportedOperationException();
+        //throw new UnsupportedOperationException();
     }
 
     public void setBody(Section body)
     {
+        JNIData data = new JNIData(Proton.pn_message_body(_impl));
+        data.clear();
+        if(body instanceof Data)
+        {
+            data.putDescribed();
+            data.enter();
+            data.putUnsignedLong(UnsignedLong.valueOf(0x0000000000000075L));
+            data.putBinary(((Data) body).getValue());
+            data.exit();
+        }
+        else if(body instanceof AmqpSequence)
+        {
+            // TODO
+        }
+        else if(body instanceof AmqpValue)
+        {
+            data.putDescribed();
+            data.enter();
+            data.putUnsignedLong(UnsignedLong.valueOf(0x0000000000000077L));
+            data.putObject(((AmqpValue) body).getValue());
+            data.exit();
+        }
+
         //TODO
-        throw new UnsupportedOperationException();
     }
 
 
+    public SWIGTYPE_p_pn_message_t getImpl()
+    {
+        return _impl;
+    }
 }

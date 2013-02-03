@@ -17,6 +17,11 @@
 #
 
 from uuid import UUID
+import uuid
+try:
+  bytes()
+except NameError:
+  bytes = str
 
 from org.apache.qpid.proton import ProtonFactoryLoader, ProtonUnsupportedOperationException
 from org.apache.qpid.proton.engine import \
@@ -25,14 +30,29 @@ from org.apache.qpid.proton.engine import \
     EndpointState, TransportException
 from org.apache.qpid.proton.message import \
     MessageFormat, MessageFactory, Message as JMessage
+from org.apache.qpid.proton.codec import \
+    DataFactory, Data as JData
 from org.apache.qpid.proton.messenger import MessengerFactory, MessengerException, Status
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
-from org.apache.qpid.proton.amqp import UnsignedInteger
-from jarray import zeros
-from java.util import EnumSet, UUID as JUUID
+from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedByte, UnsignedShort, Symbol, \
+    Decimal32, Decimal64, Decimal128
+from jarray import zeros, array
+from java.util import EnumSet, UUID as JUUID, Date as JDate
 from java.util.concurrent import TimeoutException as Timeout
+from java.nio import ByteBuffer
+from java.lang import Character as JCharacter, String as JString, Integer as JInteger
 
 LANGUAGE = "Java"
+
+
+class Constant(object):
+
+  def __init__(self, name):
+    self.name = name
+
+  def __repr__(self):
+    return self.name
+
 
 class Skipped(Exception):
   skipped = True
@@ -57,6 +77,8 @@ protonFactoryLoader = ProtonFactoryLoader()
 engineFactory = protonFactoryLoader.loadFactory(EngineFactory)
 messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
 messengerFactory = protonFactoryLoader.loadFactory(MessengerFactory)
+dataFactory = protonFactoryLoader.loadFactory(DataFactory)
+
 
 
 class Endpoint(object):
@@ -501,17 +523,453 @@ The idle timeout of the connection (in milliseconds).
     #return pn_transport_get_frames_input(self._trans)
     raise Skipped()
 
+class UnmappedType:
+
+  def __init__(self, msg):
+    self.msg = msg
+
+  def __repr__(self):
+    return "UnmappedType(%s)" % self.msg
+
+
+class ulong(long):
+
+  def __repr__(self):
+    return "ulong(%s)" % long.__repr__(self)
+
+class timestamp(long):
+
+  def __repr__(self):
+    return "timestamp(%s)" % long.__repr__(self)
+
 class symbol(unicode):
 
   def __repr__(self):
     return "symbol(%s)" % unicode.__repr__(self)
 
+class char(unicode):
+
+  def __repr__(self):
+    return "char(%s)" % unicode.__repr__(self)
+
+class Described(object):
+
+  def __init__(self, descriptor, value):
+    self.descriptor = descriptor
+    self.value = value
+
+  def __repr__(self):
+    return "Described(%r, %r)" % (self.descriptor, self.value)
+
+  def __eq__(self, o):
+    if isinstance(o, Described):
+      return self.descriptor == o.descriptor and self.value == o.value
+    else:
+      return False
+
+UNDESCRIBED = Constant("UNDESCRIBED")
+
+class Array(object):
+
+  def __init__(self, descriptor, type, *elements):
+    self.descriptor = descriptor
+    self.type = type
+    self.elements = elements
+
+  def __repr__(self):
+    if self.elements:
+      els = ", %s"  % (", ".join(map(repr, self.elements)))
+    else:
+      els = ""
+    return "Array(%r, %r%s)" % (self.descriptor, self.type, els)
+
+  def __eq__(self, o):
+    if isinstance(o, Array):
+      return self.descriptor == o.descriptor and \
+          self.type == o.type and self.elements == o.elements
+    else:
+      return False
+
+
 class Data(object):
+  NULL = JData.DataType.NULL;
+  BOOL = JData.DataType.BOOL;
+  UBYTE = JData.DataType.UBYTE;
+  BYTE = JData.DataType.BYTE;
+  USHORT = JData.DataType.USHORT;
+  SHORT = JData.DataType.SHORT;
+  UINT = JData.DataType.UINT;
+  INT = JData.DataType.INT;
+  CHAR = JData.DataType.CHAR;
+  ULONG = JData.DataType.ULONG;
+  LONG = JData.DataType.LONG;
+  TIMESTAMP = JData.DataType.TIMESTAMP;
+  FLOAT = JData.DataType.FLOAT;
+  DOUBLE = JData.DataType.DOUBLE;
+  DECIMAL32 = JData.DataType.DECIMAL32;
+  DECIMAL64 = JData.DataType.DECIMAL64;
+  DECIMAL128 = JData.DataType.DECIMAL128;
+  UUID = JData.DataType.UUID;
+  BINARY = JData.DataType.BINARY;
+  STRING = JData.DataType.STRING;
+  SYMBOL = JData.DataType.SYMBOL;
+  DESCRIBED = JData.DataType.DESCRIBED;
+  ARRAY = JData.DataType.ARRAY;
+  LIST = JData.DataType.LIST;
+  MAP = JData.DataType.MAP;
 
-  SYMBOL = None
+  def __init__(self, capacity=16):
+    try:
+      self._data = dataFactory.createData(capacity)
+    except ProtonUnsupportedOperationException:
+      raise Skipped()
 
-  def __init__(self, *args, **kwargs):
-    raise Skipped()
+  def __del__(self):
+    if hasattr(self, "_data"):
+      pn_data_free(self._data)
+      del self._data
+
+  def clear(self):
+    self._data.clear()
+
+  def rewind(self):
+    self._data.rewind()
+
+  def next(self):
+    return self._data.next()
+
+  def prev(self):
+    return self._data.prev()
+
+  def enter(self):
+    return self._data.enter()
+
+  def exit(self):
+    return self._data.exit()
+
+  def type(self):
+    return self._data.type()
+
+  def encode(self):
+
+    b = self._data.encode()
+    return b.getArray().tostring()[b.getArrayOffset():b.getLength()]
+
+  def decode(self, encoded):
+    return self._data.decode(ByteBuffer.wrap(encoded))
+
+  def put_list(self):
+    self._data.putList()
+
+  def put_map(self):
+    self._data.putMap()
+
+  def put_array(self, described, element_type):
+    self._data.putArray(described, element_type)
+
+  def put_described(self):
+    self._data.putDescribed()
+
+  def put_null(self):
+    self._data.putNull()
+
+  def put_bool(self, b):
+    self._data.putBoolean(b)
+
+  def put_ubyte(self, ub):
+    self._data.putUnsignedByte(UnsignedByte.valueOf(ub))
+
+  def put_byte(self, b):
+    self._data.putByte(b)
+
+  def put_ushort(self, us):
+    self._data.putUnsignedShort(UnsignedShort.valueOf(us))
+
+  def put_short(self, s):
+    self._data.putShort(s)
+
+  def put_uint(self, ui):
+    self._data.putUnsignedInteger(UnsignedInteger.valueOf(ui))
+
+  def put_int(self, i):
+    self._data.putInt(i)
+
+  def put_char(self, c):
+    self._data.putChar(ord(c))
+
+  def put_ulong(self, ul):
+    self._data.putUnsignedLong(UnsignedLong.valueOf(ul))
+
+  def put_long(self, l):
+    self._data.putLong(l)
+
+  def put_timestamp(self, t):
+    self._data.putTimestamp(JDate(t))
+
+  def put_float(self, f):
+    self._data.putFloat(f)
+
+  def put_double(self, d):
+    self._data.putDouble(d)
+
+  def put_decimal32(self, d):
+    self._data.putDecimal32(Decimal32(d))
+
+  def put_decimal64(self, d):
+    self._data.putDecimal64(Decimal64(d))
+
+  def put_decimal128(self, d):
+    self._data.putDecimal128(Decimal128(d))
+
+  def put_uuid(self, u):
+    u = JUUID.fromString( str(u) )
+    self._data.putUUID(u)
+
+  def put_binary(self, b):
+    self._data.putBinary(b)
+
+  def put_string(self, s):
+    self._data.putString(s)
+
+  def put_symbol(self, s):
+    self._data.putSymbol(Symbol.valueOf(s))
+
+  def get_list(self):
+    return self._data.getList()
+
+  def get_map(self):
+    return self._data.getMap()
+
+  def get_array(self):
+    count = self._data.getArray()
+    described = self._data.isArrayDescribed()
+    type = self._data.getArrayType()
+    return count, described, type
+
+  def is_described(self):
+    return self._data.isDescribed()
+
+  def is_null(self):
+    return self._data.isNull()
+
+  def get_bool(self):
+    return self._data.getBoolean()
+
+  def get_ubyte(self):
+    return self._data.getUnsignedByte().shortValue()
+
+  def get_byte(self):
+    return self._data.getByte()
+
+  def get_ushort(self):
+    return self._data.getUnsignedShort().intValue()
+
+  def get_short(self):
+    return self._data.getShort()
+
+  def get_int(self):
+    return self._data.getInt()
+
+  def get_uint(self):
+    return self._data.getUnsignedInteger().longValue()
+
+  def get_char(self):
+    return char(unichr(self._data.getChar()))
+
+  def get_ulong(self):
+    return ulong(self._data.getUnsignedLong().longValue())
+
+  def get_long(self):
+    return self._data.getLong()
+
+  def get_timestamp(self):
+    return self._data.getTimestamp().getTime()
+
+  def get_float(self):
+    return self._data.getFloat()
+
+  def get_double(self):
+    return self._data.getDouble()
+
+  def get_decimal32(self):
+    return self._data.getDecimal32().getBits()
+
+  def get_decimal64(self):
+    return self._data.getDecimal64().getBits()
+
+  def get_decimal128(self):
+    return self._data.getDecimal128().asBytes().tostring()
+
+  def get_uuid(self):
+    return UUID(self._data.getUUID().toString() )
+
+  def get_binary(self):
+    b = self._data.getBinary()
+    return b.getArray().tostring()[b.getArrayOffset():b.getArrayOffset()+b.getLength()]
+
+  def get_string(self):
+    return self._data.getString()
+
+  def get_symbol(self):
+    return symbol(self._data.getSymbol().toString())
+
+  def put_dict(self, d):
+    self.put_map()
+    self.enter()
+    try:
+      for k, v in d.items():
+        self.put_object(k)
+        self.put_object(v)
+    finally:
+      self.exit()
+
+  def get_dict(self):
+    if self.enter():
+      try:
+        result = {}
+        while self.next():
+          k = self.get_object()
+          if self.next():
+            v = self.get_object()
+          else:
+            v = None
+          result[k] = v
+      finally:
+        self.exit()
+      return result
+
+  def put_sequence(self, s):
+    self.put_list()
+    self.enter()
+    try:
+      for o in s:
+        self.put_object(o)
+    finally:
+      self.exit()
+
+  def get_sequence(self):
+    if self.enter():
+      try:
+        result = []
+        while self.next():
+          result.append(self.get_object())
+      finally:
+        self.exit()
+      return result
+
+  def get_py_described(self):
+    if self.enter():
+      try:
+        self.next()
+        descriptor = self.get_object()
+        self.next()
+        value = self.get_object()
+      finally:
+        self.exit()
+      return Described(descriptor, value)
+
+  def put_py_described(self, d):
+    self.put_described()
+    self.enter()
+    try:
+      self.put_object(d.descriptor)
+      self.put_object(d.value)
+    finally:
+      self.exit()
+
+  def get_py_array(self):
+    count, described, type = self.get_array()
+    if self.enter():
+      try:
+        if described:
+          self.next()
+          descriptor = self.get_object()
+        else:
+          descriptor = UNDESCRIBED
+        elements = []
+        while self.next():
+          elements.append(self.get_object())
+      finally:
+        self.exit()
+      return Array(descriptor, type, *elements)
+
+  def put_py_array(self, a):
+    self.put_array(a.descriptor != UNDESCRIBED, a.type)
+    self.enter()
+    try:
+      for e in a.elements:
+        self.put_object(e)
+    finally:
+      self.exit()
+
+  put_mappings = {
+    None.__class__: lambda s, _: s.put_null(),
+    bool: put_bool,
+    dict: put_dict,
+    list: put_sequence,
+    tuple: put_sequence,
+    unicode: put_string,
+    bytes: put_binary,
+    symbol: put_symbol,
+    int: put_long,
+    char: put_char,
+    long: put_long,
+    ulong: put_ulong,
+    timestamp: put_timestamp,
+    float: put_double,
+    uuid.UUID: put_uuid,
+    Described: put_py_described,
+    Array: put_py_array
+    }
+
+  get_mappings = {
+    NULL: lambda s: None,
+    BOOL: get_bool,
+    BYTE: get_byte,
+    UBYTE: get_ubyte,
+    SHORT: get_short,
+    USHORT: get_ushort,
+    INT: get_int,
+    UINT: get_uint,
+    CHAR: get_char,
+    LONG: get_long,
+    ULONG: get_ulong,
+    TIMESTAMP: get_timestamp,
+    FLOAT: get_float,
+    DOUBLE: get_double,
+    DECIMAL32: get_decimal32,
+    DECIMAL64: get_decimal64,
+    DECIMAL128: get_decimal128,
+    UUID: get_uuid,
+    BINARY: get_binary,
+    STRING: get_string,
+    SYMBOL: get_symbol,
+    DESCRIBED: get_py_described,
+    ARRAY: get_py_array,
+    LIST: get_sequence,
+    MAP: get_dict
+    }
+
+  def put_object(self, obj):
+    putter = self.put_mappings[obj.__class__]
+    putter(self, obj)
+
+
+  def get_object(self):
+    type = self.type()
+    if type is None: return None
+    getter = self.get_mappings.get(type)
+    if getter:
+      return getter(self)
+    else:
+      self.dump()
+      return UnmappedType(str(type))
+
+  def copy(self, src):
+    self._data.copy(src._data)
+
+  def format(self):
+    return self._data.toString()
 
 class Messenger(object):
 
@@ -918,16 +1376,19 @@ class Listener(object):
 
 __all__ = [
            "ACCEPTED",
+           "Array",
            "LANGUAGE",
            "MANUAL",
            "PENDING",
            "REJECTED",
            "PN_SESSION_WINDOW",
+           "char",
            "Condition",
            "Connection",
            "Connector",
            "Data",
            "Delivery",
+           "Described",
            "Driver",
            "Endpoint",
            "Link",
@@ -947,7 +1408,10 @@ __all__ = [
            "SSLSessionDetails",
            "SSLUnavailable",
            "symbol",
+           "timestamp",
            "Terminus",
            "Timeout",
            "Transport",
-           "TransportException"]
+           "TransportException",
+           "ulong",
+           "UNDESCRIBED"]
