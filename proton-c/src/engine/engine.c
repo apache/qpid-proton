@@ -38,7 +38,7 @@
 void pn_delivery_buffer_init(pn_delivery_buffer_t *db, pn_sequence_t next, size_t capacity)
 {
   // XXX: error handling
-  db->deliveries = malloc(sizeof(pn_delivery_state_t) * capacity);
+  db->deliveries = (pn_delivery_state_t *) malloc(sizeof(pn_delivery_state_t) * capacity);
   db->next = next;
   db->capacity = capacity;
   db->head = 0;
@@ -250,7 +250,7 @@ void pn_transport_free(pn_transport_t *transport)
 
 void pn_add_session(pn_connection_t *conn, pn_session_t *ssn)
 {
-  PN_ENSURE(conn->sessions, conn->session_capacity, conn->session_count + 1);
+    PN_ENSURE(conn->sessions, conn->session_capacity, conn->session_count + 1, pn_session_t*);
   conn->sessions[conn->session_count++] = ssn;
   ssn->connection = conn;
   ssn->id = conn->session_count;
@@ -312,7 +312,7 @@ void pn_session_set_context(pn_session_t *session, void *context)
 
 void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 {
-  PN_ENSURE(ssn->links, ssn->link_capacity, ssn->link_count + 1);
+  PN_ENSURE(ssn->links, ssn->link_capacity, ssn->link_count + 1, pn_link_t*);
   ssn->links[ssn->link_count++] = link;
   link->session = ssn;
   link->id = ssn->link_count;
@@ -800,7 +800,7 @@ void pn_transport_init(pn_transport_t *transport)
 pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t *ssn)
 {
   int old_capacity = transport->session_capacity;
-  PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1);
+  PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1, pn_session_state_t);
   for (int i = old_capacity; i < transport->session_capacity; i++)
   {
     transport->sessions[i] = (pn_session_state_t) {.session=NULL,
@@ -816,13 +816,13 @@ pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t
 
 pn_session_state_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
 {
-  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1);
+  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1, pn_session_state_t *);
   return transport->channels[channel];
 }
 
 void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_state_t *state)
 {
-  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1);
+  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1, pn_session_state_t *);
   state->remote_channel = channel;
   transport->channels[channel] = state;
 }
@@ -1081,7 +1081,7 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
 pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *link)
 {
   int old_capacity = ssn_state->link_capacity;
-  PN_ENSURE(ssn_state->links, ssn_state->link_capacity, link->id + 1);
+  PN_ENSURE(ssn_state->links, ssn_state->link_capacity, link->id + 1, pn_link_state_t);
   for (int i = old_capacity; i < ssn_state->link_capacity; i++)
   {
     ssn_state->links[i] = (pn_link_state_t) {.link=NULL, .local_handle = -1,
@@ -1094,14 +1094,14 @@ pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *lin
 
 void pn_map_handle(pn_session_state_t *ssn_state, uint32_t handle, pn_link_state_t *state)
 {
-  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1);
+  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1, pn_link_state_t*);
   state->remote_handle = handle;
   ssn_state->handles[handle] = state;
 }
 
 pn_link_state_t *pn_handle_state(pn_session_state_t *ssn_state, uint32_t handle)
 {
-  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1);
+  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1, pn_link_state_t*);
   return ssn_state->handles[handle];
 }
 
@@ -1693,7 +1693,7 @@ int pn_do_flow(pn_dispatcher_t *disp)
 
 int pn_do_disposition(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = disp->context;
+  pn_transport_t *transport = (pn_transport_t *) disp->context;
   bool role;
   pn_sequence_t first, last;
   uint64_t code;

@@ -46,7 +46,7 @@ pn_timestamp_t pn_i_now(void)
 #include <uuid/uuid.h>
 #include <stdlib.h>
 char* pn_i_genuuid(void) {
-    char *generated = malloc(37*sizeof(char));
+    char *generated = (char *) malloc(37*sizeof(char));
     uuid_t uuid;
     uuid_generate(uuid);
     uuid_unparse(uuid, generated);

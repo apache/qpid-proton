@@ -132,7 +132,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   }
 
   if (buf->capacity != old_capacity) {
-    buf->bytes = realloc(buf->bytes, buf->capacity);
+    buf->bytes = (char *) realloc(buf->bytes, buf->capacity);
 
     if (wrapped) {
       size_t n = old_capacity - old_head;

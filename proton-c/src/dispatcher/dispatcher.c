@@ -380,7 +380,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
     while (!(n = pn_write_frame(disp->output + disp->available,
                                 disp->capacity - disp->available, frame))) {
       disp->capacity *= 2;
-      disp->output = realloc(disp->output, disp->capacity);
+      disp->output = (char *) realloc(disp->output, disp->capacity);
     }
     disp->output_frames_ct += 1;
     if (disp->trace & PN_TRACE_RAW) {

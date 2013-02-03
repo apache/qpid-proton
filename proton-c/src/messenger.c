@@ -83,7 +83,7 @@ void pn_queue_init(pn_queue_t *queue)
   queue->window = 0;
   queue->lwm = 0;
   queue->hwm = 0;
-  queue->deliveries = calloc(queue->capacity, sizeof(pn_delivery_t *));
+  queue->deliveries = (pn_delivery_t **) calloc(queue->capacity, sizeof(pn_delivery_t *));
 }
 
 void pn_queue_tini(pn_queue_t *queue)
@@ -122,13 +122,13 @@ void pn_queue_gc(pn_queue_t *queue)
 
 static void pn_incref(pn_connection_t *conn)
 {
-  pn_connection_ctx_t *ctx = pn_connection_get_context(conn);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
   ctx->refcount++;
 }
 
 static void pn_decref(pn_connection_t *conn)
 {
-  pn_connection_ctx_t *ctx = pn_connection_get_context(conn);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
   ctx->refcount--;
   if (ctx->refcount == 0) {
     pn_connection_free(conn);
@@ -178,7 +178,7 @@ pn_sequence_t pn_queue_add(pn_queue_t *queue, pn_delivery_t *delivery)
 {
   pn_sequence_t id = queue->hwm++;
   size_t offset = id - queue->lwm;
-  PN_ENSUREZ(queue->deliveries, queue->capacity, offset + 1);
+  PN_ENSUREZ(queue->deliveries, queue->capacity, offset + 1, pn_delivery_t *);
   assert(offset >= 0 && offset < queue->capacity);
   queue->deliveries[offset] = delivery;
   pn_delivery_set_context(delivery, (void *) (intptr_t) id);
@@ -411,7 +411,7 @@ static void pn_transport_config(pn_messenger_t *messenger,
                                 pn_connector_t *connector,
                                 pn_connection_t *connection)
 {
-  pn_connection_ctx_t *ctx = pn_connection_get_context(connection);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_transport_t *transport = pn_connector_transport(connector);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
     pn_ssl_domain_t *d = pn_ssl_domain( PN_SSL_MODE_CLIENT );
@@ -562,7 +562,7 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
 {
   pn_connection_t *connection = pn_connection();
   if (!connection) return NULL;
-  pn_connection_ctx_t *ctx = malloc(sizeof(pn_connection_ctx_t));
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) malloc(sizeof(pn_connection_ctx_t));
   ctx->refcount = 0;
   ctx->scheme = pn_strdup(scheme);
   ctx->user = pn_strdup(user);
@@ -733,7 +733,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
     pn_connection_t *connection = pn_connector_connection(ctor);
-    pn_connection_ctx_t *ctx = pn_connection_get_context(connection);
+    pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
     if (pn_streq(scheme, ctx->scheme) && pn_streq(user, ctx->user) &&
         pn_streq(pass, ctx->pass) && pn_streq(host, ctx->host) &&
         pn_streq(port, ctx->port)) {
@@ -761,7 +761,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, 
 
 pn_subscription_t *pn_subscription(pn_messenger_t *messenger, const char *scheme)
 {
-  PN_ENSURE(messenger->subscriptions, messenger->sub_capacity, messenger->sub_count + 1);
+  PN_ENSURE(messenger->subscriptions, messenger->sub_capacity, messenger->sub_count + 1, pn_subscription_t);
   pn_subscription_t *sub = messenger->subscriptions + messenger->sub_count++;
   sub->scheme = pn_strdup(scheme);
   sub->context = NULL;
@@ -858,7 +858,7 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
   } else {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (src) {
-      pn_subscription_t *sub = pn_link_get_context(src);
+      pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(src);
       return sub;
     } else {
       pn_error_format(messenger->error, PN_ERR,
@@ -1109,7 +1109,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
     while (d) {
       if (pn_delivery_readable(d) && !pn_delivery_partial(d)) {
         pn_link_t *l = pn_delivery_link(d);
-        pn_subscription_t *sub = pn_link_get_context(l);
+        pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(l);
         size_t pending = pn_delivery_pending(d);
         pn_buffer_t *buf = messenger->buffer;
         int err = pn_buffer_ensure(buf, pending + 1);

@@ -130,7 +130,7 @@ void server_callback(pn_connector_t *ctor)
   }
 
   pn_connection_t *conn = pn_connector_connection(ctor);
-  struct server_context *ctx = pn_connector_context(ctor);
+  struct server_context *ctx = (struct server_context *) pn_connector_context(ctor);
   char tagstr[1024];
   char msg[10*1024];
   char data[ctx->size + 16];

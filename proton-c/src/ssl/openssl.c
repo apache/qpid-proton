@@ -210,7 +210,7 @@ static bool match_dns_pattern( const char *hostname,
     const char *cptr;
     int len;
 
-    cptr = memchr( pattern, '.', plen );
+    cptr = (const char *) memchr( pattern, '.', plen );
     len = (cptr) ? cptr - pattern : plen;
     if (len > sizeof(plabel) - 1) return false;
     memcpy( plabel, pattern, len );
@@ -218,7 +218,7 @@ static bool match_dns_pattern( const char *hostname,
     pattern = cptr + 1;
     plen -= len;
 
-    cptr = memchr( hostname, '.', slen );
+    cptr = (const char *) memchr( hostname, '.', slen );
     len = (cptr) ? cptr - hostname : slen;
     if (len > sizeof(slabel) - 1) return false;
     memcpy( slabel, hostname, len );
@@ -255,7 +255,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
     return preverify_ok;
 
   X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
-  SSL *ssn = X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
+  SSL *ssn = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
   if (!ssn) {
     _log_error("Error: unexpected error - SSL session info not available for peer verify!\n");
     return 0;  // fail connection
@@ -419,7 +419,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
                                               NULL, NULL, NULL);
   }
 
-  pn_ssl_domain_t *domain = calloc(1, sizeof(pn_ssl_domain_t));
+  pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
 
   domain->ref_count = 1;
@@ -712,7 +712,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   if (!transport) return NULL;
   if (transport->ssl) return transport->ssl;
 
-  pn_ssl_t *ssl = calloc(1, sizeof(pn_ssl_t));
+  pn_ssl_t *ssl = (pn_ssl_t *) calloc(1, sizeof(pn_ssl_t));
   if (!ssl) return NULL;
   ssl->transport = transport;
   transport->ssl = ssl;

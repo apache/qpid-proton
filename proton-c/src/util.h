@@ -97,18 +97,18 @@ char *pn_strndup(const char *src, size_t n);
 #define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
 #define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))
 
-#define PN_ENSURE(ARRAY, CAPACITY, COUNT)                      \
+#define PN_ENSURE(ARRAY, CAPACITY, COUNT, TYPE)                 \
   while ((CAPACITY) < (COUNT)) {                                \
     (CAPACITY) = (CAPACITY) ? 2 * (CAPACITY) : 16;              \
-    (ARRAY) = realloc((ARRAY), (CAPACITY) * sizeof (*(ARRAY))); \
+    (ARRAY) = (TYPE *) realloc((ARRAY), (CAPACITY) * sizeof (TYPE));    \
   }                                                             \
 
-#define PN_ENSUREZ(ARRAY, CAPACITY, COUNT)                \
+#define PN_ENSUREZ(ARRAY, CAPACITY, COUNT, TYPE)           \
   {                                                        \
     size_t _old_capacity = (CAPACITY);                     \
-    PN_ENSURE((ARRAY), (CAPACITY), (COUNT));               \
+    PN_ENSURE(ARRAY, CAPACITY, COUNT, TYPE);               \
     memset((ARRAY) + _old_capacity, 0,                     \
-           sizeof(*(ARRAY))*((CAPACITY) - _old_capacity)); \
+           sizeof(TYPE)*((CAPACITY) - _old_capacity));     \
   }
 
 #endif /* util.h */
