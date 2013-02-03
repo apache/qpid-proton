@@ -357,7 +357,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     pn_error_free(messenger->error);
     pn_queue_tini(&messenger->incoming);
     pn_queue_tini(&messenger->outgoing);
-    for (int i = 0; i < messenger->sub_count; i++) {
+    for (unsigned i = 0; i < messenger->sub_count; i++) {
       free(messenger->subscriptions[i].scheme);
     }
     free(messenger->subscriptions);
@@ -1116,7 +1116,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
         if (err) return pn_error_format(messenger->error, err, "get: error growing buffer");
         char *encoded = pn_buffer_bytes(buf).start;
         ssize_t n = pn_link_recv(l, encoded, pending);
-        if (n != pending) {
+        if (n != (ssize_t) pending) {
           return pn_error_format(messenger->error, n, "didn't receive pending bytes: %zi", n);
         }
         n = pn_link_recv(l, encoded + pending, 1);

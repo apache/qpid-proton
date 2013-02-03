@@ -231,7 +231,7 @@ void pn_transport_free(pn_transport_t *transport)
   pn_ssl_free(transport->ssl);
   pn_sasl_free(transport->sasl);
   pn_dispatcher_free(transport->disp);
-  for (int i = 0; i < transport->session_capacity; i++) {
+  for (unsigned i = 0; i < transport->session_capacity; i++) {
     pn_delivery_buffer_free(&transport->sessions[i].incoming);
     pn_delivery_buffer_free(&transport->sessions[i].outgoing);
     free(transport->sessions[i].links);
@@ -258,7 +258,7 @@ void pn_add_session(pn_connection_t *conn, pn_session_t *ssn)
 
 void pn_remove_session(pn_connection_t *conn, pn_session_t *ssn)
 {
-  for (int i = 0; i < conn->session_count; i++)
+  for (unsigned i = 0; i < conn->session_count; i++)
   {
     if (conn->sessions[i] == ssn)
     {
@@ -320,7 +320,7 @@ void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 
 void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 {
-  for (int i = 0; i < ssn->link_count; i++)
+  for (unsigned i = 0; i < ssn->link_count; i++)
   {
     if (ssn->links[i] == link)
     {
@@ -801,7 +801,7 @@ pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t
 {
   int old_capacity = transport->session_capacity;
   PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1, pn_session_state_t);
-  for (int i = old_capacity; i < transport->session_capacity; i++)
+  for (unsigned i = old_capacity; i < transport->session_capacity; i++)
   {
     transport->sessions[i] = (pn_session_state_t) {.session=NULL,
                                                    .local_channel=-1,
@@ -816,13 +816,13 @@ pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t
 
 pn_session_state_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
 {
-  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1, pn_session_state_t *);
+    PN_ENSUREZ(transport->channels, transport->channel_capacity, (size_t) channel + 1, pn_session_state_t *);
   return transport->channels[channel];
 }
 
 void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_state_t *state)
 {
-  PN_ENSUREZ(transport->channels, transport->channel_capacity, channel + 1, pn_session_state_t *);
+    PN_ENSUREZ(transport->channels, transport->channel_capacity, (size_t) channel + 1, pn_session_state_t *);
   state->remote_channel = channel;
   transport->channels[channel] = state;
 }
@@ -1082,7 +1082,7 @@ pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *lin
 {
   int old_capacity = ssn_state->link_capacity;
   PN_ENSURE(ssn_state->links, ssn_state->link_capacity, link->id + 1, pn_link_state_t);
-  for (int i = old_capacity; i < ssn_state->link_capacity; i++)
+  for (unsigned i = old_capacity; i < ssn_state->link_capacity; i++)
   {
     ssn_state->links[i] = (pn_link_state_t) {.link=NULL, .local_handle = -1,
                                              .remote_handle=-1};
@@ -1459,7 +1459,7 @@ pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_bytes_t name, bo
 {
   pn_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
 
-  for (int i = 0; i < ssn_state->session->link_count; i++)
+  for (unsigned i = 0; i < ssn_state->session->link_count; i++)
   {
     pn_link_t *link = ssn_state->session->links[i];
     if (link->endpoint.type == type &&
@@ -2797,7 +2797,7 @@ static inline int pn_set_buf(char *dst, const char *src, size_t capacity)
     dst[0] = '\0';
     return 0;
   } else {
-    int n = strlen(src) + 1;
+    unsigned n = strlen(src) + 1;
     if (n > capacity) {
       return PN_ARG_ERR;
     } else {

@@ -198,7 +198,7 @@ static bool match_dns_pattern( const char *hostname,
 {
 
   if (memchr( pattern, '*', plen ) == NULL)
-    return (plen == strlen(hostname) &&
+    return (plen == (int) strlen(hostname) &&
             strncasecmp( pattern, hostname, plen ) == 0);
 
   /* dns wildcarded pattern - RFC2818 */
@@ -212,7 +212,7 @@ static bool match_dns_pattern( const char *hostname,
 
     cptr = (const char *) memchr( pattern, '.', plen );
     len = (cptr) ? cptr - pattern : plen;
-    if (len > sizeof(plabel) - 1) return false;
+    if (len > (int) sizeof(plabel) - 1) return false;
     memcpy( plabel, pattern, len );
     plabel[len] = 0;
     pattern = cptr + 1;
@@ -220,7 +220,7 @@ static bool match_dns_pattern( const char *hostname,
 
     cptr = (const char *) memchr( hostname, '.', slen );
     len = (cptr) ? cptr - hostname : slen;
-    if (len > sizeof(slabel) - 1) return false;
+    if (len > (int) sizeof(slabel) - 1) return false;
     memcpy( slabel, hostname, len );
     slabel[len] = 0;
     hostname = cptr + 1;
@@ -1218,7 +1218,7 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
     if (hostname) *hostname = '\0';
     return 0;
   }
-  int len = strlen(ssl->peer_hostname);
+  unsigned len = strlen(ssl->peer_hostname);
   if (hostname) {
     if (len >= *bufsize) return -1;
     strcpy( hostname, ssl->peer_hostname );

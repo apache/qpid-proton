@@ -336,7 +336,7 @@ void client_callback(pn_connector_t *ctor)
         printf("  payload = \"");
       }
       while (true) {
-        size_t n = pn_link_recv(link, msg, 1024);
+        ssize_t n = pn_link_recv(link, msg, 1024);
         if (n == PN_EOS) {
           pn_link_advance(link);
           pn_delivery_update(delivery, PN_ACCEPTED);

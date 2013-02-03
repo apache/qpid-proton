@@ -238,9 +238,9 @@ void pn_buffer_clear(pn_buffer_t *buf)
 static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {
   if (sz == 0) return;
 
-  int c = 0, v = 0;
+  unsigned c = 0, v = 0;
   for (; c < buf->capacity; v++) {
-    int t = v, tp = v + sz;
+    unsigned t = v, tp = v + sz;
     char tmp = buf->bytes[v];
     c++;
     while (tp != v) {

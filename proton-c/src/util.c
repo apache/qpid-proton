@@ -36,7 +36,7 @@
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {
   int idx = 0;
-  for (int i = 0; i < size; i++)
+  for (unsigned i = 0; i < size; i++)
   {
     uint8_t c = src[i];
     if (isprint(c)) {
@@ -162,7 +162,7 @@ char *pn_strdup(const char *src)
 char *pn_strndup(const char *src, size_t n)
 {
   if (src) {
-    int size = 0;
+    unsigned size = 0;
     for (const char *c = src; size < n && *c; c++) {
       size++;
     }

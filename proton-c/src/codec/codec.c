@@ -129,7 +129,7 @@ int pn_bytes_format(pn_bytes_t *bytes, const char *fmt, ...)
   va_start(ap, fmt);
   int n = vsnprintf(bytes->start, bytes->size, fmt, ap);
   va_end(ap);
-  if (n >= bytes->size) {
+  if (n >= (int) bytes->size) {
     return PN_OVERFLOW;
   } else if (n >= 0) {
     pn_bytes_ltrim(bytes, n);
@@ -261,7 +261,7 @@ int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom)
         pfx = ":";
         bin = atom.u.as_symbol;
         quote = false;
-        for (int i = 0; i < bin.size; i++) {
+        for (unsigned i = 0; i < bin.size; i++) {
           if (!isalpha(bin.start[i])) {
             quote = true;
             break;
@@ -914,7 +914,7 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
         if (type < 0) return type;
         atoms->start[0] = (pn_iatom_t) {.type=PN_TYPE, .u.type=type};
         pn_atoms_ltrim(atoms, 1);
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
           e = pn_decode_value(bytes, atoms, acode);
           if (e) return e;
@@ -937,7 +937,7 @@ int pn_decode_value(pn_bytes_t *bytes, pn_atoms_t *atoms, uint8_t code)
       return PN_ARG_ERR;
     }
 
-    for (int i = 0; i < count; i++)
+    for (unsigned i = 0; i < count; i++)
     {
       int e = pn_decode_atom(bytes, atoms);
       if (e) return e;
@@ -1087,7 +1087,7 @@ pn_bytes_t *pn_data_bytes(pn_data_t *data, pn_node_t *node)
 
 void pn_data_rebase(pn_data_t *data, char *base)
 {
-  for (int i = 0; i < data->size; i++) {
+  for (unsigned i = 0; i < data->size; i++) {
     pn_node_t *node = &data->nodes[i];
     if (node->data) {
       pn_bytes_t *bytes = pn_data_bytes(data, node);
@@ -1919,7 +1919,7 @@ void pn_data_dump(pn_data_t *data)
 {
   char buf[1024];
   printf("{current=%zi, parent=%zi}\n", data->current, data->parent);
-  for (int i = 0; i < data->size; i++)
+  for (unsigned i = 0; i < data->size; i++)
   {
     pn_node_t *node = &data->nodes[i];
     pn_bytes_t bytes = pn_bytes(1024, buf);
@@ -2240,7 +2240,7 @@ int pn_data_parse_atoms(pn_data_t *data, pn_atoms_t atoms, int offset, int limit
   int count = 0;
   int step, i;
 
-  for (i = offset; i < atoms.size; i++) {
+  for (i = offset; i < (int) atoms.size; i++) {
     if (count == limit) return i - offset;
     pn_iatom_t atom = atoms.start[i];
     if (atom.type == PN_TYPE) return PN_ERR;

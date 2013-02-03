@@ -757,7 +757,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   d->nfds++;
 
   pn_listener_t *l = d->listener_head;
-  for (int i = 0; i < d->listener_count; i++) {
+  for (unsigned i = 0; i < d->listener_count; i++) {
     d->fds[d->nfds].fd = l->fd;
     d->fds[d->nfds].events = POLLIN;
     d->fds[d->nfds].revents = 0;
@@ -767,7 +767,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
   }
 
   pn_connector_t *c = d->connector_head;
-  for (int i = 0; i < d->connector_count; i++)
+  for (unsigned i = 0; i < d->connector_count; i++)
   {
     if (!c->closed) {
       d->wakeup = pn_timestamp_min(d->wakeup, c->wakeup);
