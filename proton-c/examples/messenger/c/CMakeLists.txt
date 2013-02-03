@@ -28,3 +28,7 @@ set_target_properties (
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
 )
+
+if (BUILD_WITH_CXX)
+  set_source_files_properties (recv.c send.c PROPERTIES LANGUAGE CXX)
+endif (BUILD_WITH_CXX)

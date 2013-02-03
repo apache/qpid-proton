@@ -187,9 +187,15 @@ if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
-  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors -Wc++-compat -Wwrite-strings -Wsign-compare -Wvla")
-  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-  set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  if (NOT BUILD_WITH_CXX)
+    set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+    set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
+  else (NOT BUILD_WITH_CXX)
+    # allow "%z" format specifier
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
+  endif (NOT BUILD_WITH_CXX)
   if (ENABLE_UNDEFINED_ERROR)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")
     set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
@@ -275,6 +281,16 @@ set_target_properties (
     PROPERTIES
     COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
 )
+
+if (BUILD_WITH_CXX)
+  # tell CMake to use C++ for proton source files ending in ".c"
+  set(pn_all_sources ${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
+  foreach (src_file ${pn_all_sources})
+    if (${src_file} MATCHES "^.*[.]c$")
+      set_source_files_properties (${src_file} PROPERTIES LANGUAGE CXX)
+    endif (${src_file} MATCHES "^.*[.]c$")
+  endforeach (src_file)
+endif (BUILD_WITH_CXX)
 
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton

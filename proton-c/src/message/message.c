@@ -265,7 +265,9 @@ pn_data_t *pn_message_id(pn_message_t *msg)
 }
 pn_atom_t pn_message_get_id(pn_message_t *msg)
 {
-  return msg ? pn_data_get_atom(msg->id) : (pn_atom_t) {.type=PN_NULL};
+  if (msg) return pn_data_get_atom(msg->id);
+  pn_atom_t atom = {PN_NULL};
+  return atom;
 }
 int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
 {
@@ -366,7 +368,9 @@ pn_data_t *pn_message_correlation_id(pn_message_t *msg)
 }
 pn_atom_t pn_message_get_correlation_id(pn_message_t *msg)
 {
-  return msg ? pn_data_get_atom(msg->correlation_id) : (pn_atom_t) {.type=PN_NULL};
+  if (msg) return pn_data_get_atom(msg->correlation_id);
+  pn_atom_t atom = {PN_NULL};
+  return atom;
 }
 int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t atom)
 {

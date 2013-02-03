@@ -36,7 +36,7 @@
 #include <proton/codec.h>
 #include <proton/buffer.h>
 #include <proton/parser.h>
-#include <inttypes.h>
+#include "platform_fmt.h"
 #include "protocol.h"
 
 typedef struct {

@@ -1021,7 +1021,7 @@ static pn_status_t disp2status(pn_disposition_t disp)
     assert(0);
   }
 
-  return 0;
+  return (pn_status_t) 0;
 }
 
 pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
@@ -1043,7 +1043,7 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
 int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
 {
   pn_queue_t *queue = pn_tracker_queue(messenger, tracker);
-  return pn_queue_update(queue, pn_tracker_sequence(tracker), 0, flags, true, true);
+  return pn_queue_update(queue, pn_tracker_sequence(tracker), (pn_status_t) 0, flags, true, true);
 }
 
 bool pn_messenger_sent(pn_messenger_t *messenger)
@@ -1184,7 +1184,7 @@ int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
   }
 
   return pn_queue_update(&messenger->incoming, pn_tracker_sequence(tracker),
-                         PN_ACCEPTED, flags, false, false);
+                         (pn_status_t) PN_ACCEPTED, flags, false, false);
 }
 
 int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
@@ -1195,7 +1195,7 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
   }
 
   return pn_queue_update(&messenger->incoming, pn_tracker_sequence(tracker),
-                         PN_REJECTED, flags, false, false);
+                         (pn_status_t) PN_REJECTED, flags, false, false);
 }
 
 int pn_messenger_queued(pn_messenger_t *messenger, bool sender)

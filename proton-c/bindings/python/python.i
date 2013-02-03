@@ -149,7 +149,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %inline %{
   void wrap_pn_delivery_tag(pn_delivery_t *delivery, char **ALLOC_OUTPUT, size_t *ALLOC_SIZE) {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
-    *ALLOC_OUTPUT = malloc(tag.size);
+    *ALLOC_OUTPUT = (char *) malloc(tag.size);
     *ALLOC_SIZE = tag.size;
     memcpy(*ALLOC_OUTPUT, tag.bytes, tag.size);
   }
@@ -182,7 +182,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_listener_context) wrap_pn_listener_context;
 %inline {
   PyObject *wrap_pn_listener_context(pn_listener_t *l) {
-    PyObject *result = pn_listener_context(l);
+    PyObject *result = (PyObject *) pn_listener_context(l);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -206,7 +206,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_listener_free) wrap_pn_listener_free;
 %inline %{
   void wrap_pn_listener_free(pn_listener_t *l) {
-    PyObject *obj = pn_listener_context(l);
+    PyObject *obj = (PyObject *) pn_listener_context(l);
     Py_XDECREF(obj);
     pn_listener_free(l);
   }
@@ -225,7 +225,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connector_context) wrap_pn_connector_context;
 %inline {
   PyObject *wrap_pn_connector_context(pn_connector_t *c) {
-    PyObject *result = pn_connector_context(c);
+    PyObject *result = (PyObject *) pn_connector_context(c);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -249,7 +249,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connector_free) wrap_pn_connector_free;
 %inline %{
   void wrap_pn_connector_free(pn_connector_t *c) {
-    PyObject *obj = pn_connector_context(c);
+    PyObject *obj = (PyObject *) pn_connector_context(c);
     Py_XDECREF(obj);
     pn_connector_free(c);
   }
@@ -259,7 +259,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connection_get_context) wrap_pn_connection_get_context;
 %inline {
   PyObject *wrap_pn_connection_get_context(pn_connection_t *c) {
-    PyObject *result = pn_connection_get_context(c);
+    PyObject *result = (PyObject *) pn_connection_get_context(c);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -283,7 +283,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connection_free) wrap_pn_connection_free;
 %inline %{
   void wrap_pn_connection_free(pn_connection_t *c) {
-    PyObject *obj = pn_connection_get_context(c);
+    PyObject *obj = (PyObject *) pn_connection_get_context(c);
     Py_XDECREF(obj);
     pn_connection_free(c);
   }
@@ -293,7 +293,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_session_get_context) wrap_pn_session_get_context;
 %inline {
   PyObject *wrap_pn_session_get_context(pn_session_t *s) {
-    PyObject *result = pn_session_get_context(s);
+    PyObject *result = (PyObject *) pn_session_get_context(s);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -317,7 +317,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_session_free) wrap_pn_session_free;
 %inline %{
   void wrap_pn_session_free(pn_session_t *s) {
-    PyObject *obj = pn_session_get_context(s);
+    PyObject *obj = (PyObject *) pn_session_get_context(s);
     Py_XDECREF(obj);
     pn_session_free(s);
   }
@@ -327,7 +327,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_link_get_context) wrap_pn_link_get_context;
 %inline {
   PyObject *wrap_pn_link_get_context(pn_link_t *l) {
-    PyObject *result = pn_link_get_context(l);
+    PyObject *result = (PyObject *) pn_link_get_context(l);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -351,7 +351,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_link_free) wrap_pn_link_free;
 %inline %{
   void wrap_pn_link_free(pn_link_t *l) {
-    PyObject *obj = pn_link_get_context(l);
+    PyObject *obj = (PyObject *) pn_link_get_context(l);
     Py_XDECREF(obj);
     pn_link_free(l);
   }
@@ -361,7 +361,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_delivery_get_context) wrap_pn_delivery_get_context;
 %inline {
   PyObject *wrap_pn_delivery_get_context(pn_delivery_t *d) {
-    PyObject *result = pn_delivery_get_context(d);
+    PyObject *result = (PyObject *) pn_delivery_get_context(d);
     if (result) {
       Py_INCREF(result);
       return result;
@@ -385,7 +385,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_delivery_settle) wrap_pn_delivery_settle;
 %inline %{
   void wrap_pn_delivery_settle(pn_delivery_t *d) {
-    PyObject *obj = pn_delivery_get_context(d);
+    PyObject *obj = (PyObject *) pn_delivery_get_context(d);
     Py_XDECREF(obj);
     pn_delivery_settle(d);
   }

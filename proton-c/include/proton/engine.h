@@ -69,7 +69,10 @@ typedef struct pn_delivery_tag_t {
   const char *bytes;
 } pn_delivery_tag_t;
 
-#define pn_dtag(BYTES, SIZE) ((pn_delivery_tag_t) {(SIZE), (BYTES)})
+static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
+  pn_delivery_tag_t dtag = {size, bytes};
+  return dtag;
+}
 
 typedef int pn_state_t;     /**< encodes the state of an endpoint */
 

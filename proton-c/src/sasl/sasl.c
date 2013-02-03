@@ -400,7 +400,7 @@ int pn_do_outcome(pn_dispatcher_t *disp)
   uint8_t outcome;
   int err = pn_scan_args(disp, "D.[B]", &outcome);
   if (err) return err;
-  sasl->outcome = outcome;
+  sasl->outcome = (pn_sasl_outcome_t) outcome;
   sasl->rcvd_done = true;
   sasl->sent_done = true;
   disp->halt = true;

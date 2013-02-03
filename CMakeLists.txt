@@ -18,7 +18,12 @@
 #
 cmake_minimum_required (VERSION 2.6)
 
-project (Proton C)
+option(BUILD_WITH_CXX "Compile Proton using C++" OFF)
+if (BUILD_WITH_CXX)
+  project (Proton C CXX)
+else (BUILD_WITH_CXX)
+  project (Proton C)
+endif (BUILD_WITH_CXX)
 
 set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 3)

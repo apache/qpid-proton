@@ -167,7 +167,7 @@ typedef enum {
   PN_SSL_VERIFY_NULL=0,   /**< internal use only */
   PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
   PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
-  PN_SSL_VERIFY_PEER_NAME,/**< require valid certificate and matching name */
+  PN_SSL_VERIFY_PEER_NAME /**< require valid certificate and matching name */
 } pn_ssl_verify_mode_t;
 
 /** Configure the level of verification used on the peer certificate.

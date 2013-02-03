@@ -24,7 +24,6 @@
 #include <string.h>
 #include <proton/framing.h>
 #include "protocol.h"
-#include <inttypes.h>
 
 #include <assert.h>
 #include <stdarg.h>
@@ -32,6 +31,7 @@
 
 #include "../sasl/sasl-internal.h"
 #include "../ssl/ssl-internal.h"
+#include "../platform_fmt.h"
 
 // delivery buffers
 
@@ -397,7 +397,7 @@ void pn_link_set_context(pn_link_t *link, void *context)
 
 void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
 {
-  endpoint->type = type;
+  endpoint->type = (pn_endpoint_type_t) type;
   endpoint->state = PN_LOCAL_UNINIT | PN_REMOTE_UNINIT;
   endpoint->error = pn_error();
   pn_condition_init(&endpoint->condition);
@@ -803,9 +803,8 @@ pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t
   PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1, pn_session_state_t);
   for (unsigned i = old_capacity; i < transport->session_capacity; i++)
   {
-    transport->sessions[i] = (pn_session_state_t) {.session=NULL,
-                                                   .local_channel=-1,
-                                                   .remote_channel=-1};
+    pn_session_state_t t = {NULL, -1, -1};
+    transport->sessions[i] = t;
     pn_delivery_buffer_init(&transport->sessions[i].incoming, 0, PN_SESSION_WINDOW);
     pn_delivery_buffer_init(&transport->sessions[i].outgoing, 0, PN_SESSION_WINDOW);
   }
@@ -1078,14 +1077,22 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   return 0;
 }
 
+void pn_link_state_init(pn_link_state_t *ls)
+{
+  ls->link = NULL;
+  ls->local_handle = -1;
+  ls->remote_handle = -1;
+  ls->delivery_count = 0;
+  ls->link_credit = 0;
+}
+
 pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *link)
 {
   int old_capacity = ssn_state->link_capacity;
   PN_ENSURE(ssn_state->links, ssn_state->link_capacity, link->id + 1, pn_link_state_t);
   for (unsigned i = old_capacity; i < ssn_state->link_capacity; i++)
   {
-    ssn_state->links[i] = (pn_link_state_t) {.link=NULL, .local_handle = -1,
-                                             .remote_handle=-1};
+    pn_link_state_init(&ssn_state->links[i]);
   }
   pn_link_state_t *state = &ssn_state->links[link->id];
   state->link = link;
@@ -1254,7 +1261,7 @@ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
     pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
     return pn_dtag(tag.start, tag.size);
   } else {
-    return (pn_delivery_tag_t) {0};
+    return pn_dtag(0, 0);
   }
 }
 
@@ -1710,7 +1717,7 @@ int pn_do_disposition(pn_dispatcher_t *disp)
   if (!last_init) last = first;
 
   pn_session_state_t *ssn_state = pn_channel_state(transport, disp->channel);
-  pn_disposition_t dispo = 0;
+  pn_disposition_t dispo = (pn_disposition_t) 0;
   if (code_init) {
     switch (code)
     {

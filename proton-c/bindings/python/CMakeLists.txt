@@ -19,6 +19,9 @@
 set(CMAKE_SWIG_FLAGS "-threads")
 
 include_directories (${PYTHON_INCLUDE_PATH})
+if (BUILD_WITH_CXX)
+   SET_SOURCE_FILES_PROPERTIES(python.i PROPERTIES CPLUSPLUS ON)
+endif (BUILD_WITH_CXX)
 swig_add_module(cproton python python.i)
 swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES})
 set_target_properties(_cproton

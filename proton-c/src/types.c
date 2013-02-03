@@ -25,7 +25,8 @@
 
 pn_bytes_t pn_bytes(size_t size, char *start)
 {
-  return (pn_bytes_t) {size, start};
+  pn_bytes_t bytes = {size, start};
+  return bytes;
 }
 
 pn_bytes_t pn_bytes_dup(size_t size, const char *start)
