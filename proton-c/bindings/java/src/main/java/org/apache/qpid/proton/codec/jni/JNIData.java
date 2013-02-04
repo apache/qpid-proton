@@ -462,10 +462,10 @@ public class JNIData implements Data
     public void putBinary(final Binary bytes)
     {
         pn_bytes_t bytes_t = new pn_bytes_t();
-        bytes_t.setSize(bytes.getLength());
         byte[] data = new byte[bytes.getLength()];
         System.arraycopy(bytes.getArray(),bytes.getArrayOffset(),data,0,bytes.getLength());
-        bytes_t.setStart(data);
+        Proton.pn_bytes_from_array(bytes_t, data);
+
         Proton.pn_data_put_binary(_impl, bytes_t);
         //TODO
     }
@@ -476,8 +476,7 @@ public class JNIData implements Data
     {
         byte[] data = string.getBytes(UTF8_CHARSET);
         pn_bytes_t bytes_t = new pn_bytes_t();
-        bytes_t.setStart(data);
-        bytes_t.setSize(data.length);
+        Proton.pn_bytes_from_array(bytes_t, data);
         Proton.pn_data_put_string(_impl, bytes_t);
 
         //TODO
@@ -489,8 +488,7 @@ public class JNIData implements Data
     {
         byte[] data = symbol.toString().getBytes(ASCII_CHARSET);
         pn_bytes_t bytes_t = new pn_bytes_t();
-        bytes_t.setStart(data);
-        bytes_t.setSize(data.length);
+        Proton.pn_bytes_from_array(bytes_t, data);
         Proton.pn_data_put_symbol(_impl, bytes_t);
         //TODO
     }

@@ -349,6 +349,22 @@ JNIEXPORT jbyteArray JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1bytes
 }
 %}
 
+%native (pn_bytes_from_array) void pn_bytes_from_array(pn_bytes_t, jbyteArray);
+%{
+JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1bytes_1from_1array(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray byteArr)
+{
+    pn_bytes_t* b = *(pn_bytes_t **)&jarg1;
+    size_t sz = (*jenv)->GetArrayLength(jenv, byteArr);
+    if(b->start) free(b->start);
+    
+    jbyte* barr = (*jenv)->GetByteArrayElements(jenv, byteArr, NULL);
+    b->size = sz;
+    b->start = malloc(sz);
+    memcpy(b->start, barr, sz);
+    (*jenv)->ReleaseByteArrayElements(jenv, byteArr, barr, 0);
+}
+%}
+
 
 
 ssize_t  pn_transport_input(pn_transport_t *transport, char *DATA, size_t SIZE);
