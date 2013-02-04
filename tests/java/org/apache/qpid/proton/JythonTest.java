@@ -42,6 +42,9 @@ public class JythonTest
 {
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
+    private static final String XML_REPORT_DIRECTORY = "surefire-reports";
+    private static final String XML_REPORT_NAME = "TEST-jython.xml";
+
     private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
     private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test";
 
@@ -50,8 +53,9 @@ public class JythonTest
     {
         File protonScriptFile = getPythonTestScript();
         String parentDirectory = protonScriptFile.getParent();
+        File xmlReportDirectory = getOptionalXmlReportDirectory(protonScriptFile);
 
-        PythonInterpreter interp = createInterpreterWithArgs();
+        PythonInterpreter interp = createInterpreterWithArgs(xmlReportDirectory);
 
         LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory added to Jython path");
 
@@ -85,14 +89,23 @@ public class JythonTest
         }
     }
 
-    private PythonInterpreter createInterpreterWithArgs()
+    private PythonInterpreter createInterpreterWithArgs(File xmlReportDirectory)
     {
         PySystemState systemState = new PySystemState();
         String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
+
+        if (xmlReportDirectory != null)
+        {
+            String xmlReportFile = new File(xmlReportDirectory, XML_REPORT_NAME).getAbsolutePath();
+            systemState.argv.append(new PyString("--xml"));
+            systemState.argv.append(new PyString(xmlReportFile));
+        }
+
         if(testPattern != null)
         {
             systemState.argv.append(new PyString(testPattern));
         }
+
         PythonInterpreter interp = new PythonInterpreter(null, systemState);
         return interp;
     }
@@ -103,4 +116,19 @@ public class JythonTest
         File protonScriptFile = new File(protonScriptUrl.toURI());
         return protonScriptFile;
     }
+
+    private File getOptionalXmlReportDirectory(File protonScriptFile)
+    {
+        File reportDirectory = new File(protonScriptFile.getParentFile().getParentFile(), XML_REPORT_DIRECTORY);
+        if (reportDirectory.isDirectory())
+        {
+            return reportDirectory;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+
 }

@@ -20,7 +20,7 @@
 
 # TODO: summarize, test harness preconditions (e.g. broker is alive)
 
-import logging, optparse, os, struct, sys, time, traceback, types
+import logging, optparse, os, struct, sys, time, traceback, types, cgi
 from fnmatch import fnmatchcase as match
 from getopt import GetoptError
 from logging import getLogger, StreamHandler, Formatter, Filter, \
@@ -189,7 +189,7 @@ class JunitXmlStyleReporter:
 
   def begin(self):
     self.f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
-    self.f.write('<testsuite>\n')
+    self.f.write('<testsuite name="pythontests">\n')
 
   def report(self, name, result):
     parts = name.split(".")
@@ -197,11 +197,15 @@ class JunitXmlStyleReporter:
     module = '.'.join(parts[0:-1])
     self.f.write('<testcase classname="%s" name="%s" time="%f">\n' % (module, method, result.time))
     if result.failed:
-      self.f.write('<failure>\n')
+      escaped_type = cgi.escape(str(result.exception_type))
+      escaped_message = cgi.escape(str(result.exception_message))
+      self.f.write('<failure type="%s" message="%s">\n' % (escaped_type, escaped_message))
       self.f.write('<![CDATA[\n')
-      self.f.write(result.exceptions)
+      self.f.write(result.formatted_exception_trace)
       self.f.write(']]>\n')
       self.f.write('</failure>\n')
+    if result.skipped:
+      self.f.write('<skipped/>\n')
     self.f.write('</testcase>\n')
 
   def end(self):
@@ -313,6 +317,8 @@ class Runner:
   def __init__(self):
     self.exceptions = []
     self.skip = False
+    self.exception_type = None
+    self.exception_message = None
 
   def passed(self):
     return not self.exceptions
@@ -333,6 +339,7 @@ class Runner:
       raise
     except:
       exi = sys.exc_info()
+      self.exception_type, self.exception_message = exi[0:2]
       self.skip = getattr(exi[0], "skipped", False)
       self.exceptions.append((name, exi))
 
@@ -346,7 +353,7 @@ class Runner:
     else:
       return None
 
-  def get_formatted_exceptions(self):
+  def get_formatted_exception_trace(self):
     for name, info in self.exceptions:
       if getattr(info[0], "skipped", False):
         output = indent("".join(traceback.format_exception_only(*info[:2]))).rstrip()
@@ -354,6 +361,12 @@ class Runner:
         output = "Error during %s:" % name
         output += indent("".join(traceback.format_exception(*info))).rstrip()
       return output
+
+  def get_exception_type(self):
+    return self.exception_type
+
+  def get_exception_message(self):
+    return self.exception_message
 
 ST_WIDTH = 8
 
@@ -393,19 +406,27 @@ def run_test(name, test, config):
     sys.stdout.write(output)
   print " %s" % colorize_word(runner.status())
   if runner.failed() or runner.skipped():
-    print runner.get_formatted_exceptions()
+    print runner.get_formatted_exception_trace()
   root.setLevel(level)
   filter.patterns = patterns
-  return TestResult(end - start, runner.passed(), runner.skipped(), runner.failed(), runner.get_formatted_exceptions())
+  return TestResult(end - start,
+                    runner.passed(),
+                    runner.skipped(),
+                    runner.failed(),
+                    runner.get_exception_type(),
+                    runner.get_exception_message(),
+                    runner.get_formatted_exception_trace())
 
 class TestResult:
 
-  def __init__(self, time, passed, skipped, failed, exceptions):
+  def __init__(self, time, passed, skipped, failed, exception_type, exception_message, formatted_exception_trace):
     self.time = time
     self.passed = passed
     self.skipped = skipped
     self.failed = failed
-    self.exceptions = exceptions
+    self.exception_type =  exception_type
+    self.exception_message = exception_message
+    self.formatted_exception_trace = formatted_exception_trace
 
 class FunctionTest:
 
