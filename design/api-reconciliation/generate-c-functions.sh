@@ -20,6 +20,10 @@
 
 # Script to generate a list of proton-c functions for use as input to the api-reconciliation tool.
 
+# If you have problems running ctags, note that there are two ctags executables on some Linux
+# distributions. The one required here is from the exuberant-ctags package
+# (http://ctags.sourceforge.net), *not* GNU emacs ctags.
+
 BASE_DIR=`dirname $0`
 INCLUDE_DIR=$BASE_DIR/../../proton-c/include/proton
 OUTPUT_DIR=$BASE_DIR/target
