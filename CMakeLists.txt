@@ -50,7 +50,7 @@ set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
       "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
 # Pull in local cmake modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
 
 find_package( Java )
 if (JAVA_FOUND)
