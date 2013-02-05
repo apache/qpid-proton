@@ -25,7 +25,7 @@
   <artifactId>proton-api-reconciliation</artifactId>
   <version>1.0-SNAPSHOT</version>
   <properties>
-    <proton-c-build-dir>${basedir}/../../proton-c/build</proton-c-build-dir>
+    <proton-c-build-dir>${basedir}/../../build/proton-c</proton-c-build-dir>
     <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
   </properties>
   <build>
@@ -103,7 +103,9 @@
     </dependency>
   </dependencies>
   <description>Tool to generate a report mapping proton-c functions to proton-j class methods.
-Can be run using sensible defaults using &quot;mvn exec:java&quot;</description>
+Uses proton-jni and proton-api at run-time, so these libraries must be available to Maven,
+eg in a local Maven repository.
+Can be run using sensible defaults using &quot;mvn compile exec:java&quot;</description>
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
