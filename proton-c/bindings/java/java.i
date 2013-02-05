@@ -385,36 +385,6 @@ ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *DATA, size_t SIZE);
 ssize_t pn_sasl_send(pn_sasl_t *sasl, char *DATA, size_t SIZE);
 %ignore pn_sasl_send;
 
-%typemap(jni) char *start "jbyteArray"
-%typemap(jtype) char *start "byte[]"
-%typemap(jstype) char *start "byte[]"
-%typemap(javaout) char *start {
-    return $jnicall;
-}
-
-%typemap(out) char *start {
-    // TODO - RG
-    $result = JCALL1(NewByteArray, jenv, arg1->size);
-    JCALL4(SetByteArrayRegion, jenv, $result, 0, arg1->size, $1);
-}
-
-%typemap(in) char *start {
-    jbyte* barr = (*jenv)->GetByteArrayElements(jenv, $input, NULL);
-    jsize length = (*jenv)->GetArrayLength(jenv, $input);
-    char *buf = malloc(length);
-    jint i = 0;
-    for(i=0;i<length;i++)
-    {
-      buf[i] = barr[i];
-    }
-    (*jenv)->ReleaseByteArrayElements(jenv, $input, barr, 0);
-    $1 = buf;
-}
-%typemap(freearg) char *start  {
-
-}
-
-
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
   pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {

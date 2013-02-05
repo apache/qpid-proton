@@ -675,7 +675,8 @@ public class JNIData implements Data
     public Binary getBinary()
     {
         pn_bytes_t b = Proton.pn_data_get_binary(_impl);
-        return new Binary(b.getStart());
+
+        return b == null ? null : new Binary(Proton.pn_bytes_to_array(b));
     }
 
     @Override
@@ -683,7 +684,7 @@ public class JNIData implements Data
     public String getString()
     {
         pn_bytes_t b = Proton.pn_data_get_string(_impl);
-        return new String(b.getStart(), UTF8_CHARSET);
+        return b == null ? null : new String(Proton.pn_bytes_to_array(b), UTF8_CHARSET);
     }
 
     @Override
@@ -691,7 +692,7 @@ public class JNIData implements Data
     public Symbol getSymbol()
     {
         pn_bytes_t b = Proton.pn_data_get_symbol(_impl);
-        return Symbol.valueOf(new String(b.getStart(), UTF8_CHARSET));
+        return b == null ? null : Symbol.valueOf(new String(Proton.pn_bytes_to_array(b), ASCII_CHARSET));
     }
 
     @Override
