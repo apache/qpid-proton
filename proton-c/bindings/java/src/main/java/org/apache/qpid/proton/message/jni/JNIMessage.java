@@ -23,10 +23,14 @@ package org.apache.qpid.proton.message.jni;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Decimal32;
+import org.apache.qpid.proton.amqp.Decimal64;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
@@ -43,18 +47,19 @@ import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.codec.jni.JNIData;
-import org.apache.qpid.proton.codec.jni.JNIDataFactory;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_data_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
 import org.apache.qpid.proton.jni.pn_atom_t;
 import org.apache.qpid.proton.jni.pn_atom_t_u;
 import org.apache.qpid.proton.jni.pn_bytes_t;
+import org.apache.qpid.proton.jni.pn_decimal128_t;
 import org.apache.qpid.proton.jni.pn_format_t;
 import org.apache.qpid.proton.jni.pn_type_t;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageError;
 import org.apache.qpid.proton.message.MessageFormat;
+import org.apache.qpid.proton.codec.Data.DataType;
 
 public class JNIMessage implements Message
 {
@@ -62,6 +67,14 @@ public class JNIMessage implements Message
     public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     public static final Charset ASCII_CHARSET = Charset.forName("US-ASCII");
     private SWIGTYPE_p_pn_message_t _impl;
+    private Header _header;
+    private DeliveryAnnotations _deliveryAnnotations;
+    private MessageAnnotations _messageAnnotations;
+    private Properties _properties;
+    private ApplicationProperties _applicationProperties;
+    private Section _body;
+    private Footer _footer;
+
 
     JNIMessage()
     {
@@ -71,84 +84,709 @@ public class JNIMessage implements Message
     public JNIMessage(SWIGTYPE_p_pn_message_t impl)
     {
         _impl = impl;
+        postDecode();
+    }
+
+    private void postDecode()
+    {
+        decodeHeader();
+        decodeDeliveryAnnotations();
+        decodeMessageAnnotations();
+        decodeProperties();
+        decodeApplicationProperies();
+        decodeBody();
+        decodeFooter();
+    }
+
+    private void decodeHeader()
+    {
+        _header = new Header();
+        _header.setDurable(Proton.pn_message_is_durable(_impl));
+        _header.setPriority(UnsignedByte.valueOf((byte) Proton.pn_message_get_priority(_impl)));
+        _header.setTtl(UnsignedInteger.valueOf(Proton.pn_message_get_ttl(_impl)));
+        _header.setFirstAcquirer(Proton.pn_message_is_first_acquirer(_impl));
+        _header.setDeliveryCount(UnsignedInteger.valueOf(Proton.pn_message_get_delivery_count(_impl)));
+    }
+
+    private void decodeDeliveryAnnotations()
+    {
+        JNIData data = new JNIData(Proton.pn_message_instructions(_impl));
+        if(data.next() == DataType.MAP)
+        {
+            Map map = data.getJavaMap();
+            _deliveryAnnotations = new DeliveryAnnotations(map);
+        }
+        else
+        {
+            _deliveryAnnotations = null;
+        }
+    }
+
+    private void decodeMessageAnnotations()
+    {
+        JNIData data = new JNIData(Proton.pn_message_annotations(_impl));
+        if(data.next() == DataType.MAP)
+        {
+            Map map = data.getJavaMap();
+            _messageAnnotations = new MessageAnnotations(map);
+        }
+        else
+        {
+            _messageAnnotations = null;
+        }
+    }
+
+    private void decodeProperties()
+    {
+        _properties = new Properties();
+        _properties.setMessageId(convert(Proton.pn_message_get_id(_impl)));
+        _properties.setUserId(new Binary(Proton.pn_bytes_to_array(Proton.pn_message_get_user_id(_impl))));
+        _properties.setTo(Proton.pn_message_get_address(_impl));
+        _properties.setSubject(Proton.pn_message_get_subject(_impl));
+        _properties.setReplyTo(Proton.pn_message_get_reply_to(_impl));
+        _properties.setCorrelationId(convert(Proton.pn_message_get_correlation_id(_impl)));
+        _properties.setContentType(Symbol.valueOf(Proton.pn_message_get_content_type(_impl)));
+        _properties.setContentEncoding(Symbol.valueOf(Proton.pn_message_get_content_encoding(_impl)));
+        long expiryTime = Proton.pn_message_get_expiry_time(_impl);
+        _properties.setAbsoluteExpiryTime(expiryTime == 0l ? null : new Date(expiryTime));
+        long creationTime = Proton.pn_message_get_creation_time(_impl);
+        _properties.setCreationTime(creationTime == 0l ? null : new Date(creationTime));
+        _properties.setGroupId(Proton.pn_message_get_group_id(_impl));
+        long groupSequence = getGroupSequence();
+        if(groupSequence != 0l || _properties.getGroupId() != null)
+        {
+            _properties.setGroupSequence(UnsignedInteger.valueOf(groupSequence));
+        }
+        _properties.setReplyToGroupId(Proton.pn_message_get_reply_to_group_id(_impl));
+    }
+
+    private void decodeApplicationProperies()
+    {
+        JNIData data = new JNIData(Proton.pn_message_properties(_impl));
+        if(data.next() == DataType.MAP)
+        {
+            Map map = data.getJavaMap();
+            _applicationProperties = new ApplicationProperties(map);
+        }
+        else
+        {
+            _applicationProperties = null;
+        }
+    }
+
+    private void decodeBody()
+    {
+        SWIGTYPE_p_pn_data_t body = Proton.pn_message_body(_impl);
+        JNIData data = new JNIData(body);
+        data.rewind();
+
+        org.apache.qpid.proton.codec.Data.DataType dataType = data.next();
+        Section section;
+        if(dataType == null)
+        {
+            section = null;
+        }
+        else
+        {
+            Object obj = data.getObject();
+            boolean notAmqpValue = Proton.pn_message_is_inferred(_impl);
+
+            if(notAmqpValue && dataType == DataType.BINARY)
+            {
+                section = new Data((Binary)obj);
+            }
+            else if(notAmqpValue && dataType == DataType.LIST)
+            {
+                section = new AmqpSequence((List)obj);
+            }
+            else
+            {
+                section = new AmqpValue(obj);
+            }
+        }
+        _body = section;
+    }
+
+    private Footer decodeFooter()
+    {
+        return null;  //TODO
+    }
+
+    private void preEncode()
+    {
+        encodeHeader();
+        encodeDeliveryAnnotations();
+        encodeMessageAnnotations();
+        encodeProperties();
+        encodeApplicationProperies();
+        encodeBody();
+        encodeFooter();
+    }
+
+    private void encodeHeader()
+    {
+
+        final boolean noHeader = _header == null;
+
+        boolean durable = !noHeader && Boolean.TRUE.equals(_header.getDurable());
+        Proton.pn_message_set_durable(_impl, durable);
+
+        byte priority = noHeader || _header.getPriority() == null
+                        ? (byte) Proton.PN_DEFAULT_PRIORITY
+                        : _header.getPriority().byteValue();
+        Proton.pn_message_set_priority(_impl, priority);
+
+        long ttl = noHeader || _header.getTtl() == null ? 0l : _header.getTtl().longValue();
+        Proton.pn_message_set_ttl(_impl, ttl);
+
+        boolean firstAcquirer = !noHeader && Boolean.TRUE.equals(_header.getFirstAcquirer());
+        Proton.pn_message_set_first_acquirer(_impl, firstAcquirer);
+
+        long deliveryCount = noHeader || _header.getDeliveryCount() == null ? 0L : _header.getDeliveryCount().longValue();
+        Proton.pn_message_set_delivery_count(_impl, deliveryCount);
+    }
+
+    private void encodeDeliveryAnnotations()
+    {
+        JNIData data = new JNIData(Proton.pn_message_instructions(_impl));
+        data.clear();
+        Map annotations;
+        if(_deliveryAnnotations != null
+           && (annotations = _deliveryAnnotations.getValue()) != null
+           && !annotations.isEmpty())
+        {
+            data.putJavaMap(annotations);
+        }
+    }
+
+    private void encodeMessageAnnotations()
+    {
+        JNIData data = new JNIData(Proton.pn_message_annotations(_impl));
+        data.clear();
+        Map annotations;
+        if(_messageAnnotations != null
+           && (annotations = _messageAnnotations.getValue()) != null
+           && !annotations.isEmpty())
+        {
+            data.putJavaMap(annotations);
+        }
+    }
+
+    private void encodeProperties()
+    {
+        final boolean noProperties = _properties == null;
+
+        Proton.pn_message_set_id(_impl, convertToAtom(noProperties ? null : _properties.getMessageId()));
+
+        pn_bytes_t userId = new pn_bytes_t();;
+        if(!noProperties && _properties.getUserId() != null)
+        {
+            final Binary binary = _properties.getUserId();
+            byte[] bytes = new byte[binary.getLength()];
+            System.arraycopy(binary.getArray(),binary.getArrayOffset(),bytes,0,binary.getLength());
+            Proton.pn_bytes_from_array(userId, bytes);
+        }
+
+        Proton.pn_message_set_user_id(_impl, userId);
+
+        Proton.pn_message_set_address(_impl, noProperties ? null : _properties.getTo());
+        Proton.pn_message_set_subject(_impl, noProperties ? null : _properties.getSubject());
+        Proton.pn_message_set_reply_to(_impl, noProperties ? null : _properties.getReplyTo());
+        Proton.pn_message_set_correlation_id(_impl, convertToAtom(noProperties ? null : _properties.getCorrelationId()));
+        String contentType = noProperties || _properties.getContentType() == null ? null : _properties.getContentType().toString();
+        Proton.pn_message_set_content_type(_impl, contentType);
+        String contentEncoding = noProperties || _properties.getContentEncoding() == null
+                                 ? null : _properties.getContentEncoding().toString();
+        Proton.pn_message_set_content_encoding(_impl, contentEncoding);
+        long expiryTime = noProperties || _properties.getAbsoluteExpiryTime() == null ? 0l : _properties.getAbsoluteExpiryTime().getTime();
+        Proton.pn_message_set_expiry_time(_impl,expiryTime);
+        long creationTime = noProperties || _properties.getCreationTime() == null ? 0l : _properties.getCreationTime().getTime();
+        Proton.pn_message_set_creation_time(_impl,creationTime);
+        Proton.pn_message_set_group_id(_impl, noProperties ? null : _properties.getGroupId());
+        int groupSequence = noProperties || _properties.getGroupSequence() == null ? 0 : _properties.getGroupSequence().intValue();
+        Proton.pn_message_set_group_sequence(_impl,groupSequence);
+        Proton.pn_message_set_reply_to_group_id(_impl, noProperties ? null : _properties.getReplyToGroupId());
+
+    }
+
+    private void encodeApplicationProperies()
+    {
+        JNIData data = new JNIData(Proton.pn_message_properties(_impl));
+        data.clear();
+        Map appProperties;
+        if(_applicationProperties != null
+           && (appProperties = _applicationProperties.getValue()) != null
+           && !appProperties.isEmpty())
+        {
+            data.putJavaMap(appProperties);
+        }
+    }
+
+    private void encodeBody()
+    {
+        JNIData data = new JNIData(Proton.pn_message_body(_impl));
+        data.clear();
+        if(_body instanceof Data)
+        {
+            Proton.pn_message_set_inferred(_impl, true);
+            data.putBinary(((Data) _body).getValue());
+        }
+        else if(_body instanceof AmqpSequence)
+        {
+            Proton.pn_message_set_inferred(_impl, true);
+            data.putJavaList(((AmqpSequence)_body).getValue());
+        }
+        else if(_body instanceof AmqpValue)
+        {
+            Proton.pn_message_set_inferred(_impl, false);
+            data.putObject(((AmqpValue) _body).getValue());
+        }
+    }
+
+    private void encodeFooter()
+    {
+        // TODO
     }
 
     @Override
     @ProtonCEquivalent("pn_message_is_durable")
     public boolean isDurable()
     {
-        return Proton.pn_message_is_durable(_impl);
+        return (_header == null || _header.getDurable() == null) ? false : _header.getDurable();
     }
+
 
     @Override
     @ProtonCEquivalent("pn_message_get_delivery_count")
     public long getDeliveryCount()
     {
-        return Proton.pn_message_get_delivery_count(_impl);
+        return (_header == null || _header.getDeliveryCount() == null) ? 0l : _header.getDeliveryCount().longValue();
     }
+
 
     @Override
     @ProtonCEquivalent("pn_message_get_priority")
     public short getPriority()
     {
-        return Proton.pn_message_get_priority(_impl);
+        return (_header == null || _header.getPriority() == null)
+               ? DEFAULT_PRIORITY
+               : _header.getPriority().shortValue();
     }
 
     @Override
     @ProtonCEquivalent("pn_message_is_first_acquirer")
     public boolean isFirstAcquirer()
     {
-        return Proton.pn_message_is_first_acquirer(_impl);
+        return (_header == null || _header.getFirstAcquirer() == null) ? false : _header.getFirstAcquirer();
     }
 
     @Override
     @ProtonCEquivalent("pn_message_get_ttl")
     public long getTtl()
     {
-        return Proton.pn_message_get_ttl(_impl);
+        return (_header == null || _header.getTtl() == null) ? 0l : _header.getTtl().longValue();
     }
 
     @Override
     @ProtonCEquivalent("pn_message_set_durable")
     public void setDurable(boolean durable)
     {
-        Proton.pn_message_set_durable(_impl, durable);
+        if (_header == null)
+        {
+            if (durable)
+            {
+                _header = new Header();
+            }
+            else
+            {
+                return;
+            }
+        }
+        _header.setDurable(durable);
     }
 
     @Override
     @ProtonCEquivalent("pn_message_set_ttl")
     public void setTtl(long ttl)
     {
-        Proton.pn_message_set_ttl(_impl, ttl);
+
+        if (_header == null)
+        {
+            if (ttl != 0l)
+            {
+                _header = new Header();
+            }
+            else
+            {
+                return;
+            }
+        }
+        _header.setTtl(UnsignedInteger.valueOf(ttl));
     }
 
     @Override
     @ProtonCEquivalent("pn_message_set_delivery_count")
     public void setDeliveryCount(long deliveryCount)
     {
-        Proton.pn_message_set_delivery_count(_impl, deliveryCount);
+        if (_header == null)
+        {
+            if (deliveryCount == 0l)
+            {
+                return;
+            }
+            _header = new Header();
+        }
+        _header.setDeliveryCount(UnsignedInteger.valueOf(deliveryCount));
     }
+
 
     @Override
     @ProtonCEquivalent("pn_message_set_first_acquirer")
     public void setFirstAcquirer(boolean firstAcquirer)
     {
-        Proton.pn_message_set_first_acquirer(_impl, firstAcquirer);
+
+        if (_header == null)
+        {
+            if (!firstAcquirer)
+            {
+                return;
+            }
+            _header = new Header();
+        }
+        _header.setFirstAcquirer(firstAcquirer);
     }
 
     @Override
     @ProtonCEquivalent("pn_message_set_priority")
     public void setPriority(short priority)
     {
-        Proton.pn_message_set_priority(_impl, priority);
+
+        if (_header == null)
+        {
+            if (priority == DEFAULT_PRIORITY)
+            {
+                return;
+            }
+            _header = new Header();
+        }
+        _header.setPriority(UnsignedByte.valueOf((byte) priority));
     }
 
     @Override
     @ProtonCEquivalent("pn_message_get_id")
     public Object getMessageId()
     {
-        return convert(Proton.pn_message_get_id(_impl));
+        return _properties == null ? null : _properties.getMessageId();
     }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_group_sequence")
+    public long getGroupSequence()
+    {
+        return (_properties == null || _properties.getGroupSequence() == null) ? 0l : _properties.getGroupSequence().intValue();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_reply_to_group_id")
+    public String getReplyToGroupId()
+    {
+        return _properties == null ? null : _properties.getReplyToGroupId();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_creation_time")
+    public long getCreationTime()
+    {
+        return (_properties == null || _properties.getCreationTime() == null) ? 0l : _properties.getCreationTime().getTime();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_address")
+    public String getAddress()
+    {
+        return _properties == null ? null : _properties.getTo();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_user_id")
+    public byte[] getUserId()
+    {
+        if(_properties == null || _properties.getUserId() == null)
+        {
+            return null;
+        }
+        else
+        {
+            final Binary userId = _properties.getUserId();
+            byte[] id = new byte[userId.getLength()];
+            System.arraycopy(userId.getArray(),userId.getArrayOffset(),id,0,userId.getLength());
+            return id;
+        }
+
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_reply_to")
+    public String getReplyTo()
+    {
+        return _properties == null ? null : _properties.getReplyTo();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_group_id")
+    public String getGroupId()
+    {
+        return _properties == null ? null : _properties.getGroupId();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_content_type")
+    public String getContentType()
+    {
+        return (_properties == null || _properties.getContentType() == null) ? null : _properties.getContentType().toString();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_expiry_time")
+    public long getExpiryTime()
+    {
+        return (_properties == null || _properties.getAbsoluteExpiryTime() == null) ? 0l : _properties.getAbsoluteExpiryTime().getTime();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_correlation_id")
+    public Object getCorrelationId()
+    {
+        return (_properties == null) ? null : _properties.getCorrelationId();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_content_encoding")
+    public String getContentEncoding()
+    {
+        return (_properties == null || _properties.getContentEncoding() == null) ? null : _properties.getContentEncoding().toString();
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_get_subject")
+    public String getSubject()
+    {
+        return _properties == null ? null : _properties.getSubject();
+    }
+
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_group_sequence")
+    public void setGroupSequence(long groupSequence)
+    {
+        if(_properties == null)
+        {
+            if(groupSequence == 0l)
+            {
+                return;
+            }
+            else
+            {
+                _properties = new Properties();
+            }
+        }
+        _properties.setGroupSequence(UnsignedInteger.valueOf((int) groupSequence));
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_user_id")
+    public void setUserId(byte[] userId)
+    {
+        if(userId == null)
+        {
+            if(_properties != null)
+            {
+                _properties.setUserId(null);
+            }
+
+        }
+        else
+        {
+            if(_properties == null)
+            {
+                _properties = new Properties();
+            }
+            byte[] id = new byte[userId.length];
+            System.arraycopy(userId, 0, id,0, userId.length);
+            _properties.setUserId(new Binary(id));
+        }
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_creation_time")
+    public void setCreationTime(long creationTime)
+    {
+        if(_properties == null)
+        {
+            if(creationTime == 0l)
+            {
+                return;
+            }
+            _properties = new Properties();
+
+        }
+        _properties.setCreationTime(new Date(creationTime));
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_subject")
+    public void setSubject(String subject)
+    {
+        if(_properties == null)
+        {
+            if(subject == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setSubject(subject);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_group_id")
+    public void setGroupId(String groupId)
+    {
+        if(_properties == null)
+        {
+            if(groupId == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setGroupId(groupId);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_address")
+    public void setAddress(String to)
+    {
+        if(_properties == null)
+        {
+            if(to == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setTo(to);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_expiry_time")
+    public void setExpiryTime(long absoluteExpiryTime)
+    {
+        if(_properties == null)
+        {
+            if(absoluteExpiryTime == 0l)
+            {
+                return;
+            }
+            _properties = new Properties();
+
+        }
+        _properties.setAbsoluteExpiryTime(new Date(absoluteExpiryTime));
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_reply_to_group_id")
+    public void setReplyToGroupId(String replyToGroupId)
+    {
+        if(_properties == null)
+        {
+            if(replyToGroupId == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setReplyToGroupId(replyToGroupId);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_content_encoding")
+    public void setContentEncoding(String contentEncoding)
+    {
+        if(_properties == null)
+        {
+            if(contentEncoding == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setContentEncoding(Symbol.valueOf(contentEncoding));
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_content_type")
+    public void setContentType(String contentType)
+    {
+        if(_properties == null)
+        {
+            if(contentType == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setContentType(Symbol.valueOf(contentType));
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_reply_to")
+    public void setReplyTo(String replyTo)
+    {
+
+        if(_properties == null)
+        {
+            if(replyTo == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setReplyTo(replyTo);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_correlation_id")
+    public void setCorrelationId(Object correlationId)
+    {
+
+        if(_properties == null)
+        {
+            if(correlationId == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setCorrelationId(correlationId);
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_message_set_id")
+    public void setMessageId(Object messageId)
+    {
+
+        if(_properties == null)
+        {
+            if(messageId == null)
+            {
+                return;
+            }
+            _properties = new Properties();
+        }
+        _properties.setMessageId(messageId);
+    }
+
 
     private pn_atom_t convertToAtom(Object o)
     {
@@ -252,7 +890,8 @@ public class JNIMessage implements Message
             buf.putLong(uuid.getMostSignificantBits());
             buf.putLong(uuid.getLeastSignificantBits());
             atom.setType(pn_type_t.PN_UUID);
-            pn_bytes_t val = Proton.pn_bytes(bytes.length, bytes);
+            pn_bytes_t val = new pn_bytes_t();
+            Proton.pn_bytes_from_array(val, bytes);
             atom.getU().setAs_bytes(val);
             val.delete();
         }
@@ -261,7 +900,8 @@ public class JNIMessage implements Message
         {
             byte[] bytes = (o instanceof byte[]) ? (byte[])o : ((Binary)o).getArray();
             atom.setType(pn_type_t.PN_BINARY);
-            pn_bytes_t val = Proton.pn_bytes(bytes.length, bytes);
+            pn_bytes_t val = new pn_bytes_t();
+            Proton.pn_bytes_from_array(val, bytes);
             atom.getU().setAs_bytes(val);
             val.delete();
         }
@@ -270,7 +910,8 @@ public class JNIMessage implements Message
         {
             byte[] bytes = ((String)o).getBytes(UTF8_CHARSET);
             atom.setType(pn_type_t.PN_STRING);
-            pn_bytes_t val = Proton.pn_bytes(bytes.length, bytes);
+            pn_bytes_t val = new pn_bytes_t();
+            Proton.pn_bytes_from_array(val, bytes);
             atom.getU().setAs_bytes(val);
             val.delete();
         }
@@ -279,7 +920,8 @@ public class JNIMessage implements Message
         {
             byte[] bytes = ((Symbol)o).toString().getBytes(ASCII_CHARSET);
             atom.setType(pn_type_t.PN_STRING);
-            pn_bytes_t val = Proton.pn_bytes(bytes.length, bytes);
+            pn_bytes_t val = new pn_bytes_t();
+            Proton.pn_bytes_from_array(val, bytes);
             atom.getU().setAs_bytes(val);
             val.delete();
         }
@@ -332,15 +974,17 @@ public class JNIMessage implements Message
             }
             else if(pn_type_t.PN_DECIMAL128.equals(type))
             {
+                pn_decimal128_t d128 = value.getAs_decimal128();
+
                 // TODO
             }
             else if(pn_type_t.PN_DECIMAL64.equals(type))
             {
-                // TODO
+                return new Decimal64(value.getAs_decimal64().longValue());
             }
             else if(pn_type_t.PN_DECIMAL32.equals(type))
             {
-                // TODO
+                return new Decimal32((int)value.getAs_decimal32());
             }
             else if(pn_type_t.PN_DESCRIBED.equals(type))
             {
@@ -410,203 +1054,31 @@ public class JNIMessage implements Message
     }
 
     @Override
-    @ProtonCEquivalent("pn_message_get_group_sequence")
-    public long getGroupSequence()
-    {
-        return Proton.pn_message_get_group_sequence(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_reply_to_group_id")
-    public String getReplyToGroupId()
-    {
-        return Proton.pn_message_get_reply_to_group_id(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_creation_time")
-    public long getCreationTime()
-    {
-        return Proton.pn_message_get_creation_time(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_address")
-    public String getAddress()
-    {
-        return Proton.pn_message_get_address(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_user_id")
-    public byte[] getUserId()
-    {
-
-        return Proton.pn_bytes_to_array(Proton.pn_message_get_user_id(_impl));
-
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_reply_to")
-    public String getReplyTo()
-    {
-        return Proton.pn_message_get_reply_to(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_group_id")
-    public String getGroupId()
-    {
-        return Proton.pn_message_get_group_id(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_content_type")
-    public String getContentType()
-    {
-        return Proton.pn_message_get_content_type(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_expiry_time")
-    public long getExpiryTime()
-    {
-        return Proton.pn_message_get_expiry_time(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_correlation_id")
-    public Object getCorrelationId()
-    {
-        return convert(Proton.pn_message_get_correlation_id(_impl));
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_content_encoding")
-    public String getContentEncoding()
-    {
-        return Proton.pn_message_get_content_encoding(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_get_subject")
-    public String getSubject()
-    {
-        return Proton.pn_message_get_subject(_impl);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_group_sequence")
-    public void setGroupSequence(long groupSequence)
-    {
-        Proton.pn_message_set_group_sequence(_impl, (int) groupSequence);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_user_id")
-    public void setUserId(byte[] userId)
-    {
-        pn_bytes_t val = Proton.pn_bytes(userId.length, userId);
-
-        Proton.pn_message_set_user_id(_impl, val);
-
-        val.delete();
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_creation_time")
-    public void setCreationTime(long creationTime)
-    {
-        Proton.pn_message_set_creation_time(_impl, creationTime);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_subject")
-    public void setSubject(String subject)
-    {
-        Proton.pn_message_set_subject(_impl, subject);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_group_id")
-    public void setGroupId(String groupId)
-    {
-        Proton.pn_message_set_group_id(_impl, groupId);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_address")
-    public void setAddress(String to)
-    {
-        Proton.pn_message_set_address(_impl, to);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_expiry_time")
-    public void setExpiryTime(long absoluteExpiryTime)
-    {
-        Proton.pn_message_set_expiry_time(_impl,absoluteExpiryTime);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_reply_to_group_id")
-    public void setReplyToGroupId(String replyToGroupId)
-    {
-        Proton.pn_message_set_reply_to_group_id(_impl, replyToGroupId);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_content_encoding")
-    public void setContentEncoding(String contentEncoding)
-    {
-        Proton.pn_message_set_content_encoding(_impl, contentEncoding);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_content_type")
-    public void setContentType(String contentType)
-    {
-        Proton.pn_message_set_content_type(_impl, contentType);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_reply_to")
-    public void setReplyTo(String replyTo)
-    {
-        Proton.pn_message_set_reply_to(_impl, replyTo);
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_correlation_id")
-    public void setCorrelationId(Object correlationId)
-    {
-        Proton.pn_message_set_correlation_id(_impl, convertToAtom(correlationId));
-    }
-
-    @Override
-    @ProtonCEquivalent("pn_message_set_id")
-    public void setMessageId(Object messageId)
-    {
-
-        Proton.pn_message_set_id(_impl, convertToAtom(messageId));
-
-    }
-
-    @Override
     @ProtonCEquivalent("pn_message_decode")
     public int decode(byte[] data, int offset, int length)
     {
-        return Proton.pn_message_decode(_impl, ByteBuffer.wrap(data,offset,length));
+        clear();
+        final int bytes = Proton.pn_message_decode(_impl, ByteBuffer.wrap(data, offset, length));
+        postDecode();
+        return bytes;
     }
 
     @Override
     @ProtonCEquivalent("pn_message_encode")
     public int encode(byte[] data, int offset, int length)
     {
+        try
+        {
+        preEncode();
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
         int status = Proton.pn_message_encode(_impl, buffer);
         return status == 0 ? buffer.position() : status;
-
+        }
+        catch(RuntimeException e)
+        {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Override
@@ -666,6 +1138,13 @@ public class JNIMessage implements Message
     @ProtonCEquivalent("pn_message_clear")
     public void clear()
     {
+        _header = null;
+        _deliveryAnnotations = null;
+        _messageAnnotations = null;
+        _properties = null;
+        _applicationProperties = null;
+        _body = null;
+        _footer = null;
         Proton.pn_message_clear(_impl);
     }
 
@@ -712,7 +1191,7 @@ public class JNIMessage implements Message
             bytes = new byte[getMessageFormat() == MessageFormat.DATA ? 0 : 1];
         }
         int rval = Proton.pn_message_load(_impl, ByteBuffer.wrap(bytes));
-
+        decodeBody();
     }
 
     @Override
@@ -757,119 +1236,81 @@ public class JNIMessage implements Message
     @Override
     public void setFooter(Footer footer)
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        _footer = footer;
     }
 
     @Override
     public Header getHeader()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        return _header;
     }
 
     @Override
     public DeliveryAnnotations getDeliveryAnnotations()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        return _deliveryAnnotations;
     }
 
     @Override
     @ProtonCEquivalent("pn_message_annotations")
     public MessageAnnotations getMessageAnnotations()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        return _messageAnnotations;
+    }
+
+    @Override
+    public Properties getProperties()
+    {
+        return _properties;
     }
 
     @Override
     @ProtonCEquivalent("pn_message_properties")
-    public Properties getProperties()
-    {
-        //TODO
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ApplicationProperties getApplicationProperties()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        return _applicationProperties;
     }
 
     @Override
     @ProtonCEquivalent("pn_message_body")
     public Section getBody()
     {
-        SWIGTYPE_p_pn_data_t body = Proton.pn_message_body(_impl);
-        JNIData data = new JNIData(body);
-        data.rewind();
-
-        // TODO
-        return data.next() == null ? null : new AmqpValue(data.getObject());
+        return _body;
     }
 
     public Footer getFooter()
     {
-        //TODO
-        throw new UnsupportedOperationException();
+        return _footer;
     }
 
     public void setHeader(Header header)
     {
-        //TODO
-        //throw new UnsupportedOperationException();
+        _header = header;
     }
 
     public void setDeliveryAnnotations(DeliveryAnnotations deliveryAnnotations)
     {
-        //TODO
-        //throw new UnsupportedOperationException();
+        _deliveryAnnotations = deliveryAnnotations;
     }
 
     public void setMessageAnnotations(MessageAnnotations messageAnnotations)
     {
-        //TODO
-        //throw new UnsupportedOperationException();
+        _messageAnnotations = messageAnnotations;
     }
 
     public void setProperties(Properties properties)
     {
-        //TODO
-        //throw new UnsupportedOperationException();
+        _properties = properties;
     }
 
     public void setApplicationProperties(ApplicationProperties applicationProperties)
     {
-        //TODO
-        //throw new UnsupportedOperationException();
+        _applicationProperties = applicationProperties;
     }
 
     public void setBody(Section body)
     {
-        JNIData data = new JNIData(Proton.pn_message_body(_impl));
-        data.clear();
-        if(body instanceof Data)
-        {
-            data.putDescribed();
-            data.enter();
-            data.putUnsignedLong(UnsignedLong.valueOf(0x0000000000000075L));
-            data.putBinary(((Data) body).getValue());
-            data.exit();
-        }
-        else if(body instanceof AmqpSequence)
-        {
-            // TODO
-        }
-        else if(body instanceof AmqpValue)
-        {
-            data.putDescribed();
-            data.enter();
-            data.putUnsignedLong(UnsignedLong.valueOf(0x0000000000000077L));
-            data.putObject(((AmqpValue) body).getValue());
-            data.exit();
-        }
+
 
         //TODO
     }
@@ -877,6 +1318,7 @@ public class JNIMessage implements Message
 
     public SWIGTYPE_p_pn_message_t getImpl()
     {
+        preEncode();
         return _impl;
     }
 }

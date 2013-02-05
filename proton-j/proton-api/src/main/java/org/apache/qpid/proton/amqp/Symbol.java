@@ -72,6 +72,10 @@ public final class Symbol implements Comparable<Symbol>, CharSequence
 
     public static Symbol getSymbol(String symbolVal)
     {
+        if(symbolVal == null)
+        {
+            return null;
+        }
         Symbol symbol = _symbols.get(symbolVal);
         if(symbol == null)
         {
