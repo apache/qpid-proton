@@ -40,10 +40,13 @@ import org.python.util.PythonInterpreter;
  */
 public class JythonTest
 {
+
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
-    private static final String XML_REPORT_DIRECTORY = "surefire-reports";
-    private static final String XML_REPORT_NAME = "TEST-jython.xml";
+    /** System property is defined in test/pom.xml */
+    private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestsXmlOutputDirectory";
+    /** Name of the junit style xml report to be written by the python test script */
+    private static final String XML_REPORT_NAME = "TEST-jython-test-results.xml";
 
     private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
     private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test";
@@ -53,9 +56,9 @@ public class JythonTest
     {
         File protonScriptFile = getPythonTestScript();
         String parentDirectory = protonScriptFile.getParent();
-        File xmlReportDirectory = getOptionalXmlReportDirectory(protonScriptFile);
+        String xmlReportFile = getOptionalXmlReportFilename();
 
-        PythonInterpreter interp = createInterpreterWithArgs(xmlReportDirectory);
+        PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile);
 
         LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory added to Jython path");
 
@@ -89,14 +92,13 @@ public class JythonTest
         }
     }
 
-    private PythonInterpreter createInterpreterWithArgs(File xmlReportDirectory)
+    private PythonInterpreter createInterpreterWithArgs(String xmlReportFile)
     {
         PySystemState systemState = new PySystemState();
         String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
 
-        if (xmlReportDirectory != null)
+        if (xmlReportFile != null)
         {
-            String xmlReportFile = new File(xmlReportDirectory, XML_REPORT_NAME).getAbsolutePath();
             systemState.argv.append(new PyString("--xml"));
             systemState.argv.append(new PyString(xmlReportFile));
         }
@@ -117,18 +119,23 @@ public class JythonTest
         return protonScriptFile;
     }
 
-    private File getOptionalXmlReportDirectory(File protonScriptFile)
+    private String getOptionalXmlReportFilename()
     {
-        File reportDirectory = new File(protonScriptFile.getParentFile().getParentFile(), XML_REPORT_DIRECTORY);
-        if (reportDirectory.isDirectory())
+        String xmlOutputDirString = System.getProperty(PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY);
+        if (xmlOutputDirString == null)
         {
-            return reportDirectory;
+            LOGGER.info(PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY + " system property not set; xml output will not be written");
         }
-        else
+
+        File xmlOutputDir = new File(xmlOutputDirString);
+        if (!xmlOutputDir.isDirectory())
         {
-            return null;
+            boolean success = xmlOutputDir.mkdirs();
+            if (!success)
+            {
+                throw new RuntimeException("Failed to create one or more directories with path " + xmlOutputDirString);
+            }
         }
+        return new File(xmlOutputDir, XML_REPORT_NAME).getAbsolutePath();
     }
-
-
 }

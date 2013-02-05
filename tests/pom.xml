@@ -34,12 +34,28 @@ mvn test -Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*'
 The proton-jni profile looks for the JNI jar and native libraries under directory &lt;basedir&gt;/build/proton-c.
 To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-build-dir=/path/to/build/dir&quot;.</description>
 
+  <properties>
+    <testReportOutputDirectory>${basedir}/target/surefire-reports</testReportOutputDirectory>
+  </properties>
+
   <build>
     <!-- System tests are arranged by language, hence the non-default location of the JUnit tests. -->
     <testSourceDirectory>java</testSourceDirectory>
     <resources>
       <resource><directory>python</directory></resource>
     </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <protonJythonTestsXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestsXmlOutputDirectory>
+          </systemPropertyVariables>
+         <reportsDirectory>${testReportOutputDirectory}</reportsDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 
   <dependencies>
@@ -68,6 +84,9 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
+      <properties>
+        <protonJythonXmlOutput>wibble</protonJythonXmlOutput>
+      </properties>
       <dependencies>
         <dependency>
           <groupId>org.apache.qpid</groupId>
