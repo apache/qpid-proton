@@ -315,33 +315,36 @@ FAIL = "fail"
 class Runner:
 
   def __init__(self):
-    self.exceptions = []
+    self.exception = None
+    self.exception_phase_name = None
     self.skip = False
-    self.exception_type = None
-    self.exception_message = None
 
   def passed(self):
-    return not self.exceptions
+    return not self.exception
 
   def skipped(self):
     return self.skip
 
   def failed(self):
-    return self.exceptions and not self.skip
+    return self.exception and not self.skip
 
   def halt(self):
-    return self.exceptions or self.skip
+    """determines if the overall test execution should be allowed to continue to the next phase"""
+    return self.exception or self.skip
 
-  def run(self, name, phase):
+  def run(self, phase_name, phase):
+    """invokes a test-phase method (which can be the test method itself or a setup/teardown
+       method).  If the method raises an exception the exception is examined to see if the
+       exception should be classified as a 'skipped' test"""
     try:
       phase()
     except KeyboardInterrupt:
       raise
     except:
-      exi = sys.exc_info()
-      self.exception_type, self.exception_message = exi[0:2]
-      self.skip = getattr(exi[0], "skipped", False)
-      self.exceptions.append((name, exi))
+      self.exception_phase_name = phase_name
+      self.exception = sys.exc_info()
+      exception_type = self.exception[0]
+      self.skip = getattr(exception_type, "skipped", False) or getattr(exception_type, "protonUnsupportedOperation", False)
 
   def status(self):
     if self.passed():
@@ -354,19 +357,20 @@ class Runner:
       return None
 
   def get_formatted_exception_trace(self):
-    for name, info in self.exceptions:
-      if getattr(info[0], "skipped", False):
-        output = indent("".join(traceback.format_exception_only(*info[:2]))).rstrip()
+    if self.exception:
+      if self.skip:
+        # format skipped tests without a traceback
+        output = indent("".join(traceback.format_exception_only(*self.exception[:2]))).rstrip()
       else:
-        output = "Error during %s:" % name
-        output += indent("".join(traceback.format_exception(*info))).rstrip()
+        output = "Error during %s:" % self.exception_phase_name
+        output += indent("".join(traceback.format_exception(*self.exception))).rstrip()
       return output
 
   def get_exception_type(self):
-    return self.exception_type
+    return self.exception[0] if self.exception else None
 
   def get_exception_message(self):
-    return self.exception_message
+    return self.exception[1] if self.exception else None
 
 ST_WIDTH = 8
 

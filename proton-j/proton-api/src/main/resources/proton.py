@@ -53,7 +53,6 @@ class Constant(object):
   def __repr__(self):
     return self.name
 
-
 class Skipped(Exception):
   skipped = True
 
@@ -95,7 +94,7 @@ class Endpoint(object):
 
   @property
   def remote_condition(self):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   @property
   def state(self):
@@ -174,7 +173,7 @@ class Connection(Endpoint):
 
   @property
   def writable(self):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   def session(self):
     return wrap_session(self.impl.session())
@@ -296,7 +295,7 @@ class Link(Endpoint):
 
   @property
   def available(self):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   @property
   def queued(self):
@@ -311,7 +310,7 @@ class DataDummy:
     pass
 
   def put_array(self, *args, **kwargs):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
 class Terminus(object):
 
@@ -349,7 +348,7 @@ class Terminus(object):
 class Sender(Link):
 
   def offered(self, n):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   def send(self, bytes):
     return self.impl.send(bytes, 0, len(bytes))
@@ -478,11 +477,11 @@ class Transport(object):
 
   def _get_max_frame_size(self):
     #return pn_transport_get_max_frame(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   def _set_max_frame_size(self, value):
     #pn_transport_set_max_frame(self._trans, value)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   max_frame_size = property(_get_max_frame_size, _set_max_frame_size,
                             doc="""
@@ -492,16 +491,16 @@ Sets the maximum size for received frames (in bytes).
   @property
   def remote_max_frame_size(self):
     #return pn_transport_get_remote_max_frame(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
     #return pn_transport_get_idle_timeout(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   def _set_idle_timeout(self, value):
     #pn_transport_set_idle_timeout(self._trans, value)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -511,17 +510,17 @@ The idle timeout of the connection (in milliseconds).
   @property
   def remote_idle_timeout(self):
     #return pn_transport_get_remote_idle_timeout(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   @property
   def frames_output(self):
     #return pn_transport_get_frames_output(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
   @property
   def frames_input(self):
     #return pn_transport_get_frames_input(self._trans)
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
 class UnmappedType:
 
@@ -619,10 +618,7 @@ class Data(object):
   MAP = JData.DataType.MAP;
 
   def __init__(self, capacity=16):
-    try:
-      self._data = dataFactory.createData(capacity)
-    except ProtonUnsupportedOperationException:
-      raise Skipped()
+    self._data = dataFactory.createData(capacity)
 
   def __del__(self):
     if hasattr(self, "_data"):
@@ -974,11 +970,7 @@ class Data(object):
 class Messenger(object):
 
   def __init__(self, *args, **kwargs):
-    try:
-      self.impl = messengerFactory.createMessenger()
-    except ProtonUnsupportedOperationException:
-      raise Skipped()
-
+    self.impl = messengerFactory.createMessenger()
 
   def start(self):
     self.impl.start()
@@ -1313,10 +1305,7 @@ class SSLDomain(object):
     # that order otherwise tests fail with proton-jni.  It is not clear yet why.
     if trusted_CAs is not None:
       self._domain.setTrustedCaDb(trusted_CAs)
-    try:
-      self._domain.setPeerAuthentication(verify_mode)
-    except ProtonUnsupportedOperationException:
-      raise Skipped()
+    self._domain.setPeerAuthentication(verify_mode)
 
   def allow_unsecured_client(self, allow_unsecured = True):
     self._domain.allowUnsecuredClient(allow_unsecured)
@@ -1347,16 +1336,10 @@ class SSL(object):
     return self._ssl.getProtocolName()
 
   def _set_peer_hostname(self, hostname):
-    try:
-      self._ssl.setPeerHostname(hostname)
-    except ProtonUnsupportedOperationException:
-      raise Skipped()
+    self._ssl.setPeerHostname(hostname)
 
   def _get_peer_hostname(self):
-    try:
-      return self._ssl.getPeerHostname()
-    except ProtonUnsupportedOperationException:
-      raise Skipped()
+    return self._ssl.getPeerHostname()
 
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname)
 
@@ -1364,15 +1347,15 @@ class SSL(object):
 class Driver(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 class Connector(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 class Listener(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise Skipped()
+    raise ProtonUnsupportedOperationException()
 
 __all__ = [
            "ACCEPTED",

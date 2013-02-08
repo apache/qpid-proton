@@ -25,6 +25,9 @@ package org.apache.qpid.proton;
  */
 public class ProtonUnsupportedOperationException extends UnsupportedOperationException
 {
+    /** Used by the Python test layer to detect an unsupported operation */
+    public static final boolean protonUnsupportedOperation = true;
+
     public ProtonUnsupportedOperationException()
     {
     }
@@ -43,5 +46,4 @@ public class ProtonUnsupportedOperationException extends UnsupportedOperationExc
     {
         super(cause);
     }
-
 }
