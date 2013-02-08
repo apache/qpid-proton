@@ -128,14 +128,24 @@ public class JythonTest
         }
 
         File xmlOutputDir = new File(xmlOutputDirString);
+        createXmlOutputDirectoryIfNecessary(xmlOutputDirString, xmlOutputDir);
+        return new File(xmlOutputDir, XML_REPORT_NAME).getAbsolutePath();
+    }
+
+    private void createXmlOutputDirectoryIfNecessary(String xmlOutputDirString, File xmlOutputDir)
+    {
         if (!xmlOutputDir.isDirectory())
         {
             boolean success = xmlOutputDir.mkdirs();
             if (!success)
             {
+                LOGGER.warning("Failed to create directory " + xmlOutputDir + " Thread name :" + Thread.currentThread().getName());
+            }
+
+            if (!xmlOutputDir.isDirectory())
+            {
                 throw new RuntimeException("Failed to create one or more directories with path " + xmlOutputDirString);
             }
         }
-        return new File(xmlOutputDir, XML_REPORT_NAME).getAbsolutePath();
     }
 }
