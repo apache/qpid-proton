@@ -208,11 +208,20 @@ if (CMAKE_COMPILER_IS_GNUCC)
   if (NOT BUILD_WITH_CXX)
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
     set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
+
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (${GCC_VERSION} VERSION_LESS "4.3.0")
+      # Only a concern if contibuting code back.
+      message (STATUS "Old gcc version detected.  C++ compatibility checks disabled")
+    else (${GCC_VERSION} VERSION_LESS "4.3.0")
+      set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
+    endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
     # allow "%z" format specifier
     set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
   endif (NOT BUILD_WITH_CXX)
+
   if (ENABLE_UNDEFINED_ERROR)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")
     set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
