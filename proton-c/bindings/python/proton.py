@@ -1608,9 +1608,12 @@ class Data:
       return Array(descriptor, type, *elements)
 
   def put_py_array(self, a):
-    self.put_array(a.descriptor != UNDESCRIBED, a.type)
+    described = a.descriptor != UNDESCRIBED
+    self.put_array(described, a.type)
     self.enter()
     try:
+      if described:
+        self.put_object(a.descriptor)
       for e in a.elements:
         self.put_object(e)
     finally:
@@ -1674,7 +1677,6 @@ class Data:
     if getter:
       return getter(self)
     else:
-      self.dump()
       return UnmappedType(str(type))
 
 
@@ -1750,6 +1752,8 @@ class Connection(Endpoint):
     else:
       self._conn = pn_connection()
       pn_connection_set_context(self._conn, self)
+    self.offered_capabilities = None
+    self.desired_capabilities = None
 
   def __del__(self):
     if hasattr(self, "_conn"):
@@ -1791,23 +1795,32 @@ class Connection(Endpoint):
   def remote_hostname(self):
     return pn_connection_remote_hostname(self._conn)
 
-  @property
-  def offered_capabilities(self):
-    return Data(pn_connection_offered_capabilities(self._conn))
-
-  @property
-  def desired_capabilities(self):
-    return Data(pn_connection_desired_capabilities(self._conn))
+  def _dat2cap(self, dimpl):
+    d = Data(dimpl)
+    d.rewind()
+    d.next()
+    obj = d.get_object()
+    d.rewind()
+    return obj
 
   @property
   def remote_offered_capabilities(self):
-    return Data(pn_connection_remote_offered_capabilities(self._conn))
+    return self._dat2cap(pn_connection_remote_offered_capabilities(self._conn))
 
   @property
   def remote_desired_capabilities(self):
-    return Data(pn_connection_remote_desired_capabilities(self._conn))
+    return self._dat2cap(pn_connection_remote_desired_capabilities(self._conn))
+
+  def _cap2data(self, obj, dimpl):
+    if obj is not None:
+      d = Data(dimpl)
+      d.put_object(obj)
 
   def open(self):
+    self._cap2data(self.offered_capabilities,
+                   pn_connection_offered_capabilities(self._conn))
+    self._cap2data(self.desired_capabilities,
+                   pn_connection_desired_capabilities(self._conn))
     pn_connection_open(self._conn)
 
   def close(self):

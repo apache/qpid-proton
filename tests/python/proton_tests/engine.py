@@ -160,29 +160,26 @@ class ConnectionTest(Test):
     assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
   def test_capabilities(self):
-    self.c1.offered_capabilities.put_array(False, Data.SYMBOL)
-    self.c1.offered_capabilities.enter()
-    self.c1.offered_capabilities.put_symbol("O_one")
-    self.c1.offered_capabilities.put_symbol("O_two")
-    self.c1.offered_capabilities.put_symbol("O_three")
-    self.c1.offered_capabilities.exit()
+    self.c1.offered_capabilities = Array(UNDESCRIBED, Data.SYMBOL,
+                                         symbol("O_one"),
+                                         symbol("O_two"),
+                                         symbol("O_three"))
 
-    self.c1.desired_capabilities.put_array(False, Data.SYMBOL)
-    self.c1.desired_capabilities.enter()
-    self.c1.desired_capabilities.put_symbol("D_one")
-    self.c1.desired_capabilities.put_symbol("D_two")
-    self.c1.desired_capabilities.put_symbol("D_three")
-    self.c1.desired_capabilities.exit()
-
+    self.c1.desired_capabilities = Array(UNDESCRIBED, Data.SYMBOL,
+                                         symbol("D_one"),
+                                         symbol("D_two"),
+                                         symbol("D_three"))
     self.c1.open()
 
-    assert self.c2.remote_offered_capabilities.format() == ""
-    assert self.c2.remote_desired_capabilities.format() == ""
+    assert self.c2.remote_offered_capabilities is None
+    assert self.c2.remote_desired_capabilities is None
 
     self.pump()
 
-    assert self.c2.remote_offered_capabilities.format() == self.c1.offered_capabilities.format()
-    assert self.c2.remote_desired_capabilities.format() == self.c1.desired_capabilities.format()
+    assert self.c2.remote_offered_capabilities == self.c1.offered_capabilities, \
+        (self.c2.remote_offered_capabilities, self.c1.offered_capabilities)
+    assert self.c2.remote_desired_capabilities == self.c1.desired_capabilities, \
+        (self.c2.remote_desired_capabilities, self.c1.desired_capabilities)
 
   def test_condition(self):
     self.c1.open()
