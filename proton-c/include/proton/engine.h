@@ -283,8 +283,74 @@ void pn_connection_set_context(pn_connection_t *connection, void *context);
 
 // transport
 pn_error_t *pn_transport_error(pn_transport_t *transport);
+/* deprecated */
 ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
+/* deprecated */
 ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
+
+/** Report the amount of free space in a transport's input buffer. If
+ * the engine is in an error state or has reached the end of stream
+ * state, a negative value will be returned indication the condition.
+ *
+ * @param[in] transport the transport
+ * @return the free space in the transport, or error state if < 0
+ */
+ssize_t pn_transport_capacity(pn_transport_t *transport);
+
+/** Return a pointer to a transport's input buffer. This pointer may
+ * change when calls into the engine are made. The amount of space in
+ * this buffer is reported by ::pn_transport_capacity. Calls to
+ * ::pn_transport_push may change the value of this pointer and the
+ * amount of free space reported by ::pn_transport_capacity.
+ *
+ * @param[in] transport the transport
+ * @return a pointer to the transport's input buffer, NULL if no capacity available.
+ */
+char *pn_transport_buffer(pn_transport_t *transport);
+
+/** Push data from a transport's input buffer into the engine and
+ * return how much data was succesfully pushed.  The number of bytes
+ * written to the input buffer (via the pointer supplied by
+ * ::pn_transport_buffer) must be no greater than the value returned
+ * by ::pn_transport_capacity.
+ *
+ * @param[in] transport the transport
+ * @param[size] the amount of data written to the transport's input buffer
+ * @return the amount of data consumed, or error code if < 0
+ */
+ssize_t pn_transport_push(pn_transport_t *transport, size_t size);
+
+/** Indicate that the input has reached End Of Stream (EOS).  This
+ * tells the transport that no more input will be forthcoming.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+int pn_transport_push_eos(pn_transport_t *transport);
+
+/** Return the number of pending output bytes for a transport, or a
+ * negative error code if the engine is in an error state.
+ *
+ * @param[in] the transport
+ * @return the number of pending output bytes, or an error code
+ */
+ssize_t pn_transport_pending(pn_transport_t *transport);
+
+/** Return a pointer to a transport's output buffer. Any calls into
+ * the engine may change the value of this pointer and it's contents.
+ *
+ * @param[in] the transport
+ * @return a pointer to the transport's output buffer, or NULL if no pending output.
+ */
+const char *pn_transport_peek(pn_transport_t *transport);
+
+/** Remove bytes from the head of the output buffer for a transport.
+ *
+ * @param[in] the transport
+ * @param[size] the number of bytes to remove
+ */
+void pn_transport_pop(pn_transport_t *transport, size_t size);
+
 /** Process any pending transport timer events.
  *
  * This method should be called after all pending input has been processed by the

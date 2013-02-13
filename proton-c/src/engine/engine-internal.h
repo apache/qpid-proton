@@ -129,6 +129,8 @@ struct pn_transport_t {
   char *remote_hostname;
   pn_data_t *remote_offered_capabilities;
   pn_data_t *remote_desired_capabilities;
+  //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
+#define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
@@ -159,6 +161,18 @@ struct pn_transport_t {
   /* statistics */
   uint64_t bytes_input;
   uint64_t bytes_output;
+
+  /* output buffered for send */
+  size_t output_size;
+  size_t output_pending;
+  char *output_buf;
+
+  /* input from peer */
+  size_t input_size;
+  size_t input_pending;
+  char *input_buf;
+  bool eos_pushed;      // input stream closed by driver
+
 };
 
 struct pn_connection_t {
