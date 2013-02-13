@@ -131,6 +131,7 @@ class MessengerTest(Test):
     msg.address="totally-bogus-address"
     try:
       self.client.put(msg)
+      assert False, "Expecting MessengerException"
     except MessengerException, exc:
       err = str(exc)
       assert "unable to send to address: totally-bogus-address" in err, err
