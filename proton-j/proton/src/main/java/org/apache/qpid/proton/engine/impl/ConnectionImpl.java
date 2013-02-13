@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.amqp.transport.Open;
@@ -59,6 +60,8 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private Symbol[] _desiredCapabilities;
     private Symbol[] _remoteOfferedCapabilities;
     private Symbol[] _remoteDesiredCapabilities;
+    private Map<Symbol, Object> _properties;
+    private Map<Symbol, Object> _remoteProperties;
 
     private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
@@ -194,6 +197,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteContainer(open.getContainerId());
         setRemoteDesiredCapabilities(open.getDesiredCapabilities());
         setRemoteOfferedCapabilities(open.getOfferedCapabilities());
+        setRemoteProperties(open.getProperties());
     }
 
 
@@ -333,6 +337,27 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
     {
         _remoteDesiredCapabilities = remoteDesiredCapabilities;
+    }
+
+
+    Map<Symbol, Object> getProperties()
+    {
+        return _properties;
+    }
+
+    public void setProperties(Map<Symbol, Object> properties)
+    {
+        _properties = properties;
+    }
+
+    public Map<Symbol, Object> getRemoteProperties()
+    {
+        return _remoteProperties;
+    }
+
+    void setRemoteProperties(Map<Symbol, Object> remoteProperties)
+    {
+        _remoteProperties = remoteProperties;
     }
 
     public String getHostname()

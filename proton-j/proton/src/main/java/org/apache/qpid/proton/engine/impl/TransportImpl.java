@@ -740,6 +740,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             open.setHostname(_connectionEndpoint.getHostname());
             open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
             open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
+            open.setProperties(_connectionEndpoint.getProperties());
             // TODO - populate;
 
             _isOpenSent = true;

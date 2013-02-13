@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 
 import java.util.List;
+import java.util.Map;
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.codec.Data;
 import org.apache.qpid.proton.codec.jni.JNIData;
@@ -210,6 +212,7 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_offered_capabilities")
     public void setOfferedCapabilities(Symbol[] capabilities)
     {
         JNIData data = new JNIData(Proton.pn_connection_offered_capabilities(_impl));
@@ -221,6 +224,7 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_desired_capabilities")
     public void setDesiredCapabilities(Symbol[] capabilities)
     {
         JNIData data = new JNIData(Proton.pn_connection_desired_capabilities(_impl));
@@ -231,7 +235,9 @@ public class JNIConnection implements Connection
         }
     }
 
+
     @Override
+    @ProtonCEquivalent("pn_connection_remote_offered_capabilities")
     public Symbol[] getRemoteOfferedCapabilities()
     {
         JNIData data = new JNIData(Proton.pn_connection_remote_offered_capabilities(_impl));
@@ -244,6 +250,7 @@ public class JNIConnection implements Connection
     }
 
     @Override
+    @ProtonCEquivalent("pn_connection_remote_desired_capabilities")
     public Symbol[] getRemoteDesiredCapabilities()
     {
         JNIData data = new JNIData(Proton.pn_connection_remote_desired_capabilities(_impl));
@@ -253,5 +260,17 @@ public class JNIConnection implements Connection
             return (Symbol[]) data.getJavaArray();
         }
         return EMPTY_CAPABILTIES;
+    }
+
+    @Override
+    public Map<Symbol, Object> getRemoteProperties()
+    {
+        throw new ProtonUnsupportedOperationException();
+    }
+
+    @Override
+    public void setProperties(Map<Symbol, Object> properties)
+    {
+        throw new ProtonUnsupportedOperationException();
     }
 }

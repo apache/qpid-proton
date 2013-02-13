@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import java.util.Map;
 import org.apache.qpid.proton.amqp.Symbol;
 
 
@@ -62,4 +63,8 @@ public interface Connection extends Endpoint
     Symbol[] getRemoteOfferedCapabilities();
 
     Symbol[] getRemoteDesiredCapabilities();
+
+    Map<Symbol,Object> getRemoteProperties();
+
+    void setProperties(Map<Symbol,Object> properties);
 }
