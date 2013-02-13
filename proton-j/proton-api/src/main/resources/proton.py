@@ -163,6 +163,28 @@ class Condition:
         self.description == o.description and \
         self.info == o.info
 
+def convertToPyArray(t,a,f):
+    if a == None or len(a) == 0:
+        return None
+
+    return Array(UNDESCRIBED, t, *map(f,a))
+
+
+arrayElementMappings = {
+    JData.DataType.SYMBOL: lambda s: Symbol.valueOf(s)
+    }
+
+
+arrayTypeMappings = {
+    JData.DataType.SYMBOL: Symbol
+    }
+
+def convertFromPyArray(a):
+    if a == None:
+        return None
+
+    return array(map(arrayElementMappings[a.type],a.elements), arrayTypeMappings[a.type])
+
 def wrap_connection(impl):
   if impl: return Connection(_impl = impl)
 
@@ -170,6 +192,8 @@ class Connection(Endpoint):
 
   def __init__(self, _impl=None):
     self.impl = _impl or engineFactory.createConnection()
+    self._desired_capabilities = None
+    self._offered_capabilities = None
 
   @property
   def writable(self):
@@ -214,9 +238,34 @@ class Connection(Endpoint):
       self.impl.setRemoteHostname(hostname)
   remote_hostname = property(_get_remote_hostname, _set_remote_hostname)
 
-  @property
-  def offered_capabilities(self):
-    return DataDummy()
+  def _get_remote_offered_capabilities(self):
+      return convertToPyArray(Data.SYMBOL, self.impl.getRemoteOfferedCapabilities(),symbol)
+  def _set_remote_offered_capabilities(self, capabilities):
+      self.impl.setRemoteOfferedCapabilities(convertFromPyArray(capabilities))
+  remote_offered_capabilities = property(_get_remote_offered_capabilities, _set_remote_offered_capabilities)
+  
+  def _get_remote_desired_capabilities(self):
+      return convertToPyArray(Data.SYMBOL, self.impl.getRemoteDesiredCapabilities(),symbol)
+  def _set_remote_desired_capabilities(self, capabilities):
+      self.impl.setRemoteDesiredCapabilities(convertFromPyArray(capabilities))
+  remote_desired_capabilities = property(_get_remote_desired_capabilities, _set_remote_desired_capabilities)
+  
+  
+  def _get_offered_capabilities(self):
+      return self._offered_capabilities
+  def _set_offered_capabilities(self, capabilities):
+      self._offered_capabilities = capabilities
+      self.impl.setOfferedCapabilities(convertFromPyArray(capabilities))
+  offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities)
+  
+  def _get_desired_capabilities(self):
+      return self._desired_capabilities
+  def _set_desired_capabilities(self, capabilities):
+      self._desired_capabilities = capabilities
+      self.impl.setDesiredCapabilities(convertFromPyArray(capabilities))
+  desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities)
+  
+  
 
 
 def wrap_session(impl):

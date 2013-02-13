@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.amqp.transport.Open;
 
@@ -54,6 +55,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private boolean _bound;
     private String _remoteContainer;
     private String _remoteHostname;
+    private Symbol[] _offeredCapabilities;
+    private Symbol[] _desiredCapabilities;
+    private Symbol[] _remoteOfferedCapabilities;
+    private Symbol[] _remoteDesiredCapabilities;
+
+    private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -185,6 +192,8 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteState(EndpointState.ACTIVE);
         setRemoteHostname(open.getHostname());
         setRemoteContainer(open.getContainerId());
+        setRemoteDesiredCapabilities(open.getDesiredCapabilities());
+        setRemoteOfferedCapabilities(open.getOfferedCapabilities());
     }
 
 
@@ -279,6 +288,51 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     public String getRemoteHostname()
     {
         return _remoteHostname;
+    }
+
+    @Override
+    public void setOfferedCapabilities(Symbol[] capabilities)
+    {
+        _offeredCapabilities = capabilities;
+    }
+
+    @Override
+    public void setDesiredCapabilities(Symbol[] capabilities)
+    {
+        _desiredCapabilities = capabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteOfferedCapabilities()
+    {
+        return _remoteOfferedCapabilities == null ? EMPTY_SYMBOL_ARRAY : _remoteOfferedCapabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteDesiredCapabilities()
+    {
+        return _remoteDesiredCapabilities == null ? EMPTY_SYMBOL_ARRAY : _remoteDesiredCapabilities;
+    }
+
+
+    Symbol[] getOfferedCapabilities()
+    {
+        return _offeredCapabilities;
+    }
+
+    Symbol[] getDesiredCapabilities()
+    {
+        return _desiredCapabilities;
+    }
+
+    void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
+    {
+        _remoteOfferedCapabilities = remoteOfferedCapabilities;
+    }
+
+    void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
+    {
+        _remoteDesiredCapabilities = remoteDesiredCapabilities;
     }
 
     public String getHostname()

@@ -20,9 +20,14 @@
  */
 package org.apache.qpid.proton.engine.jni;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 
+import java.util.List;
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.codec.Data;
+import org.apache.qpid.proton.codec.jni.JNIData;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointError;
@@ -37,6 +42,7 @@ import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_session_t;
 
 public class JNIConnection implements Connection
 {
+    public static final Symbol[] EMPTY_CAPABILTIES = new Symbol[0];
     private SWIGTYPE_p_pn_connection_t _impl;
     private Object _context;
 
@@ -201,5 +207,51 @@ public class JNIConnection implements Connection
             return connectionObj;
         }
         return null;
+    }
+
+    @Override
+    public void setOfferedCapabilities(Symbol[] capabilities)
+    {
+        JNIData data = new JNIData(Proton.pn_connection_offered_capabilities(_impl));
+        data.clear();
+        if(capabilities != null)
+        {
+            data.putJavaArray(capabilities);
+        }
+    }
+
+    @Override
+    public void setDesiredCapabilities(Symbol[] capabilities)
+    {
+        JNIData data = new JNIData(Proton.pn_connection_desired_capabilities(_impl));
+        data.clear();
+        if(capabilities != null)
+        {
+            data.putJavaArray(capabilities);
+        }
+    }
+
+    @Override
+    public Symbol[] getRemoteOfferedCapabilities()
+    {
+        JNIData data = new JNIData(Proton.pn_connection_remote_offered_capabilities(_impl));
+        data.rewind();
+        if(data.next() != null)
+        {
+            return (Symbol[]) data.getJavaArray();
+        }
+        return EMPTY_CAPABILTIES;
+    }
+
+    @Override
+    public Symbol[] getRemoteDesiredCapabilities()
+    {
+        JNIData data = new JNIData(Proton.pn_connection_remote_desired_capabilities(_impl));
+        data.rewind();
+        if(data.next() != null)
+        {
+            return (Symbol[]) data.getJavaArray();
+        }
+        return EMPTY_CAPABILTIES;
     }
 }

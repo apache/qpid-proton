@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import org.apache.qpid.proton.amqp.Symbol;
 
 
 /**
@@ -53,4 +54,12 @@ public interface Connection extends Endpoint
     public String getRemoteContainer();
 
     public String getRemoteHostname();
+
+    void setOfferedCapabilities(Symbol[] capabilities);
+
+    void setDesiredCapabilities(Symbol[] capabilities);
+
+    Symbol[] getRemoteOfferedCapabilities();
+
+    Symbol[] getRemoteDesiredCapabilities();
 }

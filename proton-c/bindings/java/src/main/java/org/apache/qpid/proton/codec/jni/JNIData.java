@@ -103,7 +103,7 @@ public class JNIData implements Data
         }
     }
 
-        public JNIData(long capacity)
+    public JNIData(long capacity)
     {
         _impl = Proton.pn_data(capacity);
     }
