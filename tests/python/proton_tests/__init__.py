@@ -24,4 +24,4 @@ import proton_tests.messenger
 import proton_tests.sasl
 import proton_tests.transport
 import proton_tests.ssl
-
+import proton_tests.interop
