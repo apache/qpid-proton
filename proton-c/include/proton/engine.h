@@ -316,8 +316,7 @@ char *pn_transport_tail(pn_transport_t *transport);
  * bytes of input occupying the free space following the tail pointer.
  * Calls to this function may change the value of ::pn_transport_tail,
  * as well as the amount of free space reported by
- * ::pn_transport_capacity. The function will return how much data was
- * successfully pushed.
+ * ::pn_transport_capacity.
  *
  * @param[in] transport the transport
  * @param[size] the amount of data written to the transport's input buffer
