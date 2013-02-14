@@ -20,6 +20,18 @@
 from proton import *
 import os, common
 
+
+def find_test_interop_dir():
+    """Walk up the directory tree to find the tests directory."""
+    f = os.path.dirname(__file__)
+    while f and os.path.basename(f) != "tests": f = os.path.dirname(f)
+    f = os.path.join(f, "interop")
+    if not os.path.isdir(f):
+        raise Exception("Cannot find test/interop directory from "+__file__)
+    return f
+
+test_interop_dir=find_test_interop_dir()
+
 class InteropTest(common.Test):
 
     def setup(self):
@@ -29,8 +41,7 @@ class InteropTest(common.Test):
         self.data = None
 
     def decode(self, name):
-        home = os.getenv("PROTON_HOME") or os.getcwd()
-        filename = os.path.join(home, "tests", "interop", name+".amqp")
+        filename = os.path.join(test_interop_dir, name+".amqp")
         f = open(filename)
         encoded = f.read()
         f.close()

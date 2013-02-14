@@ -43,6 +43,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
     <testSourceDirectory>java</testSourceDirectory>
     <resources>
       <resource><directory>python</directory></resource>
+      <resource><directory>interop</directory></resource>
     </resources>
     <plugins>
       <plugin>
