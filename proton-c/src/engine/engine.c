@@ -776,7 +776,7 @@ void pn_transport_init(pn_transport_t *transport)
   transport->open_rcvd = false;
   transport->close_sent = false;
   transport->close_rcvd = false;
-  transport->eos_pushed = false;
+  transport->tail_closed = false;
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
@@ -1852,13 +1852,13 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 {
   if (!transport) return PN_ARG_ERR;
   if (available == 0) {
-    return pn_transport_push_eos(transport);
+    return pn_transport_close_tail(transport);
   }
   const size_t original = available;
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity < 0) return capacity;
   while (available && capacity) {
-    char *dest = pn_transport_buffer(transport);
+    char *dest = pn_transport_tail(transport);
     assert(dest);
     size_t count = pn_min( (size_t)capacity, available );
     memmove( dest, bytes, count );
@@ -1879,7 +1879,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
   pn_io_layer_t *io_layer = transport->io_layers;
   size_t consumed = 0;
 
-  while (transport->input_pending || transport->eos_pushed) {
+  while (transport->input_pending || transport->tail_closed) {
     ssize_t n;
     n = io_layer->process_input( io_layer,
                                  transport->input_buf + consumed,
@@ -2639,7 +2639,7 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
   ssize_t available = pn_transport_pending(transport);
   if (available > 0) {
     available = (ssize_t) pn_min( (size_t)available, size );
-    memmove( bytes, pn_transport_peek(transport), available );
+    memmove( bytes, pn_transport_head(transport), available );
     pn_transport_pop( transport, (size_t) available );
   }
   return available;
@@ -3025,7 +3025,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 }
 
 
-char *pn_transport_buffer(pn_transport_t *transport)
+char *pn_transport_tail(pn_transport_t *transport)
 {
   if (transport && transport->input_pending < transport->input_size) {
     return &transport->input_buf[transport->input_pending];
@@ -3033,7 +3033,7 @@ char *pn_transport_buffer(pn_transport_t *transport)
   return NULL;
 }
 
-ssize_t pn_transport_push(pn_transport_t *transport, size_t size)
+int pn_transport_push(pn_transport_t *transport, size_t size)
 {
   if (!transport) return PN_ARG_ERR;
   size = pn_min( size, (transport->input_size - transport->input_pending) );
@@ -3046,13 +3046,13 @@ ssize_t pn_transport_push(pn_transport_t *transport, size_t size)
 }
 
 // input stream has closed
-int pn_transport_push_eos(pn_transport_t *transport)
+int pn_transport_close_tail(pn_transport_t *transport)
 {
-  transport->eos_pushed = true;
+  transport->tail_closed = true;
   ssize_t x = transport_consume( transport );
   if (x < 0) return (int) x;
   return 0;
-  // @todo: what if not all input processed at this point?  do we care???
+  // XXX: what if not all input processed at this point?  do we care???
 }
 
 // output
@@ -3062,7 +3062,7 @@ ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
   return transport_produce( transport );
 }
 
-const char *pn_transport_peek(pn_transport_t *transport)
+const char *pn_transport_head(pn_transport_t *transport)
 {
   if (transport && transport->output_pending) {
     return transport->output_buf;
@@ -3081,4 +3081,9 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
                transport->output_pending );
     }
   }
+}
+
+int pn_transport_close_head(pn_transport_t *transport)
+{
+  return 0;
 }

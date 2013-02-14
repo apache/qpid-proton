@@ -288,37 +288,42 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 /* deprecated */
 ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
 
-/** Report the amount of free space in a transport's input buffer. If
- * the engine is in an error state or has reached the end of stream
- * state, a negative value will be returned indication the condition.
+/** Report the amount of free space for input following the
+ * transport's tail pointer. If the engine is in an exceptional state
+ * such as encountering an error condition or reaching the end of
+ * stream state, a negative value will be returned indicating the
+ * condition. If an error is indicated, futher details can be obtained
+ * from ::pn_transport_error. Calls to ::pn_transport_push may alter
+ * the value of this pointer. See ::pn_transport_push for details.
  *
  * @param[in] transport the transport
- * @return the free space in the transport, or error state if < 0
+ * @return the free space in the transport, PN_EOS or error code if < 0
  */
 ssize_t pn_transport_capacity(pn_transport_t *transport);
 
-/** Return a pointer to a transport's input buffer. This pointer may
- * change when calls into the engine are made. The amount of space in
- * this buffer is reported by ::pn_transport_capacity. Calls to
- * ::pn_transport_push may change the value of this pointer and the
- * amount of free space reported by ::pn_transport_capacity.
+/** Return the transport's tail pointer. The amount of free space
+ * following this pointer is reported by ::pn_transport_capacity.
+ * Calls to ::pn_transport_push may alther the value of this pointer.
+ * See ::pn_transport_push for details.
  *
  * @param[in] transport the transport
  * @return a pointer to the transport's input buffer, NULL if no capacity available.
  */
-char *pn_transport_buffer(pn_transport_t *transport);
+char *pn_transport_tail(pn_transport_t *transport);
 
-/** Push data from a transport's input buffer into the engine and
- * return how much data was succesfully pushed.  The number of bytes
- * written to the input buffer (via the pointer supplied by
- * ::pn_transport_buffer) must be no greater than the value returned
- * by ::pn_transport_capacity.
+/** Push input data following the tail pointer into the transport.
+ * Calling this function will cause the transport to consume ::size
+ * bytes of input occupying the free space following the tail pointer.
+ * Calls to this function may change the value of ::pn_transport_tail,
+ * as well as the amount of free space reported by
+ * ::pn_transport_capacity. The function will return how much data was
+ * successfully pushed.
  *
  * @param[in] transport the transport
  * @param[size] the amount of data written to the transport's input buffer
- * @return the amount of data consumed, or error code if < 0
+ * @return 0 on success, or error code if < 0
  */
-ssize_t pn_transport_push(pn_transport_t *transport, size_t size);
+int pn_transport_push(pn_transport_t *transport, size_t size);
 
 /** Indicate that the input has reached End Of Stream (EOS).  This
  * tells the transport that no more input will be forthcoming.
@@ -326,30 +331,51 @@ ssize_t pn_transport_push(pn_transport_t *transport, size_t size);
  * @param[in] transport the transport
  * @return 0 on success, or error code if < 0
  */
-int pn_transport_push_eos(pn_transport_t *transport);
+int pn_transport_close_tail(pn_transport_t *transport);
 
-/** Return the number of pending output bytes for a transport, or a
- * negative error code if the engine is in an error state.
+/** Report the number of pending output bytes following the
+ * transport's head pointer. If the engine is in an exceptional state
+ * such as encountering an error condition or reaching the end of
+ * stream state, a negative value will be returned indicating the
+ * condition. If an error is indicated, further details can be
+ * obtained from ::pn_transport_error. Calls to ::pn_transport_pop may
+ * alter the value of this pointer. See ::pn_transport_pop for
+ * details.
  *
  * @param[in] the transport
  * @return the number of pending output bytes, or an error code
  */
 ssize_t pn_transport_pending(pn_transport_t *transport);
 
-/** Return a pointer to a transport's output buffer. Any calls into
- * the engine may change the value of this pointer and it's contents.
+/** Return the transport's head pointer. This pointer references
+ * queued output data. The ::pn_transport_pending function reports how
+ * many bytes of output data follow this pointer. Calls to
+ * ::pn_transport_pop may alter this pointer and any data it
+ * references. See ::pn_transport_pop for details.
  *
  * @param[in] the transport
  * @return a pointer to the transport's output buffer, or NULL if no pending output.
  */
-const char *pn_transport_peek(pn_transport_t *transport);
+const char *pn_transport_head(pn_transport_t *transport);
 
-/** Remove bytes from the head of the output buffer for a transport.
+/** Removes ::size bytes of output from the pending output queue
+ * following the transport's head pointer. Calls to this function may
+ * alter the transport's head pointer as well as the number of pending
+ * bytes reported by ::pn_transport_pending.
  *
  * @param[in] the transport
  * @param[size] the number of bytes to remove
  */
 void pn_transport_pop(pn_transport_t *transport, size_t size);
+
+/** Indicate that the output has closed.  This tells the transport
+ * that no more output will be popped.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+int pn_transport_close_head(pn_transport_t *transport);
+
 
 /** Process any pending transport timer events.
  *

@@ -171,7 +171,7 @@ struct pn_transport_t {
   size_t input_size;
   size_t input_pending;
   char *input_buf;
-  bool eos_pushed;      // input stream closed by driver
+  bool tail_closed;      // input stream closed by driver
 
 };
 
