@@ -99,7 +99,6 @@ EOF
     ##
     ## Remove content not for release
     ##
-    rm -r ${rootname}/proton-c/examples/mailbox
     rm -r ${rootname}/design
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
