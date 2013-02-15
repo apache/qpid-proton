@@ -28,7 +28,6 @@ typedef unsigned long long int uint64_t;
 typedef long long int int64_t;
 
 /* Parse these interface header files to generate APIs for script languages */
-%include "proton/import_export.h"
 %include "proton/types.h"
 %ignore pn_error_format;
 %ignore pn_error_vformat;

@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <sys/types.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -102,14 +101,14 @@ typedef enum {
  * with this domain.
  * @return a pointer to the SSL domain, if SSL support is present.
  */
-PROTON_EXTERN pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode);
+pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode);
 
 /** Release an SSL configuration domain
  *
  * This method frees an SSL domain object allocated by ::pn_ssl_domain.
  * @param[in] domain the domain to destroy.
  */
-PROTON_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
+void pn_ssl_domain_free( pn_ssl_domain_t *domain );
 
 /** Set the certificate that identifies the local node to the remote.
  *
@@ -131,7 +130,7 @@ PROTON_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
  * protected.
  * @return 0 on success
  */
-PROTON_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
+int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
                                const char *certificate_file,
                                const char *private_key_file,
                                const char *password);
@@ -150,7 +149,7 @@ PROTON_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
  * @param[in] certificate_db database of trusted CAs, used to authenticate the peer.
  * @return 0 on success
  */
-PROTON_EXTERN int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
+int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                 const char *certificate_db);
 
 /** Determines the level of peer validation.
@@ -195,7 +194,7 @@ typedef enum {
  * to the peer client if the server has been configured to verify its peer.
  * @return 0 on success
  */
-PROTON_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
+int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
                                           const pn_ssl_verify_mode_t mode,
                                           const char *trusted_CAs);
 
@@ -208,7 +207,7 @@ PROTON_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
  * @param[in] domain the domain (server) that will accept the client connections.
  * @return 0 on success
  */
-PROTON_EXTERN int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
+int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
 
 /** Create a new SSL session object associated with a transport.
  *
@@ -219,7 +218,7 @@ PROTON_EXTERN int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
  * @return a pointer to the SSL object configured for this transport.  Returns NULL if
  * no SSL session is associated with the transport.
  */
-PROTON_EXTERN pn_ssl_t *pn_ssl(pn_transport_t *transport);
+pn_ssl_t *pn_ssl(pn_transport_t *transport);
 
 /** Initialize an SSL session.
  *
@@ -233,7 +232,7 @@ PROTON_EXTERN pn_ssl_t *pn_ssl(pn_transport_t *transport);
  * and stored for future session restore.
  * @return 0 on success, else an error code.
  */
-PROTON_EXTERN int pn_ssl_init( pn_ssl_t *ssl,
+int pn_ssl_init( pn_ssl_t *ssl,
                  pn_ssl_domain_t *domain,
                  const char *session_id);
 
@@ -248,7 +247,7 @@ PROTON_EXTERN int pn_ssl_init( pn_ssl_t *ssl,
  * @param[in] size maximum number of bytes in buffer.
  * @return True if cipher name written to buffer, False if no cipher in use.
  */
-PROTON_EXTERN bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
 /** Get the name of the SSL protocol that is currently in use.
  *
@@ -261,7 +260,7 @@ PROTON_EXTERN bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t si
  * @return True if the version information was written to buffer, False if SSL connection
  * not ready.
  */
-PROTON_EXTERN bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
 /** Check whether the state has been resumed.
  *
@@ -275,7 +274,7 @@ PROTON_EXTERN bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t 
  * @param[in] ssl the ssl session to check
  * @return status code indicating whether or not the session has been resumed.
  */
-PROTON_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
+pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
 /** Set the expected identity of the remote peer.
  *
@@ -294,7 +293,7 @@ PROTON_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
  * given in RFC1034, Section 3.5.
  * @return 0 on success.
  */
-PROTON_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
 
 
 /** Access the configured peer identity.
@@ -309,7 +308,7 @@ PROTON_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname)
  * no hostname set.
  * @return 0 on success.
  */
-PROTON_EXTERN int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
 
 #ifdef __cplusplus
 }

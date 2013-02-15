@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <sys/types.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -68,14 +67,14 @@ typedef enum {
  *
  * @return a new SASL object representing the layer.
  */
-PROTON_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
+pn_sasl_t *pn_sasl(pn_transport_t *transport);
 
 /** Access the current state of the layer.
  *
  * @param[in] sasl the layer to retrieve the state from.
  * @return The state of the sasl layer.
  */
-PROTON_EXTERN pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl);
+pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl);
 
 /** Set the acceptable SASL mechanisms for the layer.
  *
@@ -83,7 +82,7 @@ PROTON_EXTERN pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl);
  * @param[in] mechanisms a list of acceptable SASL mechanisms,
  *                       separated by space
  */
-PROTON_EXTERN void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
+void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
 
 /** Retrieve the list of SASL mechanisms provided by the remote.
  *
@@ -91,7 +90,7 @@ PROTON_EXTERN void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
  * @return a string containing a list of the SASL mechanisms
  *         advertised by the remote (separated by spaces)
  */
-PROTON_EXTERN const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
+const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
 
 /** Configure the SASL layer to act as a SASL client.
  *
@@ -100,7 +99,7 @@ PROTON_EXTERN const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
  *
  * @param[in] sasl the SASL layer to configure as a client
  */
-PROTON_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
+void pn_sasl_client(pn_sasl_t *sasl);
 
 /** Configure the SASL layer to act as a server.
  *
@@ -109,7 +108,7 @@ PROTON_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
  *
  * @param[in] sasl the SASL layer to configure as a server
  */
-PROTON_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
+void pn_sasl_server(pn_sasl_t *sasl);
 
 /** Configure the SASL layer to use the "PLAIN" mechanism.
  *
@@ -122,7 +121,7 @@ PROTON_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
  * @param[in] password credential for the PLAIN authentication
  *                     mechanism
  */
-PROTON_EXTERN void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password);
+void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password);
 
 /** Determine the size of the bytes available via pn_sasl_recv().
  *
@@ -131,7 +130,7 @@ PROTON_EXTERN void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const ch
  * @param[in] sasl the SASL layer.
  * @return The number of bytes available, zero if no available data.
  */
-PROTON_EXTERN size_t pn_sasl_pending(pn_sasl_t *sasl);
+size_t pn_sasl_pending(pn_sasl_t *sasl);
 
 /** Read challenge/response data sent from the peer.
  *
@@ -142,7 +141,7 @@ PROTON_EXTERN size_t pn_sasl_pending(pn_sasl_t *sasl);
  * @param[in] size maximum number of bytes that bytes can accept.
  * @return The number of bytes written to bytes, or an error code if < 0.
  */
-PROTON_EXTERN ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size);
+ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size);
 
 /** Send challenge or response data to the peer.
  *
@@ -151,7 +150,7 @@ PROTON_EXTERN ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size);
  * @param[in] size The number of data octets in bytes.
  * @return The number of octets read from bytes, or an error code if < 0
  */
-PROTON_EXTERN ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size);
+ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size);
 
 /** Set the outcome of SASL negotiation
  *
@@ -159,13 +158,13 @@ PROTON_EXTERN ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t si
  *
  * @todo
  */
-PROTON_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
+void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
 
 /** Retrieve the outcome of SASL negotiation.
  *
  * @todo
  */
-PROTON_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
+pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
 
 #ifdef __cplusplus
 }

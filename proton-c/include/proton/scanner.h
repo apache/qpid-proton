@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <sys/types.h>
 #include <stdarg.h>
 
@@ -63,17 +62,17 @@ typedef struct {
   size_t size;
 } pn_token_t;
 
-PROTON_EXTERN pn_scanner_t *pn_scanner();
-PROTON_EXTERN void pn_scanner_free(pn_scanner_t *scanner);
-PROTON_EXTERN pn_token_t pn_scanner_token(pn_scanner_t *scanner);
-PROTON_EXTERN int pn_scanner_err(pn_scanner_t *scanner, int code, const char *fmt, ...);
-PROTON_EXTERN int pn_scanner_verr(pn_scanner_t *scanner, int code, const char *fmt, va_list ap);
-PROTON_EXTERN void pn_scanner_line_info(pn_scanner_t *scanner, int *line, int *col);
-PROTON_EXTERN int pn_scanner_errno(pn_scanner_t *scanner);
-PROTON_EXTERN const char *pn_scanner_error(pn_scanner_t *scanner);
-PROTON_EXTERN int pn_scanner_start(pn_scanner_t *scanner, const char *input);
-PROTON_EXTERN int pn_scanner_scan(pn_scanner_t *scanner);
-PROTON_EXTERN int pn_scanner_shift(pn_scanner_t *scanner);
+pn_scanner_t *pn_scanner();
+void pn_scanner_free(pn_scanner_t *scanner);
+pn_token_t pn_scanner_token(pn_scanner_t *scanner);
+int pn_scanner_err(pn_scanner_t *scanner, int code, const char *fmt, ...);
+int pn_scanner_verr(pn_scanner_t *scanner, int code, const char *fmt, va_list ap);
+void pn_scanner_line_info(pn_scanner_t *scanner, int *line, int *col);
+int pn_scanner_errno(pn_scanner_t *scanner);
+const char *pn_scanner_error(pn_scanner_t *scanner);
+int pn_scanner_start(pn_scanner_t *scanner, const char *input);
+int pn_scanner_scan(pn_scanner_t *scanner);
+int pn_scanner_shift(pn_scanner_t *scanner);
 
 #ifdef __cplusplus
 }

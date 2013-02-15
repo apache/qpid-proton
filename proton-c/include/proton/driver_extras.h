@@ -26,8 +26,6 @@
 extern "C" {
 #endif
 
-#include <proton/import_export.h>
-
 /** @file
  * Additional API for the Driver Layer.
  *
@@ -50,7 +48,7 @@ typedef int pn_socket_t;
  *                    pn_listener_context()
  * @return a new listener on the given host:port, NULL if error
  */
-PROTON_EXTERN pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd, void *context);
+pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd, void *context);
 
 /** Create a connector using the existing file descriptor.
  *
@@ -60,7 +58,7 @@ PROTON_EXTERN pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd,
  *                    pn_connector_context()
  * @return a new connector to the given host:port, NULL if error.
  */
-PROTON_EXTERN pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *context);
+pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *context);
 
 
 #ifdef __cplusplus

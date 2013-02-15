@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/types.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -93,94 +92,94 @@ typedef struct {
 
 typedef struct pn_data_t pn_data_t;
 
-PROTON_EXTERN pn_data_t *pn_data(size_t capacity);
-PROTON_EXTERN void pn_data_free(pn_data_t *data);
-PROTON_EXTERN int pn_data_errno(pn_data_t *data);
-PROTON_EXTERN const char *pn_data_error(pn_data_t *data);
-PROTON_EXTERN int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
-PROTON_EXTERN int pn_data_fill(pn_data_t *data, const char *fmt, ...);
-PROTON_EXTERN int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
-PROTON_EXTERN int pn_data_scan(pn_data_t *data, const char *fmt, ...);
+pn_data_t *pn_data(size_t capacity);
+void pn_data_free(pn_data_t *data);
+int pn_data_errno(pn_data_t *data);
+const char *pn_data_error(pn_data_t *data);
+int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
+int pn_data_fill(pn_data_t *data, const char *fmt, ...);
+int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
+int pn_data_scan(pn_data_t *data, const char *fmt, ...);
 
-PROTON_EXTERN void pn_data_clear(pn_data_t *data);
-PROTON_EXTERN size_t pn_data_size(pn_data_t *data);
-PROTON_EXTERN void pn_data_rewind(pn_data_t *data);
-PROTON_EXTERN bool pn_data_next(pn_data_t *data);
-PROTON_EXTERN bool pn_data_prev(pn_data_t *data);
-PROTON_EXTERN bool pn_data_enter(pn_data_t *data);
-PROTON_EXTERN bool pn_data_exit(pn_data_t *data);
+void pn_data_clear(pn_data_t *data);
+size_t pn_data_size(pn_data_t *data);
+void pn_data_rewind(pn_data_t *data);
+bool pn_data_next(pn_data_t *data);
+bool pn_data_prev(pn_data_t *data);
+bool pn_data_enter(pn_data_t *data);
+bool pn_data_exit(pn_data_t *data);
 
-PROTON_EXTERN pn_type_t pn_data_type(pn_data_t *data);
+pn_type_t pn_data_type(pn_data_t *data);
 
-PROTON_EXTERN int pn_data_print(pn_data_t *data);
-PROTON_EXTERN int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
-PROTON_EXTERN ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
-PROTON_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size);
+int pn_data_print(pn_data_t *data);
+int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
+ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
+ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size);
 
-PROTON_EXTERN int pn_data_put_list(pn_data_t *data);
-PROTON_EXTERN int pn_data_put_map(pn_data_t *data);
-PROTON_EXTERN int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type);
-PROTON_EXTERN int pn_data_put_described(pn_data_t *data);
-PROTON_EXTERN int pn_data_put_null(pn_data_t *data);
-PROTON_EXTERN int pn_data_put_bool(pn_data_t *data, bool b);
-PROTON_EXTERN int pn_data_put_ubyte(pn_data_t *data, uint8_t ub);
-PROTON_EXTERN int pn_data_put_byte(pn_data_t *data, int8_t b);
-PROTON_EXTERN int pn_data_put_ushort(pn_data_t *data, uint16_t us);
-PROTON_EXTERN int pn_data_put_short(pn_data_t *data, int16_t s);
-PROTON_EXTERN int pn_data_put_uint(pn_data_t *data, uint32_t ui);
-PROTON_EXTERN int pn_data_put_int(pn_data_t *data, int32_t i);
-PROTON_EXTERN int pn_data_put_char(pn_data_t *data, pn_char_t c);
-PROTON_EXTERN int pn_data_put_ulong(pn_data_t *data, uint64_t ul);
-PROTON_EXTERN int pn_data_put_long(pn_data_t *data, int64_t l);
-PROTON_EXTERN int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
-PROTON_EXTERN int pn_data_put_float(pn_data_t *data, float f);
-PROTON_EXTERN int pn_data_put_double(pn_data_t *data, double d);
-PROTON_EXTERN int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d);
-PROTON_EXTERN int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d);
-PROTON_EXTERN int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d);
-PROTON_EXTERN int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
-PROTON_EXTERN int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
-PROTON_EXTERN int pn_data_put_string(pn_data_t *data, pn_bytes_t string);
-PROTON_EXTERN int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol);
-PROTON_EXTERN int pn_data_put_atom(pn_data_t *data, pn_atom_t atom);
+int pn_data_put_list(pn_data_t *data);
+int pn_data_put_map(pn_data_t *data);
+int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type);
+int pn_data_put_described(pn_data_t *data);
+int pn_data_put_null(pn_data_t *data);
+int pn_data_put_bool(pn_data_t *data, bool b);
+int pn_data_put_ubyte(pn_data_t *data, uint8_t ub);
+int pn_data_put_byte(pn_data_t *data, int8_t b);
+int pn_data_put_ushort(pn_data_t *data, uint16_t us);
+int pn_data_put_short(pn_data_t *data, int16_t s);
+int pn_data_put_uint(pn_data_t *data, uint32_t ui);
+int pn_data_put_int(pn_data_t *data, int32_t i);
+int pn_data_put_char(pn_data_t *data, pn_char_t c);
+int pn_data_put_ulong(pn_data_t *data, uint64_t ul);
+int pn_data_put_long(pn_data_t *data, int64_t l);
+int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t);
+int pn_data_put_float(pn_data_t *data, float f);
+int pn_data_put_double(pn_data_t *data, double d);
+int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d);
+int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d);
+int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d);
+int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
+int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
+int pn_data_put_string(pn_data_t *data, pn_bytes_t string);
+int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol);
+int pn_data_put_atom(pn_data_t *data, pn_atom_t atom);
 
-PROTON_EXTERN size_t pn_data_get_list(pn_data_t *data);
-PROTON_EXTERN size_t pn_data_get_map(pn_data_t *data);
-PROTON_EXTERN size_t pn_data_get_array(pn_data_t *data);
-PROTON_EXTERN bool pn_data_is_array_described(pn_data_t *data);
-PROTON_EXTERN pn_type_t pn_data_get_array_type(pn_data_t *data);
-PROTON_EXTERN bool pn_data_is_described(pn_data_t *data);
-PROTON_EXTERN bool pn_data_is_null(pn_data_t *data);
-PROTON_EXTERN bool pn_data_get_bool(pn_data_t *data);
-PROTON_EXTERN uint8_t pn_data_get_ubyte(pn_data_t *data);
-PROTON_EXTERN int8_t pn_data_get_byte(pn_data_t *data);
-PROTON_EXTERN uint16_t pn_data_get_ushort(pn_data_t *data);
-PROTON_EXTERN int16_t pn_data_get_short(pn_data_t *data);
-PROTON_EXTERN uint32_t pn_data_get_uint(pn_data_t *data);
-PROTON_EXTERN int32_t pn_data_get_int(pn_data_t *data);
-PROTON_EXTERN pn_char_t pn_data_get_char(pn_data_t *data);
-PROTON_EXTERN uint64_t pn_data_get_ulong(pn_data_t *data);
-PROTON_EXTERN int64_t pn_data_get_long(pn_data_t *data);
-PROTON_EXTERN pn_timestamp_t pn_data_get_timestamp(pn_data_t *data);
-PROTON_EXTERN float pn_data_get_float(pn_data_t *data);
-PROTON_EXTERN double pn_data_get_double(pn_data_t *data);
-PROTON_EXTERN pn_decimal32_t pn_data_get_decimal32(pn_data_t *data);
-PROTON_EXTERN pn_decimal64_t pn_data_get_decimal64(pn_data_t *data);
-PROTON_EXTERN pn_decimal128_t pn_data_get_decimal128(pn_data_t *data);
-PROTON_EXTERN pn_uuid_t pn_data_get_uuid(pn_data_t *data);
-PROTON_EXTERN pn_bytes_t pn_data_get_binary(pn_data_t *data);
-PROTON_EXTERN pn_bytes_t pn_data_get_string(pn_data_t *data);
-PROTON_EXTERN pn_bytes_t pn_data_get_symbol(pn_data_t *data);
-PROTON_EXTERN pn_bytes_t pn_data_get_bytes(pn_data_t *data);
-PROTON_EXTERN pn_atom_t pn_data_get_atom(pn_data_t *data);
+size_t pn_data_get_list(pn_data_t *data);
+size_t pn_data_get_map(pn_data_t *data);
+size_t pn_data_get_array(pn_data_t *data);
+bool pn_data_is_array_described(pn_data_t *data);
+pn_type_t pn_data_get_array_type(pn_data_t *data);
+bool pn_data_is_described(pn_data_t *data);
+bool pn_data_is_null(pn_data_t *data);
+bool pn_data_get_bool(pn_data_t *data);
+uint8_t pn_data_get_ubyte(pn_data_t *data);
+int8_t pn_data_get_byte(pn_data_t *data);
+uint16_t pn_data_get_ushort(pn_data_t *data);
+int16_t pn_data_get_short(pn_data_t *data);
+uint32_t pn_data_get_uint(pn_data_t *data);
+int32_t pn_data_get_int(pn_data_t *data);
+pn_char_t pn_data_get_char(pn_data_t *data);
+uint64_t pn_data_get_ulong(pn_data_t *data);
+int64_t pn_data_get_long(pn_data_t *data);
+pn_timestamp_t pn_data_get_timestamp(pn_data_t *data);
+float pn_data_get_float(pn_data_t *data);
+double pn_data_get_double(pn_data_t *data);
+pn_decimal32_t pn_data_get_decimal32(pn_data_t *data);
+pn_decimal64_t pn_data_get_decimal64(pn_data_t *data);
+pn_decimal128_t pn_data_get_decimal128(pn_data_t *data);
+pn_uuid_t pn_data_get_uuid(pn_data_t *data);
+pn_bytes_t pn_data_get_binary(pn_data_t *data);
+pn_bytes_t pn_data_get_string(pn_data_t *data);
+pn_bytes_t pn_data_get_symbol(pn_data_t *data);
+pn_bytes_t pn_data_get_bytes(pn_data_t *data);
+pn_atom_t pn_data_get_atom(pn_data_t *data);
 
-PROTON_EXTERN int pn_data_copy(pn_data_t *data, pn_data_t *src);
-PROTON_EXTERN int pn_data_append(pn_data_t *data, pn_data_t *src);
-PROTON_EXTERN int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
-PROTON_EXTERN void pn_data_narrow(pn_data_t *data);
-PROTON_EXTERN void pn_data_widen(pn_data_t *data);
+int pn_data_copy(pn_data_t *data, pn_data_t *src);
+int pn_data_append(pn_data_t *data, pn_data_t *src);
+int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
+void pn_data_narrow(pn_data_t *data);
+void pn_data_widen(pn_data_t *data);
 
-PROTON_EXTERN void pn_data_dump(pn_data_t *data);
+void pn_data_dump(pn_data_t *data);
 
 #ifdef __cplusplus
 }

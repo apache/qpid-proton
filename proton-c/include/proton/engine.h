@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -117,30 +116,30 @@ typedef int pn_trace_t;
  *
  * @return pointer to a new connection object.
  */
-PROTON_EXTERN pn_connection_t *pn_connection(void);
+pn_connection_t *pn_connection(void);
 
 /** Retrieve the state of the connection.
  *
  * @param[in] connection the connection
  * @return the connection's state flags
  */
-PROTON_EXTERN pn_state_t pn_connection_state(pn_connection_t *connection);
+pn_state_t pn_connection_state(pn_connection_t *connection);
 /** @todo: needs documentation */
-PROTON_EXTERN pn_error_t *pn_connection_error(pn_connection_t *connection);
+pn_error_t *pn_connection_error(pn_connection_t *connection);
 /** @todo: needs documentation */
-PROTON_EXTERN const char *pn_connection_get_container(pn_connection_t *connection);
+const char *pn_connection_get_container(pn_connection_t *connection);
 /** @todo: needs documentation */
-PROTON_EXTERN void pn_connection_set_container(pn_connection_t *connection, const char *container);
+void pn_connection_set_container(pn_connection_t *connection, const char *container);
 /** @todo: needs documentation */
-PROTON_EXTERN const char *pn_connection_get_hostname(pn_connection_t *connection);
+const char *pn_connection_get_hostname(pn_connection_t *connection);
 /** @todo: needs documentation */
-PROTON_EXTERN void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
-PROTON_EXTERN const char *pn_connection_remote_container(pn_connection_t *connection);
-PROTON_EXTERN const char *pn_connection_remote_hostname(pn_connection_t *connection);
-PROTON_EXTERN pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection);
-PROTON_EXTERN pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection);
-PROTON_EXTERN pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection);
-PROTON_EXTERN pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection);
+void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
+const char *pn_connection_remote_container(pn_connection_t *connection);
+const char *pn_connection_remote_hostname(pn_connection_t *connection);
+pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection);
+pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection);
+pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection);
+pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection);
 
 
 /** Extracts the first delivery on the connection that has pending
@@ -158,7 +157,7 @@ PROTON_EXTERN pn_data_t *pn_connection_remote_desired_capabilities(pn_connection
  * @return the first delivery object that needs to be serviced, else
  * NULL if none
  */
-PROTON_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
+pn_delivery_t *pn_work_head(pn_connection_t *connection);
 
 /** Get the next delivery on the connection that needs has pending
  *  operations.
@@ -168,7 +167,7 @@ PROTON_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
  * @return the next delivery that has pending operations, else
  * NULL if none
  */
-PROTON_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
+pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
 
 /** Factory for creating a new session on the connection.
  *
@@ -178,7 +177,7 @@ PROTON_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
  * @param[in] connection the session will exist over this connection
  * @return pointer to new session
  */
-PROTON_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
+pn_session_t *pn_session(pn_connection_t *connection);
 
 /** Factory for creating a transport.
  *
@@ -188,16 +187,16 @@ PROTON_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
  *
  * @return pointer to new transport
  */
-PROTON_EXTERN pn_transport_t *pn_transport(void);
+pn_transport_t *pn_transport(void);
 
 /** Binds the transport to an AMQP connection endpoint.
  *
  * @return an error code, or 0 on success
  */
 
-PROTON_EXTERN int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
+int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
 
-PROTON_EXTERN int pn_transport_unbind(pn_transport_t *transport);
+int pn_transport_unbind(pn_transport_t *transport);
 
 /** Retrieve the first Session that matches the given state mask.
  *
@@ -213,7 +212,7 @@ PROTON_EXTERN int pn_transport_unbind(pn_transport_t *transport);
  * @return the first session owned by the connection that matches the
  * mask, else NULL if no sessions match
  */
-PROTON_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state);
+pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state);
 
 /** Retrieve the next Session that matches the given state mask.
  *
@@ -227,7 +226,7 @@ PROTON_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection, pn_stat
  * @return the next session owned by the connection that matches the
  * mask, else NULL if no sessions match
  */
-PROTON_EXTERN pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
+pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
 
 /** Retrieve the first Link that matches the given state mask.
  *
@@ -243,7 +242,7 @@ PROTON_EXTERN pn_session_t *pn_session_next(pn_session_t *session, pn_state_t st
  * @return the first Link owned by the connection that matches the
  * mask, else NULL if no Links match
  */
-PROTON_EXTERN pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
+pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
 
 /** Retrieve the next Link that matches the given state mask.
  *
@@ -257,12 +256,12 @@ PROTON_EXTERN pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t st
  * @return the next session owned by the connection that matches the
  * mask, else NULL if no sessions match
  */
-PROTON_EXTERN pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
+pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state);
 
-PROTON_EXTERN void pn_connection_reset(pn_connection_t *connection);
-PROTON_EXTERN void pn_connection_open(pn_connection_t *connection);
-PROTON_EXTERN void pn_connection_close(pn_connection_t *connection);
-PROTON_EXTERN void pn_connection_free(pn_connection_t *connection);
+void pn_connection_reset(pn_connection_t *connection);
+void pn_connection_open(pn_connection_t *connection);
+void pn_connection_close(pn_connection_t *connection);
+void pn_connection_free(pn_connection_t *connection);
 
 /** Access the application context that is associated with the
  *  connection.
@@ -271,7 +270,7 @@ PROTON_EXTERN void pn_connection_free(pn_connection_t *connection);
  *
  * @return the application context that was passed to pn_connection_set_context()
  */
-PROTON_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
+void *pn_connection_get_context(pn_connection_t *connection);
 
 /** Assign a new application context to the connection.
  *
@@ -279,13 +278,13 @@ PROTON_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
  * @param[in] context new application context to associate with the
  *                    connection
  */
-PROTON_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *context);
+void pn_connection_set_context(pn_connection_t *connection, void *context);
 
 
 // transport
-PROTON_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
-PROTON_EXTERN ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
-PROTON_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
+pn_error_t *pn_transport_error(pn_transport_t *transport);
+ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
+ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
 /** Process any pending transport timer events.
  *
  * This method should be called after all pending input has been processed by the
@@ -299,135 +298,135 @@ PROTON_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes
  * transport.  The caller must invoke pn_transport_tick again at least once at or before
  * this deadline occurs.
  */
-PROTON_EXTERN pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now);
-PROTON_EXTERN void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
+pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now);
+void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 // max frame of zero means "unlimited"
-PROTON_EXTERN uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
-PROTON_EXTERN void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
-PROTON_EXTERN uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
+uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
+void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
+uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
 /* timeout of zero means "no timeout" */
-PROTON_EXTERN pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
-PROTON_EXTERN void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
-PROTON_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
-PROTON_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
-PROTON_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
-PROTON_EXTERN void pn_transport_free(pn_transport_t *transport);
+pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
+void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
+pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
+uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
+uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
+void pn_transport_free(pn_transport_t *transport);
 
 // session
-PROTON_EXTERN pn_state_t pn_session_state(pn_session_t *session);
-PROTON_EXTERN pn_error_t *pn_session_error(pn_session_t *session);
-PROTON_EXTERN pn_connection_t *pn_session_connection(pn_session_t *session);
-PROTON_EXTERN void pn_session_open(pn_session_t *session);
-PROTON_EXTERN void pn_session_close(pn_session_t *session);
-PROTON_EXTERN void pn_session_free(pn_session_t *session);
-PROTON_EXTERN void *pn_session_get_context(pn_session_t *session);
-PROTON_EXTERN void pn_session_set_context(pn_session_t *session, void *context);
+pn_state_t pn_session_state(pn_session_t *session);
+pn_error_t *pn_session_error(pn_session_t *session);
+pn_connection_t *pn_session_connection(pn_session_t *session);
+void pn_session_open(pn_session_t *session);
+void pn_session_close(pn_session_t *session);
+void pn_session_free(pn_session_t *session);
+void *pn_session_get_context(pn_session_t *session);
+void pn_session_set_context(pn_session_t *session, void *context);
 
 // link
-PROTON_EXTERN pn_link_t *pn_sender(pn_session_t *session, const char *name);
-PROTON_EXTERN pn_link_t *pn_receiver(pn_session_t *session, const char *name);
-PROTON_EXTERN const char *pn_link_name(pn_link_t *link);
-PROTON_EXTERN bool pn_link_is_sender(pn_link_t *link);
-PROTON_EXTERN bool pn_link_is_receiver(pn_link_t *link);
-PROTON_EXTERN pn_state_t pn_link_state(pn_link_t *link);
-PROTON_EXTERN pn_error_t *pn_link_error(pn_link_t *link);
-PROTON_EXTERN pn_session_t *pn_link_session(pn_link_t *link);
-PROTON_EXTERN pn_terminus_t *pn_link_source(pn_link_t *link);
-PROTON_EXTERN pn_terminus_t *pn_link_target(pn_link_t *link);
-PROTON_EXTERN pn_terminus_t *pn_link_remote_source(pn_link_t *link);
-PROTON_EXTERN pn_terminus_t *pn_link_remote_target(pn_link_t *link);
-PROTON_EXTERN pn_delivery_t *pn_link_current(pn_link_t *link);
-PROTON_EXTERN bool pn_link_advance(pn_link_t *link);
-PROTON_EXTERN int pn_link_credit(pn_link_t *link);
-PROTON_EXTERN int pn_link_queued(pn_link_t *link);
-PROTON_EXTERN int pn_link_available(pn_link_t *link);
+pn_link_t *pn_sender(pn_session_t *session, const char *name);
+pn_link_t *pn_receiver(pn_session_t *session, const char *name);
+const char *pn_link_name(pn_link_t *link);
+bool pn_link_is_sender(pn_link_t *link);
+bool pn_link_is_receiver(pn_link_t *link);
+pn_state_t pn_link_state(pn_link_t *link);
+pn_error_t *pn_link_error(pn_link_t *link);
+pn_session_t *pn_link_session(pn_link_t *link);
+pn_terminus_t *pn_link_source(pn_link_t *link);
+pn_terminus_t *pn_link_target(pn_link_t *link);
+pn_terminus_t *pn_link_remote_source(pn_link_t *link);
+pn_terminus_t *pn_link_remote_target(pn_link_t *link);
+pn_delivery_t *pn_link_current(pn_link_t *link);
+bool pn_link_advance(pn_link_t *link);
+int pn_link_credit(pn_link_t *link);
+int pn_link_queued(pn_link_t *link);
+int pn_link_available(pn_link_t *link);
 
-PROTON_EXTERN int pn_link_unsettled(pn_link_t *link);
-PROTON_EXTERN pn_delivery_t *pn_unsettled_head(pn_link_t *link);
-PROTON_EXTERN pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
+int pn_link_unsettled(pn_link_t *link);
+pn_delivery_t *pn_unsettled_head(pn_link_t *link);
+pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
-PROTON_EXTERN void pn_link_open(pn_link_t *sender);
-PROTON_EXTERN void pn_link_close(pn_link_t *sender);
-PROTON_EXTERN void pn_link_free(pn_link_t *sender);
-PROTON_EXTERN void *pn_link_get_context(pn_link_t *link);
-PROTON_EXTERN void pn_link_set_context(pn_link_t *link, void *context);
+void pn_link_open(pn_link_t *sender);
+void pn_link_close(pn_link_t *sender);
+void pn_link_free(pn_link_t *sender);
+void *pn_link_get_context(pn_link_t *link);
+void pn_link_set_context(pn_link_t *link, void *context);
 
 // sender
-PROTON_EXTERN void pn_link_offered(pn_link_t *sender, int credit);
-PROTON_EXTERN ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
-PROTON_EXTERN void pn_link_drained(pn_link_t *sender);
+void pn_link_offered(pn_link_t *sender, int credit);
+ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
+void pn_link_drained(pn_link_t *sender);
 //void pn_link_abort(pn_sender_t *sender);
 
 // receiver
-PROTON_EXTERN void pn_link_flow(pn_link_t *receiver, int credit);
-PROTON_EXTERN void pn_link_drain(pn_link_t *receiver, int credit);
-PROTON_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
+void pn_link_flow(pn_link_t *receiver, int credit);
+void pn_link_drain(pn_link_t *receiver, int credit);
+ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
 
 // terminus
-PROTON_EXTERN pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type);
+pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus);
+int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type);
 
-PROTON_EXTERN const char *pn_terminus_get_address(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_address(pn_terminus_t *terminus, const char *address);
-PROTON_EXTERN pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_durability(pn_terminus_t *terminus,
+const char *pn_terminus_get_address(pn_terminus_t *terminus);
+int pn_terminus_set_address(pn_terminus_t *terminus, const char *address);
+pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus);
+int pn_terminus_set_durability(pn_terminus_t *terminus,
                                pn_durability_t durability);
-PROTON_EXTERN pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
-PROTON_EXTERN pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t);
-PROTON_EXTERN bool pn_terminus_is_dynamic(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic);
-PROTON_EXTERN pn_data_t *pn_terminus_properties(pn_terminus_t *terminus);
-PROTON_EXTERN pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus);
-PROTON_EXTERN pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus);
-PROTON_EXTERN pn_data_t *pn_terminus_filter(pn_terminus_t *terminus);
-PROTON_EXTERN int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src);
+pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
+int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
+pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus);
+int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t);
+bool pn_terminus_is_dynamic(pn_terminus_t *terminus);
+int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic);
+pn_data_t *pn_terminus_properties(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus);
+pn_data_t *pn_terminus_filter(pn_terminus_t *terminus);
+int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src);
 
 // delivery
-PROTON_EXTERN pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
-PROTON_EXTERN pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
-PROTON_EXTERN pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
+pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
+pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
+pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
 // how do we do delivery state?
-PROTON_EXTERN pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery);
-PROTON_EXTERN pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery);
-PROTON_EXTERN bool pn_delivery_settled(pn_delivery_t *delivery);
-PROTON_EXTERN size_t pn_delivery_pending(pn_delivery_t *delivery);
-PROTON_EXTERN bool pn_delivery_partial(pn_delivery_t *delivery);
-PROTON_EXTERN bool pn_delivery_writable(pn_delivery_t *delivery);
-PROTON_EXTERN bool pn_delivery_readable(pn_delivery_t *delivery);
-PROTON_EXTERN bool pn_delivery_updated(pn_delivery_t *delivery);
-PROTON_EXTERN void pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition);
-PROTON_EXTERN void pn_delivery_clear(pn_delivery_t *delivery);
+pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery);
+pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery);
+bool pn_delivery_settled(pn_delivery_t *delivery);
+size_t pn_delivery_pending(pn_delivery_t *delivery);
+bool pn_delivery_partial(pn_delivery_t *delivery);
+bool pn_delivery_writable(pn_delivery_t *delivery);
+bool pn_delivery_readable(pn_delivery_t *delivery);
+bool pn_delivery_updated(pn_delivery_t *delivery);
+void pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition);
+void pn_delivery_clear(pn_delivery_t *delivery);
 //int pn_delivery_format(pn_delivery_t *delivery);
-PROTON_EXTERN void pn_delivery_settle(pn_delivery_t *delivery);
-PROTON_EXTERN void pn_delivery_dump(pn_delivery_t *delivery);
-PROTON_EXTERN void *pn_delivery_get_context(pn_delivery_t *delivery);
-PROTON_EXTERN void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
+void pn_delivery_settle(pn_delivery_t *delivery);
+void pn_delivery_dump(pn_delivery_t *delivery);
+void *pn_delivery_get_context(pn_delivery_t *delivery);
+void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
 
-PROTON_EXTERN pn_condition_t *pn_connection_condition(pn_connection_t *connection);
-PROTON_EXTERN pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
+pn_condition_t *pn_connection_condition(pn_connection_t *connection);
+pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
 
-PROTON_EXTERN pn_condition_t *pn_session_condition(pn_session_t *session);
-PROTON_EXTERN pn_condition_t *pn_session_remote_condition(pn_session_t *session);
+pn_condition_t *pn_session_condition(pn_session_t *session);
+pn_condition_t *pn_session_remote_condition(pn_session_t *session);
 
-PROTON_EXTERN pn_condition_t *pn_link_condition(pn_link_t *link);
-PROTON_EXTERN pn_condition_t *pn_link_remote_condition(pn_link_t *link);
+pn_condition_t *pn_link_condition(pn_link_t *link);
+pn_condition_t *pn_link_remote_condition(pn_link_t *link);
 
-PROTON_EXTERN bool pn_condition_is_set(pn_condition_t *condition);
-PROTON_EXTERN void pn_condition_clear(pn_condition_t *condition);
+bool pn_condition_is_set(pn_condition_t *condition);
+void pn_condition_clear(pn_condition_t *condition);
 
-PROTON_EXTERN const char *pn_condition_get_name(pn_condition_t *condition);
-PROTON_EXTERN int pn_condition_set_name(pn_condition_t *condition, const char *name);
+const char *pn_condition_get_name(pn_condition_t *condition);
+int pn_condition_set_name(pn_condition_t *condition, const char *name);
 
-PROTON_EXTERN const char *pn_condition_get_description(pn_condition_t *condition);
-PROTON_EXTERN int pn_condition_set_description(pn_condition_t *condition, const char *description);
+const char *pn_condition_get_description(pn_condition_t *condition);
+int pn_condition_set_description(pn_condition_t *condition, const char *description);
 
-PROTON_EXTERN pn_data_t *pn_condition_info(pn_condition_t *condition);
+pn_data_t *pn_condition_info(pn_condition_t *condition);
 
-PROTON_EXTERN bool pn_condition_is_redirect(pn_condition_t *condition);
-PROTON_EXTERN const char *pn_condition_redirect_host(pn_condition_t *condition);
-PROTON_EXTERN int pn_condition_redirect_port(pn_condition_t *condition);
+bool pn_condition_is_redirect(pn_condition_t *condition);
+const char *pn_condition_redirect_host(pn_condition_t *condition);
+int pn_condition_redirect_port(pn_condition_t *condition);
 
 #ifdef __cplusplus
 }

@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/codec.h>
 
 #ifdef __cplusplus
@@ -31,11 +30,11 @@ extern "C" {
 
 typedef struct pn_parser_t pn_parser_t;
 
-PROTON_EXTERN pn_parser_t *pn_parser(void);
-PROTON_EXTERN int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *data);
-PROTON_EXTERN int pn_parser_errno(pn_parser_t *parser);
-PROTON_EXTERN const char *pn_parser_error(pn_parser_t *parser);
-PROTON_EXTERN void pn_parser_free(pn_parser_t *parser);
+pn_parser_t *pn_parser(void);
+int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *data);
+int pn_parser_errno(pn_parser_t *parser);
+const char *pn_parser_error(pn_parser_t *parser);
+void pn_parser_free(pn_parser_t *parser);
 
 #ifdef __cplusplus
 }

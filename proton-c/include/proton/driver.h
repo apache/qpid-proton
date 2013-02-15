@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/error.h>
 #include <proton/engine.h>
 #include <proton/sasl.h>
@@ -61,7 +60,7 @@ typedef enum {
  *  Call pn_driver_free() to release the driver object.
  *  @return new driver object, NULL if error
  */
-PROTON_EXTERN pn_driver_t *pn_driver(void);
+pn_driver_t *pn_driver(void);
 
 /** Return the most recent error code.
  *
@@ -69,7 +68,7 @@ PROTON_EXTERN pn_driver_t *pn_driver(void);
  *
  * @return the most recent error text for d
  */
-PROTON_EXTERN int pn_driver_errno(pn_driver_t *d);
+int pn_driver_errno(pn_driver_t *d);
 
 /** Return the most recent error text for d.
  *
@@ -77,7 +76,7 @@ PROTON_EXTERN int pn_driver_errno(pn_driver_t *d);
  *
  * @return the most recent error text for d
  */
-PROTON_EXTERN const char *pn_driver_error(pn_driver_t *d);
+const char *pn_driver_error(pn_driver_t *d);
 
 /** Set the tracing level for the given driver.
  *
@@ -85,7 +84,7 @@ PROTON_EXTERN const char *pn_driver_error(pn_driver_t *d);
  * @param[in] trace the trace level to use.
  * @todo pn_trace_t needs documentation
  */
-PROTON_EXTERN void pn_driver_trace(pn_driver_t *driver, pn_trace_t trace);
+void pn_driver_trace(pn_driver_t *driver, pn_trace_t trace);
 
 /** Force pn_driver_wait() to return
  *
@@ -93,7 +92,7 @@ PROTON_EXTERN void pn_driver_trace(pn_driver_t *driver, pn_trace_t trace);
  *
  * @return zero on success, an error code on failure
  */
-PROTON_EXTERN int pn_driver_wakeup(pn_driver_t *driver);
+int pn_driver_wakeup(pn_driver_t *driver);
 
 /** Wait for an active connector or listener
  *
@@ -103,14 +102,14 @@ PROTON_EXTERN int pn_driver_wakeup(pn_driver_t *driver);
  *
  * @return zero on success, an error code on failure
  */
-PROTON_EXTERN int pn_driver_wait(pn_driver_t *driver, int timeout);
+int pn_driver_wait(pn_driver_t *driver, int timeout);
 
 /** Get the next listener with pending data in the driver.
  *
  * @param[in] driver the driver
  * @return NULL if no active listener available
  */
-PROTON_EXTERN pn_listener_t *pn_driver_listener(pn_driver_t *driver);
+pn_listener_t *pn_driver_listener(pn_driver_t *driver);
 
 /** Get the next active connector in the driver.
  *
@@ -120,7 +119,7 @@ PROTON_EXTERN pn_listener_t *pn_driver_listener(pn_driver_t *driver);
  * @param[in] driver the driver
  * @return NULL if no active connector available
  */
-PROTON_EXTERN pn_connector_t *pn_driver_connector(pn_driver_t *driver);
+pn_connector_t *pn_driver_connector(pn_driver_t *driver);
 
 /** Free the driver allocated via pn_driver, and all associated
  *  listeners and connectors.
@@ -128,7 +127,7 @@ PROTON_EXTERN pn_connector_t *pn_driver_connector(pn_driver_t *driver);
  * @param[in] driver the driver to free, no longer valid on
  *                   return
  */
-PROTON_EXTERN void pn_driver_free(pn_driver_t *driver);
+void pn_driver_free(pn_driver_t *driver);
 
 
 /** pn_listener - the server API **/
@@ -142,7 +141,7 @@ PROTON_EXTERN void pn_driver_free(pn_driver_t *driver);
  *                    pn_listener_context()
  * @return a new listener on the given host:port, NULL if error
  */
-PROTON_EXTERN pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
+pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
                            const char *port, void* context);
 
 /** Access the head listener for a driver.
@@ -151,7 +150,7 @@ PROTON_EXTERN pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
  *
  * @return the head listener for driver or NULL if there is none
  */
-PROTON_EXTERN pn_listener_t *pn_listener_head(pn_driver_t *driver);
+pn_listener_t *pn_listener_head(pn_driver_t *driver);
 
 /** Access the next listener.
  *
@@ -160,19 +159,19 @@ PROTON_EXTERN pn_listener_t *pn_listener_head(pn_driver_t *driver);
  *
  * @return the next listener
  */
-PROTON_EXTERN pn_listener_t *pn_listener_next(pn_listener_t *listener);
+pn_listener_t *pn_listener_next(pn_listener_t *listener);
 
 /**
  * @todo pn_listener_trace needs documentation
  */
-PROTON_EXTERN void pn_listener_trace(pn_listener_t *listener, pn_trace_t trace);
+void pn_listener_trace(pn_listener_t *listener, pn_trace_t trace);
 
 /** Accept a connection that is pending on the listener.
  *
  * @param[in] listener the listener to accept the connection on
  * @return a new connector for the remote, or NULL on error
  */
-PROTON_EXTERN pn_connector_t *pn_listener_accept(pn_listener_t *listener);
+pn_connector_t *pn_listener_accept(pn_listener_t *listener);
 
 /** Access the application context that is associated with the listener.
  *
@@ -180,15 +179,15 @@ PROTON_EXTERN pn_connector_t *pn_listener_accept(pn_listener_t *listener);
  * @return the application context that was passed to pn_listener() or
  *         pn_listener_fd()
  */
-PROTON_EXTERN void *pn_listener_context(pn_listener_t *listener);
+void *pn_listener_context(pn_listener_t *listener);
 
-PROTON_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
+void pn_listener_set_context(pn_listener_t *listener, void *context);
 
 /** Close the socket used by the listener.
  *
  * @param[in] listener the listener whose socket will be closed.
  */
-PROTON_EXTERN void pn_listener_close(pn_listener_t *listener);
+void pn_listener_close(pn_listener_t *listener);
 
 /** Frees the given listener.
  *
@@ -197,7 +196,7 @@ PROTON_EXTERN void pn_listener_close(pn_listener_t *listener);
  * @param[in] listener the listener object to free, no longer valid
  *            on return
  */
-PROTON_EXTERN void pn_listener_free(pn_listener_t *listener);
+void pn_listener_free(pn_listener_t *listener);
 
 
 
@@ -213,7 +212,7 @@ PROTON_EXTERN void pn_listener_free(pn_listener_t *listener);
  *                    pn_connector_context() @return a new connector
  *                    to the given remote, or NULL on error.
  */
-PROTON_EXTERN pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
+pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
                              const char *port, void* context);
 
 /** Access the head connector for a driver.
@@ -222,7 +221,7 @@ PROTON_EXTERN pn_connector_t *pn_connector(pn_driver_t *driver, const char *host
  *
  * @return the head connector for driver or NULL if there is none
  */
-PROTON_EXTERN pn_connector_t *pn_connector_head(pn_driver_t *driver);
+pn_connector_t *pn_connector_head(pn_driver_t *driver);
 
 /** Access the next connector.
  *
@@ -231,14 +230,14 @@ PROTON_EXTERN pn_connector_t *pn_connector_head(pn_driver_t *driver);
  *
  * @return the next connector
  */
-PROTON_EXTERN pn_connector_t *pn_connector_next(pn_connector_t *connector);
+pn_connector_t *pn_connector_next(pn_connector_t *connector);
 
 /** Set the tracing level for the given connector.
  *
  * @param[in] connector the connector to trace
  * @param[in] trace the trace level to use.
  */
-PROTON_EXTERN void pn_connector_trace(pn_connector_t *connector, pn_trace_t trace);
+void pn_connector_trace(pn_connector_t *connector, pn_trace_t trace);
 
 /** Service the given connector.
  *
@@ -247,7 +246,7 @@ PROTON_EXTERN void pn_connector_trace(pn_connector_t *connector, pn_trace_t trac
  *
  * @param[in] connector the connector to process.
  */
-PROTON_EXTERN void pn_connector_process(pn_connector_t *connector);
+void pn_connector_process(pn_connector_t *connector);
 
 /** Access the listener which opened this connector.
  *
@@ -256,7 +255,7 @@ PROTON_EXTERN void pn_connector_process(pn_connector_t *connector);
  *         connector has no listener (e.g. an outbound client
  *         connection)
  */
-PROTON_EXTERN pn_listener_t *pn_connector_listener(pn_connector_t *connector);
+pn_listener_t *pn_connector_listener(pn_connector_t *connector);
 
 /** Access the Authentication and Security context of the connector.
  *
@@ -265,7 +264,7 @@ PROTON_EXTERN pn_listener_t *pn_connector_listener(pn_connector_t *connector);
  * @return the Authentication and Security context for the connector,
  *         or NULL if none
  */
-PROTON_EXTERN pn_sasl_t *pn_connector_sasl(pn_connector_t *connector);
+pn_sasl_t *pn_connector_sasl(pn_connector_t *connector);
 
 /** Access the AMQP Connection associated with the connector.
  *
@@ -273,7 +272,7 @@ PROTON_EXTERN pn_sasl_t *pn_connector_sasl(pn_connector_t *connector);
  *                      returned
  * @return the connection context for the connector, or NULL if none
  */
-PROTON_EXTERN pn_connection_t *pn_connector_connection(pn_connector_t *connector);
+pn_connection_t *pn_connector_connection(pn_connector_t *connector);
 
 /** Assign the AMQP Connection associated with the connector.
  *
@@ -281,7 +280,7 @@ PROTON_EXTERN pn_connection_t *pn_connector_connection(pn_connector_t *connector
  * @param[in] connection the connection to associate with the
  *                       connector
  */
-PROTON_EXTERN void pn_connector_set_connection(pn_connector_t *connector, pn_connection_t *connection);
+void pn_connector_set_connection(pn_connector_t *connector, pn_connection_t *connection);
 
 /** Access the application context that is associated with the
  *  connector.
@@ -291,7 +290,7 @@ PROTON_EXTERN void pn_connector_set_connection(pn_connector_t *connector, pn_con
  * @return the application context that was passed to pn_connector()
  *         or pn_connector_fd()
  */
-PROTON_EXTERN void *pn_connector_context(pn_connector_t *connector);
+void *pn_connector_context(pn_connector_t *connector);
 
 /** Assign a new application context to the connector.
  *
@@ -299,26 +298,26 @@ PROTON_EXTERN void *pn_connector_context(pn_connector_t *connector);
  * @param[in] context new application context to associate with the
  *                    connector
  */
-PROTON_EXTERN void pn_connector_set_context(pn_connector_t *connector, void *context);
+void pn_connector_set_context(pn_connector_t *connector, void *context);
 
 /** Access the transport used by this connector.
  *
  * @param[in] connector connector whose transport will be returned
  * @return the transport, or NULL if none
  */
-PROTON_EXTERN pn_transport_t *pn_connector_transport(pn_connector_t *connector);
+pn_transport_t *pn_connector_transport(pn_connector_t *connector);
 
 /** Close the socket used by the connector.
  *
  * @param[in] connector the connector whose socket will be closed
  */
-PROTON_EXTERN void pn_connector_close(pn_connector_t *connector);
+void pn_connector_close(pn_connector_t *connector);
 
 /** Determine if the connector is closed.
  *
  * @return True if closed, otherwise false
  */
-PROTON_EXTERN bool pn_connector_closed(pn_connector_t *connector);
+bool pn_connector_closed(pn_connector_t *connector);
 
 /** Destructor for the given connector.
  *
@@ -327,7 +326,7 @@ PROTON_EXTERN bool pn_connector_closed(pn_connector_t *connector);
  * @param[in] connector the connector object to free. No longer
  *                      valid on return
  */
-PROTON_EXTERN void pn_connector_free(pn_connector_t *connector);
+void pn_connector_free(pn_connector_t *connector);
 
 /** Activate a connector when a criteria is met
  *
@@ -337,7 +336,7 @@ PROTON_EXTERN void pn_connector_free(pn_connector_t *connector);
  * @param[in] connector The connector object to activate
  * @param[in] criteria  The criteria that must be met prior to activating the connector
  */
-PROTON_EXTERN void pn_connector_activate(pn_connector_t *connector, pn_activate_criteria_t criteria);
+void pn_connector_activate(pn_connector_t *connector, pn_activate_criteria_t criteria);
 
 /** Return the activation status of the connector for a criteria
  *
@@ -353,7 +352,7 @@ PROTON_EXTERN void pn_connector_activate(pn_connector_t *connector, pn_activate_
  *                      in the work list?"
  * @return true iff the criteria is activated on the connector.
  */
-PROTON_EXTERN bool pn_connector_activated(pn_connector_t *connector, pn_activate_criteria_t criteria);
+bool pn_connector_activated(pn_connector_t *connector, pn_activate_criteria_t criteria);
 
 
 #ifdef __cplusplus

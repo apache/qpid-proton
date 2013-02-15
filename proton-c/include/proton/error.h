@@ -22,7 +22,6 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -40,16 +39,16 @@ typedef struct pn_error_t pn_error_t;
 #define PN_TIMEOUT (-7)
 #define PN_INTR (-8)
 
-PROTON_EXTERN const char *pn_code(int code);
+const char *pn_code(int code);
 
-PROTON_EXTERN pn_error_t *pn_error();
-PROTON_EXTERN void pn_error_free(pn_error_t *error);
-PROTON_EXTERN void pn_error_clear(pn_error_t *error);
-PROTON_EXTERN int pn_error_set(pn_error_t *error, int code, const char *text);
-PROTON_EXTERN int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
-PROTON_EXTERN int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
-PROTON_EXTERN int pn_error_code(pn_error_t *error);
-PROTON_EXTERN const char *pn_error_text(pn_error_t *error);
+pn_error_t *pn_error();
+void pn_error_free(pn_error_t *error);
+void pn_error_clear(pn_error_t *error);
+int pn_error_set(pn_error_t *error, int code, const char *text);
+int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
+int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
+int pn_error_code(pn_error_t *error);
+const char *pn_error_text(pn_error_t *error);
 
 #ifdef __cplusplus
 }
