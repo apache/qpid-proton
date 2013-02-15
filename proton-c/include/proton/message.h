@@ -45,7 +45,7 @@ typedef enum {
 
 #define PN_DEFAULT_PRIORITY (4)
 
-PN_EXTERN pn_message_t * pn_message();
+PN_EXTERN pn_message_t * pn_message(void);
 PN_EXTERN void           pn_message_free(pn_message_t *msg);
 
 PN_EXTERN void           pn_message_clear(pn_message_t *msg);
