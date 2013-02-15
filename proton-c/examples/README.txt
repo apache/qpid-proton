@@ -1,4 +1,4 @@
 This directory contains example applications that use the Proton library.
 
-  mailbox/   - a toy mailbox client/server example
-  messenger/ - simple examples using the messenger API
+  messenger/ - simple examples using the messenger API in a variety of
+               languages (C, perl, php, python, ruby)
