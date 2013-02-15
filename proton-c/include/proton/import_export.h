@@ -1,5 +1,5 @@
-#ifndef PROTON_UTIL_H
-#define PROTON_UTIL_H 1
+#ifndef PROTON_IMPORT_EXPORT_H
+#define PROTON_IMPORT_EXPORT_H 1
 
 /*
  *
@@ -22,19 +22,36 @@
  *
  */
 
-#include <proton/import_export.h>
-#include <stdarg.h>
+//
+// Compiler specific mechanisms for managing the import and export of
+// symbols between shared objects.
+//
+// PROTON_EXPORT         - Export declaration
+// PROTON_IMPORT         - Import declaration
+//
 
-#ifdef __cplusplus
-extern "C" {
+#if defined(WIN32) && !defined(PROTON_DECLARE_STATIC)
+  //
+  // Import and Export definitions for Windows:
+  //
+#  define PROTON_EXPORT __declspec(dllexport)
+#  define PROTON_IMPORT __declspec(dllimport)
+#else
+  //
+  // Non-Windows (Linux, etc.) definitions:
+  //
+#  define PROTON_EXPORT
+#  define PROTON_IMPORT
 #endif
 
-PROTON_EXTERN void parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
-PROTON_EXTERN void pn_fatal(const char *fmt, ...);
-PROTON_EXTERN void pn_vfatal(const char *fmt, va_list ap);
 
-#ifdef __cplusplus
-}
+// For core proton library symbols
+
+#ifdef qpid_proton_EXPORTS
+#  define PROTON_EXTERN PROTON_EXPORT
+#else
+#  define PROTON_EXTERN PROTON_IMPORT
 #endif
 
-#endif /* util.h */
+
+#endif /* import_export.h */

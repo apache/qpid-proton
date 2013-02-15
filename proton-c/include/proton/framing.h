@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/import_export.h>
 #ifndef __cplusplus
 #include <stdint.h>
 #else
@@ -45,8 +46,8 @@ typedef struct {
   const char *payload;
 } pn_frame_t;
 
-size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available);
-size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
+PROTON_EXTERN size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available);
+PROTON_EXTERN size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
 
 #ifdef __cplusplus
 }

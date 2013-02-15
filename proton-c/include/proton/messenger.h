@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/import_export.h>
 #include <proton/message.h>
 
 #ifdef __cplusplus
@@ -56,7 +57,7 @@ typedef enum {
  *
  * @return pointer to a new Messenger
  */
-pn_messenger_t *pn_messenger(const char *name);
+PROTON_EXTERN pn_messenger_t *pn_messenger(const char *name);
 
 /** Retrieves the name of a Messenger.
  *
@@ -64,7 +65,7 @@ pn_messenger_t *pn_messenger(const char *name);
  *
  * @return the name of the messenger
  */
-const char *pn_messenger_name(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
 
 /** Sets the certificate file for a Messenger.
  *
@@ -73,14 +74,14 @@ const char *pn_messenger_name(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
+PROTON_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
 
 /** Gets the certificate file fora Messenger.
  *
  * @param[in] messenger the messenger
  * @return the certificate file path
  */
-const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
 
 /** Sets the private key file for a Messenger.
  *
@@ -89,14 +90,14 @@ const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
+PROTON_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
 
 /** Gets the private key file for a Messenger.
  *
  * @param[in] messenger the messenger
  * @return the private key file path
  */
-const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
 
 /** Sets the private key password for a Messenger.
  *
@@ -105,14 +106,14 @@ const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
+PROTON_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
 
 /** Gets the private key file password for a Messenger.
  *
  * @param[in] messenger the messenger
  * @return password for the private key file
  */
-const char *pn_messenger_get_password(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
 
 /** Sets the trusted certificates database for a Messenger.
  *
@@ -121,14 +122,14 @@ const char *pn_messenger_get_password(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
+PROTON_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
 
 /** Gets the trusted certificates database for a Messenger.
  *
  * @param[in] messenger the messenger
  * @return path to the trusted certificates database
  */
-const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
 
 /** Sets the timeout for a Messenger. A negative timeout means
  * infinite.
@@ -138,7 +139,7 @@ const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
  *
  * @return an error code or zero if there is no error
  */
-int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
+PROTON_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
 
 /** Retrieves the timeout for a Messenger.
  *
@@ -146,14 +147,14 @@ int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
  *
  * @return the timeout for the messenger, in milliseconds
  */
-int pn_messenger_get_timeout(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 
 /** Frees a Messenger.
  *
  * @param[in] messenger the messenger to free, no longer valid on
  *                      return
  */
-void pn_messenger_free(pn_messenger_t *messenger);
+PROTON_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
 
 /** Returns the error code for the Messenger.
  *
@@ -162,7 +163,7 @@ void pn_messenger_free(pn_messenger_t *messenger);
  * @return an error code or zero if there is no error
  * @see error.h
  */
-int pn_messenger_errno(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
 
 /** Returns the error info for a Messenger.
  *
@@ -171,7 +172,7 @@ int pn_messenger_errno(pn_messenger_t *messenger);
  * @return a descriptive error message or NULL if no error has
  *         occurred
  */
-const char *pn_messenger_error(pn_messenger_t *messenger);
+PROTON_EXTERN const char *pn_messenger_error(pn_messenger_t *messenger);
 
 /** Gets the accept mode for a Messenger. @see
  * ::pn_messenger_set_accept_mode
@@ -180,7 +181,7 @@ const char *pn_messenger_error(pn_messenger_t *messenger);
  *
  * @return one of PN_ACCEPT_MODE_AUTO or PN_ACCEPT_MODE_MANUAL
  */
-pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
+PROTON_EXTERN pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
 
 /** Set the accept mode for a Messenger. If set to
  * PN_ACCEPT_MODE_AUTO, the messenger will automatically accept every
@@ -195,7 +196,7 @@ pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode);
+PROTON_EXTERN int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode);
 
 /** Gets the outgoing window for a Messenger. @see
  * ::pn_messenger_set_outgoing_window
@@ -204,7 +205,7 @@ int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mod
  *
  * @return the outgoing window
  */
-int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
 
 /** Sets the outgoing window for a Messenger. If the outgoing window
  *  is set to a positive value, then after each call to
@@ -217,7 +218,7 @@ int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
-int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
+PROTON_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
 
 /** Gets the incoming window for a Messenger. @see
  * ::pn_messenger_set_incoming_window
@@ -226,7 +227,7 @@ int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
  *
  * @return the incoming window
  */
-int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
 
 /** Sets the incoming window for a Messenger. If the incoming window
  *  is set to a positive value, then after each call to
@@ -240,7 +241,7 @@ int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
-int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
+PROTON_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
 
 /** Starts a messenger. A messenger cannot send or recv messages until
  * it is started.
@@ -250,7 +251,7 @@ int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_start(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
 
 /** Stops a messenger. A messenger cannot send or recv messages when
  *  it is stopped.
@@ -260,7 +261,7 @@ int pn_messenger_start(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_stop(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
 
 /** Subscribes a messenger to messages from the specified source.
  *
@@ -269,11 +270,11 @@ int pn_messenger_stop(pn_messenger_t *messenger);
  *
  * @return a subscription
  */
-pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
+PROTON_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
-void *pn_subscription_get_context(pn_subscription_t *sub);
+PROTON_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
 
-void pn_subscription_set_context(pn_subscription_t *sub, void *context);
+PROTON_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
 /** Puts a message on the outgoing message queue for a messenger.
  *
@@ -283,7 +284,7 @@ void pn_subscription_set_context(pn_subscription_t *sub, void *context);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
+PROTON_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
 
 /** Gets the last known remote state of the delivery associated with
  * the given tracker.
@@ -293,7 +294,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  *
  * @return a status code for the delivery
  */
-pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+PROTON_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
 
 /** Frees a Messenger from tracking the status associated with a given
  * tracker. Use the PN_CUMULATIVE flag to indicate everything up to
@@ -306,7 +307,7 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PROTON_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /** Gets the tracker for the message most recently provided to
  * pn_messenger_put.
@@ -316,7 +317,7 @@ int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
-pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
+PROTON_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
 
 /** Sends any messages in the outgoing message queue for a messenger.
  * This will block until the messages have been sent.
@@ -326,7 +327,7 @@ pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_send(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_send(pn_messenger_t *messenger);
 
 /** Receives up to n message into the incoming message queue of a
  * messenger. Blocks until at least one message is available in the
@@ -338,7 +339,7 @@ int pn_messenger_send(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_recv(pn_messenger_t *messenger, int n);
+PROTON_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int n);
 
 /** Gets a message from the head of the incoming message queue of a
  * messenger.
@@ -349,7 +350,7 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n);
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
+PROTON_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
 
 /** Gets the tracker for the message most recently fetched by
  * pn_messenger_get.
@@ -359,9 +360,9 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
-pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
+PROTON_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
 
-pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
+PROTON_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 #define PN_CUMULATIVE (0x1)
 
@@ -376,7 +377,7 @@ pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger)
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PROTON_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /** Rejects the incoming messages identified by the tracker. Use the
  * PN_CUMULATIVE flag to reject everything prior to the supplied
@@ -389,7 +390,7 @@ int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
  * @return an error code or zero on success
  * @see error.h
  */
-int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PROTON_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /** Returns the number of messages in the outgoing message queue of a messenger.
  *
@@ -397,7 +398,7 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
  *
  * @return the outgoing queue depth
  */
-int pn_messenger_outgoing(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
 
 /** Returns the number of messages in the incoming message queue of a messenger.
  *
@@ -405,7 +406,7 @@ int pn_messenger_outgoing(pn_messenger_t *messenger);
  *
  * @return the incoming queue depth
  */
-int pn_messenger_incoming(pn_messenger_t *messenger);
+PROTON_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 
 #ifdef __cplusplus
 }
