@@ -1,5 +1,5 @@
-#ifndef PROTON_FRAMING_H
-#define PROTON_FRAMING_H 1
+#ifndef PROTON_IMPORT_EXPORT_H
+#define PROTON_IMPORT_EXPORT_H 1
 
 /*
  *
@@ -22,35 +22,36 @@
  *
  */
 
-#include <proton/import_export.h>
-#ifndef __cplusplus
-#include <stdint.h>
+//
+// Compiler specific mechanisms for managing the import and export of
+// symbols between shared objects.
+//
+// PN_EXPORT         - Export declaration
+// PN_IMPORT         - Import declaration
+//
+
+#if defined(WIN32) && !defined(PROTON_DECLARE_STATIC)
+  //
+  // Import and Export definitions for Windows:
+  //
+#  define PN_EXPORT __declspec(dllexport)
+#  define PN_IMPORT __declspec(dllimport)
 #else
-#include <proton/type_compat.h>
-#endif
-#include <sys/types.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define AMQP_HEADER_SIZE (8)
-#define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
-
-typedef struct {
-  uint8_t type;
-  uint16_t channel;
-  size_t ex_size;
-  const char *extended;
-  size_t size;
-  const char *payload;
-} pn_frame_t;
-
-PN_EXTERN size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available);
-PN_EXTERN size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
-
-#ifdef __cplusplus
-}
+  //
+  // Non-Windows (Linux, etc.) definitions:
+  //
+#  define PN_EXPORT
+#  define PN_IMPORT
 #endif
 
-#endif /* framing.h */
+
+// For core proton library symbols
+
+#ifdef qpid_proton_EXPORTS
+#  define PN_EXTERN PN_EXPORT
+#else
+#  define PN_EXTERN PN_IMPORT
+#endif
+
+
+#endif /* import_export.h */

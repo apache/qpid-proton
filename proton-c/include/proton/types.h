@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/import_export.h>
 #include <sys/types.h>
 #ifndef __cplusplus
 #include <stdint.h>
@@ -53,8 +54,8 @@ typedef struct {
   char *start;
 } pn_bytes_t;
 
-pn_bytes_t pn_bytes(size_t size, char *start);
-pn_bytes_t pn_bytes_dup(size_t size, const char *start);
+PN_EXTERN pn_bytes_t pn_bytes(size_t size, char *start);
+PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
 
 #ifdef __cplusplus
 }
