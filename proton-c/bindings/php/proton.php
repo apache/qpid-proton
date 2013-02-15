@@ -116,6 +116,9 @@ class Messenger
   }
 
   public function subscribe($source) {
+    if ($source == null) {
+      throw new MessengerException("null source passed to subscribe");
+    }
     $this->_check(pn_messenger_subscribe($this->impl, $source));
   }
 
