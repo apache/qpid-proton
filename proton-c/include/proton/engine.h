@@ -300,7 +300,7 @@ PN_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, si
  * @param[in] transport the transport
  * @return the free space in the transport, PN_EOS or error code if < 0
  */
-ssize_t pn_transport_capacity(pn_transport_t *transport);
+PN_EXTERN ssize_t pn_transport_capacity(pn_transport_t *transport);
 
 /** Return the transport's tail pointer. The amount of free space
  * following this pointer is reported by ::pn_transport_capacity.
@@ -310,7 +310,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport);
  * @param[in] transport the transport
  * @return a pointer to the transport's input buffer, NULL if no capacity available.
  */
-char *pn_transport_tail(pn_transport_t *transport);
+PN_EXTERN char *pn_transport_tail(pn_transport_t *transport);
 
 /** Push input data following the tail pointer into the transport.
  * Calling this function will cause the transport to consume ::size
@@ -323,7 +323,7 @@ char *pn_transport_tail(pn_transport_t *transport);
  * @param[size] the amount of data written to the transport's input buffer
  * @return 0 on success, or error code if < 0
  */
-int pn_transport_push(pn_transport_t *transport, size_t size);
+PN_EXTERN int pn_transport_push(pn_transport_t *transport, size_t size);
 
 /** Indicate that the input has reached End Of Stream (EOS).  This
  * tells the transport that no more input will be forthcoming.
@@ -331,7 +331,7 @@ int pn_transport_push(pn_transport_t *transport, size_t size);
  * @param[in] transport the transport
  * @return 0 on success, or error code if < 0
  */
-int pn_transport_close_tail(pn_transport_t *transport);
+PN_EXTERN int pn_transport_close_tail(pn_transport_t *transport);
 
 /** Report the number of pending output bytes following the
  * transport's head pointer. If the engine is in an exceptional state
@@ -345,7 +345,7 @@ int pn_transport_close_tail(pn_transport_t *transport);
  * @param[in] the transport
  * @return the number of pending output bytes, or an error code
  */
-ssize_t pn_transport_pending(pn_transport_t *transport);
+PN_EXTERN ssize_t pn_transport_pending(pn_transport_t *transport);
 
 /** Return the transport's head pointer. This pointer references
  * queued output data. The ::pn_transport_pending function reports how
@@ -356,7 +356,7 @@ ssize_t pn_transport_pending(pn_transport_t *transport);
  * @param[in] the transport
  * @return a pointer to the transport's output buffer, or NULL if no pending output.
  */
-const char *pn_transport_head(pn_transport_t *transport);
+PN_EXTERN const char *pn_transport_head(pn_transport_t *transport);
 
 /** Removes ::size bytes of output from the pending output queue
  * following the transport's head pointer. Calls to this function may
@@ -366,7 +366,7 @@ const char *pn_transport_head(pn_transport_t *transport);
  * @param[in] the transport
  * @param[size] the number of bytes to remove
  */
-void pn_transport_pop(pn_transport_t *transport, size_t size);
+PN_EXTERN void pn_transport_pop(pn_transport_t *transport, size_t size);
 
 /** Indicate that the output has closed.  This tells the transport
  * that no more output will be popped.
@@ -374,7 +374,7 @@ void pn_transport_pop(pn_transport_t *transport, size_t size);
  * @param[in] transport the transport
  * @return 0 on success, or error code if < 0
  */
-int pn_transport_close_head(pn_transport_t *transport);
+PN_EXTERN int pn_transport_close_head(pn_transport_t *transport);
 
 
 /** Process any pending transport timer events.
