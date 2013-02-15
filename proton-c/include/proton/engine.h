@@ -284,8 +284,99 @@ PN_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *cont
 
 // transport
 PN_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
+/* deprecated */
 PN_EXTERN ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
+/* deprecated */
 PN_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
+
+/** Report the amount of free space for input following the
+ * transport's tail pointer. If the engine is in an exceptional state
+ * such as encountering an error condition or reaching the end of
+ * stream state, a negative value will be returned indicating the
+ * condition. If an error is indicated, futher details can be obtained
+ * from ::pn_transport_error. Calls to ::pn_transport_push may alter
+ * the value of this pointer. See ::pn_transport_push for details.
+ *
+ * @param[in] transport the transport
+ * @return the free space in the transport, PN_EOS or error code if < 0
+ */
+ssize_t pn_transport_capacity(pn_transport_t *transport);
+
+/** Return the transport's tail pointer. The amount of free space
+ * following this pointer is reported by ::pn_transport_capacity.
+ * Calls to ::pn_transport_push may alther the value of this pointer.
+ * See ::pn_transport_push for details.
+ *
+ * @param[in] transport the transport
+ * @return a pointer to the transport's input buffer, NULL if no capacity available.
+ */
+char *pn_transport_tail(pn_transport_t *transport);
+
+/** Push input data following the tail pointer into the transport.
+ * Calling this function will cause the transport to consume ::size
+ * bytes of input occupying the free space following the tail pointer.
+ * Calls to this function may change the value of ::pn_transport_tail,
+ * as well as the amount of free space reported by
+ * ::pn_transport_capacity.
+ *
+ * @param[in] transport the transport
+ * @param[size] the amount of data written to the transport's input buffer
+ * @return 0 on success, or error code if < 0
+ */
+int pn_transport_push(pn_transport_t *transport, size_t size);
+
+/** Indicate that the input has reached End Of Stream (EOS).  This
+ * tells the transport that no more input will be forthcoming.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+int pn_transport_close_tail(pn_transport_t *transport);
+
+/** Report the number of pending output bytes following the
+ * transport's head pointer. If the engine is in an exceptional state
+ * such as encountering an error condition or reaching the end of
+ * stream state, a negative value will be returned indicating the
+ * condition. If an error is indicated, further details can be
+ * obtained from ::pn_transport_error. Calls to ::pn_transport_pop may
+ * alter the value of this pointer. See ::pn_transport_pop for
+ * details.
+ *
+ * @param[in] the transport
+ * @return the number of pending output bytes, or an error code
+ */
+ssize_t pn_transport_pending(pn_transport_t *transport);
+
+/** Return the transport's head pointer. This pointer references
+ * queued output data. The ::pn_transport_pending function reports how
+ * many bytes of output data follow this pointer. Calls to
+ * ::pn_transport_pop may alter this pointer and any data it
+ * references. See ::pn_transport_pop for details.
+ *
+ * @param[in] the transport
+ * @return a pointer to the transport's output buffer, or NULL if no pending output.
+ */
+const char *pn_transport_head(pn_transport_t *transport);
+
+/** Removes ::size bytes of output from the pending output queue
+ * following the transport's head pointer. Calls to this function may
+ * alter the transport's head pointer as well as the number of pending
+ * bytes reported by ::pn_transport_pending.
+ *
+ * @param[in] the transport
+ * @param[size] the number of bytes to remove
+ */
+void pn_transport_pop(pn_transport_t *transport, size_t size);
+
+/** Indicate that the output has closed.  This tells the transport
+ * that no more output will be popped.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+int pn_transport_close_head(pn_transport_t *transport);
+
+
 /** Process any pending transport timer events.
  *
  * This method should be called after all pending input has been processed by the
@@ -311,6 +402,7 @@ PN_EXTERN void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_milli
 PN_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
 PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
+PN_EXTERN bool pn_transport_quiesced(pn_transport_t *transport);
 PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 
 // session

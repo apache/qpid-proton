@@ -113,6 +113,8 @@ typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_io_layer_t *io_layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_io_layer_t *io_layer, char *, size_t);
   pn_timestamp_t (*process_tick)(struct pn_io_layer_t *io_layer, pn_timestamp_t);
+  size_t (*buffered_output)(struct pn_io_layer_t *);  // how much output is held
+  size_t (*buffered_input)(struct pn_io_layer_t *);   // how much input is held
 } pn_io_layer_t;
 
 struct pn_transport_t {
@@ -129,6 +131,8 @@ struct pn_transport_t {
   char *remote_hostname;
   pn_data_t *remote_offered_capabilities;
   pn_data_t *remote_desired_capabilities;
+  //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
+#define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
@@ -159,6 +163,18 @@ struct pn_transport_t {
   /* statistics */
   uint64_t bytes_input;
   uint64_t bytes_output;
+
+  /* output buffered for send */
+  size_t output_size;
+  size_t output_pending;
+  char *output_buf;
+
+  /* input from peer */
+  size_t input_size;
+  size_t input_pending;
+  char *input_buf;
+  bool tail_closed;      // input stream closed by driver
+
 };
 
 struct pn_connection_t {

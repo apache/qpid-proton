@@ -145,7 +145,6 @@ struct pn_listener_t {
   void *context;
 };
 
-#define IO_BUF_SIZE (64*1024)
 #define PN_NAME_MAX (256)
 
 struct pn_connector_t {
@@ -162,13 +161,7 @@ struct pn_connector_t {
   pn_trace_t trace;
   bool closed;
   pn_timestamp_t wakeup;
-  void (*read)(pn_connector_t *);
-  void (*write) (pn_connector_t *);
-  size_t input_size;
-  char input[IO_BUF_SIZE];
   bool input_eos;
-  size_t output_size;
-  char output[IO_BUF_SIZE];
   pn_connection_t *connection;
   pn_transport_t *transport;
   pn_sasl_t *sasl;
@@ -442,11 +435,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *conte
   c->trace = driver->trace;
   c->closed = false;
   c->wakeup = 0;
-  c->read = pn_connector_read;
-  c->write = pn_connector_write;
-  c->input_size = 0;
   c->input_eos = false;
-  c->output_size = 0;
   c->connection = NULL;
   c->transport = pn_transport();
   c->sasl = pn_sasl(c->transport);
@@ -545,74 +534,6 @@ void pn_connector_free(pn_connector_t *ctor)
   free(ctor);
 }
 
-static void pn_connector_read(pn_connector_t *ctor)
-{
-  ssize_t n = recv(ctor->fd, ctor->input + ctor->input_size, IO_BUF_SIZE - ctor->input_size, 0);
-  if (n < 0) {
-      if (errno != EAGAIN) {
-          if (n < 0) perror("read");
-          ctor->status &= ~PN_SEL_RD;
-          ctor->input_eos = true;
-      }
-  } else if (n == 0) {
-    ctor->status &= ~PN_SEL_RD;
-    ctor->input_eos = true;
-  } else {
-    ctor->input_size += n;
-  }
-}
-
-static void pn_connector_consume(pn_connector_t *ctor, int n)
-{
-  ctor->input_size -= n;
-  memmove(ctor->input, ctor->input + n, ctor->input_size);
-}
-
-static void pn_connector_process_input(pn_connector_t *ctor)
-{
-  pn_transport_t *transport = ctor->transport;
-  if (!ctor->input_done) {
-    if (ctor->input_size > 0 || ctor->input_eos) {
-      ssize_t n = pn_transport_input(transport, ctor->input, ctor->input_size);
-      if (n >= 0) {
-        pn_connector_consume(ctor, n);
-      } else {
-        pn_connector_consume(ctor, ctor->input_size);
-        ctor->input_done = true;
-      }
-    }
-  }
-}
-
-static char *pn_connector_output(pn_connector_t *ctor)
-{
-  return ctor->output + ctor->output_size;
-}
-
-static size_t pn_connector_available(pn_connector_t *ctor)
-{
-  return IO_BUF_SIZE - ctor->output_size;
-}
-
-static void pn_connector_process_output(pn_connector_t *ctor)
-{
-  pn_transport_t *transport = ctor->transport;
-  if (!ctor->output_done) {
-    ssize_t n = pn_transport_output(transport, pn_connector_output(ctor),
-                                    pn_connector_available(ctor));
-    if (n >= 0) {
-      ctor->output_size += n;
-    } else {
-      ctor->output_done = true;
-    }
-  }
-
-  if (ctor->output_size) {
-    ctor->status |= PN_SEL_WR;
-  }
-}
-
-
 void pn_connector_activate(pn_connector_t *ctor, pn_activate_criteria_t crit)
 {
     switch (crit) {
@@ -648,28 +569,6 @@ bool pn_connector_activated(pn_connector_t *ctor, pn_activate_criteria_t crit)
     return result;
 }
 
-
-static void pn_connector_write(pn_connector_t *ctor)
-{
-  if (ctor->output_size > 0) {
-    ssize_t n = pn_send(ctor->fd, ctor->output, ctor->output_size);
-    if (n < 0) {
-      // XXX
-        if (errno != EAGAIN) {
-            perror("send");
-            ctor->output_size = 0;
-            ctor->output_done = true;
-        }
-    } else {
-      ctor->output_size -= n;
-      memmove(ctor->output, ctor->output + n, ctor->output_size);
-    }
-  }
-
-  if (!ctor->output_size)
-    ctor->status &= ~PN_SEL_WR;
-}
-
 static pn_timestamp_t pn_connector_tick(pn_connector_t *ctor, time_t now)
 {
   if (!ctor->transport) return 0;
@@ -681,21 +580,80 @@ void pn_connector_process(pn_connector_t *c)
   if (c) {
     if (c->closed) return;
 
-    if (c->pending_read) {
-      c->read(c);
-      c->pending_read = false;
-    }
-    pn_connector_process_input(c);
+    pn_transport_t *transport = c->transport;
 
+    ///
+    /// Socket read
+    ///
+    if (!c->input_done) {
+      ssize_t capacity = pn_transport_capacity(transport);
+      if (capacity > 0) {
+        c->status |= PN_SEL_RD;
+        if (c->pending_read) {
+          c->pending_read = false;
+          ssize_t n =  recv(c->fd, pn_transport_tail(transport),
+                            capacity, 0);
+          if (n < 0) {
+            if (errno != EAGAIN) {
+              perror("read");
+              c->status &= ~PN_SEL_RD;
+              c->input_eos = true;
+            }
+          } else {
+            if (n == 0) {
+              c->status &= ~PN_SEL_RD;
+              c->input_eos = true;
+            }
+            if (pn_transport_push(transport, (size_t) n) < 0) {
+              c->status &= ~PN_SEL_RD;
+              c->input_done = true;
+            }
+          }
+        }
+      } else if (capacity < 0) {
+        c->status &= ~PN_SEL_RD;
+        c->input_done = true;
+      }
+    }
+
+    ///
+    /// Event wakeup
+    ///
     c->wakeup = pn_connector_tick(c, pn_i_now());
 
-    pn_connector_process_output(c);
-    if (c->pending_write) {
-      c->write(c);
-      c->pending_write = false;
-      pn_connector_process_output(c);  // XXX: review this - there's a better way to determine if the WR flag should be re-set
+    ///
+    /// Socket write
+    ///
+    if (!c->output_done) {
+      ssize_t pending = pn_transport_pending(transport);
+      if (pending > 0) {
+        c->status |= PN_SEL_WR;
+        if (c->pending_write) {
+          c->pending_write = false;
+          ssize_t n = pn_send(c->fd, pn_transport_head(transport), pending);
+          if (n < 0) {
+            // XXX
+            if (errno != EAGAIN) {
+              perror("send");
+              c->output_done = true;
+              c->status &= ~PN_SEL_WR;
+            }
+          } else if (n) {
+            pn_transport_pop(transport, (size_t) n);
+            pending -= n;
+            if (pending == 0)
+              c->status &= ~PN_SEL_WR;
+          }
+        }
+      } else if (pending < 0) {
+        c->output_done = true;
+        c->status &= ~PN_SEL_WR;
+      }
     }
-    if (c->output_size == 0 && c->input_done && c->output_done) {
+
+    // Closed?
+
+    if (c->input_done && c->output_done) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
         fprintf(stderr, "Closed %s\n", c->name);
       }
@@ -960,8 +918,7 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
     pn_connector_t *c = d->connector_next;
     d->connector_next = c->connector_next;
 
-    if (c->closed || c->pending_read || c->pending_write || c->pending_tick ||
-        c->input_size || c->input_eos) {
+    if (c->closed || c->pending_read || c->pending_write || c->pending_tick || c->input_eos) {
       return c;
     }
   }

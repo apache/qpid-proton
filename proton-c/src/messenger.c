@@ -1046,10 +1046,19 @@ int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
   return pn_queue_update(queue, pn_tracker_sequence(tracker), (pn_status_t) 0, flags, true, true);
 }
 
+// true if all pending output has been sent to peer
 bool pn_messenger_sent(pn_messenger_t *messenger)
 {
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
+
+    // check if transport is done generating output
+    pn_transport_t *transport = pn_connector_transport(ctor);
+    if (transport) {
+      if (!pn_transport_quiesced(transport))
+        return false;
+    }
+
     pn_connection_t *conn = pn_connector_connection(ctor);
 
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);

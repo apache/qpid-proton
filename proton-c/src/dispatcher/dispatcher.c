@@ -166,63 +166,26 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
 
 ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available)
 {
-  size_t offered = available;
-
-  if (offered == disp->fragment) {
-    return 0;
-  }
-
-  size_t leftover = pn_buffer_size(disp->input);
-  if (leftover) {
-    int e = pn_buffer_append(disp->input, bytes, available);
-    if (e) return e;
-    pn_bytes_t b = pn_buffer_bytes(disp->input);
-    bytes = b.start;
-    available = b.size;
-  }
-
   size_t read = 0;
-  bool fragment = false;
 
-  while (!disp->halt) {
+  while (available && !disp->halt) {
     pn_frame_t frame;
 
-    size_t n = pn_read_frame(&frame, bytes + read, available - read);
+    size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
+      read += n;
+      available -= n;
       disp->input_frames_ct += 1;
       int e = pn_dispatch_frame(disp, frame);
       if (e) return e;
-      read += n;
     } else {
-      if (leftover) {
-        if (read > leftover) {
-          pn_buffer_clear(disp->input);
-          fragment = true;
-        } else {
-          read = available;
-        }
-      } else {
-        if (!read) {
-          int e = pn_buffer_append(disp->input, bytes + read, available - read);
-          if (e) return e;
-          read = available;
-        } else {
-          fragment = true;
-        }
-      }
       break;
     }
 
     if (!disp->batch) break;
   }
 
-  size_t consumed = read - leftover;
-  if (consumed && fragment) {
-    disp->fragment = offered - consumed;
-  } else {
-    disp->fragment = 0;
-  }
-  return consumed;
+  return read;
 }
 
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)
