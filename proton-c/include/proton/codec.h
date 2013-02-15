@@ -64,6 +64,8 @@ typedef enum {
   PN_MAP
 } pn_type_t;
 
+PN_EXTERN const char *pn_type_name(pn_type_t type);
+
 typedef struct {
   pn_type_t type;
   union {

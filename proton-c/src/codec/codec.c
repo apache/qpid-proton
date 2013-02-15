@@ -72,7 +72,6 @@ int pn_decode_atoms(pn_bytes_t *bytes, pn_atoms_t *atoms);
 int pn_decode_one(pn_bytes_t *bytes, pn_atoms_t *atoms);
 
 int pn_print_atom(pn_iatom_t atom);
-const char *pn_type_str(pn_type_t type);
 int pn_print_atoms(const pn_atoms_t *atoms);
 ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms);
 int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom);
@@ -85,7 +84,7 @@ typedef union {
   double d;
 } conv_t;
 
-const char *pn_type_str(pn_type_t type)
+const char *pn_type_name(pn_type_t type)
 {
   if (type == PN_TYPE) return "PN_TYPE";
 
@@ -162,7 +161,7 @@ int pn_print_atom(pn_iatom_t atom)
 int pn_format_atom(pn_bytes_t *bytes, pn_iatom_t atom)
 {
   if (atom.type == PN_TYPE) {
-    return pn_bytes_format(bytes, "%s", pn_type_str(atom.u.type));
+    return pn_bytes_format(bytes, "%s", pn_type_name(atom.u.type));
   }
 
   switch (atom.type)
