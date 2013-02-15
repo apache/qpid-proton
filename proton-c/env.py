@@ -23,6 +23,7 @@
 
 import sys
 import os
+import subprocess
 from optparse import OptionParser
 
 def main(argv=None):
@@ -57,7 +58,8 @@ def main(argv=None):
     if len(args) == 0 or len(args[0]) == 0:
         raise Exception("Error: syntax error in command arguments")
 
-    os.execvpe(args[0], args, new_env)
+    p = subprocess.Popen(args, env=new_env)
+    p.wait()
     return 0
 
 if __name__ == "__main__":

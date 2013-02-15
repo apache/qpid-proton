@@ -936,6 +936,37 @@ class Data:
   LIST = PN_LIST; "A list value."
   MAP = PN_MAP; "A map value."
 
+  type_names = {
+    NULL: "null",
+    BOOL: "bool",
+    BYTE: "byte",
+    UBYTE: "ubyte",
+    SHORT: "short",
+    USHORT: "ushort",
+    INT: "int",
+    UINT: "uint",
+    CHAR: "char",
+    LONG: "long",
+    ULONG: "ulong",
+    TIMESTAMP: "timestamp",
+    FLOAT: "float",
+    DOUBLE: "double",
+    DECIMAL32: "decimal32",
+    DECIMAL64: "decimal64",
+    DECIMAL128: "decimal128",
+    UUID: "uuid",
+    BINARY: "binary",
+    STRING: "string",
+    SYMBOL: "symbol",
+    DESCRIBED: "described",
+    ARRAY: "array",
+    LIST: "list",
+    MAP: "map"
+    }
+
+  @classmethod
+  def type_name(type): return Data.type_names[type]
+
   def __init__(self, capacity=16):
     if type(capacity) in (int, long):
       self._data = pn_data(capacity)
@@ -964,7 +995,9 @@ class Data:
 
   def rewind(self):
     """
-    Clears current node and sets the parent to the root node.
+    Clears current node and sets the parent to the root node.  Clearing the
+    current node sets it _before_ the first node, calling next() will advance to
+    the first node.
     """
     pn_data_rewind(self._data)
 
@@ -995,6 +1028,8 @@ class Data:
   def enter(self):
     """
     Sets the parent node to the current node and clears the current node.
+    Clearing the current node sets it _before_ the first child,
+    call next() advances to the first child.
     """
     return pn_data_enter(self._data)
 
@@ -1592,7 +1627,14 @@ class Data:
       self.exit()
 
   def get_py_array(self):
+    """
+    If the current node is an array, return an Array object
+    representing the array and its contents. Otherwise return None.
+    This is a convenience wrapper around get_array, enter, etc.
+    """
+
     count, described, type = self.get_array()
+    if type is None: return None
     if self.enter():
       try:
         if described:
@@ -1666,6 +1708,7 @@ class Data:
     MAP: get_dict
     }
 
+
   def put_object(self, obj):
     putter = self.put_mappings[obj.__class__]
     putter(self, obj)
@@ -1678,7 +1721,6 @@ class Data:
       return getter(self)
     else:
       return UnmappedType(str(type))
-
 
 class ConnectionException(ProtonException):
   pass
@@ -2557,7 +2599,6 @@ class Driver(object):
 
   def pending_connector(self):
     return wrap_connector(pn_driver_connector(self._driver))
-
 
 __all__ = [
            "LANGUAGE",

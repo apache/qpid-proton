@@ -1,0 +1,128 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+from proton import *
+import os, common
+
+
+def find_test_interop_dir():
+    """Walk up the directory tree to find the tests directory."""
+    f = os.path.dirname(__file__)
+    while f and os.path.basename(f) != "tests": f = os.path.dirname(f)
+    f = os.path.join(f, "interop")
+    if not os.path.isdir(f):
+        raise Exception("Cannot find test/interop directory from "+__file__)
+    return f
+
+test_interop_dir=find_test_interop_dir()
+
+class InteropTest(common.Test):
+
+    def setup(self):
+        self.data = Data()
+
+    def teardown(self):
+        self.data = None
+
+    def decode(self, name):
+        filename = os.path.join(test_interop_dir, name+".amqp")
+        f = open(filename)
+        encoded = f.read()
+        f.close()
+        buffer = encoded
+        while buffer:
+            n = self.data.decode(buffer)
+            buffer = buffer[n:]
+        self.data.rewind()
+        # Test the round-trip re-encoding gives the same result.
+        assert encoded == self.data.encode()
+
+    def assert_next(self, type, value):
+        next_type = self.data.next()
+        assert next_type == type, "Type mismatch: %s != %s"%(
+            Data.type_names[next_type], Data.type_names[type])
+        getter = Data.get_mappings[type]
+        next_value = getter(self.data)
+        assert next_value == value, "Value mismatch: %s != %s"%(next_value, value)
+
+    def test_primitives(self):
+        self.decode("primitives")
+        self.assert_next(Data.BOOL, True)
+        self.assert_next(Data.BOOL, False)
+        self.assert_next(Data.UBYTE, 42)
+        self.assert_next(Data.USHORT, 42)
+        self.assert_next(Data.SHORT, -42)
+        self.assert_next(Data.UINT, 12345)
+        self.assert_next(Data.INT, -12345)
+        self.assert_next(Data.ULONG, 12345)
+        self.assert_next(Data.LONG, -12345)
+        self.assert_next(Data.FLOAT, 0.125)
+        self.assert_next(Data.DOUBLE, 0.125)
+        assert self.data.next() is None
+
+    def test_strings(self):
+        self.decode("strings")
+        self.assert_next(Data.BINARY, "abc\0defg")
+        self.assert_next(Data.STRING, "abcdefg")
+        self.assert_next(Data.SYMBOL, "abcdefg")
+        self.assert_next(Data.BINARY, "")
+        self.assert_next(Data.STRING, "")
+        self.assert_next(Data.SYMBOL, "")
+        assert self.data.next() is None
+
+    def test_described(self):
+        self.decode("described")
+        assert self.data.next() == Data.DESCRIBED
+        self.data.enter()
+        self.assert_next(Data.SYMBOL, "foo-descriptor")
+        self.assert_next(Data.STRING, "foo-value")
+        self.data.exit()
+
+        assert self.data.next() == Data.DESCRIBED
+        self.data.enter()
+        self.assert_next(Data.INT, 12)
+        self.assert_next(Data.INT, 13)
+        self.data.exit()
+
+        assert self.data.next() is None
+
+    def test_described_array(self):
+        raise common.Skipped()  # PROTON-240: Incorrect encoding of described arrays.
+        self.decode("described_array")
+        self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0,10)))
+
+    def test_arrays(self):
+        self.decode("arrays")
+        self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT, *range(0,100)))
+        self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.STRING, *["a", "b", "c"]))
+        self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT))
+        assert self.data.next() is None
+
+    def test_lists(self):
+        self.decode("lists")
+        self.assert_next(Data.LIST, [32, "foo", True])
+        self.assert_next(Data.LIST, [])
+        assert self.data.next() is None
+
+    def test_maps(self):
+        self.decode("maps")
+        self.assert_next(Data.MAP, {"one":1, "two":2, "three":3 })
+        self.assert_next(Data.MAP, {1:"one", 2:"two", 3:"three"})
+        self.assert_next(Data.MAP, {})
+        assert self.data.next() is None
