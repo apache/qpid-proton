@@ -34,6 +34,10 @@ set (PN_VERSION_MAJOR 0)
 set (PN_VERSION_MINOR 3)
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
 
+enable_testing()
+include (CTest)
+set (pn_test_root "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+
 # Start of variables used during install
 set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
 set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
@@ -67,3 +71,11 @@ add_subdirectory(proton-c)
 install (FILES LICENSE README TODO
          DESTINATION ${PROTON_SHARE})
 
+# add relevant CTest support
+find_program (MAVEN_EXECUTABLE mvn DOC "Location of the maven program")
+if (JAVA_FOUND AND MAVEN_EXECUTABLE AND DEFINED ENV{M2_HOME})
+  add_test (proton-jni mvn test -P proton-jni --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml) 
+  set_tests_properties(proton-jni PROPERTIES PASS_REGULAR_EXPRESSION "Tests run:.*Failures: 0, Errors: 0")
+else (JAVA_FOUND AND MAVEN_EXECUTABLE AND DEFINED ENV{M2_HOME})
+  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J and JNI Bindings")
+endif (JAVA_FOUND AND MAVEN_EXECUTABLE AND DEFINED ENV{M2_HOME})

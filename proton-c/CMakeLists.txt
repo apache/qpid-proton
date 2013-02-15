@@ -338,3 +338,35 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
          ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
          DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+
+# CTest
+
+# suffix for Visual Studio targets.  Only support RelWithDebInfo for now.
+if (MSVC)
+  set (bld_suffix "/RelWithDebInfo")
+endif (MSVC)
+
+# directories of interest
+set (tdir1 "${pn_test_root}/python")
+set (tdir2 "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
+set (tdir3 "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
+set (tdir4 "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
+
+
+# test #1:  python [...]tests/python/proton-test
+
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Windows uses a ';' separator and needs extra PATH help
+  set (newpath "PATH=$ENV{PATH};${tdir4}")
+  string (REGEX REPLACE "\\\\" "/" newpath "${newpath}")
+  add_test(proton-c python "${CMAKE_CURRENT_SOURCE_DIR}/env.py"
+           "PYTHONPATH=${tdir1};${tdir2};${tdir3};${tdir3}${bld_suffix}" 
+	   "${newpath}"
+           python "${pn_test_root}/python/proton-test")
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  add_test(proton-c python "${CMAKE_CURRENT_SOURCE_DIR}/env.py"
+           "PYTHONPATH=${tdir1}:${tdir2}:${tdir3}"
+           python "${pn_test_root}/python/proton-test")
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+
+set_tests_properties(proton-c PROPERTIES PASS_REGULAR_EXPRESSION "Totals:.*, 0 failed")
