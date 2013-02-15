@@ -235,7 +235,7 @@ endif (SWIG_FOUND)
 
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
-add_subdirectory(examples/messenger/c)
+add_subdirectory(../examples/messenger/c examples/messenger/c)
 
 set (qpid-proton-platform
   ${pn_driver_impl}
