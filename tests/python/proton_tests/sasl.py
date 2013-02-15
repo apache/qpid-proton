@@ -106,3 +106,27 @@ class SaslTest(Test):
 
     out1 = self.t1.output(1024)
     assert len(out1) > 0
+
+  def testFracturedSASL(self):
+    """ PROTON-235
+    """
+    self.s1.mechanisms("ANONYMOUS")
+    self.s1.client()
+    assert self.s1.outcome is None
+
+    # self.t1.trace(Transport.TRACE_FRM)
+
+    out = self.t1.output(1024)
+    self.t1.input("AMQP\x03\x01\x00\x00")
+    out = self.t1.output(1024)
+    self.t1.input("\x00\x00\x00")
+    out = self.t1.output(1024)
+    self.t1.input("A\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x06\xa3\x06GSSAPI\x05PLAIN\x0aDIGEST-MD5\x08AMQPLAIN\x08CRAM-MD5\x04NTLM")
+    out = self.t1.output(1024)
+    self.t1.input("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00")
+    out = self.t1.output(1024)
+    while out:
+      out = self.t1.output(1024)
+
+    assert self.s1.outcome == SASL.OK
+

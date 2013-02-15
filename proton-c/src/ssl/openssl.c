@@ -91,9 +91,11 @@ struct pn_ssl_t {
 
   // buffers for holding I/O from "applications" above SSL
 #define APP_BUF_SIZE    (4*1024)
-  char outbuf[APP_BUF_SIZE];
+  char *outbuf;
+  size_t out_size;
   size_t out_count;
-  char inbuf[APP_BUF_SIZE];
+  char *inbuf;
+  size_t in_size;
   size_t in_count;
 
   pn_trace_t trace;
@@ -703,7 +705,8 @@ void pn_ssl_free( pn_ssl_t *ssl)
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
   if (ssl->session_id) free((void *)ssl->session_id);
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
-
+  if (ssl->inbuf) free((void *)ssl->inbuf);
+  if (ssl->outbuf) free((void *)ssl->outbuf);
   free(ssl);
 }
 
@@ -714,6 +717,21 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
   pn_ssl_t *ssl = (pn_ssl_t *) calloc(1, sizeof(pn_ssl_t));
   if (!ssl) return NULL;
+  ssl->out_size = APP_BUF_SIZE;
+  uint32_t max_frame = pn_transport_get_max_frame(transport);
+  ssl->in_size =  max_frame ? max_frame : APP_BUF_SIZE;
+  ssl->outbuf = (char *)malloc(ssl->out_size);
+  if (!ssl->outbuf) {
+    free(ssl);
+    return NULL;
+  }
+  ssl->inbuf =  (char *)malloc(ssl->in_size);
+  if (!ssl->inbuf) {
+    free(ssl->outbuf);
+    free(ssl);
+    return NULL;
+  }
+
   ssl->transport = transport;
   transport->ssl = ssl;
 
@@ -814,8 +832,8 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
 
     // Read all available data from the SSL socket
 
-    if (!ssl->ssl_closed && ssl->in_count < APP_BUF_SIZE) {
-      int read = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], APP_BUF_SIZE - ssl->in_count );
+    if (!ssl->ssl_closed && ssl->in_count < ssl->in_size) {
+      int read = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], ssl->in_size - ssl->in_count );
       if (read > 0) {
         _log( ssl, "Read %d bytes from SSL socket for app\n", read );
         _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
@@ -860,15 +878,39 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
           data += consumed;
           work_pending = true;
           _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
+        } else if (consumed < 0) {
+          _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
+               (int) consumed, (int)ssl->in_count);
+          ssl->in_count = 0;    // discard any pending input
+          ssl->app_input_closed = consumed;
+          if (ssl->app_output_closed && ssl->out_count == 0) {
+            // both sides of app closed, and no more app output pending:
+            start_ssl_shutdown(ssl);
+          }
         } else {
-          if (consumed < 0) {
-            _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
-                 (int) consumed, (int)ssl->in_count);
-            ssl->in_count = 0;    // discard any pending input
-            ssl->app_input_closed = consumed;
-            if (ssl->app_output_closed && ssl->out_count == 0) {
-              // both sides of app closed, and no more app output pending:
-              start_ssl_shutdown(ssl);
+          // app did not consume any bytes, must be waiting for a full frame
+          if (ssl->in_count == ssl->in_size) {
+            // but the buffer is full, not enough room for a full frame.
+            // can we grow the buffer?
+            uint32_t max_frame = pn_transport_get_max_frame(ssl->transport);
+            if (!max_frame) max_frame = ssl->in_size * 2;  // no limit
+            if (ssl->in_size < max_frame) {
+              // no max frame limit - grow it.
+              char *newbuf = (char *)malloc( max_frame );
+              if (newbuf) {
+                ssl->in_size *= max_frame;
+                memmove( newbuf, ssl->inbuf, ssl->in_count );
+                free( ssl->inbuf );
+                ssl->inbuf = newbuf;
+              }
+              work_pending = true;  // can we get more input?
+            } else {
+              // can't gather any more input, but app needs more?
+              // This is a bug - since SSL can buffer up to max-frame,
+              // the application _must_ have enough data to process.  If
+              // this is an oversized frame, the app _must_ handle it
+              // by returning an error code to SSL.
+              _log_error("Error: application unable to consume input.\n");
             }
           }
         }
@@ -913,9 +955,9 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
     work_pending = false;
     // first, get any pending application output, if possible
 
-    if (!ssl->app_output_closed && ssl->out_count < APP_BUF_SIZE) {
+    if (!ssl->app_output_closed && ssl->out_count < ssl->out_size) {
       pn_io_layer_t *io_next = ssl->io_layer->next;
-      ssize_t app_bytes = io_next->process_output( io_next, &ssl->outbuf[ssl->out_count], APP_BUF_SIZE - ssl->out_count);
+      ssize_t app_bytes = io_next->process_output( io_next, &ssl->outbuf[ssl->out_count], ssl->out_size - ssl->out_count);
       if (app_bytes > 0) {
         ssl->out_count += app_bytes;
         work_pending = true;
