@@ -752,6 +752,8 @@ void pn_transport_init(pn_transport_t *transport)
     io_layer->process_input = pn_io_layer_input_passthru;
     io_layer->process_output = pn_io_layer_output_passthru;
     io_layer->process_tick = pn_io_layer_tick_passthru;
+    io_layer->buffered_output = NULL;
+    io_layer->buffered_input = NULL;
     ++io_layer;
   }
 
@@ -760,6 +762,8 @@ void pn_transport_init(pn_transport_t *transport)
   amqp->process_input = pn_input_read_amqp_header;
   amqp->process_output = pn_output_write_amqp_header;
   amqp->process_tick = pn_io_layer_tick_passthru;
+  amqp->buffered_output = NULL;
+  amqp->buffered_input = NULL;
   amqp->next = NULL;
 
   pn_dispatcher_action(transport->disp, OPEN, "OPEN", pn_do_open);
@@ -3086,4 +3090,22 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 int pn_transport_close_head(pn_transport_t *transport)
 {
   return 0;
+}
+
+size_t pn_transport_buffered_output(pn_transport_t *transport)
+{
+  size_t count = 0;
+  if (transport) {
+    ssize_t pending = pn_transport_pending(transport);
+    if (pending >= 0) {  // !error
+      count += pending;
+      pn_io_layer_t *io_layer = transport->io_layers;
+      while (io_layer != &transport->io_layers[PN_IO_LAYER_CT]) {
+        if (io_layer->buffered_output)
+          count += io_layer->buffered_output( io_layer );
+        ++io_layer;
+      }
+    }
+  }
+  return count;
 }

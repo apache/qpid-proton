@@ -113,6 +113,8 @@ typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_io_layer_t *io_layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_io_layer_t *io_layer, char *, size_t);
   pn_timestamp_t (*process_tick)(struct pn_io_layer_t *io_layer, pn_timestamp_t);
+  size_t (*buffered_output)(struct pn_io_layer_t *);  // how much output is held
+  size_t (*buffered_input)(struct pn_io_layer_t *);   // how much input is held
 } pn_io_layer_t;
 
 struct pn_transport_t {

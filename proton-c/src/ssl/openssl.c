@@ -127,7 +127,8 @@ static int init_ssl_socket( pn_ssl_t * );
 static void release_ssl_socket( pn_ssl_t * );
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
-
+static size_t buffered_output( pn_io_layer_t *io_layer );
+static size_t buffered_input( pn_io_layer_t *io_layer );
 
 // @todo: used to avoid littering the code with calls to printf...
 static void _log_error(const char *fmt, ...)
@@ -740,6 +741,8 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   ssl->io_layer->process_input = pn_io_layer_input_passthru;
   ssl->io_layer->process_output = pn_io_layer_output_passthru;
   ssl->io_layer->process_tick = pn_io_layer_tick_passthru;
+  ssl->io_layer->buffered_output = buffered_output;
+  ssl->io_layer->buffered_input = buffered_input;
 
   ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
 
@@ -1276,4 +1279,32 @@ static ssize_t process_input_done(pn_io_layer_t *io_layer, const char *input_dat
 static ssize_t process_output_done(pn_io_layer_t *io_layer, char *input_data, size_t len)
 {
   return PN_EOS;
+}
+
+// return # output bytes sitting in this layer
+static size_t buffered_output(pn_io_layer_t *io_layer)
+{
+  size_t count = 0;
+  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
+  if (ssl) {
+    count += ssl->out_count;
+    if (ssl->bio_net_io) { // pick up any bytes waiting for network io
+      count += BIO_ctrl_pending(ssl->bio_net_io);
+    }
+  }
+  return count;
+}
+
+// return # input bytes sitting in this layer
+static size_t buffered_input( pn_io_layer_t *io_layer )
+{
+  size_t count = 0;
+  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
+  if (ssl) {
+    count += ssl->in_count;
+    if (ssl->bio_ssl) { // pick up any bytes waiting to be read
+      count += BIO_ctrl_pending(ssl->bio_ssl);
+    }
+  }
+  return count;
 }
