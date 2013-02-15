@@ -20,10 +20,12 @@
 import os, common
 from proton import *
 from threading import Thread
+from time import sleep, time
 
 class Test(common.Test):
 
   def setup(self):
+    self.server_received = 0;
     self.server = Messenger("server")
     self.server.timeout=10000
     self.server.start()
@@ -69,6 +71,7 @@ class MessengerTest(Test):
   def process_incoming(self, msg):
     while self.server.incoming:
       self.server.get(msg)
+      self.server_received += 1
       if msg.body == REJECT_ME:
         self.server.reject()
       else:
@@ -250,3 +253,19 @@ class MessengerTest(Test):
         remaining -= 1
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
+
+  def test_proton222(self):
+    self.start()
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.subject="Hello World!"
+    msg.load("First the world, then the galaxy!")
+    assert self.server_received == 0
+    self.client.put(msg)
+    self.client.send()
+    # ensure the server got the message without requiring client to stop first
+    deadline = time() + 10
+    while self.server_received == 0:
+      assert time() < deadline, "Server did not receive message!"
+      sleep(.1)
+    assert self.server_received == 1
