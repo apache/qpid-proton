@@ -1052,12 +1052,10 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
 
+    // check if transport is done generating output
     pn_transport_t *transport = pn_connector_transport(ctor);
     if (transport) {
-      // could be as simple as this, if not for SSL:
-      //if (pn_transport_pending(transport) > 0)
-      //  return false;
-      if (pn_transport_buffered_output(transport) > 0)
+      if (!pn_transport_quiesced(transport))
         return false;
     }
 

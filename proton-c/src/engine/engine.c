@@ -3092,20 +3092,20 @@ int pn_transport_close_head(pn_transport_t *transport)
   return 0;
 }
 
-size_t pn_transport_buffered_output(pn_transport_t *transport)
+
+// true if the transport will not generate further output
+bool pn_transport_quiesced(pn_transport_t *transport)
 {
-  size_t count = 0;
-  if (transport) {
-    ssize_t pending = pn_transport_pending(transport);
-    if (pending >= 0) {  // !error
-      count += pending;
-      pn_io_layer_t *io_layer = transport->io_layers;
-      while (io_layer != &transport->io_layers[PN_IO_LAYER_CT]) {
-        if (io_layer->buffered_output)
-          count += io_layer->buffered_output( io_layer );
-        ++io_layer;
-      }
-    }
+  if (!transport) return true;
+  ssize_t pending = pn_transport_pending(transport);
+  if (pending < 0) return true; // output done
+  else if (pending > 0) return false;
+  // no pending at transport, but check if data is buffered in I/O layers
+  pn_io_layer_t *io_layer = transport->io_layers;
+  while (io_layer != &transport->io_layers[PN_IO_LAYER_CT]) {
+    if (io_layer->buffered_output && io_layer->buffered_output( io_layer ))
+      return false;
+    ++io_layer;
   }
-  return count;
+  return true;
 }

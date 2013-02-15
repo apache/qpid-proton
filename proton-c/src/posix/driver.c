@@ -546,8 +546,7 @@ void pn_connector_process(pn_connector_t *c)
         c->status |= PN_SEL_RD;
         if (c->pending_read) {
           c->pending_read = false;
-          ssize_t n =  recv(c->fd, pn_transport_buffer(transport),
-                            capacity, 0);
+          ssize_t n =  recv(c->fd, pn_transport_tail(transport), capacity, 0);
           if (n < 0) {
             if (errno != EAGAIN) {
               perror("read");
@@ -585,7 +584,7 @@ void pn_connector_process(pn_connector_t *c)
         c->status |= PN_SEL_WR;
         if (c->pending_write) {
           c->pending_write = false;
-          ssize_t n = pn_send(c->fd, pn_transport_peek(transport), pending);
+          ssize_t n = pn_send(c->fd, pn_transport_head(transport), pending);
           if (n < 0) {
             // XXX
             if (errno != EAGAIN) {
