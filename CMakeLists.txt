@@ -30,9 +30,14 @@ else (BUILD_WITH_CXX)
   project (Proton C)
 endif (BUILD_WITH_CXX)
 
-set (PN_VERSION_MAJOR 0)
-set (PN_VERSION_MINOR 3)
+file(READ version.txt PN_VERSION_FILE)
+string(REGEX MATCHALL "[0-9]+" PN_VERSION_LIST "${PN_VERSION_FILE}")
+
+list(GET PN_VERSION_LIST 0 PN_VERSION_MAJOR)
+list(GET PN_VERSION_LIST 1 PN_VERSION_MINOR)
+
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
+message("PN_VERSION: ${PN_VERSION}")
 
 enable_testing()
 include (CTest)

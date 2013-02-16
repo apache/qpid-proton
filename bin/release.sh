@@ -39,7 +39,6 @@ REVISION=""
 usage()
 {
     echo "Usage: ${ME} -v VERSION [-u URL] [-b BRANCH] [-r REVISION]"
-    echo "-v VERSION  Specifies the release version; e.g., 3.14"
     echo "-u URL      The base URL for the repository (def. ${URL})"
     echo "-b BRANCH   The branch to check out (def. ${BRANCH})"
     echo "-r REVISION The revision to check out (def. HEAD)"
@@ -53,8 +52,6 @@ while getopts "hu:b:r:v:d" OPTION; do
     case $OPTION in
         h) usage;;
 
-        v) VERSION=$OPTARG;;
-
         u) URL=$OPTARG;;
 
         b) BRANCH=$OPTARG;;
@@ -67,10 +64,6 @@ while getopts "hu:b:r:v:d" OPTION; do
     esac
 done
 
-if [[ -z "${VERSION}" ]]; then
-    die "You need to specify a version."
-fi
-
 if [[ -z "${REVISION}" ]]; then
     # grab a consistent revision to use for all exports
     REVISION=$(svn info http://svn.apache.org/repos/asf/qpid/proton | fgrep Revision: | awk '{ print $2 }')
@@ -81,12 +74,14 @@ echo "Using svn revision ${REVISION}."
 ##
 ## Create the tarball
 ##
-rootname="qpid-proton-${VERSION}"
 WORKDIR=$(mktemp -d)
 mkdir -p "${WORKDIR}"
 (
     cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/ ${rootname}
+    svn export -qr ${REVISION} ${URL}/${BRANCH}/ tmp
+    VERSION=$(cat tmp/version.txt)
+    rootname="qpid-proton-${VERSION}"
+    mv tmp ${rootname}
 
     cat <<EOF > ${rootname}/SVN_INFO
 Repo: ${URL}
@@ -102,48 +97,6 @@ EOF
     rm -r ${rootname}/design
 
     echo "Generating Archive: ${CURRDIR}/${rootname}.tar.gz"
-    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname}
-)
-
-##
-## Create the Ruby GEM
-##
-rootname="qpid-proton-ruby-${VERSION}"
-WORKDIR=$(mktemp -d)
-mkdir -p "${WORKDIR}"
-(
-    cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c/bindings/ruby ${rootname}
-
-    cat <<EOF > ${rootname}/SVN_INFO
-Repo: ${URL}
-Branch: ${BRANCH}
-Revision: ${REVISION}
-EOF
-
-    tar zcf  ${CURRDIR}/${rootname}.tar.gz ${rootname} \
-      --exclude=spec \
-      --exclude=CMakeLists.txt \
-      --exclude=.gitignore
-)
-
-##
-## Create the Perl tarball
-##
-rootname="perl-qpid_proton-${VERSION}"
-WORKDIR=$(mktemp -d)
-mkdir -p "${WORKDIR}"
-(
-    cd ${WORKDIR}
-    svn export -qr ${REVISION} ${URL}/${BRANCH}/proton-c/bindings/perl ${rootname}
-
-    cat <<EOF > ${rootname}/SVN_INFO
-Repo: ${URL}
-Branch: ${BRANCH}
-Revision: ${REVISION}
-EOF
-
-tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname} \
-    --exclude=CMakeLists.txt \
-    --exclude=.gitignore
+    tar zcf ${CURRDIR}/${rootname}.tar.gz ${rootname} \
+        --exclude=.gitignore
 )
