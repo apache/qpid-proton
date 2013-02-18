@@ -46,3 +46,7 @@ include(UseProtonJava)
 rebuild_jar(proton-jni proton-jni-${PN_VERSION}.jar)
 
 add_dependencies(proton-jni proton-api proton-swig)
+
+install_jar(proton-jni ${JNI_INSTALL_DIR})
+install(TARGETS proton-swig
+        DESTINATION ${JNI_SHARED_LIB_INSTALL_DIR})

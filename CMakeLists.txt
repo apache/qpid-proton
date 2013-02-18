@@ -50,6 +50,10 @@ set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration director
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
+set (JAVA_INSTALL_DIR ${SHARE_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs except those using JNI")
+set (JNI_INSTALL_DIR ${LIB_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs utilising JNI")
+set (JNI_SHARED_LIB_INSTALL_DIR ${LIB_INSTALL_DIR} CACHE PATH "Installation directory for shared objects used by JNI JARs")
+
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 

@@ -55,6 +55,9 @@ if (BOUNCYCASTLE_FOUND)
   rebuild_jar(proton-j-impl proton-j-impl-${PN_VERSION}.jar)
 
   add_dependencies(proton-j-impl proton-api)
+
+  install_jar(proton-j-impl ${JAVA_INSTALL_DIR})
 else()
     message("Won't build proton-j-impl because one or more Bouncycastle jars were not found. PROTON_JAR_DEPEND_DIR was: ${PROTON_JAR_DEPEND_DIR}")
 endif()
+
