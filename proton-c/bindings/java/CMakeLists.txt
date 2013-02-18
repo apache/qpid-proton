@@ -28,7 +28,8 @@ swig_link_libraries(proton-swig ${BINDING_DEPS}  )
 
 set_target_properties(proton-swig
     PROPERTIES
-    PREFIX "lib")
+    OUTPUT_NAME "proton-jni"
+    PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
 
 add_custom_command(OUTPUT ${CMAKE_SWIG_OUTDIR} COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR} COMMENT "Creating target directory for Proton-JNI sources")
 add_custom_target(protonjnioutdir ALL DEPENDS ${CMAKE_SWIG_OUTDIR})

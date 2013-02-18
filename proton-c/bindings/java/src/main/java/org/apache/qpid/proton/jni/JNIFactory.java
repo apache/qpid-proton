@@ -27,7 +27,7 @@ public abstract class JNIFactory
 
     static
     {
-        String libname = "proton-swig";
+        String libname = "proton-jni";
 
         if(LOGGER.isLoggable(Level.FINE))
         {
