@@ -103,7 +103,6 @@ class InteropTest(common.Test):
         assert self.data.next() is None
 
     def test_described_array(self):
-        raise common.Skipped()  # PROTON-240: Incorrect encoding of described arrays.
         self.decode("described_array")
         self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0,10)))
 

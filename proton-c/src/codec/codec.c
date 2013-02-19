@@ -2095,6 +2095,20 @@ static uint8_t pn_node2code(pn_node_t *node)
   }
 }
 
+/* True if node is an element of an array - not the descriptor. */
+static bool pn_is_in_array(pn_data_t *data, pn_node_t *parent, pn_node_t *node) {
+  return (parent && parent->atom.type == PN_ARRAY) /* In array */
+    && !(parent->described && !node->prev); /* Not the descriptor */
+}
+
+/** True if node is the first element of an array, not the descriptor.
+ *@pre pn_is_in_array(data, parent, node)
+ */
+static bool pn_is_first_in_array(pn_data_t *data, pn_node_t *parent, pn_node_t *node) {
+  if (!node->prev) return !parent->described; /* First node */
+  return parent->described && (!pn_data_node(data, node->prev)->prev);
+}
+
 static int pn_data_encode_node(pn_data_t *data, pn_node_t *parent, pn_node_t *node,
                                pn_bytes_t *bytes)
 {
@@ -2103,9 +2117,10 @@ static int pn_data_encode_node(pn_data_t *data, pn_node_t *parent, pn_node_t *no
   uint8_t code;
   conv_t c;
 
-  if (parent && parent->atom.type == PN_ARRAY) {
+  /** In an array we don't write the code before each element, only the first. */
+  if (pn_is_in_array(data, parent, node)) {
     code = pn_type2code(parent->type);
-    if (!node->prev || (node->prev && parent->described && !pn_data_node(data, node->prev)->prev)) {
+    if (pn_is_first_in_array(data, parent, node)) {
       err = pn_i_bytes_writef8(bytes, code);
       if (err) return err;
     }
