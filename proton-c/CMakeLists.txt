@@ -28,25 +28,6 @@ if(WIN32 AND NOT CYGWIN)
   set (PLATFORM_LIBS ws2_32 Rpcrt4)
 endif(WIN32 AND NOT CYGWIN)
 
-
-# In rpm builds the build sets some variables:
-#  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
-#  INCLUDE_INSTALL_DIR
-#  LIB_INSTALL_DIR
-#  SYSCONF_INSTALL_DIR
-#  SHARE_INSTALL_DIR
-# So make these cached variables and the specific variables non cached
-# and derived from them.
-
-if (NOT DEFINED LIB_SUFFIX)
-    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-    if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
-        set(LIB_SUFFIX 64)
-    else()
-        set(LIB_SUFFIX "")
-    endif()
-endif()
-
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
 if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
     # OPTIONAL does not exist in install before 2.8 so always make docs and install

@@ -43,6 +43,25 @@ enable_testing()
 include (CTest)
 set (pn_test_root "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
+
+# In rpm builds the build sets some variables:
+#  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
+#  INCLUDE_INSTALL_DIR
+#  LIB_INSTALL_DIR
+#  SYSCONF_INSTALL_DIR
+#  SHARE_INSTALL_DIR
+# So make these cached variables and the specific variables non cached
+# and derived from them.
+
+if (NOT DEFINED LIB_SUFFIX)
+    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+    if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
+        set(LIB_SUFFIX 64)
+    else()
+        set(LIB_SUFFIX "")
+    endif()
+endif()
+
 # Start of variables used during install
 set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
 set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
