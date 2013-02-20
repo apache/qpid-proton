@@ -1284,7 +1284,6 @@ typedef long long int int64_t;
 {
  require:
   messenger != NULL;
-  n >= 0;
 }
 
 %contract pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)

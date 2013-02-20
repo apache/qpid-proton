@@ -48,6 +48,7 @@ struct pn_messenger_t {
   char *trusted_certificates;
   int timeout;
   pn_driver_t *driver;
+  bool unlimited_credit;
   int credit;
   int distributed;
   uint64_t next_tag;
@@ -262,6 +263,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->trusted_certificates = NULL;
     m->timeout = -1;
     m->driver = pn_driver();
+    m->unlimited_credit = false;
     m->credit = 0;
     m->distributed = 0;
     m->next_tag = 0;
@@ -385,25 +387,33 @@ const char *pn_messenger_error(pn_messenger_t *messenger)
 
 void pn_messenger_flow(pn_messenger_t *messenger)
 {
-  while (messenger->credit > 0) {
+  while (messenger->credit > 0 || messenger->unlimited_credit) {
     int prev = messenger->credit;
     pn_connector_t *ctor = pn_connector_head(messenger->driver);
     while (ctor) {
       pn_connection_t *conn = pn_connector_connection(ctor);
 
       pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
-      while (link && messenger->credit > 0) {
+      while (link) {
         if (pn_link_is_receiver(link)) {
-          pn_link_flow(link, 1);
-          messenger->credit--;
-          messenger->distributed++;
+          if (messenger->unlimited_credit) {
+            if (!pn_link_credit(link)) {
+              pn_link_flow(link, 1);
+              messenger->distributed++;
+            }
+          } else {
+            pn_link_flow(link, 1);
+            messenger->credit--;
+            messenger->distributed++;
+            if (messenger->credit == 0) break;
+          }
         }
         link = pn_link_next(link, PN_LOCAL_ACTIVE);
       }
 
       ctor = pn_connector_next(ctor);
     }
-    if (messenger->credit == prev) break;
+    if (messenger->unlimited_credit || messenger->credit == prev) break;
   }
 }
 
@@ -1115,8 +1125,13 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
   if (!pn_listener_head(messenger->driver) && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
   int total = messenger->credit + messenger->distributed;
-  if (n > total)
-    messenger->credit += (n - total);
+  if (n == -1) {
+    messenger->unlimited_credit = true;
+  } else  {
+    messenger->unlimited_credit = false;
+    if (n > total)
+      messenger->credit += (n - total);
+  }
   pn_messenger_flow(messenger);
   return pn_messenger_sync(messenger, pn_messenger_rcvd);
 }

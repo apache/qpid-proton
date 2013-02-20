@@ -366,12 +366,14 @@ send. Defaults to zero.
     """
     self._check(pn_messenger_send(self._mng))
 
-  def recv(self, n):
+  def recv(self, n=None):
     """
     Receives up to I{n} messages into the incoming queue of the
     L{Messenger}. This method will block until at least one message is
     available or the operation times out.
     """
+    if n is None:
+      n = -1
     self._check(pn_messenger_recv(self._mng, n))
 
   def get(self, message=None):

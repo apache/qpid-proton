@@ -25,7 +25,8 @@ from time import sleep, time
 class Test(common.Test):
 
   def setup(self):
-    self.server_received = 0;
+    self.server_credit = -1
+    self.server_received = 0
     self.server = Messenger("server")
     self.server.timeout=10000
     self.server.start()
@@ -61,7 +62,7 @@ class MessengerTest(Test):
     msg = Message()
     try:
       while self.running:
-        self.server.recv(10)
+        self.server.recv(self.server_credit)
         self.process_incoming(msg)
     except Timeout:
       print "server timed out"
@@ -209,6 +210,7 @@ class MessengerTest(Test):
         assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
   def testRejectIndividual(self):
+    self.server_credit = 10
     self.testReject(self.reject_individual)
 
   def reject_individual(self, msg):
@@ -269,3 +271,43 @@ class MessengerTest(Test):
       assert time() < deadline, "Server did not receive message!"
       sleep(.1)
     assert self.server_received == 1
+
+  def testUnlimitedCredit(self):
+    """ Bring up two links.  Verify credit is granted to each link by
+    transferring a message over each.
+    """
+    self.start()
+
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345/XXX"
+    msg.subject="Hello World!"
+    body = "First the world, then the galaxy!"
+    msg.load(body)
+    self.client.put(msg)
+    self.client.send()
+
+    reply = Message()
+    self.client.recv(1)
+    assert self.client.incoming == 1
+    self.client.get(reply)
+
+    assert reply.subject == "Hello World!"
+    rbod = reply.save()
+    assert rbod == body, (rbod, body)
+
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345/YYY"
+    msg.subject="Hello World!"
+    body = "First the world, then the galaxy!"
+    msg.load(body)
+    self.client.put(msg)
+    self.client.send()
+
+    reply = Message()
+    self.client.recv(-1)
+    assert self.client.incoming == 1
+    self.client.get(reply)
+
+    assert reply.subject == "Hello World!"
+    rbod = reply.save()
+    assert rbod == body, (rbod, body)

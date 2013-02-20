@@ -334,7 +334,8 @@ PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger);
  * incoming queue.
  *
  * @param[in] messenger the messenger
- * @param[in] n the maximum number of messages to receive
+ * @param[in] n the maximum number of messages to receive, if -1
+ * allow at least one message from each peer.
  *
  * @return an error code or zero on success
  * @see error.h
