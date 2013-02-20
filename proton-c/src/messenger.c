@@ -49,6 +49,7 @@ struct pn_messenger_t {
   int timeout;
   pn_driver_t *driver;
   bool unlimited_credit;
+  int credit_batch;
   int credit;
   int distributed;
   uint64_t next_tag;
@@ -264,6 +265,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->timeout = -1;
     m->driver = pn_driver();
     m->unlimited_credit = false;
+    m->credit_batch = 10;
     m->credit = 0;
     m->distributed = 0;
     m->next_tag = 0;
@@ -387,33 +389,47 @@ const char *pn_messenger_error(pn_messenger_t *messenger)
 
 void pn_messenger_flow(pn_messenger_t *messenger)
 {
-  while (messenger->credit > 0 || messenger->unlimited_credit) {
-    int prev = messenger->credit;
-    pn_connector_t *ctor = pn_connector_head(messenger->driver);
-    while (ctor) {
-      pn_connection_t *conn = pn_connector_connection(ctor);
+  int link_ct = 0;
+  pn_connector_t *ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
+    pn_connection_t *conn = pn_connector_connection(ctor);
 
-      pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
-      while (link) {
-        if (pn_link_is_receiver(link)) {
-          if (messenger->unlimited_credit) {
-            if (!pn_link_credit(link)) {
-              pn_link_flow(link, 1);
-              messenger->distributed++;
-            }
-          } else {
-            pn_link_flow(link, 1);
-            messenger->credit--;
-            messenger->distributed++;
-            if (messenger->credit == 0) break;
-          }
-        }
-        link = pn_link_next(link, PN_LOCAL_ACTIVE);
-      }
-
-      ctor = pn_connector_next(ctor);
+    pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
+    while (link) {
+      if (pn_link_is_receiver(link)) link_ct++;
+      link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }
-    if (messenger->unlimited_credit || messenger->credit == prev) break;
+    ctor = pn_connector_next(ctor);
+  }
+
+  if (link_ct == 0) return;
+
+  if (messenger->unlimited_credit)
+    messenger->credit = link_ct * messenger->credit_batch;
+
+  int batch = (messenger->credit < link_ct) ? 1
+    : (messenger->credit/link_ct);
+
+  ctor = pn_connector_head(messenger->driver);
+  while (ctor) {
+    pn_connection_t *conn = pn_connector_connection(ctor);
+    pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
+    while (link) {
+      if (pn_link_is_receiver(link)) {
+
+        int have = pn_link_credit(link);
+        if (have < batch) {
+          int need = batch - have;
+          int amount = (messenger->credit < need) ? messenger->credit : need;
+          pn_link_flow(link, amount);
+          messenger->distributed += amount;
+          messenger->credit -= amount;
+          if (messenger->credit == 0) return;
+        }
+      }
+      link = pn_link_next(link, PN_LOCAL_ACTIVE);
+    }
+    ctor = pn_connector_next(ctor);
   }
 }
 

@@ -74,6 +74,7 @@ public class MessengerImpl implements Messenger
     private byte[] _buffer = new byte[5*1024];
     private Driver _driver;
     private boolean _unlimitedCredit = false;
+    private static final int _creditBatch = 10;
     private int _credit;
     private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
@@ -571,27 +572,44 @@ public class MessengerImpl implements Messenger
 
     private void distributeCredit()
     {
-        int previous = 0;
-        while (_unlimitedCredit || (_credit > 0 && _credit != previous))
+        int linkCt = 0;
+        // @todo track the number of opened receive links
+        for (Connector c : _driver.connectors())
         {
-            previous = _credit;
-            for (Connector c : _driver.connectors())
+            Connection connection = c.getConnection();
+            for (Link link : new Links(connection, ACTIVE, ANY))
             {
-                Connection connection = c.getConnection();
-                for (Link link : new Links(connection, ACTIVE, ANY))
+                if (link instanceof Receiver) linkCt++;
+            }
+        }
+
+        if (linkCt == 0) return;
+
+        if (_unlimitedCredit)
+        {
+            _credit = linkCt * _creditBatch;
+        }
+
+        int batch = (_credit < linkCt) ? 1 : (_credit/linkCt);
+        for (Connector c : _driver.connectors())
+        {
+            Connection connection = c.getConnection();
+            for (Link link : new Links(connection, ACTIVE, ANY))
+            {
+                if (link instanceof Receiver)
                 {
-                    if (link instanceof Receiver)
+                    int have = ((Receiver) link).getCredit();
+                    if (have < batch)
                     {
-                        ((Receiver) link).flow(1);
-                        _distributed++;
-                        if (!_unlimitedCredit) {
-                            _credit--;
-                            if (_credit == 0) return;
-                        }
+                        int need = batch - have;
+                        int amount = (_credit < need) ? _credit : need;
+                        ((Receiver) link).flow(amount);
+                        _distributed += amount;
+                        _credit -= amount;
+                        if (_credit == 0) return;
                     }
                 }
             }
-            if (_unlimitedCredit) return;
         }
     }
 

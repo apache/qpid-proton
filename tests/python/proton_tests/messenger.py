@@ -25,7 +25,7 @@ from time import sleep, time
 class Test(common.Test):
 
   def setup(self):
-    self.server_credit = -1
+    self.server_credit = 10
     self.server_received = 0
     self.server = Messenger("server")
     self.server.timeout=10000
@@ -210,7 +210,6 @@ class MessengerTest(Test):
         assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
   def testRejectIndividual(self):
-    self.server_credit = 10
     self.testReject(self.reject_individual)
 
   def reject_individual(self, msg):
@@ -276,6 +275,7 @@ class MessengerTest(Test):
     """ Bring up two links.  Verify credit is granted to each link by
     transferring a message over each.
     """
+    self.server_credit = -1
     self.start()
 
     msg = Message()
@@ -304,7 +304,7 @@ class MessengerTest(Test):
     self.client.send()
 
     reply = Message()
-    self.client.recv(-1)
+    self.client.recv(1)
     assert self.client.incoming == 1
     self.client.get(reply)
 

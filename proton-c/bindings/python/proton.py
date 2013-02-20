@@ -369,8 +369,9 @@ send. Defaults to zero.
   def recv(self, n=None):
     """
     Receives up to I{n} messages into the incoming queue of the
-    L{Messenger}. This method will block until at least one message is
-    available or the operation times out.
+    L{Messenger}. If I{n} is not specified, L{Messenger} will receive as many
+    messages as it can buffer internally. This method will block until at least
+    one message is available or the operation times out.
     """
     if n is None:
       n = -1

@@ -329,13 +329,14 @@ PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger);
 
-/** Receives up to n message into the incoming message queue of a
- * messenger. Blocks until at least one message is available in the
- * incoming queue.
+/** Receives up to n messages into the incoming message queue of a
+ * messenger. If n is -1, Messenger will be able to receive as many
+ * messages as it can buffer internally.  Blocks until at least one
+ * message is available in the incoming queue.
  *
  * @param[in] messenger the messenger
- * @param[in] n the maximum number of messages to receive, if -1
- * allow at least one message from each peer.
+ * @param[in] n the maximum number of messages to receive or -1 to to
+ * receive as many messages as it can buffer internally.
  *
  * @return an error code or zero on success
  * @see error.h
