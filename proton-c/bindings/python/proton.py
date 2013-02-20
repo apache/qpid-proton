@@ -31,7 +31,58 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
-import uuid
+try:
+  import uuid
+except ImportError:
+  """
+  No 'native' UUID support.  Provide a very basic UUID type that is a compatible subset of the uuid type provided by more modern python releases.
+  """
+  import struct
+  class uuid:
+    class UUID:
+      def __init__(self, hex=None, bytes=None):
+        if [hex, bytes].count(None) != 1:
+          raise TypeErrror("need one of hex or bytes")
+        if bytes is not None:
+          self.bytes = bytes
+        elif hex is not None:
+          fields=hex.split("-")
+          fields[4:5] = [fields[4][:4], fields[4][4:]]
+          self.bytes = struct.pack("!LHHHHL", *[int(x,16) for x in fields])
+
+      def __cmp__(self, other):
+        if isinstance(other, uuid.UUID):
+          return cmp(self.bytes, other.bytes)
+        else:
+          return -1
+
+      def __str__(self):
+        return "%08x-%04x-%04x-%04x-%04x%08x" % struct.unpack("!LHHHHL", self.bytes)
+
+      def __repr__(self):
+        return "UUID(%r)" % str(self)
+
+      def __hash__(self):
+        return self.bytes.__hash__()
+
+  import os, random, socket, time
+  rand = random.Random()
+  rand.seed((os.getpid(), time.time(), socket.gethostname()))
+  def random_uuid():
+    bytes = [rand.randint(0, 255) for i in xrange(16)]
+
+    # From RFC4122, the version bits are set to 0100
+    bytes[7] &= 0x0F
+    bytes[7] |= 0x40
+
+    # From RFC4122, the top two bits of byte 8 get set to 01
+    bytes[8] &= 0x3F
+    bytes[8] |= 0x80
+    return "".join(map(chr, bytes))
+
+  def uuid4():
+    return uuid.UUID(bytes=random_uuid())
+
 try:
   bytes()
 except NameError:

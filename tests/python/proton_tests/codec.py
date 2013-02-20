@@ -19,7 +19,11 @@
 
 import os, common
 from proton import *
-from uuid import uuid3, NAMESPACE_OID
+try:
+  from uuid import uuid4
+except ImportError:
+  from proton import uuid4
+  
 
 class Test(common.Test):
 
@@ -163,9 +167,7 @@ class DataTest(Test):
     self._testArray(None, None, "int", 1, 2, 3)
 
   def testUUIDArray(self):
-    self._testArray(None, None, "uuid", uuid3(NAMESPACE_OID, "one"),
-                    uuid3(NAMESPACE_OID, "one"),
-                    uuid3(NAMESPACE_OID, "three"))
+    self._testArray(None, None, "uuid", uuid4(), uuid4(), uuid4())
 
   def testEmptyArray(self):
     self._testArray(None, None, "null")
@@ -236,8 +238,7 @@ class DataTest(Test):
     self._test("char", 'a', 'b', 'c', u'\u1234')
 
   def testUUID(self):
-    self._test("uuid", uuid3(NAMESPACE_OID, "test1"), uuid3(NAMESPACE_OID, "test2"),
-               uuid3(NAMESPACE_OID, "test3"))
+    self._test("uuid", uuid4(), uuid4(), uuid4())
 
   def testDecimal32(self):
     self._test("decimal32", 0, 1, 2, 3, 4, 2**30)

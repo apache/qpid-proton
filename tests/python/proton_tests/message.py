@@ -19,7 +19,10 @@
 
 import os, common
 from proton import *
-from uuid import uuid3, NAMESPACE_OID
+try:
+  from uuid import uuid4
+except ImportError:
+  from proton import uuid4
 
 class Test(common.Test):
 
@@ -47,10 +50,10 @@ class AccessorsTest(Test):
     self._test(name, 0, (0, 123456789, 987654321))
 
   def testId(self):
-    self._test("id", None, ("bytes", None, 123, u"string", uuid3(NAMESPACE_OID, "blah")))
+    self._test("id", None, ("bytes", None, 123, u"string", uuid4()))
 
   def testCorrelationId(self):
-    self._test("correlation_id", None, ("bytes", None, 123, u"string", uuid3(NAMESPACE_OID, "blah")))
+    self._test("correlation_id", None, ("bytes", None, 123, u"string", uuid4()))
 
   def testDurable(self):
     self._test("durable", False, (True, False))
@@ -104,7 +107,7 @@ class CodecTest(Test):
 
   def testRoundTrip(self):
     self.msg.id = "asdf"
-    self.msg.correlation_id = uuid3(NAMESPACE_OID, "bleh")
+    self.msg.correlation_id = uuid4()
     self.msg.ttl = 3
     self.msg.priority = 100
     self.msg.address = "address"

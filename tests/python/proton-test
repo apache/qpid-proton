@@ -367,10 +367,16 @@ class Runner:
       return output
 
   def get_exception_type(self):
-    return self.exception[0] if self.exception else None
+    if self.exception:
+      return self.exception[0]
+    else:
+      return None
 
   def get_exception_message(self):
-    return self.exception[1] if self.exception else None
+    if self.exception:
+      return self.exception[1]
+    else:
+      return None
 
 ST_WIDTH = 8
 
