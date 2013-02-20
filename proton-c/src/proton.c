@@ -22,6 +22,10 @@
 #if defined(_WIN32) && ! defined(__CYGWIN__)
 #define NOGDI
 #include <winsock2.h>
+#include "../wincompat/getopt.h"
+#else
+#include <unistd.h>
+#include <libgen.h>
 #endif
 
 #include <stdio.h>
@@ -29,8 +33,6 @@
 #include <proton/driver.h>
 #include <proton/message.h>
 #include <proton/util.h>
-#include <unistd.h>
-#include <libgen.h>
 #include "util.h"
 #include "pn_config.h"
 #include <proton/codec.h>
@@ -447,7 +449,7 @@ int main(int argc, char **argv)
       buffer(argc, argv);
       exit(EXIT_SUCCESS);
     case 'h':
-      printf("Usage: %s [-h] [-c [user[:password]@]host[:port]] [-a <address>] [-m <sasl-mech>]\n", basename(argv[0]));
+      printf("Usage: proton [-h] [-c [user[:password]@]host[:port]] [-a <address>] [-m <sasl-mech>]\n");
       printf("\n");
       printf("    -c    The connect url.\n");
       printf("    -a    The AMQP address.\n");

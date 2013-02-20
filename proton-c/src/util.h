@@ -32,9 +32,9 @@
 #include <sys/types.h>
 #include <proton/types.h>
 
-ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
-void pn_fprint_data(FILE *stream, const char *bytes, size_t size);
-void pn_print_data(const char *bytes, size_t size);
+PN_EXTERN ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
+PN_EXTERN void pn_fprint_data(FILE *stream, const char *bytes, size_t size);
+PN_EXTERN void pn_print_data(const char *bytes, size_t size);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 

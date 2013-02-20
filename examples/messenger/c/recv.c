@@ -21,7 +21,11 @@
 #include "proton/message.h"
 #include "proton/messenger.h"
 
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#include "../../../proton-c/wincompat/getopt.h"
+#else
 #include <getopt.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>

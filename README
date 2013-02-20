@@ -76,55 +76,72 @@ file.
 == Build Instructions (Windows) ==
 
 This describes how to build the Proton library on Windows using Microsoft
-Visual C++ 2010 Express (VC10).
+Visual C++.
 
 The Proton build uses the cmake tool to generate the Visual Studio project
-files.  These project files can then be loaded into Express and used to build
-the Proton library.
+files.  These project files can then be loaded into Visual Studio and used to
+build the Proton library.
 
-Note that these instructions were created using a 32 bit version of Windows 7
-Professional. These instructions assume use of a command shell.
+These instructions assume use of a command shell.  If you use the Visual
+Studio supplied Command Prompt, cmake is even more likely to guess the
+intended compiler.
 
 The following packages must be installed:
 
-    Visual Studio 2010 Express (or equivalent)
+    Visual Studio 2005 or newer (regular or C++ Express)
     Python (www.python.org)
     Cmake (www.cmake.org)
 
+Optional: to run the python or java driven test suites
+
+    swig (www.swig.org)
+
     Notes:
-        - Be sure to install MSVC Express 2010 Service Pack 1 also!
+        - Be sure to install relevant Microsoft Service Packs and updates
         - python.exe _must_ be in your path
         - cmake.exe _must_ be in your path
+        - swig.exe optional (but should be in your path for building test modules)
 
 
-Step 1: Create a 'build' directory - this must be at the same level as the 'src'
-        directory.  Example:
+Step 1: Create a 'build' directory - this must be at the same level as the
+        'proton-c' directory.  Example:
 
-     $ cd proton-c
-     $ mkdir build
+     From the directory where you found this README file:
+     > mkdir build
 
 Step 2: cd into the build directory
 
-     $ cd build
+     > cd build
 
-Step 3: Generate the Visual Studio project files using cmake.  You must provide:
+Step 3: Generate the Visual Studio project files using cmake.  The command contains
 
-        1) the name of the compiler you are using [see cmake documentation],
-        2) the path to the _directory_ that contains the "CMakeLists.txt"
-           file (the parent directory, in this case).
+        1) the name of the compiler you are using (if cmake guesses wrongly)
+        2) the path (required) to the _directory_ that contains the top level
+           "CMakeLists.txt" file (the parent directory, in this case).
      Example:
 
-     $ cmake -G "Visual Studio 10" ..
+     > cmake ..
+
+     If cmake doesn't guess things correctly, useful additional arguments are:
+
+        -G "Visual Studio 10"
+        -DSWIG_EXECUTABLE=C:\swigwin-2.0.7\swig.exe
 
      Refer to the cmake documentation for more information.
 
-Step 4: Load the ALL_BUILD project into Visual C++ Express.
+Step 4: Load the ALL_BUILD project into Visual Studio
 
-     4a: Run the Microsoft Visual C++ Express IDE
-     4b: From within the IDE, open the ALL_BUILD project file - it should be in
-         the 'build' directory you created above.
+     4a: Run the Microsoft Visual Studio IDE
+     4b: From within the IDE, open the ALL_BUILD project file or proton solution
+         file - it should be in the 'build' directory you created above.
+     4c: select the appropriate configuration.  RelWithDebInfo works best with
+         the included CMake/CTest scripts
 
 Step 5: Build the ALL_BUILD project.
+
+Note that if you wish to build debug version of proton for use with swig
+bindings on Windows, you must have the appropriate debug target libraries to
+link against.
 
 === Proton-J ===
 
@@ -150,14 +167,13 @@ implementations.
 
 == Test Instructions (Proton-C only) ==
 
-To run the system tests against Proton-C, from the directory where you found this
-README file:
+To run the system tests against Proton-C, from your build directory above:
 
-  # Source conifig.sh to set-up the Python path.
-  . config.sh
+   # to run all the tests, summary mode
+   ctest
 
-  # Execute the tests
-  ./tests/python/proton-test
+   # to run a single test, full output
+   ctest -V -R proton-c
 
 == Test Instructions (Proton-J and Proton-C) ==
 
