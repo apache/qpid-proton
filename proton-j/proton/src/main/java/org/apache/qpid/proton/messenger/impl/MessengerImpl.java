@@ -73,6 +73,7 @@ public class MessengerImpl implements Messenger
     private long _nextTag = 1;
     private byte[] _buffer = new byte[5*1024];
     private Driver _driver;
+    private boolean _unlimitedCredit = false;
     private int _credit;
     private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
@@ -207,7 +208,12 @@ public class MessengerImpl implements Messenger
 
     public void recv(int n) throws java.util.concurrent.TimeoutException
     {
-        _credit += n;
+        if (n == -1) {
+            _unlimitedCredit = true;
+        } else {
+            _credit += n;
+            _unlimitedCredit = false;
+        }
         distributeCredit();
 
         waitUntil(_messageAvailable);
@@ -566,7 +572,7 @@ public class MessengerImpl implements Messenger
     private void distributeCredit()
     {
         int previous = 0;
-        while (_credit > 0 && _credit != previous)
+        while (_unlimitedCredit || (_credit > 0 && _credit != previous))
         {
             previous = _credit;
             for (Connector c : _driver.connectors())
@@ -577,12 +583,15 @@ public class MessengerImpl implements Messenger
                     if (link instanceof Receiver)
                     {
                         ((Receiver) link).flow(1);
-                        _credit--;
                         _distributed++;
-                        if (_credit == 0) return;
+                        if (!_unlimitedCredit) {
+                            _credit--;
+                            if (_credit == 0) return;
+                        }
                     }
                 }
             }
+            if (_unlimitedCredit) return;
         }
     }
 
