@@ -270,6 +270,18 @@ class DataTest(Test):
     dst.copy(self.data)
     assert dst.format() == self.data.format()
 
+  def testCopyNestedArray(self):
+    nested = [Array(UNDESCRIBED, Data.LIST,
+                    ["first", [Array(UNDESCRIBED, Data.INT, 1,2,3)]],
+                    ["second", [Array(UNDESCRIBED, Data.INT, 1,2,3)]],
+                    ["third", [Array(UNDESCRIBED, Data.INT, 1,2,3)]],
+                    ),
+              "end"]
+    self.data.put_object(nested)
+    dst = Data()
+    dst.copy(self.data)
+    assert dst.format() == self.data.format()
+
   def testRoundTrip(self):
     obj = {symbol("key"): timestamp(1234),
            ulong(123): "blah",

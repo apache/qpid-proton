@@ -2982,14 +2982,13 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
         pn_data_exit(data);
         pn_data_exit(src);
         level--;
+        continue;
       }
 
-      if (pn_data_next(src)) {
-        break;
-      } else {
+      if (!pn_data_next(src)) {
         stop = true;
-        break;
       }
+      break;
     }
 
     if (stop) break;
