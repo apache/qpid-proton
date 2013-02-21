@@ -72,10 +72,12 @@ typedef struct pn_delivery_tag_t {
   const char *bytes;
 } pn_delivery_tag_t;
 
+#ifndef SWIG  // older versions of SWIG choke on this:
 static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
   pn_delivery_tag_t dtag = {size, bytes};
   return dtag;
 }
+#endif
 
 typedef int pn_state_t;     /**< encodes the state of an endpoint */
 
