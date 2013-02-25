@@ -130,15 +130,12 @@ public class InteropTest {
 	assertEquals(13, dt.getDescribed());
     }
 
-
-    // FIXME aconway 2013-02-19:
-    @Ignore("PROTON-240: Incorrect encoding of described arrays.")
     @Test
-    public void skip_testDescribedArray() throws IOException {
+    public void testDescribedArray() throws IOException {
         TestDecoder d = createDecoder(getBytes("described_array"));
 	DescribedType a[] = (DescribedType[])(d.readArray());
 	for (int i = 0; i < 10; ++i) {
-	    assertEquals("int-array", a[i].getDescriptor());
+	    assertEquals(Symbol.valueOf("int-array"), a[i].getDescriptor());
 	    assertEquals(i, a[i].getDescribed());
 	}
     }
