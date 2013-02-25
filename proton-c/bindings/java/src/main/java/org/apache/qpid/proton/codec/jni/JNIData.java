@@ -997,13 +997,14 @@ public class JNIData implements Data
     @Override
     public Object[] getJavaArray()
     {
-        int count = (int) getArray();
+        int count = (int)getArray();
         boolean described = isArrayDescribed();
+        DataType t = getArrayType();
 
         Object descriptor;
         enter();
-        DataType t = next();
         Object[] arr;
+	next();
         if(described)
         {
             descriptor = getObject();

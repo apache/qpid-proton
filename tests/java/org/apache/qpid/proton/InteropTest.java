@@ -144,15 +144,17 @@ public class InteropTest {
     public void testArrays() throws IOException {
         TestDecoder d = createDecoder(getBytes("arrays"));
 
+	// int array
 	Vector<Integer> ints = new Vector<Integer>();
 	for (int i = 0; i < 100; ++i) ints.add(new Integer(i));
 	assertArrayEquals(ints.toArray(), d.readArray());
 
+	// String array
 	String strings[] = { "a", "b", "c" };
 	assertArrayEquals(strings, d.readArray());
 
-	// FIXME aconway 2013-02-18: NPE: bug in decoder?
-        // assertArrayEquals(new Integer[0], d.readArray());
+	// Empty array
+        assertArrayEquals(new Integer[0], d.readArray());
     }
 
     @Test
