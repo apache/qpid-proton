@@ -36,15 +36,18 @@ class InteropTest(common.Test):
 
     def setup(self):
         self.data = Data()
+        self.message = Message()
 
     def teardown(self):
         self.data = None
 
-    def decode(self, name):
+    def get_data(self, name):
         filename = os.path.join(test_interop_dir, name+".amqp")
         f = open(filename)
-        encoded = f.read()
-        f.close()
+        try: return f.read()
+        finally: f.close()
+
+    def decode_data(self, encoded):
         buffer = encoded
         while buffer:
             n = self.data.decode(buffer)
@@ -52,6 +55,12 @@ class InteropTest(common.Test):
         self.data.rewind()
         # Test the round-trip re-encoding gives the same result.
         assert encoded == self.data.encode()
+
+    def decode_data_file(self, name): self.decode_data(self.get_data(name))
+
+    def decode_message_file(self, name):
+        self.message.decode(self.get_data(name))
+        self.decode_data(self.message.body)
 
     def assert_next(self, type, value):
         next_type = self.data.next()
@@ -61,8 +70,13 @@ class InteropTest(common.Test):
         next_value = getter(self.data)
         assert next_value == value, "Value mismatch: %s != %s"%(next_value, value)
 
+    def test_message(self):
+        self.decode_message_file("message")
+        self.assert_next(Data.STRING, "hello")
+        assert self.data.next() is None
+
     def test_primitives(self):
-        self.decode("primitives")
+        self.decode_data_file("primitives")
         self.assert_next(Data.BOOL, True)
         self.assert_next(Data.BOOL, False)
         self.assert_next(Data.UBYTE, 42)
@@ -77,7 +91,7 @@ class InteropTest(common.Test):
         assert self.data.next() is None
 
     def test_strings(self):
-        self.decode("strings")
+        self.decode_data_file("strings")
         self.assert_next(Data.BINARY, "abc\0defg")
         self.assert_next(Data.STRING, "abcdefg")
         self.assert_next(Data.SYMBOL, "abcdefg")
@@ -87,7 +101,7 @@ class InteropTest(common.Test):
         assert self.data.next() is None
 
     def test_described(self):
-        self.decode("described")
+        self.decode_data_file("described")
         assert self.data.next() == Data.DESCRIBED
         self.data.enter()
         self.assert_next(Data.SYMBOL, "foo-descriptor")
@@ -107,20 +121,20 @@ class InteropTest(common.Test):
         self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0,10)))
 
     def test_arrays(self):
-        self.decode("arrays")
+        self.decode_data_file("arrays")
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT, *range(0,100)))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.STRING, *["a", "b", "c"]))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT))
         assert self.data.next() is None
 
     def test_lists(self):
-        self.decode("lists")
+        self.decode_data_file("lists")
         self.assert_next(Data.LIST, [32, "foo", True])
         self.assert_next(Data.LIST, [])
         assert self.data.next() is None
 
     def test_maps(self):
-        self.decode("maps")
+        self.decode_data_file("maps")
         self.assert_next(Data.MAP, {"one":1, "two":2, "three":3 })
         self.assert_next(Data.MAP, {1:"one", 2:"two", 3:"three"})
         self.assert_next(Data.MAP, {})

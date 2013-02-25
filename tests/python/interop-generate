@@ -30,6 +30,13 @@ def main(argv):
         f.write(data.encode())
         f.close()
 
+    # message
+    m = Message()
+    d = Data()
+    d.put_string("hello")
+    m.body = d.encode()
+    write(m, "message")
+
     # null
     d = Data()
     d.put_null()
