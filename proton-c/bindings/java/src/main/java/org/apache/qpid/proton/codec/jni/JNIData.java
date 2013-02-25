@@ -1031,7 +1031,9 @@ public class JNIData implements Data
     public DescribedType getDescribedType()
     {
         enter();
+	next();
         final Object descriptor = getObject();
+	next();
         final Object described = getObject();
         exit();
         return new DataDescribedType(descriptor, described);
