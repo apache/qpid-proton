@@ -117,7 +117,7 @@ class InteropTest(common.Test):
         assert self.data.next() is None
 
     def test_described_array(self):
-        self.decode("described_array")
+        self.decode_data_file("described_array")
         self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0,10)))
 
     def test_arrays(self):
