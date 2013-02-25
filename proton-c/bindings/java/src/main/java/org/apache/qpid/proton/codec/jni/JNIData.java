@@ -971,11 +971,9 @@ public class JNIData implements Data
         enter();
         for(int i = 0; i < count; i+=2)
         {
-            next();
-            Object key = getObject();
-
+            Object key = next() != null ? getObject() : null;
             Object value = next() != null ? getObject() : null;
-
+	    map.put(key, value);
         }
         exit();
         return map;

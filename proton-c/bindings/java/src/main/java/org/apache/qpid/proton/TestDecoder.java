@@ -83,16 +83,9 @@ public class TestDecoder {
     public String readString() { data.next(); return data.getString(); }
 
     // FIXME aconway 2013-02-16:
-    // public List readList() { data.next(); return data.getList(); }
-    // public Map readMap() { data.next(); return data.getMap(); }
-    // public Object[] readArray() { data.next(); return data.getArray(); }
-    // public boolean[] readBooleanArray() { data.next(); return data.getBooleanArray(); }
-    // public byte[] readByteArray() { data.next(); return data.getByteArray(); }
-    // public short[] readShortArray() { data.next(); return data.getShortArray(); }
-    // public int[] readIntegerArray() { data.next(); return data.getIntegerArray(); }
-    // public long[] readLongArray() { data.next(); return data.getLongArray(); }
-    // public float[] readFloatArray() { data.next(); return data.getFloatArray(); }
-    // public double[] readDoubleArray() { data.next(); return data.getDoubleArray(); }
-    // public char[] readCharacterArray() { data.next(); return data.getCharacterArray(); }
-    // public Object readObject() { data.next(); return data.getObject(); }
+    public List readList() { data.next(); return data.getJavaList(); }
+    public Object[] readArray() { data.next(); return data.getJavaArray(); }
+    public Map<Object, Object> readMap() { data.next(); return data.getJavaMap(); }
+
+     public Object readObject() { data.next(); return data.getObject(); }
 }
