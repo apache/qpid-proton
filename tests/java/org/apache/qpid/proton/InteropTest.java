@@ -21,6 +21,7 @@ package org.apache.qpid.proton;
 import org.apache.qpid.proton.TestDecoder;
 import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.DescribedType;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
@@ -33,6 +34,7 @@ import org.apache.qpid.proton.message.MessageFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 import org.junit.Test;
+import org.junit.Ignore;
 import java.lang.System;
 import java.io.File;
 import java.io.FileInputStream;
@@ -118,12 +120,27 @@ public class InteropTest {
 
     @Test
     public void testDescribed() throws IOException {
-	// FIXME aconway 2013-02-18: TODO
+	TestDecoder d = createDecoder(getBytes("described"));
+	DescribedType dt = (DescribedType)(d.readObject());
+	assertEquals(Symbol.valueOf("foo-descriptor"), dt.getDescriptor());
+	assertEquals("foo-value", dt.getDescribed());
+
+	dt = (DescribedType)(d.readObject());
+	assertEquals(12, dt.getDescriptor());
+	assertEquals(13, dt.getDescribed());
     }
 
+
+    // FIXME aconway 2013-02-19:
+    @Ignore("PROTON-240: Incorrect encoding of described arrays.")
     @Test
-    public void testDescribedArray() throws IOException {
-	// FIXME aconway 2013-02-18: TODO
+    public void skip_testDescribedArray() throws IOException {
+        TestDecoder d = createDecoder(getBytes("described_array"));
+	DescribedType a[] = (DescribedType[])(d.readArray());
+	for (int i = 0; i < 10; ++i) {
+	    assertEquals("int-array", a[i].getDescriptor());
+	    assertEquals(i, a[i].getDescribed());
+	}
     }
 
     @Test
