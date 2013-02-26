@@ -26,14 +26,11 @@
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 #include <proton/driver_extras.h>
-%}
 
-typedef unsigned int size_t;
-typedef signed int ssize_t;
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long int uint64_t;
-typedef int int32_t;
+#include <proton/types.h>
+
+#include <uuid/uuid.h>
+%}
 
 %include <cstring.i>
 
@@ -55,7 +52,7 @@ typedef int int32_t;
   } else {
     $1.start = RSTRING_PTR($input);
     if (!$1.start) {
-      return NULL;
+      $1.size = 0;
     }
     $1.size = RSTRING_LEN($input);
   }
@@ -172,6 +169,70 @@ typedef int int32_t;
     case PN_STRING:
       $result = rb_str_new($1.u.as_bytes.start, $1.u.as_bytes.size);
       break;
+    }
+}
+
+%typemap (in) pn_decimal32_t
+{
+  $1 = FIX2UINT($input);
+}
+
+%typemap (out) pn_decimal32_t
+{
+  $result = ULL2NUM($1);
+}
+
+%typemap (in) pn_decimal64_t
+{
+  $1 = NUM2ULONG($input);
+}
+
+%typemap (out) pn_decimal64_t
+{
+  $result = ULL2NUM($1);
+}
+
+%typemap (in) pn_decimal128_t
+{
+  int index;
+
+  for(index = 0; index < 16; index++)
+    {
+      VALUE element = rb_ary_entry($input, index);
+      $1.bytes[16 - (index + 1)] = FIX2INT(element);
+    }
+}
+
+%typemap (out) pn_decimal128_t
+{
+  int index;
+
+  $result = rb_ary_new2(16);
+  for(index = 0; index < 16; index++)
+    {
+      rb_ary_store($result, 16 - (index + 1), CHR2FIX($1.bytes[index]));
+    }
+}
+
+%typemap (in) pn_uuid_t
+{
+  int index;
+
+  for(index = 0; index < 16; index++)
+    {
+      VALUE element = rb_ary_entry($input, index);
+      $1.bytes[16 - (index + 1)] = FIX2INT(element);
+    }
+}
+
+%typemap (out) pn_uuid_t
+{
+  int index;
+
+  $result = rb_ary_new2(16);
+  for(index = 0; index < 16; index++)
+    {
+      rb_ary_store($result, 16 - (index + 1), CHR2FIX($1.bytes[index]));
     }
 }
 

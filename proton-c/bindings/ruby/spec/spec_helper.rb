@@ -37,3 +37,4 @@ def random_string(length = 8)
   (0...length).map{65.+(rand(25)).chr}.join
 end
 
+require "securerandom"
