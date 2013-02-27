@@ -25,11 +25,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.qpid.proton.ProtonFactoryLoader;
+import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.DriverFactory;
@@ -202,12 +202,12 @@ public class MessengerImpl implements Messenger
         }
     }
 
-    public void send() throws java.util.concurrent.TimeoutException
+    public void send() throws TimeoutException
     {
         waitUntil(_sentSettled);
     }
 
-    public void recv(int n) throws java.util.concurrent.TimeoutException
+    public void recv(int n) throws TimeoutException
     {
         if (n == -1) {
             _unlimitedCredit = true;

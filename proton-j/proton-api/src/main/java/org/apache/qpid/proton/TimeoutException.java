@@ -18,30 +18,26 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton;
 
-package org.apache.qpid.proton.messenger;
-
-import org.apache.qpid.proton.ProtonException;
-
-public class MessengerException extends ProtonException
+public class TimeoutException extends ProtonException
 {
-    public MessengerException()
+    public TimeoutException()
     {
     }
 
-    public MessengerException(String message)
+    public TimeoutException(String message)
     {
         super(message);
     }
 
-    public MessengerException(String message, Throwable cause)
+    public TimeoutException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
-    public MessengerException(Throwable cause)
+    public TimeoutException(Throwable cause)
     {
         super(cause);
     }
-
 }

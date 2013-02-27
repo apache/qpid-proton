@@ -22,9 +22,10 @@ package org.apache.qpid.proton.messenger.jni;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeoutException;
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.ProtonException;
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
+import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_messenger_t;
@@ -56,13 +57,8 @@ class JNIMessenger implements Messenger
     {
         SWIGTYPE_p_pn_message_t message_t = (message instanceof JNIMessage) ? ((JNIMessage)message).getImpl() : convertMessage(message);
         int err = Proton.pn_messenger_put(_impl, message_t);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
-
     private SWIGTYPE_p_pn_message_t convertMessage(final Message message)
     {
         int length = 512;
@@ -86,11 +82,7 @@ class JNIMessenger implements Messenger
     public void send() throws TimeoutException
     {
         int err = Proton.pn_messenger_send(_impl);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -104,11 +96,7 @@ class JNIMessenger implements Messenger
     public void recv(final int count) throws TimeoutException
     {
         int err = Proton.pn_messenger_recv(_impl, count);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -116,11 +104,7 @@ class JNIMessenger implements Messenger
     {
         SWIGTYPE_p_pn_message_t msg = Proton.pn_message();
         int err = Proton.pn_messenger_get(_impl, msg);
-        if(err != 0)
-        {
-            //TODO - error handling... null?
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
         return new JNIMessage(msg);
     }
 
@@ -128,33 +112,21 @@ class JNIMessenger implements Messenger
     public void start() throws IOException
     {
         int err = Proton.pn_messenger_start(_impl);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
     public void stop()
     {
         int err = Proton.pn_messenger_stop(_impl);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
     public void setTimeout(final long timeInMillis)
     {
         int err = Proton.pn_messenger_set_timeout(_impl, (int) timeInMillis);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -185,11 +157,7 @@ class JNIMessenger implements Messenger
     public void setIncomingWindow(final int window)
     {
         int err = Proton.pn_messenger_set_incoming_window(_impl, window);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -202,11 +170,7 @@ class JNIMessenger implements Messenger
     public void setOutgoingWindow(final int window)
     {
         int err = Proton.pn_messenger_set_outgoing_window(_impl, window);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -225,33 +189,21 @@ class JNIMessenger implements Messenger
     public void reject(final Tracker tracker, final int flags)
     {
         int err = Proton.pn_messenger_reject(_impl, ((JNITracker) tracker).getTracker(), flags);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
     public void accept(final Tracker tracker, final int flags)
     {
         int err = Proton.pn_messenger_accept(_impl, ((JNITracker) tracker).getTracker(), flags);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
     public void settle(final Tracker tracker, final int flags)
     {
         int err = Proton.pn_messenger_settle(_impl, ((JNITracker) tracker).getTracker(), flags);
-        if(err != 0)
-        {
-            //TODO - error handling
-            throw new ProtonUnsupportedOperationException("Messenger error handling not yet implemented");
-        }
+        check(err);
     }
 
     @Override
@@ -277,6 +229,23 @@ class JNIMessenger implements Messenger
 
         return Status.UNKNOWN;  //TODO - is this correct?
     }
+
+    private void check(int errorCode) throws ProtonException
+    {
+        if(errorCode != 0)
+        {
+            String errorMessage = Proton.pn_messenger_error(_impl);
+            if(errorCode == Proton.PN_TIMEOUT)
+            {
+                throw new TimeoutException(errorMessage);
+            }
+            else
+            {
+                throw new MessengerException(errorMessage);
+            }
+        }
+    }
+
 
     @Override
     protected void finalize() throws Throwable

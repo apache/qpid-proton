@@ -21,8 +21,8 @@
 package org.apache.qpid.proton.messenger;
 
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
+import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.message.Message;
 
 /**
