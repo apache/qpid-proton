@@ -20,7 +20,7 @@
 SET(CMAKE_SWIG_FLAGS -package org.apache.qpid.proton.jni)
 SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/src/main/java/org/apache/qpid/proton/jni)
 
-message( "Using JNI libraries: ${JNI_LIBRARIES}" )
+message(STATUS "Using JNI libraries: ${JNI_LIBRARIES}" )
 
 swig_add_module(proton-swig java java.i)
 include_directories(${JNI_INCLUDE_DIRS})
@@ -29,24 +29,34 @@ swig_link_libraries(proton-swig ${BINDING_DEPS}  )
 set_target_properties(proton-swig
     PROPERTIES
     OUTPUT_NAME "proton-jni"
-    PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
+    PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
 
-add_custom_command(OUTPUT ${CMAKE_SWIG_OUTDIR} COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR} COMMENT "Creating target directory for Proton-JNI sources")
-add_custom_target(protonjnioutdir ALL DEPENDS ${CMAKE_SWIG_OUTDIR})
-add_dependencies(proton-swig protonjnioutdir)
+add_custom_command(OUTPUT ${CMAKE_SWIG_OUTDIR}
+                   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR}
+                   COMMENT "Creating target directory for Proton-JNI sources")
+add_custom_target(proton-jni-swig-out-dir ALL DEPENDS ${CMAKE_SWIG_OUTDIR})
+add_dependencies(proton-swig proton-jni-swig-out-dir)
 
 set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
 
-file(GLOB_RECURSE THUNKING_SOURCES_ABS "src/main/java/*.java")
-
 set(CMAKE_JAVA_INCLUDE_PATH ${PROTON_API_TARGET_JAR})
 
-add_jar(proton-jni ${CMAKE_SWIG_OUTDIR}/*.java ${THUNKING_SOURCES_ABS})
+set(PROTON_JNI_SOURCE_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/proton_jni_source_filelist)
+set(PROTON_JNI_ALL_SOURCE_DIRS "${CMAKE_SWIG_OUTDIR}:${CMAKE_CURRENT_SOURCE_DIR}/src/main/java")
 
-include(UseProtonJava)
+add_custom_target(proton-jni-sourcefile-list ALL
+            COMMAND ${CMAKE_COMMAND}
+                -DJAVA_SOURCE_DIR_PATHS=${PROTON_JNI_ALL_SOURCE_DIRS}
+                -DJAVA_SOURCE_FILE_LIST=${PROTON_JNI_SOURCE_FILE_LIST}
+                -P ${CMAKE_MODULE_PATH}/ProtonUseJavaSourceFileList.cmake)
+add_dependencies(proton-jni-sourcefile-list proton-swig)
+
+add_jar_from_filelist(proton-jni ${PROTON_JNI_SOURCE_FILE_LIST})
+
+include(ProtonUseJava)
 rebuild_jar(proton-jni proton-jni-${PN_VERSION}.jar)
 
-add_dependencies(proton-jni proton-api proton-swig)
+add_dependencies(proton-jni proton-api proton-jni-sourcefile-list)
 
 install_jar(proton-jni ${JNI_INSTALL_DIR})
 install(TARGETS proton-swig

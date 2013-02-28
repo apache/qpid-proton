@@ -37,7 +37,7 @@ list(GET PN_VERSION_LIST 0 PN_VERSION_MAJOR)
 list(GET PN_VERSION_LIST 1 PN_VERSION_MINOR)
 
 set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
-message("PN_VERSION: ${PN_VERSION}")
+message(STATUS "PN_VERSION: ${PN_VERSION}")
 
 enable_testing()
 include (CTest)
@@ -86,9 +86,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modu
 
 find_package( Java )
 if (JAVA_FOUND)
-  message("Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
+  message(STATUS "Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
   include(UseJava)
-  include(UseProtonJava)
+  include(ProtonUseJava)
 
   add_subdirectory(proton-j/proton-api)
   add_subdirectory(proton-j/proton)

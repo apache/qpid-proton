@@ -208,6 +208,8 @@ endfunction ()
 set(_JAVA_CLASS_FILELIST_SCRIPT ${CMAKE_MODULE_PATH}/UseJavaClassFilelist.cmake)
 set(_JAVA_SYMLINK_SCRIPT ${CMAKE_MODULE_PATH}/UseJavaSymlinks.cmake)
 
+# Apache Qpid Proton: changed to write a source file list to avoid hitting
+# command line limits when processing many source files.
 function(add_jar _TARGET_NAME)
     set(_JAVA_SOURCE_FILES ${ARGN})
 
@@ -302,6 +304,10 @@ function(add_jar _TARGET_NAME)
         endif ()
     endforeach()
 
+    set(CMAKE_JAVA_SOURCE_FILE_LIST ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_source_filelist)
+    string(REPLACE ";" "\n" _JAVA_COMPILE_FILES_NEWLINE_SEPARATED "${_JAVA_COMPILE_FILES}")
+    file(WRITE ${CMAKE_JAVA_SOURCE_FILE_LIST} "${_JAVA_COMPILE_FILES_NEWLINE_SEPARATED}")
+
     # create an empty java_class_filelist
     if (NOT EXISTS ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist)
         file(WRITE ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist "")
@@ -316,7 +322,7 @@ function(add_jar _TARGET_NAME)
                 ${CMAKE_JAVA_COMPILE_FLAGS}
                 -classpath "${CMAKE_JAVA_INCLUDE_PATH_FINAL}"
                 -d ${CMAKE_JAVA_CLASS_OUTPUT_PATH}
-                ${_JAVA_COMPILE_FILES}
+                @${CMAKE_JAVA_SOURCE_FILE_LIST}
             COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_compiled_${_TARGET_NAME}
             DEPENDS ${_JAVA_COMPILE_FILES}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -373,6 +379,130 @@ function(add_jar _TARGET_NAME)
         )
     endif ()
 
+    # Add the target and make sure we have the latest resource files.
+    add_custom_target(${_TARGET_NAME} ALL DEPENDS ${_JAVA_JAR_OUTPUT_PATH})
+
+    set_property(
+        TARGET
+            ${_TARGET_NAME}
+        PROPERTY
+            INSTALL_FILES
+                ${_JAVA_JAR_OUTPUT_PATH}
+    )
+
+    if (_JAVA_TARGET_OUTPUT_LINK)
+        set_property(
+            TARGET
+                ${_TARGET_NAME}
+            PROPERTY
+                INSTALL_FILES
+                    ${_JAVA_JAR_OUTPUT_PATH}
+                    ${CMAKE_JAVA_TARGET_OUTPUT_DIR}/${_JAVA_TARGET_OUTPUT_LINK}
+        )
+
+        if (CMAKE_JNI_TARGET)
+            set_property(
+                TARGET
+                    ${_TARGET_NAME}
+                PROPERTY
+                    JNI_SYMLINK
+                        ${CMAKE_JAVA_TARGET_OUTPUT_DIR}/${_JAVA_TARGET_OUTPUT_LINK}
+            )
+        endif ()
+    endif ()
+
+    set_property(
+        TARGET
+            ${_TARGET_NAME}
+        PROPERTY
+            JAR_FILE
+                ${_JAVA_JAR_OUTPUT_PATH}
+    )
+
+    set_property(
+        TARGET
+            ${_TARGET_NAME}
+        PROPERTY
+            CLASSDIR
+                ${CMAKE_JAVA_CLASS_OUTPUT_PATH}
+    )
+
+endfunction()
+
+# Apache Qpid Proton: new function that accepts a file containing the Java source
+# files. This is useful when the set of source files is only discovered at make-time,
+# and avoids passing a wildcard argument to javac (which fails on some platforms)
+function(add_jar_from_filelist _TARGET_NAME CMAKE_JAVA_SOURCE_FILE_LIST)
+
+    if (NOT DEFINED CMAKE_JAVA_TARGET_OUTPUT_DIR)
+      set(CMAKE_JAVA_TARGET_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
+    set(CMAKE_JAVA_CLASS_OUTPUT_PATH "${CMAKE_JAVA_TARGET_OUTPUT_DIR}${CMAKE_FILES_DIRECTORY}/${_TARGET_NAME}.dir")
+
+    set(_JAVA_TARGET_OUTPUT_NAME "${_TARGET_NAME}.jar")
+    if (CMAKE_JAVA_TARGET_OUTPUT_NAME AND CMAKE_JAVA_TARGET_VERSION)
+        set(_JAVA_TARGET_OUTPUT_NAME "${CMAKE_JAVA_TARGET_OUTPUT_NAME}-${CMAKE_JAVA_TARGET_VERSION}.jar")
+        set(_JAVA_TARGET_OUTPUT_LINK "${CMAKE_JAVA_TARGET_OUTPUT_NAME}.jar")
+    elseif (CMAKE_JAVA_TARGET_VERSION)
+        set(_JAVA_TARGET_OUTPUT_NAME "${_TARGET_NAME}-${CMAKE_JAVA_TARGET_VERSION}.jar")
+        set(_JAVA_TARGET_OUTPUT_LINK "${_TARGET_NAME}.jar")
+    elseif (CMAKE_JAVA_TARGET_OUTPUT_NAME)
+        set(_JAVA_TARGET_OUTPUT_NAME "${CMAKE_JAVA_TARGET_OUTPUT_NAME}.jar")
+    endif ()
+    # reset
+    set(CMAKE_JAVA_TARGET_OUTPUT_NAME)
+
+    foreach (JAVA_INCLUDE_DIR ${CMAKE_JAVA_INCLUDE_PATH})
+       set(CMAKE_JAVA_INCLUDE_PATH_FINAL "${CMAKE_JAVA_INCLUDE_PATH_FINAL}${CMAKE_JAVA_INCLUDE_FLAG_SEP}${JAVA_INCLUDE_DIR}")
+    endforeach()
+
+    # create an empty java_class_filelist
+    if (NOT EXISTS ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist)
+        file(WRITE ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist "")
+    endif ()
+
+    # Compile the java files and create a list of class files
+    add_custom_command(
+	# NOTE: this command generates an artificial dependency file
+	OUTPUT ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_compiled_${_TARGET_NAME}
+	COMMAND ${Java_JAVAC_EXECUTABLE}
+	    ${CMAKE_JAVA_COMPILE_FLAGS}
+	    -classpath "${CMAKE_JAVA_INCLUDE_PATH_FINAL}"
+	    -d ${CMAKE_JAVA_CLASS_OUTPUT_PATH}
+	    @${CMAKE_JAVA_SOURCE_FILE_LIST}
+	COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_compiled_${_TARGET_NAME}
+	DEPENDS ${CMAKE_JAVA_SOURCE_FILE_LIST}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	COMMENT "Building Java objects for ${_TARGET_NAME}.jar"
+    )
+    add_custom_command(
+	OUTPUT ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist
+	COMMAND ${CMAKE_COMMAND}
+	    -DCMAKE_JAVA_CLASS_OUTPUT_PATH=${CMAKE_JAVA_CLASS_OUTPUT_PATH}
+	    -DCMAKE_JAR_CLASSES_PREFIX="${CMAKE_JAR_CLASSES_PREFIX}"
+	    -P ${_JAVA_CLASS_FILELIST_SCRIPT}
+	DEPENDS ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_compiled_${_TARGET_NAME}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # create the jar file
+    set(_JAVA_JAR_OUTPUT_PATH
+      ${CMAKE_JAVA_TARGET_OUTPUT_DIR}/${_JAVA_TARGET_OUTPUT_NAME})
+    add_custom_command(
+	OUTPUT ${_JAVA_JAR_OUTPUT_PATH}
+	COMMAND ${Java_JAR_EXECUTABLE}
+	    -cf ${_JAVA_JAR_OUTPUT_PATH}
+	    ${_JAVA_RESOURCE_FILES} @java_class_filelist
+	COMMAND ${CMAKE_COMMAND}
+	    -D_JAVA_TARGET_DIR=${CMAKE_JAVA_TARGET_OUTPUT_DIR}
+	    -D_JAVA_TARGET_OUTPUT_NAME=${_JAVA_TARGET_OUTPUT_NAME}
+	    -D_JAVA_TARGET_OUTPUT_LINK=${_JAVA_TARGET_OUTPUT_LINK}
+	    -P ${_JAVA_SYMLINK_SCRIPT}
+	WORKING_DIRECTORY ${CMAKE_JAVA_CLASS_OUTPUT_PATH}
+	DEPENDS ${_JAVA_RESOURCE_FILES} ${_JAVA_DEPENDS} ${CMAKE_JAVA_CLASS_OUTPUT_PATH}/java_class_filelist
+	COMMENT "Creating Java archive ${_JAVA_TARGET_OUTPUT_NAME}"
+    )
     # Add the target and make sure we have the latest resource files.
     add_custom_target(${_TARGET_NAME} ALL DEPENDS ${_JAVA_JAR_OUTPUT_PATH})
 

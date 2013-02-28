@@ -36,11 +36,11 @@ else()
   set(BOUNCYCASTLE_FOUND TRUE)
 endif()
 
-message("Locations of Bouncycastle ${BOUNCYCASTLE_VERSION} jars: "
+message(STATUS "Locations of Bouncycastle ${BOUNCYCASTLE_VERSION} jars: "
         "${BOUNCYCASTLE_BCPROV_JAR} ${BOUNCYCASTLE_BCPKIX_JAR}")
 
 if (BOUNCYCASTLE_FOUND)
-  message("Will build proton-j-impl")
+  message(STATUS "Will build proton-j-impl")
   set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
 
   file(GLOB_RECURSE SOURCES_ABS "src/main/java/*.java")
@@ -58,6 +58,6 @@ if (BOUNCYCASTLE_FOUND)
 
   install_jar(proton-j-impl ${JAVA_INSTALL_DIR})
 else()
-    message("Won't build proton-j-impl because one or more Bouncycastle jars were not found. PROTON_JAR_DEPEND_DIR was: ${PROTON_JAR_DEPEND_DIR}")
+    message(STATUS "Won't build proton-j-impl because one or more Bouncycastle jars were not found. PROTON_JAR_DEPEND_DIR was: ${PROTON_JAR_DEPEND_DIR}")
 endif()
 
