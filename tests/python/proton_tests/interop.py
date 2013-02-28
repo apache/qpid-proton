@@ -60,7 +60,10 @@ class InteropTest(common.Test):
 
     def decode_message_file(self, name):
         self.message.decode(self.get_data(name))
-        self.decode_data(self.message.body)
+        body = self.message.body
+        if str(type(body)) == "<type 'org.apache.qpid.proton.amqp.Binary'>":
+            body = body.array.tostring()
+        self.decode_data(body)
 
     def assert_next(self, type, value):
         next_type = self.data.next()
