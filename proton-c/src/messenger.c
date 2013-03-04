@@ -1081,8 +1081,10 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
     // check if transport is done generating output
     pn_transport_t *transport = pn_connector_transport(ctor);
     if (transport) {
-      if (!pn_transport_quiesced(transport))
+      if (!pn_transport_quiesced(transport)) {
+        pn_connector_process(ctor);
         return false;
+      }
     }
 
     pn_connection_t *conn = pn_connector_connection(ctor);
