@@ -21,6 +21,8 @@
 package org.apache.qpid.proton.engine;
 
 
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+
 /**
  * Endpoint
  *
@@ -41,12 +43,18 @@ public interface Endpoint
     /**
      * @return the local endpoint error, or null if there is none
      */
-    public EndpointError getLocalError();
+    public ErrorCondition getCondition();
+
+    /**
+     * Set the local error condition
+     * @param condition
+     */
+    public void setCondition(ErrorCondition condition);
 
     /**
      * @return the remote endpoint error, or null if there is none
      */
-    public EndpointError getRemoteError();
+    public ErrorCondition getRemoteCondition();
 
     /**
      * free the endpoint and any associated resources

@@ -34,6 +34,16 @@ public final class ErrorCondition
     private String _description;
     private Map _info;
 
+    public ErrorCondition()
+    {
+    }
+
+    public ErrorCondition(Symbol condition, String description)
+    {
+        _condition = condition;
+        _description = description;
+    }
+
     public Symbol getCondition()
     {
         return _condition;
@@ -69,13 +79,66 @@ public final class ErrorCondition
         _info = info;
     }
 
+    public void clear()
+    {
+        _condition = null;
+        _description = null;
+        _info = null;
+    }
+
+    public void copyFrom(ErrorCondition condition)
+    {
+        _condition = condition._condition;
+        _description = condition._description;
+        _info = condition._info;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        ErrorCondition that = (ErrorCondition) o;
+
+        if (_condition != null ? !_condition.equals(that._condition) : that._condition != null)
+        {
+            return false;
+        }
+        if (_description != null ? !_description.equals(that._description) : that._description != null)
+        {
+            return false;
+        }
+        if (_info != null ? !_info.equals(that._info) : that._info != null)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = _condition != null ? _condition.hashCode() : 0;
+        result = 31 * result + (_description != null ? _description.hashCode() : 0);
+        result = 31 * result + (_info != null ? _info.hashCode() : 0);
+        return result;
+    }
+
     @Override
     public String toString()
     {
         return "Error{" +
-               "_condition=" + _condition +
-               ", _description='" + _description + '\'' +
-               ", _info=" + _info +
+               "condition=" + _condition +
+               ", description='" + _description + '\'' +
+               ", info=" + _info +
                '}';
     }
 }

@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.jni;
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_connection_t;
@@ -134,13 +135,19 @@ public class JNITransport implements Transport
     }
 
     @Override
-    public EndpointError getLocalError()
+    public ErrorCondition getCondition()
     {
         return null; //TODO
     }
 
     @Override
-    public EndpointError getRemoteError()
+    public void setCondition(ErrorCondition condition)
+    {
+        // TODO
+    }
+
+    @Override
+    public ErrorCondition getRemoteCondition()
     {
         return null; //TODO
     }

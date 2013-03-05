@@ -28,15 +28,16 @@ import java.util.Map;
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.codec.Data;
 import org.apache.qpid.proton.codec.jni.JNIData;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.jni.Proton;
+import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_condition_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_connection_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_delivery_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_link_t;
@@ -47,6 +48,9 @@ public class JNIConnection implements Connection
     public static final Symbol[] EMPTY_CAPABILTIES = new Symbol[0];
     private SWIGTYPE_p_pn_connection_t _impl;
     private Object _context;
+    private ErrorCondition _condition = new ErrorCondition();
+    private ErrorCondition _remoteCondition = new ErrorCondition();
+
 
     public JNIConnection()
     {
@@ -131,17 +135,36 @@ public class JNIConnection implements Connection
     }
 
     @Override
-    public EndpointError getLocalError()
+    public ErrorCondition getCondition()
     {
-        //TODO
-        return null;
+        return _condition;
     }
 
     @Override
-    public EndpointError getRemoteError()
+    public void setCondition(ErrorCondition condition)
     {
-        //TODO
-        return null;
+        if(condition != null)
+        {
+            _condition.copyFrom(condition);
+        }
+        else
+        {
+            _condition.clear();
+        }
+    }
+
+    @Override
+    public ErrorCondition getRemoteCondition()
+    {
+        SWIGTYPE_p_pn_condition_t cond = Proton.pn_connection_remote_condition(_impl);
+        _remoteCondition.setCondition(Symbol.valueOf(Proton.pn_condition_get_name(cond)));
+        _remoteCondition.setDescription(Proton.pn_condition_get_description(cond));
+        JNIData data = new JNIData(Proton.pn_condition_info(cond));
+        if(data.next() == Data.DataType.MAP)
+        {
+            _remoteCondition.setInfo(data.getJavaMap());
+        }
+        return _remoteCondition;
     }
 
     @Override
@@ -167,6 +190,17 @@ public class JNIConnection implements Connection
     @ProtonCEquivalent("pn_connection_close")
     public void close()
     {
+        SWIGTYPE_p_pn_condition_t cond = Proton.pn_connection_condition(_impl);
+        if(_condition.getCondition() != null)
+        {
+            Proton.pn_condition_set_name(cond, _condition.getCondition().toString());
+            Proton.pn_condition_set_description(cond, _condition.getDescription());
+            if(_condition.getInfo() != null && !_condition.getInfo().isEmpty())
+            {
+                JNIData data = new JNIData(Proton.pn_condition_info(cond));
+                data.putJavaMap(_condition.getInfo());
+            }
+        }
         Proton.pn_connection_close(_impl);
     }
 

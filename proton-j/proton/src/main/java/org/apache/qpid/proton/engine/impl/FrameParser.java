@@ -23,10 +23,11 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.qpid.proton.amqp.transport.ConnectionError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
@@ -41,7 +42,7 @@ class FrameParser implements TransportInput
 
     public static final byte[] HEADER = new byte[8];
 
-    private EndpointError _localError;
+    private ErrorCondition _localError;
     private Logger _traceLogger = Logger.getLogger("proton.trace");
     private Logger _rawLogger = Logger.getLogger("proton.raw");
     private FrameTransport _frameTransport;
@@ -112,7 +113,7 @@ class FrameParser implements TransportInput
             }
         }
         int unconsumed = length;
-        EndpointError frameParsingError = null;
+        ErrorCondition frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
@@ -450,12 +451,12 @@ class FrameParser implements TransportInput
     }
 
 
-    private EndpointError createFramingError(String description, Object... args)
+    private ErrorCondition createFramingError(String description, Object... args)
     {
         Formatter formatter = new Formatter();
         formatter.format(description, args);
 
-        return new EndpointError("ERROR", formatter.toString());
+        return new ErrorCondition(ConnectionError.FRAMING_ERROR, formatter.toString());
     }
 
 

@@ -94,7 +94,8 @@ class Endpoint(object):
 
   @property
   def remote_condition(self):
-    raise ProtonUnsupportedOperationException()
+    return Condition(impl = self.impl.getRemoteCondition())
+
 
   @property
   def state(self):
@@ -143,14 +144,27 @@ class Endpoint(object):
     self.impl.open()
 
   def close(self):
+    if self.condition is not None:
+        if self.condition.impl is None:
+          self.condition.impl = self.impl.getCondition()
+        self.condition.impl.setCondition(Symbol.getSymbol(self.condition.name))
+        self.condition.impl.setDescription(self.condition.description)
+        self.condition.impl.setInfo(self.condition.info)
     self.impl.close()
 
 class Condition:
 
-  def __init__(self, name, description=None, info=None):
+  def __init__(self, name=None, description=None, info=None, impl=None):
     self.name = name
     self.description = description
     self.info = info
+    if impl is not None:
+      self.impl = impl
+      self.name = impl.getCondition()
+      self.description = impl.getDescription()
+      self.info = impl.getInfo()
+    else:
+      self.impl = None
 
   def __repr__(self):
     return "Condition(%s)" % ", ".join([repr(x) for x in
@@ -159,9 +173,10 @@ class Condition:
 
   def __eq__(self, o):
     if not isinstance(o, Condition): return False
-    return self.name == o.name and \
+    return (self.impl is not None and o.impl is not None and self.impl.equals(o.impl)) or \
+        (self.name == o.name and \
         self.description == o.description and \
-        self.info == o.info
+        self.info == o.info)
 
 def convertToPyArray(t,a,f):
     if a == None or len(a) == 0:
@@ -191,6 +206,7 @@ def wrap_connection(impl):
 class Connection(Endpoint):
 
   def __init__(self, _impl=None):
+    Endpoint.__init__(self)
     self.impl = _impl or engineFactory.createConnection()
     self._desired_capabilities = None
     self._offered_capabilities = None
@@ -275,6 +291,7 @@ def wrap_session(impl):
 class Session(Endpoint):
 
   def __init__(self, impl):
+    Endpoint.__init__(self)
     self.impl = impl
 
   @property
@@ -299,6 +316,7 @@ def wrap_link(impl):
 class Link(Endpoint):
 
   def __init__(self, impl):
+    Endpoint.__init__(self)
     self.impl = impl
 
   @property

@@ -20,11 +20,7 @@
 package org.apache.qpid.proton.engine;
 
 import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointError;
 
 public interface ProtonJEndpoint extends Endpoint
 {
-
-    void setLocalError(EndpointError localError);
-
 }

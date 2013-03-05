@@ -17,6 +17,8 @@
 
 package org.apache.qpid.proton.hawtdispatch.impl;
 
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.*;
 import org.fusesource.hawtdispatch.Task;
 
@@ -37,7 +39,9 @@ public class AmqpListener {
     }
 
     public void processRemoteOpen(Endpoint endpoint, Task onComplete) {
-        ((ProtonJEndpoint)endpoint).setLocalError(new EndpointError("error", "Not supported"));
+        ErrorCondition condition = endpoint.getCondition();
+        condition.setCondition(Symbol.valueOf("error"));
+        condition.setDescription("Not supported");
         endpoint.close();
         onComplete.run();
     }

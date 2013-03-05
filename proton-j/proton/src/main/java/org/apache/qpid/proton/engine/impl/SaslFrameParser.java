@@ -23,15 +23,15 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Formatter;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.security.SaslFrameBody;
 
 class SaslFrameParser
 {
 
-    private EndpointError _localError;
+    private ErrorCondition _localError;
     private SaslImpl _sasl;
 
 
@@ -64,7 +64,7 @@ class SaslFrameParser
     public int input(byte[] bytes, int offset, final int length)
     {
         int unconsumed = length;
-        EndpointError frameParsingError = null;
+        ErrorCondition frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
@@ -273,7 +273,7 @@ class SaslFrameParser
     }
 
 
-    private EndpointError createFramingError(String description, Object... args)
+    private ErrorCondition createFramingError(String description, Object... args)
     {
         Formatter formatter = new Formatter();
         formatter.format(description, args);

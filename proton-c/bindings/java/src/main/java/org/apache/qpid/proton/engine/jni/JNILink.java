@@ -24,12 +24,15 @@ import java.util.EnumSet;
 import java.util.Iterator;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.codec.Data;
+import org.apache.qpid.proton.codec.jni.JNIData;
 import org.apache.qpid.proton.engine.Delivery;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.jni.Proton;
+import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_condition_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_link_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_session_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_terminus_t;
@@ -52,6 +55,9 @@ abstract class JNILink implements Link
     private SWIGTYPE_p_pn_link_t _impl;
     private Object _context;
     private JNISession _session;
+    private ErrorCondition _condition = new ErrorCondition();
+    private ErrorCondition _remoteCondition = new ErrorCondition();
+
 
     public JNILink(SWIGTYPE_p_pn_link_t link_t)
     {
@@ -428,15 +434,36 @@ abstract class JNILink implements Link
     }
 
     @Override
-    public EndpointError getLocalError()
+    public ErrorCondition getCondition()
     {
-        return null;  //TODO
+        return _condition;
     }
 
     @Override
-    public EndpointError getRemoteError()
+    public void setCondition(ErrorCondition condition)
     {
-        return null;  //TODO
+        if(condition != null)
+        {
+            _condition.copyFrom(condition);
+        }
+        else
+        {
+            _condition.clear();
+        }
+    }
+
+    @Override
+    public ErrorCondition getRemoteCondition()
+    {
+        SWIGTYPE_p_pn_condition_t cond = Proton.pn_link_remote_condition(_impl);
+        _remoteCondition.setCondition(Symbol.valueOf(Proton.pn_condition_get_name(cond)));
+        _remoteCondition.setDescription(Proton.pn_condition_get_description(cond));
+        JNIData data = new JNIData(Proton.pn_condition_info(cond));
+        if(data.next() == Data.DataType.MAP)
+        {
+            _remoteCondition.setInfo(data.getJavaMap());
+        }
+        return _remoteCondition;
     }
 
     @Override
@@ -463,6 +490,18 @@ abstract class JNILink implements Link
     @ProtonCEquivalent("pn_link_close")
     public void close()
     {
+        SWIGTYPE_p_pn_condition_t cond = Proton.pn_link_condition(_impl);
+        if(_condition.getCondition() != null)
+        {
+            Proton.pn_condition_set_name(cond, _condition.getCondition().toString());
+            Proton.pn_condition_set_description(cond, _condition.getDescription());
+            if(_condition.getInfo() != null && !_condition.getInfo().isEmpty())
+            {
+                JNIData data = new JNIData(Proton.pn_condition_info(cond));
+                data.putJavaMap(_condition.getInfo());
+            }
+        }
+
         Proton.pn_link_close(_impl);
     }
 

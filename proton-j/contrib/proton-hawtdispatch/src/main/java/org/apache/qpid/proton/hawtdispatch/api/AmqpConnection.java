@@ -17,11 +17,11 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.hawtdispatch.impl.AmqpListener;
 import org.apache.qpid.proton.hawtdispatch.impl.AmqpTransport;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.ProtonJConnection;
 import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
@@ -183,9 +183,9 @@ public class AmqpConnection extends AmqpEndpointBase  {
     @Override
     public void close() {
         super.close();
-        onRemoteClose(new Callback<EndpointError>() {
+        onRemoteClose(new Callback<ErrorCondition>() {
             @Override
-            public void onSuccess(EndpointError value) {
+            public void onSuccess(ErrorCondition value) {
                 disconnect();
             }
 

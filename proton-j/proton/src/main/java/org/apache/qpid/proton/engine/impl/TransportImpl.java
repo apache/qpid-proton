@@ -30,7 +30,6 @@ import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.ProtonJTransport;
@@ -318,12 +317,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                             // TODO - need an API for detaching rather than closing the link
                             detach.setClosed(true);
 
-                            EndpointError localError = link.getLocalError();
-                            if( localError !=null ) {
-                                ErrorCondition error = new ErrorCondition();
-                                error.setCondition(Symbol.getSymbol(localError.getName()));
-                                error.setDescription(localError.getDescription());
-                                detach.setError(error);
+                            ErrorCondition localError = link.getCondition();
+                            if( localError.getCondition() !=null )
+                            {
+                                detach.setError(localError);
                             }
 
 
@@ -855,6 +852,12 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 {
                     int channel = freeLocalChannel(transportSession);
                     End end = new End();
+                    ErrorCondition localError = endpoint.getCondition();
+                    if( localError.getCondition() !=null )
+                    {
+                        end.setError(localError);
+                    }
+
                     int frameBytes = writeFrame(buffer, channel, end, null, null);
                     written += frameBytes;
                     endpoint.clearModified();
@@ -899,7 +902,11 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             {
                 Close close = new Close();
 
-                // TODO - populate;
+                ErrorCondition localError = _connectionEndpoint.getCondition();
+                if( localError.getCondition() !=null )
+                {
+                    close.setError(localError);
+                }
 
                 _isCloseSent = true;
 
@@ -1148,7 +1155,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
                 link.setRemoteState(EndpointState.CLOSED);
-
+                if(detach.getError() != null)
+                {
+                    link.getRemoteCondition().copyFrom(detach.getError());
+                }
             }
             else
             {
@@ -1169,8 +1179,13 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         {
             _remoteSessions[channel] = null;
             transportSession.receivedEnd();
-            transportSession.getSession().setRemoteState(EndpointState.CLOSED);
-
+            SessionImpl session = transportSession.getSession();
+            session.setRemoteState(EndpointState.CLOSED);
+            ErrorCondition errorCondition = end.getError();
+            if(errorCondition != null)
+            {
+                session.getRemoteCondition().copyFrom(errorCondition);
+            }
         }
     }
 
@@ -1182,6 +1197,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         if(_connectionEndpoint != null)
         {
             _connectionEndpoint.setRemoteState(EndpointState.CLOSED);
+            if(close.getError() != null)
+            {
+                _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
+            }
         }
 
     }

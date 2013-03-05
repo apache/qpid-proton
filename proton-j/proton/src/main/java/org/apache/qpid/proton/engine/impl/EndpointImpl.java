@@ -21,7 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.EndpointError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.ProtonJEndpoint;
 
@@ -29,8 +29,8 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 {
     private EndpointState _localState = EndpointState.UNINITIALIZED;
     private EndpointState _remoteState = EndpointState.UNINITIALIZED;
-    private EndpointError _localError;
-    private EndpointError _remoteError;
+    private ErrorCondition _localError = new ErrorCondition();
+    private ErrorCondition _remoteError = new ErrorCondition();
     private boolean _modified;
     private EndpointImpl _transportNext;
     private EndpointImpl _transportPrev;
@@ -73,12 +73,25 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         return _remoteState;
     }
 
-    public EndpointError getLocalError()
+    public ErrorCondition getCondition()
     {
         return _localError;
     }
 
-    public EndpointError getRemoteError()
+    @Override
+    public void setCondition(ErrorCondition condition)
+    {
+        if(condition != null)
+        {
+            _localError.copyFrom(condition);
+        }
+        else
+        {
+            _localError.clear();
+        }
+    }
+
+    public ErrorCondition getRemoteCondition()
     {
         return _remoteError;
     }
@@ -92,17 +105,6 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     {
         // TODO - check state change legal
         _remoteState = remoteState;
-    }
-
-    @Override
-    public void setLocalError(EndpointError localError)
-    {
-        _localError = localError;
-    }
-
-    void setRemoteError(EndpointError remoteError)
-    {
-        _remoteError = remoteError;
     }
 
     void modified()

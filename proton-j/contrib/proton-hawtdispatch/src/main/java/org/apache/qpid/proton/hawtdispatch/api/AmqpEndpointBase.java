@@ -17,9 +17,10 @@
 
 package org.apache.qpid.proton.hawtdispatch.api;
 
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.hawtdispatch.impl.*;
 import org.apache.qpid.proton.engine.Endpoint;
-import org.apache.qpid.proton.engine.EndpointError;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -81,13 +82,13 @@ abstract class AmqpEndpointBase extends WatchBase {
         });
     }
 
-    public EndpointError waitForRemoteClose() throws Exception {
+    public ErrorCondition waitForRemoteClose() throws Exception {
         assertNotOnDispatchQueue();
         return getRemoteCloseFuture().await();
     }
 
-    public Future<EndpointError> getRemoteCloseFuture() {
-        final Promise<EndpointError> rc = new Promise<EndpointError>();
+    public Future<ErrorCondition> getRemoteCloseFuture() {
+        final Promise<ErrorCondition> rc = new Promise<ErrorCondition>();
         queue().execute(new Task() {
             @Override
             public void run() {
@@ -97,12 +98,12 @@ abstract class AmqpEndpointBase extends WatchBase {
         return rc;
     }
 
-    public void onRemoteClose(final Callback<EndpointError> cb) {
+    public void onRemoteClose(final Callback<ErrorCondition> cb) {
         addWatch(new Watch() {
             @Override
             public boolean execute() {
                 if (getEndpoint().getRemoteState() == EndpointState.CLOSED) {
-                    cb.onSuccess(getEndpoint().getRemoteError());
+                    cb.onSuccess(getEndpoint().getRemoteCondition());
                     return true;
                 }
                 return false;
@@ -119,12 +120,12 @@ abstract class AmqpEndpointBase extends WatchBase {
         return getEndpoint().getRemoteState();
     }
 
-    public EndpointError getRemoteError() {
-        return getEndpoint().getRemoteError();
+    public ErrorCondition getRemoteError() {
+        return getEndpoint().getRemoteCondition();
     }
 
-    static protected EndpointError toError(Throwable value) {
-        return new EndpointError("error", value.toString());
+    static protected ErrorCondition toError(Throwable value) {
+        return new ErrorCondition(Symbol.valueOf("error"), value.toString());
     }
 
     class Attachment extends Task {
