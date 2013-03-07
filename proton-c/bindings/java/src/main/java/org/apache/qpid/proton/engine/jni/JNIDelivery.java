@@ -223,9 +223,10 @@ public class JNIDelivery implements Delivery
     }
 
     @Override
+    @ProtonCEquivalent("pn_delivery_partial")
     public boolean isPartial()
     {
-        throw new ProtonUnsupportedOperationException();
+        return Proton.pn_delivery_partial(_impl);
     }
 
     @Override
