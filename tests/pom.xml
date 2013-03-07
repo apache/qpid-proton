@@ -44,6 +44,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
     <resources>
       <resource><directory>python</directory></resource>
       <resource><directory>interop</directory></resource>
+      <resource><directory>resources</directory></resource>
     </resources>
     <plugins>
       <plugin>
@@ -52,6 +53,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
         <configuration>
           <systemPropertyVariables>
             <protonJythonTestsXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestsXmlOutputDirectory>
+            <java.util.logging.config.file>${build.outputDirectory}/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
          <reportsDirectory>${testReportOutputDirectory}</reportsDirectory>
         </configuration>
