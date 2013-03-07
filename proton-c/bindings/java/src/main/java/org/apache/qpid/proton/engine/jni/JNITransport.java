@@ -59,24 +59,35 @@ public class JNITransport implements Transport
     @ProtonCEquivalent("pn_transport_input")
     public int input(byte[] bytes, int offset, int size)
     {
-        int i = Proton.pn_transport_input(_impl, ByteBuffer.wrap(bytes, offset, size));
-        if(i == Proton.PN_ERR)
+        int bytesConsumed = Proton.pn_transport_input(_impl, ByteBuffer.wrap(bytes, offset, size));
+        if(bytesConsumed == Proton.PN_ERR)
         {
             SWIGTYPE_p_pn_error_t err = Proton.pn_transport_error(_impl);
             String errorText = Proton.pn_error_text(err);
             Proton.pn_error_clear(err);
             throw new TransportException(errorText);
         }
-        //System.err.println("**RG**  input: " + i);
-        return i;
+        else if (bytesConsumed == Proton.PN_EOS)
+        {
+            // TODO: PROTON-264 Proton-c returns PN_EOS after close has been consumed rather than
+            // reporting the number of bytes consumed. This will be resolved by PROTON-225.
+            return size;
+        }
+        return bytesConsumed;
     }
 
     @Override
     public int output(byte[] bytes, int offset, int size)
     {
-        /*int i = Proton.pn_transport_output(_impl, ByteBuffer.wrap(bytes, offset, size));
-        return i;*/
-        return Proton.pn_transport_output(_impl, ByteBuffer.wrap(bytes, offset, size));
+        int bytesProduced = Proton.pn_transport_output(_impl, ByteBuffer.wrap(bytes, offset, size));
+        if (bytesProduced == Proton.PN_EOS)
+        {
+            // TODO: PROTON-264 Proton-c returns PN_EOS after close has been consumed rather than
+            // returning 0.
+            return 0;
+        }
+
+        return bytesProduced;
     }
 
     @Override
