@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 public class DeliveryImpl implements Delivery
@@ -47,7 +48,18 @@ public class DeliveryImpl implements Delivery
     private static final int ABLE_TO_SEND = 2;
     private static final int IO_WORK = 4;
 
+
+    /**
+     * A bit-mask representing the outstanding work on this delivery received from the transport layer
+     * that has not yet been processed by the application.
+     * Note that contrast with {@link #_transportFlags}.
+     */
     private int _flags = (byte) 0;
+
+    /**
+     * A bit-mask representing the outstanding work done by the application on this delivery
+     * that has not yet been processed by the transport layer
+     */
     private int _transportFlags = (byte) 0;
     private TransportDelivery _transportDelivery;
     private byte[] _data;
@@ -194,7 +206,7 @@ public class DeliveryImpl implements Delivery
         {
             clearFlag(IO_WORK);
         }
-        return (_complete && consumed == 0) ? TransportImpl.END_OF_STREAM : consumed;  //TODO - Implement
+        return (_complete && consumed == 0) ? Transport.END_OF_STREAM : consumed;  //TODO - Implement
     }
 
     private void clearFlag(int ioWork)

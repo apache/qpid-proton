@@ -21,12 +21,10 @@
 package org.apache.qpid.proton.engine.jni;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_delivery_t;
-import org.apache.qpid.proton.jni.pn_delivery_tag_t;
 import org.apache.qpid.proton.jni.pn_disposition_t;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -41,10 +39,16 @@ public class JNIDelivery implements Delivery
     private Object _context;
     private JNILink _link;
 
+    /**
+     *
+     * Note that we give the c layer a reference to the Java representation of the delivery
+     * so we can return the same Delivery object to the application throughput its lifetime.
+     * Used by {@link #getDelivery(SWIGTYPE_p_pn_delivery_t)}
+     */
     public JNIDelivery(SWIGTYPE_p_pn_delivery_t delivery_t)
     {
         _impl = delivery_t;
-        Proton.pn_delivery_set_context(_impl, this);
+                Proton.pn_delivery_set_context(_impl, this);
         _link = JNILink.getLink(Proton.pn_delivery_link(_impl));
     }
 
@@ -239,6 +243,7 @@ public class JNIDelivery implements Delivery
     @Override
     protected void finalize() throws Throwable
     {
+        // TODO if the delivery is not settled, surely it never gets free'd, thereby leaking memory
         if(isSettled())
         {
             free();

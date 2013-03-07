@@ -1,4 +1,3 @@
-package org.apache.qpid.proton.amqp.transport;
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,7 +18,7 @@ package org.apache.qpid.proton.amqp.transport;
  * under the License.
  *
 */
-
+package org.apache.qpid.proton.amqp.transport;
 
 public interface Source
 {

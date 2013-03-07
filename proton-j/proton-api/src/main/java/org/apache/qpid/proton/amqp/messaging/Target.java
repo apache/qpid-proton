@@ -28,8 +28,6 @@ import java.util.Arrays;
 public final class Target extends Terminus
       implements org.apache.qpid.proton.amqp.transport.Target
 {
-
-
     @Override
     public String toString()
     {

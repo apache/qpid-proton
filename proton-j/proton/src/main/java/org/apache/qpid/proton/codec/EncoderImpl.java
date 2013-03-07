@@ -22,7 +22,7 @@ package org.apache.qpid.proton.codec;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.List;
+
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Decimal128;
 import org.apache.qpid.proton.amqp.Decimal32;
@@ -36,8 +36,6 @@ import org.apache.qpid.proton.amqp.UnsignedShort;
 
 public final class EncoderImpl implements ByteBufferEncoder
 {
-
-
     private static final byte DESCRIBED_TYPE_OP = (byte)0;
 
 

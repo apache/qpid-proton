@@ -1,4 +1,3 @@
-
 /*
 *
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,8 +18,6 @@
 * under the License.
 *
 */
-
-
 package org.apache.qpid.proton.amqp.messaging;
 
 import java.util.Arrays;
@@ -30,7 +27,6 @@ import org.apache.qpid.proton.amqp.Symbol;
 public final class Source extends Terminus
       implements org.apache.qpid.proton.amqp.transport.Source
 {
-
     private Symbol _distributionMode;
     private Map _filter;
     private Outcome _defaultOutcome;

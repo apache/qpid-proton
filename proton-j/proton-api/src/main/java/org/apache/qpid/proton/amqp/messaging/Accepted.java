@@ -31,6 +31,14 @@ public final class Accepted
 {
     private static final Accepted INSTANCE = new Accepted();
 
+
+    /**
+     *  TODO should this (and other DeliveryStates) have a private constructor??
+     */
+    public Accepted()
+    {
+    }
+
     @Override
     public String toString()
     {

@@ -25,7 +25,6 @@ package org.apache.qpid.proton.engine;
  * Sender
  *
  */
-
 public interface Sender extends Link
 {
 
@@ -38,12 +37,16 @@ public interface Sender extends Link
     public void offer(int credits);
 
     /**
-     * Sends message data for the current delivery.
+     * Sends some data for the current delivery.  The application may call this method multiple
+     * times for the same delivery.
      *
-     * @param bytes the message data
+     * @return the number of bytes accepted
+     *
+     * TODO Proton-j current copies all the bytes it has been given so the return value will always be
+     * length.  Should this be changed? How does Proton-c behave?   What should the application do if
+     * the number of bytes accepted is smaller than length.
      */
     public int send(byte[] bytes, int offset, int length);
-
 
     /**
      * Abort the current delivery.
@@ -53,4 +56,18 @@ public interface Sender extends Link
     public void abort();
 
     public void drained();
+
+    /**
+     * {@inheritDoc}
+     *
+     * Informs the sender that all the bytes of the current {@link Delivery} have been written.
+     * The application must call this method in order for the delivery to be considered complete.
+     *
+     * @see #send(byte[], int, int)
+     *
+     * TODO fully state the rules regarding when you have to call this method, what happens if you don't call it
+     * before creating another delivery etc.
+     */
+    @Override
+    public boolean advance();
 }

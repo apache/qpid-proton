@@ -26,16 +26,18 @@ import java.util.EnumSet;
 /**
  * Session
  *
+ * Note that session level flow control is handled internally by Proton.
  */
-
 public interface Session extends Endpoint
 {
-
     /**
-     * @return a newly created link
+     * Returns a newly created sender endpoint
      */
     public Sender sender(String name);
 
+    /**
+     * Returns a newly created receiver endpoint
+     */
     public Receiver receiver(String name);
 
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);

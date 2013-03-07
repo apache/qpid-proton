@@ -71,7 +71,14 @@ public interface Endpoint
      */
     void close();
 
+    /**
+     * Sets an arbitrary an application owned object on the end-point.  This object
+     * is not used by Proton.
+     */
     public void setContext(Object o);
 
+    /**
+     * @see #setContext(Object)
+     */
     public Object getContext();
 }

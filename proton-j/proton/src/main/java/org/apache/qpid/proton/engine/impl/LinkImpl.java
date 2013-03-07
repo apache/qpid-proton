@@ -88,26 +88,27 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     public DeliveryImpl delivery(byte[] tag, int offset, int length)
     {
-        if (offset != 0 || length != tag.length) {
+        if (offset != 0 || length != tag.length)
+        {
             throw new IllegalArgumentException("At present delivery tag must be the whole byte array");
         }
         incrementQueued();
         try
         {
-        DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);
-        if(_tail == null)
-        {
-            _head = delivery;
+            DeliveryImpl delivery = new DeliveryImpl(tag, this, _tail);
+            if (_tail == null)
+            {
+                _head = delivery;
+            }
+            _tail = delivery;
+            if (_current == null)
+            {
+                _current = delivery;
+            }
+            getConnectionImpl().workUpdate(delivery);
+            return delivery;
         }
-        _tail = delivery;
-        if(_current == null)
-        {
-            _current = delivery;
-        }
-        getConnectionImpl().workUpdate(delivery);
-        return delivery;
-        }
-        catch(RuntimeException e)
+        catch (RuntimeException e)
         {
             e.printStackTrace();
             throw e;
@@ -230,6 +231,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     abstract TransportLink getTransportLink();
 
+    /**
+     * TODO:  Confirm What does this method does.  It seems to
+     * merely make an observation rather than mutate state.  Rename???
+     */
     abstract boolean workUpdate(DeliveryImpl delivery);
 
     public int getCredit()

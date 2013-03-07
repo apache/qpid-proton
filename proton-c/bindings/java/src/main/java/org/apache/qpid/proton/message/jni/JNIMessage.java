@@ -1059,6 +1059,7 @@ public class JNIMessage implements Message
     {
         clear();
         final int bytes = Proton.pn_message_decode(_impl, ByteBuffer.wrap(data, offset, length));
+        // TODO: detect decode code and throw exception
         postDecode();
         return bytes;
     }

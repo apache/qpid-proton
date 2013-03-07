@@ -23,10 +23,11 @@ package org.apache.qpid.proton.engine;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 /**
- * Delivery
+ * A delivery of a message on a particular link.
  *
+ * Whilst a message is logically a long-lived object, a delivery is short-lived - it
+ * is only intended to be used by the application until it is settled and all its data has been read.
  */
-
 public interface Delivery
 {
 
@@ -38,8 +39,7 @@ public interface Delivery
 
     public DeliveryState getRemoteState();
 
-    public boolean remotelySettled();
-
+    /** TODO is this required?? */
     public int getMessageFormat();
 
     /**
@@ -50,23 +50,49 @@ public interface Delivery
     public void disposition(DeliveryState state);
 
     /**
+     * Settles this delivery.
+     *
+     * Causes the delivery to be removed from the connection's work list (see {@link Connection#getWorkHead()).
+     * If this delivery is its link's current delivery, the link's current delivery pointer is advanced.
      */
     public void settle();
 
+    /**
+     * Returns whether this delivery has been locally settled.
+     * @see #settle()
+     */
     public boolean isSettled();
 
+    public boolean remotelySettled();
+
+    /**
+     * TODO When does an application call this method?  Do we really need this?
+     */
     public void free();
 
+    /**
+     * @see Connection#getWorkHead()
+     */
     public Delivery getWorkNext();
 
     public boolean isWritable();
 
+    /**
+     * Returns whether this delivery has data ready to be received.
+     *
+     * @see Receiver#recv(byte[], int, int)
+     */
     public boolean isReadable();
 
     public void setContext(Object o);
 
     public Object getContext();
 
+    /**
+     * Returns whether this delivery's state or settled flag has ever remotely changed.
+     *
+     * TODO what is the main intended use case for calling this method?
+     */
     public boolean isUpdated();
 
     public boolean isPartial();

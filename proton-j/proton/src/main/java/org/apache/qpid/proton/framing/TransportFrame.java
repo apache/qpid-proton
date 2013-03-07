@@ -53,4 +53,13 @@ public class TransportFrame
     {
         return _payload;
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("TransportFrame{ _channel=").append(_channel).append(", _body=").append(_body).append("}");
+        return builder.toString();
+    }
+
 }

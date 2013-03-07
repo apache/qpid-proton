@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,21 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-package org.apache.qpid.proton.amqp.transport;
+package org.apache.qpid.proton.logging;
+
+import java.util.logging.Logger;
 
 /**
- * Describes the state of a delivery at a link end-point.
- *
- * Note that the the sender is the owner of the state.
- * The receiver merely influences the state.
- * TODO clarify the concept of ownership? how is link recovery involved?
+ * Thin convenience wrapper around {@link Logger}
  */
-public interface DeliveryState
+public class ProtonLoggerFactory
 {
-
+    /**
+     * Returns a logger named using the fully qualified name of the supplied class.
+     */
+    public static Logger getLogger(Class<?> clazz)
+    {
+        return Logger.getLogger(clazz.getName());
+    }
 }

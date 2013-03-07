@@ -1,4 +1,3 @@
-
 /*
 *
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,12 +19,10 @@
 *
 */
 
-
 package org.apache.qpid.proton.amqp.messaging;
 
 import java.util.Map;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
-
 
 public final class Modified
       implements DeliveryState, Outcome

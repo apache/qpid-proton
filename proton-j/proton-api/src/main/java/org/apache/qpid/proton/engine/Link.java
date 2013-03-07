@@ -30,8 +30,13 @@ import org.apache.qpid.proton.amqp.transport.Target;
 /**
  * Link
  *
+ * The settlement mode defaults are:
+ *
+ * Sender settle mode - {@link SenderSettleMode#MIXED}.
+ * Receiver settle mode - {@link ReceiverSettleMode#FIRST}
+ *
+ * TODO describe the application's responsibility to honour settlement.
  */
-
 public interface Link extends Endpoint
 {
 
@@ -43,17 +48,23 @@ public interface Link extends Endpoint
     String getName();
 
     /**
-     * Create a delivery object based on the specified tag.
+     * Create a delivery object based on the specified tag and adds it to the
+     * this link's delivery list and its connection work list.
+     *
+     * TODO to clarify - this adds the delivery to the connection list.  It is not yet
+     * clear why this is done or if it is useful for the application to be able to discover
+     * newly created deliveries from the {@link Connection#getWorkHead()}.
      *
      * @param tag a tag for the delivery
-     * @return a Delivery object
+     * @return a new Delivery object
      */
     public Delivery delivery(byte[] tag);
+
     /**
      * Create a delivery object based on the specified tag. This form
      * of the method is intended to allow the tag to be formed from a
      * subsequence of the byte array passed in. This might allow more
-     * optimsation options in future but at present is not
+     * optimisation options in future but at present is not
      * implemented.
      *
      * @param tag a tag for the delivery
@@ -69,24 +80,53 @@ public interface Link extends Endpoint
     public Iterator<Delivery> unsettled();
 
     /**
-     * @return return the current delivery
+     * Returns the current delivery
      */
     Delivery current();
 
     /**
-     * Attempts to advance the current delivery
+     * Attempts to advance the current delivery. Advances it to the next delivery if one exists, else null.
+     *
+     * The behaviour of this method is different for senders and receivers.
+     *
      * @return true if it can advance, false if it cannot
+     *
+     * TODO document the meaning of the return value more fully. Currently Senderimpl only returns false if there is no current delivery
      */
     boolean advance();
 
+
     Source getSource();
     Target getTarget();
+
+    /**
+     * Sets the source for this link.
+     *
+     * The initiator of the link must always provide a Source.
+     *
+     * An application responding to the creation of the link should perform an application
+     * specific lookup on the {@link #getRemoteSource()} to determine an actual Source. If it
+     * failed to determine an actual source, it should set null, and then go on to {@link #close()}
+     * the link.
+     *
+     * @see "AMQP Spec 1.0 section 2.6.3"
+     */
     void setSource(Source address);
+
+    /**
+     * Expected to be used in a similar manner to {@link #setSource(Source)}
+     */
     void setTarget(Target address);
 
+    /**
+     * @see #setSource(Source)
+     */
     Source getRemoteSource();
-    Target getRemoteTarget();
 
+    /**
+     * @see #setTarget(Target)
+     */
+    Target getRemoteTarget();
 
     public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
@@ -98,15 +138,45 @@ public interface Link extends Endpoint
 
     SenderSettleMode getSenderSettleMode();
 
+    /**
+     * Sets the sender settle mode.
+     *
+     * Should only be called during link set-up, i.e. before calling {@link #open()}.
+     *
+     * If this endpoint is the initiator of the link, this method can be used to set a value other than
+     * the default.
+     *
+     * If this endpoint is not the initiator, this method should be used to set a local value. According
+     * to the AMQP spec, the application may choose to accept the sender's suggestion
+     * (accessed by calling {@link #getRemoteSenderSettleMode()}) or choose another value. The value
+     * has no effect on Proton, but may be useful to the application at a later point.
+     *
+     * In order to be AMQP compliant the application is responsible for honouring the settlement mode. See {@link Link}.
+     */
     void setSenderSettleMode(SenderSettleMode senderSettleMode);
 
+    /**
+     * @see #setSenderSettleMode(SenderSettleMode)
+     */
     SenderSettleMode getRemoteSenderSettleMode();
-
-    void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
 
     ReceiverSettleMode getReceiverSettleMode();
 
+    /**
+     * Sets the receiver settle mode.
+     *
+     * Used in analogous way to {@link #setSenderSettleMode(SenderSettleMode)}
+     */
     void setReceiverSettleMode(ReceiverSettleMode receiverSettleMode);
 
+    /**
+     * @see #setReceiverSettleMode(ReceiverSettleMode)
+     */
     ReceiverSettleMode getRemoteReceiverSettleMode();
+
+    /**
+     * TODO should this be part of the interface?
+     */
+    @Deprecated
+    void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
 }

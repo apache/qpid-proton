@@ -25,7 +25,7 @@ import org.apache.qpid.proton.framing.TransportFrame;
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public interface ProtocolTracer 
+public interface ProtocolTracer
 {
     public void receivedFrame(TransportFrame transportFrame);
     public void sentFrame(TransportFrame transportFrame);

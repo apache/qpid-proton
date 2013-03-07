@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
@@ -57,8 +56,6 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 public class TransportImpl extends EndpointImpl implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
 {
     public static final byte[] HEADER = new byte[8];
-    public static final org.apache.qpid.proton.amqp.messaging.Accepted ACCEPTED =
-            new org.apache.qpid.proton.amqp.messaging.Accepted();
 
     static
     {

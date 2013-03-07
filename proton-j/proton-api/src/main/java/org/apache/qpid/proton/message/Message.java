@@ -28,6 +28,12 @@ import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
 
+/**
+ * Represents a Message within Proton.
+ *
+ * Create instances of Message using a {@link MessageFactory} implementation.
+ *
+ */
 public interface Message
 {
     short DEFAULT_PRIORITY = 4;
@@ -133,12 +139,38 @@ public interface Message
 
     void setFooter(Footer footer);
 
+    /**
+     * TODO describe what happens if the data does not represent a complete message.
+     * Currently this appears to leave the message in an unknown state.
+     */
     int decode(byte[] data, int offset, int length);
 
+    /**
+     * Encodes up to {@code length} bytes of the message into the provided byte array,
+     * starting at position {@code offset}.
+     *
+     * TODO describe what happens if length is smaller than the encoded form, Currently
+     * Proton-J throws an exception. What does Proton-C do?
+     *
+     * @return the number of bytes written to the byte array
+     */
     int encode(byte[] data, int offset, int length);
 
+    /**
+     * Loads message body from the {@code data}.
+     *
+     * TODO describe how the object is interpreted according to the MessageFormat.
+     *
+     * @see #setMessageFormat(MessageFormat)
+     */
     void load(Object data);
 
+    /**
+     * Return the message body in a format determined by {@link #getMessageFormat()}.
+     *
+     * TODO describe the formatting process
+     *
+     */
     Object save();
 
     String toAMQPFormat(Object value);
