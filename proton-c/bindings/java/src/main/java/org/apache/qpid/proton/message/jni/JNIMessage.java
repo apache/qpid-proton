@@ -1310,11 +1310,8 @@ public class JNIMessage implements Message
 
     public void setBody(Section body)
     {
-
-
-        //TODO
+        _body = body;
     }
-
 
     public SWIGTYPE_p_pn_message_t getImpl()
     {
