@@ -607,6 +607,8 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 {
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
+    pn_connection_t *conn = pn_connector_connection(ctor);
+    pn_messenger_endpoints(messenger, conn, ctor);
     pn_connector_process(ctor);
     ctor = pn_connector_next(ctor);
   }

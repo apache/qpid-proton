@@ -311,3 +311,24 @@ class MessengerTest(Test):
     assert reply.subject == "Hello World!"
     rbod = reply.save()
     assert rbod == body, (rbod, body)
+
+  def test_proton268(self):
+    """ Reproducer for JIRA Proton-268 """
+    self.server_credit = 2048
+    self.start()
+
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345"
+    msg.load( "X" * 1024 )
+
+    for x in range( 100 ):
+      self.client.put( msg )
+    self.client.send()
+
+    try:
+      self.client.stop()
+    except Timeout:
+      assert False, "Timeout waiting for client stop()"
+
+    # need to restart client, as teardown() uses it to stop server
+    self.client.start()
