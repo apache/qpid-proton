@@ -119,7 +119,6 @@ struct pn_connector_t {
   pn_trace_t trace;
   bool closed;
   pn_timestamp_t wakeup;
-  bool input_eos;
   pn_connection_t *connection;
   pn_transport_t *transport;
   pn_sasl_t *sasl;
@@ -390,7 +389,6 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   c->trace = driver->trace;
   c->closed = false;
   c->wakeup = 0;
-  c->input_eos = false;
   c->connection = NULL;
   c->transport = pn_transport();
   c->sasl = pn_sasl(c->transport);
@@ -551,13 +549,14 @@ void pn_connector_process(pn_connector_t *c)
             if (errno != EAGAIN) {
               perror("read");
               c->status &= ~PN_SEL_RD;
-              c->input_eos = true;
+              c->input_done = true;
+              pn_transport_close_tail( transport );
             }
+          } else if (n == 0) {
+            c->status &= ~PN_SEL_RD;
+            c->input_done = true;
+            pn_transport_close_tail( transport );
           } else {
-            if (n == 0) {
-              c->status &= ~PN_SEL_RD;
-              c->input_eos = true;
-            }
             if (pn_transport_push(transport, (size_t) n) < 0) {
               c->status &= ~PN_SEL_RD;
               c->input_done = true;
@@ -591,6 +590,7 @@ void pn_connector_process(pn_connector_t *c)
               perror("send");
               c->output_done = true;
               c->status &= ~PN_SEL_WR;
+              pn_transport_close_head( transport );
             }
           } else if (n) {
             pn_transport_pop(transport, (size_t) n);
@@ -833,7 +833,7 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
     pn_connector_t *c = d->connector_next;
     d->connector_next = c->connector_next;
 
-    if (c->closed || c->pending_read || c->pending_write || c->pending_tick || c->input_eos) {
+    if (c->closed || c->pending_read || c->pending_write || c->pending_tick) {
       return c;
     }
   }
