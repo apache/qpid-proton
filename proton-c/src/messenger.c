@@ -55,7 +55,6 @@ struct pn_messenger_t {
   uint64_t next_tag;
   pn_queue_t outgoing;
   pn_queue_t incoming;
-  pn_accept_mode_t accept_mode;
   pn_subscription_t *subscriptions;
   size_t sub_capacity;
   size_t sub_count;
@@ -271,7 +270,6 @@ pn_messenger_t *pn_messenger(const char *name)
     m->next_tag = 0;
     pn_queue_init(&m->outgoing);
     pn_queue_init(&m->incoming);
-    m->accept_mode = PN_ACCEPT_MODE_AUTO;
     m->subscriptions = NULL;
     m->sub_capacity = 0;
     m->sub_count = 0;
@@ -898,17 +896,6 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
       return NULL;
     }
   }
-}
-
-pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger)
-{
-  return messenger->accept_mode;
-}
-
-int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode)
-{
-  messenger->accept_mode = mode;
-  return 0;
 }
 
 int pn_messenger_get_outgoing_window(pn_messenger_t *messenger)

@@ -39,11 +39,6 @@ typedef struct pn_subscription_t pn_subscription_t; /**< Subscription*/
 typedef int64_t pn_tracker_t;
 
 typedef enum {
-  PN_ACCEPT_MODE_AUTO,
-  PN_ACCEPT_MODE_MANUAL
-} pn_accept_mode_t;
-
-typedef enum {
   PN_STATUS_UNKNOWN = 0,
   PN_STATUS_PENDING = 1,
   PN_STATUS_ACCEPTED = 2,
@@ -173,30 +168,6 @@ PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
  *         occurred
  */
 PN_EXTERN const char *pn_messenger_error(pn_messenger_t *messenger);
-
-/** Gets the accept mode for a Messenger. @see
- * ::pn_messenger_set_accept_mode
- *
- * @param[in] messenger the messenger
- *
- * @return one of PN_ACCEPT_MODE_AUTO or PN_ACCEPT_MODE_MANUAL
- */
-PN_EXTERN pn_accept_mode_t pn_messenger_get_accept_mode(pn_messenger_t *messenger);
-
-/** Set the accept mode for a Messenger. If set to
- * PN_ACCEPT_MODE_AUTO, the messenger will automatically accept every
- * message as it is returned by pn_messenger_get(). If set to
- * PN_ACCEPT_MODE_MANUAL, incoming messages must be manually accepted
- * or rejected (either individually or cumulatively) via
- * pn_messenger_accept() and/or pn_messenger_reject().
- *
- * @param[in] messenger the messenger to set the accept mode for
- * @param[in] mode one of PN_ACCEPT_MODE_AUTO or PN_ACCEPT_MODE_MANUAL
- *
- * @return an error code or zero on success
- * @see error.h
- */
-PN_EXTERN int pn_messenger_set_accept_mode(pn_messenger_t *messenger, pn_accept_mode_t mode);
 
 /** Gets the outgoing window for a Messenger. @see
  * ::pn_messenger_set_outgoing_window
