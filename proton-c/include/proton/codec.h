@@ -111,6 +111,7 @@ PN_EXTERN bool pn_data_next(pn_data_t *data);
 PN_EXTERN bool pn_data_prev(pn_data_t *data);
 PN_EXTERN bool pn_data_enter(pn_data_t *data);
 PN_EXTERN bool pn_data_exit(pn_data_t *data);
+PN_EXTERN bool pn_data_lookup(pn_data_t *data, const char *name);
 
 PN_EXTERN pn_type_t pn_data_type(pn_data_t *data);
 

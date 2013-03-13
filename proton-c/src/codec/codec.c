@@ -1919,6 +1919,32 @@ bool pn_data_exit(pn_data_t *data)
   }
 }
 
+bool pn_data_lookup(pn_data_t *data, const char *name)
+{
+  while (pn_data_next(data)) {
+    pn_type_t type = pn_data_type(data);
+
+    switch (type) {
+    case PN_STRING:
+    case PN_SYMBOL:
+      {
+        pn_bytes_t bytes = pn_data_get_bytes(data);
+        if (!strncmp(name, bytes.start, bytes.size)) {
+          return pn_data_next(data);
+        }
+      }
+      break;
+    default:
+      break;
+    }
+
+    // skip the value
+    pn_data_next(data);
+  }
+
+  return false;
+}
+
 void pn_data_dump(pn_data_t *data)
 {
   char buf[1024];

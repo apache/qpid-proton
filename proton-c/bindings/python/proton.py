@@ -1094,6 +1094,15 @@ class Data:
     """
     return pn_data_exit(self._data)
 
+  def lookup(self, name):
+    return pn_data_lookup(self._data, name)
+
+  def narrow(self):
+    pn_data_narrow(self._data)
+
+  def widen(self):
+    pn_data_widen(self._data)
+
   def type(self):
     """
     Returns the type of the current node.

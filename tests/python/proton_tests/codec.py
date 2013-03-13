@@ -297,3 +297,24 @@ class DataTest(Test):
     assert data.next()
     copy = data.get_object()
     assert copy == obj, (copy, obj)
+
+  def testLookup(self):
+    obj = {symbol("key"): u"value",
+           symbol("pi"): 3.14159,
+           symbol("list"): [1, 2, 3, 4]}
+    self.data.put_object(obj)
+    self.data.rewind()
+    self.data.next()
+    self.data.enter()
+    self.data.narrow()
+    assert self.data.lookup("pi")
+    assert self.data.get_object() == 3.14159
+    self.data.rewind()
+    assert self.data.lookup("key")
+    assert self.data.get_object() == u"value"
+    self.data.rewind()
+    assert self.data.lookup("list")
+    assert self.data.get_object() == [1, 2, 3, 4]
+    self.data.widen()
+    self.data.rewind()
+    assert not self.data.lookup("pi")

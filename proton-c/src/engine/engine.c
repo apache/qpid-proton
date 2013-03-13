@@ -2944,10 +2944,7 @@ const char *pn_condition_redirect_host(pn_condition_t *condition)
   pn_data_rewind(data);
   pn_data_next(data);
   pn_data_enter(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
+  pn_data_lookup(data, "network-host");
   pn_bytes_t host = pn_data_get_bytes(data);
   pn_data_rewind(data);
   return host.start;
@@ -2959,12 +2956,7 @@ int pn_condition_redirect_port(pn_condition_t *condition)
   pn_data_rewind(data);
   pn_data_next(data);
   pn_data_enter(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
-  pn_data_next(data);
+  pn_data_lookup(data, "port");
   int port = pn_data_get_int(data);
   pn_data_rewind(data);
   return port;
