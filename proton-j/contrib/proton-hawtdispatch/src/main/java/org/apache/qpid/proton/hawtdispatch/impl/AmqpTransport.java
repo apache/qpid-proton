@@ -244,11 +244,11 @@ public class AmqpTransport extends WatchBase {
                         authSent = true;
                         DataByteArrayOutputStream os = new DataByteArrayOutputStream();
                         try {
+                            os.writeByte(0);
                             os.write(new UTF8Buffer(options.getUser()));
                             os.writeByte(0);
                             if (options.getPassword() != null) {
                                 os.write(new UTF8Buffer(options.getPassword()));
-                                os.writeByte(0);
                             }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
