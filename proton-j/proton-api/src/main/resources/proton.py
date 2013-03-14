@@ -710,6 +710,15 @@ class Data(object):
   def exit(self):
     return self._data.exit()
 
+  def lookup(self, name):
+    return self._data.lookup(name)
+
+  def narrow(self):
+    self._data.narrow()
+
+  def widen(self):
+    self._data.widen()
+
   def type(self):
     return self._data.type()
 

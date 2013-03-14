@@ -173,6 +173,13 @@ public class JNIData implements Data
         return Proton.pn_data_exit(_impl);
     }
 
+    @Override
+    @ProtonCEquivalent("pn_data_lookup")
+    public boolean lookup(String name)
+    {
+        return Proton.pn_data_lookup(_impl, name);
+    }
+
     static final Map<pn_type_t, DataType> TYPEMAP = new HashMap<pn_type_t, DataType>();
     static final Map<DataType, pn_type_t> REVERSE_TYPEMAP = new EnumMap<DataType,pn_type_t>(DataType.class);
     static

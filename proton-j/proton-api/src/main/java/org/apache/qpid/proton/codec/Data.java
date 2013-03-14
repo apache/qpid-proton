@@ -81,6 +81,7 @@ public interface Data
     DataType prev();
     boolean enter();
     boolean exit();
+    boolean lookup(String name);
 
     DataType type();
 
