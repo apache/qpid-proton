@@ -49,7 +49,7 @@ fi
 
 # Ruby
 export RUBY_BINDINGS=$PROTON_BINDINGS/ruby
-export RUBYLIB=$RUBY_BINDINGS:$PROTON_HOME/proton-c-bindings/ruby/lib
+export RUBYLIB=$RUBY_BINDINGS:$PROTON_HOME/proton-c/bindings/ruby/lib:$PROTON_HOME/tests/ruby
 
 # Perl
 export PERL_BINDINGS=$PROTON_BINDINGS/perl

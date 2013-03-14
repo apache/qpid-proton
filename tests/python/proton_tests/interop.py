@@ -43,7 +43,7 @@ class InteropTest(common.Test):
 
     def get_data(self, name):
         filename = os.path.join(test_interop_dir, name+".amqp")
-        f = open(filename)
+        f = open(filename,"rb")
         try: return f.read()
         finally: f.close()
 
@@ -105,10 +105,7 @@ class InteropTest(common.Test):
 
     def test_described(self):
         self.decode_data_file("described")
-        assert self.data.next() == Data.DESCRIBED
-        self.data.enter()
-        self.assert_next(Data.SYMBOL, "foo-descriptor")
-        self.assert_next(Data.STRING, "foo-value")
+        self.assert_next(Data.DESCRIBED, Described("foo-descriptor", "foo-value"))
         self.data.exit()
 
         assert self.data.next() == Data.DESCRIBED

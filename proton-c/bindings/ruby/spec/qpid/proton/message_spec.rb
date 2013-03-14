@@ -401,7 +401,7 @@ module Qpid
         @message.reply_to_group_id.should eq(id)
       end
 
-      it "can have nil content" do
+      xit "can have nil content" do
         @message.content = nil
         @message.content.should be_nil
       end

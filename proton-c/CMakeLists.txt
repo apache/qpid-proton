@@ -30,15 +30,15 @@ endif(WIN32 AND NOT CYGWIN)
 
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
 if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
-    # OPTIONAL does not exist in install before 2.8 so always make docs and install
-    set (OPTIONAL_ARG "")
-    add_custom_target(docs ALL)
-    # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
-    # so turn off unknown symbol warnings
-    set (NOENABLE_UNDEFINED_ERROR ON)
+  # OPTIONAL does not exist in install before 2.8 so always make docs and install
+  set (OPTIONAL_ARG "")
+  add_custom_target(docs ALL)
+  # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
+  # so turn off unknown symbol warnings
+  set (NOENABLE_UNDEFINED_ERROR ON)
 else()
-    set (OPTIONAL_ARG OPTIONAL)
-    add_custom_target(docs)
+  set (OPTIONAL_ARG OPTIONAL)
+  add_custom_target(docs)
 endif()
 
 # Set the default SSL/TLS implementation
@@ -46,14 +46,14 @@ find_package(OpenSSL)
 
 set(ssl_impl, none)
 if (OPENSSL_FOUND)
-   set(ssl_impl openssl)
+  set(ssl_impl openssl)
 endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/pn_config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/pn_config.h"
-)
+  )
 
 include_directories ("${CMAKE_CURRENT_BINARY_DIR}")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -62,13 +62,13 @@ add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
-)
+  )
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
   COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
-)
+  )
 
 # Select driver
 if(PN_WINAPI)
@@ -128,20 +128,20 @@ else (UUID_GENERATE_IN_LIBC)
 endif (UUID_GENERATE_IN_LIBC)
 
 if (PN_WINAPI)
-CHECK_SYMBOL_EXISTS(strerror_s "string.h" STRERROR_S_IN_WINAPI)
-if (STRERROR_S_IN_WINAPI)
-  list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_S")
-else (STRERROR_S_IN_WINAPI)
-if (MINGW)
-  message (STATUS, "NOTE: your MinGW version lacks a thread safe strerror")
-  list(APPEND PLATFORM_DEFINITIONS "USE_OLD_STRERROR")
-endif (MINGW)
-endif (STRERROR_S_IN_WINAPI)
+  CHECK_SYMBOL_EXISTS(strerror_s "string.h" STRERROR_S_IN_WINAPI)
+  if (STRERROR_S_IN_WINAPI)
+    list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_S")
+  else (STRERROR_S_IN_WINAPI)
+    if (MINGW)
+      message (STATUS, "NOTE: your MinGW version lacks a thread safe strerror")
+      list(APPEND PLATFORM_DEFINITIONS "USE_OLD_STRERROR")
+    endif (MINGW)
+  endif (STRERROR_S_IN_WINAPI)
 else (PN_WINAPI)
-CHECK_SYMBOL_EXISTS(strerror_r "string.h" STRERROR_R_IN_LIBC)
-if (STRERROR_R_IN_LIBC)
-  list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_R")
-endif (STRERROR_R_IN_LIBC)
+  CHECK_SYMBOL_EXISTS(strerror_r "string.h" STRERROR_R_IN_LIBC)
+  if (STRERROR_R_IN_LIBC)
+    list(APPEND PLATFORM_DEFINITIONS "USE_STRERROR_R")
+  endif (STRERROR_R_IN_LIBC)
 endif (PN_WINAPI)
 
 CHECK_SYMBOL_EXISTS(atoll "stdlib.h" C99_ATOLL)
@@ -191,7 +191,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 
     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
     if (${GCC_VERSION} VERSION_LESS "4.3.0")
       # Only a concern if contibuting code back.
       message (STATUS "Old gcc version detected.  C++ compatibility checks disabled")
@@ -222,7 +222,7 @@ set (qpid-proton-platform
   ${pn_driver_impl}
   src/platform.c
   ${pn_driver_ssl_impl}
-)
+  )
 
 set (qpid-proton-core
   src/util.c
@@ -245,27 +245,27 @@ set (qpid-proton-core
 
   ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
-)
+  )
 
 set_source_files_properties (
-    ${qpid-proton-core}
-    PROPERTIES
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
-)
+  ${qpid-proton-core}
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+  )
 
 set_source_files_properties (
-    ${qpid-proton-platform}
-    PROPERTIES
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-    COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
-)
+  ${qpid-proton-platform}
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
+  )
 
 add_library (
   qpid-proton SHARED
 
   ${qpid-proton-core}
   ${qpid-proton-platform}
-)
+  )
 
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
@@ -275,7 +275,7 @@ set_target_properties (
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
-)
+  )
 
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpid-proton)
@@ -284,10 +284,10 @@ add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
-    proton proton-dump
-    PROPERTIES
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-)
+  proton proton-dump
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  )
 
 if (BUILD_WITH_CXX)
   # tell CMake to use C++ for proton source files ending in ".c"
@@ -301,8 +301,8 @@ endif (BUILD_WITH_CXX)
 
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton
-         RUNTIME DESTINATION bin
-         LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
@@ -316,38 +316,74 @@ get_filename_component (LIBDIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR} ABSOLU
 get_filename_component (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${INCLUDE_INSTALL_DIR} ABSOLUTE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
-         ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
-         DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
 # CTest
 
-# suffix for Visual Studio targets.  Only support RelWithDebInfo for now.
+  # suffix for Visual Studio targets.  Only support RelWithDebInfo for now.
 if (MSVC)
   set (bld_suffix "/RelWithDebInfo")
-endif (MSVC)
-
-# directories of interest
-set (tdir1 "${pn_test_root}/python")
-set (tdir2 "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
-set (tdir3 "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
-set (tdir4 "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
-
-
-# test #1:  python [...]tests/python/proton-test
+endif(MSVC)
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # Windows uses a ';' separator and needs extra PATH help
-  set (newpath "PATH=$ENV{PATH};${tdir4}")
-  string (REGEX REPLACE "\\\\" "/" newpath "${newpath}")
-  add_test(proton-c python "${CMAKE_CURRENT_SOURCE_DIR}/env.py"
-           "PYTHONPATH=${tdir1};${tdir2};${tdir3};${tdir3}${bld_suffix}" 
-	   "${newpath}"
-           python "${pn_test_root}/python/proton-test")
+
+  # Substitute windows separators in path and remove empty entries
+  function(set_path result path)
+    string (REGEX REPLACE "^:" "" path "${path}")
+    string (REGEX REPLACE "::" ":" path "${path}")
+    string (REGEX REPLACE "\\\\" "/" path "${path}")
+    string (REGEX REPLACE ":" ";" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+
 else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  add_test(proton-c python "${CMAKE_CURRENT_SOURCE_DIR}/env.py"
-           "PYTHONPATH=${tdir1}:${tdir2}:${tdir3}"
-           python "${pn_test_root}/python/proton-test")
+
+  # Set variable result to path, with empty entries removed
+  function(set_path result path)
+    string (REGEX REPLACE "^:" "" path "${path}")
+    string (REGEX REPLACE "::" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
-set_tests_properties(proton-c PROPERTIES PASS_REGULAR_EXPRESSION "Totals:.*, 0 failed")
+
+set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
+
+# python test: tests/ruby/proton-test
+set (py_root "${pn_test_root}/python")
+set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
+set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
+set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
+set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}")
+set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bld}")
+
+add_test (python-test python ${env_py} "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
+  "${py_root}/proton-test")
+
+find_program(ruby_exe "ruby")
+if (ruby_exe)
+  set (rb_root "${pn_test_root}/ruby")
+  set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
+  set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
+  set (rb_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
+  set_path (rb "$ENV{PATH}:${rb_bin}:${rb_bld}")
+  set_path (rb "$ENV{RUBYLIB}:${rb_root}:${rb_src}:${rb_bin}:${rb_bld}")
+
+  # ruby unit tests:  tests/ruby/proton-test
+  add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+    "${rb_root}/proton-test")
+
+  # ruby spec tests
+  find_program(rspec_exe rspec)
+  if (rspec_exe)
+    add_test (ruby-spec-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+      ${rspec_exe})
+  else(rspec_exe)
+    message (STATUS "Cannot find rspec, skipping rspec tests")
+  endif(rspec_exe)
+else (ruby_exe)
+  message (STATUS "Cannot find ruby, skipping ruby tests")
+endif (ruby_exe)

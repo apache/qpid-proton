@@ -414,7 +414,7 @@ module Qpid
       it "can hold an array" do
         values = []
         (1..(rand(100) + 5)).each { values << rand(2**16) }
-        @data.put_array false, :INT
+        @data.put_array false, Data::INT
         @data.enter
         values.each { |value| @data.int = value }
         @data.exit
@@ -430,13 +430,13 @@ module Qpid
         values = []
         (1..(rand(100) + 5)).each { values << random_string(64) }
         descriptor = random_string(32)
-        @data.put_array true, :STRING
+        @data.put_array true, Data::STRING
         @data.enter
         @data.symbol = descriptor
         values.each { |value| @data.string = value }
         @data.exit
 
-        @data.array.should == [values.size, true, :STRING]
+        @data.array.should == [values.size, true, Data::STRING]
         @data.enter
         @data.next
         @data.symbol.should == descriptor

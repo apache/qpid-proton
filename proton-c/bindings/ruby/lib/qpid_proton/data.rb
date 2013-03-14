@@ -17,6 +17,8 @@
 # under the License.
 #
 
+require 'cproton'
+
 module Qpid
 
   module Proton
@@ -51,27 +53,27 @@ module Qpid
     #
     # The following types of scalar values are supported:
     #
-    # * *:NULL*
-    # * *:BOOL*
-    # * *:UBYTE*
-    # * *:USHORT*
-    # * *:SHORT*
-    # * *:UINT*
-    # * *:INT*
-    # * *:ULONG*
-    # * *:LONG*
-    # * *:FLOAT*
-    # * *:DOUBLE*
-    # * *:BINARY*
-    # * *:STRING*
-    # * *:SYMBOL*
+    # * *NULL*
+    # * *BOOL*
+    # * *UBYTE*
+    # * *USHORT*
+    # * *SHORT*
+    # * *UINT*
+    # * *INT*
+    # * *ULONG*
+    # * *LONG*
+    # * *FLOAT*
+    # * *DOUBLE*
+    # * *BINARY*
+    # * *STRING*
+    # * *SYMBOL*
     #
     # The following types of compound values are supported:
     #
-    # * *:DESCRIBED*
-    # * *:ARRAY*
-    # * *:LIST*
-    # * *:MAP*
+    # * *DESCRIBED*
+    # * *ARRAY*
+    # * *LIST*
+    # * *MAP*
     #
     class Data
 
@@ -115,13 +117,12 @@ module Qpid
         Cproton.pn_data_rewind(@data)
       end
 
-      # Advances the current node to tits next sibling and returns its types.
+      # Advances the current node to its next sibling and returns its types.
       #
       # If there is no next sibling the current node remains unchanged
       # and nil is returned.
       def next
-        found = Cproton.pn_data_next(@data)
-        return found ? found : nil
+        return Cproton.pn_data_next(@data) ? type : nil
       end
 
       # Advances the current node to its previous sibling and returns its type.
@@ -129,8 +130,7 @@ module Qpid
       # If there is no previous sibling then the current node remains unchanged
       # and nil is return.
       def prev
-        found = Cproton.pn_data_prev(@data)
-        return found ? found : nil
+        return Cproton.pn_data_prev(@data) ? type : nil
       end
 
       # Sets the parent node to the current node and clears the current node.
@@ -146,21 +146,26 @@ module Qpid
         Cproton.pn_data_exit(@data)
       end
 
-      # Returns the type of the current node.
-      def node_type
+      # Returns the numeric type code of the current node.
+      def type_code
         dtype = Cproton.pn_data_type(@data)
         return (dtype == -1) ? nil : dtype
       end
 
-      # Returns a representation of the data encoded. in AMQP format.
+      # Return the Type object for the current node
+      def type
+        Type.by_code(type_code)
+      end
+
+      # Returns a representation of the data encoded in AMQP format.
       def encode
-        size = 1024
+        buffer = "\0"*1024
         loop do
-          (cd, enc) = Cproton.pn_data_encode(@data, size)
+          cd = Cproton.pn_data_encode(@data, buffer, buffer.length)
           if cd == Cproton::PN_OVERFLOW
-            size *= 2
+            buffer *= 2
           elsif cd >= 0
-            return enc
+            return buffer[0...cd]
           else
             check(cd)
           end
@@ -175,7 +180,7 @@ module Qpid
       # * encoded - the encoded data
       #
       def decode(encoded)
-        check(Cproton.pn_data_decode(@data, encoded))
+        check(Cproton.pn_data_decode(@data, encoded, encoded.length))
       end
 
       # Puts a list value.
@@ -208,7 +213,7 @@ module Qpid
       #   @data.enter
       #   (0...count).each
       #     type = @data.next
-      #     puts "Value: #{@data.string}" if type == :STRING
+      #     puts "Value: #{@data.string}" if type == STRING
       #     # ... process other node types
       #   end
       def list
@@ -244,10 +249,10 @@ module Qpid
       #   @data.enter
       #   (0...count).each do
       #     type = @data.next
-      #     puts "Key=#{@data.string}" if type == :STRING
+      #     puts "Key=#{@data.string}" if type == STRING
       #     # ... process other key types
       #     type = @data.next
-      #     puts "Value=#{@data.string}" if type == :STRING
+      #     puts "Value=#{@data.string}" if type == STRING
       #     # ... process other value types
       #   end
       #   @data.exit
@@ -273,7 +278,7 @@ module Qpid
       #
       #   # create an array of integer values
       #   data = Qpid::Proton::Data.new
-      #   data.put_array(false, :INT)
+      #   data.put_array(false, INT)
       #   data.enter
       #   data.int = 1
       #   data.int = 2
@@ -281,7 +286,7 @@ module Qpid
       #   data.exit
       #
       #   # create an array of double values
-      #   data.put_array(true, :DOUBLE)
+      #   data.put_array(true, DOUBLE)
       #   data.enter
       #   data.symbol = "array-descriptor"
       #   data.double = 1.1
@@ -290,8 +295,7 @@ module Qpid
       #   data.exit
       #
       def put_array(described, element_type)
-        check(Cproton.pn_data_put_array(@data, described,
-                                        Data.type_value(element_type)))
+        check(Cproton.pn_data_put_array(@data, described, element_type.code))
       end
 
       # If the current node is an array, returns a tuple of the element count, a
@@ -319,12 +323,8 @@ module Qpid
         count = Cproton.pn_data_get_array(@data)
         described = Cproton.pn_data_is_array_described(@data)
         array_type = Cproton.pn_data_get_array_type(@data)
-        if array_type == -1
-          array_type = nil
-        else
-          array_type = Data.type_name(array_type)
-        end
-        [count, described, array_type]
+        return nil if array_type == -1
+        [count, described, Type.by_code(array_type) ]
       end
 
       # Puts a described value.
@@ -719,38 +719,248 @@ module Qpid
         Cproton.pn_data_get_symbol(@data)
       end
 
-      def self.add_item(key, value, name) # :nodoc:
-        @@type_value ||= {}
-        @@type_value[key] = value
-
-        @@type_name ||= {}
-        @@type_name[value] = key
-      end
-
-      # Returns the typename for the specified type.
+      # Convenience class for described types.
       #
-      # ==== Examples
-      #   # returns "null"
-      #   name = Qpid::Proton::Data.type_name(:NULL)
+      # Holds the descriptor and value, implements methods to get and put a
+      # described type in a Data object.
+      Described = Struct.new(:descriptor, :value)
+      class Described
+        def self.get(data)
+          def fail; raise 'Not a described type'; end
+          (data.described? and data.enter) or fail
+          begin
+            data.next or fail
+            descriptor = data.get
+            data.next or fail
+            value = data.get
+            return Described.new(descriptor, value)
+          ensure
+            data.exit
+          end
+        end
+
+        def put(data)
+          described
+          enter
+          data.put(@descriptor)
+          data.put(@value)
+        end
+      end
+
+      # Convenience class for arrays
       #
-      def self.type_name(key)
-        @@type_name[key]
+      # Convenience class for arrays.
+      #
+      # An Array with methods to get and put the array in a Data object
+      # as an AMQP array.
+      class Array < ::Array
+        def initialize(descriptor, type, elements=[])
+          @descriptor, @type = descriptor, type
+          super(elements.collect { |x| x })
+        end
+
+        attr_reader :descriptor, :type
+
+        def ==(o) super; end
+        def eql?(o)
+          o.class == self.class && @descriptor == o.descriptor && @type == o.type &&
+            super
+        end
+
+
+        def self.get(data)
+          count, described, type = data.array
+          data.enter or raise 'Not an array'
+          begin
+            descriptor = nil
+            if described then
+              data.next; descriptor = data.get
+            end
+            elements = []
+            while data.next do; elements << data.get; end
+            elements.size == count or
+              raise "Array wrong length, expected #{count} but got #{elements.size}"
+            return Array.new(descriptor, type, elements)
+          ensure
+            data.exit
+          end
+        end
+
+        def put(data)
+          data.put_array(@descriptor, @type)
+          data.enter
+          begin
+            data.put(@descriptor) if @descriptor
+            elements.each { |e| data.put(e); }
+          ensure
+            data.exit
+          end
+        end
       end
 
-      def self.type_value(key) # :nodoc:
-        @@type_value[key]
+      # Convenience class for arrays.
+      #
+      # An array with methods to get and put the in a Data object
+      # as an AMQP list.
+      class List < ::Array
+
+        def initialize(elements) super; end
+
+        def self.get(data)
+          def fail; raise 'Not a list'; end
+          size = data.list
+          data.enter or fail
+          begin
+            elements = []
+            while data.next do elements << data.get; end
+            elements.size == size or
+              raise "List wrong length, expected #{size} but got #{elements.size}"
+            return List.new(elements)
+          ensure
+            data.exit
+          end
+        end
+
+        def put(data)
+          data.put_list
+          @elements.each { |e| data.put(e); }
+        end
       end
 
-      def self.const_missing(key) # :nodoc:
-        @@type_value[key]
+      # Convenience class for maps
+      #
+      # A Hash with methods to get and put the map in a Data object as an AMQP
+      # map.
+      class Map < ::Hash
+        def initialize(map) super; end
+
+        def self.get(data)
+          data.enter or raise "Not a Map"
+          begin
+            map = {}
+            while data.next
+              k = data.get
+              data.next or raise "Map missing final value"
+              map[k] = data.get
+            end
+            return map
+          ensure
+            data.exit
+          end
+        end
+
+        def put(data)
+          data.enter
+          begin
+            @map.each { |k,v| data.put(k); data.put(v); }
+          ensure
+            data.exit
+          end
+        end
       end
+
+      # Convenience class for null values
+      #
+      # Empty object with methods to get and put it in a Data object.
+      class Null
+        def initialize; end
+
+        def self.get(data)
+          data.null? or raise "Not a null"
+          return nil
+        end
+
+        def put(data); data.null; end
+      end
+
+      # Information about AMQP types including how to get/put an object of that
+      # type in a Data object.
+      #
+      # A convenience class is provided for each of the compound types
+      # to allow get/put of those types as a single object.
+      class Type
+        attr_reader :code, :name
+
+        def initialize(code,name,klass=nil)
+          @code, @name, @klass = code,name,klass;
+          @get,@put = name.intern,(name+"=").intern if !klass
+          @@by_code ||= {}
+          @@by_code[code] = self
+          @@by_name ||= {}
+          @@by_name[name] = self
+        end
+
+        def get(data)
+          if @klass then @klass.send(:get, data)
+          else data.send(@get); end
+        end
+
+        def put(data, value)
+          if @klass then @klass.send(:put, data, value)
+          else data.send(@put, value); end
+        end
+
+        def to_s() return name; end
+        def self.by_name(name) @@by_name[name]; end
+        def self.by_code(code) @@by_code[code]; end
+
+
+        def self.get(data)
+          if @klass then @klass.send(:get, data)
+          else data.send(@get); end
+        end
+
+        def put(data, value)
+          if @klass then @klass.send(:put, data, value)
+          else data.send(@put, value); end
+
+          def to_s name; end
+        end
+      end
+
+      # Get the current value as a single object.
+      def get
+        type.get(self);
+      end
+
+      # Put value as an object of type type_
+      def put(value, type_);
+        type_.put(self, value);
+      end
+
+      # Constants for all the supported types
+      NULL       = Type.new(Cproton::PN_NULL,       "null",      Null)
+      BOOL       = Type.new(Cproton::PN_BOOL,       "bool")
+      UBYTE      = Type.new(Cproton::PN_UBYTE,      "ubyte")
+      BYTE       = Type.new(Cproton::PN_BYTE,       "byte")
+      USHORT     = Type.new(Cproton::PN_USHORT,     "ushort")
+      SHORT      = Type.new(Cproton::PN_SHORT,      "short")
+      UINT       = Type.new(Cproton::PN_UINT,       "uint")
+      INT        = Type.new(Cproton::PN_INT,        "int")
+      CHAR       = Type.new(Cproton::PN_CHAR,       "char")
+      ULONG      = Type.new(Cproton::PN_ULONG,      "ulong")
+      LONG       = Type.new(Cproton::PN_LONG,       "long")
+      TIMESTAMP  = Type.new(Cproton::PN_TIMESTAMP,  "timestamp")
+      FLOAT      = Type.new(Cproton::PN_FLOAT,      "float")
+      DOUBLE     = Type.new(Cproton::PN_DOUBLE,     "double")
+      DECIMAL32  = Type.new(Cproton::PN_DECIMAL32,  "decimal32")
+      DECIMAL64  = Type.new(Cproton::PN_DECIMAL64,  "decimal64")
+      DECIMAL128 = Type.new(Cproton::PN_DECIMAL128, "decimal128")
+      UUID       = Type.new(Cproton::PN_UUID,       "uuid")
+      BINARY     = Type.new(Cproton::PN_BINARY,     "binary")
+      STRING     = Type.new(Cproton::PN_STRING,     "string")
+      SYMBOL     = Type.new(Cproton::PN_SYMBOL,     "symbol")
+      DESCRIBED  = Type.new(Cproton::PN_DESCRIBED,  "described", Described)
+      ARRAY      = Type.new(Cproton::PN_ARRAY,      "array",     Array)
+      LIST       = Type.new(Cproton::PN_LIST,       "list",      List)
+      MAP        = Type.new(Cproton::PN_MAP,        "map",       Map)
 
       private
 
       def valid_uuid?(value)
-      # ensure that the UUID is in the right format
-      # xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
-      value =~ /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
+        # ensure that the UUID is in the right format
+        # xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx
+        value =~ /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
       end
 
       def check(err) # :nodoc:
@@ -760,35 +970,6 @@ module Qpid
           return err
         end
       end
-
-      self.add_item(:NULL,       Cproton::PN_NULL,       "null")
-      self.add_item(:BOOL,       Cproton::PN_BOOL,       "bool")
-      self.add_item(:UBYTE,      Cproton::PN_UBYTE,      "ubyte")
-      self.add_item(:BYTE,       Cproton::PN_BYTE,       "byte")
-      self.add_item(:USHORT,     Cproton::PN_USHORT,     "ushort")
-      self.add_item(:SHORT,      Cproton::PN_SHORT,      "short")
-      self.add_item(:UINT,       Cproton::PN_UINT,       "uint")
-      self.add_item(:INT,        Cproton::PN_INT,        "int")
-      self.add_item(:CHAR,       Cproton::PN_CHAR,       "char")
-      self.add_item(:ULONG,      Cproton::PN_ULONG,      "ulong")
-      self.add_item(:LONG,       Cproton::PN_LONG,       "long")
-      self.add_item(:TIMESTAMP,  Cproton::PN_TIMESTAMP,  "timestamp")
-      self.add_item(:FLOAT,      Cproton::PN_FLOAT,      "float")
-      self.add_item(:DOUBLE,     Cproton::PN_DOUBLE,     "double")
-      self.add_item(:DECIMAL32,  Cproton::PN_DECIMAL32,  "decimal32")
-      self.add_item(:DECIMAL64,  Cproton::PN_DECIMAL64,  "decimal64")
-      self.add_item(:DECIMAL128, Cproton::PN_DECIMAL128, "decimal128")
-      self.add_item(:UUID,       Cproton::PN_UUID,       "uuid")
-      self.add_item(:BINARY,     Cproton::PN_BINARY,     "binary")
-      self.add_item(:STRING,     Cproton::PN_STRING,     "string")
-      self.add_item(:SYMBOL,     Cproton::PN_SYMBOL,     "symbol")
-      self.add_item(:DESCRIBED,  Cproton::PN_DESCRIBED,  "described")
-      self.add_item(:ARRAY,      Cproton::PN_ARRAY,      "array")
-      self.add_item(:LIST,       Cproton::PN_LIST,       "list")
-      self.add_item(:MAP,        Cproton::PN_MAP,        "map")
-
     end
-
   end
-
 end

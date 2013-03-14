@@ -27,6 +27,17 @@ module Qpid
     #
     class Message
 
+      # Decodes a message from supplied AMQP data and returns the number
+      # of bytes consumed.
+      #
+      # ==== Options
+      #
+      # * encoded - the encoded data
+      #
+      def decode(encoded)
+        check(Cproton.pn_message_decode(@impl, encoded, encoded.length))
+      end
+
       # Creates a new +Message+ instance.
       def initialize
         @impl = Cproton.pn_message
@@ -427,6 +438,15 @@ module Qpid
         Cproton.pn_message_get_reply_to_group_id(@impl)
       end
 
+      private
+
+      def check(err) # :nodoc:
+        if err < 0
+          raise DataError, "[#{err}]: #{Cproton.pn_message_error(@data)}"
+        else
+          return err
+        end
+      end
     end
 
   end
