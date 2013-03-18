@@ -33,28 +33,28 @@ The following bash script can be used to create these certificates (requires key
 rm -f *.pem *.pkcs12
 
 # Create a self-signed certificate for the CA, and a private key to sign certificate requests:
-keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -genkey -dname "O=Trust Me Inc.,CN=Trusted.CA.com"
+keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -genkey -dname "O=Trust Me Inc.,CN=Trusted.CA.com" -validity 99999
 openssl pkcs12 -nokeys -passin pass:ca-password -in ca.pkcs12 -passout pass:ca-password -out ca-certificate.pem
 
 # Create a certificate request for the server certificate.  Use the CA's certificate to sign it:
-keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -genkey  -dname "O=Server,CN=A1.Good.Server.domain.com"
+keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -genkey  -dname "O=Server,CN=A1.Good.Server.domain.com" -validity 99999
 keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -certreq -file server-request.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-request.pem -outfile server-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-private-key.pem
 
 # Create a certificate request for the client certificate.  Use the CA's certificate to sign it:
-keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1"
+keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1" -validity 99999
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -certreq -file client-request.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile client-request.pem -outfile client-certificate.pem
 openssl pkcs12 -nocerts -passin pass:client-password -in client.pkcs12 -passout pass:client-password -out client-private-key.pem
 
 # Create a "bad" certificate - not signed by a trusted authority
-keytool -storetype pkcs12 -keystore bad-server.pkcs12 -storepass server-password -alias bad-server -keypass server-password -genkey -dname "O=Not Trusted Inc,CN=127.0.0.1"
+keytool -storetype pkcs12 -keystore bad-server.pkcs12 -storepass server-password -alias bad-server -keypass server-password -genkey -dname "O=Not Trusted Inc,CN=127.0.0.1" -validity 99999
 openssl pkcs12 -nocerts -passin pass:server-password -in bad-server.pkcs12 -passout pass:server-password -out bad-server-private-key.pem
 openssl pkcs12 -nokeys  -passin pass:server-password -in bad-server.pkcs12 -passout pass:server-password -out bad-server-certificate.pem
 
 # Create a server certificate with several alternate names, including a wildcarded common name:
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -genkeypair -dname "O=Server,CN=*.prefix*.domain.com"
+keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -genkeypair -dname "O=Server,CN=*.prefix*.domain.com" -validity 99999
 keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -certreq -file server-wc-request.pem
 keytool -ext san=dns:alternate.name.one.com,dns:another.name.com  -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
