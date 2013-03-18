@@ -161,7 +161,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s\n", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
     return NULL;
   }
 
@@ -340,7 +340,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
     return NULL;
   }
 
