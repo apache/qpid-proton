@@ -22,6 +22,10 @@ SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/src/main/java/org/apache/qpid/
 
 message(STATUS "Using JNI libraries: ${JNI_LIBRARIES}" )
 
+if (BUILD_WITH_CXX)
+    SET_SOURCE_FILES_PROPERTIES(java.i PROPERTIES CPLUSPLUS ON)
+endif (BUILD_WITH_CXX)
+
 swig_add_module(proton-swig java java.i)
 include_directories(${JNI_INCLUDE_DIRS})
 swig_link_libraries(proton-swig ${BINDING_DEPS}  )
@@ -30,6 +34,7 @@ set_target_properties(proton-swig
     PROPERTIES
     OUTPUT_NAME "proton-jni"
     PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
+
 
 add_custom_command(OUTPUT ${CMAKE_SWIG_OUTDIR}
                    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SWIG_OUTDIR}

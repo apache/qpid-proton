@@ -82,15 +82,15 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
   $2 = (long)(JCALL2(CallIntMethod,jenv, $input, remainingId));
 
   if(isDirect) {
-    $1 = JCALL1(GetDirectBufferAddress,jenv, $input) + position;
+    $1 = (char*)JCALL1(GetDirectBufferAddress,jenv, $input) + position;
     data = (char *)0;
     arr = (jobject) 0;
   } else {
     jmethodID arrayId= JCALL3(GetMethodID,jenv, bbclass, "array", "()[B");
     jmethodID arrayOffsetId= JCALL3(GetMethodID,jenv, bbclass, "arrayOffset", "()I");
-    jobject a = JCALL2(CallObjectMethod,jenv, $input, arrayId);
-    arr = a;
-    data = JCALL2(GetPrimitiveArrayCritical, jenv, a, NULL);
+    jarray a = (jarray)JCALL2(CallObjectMethod,jenv, $input, arrayId);
+    arr = (jobject)a;
+    data = (char*)JCALL2(GetPrimitiveArrayCritical, jenv, a, NULL);
     $1 = data + JCALL2(CallIntMethod,jenv, $input, arrayOffsetId) + position;
 
   }
@@ -108,7 +108,7 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
 %typemap(freearg) (char *DATA, size_t SIZE)  {
 
   if(!isDirect$argnum) {
-    JCALL3(ReleasePrimitiveArrayCritical, jenv, arr$argnum, data$argnum,0);
+    JCALL3(ReleasePrimitiveArrayCritical, jenv, (jarray)arr$argnum, data$argnum,0);
   }
 }
 
@@ -123,11 +123,11 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
   jmethodID remainingId= JCALL3(GetMethodID,jenv, bbclass, "remaining", "()I");
   isDirect = JCALL2(CallBooleanMethod,jenv, $input, isDirectId);
   jint position = JCALL2(CallIntMethod,jenv, $input, positionId);
-  long size = (long)(JCALL2(CallIntMethod,jenv, $input, remainingId));
-  $2 = &size;
+  jint size = (JCALL2(CallIntMethod,jenv, $input, remainingId));
+  $2 = (size_t*)&size; // todo what if length of size_t is not the same as jint
 
   if(isDirect) {
-    $1 = JCALL1(GetDirectBufferAddress,jenv, $input) + position;
+    $1 =  (char*)JCALL1(GetDirectBufferAddress,jenv, $input) + position;
     data = (char *)0;
     array = (jobject) 0;
   } else {
@@ -136,7 +136,7 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
     array = JCALL2(CallObjectMethod,jenv, $input, arrayId);
     //data = JCALL2(GetByteArrayElements, jenv, array, NULL);
     jobject a = array;
-    data = (char *) JCALL2(GetPrimitiveArrayCritical, jenv, a, NULL);
+    data = (char *) JCALL2(GetPrimitiveArrayCritical, jenv, (jarray)a, NULL);
     //data = (char *) (*jenv)->GetPrimitiveArrayCritical(jenv, array, NULL);
     //printf("Acquired  %p from %p\n", data, a);
 
@@ -157,12 +157,10 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
 
   if(!isDirect$argnum) {
 
-    //JCALL3(ReleaseByteArrayElements, jenv, array, $1 - ((*jenv)->CallIntMethod(jenv, $input, arrayOffsetId) + position),0);
-    JCALL3(ReleasePrimitiveArrayCritical, jenv, array$argnum, data$argnum,0);
-    //printf("Releasing %p from %p\n", data$argnum, array$argnum);
+    JCALL3(ReleasePrimitiveArrayCritical, jenv, (jarray)array$argnum, data$argnum,0);
   }
 
-  jmethodID setpositionId = (*jenv)->GetMethodID(jenv, bbclass$argnum, "position", "(I)Ljava/nio/Buffer;");
+  jmethodID setpositionId = JCALL3(GetMethodID, jenv, bbclass$argnum, "position", "(I)Ljava/nio/Buffer;");
 
   jint pos = (int)*$2;
   // todo - need to increment not just set
@@ -191,32 +189,72 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
 }
 %ignore pn_connection_get_context;
 
+%inline {
+
+  // Provides wrappers around JNI functions which are suitable for use under C++ or C
+  // See http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#global_local
+
+  jobject new_global_ref(JNIEnv *jenv, jobject context) {
+    jobject newContext = NULL;
+    if(context) {
+      newContext = JCALL1(NewGlobalRef, jenv, context);
+    }
+    return newContext;
+  }
+
+  void delete_global_ref(JNIEnv *jenv, jobject context) {
+    if(context) {
+      JCALL1(DeleteGlobalRef, jenv, context);
+    }
+  }
+
+  jbyteArray new_byte_array(JNIEnv *jenv, jsize length) {
+    return JCALL1(NewByteArray, jenv, length);
+  }
+
+  jbyte* get_byte_array_elements(JNIEnv *jenv, jbyteArray array, jboolean *isCopy) {
+    return JCALL2(GetByteArrayElements, jenv, array, isCopy);
+  }
+
+  jsize get_array_length(JNIEnv *jenv, jarray array) {
+    return JCALL1(GetArrayLength, jenv, array);
+  }
+
+  void release_byte_array_elements(JNIEnv *jenv, jbyteArray array, jbyte* elems, jint mode) {
+    JCALL3(ReleaseByteArrayElements, jenv, array, elems, mode);
+  }
+}
+
 %native (pn_connection_set_context) void pn_connection_set_context(pn_connection_t, jobject);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1connection_1set_1context(JNIEnv *jenv, jclass jcls,
                                                               jlong jarg1, jobject context)
 {
     pn_connection_t *c = *(pn_connection_t **)&jarg1;
 
     jobject oldContext = (jobject) pn_connection_get_context(c);
-    if(oldContext) {
-      (*jenv)->DeleteGlobalRef(jenv, oldContext);
-    }
-    jobject newContext = NULL;
-    if(context)
-    {
-        newContext = (*jenv)->NewGlobalRef(jenv, context);
-    }
+    delete_global_ref(jenv, oldContext);
+    jobject newContext = new_global_ref(jenv, context);
     pn_connection_set_context(c, newContext);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 %ignore pn_connection_set_context;
 
 
 %rename(pn_session_get_context) wrap_pn_session_get_context;
 %inline {
-  jobject wrap_pn_session_get_context(pn_session_t *c) {
+    jobject wrap_pn_session_get_context(pn_session_t *c) {
     jobject result = (jobject) pn_session_get_context(c);
     return result;
   }
@@ -225,29 +263,33 @@ JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1connection_
 
 %native (pn_session_set_context) void pn_session_set_context(pn_session_t, jobject);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1session_1set_1context(JNIEnv *jenv, jclass jcls,
                                                               jlong jarg1, jobject context)
 {
     pn_session_t *c = *(pn_session_t **)&jarg1;
 
     jobject oldContext = (jobject) pn_session_get_context(c);
-    if(oldContext) {
-      (*jenv)->DeleteGlobalRef(jenv, oldContext);
-    }
-    jobject newContext = NULL;
-    if(context)
-    {
-        newContext = (*jenv)->NewGlobalRef(jenv, context);
-    }
+    delete_global_ref(jenv, oldContext);
+    jobject newContext = new_global_ref(jenv, context);
     pn_session_set_context(c, newContext);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 %ignore pn_session_set_context;
 
 %rename(pn_link_get_context) wrap_pn_link_get_context;
 %inline {
-  jobject wrap_pn_link_get_context(pn_link_t *c) {
+    jobject wrap_pn_link_get_context(pn_link_t *c) {
     jobject result = (jobject) pn_link_get_context(c);
     return result;
   }
@@ -256,29 +298,33 @@ JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1session_1se
 
 %native (pn_link_set_context) void pn_link_set_context(pn_link_t, jobject);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1link_1set_1context(JNIEnv *jenv, jclass jcls,
                                                               jlong jarg1, jobject context)
 {
     pn_link_t *c = *(pn_link_t **)&jarg1;
-    void* oldContext = pn_link_get_context(c);
+    jobject oldContext = (jobject) pn_link_get_context(c);
 
-    if(oldContext!=NULL) {
-      (*jenv)->DeleteGlobalRef(jenv, (jobject)oldContext);
-    }
-    jobject newContext = NULL;
-    if(context!=NULL)
-    {
-        newContext = (*jenv)->NewGlobalRef(jenv, context);
-    }
+    delete_global_ref(jenv, oldContext);
+    jobject newContext = new_global_ref(jenv, context);
     pn_link_set_context(c, newContext);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 %ignore pn_link_set_context;
 
 %rename(pn_delivery_get_context) wrap_pn_delivery_get_context;
 %inline {
-  jobject wrap_pn_delivery_get_context(pn_delivery_t *c) {
+    jobject wrap_pn_delivery_get_context(pn_delivery_t *c) {
     jobject result = (jobject) pn_delivery_get_context(c);
     return result;
   }
@@ -287,82 +333,116 @@ JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1link_1set_1
 
 %native (pn_delivery_set_context) void pn_delivery_set_context(pn_delivery_t, jobject);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1delivery_1set_1context(JNIEnv *jenv, jclass jcls,
                                                               jlong jarg1, jobject context)
 {
 
     pn_delivery_t *c = *(pn_delivery_t **)&jarg1;
     jobject oldContext = (jobject) pn_delivery_get_context(c);
-    if(oldContext) {
-      (*jenv)->DeleteGlobalRef(jenv, oldContext);
-    }
-    jobject newContext = NULL;
-    if(context)
-    {
-        newContext = (*jenv)->NewGlobalRef(jenv, context);
-    }
+    delete_global_ref(jenv, oldContext);
+    jobject newContext = new_global_ref(jenv, context);
     pn_delivery_set_context(c, newContext);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 %ignore pn_delivery_set_context;
 
 %native (pn_delivery_tag) jbyteArray pn_delivery_tag(pn_delivery_t);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1delivery_1tag(JNIEnv *jenv, jclass jcls,
                                                               jlong jarg1)
 {
 
     pn_delivery_t *c = *(pn_delivery_t **)&jarg1;
     pn_delivery_tag_t tag = pn_delivery_tag(c);
-    jbyteArray rval = (*jenv)->NewByteArray(jenv, tag.size);
-    jbyte* barr = (*jenv)->GetByteArrayElements(jenv, rval, NULL);
+    jbyteArray rval = new_byte_array(jenv, tag.size);
+    jbyte* barr = get_byte_array_elements(jenv, rval, NULL);
     jint i = 0;
     for(i=0;i<tag.size;i++)
     {
       barr[i] = tag.bytes[i];
     }
-    (*jenv)->ReleaseByteArrayElements(jenv, rval, barr, 0);
+    release_byte_array_elements(jenv, rval, barr, 0);
 
-    return (jbyteArray) (*jenv)->NewGlobalRef(jenv, rval);
+    return (jbyteArray) new_global_ref(jenv, (jobject)rval);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 %ignore pn_delivery_tag;
 
 %native (pn_bytes_to_array) jbyteArray pn_bytes_to_array(pn_bytes_t);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT jbyteArray JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1bytes_1to_1array(JNIEnv *jenv, jclass jcls, jlong jarg1)
 {
     pn_bytes_t* b = *(pn_bytes_t **)&jarg1;
-    jbyteArray rval = (*jenv)->NewByteArray(jenv, b->size);
-    jbyte* barr = (*jenv)->GetByteArrayElements(jenv, rval, NULL);
+    jbyteArray rval = new_byte_array(jenv, b->size);
+    jbyte* barr = get_byte_array_elements(jenv, rval, NULL);
     jint i = 0;
     for(i=0;i<b->size;i++)
     {
       barr[i] = b->start[i];
     }
-    (*jenv)->ReleaseByteArrayElements(jenv, rval, barr, 0);
+    release_byte_array_elements(jenv, rval, barr, 0);
 
-    return (jbyteArray) (*jenv)->NewGlobalRef(jenv, rval);
+    return (jbyteArray) new_global_ref(jenv, (jobject)rval);
 
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 
 %native (pn_bytes_from_array) void pn_bytes_from_array(pn_bytes_t, jbyteArray);
 %{
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1bytes_1from_1array(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jbyteArray byteArr)
 {
     pn_bytes_t* b = *(pn_bytes_t **)&jarg1;
-    size_t sz = (*jenv)->GetArrayLength(jenv, byteArr);
+    size_t sz = get_array_length(jenv, byteArr);
     if(b->start) free(b->start);
     
-    jbyte* barr = (*jenv)->GetByteArrayElements(jenv, byteArr, NULL);
+    jbyte* barr = get_byte_array_elements(jenv, byteArr, NULL);
     b->size = sz;
-    b->start = malloc(sz);
+    b->start = (char*)malloc(sz);
     memcpy(b->start, barr, sz);
-    (*jenv)->ReleaseByteArrayElements(jenv, byteArr, barr, 0);
+    release_byte_array_elements(jenv, byteArr, barr, 0);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 %}
 
 
