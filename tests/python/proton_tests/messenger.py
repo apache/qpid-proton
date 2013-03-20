@@ -19,38 +19,45 @@
 
 import os, common
 from proton import *
-from threading import Thread
+from threading import Thread, Event
 from time import sleep, time
 
 class Test(common.Test):
 
   def setup(self):
+    # Very high timeout expected to only be exceeded by a genuine functional
+    # problem, not by CI server slowness.
+    self.long_timeout_millis = 100000
+
     self.server_credit = 10
     self.server_received = 0
     self.server = Messenger("server")
-    self.server.timeout=10000
+    self.server.timeout = self.long_timeout_millis
     self.server.start()
     self.server.subscribe("amqp://~0.0.0.0:12345")
-    self.thread = Thread(name="server-thread", target=self.run)
-    self.thread.daemon = True
+    self.server_thread = Thread(name="server-thread", target=self.run_server)
+    self.server_thread.daemon = True
+    self.server_is_running_event = Event()
     self.running = True
 
     self.client = Messenger("client")
-    self.client.timeout=1000
+    self.client.timeout= self.long_timeout_millis
 
   def start(self):
-    self.thread.start()
+    self.server_thread.start()
+    self.server_is_running_event.wait(self.long_timeout_millis/1000)
     self.client.start()
 
   def teardown(self):
     if self.running:
+      # send a message to cause the server to promptly exit
       self.running = False
       msg = Message()
       msg.address="amqp://0.0.0.0:12345"
       self.client.put(msg)
       self.client.send()
     self.client.stop()
-    self.thread.join()
+    self.server_thread.join()
     self.client = None
     self.server = None
 
@@ -58,14 +65,12 @@ REJECT_ME = "*REJECT-ME*"
 
 class MessengerTest(Test):
 
-  def run(self):
+  def run_server(self):
     msg = Message()
-    try:
-      while self.running:
-        self.server.recv(self.server_credit)
-        self.process_incoming(msg)
-    except Timeout:
-      print "server timed out"
+    while self.running:
+      self.server_is_running_event.set()
+      self.server.recv(self.server_credit)
+      self.process_incoming(msg)
     self.server.stop()
     self.running = False
 
