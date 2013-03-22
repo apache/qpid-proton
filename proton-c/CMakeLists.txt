@@ -329,12 +329,15 @@ endif(MSVC)
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
-  # Substitute windows separators in path and remove empty entries
+  # Substitute windows separators in path and remove empty entries.
+  # Replace necessary colons after windows drive letters.
   function(set_path result path)
-    string (REGEX REPLACE "^:" "" path "${path}")
-    string (REGEX REPLACE "::" ":" path "${path}")
-    string (REGEX REPLACE "\\\\" "/" path "${path}")
     string (REGEX REPLACE ":" ";" path "${path}")
+    string (REGEX REPLACE ";;" ";" path "${path}")
+    string (REGEX REPLACE "^;" "" path "${path}")
+    string (REGEX REPLACE "\\\\" "/" path "${path}")
+    string (REGEX REPLACE ";([a-zA-Z]);" ";\\1:" path "${path}")
+    string (REGEX REPLACE "^([a-zA-Z]);" "\\1:" path "${path}")
     set (${result} ${path} PARENT_SCOPE)
   endfunction()
 
@@ -359,9 +362,11 @@ set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
 set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
 set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}")
 set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bld}")
-
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 add_test (python-test python ${env_py} "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
-  "${py_root}/proton-test")
+  ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
 
 find_program(ruby_exe "ruby")
 if (ruby_exe)
