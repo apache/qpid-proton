@@ -29,9 +29,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "util.h"
-#include "platform.h"
-#include "platform_fmt.h"
+#include "../util.h"
+#include "../platform.h"
+#include "../platform_fmt.h"
 
 typedef struct {
   size_t capacity;
