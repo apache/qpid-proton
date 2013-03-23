@@ -32,8 +32,6 @@ if not args:
 mng = Messenger()
 mng.start()
 
-import uuid
-
 msg = Message()
 for m in args:
   msg.address = opts.address
