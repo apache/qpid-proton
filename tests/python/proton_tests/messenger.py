@@ -341,9 +341,9 @@ class MessengerTest(Test):
 
   def testRoute(self):
     self.server.subscribe("amqps://~0.0.0.0:12346")
+    self.start()
     self.client.route("route1", "amqp://0.0.0.0:12345")
     self.client.route("route2", "amqps://0.0.0.0:12346")
-    self.start()
 
     msg = Message()
     msg.address = "route1"
@@ -364,8 +364,8 @@ class MessengerTest(Test):
     assert reply.body == "test"
 
   def testDefaultRoute(self):
-    self.client.route("*", "amqp://0.0.0.0:12345")
     self.start()
+    self.client.route("*", "amqp://0.0.0.0:12345")
 
     msg = Message()
     msg.address = "asdf"
@@ -379,8 +379,8 @@ class MessengerTest(Test):
     assert reply.body == "test"
 
   def testDefaultRouteSubstitution(self):
-    self.client.route("*", "amqp://0.0.0.0:12345/$1")
     self.start()
+    self.client.route("*", "amqp://0.0.0.0:12345/$1")
 
     msg = Message()
     msg.address = "asdf"
@@ -394,9 +394,9 @@ class MessengerTest(Test):
     assert reply.body == "test"
 
   def testIncomingRoute(self):
+    self.start()
     self.client.route("in", "amqp://~0.0.0.0:12346")
     self.client.subscribe("in")
-    self.start()
 
     msg = Message()
     msg.address = "amqp://0.0.0.0:12345"

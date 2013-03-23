@@ -489,6 +489,9 @@ send. Defaults to zero.
     """
     return pn_messenger_incoming(self._mng)
 
+  def route(self, pattern, host):
+    self._check(pn_messenger_route(self._mng, pattern, host))
+
 class Message(object):
   """
   The L{Message} class is a mutable holder of message content.

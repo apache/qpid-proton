@@ -1048,6 +1048,9 @@ class Messenger(object):
   def __init__(self, *args, **kwargs):
     self.impl = messengerFactory.createMessenger()
 
+  def route(self, *args, **kwargs):
+    raise Skipped()
+
   def start(self):
     self.impl.start()
 

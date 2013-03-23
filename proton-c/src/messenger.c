@@ -25,6 +25,7 @@
 #include <proton/ssl.h>
 #include <proton/buffer.h>
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -39,6 +40,42 @@ typedef struct {
   pn_sequence_t hwm;
   pn_delivery_t **deliveries;
 } pn_queue_t;
+
+typedef struct {
+  const char *start;
+  size_t size;
+} pn_group_t;
+
+#define MAX_GROUP (64)
+
+typedef struct {
+  size_t groups;
+  pn_group_t group[MAX_GROUP];
+} pn_matcher_t;
+
+#define PN_MAX_ADDR (1024)
+
+typedef struct {
+  char text[PN_MAX_ADDR + 1];
+  char *scheme;
+  char *user;
+  char *pass;
+  char *host;
+  char *port;
+  char *name;
+} pn_address_t;
+
+typedef struct pn_route_t pn_route_t;
+
+#define PN_MAX_PATTERN (255)
+#define PN_MAX_ROUTE (255)
+
+struct pn_route_t {
+  char pattern[PN_MAX_PATTERN + 1];
+  char address[PN_MAX_ROUTE + 1];
+  pn_route_t *next;
+};
+
 
 struct pn_messenger_t {
   char *name;
@@ -61,6 +98,9 @@ struct pn_messenger_t {
   pn_subscription_t *incoming_subscription;
   pn_buffer_t *buffer;
   pn_error_t *error;
+  pn_route_t *routes;
+  pn_matcher_t matcher;
+  pn_address_t address;
 };
 
 struct pn_subscription_t {
@@ -276,6 +316,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->incoming_subscription = NULL;
     m->buffer = pn_buffer(1024);
     m->error = pn_error();
+    m->routes = NULL;
   }
 
   return m;
@@ -363,6 +404,12 @@ void pn_messenger_free(pn_messenger_t *messenger)
       free(messenger->subscriptions[i].scheme);
     }
     free(messenger->subscriptions);
+    pn_route_t *route = messenger->routes;
+    while (route) {
+      pn_route_t *next = route->next;
+      free(route);
+      route = next;
+    }
     free(messenger);
   }
 }
@@ -734,16 +781,140 @@ static const char *default_port(const char *scheme)
   else
     return "5672";
 }
-pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, char *address, char **name)
+
+static void pni_sub(pn_matcher_t *matcher, size_t group, const char *text, size_t matched)
+{
+  if (group > matcher->groups) {
+    matcher->groups = group;
+  }
+  matcher->group[group].start = text - matched;
+  matcher->group[group].size = matched;
+}
+
+static bool pni_match_r(pn_matcher_t *matcher, const char *pattern, const char *text, size_t group, size_t matched)
+{
+  bool match;
+
+  char p = *pattern;
+  char c = *text;
+
+  switch (p) {
+  case '\0': return c == '\0';
+  case '%':
+  case '*':
+    switch (c) {
+    case '\0':
+      match = pni_match_r(matcher, pattern + 1, text, group + 1, 0);
+      if (match) pni_sub(matcher, group, text, matched);
+      return match;
+    case '/':
+      if (p == '%') {
+        match = pni_match_r(matcher, pattern + 1, text, group + 1, 0);
+        if (match) pni_sub(matcher, group, text, matched);
+        return match;
+      }
+    default:
+      match = pni_match_r(matcher, pattern, text + 1, group, matched + 1);
+      if (!match) {
+        match = pni_match_r(matcher, pattern + 1, text, group + 1, 0);
+        if (match) pni_sub(matcher, group, text, matched);
+      }
+      return match;
+    }
+  default:
+    return c == p && pni_match_r(matcher, pattern + 1, text + 1, group, 0);
+  }
+}
+
+static bool pni_match(pn_matcher_t *matcher, const char *pattern, const char *text)
+{
+  matcher->groups = 0;
+  if (pni_match_r(matcher, pattern, text, 1, 0)) {
+    matcher->group[0].start = text;
+    matcher->group[0].size = strlen(text);
+    return true;
+  } else {
+    matcher->groups = 0;
+    return false;
+  }
+}
+
+static void pni_substitute(pn_matcher_t *matcher, const char *pattern, char *dest)
+{
+  while (*pattern) {
+    switch (*pattern) {
+    case '$':
+      pattern++;
+      if (*pattern == '$') {
+        *dest++ = *pattern++;
+      } else {
+        size_t idx = 0;
+        while (isdigit(*pattern)) {
+          idx *= 10;
+          idx += *pattern++ - '0';
+        }
+
+        if (idx <= matcher->groups) {
+          pn_group_t *group = &matcher->group[idx];
+          for (size_t i = 0; i < group->size; i++) {
+            *dest++ = group->start[i];
+          }
+        }
+      }
+      break;
+    default:
+      *dest++ = *pattern++;
+      break;
+    }
+  }
+
+  *dest = '\0';
+}
+
+static void pni_parse(pn_address_t *address)
+{
+  address->scheme = NULL;
+  address->user = NULL;
+  address->pass = NULL;
+  address->host = NULL;
+  address->port = NULL;
+  address->name = NULL;
+  parse_url(address->text, &address->scheme, &address->user, &address->pass,
+            &address->host, &address->port, &address->name);
+}
+
+static pn_route_t *pni_route(pn_messenger_t *messenger, const char *address)
+{
+  pn_address_t *addr = &messenger->address;
+  pn_route_t *route = messenger->routes;
+  while (route) {
+    if (pni_match(&messenger->matcher, route->pattern, address)) {
+      pni_substitute(&messenger->matcher, route->address, addr->text);
+      pni_parse(addr);
+      return route;
+    }
+    route = route->next;
+  }
+
+  strcpy(addr->text, address);
+  pni_parse(addr);
+
+  return NULL;
+}
+
+pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
 {
   char domain[256];
   if (sizeof(domain) < strlen(address) + 1) return NULL;
-  char *scheme = NULL;
-  char *user = NULL;
-  char *pass = NULL;
-  char *host = (char *) "0.0.0.0";
-  char *port = NULL;
-  parse_url(address, &scheme, &user, &pass, &host, &port, name);
+
+  pni_route(messenger, address);
+
+  char *scheme = messenger->address.scheme;
+  char *user = messenger->address.user;
+  char *pass = messenger->address.pass;
+  char *host = messenger->address.host;
+  char *port = messenger->address.port;
+  *name = messenger->address.name;
 
   domain[0] = '\0';
 
@@ -809,15 +980,8 @@ void pn_subscription_set_context(pn_subscription_t *sub, void *context)
 
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
 {
-  char copy[256];
-  if (sizeof(copy) <= (address ? strlen(address) : 0)) return NULL;
-  if (address) {
-    strcpy(copy, address);
-  } else {
-    copy[0] = '\0';
-  }
   char *name = NULL;
-  pn_connection_t *connection = pn_messenger_resolve(messenger, copy, &name);
+  pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
   if (!connection) return NULL;
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
@@ -858,18 +1022,11 @@ pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
 
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
-  char copy[256];
-  if (strlen(source) >= sizeof(copy)) return NULL;
-  strcpy(copy, source);
+  pni_route(messenger, source);
 
-  char *scheme = NULL;
-  char *user = NULL;
-  char *pass = NULL;
-  char *host = (char *) "0.0.0.0";
-  char *port = NULL;
-  char *path = NULL;
-
-  parse_url(copy, &scheme, &user, &pass, &host, &port, &path);
+  char *scheme = messenger->address.scheme;
+  char *host = messenger->address.host;
+  char *port = messenger->address.port;
 
   if (host[0] == '~') {
     pn_listener_t *lnr = pn_listener(messenger->driver, host + 1,
@@ -1264,4 +1421,29 @@ int pn_messenger_outgoing(pn_messenger_t *messenger)
 int pn_messenger_incoming(pn_messenger_t *messenger)
 {
   return pn_messenger_queued(messenger, false);
+}
+
+int pn_messenger_route(pn_messenger_t *messenger, const char *pattern, const char *address)
+{
+  if (strlen(pattern) > PN_MAX_PATTERN || strlen(address) > PN_MAX_ROUTE) {
+    return PN_ERR;
+  }
+  pn_route_t *route = (pn_route_t *) malloc(sizeof(pn_route_t));
+  if (!route) return PN_ERR;
+
+  strcpy(route->pattern, pattern);
+  strcpy(route->address, address);
+  route->next = NULL;
+
+  pn_route_t *tail = messenger->routes;
+  if (!tail) {
+    messenger->routes = route;
+  } else {
+    while (tail->next) {
+      tail = tail->next;
+    }
+    tail->next = route;
+  }
+
+  return 0;
 }
