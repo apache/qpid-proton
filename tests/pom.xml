@@ -42,8 +42,6 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
     <!-- System tests are arranged by language, hence the non-default location of the JUnit tests. -->
     <testSourceDirectory>java</testSourceDirectory>
     <resources>
-      <resource><directory>python</directory></resource>
-      <resource><directory>interop</directory></resource>
       <resource><directory>resources</directory></resource>
     </resources>
     <plugins>
@@ -52,7 +50,9 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <protonJythonTestsXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestsXmlOutputDirectory>
+            <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
+            <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
+            <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>
             <java.util.logging.config.file>${build.outputDirectory}/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
          <reportsDirectory>${testReportOutputDirectory}</reportsDirectory>

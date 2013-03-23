@@ -23,8 +23,7 @@ package org.apache.qpid.proton;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.io.FileNotFoundException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,37 +39,34 @@ import org.python.util.PythonInterpreter;
  */
 public class JythonTest
 {
-
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
-    /** System property is defined in test/pom.xml */
-    private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestsXmlOutputDirectory";
+    /* System properties expected to be defined in test/pom.xml */
+    private static final String PROTON_JYTHON_TEST_ROOT = "protonJythonTestRoot";
+    private static final String PROTON_JYTHON_TEST_SCRIPT = "protonJythonTestScript";
+    private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestXmlOutputDirectory";
+
     /** Name of the junit style xml report to be written by the python test script */
     private static final String XML_REPORT_NAME = "TEST-jython-test-results.xml";
 
     private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
-    private static final String PROTON_TEST_SCRIPT_CLASSPATH_LOCATION = "/proton-test";
 
     @Test
     public void test() throws Exception
     {
-        File protonScriptFile = getPythonTestScript();
-        String parentDirectory = protonScriptFile.getParent();
+        String testScript = getJythonTestScript();
+        String testRoot = getJythonTestRoot();
         String xmlReportFile = getOptionalXmlReportFilename();
 
         PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile);
+        interp.getSystemState().path.insert(0, new PyString(testRoot));
 
-        LOGGER.info("About to call Jython test script: " + protonScriptFile + " with parent directory added to Jython path");
-
-        interp.exec(
-        "import sys\n"+
-        "sys.path.insert(0,\""+parentDirectory+"\")\n"
-        );
+        LOGGER.info("About to call Jython test script: '" + testScript
+                + "' with '" + testRoot + "' added to Jython path");
 
         try
         {
-            String protonTestPyPath = protonScriptFile.getAbsolutePath();
-            interp.execfile(protonTestPyPath);
+            interp.execfile(testScript);
         }
         catch (PyException e)
         {
@@ -112,11 +108,27 @@ public class JythonTest
         return interp;
     }
 
-    private File getPythonTestScript() throws URISyntaxException
+    private String getJythonTestScript() throws FileNotFoundException
     {
-        URL protonScriptUrl = getClass().getResource(PROTON_TEST_SCRIPT_CLASSPATH_LOCATION);
-        File protonScriptFile = new File(protonScriptUrl.toURI());
-        return protonScriptFile;
+        String testScriptString = getNonNullSystemProperty(PROTON_JYTHON_TEST_SCRIPT, "System property '%s' must provide the location of the python test script");
+        File testScript = new File(testScriptString);
+        if (!testScript.canRead())
+        {
+            throw new FileNotFoundException("Can't read python test script " + testScript);
+        }
+        return testScript.getAbsolutePath();
+    }
+
+
+    private String getJythonTestRoot() throws FileNotFoundException
+    {
+        String testRootString = getNonNullSystemProperty(PROTON_JYTHON_TEST_ROOT, "System property '%s' must provide the location of the python test root");
+        File testRoot = new File(testRootString);
+        if (!testRoot.isDirectory())
+        {
+            throw new FileNotFoundException("Test root '" + testRoot + "' should be a directory.");
+        }
+        return testRoot.getAbsolutePath();
     }
 
     private String getOptionalXmlReportFilename()
@@ -147,5 +159,16 @@ public class JythonTest
                 throw new RuntimeException("Failed to create one or more directories with path " + xmlOutputDirString);
             }
         }
+    }
+
+    private String getNonNullSystemProperty(String systemProperty, String messageWithStringFormatToken)
+    {
+        String testScriptString = System.getProperty(systemProperty);
+        if (testScriptString == null)
+        {
+            String message = messageWithStringFormatToken;
+            throw new IllegalStateException(String.format(message, systemProperty));
+        }
+        return testScriptString;
     }
 }
