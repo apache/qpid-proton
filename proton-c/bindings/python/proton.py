@@ -489,8 +489,8 @@ send. Defaults to zero.
     """
     return pn_messenger_incoming(self._mng)
 
-  def route(self, pattern, host):
-    self._check(pn_messenger_route(self._mng, pattern, host))
+  def route(self, pattern, address):
+    self._check(pn_messenger_route(self._mng, pattern, address))
 
 class Message(object):
   """
