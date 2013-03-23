@@ -839,14 +839,19 @@ static bool pni_match(pn_matcher_t *matcher, const char *pattern, const char *te
   }
 }
 
-static void pni_substitute(pn_matcher_t *matcher, const char *pattern, char *dest)
+static size_t pni_substitute(pn_matcher_t *matcher, const char *pattern, char *dest, size_t limit)
 {
+  size_t result = 0;
+
   while (*pattern) {
     switch (*pattern) {
     case '$':
       pattern++;
       if (*pattern == '$') {
-        *dest++ = *pattern++;
+        if (result < limit) {
+          *dest++ = *pattern++;
+        }
+        result++;
       } else {
         size_t idx = 0;
         while (isdigit(*pattern)) {
@@ -857,18 +862,29 @@ static void pni_substitute(pn_matcher_t *matcher, const char *pattern, char *des
         if (idx <= matcher->groups) {
           pn_group_t *group = &matcher->group[idx];
           for (size_t i = 0; i < group->size; i++) {
-            *dest++ = group->start[i];
+            if (result < limit) {
+              *dest++ = group->start[i];
+            }
+            result++;
           }
         }
       }
       break;
     default:
-      *dest++ = *pattern++;
+      if (result < limit) {
+        *dest++ = *pattern++;
+      }
+      result++;
       break;
     }
   }
 
-  *dest = '\0';
+  if (result < limit) {
+    *dest = '\0';
+  }
+  result++;
+
+  return result;
 }
 
 static void pni_parse(pn_address_t *address)
@@ -889,9 +905,16 @@ static pn_route_t *pni_route(pn_messenger_t *messenger, const char *address)
   pn_route_t *route = messenger->routes;
   while (route) {
     if (pni_match(&messenger->matcher, route->pattern, address)) {
-      pni_substitute(&messenger->matcher, route->address, addr->text);
-      pni_parse(addr);
-      return route;
+      size_t n = pni_substitute(&messenger->matcher, route->address, addr->text, PN_MAX_ADDR);
+      if (n < PN_MAX_ADDR) {
+        pni_parse(addr);
+        return route;
+      } else {
+        pn_error_format(messenger->error, PN_ERR,
+                        "routing address exceeded maximum length: (%s -> %s)",
+                        route->pattern, route->address);
+        return NULL;
+      }
     }
     route = route->next;
   }
@@ -904,10 +927,15 @@ static pn_route_t *pni_route(pn_messenger_t *messenger, const char *address)
 
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
 {
-  char domain[256];
-  if (sizeof(domain) < strlen(address) + 1) return NULL;
+  char domain[1024];
+  if (sizeof(domain) < strlen(address) + 1) {
+    pn_error_format(messenger->error, PN_ERR,
+                    "address exceeded maximum length: %s", address);
+    return NULL;
+  }
 
   pni_route(messenger, address);
+  if (pn_error_code(messenger->error)) return NULL;
 
   char *scheme = messenger->address.scheme;
   char *user = messenger->address.user;
@@ -947,7 +975,13 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   pn_connector_t *connector = pn_connector(messenger->driver, host,
                                            port ? port : default_port(scheme),
                                            NULL);
-  if (!connector) return NULL;
+  if (!connector) {
+    pn_error_format(messenger->error, PN_ERR,
+                    "unable to connect to %s: %s", address,
+                    pn_driver_error(messenger->driver));
+    return NULL;
+  }
+
   pn_connection_t *connection =
     pn_messenger_connection(messenger, scheme, user, pass, host, port);
   pn_transport_config(messenger, connector, connection);
@@ -1023,6 +1057,7 @@ pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
 {
   pni_route(messenger, source);
+  if (pn_error_code(messenger->error)) return NULL;
 
   char *scheme = messenger->address.scheme;
   char *host = messenger->address.host;
@@ -1037,21 +1072,15 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
       return sub;
     } else {
       pn_error_format(messenger->error, PN_ERR,
-                      "unable to subscribe to source: %s (%s)", source,
+                      "unable to subscribe to address %s: %s", source,
                       pn_driver_error(messenger->driver));
       return NULL;
     }
   } else {
     pn_link_t *src = pn_messenger_source(messenger, source);
-    if (src) {
-      pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(src);
-      return sub;
-    } else {
-      pn_error_format(messenger->error, PN_ERR,
-                      "unable to subscribe to source: %s (%s)", source,
-                      pn_driver_error(messenger->driver));
-      return NULL;
-    }
+    if (!src) return NULL;
+    pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(src);
+    return sub;
   }
 }
 
@@ -1125,10 +1154,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
   outward_munge(messenger, msg);
   const char *address = pn_message_get_address(msg);
   pn_link_t *sender = pn_messenger_target(messenger, address);
-  if (!sender)
-    return pn_error_format(messenger->error, PN_ERR,
-                           "unable to send to address: %s (%s)", address,
-                           pn_driver_error(messenger->driver));
+  if (!sender) return pn_error_code(messenger->error);
 
   pn_buffer_t *buf = messenger->buffer;
 
