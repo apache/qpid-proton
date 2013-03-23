@@ -338,3 +338,73 @@ class MessengerTest(Test):
 
     # need to restart client, as teardown() uses it to stop server
     self.client.start()
+
+  def testRoute(self):
+    self.server.subscribe("amqps://~0.0.0.0:12346")
+    self.client.route("route1", "amqp://0.0.0.0:12345")
+    self.client.route("route2", "amqps://0.0.0.0:12346")
+    self.start()
+
+    msg = Message()
+    msg.address = "route1"
+    msg.body = "test"
+    self.client.put(msg)
+    self.client.recv(1)
+
+    reply = Message()
+    self.client.get(reply)
+
+    msg = Message()
+    msg.address = "route2"
+    msg.body = "test"
+    self.client.put(msg)
+    self.client.recv(1)
+
+    self.client.get(reply)
+    assert reply.body == "test"
+
+  def testDefaultRoute(self):
+    self.client.route("*", "amqp://0.0.0.0:12345")
+    self.start()
+
+    msg = Message()
+    msg.address = "asdf"
+    msg.body = "test"
+
+    self.client.put(msg)
+    self.client.recv(1)
+
+    reply = Message()
+    self.client.get(reply)
+    assert reply.body == "test"
+
+  def testDefaultRouteSubstitution(self):
+    self.client.route("*", "amqp://0.0.0.0:12345/$1")
+    self.start()
+
+    msg = Message()
+    msg.address = "asdf"
+    msg.body = "test"
+
+    self.client.put(msg)
+    self.client.recv(1)
+
+    reply = Message()
+    self.client.get(reply)
+    assert reply.body == "test"
+
+  def testIncomingRoute(self):
+    self.client.route("in", "amqp://~0.0.0.0:12346")
+    self.client.subscribe("in")
+    self.start()
+
+    msg = Message()
+    msg.address = "amqp://0.0.0.0:12345"
+    msg.reply_to = "amqp://0.0.0.0:12346"
+    msg.body = "test"
+
+    self.client.put(msg)
+    self.client.recv(1)
+    reply = Message()
+    self.client.get(reply)
+    assert reply.body == "test"
