@@ -53,7 +53,7 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
             <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
             <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
             <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>
-            <java.util.logging.config.file>${build.outputDirectory}/logging.properties</java.util.logging.config.file>
+            <java.util.logging.config.file>${project.build.outputDirectory}/logging.properties</java.util.logging.config.file>
           </systemPropertyVariables>
          <reportsDirectory>${testReportOutputDirectory}</reportsDirectory>
         </configuration>
