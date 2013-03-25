@@ -1955,9 +1955,9 @@ void pn_data_dump(pn_data_t *data)
     pn_bytes_t bytes = pn_bytes(1024, buf);
     pn_format_atom(&bytes, node->atom);
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
-           ", children=%" PN_ZI ", type=%i (%s)\n",
-           i + 1, node->prev, node->next, node->parent, node->down, node->children, node->atom.type,
-           buf);
+           ", children=%" PN_ZI ", type=%s (%s)\n",
+           i + 1, node->prev, node->next, node->parent, node->down, node->children,
+           pn_type_name(node->atom.type), buf);
   }
 }
 
