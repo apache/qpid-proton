@@ -56,14 +56,21 @@ module Qpid
     # * *NULL*
     # * *BOOL*
     # * *UBYTE*
+    # * *BYTE*
     # * *USHORT*
     # * *SHORT*
     # * *UINT*
     # * *INT*
+    # * *CHAR*
     # * *ULONG*
     # * *LONG*
+    # * *TIMESTAMP*
     # * *FLOAT*
     # * *DOUBLE*
+    # * *DECIMAL32*
+    # * *DECIMAL64*
+    # * *DECIMAL128*
+    # * *UUID*
     # * *BINARY*
     # * *STRING*
     # * *SYMBOL*
