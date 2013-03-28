@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,13 +17,18 @@
 # under the License.
 #
 
-import proton_tests.codec
-import proton_tests.engine
-import proton_tests.message
-import proton_tests.messenger
-import proton_tests.sasl
-import proton_tests.transport
-import proton_tests.ssl
-import proton_tests.interop
-import proton_tests.soak
+add_executable(msgr-recv msgr-recv.c msgr-common.c)
+add_executable(msgr-send msgr-send.c msgr-common.c)
 
+target_link_libraries(msgr-recv qpid-proton)
+target_link_libraries(msgr-send qpid-proton)
+
+set_target_properties (
+  msgr-recv msgr-send
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+)
+
+if (BUILD_WITH_CXX)
+  set_source_files_properties (msgr-recv.c msgr-send.c PROPERTIES LANGUAGE CXX)
+endif (BUILD_WITH_CXX)

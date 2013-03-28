@@ -19,7 +19,30 @@
 
 from random import randint
 from threading import Thread
+from socket import socket, AF_INET, SOCK_STREAM
 from proton import Driver, Connection, SASL, Endpoint, Delivery
+
+
+def free_tcp_ports(count=1):
+    """ return a list of 'count' TCP ports that are free to used (ie. unbound)
+    """
+    retry = 0
+    ports = []
+    sockets = []
+    while len(ports) != count:
+        port = randint(49152, 65535)
+        sockets.append( socket( AF_INET, SOCK_STREAM ) )
+        try:
+            sockets[-1].bind( ("0.0.0.0", port ) )
+            ports.append( port )
+            retry = 0
+        except:
+            retry += 1
+            assert retry != 100, "No free sockets available for test!"
+    for s in sockets:
+        s.close()
+    return ports
+
 
 class Test:
 

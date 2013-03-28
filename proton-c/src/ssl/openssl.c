@@ -1122,11 +1122,12 @@ static int init_ssl_socket( pn_ssl_t *ssl )
 static void release_ssl_socket( pn_ssl_t *ssl )
 {
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
-  if (ssl->ssl) SSL_free(ssl->ssl);
-  else {
+  if (ssl->ssl) {
+      SSL_free(ssl->ssl);       // will free bio_ssl_io
+  } else {
     if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
-    if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
   }
+  if (ssl->bio_net_io) BIO_free(ssl->bio_net_io);
   ssl->bio_ssl = NULL;
   ssl->bio_ssl_io = NULL;
   ssl->bio_net_io = NULL;

@@ -217,6 +217,7 @@ endif (SWIG_FOUND)
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../examples/messenger/c examples/messenger/c)
+add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 set (qpid-proton-platform
   ${pn_driver_impl}
@@ -355,18 +356,30 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
 
-# python test: tests/ruby/proton-test
+find_program(VALGRIND valgrind DOC "Location of the valgrind program")
+option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
+if (ENABLE_VALGRIND AND NOT VALGRIND)
+  message(STATUS "Can't locate the valgrind command; no run-time error detection")
+else (ENABLE_VALGRIND AND NOT VALGRIND)
+  set (VALGRIND_ENV "VALGRIND=1")
+endif (ENABLE_VALGRIND AND NOT VALGRIND)
+
+
+# python test: tests/python/proton-test
 set (py_root "${pn_test_root}/python")
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
 set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
-set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}")
+set (app_path "${pn_test_bin}/tools/apps/c${bld_suffix}")
+set (app_path "${app_path}:${pn_test_root}/tools/apps/python")
+set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}:${app_path}")
 set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bld}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-add_test (python-test python ${env_py} "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
-  ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+add_test (python-test python ${env_py}
+         "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+         ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
 
 find_program(ruby_exe "ruby")
 if (ruby_exe)

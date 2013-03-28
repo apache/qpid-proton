@@ -61,3 +61,19 @@ export RUBYLIB=$RUBY_BINDINGS:$PROTON_HOME/proton-c/bindings/ruby/lib:$PROTON_HO
 # Perl
 export PERL_BINDINGS=$PROTON_BINDINGS/perl
 export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
+
+# test applications
+if [ -d $PROTON_HOME/build/tests/tools/apps/c ]; then
+    export PATH="$PATH:$PROTON_HOME/build/tests/tools/apps/c"
+fi
+if [ -d $PROTON_HOME/tests/tools/apps/python ]; then
+    export PATH="$PATH:$PROTON_HOME/tests/tools/apps/python"
+fi
+
+# test applications
+export PATH="$PATH:$PROTON_HOME/tests/python"
+
+# can the test harness use valgrind?
+if [[ -x "$(type -p valgrind)" ]] ; then
+    export VALGRIND=1
+fi

@@ -1,0 +1,13 @@
+{
+   SSL ssl3_ctx_ctrl uses uninitialized data (expected) - 1
+   Memcheck:Value8
+   ...
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL ssl3_ctx_ctrl uses uninitialized data (expected) - 2
+   Memcheck:Cond
+   ...
+   fun:ssl3_ctx_ctrl
+}

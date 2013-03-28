@@ -42,7 +42,7 @@ message(STATUS "PN_VERSION: ${PN_VERSION}")
 enable_testing()
 include (CTest)
 set (pn_test_root "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-
+set (pn_test_bin "${CMAKE_CURRENT_BINARY_DIR}/tests")
 
 # In rpm builds the build sets some variables:
 #  CMAKE_INSTALL_PREFIX - this is a standard cmake variable

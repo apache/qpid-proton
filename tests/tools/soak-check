@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+import sys, optparse
+from subprocess import Popen,PIPE
+
+def run_test(cmd):
+    try:
+        process = Popen(cmd)
+    except OSError, e:
+        assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
+    return process.wait()
+
+
+def main(argv=None):
+    """
+    Run a subset of the Proton tests for an extended period of time.
+    """
+
+    # tests is a list of test configurations.  Each configuration is
+    # represented as a two-element tuple.  Tuple[0] is the pattern passed to
+    # proton-test that identifies the test case.  Tuple[1] is a list of maps.
+    # Each map contains the parameters for one test.  A test (of 'pattern') is
+    # executed for each map in Tuple[1]
+
+    parser = optparse.OptionParser()
+    parser.add_option("-i", "--iterations", action="store", type="int", default=1,
+                      help="# of times to repeat each test.")
+    parser.add_option("-v", "--verbose", action="store_true",
+                      help="print extra detail to stdout")
+    opts, extra = parser.parse_args(args=argv)
+
+    iterations = opts.iterations
+    verbose = opts.verbose
+
+    tests = [
+
+        ("proton_tests.soak.MessengerTests.test_oneway_*",
+         # 104,297 * 7 = 730,079 msgs transferred per iteration
+         [{ "iterations": iterations,
+            "send_count": 104297,
+            "target_count": 7 }]),
+
+        ("proton_tests.soak.MessengerTests.test_echo_*",
+         # 102,811 * 5 * 2 (send+reply) = 1,028,110 msgs transferred per iteration
+         [{"iterations": iterations,
+           "send_count": 102811,
+           "target_count": 5,
+           "send_batch": 3187}]),
+
+        ("proton_tests.soak.MessengerTests.test_relay_*",
+         # 102,197 * 4 * 3 (send+reply+forward)= 1,226,364 msgs transferred per iteration
+         [{"iterations": iterations,
+           "send_count": 102197,
+           "target_count": 4,
+           "send_batch": 829,
+           "forward_count": 7}]),
+
+        ("proton_tests.soak.MessengerTests.test_star_topology_*",
+         # 2 ports * 3 senders = 6 connections per iteration
+         # 6 connections * 7 targets = 42 links per iteration
+         # 42 links * 35419 msg * 2 (send/reply) = 2,975,196 msgs per iteration
+         [{"iterations": iterations,
+           "port_count": 2,
+           "sender_count": 3,
+           "target_count": 7,
+           "send_count": 35419,
+           "send_batch": 311}]),
+
+        #
+        # Scale up the number of connections and links
+        #
+
+        ("proton_tests.soak.MessengerTests.test_star_topology_C",
+         # 10 ports * 10 senders = 100 connections per iteration
+         # 100 connections * 11 targets = 1100 links per iteration
+         # 1100 links * 311 msg * 2 (send/reply) = 684,200 msgs per iteration
+         [{"iterations": iterations,
+           "port_count": 10,
+           "sender_count": 10,
+           "target_count": 11,
+           "send_count": 311,
+           "send_batch": 3}])
+        ]
+
+    for test in tests:
+        pattern = test[0]
+        param_list = test[1]
+        for test_params in param_list:
+            command = ["proton-test"]
+            for (k, v) in test_params.iteritems():
+                command.append( "-D%s=%s" % (k,v) )
+            if verbose:
+                command.append( "-Dverbose" )
+            command.append( pattern )
+            if verbose:
+                print "command='%s'" % str(command)
+            run_test(command)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
