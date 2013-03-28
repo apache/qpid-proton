@@ -23,7 +23,6 @@
 #include "proton/messenger.h"
 #include "proton/error.h"
 
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

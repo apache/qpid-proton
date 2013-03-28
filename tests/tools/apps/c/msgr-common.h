@@ -59,3 +59,10 @@ typedef struct {
 void statistics_start( Statistics_t *s );
 void statistics_msg_received( Statistics_t *s, pn_message_t *message );
 void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
+
+
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#include "../wincompat/getopt.h"
+#else
+#include <getopt.h>
+#endif
