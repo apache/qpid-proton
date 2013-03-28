@@ -380,6 +380,7 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 add_test (python-test python ${env_py}
          "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
          ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 find_program(ruby_exe "ruby")
 if (ruby_exe)
