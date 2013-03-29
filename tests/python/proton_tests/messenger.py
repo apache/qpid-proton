@@ -49,17 +49,19 @@ class Test(common.Test):
     self.client.start()
 
   def teardown(self):
-    if self.running:
-      # send a message to cause the server to promptly exit
-      self.running = False
-      msg = Message()
-      msg.address="amqp://0.0.0.0:12345"
-      self.client.put(msg)
-      self.client.send()
-    self.client.stop()
-    self.server_thread.join()
-    self.client = None
-    self.server = None
+    try:
+      if self.running:
+        # send a message to cause the server to promptly exit
+        self.running = False
+        msg = Message()
+        msg.address="amqp://0.0.0.0:12345"
+        self.client.put(msg)
+        self.client.send()
+    finally:
+      self.client.stop()
+      self.server_thread.join()
+      self.client = None
+      self.server = None
 
 REJECT_ME = "*REJECT-ME*"
 
@@ -67,12 +69,14 @@ class MessengerTest(Test):
 
   def run_server(self):
     msg = Message()
-    while self.running:
-      self.server_is_running_event.set()
-      self.server.recv(self.server_credit)
-      self.process_incoming(msg)
-    self.server.stop()
-    self.running = False
+    try:
+      while self.running:
+        self.server_is_running_event.set()
+        self.server.recv(self.server_credit)
+        self.process_incoming(msg)
+    finally:
+      self.server.stop()
+      self.running = False
 
   def process_incoming(self, msg):
     while self.server.incoming:
