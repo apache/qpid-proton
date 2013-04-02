@@ -129,12 +129,12 @@ void statistics_msg_received( Statistics_t *s, pn_message_t *message )
   }
 }
 
-void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received )
+void statistics_report( Statistics_t *s, unsigned long long sent, unsigned long long received )
 {
   pn_timestamp_t end = msgr_now() - s->start;
   double secs = end/(double)1000.0;
 
-  fprintf(stdout, "Messages sent: %lu recv: %lu\n", sent, received );
+  fprintf(stdout, "Messages sent: %llu recv: %llu\n", sent, received );
   fprintf(stdout, "Total time: %f sec\n", secs );
   fprintf(stdout, "Throughput: %f msgs/sec\n",  (secs != 0.0) ? (double)sent/secs : 0);
   fprintf(stdout, "Latency (sec): %f min %f max %f avg\n",

@@ -30,7 +30,7 @@
 
 typedef struct {
     Addresses_t subscriptions;
-    uint64_t msg_count;
+    unsigned long long msg_count;
     int recv_count;
     int incoming_window;
     int timeout;  // seconds
@@ -89,7 +89,7 @@ static void parse_options( int argc, char **argv, Options_t *opts )
                 {
                 case 'a': addresses_merge( &opts->subscriptions, optarg ); break;
                 case 'c':
-                    if (sscanf( optarg, "%lu", &opts->msg_count ) != 1) {
+                    if (sscanf( optarg, "%llu", &opts->msg_count ) != 1) {
                         fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
                         usage(1);
                     }
@@ -153,8 +153,8 @@ int main(int argc, char** argv)
 {
     Options_t opts;
     Statistics_t stats;
-    uint64_t sent = 0;
-    uint64_t received = 0;
+    unsigned long long sent = 0;
+    unsigned long long received = 0;
     int forwarding_index = 0;
     int rc;
 
@@ -250,7 +250,7 @@ int main(int argc, char** argv)
             }
 
         }
-        LOG("Messages received=%lu sent=%lu\n", received, sent);
+        LOG("Messages received=%llu sent=%llu\n", received, sent);
     }
 
     // this will flush any pending sends

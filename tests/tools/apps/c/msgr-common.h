@@ -58,7 +58,7 @@ typedef struct {
 
 void statistics_start( Statistics_t *s );
 void statistics_msg_received( Statistics_t *s, pn_message_t *message );
-void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
+void statistics_report( Statistics_t *s, unsigned long long sent, unsigned long long received );
 
 
 #if defined(_WIN32) && ! defined(__CYGWIN__)
