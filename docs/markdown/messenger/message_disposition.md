@@ -10,11 +10,11 @@ detect the disposition of their messages.
 Message States
 ---------------------------
 
-Messages have one of four different states:  
-  * `PN_STATUS_UNKNOWN`  
-  * `PN_STATUS_PENDING`  
-  * `PN_STATUS_ACCEPTED`  
-  * `PN_STATUS_REJECTED`  
+Messages have one of four different states:
+  * `PN_STATUS_UNKNOWN`
+  * `PN_STATUS_PENDING`
+  * `PN_STATUS_ACCEPTED`
+  * `PN_STATUS_REJECTED`
 
 <br/>
 
@@ -66,7 +66,6 @@ be changed, even if you have a separate tracker associated with it.
 
 <br/>
 <br/>
-   
 
 
 ### sending ###
@@ -76,7 +75,7 @@ if it has a positive outgoing window size:
 
         pn_messenger_set_outgoing_window ( messenger, N );
 
-and if a tracker has been associated with that message in question.  
+and if a tracker has been associated with that message in question.
 This call:
 
         pn_messenger_outgoing_tracker ( messenger );
@@ -93,7 +92,7 @@ The returned value will be one of
 
 * `PN_STATUS_ACCEPTED`
 * `PN_STATUS_REJECTED` , or
-* `PN_STATUS_PENDING` - If the receiver has not disposed the message yet.  
+* `PN_STATUS_PENDING` - If the receiver has not disposed the message yet.
 
 
 If either the sender or the receiver simply declares the message (or range of messages) to
@@ -107,14 +106,14 @@ settled messages.
 
 <br/>
 
-_Note_  
+_Note_
 If a message is rejected by the receiver, it does not mean that
 the message was malformed.  Malformed messages cannot be sent.
 Even messages with no content are valid messages.
 Rejection by a receiver should be understood as the receiver
-saying "I don't want this." or possibly  "I don't want this _yet_." 
+saying "I don't want this." or possibly  "I don't want this _yet_."
 dependeing on your application.
-The sender could decide to try sending the same message again later, 
+The sender could decide to try sending the same message again later,
 or to send the message to another receiver, or to discard it.
 
 

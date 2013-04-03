@@ -24,5 +24,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>proton-api</artifactId>
+  <name>proton-api</name>
+  <scm>
+    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
+  </scm>
 
 </project>

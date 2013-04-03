@@ -24,6 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>proton-j</artifactId>
+  <name>proton-j</name>
   <packaging>pom</packaging>
 
   <dependencies>
@@ -41,5 +42,8 @@
     <module>contrib/proton-jms</module>
     <module>contrib/proton-hawtdispatch</module>
   </modules>
+  <scm>
+    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
+  </scm>
     
 </project>

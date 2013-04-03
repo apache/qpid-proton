@@ -25,6 +25,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>proton-hawtdispatch</artifactId>
+  <name>proton-hawtdispatch</name>
 
   <properties>
     <hawtbuf-version>1.9</hawtbuf-version>
@@ -53,5 +54,8 @@
 
   <build> 
   </build>
+  <scm>
+    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
+  </scm>
 
 </project>

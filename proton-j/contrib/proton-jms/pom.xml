@@ -25,6 +25,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>proton-jms</artifactId>
+  <name>proton-jms</name>
 
   <dependencies>
     <dependency>
@@ -42,5 +43,8 @@
 
   <build> 
   </build>
+  <scm>
+    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
+  </scm>
 
 </project>

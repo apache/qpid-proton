@@ -3,7 +3,7 @@ Linux Quick Start
 
 
 On a Linux system, these instructions take you from
-zero to running your first example code.  You will 
+zero to running your first example code.  You will
 need root privileges for one of the commands.
 
 
