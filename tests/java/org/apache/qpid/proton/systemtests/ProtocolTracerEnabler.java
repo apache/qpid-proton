@@ -48,15 +48,18 @@ public class ProtocolTracerEnabler
 
             setPrococolTracerMethod.invoke(transport, newLoggingProtocolTracer);
         }
-        catch(ClassNotFoundException e)
-        {
-            LOGGER.fine("Protocol tracing disabled because unable to reflectively set a "
-                    + LOGGING_PROTOCOL_TRACER_CLASS_NAME + " instance on the supplied transport which is a: "
-                    + transport.getClass().getName());
-        }
         catch(Exception e)
         {
-            throw new RuntimeException("Unable to set up protocol tracing", e);
+            if(e instanceof ClassNotFoundException || e instanceof NoSuchMethodException)
+            {
+                LOGGER.fine("Protocol tracing disabled because unable to reflectively set a "
+                        + LOGGING_PROTOCOL_TRACER_CLASS_NAME + " instance on the supplied transport which is a: "
+                        + transport.getClass().getName());
+            }
+            else
+            {
+                throw new RuntimeException("Unable to set up protocol tracing", e);
+            }
         }
     }
 }

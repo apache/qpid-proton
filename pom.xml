@@ -89,6 +89,8 @@
       <id>proton-jni</id>
       <modules>
         <module>proton-j/proton-api</module>
+        <!--proton-j-impl is required so we can use its EncoderImpl and DecoderImpl to generate test data -->
+        <module>proton-j/proton</module>
         <module>tests</module>
       </modules>
     </profile>

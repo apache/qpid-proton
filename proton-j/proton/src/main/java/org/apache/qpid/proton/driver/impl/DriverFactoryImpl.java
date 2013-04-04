@@ -21,17 +21,15 @@ package org.apache.qpid.proton.driver.impl;
 
 import java.io.IOException;
 
+import org.apache.qpid.proton.ProtonFactoryImpl;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.DriverFactory;
 
-public class DriverFactoryImpl implements DriverFactory
+public class DriverFactoryImpl extends ProtonFactoryImpl implements DriverFactory
 {
-
     @Override
     public Driver createDriver() throws IOException
     {
         return new DriverImpl();
     }
-
-
 }

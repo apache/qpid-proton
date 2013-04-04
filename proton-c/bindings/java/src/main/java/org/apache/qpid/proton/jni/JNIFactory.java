@@ -21,7 +21,9 @@ package org.apache.qpid.proton.jni;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public abstract class JNIFactory
+import org.apache.qpid.proton.ProtonFactory;
+
+public abstract class JNIFactory implements ProtonFactory
 {
     private static final Logger LOGGER = Logger.getLogger(JNIFactory.class.getName());
 
@@ -42,4 +44,9 @@ public abstract class JNIFactory
         }
     }
 
+    @Override
+    public final ImplementationType getImplementationType()
+    {
+        return ImplementationType.PROTON_C;
+    }
 }

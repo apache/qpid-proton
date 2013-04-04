@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-package org.apache.qpid.proton.codec.impl;
+package org.apache.qpid.proton.factoryloadertesting;
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
 
-public class DataFactoryImpl extends ProtonFactoryImpl implements DataFactory
+public class DummyProtonCFactory implements DummyProtonFactory
 {
     @Override
-    public Data createData(final long capacity)
+    public ImplementationType getImplementationType()
     {
-        // TODO
-        throw new ProtonUnsupportedOperationException();
+        return ImplementationType.PROTON_C;
     }
 }

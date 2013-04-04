@@ -19,7 +19,9 @@
  */
 package org.apache.qpid.proton.messenger;
 
-public interface MessengerFactory
+import org.apache.qpid.proton.ProtonFactory;
+
+public interface MessengerFactory extends ProtonFactory
 {
     Messenger createMessenger();
     Messenger createMessenger(String name);

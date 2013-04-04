@@ -37,6 +37,9 @@ public interface Connection extends Endpoint
 {
     /**
      * Returns a newly created session
+     *
+     * TODO does the Connection's channel-max property limit how many sessions can be created,
+     * or opened, or neither?
      */
     public Session session();
 
@@ -45,6 +48,8 @@ public interface Connection extends Endpoint
      *
      * Typically used to discover sessions whose remote state has acquired
      * particular values, e.g. sessions that have been remotely opened or closed.
+     *
+     * TODO what ordering guarantees on the returned "linked list" are provided?
      *
      * @see Session#next(EnumSet, EnumSet)
      */

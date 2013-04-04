@@ -20,7 +20,9 @@
  */
 package org.apache.qpid.proton.codec;
 
-public interface DataFactory
+import org.apache.qpid.proton.ProtonFactory;
+
+public interface DataFactory extends ProtonFactory
 {
     Data createData(long capacity);
 }

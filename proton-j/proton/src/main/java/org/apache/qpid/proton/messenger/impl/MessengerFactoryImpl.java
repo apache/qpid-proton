@@ -19,10 +19,11 @@
  */
 package org.apache.qpid.proton.messenger.impl;
 
+import org.apache.qpid.proton.ProtonFactoryImpl;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerFactory;
 
-public class MessengerFactoryImpl implements MessengerFactory
+public class MessengerFactoryImpl extends ProtonFactoryImpl implements MessengerFactory
 {
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override

@@ -21,7 +21,9 @@ package org.apache.qpid.proton.driver;
 
 import java.io.IOException;
 
-public interface DriverFactory
+import org.apache.qpid.proton.ProtonFactory;
+
+public interface DriverFactory extends ProtonFactory
 {
     Driver createDriver() throws IOException;
 }

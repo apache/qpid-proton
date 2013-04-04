@@ -39,12 +39,9 @@ import java.util.Formatter;
 
 class FrameParser implements TransportInput
 {
-
     public static final byte[] HEADER = new byte[8];
 
-    private ErrorCondition _localError;
     private Logger _traceLogger = Logger.getLogger("proton.trace");
-    private Logger _rawLogger = Logger.getLogger("proton.raw");
     private FrameTransport _frameTransport;
     private TransportFrame _heldFrame;
 
@@ -322,8 +319,6 @@ class FrameParser implements TransportInput
                         {
                             ByteBuffer dup = in.duplicate();
                             dup.limit(dup.position()+_buffer.remaining());
-                            int i = _buffer.remaining();
-                            int d = dup.remaining();
                             in.position(in.position()+_buffer.remaining());
                             _buffer.put(dup);
                             oldIn = in;
@@ -362,17 +357,19 @@ class FrameParser implements TransportInput
                         break;
                     }
 
+                    // note that this skips over the extended header if it's present
                     if(dataOffset!=8)
                     {
                         in.position(in.position()+dataOffset-8);
                     }
 
                     // oldIn null iff not working on duplicated buffer
+                    final int frameBodySize = size - dataOffset;
                     if(oldIn == null)
                     {
                         oldIn = in;
                         in = in.duplicate();
-                        final int endPos = in.position() + size - dataOffset;
+                        final int endPos = in.position() + frameBodySize;
                         in.limit(endPos);
                         oldIn.position(endPos);
 
@@ -380,40 +377,50 @@ class FrameParser implements TransportInput
 
                     try
                     {
-                        _decoder.setByteBuffer(in);
-                        Object val = _decoder.readObject();
-
-                        Binary payload;
-
-                        if(in.hasRemaining())
+                        if (frameBodySize > 0)
                         {
-                            byte[] payloadBytes = new byte[in.remaining()];
-                            in.get(payloadBytes);
-                            payload = new Binary(payloadBytes);
+
+                            _decoder.setByteBuffer(in);
+                            Object val = _decoder.readObject();
+
+                            Binary payload;
+
+                            if(in.hasRemaining())
+                            {
+                                byte[] payloadBytes = new byte[in.remaining()];
+                                in.get(payloadBytes);
+                                payload = new Binary(payloadBytes);
+                            }
+                            else
+                            {
+                                payload = null;
+                            }
+
+                            if(val instanceof FrameBody)
+                            {
+                                FrameBody frameBody = (FrameBody) val;
+                                if(_traceLogger.isLoggable(Level.FINE))
+                                {
+                                    _traceLogger.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
+                                }
+                                TransportFrame frame = new TransportFrame(channel, frameBody, payload);
+                                if(!_frameTransport.input(frame))
+                                {
+                                    transportAccepting = false;
+                                    _heldFrame = frame;
+                                }
+
+                            }
+                            else
+                            {
+                                throw new TransportException("Frameparser encountered a "
+                                        + (val == null? "null" : val.getClass())
+                                        + " which is not a " + FrameBody.class);
+                            }
                         }
                         else
                         {
-                            payload = null;
-                        }
-
-                        if(val instanceof FrameBody)
-                        {
-                            FrameBody frameBody = (FrameBody) val;
-                            if(_traceLogger.isLoggable(Level.FINE))
-                            {
-                                _traceLogger.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
-                            }
-                            TransportFrame frame = new TransportFrame(channel, frameBody, payload);
-                            if(!_frameTransport.input(frame))
-                            {
-                                transportAccepting = false;
-                                _heldFrame = frame;
-                            }
-
-                        }
-                        else
-                        {
-                            // TODO - error
+                            _traceLogger.finest("Ignored empty frame");
                         }
                         reset();
                         in = oldIn;
@@ -436,7 +443,6 @@ class FrameParser implements TransportInput
         _state = state;
         _size = size;
 
-        _localError = frameParsingError;
         if(_state == State.ERROR )
         {
             throw new TransportException(frameParsingError.getDescription());
@@ -453,6 +459,7 @@ class FrameParser implements TransportInput
 
     private ErrorCondition createFramingError(String description, Object... args)
     {
+        @SuppressWarnings("resource")
         Formatter formatter = new Formatter();
         formatter.format(description, args);
 

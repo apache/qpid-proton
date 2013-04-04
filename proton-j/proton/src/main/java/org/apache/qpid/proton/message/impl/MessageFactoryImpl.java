@@ -18,6 +18,7 @@
  */
 package org.apache.qpid.proton.message.impl;
 
+import org.apache.qpid.proton.ProtonFactoryImpl;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Footer;
@@ -28,7 +29,7 @@ import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.message.ProtonJMessage;
 
-public class MessageFactoryImpl implements MessageFactory
+public class MessageFactoryImpl extends ProtonFactoryImpl implements MessageFactory
 {
 
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)

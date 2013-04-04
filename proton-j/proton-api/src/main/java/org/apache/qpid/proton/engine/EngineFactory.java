@@ -18,7 +18,9 @@
  */
 package org.apache.qpid.proton.engine;
 
-public interface EngineFactory
+import org.apache.qpid.proton.ProtonFactory;
+
+public interface EngineFactory extends ProtonFactory
 {
     Connection createConnection();
     Transport createTransport();

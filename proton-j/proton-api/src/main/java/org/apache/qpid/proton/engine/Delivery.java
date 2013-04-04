@@ -58,7 +58,10 @@ public interface Delivery
     public void settle();
 
     /**
-     * Returns whether this delivery has been locally settled.
+     * Returns whether this delivery has been settled.
+     *
+     * TODO proton-j and proton-c return the local and remote statuses. Resolve this ambiguity.
+     *
      * @see #settle()
      */
     public boolean isSettled();

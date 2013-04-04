@@ -23,13 +23,21 @@ import java.util.ServiceLoader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.ProtonFactory.ImplementationType;
+
 /**
  * A thin wrapper around {@link ServiceLoader} intended for loading Proton object factories.
+ *
+ * If system property {@value #IMPLEMENTATION_TYPE_PROPERTY} if set, loads a factory
+ * whose {@link ImplementationType} matches its value.
  */
-public class ProtonFactoryLoader<C>
+public class ProtonFactoryLoader<C extends ProtonFactory>
 {
+    public static final String IMPLEMENTATION_TYPE_PROPERTY = "qpid.proton.implementationtype";
+
     private static final Logger LOGGER = Logger.getLogger(ProtonFactoryLoader.class.getName());
-    private Class<C> _factoryInterface;
+    private final Class<C> _factoryInterface;
+    private final ImplementationType _implementationType;
 
     /**
      * Use this constructor if you intend to explicitly provide factory interface later,
@@ -38,14 +46,34 @@ public class ProtonFactoryLoader<C>
      */
     public ProtonFactoryLoader()
     {
+        this(null);
+    }
+
+    public ProtonFactoryLoader(Class<C> factoryInterface)
+    {
+        this(factoryInterface, getImpliedImplementationType());
+    }
+
+    private static ImplementationType getImpliedImplementationType()
+    {
+        String implementationTypeFromSystemProperty = System.getProperty(IMPLEMENTATION_TYPE_PROPERTY);
+        if(implementationTypeFromSystemProperty != null)
+        {
+            return ImplementationType.valueOf(implementationTypeFromSystemProperty);
+        }
+        else
+        {
+            return ImplementationType.ANY;
+        }
     }
 
     /**
      * @param factoryInterface will be used as the factory interface class in calls to {@link #loadFactory()}.
      */
-    public ProtonFactoryLoader(Class<C> factoryInterface)
+    public ProtonFactoryLoader(Class<C> factoryInterface, ImplementationType implementationType)
     {
         _factoryInterface = factoryInterface;
+        _implementationType = implementationType;
     }
 
     /**
@@ -64,16 +92,20 @@ public class ProtonFactoryLoader<C>
         }
         ServiceLoader<C> serviceLoader = ServiceLoader.load(factoryInterface);
         Iterator<C> serviceLoaderIterator = serviceLoader.iterator();
-        if(!serviceLoaderIterator.hasNext())
+        while(serviceLoaderIterator.hasNext())
         {
-            throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName());
+            C factory = serviceLoaderIterator.next();
+            if(_implementationType == ImplementationType.ANY || factory.getImplementationType() == _implementationType)
+            {
+                if(LOGGER.isLoggable(Level.FINE))
+                {
+                    LOGGER.fine("loadFactory returning " + factory + " for loader's implementation type " + _implementationType);
+                }
+                return factory;
+            }
         }
-        C factory = serviceLoaderIterator.next();
-        if(LOGGER.isLoggable(Level.FINE))
-        {
-            LOGGER.fine("loadFactory returning " + factory);
-        }
-        return factory;
+        throw new IllegalStateException("Can't find service loader for " + factoryInterface.getName() +
+                                        " for implementation type " + _implementationType);
     }
 
 }

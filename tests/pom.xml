@@ -88,9 +88,19 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
-      <properties>
-        <protonJythonXmlOutput>wibble</protonJythonXmlOutput>
-      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <qpid.proton.implementationtype>PROTON_J</qpid.proton.implementationtype>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
       <dependencies>
         <dependency>
           <groupId>org.apache.qpid</groupId>
@@ -117,6 +127,9 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
             <configuration>
               <forkMode>once</forkMode>
               <argLine>-Djava.library.path=${jni-native-path}</argLine>
+              <systemPropertyVariables>
+                <qpid.proton.implementationtype>PROTON_C</qpid.proton.implementationtype>
+              </systemPropertyVariables>
             </configuration>
           </plugin>
         </plugins>
@@ -128,6 +141,13 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
           <version>${project.parent.version}</version>
           <scope>system</scope>
           <systemPath>${jni-jar}</systemPath>
+        </dependency>
+        <!-- proton-j-impl is required so we can use EncoderImpl and DecoderImpl to generate test data -->
+        <dependency>
+          <groupId>org.apache.qpid</groupId>
+          <artifactId>proton-j-impl</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <scope>runtime</scope>
         </dependency>
       </dependencies>
     </profile>

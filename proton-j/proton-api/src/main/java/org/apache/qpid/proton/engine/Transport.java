@@ -24,11 +24,13 @@ package org.apache.qpid.proton.engine;
 /**
  * Transport
  *
+ * TODO why do I implement Endpoint
  */
 
 public interface Transport extends Endpoint
 {
-
+    /** the lower bound for the agreed maximum frame size (in bytes). */
+    public int MIN_MAX_FRAME_SIZE = 512;
     public int SESSION_WINDOW = 1024;
     public int END_OF_STREAM = -1;
 

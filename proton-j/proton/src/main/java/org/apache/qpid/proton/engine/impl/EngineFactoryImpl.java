@@ -18,6 +18,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.ProtonFactoryImpl;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.ProtonJConnection;
 import org.apache.qpid.proton.engine.ProtonJSslDomain;
@@ -26,7 +27,7 @@ import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
 import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
 
-public class EngineFactoryImpl implements EngineFactory
+public class EngineFactoryImpl extends ProtonFactoryImpl implements EngineFactory
 {
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override

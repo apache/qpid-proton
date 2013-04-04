@@ -23,11 +23,6 @@ package org.apache.qpid.proton.engine;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 
-/**
- * Endpoint
- *
- */
-
 public interface Endpoint
 {
     /**

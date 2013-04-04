@@ -20,10 +20,12 @@
 package org.apache.qpid.proton.messenger.jni;
 
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
+import org.apache.qpid.proton.jni.JNIFactory;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerFactory;
 
-public class JNIMessengerFactory implements MessengerFactory
+
+public class JNIMessengerFactory extends JNIFactory implements MessengerFactory
 {
 
     @Override

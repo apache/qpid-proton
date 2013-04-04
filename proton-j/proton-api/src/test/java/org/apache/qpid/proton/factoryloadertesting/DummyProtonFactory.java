@@ -16,22 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.message;
+package org.apache.qpid.proton.factoryloadertesting;
 
 import org.apache.qpid.proton.ProtonFactory;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Footer;
-import org.apache.qpid.proton.amqp.messaging.Header;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Properties;
-import org.apache.qpid.proton.amqp.messaging.Section;
 
-public interface MessageFactory extends ProtonFactory
+public interface DummyProtonFactory extends ProtonFactory
 {
-    Message createMessage();
-    Message createMessage(Header header,
-                          DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
-                          Properties properties, ApplicationProperties applicationProperties,
-                          Section body, Footer footer);
 }
