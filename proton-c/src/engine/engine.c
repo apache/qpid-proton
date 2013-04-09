@@ -1196,6 +1196,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
+  } else {
+    assert(!delivery->tpwork);
   }
   delivery->link = link;
   pn_buffer_clear(delivery->tag);
@@ -1272,13 +1274,14 @@ void pn_delivery_dump(pn_delivery_t *d)
 
 void *pn_delivery_get_context(pn_delivery_t *delivery)
 {
-    return delivery ? delivery->context : NULL;
+  assert(delivery);
+  return delivery->context;
 }
 
 void pn_delivery_set_context(pn_delivery_t *delivery, void *context)
 {
-    if (delivery)
-        delivery->context = context;
+  assert(delivery);
+  delivery->context = context;
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
@@ -1350,7 +1353,6 @@ void pn_real_settle(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   LL_REMOVE(link, unsettled, delivery);
-  // TODO: what if we settle the current delivery?
   LL_ADD(link, settled, delivery);
   pn_buffer_clear(delivery->tag);
   pn_buffer_clear(delivery->bytes);
@@ -1359,6 +1361,7 @@ void pn_real_settle(pn_delivery_t *delivery)
 
 void pn_full_settle(pn_delivery_buffer_t *db, pn_delivery_t *delivery)
 {
+  assert(!delivery->work);
   pn_delivery_state_t *state = (pn_delivery_state_t *) delivery->transport_context;
   delivery->transport_context = NULL;
   if (state) state->delivery = NULL;
