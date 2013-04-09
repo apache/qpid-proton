@@ -824,12 +824,19 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
   }
 
   struct timeval to = {0};
-  if (timeout > 0) {
-    // convert millisecs to sec and usec:
-    to.tv_sec = timeout/1000;
-    to.tv_usec = (timeout - (to.tv_sec * 1000)) * 1000;
+  struct timeval *to_arg = &to;
+  // block only if (timeout == 0) and (closed_count == 0)
+  if (d->closed_count == 0) {
+    if (timeout > 0) {
+      // convert millisecs to sec and usec:
+      to.tv_sec = timeout/1000;
+      to.tv_usec = (timeout - (to.tv_sec * 1000)) * 1000;
+    }
+    else if (timeout < 0) {
+	to_arg = NULL;
+    }
   }
-  int nfds = select(/* d->max_fds */ 0, &d->readfds, &d->writefds, NULL, timeout < 0 ? NULL : &to);
+  int nfds = select(/* d->max_fds */ 0, &d->readfds, &d->writefds, NULL, to_arg);
   if (nfds == SOCKET_ERROR) {
     errno = WSAGetLastError();
     pn_i_error_from_errno(d->error, "select");
