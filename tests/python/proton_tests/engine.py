@@ -1346,12 +1346,12 @@ class ServerTest(Test):
   def testKeepalive(self):
     """ Verify that idle frames are sent to keep a Connection alive
     """
-    idle_timeout_secs = 1
+    idle_timeout_secs = self.delay
     self.server = common.TestServerDrain()
     self.server.start()
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
-    self.cxtr.transport.idle_timeout = idle_timeout_secs * 1000  #msecs
+    self.cxtr.transport.idle_timeout = int(idle_timeout_secs * 1000)  #msecs
     self.cxtr.sasl().mechanisms("ANONYMOUS")
     self.cxtr.sasl().client()
     self.conn = Connection()
@@ -1364,9 +1364,9 @@ class ServerTest(Test):
 
     # wait for the connection to come up
 
-    timeout = time() + 10
+    deadline = time() + self.timeout
     while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
-          and time() <= timeout:
+          and time() <= deadline:
       self.cxtr.process()
       self.driver.wait(1)
       self.cxtr.process()
@@ -1376,10 +1376,10 @@ class ServerTest(Test):
     # wait up to 3x the idle timeout
     old_count = self.cxtr.transport.frames_input
     duration = 3 * idle_timeout_secs
-    timeout = time() + duration
-    while time() <= timeout:
+    deadline = time() + duration
+    while time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(10 * duration * 1000)
+      self.driver.wait(1)
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
@@ -1391,8 +1391,8 @@ class ServerTest(Test):
     """ Verify that a Connection is terminated properly when Idle frames do not
     arrive in a timely manner.
     """
-    idle_timeout_secs = 1
-    self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs * 1000)
+    idle_timeout_secs = self.delay
+    self.server = common.TestServerDrain(idle_timeout=int(idle_timeout_secs * 1000))
     self.server.start()
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
@@ -1404,11 +1404,11 @@ class ServerTest(Test):
 
     # wait for the connection to come up
 
-    timeout = time() + 10
+    deadline = time() + self.timeout
     while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
-          and time() <= timeout:
+          and time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(10 * 1000)
+      self.driver.wait(int(self.timeout * 1000))
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
@@ -1417,10 +1417,10 @@ class ServerTest(Test):
     # wait up to 3x the idle timeout
     old_count = self.cxtr.transport.frames_output
     duration = 3 * idle_timeout_secs
-    timeout = time() + duration
-    while time() <= timeout:
+    deadline = time() + duration
+    while time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(10 * duration * 1000)
+      self.driver.wait(int(10 * duration * 1000))
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
@@ -1432,10 +1432,10 @@ class ServerTest(Test):
 
     # and check that the remote killed the connection:
 
-    timeout = time() + 10
-    while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= timeout:
+    deadline = time() + self.timeout
+    while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(10*1000)
+      self.driver.wait(int(self.timeout*1000))
       self.cxtr.process()
 
     assert self.conn.state & Endpoint.REMOTE_CLOSED, "Connection failed to close"

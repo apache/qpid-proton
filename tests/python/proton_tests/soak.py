@@ -244,9 +244,47 @@ class AppTests(common.Test):
 
     def __init__(self, *args):
         common.Test.__init__(self, *args)
+        self.is_valgrind = False
 
-    def configure(self, config):
-        self.config = config.defines
+    def default(self, name, value, **kwargs):
+        if self.is_valgrind:
+            default = kwargs.get("valgrind", value)
+        else:
+            default = value
+        return common.Test.default(self, name, default, **kwargs)
+
+    @property
+    def iterations(self):
+        return int(self.default("iterations", 2, fast=1, valgrind=1))
+
+    @property
+    def send_count(self):
+        return int(self.default("send_count", 17, fast=1, valgrind=1))
+
+    @property
+    def target_count(self):
+        return int(self.default("target_count", 5, fast=1, valgrind=1))
+
+    @property
+    def send_batch(self):
+        return int(self.default("send_batch", 7, fast=1, valgrind=1))
+
+    @property
+    def forward_count(self):
+        return int(self.default("forward_count", 5, fast=1, valgrind=1))
+
+    @property
+    def port_count(self):
+        return int(self.default("port_count", 3, fast=1, valgrind=1))
+
+    @property
+    def sender_count(self):
+        return int(self.default("sender_count", 3, fast=1, valgrind=1))
+
+    def valgrind_test(self):
+        if "VALGRIND" not in os.environ:
+            raise common.Skipped("Skipping test - $VALGRIND not set.")
+        self.is_valgrind = True
 
     def setup(self):
         self.senders = []
@@ -256,7 +294,7 @@ class AppTests(common.Test):
         pass
 
     def _do_test(self, iterations=1):
-        verbose = "verbose" in self.config
+        verbose = self.verbose
 
         for R in self.receivers:
             R.start( verbose )
@@ -295,9 +333,9 @@ class MessengerTests(AppTests):
         target_count = # of targets to send to.
         send_count = # messages sent to each target
         """
-        iterations = int(self.config.get("iterations", 2))
-        send_count = int(self.config.get("send_count", 997))
-        target_count = int(self.config.get("target_count", 5))
+        iterations = self.iterations
+        send_count = self.send_count
+        target_count = self.target_count
 
         send_total = send_count * target_count
         receive_total = send_total * iterations
@@ -324,10 +362,10 @@ class MessengerTests(AppTests):
         send_count = # messages sent to each target
         send_batch - wait for replies after this many messages sent
         """
-        iterations = int(self.config.get("iterations", 2))
-        send_count = int(self.config.get("send_count", 1097))
-        target_count = int(self.config.get("target_count", 3))
-        send_batch = int(self.config.get("send_batch", 13))
+        iterations = self.iterations
+        send_count = self.send_count
+        target_count = self.target_count
+        send_batch = self.send_batch
 
         send_total = send_count * target_count
         receive_total = send_total * iterations
@@ -359,11 +397,11 @@ class MessengerTests(AppTests):
         send_batch - wait for replies after this many messages sent
         forward_count - forward to this many targets
         """
-        iterations = int(self.config.get("iterations", 2))
-        send_count = int(self.config.get("send_count", 857))
-        target_count = int(self.config.get("target_count", 3))
-        send_batch = int(self.config.get("send_batch", 11))
-        forward_count = int(self.config.get("forward_count", 3))
+        iterations = self.iterations
+        send_count = self.send_count
+        target_count = self.target_count
+        send_batch = self.send_batch
+        forward_count = self.forward_count
 
         send_total = send_count * target_count
         receive_total = send_total * iterations
@@ -411,12 +449,12 @@ class MessengerTests(AppTests):
         send_count - # of messages sent to each target
         send_batch - # of messages to send before waiting for response
         """
-        iterations = int(self.config.get("iterations", 2))
-        port_count = int(self.config.get("port_count", 3))
-        sender_count = int(self.config.get("sender_count", 11))
-        target_count = int(self.config.get("target_count", 3))
-        send_count = int(self.config.get("send_count", 101))
-        send_batch = int(self.config.get("send_batch", 17))
+        iterations = self.iterations
+        port_count = self.port_count
+        sender_count = self.sender_count
+        target_count = self.target_count
+        send_count = self.send_count
+        send_batch = self.send_batch
 
         send_total = port_count * target_count * send_count
         receive_total = send_total * sender_count * iterations
@@ -445,9 +483,7 @@ class MessengerTests(AppTests):
         self._do_oneway_test(MessengerReceiverC(), MessengerSenderC())
 
     def test_oneway_valgrind(self):
-        if "VALGRIND" not in os.environ:
-            raise common.Skipped("Skipping test - $VALGRIND not set.")
-        self.config["iterations"] = int(self.config.get("iterations", 1))
+        self.valgrind_test()
         self._do_oneway_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
 
     def test_oneway_Python(self):
@@ -463,9 +499,7 @@ class MessengerTests(AppTests):
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC())
 
     def test_echo_valgrind(self):
-        if "VALGRIND" not in os.environ:
-            raise common.Skipped("Skipping test - $VALGRIND not set.")
-        self.config["iterations"] = int(self.config.get("iterations", 1))
+        self.valgrind_test()
         self._do_echo_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
 
     def test_echo_Python(self):
@@ -481,9 +515,7 @@ class MessengerTests(AppTests):
         self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC())
 
     def test_relay_valgrind(self):
-        if "VALGRIND" not in os.environ:
-            raise common.Skipped("Skipping test - $VALGRIND not set.")
-        self.config["iterations"] = int(self.config.get("iterations", 1))
+        self.valgrind_test()
         self._do_relay_test(MessengerReceiverValgrind(), MessengerReceiverValgrind(), MessengerSenderValgrind())
 
     def test_relay_C_Python(self):
@@ -496,9 +528,7 @@ class MessengerTests(AppTests):
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC )
 
     def test_star_topology_valgrind(self):
-        if "VALGRIND" not in os.environ:
-            raise common.Skipped("Skipping test - $VALGRIND not set.")
-        self.config["iterations"] = int(self.config.get("iterations", 1))
+        self.valgrind_test()
         self._do_star_topology_test( MessengerReceiverValgrind, MessengerSenderValgrind )
 
     def test_star_topology_Python(self):

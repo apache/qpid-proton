@@ -24,30 +24,52 @@ from proton import Driver, Connection, SASL, Endpoint, Delivery
 
 
 def free_tcp_ports(count=1):
-    """ return a list of 'count' TCP ports that are free to used (ie. unbound)
-    """
-    retry = 0
-    ports = []
-    sockets = []
-    while len(ports) != count:
-        port = randint(49152, 65535)
-        sockets.append( socket( AF_INET, SOCK_STREAM ) )
-        try:
-            sockets[-1].bind( ("0.0.0.0", port ) )
-            ports.append( port )
-            retry = 0
-        except:
-            retry += 1
-            assert retry != 100, "No free sockets available for test!"
-    for s in sockets:
-        s.close()
-    return ports
+  """ return a list of 'count' TCP ports that are free to used (ie. unbound)
+  """
+  retry = 0
+  ports = []
+  sockets = []
+  while len(ports) != count:
+    port = randint(49152, 65535)
+    sockets.append( socket( AF_INET, SOCK_STREAM ) )
+    try:
+      sockets[-1].bind( ("0.0.0.0", port ) )
+      ports.append( port )
+      retry = 0
+    except:
+      retry += 1
+      assert retry != 100, "No free sockets available for test!"
+  for s in sockets:
+    s.close()
+  return ports
 
 
 class Test:
 
   def __init__(self, name):
     self.name = name
+
+  def configure(self, config):
+    self.config = config
+
+  def default(self, name, value, **profiles):
+    default = value
+    profile = self.config.defines.get("profile")
+    if profile:
+      default = profiles.get(profile, default)
+    return self.config.defines.get(name, default)
+
+  @property
+  def delay(self):
+    return float(self.default("delay", "1", fast="0.1"))
+
+  @property
+  def timeout(self):
+    return float(self.default("timeout", "60", fast="10"))
+
+  @property
+  def verbose(self):
+    return int(self.default("verbose", 0))
 
 class Skipped(Exception):
   skipped = True
