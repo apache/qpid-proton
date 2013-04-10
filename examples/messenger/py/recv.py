@@ -42,7 +42,7 @@ for a in args:
 
 msg = Message()
 while True:
-  mng.recv(10)
+  mng.recv()
   while mng.incoming:
     try:
       mng.get(msg)
