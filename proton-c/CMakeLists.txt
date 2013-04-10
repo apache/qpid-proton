@@ -243,6 +243,7 @@ set (qpid-proton-core
   src/sasl/sasl.c
 
   src/messenger/messenger.c
+  src/messenger/store.c
 
   ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
