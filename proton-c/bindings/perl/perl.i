@@ -105,16 +105,51 @@ typedef int int32_t;
 {
   SV* obj = sv_newmortal();
 
-  if($1.size > 0)
+  if($1.start != NULL)
     {
-      sv_setpvn(obj, $1.start, $1.size);
+      $result = newSVpvn($1.start, $1.size);
     }
   else
     {
-      sv_setsv(obj, &PL_sv_undef);
+      $result = &PL_sv_undef;
     }
 
-  $result = obj;
+  argvi++;
+}
+
+%typemap(in) pn_decimal128_t
+{
+  AV *tmpav = (AV*)SvRV($input);
+  int index = 0;
+
+  for(index = 0; index < 16; index++)
+    {
+      $1.bytes[index] = SvIV(*av_fetch(tmpav, index, 0));
+      $1.bytes[index] = $1.bytes[index] & 0xff;
+    }
+}
+
+%typemap(out) pn_decimal128_t
+{
+  $result = newSVpvn($1.bytes, 16);
+  argvi++;
+}
+
+%typemap(in) pn_uuid_t
+{
+  AV* tmpav = SvRV($input);
+  int index = 0;
+
+  for(index = 0; index < 16; index++)
+    {
+      $1.bytes[index] = SvIV(*av_fetch(tmpav, index, 0));
+      $1.bytes[index] = $1.bytes[index] & 0xff;
+    }
+}
+
+%typemap(out) pn_uuid_t
+{
+  $result = newSVpvn($1.bytes, 16);
   argvi++;
 }
 

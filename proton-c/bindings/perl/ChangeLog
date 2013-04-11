@@ -1,3 +1,6 @@
+version 0.5:
+	* Added the qpid::proton::Data type.
+
 version 0.4:
 	* Unit tests for qpid::proton::Message.
 	* Unit tests for qpid::proton::Messenger.

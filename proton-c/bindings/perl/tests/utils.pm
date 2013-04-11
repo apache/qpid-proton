@@ -1,3 +1,29 @@
+sub random_integers
+{
+    my $len = shift;
+    my @result;
+
+    foreach (1..$len) {
+        my $value = int(rand(100));
+        push @result, $value;
+    }
+
+    return @result;
+}
+
+sub random_hash
+{
+    my $len = shift;
+    my %result;
+
+    foreach (1..$len) {
+        my $key = random_string(32);
+        my $val = random_string(128);
+        $result{$key} = $val;
+    }
+
+    return %result;
+}
 
 sub random_string
 {
