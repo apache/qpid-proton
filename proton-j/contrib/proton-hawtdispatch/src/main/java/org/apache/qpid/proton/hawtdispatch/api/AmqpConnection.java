@@ -28,6 +28,7 @@ import org.apache.qpid.proton.engine.impl.ProtocolTracer;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.fusesource.hawtdispatch.Task;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -63,6 +64,8 @@ public class AmqpConnection extends AmqpEndpointBase  {
                 pumpOut();
             }
 
+            public void processTransportFailure(final IOException e) {
+            }
         });
         connection = transport.connection();
         connection.open();
