@@ -56,10 +56,11 @@ and
 
 
 <br/>
+
 Routing
 ------------------------------
 
-### Pattern Matching and Address Translation ###
+### Pattern Matching, Address Translation, and Message Routing ###
 
 The Messenger library provides message routing capability
 with an address translation table.  Each entry in the table 
@@ -199,6 +200,7 @@ Examples of route translation usage:
 
 
 <br/>
+
 ### First Match Wins ###
 
 If you create multiple routing rules, each new rule is appended
