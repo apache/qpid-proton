@@ -567,7 +567,7 @@ bool pn_connector_activated(pn_connector_t *ctor, pn_activate_criteria_t crit)
     return result;
 }
 
-static pn_timestamp_t pn_connector_tick(pn_connector_t *ctor, time_t now)
+static pn_timestamp_t pn_connector_tick(pn_connector_t *ctor, pn_timestamp_t now)
 {
   if (!ctor->transport) return 0;
   return pn_transport_tick(ctor->transport, now);

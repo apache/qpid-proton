@@ -259,7 +259,7 @@ typedef long long int int64_t;
   transport != NULL;
 }
 
-#%contract pn_transport_tick(pn_transport_t *transport, time_t now)
+#%contract pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now)
 #{
 #  # this method currently always returns 0
 #}
