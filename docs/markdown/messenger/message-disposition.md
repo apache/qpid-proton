@@ -4,17 +4,17 @@ Message Disposition
 
 Messenger disposition operations allow a receiver to accept or
 reject specific messages, or ranges of messages.  Senders can
-detect the disposition of their messages.
+then detect the disposition of their messages.
 
 
 Message States
 ---------------------------
 
 Messages have one of four different states:  
-  * `PN_STATUS_UNKNOWN`  
-  * `PN_STATUS_PENDING`  
-  * `PN_STATUS_ACCEPTED`  
-  * `PN_STATUS_REJECTED`  
+        `PN_STATUS_UNKNOWN`  
+        `PN_STATUS_PENDING`  
+        `PN_STATUS_ACCEPTED`  
+        `PN_STATUS_REJECTED`  
 
 <br/>
 
@@ -66,6 +66,7 @@ be changed, even if you have a separate tracker associated with it.
 
 
 <br/>
+
 ###when to accept###
 
 Although you _can_ accept messages implicitly by letting them fall 
@@ -79,6 +80,13 @@ unpredictable amount of time.
 
 The purpose of a nonzero window size is really to place 
 a limit on how much state your Messenger needs to track.
+
+<br/>
+
+###accepting by accident####
+
+_This section coming soon._
+
 
 
 
@@ -120,7 +128,7 @@ be settled, with one of these calls:
         pn_messenger_settle ( messenger, tracker, 0 );
         pn_messenger_settle ( messenger, tracker, PN_CUMULATIVE );
 
-then the sender will see `PN_STATUS_UNKNOWN` as the status of any
+then the sender will see `PN_STATUS_PENDING` as the status of any
 settled messages.
 
 <br/>
