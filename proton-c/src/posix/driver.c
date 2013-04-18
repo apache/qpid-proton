@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -256,6 +257,14 @@ static void pn_configure_sock(int sock) {
 
     if (fcntl(sock, F_SETFL, flags) < 0) {
         perror("fcntl");
+    }
+
+    //
+    // Disable the Nagle algorithm on TCP connections.
+    //
+    int tcp_nodelay = 1;
+    if (setsockopt(sock, SOL_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0) {
+        perror("setsockopt");
     }
 }
 
