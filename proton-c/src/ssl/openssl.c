@@ -199,15 +199,14 @@ static int ssl_failed(pn_ssl_t *ssl)
 static bool match_dns_pattern( const char *hostname,
                                const char *pattern, int plen )
 {
-
+  int slen = (int) strlen(hostname);
   if (memchr( pattern, '*', plen ) == NULL)
-    return (plen == (int) strlen(hostname) &&
+    return (plen == slen &&
             strncasecmp( pattern, hostname, plen ) == 0);
 
   /* dns wildcarded pattern - RFC2818 */
   char plabel[64];   /* max label length < 63 - RFC1034 */
   char slabel[64];
-  int slen = strlen(hostname);
 
   while (plen > 0 && slen > 0) {
     const char *cptr;
@@ -218,7 +217,8 @@ static bool match_dns_pattern( const char *hostname,
     if (len > (int) sizeof(plabel) - 1) return false;
     memcpy( plabel, pattern, len );
     plabel[len] = 0;
-    pattern = cptr + 1;
+    if (cptr) ++len;    // skip matching '.'
+    pattern += len;
     plen -= len;
 
     cptr = (const char *) memchr( hostname, '.', slen );
@@ -226,7 +226,8 @@ static bool match_dns_pattern( const char *hostname,
     if (len > (int) sizeof(slabel) - 1) return false;
     memcpy( slabel, hostname, len );
     slabel[len] = 0;
-    hostname = cptr + 1;
+    if (cptr) ++len;    // skip matching '.'
+    hostname += len;
     slen -= len;
 
     char *star = strchr( plabel, '*' );
