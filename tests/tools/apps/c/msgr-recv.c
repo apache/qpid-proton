@@ -40,10 +40,10 @@ typedef struct {
     int   reply;
     const char *name;
     const char *ready_text;
-    // @todo add SSL support
     char *certificate;
-    char *privatekey;
-    char *password;
+    char *privatekey;   // used to sign certificate
+    char *password;     // for private key file
+    char *ca_db;        // trusted CA database
 } Options_t;
 
 static int log = 0;
@@ -65,10 +65,12 @@ static void usage(int rc)
            " -N <name> \tSet the container name to <name>\n"
            " -X <text> \tPrint '<text>\\n' to stdout after all subscriptions are created\n"
            " -V \tEnable debug logging\n"
+           " SSL options:\n"
+           " -T <path> \tDatabase of trusted CA certificates for validating peer\n"
+           " -C <path> \tFile containing self-identifying certificate\n"
+           " -K <path> \tFile containing private key used to sign certificate\n"
+           " -P [pass:<password>|path] \tPassword to unlock private key file.\n"
            );
-    //  printf("-C    \tPath to the certificate file.\n");
-    //  printf("-K    \tPath to the private key file.\n");
-    //  printf("-P    \tPassword for the private key.\n");
     exit(rc);
 }
 
@@ -83,64 +85,61 @@ static void parse_options( int argc, char **argv, Options_t *opts )
     addresses_init(&opts->subscriptions);
     addresses_init(&opts->forwarding_targets);
 
-    while((c = getopt(argc, argv, "a:c:b:w:t:e:RW:F:VN:X:")) != -1)
-        {
-            switch(c)
-                {
-                case 'a': addresses_merge( &opts->subscriptions, optarg ); break;
-                case 'c':
-                    if (sscanf( optarg, "%llu", &opts->msg_count ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    break;
-                case 'b':
-                    if (sscanf( optarg, "%d", &opts->recv_count ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    break;
-                case 'w':
-                    if (sscanf( optarg, "%d", &opts->incoming_window ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    break;
-                case 't':
-                    if (sscanf( optarg, "%d", &opts->timeout ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    if (opts->timeout > 0) opts->timeout *= 1000;
-                    break;
-                case 'e':
-                    if (sscanf( optarg, "%u", &opts->report_interval ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    break;
-                case 'R': opts->reply = 1; break;
-                case 'W':
-                    if (sscanf( optarg, "%d", &opts->outgoing_window ) != 1) {
-                        fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
-                        usage(1);
-                    }
-                    break;
-                case 'F': addresses_merge( &opts->forwarding_targets, optarg ); break;
-                case 'V': log = 1; break;
-                case 'N': opts->name = optarg; break;
-                case 'X': opts->ready_text = optarg; break;
+    while ((c = getopt(argc, argv,
+                       "a:c:b:w:t:e:RW:F:VN:X:T:C:K:P:")) != -1) {
+        switch (c) {
+        case 'a': addresses_merge( &opts->subscriptions, optarg ); break;
+        case 'c':
+            if (sscanf( optarg, "%llu", &opts->msg_count ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            break;
+        case 'b':
+            if (sscanf( optarg, "%d", &opts->recv_count ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            break;
+        case 'w':
+            if (sscanf( optarg, "%d", &opts->incoming_window ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            break;
+        case 't':
+            if (sscanf( optarg, "%d", &opts->timeout ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            if (opts->timeout > 0) opts->timeout *= 1000;
+            break;
+        case 'e':
+            if (sscanf( optarg, "%u", &opts->report_interval ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            break;
+        case 'R': opts->reply = 1; break;
+        case 'W':
+            if (sscanf( optarg, "%d", &opts->outgoing_window ) != 1) {
+                fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
+                usage(1);
+            }
+            break;
+        case 'F': addresses_merge( &opts->forwarding_targets, optarg ); break;
+        case 'V': log = 1; break;
+        case 'N': opts->name = optarg; break;
+        case 'X': opts->ready_text = optarg; break;
+        case 'T': opts->ca_db = optarg; break;
+        case 'C': opts->certificate = optarg; break;
+        case 'K': opts->privatekey = optarg; break;
+        case 'P': parse_password( optarg, &opts->password ); break;
 
-                    /*
-                      case 'C': opts->certificate = optarg; break;
-                      case 'K': opts->privatekey = optarg; break;
-                      case 'P': opts->password = optarg; break;
-                    */
-
-                default:
-                    usage(1);
-                }
+        default:
+            usage(1);
         }
+    }
 
     // default subscription if none specified
     if (opts->subscriptions.count == 0) addresses_add( &opts->subscriptions,
@@ -169,20 +168,25 @@ int main(int argc, char** argv)
     messenger = pn_messenger( opts.name );
 
     /* load the various command line options if they're set */
-    if(opts.certificate)
-        {
-            pn_messenger_set_certificate(messenger, opts.certificate);
-        }
+    if (opts.certificate) {
+        rc = pn_messenger_set_certificate(messenger, opts.certificate);
+        check( rc == 0, "Failed to set certificate" );
+    }
 
-    if(opts.privatekey)
-        {
-            pn_messenger_set_private_key(messenger, opts.privatekey);
-        }
+    if (opts.privatekey) {
+        rc = pn_messenger_set_private_key(messenger, opts.privatekey);
+        check( rc == 0, "Failed to set private key" );
+    }
 
-    if(opts.password)
-        {
-            pn_messenger_set_password(messenger, opts.password);
-        }
+    if (opts.password) {
+        rc = pn_messenger_set_password(messenger, opts.password);
+        check( rc == 0, "Failed to set password" );
+    }
+
+    if (opts.ca_db) {
+        rc = pn_messenger_set_trusted_certificates(messenger, opts.ca_db);
+        check( rc == 0, "Failed to set trusted CA database" );
+    }
 
     if (opts.incoming_window) {
         // RAFI: seems to cause receiver to hang:

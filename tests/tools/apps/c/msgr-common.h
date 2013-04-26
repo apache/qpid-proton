@@ -24,6 +24,7 @@
 void msgr_die(const char *file, int line, const char *message);
 char *msgr_strdup( const char *src );
 pn_timestamp_t msgr_now();
+void parse_password( const char *, char ** );
 
 #define check_messenger(m)  \
   { check(pn_messenger_errno(m) == 0, pn_messenger_error(m)) }

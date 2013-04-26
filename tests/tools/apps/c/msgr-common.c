@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <assert.h>
 
 void msgr_die(const char *file, int line, const char *message)
 {
@@ -142,3 +143,18 @@ void statistics_report( Statistics_t *s, unsigned long long sent, unsigned long 
           (s->latency_samples) ? (s->latency_total/s->latency_samples)/1000.0 : 0);
 }
 
+void parse_password( const char *input, char **password )
+{
+    if (strncmp( input, "pass:", 5 ) == 0) {
+        // password provided on command line (not secure, shows up in 'ps')
+        *password = msgr_strdup( input + 5 );
+    } else {    // input assumed to be file containing password
+        FILE *f = fopen( input, "r" );
+        check( f, "Cannot open password file\n" );
+        *password = (char *)malloc(256);    // 256 should be enough for anybody!
+        check( *password, "malloc failure" );
+        int rc = fscanf( f, "%255s", *password );
+        check( rc == 1, "Cannot read password from file\n" );
+        fclose(f);
+    }
+}

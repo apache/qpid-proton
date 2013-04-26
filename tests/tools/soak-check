@@ -96,6 +96,17 @@ def main(argv=None):
            "sender_count": 10,
            "target_count": 11,
            "send_count": 311,
+           "send_batch": 3}]),
+
+        ("proton_tests.soak.MessengerTests.test_star_topology_C_SSL",
+         # 10 ports * 10 senders = 100 connections per iteration
+         # 100 connections * 11 targets = 1100 links per iteration
+         # 1100 links * 30 msg * 2 (send/reply) = 66000 msgs per iteration
+         [{"iterations": iterations,
+           "port_count": 10,
+           "sender_count": 10,
+           "target_count": 11,
+           "send_count": 30,
            "send_batch": 3}])
         ]
 

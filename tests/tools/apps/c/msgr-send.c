@@ -44,6 +44,10 @@ typedef struct {
     int   incoming_window;
     int   recv_count;
     const char *name;
+    char *certificate;
+    char *privatekey;   // used to sign certificate
+    char *password;     // for private key file
+    char *ca_db;        // trusted CA database
 } Options_t;
 
 static int log = 0;
@@ -65,6 +69,11 @@ static void usage(int rc)
            " -B # \tArgument to Messenger::recv(n) [-1]\n"
            " -N <name> \tSet the container name to <name>\n"
            " -V \tEnable debug logging\n"
+           " SSL options:\n"
+           " -T <path> \tDatabase of trusted CA certificates for validating peer\n"
+           " -C <path> \tFile containing self-identifying certificate\n"
+           " -K <path> \tFile containing private key used to sign certificate\n"
+           " -P [pass:<password>|path] \tPassword to unlock private key file.\n"
            );
     //printf("-p     \t*TODO* Add N sample properties to each message [3]\n");
     exit(rc);
@@ -82,7 +91,8 @@ static void parse_options( int argc, char **argv, Options_t *opts )
     opts->recv_count = -1;
     addresses_init(&opts->targets);
 
-    while((c = getopt(argc, argv, "a:c:b:p:w:e:l:Rt:W:B:VN:")) != -1) {
+    while ((c = getopt(argc, argv,
+                       "a:c:b:p:w:e:l:Rt:W:B:VN:T:C:K:P:")) != -1) {
         switch(c) {
         case 'a': addresses_merge( &opts->targets, optarg ); break;
         case 'c':
@@ -137,6 +147,11 @@ static void parse_options( int argc, char **argv, Options_t *opts )
             break;
         case 'V': log = 1; break;
         case 'N': opts->name = optarg; break;
+        case 'T': opts->ca_db = optarg; break;
+        case 'C': opts->certificate = optarg; break;
+        case 'K': opts->privatekey = optarg; break;
+        case 'P': parse_password( optarg, &opts->password ); break;
+
         default:
             usage(1);
         }
@@ -187,6 +202,27 @@ int main(int argc, char** argv)
     parse_options( argc, argv, &opts );
 
     messenger = pn_messenger( opts.name );
+
+    if (opts.certificate) {
+        rc = pn_messenger_set_certificate(messenger, opts.certificate);
+        check( rc == 0, "Failed to set certificate" );
+    }
+
+    if (opts.privatekey) {
+        rc = pn_messenger_set_private_key(messenger, opts.privatekey);
+        check( rc == 0, "Failed to set private key" );
+    }
+
+    if (opts.password) {
+        rc = pn_messenger_set_password(messenger, opts.password);
+        check( rc == 0, "Failed to set password" );
+    }
+
+    if (opts.ca_db) {
+        rc = pn_messenger_set_trusted_certificates(messenger, opts.ca_db);
+        check( rc == 0, "Failed to set trusted CA database" );
+    }
+
     if (opts.outgoing_window) {
         pn_messenger_set_outgoing_window( messenger, opts.outgoing_window );
     }

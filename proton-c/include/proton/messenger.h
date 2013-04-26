@@ -62,7 +62,8 @@ PN_EXTERN pn_messenger_t *pn_messenger(const char *name);
  */
 PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
 
-/** Sets the certificate file for a Messenger.
+/** Provides a certificate that will be used to identify the local
+ * Messenger to the peer.
  *
  * @param[in] messenger the messenger
  * @param[in] certificate a path to a certificate file
@@ -71,14 +72,15 @@ PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
 
-/** Gets the certificate file fora Messenger.
+/** Gets the certificate file for a Messenger.
  *
  * @param[in] messenger the messenger
  * @return the certificate file path
  */
 PN_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
 
-/** Sets the private key file for a Messenger.
+/** Provides the private key that was used to sign the certificate.
+ * See ::pn_messenger_set_certificate
  *
  * @param[in] messenger the Messenger
  * @param[in] private_key a path to a private key file
@@ -110,7 +112,9 @@ PN_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *p
  */
 PN_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
 
-/** Sets the trusted certificates database for a Messenger.
+/** Sets the trusted certificates database for a Messenger.  Messenger
+ * will use this database to validate the certificate provided by the
+ * peer.
  *
  * @param[in] messenger the messenger
  * @param[in] cert_db a path to the certificates database

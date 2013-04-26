@@ -20,6 +20,8 @@
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
+from subprocess import Popen,PIPE
+import sys, os
 from proton import Driver, Connection, SASL, Endpoint, Delivery
 
 
@@ -268,4 +270,247 @@ class TestServerDrain(TestServer):
       link.advance()
     if link.credit == 0:
       link.flow(self.credit_batch)
+
+
+#
+# Classes that wrap the messenger applications msgr-send and msgr-recv.
+# These applications reside in the tests/tools/apps directory
+#
+
+class MessengerApp(object):
+    """ Interface to control a MessengerApp """
+    def __init__(self):
+        self._cmdline = None
+        # options common to Receivers and Senders:
+        self.ca_db = None
+        self.certificate = None
+        self.privatekey = None
+        self.password = None
+
+    def start(self, verbose=False):
+        """ Begin executing the test """
+        if sys.platform.startswith("java"):
+            raise common.Skipped("Skipping soak tests - not supported under Jython")
+        cmd = self.cmdline()
+        self._verbose = verbose
+        if self._verbose:
+            print("COMMAND='%s'" % str(cmd))
+        #print("ENV='%s'" % str(os.environ.copy()))
+        try:
+            self._process = Popen(cmd, stdout=PIPE, bufsize=4096)
+        except OSError, e:
+            assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
+        self._ready()  # wait for it to initialize
+
+    def stop(self):
+        """ Signal the client to start clean shutdown """
+        pass
+
+    def wait(self):
+        """ Wait for client to complete """
+        self._output = self._process.communicate()
+        if self._verbose:
+            print("OUTPUT='%s'" % self.stdout())
+
+    def status(self):
+        """ Return status from client process """
+        return self._process.returncode
+
+    def stdout(self):
+        #self._process.communicate()[0]
+        return self._output[0]
+
+    def cmdline(self):
+        if not self._cmdline:
+            self._build_command()
+        return self._cmdline
+
+    def _build_command(self):
+        assert False, "_build_command() needs override"
+
+    def _ready(self):
+        assert False, "_ready() needs override"
+
+    def _do_common_options(self):
+        """ Common option handling """
+        if self.ca_db is not None:
+            self._cmdline.append("-T")
+            self._cmdline.append(str(self.ca_db))
+        if self.certificate is not None:
+            self._cmdline.append("-C")
+            self._cmdline.append(str(self.certificate))
+        if self.privatekey is not None:
+            self._cmdline.append("-K")
+            self._cmdline.append(str(self.privatekey))
+        if self.password is not None:
+            self._cmdline.append("-P")
+            self._cmdline.append("pass:" + str(self.password))
+
+
+class MessengerSender(MessengerApp):
+    """ Interface to configure a sending MessengerApp """
+    def __init__(self):
+        MessengerApp.__init__(self)
+        self._command = None
+        # @todo make these properties
+        self.targets = []
+        self.send_count = None
+        self.msg_size = None
+        self.send_batch = None
+        self.outgoing_window = None
+        self.report_interval = None
+        self.get_reply = False
+        self.timeout = None
+        self.incoming_window = None
+        self.recv_count = None
+        self.name = None
+
+    # command string?
+    def _build_command(self):
+        self._cmdline = self._command
+        self._do_common_options()
+        assert self.targets, "Missing targets, required for sender!"
+        self._cmdline.append("-a")
+        self._cmdline.append(",".join(self.targets))
+        if self.send_count is not None:
+            self._cmdline.append("-c")
+            self._cmdline.append(str(self.send_count))
+        if self.msg_size is not None:
+            self._cmdline.append("-b")
+            self._cmdline.append(str(self.msg_size))
+        if self.send_batch is not None:
+            self._cmdline.append("-p")
+            self._cmdline.append(str(self.send_batch))
+        if self.outgoing_window is not None:
+            self._cmdline.append("-w")
+            self._cmdline.append(str(self.outgoing_window))
+        if self.report_interval is not None:
+            self._cmdline.append("-e")
+            self._cmdline.append(str(self.report_interval))
+        if self.get_reply:
+            self._cmdline.append("-R")
+        if self.timeout is not None:
+            self._cmdline.append("-t")
+            self._cmdline.append(str(self.timeout))
+        if self.incoming_window is not None:
+            self._cmdline.append("-W")
+            self._cmdline.append(str(self.incoming_window))
+        if self.recv_count is not None:
+            self._cmdline.append("-B")
+            self._cmdline.append(str(self.recv_count))
+        if self.name is not None:
+            self._cmdline.append("-N")
+            self._cmdline.append(str(self.name))
+
+    def _ready(self):
+        pass
+
+
+class MessengerReceiver(MessengerApp):
+    """ Interface to configure a receiving MessengerApp """
+    def __init__(self):
+        MessengerApp.__init__(self)
+        self._command = None
+        # @todo make these properties
+        self.subscriptions = []
+        self.receive_count = None
+        self.recv_count = None
+        self.incoming_window = None
+        self.timeout = None
+        self.report_interval = None
+        self.send_reply = False
+        self.outgoing_window = None
+        self.forwards = []
+        self.name = None
+
+    # command string?
+    def _build_command(self):
+        self._cmdline = self._command
+        self._do_common_options()
+        self._cmdline += ["-X", "READY"]
+        assert self.subscriptions, "Missing subscriptions, required for receiver!"
+        self._cmdline.append("-a")
+        self._cmdline.append(",".join(self.subscriptions))
+        if self.receive_count is not None:
+            self._cmdline.append("-c")
+            self._cmdline.append(str(self.receive_count))
+        if self.recv_count is not None:
+            self._cmdline.append("-b")
+            self._cmdline.append(str(self.recv_count))
+        if self.incoming_window is not None:
+            self._cmdline.append("-w")
+            self._cmdline.append(str(self.incoming_window))
+        if self.timeout is not None:
+            self._cmdline.append("-t")
+            self._cmdline.append(str(self.timeout))
+        if self.report_interval is not None:
+            self._cmdline.append("-e")
+            self._cmdline.append(str(self.report_interval))
+        if self.send_reply:
+            self._cmdline.append("-R")
+        if self.outgoing_window is not None:
+            self._cmdline.append("-W")
+            self._cmdline.append(str(self.outgoing_window))
+        if self.forwards:
+            self._cmdline.append("-F")
+            self._cmdline.append(",".join(self.forwards))
+        if self.name is not None:
+            self._cmdline.append("-N")
+            self._cmdline.append(str(self.name))
+
+    def _ready(self):
+        """ wait for subscriptions to complete setup. """
+        r = self._process.stdout.readline()
+        assert r == "READY\n", "Unexpected input while waiting for receiver to initialize: %s" % r
+
+class MessengerSenderC(MessengerSender):
+    def __init__(self):
+        MessengerSender.__init__(self)
+        self._command = ["msgr-send"]
+
+class MessengerSenderValgrind(MessengerSenderC):
+    """ Run the C sender under Valgrind
+    """
+    def __init__(self, suppressions=None):
+        if "VALGRIND" not in os.environ:
+            raise Skipped("Skipping test - $VALGRIND not set.")
+        MessengerSenderC.__init__(self)
+        if not suppressions:
+            suppressions = os.path.join(os.path.dirname(__file__),
+                                        "valgrind.supp" )
+        self._command = ["valgrind", "--error-exitcode=1", "--quiet",
+                         "--trace-children=yes", "--leak-check=full",
+                         "--suppressions=%s" % suppressions] + self._command
+
+class MessengerReceiverC(MessengerReceiver):
+    def __init__(self):
+        MessengerReceiver.__init__(self)
+        self._command = ["msgr-recv"]
+
+class MessengerReceiverValgrind(MessengerReceiverC):
+    """ Run the C receiver under Valgrind
+    """
+    def __init__(self, suppressions=None):
+        if "VALGRIND" not in os.environ:
+            raise Skipped("Skipping test - $VALGRIND not set.")
+        MessengerReceiverC.__init__(self)
+        if not suppressions:
+            suppressions = os.path.join(os.path.dirname(__file__),
+                                        "valgrind.supp" )
+        self._command = ["valgrind", "--error-exitcode=1", "--quiet",
+                         "--trace-children=yes", "--leak-check=full",
+                         "--suppressions=%s" % suppressions] + self._command
+
+class MessengerSenderPython(MessengerSender):
+    def __init__(self):
+        MessengerSender.__init__(self)
+        self._command = ["msgr-send.py"]
+
+
+class MessengerReceiverPython(MessengerReceiver):
+    def __init__(self):
+        MessengerReceiver.__init__(self)
+        self._command = ["msgr-recv.py"]
+
+
 

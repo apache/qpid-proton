@@ -25,6 +25,8 @@ from common import Skipped
 
 class SslTest(common.Test):
 
+    _timeout = 60
+
     def __init__(self, *args):
         common.Test.__init__(self, *args)
 
@@ -677,3 +679,91 @@ class SslTest(common.Test):
         except TransportException:
             pass
         self.teardown()
+
+
+    def test_defaults_messenger_app(self):
+        """ Test an SSL connection using the Messenger apps (no certificates)
+        """
+        port = common.free_tcp_ports()[0]
+
+        receiver = common.MessengerReceiverC()
+        receiver.subscriptions = ["amqps://~0.0.0.0:%s" % port]
+        receiver.receive_count = 1
+        receiver.timeout = SslTest._timeout
+        receiver.start()
+
+        sender = common.MessengerSenderC()
+        sender.targets = ["amqps://0.0.0.0:%s/X" % port]
+        sender.send_count = 1
+        sender.timeout = SslTest._timeout
+        sender.start()
+        sender.wait()
+        assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
+
+        receiver.wait()
+        assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
+
+    def test_server_authentication_messenger_app(self):
+        """ Test an SSL authentication using the Messenger apps.
+        """
+        port = common.free_tcp_ports()[0]
+
+        receiver = common.MessengerReceiverC()
+        receiver.subscriptions = ["amqps://~0.0.0.0:%s" % port]
+        receiver.receive_count = 1
+        receiver.timeout = SslTest._timeout
+        # Note hack - we use the client-certificate for the _server_ because
+        # the client-certificate's common name field is "127.0.0.1", which will
+        # match the target address used by the sender.
+        receiver.certificate = self._testpath("client-certificate.pem")
+        receiver.privatekey = self._testpath("client-private-key.pem")
+        receiver.password = "client-password"
+        receiver.start()
+
+        sender = common.MessengerSenderC()
+        sender.targets = ["amqps://127.0.0.1:%s/X" % port]
+        sender.send_count = 1
+        sender.timeout = SslTest._timeout
+        sender.ca_db = self._testpath("ca-certificate.pem")
+        sender.start()
+        sender.wait()
+        assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
+
+        receiver.wait()
+        assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
+
+
+    def DISABLED_test_defaults_valgrind(self):
+        """ Run valgrind over a simple SSL connection (no certificates)
+        """
+        # the openssl libraries produce far too many valgrind errors to be
+        # useful.  AFAIK, there is no way to wriate a valgrind suppression
+        # expression that will ignore all errors from a given library.
+        # Until we can, skip this test.
+        port = common.free_tcp_ports()[0]
+
+        receiver = common.MessengerReceiverValgrind()
+        receiver.subscriptions = ["amqps://~127.0.0.1:%s" % port]
+        receiver.receive_count = 1
+        receiver.timeout = SslTest._timeout
+        receiver.start()
+
+        sender = common.MessengerSenderValgrind()
+        sender.targets = ["amqps://127.0.0.1:%s/X" % port]
+        sender.send_count = 1
+        sender.timeout = SslTest._timeout
+        sender.start()
+        sender.wait()
+        assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
+
+        receiver.wait()
+        assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
+
+        # self.server_domain.set_credentials(self._testpath("client-certificate.pem"),
+        #                                    self._testpath("client-private-key.pem"),
+        #                                    "client-password")
+
+        # self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        # self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
+
+
