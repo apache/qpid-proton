@@ -986,6 +986,8 @@ B<TYPE> specifies the type of elements in the array.
 
 =item $data->put_array( DESCRIBED, TYPE )
 
+=item my ($count, $described, $array_type) = item $data->get_array
+
 =back
 
 =cut
@@ -994,11 +996,35 @@ sub put_array {
     my ($self) = @_;
     my $impl = $self->{_impl};
     my $described = $_[1] || 0;
-    my $type = $_[2];
+    my $array_type = $_[2];
 
-    die "array type must be defined" if !defined($type);
+    die "array type must be defined" if !defined($array_type);
 
-    check(cproton_perl::pn_data_put_array($impl, $described, $type));
+    my $type_value = $array_type->get_type_value;
+
+    check(cproton_perl::pn_data_put_array($impl,
+                                          $described,
+                                          $type_value));
+}
+
+sub get_array {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    my $count = check(cproton_perl::pn_data_get_array($impl));
+    my $described = cproton_perl::pn_data_is_array_described($impl);
+    my $type_value = cproton_perl::pn_data_get_array_type($impl);
+
+    $type_value = qpid::proton::TypeHelper->find_by_type_value($type_value);
+
+    return ($count, $described, $type_value);
+}
+
+sub get_array_type {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_data_get_array_type($impl);
 }
 
 =pod
