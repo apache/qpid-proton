@@ -24,6 +24,7 @@ use cproton_perl;
 use qpid::proton::Data;
 use qpid::proton::TypeHelper;
 use qpid::proton::Array;
+use qpid::proton::List;
 use qpid::proton::Constants;
 use qpid::proton::Messenger;
 use qpid::proton::Message;

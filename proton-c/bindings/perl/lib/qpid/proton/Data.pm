@@ -1039,6 +1039,8 @@ Elements may be filled in by entering the list and putting element values.
 
 =item $data->put_list;
 
+=item my $count = $data->get_list
+
 =back
 
 =cut
@@ -1048,6 +1050,13 @@ sub put_list {
     my $impl = $self->{_impl};
 
     check(cproton_perl::pn_data_put_list($impl));
+}
+
+sub get_list {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_data_get_list($impl);
 }
 
 =pod
@@ -1063,6 +1072,8 @@ key/value pairs.
 
 =item $data->put_map;
 
+=item my $count = $data->get_map;
+
 =back
 
 =cut
@@ -1072,6 +1083,13 @@ sub put_map {
     my $impl = $self->{_impl};
 
     check(cproton_perl::pn_data_put_map($impl));
+}
+
+sub get_map {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_data_get_map($impl);
 }
 
 1;
