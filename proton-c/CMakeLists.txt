@@ -226,6 +226,8 @@ set (qpid-proton-platform
   )
 
 set (qpid-proton-core
+  src/object/object.c
+
   src/util.c
   src/error.c
   src/buffer.c
@@ -291,15 +293,18 @@ set_target_properties (
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
   )
 
-if (BUILD_WITH_CXX)
-  # tell CMake to use C++ for proton source files ending in ".c"
-  set(pn_all_sources ${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
-  foreach (src_file ${pn_all_sources})
+macro(pn_c_files)
+  foreach (src_file ${ARGN})
     if (${src_file} MATCHES "^.*[.]c$")
-      set_source_files_properties (${src_file} PROPERTIES LANGUAGE CXX)
+      if (BUILD_WITH_CXX)
+        # tell CMake to use C++ for proton source files ending in ".c"
+        set_source_files_properties (${src_file} PROPERTIES LANGUAGE CXX)
+      endif (BUILD_WITH_CXX)
     endif (${src_file} MATCHES "^.*[.]c$")
   endforeach (src_file)
-endif (BUILD_WITH_CXX)
+endmacro(pn_c_files)
+
+pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
 
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton
@@ -365,6 +370,9 @@ else (ENABLE_VALGRIND AND NOT VALGRIND)
   set (VALGRIND_ENV "VALGRIND=1")
 endif (ENABLE_VALGRIND AND NOT VALGRIND)
 
+# c tests:
+
+add_subdirectory(src/tests)
 
 # python test: tests/python/proton-test
 set (py_root "${pn_test_root}/python")
