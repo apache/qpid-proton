@@ -152,31 +152,6 @@ module Qpid
         @messenger.trusted_certificates.should eq(certs)
       end
 
-      it "raises an error when setting a nil accept mode" do
-        expect {
-          @messenger.accept_mode = nil
-        }.to raise_error(TypeError)
-      end
-
-      it "raises an error when setting an invalid accept mode" do
-        mode = random_string(16)
-        expect {
-          @messenger.accept_mode = mode
-        }.to raise_error(TypeError)
-      end
-
-      it "can have an automatic acceptance mode" do
-        mode = Qpid::Proton::Messenger::ACCEPT_MODE_AUTO
-        @messenger.accept_mode = mode
-        @messenger.accept_mode.should equal(mode)
-      end
-
-      it "can have a manual acceptance mode" do
-        mode = Qpid::Proton::Messenger::ACCEPT_MODE_MANUAL
-        @messenger.accept_mode = mode
-        @messenger.accept_mode.should equal(mode)
-      end
-
       it "raises an error on a nil outgoing window" do
         expect {
           @messenger.outgoing_window = nil

@@ -28,14 +28,6 @@ module Qpid
     #
     class Messenger
 
-      # Automatically accept every message as it is returned by #get
-      #
-      ACCEPT_MODE_AUTO = Cproton::PN_ACCEPT_MODE_AUTO
-
-      # Messages must be manually accepted or rejected using #accept
-      #
-      ACCEPT_MODE_MANUAL = Cproton::PN_ACCEPT_MODE_MANUAL
-
       include Qpid::Proton::ExceptionHandling
 
       # Creates a new +Messenger+.
@@ -262,28 +254,6 @@ module Qpid
         Qpid::Proton::Tracker.new(impl)
       end
 
-      # Set the accept mode for the Messenger. See #ACCEPT_MODE_AUTO and
-      # #ACCEPT_MODE_MANUAL for more details
-      #
-      # ==== Options
-      #
-      # * mode - the acceptance mode
-      #
-      # ==== Examples
-      #
-      #  @messenger.accept_mode = Qpid::Proton::Messenger::ACCEPT_MODE_AUTO
-      #
-      def accept_mode=(mode)
-        raise TypeError.new("Invalid mode: #{mode}") unless valid_mode?(mode)
-        Cproton.pn_messenger_set_accept_mode(@impl, mode)
-      end
-
-      # Returns the current acceptance mode for the Messenger.
-      #
-      def accept_mode
-        Cproton.pn_messenger_get_accept_mode(@impl)
-      end
-
       # Accepts the incoming message identified by the tracker.
       #
       # ==== Options
@@ -382,10 +352,6 @@ module Qpid
 
       def valid_tracker?(tracker)
         !tracker.nil? && tracker.is_a?(Qpid::Proton::Tracker)
-      end
-
-      def valid_mode?(mode)
-        [ACCEPT_MODE_AUTO, ACCEPT_MODE_MANUAL].include?(mode)
       end
 
       def valid_window?(window)
