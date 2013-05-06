@@ -24,6 +24,32 @@ Windows and Trackers
 
 <br/>
 
+Messenger does not track the disposition of every message that
+it sends or receives.  To set (or get) the disposition of a 
+message, that message must be within your incoming (or outgoing)
+window.
+
+( I will use the incoming direction as the example.  The outgoing
+direction works similarly. )
+
+When you call
+  
+        pn_messenger_set_incoming_window ( messenger, window_size );
+
+you have only declared the window size.  The window is not yet
+created.  The window will be created when you issue your first
+call to 
+
+        pn_messenger_get ( messenger,  msg );
+
+And the window will be further populated only by further calls to
+pn_messenger_get ( ).
+
+
+
+
+
+
 
 ### receiving ###
 
@@ -78,14 +104,29 @@ accepting messages by allowing them to fall off the edge of the
 incoming window could delay your response to the sender for an 
 unpredictable amount of time.
 
-The purpose of a nonzero window size is really to place 
-a limit on how much state your Messenger needs to track.
+A nonzero window size places a limit on
+how much state your Messenger needs to track.
 
 <br/>
 
 ###accepting by accident####
 
-_This section coming soon._
+If you allow a message to "fall off the edge" of your incoming 
+window before you have explicitly accepted or rejected it, then
+it will be accepted automatically.
+
+But since your incoming window is only filled by calls to 
+
+        pn_messenger_get ( messenger, msg );
+
+messages cannot be forced to fall over the edge by simply 
+receiving more messages.  Messages will not be forced over the
+edge of the incoming window unless you make too many calls to
+`pn_messenger_get()` without explicitly accepting or rejecting 
+the messages.
+
+Your application should accept or reject each message as soon 
+as practical after getting and processing it.
 
 
 
@@ -133,19 +174,8 @@ settled messages.
 
 <br/>
 
-### windows do not fill up ###
-When your incoming window fills up with messages it does not stop
-you from receiving more messages.  If your incoming window has size *N*
-the only effect of receiving *N+1* messages is that the oldest message
-is automatically accepted (if you have not already accepted or rejected
-it).
 
-If your outgoing window fills, and new messages going out force the
-oldest ones to fall off the edge, your application will just lose 
-the ability to track those oldest messages.
-<br/>
-
-_Note_  
+### message rejection ###
 If a message is rejected by the receiver, it does not mean that
 the message was malformed.  Malformed messages cannot be sent.
 Even messages with no content are valid messages.
@@ -157,7 +187,7 @@ or to send the message to another receiver, or to discard it.
 
 The AMQP 1.0 specification permits a distinction
 between _rejecting_ the message, and _releasing_ the message,
-but the Proton library does not (yet) expose the _releasing_ 
+but the Proton library does not expose the _releasing_ 
 disposition.
 
 
