@@ -23,9 +23,6 @@ use cproton_perl;
 
 package qpid::proton::Messenger;
 
-our $AUTO_ACCEPT   = $cproton_perl::PN_ACCEPT_MODE_AUTO;
-our $MANUAL_ACCEPT = $cproton_perl::PN_ACCEPT_MODE_MANUAL;
-
 sub new {
     my ($class) = @_;
     my ($self) = {};
@@ -61,20 +58,6 @@ sub set_timeout {
 sub get_timeout {
     my ($self) = @_;
     return cproton_perl::pn_messenger_get_timeout($self->{_impl});
-}
-
-sub set_accept_mode {
-    my ($self) = @_;
-    my $mode = $_[1];
-
-    die "acccept mode must be defined" if !defined($mode);
-
-    cproton_perl::pn_messenger_set_accept_mode($self->{_impl}, $mode);
-}
-
-sub get_accept_mode {
-    my ($self) = @_;
-    return cproton_perl::pn_messenger_get_accept_mode($self->{_impl});
 }
 
 sub set_outgoing_window {

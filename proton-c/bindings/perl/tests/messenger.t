@@ -93,24 +93,6 @@ ok($messenger->get_timeout() == 0, 'Timeout can be zero');
 $messenger->set_timeout($timeout);
 ok($messenger->get_timeout() == int($timeout), 'Timeout can be positive');
 
-# accept mode
-my @accept_modes = ($qpid::proton::Messenger::AUTO_ACCEPT,
-                    $qpid::proton::Messenger::MANUAL_ACCEPT);
-
-dies_ok(sub {$messenger->set_accept_mode(undef);},
-        'Accept mode cannot be null');
-dies_ok(sub {$messenger->set_accept_mode($messenger);},
-        'Accept mode rejects an arbitrary value');
-
-foreach (@accept_modes)
-{
-    my $mode = $_;
-
-    $messenger->set_accept_mode($mode);
-    ok($messenger->get_accept_mode() eq $mode,
-       'Accept mode was set correctly');
-}
-
 # outgoing window
 my $outgoing_window = rand(2**9);
 
