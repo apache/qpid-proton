@@ -1182,7 +1182,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
   if (!entry)
     return pn_error_format(messenger->error, PN_ERR, "store error");
 
-  messenger->outgoing_tracker = pn_tracker(OUTGOING, pni_entry_tracker(entry));
+  messenger->outgoing_tracker = pn_tracker(OUTGOING, pni_entry_track(entry));
   pn_buffer_t *buf = pni_entry_bytes(entry);
 
   while (true) {
@@ -1226,7 +1226,7 @@ pni_store_t *pn_tracker_store(pn_messenger_t *messenger, pn_tracker_t tracker)
 pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
 {
   pni_store_t *store = pn_tracker_store(messenger, tracker);
-  pni_entry_t *e = pni_store_track(store, pn_tracker_sequence(tracker));
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
   if (e) {
     return pni_entry_get_status(e);
   } else {
@@ -1346,7 +1346,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
   // XXX: need to drain credit before returning EOS
   if (!entry) return PN_EOS;
 
-  messenger->incoming_tracker = pn_tracker(INCOMING, pni_entry_tracker(entry));
+  messenger->incoming_tracker = pn_tracker(INCOMING, pni_entry_track(entry));
   pn_buffer_t *buf = pni_entry_bytes(entry);
   pn_bytes_t bytes = pn_buffer_bytes(buf);
   const char *encoded = bytes.start;

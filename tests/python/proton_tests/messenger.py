@@ -265,6 +265,39 @@ class MessengerTest(Test):
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
+  def testIncomingQueueBiggerThanWindow(self):
+    self.server.outgoing_window = 10
+    self.client.incoming_window = 10
+    self.start()
+
+    msg = Message()
+    msg.address = "amqp://0.0.0.0:12345"
+    msg.subject = "Hello World!"
+
+    for i in range(20):
+      self.client.put(msg)
+
+    while self.client.incoming < 20:
+      self.client.recv(20 - self.client.incoming)
+
+    trackers = []
+    while self.client.incoming:
+      t = self.client.get(msg)
+      assert self.client.status(t) is PENDING, (t, self.client.status(t))
+      trackers.append(t)
+
+    for t in trackers[:10]:
+      assert self.client.status(t) is None, (t, self.client.status(t))
+    for t in trackers[10:]:
+      assert self.client.status(t) is PENDING, (t, self.client.status(t))
+
+    self.client.accept()
+
+    for t in trackers[:10]:
+      assert self.client.status(t) is None, (t, self.client.status(t))
+    for t in trackers[10:]:
+      assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
+
   def test_proton222(self):
     self.start()
     msg = Message()

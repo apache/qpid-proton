@@ -43,8 +43,8 @@ void *pni_entry_get_context(pni_entry_t *entry);
 void pni_entry_updated(pni_entry_t *entry);
 void pni_entry_free(pni_entry_t *entry);
 
-pn_sequence_t pni_entry_tracker(pni_entry_t *entry);
-pni_entry_t *pni_store_track(pni_store_t *store, pn_sequence_t id);
+pn_sequence_t pni_entry_track(pni_entry_t *entry);
+pni_entry_t *pni_store_entry(pni_store_t *store, pn_sequence_t id);
 int pni_store_update(pni_store_t *store, pn_sequence_t id, pn_status_t status,
                      int flags, bool settle, bool match);
 int pni_store_get_window(pni_store_t *store);
