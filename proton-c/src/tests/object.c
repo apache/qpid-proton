@@ -315,6 +315,74 @@ static void test_hash()
   pn_decref(three);
 }
 
+static bool equals(const char *a, const char *b)
+{
+  if (a == NULL && b == NULL) {
+    return true;
+  }
+
+  if (a == NULL || b == NULL) {
+    return false;
+  }
+
+  return !strcmp(a, b);
+}
+
+static void test_string(const char *value)
+{
+  size_t size = value ? strlen(value) : 0;
+
+  pn_string_t *str = pn_string(value);
+  assert(equals(pn_string_get(str), value));
+  assert(pn_string_size(str) == size);
+
+  pn_string_t *strn = pn_stringn(value, size);
+  assert(equals(pn_string_get(strn), value));
+  assert(pn_string_size(strn) == size);
+
+  pn_string_t *strset = pn_string(NULL);
+  pn_string_set(strset, value);
+  assert(equals(pn_string_get(strset), value));
+  assert(pn_string_size(strset) == size);
+
+  pn_string_t *strsetn = pn_string(NULL);
+  pn_string_setn(strsetn, value, size);
+  assert(equals(pn_string_get(strsetn), value));
+  assert(pn_string_size(strsetn) == size);
+
+  assert(pn_hashcode(str) == pn_hashcode(strn));
+  assert(pn_hashcode(str) == pn_hashcode(strset));
+  assert(pn_hashcode(str) == pn_hashcode(strsetn));
+
+  assert(!pn_compare(str, str));
+  assert(!pn_compare(str, strn));
+  assert(!pn_compare(str, strset));
+  assert(!pn_compare(str, strsetn));
+
+  pn_free(str);
+  pn_free(strn);
+  pn_free(strset);
+  pn_free(strsetn);
+}
+
+static void test_stringn(const char *value, size_t size)
+{
+  pn_string_t *strn = pn_stringn(value, size);
+  assert(equals(pn_string_get(strn), value));
+  assert(pn_string_size(strn) == size);
+
+  pn_string_t *strsetn = pn_string(NULL);
+  pn_string_setn(strsetn, value, size);
+  assert(equals(pn_string_get(strsetn), value));
+  assert(pn_string_size(strsetn) == size);
+
+  assert(pn_hashcode(strn) == pn_hashcode(strsetn));
+  assert(!pn_compare(strn, strsetn));
+
+  pn_free(strn);
+  pn_free(strsetn);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -335,11 +403,22 @@ int main(int argc, char **argv)
   for (size_t i = 0; i < 4; i++) {
     test_list(i);
   }
+
   for (size_t i = 0; i < 4; i++) {
     test_list_refcount(i);
   }
+
   test_map();
+
   test_hash();
+
+  test_string(NULL);
+  test_string("");
+  test_string("this is a test");
+  test_string("012345678910111213151617181920212223242526272829303132333435363"
+              "738394041424344454647484950515253545556575859606162636465666768");
+  test_string("this has an embedded \000 in it");
+  test_stringn("this has an embedded \000 in it", 28);
 
   return 0;
 }

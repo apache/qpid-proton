@@ -21,6 +21,7 @@
 
 #include <proton/error.h>
 #include <proton/object.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -498,9 +499,11 @@ void pn_hash_del(pn_hash_t *hash, uintptr_t key)
   pn_map_del(&hash->map, (void *) key);
 }
 
+#define PNI_NULL_SIZE (-1)
+
 struct pn_string_t {
   char *bytes;
-  size_t size;
+  ssize_t size;       // PNI_NULL_SIZE (-1) means null
   size_t capacity;
 };
 
@@ -513,8 +516,12 @@ static void pn_string_finalize(void *object)
 static uintptr_t pn_string_hashcode(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
+  if (string->size == PNI_NULL_SIZE) {
+    return 0;
+  }
+
   uintptr_t hashcode = 1;
-  for (size_t i = 0; i < string->size; i++) {
+  for (ssize_t i = 0; i < string->size; i++) {
     hashcode = hashcode * 31 + string->bytes[i];
   }
   return hashcode;
@@ -528,12 +535,16 @@ static intptr_t pn_string_compare(void *oa, void *ob)
     return b->size - a->size;
   }
 
-  return memcmp(a->bytes, b->bytes, a->size);
+  if (a->size == PNI_NULL_SIZE) {
+    return 0;
+  } else {
+    return memcmp(a->bytes, b->bytes, a->size);
+  }
 }
 
 pn_string_t *pn_string(const char *bytes)
 {
-  return pn_stringn(bytes, strlen(bytes) + 1);
+  return pn_stringn(bytes, bytes ? strlen(bytes) : 0);
 }
 
 static pn_class_t clazz = {pn_string_finalize, pn_string_hashcode,
@@ -552,24 +563,32 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 const char *pn_string_get(pn_string_t *string)
 {
   assert(string);
-  return string->bytes;
+  if (string->size == PNI_NULL_SIZE) {
+    return NULL;
+  } else {
+    return string->bytes;
+  }
 }
 
 size_t pn_string_size(pn_string_t *string)
 {
   assert(string);
-  return string->size;
+  if (string->size == PNI_NULL_SIZE) {
+    return 0;
+  } else {
+    return string->size;
+  }
 }
 
 int pn_string_set(pn_string_t *string, const char *bytes)
 {
-  return pn_string_setn(string, bytes, strlen(bytes) + 1);
+  return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
 int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 {
   bool grow = false;
-  while (string->capacity < n*sizeof(char)) {
+  while (string->capacity < (n*sizeof(char) + 1)) {
     string->capacity *= 2;
     grow = true;
   }
@@ -583,7 +602,18 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
     }
   }
 
-  memcpy(string->bytes, bytes, n*sizeof(char));
-  string->size = n;
+  if (bytes) {
+    memcpy(string->bytes, bytes, n*sizeof(char));
+    string->bytes[n] = '\0';
+    string->size = n;
+  } else {
+    string->size = PNI_NULL_SIZE;
+  }
+
   return 0;
+}
+
+void pn_string_clear(pn_string_t *string)
+{
+  pn_string_set(string, NULL);
 }

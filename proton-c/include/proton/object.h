@@ -86,6 +86,7 @@ PN_EXTERN const char *pn_string_get(pn_string_t *string);
 PN_EXTERN size_t pn_string_size(pn_string_t *string);
 PN_EXTERN int pn_string_set(pn_string_t *string, const char *bytes);
 PN_EXTERN int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
+PN_EXTERN void pn_string_clear(pn_string_t *string);
 
 #ifdef __cplusplus
 }
