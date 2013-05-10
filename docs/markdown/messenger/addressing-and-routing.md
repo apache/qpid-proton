@@ -64,11 +64,11 @@ Routing
 
 The Messenger library provides message routing capability
 with an address translation table.  Each entry in the table 
-consists of a _pattern_ and a _translation_.
+consists of a *pattern* and a *translation*.
 
 You store a new route entry in the table with the call:
 
-        pn_messenger_route ( messenger, pattern, translation );
+        pn_messenger_route(messenger, pattern, translation);
 
 
 The address of each outgoing message is compared to the 

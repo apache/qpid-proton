@@ -26,7 +26,7 @@ When receiving messages, you can:
 Functions
 ------------------------------
 
-* `pn_messenger_put ( messenger )`
+* `pn_messenger_put(messenger)`
 
     Stage message for later transmission, and possibly
     transmit any messages currently staged that are not
@@ -35,9 +35,9 @@ Functions
 
 
 
-* `pn_messenger_send ( messenger )`
+* `pn_messenger_send(messenger)`
 
-    If messenger timeout is negative (initial default ),
+    If messenger timeout is negative (initial default),
     block until all staged messages have been sent.
 
     If messenger timeout is 0, send all messages that
@@ -46,13 +46,13 @@ Functions
     If messenger timeout is positive, send all messages
     that can be sent until timeout expires.
 
-    _note: If there are any messages that can be received
+    *note: If there are any messages that can be received
     when `pn_messenger_send()` is called, they will
-    be received._
+    be received.*
 
 
 
-* `pn_messenger_get ( messenger, msg )`
+* `pn_messenger_get(messenger, msg)`
 
     Dequeue the head of the incoming message queue to
     your application.
@@ -60,9 +60,9 @@ Functions
 
 
 
-* `pn_messenger_recv ( messenger )`
+* `pn_messenger_recv(messenger)`
 
-    If messenger timeout is negative ( initial default ),
+    If messenger timeout is negative(initial default),
     block until at least one message is received.
 
     If timeout is 0, receive whatever messages are available,
@@ -71,8 +71,8 @@ Functions
     If timeout is positive, receive available messages until
     timeout expires.
 
-    _note: If there are any unblocked outgoing messages,
-    they will be sent during this call._
+    *note: If there are any unblocked outgoing messages,
+    they will be sent during this call.*
 
 
 
@@ -83,62 +83,62 @@ Examples
 
 * send a message immediately
 
-        pn_messenger_put  ( messenger, msg );
-        pn_messenger_send ( messenger );
+        pn_messenger_put(messenger, msg);
+        pn_messenger_send(messenger);
 
 
 
 * enqueue a message to be sent later
 
-        pn_messenger_put ( messenger, msg );
+        pn_messenger_put(messenger, msg);
 
-    _note:
+    *note:
     The message will be sent whenever it is not blocked and
-    the Messenger code has other I/O work to be done._
+    the Messenger code has other I/O work to be done.*
 
 
 
 * block until all enqueued messages are sent
 
-        pn_messenger_set_timeout ( messenger, -1 );
-        pn_messenger_send ( messenger );
+        pn_messenger_set_timeout(messenger, -1);
+        pn_messenger_send(messenger);
 
-    _note:
+    *note:
     A negative timeout means 'forever'.  That is the initial
-    default for a messenger._
+    default for a messenger.*
 
 
 
 * send enqueued messages until a timeout occurs
 
-        pn_messenger_set_timeout ( messenger, 100 ); /* 100 msec */
-        pn_messenger_send ( messenger );
+        pn_messenger_set_timeout(messenger, 100); /* 100 msec */
+        pn_messenger_send(messenger);
 
 
 
 * send all messages that can be sent without blocking
 
-        pn_messenger_set_timeout ( messenger, 0 );
-        pn_messenger_send ( messenger );
+        pn_messenger_set_timeout(messenger, 0);
+        pn_messenger_send(messenger);
 
 
 
 * receive messages that can be received without blocking
 
-        pn_messenger_set_timeout ( messenger, 0 );
-        pn_messenger_recv ( messenger, -1 );
+        pn_messenger_set_timeout(messenger, 0);
+        pn_messenger_recv(messenger, -1);
 
 
 * block until at least one message is received
 
-        pn_messenger_set_timeout ( messenger, -1 );
-        pn_messenger_recv ( messenger, -1 );
+        pn_messenger_set_timeout(messenger, -1);
+        pn_messenger_recv(messenger, -1);
 
-    _note: -1 is initial messenger default._
+    *note: -1 is initial messenger default.*
 
 
 
 * receive no more than a fixed number of messages
 
-        pn_messenger_recv ( messenger, 10 );
+        pn_messenger_recv(messenger, 10);
 
