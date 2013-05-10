@@ -87,7 +87,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         return _done && (_role==Role.CLIENT || _initReceived);
     }
 
-    public final int input(byte[] bytes, int offset, int size)
+    private final int input(byte[] bytes, int offset, int size)
     {
         if(isDone())
         {
@@ -99,7 +99,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
-    public final int output(byte[] bytes, int offset, int size)
+    private final int output(byte[] bytes, int offset, int size)
     {
 
         int written = 0;

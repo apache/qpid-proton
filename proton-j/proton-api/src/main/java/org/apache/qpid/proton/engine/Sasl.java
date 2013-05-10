@@ -64,23 +64,6 @@ public interface Sasl
     public static SaslOutcome PN_SASL_TEMP = SaslOutcome.PN_SASL_TEMP;
 
     public int END_OF_STREAM = -1;
-    /**
-     * @param bytes input bytes for consumption
-     * @param offset the offset within bytes where input begins
-     * @param size the number of bytes available for input
-     *
-     * @return the number of bytes consumed
-     */
-    public int input(byte[] bytes, int offset, int size);
-
-    /**
-     * @param bytes array for output bytes
-     * @param offset the offset within bytes where output begins
-     * @param size the number of bytes available for output
-     *
-     * @return the number of bytes written
-     */
-    public int output(byte[] bytes, int offset, int size);
 
     /** Access the current state of the layer.
      *

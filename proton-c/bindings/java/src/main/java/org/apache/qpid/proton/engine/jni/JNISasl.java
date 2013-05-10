@@ -42,18 +42,6 @@ public class JNISasl implements Sasl
     }
 
     @Override
-    public int input(byte[] bytes, int offset, int size)
-    {
-        return 0;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
-    public int output(byte[] bytes, int offset, int size)
-    {
-        return 0;  //To change body of implemented methods use File | Settings | File Templates.
-    }
-
-    @Override
     @ProtonCEquivalent("pn_sasl_state")
     public SaslState getState()
     {
