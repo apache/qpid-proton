@@ -452,6 +452,9 @@ PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
                                  const char *address);
 
+PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
+                                   const char *address);
+
 #ifdef __cplusplus
 }
 #endif

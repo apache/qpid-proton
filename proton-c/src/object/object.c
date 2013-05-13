@@ -21,7 +21,7 @@
 
 #include <proton/error.h>
 #include <proton/object.h>
-#include <sys/types.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -585,10 +585,10 @@ int pn_string_set(pn_string_t *string, const char *bytes)
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
+static int pn_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
-  while (string->capacity < (n*sizeof(char) + 1)) {
+  while (string->capacity < (capacity*sizeof(char) + 1)) {
     string->capacity *= 2;
     grow = true;
   }
@@ -602,6 +602,14 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
     }
   }
 
+  return 0;
+}
+
+int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
+{
+  int err = pn_string_grow(string, n);
+  if (err) return err;
+
   if (bytes) {
     memcpy(string->bytes, bytes, n*sizeof(char));
     string->bytes[n] = '\0';
@@ -613,7 +621,66 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
   return 0;
 }
 
+ssize_t pn_string_put(pn_string_t *string, char *dst)
+{
+  assert(string);
+  assert(dst);
+
+  if (string->size != PNI_NULL_SIZE) {
+    memcpy(dst, string->bytes, string->size + 1);
+  }
+
+  return string->size;
+}
+
 void pn_string_clear(pn_string_t *string)
 {
   pn_string_set(string, NULL);
+}
+
+int pn_string_format(pn_string_t *string, const char *format, ...)
+{
+  va_list ap;
+
+  while (true) {
+    va_start(ap, format);
+    int err = vsnprintf(string->bytes, string->capacity, format, ap);
+    va_end(ap);
+    if (err < 0) {
+      return err;
+    } else if ((size_t) err >= string->capacity) {
+      pn_string_grow(string, err);
+    } else {
+      string->size = err;
+      return 0;
+    }
+  }
+}
+
+char *pn_string_buffer(pn_string_t *string)
+{
+  assert(string);
+  return string->bytes;
+}
+
+size_t pn_string_capacity(pn_string_t *string)
+{
+  assert(string);
+  return string->capacity - 1;
+}
+
+int pn_string_resize(pn_string_t *string, size_t size)
+{
+  assert(string);
+  int err = pn_string_grow(string, size);
+  if (err) return err;
+  string->size = size;
+  string->bytes[size] = '\0';
+  return 0;
+}
+
+int pn_string_copy(pn_string_t *string, pn_string_t *src)
+{
+  assert(string);
+  return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
 }

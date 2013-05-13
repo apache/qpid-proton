@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #include <proton/import_export.h>
 
@@ -86,7 +87,15 @@ PN_EXTERN const char *pn_string_get(pn_string_t *string);
 PN_EXTERN size_t pn_string_size(pn_string_t *string);
 PN_EXTERN int pn_string_set(pn_string_t *string, const char *bytes);
 PN_EXTERN int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
+PN_EXTERN ssize_t pn_string_put(pn_string_t *string, char *dst);
 PN_EXTERN void pn_string_clear(pn_string_t *string);
+PN_EXTERN int pn_string_format(pn_string_t *string, const char *format, ...)
+  __attribute__ ((format (printf, 2, 3)));
+PN_EXTERN char *pn_string_buffer(pn_string_t *string);
+PN_EXTERN size_t pn_string_capacity(pn_string_t *string);
+PN_EXTERN int pn_string_resize(pn_string_t *string, size_t size);
+PN_EXTERN int pn_string_copy(pn_string_t *string, pn_string_t *src);
+
 
 #ifdef __cplusplus
 }

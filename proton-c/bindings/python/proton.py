@@ -492,6 +492,9 @@ send. Defaults to zero.
   def route(self, pattern, address):
     self._check(pn_messenger_route(self._mng, pattern, address))
 
+  def rewrite(self, pattern, address):
+    self._check(pn_messenger_rewrite(self._mng, pattern, address))
+
 class Message(object):
   """
   The L{Message} class is a mutable holder of message content.
@@ -549,9 +552,8 @@ class Message(object):
     props.clear()
     if self.properties is not None:
       props.put_object(self.properties)
+    body.clear()
     if self.body is not None:
-      # XXX: move this out when load/save are gone
-      body.clear()
       body.put_object(self.body)
 
   def _post_decode(self):

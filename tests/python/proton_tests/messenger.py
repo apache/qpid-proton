@@ -25,32 +25,31 @@ from time import sleep, time
 class Test(common.Test):
 
   def setup(self):
-    # Very high timeout expected to only be exceeded by a genuine functional
-    # problem, not by CI server slowness.
-    self.long_timeout_millis = 100000
-
     self.server_credit = 10
     self.server_received = 0
     self.server = Messenger("server")
-    self.server.timeout = self.long_timeout_millis
+    self.server.timeout = int(self.timeout*1000)
     self.server.start()
     self.server.subscribe("amqp://~0.0.0.0:12345")
     self.server_thread = Thread(name="server-thread", target=self.run_server)
     self.server_thread.daemon = True
     self.server_is_running_event = Event()
     self.running = True
+    self.server_thread_started = False
 
     self.client = Messenger("client")
-    self.client.timeout= self.long_timeout_millis
+    self.client.timeout = int(self.timeout*1000)
 
   def start(self):
+    self.server_thread_started = True
     self.server_thread.start()
-    self.server_is_running_event.wait(self.long_timeout_millis/1000)
+    self.server_is_running_event.wait(self.timeout)
     self.client.start()
 
   def teardown(self):
     try:
       if self.running:
+        if not self.server_thread_started: self.start()
         # send a message to cause the server to promptly exit
         self.running = False
         msg = Message()
@@ -59,7 +58,7 @@ class Test(common.Test):
         self.client.send()
     finally:
       self.client.stop()
-      self.server_thread.join()
+      self.server_thread.join(self.timeout)
       self.client = None
       self.server = None
 
@@ -104,7 +103,7 @@ class MessengerTest(Test):
       while len(body) < size:
         body = 2*body
       body = body[:size]
-    msg.load(body)
+    msg.body = body
     self.client.put(msg)
     self.client.send()
 
@@ -114,7 +113,7 @@ class MessengerTest(Test):
     self.client.get(reply)
 
     assert reply.subject == "Hello World!"
-    rbod = reply.save()
+    rbod = reply.body
     assert rbod == body, (rbod, body)
 
   def testSendReceive(self):
@@ -303,7 +302,7 @@ class MessengerTest(Test):
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
     msg.subject="Hello World!"
-    msg.load("First the world, then the galaxy!")
+    msg.body = "First the world, then the galaxy!"
     assert self.server_received == 0
     self.client.put(msg)
     self.client.send()
@@ -325,7 +324,7 @@ class MessengerTest(Test):
     msg.address="amqp://0.0.0.0:12345/XXX"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
-    msg.load(body)
+    msg.body = body
     self.client.put(msg)
     self.client.send()
 
@@ -335,14 +334,14 @@ class MessengerTest(Test):
     self.client.get(reply)
 
     assert reply.subject == "Hello World!"
-    rbod = reply.save()
+    rbod = reply.body
     assert rbod == body, (rbod, body)
 
     msg = Message()
     msg.address="amqp://0.0.0.0:12345/YYY"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
-    msg.load(body)
+    msg.body = body
     self.client.put(msg)
     self.client.send()
 
@@ -352,7 +351,7 @@ class MessengerTest(Test):
     self.client.get(reply)
 
     assert reply.subject == "Hello World!"
-    rbod = reply.save()
+    rbod = reply.body
     assert rbod == body, (rbod, body)
 
   def _DISABLE_test_proton268(self):
@@ -363,7 +362,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
-    msg.load( "X" * 1024 )
+    msg.body = "X" * 1024
 
     for x in range( 100 ):
       self.client.put( msg )
@@ -446,3 +445,120 @@ class MessengerTest(Test):
     reply = Message()
     self.client.get(reply)
     assert reply.body == "test"
+
+  def echo_address(self, msg):
+    while self.server.incoming:
+      self.server.get(msg)
+      msg.body = msg.address
+      self.dispatch(msg)
+
+  def _testRewrite(self, original, rewritten):
+    self.start()
+    self.process_incoming = self.echo_address
+    self.client.route("*", "amqp://0.0.0.0:12345")
+
+    msg = Message()
+    msg.address = original
+    msg.body = "test"
+
+    self.client.put(msg)
+    assert msg.address == original
+    self.client.recv(1)
+    assert self.client.incoming == 1
+
+    echo = Message()
+    self.client.get(echo)
+    assert echo.body == rewritten, (echo.body, rewritten)
+    assert msg.address == original
+
+  def testDefaultRewriteH(self):
+    self._testRewrite("original", "original")
+
+  def testDefaultRewriteUH(self):
+    self._testRewrite("user@original", "original")
+
+  def testDefaultRewriteUPH(self):
+    self._testRewrite("user:pass@original", "original")
+
+  def testDefaultRewriteHP(self):
+    self._testRewrite("original:123", "original:123")
+
+  def testDefaultRewriteUHP(self):
+    self._testRewrite("user@original:123", "original:123")
+
+  def testDefaultRewriteUPHP(self):
+    self._testRewrite("user:pass@original:123", "original:123")
+
+  def testDefaultRewriteHN(self):
+    self._testRewrite("original/name", "original/name")
+
+  def testDefaultRewriteUHN(self):
+    self._testRewrite("user@original/name", "original/name")
+
+  def testDefaultRewriteUPHN(self):
+    self._testRewrite("user:pass@original/name", "original/name")
+
+  def testDefaultRewriteHPN(self):
+    self._testRewrite("original:123/name", "original:123/name")
+
+  def testDefaultRewriteUHPN(self):
+    self._testRewrite("user@original:123/name", "original:123/name")
+
+  def testDefaultRewriteUPHPN(self):
+    self._testRewrite("user:pass@original:123/name", "original:123/name")
+
+  def testDefaultRewriteSH(self):
+    self._testRewrite("amqp://original", "amqp://original")
+
+  def testDefaultRewriteSUH(self):
+    self._testRewrite("amqp://user@original", "amqp://original")
+
+  def testDefaultRewriteSUPH(self):
+    self._testRewrite("amqp://user:pass@original", "amqp://original")
+
+  def testDefaultRewriteSHP(self):
+    self._testRewrite("amqp://original:123", "amqp://original:123")
+
+  def testDefaultRewriteSUHP(self):
+    self._testRewrite("amqp://user@original:123", "amqp://original:123")
+
+  def testDefaultRewriteSUPHP(self):
+    self._testRewrite("amqp://user:pass@original:123", "amqp://original:123")
+
+  def testDefaultRewriteSHN(self):
+    self._testRewrite("amqp://original/name", "amqp://original/name")
+
+  def testDefaultRewriteSUHN(self):
+    self._testRewrite("amqp://user@original/name", "amqp://original/name")
+
+  def testDefaultRewriteSUPHN(self):
+    self._testRewrite("amqp://user:pass@original/name", "amqp://original/name")
+
+  def testDefaultRewriteSHPN(self):
+    self._testRewrite("amqp://original:123/name", "amqp://original:123/name")
+
+  def testDefaultRewriteSUHPN(self):
+    self._testRewrite("amqp://user@original:123/name", "amqp://original:123/name")
+
+  def testDefaultRewriteSUPHPN(self):
+    self._testRewrite("amqp://user:pass@original:123/name", "amqp://original:123/name")
+
+  def testRewriteSupress(self):
+    self.client.rewrite("*", None)
+    self._testRewrite("asdf", None)
+
+  def testRewrite(self):
+    self.client.rewrite("a", "b")
+    self._testRewrite("a", "b")
+
+  def testRewritePattern(self):
+    self.client.rewrite("amqp://%@*", "amqp://$2")
+    self._testRewrite("amqp://foo@bar", "amqp://bar")
+
+  def testRewriteToAt(self):
+    self.client.rewrite("amqp://%/*", "$2@$1")
+    self._testRewrite("amqp://domain/name", "name@domain")
+
+  def testRewriteOverrideDefault(self):
+    self.client.rewrite("*", "$1")
+    self._testRewrite("amqp://user:pass@host", "amqp://user:pass@host")

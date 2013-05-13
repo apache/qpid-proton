@@ -1051,6 +1051,9 @@ class Messenger(object):
   def route(self, *args, **kwargs):
     raise Skipped()
 
+  def rewrite(self, *args, **kwargs):
+    raise Skipped()
+
   def start(self):
     self.impl.start()
 

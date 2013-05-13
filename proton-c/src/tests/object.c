@@ -383,6 +383,18 @@ static void test_stringn(const char *value, size_t size)
   pn_free(strsetn);
 }
 
+static void test_string_format()
+{
+  pn_string_t *str = pn_string("");
+  assert(str);
+  int err = pn_string_format(str, "%s", "this is a string that should be long "
+                             "enough to force growth but just in case we'll "
+                             "tack this other really long string on for the "
+                             "heck of it");
+  assert(err == 0);
+  pn_free(str);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -419,6 +431,8 @@ int main(int argc, char **argv)
               "738394041424344454647484950515253545556575859606162636465666768");
   test_string("this has an embedded \000 in it");
   test_stringn("this has an embedded \000 in it", 28);
+
+  test_string_format();
 
   return 0;
 }

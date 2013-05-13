@@ -112,8 +112,7 @@ class CodecTest(Test):
     self.msg.priority = 100
     self.msg.address = "address"
     self.msg.subject = "subject"
-    body = 'Hello World!'
-    self.msg.load(body)
+    self.msg.body = 'Hello World!'
 
     data = self.msg.encode()
 
@@ -126,8 +125,7 @@ class CodecTest(Test):
     assert self.msg.priority == msg2.priority, (self.msg.priority, msg2.priority)
     assert self.msg.address == msg2.address, (self.msg.address, msg2.address)
     assert self.msg.subject == msg2.subject, (self.msg.subject, msg2.subject)
-    saved = self.msg.save()
-    assert saved == body, (body, saved)
+    assert self.msg.body == msg2.body, (self.msg.body, msg2.body)
 
 class LoadSaveTest(Test):
 
