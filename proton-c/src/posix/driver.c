@@ -608,7 +608,9 @@ void pn_connector_process(pn_connector_t *c)
               c->status &= ~PN_SEL_WR;
           }
         }
-      } else if (pending < 0) {
+      } else if (pending == 0) {
+        c->status &= ~PN_SEL_WR;
+      } else {
         c->output_done = true;
         c->status &= ~PN_SEL_WR;
       }
