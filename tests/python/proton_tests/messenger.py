@@ -264,7 +264,8 @@ class MessengerTest(Test):
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
-  def testIncomingQueueBiggerThanWindow(self):
+  # see https://issues.apache.org/jira/browse/PROTON-315
+  def removedInProton315_testIncomingQueueBiggerThanWindow(self):
     self.server.outgoing_window = 10
     self.client.incoming_window = 10
     self.start()
