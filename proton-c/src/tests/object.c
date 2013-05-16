@@ -20,9 +20,11 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <proton/object.h>
-#include <assert.h>
+
+#define assert(E) ((E) ? 0 : (abort(), 0))
 
 static void noop(void *o) {}
 static uintptr_t zero(void *o) { return 0; }

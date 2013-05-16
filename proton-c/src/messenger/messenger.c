@@ -1039,7 +1039,7 @@ static void pni_default_rewrite(pn_messenger_t *messenger, const char *address,
   pn_address_t *addr = &messenger->address;
   if (address && strstr(address, "@")) {
     int err = pn_string_set(addr->text, address);
-    assert(!err);
+    if (err) assert(false);
     pni_parse(addr);
     if (addr->user || addr->pass)
     {
@@ -1062,7 +1062,7 @@ static void pni_rewrite(pn_messenger_t *messenger, pn_message_t *msg)
 
   int err = pn_transform_apply(messenger->rewrites, address,
                                messenger->rewritten);
-  assert(!err);
+  if (err) assert(false);
   if (!pn_transform_matched(messenger->rewrites)) {
     pni_default_rewrite(messenger, pn_string_get(messenger->rewritten),
                         messenger->rewritten);
