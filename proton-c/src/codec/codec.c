@@ -2996,7 +2996,7 @@ int pn_data_append(pn_data_t *data, pn_data_t *src)
 
 int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
 {
-  int err;
+  int err = 0;
   int level = 0, count = 0;
   bool stop = false;
   pn_point_t point = pn_data_point(src);
