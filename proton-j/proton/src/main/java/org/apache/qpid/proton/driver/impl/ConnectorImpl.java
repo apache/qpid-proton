@@ -119,7 +119,7 @@ class ConnectorImpl<C> implements Connector<C>
             _readBuffer.position(_readBuffer.position() + consumed);
             if (_logger.isLoggable(Level.FINE))
             {
-                _logger.log(Level.FINE, "consumed " + consumed + " bytes, " + _readBuffer.remaining() + " available");
+                _logger.log(Level.FINE, this + " consumed " + consumed + " bytes, " + _readBuffer.remaining() + " available");
             }
             total += consumed;
         }
@@ -140,7 +140,7 @@ class ConnectorImpl<C> implements Connector<C>
             int wrote = _channel.write(_writeBuffer);
             if (_logger.isLoggable(Level.FINE))
             {
-                _logger.log(Level.FINE, "wrote " + wrote + " bytes, " + _writeBuffer.remaining() + " remaining");
+                _logger.log(Level.FINE, this + " wrote " + wrote + " bytes, " + _writeBuffer.remaining() + " remaining");
             }
             if (_writeBuffer.hasRemaining())
             {
@@ -159,6 +159,10 @@ class ConnectorImpl<C> implements Connector<C>
             }
         }
         _key.interestOps(interest);
+        if (_logger.isLoggable(Level.FINE))
+        {
+            _logger.log(Level.FINE, this + " finished writing output to the channel.");
+        }
     }
 
     public Listener<C> listener()
@@ -225,5 +229,13 @@ class ConnectorImpl<C> implements Connector<C>
     {
         close(); // close if not closed already
         _driver.removeConnector(this);
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("ConnectorImpl [_channel=").append(_channel).append("]");
+        return builder.toString();
     }
 }

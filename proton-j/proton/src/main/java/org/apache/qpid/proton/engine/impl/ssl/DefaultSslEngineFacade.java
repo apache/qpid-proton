@@ -24,12 +24,22 @@ import java.nio.ByteBuffer;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
 
 
 class DefaultSslEngineFacade implements ProtonSslEngine
 {
     private final SSLEngine _sslEngine;
+
+    /**
+     * Our testing has shown that application buffers need to be a bit larger
+     * than that provided by {@link SSLSession#getApplicationBufferSize()} otherwise
+     * {@link Status#BUFFER_OVERFLOW} will result on {@link SSLEngine#unwrap()}.
+     * Sun's own example uses 50, so we use the same.
+     */
+    private static final int APPLICATION_BUFFER_EXTRA = 50;
 
     DefaultSslEngineFacade(SSLEngine sslEngine)
     {
@@ -48,8 +58,16 @@ class DefaultSslEngineFacade implements ProtonSslEngine
         return _sslEngine.unwrap(src, dst);
     }
 
+    /**
+     * @see #APPLICATION_BUFFER_EXTRA
+     */
     @Override
-    public int getApplicationBufferSize()
+    public int getEffectiveApplicationBufferSize()
+    {
+        return getApplicationBufferSize() + APPLICATION_BUFFER_EXTRA;
+    }
+
+    private int getApplicationBufferSize()
     {
         return _sslEngine.getSession().getApplicationBufferSize();
     }
@@ -89,4 +107,13 @@ class DefaultSslEngineFacade implements ProtonSslEngine
     {
         return _sslEngine.getUseClientMode();
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("DefaultSslEngineFacade [_sslEngine=").append(_sslEngine).append("]");
+        return builder.toString();
+    }
+
 }

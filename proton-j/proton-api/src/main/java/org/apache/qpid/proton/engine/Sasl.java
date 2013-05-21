@@ -25,20 +25,30 @@ public interface Sasl
 {
     public enum SaslState
     {
-        PN_SASL_CONF,    /** Pending configuration by application */
-        PN_SASL_IDLE,    /** Pending SASL Init */
-        PN_SASL_STEP,    /** negotiation in progress */
-        PN_SASL_PASS,    /** negotiation completed successfully */
-        PN_SASL_FAIL     /** negotiation failed */
+        /** Pending configuration by application */
+        PN_SASL_CONF,
+        /** Pending SASL Init */
+        PN_SASL_IDLE,
+        /** negotiation in progress */
+        PN_SASL_STEP,
+        /** negotiation completed successfully */
+        PN_SASL_PASS,
+        /** negotiation failed */
+        PN_SASL_FAIL
     }
 
     public enum SaslOutcome
     {
-        PN_SASL_NONE((byte)-1),  /** negotiation not completed */
-        PN_SASL_OK((byte)0),     /** authentication succeeded */
-        PN_SASL_AUTH((byte)1),   /** failed due to bad credentials */
-        PN_SASL_SYS((byte)2),    /** failed due to a system error */
-        PN_SASL_PERM((byte)3),   /** failed due to unrecoverable error */
+        /** negotiation not completed */
+        PN_SASL_NONE((byte)-1),
+        /** authentication succeeded */
+        PN_SASL_OK((byte)0),
+        /** failed due to bad credentials */
+        PN_SASL_AUTH((byte)1),
+        /** failed due to a system error */
+        PN_SASL_SYS((byte)2),
+        /** failed due to unrecoverable error */
+        PN_SASL_PERM((byte)3),
         PN_SASL_TEMP((byte)4);
 
         private final byte _code;
@@ -63,27 +73,29 @@ public interface Sasl
     public static SaslOutcome PN_SASL_PERM = SaslOutcome.PN_SASL_PERM;
     public static SaslOutcome PN_SASL_TEMP = SaslOutcome.PN_SASL_TEMP;
 
-    public int END_OF_STREAM = -1;
-
-    /** Access the current state of the layer.
+    /**
+     * Access the current state of the layer.
      *
      * @return The state of the sasl layer.
      */
     SaslState getState();
 
-    /** Set the acceptable SASL mechanisms for the layer.
+    /**
+     * Set the acceptable SASL mechanisms for the layer.
      *
      * @param mechanisms a list of acceptable SASL mechanisms
      */
     void setMechanisms(String[] mechanisms);
 
-    /** Retrieve the list of SASL mechanisms provided by the remote.
+    /**
+     * Retrieve the list of SASL mechanisms provided by the remote.
      *
      * @return the SASL mechanisms advertised by the remote
      */
     String[] getRemoteMechanisms();
 
-    /** Determine the size of the bytes available via recv().
+    /**
+     * Determine the size of the bytes available via recv().
      *
      * Returns the size in bytes available via recv().
      *
@@ -91,7 +103,8 @@ public interface Sasl
      */
     int pending();
 
-    /** Read challenge/response data sent from the peer.
+    /**
+     * Read challenge/response data sent from the peer.
      *
      * Use pending to determine the size of the data.
      *
@@ -102,7 +115,8 @@ public interface Sasl
      */
     int recv(byte[] bytes, int offset, int size);
 
-    /** Send challenge or response data to the peer.
+    /**
+     * Send challenge or response data to the peer.
      *
      * @param bytes The challenge/response data.
      * @param offset the point within the array at which the data starts at
@@ -112,7 +126,8 @@ public interface Sasl
     int send(byte[] bytes, int offset, int size);
 
 
-    /** Set the outcome of SASL negotiation
+    /**
+     * Set the outcome of SASL negotiation
      *
      * Used by the server to set the result of the negotiation process.
      *
@@ -121,7 +136,8 @@ public interface Sasl
     void done(SaslOutcome outcome);
 
 
-    /** Configure the SASL layer to use the "PLAIN" mechanism.
+    /**
+     * Configure the SASL layer to use the "PLAIN" mechanism.
      *
      * A utility function to configure a simple client SASL layer using
      * PLAIN authentication.
@@ -133,13 +149,11 @@ public interface Sasl
      */
     void plain(String username, String password);
 
-    /** Retrieve the outcome of SASL negotiation.
-     *
+    /**
+     * Retrieve the outcome of SASL negotiation.
      */
     SaslOutcome getOutcome();
 
-
     void client();
     void server();
-
 }

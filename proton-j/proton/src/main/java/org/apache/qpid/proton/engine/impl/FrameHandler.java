@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,36 +16,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.systemtests;
+package org.apache.qpid.proton.engine.impl;
 
-public class BinaryFormatter
+import org.apache.qpid.proton.framing.TransportFrame;
+
+public interface FrameHandler
 {
+    /**
+     * @throws IllegalStateException if I am not currently accepting input
+     * @see #isHandlingFrames()
+     */
+    void handleFrame(TransportFrame frame);
 
-    public String format(byte[] binaryData)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for(int i = 0; i < binaryData.length; i++)
-        {
-            byte theByte = binaryData[i];
-            String formattedByte = formatByte(theByte);
-            stringBuilder.append(formattedByte);
-        }
-        return stringBuilder.toString();
-    }
-
-    private String formatByte(byte theByte)
-    {
-        final String retVal;
-        if(Character.isLetterOrDigit(theByte))
-        {
-            retVal = String.format("[ %c ]", theByte);
-        }
-        else
-        {
-            retVal = String.format("[x%02x]", theByte);
-        }
-        return retVal;
-    }
-
+    /**
+     * Returns whether I am currently able to handle frames.
+     * MUST be checked before calling {@link #handleFrame(TransportFrame)}.
+     */
+    boolean isHandlingFrames();
 }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,14 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.framing.TransportFrame;
-
-public interface FrameTransport
+public interface AmqpHeader
 {
-    boolean input(TransportFrame frame);
+    public static final byte[] HEADER = new byte[]
+            { 'A', 'M', 'Q', 'P', 0, 1, 0, 0 };
+
+    public static final byte[] SASL_HEADER = new byte[]
+            { 'A', 'M', 'Q', 'P', 3, 1, 0, 0 };
 }

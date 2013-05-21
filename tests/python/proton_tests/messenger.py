@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import os, common
+import os, common, sys, traceback
 from proton import *
 from threading import Thread, Event
 from time import sleep, time
@@ -46,20 +46,39 @@ class Test(common.Test):
     self.server_is_running_event.wait(self.timeout)
     self.client.start()
 
+  def _safelyStopClient(self):
+    existing_exception = None
+    try:
+      # send a message to cause the server to promptly exit
+      msg = Message()
+      msg.address="amqp://0.0.0.0:12345"
+      self.client.put(msg)
+      try:
+        self.client.send()
+      except:
+        print "Client failed to send shutdown message due to: %s" % sys.exc_info()[1]
+        existing_exception = sys.exc_info()[1]
+        raise
+    finally:
+      try:
+        self.client.stop()
+        self.client = None
+      except:
+        print "Client failed to stop due to: %s" % sys.exc_info()[1]
+        if existing_exception:
+          raise existing_exception
+        else:
+          raise
+
   def teardown(self):
     try:
       if self.running:
         if not self.server_thread_started: self.start()
         # send a message to cause the server to promptly exit
         self.running = False
-        msg = Message()
-        msg.address="amqp://0.0.0.0:12345"
-        self.client.put(msg)
-        self.client.send()
+        self._safelyStopClient()
     finally:
-      self.client.stop()
       self.server_thread.join(self.timeout)
-      self.client = None
       self.server = None
 
 REJECT_ME = "*REJECT-ME*"
@@ -165,6 +184,7 @@ class MessengerTest(Test):
     for t in trackers:
       assert self.client.status(t) is None
 
+    # reduce outgoing_window to 5 and then try to send 10 messages
     self.client.outgoing_window = 5
 
     trackers = []

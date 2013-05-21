@@ -20,6 +20,10 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.nio.ByteBuffer;
+
+import org.apache.qpid.proton.engine.TransportResult;
+
 public class PlainTransportWrapper implements TransportWrapper
 {
     private final TransportOutput _outputProcessor;
@@ -33,14 +37,26 @@ public class PlainTransportWrapper implements TransportWrapper
     }
 
     @Override
-    public int output(byte[] bytes, int offset, int size)
+    public ByteBuffer getInputBuffer()
     {
-        return _outputProcessor.output(bytes, offset, size);
+        return _inputProcessor.getInputBuffer();
     }
 
     @Override
-    public int input(byte[] bytes, int offset, int size)
+    public TransportResult processInput()
     {
-        return _inputProcessor.input(bytes, offset, size);
+        return _inputProcessor.processInput();
+    }
+
+    @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        return _outputProcessor.getOutputBuffer();
+    }
+
+    @Override
+    public void outputConsumed()
+    {
+        _outputProcessor.outputConsumed();
     }
 }

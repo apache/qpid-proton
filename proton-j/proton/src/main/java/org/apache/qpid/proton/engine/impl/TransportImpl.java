@@ -17,12 +17,30 @@
 
 package org.apache.qpid.proton.engine.impl;
 
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
+import org.apache.qpid.proton.amqp.transport.Attach;
+import org.apache.qpid.proton.amqp.transport.Begin;
+import org.apache.qpid.proton.amqp.transport.Close;
+import org.apache.qpid.proton.amqp.transport.Detach;
+import org.apache.qpid.proton.amqp.transport.Disposition;
+import org.apache.qpid.proton.amqp.transport.End;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.amqp.transport.Flow;
+import org.apache.qpid.proton.amqp.transport.FrameBody;
+import org.apache.qpid.proton.amqp.transport.Open;
+import org.apache.qpid.proton.amqp.transport.Role;
+import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
@@ -36,38 +54,21 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
-import org.apache.qpid.proton.amqp.transport.Attach;
-import org.apache.qpid.proton.amqp.transport.Begin;
-import org.apache.qpid.proton.amqp.transport.Close;
-import org.apache.qpid.proton.amqp.transport.Detach;
-import org.apache.qpid.proton.amqp.transport.Disposition;
-import org.apache.qpid.proton.amqp.transport.End;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.amqp.transport.Flow;
-import org.apache.qpid.proton.amqp.transport.FrameBody;
-import org.apache.qpid.proton.amqp.transport.Open;
-import org.apache.qpid.proton.amqp.transport.Role;
-import org.apache.qpid.proton.amqp.transport.Transfer;
 
-public class TransportImpl extends EndpointImpl implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,FrameTransport
+public class TransportImpl extends EndpointImpl
+    implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
+        FrameHandler, TransportOutputWriter
 {
-    public static final byte[] HEADER = new byte[8];
+    private static final byte AMQP_FRAME_TYPE = 0;
 
-    static
-    {
-        HEADER[0] = (byte) 'A';
-        HEADER[1] = (byte) 'M';
-        HEADER[2] = (byte) 'Q';
-        HEADER[3] = (byte) 'P';
-        HEADER[4] = 0;
-        HEADER[5] = 1;
-        HEADER[6] = 0;
-        HEADER[7] = 0;
-    }
+    private final FrameParser _frameParser;
 
     private ConnectionImpl _connectionEndpoint;
 
@@ -82,28 +83,25 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
     private TransportOutput _outputProcessor;
 
     private Map<SessionImpl, TransportSession> _transportSessionState = new HashMap<SessionImpl, TransportSession>();
-    private Map<LinkImpl, TransportLink> _transportLinkState = new HashMap<LinkImpl, TransportLink>();
+    private Map<LinkImpl, TransportLink<?>> _transportLinkState = new HashMap<LinkImpl, TransportLink<?>>();
 
 
     private DecoderImpl _decoder = new DecoderImpl();
     private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
-    private int _maxFrameSize = 16 * 1024;
+    private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
-    private final ByteBuffer _overflowBuffer = ByteBuffer.wrap(new byte[_maxFrameSize]);
-    private static final byte AMQP_FRAME_TYPE = 0;
+    private final ByteBuffer _outputOverflowBuffer;
+
     private boolean _closeReceived;
     private Open _open;
     private SaslImpl _sasl;
     private SslImpl _ssl;
-    private TransportException _inputException;
     private ProtocolTracer _protocolTracer = null;
 
+    private ByteBuffer _lastInputBuffer;
 
-    {
-        AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
-        _overflowBuffer.flip();
-    }
+    private TransportResult _lastTransportResult = TransportResultFactory.ok();
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -111,17 +109,23 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
      */
     @Deprecated public TransportImpl()
     {
-        FrameParser frameParser = new FrameParser(this);
+        this(DEFAULT_MAX_FRAME_SIZE);
+    }
 
-        _inputProcessor = frameParser;
-        _outputProcessor = new TransportOutput()
-                    {
-                        @Override
-                        public int output(byte[] bytes, int offset, int size)
-                        {
-                            return transportOutput(bytes, offset, size);
-                        }
-                    };
+    /**
+     * Creates a transport with the given maximum frame size.
+     * Note that the maximumFrameSize also determines the size of the output buffer.
+     */
+    TransportImpl(int maxFrameSize)
+    {
+        AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
+
+        _maxFrameSize = maxFrameSize;
+        _frameParser = new FrameParser(this, _decoder, maxFrameSize);
+
+        _inputProcessor = _frameParser;
+        _outputProcessor = new TransportOutputAdaptor(this, maxFrameSize);
+        _outputOverflowBuffer = newReadableBuffer(maxFrameSize);
     }
 
     @Override
@@ -143,33 +147,37 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             {
                 _connectionEndpoint.setRemoteState(EndpointState.CLOSED);
             }
-            _inputProcessor.input(new byte[0],0,0);
+
+            _frameParser.flush();
         }
     }
 
     @Override
     public int input(byte[] bytes, int offset, int length)
     {
-        if(_inputException != null)
-        {
-            throw _inputException;
-        }
-        if(length == 0)
+        oldApiCheckStateBeforeInput(length).checkIsOk();
+
+        ByteBuffer inputBuffer = getInputBuffer();
+        int numberOfBytesConsumed = pourArrayToBuffer(bytes, offset, length, inputBuffer);
+        processInput().checkIsOk();
+        return numberOfBytesConsumed;
+    }
+
+    /**
+     * This method is public as it is used by Python layer.
+     * @see Transport#input(byte[], int, int)
+     */
+    public TransportResult oldApiCheckStateBeforeInput(int inputLength)
+    {
+        _lastTransportResult.checkIsOk();
+        if(inputLength == 0)
         {
             if(_connectionEndpoint == null || _connectionEndpoint.getRemoteState() != EndpointState.CLOSED)
             {
-                throw new TransportException("Unexpected EOS: connection aborted");
+                return TransportResultFactory.error(new TransportException("Unexpected EOS when remote connection not closed: connection aborted"));
             }
         }
-        try
-        {
-            return  _inputProcessor.input(bytes, offset, length);
-        }
-        catch (TransportException e)
-        {
-            _inputException = e;
-            throw e;
-        }
+        return TransportResultFactory.ok();
     }
 
     //==================================================================================================================
@@ -178,62 +186,52 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
     @Override
     public int output(byte[] bytes, final int offset, final int size)
     {
-        try
-        {
-            return _outputProcessor.output(bytes, offset, size);
-        }
-        catch (RuntimeException e)
-        {
-            e.printStackTrace();
-            throw e;
-        }
+        ByteBuffer outputBuffer = getOutputBuffer();
+        int numberOfBytesOutput = pourBufferToArray(outputBuffer, bytes, offset, size);
+        outputConsumed();
+        return numberOfBytesOutput;
     }
 
-    private int transportOutput(byte[] bytes, int offset, int size)
+    @Override
+    public void writeInto(ByteBuffer outputBuffer)
     {
-        int written = 0;
-
-        if(_overflowBuffer.hasRemaining())
+        if(_outputOverflowBuffer.hasRemaining())
         {
-            final int overflowWritten = Math.min(size, _overflowBuffer.remaining());
-            _overflowBuffer.get(bytes, offset, overflowWritten);
-            written+=overflowWritten;
+            pour(_outputOverflowBuffer, outputBuffer);
         }
-        if(!_overflowBuffer.hasRemaining())
+        if(!_outputOverflowBuffer.hasRemaining())
         {
-            _overflowBuffer.clear();
+            _outputOverflowBuffer.clear();
 
-            CompositeWritableBuffer outputBuffer =
+            CompositeWritableBuffer compositeOutputBuffer =
                     new CompositeWritableBuffer(
-                       new WritableBuffer.ByteBufferWrapper(ByteBuffer.wrap(bytes, offset + written, size - written)),
-                       new WritableBuffer.ByteBufferWrapper(_overflowBuffer));
+                       new WritableBuffer.ByteBufferWrapper(outputBuffer),
+                       new WritableBuffer.ByteBufferWrapper(_outputOverflowBuffer));
 
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processHeader(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processOpen(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processBegin(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processAttach(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processReceiverDisposition(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processReceiverFlow(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processMessageData(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processSenderDisposition(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processSenderFlow(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processDetach(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processEnd(outputBuffer);
-            if( outputBuffer.remaining() >= _maxFrameSize ) { written += processClose(outputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processHeader(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processOpen(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processBegin(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processAttach(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processReceiverDisposition(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processReceiverFlow(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processMessageData(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processSenderDisposition(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processSenderFlow(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processDetach(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processEnd(compositeOutputBuffer);
+            if( compositeOutputBuffer.remaining() >= _maxFrameSize ) { processClose(compositeOutputBuffer);
             }}}}}}}}}}}}
 
-            _overflowBuffer.flip();
-            written -= _overflowBuffer.remaining();
+            _outputOverflowBuffer.flip();
         }
-
-        return written;
     }
 
+    @Override
     public Sasl sasl()
     {
         if(_sasl == null)
         {
-            _sasl = new SaslImpl();
+            _sasl = new SaslImpl(_maxFrameSize);
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
@@ -268,20 +266,8 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         return ssl(sslDomain, null);
     }
 
-    private void clearTransportWorkList()
+    private void processDetach(WritableBuffer buffer)
     {
-        DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
-        while(delivery != null)
-        {
-            DeliveryImpl transportWorkNext = delivery.getTransportWorkNext();
-            delivery.clearTransportWork();
-            delivery = transportWorkNext;
-        }
-    }
-
-    private int processDetach(WritableBuffer buffer)
-    {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
@@ -291,7 +277,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 if(endpoint instanceof LinkImpl)
                 {
                     LinkImpl link = (LinkImpl) endpoint;
-                    TransportLink transportLink = getTransportState(link);
+                    TransportLink<?> transportLink = getTransportState(link);
                     SessionImpl session = link.getSession();
                     TransportSession transportSession = getTransportState(session);
 
@@ -321,8 +307,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                             }
 
 
-                            int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), detach, null, null);
-                            written += frameBytes;
+                            writeFrame(buffer, transportSession.getLocalChannel(), detach, null, null);
                             endpoint.clearModified();
 
                             // TODO - temporary hack for PROTON-154, this line should be removed and replaced
@@ -335,12 +320,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 endpoint = endpoint.transportNext();
             }
         }
-        return written;
     }
 
-    private int processSenderFlow(WritableBuffer buffer)
+    private void processSenderFlow(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
@@ -368,8 +351,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                         flow.setLinkCredit(transportLink.getLinkCredit());
                         flow.setDrain(sender.getDrain());
                         flow.setNextOutgoingId(transportSession.getNextOutgoingId());
-                        int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
-                        written += frameBytes;
+                        writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
                         endpoint.clearModified();
                     }
 
@@ -378,12 +360,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 endpoint = endpoint.transportNext();
             }
         }
-        return written;  //TODO - Implement
     }
 
-    private int processSenderDisposition(WritableBuffer buffer)
+    private void processSenderDisposition(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
@@ -402,10 +382,11 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                         transportDelivery.settled();
                     }
                     disposition.setState(delivery.getLocalState());
-                    int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
-                                                                      .getTransportSession().getLocalChannel(),
-                                       disposition, null, null);
-                    written += frameBytes;
+
+                    writeFrame(buffer,
+                               delivery.getLink().getSession().getTransportSession().getLocalChannel(),
+                               disposition, null, null);
+
                     delivery = delivery.clearTransportWork();
                 }
                 else
@@ -414,13 +395,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 }
             }
         }
-        return written;
-
     }
 
-    private int processMessageData(WritableBuffer buffer)
+    private void processMessageData(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
@@ -435,7 +413,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                     sender.decrementQueued();
 
 
-                    TransportLink transportLink = sender.getTransportLink();
+                    TransportLink<?> transportLink = sender.getTransportLink();
 
                     UnsignedInteger deliveryId = transportLink.getDeliveryCount();
                     TransportDelivery transportDelivery = new TransportDelivery(deliveryId, delivery, transportLink);
@@ -465,12 +443,10 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                     // TODO - large frames
                     ByteBuffer payload = delivery.getData() ==  null ? null : ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(), delivery.getDataLength());
 
-                    int frameBytes = writeFrame(buffer,
-                                                sender.getSession().getTransportSession().getLocalChannel(),
-                                                transfer, payload, new PartialTransfer(transfer));
+                    writeFrame(buffer,
+                               sender.getSession().getTransportSession().getLocalChannel(),
+                               transfer, payload, new PartialTransfer(transfer));
                     sender.getSession().getTransportSession().incrementOutgoingId();
-
-                    written += frameBytes;
 
                     if(payload == null || !payload.hasRemaining())
                     {
@@ -492,11 +468,6 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                         delivery.setDataOffset(delivery.getDataOffset()+delivery.getDataLength()-payload.remaining());
                         delivery.setDataLength(payload.remaining());
                     }
-
-
-
-
-
                 }
                 else
                 {
@@ -504,21 +475,17 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 }
             }
         }
-        return written;
     }
 
-    private int processReceiverDisposition(WritableBuffer buffer)
+    private void processReceiverDisposition(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
             while(delivery != null && buffer.remaining() >= _maxFrameSize)
             {
-                boolean remove = false;
                 if((delivery.getLink() instanceof ReceiverImpl) && delivery.isLocalStateChange())
                 {
-                    remove = true;
                     TransportDelivery transportDelivery = delivery.getTransportDelivery();
                     Disposition disposition = new Disposition();
                     disposition.setFirst(transportDelivery.getDeliveryId());
@@ -527,16 +494,14 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                     disposition.setSettled(delivery.isSettled());
 
                     disposition.setState(delivery.getLocalState());
-                    int frameBytes = writeFrame(buffer, delivery.getLink().getSession()
-                                                                      .getTransportSession().getLocalChannel(),
-                                       disposition, null, null);
-                    written += frameBytes;
+                    writeFrame(buffer,
+                               delivery.getLink().getSession().getTransportSession().getLocalChannel(),
+                               disposition, null, null);
                     if(delivery.isSettled())
                     {
                         transportDelivery.settled();
                     }
                     delivery = delivery.clearTransportWork();
-
                 }
                 else
                 {
@@ -544,23 +509,19 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 }
             }
         }
-        return written;
     }
 
-    private int processReceiverFlow(WritableBuffer buffer)
+    private void processReceiverFlow(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null && buffer.remaining() >= _maxFrameSize)
             {
-
                 if(endpoint instanceof ReceiverImpl)
                 {
-
                     ReceiverImpl receiver = (ReceiverImpl) endpoint;
-                    TransportLink transportLink = getTransportState(receiver);
+                    TransportLink<?> transportLink = getTransportState(receiver);
                     TransportSession transportSession = getTransportState(receiver.getSession());
 
                     if(receiver.getLocalState() == EndpointState.ACTIVE)
@@ -579,14 +540,12 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                             flow.setLinkCredit(transportLink.getLinkCredit());
                             flow.setDrain(receiver.getDrain());
                             flow.setNextOutgoingId(transportSession.getNextOutgoingId());
-                            int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
-                            written += frameBytes;
+                            writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
                             if(receiver.getLocalState() == EndpointState.ACTIVE)
                             {
                                 endpoint.clearModified();
                             }
                         }
-
                     }
                 }
                 endpoint = endpoint.transportNext();
@@ -594,7 +553,6 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null && buffer.remaining() >= _maxFrameSize)
             {
-
                 if(endpoint instanceof SessionImpl)
                 {
 
@@ -611,20 +569,17 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                             flow.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                             flow.setNextOutgoingId(transportSession.getNextOutgoingId());
                             flow.setNextIncomingId(transportSession.getNextIncomingId());
-                            int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
-                            written += frameBytes;
+                            writeFrame(buffer, transportSession.getLocalChannel(), flow, null, null);
                         }
                     }
                 }
                 endpoint = endpoint.transportNext();
             }
         }
-        return written;
     }
 
-    private int processAttach(WritableBuffer buffer)
+    private void processAttach(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
@@ -635,7 +590,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 {
 
                     LinkImpl link = (LinkImpl) endpoint;
-                    TransportLink transportLink = getTransportState(link);
+                    TransportLink<?> transportLink = getTransportState(link);
                     if(link.getLocalState() != EndpointState.UNINITIALIZED && !transportLink.attachSent())
                     {
 
@@ -683,8 +638,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                                 attach.setInitialDeliveryCount(UnsignedInteger.ZERO);
                             }
 
-                            int frameBytes = writeFrame(buffer, transportSession.getLocalChannel(), attach, null, null);
-                            written += frameBytes;
+                            writeFrame(buffer, transportSession.getLocalChannel(), attach, null, null);
                             transportLink.sentAttach();
                             if(link.getLocalState() == EndpointState.ACTIVE && (link instanceof SenderImpl || !link.hasCredit()))
                             {
@@ -692,40 +646,22 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                             }
                         }
                     }
-
                 }
-
                 endpoint = endpoint.transportNext();
             }
         }
-        return written;
     }
 
-    private void clearInterestList()
-    {
-        EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
-        while(endpoint != null)
-        {
-            endpoint.clearModified();
-            endpoint = endpoint.transportNext();
-        }
-    }
-
-    private int processHeader(WritableBuffer buffer)
+    private void processHeader(WritableBuffer buffer)
     {
         if(!_headerWritten)
         {
-            buffer.put(HEADER, 0, HEADER.length);
+            buffer.put(AmqpHeader.HEADER, 0, AmqpHeader.HEADER.length);
             _headerWritten = true;
-            return HEADER.length;
-        }
-        else
-        {
-            return 0;
         }
     }
 
-    private int processOpen(WritableBuffer buffer)
+    private void processOpen(WritableBuffer buffer)
     {
         if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
         {
@@ -739,16 +675,13 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
 
             _isOpenSent = true;
 
-            return  writeFrame(buffer, 0, open, null, null);
+            writeFrame(buffer, 0, open, null, null);
 
         }
-        return 0;
     }
 
-    private int processBegin(WritableBuffer buffer)
+    private void processBegin(WritableBuffer buffer)
     {
-        int written = 0;
-
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
@@ -772,7 +705,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                         begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                         begin.setNextOutgoingId(transportSession.getNextOutgoingId());
 
-                        written += writeFrame(buffer, channelId, begin, null, null);
+                        writeFrame(buffer, channelId, begin, null, null);
                         transportSession.sentBegin();
                         if(session.getLocalState() == EndpointState.ACTIVE)
                         {
@@ -783,7 +716,6 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                 endpoint = endpoint.transportNext();
             }
         }
-        return written;
     }
 
     private TransportSession getTransportState(SessionImpl session)
@@ -798,9 +730,9 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         return transportSession;
     }
 
-    private TransportLink getTransportState(LinkImpl link)
+    private TransportLink<?> getTransportState(LinkImpl link)
     {
-        TransportLink transportLink = _transportLinkState.get(link);
+        TransportLink<?> transportLink = _transportLinkState.get(link);
         if(transportLink == null)
         {
             transportLink = TransportLink.createTransportLink(link);
@@ -831,9 +763,8 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         return channel;
     }
 
-    private int processEnd(WritableBuffer buffer)
+    private void processEnd(WritableBuffer buffer)
     {
-        int written = 0;
         if(_connectionEndpoint != null)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
@@ -855,16 +786,13 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
                         end.setError(localError);
                     }
 
-                    int frameBytes = writeFrame(buffer, channel, end, null, null);
-                    written += frameBytes;
+                    writeFrame(buffer, channel, end, null, null);
                     endpoint.clearModified();
                 }
 
                 endpoint = endpoint.transportNext();
-
             }
         }
-        return written;
     }
 
     private boolean hasSendableMessages(SessionImpl session)
@@ -891,7 +819,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         return false;
     }
 
-    private int processClose(WritableBuffer buffer)
+    private void processClose(WritableBuffer buffer)
     {
         if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() == EndpointState.CLOSED && !_isCloseSent)
         {
@@ -907,14 +835,12 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
 
                 _isCloseSent = true;
 
-                return  writeFrame(buffer, 0, close, null, null);
+                writeFrame(buffer, 0, close, null, null);
             }
         }
-        return 0;
-
     }
 
-    private int writeFrame(WritableBuffer buffer,
+    private void writeFrame(WritableBuffer buffer,
                            int channel,
                            FrameBody frameBody,
                            ByteBuffer payload,
@@ -943,7 +869,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             {
                 originalPayload = payload.duplicate();
             }
-            _protocolTracer.sentFrame(new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload)));
+            _protocolTracer.sentFrame(new TransportFrame(channel, frameBody, Binary.create(originalPayload)));
         }
 
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize - (buffer.position() - oldPosition));
@@ -962,8 +888,6 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         buffer.put(AMQP_FRAME_TYPE);
         buffer.putShort((short) channel);
         buffer.position(limit);
-
-        return frameSize;
     }
 
     //==================================================================================================================
@@ -997,7 +921,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
             _open = open;
         }
 
-        if(open.getMaxFrameSize().longValue() > 0 && open.getMaxFrameSize().longValue() < (long) _maxFrameSize)
+        if(open.getMaxFrameSize().longValue() > 0 && open.getMaxFrameSize().longValue() < _maxFrameSize)
         {
             _maxFrameSize = (int) open.getMaxFrameSize().longValue();
         }
@@ -1048,7 +972,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         else
         {
             SessionImpl session = transportSession.getSession();
-            TransportLink transportLink = transportSession.getLinkFromRemoteHandle(attach.getHandle());
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(attach.getHandle());
             LinkImpl link = null;
 
             if(transportLink != null)
@@ -1144,7 +1068,7 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         }
         else
         {
-            TransportLink transportLink = transportSession.getLinkFromRemoteHandle(detach.getHandle());
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(detach.getHandle());
 
             if(transportLink != null)
             {
@@ -1203,36 +1127,25 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
     }
 
     @Override
-    public boolean input(TransportFrame frame)
+    public void handleFrame(TransportFrame frame)
     {
-        if( _protocolTracer!=null )
+        if (!isHandlingFrames())
+        {
+            throw new IllegalStateException("Transport cannot accept frame: " + frame);
+        }
+
+        if( _protocolTracer != null )
         {
             _protocolTracer.receivedFrame(frame);
         }
-        if(_connectionEndpoint != null || getRemoteState() == EndpointState.UNINITIALIZED)
-        {
-            frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+
+        frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
     }
 
-    private static class PartialTransfer implements Runnable
+    @Override
+    public boolean isHandlingFrames()
     {
-        private final Transfer _transfer;
-
-        public PartialTransfer(Transfer transfer)
-        {
-            _transfer = transfer;
-        }
-
-        public void run()
-        {
-            _transfer.setMore(true);
-        }
+        return _connectionEndpoint != null || getRemoteState() == EndpointState.UNINITIALIZED;
     }
 
     @Override
@@ -1247,4 +1160,57 @@ public class TransportImpl extends EndpointImpl implements ProtonJTransport, Fra
         this._protocolTracer = protocolTracer;
     }
 
+    @Override
+    public ByteBuffer getInputBuffer()
+    {
+        _lastTransportResult.checkIsOk();
+        _lastInputBuffer = _inputProcessor.getInputBuffer();
+        return _lastInputBuffer;
+    }
+
+    @Override
+    public TransportResult processInput()
+    {
+        if (_lastInputBuffer == null)
+        {
+            throw new IllegalStateException("Unexpected invocation of processInput(), it is required to invoke getInputBuffer() first");
+        }
+
+        _lastTransportResult = _inputProcessor.processInput();
+        return _lastTransportResult;
+    }
+
+    @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        return _outputProcessor.getOutputBuffer();
+    }
+
+    @Override
+    public void outputConsumed()
+    {
+        _outputProcessor.outputConsumed();
+    }
+
+    @Override
+    public String toString()
+    {
+        return "TransportImpl [_connectionEndpoint=" + _connectionEndpoint + ", " + super.toString() + "]";
+    }
+
+    private static class PartialTransfer implements Runnable
+    {
+        private final Transfer _transfer;
+
+        public PartialTransfer(Transfer transfer)
+        {
+            _transfer = transfer;
+        }
+
+        @Override
+        public void run()
+        {
+            _transfer.setMore(true);
+        }
+    }
 }

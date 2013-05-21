@@ -56,9 +56,14 @@ public interface ProtonSslEngine
     Runnable getDelegatedTask();
     HandshakeStatus getHandshakeStatus();
 
-    int getApplicationBufferSize();
+    /**
+     * Gets the application buffer size.
+     */
+    int getEffectiveApplicationBufferSize();
+
     int getPacketBufferSize();
     String getCipherSuite();
     String getProtocol();
     boolean getUseClientMode();
+
 }

@@ -20,7 +20,6 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import static org.junit.Assert.assertNotNull;
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.engine.impl.TransportOutput;
@@ -39,18 +38,22 @@ public class CannedTransportOutput implements TransportOutput
         setOutput(output);
     }
 
-    @Override
-    public int output(byte[] destination, int offset, int size)
-    {
-        assertNotNull(_cannedOutput);
-        int sizeToGet = Math.min(size, _cannedOutput.remaining());
-        _cannedOutput.get(destination, offset, sizeToGet);
-        return sizeToGet;
-    }
-
     public void setOutput(String output)
     {
         _cannedOutput = ByteBuffer.wrap(output.getBytes());
     }
+
+    @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        return _cannedOutput;
+    }
+
+    @Override
+    public void outputConsumed()
+    {
+        // no-op
+    }
+
 
 }

@@ -20,10 +20,13 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import java.nio.ByteBuffer;
+
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
+import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
@@ -97,17 +100,32 @@ public class SslImpl implements Ssl
         }
 
         @Override
-        public int input(byte[] bytes, int offset, int size)
+        public ByteBuffer getInputBuffer()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.input(bytes, offset, size);
+            return _transportWrapper.getInputBuffer();
+        }
+
+
+        @Override
+        public TransportResult processInput()
+        {
+            initTransportWrapperOnFirstIO();
+            return _transportWrapper.processInput();
         }
 
         @Override
-        public int output(byte[] bytes, int offset, int size)
+        public ByteBuffer getOutputBuffer()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.output(bytes, offset, size);
+            return _transportWrapper.getOutputBuffer();
+        }
+
+        @Override
+        public void outputConsumed()
+        {
+            initTransportWrapperOnFirstIO();
+            _transportWrapper.outputConsumed();
         }
 
         @Override

@@ -16,35 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.systemtests;
+package org.apache.qpid.proton.engine.impl;
 
-public class BinaryFormatter
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.security.SaslFrameBody;
+
+/**
+ * Used by {@link SaslFrameParser} to handle the frames it parses
+ */
+interface SaslFrameHandler
 {
+    void handle(SaslFrameBody frameBody, Binary payload);
 
-    public String format(byte[] binaryData)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for(int i = 0; i < binaryData.length; i++)
-        {
-            byte theByte = binaryData[i];
-            String formattedByte = formatByte(theByte);
-            stringBuilder.append(formattedByte);
-        }
-        return stringBuilder.toString();
-    }
-
-    private String formatByte(byte theByte)
-    {
-        final String retVal;
-        if(Character.isLetterOrDigit(theByte))
-        {
-            retVal = String.format("[ %c ]", theByte);
-        }
-        else
-        {
-            retVal = String.format("[x%02x]", theByte);
-        }
-        return retVal;
-    }
-
+    boolean isDone();
 }

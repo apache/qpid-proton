@@ -350,10 +350,12 @@ public class SslEngineFacadeFactory
         }
 
         Reader reader = null;
+        PEMReader pemReader = null;
+
         try
         {
             reader = new FileReader(pemFile);
-            PEMReader pemReader = new PEMReader(reader, passwordFinder);
+            pemReader = new PEMReader(reader, passwordFinder);
             Object pemObject = pemReader.readObject();
             if (!checkPemObjectIsOfAllowedTypes(pemObject, expectedInterfaces))
             {
@@ -374,6 +376,17 @@ public class SslEngineFacadeFactory
         }
         finally
         {
+            if(pemReader != null)
+            {
+                try
+                {
+                    pemReader.close();
+                }
+                catch(IOException e)
+                {
+                    _logger.log(Level.SEVERE, "Couldn't close PEM reader", e);
+                }
+            }
             if (reader != null)
             {
                 try
@@ -382,7 +395,7 @@ public class SslEngineFacadeFactory
                 }
                 catch (IOException e)
                 {
-                    // Ignore
+                    _logger.log(Level.SEVERE, "Couldn't close PEM file reader", e);
                 }
             }
         }

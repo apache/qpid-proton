@@ -15,36 +15,29 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton.systemtests;
+package org.apache.qpid.proton.engine;
 
-public class BinaryFormatter
+public interface TransportResult
 {
-
-    public String format(byte[] binaryData)
+    enum Status
     {
-        StringBuilder stringBuilder = new StringBuilder();
-        for(int i = 0; i < binaryData.length; i++)
-        {
-            byte theByte = binaryData[i];
-            String formattedByte = formatByte(theByte);
-            stringBuilder.append(formattedByte);
-        }
-        return stringBuilder.toString();
+        OK,
+        ERROR
     }
 
-    private String formatByte(byte theByte)
-    {
-        final String retVal;
-        if(Character.isLetterOrDigit(theByte))
-        {
-            retVal = String.format("[ %c ]", theByte);
-        }
-        else
-        {
-            retVal = String.format("[x%02x]", theByte);
-        }
-        return retVal;
-    }
+    Status getStatus();
+
+    String getErrorDescription();
+
+    Exception getException();
+
+    /**
+     * @throws TransportException if the result's state is not ok.
+     */
+    void checkIsOk();
+
+    boolean isOk();
 
 }

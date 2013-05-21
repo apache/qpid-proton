@@ -24,16 +24,22 @@
   <artifactId>tests</artifactId>
   <name>tests</name>
 
-  <description>The Proton system tests execute against either the Java or the C implementations, based on the chosen profile.
+  <description>The Proton system tests execute against either the Java or the C implementations,
+based on the chosen profile.
 
-To execute, run either &quot;mvn test -P proton-j&quot; or &quot;mvn test -P proton-jni&quot;.
+To execute, run either &quot;mvn test&quot; or &quot;mvn test -P proton-jni&quot;.
 
-To reduce the set of Python tests run, set system property proton.pythontest.pattern, for example:
+Example of advanced usage (all of the -D flags are optional):
 
-mvn test -Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*'
+mvn test \
+-P proton-jni \
+-Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*' \
+-Dproton.pythontest.invocations=20 \
+-Dproton.pythontest.always_colorize=true \
+-Dproton-c-build-dir=/path/to/build/dir
 
-The proton-jni profile looks for the JNI jar and native libraries under directory &lt;basedir&gt;/build/proton-c.
-To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-build-dir=/path/to/build/dir&quot;.</description>
+By default, the proton-jni profile looks for the JNI jar and native libraries under
+directory &lt;basedir&gt;/build/proton-c.</description>
 
   <properties>
     <testReportOutputDirectory>${basedir}/target/surefire-reports</testReportOutputDirectory>
@@ -80,6 +86,23 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
         <version>2.5.3</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <!-- proton-j-impl is even required for profile proton-jni so we can use EncoderImpl and DecoderImpl to
+           generate test data, hence this dependency appearing here and not just in the proton-j profile -->
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>proton-j-impl</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- Depend on test helper classes contained with test-jar from proton-j-impl -->
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>proton-j-impl</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -101,14 +124,6 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
           </plugin>
         </plugins>
       </build>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.qpid</groupId>
-          <artifactId>proton-j-impl</artifactId>
-          <version>1.0-SNAPSHOT</version>
-          <scope>runtime</scope>
-        </dependency>
-      </dependencies>
     </profile>
     <profile>
       <id>proton-jni</id>
@@ -141,13 +156,6 @@ To override this, run Maven like so: &quot;mvn test -P proton-jni -Dproton-c-bui
           <version>${project.parent.version}</version>
           <scope>system</scope>
           <systemPath>${jni-jar}</systemPath>
-        </dependency>
-        <!-- proton-j-impl is required so we can use EncoderImpl and DecoderImpl to generate test data -->
-        <dependency>
-          <groupId>org.apache.qpid</groupId>
-          <artifactId>proton-j-impl</artifactId>
-          <version>1.0-SNAPSHOT</version>
-          <scope>runtime</scope>
         </dependency>
       </dependencies>
     </profile>

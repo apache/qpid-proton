@@ -28,6 +28,7 @@ from org.apache.qpid.proton.engine import \
     EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
     EndpointState, TransportException
+
 from org.apache.qpid.proton.message import \
     MessageFormat, MessageFactory, Message as JMessage
 from org.apache.qpid.proton.codec import \
@@ -524,23 +525,30 @@ class Transport(object):
   def output(self, size):
     """ has the transport produce up to size bytes returning what was
         produced to the caller"""
-    output = zeros(size, "b")
-    n = self.impl.output(output, 0, size)
-    if n >= 0:
-      return output.tostring()[:n]
-    elif n == JTransport.END_OF_STREAM:
-      return None
-    else:
-      raise Exception("Unexpected return value from output: %s" % n)
+
+    output_buffer = self.impl.getOutputBuffer()
+    output_length = min(size, output_buffer.remaining())
+    output = zeros(output_length, "b")
+    output_buffer.get(output)
+    self.impl.outputConsumed()
+    return output.tostring()
 
   def input(self, bytes):
-    n = self.impl.input(bytes, 0, len(bytes))
-    if n >= 0:
-      return n
-    elif n == JTransport.END_OF_STREAM:
-      return None
-    else:
-      raise Exception("Unexpected return value from input: %s" % n)
+
+    # Python tests currently assume the old API.  We call this method
+    # in order to fulfil the contract.
+    self.impl.oldApiCheckStateBeforeInput(len(bytes)).checkIsOk()
+
+    input_buffer = self.impl.getInputBuffer()
+    length = min(len(bytes), input_buffer.remaining())
+    input_buffer.put(bytes, 0, length)
+    input_result = self.impl.processInput()
+    if not input_result.isOk():
+      raise TransportException("processInput failed due to %s. Input was: %r" % \
+                               (input_result.getErrorDescription(), bytes), \
+                               input_result.getException())
+    return length
+
 
   def _get_max_frame_size(self):
     #return pn_transport_get_max_frame(self._trans)
@@ -1045,8 +1053,11 @@ class Data(object):
 
 class Messenger(object):
 
-  def __init__(self, *args, **kwargs):
-    self.impl = messengerFactory.createMessenger()
+  def __init__(self, name=None):
+    if name:
+      self.impl = messengerFactory.createMessenger(name)
+    else:
+      self.impl = messengerFactory.createMessenger()
 
   def route(self, *args, **kwargs):
     raise Skipped()

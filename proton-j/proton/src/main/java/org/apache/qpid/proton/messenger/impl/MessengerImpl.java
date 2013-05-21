@@ -50,19 +50,18 @@ import org.apache.qpid.proton.messenger.MessengerException;
 import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
-import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Source;
 import org.apache.qpid.proton.amqp.messaging.Target;
 
 public class MessengerImpl implements Messenger
 {
+    @SuppressWarnings("rawtypes")
     private static ProtonFactoryLoader protonFactoryLoader = new ProtonFactoryLoader();
 
     private static final EnumSet<EndpointState> UNINIT = EnumSet.of(EndpointState.UNINITIALIZED);
     private static final EnumSet<EndpointState> ACTIVE = EnumSet.of(EndpointState.ACTIVE);
     private static final EnumSet<EndpointState> CLOSED = EnumSet.of(EndpointState.CLOSED);
     private static final EnumSet<EndpointState> ANY = EnumSet.allOf(EndpointState.class);
-    private static final Accepted ACCEPTED = new Accepted();
 
     private final Logger _logger = Logger.getLogger("proton.messenger");
     private final String _name;
@@ -76,7 +75,6 @@ public class MessengerImpl implements Messenger
     private boolean _unlimitedCredit = false;
     private static final int _creditBatch = 10;
     private int _credit;
-    private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
 
@@ -128,8 +126,12 @@ public class MessengerImpl implements Messenger
 
     public void stop()
     {
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " about to stop");
+        }
         //close all connections
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             connection.close();
@@ -143,7 +145,7 @@ public class MessengerImpl implements Messenger
             }
         }
         //stop listeners
-        for (Listener l : _driver.listeners())
+        for (Listener<?> l : _driver.listeners())
         {
             try
             {
@@ -167,6 +169,10 @@ public class MessengerImpl implements Messenger
 
     public void put(Message m) throws MessengerException
     {
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " about to put message: " + m);
+        }
         try
         {
             URI address = new URI(m.getAddress());
@@ -204,11 +210,19 @@ public class MessengerImpl implements Messenger
 
     public void send() throws TimeoutException
     {
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " about to send");
+        }
         waitUntil(_sentSettled);
     }
 
     public void recv(int n) throws TimeoutException
     {
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " about to wait for up to " + n + " messages to be received");
+        }
         if (n == -1) {
             _unlimitedCredit = true;
         } else {
@@ -222,7 +236,7 @@ public class MessengerImpl implements Messenger
 
     public Message get()
     {
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             _logger.log(Level.FINE, "Attempting to get message from " + connection);
@@ -236,7 +250,6 @@ public class MessengerImpl implements Messenger
                     Message message = _messageFactory.createMessage();
                     message.decode(_buffer, 0, size);
                     _incoming.add(delivery);
-                    _distributed--;
                     delivery.getLink().advance();
                     return message;
                 }
@@ -260,15 +273,24 @@ public class MessengerImpl implements Messenger
         try
         {
             URI address = new URI(listen ? source.replace("~", "") : source);
-            if (address.getHost() == null) throw new MessengerException("Invalid source address (hostname cannot be null): " + source);
+            String hostName = address.getHost();
+            if (hostName == null) throw new MessengerException("Invalid source address (hostname cannot be null): " + source);
             int port = address.getPort() < 0 ? defaultPort(address.getScheme()) : address.getPort();
             if (listen)
             {
-                _driver.createListener(address.getHost(), port, null);
+                if(_logger.isLoggable(Level.FINE))
+                {
+                    _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
+                }
+                _driver.createListener(hostName, port, null);
             }
             else
             {
-                getLink(address.getHost(), port, new ReceiverFinder(cleanPath(address.getPath())));
+                if(_logger.isLoggable(Level.FINE))
+                {
+                    _logger.fine(this + " about to subscribe to source " + source);
+                }
+                getLink(hostName, port, new ReceiverFinder(cleanPath(address.getPath())));
             }
         }
         catch (URISyntaxException e)
@@ -341,7 +363,7 @@ public class MessengerImpl implements Messenger
     private int queued(boolean outgoing)
     {
         int count = 0;
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             for (Link link : new Links(connection, ACTIVE, ANY))
@@ -384,15 +406,9 @@ public class MessengerImpl implements Messenger
         return total;
     }
 
-    private void process()
-    {
-        processAllConnectors();
-        processActive();
-    }
-
     private void processAllConnectors()
     {
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             try
             {
@@ -408,9 +424,9 @@ public class MessengerImpl implements Messenger
     private void processActive()
     {
         //process active listeners
-        for (Listener l = _driver.listener(); l != null; l = _driver.listener())
+        for (Listener<?> l = _driver.listener(); l != null; l = _driver.listener())
         {
-            Connector c = l.accept();
+            Connector<?> c = l.accept();
             Connection connection = _engineFactory.createConnection();
             connection.setContainer(_name);
             c.setConnection(connection);
@@ -425,7 +441,7 @@ public class MessengerImpl implements Messenger
             connection.open();
         }
         //process active connectors, handling opened & closed connections as needed
-        for (Connector c = _driver.connector(); c != null; c = _driver.connector())
+        for (Connector<?> c = _driver.connector(); c != null; c = _driver.connector())
         {
             _logger.log(Level.FINE, "Processing active connector " + c);
             try
@@ -536,13 +552,15 @@ public class MessengerImpl implements Messenger
         }
         if (!done)
         {
+            _logger.log(Level.SEVERE, String.format(
+                    "Timeout when waiting for condition %s after %s ms", condition, timeout));
             throw new TimeoutException();
         }
     }
 
     private Connection lookup(String host, String service)
     {
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             if (host.equals(connection.getRemoteContainer()) || service.equals(connection.getContext()))
@@ -567,14 +585,13 @@ public class MessengerImpl implements Messenger
     private void reclaimCredit(int credit)
     {
         _credit += credit;
-        _distributed -= credit;
     }
 
     private void distributeCredit()
     {
         int linkCt = 0;
         // @todo track the number of opened receive links
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             for (Link link : new Links(connection, ACTIVE, ANY))
@@ -591,7 +608,7 @@ public class MessengerImpl implements Messenger
         }
 
         int batch = (_credit < linkCt) ? 1 : (_credit/linkCt);
-        for (Connector c : _driver.connectors())
+        for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             for (Link link : new Links(connection, ACTIVE, ANY))
@@ -604,7 +621,6 @@ public class MessengerImpl implements Messenger
                         int need = batch - have;
                         int amount = (_credit < need) ? _credit : need;
                         ((Receiver) link).flow(amount);
-                        _distributed += amount;
                         _credit -= amount;
                         if (_credit == 0) return;
                     }
@@ -623,7 +639,7 @@ public class MessengerImpl implements Messenger
         public boolean test()
         {
             //are all sent messages settled?
-            for (Connector c : _driver.connectors())
+            for (Connector<?> c : _driver.connectors())
             {
                 Connection connection = c.getConnection();
                 for (Link link : new Links(connection, ACTIVE, ANY))
@@ -681,7 +697,7 @@ public class MessengerImpl implements Messenger
         public boolean test()
         {
             //do we have at least one message?
-            for (Connector c : _driver.connectors())
+            for (Connector<?> c : _driver.connectors())
             {
                 Connection connection = c.getConnection();
                 Delivery delivery = connection.getWorkHead();
@@ -789,7 +805,7 @@ public class MessengerImpl implements Messenger
         Connection connection = lookup(host, service);
         if (connection == null)
         {
-            Connector connector = _driver.createConnector(host, port, null);
+            Connector<?> connector = _driver.createConnector(host, port, null);
             _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
             connection = _engineFactory.createConnection();
             connection.setContainer(_name);
@@ -971,19 +987,30 @@ public class MessengerImpl implements Messenger
         else return 5672;
     }
 
+    @SuppressWarnings("unchecked")
     private static EngineFactory defaultEngineFactory()
     {
         return (EngineFactory) protonFactoryLoader.loadFactory(EngineFactory.class);
     }
 
+    @SuppressWarnings("unchecked")
     private static DriverFactory defaultDriverFactory()
     {
         return (DriverFactory) protonFactoryLoader.loadFactory(DriverFactory.class);
     }
 
+    @SuppressWarnings("unchecked")
     private static MessageFactory defaultMessageFactory()
     {
         return (MessageFactory) protonFactoryLoader.loadFactory(MessageFactory.class);
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("MessengerImpl [_name=").append(_name).append("]");
+        return builder.toString();
     }
 
 }

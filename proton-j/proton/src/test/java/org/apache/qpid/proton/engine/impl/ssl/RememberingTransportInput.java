@@ -20,50 +20,18 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import java.nio.ByteBuffer;
+
+import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 
 class RememberingTransportInput implements TransportInput
 {
     private StringBuilder _receivedInput = new StringBuilder();
-    private boolean _hasAcceptedLimit = false;
-    private int _acceptLimit = 0;
-
-    @Override
-    public int input(byte[] bytes, int offset, int size)
-    {
-        final String newInput;
-        if (!_hasAcceptedLimit)
-        {
-            newInput = new String(bytes, offset, size);
-        }
-        else
-        {
-            int currentSize = _receivedInput.length();
-            int spareCapacity = _acceptLimit - currentSize;
-            if (spareCapacity < 0)
-            {
-                throw new IllegalStateException("Could not write " + size
-                        + " bytes into buffer of size " + currentSize
-                        + " with accept limit of " + _acceptLimit + ". Test error??");
-            }
-            int effectiveSize = Math.min(size, spareCapacity);
-            newInput = new String(bytes, offset, effectiveSize);
-        }
-
-        _receivedInput.append(newInput);
-        return newInput.length();
-    }
-
-    public void removeAcceptLimit()
-    {
-        _hasAcceptedLimit = false;
-    }
-
-    public void setAcceptLimit(int acceptLimit)
-    {
-        _hasAcceptedLimit = true;
-        _acceptLimit = acceptLimit;
-    }
+    private ByteBuffer _buffer;
+    private TransportResult _nextErrorResult;
+    private int _inputBufferSize = 1024;
 
     String getAcceptedInput()
     {
@@ -74,5 +42,37 @@ class RememberingTransportInput implements TransportInput
     public String toString()
     {
         return "[RememberingTransportInput receivedInput (length " + _receivedInput.length() + ") is:" + _receivedInput.toString() + "]";
+    }
+
+    @Override
+    public ByteBuffer getInputBuffer()
+    {
+        _buffer = ByteBuffer.allocate(_inputBufferSize);
+        return _buffer;
+    }
+
+    @Override
+    public TransportResult processInput()
+    {
+        if(_nextErrorResult != null)
+        {
+            return _nextErrorResult;
+        }
+
+        _buffer.flip();
+        byte[] receivedInputBuffer = new byte[_buffer.remaining()];
+        _buffer.get(receivedInputBuffer);
+        _receivedInput.append(new String(receivedInputBuffer));
+        return TransportResultFactory.ok();
+    }
+
+    public void rejectNextInput(TransportResult nextErrorResult)
+    {
+        _nextErrorResult = nextErrorResult;
+    }
+
+    public void setInputBufferSize(int inputBufferSize)
+    {
+        _inputBufferSize = inputBufferSize;
     }
 }

@@ -30,14 +30,14 @@ public class BinaryFormatterTest
     @Test
     public void testSingleCharacter()
     {
-        assertEquals("[ A ]", _binaryFormatter.format("A".getBytes(), 1));
+        assertEquals("[ A ]", _binaryFormatter.format("A".getBytes()));
     }
 
     @Test
     public void testSingleSmallNonCharacter()
     {
         byte[] bytes = new byte[] { (byte)0x1 };
-        assertEquals("[x01]", _binaryFormatter.format(bytes, 1));
+        assertEquals("[x01]", _binaryFormatter.format(bytes));
     }
 
     @Test
@@ -46,7 +46,7 @@ public class BinaryFormatterTest
         int numberToUse = 0xa2;
         byte byteToUse = (byte)numberToUse;
         byte[] bytes = new byte[] { byteToUse };
-        assertEquals("[xa2]", _binaryFormatter.format(bytes, 1));
+        assertEquals("[xa2]", _binaryFormatter.format(bytes));
     }
 
     @Test
@@ -56,7 +56,7 @@ public class BinaryFormatterTest
         System.arraycopy("ABC".getBytes(), 0, binaryData, 0, 3);
         binaryData[3] = (byte)0xff;
 
-        String formattedString = _binaryFormatter.format(binaryData, binaryData.length);
+        String formattedString = _binaryFormatter.format(binaryData);
         String expected = "[ A ][ B ][ C ][xff]";
         assertEquals(expected, formattedString);
     }

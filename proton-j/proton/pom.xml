@@ -26,6 +26,26 @@
   <artifactId>proton-j-impl</artifactId>
   <name>proton-j-impl</name>
 
+  <!-- Creates a JAR containing the test classes of this module.  These are used by the tests module. -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <!-- Binding to phase test to retains compatibility with Maven 2. If we ever remove
+                 support for Maven 2, the phase can revert to its default (package). -->
+            <phase>test</phase>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.qpid</groupId>

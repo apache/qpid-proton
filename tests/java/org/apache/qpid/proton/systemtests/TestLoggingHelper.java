@@ -18,7 +18,7 @@
  */
 package org.apache.qpid.proton.systemtests;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
 /**
@@ -63,14 +63,25 @@ public class TestLoggingHelper
         _logger = logger;
     }
 
-    public void prettyPrintBytes(String prefix, final byte[] bytes, int length) throws UnsupportedEncodingException
+    public void prettyPrint(String prefix, byte[] bytes)
     {
-        _logger.fine(prefix + " " + length + " byte(s) " + _binaryFormatter.format(bytes, length));
+        _logger.fine(prefix + " " + bytes.length + " byte(s) " + _binaryFormatter.format(bytes));
+    }
+
+    /**
+     * Note that ByteBuffer is assumed to be readable. Its state is unchanged by this operation.
+     */
+    public void prettyPrint(String prefix, ByteBuffer buf)
+    {
+        byte[] bytes = new byte[buf.remaining()];
+        buf.duplicate().get(bytes);
+        prettyPrint(prefix, bytes);
     }
 
     public static String bold(String string)
     {
         return BOLD + string + TestLoggingHelper.COLOUR_RESET;
     }
+
 
 }

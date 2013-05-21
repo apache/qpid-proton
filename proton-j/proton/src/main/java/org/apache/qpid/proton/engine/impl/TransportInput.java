@@ -20,18 +20,22 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.nio.ByteBuffer;
+
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportResult;
+
 
 public interface TransportInput
 {
+    /**
+     * @see Transport#getInputBuffer()
+     */
+    ByteBuffer getInputBuffer();
 
     /**
-     * @param bytes input bytes for consumption
-     * @param offset the offset within bytes where input begins
-     * @param size the number of bytes available for input
-     *
-     * @return the number of bytes consumed
+     * @see Transport#processInput()
      */
-    public int input(byte[] bytes, int offset, int size);
-
+    TransportResult processInput();
 
 }

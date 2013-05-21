@@ -45,6 +45,7 @@ import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.impl.AmqpFramer;
 import org.junit.Ignore;
 import org.junit.Test;
 

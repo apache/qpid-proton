@@ -48,9 +48,10 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
 
     private static final int CLEAR_CHUNK_SIZE = 2;
     private static final char CLEARTEXT_PADDING = '_';
+    private SSLException _nextException;
 
     /**
-     * Converts a_b_c_ to <-A->.  z_ is special and encodes as <> (to give us packets of different lengths).
+     * Converts a_ to <-A->.  z_ is special and encodes as <> (to give us packets of different lengths).
      * If dst is not sufficiently large ({@value #SHORT_ENCODED_CHUNK_SIZE} in our encoding), we return
      * {@link Status#BUFFER_OVERFLOW}, and the src and dst ByteBuffers are unchanged.
      */
@@ -115,6 +116,11 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     public SSLEngineResult unwrap(ByteBuffer src, ByteBuffer dst)
             throws SSLException
     {
+        if(_nextException != null)
+        {
+            throw _nextException;
+        }
+
         Status resultStatus;
         final int consumed;
         final int produced;
@@ -172,7 +178,12 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     }
 
     @Override
-    public int getApplicationBufferSize()
+    public int getEffectiveApplicationBufferSize()
+    {
+        return getApplicationBufferSize();
+    }
+
+    private int getApplicationBufferSize()
     {
         return CLEAR_CHUNK_SIZE;
     }
@@ -227,5 +238,10 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     public boolean getUseClientMode()
     {
         return true;
+    }
+
+    public void rejectNextEncodedPacket(SSLException nextException)
+    {
+        _nextException = nextException;
     }
 }

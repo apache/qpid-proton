@@ -20,7 +20,7 @@
 import os, common
 import subprocess
 from proton import *
-from common import Skipped
+from common import Skipped, pump
 
 
 class SslTest(common.Test):
@@ -57,34 +57,7 @@ class SslTest(common.Test):
                 raise Skipped(e)
 
     def _pump(self, ssl_client, ssl_server, buffer_size=1024):
-        """ Allow two SslTestConnections to transfer data until done.
-        """
-        out_client_leftover_by_server = ""
-        out_server_leftover_by_client = ""
-        i = 0
-
-        while True:
-            out_client = out_client_leftover_by_server + (ssl_client.transport.output(buffer_size) or "")
-            out_server = out_server_leftover_by_client + (ssl_server.transport.output(buffer_size) or "")
-
-            if out_client:
-                number_server_consumed = ssl_server.transport.input(out_client)
-                if number_server_consumed is None:
-                    # special None return value means input is closed so discard the leftovers
-                    out_client_leftover_by_server = ""
-                else:
-                    out_client_leftover_by_server = out_client[number_server_consumed:]
-
-            if out_server:
-                number_client_consumed = ssl_client.transport.input(out_server)
-                if number_client_consumed is None:
-                    # special None return value means input is closed so discard the leftovers
-                    out_server_leftover_by_client = ""
-                else:
-                    out_server_leftover_by_client = out_server[number_client_consumed:]
-
-            if not out_client and not out_server: break
-            i = i + 1
+        pump(ssl_client.transport, ssl_server.transport, buffer_size)
 
     def _testpath(self, file):
         """ Set the full path to the certificate,keyfile, etc. for the test.
@@ -363,7 +336,7 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump( client, server )
 
-    def test_allow_unsecured_client(self):
+    def test_allow_unsecured_client_which_connects_unsecured(self):
         """ Server allows an unsecured client to connect if configured.
         """
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
@@ -386,6 +359,39 @@ class SslTest(common.Test):
         client.connection.close()
         server.connection.close()
         self._pump( client, server )
+
+    def test_allow_unsecured_client_which_connects_secured(self):
+        """ As per test_allow_unsecured_client_which_connects_unsecured
+            but client actually uses SSL
+        """
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
+                                                    self._testpath("ca-certificate.pem") )
+
+        self.client_domain.set_credentials(self._testpath("client-certificate.pem"),
+                                           self._testpath("client-private-key.pem"),
+                                           "client-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
+
+        # allow unsecured clients on this connection
+        #self.server_domain.allow_unsecured_client()
+
+        # client uses ssl. Server should detect this.
+        client = SslTest.SslTestConnection( self.client_domain )
+        server = SslTest.SslTestConnection( self.server_domain )
+
+        client.connection.open()
+        server.connection.open()
+        self._pump( client, server )
+        assert server.ssl.protocol_name() is not None
+        client.connection.close()
+        server.connection.close()
+        self._pump( client, server )
+
 
     def test_disallow_unsecured_client(self):
         """ Non-SSL Client is disallowed from connecting to server.

@@ -16,35 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.qpid.proton.systemtests;
+package org.apache.qpid.proton.engine.impl;
 
-public class BinaryFormatter
+import java.nio.ByteBuffer;
+
+interface TransportOutputWriter
 {
-
-    public String format(byte[] binaryData)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for(int i = 0; i < binaryData.length; i++)
-        {
-            byte theByte = binaryData[i];
-            String formattedByte = formatByte(theByte);
-            stringBuilder.append(formattedByte);
-        }
-        return stringBuilder.toString();
-    }
-
-    private String formatByte(byte theByte)
-    {
-        final String retVal;
-        if(Character.isLetterOrDigit(theByte))
-        {
-            retVal = String.format("[ %c ]", theByte);
-        }
-        else
-        {
-            retVal = String.format("[x%02x]", theByte);
-        }
-        return retVal;
-    }
-
+    /**
+     * Writes my pending output bytes into outputBuffer. Does not subsequently flip it.
+     */
+    void writeInto(ByteBuffer outputBuffer);
 }

@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton;
 
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -35,7 +36,9 @@ import org.python.util.PythonInterpreter;
 
 /**
  * Runs all the python tests, or just those that match the system property {@value #TEST_PATTERN_SYSTEM_PROPERTY}
- * if it exists
+ * if it exists.
+ * Use {@value #TEST_INVOCATIONS_SYSTEM_PROPERTY} to specify the number of repetitions, or use 0
+ * for unlimited repetitions.
  */
 public class JythonTest
 {
@@ -49,7 +52,12 @@ public class JythonTest
     /** Name of the junit style xml report to be written by the python test script */
     private static final String XML_REPORT_NAME = "TEST-jython-test-results.xml";
 
-    private static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
+    public static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
+
+    /** The number of times to run the test, or forever if zero */
+    public static final String TEST_INVOCATIONS_SYSTEM_PROPERTY = "proton.pythontest.invocations";
+
+    public static final String ALWAYS_COLORIZE_SYSTEM_PROPERTY = "proton.pythontest.always_colorize";
 
     @Test
     public void test() throws Exception
@@ -64,6 +72,26 @@ public class JythonTest
         LOGGER.info("About to call Jython test script: '" + testScript
                 + "' with '" + testRoot + "' added to Jython path");
 
+        int maxInvocations = Integer.getInteger(TEST_INVOCATIONS_SYSTEM_PROPERTY, 1);
+        assertTrue("Number of invocations should be non-negative", maxInvocations >= 0);
+        boolean loopForever = maxInvocations == 0;
+        if(maxInvocations > 1)
+        {
+            LOGGER.info("Will invoke Python test " + maxInvocations + " times");
+        }
+        if(loopForever)
+        {
+            LOGGER.info("Will repeatedly invoke Python test forever");
+        }
+        int invocations = 1;
+        while(loopForever || invocations++ <= maxInvocations)
+        {
+            runTestOnce(testScript, interp, invocations);
+        }
+    }
+
+    private void runTestOnce(String testScript, PythonInterpreter interp, int invocationsSoFar)
+    {
         try
         {
             interp.execfile(testScript);
@@ -83,7 +111,7 @@ public class JythonTest
 
                 // This unusual code is necessary because PyException toString() contains the useful Python traceback
                 // and getMessage() is usually null
-                fail("Caught PyException: " + e.toString() + " with message: " + e.getMessage());
+                fail("Caught PyException on invocation number " + invocationsSoFar + ": " + e.toString() + " with message: " + e.getMessage());
             }
         }
     }
@@ -91,7 +119,6 @@ public class JythonTest
     private PythonInterpreter createInterpreterWithArgs(String xmlReportFile)
     {
         PySystemState systemState = new PySystemState();
-        String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
 
         if (xmlReportFile != null)
         {
@@ -99,9 +126,15 @@ public class JythonTest
             systemState.argv.append(new PyString(xmlReportFile));
         }
 
+        String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
         if(testPattern != null)
         {
             systemState.argv.append(new PyString(testPattern));
+        }
+
+        if(Boolean.getBoolean(ALWAYS_COLORIZE_SYSTEM_PROPERTY))
+        {
+            systemState.argv.append(new PyString("--always-colorize"));
         }
 
         PythonInterpreter interp = new PythonInterpreter(null, systemState);

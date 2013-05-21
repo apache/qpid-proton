@@ -19,342 +19,235 @@
  *
  */
 package org.apache.qpid.proton.engine.impl.ssl;
-
-import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.assertArrayUntouchedExcept;
-import static org.apache.qpid.proton.engine.impl.ssl.ByteTestHelper.createFilledBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
+import static org.apache.qpid.proton.engine.impl.TransportTestHelper.assertByteBufferContentEquals;
+import static org.apache.qpid.proton.engine.impl.TransportTestHelper.pourBufferToString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.ByteBuffer;
+
+import javax.net.ssl.SSLException;
+
+import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * TODO unit test handshaking
  * TODO unit test closing
+ * TODO unit test graceful handling of SSLEngine.wrap throwing an SSLException
  */
 public class SimpleSslTransportWrapperTest
 {
     private RememberingTransportInput _underlyingInput = new RememberingTransportInput();
     private CannedTransportOutput _underlyingOutput = new CannedTransportOutput();
 
-    private SimpleSslTransportWrapper _transportWrapper;
+    private SimpleSslTransportWrapper _sslWrapper;
 
     private CapitalisingDummySslEngine _dummySslEngine = new CapitalisingDummySslEngine();
+
+    @Rule
+    public ExpectedException _expectedException = ExpectedException.none();
 
     @Before
     public void setUp()
     {
-        _transportWrapper = new SimpleSslTransportWrapper(_dummySslEngine, _underlyingInput, _underlyingOutput);
+        _sslWrapper = new SimpleSslTransportWrapper(_dummySslEngine, _underlyingInput, _underlyingOutput);
     }
 
     @Test
     public void testInputDecodesOnePacket()
     {
-        byte[] encodedBytes = "<-A->".getBytes();
+        String encodedBytes = "<-A->";
 
-        int numberConsumed = _transportWrapper.input(encodedBytes, 0, encodedBytes.length);
-        assertEquals(encodedBytes.length, numberConsumed);
+        putBytesIntoTransport(encodedBytes);
+
         assertEquals("a_", _underlyingInput.getAcceptedInput());
     }
 
     @Test
     public void testInputWithMultiplePackets()
     {
-        byte[] encodedBytes = "<-A-><-B-><-C-><>".getBytes();
+        String encodedBytes = "<-A-><-B-><-C-><>";
 
-        int numberConsumed = _transportWrapper.input(encodedBytes, 0, encodedBytes.length);
-        assertEquals(encodedBytes.length, numberConsumed);
+        putBytesIntoTransport(encodedBytes);
+
         assertEquals("a_b_c_z_", _underlyingInput.getAcceptedInput());
     }
 
     @Test
-    public void testInputWithMultiplePacketsUsingNonZeroOffset()
+    public void testInputIncompletePacket_isNotPassedToUnderlyingInputUntilCompleted()
     {
-        byte[] encodedBytes = "<-A-><-B-><-C-><-D-><-E->".getBytes();
+        String incompleteEncodedBytes = "<-A-><-B-><-C"; // missing the trailing '>' to cause the underflow
+        String remainingEncodedBytes = "-><-D->";
 
-        // try to decode the "<-B-><-C->" portion of encodedBytes
-        int numberConsumed = _transportWrapper.input(encodedBytes, 5, 10);
-        assertEquals(10, numberConsumed);
-        assertEquals("b_c_", _underlyingInput.getAcceptedInput());
-    }
-
-    @Test
-    public void testInsufficientInputBufferUnderflow()
-    {
-        byte[] incompleteEncodedBytes = "<-A-><-B-><-C".getBytes(); // missing the trailing '>' to cause the underflow
-        byte[] remainingEncodedBytes = "-><-D->".getBytes();
-
-        int numberConsumed = _transportWrapper.input(incompleteEncodedBytes, 0, incompleteEncodedBytes.length);
-        assertEquals(incompleteEncodedBytes.length, numberConsumed);
+        putBytesIntoTransport(incompleteEncodedBytes);
         assertEquals("a_b_", _underlyingInput.getAcceptedInput());
 
-        numberConsumed = _transportWrapper.input(remainingEncodedBytes, 0, remainingEncodedBytes.length);
-        assertEquals(remainingEncodedBytes.length, numberConsumed);
+        putBytesIntoTransport(remainingEncodedBytes);
         assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
-    }
-
-    @Test
-    public void testInsufficientInputBufferUnderflowThreePart()
-    {
-        byte[] firstEncodedBytes = "<-A-><-B-><-".getBytes();
-        byte[] secondEncodedBytes = "C".getBytes(); // Sending this causes the impl to have to hold the data without producing more input yet
-        byte[] thirdEncodedBytes = "-><-D->".getBytes();
-
-        int numberConsumed = _transportWrapper.input(firstEncodedBytes, 0, firstEncodedBytes.length);
-        assertEquals(firstEncodedBytes.length, numberConsumed);
-        assertEquals("a_b_", _underlyingInput.getAcceptedInput());
-
-        numberConsumed = _transportWrapper.input(secondEncodedBytes, 0, secondEncodedBytes.length);
-        assertEquals(secondEncodedBytes.length, numberConsumed);
-        assertEquals("a_b_", _underlyingInput.getAcceptedInput());
-
-        numberConsumed = _transportWrapper.input(thirdEncodedBytes, 0, thirdEncodedBytes.length);
-        assertEquals(thirdEncodedBytes.length, numberConsumed);
-        assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
-    }
-
-    @Test
-    public void testUnderlyingInputBecomesTemporarilyFull()
-    {
-        _underlyingInput.setAcceptLimit(3);
-
-        byte[] encodedBytes = "<-A-><-B-><-C->".getBytes();
-
-        // We consume encoded A and B, but due to the limit underlying input accepts
-        // only a part of b's decoded packet.
-        int firstNumberConsumed = _transportWrapper.input(encodedBytes, 0, encodedBytes.length);
-        assertEquals(10, firstNumberConsumed);
-        assertEquals("a_b", _underlyingInput.getAcceptedInput());
-
-        _underlyingInput.removeAcceptLimit();
-
-        // Send the remaining encoded data
-        int remainingOffset = firstNumberConsumed;
-        int remainingSize = encodedBytes.length - firstNumberConsumed;
-        int secondNumberConsumed = _transportWrapper.input(encodedBytes, remainingOffset, remainingSize);
-        assertEquals(5, secondNumberConsumed);
-        assertEquals("a_b_c_", _underlyingInput.getAcceptedInput());
     }
 
     /**
-     * @see #testUnderlyingInputBecomesTemporarilyFull()
+     * As per {@link #testInputIncompletePacket_isNotPassedToUnderlyingInputUntilCompleted()}
+     * but this time it takes TWO chunks to complete the "dangling" packet.
      */
     @Test
-    public void testUnderlyingInputBecomesPermanentlyFull()
+    public void testInputIncompletePacketInThreeParts()
     {
-        _underlyingInput.setAcceptLimit(3);
+        String firstEncodedBytes = "<-A-><-B-><-";
+        String secondEncodedBytes = "C"; // Sending this causes the impl to have to hold the data without producing more input yet
+        String thirdEncodedBytes = "-><-D->";
 
-        byte[] encodedBytes = "<-A-><-B-><-C->".getBytes();
+        putBytesIntoTransport(firstEncodedBytes);
+        assertEquals("a_b_", _underlyingInput.getAcceptedInput());
 
-        int firstNumberConsumed = _transportWrapper.input(encodedBytes, 0, encodedBytes.length);
-        assertEquals(10, firstNumberConsumed);
-        assertEquals("a_b", _underlyingInput.getAcceptedInput());
+        putBytesIntoTransport(secondEncodedBytes);
+        assertEquals("a_b_", _underlyingInput.getAcceptedInput());
 
-        // Send the remaining encoded data
-        int remainingOffset = firstNumberConsumed;
-        int remainingSize = encodedBytes.length - firstNumberConsumed;
-        int secondNumberConsumed = _transportWrapper.input(encodedBytes, remainingOffset, remainingSize);
-        assertEquals(0, secondNumberConsumed);
-        assertEquals("a_b", _underlyingInput.getAcceptedInput());
+        putBytesIntoTransport(thirdEncodedBytes);
+        assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
     }
 
-    public void testUnderlyingInputPartiallyAcceptsLeftovers()
+    @Test
+    public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInput() throws Exception
     {
-        byte[] encodedBytes = "<A><B><C>".getBytes();
+        _underlyingInput.setInputBufferSize(1);
 
-        _underlyingInput.setAcceptLimit(0);
+        putBytesIntoTransport("<-A->");
 
-        int firstNumberConsumed = _transportWrapper.input(encodedBytes, 0, encodedBytes.length);
-        assertEquals(3, firstNumberConsumed);
+        assertEquals("a_", _underlyingInput.getAcceptedInput());
+    }
+
+    @Test
+    public void testSslUnwrapThrowsException_returnsErrorResultAndRefusesFurtherInput() throws Exception
+    {
+        SSLException sslException = new SSLException("unwrap exception");
+        _dummySslEngine.rejectNextEncodedPacket(sslException);
+
+        _sslWrapper.getInputBuffer().put("<-A->".getBytes());
+        TransportResult result = _sslWrapper.processInput();
+        assertEquals(TransportResult.Status.ERROR, result.getStatus());
+        assertSame(sslException, result.getException().getCause());
         assertEquals("", _underlyingInput.getAcceptedInput());
 
-        // Set underlying input to accept *part* of the decoded leftovers, then try to send the remaining encoded data
-        _underlyingInput.setAcceptLimit(1);
-        int offsetAfterFirstAttempt = firstNumberConsumed;
-        int sizeAfterFirstAttempt = encodedBytes.length - firstNumberConsumed;
-        int secondNumberConsumed = _transportWrapper.input(encodedBytes, offsetAfterFirstAttempt, sizeAfterFirstAttempt);
-        assertEquals(0, secondNumberConsumed);
-        assertEquals("a", _underlyingInput.getAcceptedInput());
+        _expectedException.expect(TransportException.class);
+        _sslWrapper.getInputBuffer();
+    }
 
-        // Remove the limit and send the remaining data.
-        _underlyingInput.removeAcceptLimit();
-        // offset and size unchanged because second attempt consumed no bytes
-        int thirdNumberConsumed = _transportWrapper.input(encodedBytes, offsetAfterFirstAttempt, sizeAfterFirstAttempt);
-        assertEquals(6, thirdNumberConsumed);
-        assertEquals("a_b_c_", _underlyingInput.getAcceptedInput());
+    @Test
+    public void testUnderlyingInputReturnsErrorResult_returnsErrorResultAndRefusesFurtherInput() throws Exception
+    {
+        String underlyingErrorDescription = "dummy underlying error";
+        TransportResult underlyingErrorResult = TransportResultFactory.error(underlyingErrorDescription);
+        _underlyingInput.rejectNextInput(underlyingErrorResult);
+
+        _sslWrapper.getInputBuffer().put("<-A->".getBytes());
+
+        TransportResult result = _sslWrapper.processInput();
+
+        assertEquals(TransportResult.Status.ERROR, result.getStatus());
+        assertEquals(underlyingErrorDescription, result.getErrorDescription());
+    }
+
+    @Test
+    public void testGetOutputBufferIsReadOnly()
+    {
+        _underlyingOutput.setOutput("");
+        assertTrue(_sslWrapper.getOutputBuffer().isReadOnly());
     }
 
     @Test
     public void testOutputEncodesOnePacket()
     {
-        byte[] encodedBytes = createFilledBuffer(10);
-        String expectedOutputProduced = "<-A->";
-
         _underlyingOutput.setOutput("a_");
 
-        int numberProduced = _transportWrapper.output(encodedBytes, 0, encodedBytes.length);
-        assertEquals(expectedOutputProduced.length(), numberProduced);
-        assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes);
-    }
+        ByteBuffer outputBuffer = _sslWrapper.getOutputBuffer();
 
-    @Test
-    public void testOutputEncodesOnePacketUsingNonZeroOffset()
-    {
-        byte[] encodedBytes = createFilledBuffer(10);
-        String expectedOutputProduced = "<-A->";
-
-        _underlyingOutput.setOutput("a_");
-
-        int numberProduced = _transportWrapper.output(encodedBytes, 1, 5);
-        assertEquals(expectedOutputProduced.length(), numberProduced);
-        assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes, 1);
-    }
-
-    @Test
-    public void testOutputUsingSmallBuffers()
-    {
-        String expectedOutputProducedFirstAttempt = "<-";
-        String expectedOutputProducedSecondAttempt = "A";
-        String expectedOutputProducedThirdAttempt = "->";
-
-        String expectedOutputProducedLastAttempt = "<-B->";
-
-        _underlyingOutput.setOutput("a_");
-        {
-            byte[] encodedBytesForFirstAttempt = createFilledBuffer(2);
-            int numberProducedFirstAttempt = _transportWrapper.output(encodedBytesForFirstAttempt, 0, encodedBytesForFirstAttempt.length);
-            assertEquals(expectedOutputProducedFirstAttempt.length(), numberProducedFirstAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedFirstAttempt, encodedBytesForFirstAttempt);
-        }
-
-        {
-            byte[] encodedBytesForSecondAttempt = createFilledBuffer(1);
-            int numberProducedSecondAttempt = _transportWrapper.output(encodedBytesForSecondAttempt, 0, encodedBytesForSecondAttempt.length);
-            assertEquals(expectedOutputProducedSecondAttempt.length(), numberProducedSecondAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedSecondAttempt, encodedBytesForSecondAttempt);
-        }
-
-        {
-            byte[] encodedBytesForThirdAttempt = createFilledBuffer(2);
-            int numberProducedThirdAttempt = _transportWrapper.output(encodedBytesForThirdAttempt, 0, encodedBytesForThirdAttempt.length);
-            assertEquals(expectedOutputProducedThirdAttempt.length(), numberProducedThirdAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedThirdAttempt, encodedBytesForThirdAttempt);
-        }
-
-        _underlyingOutput.setOutput("b_");
-        {
-            byte[] encodedBytesForLastAttempt = createFilledBuffer(10);
-            int numberProducedLastAttempt = _transportWrapper.output(encodedBytesForLastAttempt, 0, encodedBytesForLastAttempt.length);
-            assertEquals(expectedOutputProducedLastAttempt.length(), numberProducedLastAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedLastAttempt, encodedBytesForLastAttempt);
-        }
-    }
-
-    @Test
-    public void testOutputUsingSmallBuffersAndDecodingMoreBytesAlongTheWay()
-    {
-        String expectedOutputProducedFirstAttempt = "<-";
-        String expectedOutputProducedSecondAttempt = "A-";
-
-        String expectedOutputProducedThirdAttempt = "><-B->";
-        String expectedOutputProducedLastAttempt = "<-C->";
-
-
-        _underlyingOutput.setOutput("a_");
-        {
-            byte[] encodedBytesForFirstAttempt = createFilledBuffer(2);
-            int numberProducedFirstAttempt = _transportWrapper.output(encodedBytesForFirstAttempt, 0, encodedBytesForFirstAttempt.length);
-            assertEquals(expectedOutputProducedFirstAttempt.length(), numberProducedFirstAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedFirstAttempt, encodedBytesForFirstAttempt);
-        }
-
-        {
-            byte[] encodedBytesForSecondAttempt = createFilledBuffer(2);
-            int numberProducedSecondAttempt = _transportWrapper.output(encodedBytesForSecondAttempt, 0, encodedBytesForSecondAttempt.length);
-            assertEquals(expectedOutputProducedSecondAttempt.length(), numberProducedSecondAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedSecondAttempt, encodedBytesForSecondAttempt);
-        }
-
-        {
-            // now get some output into a roomy buffer, which should get the left-over ">" plus some new stuff
-            _underlyingOutput.setOutput("b_");
-            byte[] encodedBytesForThirdAttempt = createFilledBuffer(10);
-            int numberProducedThirdAttempt = _transportWrapper.output(encodedBytesForThirdAttempt, 0, encodedBytesForThirdAttempt.length);
-            assertEquals(expectedOutputProducedThirdAttempt.length(), numberProducedThirdAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedThirdAttempt, encodedBytesForThirdAttempt);
-        }
-
-        _underlyingOutput.setOutput("c_");
-        {
-            byte[] encodedBytesForLastAttempt = createFilledBuffer(10);
-            int numberProducedLastAttempt = _transportWrapper.output(encodedBytesForLastAttempt, 0, encodedBytesForLastAttempt.length);
-            assertEquals(expectedOutputProducedLastAttempt.length(), numberProducedLastAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedLastAttempt, encodedBytesForLastAttempt);
-        }
+        assertByteBufferContentEquals("<-A->".getBytes(), outputBuffer);
     }
 
     @Test
     public void testOutputEncodesMultiplePackets()
     {
-        byte[] encodedBytes = createFilledBuffer(17);
-        String expectedOutputProduced = "<-A-><-B-><-C-><>";
+        _underlyingOutput.setOutput("a_b_c_");
 
-        _underlyingOutput.setOutput("a_b_c_z_");
-
-        int numberProduced = _transportWrapper.output(encodedBytes, 0, encodedBytes.length);
-        assertEquals(expectedOutputProduced.length(), numberProduced);
-        assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes);
+        assertEquals("<-A-><-B-><-C->", getAllBytesFromTransport());
     }
 
     @Test
-    public void testOutputWritesShortEncodedPacketIntoBufferThatIsLessThanMaximumPacketSize()
+    public void testOutputEncodesMultiplePacketsOfVaryingSize()
     {
-        int bufferLength = _dummySslEngine.getPacketBufferSize() - 1;
-        assertTrue(bufferLength > CapitalisingDummySslEngine.SHORT_ENCODED_CHUNK_SIZE);
+        _underlyingOutput.setOutput("z_a_b_");
 
-        _underlyingOutput.setOutput("z_");
-
-        {
-            byte[] encodedBytes = createFilledBuffer(bufferLength); // smaller than a packet but large enough to receive encoded bytes for z_
-            String expectedOutputProduced = "<>";
-            int numberProduced = _transportWrapper.output(encodedBytes, 0, encodedBytes.length);
-            assertEquals(expectedOutputProduced.length(), numberProduced);
-            assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes);
-        }
+        assertEquals("<><-A-><-B->", getAllBytesFromTransport());
     }
 
     @Test
-    public void testOutputEncodesMultiplePacketsWithInitialBufferTooSmallForAllOfSecondPacket()
+    public void testClientConsumesEncodedOutputInMultipleChunks()
     {
-        String expectedOutputProducedFirstAttempt = "<-A-><";
-        String expectedOutputProducedSecondAttempt = "><-C->";
-
-        _underlyingOutput.setOutput("a_z_c_");
+        _underlyingOutput.setOutput("a_b_");
 
         {
-            byte[] encodedBytesFirstAttempt = createFilledBuffer(6);
-            int numberProducedFirstAttempt = _transportWrapper.output(encodedBytesFirstAttempt, 0, encodedBytesFirstAttempt.length);
-            assertEquals(expectedOutputProducedFirstAttempt.length(), numberProducedFirstAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedFirstAttempt, encodedBytesFirstAttempt);
+            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            String output = pourBufferToString(buffer, 2);
+            assertEquals("<-", output);
+            _sslWrapper.outputConsumed();
         }
+
         {
-            byte[] encodedBytesSecondAttempt = createFilledBuffer(6);
-            int numberProducedSecondAttempt = _transportWrapper.output(encodedBytesSecondAttempt, 0, encodedBytesSecondAttempt.length);
-            assertEquals(expectedOutputProducedSecondAttempt.length(), numberProducedSecondAttempt);
-            assertArrayUntouchedExcept(expectedOutputProducedSecondAttempt, encodedBytesSecondAttempt);
+            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            String output = pourBufferToString(buffer, 3);
+            assertEquals("A->", output);
+            _sslWrapper.outputConsumed();
         }
+
+        assertEquals("<-B->", getAllBytesFromTransport());
     }
 
     @Test
     public void testNoOutputToEncode()
     {
-        byte[] encodedBytes = createFilledBuffer(10);
-        String expectedOutputProduced = "";
-
         _underlyingOutput.setOutput("");
 
-        int numberProduced = _transportWrapper.output(encodedBytes, 0, encodedBytes.length);
-        assertEquals(expectedOutputProduced.length(), numberProduced);
-        assertArrayUntouchedExcept(expectedOutputProduced, encodedBytes);
+        assertFalse(_sslWrapper.getOutputBuffer().hasRemaining());
     }
+
+    private void putBytesIntoTransport(String encodedBytes)
+    {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(encodedBytes.getBytes());
+        while(byteBuffer.hasRemaining())
+        {
+            int numberPoured = pour(byteBuffer, _sslWrapper.getInputBuffer());
+            assertTrue("We should be able to pour some bytes into the input buffer",
+                    numberPoured > 0);
+            _sslWrapper.processInput().checkIsOk();
+        }
+    }
+
+    private String getAllBytesFromTransport()
+    {
+        StringBuilder readBytes = new StringBuilder();
+        boolean continueLooping;
+        do
+        {
+            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            continueLooping = buffer.hasRemaining();
+
+            readBytes.append(pourBufferToString(buffer));
+
+            _sslWrapper.outputConsumed();
+        }
+        while(continueLooping);
+
+        return readBytes.toString();
+    }
+
 }

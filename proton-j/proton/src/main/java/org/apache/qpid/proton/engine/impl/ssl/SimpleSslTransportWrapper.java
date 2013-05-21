@@ -20,53 +20,51 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourAll;
+
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
 
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 
 /**
- * TODO close the SSLEngine when told to, and modify {@link #input(byte[], int, int)} and {@link #output(byte[], int, int)}
+ * TODO close the SSLEngine when told to, and modify {@link #wrapOutput()} and {@link #unwrapInput()}
  * to respond appropriately thereafter.
  */
 public class SimpleSslTransportWrapper implements SslTransportWrapper
 {
     private static final Logger _logger = Logger.getLogger(SimpleSslTransportWrapper.class.getName());
 
-    /**
-     * Our testing has shown that application buffers need to be a bit larger
-     * than that provided by {@link SSLSession#getApplicationBufferSize()} otherwise
-     * {@link Status#BUFFER_OVERFLOW} will result on {@link SSLEngine#unwrap()}.
-     * Sun's own example uses 50, so we use the same.
-     */
-    private static final int APPLICATION_BUFFER_EXTRA = 50;
+    private final ProtonSslEngine _sslEngine;
 
     private final TransportInput _underlyingInput;
     private final TransportOutput _underlyingOutput;
 
-    private ProtonSslEngine _sslEngine;
+    private final ByteBuffer _inputBuffer;
 
-    /** Used by {@link #output(byte[], int, int)}. Acts as a buffer for the output from underlyingOutput */
-    private ByteHolder _clearOutputHolder;
+    private final ByteBuffer _outputBuffer;
 
-    /** Used by {@link #output(byte[], int, int)}. Caches the output from SSLEngine.wrap */
-    private ByteHolder _encodedOutputHolder;
+    /**
+     * A buffer for the decoded bytes that will be passed to _underlyingInput.
+     * This extra layer of buffering is necessary in case the underlying input's buffer
+     * is too small for SSLEngine to ever unwrap into.
+     */
+    private final ByteBuffer _decodedInputBuffer;
 
-    /** Used by {@link #input(byte[], int, int)}. A buffer for the decoded bytes that will be passed to _underlyingInput */
-    private ByteHolder _decodedInputHolder;
-
-    /** used by {@link #input(byte[], int, int)} to cache the left over bytes not yet decoded due to buffer underflow. */
-    private final BytePipeline _encodedLeftoversPipeline = new BytePipeline();
+    private ByteBuffer _readOnlyOutputBufferView;
 
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _cipherName;
@@ -74,48 +72,56 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     /** could change during the lifetime of the ssl connection owing to renegotiation. */
     private String _protocolName;
 
+
+    /**
+     * We store the last input result so that we know not to process any more input
+     * if it failed.
+     */
+    private TransportResult _lastInputResult = TransportResultFactory.ok();
+
+
     SimpleSslTransportWrapper(ProtonSslEngine sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
     {
         _underlyingInput = underlyingInput;
         _underlyingOutput = underlyingOutput;
         _sslEngine = sslEngine;
-        createByteHolders();
-    }
 
-    private void createByteHolders()
-    {
-        int appBufferMax = _sslEngine.getApplicationBufferSize();
-        int packetBufferMax = _sslEngine.getPacketBufferSize();
+        int effectiveAppBufferMax = _sslEngine.getEffectiveApplicationBufferSize();
+        int packetSize = _sslEngine.getPacketBufferSize();
 
-        _clearOutputHolder = new ByteHolder(appBufferMax + APPLICATION_BUFFER_EXTRA);
-        _decodedInputHolder = new ByteHolder(appBufferMax + APPLICATION_BUFFER_EXTRA);
-        _decodedInputHolder.prepareToRead();
+        // Input and output buffers need to be large enough to contain one SSL packet,
+        // as stated in SSLEngine JavaDoc.
+        _inputBuffer = newWriteableBuffer(packetSize);
+        _outputBuffer = newWriteableBuffer(packetSize);
 
-        _encodedOutputHolder = new ByteHolder(packetBufferMax);
-        _encodedOutputHolder.prepareToRead();
-    }
+        _decodedInputBuffer = newReadableBuffer(effectiveAppBufferMax);
 
-    @Override
-    public int input(byte[] encodedBytes, int offset, int size)
-    {
-        final int initialSizeOfEncodedLeftovers =  _encodedLeftoversPipeline.getSize();
-        final ByteBuffer oldPlusNewEncodedByteBuffer = _encodedLeftoversPipeline.appendAndClear(encodedBytes, offset, size);
-
-        if(!_decodedInputHolder.readInto(_underlyingInput))
+        if(_logger.isLoggable(Level.FINE))
         {
-            // underlying input couldn't accept all existing leftovers so we return without trying to decode any new data
-            return 0;
+            _logger.fine("Constructed " + this);
         }
+    }
 
+
+    /**
+     * Unwraps the contents of {@link #_inputBuffer} and passes it to {@link #_underlyingInput}.
+     *
+     * Regarding the state of {@link #_inputBuffer}:
+     * - On entry, it is assumed to be readable.
+     * - On exit, it is still readable and its "remaining" bytes are those that we were unable
+     * to unwrap (e.g. if they don't form a whole packet).
+     */
+    private TransportResult unwrapInput()
+    {
         try
         {
+            TransportResult underlyingResult = TransportResultFactory.ok();
             boolean keepLooping = true;
-            int totalBytesDecoded = 0;
-
             do
             {
-                SSLEngineResult result = _sslEngine.unwrap(oldPlusNewEncodedByteBuffer, _decodedInputHolder.prepareToWrite());
-                _decodedInputHolder.prepareToRead();
+                _decodedInputBuffer.compact();
+                SSLEngineResult result = _sslEngine.unwrap(_inputBuffer, _decodedInputBuffer);
+                _decodedInputBuffer.flip();
 
                 runDelegatedTasks(result);
                 updateCipherAndProtocolName(result);
@@ -127,20 +133,18 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
                 if(sslResultStatus == SSLEngineResult.Status.OK)
                 {
-                    totalBytesDecoded += result.bytesConsumed();
+                    // continue
                 }
                 else if(sslResultStatus == SSLEngineResult.Status.BUFFER_UNDERFLOW)
                 {
-                    // Not an error. We store the not-yet-decoded bytes which will hopefully be augmented by some more
+                    // Not an error. The not-yet-decoded bytes remain in _inputBuffer and will hopefully be augmented by some more
                     // in a subsequent invocation of this method, allowing decoding to be done.
-                    _encodedLeftoversPipeline.set(oldPlusNewEncodedByteBuffer, totalBytesDecoded);
                 }
                 else
                 {
                     throw new IllegalStateException("Unexpected SSL Engine state " + sslResultStatus);
                 }
 
-                boolean allAcceptedByUnderlyingInput = true;
                 if(result.bytesProduced() > 0)
                 {
                     if(handshakeStatus != HandshakeStatus.NOT_HANDSHAKING)
@@ -148,106 +152,80 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                         _logger.warning("WARN unexpectedly produced bytes for the underlying input when handshaking");
                     }
 
-                    allAcceptedByUnderlyingInput = _decodedInputHolder.readInto(_underlyingInput);
+                    underlyingResult = pourAll(_decodedInputBuffer, _underlyingInput);
                 }
 
                 keepLooping = handshakeStatus == HandshakeStatus.NOT_HANDSHAKING
                             && sslResultStatus != Status.BUFFER_UNDERFLOW
-                            && allAcceptedByUnderlyingInput;
+                            && underlyingResult.isOk();
             }
             while(keepLooping);
 
-            int newEncodedLeftovers = _encodedLeftoversPipeline.getSize();
-            int sizeToReportConsumed = totalBytesDecoded + newEncodedLeftovers - initialSizeOfEncodedLeftovers;
-            return sizeToReportConsumed;
+            return underlyingResult;
         }
         catch(SSLException e)
         {
-            throw new TransportException("Problem during input. useClientMode: " + _sslEngine.getUseClientMode(), e);
+            return TransportResultFactory.error(new TransportException(
+                    "Problem during input. useClientMode: " + _sslEngine.getUseClientMode(), e));
         }
     }
 
     /**
-     * Write encoded output to the supplied destination.
+     * Wrap the underlying transport's output, passing it to the output buffer.
      *
-     * The following conditions hold before and after this method call:
-     * {@link #_encodedOutputHolder} is readable.
-     * {@link #_clearOutputHolder} is writeable.
+     * {@link #_outputBuffer} is assumed to be writeable on entry and is guaranteed to
+     * be still writeable on exit.
      */
-    @Override
-    public int output(byte[] destination, int offset, final int size)
+    private void wrapOutput()
     {
-        try
+        boolean keepWrapping = hasSpaceForSslPacket(_outputBuffer);
+        while(keepWrapping)
         {
-            int totalBytesWrittenToDestination = _encodedOutputHolder.readInto(destination, offset, size);
-            if(totalBytesWrittenToDestination == size)
+            ByteBuffer clearOutputBuffer = _underlyingOutput.getOutputBuffer();
+            try
             {
-                return size;
-            }
-
-            boolean keepLooping = true;
-            do
-            {
-                if (_clearOutputHolder.hasSpace())
+                if(clearOutputBuffer.hasRemaining())
                 {
-                    int numberOfBytesInClearOutputHolder = _clearOutputHolder.writeOutputFrom(_underlyingOutput);
-                    if (numberOfBytesInClearOutputHolder == 0)
+                    SSLEngineResult result = _sslEngine.wrap(clearOutputBuffer, _outputBuffer);
+
+                    logEngineClientModeAndResult(result, "output");
+
+                    Status sslResultStatus = result.getStatus();
+                    if(sslResultStatus == SSLEngineResult.Status.BUFFER_OVERFLOW)
                     {
-                        break; // no output to wrap
+                        throw new IllegalStateException("Insufficient space to perform wrap into encoded output buffer. Buffer: " + _outputBuffer);
                     }
-                }
+                    else if(sslResultStatus != SSLEngineResult.Status.OK)
+                    {
+                        throw new RuntimeException("Unexpected SSLEngineResult status " + sslResultStatus);
+                    }
 
-                int availableDestinationSize = size - totalBytesWrittenToDestination;
-                // SSLEngine will wrap directly into the provided destination byte[] if there is space, or into _encodedOutputHolder otherwise.
-                boolean wrappingIntoEncodedOutputHolder = availableDestinationSize < _sslEngine.getPacketBufferSize();
-                final ByteBuffer sslWrapDst;
-                if (wrappingIntoEncodedOutputHolder)
-                {
-                    sslWrapDst = _encodedOutputHolder.prepareToWrite();
+                    runDelegatedTasks(result);
+                    updateCipherAndProtocolName(result);
+
+                    keepWrapping = result.getHandshakeStatus() == HandshakeStatus.NOT_HANDSHAKING
+                            && hasSpaceForSslPacket(_outputBuffer);
                 }
                 else
                 {
-                    sslWrapDst = ByteBuffer.wrap(destination, offset+totalBytesWrittenToDestination, availableDestinationSize);
+                    // no output to wrap
+                    keepWrapping = false;
                 }
-
-                SSLEngineResult result = _sslEngine.wrap(_clearOutputHolder.prepareToRead(), sslWrapDst);
-                logEngineClientModeAndResult(result, "output");
-
-                _clearOutputHolder.prepareToWrite();
-
-                Status sslResultStatus = result.getStatus();
-                if(sslResultStatus == SSLEngineResult.Status.BUFFER_OVERFLOW)
-                {
-                    throw new IllegalStateException("Insufficient space to perform wrap into encoded output buffer that has " + sslWrapDst.remaining() + " remaining bytes. wrappingIntoEncodedOutputHolder=" + wrappingIntoEncodedOutputHolder);
-                }
-                else if(sslResultStatus != SSLEngineResult.Status.OK)
-                {
-                    throw new RuntimeException("Unexpected SSLEngineResult status " + sslResultStatus);
-                }
-
-                runDelegatedTasks(result);
-                updateCipherAndProtocolName(result);
-
-                final int numberOfNewlyEncodedBytesWritten = Math.min(availableDestinationSize, result.bytesProduced());
-                if(wrappingIntoEncodedOutputHolder)
-                {
-                    _encodedOutputHolder.prepareToRead();
-                    _encodedOutputHolder.readInto(destination, offset+totalBytesWrittenToDestination, numberOfNewlyEncodedBytesWritten);
-                }
-
-                totalBytesWrittenToDestination += numberOfNewlyEncodedBytesWritten;
-
-                keepLooping = result.getHandshakeStatus() == HandshakeStatus.NOT_HANDSHAKING
-                        && totalBytesWrittenToDestination < size;
             }
-            while(keepLooping);
+            catch(SSLException e)
+            {
+                throw new TransportException("Problem during output. useClientMode: " + _sslEngine.getUseClientMode(), e);
+            }
+            finally
+            {
+                _underlyingOutput.outputConsumed();
+            }
+        }
+    }
 
-            return totalBytesWrittenToDestination;
-        }
-        catch(SSLException e)
-        {
-            throw new TransportException("Problem during output. useClientMode: " + _sslEngine.getUseClientMode(), e);
-        }
+    private boolean hasSpaceForSslPacket(ByteBuffer byteBuffer)
+    {
+        return byteBuffer.remaining() >= _sslEngine.getPacketBufferSize();
     }
 
     /** @return the cipher name, which is null until the SSL handshaking is completed */
@@ -307,5 +285,70 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                 .append(" bytesConsumed = ").append(result.bytesConsumed())
                 .append(" bytesProduced = ").append(result.bytesProduced())
                 .append("]").toString();
+    }
+
+    @Override
+    public ByteBuffer getInputBuffer()
+    {
+        _lastInputResult.checkIsOk();
+        return _inputBuffer;
+    }
+
+    @Override
+    public TransportResult processInput()
+    {
+        _inputBuffer.flip();
+
+        try
+        {
+            _lastInputResult = unwrapInput();
+            return _lastInputResult;
+        }
+        finally
+        {
+            _inputBuffer.compact();
+        }
+    }
+
+    /*
+     * Pre-condition of {@link #_outputBuffer}: it's writeable
+     * Post-condition of {@link #_outputBuffer}: it's readable
+     */
+    @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        wrapOutput();
+        _outputBuffer.flip();
+
+        _readOnlyOutputBufferView = _outputBuffer.asReadOnlyBuffer();
+        return _readOnlyOutputBufferView;
+    }
+
+    @Override
+    public void outputConsumed()
+    {
+        if(_readOnlyOutputBufferView == null)
+        {
+            throw new IllegalStateException("Illegal invocation with previously calling getOutputBuffer");
+        }
+
+        _outputBuffer.position(_readOnlyOutputBufferView.position());
+        _readOnlyOutputBufferView = null;
+        _outputBuffer.compact();
+    }
+
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("SimpleSslTransportWrapper [sslEngine=").append(_sslEngine)
+            .append(", inputBuffer=").append(_inputBuffer)
+            .append(", outputBuffer=").append(_outputBuffer)
+            .append(", decodedInputBuffer=").append(_decodedInputBuffer)
+            .append(", cipherName=").append(_cipherName)
+            .append(", protocolName=").append(_protocolName)
+            .append("]");
+        return builder.toString();
     }
 }

@@ -19,6 +19,7 @@
 
 import os, common
 from proton import *
+from common import pump
 
 class Test(common.Test):
   pass
@@ -32,12 +33,7 @@ class SaslTest(Test):
     self.s2 = SASL(self.t2)
 
   def pump(self):
-    while True:
-      out1 = self.t1.output(1024)
-      out2 = self.t2.output(1024)
-      if out1: self.t2.input(out1)
-      if out2: self.t1.input(out2)
-      if not out1 and not out2: break
+    pump(self.t1, self.t2, 1024)
 
   def testPipelined(self):
     self.s1.mechanisms("ANONYMOUS")
@@ -61,6 +57,49 @@ class SaslTest(Test):
     assert n == len(out2), (n, out2)
 
     assert self.s2.outcome == SASL.OK
+
+  def testSaslAndAmqpInSingleChunk(self):
+    self.s1.mechanisms("ANONYMOUS")
+    self.s1.client()
+
+    self.s2.mechanisms("ANONYMOUS")
+    self.s2.server()
+    self.s2.done(SASL.OK)
+
+    # send the server's OK to the client
+    out2 = self.t2.output(1024)
+    self.t1.input(out2)
+
+    # do some work to generate AMQP data
+    c1 = Connection()
+    c2 = Connection()
+    self.t1.bind(c1)
+    c1._transport = self.t1
+    self.t2.bind(c2)
+    c2._transport = self.t2
+
+    c1.open()
+
+    # get all t1's output in one buffer then pass it all to t2
+    out1_sasl_and_amqp = ""
+    t1_still_producing = True
+    while t1_still_producing:
+      out1 = self.t1.output(1024)
+      out1_sasl_and_amqp += out1
+      t1_still_producing = out1
+
+    t2_still_consuming = True
+    while t2_still_consuming:
+      num_consumed = self.t2.input(out1_sasl_and_amqp)
+      out1_sasl_and_amqp = out1_sasl_and_amqp[num_consumed:]
+      t2_still_consuming = num_consumed > 0 and len(out1_sasl_and_amqp) > 0
+
+    assert len(out1_sasl_and_amqp) == 0, (len(out1_sasl_and_amqp), out1_sasl_and_amqp)
+
+    # check that t2 processed both the SASL data and the AMQP data
+    assert self.s2.outcome == SASL.OK
+    assert c2.state & Endpoint.REMOTE_ACTIVE
+
 
   def testChallengeResponse(self):
     self.s1.mechanisms("FAKE_MECH")

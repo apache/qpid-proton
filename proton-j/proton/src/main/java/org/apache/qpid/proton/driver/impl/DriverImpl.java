@@ -181,7 +181,10 @@ public class DriverImpl implements Driver
             serverSocketChannel.configureBlocking(false);
             ServerSocket serverSocket = serverSocketChannel.socket();
             serverSocket.bind(new InetSocketAddress(host, port));
-            return createListener(serverSocketChannel, context);
+            Listener<C> listener = createListener(serverSocketChannel, context);
+            _logger.fine("Created listener on " + host + ":" + port + ": " + context);
+
+            return listener;
         }
         catch (ClosedChannelException e)
         {

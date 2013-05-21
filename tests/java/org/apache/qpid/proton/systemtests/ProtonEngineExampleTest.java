@@ -29,7 +29,8 @@ import static org.apache.qpid.proton.systemtests.TestLoggingHelper.bold;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.apache.qpid.proton.ProtonFactoryLoader;
@@ -58,6 +59,10 @@ import org.junit.Test;
  * To see the protocol trace, add the following line to test/resources/logging.properties:
  *
  * org.apache.qpid.proton.logging.LoggingProtocolTracer.sent.level = ALL
+ *
+ * and to see the byte level trace, add the following:
+ *
+ * org.apache.qpid.proton.systemtests.ProtonEngineExampleTest.level = ALL
  *
  * Does not illustrate use of the Messenger API.
  */
@@ -181,9 +186,9 @@ public class ProtonEngineExampleTest
         _client.message = _messageFactory.createMessage();
         Section messageBody = new AmqpValue("Hello");
         _client.message.setBody(messageBody);
-        _client.messageData = newByteArray();
+        _client.messageData = new byte[BUFFER_SIZE];
         int lengthOfEncodedMessage = _client.message.encode(_client.messageData, 0, BUFFER_SIZE);
-        _testLoggingHelper.prettyPrintBytes(TestLoggingHelper.MESSAGE_PREFIX, _client.messageData, lengthOfEncodedMessage);
+        _testLoggingHelper.prettyPrint(TestLoggingHelper.MESSAGE_PREFIX, Arrays.copyOf(_client.messageData, lengthOfEncodedMessage));
 
         byte[] deliveryTag = "delivery1".getBytes();
         _client.delivery = _client.sender.delivery(deliveryTag);
@@ -218,7 +223,7 @@ public class ProtonEngineExampleTest
         assertFalse(_server.delivery.isPartial());
         assertTrue(_server.delivery.isReadable());
 
-        _server.messageData = newByteArray();
+        _server.messageData = new byte[BUFFER_SIZE];
         int numberOfBytesProducedByReceiver = _server.receiver.recv(_server.messageData, 0, BUFFER_SIZE);
         assertEquals(numberOfBytesAcceptedBySender, numberOfBytesProducedByReceiver);
 
@@ -364,47 +369,43 @@ public class ProtonEngineExampleTest
         pumpServerToClient();
     }
 
-    private void pumpClientToServer() throws UnsupportedEncodingException
+    private void pumpClientToServer()
     {
-        final byte[] clientOutput = newByteArray();
-        int clientOutputLength = _client.transport.output(clientOutput, 0, BUFFER_SIZE);
-        _testLoggingHelper.prettyPrintBytes(TestLoggingHelper.CLIENT_PREFIX + ">>> ", clientOutput, clientOutputLength);
+        ByteBuffer clientBuffer = _client.transport.getOutputBuffer();
 
-        assertTrue("Client expected to produce some output", clientOutputLength > 0);
+        _testLoggingHelper.prettyPrint(TestLoggingHelper.CLIENT_PREFIX + ">>> ", clientBuffer);
+        assertTrue("Client expected to produce some output", clientBuffer.hasRemaining());
 
-        int serverInputLength = _server.transport.input(clientOutput, 0, clientOutputLength);
-        LOGGER.fine("          >>>" + TestLoggingHelper.SERVER_PREFIX + " " + serverInputLength + " byte(s)");
+        ByteBuffer serverBuffer = _server.transport.getInputBuffer();
 
-        assertEquals("Server expected to consume all client's output", clientOutputLength, serverInputLength);
+        serverBuffer.put(clientBuffer);
+
+        assertEquals("Server expected to consume all client's output", 0, clientBuffer.remaining());
+
+        _client.transport.outputConsumed();
+        _server.transport.processInput().checkIsOk();
     }
 
-    private void assertClientHasNothingToOutput() throws UnsupportedEncodingException
+    private void pumpServerToClient()
     {
-        final byte[] clientOutput1 = newByteArray();
-        int clientOutputLength = _client.transport.output(clientOutput1, 0, BUFFER_SIZE);
-        assertEquals(0, clientOutputLength);
+        ByteBuffer serverBuffer = _server.transport.getOutputBuffer();
+
+        _testLoggingHelper.prettyPrint("          <<<" + TestLoggingHelper.SERVER_PREFIX + " ", serverBuffer);
+        assertTrue("Server expected to produce some output", serverBuffer.hasRemaining());
+
+        ByteBuffer clientBuffer = _client.transport.getInputBuffer();
+
+        clientBuffer.put(serverBuffer);
+
+        assertEquals("Client expected to consume all server's output", 0, serverBuffer.remaining());
+
+        _client.transport.processInput().checkIsOk();
+        _server.transport.outputConsumed();
     }
 
-
-    private void pumpServerToClient() throws UnsupportedEncodingException
+    private void assertClientHasNothingToOutput()
     {
-        final byte[] serverOutput = newByteArray();
-        int serverOutputLength = _server.transport.output(serverOutput, 0, BUFFER_SIZE);
-
-        _testLoggingHelper.prettyPrintBytes("          <<<" + TestLoggingHelper.SERVER_PREFIX + " ", serverOutput, serverOutputLength);
-
-        assertTrue("Server expected to produce some output", serverOutputLength > 0);
-
-        int clientInputLength = _client.transport.input(serverOutput, 0, serverOutputLength);
-        LOGGER.fine(TestLoggingHelper.CLIENT_PREFIX + "<<< " + clientInputLength + " byte(s)");
-
-        assertEquals("Client expected to consume all server's output", serverOutputLength, clientInputLength);
+        assertEquals(0, _client.transport.getOutputBuffer().remaining());
+        _client.transport.outputConsumed();
     }
-
-    /** returns a byte array sized to be big enough to avoid left-overs */
-    private byte[] newByteArray()
-    {
-        return new byte[BUFFER_SIZE];
-    }
-
 }

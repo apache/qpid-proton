@@ -62,6 +62,8 @@ parser.add_option("-D", "--define", metavar="DEFINE", dest="defines",
                   action="append", default=[], help="define test parameters")
 parser.add_option("-x", "--xml", metavar="XML", dest="xml",
                   help="write test results in Junit style xml suitable for use by CI tools etc")
+parser.add_option("-a", "--always-colorize", action="store_true", dest="always_colorize", default=False,
+                  help="always colorize the test results rather than relying on terminal tty detection. Useful when invoked from Jython/Maven.")
 
 class Config:
 
@@ -164,15 +166,13 @@ KEYWORDS = {"pass": (32,),
             "elapsed": (34,),
             "average": (34,)}
 
-COLORIZE = is_smart()
-
 def colorize_word(word, text=None):
   if text is None:
     text = word
   return colorize(text, *KEYWORDS.get(word, ()))
 
 def colorize(text, *attrs):
-  if attrs and COLORIZE:
+  if attrs and (is_smart() or opts.always_colorize):
     return "%s%s%s" % (vt100_attrs(*attrs), text, vt100_reset)
   else:
     return text

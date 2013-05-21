@@ -20,6 +20,7 @@
 import os, common
 from time import time, sleep
 from proton import *
+from common import pump
 
 # future test areas
 #  + different permutations of setup
@@ -29,21 +30,6 @@ from proton import *
 #    - locally and remotely created deliveries with the same tag
 
 OUTPUT_SIZE = 10*1024
-
-def pump(t1, t2, buffer_size=OUTPUT_SIZE):
-  while True:
-    out1 = t1.output(buffer_size)
-    out2 = t2.output(buffer_size)
-
-    if out1 or out2:
-      if out1:
-        n = t2.input(out1)
-        assert n is None or n == len(out1), (n, out1, len(out1))
-      if out2:
-        n = t1.input(out2)
-        assert n is None or n == len(out2), (n, out2, len(out2))
-    else:
-      return
 
 class Test(common.Test):
 

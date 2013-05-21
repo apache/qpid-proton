@@ -52,7 +52,7 @@ public interface Delivery
     /**
      * Settles this delivery.
      *
-     * Causes the delivery to be removed from the connection's work list (see {@link Connection#getWorkHead()).
+     * Causes the delivery to be removed from the connection's work list (see {@link Connection#getWorkHead()}).
      * If this delivery is its link's current delivery, the link's current delivery pointer is advanced.
      */
     public void settle();

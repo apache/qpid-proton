@@ -1,4 +1,3 @@
-package org.apache.qpid.proton.engine.impl;
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,46 +19,56 @@ package org.apache.qpid.proton.engine.impl;
  *
 */
 
+package org.apache.qpid.proton.engine.impl;
+
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourAll;
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
 import java.nio.ByteBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.security.SaslChallenge;
+import org.apache.qpid.proton.amqp.security.SaslCode;
+import org.apache.qpid.proton.amqp.security.SaslFrameBody;
+import org.apache.qpid.proton.amqp.security.SaslInit;
+import org.apache.qpid.proton.amqp.security.SaslMechanisms;
+import org.apache.qpid.proton.amqp.security.SaslResponse;
+import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.codec.AMQPDefinedTypes;
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.amqp.security.*;
+import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportResultFactory;
 
-public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
+public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>, SaslFrameHandler
 {
+    private static final Logger _logger = Logger.getLogger(SaslImpl.class.getName());
+
     public static final byte SASL_FRAME_TYPE = (byte) 1;
 
-    public static final byte[] HEADER =
-            new byte[] { (byte) 'A',
-                         (byte) 'M',
-                         (byte) 'Q',
-                         (byte) 'P',
-                         3,
-                         1,
-                         0,
-                         0
-                       };
-
-    private ByteBuffer _pending;
     private final DecoderImpl _decoder = new DecoderImpl();
     private final EncoderImpl _encoder = new EncoderImpl(_decoder);
-    private int _maxFrameSize = 4096;
-    private final ByteBuffer _overflowBuffer = ByteBuffer.wrap(new byte[_maxFrameSize]);
+
+    private final ByteBuffer _inputBuffer;
+    private final ByteBuffer _outputBuffer;
+    private final ByteBuffer _outputOverflowBuffer;
+
+    private ByteBuffer _pending;
+
     private boolean _headerWritten;
     private Binary _challengeResponse;
     private SaslFrameParser _frameParser;
     private boolean _initReceived;
     private boolean _mechanismsSent;
     private boolean _initSent;
-
 
     enum Role { CLIENT, SERVER };
 
@@ -72,72 +81,67 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     private Symbol _chosenMechanism;
 
-
     private Role _role;
 
-    SaslImpl()
+    /**
+     * @param maxFrameSize the size of the input and output buffers
+     * returned by {@link SaslTransportWrapper#getInputBuffer()} and
+     * {@link SaslTransportWrapper#getOutputBuffer()}.
+     */
+    SaslImpl(int maxFrameSize)
     {
-        _frameParser = new SaslFrameParser(this);
+        _inputBuffer = newWriteableBuffer(maxFrameSize);
+        _outputBuffer = newWriteableBuffer(maxFrameSize);
+        _outputOverflowBuffer = newReadableBuffer(maxFrameSize);
+
         AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);
-        _overflowBuffer.flip();
+        _frameParser = new SaslFrameParser(this, _decoder);
     }
 
-    boolean isDone()
+    @Override
+    public boolean isDone()
     {
         return _done && (_role==Role.CLIENT || _initReceived);
     }
 
-    private final int input(byte[] bytes, int offset, int size)
+    private void writeSaslOutput()
     {
-        if(isDone())
+        if(_outputOverflowBuffer.hasRemaining())
         {
-            return TransportImpl.END_OF_STREAM;
+            _outputBuffer.put(_outputOverflowBuffer);
         }
-        else
+        if(!_outputOverflowBuffer.hasRemaining())
         {
-            return getFrameParser().input(bytes, offset, size);
-        }
-    }
+            _outputOverflowBuffer.clear();
 
-    private final int output(byte[] bytes, int offset, int size)
-    {
-
-        int written = 0;
-        if(_overflowBuffer.hasRemaining())
-        {
-            final int overflowWritten = Math.min(size, _overflowBuffer.remaining());
-            _overflowBuffer.get(bytes, offset, overflowWritten);
-            written+=overflowWritten;
-        }
-        if(!_overflowBuffer.hasRemaining())
-        {
-            _overflowBuffer.rewind();
-
-            CompositeWritableBuffer outputBuffer =
+            CompositeWritableBuffer compositeOutputBuffer =
                     new CompositeWritableBuffer(
-                       new WritableBuffer.ByteBufferWrapper(ByteBuffer.wrap(bytes, offset + written, size - written)),
-                       new WritableBuffer.ByteBufferWrapper(_overflowBuffer));
+                       new WritableBuffer.ByteBufferWrapper(_outputBuffer),
+                       new WritableBuffer.ByteBufferWrapper(_outputOverflowBuffer));
 
+            process(compositeOutputBuffer);
 
-            written += process(outputBuffer);
+            _outputOverflowBuffer.flip();
         }
-        return written;
+
+        if(_logger.isLoggable(Level.FINER))
+        {
+            _logger.log(Level.FINER, "Finished writing SASL output. Output Buffer : " + _outputBuffer);
+        }
     }
 
-
-    protected int process(WritableBuffer buffer)
+    private void process(WritableBuffer buffer)
     {
-        int written = processHeader(buffer);
+        processHeader(buffer);
 
         if(_role == Role.SERVER)
         {
-
             if(!_mechanismsSent && _mechanisms != null)
             {
                 SaslMechanisms mechanisms = new SaslMechanisms();
 
                 mechanisms.setSaslServerMechanisms(_mechanisms);
-                written += writeFrame(buffer, mechanisms);
+                writeFrame(buffer, mechanisms);
                 _mechanismsSent = true;
                 _state = SaslState.PN_SASL_STEP;
             }
@@ -146,7 +150,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             {
                 SaslChallenge challenge = new SaslChallenge();
                 challenge.setChallenge(getChallengeResponse());
-                written+=writeFrame(buffer, challenge);
+                writeFrame(buffer, challenge);
                 setChallengeResponse(null);
             }
 
@@ -155,26 +159,24 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
                 org.apache.qpid.proton.amqp.security.SaslOutcome outcome =
                         new org.apache.qpid.proton.amqp.security.SaslOutcome();
                 outcome.setCode(SaslCode.values()[_outcome.getCode()]);
-                written+=writeFrame(buffer, outcome);
+                writeFrame(buffer, outcome);
             }
         }
         else if(_role == Role.CLIENT)
         {
             if(getState() == SaslState.PN_SASL_IDLE && _chosenMechanism != null)
             {
-                written += processInit(buffer);
+                processInit(buffer);
                 _state = SaslState.PN_SASL_STEP;
             }
             if(getState() == SaslState.PN_SASL_STEP && getChallengeResponse() != null)
             {
-                written += processResponse(buffer);
+                processResponse(buffer);
             }
         }
-
-        return written;
     }
 
-    int writeFrame(WritableBuffer buffer, SaslFrameBody frameBody)
+    private void writeFrame(WritableBuffer buffer, SaslFrameBody frameBody)
     {
         int oldPosition = buffer.position();
         buffer.position(buffer.position()+8);
@@ -190,17 +192,20 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         buffer.putShort((short) 0);
         buffer.position(limit);
 
-        return frameSize;
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " wrote frame " + frameBody + " (" + frameSize + ") bytes");
+        }
     }
 
+    @Override
     final public int recv(byte[] bytes, int offset, int size)
     {
         if(_pending == null)
         {
             return -1;
         }
-        final int written = Math.min(size, _pending.remaining());
-        _pending.get(bytes, offset, written);
+        final int written = pourBufferToArray(_pending, bytes, offset, size);
         if(!_pending.hasRemaining())
         {
             _pending = null;
@@ -208,6 +213,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         return written;
     }
 
+    @Override
     final public int send(byte[] bytes, int offset, int size)
     {
         byte[] data = new byte[size];
@@ -221,10 +227,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
         if(!_headerWritten)
         {
-            outputBuffer.put(HEADER,0, HEADER.length);
+            outputBuffer.put(AmqpHeader.SASL_HEADER,0, AmqpHeader.SASL_HEADER.length);
 
             _headerWritten = true;
-            return HEADER.length;
+            return AmqpHeader.SASL_HEADER.length;
         }
         else
         {
@@ -232,6 +238,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
+    @Override
     public int pending()
     {
         return _pending == null ? 0 : _pending.remaining();
@@ -242,15 +249,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         _pending = pending;
     }
 
+    @Override
     public SaslState getState()
     {
         return _state;
-    }
-
-
-    final DecoderImpl getDecoder()
-    {
-        return _decoder;
     }
 
     final Binary getChallengeResponse()
@@ -263,13 +265,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         _challengeResponse = challengeResponse;
     }
 
-    final SaslFrameParser getFrameParser()
-    {
-        return _frameParser;
-    }
-
-
-
+    @Override
     public void setMechanisms(String[] mechanisms)
     {
         if(mechanisms != null)
@@ -290,6 +286,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
+    @Override
     public String[] getRemoteMechanisms()
     {
         if(_role == Role.SERVER)
@@ -333,7 +330,13 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         setPending(initialResponse.asByteBuffer());
     }
 
+    @Override
+    public void handle(SaslFrameBody frameBody, Binary payload)
+    {
+        frameBody.invoke(this, payload, null);
+    }
 
+    @Override
     public void handleInit(SaslInit saslInit, Binary payload, Void context)
     {
         if(_role == null)
@@ -351,20 +354,21 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
-
+    @Override
     public void handleResponse(SaslResponse saslResponse, Binary payload, Void context)
     {
         checkRole(Role.SERVER);
         setPending(saslResponse.getResponse()  == null ? null : saslResponse.getResponse().asByteBuffer());
     }
 
-
+    @Override
     public void done(SaslOutcome outcome)
     {
         checkRole(Role.SERVER);
         _outcome = outcome;
         _done = true;
         _state = outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
+        _logger.fine("SASL negotiation done: " + this);
     }
 
     private void checkRole(Role role)
@@ -375,7 +379,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
-
+    @Override
     public void handleMechanisms(SaslMechanisms saslMechanisms, Binary payload, Void context)
     {
         if(_role == null)
@@ -386,14 +390,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         _mechanisms = saslMechanisms.getSaslServerMechanisms();
     }
 
-
+    @Override
     public void handleChallenge(SaslChallenge saslChallenge, Binary payload, Void context)
     {
         checkRole(Role.CLIENT);
         setPending(saslChallenge.getChallenge()  == null ? null : saslChallenge.getChallenge().asByteBuffer());
     }
 
-
+    @Override
     public void handleOutcome(org.apache.qpid.proton.amqp.security.SaslOutcome saslOutcome,
                               Binary payload,
                               Void context)
@@ -408,16 +412,22 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             }
         }
         _done = true;
+
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine("Handled outcome: " + this);
+        }
     }
-    private int processResponse(WritableBuffer buffer)
+
+    private void processResponse(WritableBuffer buffer)
     {
         SaslResponse response = new SaslResponse();
         response.setResponse(getChallengeResponse());
         setChallengeResponse(null);
-        return writeFrame(buffer, response);
+        writeFrame(buffer, response);
     }
 
-    private int processInit(WritableBuffer buffer)
+    private void processInit(WritableBuffer buffer)
     {
         SaslInit init = new SaslInit();
         init.setHostname(_hostname);
@@ -428,9 +438,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
             setChallengeResponse(null);
         }
         _initSent = true;
-        return writeFrame(buffer, init);
+        writeFrame(buffer, init);
     }
 
+    @Override
     public void plain(String username, String password)
     {
         client();
@@ -445,11 +456,13 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     }
 
+    @Override
     public SaslOutcome getOutcome()
     {
         return _outcome;
     }
 
+    @Override
     public void client()
     {
         _role = Role.CLIENT;
@@ -461,6 +474,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
         }
     }
 
+    @Override
     public void server()
     {
         _role = Role.SERVER;
@@ -469,41 +483,151 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
-        return new TransportWrapper()
+        return new SaslTransportWrapper(input, output);
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder
+            .append("SaslImpl [_outcome=").append(_outcome)
+            .append(", state=").append(_state)
+            .append(", done=").append(_done)
+            .append(", role=").append(_role)
+            .append("]");
+        return builder.toString();
+    }
+
+
+    private class SaslTransportWrapper implements TransportWrapper
+    {
+        private final TransportInput _underlyingInput;
+        private final TransportOutput _underlyingOutput;
+        private boolean _outputComplete;
+
+        /**
+         * We store the last result when processing input so that
+         * we know not to process any more input if it was an error.
+         */
+        private TransportResult _lastInputResult = TransportResultFactory.ok();
+        private ByteBuffer _readOnlyOutputBufferView;
+
+        private SaslTransportWrapper(TransportInput input, TransportOutput output)
         {
-            private boolean _outputComplete;
+            _underlyingInput = input;
+            _underlyingOutput = output;
+        }
 
-            @Override
-            public int input(byte[] bytes, int offset, int size)
+        private void fillOutputBuffer()
+        {
+            if(isOutputInSaslMode())
             {
-                if(_role == null || (_role == Role.CLIENT && !_done) ||(_role == Role.SERVER && (!_initReceived || !_done)))
+                SaslImpl.this.writeSaslOutput();
+                if(_done)
                 {
-                    return SaslImpl.this.input(bytes, offset, size);
+                    _outputComplete = true;
                 }
-                else
+
+                // TODO if sasl is now 'done', it would be more efficient if any remaining space is
+                // now offered directly to _output rather than awaiting the next invocation.
+            }
+            else
+            {
+                ByteBuffer outputBuffer = _underlyingOutput.getOutputBuffer();
+                pour(outputBuffer, _outputBuffer);
+
+                _underlyingOutput.outputConsumed();
+
+                if(_logger.isLoggable(Level.FINER))
                 {
-                    return input.input(bytes, offset, size);
+                    _logger.log(Level.FINER, SaslImpl.this + " filled output buffer with plain output");
                 }
             }
+        }
 
+        /**
+         * TODO rationalise this method with respect to the other similar checks of _role/_initReceived etc
+         * @see SaslImpl#isDone()
+         */
+        private boolean isInputInSaslMode()
+        {
+            return _role == null || (_role == Role.CLIENT && !_done) ||(_role == Role.SERVER && (!_initReceived || !_done));
+        }
 
-            @Override
-            public int output(byte[] bytes, int offset, int size)
+        private boolean isOutputInSaslMode()
+        {
+            return _role == null || (_role == Role.CLIENT && (!_done || !_initSent)) || (_role == Role.SERVER && !_outputComplete);
+        }
+
+        @Override
+        public ByteBuffer getInputBuffer()
+        {
+            // TODO if the SASL negotiation is complete, it would be more efficient
+            // to return the underlying transport input's buffer.
+            // The same optimisation would be possible in getOutputBuffer
+            _lastInputResult.checkIsOk();
+            return _inputBuffer;
+        }
+
+        @Override
+        public TransportResult processInput()
+        {
+            _inputBuffer.flip();
+
+            try
             {
-                if(_role == null || (_role == Role.CLIENT && (!_done || !_initSent)) || (_role == Role.SERVER && !_outputComplete))
-                {
-                    int written = SaslImpl.this.output(bytes, offset, size);
-                    if(_done && !_overflowBuffer.hasRemaining())
-                    {
-                        _outputComplete = true;
-                    }
-                    return written;
-                }
-                else
-                {
-                    return output.output(bytes, offset, size);
-                }
+                _lastInputResult = reallyProcessInput();
+                return _lastInputResult;
             }
-        };
+            finally
+            {
+                _inputBuffer.compact();
+            }
+        }
+
+        private TransportResult reallyProcessInput()
+        {
+            TransportResult transportResult = TransportResultFactory.ok();
+
+            if(isInputInSaslMode())
+            {
+                if(_logger.isLoggable(Level.FINER))
+                {
+                    _logger.log(Level.FINER, SaslImpl.this + " about to call input.");
+                }
+
+                transportResult = _frameParser.input(_inputBuffer);
+            }
+
+            if(!isInputInSaslMode() && transportResult.isOk())
+            {
+                if(_logger.isLoggable(Level.FINER))
+                {
+                    _logger.log(Level.FINER, SaslImpl.this + " about to call plain input");
+                }
+
+                transportResult = pourAll(_inputBuffer, _underlyingInput);
+            }
+            return transportResult;
+        }
+
+        @Override
+        public ByteBuffer getOutputBuffer()
+        {
+            fillOutputBuffer();
+            _outputBuffer.flip();
+
+            _readOnlyOutputBufferView = _outputBuffer.asReadOnlyBuffer();
+            return _readOnlyOutputBufferView;
+        }
+
+        @Override
+        public void outputConsumed()
+        {
+            _outputBuffer.position(_readOnlyOutputBufferView.position());
+            _outputBuffer.compact();
+        }
+
     }
 }

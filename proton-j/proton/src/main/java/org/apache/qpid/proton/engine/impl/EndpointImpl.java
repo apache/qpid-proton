@@ -173,4 +173,10 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     {
         _context = context;
     }
+
+    @Override
+    public String toString()
+    {
+        return "EndpointImpl [_localState=" + _localState + ", _remoteState=" + _remoteState + ", _localError=" + _localError + ", _remoteError=" + _remoteError + "]";
+    }
 }
