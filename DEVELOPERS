@@ -1,0 +1,53 @@
+Qpid Proton Developer Information
+=================================
+
+DEVELOPMENT ENVIRONMENT
+=======================
+
+To setup the variables for your development environment, simply source
+the file $REPO/config.sh:
+
+  $ source config.sh
+
+This file sets the needed environment variables for all supported dynamic
+languages (Python, Perl, Ruby, PHP) as well as for Java and for testing. It,
+by default, assumes that you're building Proton in the directory:
+
+  $REPO/build
+
+where $REPO points the location where the Proton Subversion or Git repo has
+been checked out.
+
+If, however, you use a different location for your build files, then you'll want
+to set the environment variable CPROTON_BUILD to point to it first. So, for
+example, if you're building in:
+
+  /home/yourname/devel/proton/cmake
+
+then you would have the following environment variable set:
+
+  $ export CPROTON_BUILD=/hojme/yourname/devel/proton/cmake/proton-c
+
+NOTE: You need to point the environment variable to the proton-c directory under
+where your build is done.
+
+
+
+MAILING LIST
+============
+
+Subscribe to the Qpid Proton mailing list here:
+
+  http://qpid.apache.org/proton/mailing_lists.html
+
+
+
+PATCHES
+=======
+
+The best way to submit patches it to create a bug report or feature request
+on the project's JIRA instance:
+
+  http://issues.apache.org/jira/browse/PROTON
+
+You can attach any patch(es) to the report/request there
