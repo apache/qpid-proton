@@ -18,6 +18,25 @@
  *
  */
 
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#include "../wincompat/getopt.h"
+#else
+#include <getopt.h>
+#endif
+
+#if defined(USE_INTTYPES)
+#include <inttypes.h>
+#endif
+
+/* should be defined in inttypes.h, if not, best guess */
+#if !defined(SCNu64)
+#define SCNu64 "ul"
+#endif
+#if !defined(PRIu64)
+#define PRIu64 "ul"
+#endif
+
+
 #include "proton/types.h"
 #include "proton/message.h"
 
@@ -59,11 +78,8 @@ typedef struct {
 
 void statistics_start( Statistics_t *s );
 void statistics_msg_received( Statistics_t *s, pn_message_t *message );
-void statistics_report( Statistics_t *s, unsigned long long sent, unsigned long long received );
+void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
 
+void enable_logging();
+void LOG( const char *fmt, ... );
 
-#if defined(_WIN32) && ! defined(__CYGWIN__)
-#include "../wincompat/getopt.h"
-#else
-#include <getopt.h>
-#endif

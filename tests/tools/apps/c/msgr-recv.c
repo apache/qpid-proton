@@ -30,7 +30,7 @@
 
 typedef struct {
     Addresses_t subscriptions;
-    unsigned long long msg_count;
+    uint64_t msg_count;
     int recv_count;
     int incoming_window;
     int timeout;  // seconds
@@ -46,9 +46,6 @@ typedef struct {
     char *ca_db;        // trusted CA database
 } Options_t;
 
-static int log = 0;
-#define LOG(...)                                        \
-    if (log) { fprintf( stdout, __VA_ARGS__ ); }
 
 static void usage(int rc)
 {
@@ -90,7 +87,7 @@ static void parse_options( int argc, char **argv, Options_t *opts )
         switch (c) {
         case 'a': addresses_merge( &opts->subscriptions, optarg ); break;
         case 'c':
-            if (sscanf( optarg, "%llu", &opts->msg_count ) != 1) {
+            if (sscanf( optarg, "%" SCNu64, &opts->msg_count ) != 1) {
                 fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);
                 usage(1);
             }
@@ -128,7 +125,7 @@ static void parse_options( int argc, char **argv, Options_t *opts )
             }
             break;
         case 'F': addresses_merge( &opts->forwarding_targets, optarg ); break;
-        case 'V': log = 1; break;
+        case 'V': enable_logging(); break;
         case 'N': opts->name = optarg; break;
         case 'X': opts->ready_text = optarg; break;
         case 'T': opts->ca_db = optarg; break;
@@ -152,8 +149,8 @@ int main(int argc, char** argv)
 {
     Options_t opts;
     Statistics_t stats;
-    unsigned long long sent = 0;
-    unsigned long long received = 0;
+    uint64_t sent = 0;
+    uint64_t received = 0;
     int forwarding_index = 0;
     int rc;
 

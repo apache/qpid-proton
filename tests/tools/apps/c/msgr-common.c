@@ -130,12 +130,12 @@ void statistics_msg_received( Statistics_t *s, pn_message_t *message )
   }
 }
 
-void statistics_report( Statistics_t *s, unsigned long long sent, unsigned long long received )
+void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received )
 {
   pn_timestamp_t end = msgr_now() - s->start;
   double secs = end/(double)1000.0;
 
-  fprintf(stdout, "Messages sent: %llu recv: %llu\n", sent, received );
+  fprintf(stdout, "Messages sent: %" PRIu64 " recv: %" PRIu64 "\n", sent, received );
   fprintf(stdout, "Total time: %f sec\n", secs );
   fprintf(stdout, "Throughput: %f msgs/sec\n",  (secs != 0.0) ? (double)sent/secs : 0);
   fprintf(stdout, "Latency (sec): %f min %f max %f avg\n",
@@ -156,5 +156,21 @@ void parse_password( const char *input, char **password )
         int rc = fscanf( f, "%255s", *password );
         check( rc == 1, "Cannot read password from file\n" );
         fclose(f);
+    }
+}
+
+static int log = 0;
+void enable_logging()
+{
+    log = 1;
+}
+
+void LOG( const char *fmt, ... )
+{
+    if (log) {
+        va_list ap;
+        va_start(ap, fmt);
+        vfprintf( stdout, fmt, ap );
+        va_end(ap);
     }
 }

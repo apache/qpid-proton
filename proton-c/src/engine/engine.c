@@ -815,7 +815,7 @@ pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t
   PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1, pn_session_state_t);
   for (unsigned i = old_capacity; i < transport->session_capacity; i++)
   {
-    pn_session_state_t t = {NULL, -1, -1};
+    pn_session_state_t t = {NULL, (uint16_t)-1, (uint16_t)-1};
     transport->sessions[i] = t;
     pn_delivery_buffer_init(&transport->sessions[i].incoming, 0, PN_SESSION_WINDOW);
     pn_delivery_buffer_init(&transport->sessions[i].outgoing, 0, PN_SESSION_WINDOW);

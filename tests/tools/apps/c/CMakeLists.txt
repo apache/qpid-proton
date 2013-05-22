@@ -17,6 +17,16 @@
 # under the License.
 #
 
+include(CheckIncludeFiles)
+
+CHECK_INCLUDE_FILES("inttypes.h" INTTYPES_AVAILABLE)
+if (INTTYPES_AVAILABLE)
+  list(APPEND PLATFORM_DEFINITIONS "USE_INTTYPES")
+else (INTTYPES_AVAILABLE)
+  # since inttypes.h provides portable printf format macros
+  set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
+endif (INTTYPES_AVAILABLE)
+
 add_executable(msgr-recv msgr-recv.c msgr-common.c)
 add_executable(msgr-send msgr-send.c msgr-common.c)
 
@@ -27,8 +37,9 @@ set_target_properties (
   msgr-recv msgr-send
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+  COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
 )
 
 if (BUILD_WITH_CXX)
-  set_source_files_properties (msgr-recv.c msgr-send.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties (msgr-recv.c msgr-send.c msgr-common.c PROPERTIES LANGUAGE CXX)
 endif (BUILD_WITH_CXX)
