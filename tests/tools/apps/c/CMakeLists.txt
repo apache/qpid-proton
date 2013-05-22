@@ -23,8 +23,10 @@ CHECK_INCLUDE_FILES("inttypes.h" INTTYPES_AVAILABLE)
 if (INTTYPES_AVAILABLE)
   list(APPEND PLATFORM_DEFINITIONS "USE_INTTYPES")
 else (INTTYPES_AVAILABLE)
-  # since inttypes.h provides portable printf format macros
-  set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
+  if (CMAKE_COMPILER_IS_GNUCC)
+    # since inttypes.h provides portable printf format macros
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
+  endif (CMAKE_COMPILER_IS_GNUCC)
 endif (INTTYPES_AVAILABLE)
 
 add_executable(msgr-recv msgr-recv.c msgr-common.c)
