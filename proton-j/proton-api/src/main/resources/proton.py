@@ -43,7 +43,6 @@ from java.util.concurrent import TimeoutException as Timeout
 from java.nio import ByteBuffer
 from java.lang import Character as JCharacter, String as JString, Integer as JInteger
 
-LANGUAGE = "Java"
 
 
 class Constant(object):
@@ -79,6 +78,10 @@ messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
 messengerFactory = protonFactoryLoader.loadFactory(MessengerFactory)
 dataFactory = protonFactoryLoader.loadFactory(DataFactory)
 
+API_LANGUAGE = "Java"
+IMPLEMENTATION_LANGUAGE = "C"
+if engineFactory.getImplementationType().name() == "PROTON_J":
+  IMPLEMENTATION_LANGUAGE = "Java"
 
 
 class Endpoint(object):
@@ -1453,7 +1456,8 @@ class Listener(object):
 __all__ = [
            "ACCEPTED",
            "Array",
-           "LANGUAGE",
+           "API_LANGUAGE",
+           "IMPLEMENTATION_LANGUAGE",
            "MANUAL",
            "PENDING",
            "REJECTED",

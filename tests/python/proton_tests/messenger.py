@@ -21,6 +21,7 @@ import os, common, sys, traceback
 from proton import *
 from threading import Thread, Event
 from time import sleep, time
+from common import Skipped
 
 class Test(common.Test):
 
@@ -284,8 +285,11 @@ class MessengerTest(Test):
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
-  # see https://issues.apache.org/jira/browse/PROTON-315
-  def removedInProton315_testIncomingQueueBiggerThanWindow(self):
+  def testIncomingQueueBiggerThanWindow(self):
+    if IMPLEMENTATION_LANGUAGE == "Java":
+      # Currently fails with proton-j. See https://issues.apache.org/jira/browse/PROTON-315
+      raise Skipped
+
     self.server.outgoing_window = 10
     self.client.incoming_window = 10
     self.start()

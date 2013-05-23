@@ -88,7 +88,8 @@ try:
 except NameError:
   bytes = str
 
-LANGUAGE = "C"
+API_LANGUAGE = "C"
+IMPLEMENTATION_LANGUAGE = "C"
 
 class Constant(object):
 
@@ -2669,7 +2670,8 @@ class Driver(object):
     return wrap_connector(pn_driver_connector(self._driver))
 
 __all__ = [
-           "LANGUAGE",
+           "API_LANGUAGE",
+           "IMPLEMENTATION_LANGUAGE",
            "PN_SESSION_WINDOW",
            "ACCEPTED",
            "AUTOMATIC",

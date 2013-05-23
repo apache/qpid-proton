@@ -458,7 +458,7 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump( client, server )
         assert server.ssl.protocol_name() is not None
-        if(LANGUAGE=="C"):
+        if(API_LANGUAGE=="C"):
             assert client.ssl.resume_status() == SSL.RESUME_REUSED
         else:
             # Java gives no way to check whether a previous session has been resumed
@@ -481,7 +481,7 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump( client, server )
         assert server.ssl.protocol_name() is not None
-        if(LANGUAGE=="C"):
+        if(API_LANGUAGE=="C"):
             assert client.ssl.resume_status() == SSL.RESUME_NEW
 
         client.connection.close()
