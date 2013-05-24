@@ -140,6 +140,10 @@ class Messenger
     $message->_post_decode();
   }
 
+  public function route($pattern, $address) {
+    $this->_check(pn_messenger_route($this->impl, $pattern, $address));
+  }
+
   public function outgoing() {
     return pn_messenger_outgoing($this->impl);
   }
