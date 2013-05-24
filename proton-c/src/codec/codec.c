@@ -19,6 +19,7 @@
  *
  */
 
+#include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
 #include <proton/buffer.h>
@@ -1000,9 +1001,19 @@ typedef struct {
   size_t current;
 } pn_point_t;
 
+static void pn_data_finalize(void *object)
+{
+  pn_data_t *data = (pn_data_t *) object;
+  free(data->nodes);
+  pn_buffer_free(data->buf);
+  pn_error_free(data->error);
+  free(data->iatoms);
+}
+
 pn_data_t *pn_data(size_t capacity)
 {
-  pn_data_t *data = (pn_data_t *) malloc(sizeof(pn_data_t));
+  static pn_class_t clazz = {pn_data_finalize};
+  pn_data_t *data = (pn_data_t *) pn_new(sizeof(pn_data_t), &clazz);
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pn_node_t *) malloc(capacity * sizeof(pn_node_t)) : NULL;
@@ -1020,13 +1031,7 @@ pn_data_t *pn_data(size_t capacity)
 
 void pn_data_free(pn_data_t *data)
 {
-  if (data) {
-    free(data->nodes);
-    pn_buffer_free(data->buf);
-    pn_error_free(data->error);
-    free(data->iatoms);
-    free(data);
-  }
+  pn_free(data);
 }
 
 int pn_data_errno(pn_data_t *data)
