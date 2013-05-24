@@ -211,6 +211,49 @@ static void test_list_refcount(size_t capacity)
   pn_decref(four);
 }
 
+static void check_list_index(pn_list_t *list, void *value, ssize_t idx)
+{
+  assert(pn_list_index(list, value) == idx);
+}
+
+static void test_list_index()
+{
+  pn_list_t *l = pn_list(0, 0);
+  void *one = pn_string("one");
+  void *two = pn_string("two");
+  void *three = pn_string("three");
+  void *dup1 = pn_string("dup");
+  void *dup2 = pn_string("dup");
+  void *last = pn_string("last");
+
+  pn_list_add(l, one);
+  pn_list_add(l, two);
+  pn_list_add(l, three);
+  pn_list_add(l, dup1);
+  pn_list_add(l, dup2);
+  pn_list_add(l, last);
+
+  check_list_index(l, one, 0);
+  check_list_index(l, two, 1);
+  check_list_index(l, three, 2);
+  check_list_index(l, dup1, 3);
+  check_list_index(l, dup2, 3);
+  check_list_index(l, last, 5);
+
+  void *nonexistent = pn_string("nonexistent");
+
+  check_list_index(l, nonexistent, -1);
+
+  pn_free(l);
+  pn_free(one);
+  pn_free(two);
+  pn_free(three);
+  pn_free(dup1);
+  pn_free(dup2);
+  pn_free(last);
+  pn_free(nonexistent);
+}
+
 static void test_map()
 {
   void *one = pn_new(0, NULL);
@@ -421,6 +464,8 @@ int main(int argc, char **argv)
   for (size_t i = 0; i < 4; i++) {
     test_list_refcount(i);
   }
+
+  test_list_index();
 
   test_map();
 

@@ -174,6 +174,30 @@ int pn_list_add(pn_list_t *list, void *value)
   return 0;
 }
 
+ssize_t pn_list_index(pn_list_t *list, void *value)
+{
+  for (size_t i = 0; i < list->size; i++) {
+    if (pn_equals(list->elements[i], value)) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+bool pn_list_remove(pn_list_t *list, void *value)
+{
+  assert(list);
+  ssize_t idx = pn_list_index(list, value);
+  if (idx < 0) {
+    return false;
+  } else {
+    pn_list_del(list, idx, 1);
+  }
+
+  return true;
+}
+
 void pn_list_del(pn_list_t *list, int index, int n)
 {
   assert(list);
