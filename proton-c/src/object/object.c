@@ -333,7 +333,7 @@ pn_map_t *pn_map(size_t capacity, float load_factor, int options)
 
   pn_map_t *map = (pn_map_t *) pn_new(sizeof(pn_map_t), &clazz);
   map->capacity = capacity ? capacity : 16;
-  map->addressable = capacity * 0.86;
+  map->addressable = map->capacity * 0.86;
   if (!map->addressable) map->addressable = map->capacity;
   map->load_factor = load_factor;
   map->hashcode = pn_hashcode;
