@@ -180,17 +180,7 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint);
 
 void pn_connection_free(pn_connection_t *connection)
 {
-  if (!connection) return;
-
-  while (connection->session_count)
-    pn_session_free(connection->sessions[connection->session_count - 1]);
-  free(connection->sessions);
-  free(connection->container);
-  free(connection->hostname);
-  pn_data_free(connection->offered_capabilities);
-  pn_data_free(connection->desired_capabilities);
-  pn_endpoint_tini(&connection->endpoint);
-  free(connection);
+  pn_free(connection);
 }
 
 void *pn_connection_get_context(pn_connection_t *conn)
@@ -254,24 +244,15 @@ void pn_transport_free(pn_transport_t *transport)
 
 void pn_add_session(pn_connection_t *conn, pn_session_t *ssn)
 {
-    PN_ENSURE(conn->sessions, conn->session_capacity, conn->session_count + 1, pn_session_t*);
-  conn->sessions[conn->session_count++] = ssn;
+  pn_list_add(conn->sessions, ssn);
   ssn->connection = conn;
-  ssn->id = conn->session_count;
+  ssn->id = pn_list_size(conn->sessions);
 }
 
 void pn_remove_session(pn_connection_t *conn, pn_session_t *ssn)
 {
-  for (unsigned i = 0; i < conn->session_count; i++)
-  {
-    if (conn->sessions[i] == ssn)
-    {
-      memmove(&conn->sessions[i], &conn->sessions[i+1], conn->session_count - i - 1);
-      conn->session_count--;
-      break;
-    }
-  }
   ssn->connection = NULL;
+  pn_list_remove(conn->sessions, ssn);
 }
 
 pn_connection_t *pn_session_connection(pn_session_t *session)
@@ -291,15 +272,8 @@ void pn_session_close(pn_session_t *session)
 
 void pn_session_free(pn_session_t *session)
 {
-  if (!session) return;
-
-  while (session->link_count)
-    pn_link_free(session->links[session->link_count - 1]);
-  if (session->connection)
+  if (session && session->connection)
     pn_remove_session(session->connection, session);
-  free(session->links);
-  pn_endpoint_tini(&session->endpoint);
-  free(session);
 }
 
 void *pn_session_get_context(pn_session_t *session)
@@ -316,24 +290,15 @@ void pn_session_set_context(pn_session_t *session, void *context)
 
 void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 {
-  PN_ENSURE(ssn->links, ssn->link_capacity, ssn->link_count + 1, pn_link_t*);
-  ssn->links[ssn->link_count++] = link;
+  pn_list_add(ssn->links, link);
   link->session = ssn;
-  link->id = ssn->link_count;
+  link->id = pn_list_size(ssn->links);
 }
 
 void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 {
-  for (unsigned i = 0; i < ssn->link_count; i++)
-  {
-    if (ssn->links[i] == link)
-    {
-      memmove(&ssn->links[i], &ssn->links[i+1], ssn->link_count - i - 1);
-      ssn->link_count--;
-      break;
-    }
-  }
   link->session = NULL;
+  pn_list_remove(ssn->links, link);
 }
 
 void pn_free_delivery(pn_delivery_t *delivery)
@@ -357,35 +322,17 @@ void pn_link_close(pn_link_t *link)
 
 void pn_terminus_free(pn_terminus_t *terminus)
 {
-  free(terminus->address);
-  pn_data_free(terminus->properties);
-  pn_data_free(terminus->capabilities);
-  pn_data_free(terminus->outcomes);
-  pn_data_free(terminus->filter);
+  pn_free(terminus->address);
+  pn_free(terminus->properties);
+  pn_free(terminus->capabilities);
+  pn_free(terminus->outcomes);
+  pn_free(terminus->filter);
 }
 
 void pn_link_free(pn_link_t *link)
 {
-  if (!link) return;
-
-  pn_terminus_free(&link->source);
-  pn_terminus_free(&link->target);
-  pn_terminus_free(&link->remote_source);
-  pn_terminus_free(&link->remote_target);
-  pn_remove_link(link->session, link);
-  while (link->settled_head) {
-    pn_delivery_t *d = link->settled_head;
-    LL_POP(link, settled);
-    pn_free_delivery(d);
-  }
-  while (link->unsettled_head) {
-    pn_delivery_t *d = link->unsettled_head;
-    LL_POP(link, unsettled);
-    pn_free_delivery(d);
-  }
-  free(link->name);
-  pn_endpoint_tini(&link->endpoint);
-  free(link);
+  if (link && link->session)
+    pn_remove_link(link->session, link);
 }
 
 void *pn_link_get_context(pn_link_t *link)
@@ -422,9 +369,21 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint)
   pn_condition_tini(&endpoint->condition);
 }
 
+static void pn_connection_finalize(void *object)
+{
+  pn_connection_t *conn = (pn_connection_t *) object;
+  pn_free(conn->sessions);
+  pn_free(conn->container);
+  pn_free(conn->hostname);
+  pn_free(conn->offered_capabilities);
+  pn_free(conn->desired_capabilities);
+  pn_endpoint_tini(&conn->endpoint);
+}
+
 pn_connection_t *pn_connection()
 {
-  pn_connection_t *conn = (pn_connection_t *) malloc(sizeof(pn_connection_t));
+  static pn_class_t clazz = {pn_connection_finalize};
+  pn_connection_t *conn = (pn_connection_t *) pn_new(sizeof(pn_connection_t), &clazz);
   if (!conn) return NULL;
 
   conn->context = NULL;
@@ -433,16 +392,14 @@ pn_connection_t *pn_connection()
   pn_endpoint_init(&conn->endpoint, CONNECTION, conn);
   conn->transport_head = NULL;
   conn->transport_tail = NULL;
-  conn->sessions = NULL;
-  conn->session_capacity = 0;
-  conn->session_count = 0;
+  conn->sessions = pn_list(0, PN_REFCOUNT);
   conn->transport = NULL;
   conn->work_head = NULL;
   conn->work_tail = NULL;
   conn->tpwork_head = NULL;
   conn->tpwork_tail = NULL;
-  conn->container = NULL;
-  conn->hostname = NULL;
+  conn->container = pn_string(NULL);
+  conn->hostname = pn_string(NULL);
   conn->offered_capabilities = pn_data(16);
   conn->desired_capabilities = pn_data(16);
 
@@ -461,26 +418,26 @@ pn_error_t *pn_connection_error(pn_connection_t *connection)
 
 const char *pn_connection_get_container(pn_connection_t *connection)
 {
-  return connection ? connection->container : NULL;
+  assert(connection);
+  return pn_string_get(connection->container);
 }
 
 void pn_connection_set_container(pn_connection_t *connection, const char *container)
 {
-  if (!connection) return;
-  if (connection->container) free(connection->container);
-  connection->container = pn_strdup(container);
+  assert(connection);
+  pn_string_set(connection->container, container);
 }
 
 const char *pn_connection_get_hostname(pn_connection_t *connection)
 {
-  return connection ? connection->hostname : NULL;
+  assert(connection);
+  return pn_string_get(connection->hostname);
 }
 
 void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname)
 {
-  if (!connection) return;
-  if (connection->hostname) free(connection->hostname);
-  connection->hostname = pn_strdup(hostname);
+  assert(connection);
+  pn_string_set(connection->hostname, hostname);
 }
 
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
@@ -696,17 +653,24 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
   return NULL;
 }
 
+static void pn_session_finalize(void *object)
+{
+  pn_session_t *session = (pn_session_t *) object;
+  pn_free(session->links);
+  pn_endpoint_tini(&session->endpoint);
+}
+
 pn_session_t *pn_session(pn_connection_t *conn)
 {
-  if (!conn) return NULL;
-  pn_session_t *ssn = (pn_session_t *) malloc(sizeof(pn_session_t));
+  assert(conn);
+  static pn_class_t clazz = {pn_session_finalize};
+  pn_session_t *ssn = (pn_session_t *) pn_new(sizeof(pn_session_t), &clazz);
   if (!ssn) return NULL;
 
   pn_endpoint_init(&ssn->endpoint, SESSION, conn);
   pn_add_session(conn, ssn);
-  ssn->links = NULL;
-  ssn->link_capacity = 0;
-  ssn->link_count = 0;
+  pn_decref(ssn);
+  ssn->links = pn_list(0, PN_REFCOUNT);
   ssn->context = 0;
 
   return ssn;
@@ -922,7 +886,7 @@ pn_error_t *pn_transport_error(pn_transport_t *transport)
 void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
 {
   terminus->type = type;
-  terminus->address = NULL;
+  terminus->address = pn_string(NULL);
   terminus->durability = PN_NONDURABLE;
   terminus->expiry_policy = PN_SESSION_CLOSE;
   terminus->timeout = 0;
@@ -933,11 +897,37 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(16);
 }
 
-void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *name)
+static void pn_link_finalize(void *object)
 {
+  pn_link_t *link = (pn_link_t *) object;
+
+  pn_terminus_free(&link->source);
+  pn_terminus_free(&link->target);
+  pn_terminus_free(&link->remote_source);
+  pn_terminus_free(&link->remote_target);
+  while (link->settled_head) {
+    pn_delivery_t *d = link->settled_head;
+    LL_POP(link, settled);
+    pn_free_delivery(d);
+  }
+  while (link->unsettled_head) {
+    pn_delivery_t *d = link->unsettled_head;
+    LL_POP(link, unsettled);
+    pn_free_delivery(d);
+  }
+  pn_free(link->name);
+  pn_endpoint_tini(&link->endpoint);
+}
+
+pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
+{
+  static pn_class_t clazz = {pn_link_finalize};
+  pn_link_t *link = (pn_link_t *) pn_new(sizeof(pn_link_t), &clazz);
+
   pn_endpoint_init(&link->endpoint, type, session->connection);
   pn_add_link(session, link);
-  link->name = pn_strdup(name);
+  pn_decref(link);
+  link->name = pn_string(name);
   pn_terminus_init(&link->source, PN_SOURCE);
   pn_terminus_init(&link->target, PN_TARGET);
   pn_terminus_init(&link->remote_source, PN_UNSPECIFIED);
@@ -951,6 +941,8 @@ void pn_link_init(pn_link_t *link, int type, pn_session_t *session, const char *
   link->drain = false;
   link->drained = false;
   link->context = 0;
+
+  return link;
 }
 
 pn_terminus_t *pn_link_source(pn_link_t *link)
@@ -987,28 +979,25 @@ pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus)
 
 const char *pn_terminus_get_address(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->address : NULL;
+  assert(terminus);
+  return pn_string_get(terminus->address);
 }
 
 int pn_terminus_set_address(pn_terminus_t *terminus, const char *address)
 {
-  if (!terminus) return PN_ARG_ERR;
-  if (terminus->address) free(terminus->address);
-  terminus->address = pn_strdup(address);
-  return 0;
+  assert(terminus);
+  return pn_string_set(terminus->address, address);
 }
 
-char *pn_bytes_strdup(pn_bytes_t str)
+static char *pn_bytes_strdup(pn_bytes_t str)
 {
   return pn_strndup(str.start, str.size);
 }
 
 int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
 {
-  if (!terminus) return PN_ARG_ERR;
-  if (terminus->address) free(terminus->address);
-  terminus->address = pn_bytes_strdup(address);
-  return 0;
+  assert(terminus);
+  return pn_string_setn(terminus->address, address.start, address.size);
 }
 
 pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus)
@@ -1140,20 +1129,12 @@ pn_link_state_t *pn_handle_state(pn_session_state_t *ssn_state, uint32_t handle)
 
 pn_link_t *pn_sender(pn_session_t *session, const char *name)
 {
-  if (!session) return NULL;
-  pn_link_t *snd = (pn_link_t *) malloc(sizeof(pn_link_t));
-  if (!snd) return NULL;
-  pn_link_init(snd, SENDER, session, name);
-  return snd;
+  return pn_link_new(SENDER, session, name);
 }
 
 pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 {
-  if (!session) return NULL;
-  pn_link_t *rcv = (pn_link_t *) malloc(sizeof(pn_link_t));
-  if (!rcv) return NULL;
-  pn_link_init(rcv, RECEIVER, session, name);
-  return rcv;
+  return pn_link_new(RECEIVER, session, name);
 }
 
 pn_state_t pn_link_state(pn_link_t *link)
@@ -1168,7 +1149,8 @@ pn_error_t *pn_link_error(pn_link_t *link)
 
 const char *pn_link_name(pn_link_t *link)
 {
-  return link ? link->name : NULL;
+  assert(link);
+  return pn_string_get(link->name);
 }
 
 bool pn_link_is_sender(pn_link_t *link)
@@ -1495,11 +1477,11 @@ pn_link_state_t *pn_find_link(pn_session_state_t *ssn_state, pn_bytes_t name, bo
 {
   pn_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
 
-  for (unsigned i = 0; i < ssn_state->session->link_count; i++)
+  for (size_t i = 0; i < pn_list_size(ssn_state->session->links); i++)
   {
-    pn_link_t *link = ssn_state->session->links[i];
+    pn_link_t *link = (pn_link_t *) pn_list_get(ssn_state->session->links, i);
     if (link->endpoint.type == type &&
-        !strncmp(name.start, link->name, name.size))
+        !strncmp(name.start, pn_string_get(link->name), name.size))
     {
       return pn_link_get_state(ssn_state, link);
     }
@@ -2039,8 +2021,8 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       int err = pn_post_frame(transport->disp, 0, "DL[SS?In?InnCC]", OPEN,
-                              connection->container,
-                              connection->hostname,
+                              pn_string_get(connection->container),
+                              pn_string_get(connection->hostname),
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
                               (bool)transport->local_idle_timeout, transport->local_idle_timeout,
@@ -2108,11 +2090,11 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       state->local_handle = link->id;
       int err = pn_post_frame(transport->disp, ssn_state->local_channel,
                               "DL[SIonn?DL[SIsIoCnCnCC]?DL[SIsIoCC]nnI]", ATTACH,
-                              link->name,
+                              pn_string_get(link->name),
                               state->local_handle,
                               endpoint->type == RECEIVER,
                               (bool) link->source.type, SOURCE,
-                              link->source.address,
+                              pn_string_get(link->source.address),
                               link->source.durability,
                               expiry_symbol(link->source.expiry_policy),
                               link->source.timeout,
@@ -2122,7 +2104,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
                               link->source.outcomes,
                               link->source.capabilities,
                               (bool) link->target.type, TARGET,
-                              link->target.address,
+                              pn_string_get(link->target.address),
                               link->target.durability,
                               expiry_symbol(link->target.expiry_policy),
                               link->target.timeout,

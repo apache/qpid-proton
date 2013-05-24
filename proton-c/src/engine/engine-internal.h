@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/object.h>
 #include <proton/buffer.h>
 #include <proton/engine.h>
 #include <proton/types.h>
@@ -183,16 +184,14 @@ struct pn_connection_t {
   pn_endpoint_t *endpoint_tail;
   pn_endpoint_t *transport_head;
   pn_endpoint_t *transport_tail;
-  pn_session_t **sessions;
-  size_t session_capacity;
-  size_t session_count;
+  pn_list_t *sessions;
   pn_transport_t *transport;
   pn_delivery_t *work_head;
   pn_delivery_t *work_tail;
   pn_delivery_t *tpwork_head;
   pn_delivery_t *tpwork_tail;
-  char *container;
-  char *hostname;
+  pn_string_t *container;
+  pn_string_t *hostname;
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;
   void *context;
@@ -201,16 +200,14 @@ struct pn_connection_t {
 struct pn_session_t {
   pn_endpoint_t endpoint;
   pn_connection_t *connection;
-  pn_link_t **links;
-  size_t link_capacity;
-  size_t link_count;
+  pn_list_t *links;
   size_t id;
   void *context;
 };
 
 struct pn_terminus_t {
   pn_terminus_type_t type;
-  char *address;
+  pn_string_t *address;
   pn_durability_t durability;
   pn_expiry_policy_t expiry_policy;
   pn_seconds_t timeout;
@@ -223,7 +220,7 @@ struct pn_terminus_t {
 
 struct pn_link_t {
   pn_endpoint_t endpoint;
-  char *name;
+  pn_string_t *name;
   pn_session_t *session;
   pn_terminus_t source;
   pn_terminus_t target;
