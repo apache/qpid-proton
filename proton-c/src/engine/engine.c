@@ -301,15 +301,6 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
   pn_list_remove(ssn->links, link);
 }
 
-void pn_free_delivery(pn_delivery_t *delivery)
-{
-  if (delivery) {
-    pn_buffer_free(delivery->tag);
-    pn_buffer_free(delivery->bytes);
-    free(delivery);
-  }
-}
-
 void pn_link_open(pn_link_t *link)
 {
   if (link) pn_open((pn_endpoint_t *) link);
@@ -908,12 +899,12 @@ static void pn_link_finalize(void *object)
   while (link->settled_head) {
     pn_delivery_t *d = link->settled_head;
     LL_POP(link, settled);
-    pn_free_delivery(d);
+    pn_free(d);
   }
   while (link->unsettled_head) {
     pn_delivery_t *d = link->unsettled_head;
     LL_POP(link, unsettled);
-    pn_free_delivery(d);
+    pn_free(d);
   }
   pn_free(link->name);
   pn_endpoint_tini(&link->endpoint);
@@ -1168,13 +1159,21 @@ pn_session_t *pn_link_session(pn_link_t *link)
   return link->session;
 }
 
+static void pn_delivery_finalize(void *object)
+{
+  pn_delivery_t *delivery = (pn_delivery_t *) object;
+  pn_buffer_free(delivery->tag);
+  pn_buffer_free(delivery->bytes);
+}
+
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
-  if (!link) return NULL;
+  assert(link);
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled);
   if (!delivery) {
-    delivery = (pn_delivery_t *) malloc(sizeof(pn_delivery_t));
+    static pn_class_t clazz = {pn_delivery_finalize};
+    delivery = (pn_delivery_t *) pn_new(sizeof(pn_delivery_t), &clazz);
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
@@ -1354,7 +1353,7 @@ void pn_full_settle(pn_delivery_buffer_t *db, pn_delivery_t *delivery)
 
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
-  if (!delivery) return;
+  assert(delivery);
 
   pn_link_t *link = delivery->link;
   if (pn_is_current(delivery)) {
