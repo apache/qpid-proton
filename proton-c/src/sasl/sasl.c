@@ -70,11 +70,11 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->disp = pn_dispatcher(1, sasl);
     sasl->disp->batch = false;
 
-    pn_dispatcher_action(sasl->disp, SASL_INIT, "SASL-INIT", pn_do_init);
-    pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, "SASL-MECHANISMS", pn_do_mechanisms);
-    pn_dispatcher_action(sasl->disp, SASL_CHALLENGE, "SASL-CHALLENGE", pn_do_challenge);
-    pn_dispatcher_action(sasl->disp, SASL_RESPONSE, "SASL-RESPONSE", pn_do_response);
-    pn_dispatcher_action(sasl->disp, SASL_OUTCOME, "SASL-OUTCOME", pn_do_outcome);
+    pn_dispatcher_action(sasl->disp, SASL_INIT, pn_do_init);
+    pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, pn_do_mechanisms);
+    pn_dispatcher_action(sasl->disp, SASL_CHALLENGE, pn_do_challenge);
+    pn_dispatcher_action(sasl->disp, SASL_RESPONSE, pn_do_response);
+    pn_dispatcher_action(sasl->disp, SASL_OUTCOME, pn_do_outcome);
 
     sasl->client = false;
     sasl->configured = false;

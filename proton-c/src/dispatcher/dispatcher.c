@@ -72,11 +72,10 @@ void pn_dispatcher_free(pn_dispatcher_t *disp)
   }
 }
 
-void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
+void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code,
                           pn_action_t *action)
 {
   disp->actions[code] = action;
-  disp->names[code] = name;
 }
 
 typedef enum {IN, OUT} pn_dir_t;
@@ -85,14 +84,10 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
                         pn_data_t *args, const char *payload, size_t size)
 {
   if (disp->trace & PN_TRACE_FRM) {
-    uint64_t code64;
-    bool scanned;
-    pn_data_scan(args, "D?L.", &scanned, &code64);
-    uint8_t code = scanned ? code64 : 0;
     size_t n = SCRATCH;
     pn_data_format(args, disp->scratch, &n);
-    pn_dispatcher_trace(disp, ch, "%s %s %s", dir == OUT ? "->" : "<-",
-                        disp->names[code], disp->scratch);
+    pn_dispatcher_trace(disp, ch, "%s %s", dir == OUT ? "->" : "<-",
+                        disp->scratch);
     if (size) {
       char buf[1024];
       int e = pn_quote_data(buf, 1024, payload, size);

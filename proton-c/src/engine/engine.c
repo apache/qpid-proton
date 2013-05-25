@@ -223,20 +223,14 @@ void pn_transport_free(pn_transport_t *transport)
   pn_ssl_free(transport->ssl);
   pn_sasl_free(transport->sasl);
   pn_dispatcher_free(transport->disp);
-  for (unsigned i = 0; i < transport->session_capacity; i++) {
-    pn_delivery_buffer_free(&transport->sessions[i].incoming);
-    pn_delivery_buffer_free(&transport->sessions[i].outgoing);
-    free(transport->sessions[i].links);
-    free(transport->sessions[i].handles);
-  }
   free(transport->remote_container);
   free(transport->remote_hostname);
   pn_data_free(transport->remote_offered_capabilities);
   pn_data_free(transport->remote_desired_capabilities);
   pn_error_free(transport->error);
   pn_condition_tini(&transport->remote_condition);
-  free(transport->sessions);
-  free(transport->channels);
+  pn_free(transport->local_channels);
+  pn_free(transport->remote_channels);
   free(transport->input_buf);
   free(transport->output_buf);
   free(transport);
@@ -246,7 +240,6 @@ void pn_add_session(pn_connection_t *conn, pn_session_t *ssn)
 {
   pn_list_add(conn->sessions, ssn);
   ssn->connection = conn;
-  ssn->id = pn_list_size(conn->sessions);
 }
 
 void pn_remove_session(pn_connection_t *conn, pn_session_t *ssn)
@@ -292,7 +285,6 @@ void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 {
   pn_list_add(ssn->links, link);
   link->session = ssn;
-  link->id = pn_list_size(ssn->links);
 }
 
 void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
@@ -649,6 +641,11 @@ static void pn_session_finalize(void *object)
   pn_session_t *session = (pn_session_t *) object;
   pn_free(session->links);
   pn_endpoint_tini(&session->endpoint);
+
+  pn_delivery_buffer_free(&session->state.incoming);
+  pn_delivery_buffer_free(&session->state.outgoing);
+  pn_free(session->state.local_handles);
+  pn_free(session->state.remote_handles);
 }
 
 pn_session_t *pn_session(pn_connection_t *conn)
@@ -663,6 +660,14 @@ pn_session_t *pn_session(pn_connection_t *conn)
   pn_decref(ssn);
   ssn->links = pn_list(0, PN_REFCOUNT);
   ssn->context = 0;
+
+  // begin transport state
+  ssn->state = (pn_session_state_t) {ssn, (uint16_t)-1, (uint16_t)-1};
+  pn_delivery_buffer_init(&ssn->state.incoming, 0, PN_SESSION_WINDOW);
+  pn_delivery_buffer_init(&ssn->state.outgoing, 0, PN_SESSION_WINDOW);
+  ssn->state.local_handles = pn_hash(0, 0.75, PN_REFCOUNT);
+  ssn->state.remote_handles = pn_hash(0, 0.75, PN_REFCOUNT);
+  // end transport state
 
   return ssn;
 }
@@ -721,15 +726,15 @@ void pn_transport_init(pn_transport_t *transport)
   amqp->buffered_input = NULL;
   amqp->next = NULL;
 
-  pn_dispatcher_action(transport->disp, OPEN, "OPEN", pn_do_open);
-  pn_dispatcher_action(transport->disp, BEGIN, "BEGIN", pn_do_begin);
-  pn_dispatcher_action(transport->disp, ATTACH, "ATTACH", pn_do_attach);
-  pn_dispatcher_action(transport->disp, TRANSFER, "TRANSFER", pn_do_transfer);
-  pn_dispatcher_action(transport->disp, FLOW, "FLOW", pn_do_flow);
-  pn_dispatcher_action(transport->disp, DISPOSITION, "DISPOSITION", pn_do_disposition);
-  pn_dispatcher_action(transport->disp, DETACH, "DETACH", pn_do_detach);
-  pn_dispatcher_action(transport->disp, END, "END", pn_do_end);
-  pn_dispatcher_action(transport->disp, CLOSE, "CLOSE", pn_do_close);
+  pn_dispatcher_action(transport->disp, OPEN, pn_do_open);
+  pn_dispatcher_action(transport->disp, BEGIN, pn_do_begin);
+  pn_dispatcher_action(transport->disp, ATTACH, pn_do_attach);
+  pn_dispatcher_action(transport->disp, TRANSFER, pn_do_transfer);
+  pn_dispatcher_action(transport->disp, FLOW, pn_do_flow);
+  pn_dispatcher_action(transport->disp, DISPOSITION, pn_do_disposition);
+  pn_dispatcher_action(transport->disp, DETACH, pn_do_detach);
+  pn_dispatcher_action(transport->disp, END, pn_do_end);
+  pn_dispatcher_action(transport->disp, CLOSE, pn_do_close);
 
   transport->open_sent = false;
   transport->open_rcvd = false;
@@ -751,11 +756,8 @@ void pn_transport_init(pn_transport_t *transport)
   transport->error = pn_error();
   pn_condition_init(&transport->remote_condition);
 
-  transport->sessions = NULL;
-  transport->session_capacity = 0;
-
-  transport->channels = NULL;
-  transport->channel_capacity = 0;
+  transport->local_channels = pn_hash(0, 0.75, PN_REFCOUNT);
+  transport->remote_channels = pn_hash(0, 0.75, PN_REFCOUNT);
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
@@ -766,31 +768,25 @@ void pn_transport_init(pn_transport_t *transport)
 
 pn_session_state_t *pn_session_get_state(pn_transport_t *transport, pn_session_t *ssn)
 {
-  int old_capacity = transport->session_capacity;
-  PN_ENSURE(transport->sessions, transport->session_capacity, ssn->id + 1, pn_session_state_t);
-  for (unsigned i = old_capacity; i < transport->session_capacity; i++)
-  {
-    pn_session_state_t t = {NULL, (uint16_t)-1, (uint16_t)-1};
-    transport->sessions[i] = t;
-    pn_delivery_buffer_init(&transport->sessions[i].incoming, 0, PN_SESSION_WINDOW);
-    pn_delivery_buffer_init(&transport->sessions[i].outgoing, 0, PN_SESSION_WINDOW);
-  }
-  pn_session_state_t *state = &transport->sessions[ssn->id];
-  state->session = ssn;
-  return state;
+  return &ssn->state;
 }
 
 pn_session_state_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
 {
-    PN_ENSUREZ(transport->channels, transport->channel_capacity, (size_t) channel + 1, pn_session_state_t *);
-  return transport->channels[channel];
+  pn_session_t *ssn = (pn_session_t *) pn_hash_get(transport->remote_channels, channel);
+  return &ssn->state;
 }
 
-void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_state_t *state)
+static void pn_map_channel(pn_transport_t *transport, uint16_t channel, pn_session_state_t *state)
 {
-    PN_ENSUREZ(transport->channels, transport->channel_capacity, (size_t) channel + 1, pn_session_state_t *);
+  pn_hash_put(transport->remote_channels, channel, state->session);
   state->remote_channel = channel;
-  transport->channels[channel] = state;
+}
+
+static void pn_unmap_channel(pn_transport_t *transport, pn_session_state_t *state)
+{
+  pn_hash_del(transport->remote_channels, state->remote_channel);
+  state->remote_channel = -2;
 }
 
 pn_transport_t *pn_transport()
@@ -932,6 +928,14 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->drain = false;
   link->drained = false;
   link->context = 0;
+
+  // begin transport state
+  link->state.link = link;
+  link->state.local_handle = -1;
+  link->state.remote_handle = -1;
+  link->state.delivery_count = 0;
+  link->state.link_credit = 0;
+  // end transport stat
 
   return link;
 }
@@ -1083,39 +1087,27 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   return 0;
 }
 
-void pn_link_state_init(pn_link_state_t *ls)
-{
-  ls->link = NULL;
-  ls->local_handle = -1;
-  ls->remote_handle = -1;
-  ls->delivery_count = 0;
-  ls->link_credit = 0;
-}
-
 pn_link_state_t *pn_link_get_state(pn_session_state_t *ssn_state, pn_link_t *link)
 {
-  int old_capacity = ssn_state->link_capacity;
-  PN_ENSURE(ssn_state->links, ssn_state->link_capacity, link->id + 1, pn_link_state_t);
-  for (unsigned i = old_capacity; i < ssn_state->link_capacity; i++)
-  {
-    pn_link_state_init(&ssn_state->links[i]);
-  }
-  pn_link_state_t *state = &ssn_state->links[link->id];
-  state->link = link;
-  return state;
+  return &link->state;
 }
 
-void pn_map_handle(pn_session_state_t *ssn_state, uint32_t handle, pn_link_state_t *state)
+static void pn_map_handle(pn_session_state_t *ssn_state, uint32_t handle, pn_link_state_t *state)
 {
-  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1, pn_link_state_t*);
   state->remote_handle = handle;
-  ssn_state->handles[handle] = state;
+  pn_hash_put(ssn_state->remote_handles, handle, state->link);
+}
+
+static void pn_unmap_handle(pn_session_state_t *ssn_state, pn_link_state_t *state)
+{
+  pn_hash_del(ssn_state->remote_handles, state->remote_handle);
+  state->remote_handle = -2;
 }
 
 pn_link_state_t *pn_handle_state(pn_session_state_t *ssn_state, uint32_t handle)
 {
-  PN_ENSUREZ(ssn_state->handles, ssn_state->handle_capacity, handle + 1, pn_link_state_t*);
-  return ssn_state->handles[handle];
+  pn_link_t *link = (pn_link_t *) pn_hash_get(ssn_state->remote_handles, handle);
+  return &link->state;
 }
 
 pn_link_t *pn_sender(pn_session_t *session, const char *name)
@@ -1457,14 +1449,14 @@ int pn_do_begin(pn_dispatcher_t *disp)
   int err = pn_scan_args(disp, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
 
-  pn_session_state_t *state;
+  pn_session_t *ssn;
   if (reply) {
     // XXX: what if session is NULL?
-    state = &transport->sessions[remote_channel];
+    ssn = (pn_session_t *) pn_hash_get(transport->local_channels, remote_channel);
   } else {
-    pn_session_t *ssn = pn_session(transport->connection);
-    state = pn_session_get_state(transport, ssn);
+    ssn = pn_session(transport->connection);
   }
+  pn_session_state_t *state = pn_session_get_state(transport, ssn);
   state->incoming_transfer_count = next;
   pn_map_channel(transport, disp->channel, state);
   PN_SET_REMOTE(state->session->endpoint.state, PN_REMOTE_ACTIVE);
@@ -1800,7 +1792,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
   err = pn_scan_error(disp, &link->endpoint.remote_condition, true);
   if (err) return err;
 
-  link_state->remote_handle = -2;
+  pn_unmap_handle(ssn_state, link_state);
 
   if (closed)
   {
@@ -1819,7 +1811,7 @@ int pn_do_end(pn_dispatcher_t *disp)
   pn_session_t *session = ssn_state->session;
   int err = pn_scan_error(disp, &session->endpoint.remote_condition, false);
   if (err) return err;
-  ssn_state->remote_channel = -2;
+  pn_unmap_channel(transport, ssn_state);
   PN_SET_REMOTE(session->endpoint.state, PN_REMOTE_CLOSED);
   return 0;
 }
@@ -2035,6 +2027,18 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
   return 0;
 }
 
+static uint16_t allocate_alias(pn_hash_t *aliases)
+{
+  for (uint32_t i = 0; i < 65536; i++) {
+    if (!pn_hash_get(aliases, i)) {
+      return i;
+    }
+  }
+
+  assert(false);
+  return 0;
+}
+
 int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == SESSION && transport->open_sent)
@@ -2043,15 +2047,14 @@ int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_session_state_t *state = pn_session_get_state(transport, ssn);
     if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_channel == (uint16_t) -1)
     {
-      // XXX: we use the session id as the outgoing channel, we depend
-      // on this for looking up via remote channel
-      uint16_t channel = ssn->id;
+      uint16_t channel = allocate_alias(transport->local_channels);
       pn_post_frame(transport->disp, channel, "DL[?HIII]", BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
                     pn_delivery_buffer_available(&state->incoming),
                     pn_delivery_buffer_available(&state->outgoing));
       state->local_channel = channel;
+      pn_hash_put(transport->local_channels, channel, ssn);
     }
   }
 
@@ -2085,8 +2088,8 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (((int16_t) ssn_state->local_channel >= 0) &&
         !(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
     {
-      // XXX
-      state->local_handle = link->id;
+      state->local_handle = allocate_alias(ssn_state->local_handles);
+      pn_hash_put(ssn_state->local_handles, state->local_handle, link);
       int err = pn_post_frame(transport->disp, ssn_state->local_channel,
                               "DL[SIonn?DL[SIsIoCnCnCC]?DL[SIsIoCC]nnI]", ATTACH,
                               pn_string_get(link->name),

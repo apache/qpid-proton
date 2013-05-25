@@ -38,7 +38,6 @@ typedef int (pn_action_t)(pn_dispatcher_t *disp);
 
 struct pn_dispatcher_t {
   pn_action_t *actions[256];
-  const char *names[256];
   uint8_t frame_type;
   pn_trace_t trace;
   pn_buffer_t *input;
@@ -66,7 +65,7 @@ struct pn_dispatcher_t {
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context);
 void pn_dispatcher_free(pn_dispatcher_t *disp);
-void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code, const char *name,
+void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code,
                           pn_action_t *action);
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...);
 void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size);

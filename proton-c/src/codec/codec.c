@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "encodings.h"
+#define DEFINE_FIELDS
+#include "protocol.h"
 #include "../platform_fmt.h"
 #include "../util.h"
 
@@ -322,29 +324,39 @@ size_t pn_atoms_ltrim(pn_atoms_t *atoms, size_t size)
   return size;
 }
 
-int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level)
+int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level, pn_fields_t *fields)
 {
   if (!atoms->size) return PN_UNDERFLOW;
   pn_iatom_t *atom = atoms->start;
   pn_atoms_ltrim(atoms, 1);
   int err, count;
-  bool list;
+  pn_fields_t *f;
 
   switch (atom->type) {
   case PN_DESCRIPTOR:
     if ((err = pn_bytes_format(bytes, "@"))) return err;
-    if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
+    if (atoms->start->type == PN_ULONG) {
+      f = &FIELDS[atoms->start->u.as_ulong];
+    } else {
+      f = NULL;
+    }
+    if (f && f->name) {
+      if ((err = pn_bytes_format(bytes, "%s", f->name))) return err;
+      pn_atoms_ltrim(atoms, 1);
+    } else {
+      if ((err = pn_format_atoms_one(bytes, atoms, level + 1, NULL))) return err;
+    }
     if ((err = pn_bytes_format(bytes, " "))) return err;
-    if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
+    if ((err = pn_format_atoms_one(bytes, atoms, level + 1, f))) return err;
     return 0;
   case PN_ARRAY:
     count = atom->u.count;
     if ((err = pn_bytes_format(bytes, "@"))) return err;
-    if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
+    if ((err = pn_format_atoms_one(bytes, atoms, level + 1, NULL))) return err;
     if ((err = pn_bytes_format(bytes, "["))) return err;
     for (int i = 0; i < count; i++)
     {
-      if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
+      if ((err = pn_format_atoms_one(bytes, atoms, level + 1, NULL))) return err;
       if (i < count - 1) {
         if ((err = pn_bytes_format(bytes, ", "))) return err;
       }
@@ -352,28 +364,52 @@ int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level)
     if ((err = pn_bytes_format(bytes, "]"))) return err;
     return 0;
   case PN_LIST:
+    {
+      count = atom->u.count;
+      if ((err = pn_bytes_format(bytes, "["))) return err;
+      bool comma = false;
+      for (int i = 0; i < count; i++)
+      {
+        const char *name = NULL;
+        bool render = true;
+        if (fields) {
+          name = fields->fields[i];
+          if (atoms->start->type == PN_NULL) {
+            pn_atoms_ltrim(atoms, 1);
+            render = false;
+          }
+        }
+
+        if (render) {
+          if (comma) {
+            if ((err = pn_bytes_format(bytes, ", "))) return err;
+          } else {
+            comma = true;
+          }
+          if (name) {
+            if ((err = pn_bytes_format(bytes, "%s=", name))) return err;
+          }
+          if ((err = pn_format_atoms_one(bytes, atoms, level + 1, NULL))) return err;
+        }
+      }
+    }
+    if ((err = pn_bytes_format(bytes, "]"))) return err;
+    return 0;
   case PN_MAP:
     count = atom->u.count;
-    list = atom->type == PN_LIST;
-    if ((err = pn_bytes_format(bytes, "%s",  list ? "[" : "{"))) return err;
+    if ((err = pn_bytes_format(bytes, "{"))) return err;
     for (int i = 0; i < count; i++)
     {
-      if ((err = pn_format_atoms_one(bytes, atoms, level + 1))) return err;
-      if (list) {
+      if ((err = pn_format_atoms_one(bytes, atoms, level + 1, NULL))) return err;
+      if (i % 2) {
         if (i < count - 1) {
           if ((err = pn_bytes_format(bytes, ", "))) return err;
         }
       } else {
-        if (i % 2) {
-          if (i < count - 1) {
-            if ((err = pn_bytes_format(bytes, ", "))) return err;
-          }
-        } else {
-          if ((err = pn_bytes_format(bytes, "="))) return err;
-        }
+        if ((err = pn_bytes_format(bytes, "="))) return err;
       }
     }
-    if ((err = pn_bytes_format(bytes, "%s",  list ? "]" : "}"))) return err;
+    if ((err = pn_bytes_format(bytes, "}"))) return err;
     return 0;
   default:
     return pn_format_atom(bytes, *atom);
@@ -387,7 +423,7 @@ ssize_t pn_format_atoms(char *buf, size_t n, pn_atoms_t atoms)
 
   while (copy.size)
   {
-    int e = pn_format_atoms_one(&bytes, &copy, 0);
+    int e = pn_format_atoms_one(&bytes, &copy, 0, NULL);
     if (e) return e;
     if (copy.size) {
       e = pn_bytes_format(&bytes, " ");
