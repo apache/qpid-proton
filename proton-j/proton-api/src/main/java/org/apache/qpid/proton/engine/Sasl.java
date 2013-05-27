@@ -85,7 +85,7 @@ public interface Sasl
      *
      * @param mechanisms a list of acceptable SASL mechanisms
      */
-    void setMechanisms(String[] mechanisms);
+    void setMechanisms(String... mechanisms);
 
     /**
      * Retrieve the list of SASL mechanisms provided by the remote.

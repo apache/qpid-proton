@@ -275,7 +275,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     }
 
     @Override
-    public void setMechanisms(String[] mechanisms)
+    public void setMechanisms(String... mechanisms)
     {
         if(mechanisms != null)
         {
