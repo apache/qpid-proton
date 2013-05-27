@@ -168,11 +168,20 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             {
                 processInit(buffer);
                 _state = SaslState.PN_SASL_STEP;
+
+                //HACK: if we received an outcome before
+                //we sent our init, change the state now
+                if(_outcome != SaslOutcome.PN_SASL_NONE)
+                {
+                    _state = classifyStateFromOutcome(_outcome);
+                }
             }
+
             if(getState() == SaslState.PN_SASL_STEP && getChallengeResponse() != null)
             {
                 processResponse(buffer);
             }
+
         }
     }
 
@@ -367,7 +376,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         checkRole(Role.SERVER);
         _outcome = outcome;
         _done = true;
-        _state = outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
+        _state = classifyStateFromOutcome(outcome);
         _logger.fine("SASL negotiation done: " + this);
     }
 
@@ -408,6 +417,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             if(outcome.getCode() == saslOutcome.getCode().ordinal())
             {
                 _outcome = outcome;
+                if (_state != SaslState.PN_SASL_IDLE)
+                {
+                    _state = classifyStateFromOutcome(outcome);
+                }
                 break;
             }
         }
@@ -417,6 +430,11 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         {
             _logger.fine("Handled outcome: " + this);
         }
+    }
+
+    private SaslState classifyStateFromOutcome(SaslOutcome outcome)
+    {
+        return outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
     }
 
     private void processResponse(WritableBuffer buffer)
