@@ -335,7 +335,7 @@ int pn_format_atoms_one(pn_bytes_t *bytes, pn_atoms_t *atoms, int level, pn_fiel
   switch (atom->type) {
   case PN_DESCRIPTOR:
     if ((err = pn_bytes_format(bytes, "@"))) return err;
-    if (atoms->start->type == PN_ULONG) {
+    if (atoms->start->type == PN_ULONG && atoms->start->u.as_ulong < 256) {
       f = &FIELDS[atoms->start->u.as_ulong];
     } else {
       f = NULL;
