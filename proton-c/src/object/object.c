@@ -479,6 +479,44 @@ void pn_map_del(pn_map_t *map, void *key)
   }
 }
 
+pn_handle_t pn_map_head(pn_map_t *map)
+{
+  assert(map);
+  for (size_t i = 0; i < map->capacity; i++)
+  {
+    if (map->entries[i].state != PNI_ENTRY_FREE) {
+      return i + 1;
+    }
+  }
+
+  return 0;
+}
+
+pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
+{
+  for (size_t i = entry; i < map->capacity; i++) {
+    if (map->entries[i].state != PNI_ENTRY_FREE) {
+      return i + 1;
+    }
+  }
+
+  return 0;
+}
+
+void *pn_map_key(pn_map_t *map, pn_handle_t entry)
+{
+  assert(map);
+  assert(entry);
+  return map->entries[entry - 1].key;
+}
+
+void *pn_map_value(pn_map_t *map, pn_handle_t entry)
+{
+  assert(map);
+  assert(entry);
+  return map->entries[entry - 1].value;
+}
+
 struct pn_hash_t {
   pn_map_t map;
 };
@@ -522,6 +560,27 @@ void pn_hash_del(pn_hash_t *hash, uintptr_t key)
 {
   pn_map_del(&hash->map, (void *) key);
 }
+
+pn_handle_t pn_hash_head(pn_hash_t *hash)
+{
+  return pn_map_head(&hash->map);
+}
+
+pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry)
+{
+  return pn_map_next(&hash->map, entry);
+}
+
+uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry)
+{
+  return (uintptr_t) pn_map_key(&hash->map, entry);
+}
+
+void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry)
+{
+  return pn_map_value(&hash->map, entry);
+}
+
 
 #define PNI_NULL_SIZE (-1)
 

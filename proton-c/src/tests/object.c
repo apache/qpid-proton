@@ -19,12 +19,75 @@
  *
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <proton/object.h>
 
 #define assert(E) ((E) ? 0 : (abort(), 0))
+
+static char mem;
+static void *END = &mem;
+
+static pn_list_t *build_list(size_t capacity, int options, ...)
+{
+  pn_list_t *result = pn_list(capacity, options);
+  va_list ap;
+
+  va_start(ap, options);
+  while (true) {
+    void *arg = va_arg(ap, void *);
+    if (arg == END) {
+      break;
+    }
+
+    pn_list_add(result, arg);
+    if (PN_REFCOUNT & options) {
+      pn_decref(arg);
+    }
+  }
+  va_end(ap);
+
+  return result;
+}
+
+static pn_map_t *build_map(size_t capacity, float load_factor, int options, ...)
+{
+  pn_map_t *result = pn_map(capacity, load_factor, options);
+  va_list ap;
+
+  void *prev = NULL;
+
+  va_start(ap, options);
+  int count = 0;
+  while (true) {
+    void *arg = va_arg(ap, void *);
+    bool last = arg == END;
+    if (arg == END) {
+      arg = NULL;
+    }
+
+    if (count % 2) {
+      pn_map_put(result, prev, arg);
+      if (PN_REFCOUNT & options) {
+        pn_decref(prev);
+        pn_decref(arg);
+      }
+    } else {
+      prev = arg;
+    }
+
+    if (last) {
+      break;
+    }
+
+    count++;
+  }
+  va_end(ap);
+
+  return result;
+}
 
 static void noop(void *o) {}
 static uintptr_t zero(void *o) { return 0; }
@@ -254,6 +317,82 @@ static void test_list_index()
   pn_free(nonexistent);
 }
 
+static bool pn_strequals(const char *a, const char *b)
+{
+  return !strcmp(a, b);
+}
+
+static void test_build_list()
+{
+  pn_list_t *l = build_list(0, PN_REFCOUNT,
+                            pn_string("one"),
+                            pn_string("two"),
+                            pn_string("three"),
+                            END);
+
+  assert(pn_list_size(l) == 3);
+
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_list_get(l, 0)),
+                      "one"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_list_get(l, 1)),
+                      "two"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_list_get(l, 2)),
+                      "three"));
+
+  pn_free(l);
+}
+
+static void test_build_map()
+{
+  pn_map_t *m = build_map(0, 0.75, PN_REFCOUNT,
+                          pn_string("key"),
+                          pn_string("value"),
+                          pn_string("key2"),
+                          pn_string("value2"),
+                          END);
+
+  assert(pn_map_size(m) == 2);
+
+  pn_string_t *key = pn_string(NULL);
+
+  pn_string_set(key, "key");
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_map_get(m, key)),
+                      "value"));
+  pn_string_set(key, "key2");
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_map_get(m, key)),
+                      "value2"));
+
+  pn_free(m);
+  pn_free(key);
+}
+
+static void test_build_map_odd()
+{
+  pn_map_t *m = build_map(0, 0.75, PN_REFCOUNT,
+                          pn_string("key"),
+                          pn_string("value"),
+                          pn_string("key2"),
+                          pn_string("value2"),
+                          pn_string("key3"),
+                          END);
+
+  assert(pn_map_size(m) == 3);
+
+  pn_string_t *key = pn_string(NULL);
+
+  pn_string_set(key, "key");
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_map_get(m, key)),
+                      "value"));
+  pn_string_set(key, "key2");
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_map_get(m, key)),
+                      "value2"));
+  pn_string_set(key, "key3");
+  assert(pn_map_get(m, key) == NULL);
+
+  pn_free(m);
+  pn_free(key);
+}
+
 static void test_map()
 {
   void *one = pn_new(0, NULL);
@@ -440,6 +579,45 @@ static void test_string_format()
   pn_free(str);
 }
 
+static void test_map_iteration(int n)
+{
+  pn_list_t *pairs = pn_list(2*n, PN_REFCOUNT);
+  for (int i = 0; i < n; i++) {
+    void *key = pn_new(0, NULL);
+    void *value = pn_new(0, NULL);
+    pn_list_add(pairs, key);
+    pn_list_add(pairs, value);
+    pn_decref(key);
+    pn_decref(value);
+  }
+
+  pn_map_t *map = pn_map(0, 0.75, PN_REFCOUNT);
+
+  assert(pn_map_head(map) == 0);
+
+  for (int i = 0; i < n; i++) {
+    pn_map_put(map, pn_list_get(pairs, 2*i), pn_list_get(pairs, 2*i + 1));
+  }
+
+  for (pn_handle_t entry = pn_map_head(map); entry; entry = pn_map_next(map, entry))
+  {
+    void *key = pn_map_key(map, entry);
+    void *value = pn_map_value(map, entry);
+    ssize_t idx = pn_list_index(pairs, key);
+    assert(idx >= 0);
+
+    assert(pn_list_get(pairs, idx) == key);
+    assert(pn_list_get(pairs, idx + 1) == value);
+
+    pn_list_del(pairs, idx, 2);
+  }
+
+  assert(pn_list_size(pairs) == 0);
+
+  pn_decref(map);
+  pn_decref(pairs);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -480,6 +658,15 @@ int main(int argc, char **argv)
   test_stringn("this has an embedded \000 in it", 28);
 
   test_string_format();
+
+  test_build_list();
+  test_build_map();
+  test_build_map_odd();
+
+  for (int i = 0; i < 64; i++)
+  {
+    test_map_iteration(i);
+  }
 
   return 0;
 }

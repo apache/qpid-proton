@@ -62,6 +62,7 @@ PN_EXTERN ssize_t pn_list_index(pn_list_t *list, void *value);
 PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
 
+typedef uintptr_t pn_handle_t;
 
 typedef struct pn_map_t pn_map_t;
 
@@ -73,6 +74,10 @@ PN_EXTERN size_t pn_map_size(pn_map_t *map);
 PN_EXTERN int pn_map_put(pn_map_t *map, void *key, void *value);
 PN_EXTERN void *pn_map_get(pn_map_t *map, void *key);
 PN_EXTERN void pn_map_del(pn_map_t *map, void *key);
+PN_EXTERN pn_handle_t pn_map_head(pn_map_t *map);
+PN_EXTERN pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry);
+PN_EXTERN void *pn_map_key(pn_map_t *map, pn_handle_t entry);
+PN_EXTERN void *pn_map_value(pn_map_t *map, pn_handle_t entry);
 
 typedef struct pn_hash_t pn_hash_t;
 
@@ -81,6 +86,10 @@ PN_EXTERN size_t pn_hash_size(pn_hash_t *hash);
 PN_EXTERN int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value);
 PN_EXTERN void *pn_hash_get(pn_hash_t *hash, uintptr_t key);
 PN_EXTERN void pn_hash_del(pn_hash_t *hash, uintptr_t key);
+PN_EXTERN pn_handle_t pn_hash_head(pn_hash_t *hash);
+PN_EXTERN pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry);
+PN_EXTERN uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry);
+PN_EXTERN void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry);
 
 typedef struct pn_string_t pn_string_t;
 
