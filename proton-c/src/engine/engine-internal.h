@@ -68,7 +68,6 @@ typedef struct {
 } pn_delivery_map_t;
 
 typedef struct {
-  pn_link_t *link;
   // XXX: stop using negative numbers
   uint32_t local_handle;
   uint32_t remote_handle;
@@ -77,7 +76,6 @@ typedef struct {
 } pn_link_state_t;
 
 typedef struct {
-  pn_session_t *session;
   // XXX: stop using negative numbers
   uint16_t local_channel;
   uint16_t remote_channel;
