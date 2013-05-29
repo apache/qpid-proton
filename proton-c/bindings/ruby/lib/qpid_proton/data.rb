@@ -811,7 +811,17 @@ module Qpid
       # as an AMQP list.
       class List < ::Array
 
-        def initialize(elements) super; end
+        PROTON_TYPE_FOR_CLASS = {
+          ::NilClass   => Cproton::PN_NULL,
+          ::TrueClass  => Cproton::PN_BOOL,
+          ::FalseClass => Cproton::PN_BOOL,
+          ::Fixnum     => Cproton::PN_INT,
+          ::Bignum     => Cproton::PN_LONG,
+          ::String     => Cproton::PN_STRING,
+          ::Float      => Cproton::PN_FLOAT
+        }
+
+        def initialize(elements = []) super; end
 
         def self.get(data)
           def fail; raise 'Not a list'; end
@@ -830,7 +840,15 @@ module Qpid
 
         def put(data)
           data.put_list
-          @elements.each { |e| data.put(e); }
+          data.enter
+          self.each do |e|
+            etype = PROTON_TYPE_FOR_CLASS[e.class]
+            puts "I think #{e} is of type #{etype}"
+            etype = Type.by_code(etype)
+            puts "The type helper is #{etype}"
+            etype.put(data, e)
+          end
+          data.exit
         end
       end
 
@@ -877,7 +895,7 @@ module Qpid
           return nil
         end
 
-        def put(data); data.null; end
+        def self.put(data, value); data.null; end
       end
 
       # Information about AMQP types including how to get/put an object of that
@@ -903,8 +921,11 @@ module Qpid
         end
 
         def put(data, value)
-          if @klass then @klass.send(:put, data, value)
-          else data.send(@put, value); end
+          if @klass then
+            @klass.send(:put, data, value)
+          else
+            data.send(@put, value)
+          end
         end
 
         def to_s() return name; end
@@ -917,12 +938,7 @@ module Qpid
           else data.send(@get); end
         end
 
-        def put(data, value)
-          if @klass then @klass.send(:put, data, value)
-          else data.send(@put, value); end
-
-          def to_s name; end
-        end
+        def to_s; name; end
       end
 
       # Get the current value as a single object.
