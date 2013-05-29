@@ -56,18 +56,16 @@ struct pn_endpoint_t {
 };
 
 typedef struct {
-  pn_delivery_t *delivery;
   pn_sequence_t id;
   bool sent;
+  bool init;
 } pn_delivery_state_t;
 
 typedef struct {
-  pn_sequence_t next;
   size_t capacity;
-  size_t head;
-  size_t size;
-  pn_delivery_state_t *deliveries;
-} pn_delivery_buffer_t;
+  pn_sequence_t next;
+  pn_hash_t *deliveries;
+} pn_delivery_map_t;
 
 typedef struct {
   pn_link_t *link;
@@ -84,8 +82,8 @@ typedef struct {
   uint16_t local_channel;
   uint16_t remote_channel;
   bool incoming_init;
-  pn_delivery_buffer_t incoming;
-  pn_delivery_buffer_t outgoing;
+  pn_delivery_map_t incoming;
+  pn_delivery_map_t outgoing;
   pn_sequence_t incoming_transfer_count;
   pn_sequence_t incoming_window;
   pn_sequence_t outgoing_transfer_count;
@@ -258,8 +256,8 @@ struct pn_delivery_t {
   bool tpwork;
   pn_buffer_t *bytes;
   bool done;
-  void *transport_context;
   void *context;
+  pn_delivery_state_t state;
 };
 
 #define PN_SET_LOCAL(OLD, NEW)                                          \
