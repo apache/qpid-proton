@@ -1908,10 +1908,10 @@ static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now)
   if (transport->remote_idle_timeout && !transport->close_sent) {
     if (transport->keepalive_deadline == 0 ||
         transport->last_bytes_output != transport->bytes_output) {
-      transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
       transport->last_bytes_output = transport->bytes_output;
     } else if (transport->keepalive_deadline <= now) {
-      transport->keepalive_deadline = now + (transport->remote_idle_timeout/2.0);
+      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
       if (transport->disp->available == 0) {    // no outbound data pending
         // so send empty frame (and account for it!)
         pn_post_frame(transport->disp, 0, "");
