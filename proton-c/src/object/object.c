@@ -333,7 +333,7 @@ pn_map_t *pn_map(size_t capacity, float load_factor, int options)
 
   pn_map_t *map = (pn_map_t *) pn_new(sizeof(pn_map_t), &clazz);
   map->capacity = capacity ? capacity : 16;
-  map->addressable = map->capacity * 0.86;
+  map->addressable = (size_t) (map->capacity * 0.86);
   if (!map->addressable) map->addressable = map->capacity;
   map->load_factor = load_factor;
   map->hashcode = pn_hashcode;
@@ -362,7 +362,7 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
   while (map->capacity < capacity ||
          (map->size / map->addressable) > map->load_factor) {
     map->capacity *= 2;
-    map->addressable = 0.86 * map->capacity;
+    map->addressable = (size_t) (0.86 * map->capacity);
   }
 
   pni_entry_t *entries = map->entries;
