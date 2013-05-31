@@ -19,6 +19,9 @@
 
 require "cproton"
 
+require "qpid_proton/described"
+require "qpid_proton/mapping"
+require "qpid_proton/array"
 require "qpid_proton/exceptions"
 require "qpid_proton/exception_handling"
 require "qpid_proton/message_format"
