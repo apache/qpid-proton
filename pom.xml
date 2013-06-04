@@ -26,6 +26,10 @@
 
   <groupId>org.apache.qpid</groupId>
   <artifactId>proton-project</artifactId>
+  <!-- We use a static 1.0-SNAPSHOT version so that dependent projects
+       requiring the latest trunk build can use an unchanging value in their pom.xml.
+       We will use a more representative version if and when snapshots from multiple
+       branches are being concurrently produced. -->
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
