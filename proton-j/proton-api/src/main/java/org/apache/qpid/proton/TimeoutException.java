@@ -40,4 +40,9 @@ public class TimeoutException extends ProtonException
     {
         super(cause);
     }
+
+    public TimeoutException(long timeoutMillis, String pendingCondition)
+    {
+        this("Timed out after " + timeoutMillis + " ms waiting for condition: " + pendingCondition);
+    }
 }

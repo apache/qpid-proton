@@ -60,7 +60,7 @@ public interface Delivery
     /**
      * Returns whether this delivery has been settled.
      *
-     * TODO proton-j and proton-c return the local and remote statuses. Resolve this ambiguity.
+     * TODO proton-j and proton-c return the local and remote statuses respectively. Resolve this ambiguity.
      *
      * @see #settle()
      */

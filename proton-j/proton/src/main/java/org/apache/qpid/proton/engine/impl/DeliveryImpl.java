@@ -20,6 +20,8 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.util.Arrays;
+
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
@@ -461,6 +463,27 @@ public class DeliveryImpl implements Delivery
     public void setContext(Object context)
     {
         _context = context;
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("DeliveryImpl [_tag=").append(Arrays.toString(_tag))
+            .append(", _link=").append(_link)
+            .append(", _deliveryState=").append(_deliveryState)
+            .append(", _settled=").append(_settled)
+            .append(", _remoteSettled=").append(_remoteSettled)
+            .append(", _remoteDeliveryState=").append(_remoteDeliveryState)
+            .append(", _flags=").append(_flags)
+            .append(", _transportFlags=").append(_transportFlags)
+            .append(", _transportDelivery=").append(_transportDelivery)
+            .append(", _dataSize=").append(_dataSize)
+            .append(", _complete=").append(_complete)
+            .append(", _updated=").append(_updated)
+            .append(", _done=").append(_done)
+            .append(", _offset=").append(_offset).append("]");
+        return builder.toString();
     }
 
 }
