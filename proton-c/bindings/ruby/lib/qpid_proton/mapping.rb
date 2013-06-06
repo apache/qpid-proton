@@ -36,7 +36,8 @@ module Qpid # :nodoc:
       # * code    - the AMQP code for this type
       # * name    - the AMQP name for this type
       # * klasses - the Ruby classes for this type
-      def initialize(code, name, klasses = nil)
+      # * getter  - overrides the get method for the type
+      def initialize(code, name, klasses = nil, getter = nil)
         @code = code
         @name = name
 
@@ -55,7 +56,12 @@ module Qpid # :nodoc:
         end
 
         @put_method = (name + "=").intern
-        @get_method = name.intern
+
+        if getter.nil?
+          @get_method = name.intern
+        else
+          @get_method = getter.intern
+        end
       end
 
       def to_s; @name; end
@@ -78,7 +84,7 @@ module Qpid # :nodoc:
 
     end
 
-    NULL       = Mapping.new(Cproton::PN_NULL, "null", [NilClass])
+    NULL       = Mapping.new(Cproton::PN_NULL, "null", [NilClass], "nil?")
     BOOL       = Mapping.new(Cproton::PN_BOOL, "bool", [TrueClass, FalseClass])
     UBYTE      = Mapping.new(Cproton::PN_UBYTE, "ubyte")
     BYTE       = Mapping.new(Cproton::PN_BYTE, "byte")

@@ -373,6 +373,11 @@ module Qpid
         check(Cproton.pn_data_put_null(@data))
       end
 
+      # Utility method for Qpid::Proton::Mapping
+      def null=(value) # :nodoc:
+        null
+      end
+
       # Checks if the current node is null.
       def null?
         Cproton.pn_data_is_null(@data)
@@ -724,52 +729,6 @@ module Qpid
       # returns an empty string ("").
       def symbol
         Cproton.pn_data_get_symbol(@data)
-      end
-
-      # Convenience class for maps
-      #
-      # A Hash with methods to get and put the map in a Data object as an AMQP
-      # map.
-      class Map < ::Hash
-        def initialize(map) super; end
-
-        def self.get(data)
-          data.enter or raise "Not a Map"
-          begin
-            map = {}
-            while data.next
-              k = data.get
-              data.next or raise "Map missing final value"
-              map[k] = data.get
-            end
-            return map
-          ensure
-            data.exit
-          end
-        end
-
-        def put(data)
-          data.enter
-          begin
-            @map.each { |k,v| data.put(k); data.put(v); }
-          ensure
-            data.exit
-          end
-        end
-      end
-
-      # Convenience class for null values
-      #
-      # Empty object with methods to get and put it in a Data object.
-      class Null
-        def initialize; end
-
-        def self.get(data)
-          data.null? or raise "Not a null"
-          return nil
-        end
-
-        def self.put(data, value); data.null; end
       end
 
       # Get the current value as a single object.
