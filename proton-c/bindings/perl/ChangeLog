@@ -1,5 +1,8 @@
 version 0.5:
 	* Added the qpid::proton::Data type.
+	* Added the qpid::proton::put_array_into method.
+	* Added the qpid::proton::get_array_from method.
+	* Added the qpid::proton::put_list_into method.
 
 version 0.4:
 	* Unit tests for qpid::proton::Message.

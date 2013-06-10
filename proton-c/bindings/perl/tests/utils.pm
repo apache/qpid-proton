@@ -37,6 +37,19 @@ sub random_string
     return $result;
 }
 
+sub random_strings
+{
+    my $len = $_[0];
+    my @result = ();
+
+    foreach (1..$len) {
+        my $strlen = rand(64) + 32;
+        push(@result, random_string($strlen));
+    }
+
+    return @result;
+}
+
 sub random_timestamp
 {
     my $result = rand(2**63) + 1;

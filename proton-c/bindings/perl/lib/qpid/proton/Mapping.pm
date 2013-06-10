@@ -17,7 +17,7 @@
 # under the License.
 #
 
-package qpid::proton::TypeHelper;
+package qpid::proton::Mapping;
 
 our %by_type_value = ();
 
@@ -25,19 +25,40 @@ sub new {
     my ($class) = @_;
     my ($self) = {};
 
-    my $type_value = $_[1];
-    my $set_method = $_[2];
-    my $get_method = $_[3];
+    my $name       = $_[1];
+    my $type_value = $_[2];
+    my $set_method = $_[3];
+    my $get_method = $_[4];
 
+    $self->{_name}       = $name;
     $self->{_type_value} = $type_value;
     $self->{_set_method} = $set_method;
     $self->{_get_method} = $get_method;
 
     bless $self, $class;
 
-    $qpid::proton::TypeHelper::by_type_value{$type_value} = $self;
+    $qpid::proton::Mapping::by_type_value{$type_value} = $self;
 
-   return $self;
+    return $self;
+}
+
+use overload (
+    '""' => \& stringify,
+    '==' => \& equals,
+    );
+
+sub stringify {
+    my ($self) = @_;
+    return $self->{_name};
+}
+
+sub equals {
+    my ($self) = @_;
+    my $that = $_[1];
+
+    return 0 if !defined($that);
+
+    return ($self->get_type_value == $that->get_type_value);
 }
 
 sub getter_method {
@@ -53,36 +74,37 @@ sub get_type_value {
     return $self->{_type_value};
 }
 
+=pod
+
+=head1 MARSHALLING DATA
+
+I<Mapping> can move data automatically into and out of a I<Data> object.
+
+=over
+
+=item $mapping->put( [DATA], [VALUE] );
+
+=item $mapping->get( [DATA] );
+
+=back
+
+=cut
+
 sub put {
     my ($self) = @_;
     my $data = $_[1];
-    my $described = $_[2];
-    my $elements = $_[3];
-    my $array_type = $self->{_type_value};
+    my $value = $_[2];
     my $setter_method = $self->{_set_method};
 
-    $data->put_array($described,
-                     qpid::proton::TypeHelper->find_by_type_value($array_type));
-    $data->enter;
-    foreach $value (@${elements}) {
-        $data->$setter_method($value);
-    }
-    $data->exit;
+    $data->$setter_method($value);
 }
 
 sub get {
+    my ($self) = @_;
     my $data = $_[1];
+    my $getter_method = $self->{_get_method};
 
-    my ($size, $described, $type_value) = $data->get_array;
-    my $get_method = $type_value->getter_method;
-    my $result = qpid::proton::Array->new($described, $type_value);
-
-    $data->enter;
-    while($data->next) {
-        my $next_value = $data->$get_method();
-        $result->push($next_value);
-    }
-    $data->exit;
+    my $result = $data->$getter_method;
 
     return $result;
 }
@@ -92,7 +114,7 @@ sub find_by_type_value {
 
     return undef if !defined($type_value);
 
-    return $qpid::proton::TypeHelper::by_type_value{$type_value};
+    return $qpid::proton::Mapping::by_type_value{$type_value};
 }
 
 1;

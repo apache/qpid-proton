@@ -110,6 +110,17 @@ Clearing the current node sets it I<before> the first child.
 
 Sets the current node to the parent node, and the parent node to its own parent.
 
+=item $doc->next;
+
+=item $doc->prev;
+
+Moves to the next/previous sibling and returns its type. If there is no next or
+previous sibling then the current node remains unchanged.
+
+=item $doc->rewind;
+
+Clears the current node and sets the parent to the root node.
+
 =back
 
 =cut
@@ -126,6 +137,13 @@ sub exit {
     my $impl = $self->{_impl};
 
     cproton_perl::pn_data_exit($impl);
+}
+
+sub rewind {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_data_rewind($impl);
 }
 
 
@@ -159,14 +177,16 @@ sub next {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    cproton_perl::pn_data_next($impl);
+    my $type = cproton_perl::pn_data_next($impl);
+    return qpid::proton::Mapping->find_by_type_value($type);
 }
 
 sub prev {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    cproton_perl::pn_data_prev($impl);
+    my $type = cproton_perl::pn_data_prev($impl);
+    return qpid::proton::Mapping->find_by_type_value($type);
 }
 
 
@@ -177,7 +197,26 @@ sub prev {
 The following methods allow for inserting the various node types into the
 tree.
 
+=head2 NODE TYPE
+
+You can retrieve the type of the current node.
+
+=over
+
+=item $type = $doc->get_type;
+
+=back
+
 =cut
+
+
+sub get_type {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+    my $type = cproton_perl::pn_data_type($impl);
+
+    return qpid::proton::Mapping->find_by_type_value($type);
+}
 
 
 =pod
@@ -1000,22 +1039,20 @@ sub put_array {
 
     die "array type must be defined" if !defined($array_type);
 
-    my $type_value = $array_type->get_type_value;
-
     check(cproton_perl::pn_data_put_array($impl,
                                           $described,
-                                          $type_value));
+                                          $array_type->get_type_value));
 }
 
 sub get_array {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    my $count = check(cproton_perl::pn_data_get_array($impl));
+    my $count = cproton_perl::pn_data_get_array($impl);
     my $described = cproton_perl::pn_data_is_array_described($impl);
     my $type_value = cproton_perl::pn_data_get_array_type($impl);
 
-    $type_value = qpid::proton::TypeHelper->find_by_type_value($type_value);
+    $type_value = qpid::proton::Mapping->find_by_type_value($type_value);
 
     return ($count, $described, $type_value);
 }

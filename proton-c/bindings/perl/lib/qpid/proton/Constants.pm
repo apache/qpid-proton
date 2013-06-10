@@ -21,86 +21,116 @@ package qpid::proton;
 
 use constant {
     NULL       => $cproton_perl::PN_NULL,
-    BOOL       => qpid::proton::TypeHelper->new(
+    BOOL       => qpid::proton::Mapping->new(
+        "bool",
         $cproton_perl::PN_BOOL,
         "put_bool",
         "get_bool"),
-    UBYTE      => qpid::proton::TypeHelper->new(
+    UBYTE      => qpid::proton::Mapping->new(
+        "ubyte",
         $cproton_perl::PN_UBYTE,
         "put_ubyte",
         "get_ubyte"),
-    BYTE       => qpid::proton::TypeHelper->new(
+    BYTE       => qpid::proton::Mapping->new(
+        "byte",
         $cproton_perl::PN_BYTE,
         "put_byte",
         "get_byte"),
-    USHORT     => qpid::proton::TypeHelper->new(
+    USHORT     => qpid::proton::Mapping->new(
+        "ushort",
         $cproton_perl::PN_USHORT,
         "put_ushort",
         "get_ushort"),
-    SHORT      => qpid::proton::TypeHelper->new(
+    SHORT      => qpid::proton::Mapping->new(
+        "short",
         $cproton_perl::PN_SHORT,
         "put_short",
         "get_short"),
-    UINT       => qpid::proton::TypeHelper->new(
+    UINT       => qpid::proton::Mapping->new(
+        "uint",
         $cproton_perl::PN_UINT,
         "put_uint",
         "get_uint"),
-    INT        => qpid::proton::TypeHelper->new(
+    INT        => qpid::proton::Mapping->new(
+        "int",
         $cproton_perl::PN_INT,
         "put_int",
         "get_int"),
-    CHAR       => qpid::proton::TypeHelper->new(
+    CHAR       => qpid::proton::Mapping->new(
+        "char",
         $cproton_perl::PN_CHAR,
         "put_char",
         "get_char"),
-    ULONG      => qpid::proton::TypeHelper->new(
+    ULONG      => qpid::proton::Mapping->new(
+        "ulong",
         $cproton_perl::PN_ULONG,
         "put_ulong",
         "get_ulong"),
-    LONG       => qpid::proton::TypeHelper->new(
+    LONG       => qpid::proton::Mapping->new(
+        "long",
         $cproton_perl::PN_LONG,
         "put_long",
         "get_long"),
-    TIMESTAMP  => qpid::proton::TypeHelper->new(
+    TIMESTAMP  => qpid::proton::Mapping->new(
+        "timestamp",
         $cproton_perl::PN_TIMESTAMP,
         "put_timestamp",
         "get_timestamp"),
-    FLOAT      => qpid::proton::TypeHelper->new(
+    FLOAT      => qpid::proton::Mapping->new(
+        "float",
         $cproton_perl::PN_FLOAT,
         "put_float",
         "get_float"),
-    DOUBLE     => qpid::proton::TypeHelper->new(
+    DOUBLE     => qpid::proton::Mapping->new(
+        "double",
         $cproton_perl::PN_DOUBLE,
         "put_double",
         "get_double"),
-    DECIMAL32  => qpid::proton::TypeHelper->new(
+    DECIMAL32  => qpid::proton::Mapping->new(
+        "decimal32",
         $cproton_perl::PN_DECIMAL32,
         "put_decimal32",
         "get_decimal32"),
-    DECIMAL64  => qpid::proton::TypeHelper->new(
+    DECIMAL64  => qpid::proton::Mapping->new(
+        "decimal64",
         $cproton_perl::PN_DECIMAL64,
         "put_decimal64",
         "get_decimal64"),
-    DECIMAL128 => qpid::proton::TypeHelper->new(
+    DECIMAL128 => qpid::proton::Mapping->new(
+        "decimal128",
         $cproton_perl::PN_DECIMAL128,
         "put_decimal128",
         "get_decimal128"),
-    UUID       => qpid::proton::TypeHelper->new(
+    UUID       => qpid::proton::Mapping->new(
+        "uuid",
         $cproton_perl::PN_UUID,
         "put_uuid",
         "get_uuid"),
-    BINARY     => qpid::proton::TypeHelper->new(
+    BINARY     => qpid::proton::Mapping->new(
+        "binary",
         $cproton_perl::PN_BINARY,
         "put_binary",
         "get_binary"),
-    STRING     => qpid::proton::TypeHelper->new(
+    STRING     => qpid::proton::Mapping->new(
+        "string",
         $cproton_perl::PN_STRING,
         "put_string",
         "get_string"),
-    SYMBOL     => qpid::proton::TypeHelper->new(
+    SYMBOL     => qpid::proton::Mapping->new(
+        "symbol",
         $cproton_perl::PN_SYMBOL,
         "put_symbol",
-        "get_symbol")
+        "get_symbol"),
+    ARRAY     => qpid::proton::Mapping->new(
+        "array",
+        $cproton_perl::PN_ARRAY,
+        "put_array",
+        "get_array"),
+    LIST      => qpid::proton::Mapping->new(
+        "list",
+        $cproton_perl::PN_LIST,
+        "put_list",
+        "get_list"),
 };
 
 1;
