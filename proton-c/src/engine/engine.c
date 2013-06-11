@@ -1625,9 +1625,10 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   pn_bytes_t tag;
   bool id_present;
   pn_sequence_t id;
+  bool settled;
   bool more;
-  int err = pn_scan_args(disp, "D.[I?Iz..o]", &handle, &id_present, &id, &tag,
-                         &more);
+  int err = pn_scan_args(disp, "D.[I?Iz.oo]", &handle, &id_present, &id, &tag,
+                         &settled, &more);
   if (err) return err;
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
 
@@ -1662,6 +1663,11 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     link->state.delivery_count++;
     link->state.link_credit--;
     link->queued++;
+
+    // XXX: need to fill in remote state: delivery->remote_state = ...;
+    delivery->remote_settled = settled;
+    delivery->updated = true;
+    pn_work_update(transport->connection, delivery);
   }
 
   pn_buffer_append(delivery->bytes, disp->payload, disp->size);
@@ -2254,14 +2260,12 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
+  bool xfr_posted = false;
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
     if (!(*allocation_blocked) && !state) {
       state = pn_delivery_map_push(&ssn_state->outgoing, delivery);
     } else {
-      // XXX: I'm pretty sure this can never actually happen, however
-      // we may need some logic to block allocation if a delivery is
-      // blocked by link credit
       *allocation_blocked = true;
     }
 
@@ -2280,6 +2284,7 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
                                          !delivery->done,
                                          ssn_state->remote_incoming_window);
       if (count < 0) return count;
+      xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
 
@@ -2295,9 +2300,8 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
   }
 
   pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
-  // XXX: need to prevent duplicate disposition sending
   if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
-      && state && state->sent) {
+      && state && state->sent && !xfr_posted) {
     int err = pn_post_disp(transport, delivery);
     if (err) return err;
   }
