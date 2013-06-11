@@ -131,6 +131,11 @@ use constant {
         $cproton_perl::PN_LIST,
         "put_list",
         "get_list"),
+    MAP      => qpid::proton::Mapping->new(
+        "map",
+        $cproton_perl::PN_MAP,
+        "put_map",
+        "get_map"),
 };
 
 1;

@@ -22,7 +22,7 @@ sub random_hash
         $result{$key} = $val;
     }
 
-    return %result;
+    return \%result;
 }
 
 sub random_string
