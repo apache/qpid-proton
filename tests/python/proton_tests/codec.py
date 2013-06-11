@@ -288,6 +288,7 @@ class DataTest(Test):
            char("c"): "bleh",
            u"desc": Described(symbol("url"), u"http://example.org"),
            u"array": Array(UNDESCRIBED, Data.INT, 1, 2, 3),
+           u"list": [1, 2, 3, None, 4],
            u"boolean": True}
     self.data.put_object(obj)
     enc = self.data.encode()
