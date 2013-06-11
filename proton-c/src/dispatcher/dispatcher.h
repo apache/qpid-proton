@@ -80,5 +80,6 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp,
                            const pn_bytes_t *delivery_tag,
                            uint32_t message_format,
                            bool settled,
-                           bool more);
+                           bool more,
+                           pn_sequence_t frame_limit);
 #endif /* dispatcher.h */

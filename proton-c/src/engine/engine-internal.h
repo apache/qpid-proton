@@ -62,7 +62,6 @@ typedef struct {
 } pn_delivery_state_t;
 
 typedef struct {
-  size_t capacity;
   pn_sequence_t next;
   pn_hash_t *deliveries;
 } pn_delivery_map_t;
@@ -84,6 +83,7 @@ typedef struct {
   pn_delivery_map_t outgoing;
   pn_sequence_t incoming_transfer_count;
   pn_sequence_t incoming_window;
+  pn_sequence_t remote_incoming_window;
   pn_sequence_t outgoing_transfer_count;
   pn_sequence_t outgoing_window;
   pn_hash_t *local_handles;
@@ -194,6 +194,11 @@ struct pn_session_t {
   pn_connection_t *connection;
   pn_list_t *links;
   void *context;
+  size_t incoming_capacity;
+  pn_sequence_t incoming_bytes;
+  pn_sequence_t outgoing_bytes;
+  pn_sequence_t incoming_deliveries;
+  pn_sequence_t outgoing_deliveries;
   pn_session_state_t state;
 };
 

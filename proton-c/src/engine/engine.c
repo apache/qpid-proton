@@ -37,21 +37,15 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 // delivery buffers
 
-void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next, size_t capacity)
+void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
-  db->deliveries = pn_hash(capacity, 0.75, PN_REFCOUNT);
-  db->capacity = capacity;
+  db->deliveries = pn_hash(1024, 0.75, PN_REFCOUNT);
   db->next = next;
 }
 
 void pn_delivery_map_free(pn_delivery_map_t *db)
 {
   pn_free(db->deliveries);
-}
-
-size_t pn_delivery_map_available(pn_delivery_map_t *db)
-{
-  return db->capacity - pn_hash_size(db->deliveries);
 }
 
 pn_delivery_t *pn_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
@@ -68,8 +62,6 @@ static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *deliv
 
 pn_delivery_state_t *pn_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
-  if (!pn_delivery_map_available(db))
-    return NULL;
   pn_delivery_state_t *ds = &delivery->state;
   pn_delivery_state_init(ds, delivery, db->next++);
   pn_hash_put(db->deliveries, ds->id, delivery);
@@ -628,18 +620,72 @@ pn_session_t *pn_session(pn_connection_t *conn)
   pn_decref(ssn);
   ssn->links = pn_list(0, PN_REFCOUNT);
   ssn->context = 0;
+  ssn->incoming_capacity = 1024*1024;
+  ssn->incoming_bytes = 0;
+  ssn->outgoing_bytes = 0;
+  ssn->incoming_deliveries = 0;
+  ssn->outgoing_deliveries = 0;
 
   // begin transport state
   memset(&ssn->state, 0, sizeof(ssn->state));
   ssn->state.local_channel = (uint16_t)-1;
   ssn->state.remote_channel = (uint16_t)-1;
-  pn_delivery_map_init(&ssn->state.incoming, 0, PN_SESSION_WINDOW);
-  pn_delivery_map_init(&ssn->state.outgoing, 0, PN_SESSION_WINDOW);
+  pn_delivery_map_init(&ssn->state.incoming, 0);
+  pn_delivery_map_init(&ssn->state.outgoing, 0);
   ssn->state.local_handles = pn_hash(0, 0.75, PN_REFCOUNT);
   ssn->state.remote_handles = pn_hash(0, 0.75, PN_REFCOUNT);
   // end transport state
 
   return ssn;
+}
+
+size_t pn_session_get_incoming_capacity(pn_session_t *ssn)
+{
+  assert(ssn);
+  return ssn->incoming_capacity;
+}
+
+void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity)
+{
+  assert(ssn);
+  // XXX: should this trigger a flow?
+  ssn->incoming_capacity = capacity;
+}
+
+size_t pn_session_outgoing_bytes(pn_session_t *ssn)
+{
+  assert(ssn);
+  return ssn->outgoing_bytes;
+}
+
+size_t pn_session_incoming_bytes(pn_session_t *ssn)
+{
+  assert(ssn);
+  return ssn->incoming_bytes;
+}
+
+size_t pn_session_outgoing_window(pn_session_t *ssn)
+{
+  uint32_t size = ssn->connection->transport->remote_max_frame;
+  if (!size) {
+    return ssn->outgoing_deliveries;
+  } else {
+    pn_sequence_t frames = ssn->outgoing_bytes/size;
+    if (ssn->outgoing_bytes % size) {
+      frames++;
+    }
+    return pn_max(frames, ssn->outgoing_deliveries);
+  }
+}
+
+size_t pn_session_incoming_window(pn_session_t *ssn)
+{
+  uint32_t size = ssn->connection->transport->local_max_frame;
+  if (!size) {
+    return 2147483647; // biggest legal value
+  } else {
+    return (ssn->incoming_capacity - ssn->incoming_bytes)/size;
+  }
 }
 
 pn_state_t pn_session_state(pn_session_t *session)
@@ -1228,6 +1274,7 @@ void pn_advance_sender(pn_link_t *link)
   link->current->done = true;
   link->queued++;
   link->credit--;
+  link->session->outgoing_deliveries++;
   pn_add_tpwork(link->current);
   link->current = link->current->unsettled_next;
 }
@@ -1236,6 +1283,16 @@ void pn_advance_receiver(pn_link_t *link)
 {
   link->credit--;
   link->queued--;
+  link->session->incoming_deliveries--;
+
+  pn_delivery_t *current = link->current;
+  link->session->incoming_bytes -= pn_buffer_size(current->bytes);
+  pn_buffer_clear(current->bytes);
+
+  if (!link->session->state.incoming_window) {
+    pn_add_tpwork(current);
+  }
+
   link->current = link->current->unsettled_next;
 }
 
@@ -1553,6 +1610,11 @@ int pn_do_transfer(pn_dispatcher_t *disp)
                          &more);
   if (err) return err;
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+
+  if (!ssn->state.incoming_window) {
+    return pn_do_error(transport, "amqp:session:window-violation", "incoming session window exceeded");
+  }
+
   pn_link_t *link = pn_handle_state(ssn, handle);
   pn_delivery_t *delivery;
   if (link->unsettled_tail && !link->unsettled_tail->done) {
@@ -1560,13 +1622,10 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   } else {
     pn_delivery_map_t *incoming = &ssn->state.incoming;
 
-    if (!pn_delivery_map_available(incoming)) {
-      return pn_do_error(transport, "amqp:session:window-violation", "incoming session window exceeded");
-    }
-
     if (!ssn->state.incoming_init) {
       incoming->next = id;
       ssn->state.incoming_init = true;
+      ssn->incoming_deliveries++;
     }
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
@@ -1586,11 +1645,13 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   }
 
   pn_buffer_append(delivery->bytes, disp->payload, disp->size);
+  ssn->incoming_bytes += disp->size;
   delivery->done = !more;
 
   ssn->state.incoming_transfer_count++;
   ssn->state.incoming_window--;
 
+  // XXX: need better policy for when to refresh window
   if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
     pn_post_flow(transport, ssn, link);
   }
@@ -1613,9 +1674,9 @@ int pn_do_flow(pn_dispatcher_t *disp)
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
 
   if (inext_init) {
-    ssn->state.outgoing_window = inext + iwin - ssn->state.outgoing_transfer_count;
+    ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
   } else {
-    ssn->state.outgoing_window = iwin;
+    ssn->state.remote_incoming_window = iwin;
   }
 
   if (handle_init) {
@@ -1983,11 +2044,13 @@ int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_channel == (uint16_t) -1)
     {
       uint16_t channel = allocate_alias(transport->local_channels);
+      state->incoming_window = pn_session_incoming_window(ssn);
+      state->outgoing_window = pn_session_outgoing_window(ssn);
       pn_post_frame(transport->disp, channel, "DL[?HIII]", BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
-                    pn_delivery_map_available(&state->incoming),
-                    pn_delivery_map_available(&state->outgoing));
+                    state->incoming_window,
+                    state->outgoing_window);
       state->local_channel = channel;
       pn_hash_put(transport->local_channels, channel, ssn);
     }
@@ -2058,14 +2121,15 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 
 int pn_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t *link)
 {
-  ssn->state.incoming_window = pn_delivery_map_available(&ssn->state.incoming);
+  ssn->state.incoming_window = pn_session_incoming_window(ssn);
+  ssn->state.outgoing_window = pn_session_outgoing_window(ssn);
   bool linkq = (bool) link;
   pn_link_state_t *state = &link->state;
   return pn_post_frame(transport->disp, ssn->state.local_channel, "DL[?IIII?I?I?In?o]", FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
                        ssn->state.incoming_window,
-                       ssn->state.outgoing.next,
-                       pn_delivery_map_available(&ssn->state.outgoing),
+                       ssn->state.outgoing_transfer_count,
+                       ssn->state.outgoing_window,
                        linkq, linkq ? state->local_handle : 0,
                        linkq, linkq ? state->delivery_count : 0,
                        linkq, linkq ? state->link_credit : 0,
@@ -2171,33 +2235,40 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
   pn_link_state_t *link_state = &link->state;
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
     pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
-    if (!(*allocation_blocked) && !state && pn_delivery_map_available(&ssn_state->outgoing)) {
+    if (!(*allocation_blocked) && !state) {
       state = pn_delivery_map_push(&ssn_state->outgoing, delivery);
     } else {
+      // XXX: I'm pretty sure this can never actually happen, however
+      // we may need some logic to block allocation if a delivery is
+      // blocked by link credit
       *allocation_blocked = true;
     }
 
     if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
-        ssn_state->outgoing_window > 0 && link_state->link_credit > 0) {
+        ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       pn_set_payload(transport->disp, bytes.start, bytes.size);
-      pn_buffer_clear(delivery->bytes);
+      link->session->outgoing_bytes -= bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-      int err = pn_post_transfer_frame(transport->disp,
-                                       ssn_state->local_channel,
-                                       link_state->local_handle,
-                                       state->id, &tag,
-                                       0, // message-format
-                                       delivery->local_settled,
-                                       !delivery->done);
-      if (err) return err;
-      ssn_state->outgoing_transfer_count++;
-      ssn_state->outgoing_window--;
-      if (delivery->done) {
+      int count = pn_post_transfer_frame(transport->disp,
+                                         ssn_state->local_channel,
+                                         link_state->local_handle,
+                                         state->id, &tag,
+                                         0, // message-format
+                                         delivery->local_settled,
+                                         !delivery->done,
+                                         ssn_state->remote_incoming_window);
+      if (count < 0) return count;
+      ssn_state->outgoing_transfer_count += count;
+      ssn_state->remote_incoming_window -= count;
+
+      pn_buffer_trim(delivery->bytes, bytes.size - transport->disp->output_size, 0);
+      if (!pn_buffer_size(delivery->bytes) && delivery->done) {
         state->sent = true;
         link_state->delivery_count++;
         link_state->link_credit--;
         link->queued--;
+        link->session->outgoing_deliveries--;
       }
     }
   }
@@ -2228,13 +2299,13 @@ int pn_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *deliver
   }
 
   if (delivery->local_settled) {
-    size_t available = pn_delivery_map_available(&ssn->state.incoming);
     pn_full_settle(&ssn->state.incoming, delivery);
-    if (!ssn->state.incoming_window &&
-        pn_delivery_map_available(&ssn->state.incoming) > available) {
-      int err = pn_post_flow(transport, ssn, NULL);
-      if (err) return err;
-    }
+  }
+
+  // XXX: need to centralize this policy and improve it
+  if (!ssn->state.incoming_window) {
+    int err = pn_post_flow(transport, ssn, link);
+    if (err) return err;
   }
 
   return 0;
@@ -2621,6 +2692,7 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
   pn_delivery_t *current = pn_link_current(sender);
   if (!current) return PN_EOS;
   pn_buffer_append(current->bytes, bytes, n);
+  sender->session->outgoing_bytes += n;
   pn_add_tpwork(current);
   return n;
 }
@@ -2643,6 +2715,10 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
     size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
     pn_buffer_trim(delivery->bytes, size, 0);
     if (size) {
+      receiver->session->incoming_bytes -= size;
+      if (!receiver->session->state.incoming_window) {
+        pn_add_tpwork(delivery);
+      }
       return size;
     } else {
       return delivery->done ? PN_EOS : 0;

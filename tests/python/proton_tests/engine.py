@@ -899,7 +899,7 @@ class IdleTimeoutTest(Test):
 class CreditTest(Test):
 
   def setup(self):
-    self.snd, self.rcv = self.link("test-link")
+    self.snd, self.rcv = self.link("test-link", max_frame=(16*1024, 16*1024))
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
     self.snd.open()
@@ -909,7 +909,7 @@ class CreditTest(Test):
   def teardown(self):
     self.cleanup()
 
-  def testCreditSender(self):
+  def testCreditSender(self, count=1024):
     credit = self.snd.credit
     assert credit == 0, credit
     self.rcv.flow(10)
@@ -917,10 +917,10 @@ class CreditTest(Test):
     credit = self.snd.credit
     assert credit == 10, credit
 
-    self.rcv.flow(PN_SESSION_WINDOW)
+    self.rcv.flow(count)
     self.pump()
     credit = self.snd.credit
-    assert credit == 10 + PN_SESSION_WINDOW, credit
+    assert credit == 10 + count, credit
 
   def testCreditReceiver(self):
     self.rcv.flow(10)
@@ -937,70 +937,6 @@ class CreditTest(Test):
     assert c.tag == "tag", c.tag
     assert self.rcv.advance()
     assert self.rcv.credit == 9, self.rcv.credit
-    assert self.rcv.queued == 0, self.rcv.queued
-
-  def settle(self):
-    result = []
-    d = self.c1.work_head
-    while d:
-      if d.updated:
-        result.append(d.tag)
-        d.settle()
-      d = d.work_next
-    return result
-
-  def testBuffering(self):
-    self.rcv.flow(PN_SESSION_WINDOW + 10)
-    self.pump()
-
-    assert self.rcv.queued == 0, self.rcv.queued
-
-    idx = 0
-    while self.snd.credit:
-      d = self.snd.delivery("tag%s" % idx)
-      assert d
-      assert self.snd.advance()
-      self.pump()
-      idx += 1
-
-    assert idx == PN_SESSION_WINDOW + 10, idx
-
-    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
-
-    extra = self.snd.delivery("extra")
-    assert extra
-    assert self.snd.advance()
-    self.pump()
-
-    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
-
-    for i in range(10):
-      d = self.rcv.current
-      assert d.tag == "tag%s" % i, d.tag
-      assert self.rcv.advance()
-      d.settle()
-      self.pump()
-      assert self.rcv.queued == PN_SESSION_WINDOW - (i+1), self.rcv.queued
-
-    tags = self.settle()
-    assert tags == ["tag%s" % i for i in range(10)], tags
-    self.pump()
-
-    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
-
-    for i in range(PN_SESSION_WINDOW):
-      d = self.rcv.current
-      assert d, i
-      assert d.tag == "tag%s" % (i+10), d.tag
-      assert self.rcv.advance()
-      d.settle()
-      self.pump()
-
-    assert self.rcv.queued == 0, self.rcv.queued
-
-    tags = self.settle()
-    assert tags == ["tag%s" % (i+10) for i in range(PN_SESSION_WINDOW)]
-
     assert self.rcv.queued == 0, self.rcv.queued
 
   def _testBufferingOnClose(self, a, b):
@@ -1052,27 +988,6 @@ class CreditTest(Test):
 
   def testBufferingOnCloseConnectionConnection(self):
     self._testBufferingOnClose("connection", "connection")
-
-  def testCreditWithBuffering(self):
-    self.rcv.flow(PN_SESSION_WINDOW + 10)
-    self.pump()
-    assert self.snd.credit == PN_SESSION_WINDOW + 10, self.snd.credit
-    assert self.rcv.queued == 0, self.rcv.queued
-
-    idx = 0
-    while self.snd.credit:
-      d = self.snd.delivery("tag%s" % idx)
-      assert d
-      assert self.snd.advance()
-      self.pump()
-      idx += 1
-
-    assert idx == PN_SESSION_WINDOW + 10, idx
-    assert self.rcv.queued == PN_SESSION_WINDOW, self.rcv.queued
-
-    self.rcv.flow(1)
-    self.pump()
-    assert self.snd.credit == 1, self.snd.credit
 
   def testFullDrain(self):
     assert self.rcv.credit == 0
@@ -1197,6 +1112,116 @@ class CreditTest(Test):
     assert self.rcv.credit == 0
     assert self.rcv.queued == 0
 
+class SessionCreditTest(Test):
+
+  def teardown(self):
+    self.cleanup()
+
+  def testBuffering(self, count=32, size=1024, capacity=16*1024, max_frame=1024):
+    snd, rcv = self.link("test-link", max_frame=(max_frame, max_frame))
+    rcv.session.incoming_capacity = capacity
+    snd.open()
+    rcv.open()
+    rcv.flow(count)
+    self.pump()
+
+    assert count > 0
+
+    total_bytes = count * size
+
+    assert snd.session.outgoing_bytes == 0, snd.session.outgoing_bytes
+    assert rcv.session.incoming_bytes == 0, rcv.session.incoming_bytes
+    assert snd.queued == 0, snd.queued
+    assert rcv.queued == 0, rcv.queued
+
+    idx = 0
+    while snd.credit:
+      d = snd.delivery("tag%s" % idx)
+      assert d
+      n = snd.send("x"*size)
+      assert n == size, (n, size)
+      assert snd.advance()
+      self.pump()
+      idx += 1
+
+    assert idx == count, (idx, count)
+
+    assert snd.session.outgoing_bytes < total_bytes, (snd.session.outgoing_bytes, total_bytes)
+    assert rcv.session.incoming_bytes < capacity, (rcv.session.incoming_bytes, capacity)
+    if snd.session.outgoing_bytes > 0:
+      available = rcv.session.incoming_capacity - rcv.session.incoming_bytes
+      assert available < max_frame, available
+
+    for i in range(count):
+      d = rcv.current
+      pending = d.pending
+      before = rcv.session.incoming_bytes
+      assert rcv.advance()
+      after = rcv.session.incoming_bytes
+      assert before - after == pending
+      snd_before = snd.session.incoming_bytes
+      self.pump()
+      snd_after = snd.session.incoming_bytes
+
+      assert rcv.session.incoming_bytes < capacity
+      if snd_before > 0:
+        assert capacity - after <= max_frame
+        assert snd_before > snd_after
+      if snd_after > 0:
+        available = rcv.session.incoming_capacity - rcv.session.incoming_bytes
+        assert available < max_frame, available
+
+  def testBufferingSize16(self):
+    self.testBuffering(size=16)
+
+  def testBufferingSize256(self):
+    self.testBuffering(size=256)
+
+  def testBufferingSize512(self):
+    self.testBuffering(size=512)
+
+  def testBufferingSize2048(self):
+    self.testBuffering(size=2048)
+
+  def testBufferingSize1025(self):
+    self.testBuffering(size=1025)
+
+  def testBufferingSize1023(self):
+    self.testBuffering(size=1023)
+
+  def testBufferingSize989(self):
+    self.testBuffering(size=989)
+
+  def testBufferingSize1059(self):
+    self.testBuffering(size=1059)
+
+  def testCreditWithBuffering(self):
+    snd, rcv = self.link("test-link", max_frame=(1024, 1024))
+    rcv.session.incoming_capacity = 64*1024
+    snd.open()
+    rcv.open()
+    rcv.flow(128)
+    self.pump()
+
+    assert snd.credit == 128, snd.credit
+    assert rcv.queued == 0, rcv.queued
+
+    idx = 0
+    while snd.credit:
+      d = snd.delivery("tag%s" % idx)
+      snd.send("x"*1024)
+      assert d
+      assert snd.advance()
+      self.pump()
+      idx += 1
+
+    assert idx == 128, idx
+    assert rcv.queued < 128, rcv.queued
+
+    rcv.flow(1)
+    self.pump()
+    assert snd.credit == 1, snd.credit
+
 class SettlementTest(Test):
 
   def setup(self):
@@ -1265,6 +1290,53 @@ class SettlementTest(Test):
 
     assert self.snd.unsettled == 1, self.snd.unsettled
     assert self.rcv.unsettled == 0, self.rcv.unsettled
+
+  def testMultipleUnsettled(self, count=1024, size=1024):
+    self.rcv.flow(count)
+    self.pump()
+
+    assert self.snd.unsettled == 0, self.snd.unsettled
+    assert self.rcv.unsettled == 0, self.rcv.unsettled
+
+    unsettled = []
+
+    for i in range(count):
+      sd = self.snd.delivery("tag%s" % i)
+      assert sd
+      n = self.snd.send("x"*size)
+      assert n == size, n
+      assert self.snd.advance()
+      self.pump()
+
+      rd = self.rcv.current
+      assert rd, "did not receive delivery %s" % i
+      n = rd.pending
+      b = self.rcv.recv(n)
+      assert len(b) == n, (b, n)
+      rd.update(Delivery.ACCEPTED)
+      assert self.rcv.advance()
+      self.pump()
+      unsettled.append(rd)
+
+    assert self.rcv.unsettled == count
+
+    for rd in unsettled:
+      rd.settle()
+
+  def testMultipleUnsettled2K1K(self):
+    self.testMultipleUnsettled(2048, 1024)
+
+  def testMultipleUnsettled4K1K(self):
+    self.testMultipleUnsettled(4096, 1024)
+
+  def testMultipleUnsettled1K2K(self):
+    self.testMultipleUnsettled(1024, 2048)
+
+  def testMultipleUnsettled2K2K(self):
+    self.testMultipleUnsettled(2048, 2048)
+
+  def testMultipleUnsettled4K2K(self):
+    self.testMultipleUnsettled(4096, 2048)
 
 class PipelineTest(Test):
 

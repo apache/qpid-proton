@@ -285,42 +285,44 @@ class MessengerTest(Test):
     for t in trackers:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
-  def testIncomingQueueBiggerThanWindow(self):
+  def testIncomingQueueBiggerThanWindow(self, size=10):
     if IMPLEMENTATION_LANGUAGE == "Java":
       # Currently fails with proton-j. See https://issues.apache.org/jira/browse/PROTON-315
       raise Skipped
 
-    self.server.outgoing_window = 10
-    self.client.incoming_window = 10
+    self.server.outgoing_window = size
+    self.client.incoming_window = size
     self.start()
 
     msg = Message()
     msg.address = "amqp://0.0.0.0:12345"
     msg.subject = "Hello World!"
 
-    for i in range(20):
+    for i in range(2*size):
       self.client.put(msg)
 
-    while self.client.incoming < 20:
-      self.client.recv(20 - self.client.incoming)
-
     trackers = []
-    while self.client.incoming:
-      t = self.client.get(msg)
-      assert self.client.status(t) is PENDING, (t, self.client.status(t))
-      trackers.append(t)
+    while len(trackers) < 2*size:
+      self.client.recv(2*size - len(trackers))
+      while self.client.incoming:
+        t = self.client.get(msg)
+        assert self.client.status(t) is PENDING, (t, self.client.status(t))
+        trackers.append(t)
 
-    for t in trackers[:10]:
+    for t in trackers[:size]:
       assert self.client.status(t) is None, (t, self.client.status(t))
-    for t in trackers[10:]:
+    for t in trackers[size:]:
       assert self.client.status(t) is PENDING, (t, self.client.status(t))
 
     self.client.accept()
 
-    for t in trackers[:10]:
+    for t in trackers[:size]:
       assert self.client.status(t) is None, (t, self.client.status(t))
-    for t in trackers[10:]:
+    for t in trackers[size:]:
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
+
+  def testIncomingQueueBiggerThanSessionWindow(self):
+    self.testIncomingQueueBiggerThanWindow(2048)
 
   def test_proton222(self):
     self.start()

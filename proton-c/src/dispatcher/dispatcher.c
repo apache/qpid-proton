@@ -266,9 +266,11 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
                            const pn_bytes_t *tag,
                            uint32_t message_format,
                            bool settled,
-                           bool more)
+                           bool more,
+                           pn_sequence_t frame_limit)
 {
   bool more_flag = more;
+  int framecount = 0;
 
   // create preformatives, assuming 'more' flag need not change
 
@@ -323,7 +325,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
       goto encode_performatives;
     }
 
-    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, disp->output_size);
+    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, available);
 
     memmove( buf.start + buf.size, disp->output_payload, available);
     disp->output_payload += available;
@@ -342,14 +344,15 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
       disp->output = (char *) realloc(disp->output, disp->capacity);
     }
     disp->output_frames_ct += 1;
+    framecount++;
     if (disp->trace & PN_TRACE_RAW) {
       fprintf(stderr, "RAW: \"");
       pn_fprint_data(stderr, disp->output + disp->available, n);
       fprintf(stderr, "\"\n");
     }
     disp->available += n;
-  } while (disp->output_size > 0);
+  } while (disp->output_size > 0 && framecount < frame_limit);
 
   disp->output_payload = NULL;
-  return 0;
+  return framecount;
 }

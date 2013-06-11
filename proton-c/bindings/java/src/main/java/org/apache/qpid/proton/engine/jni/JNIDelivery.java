@@ -250,4 +250,11 @@ public class JNIDelivery implements Delivery
         }
         super.finalize();
     }
+
+    @ProtonCEquivalent("pn_delivery_pending")
+    public int pending()
+    {
+        return (int) Proton.pn_delivery_pending(_impl);
+    }
+
 }

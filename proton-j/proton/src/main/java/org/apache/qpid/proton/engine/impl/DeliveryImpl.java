@@ -486,4 +486,9 @@ public class DeliveryImpl implements Delivery
         return builder.toString();
     }
 
+    public int pending()
+    {
+        return _dataSize;
+    }
+
 }

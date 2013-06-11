@@ -67,7 +67,7 @@ public interface Transport extends Endpoint
 
     /** the lower bound for the agreed maximum frame size (in bytes). */
     public int MIN_MAX_FRAME_SIZE = 512;
-    public int SESSION_WINDOW = 1024;
+    public int SESSION_WINDOW = 16*1024;
     public int END_OF_STREAM = -1;
 
     public void bind(Connection connection);

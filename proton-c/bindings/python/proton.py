@@ -1993,6 +1993,22 @@ class Session(Endpoint):
   def _get_remote_cond_impl(self):
     return pn_session_remote_condition(self._ssn)
 
+  def _get_incoming_capacity(self):
+    return pn_session_get_incoming_capacity(self._ssn)
+
+  def _set_incoming_capacity(self, capacity):
+    pn_session_set_incoming_capacity(self._ssn, capacity)
+
+  incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity)
+
+  @property
+  def outgoing_bytes(self):
+    return pn_session_outgoing_bytes(self._ssn)
+
+  @property
+  def incoming_bytes(self):
+    return pn_session_incoming_bytes(self._ssn)
+
   def open(self):
     pn_session_open(self._ssn)
 
@@ -2262,6 +2278,14 @@ class Delivery(object):
 
   def update(self, state):
     pn_delivery_update(self._dlv, state)
+
+  @property
+  def pending(self):
+    return pn_delivery_pending(self._dlv)
+
+  @property
+  def partial(self):
+    return pn_delivery_partial(self._dlv)
 
   @property
   def local_state(self):
@@ -2672,7 +2696,6 @@ class Driver(object):
 __all__ = [
            "API_LANGUAGE",
            "IMPLEMENTATION_LANGUAGE",
-           "PN_SESSION_WINDOW",
            "ACCEPTED",
            "AUTOMATIC",
            "PENDING",

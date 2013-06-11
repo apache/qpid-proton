@@ -446,7 +446,9 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   char *encoded = pn_buffer_bytes(buf).start;
   ssize_t n = pn_link_recv(receiver, encoded, pending);
   if (n != (ssize_t) pending) {
-    return pn_error_format(messenger->error, n, "didn't receive pending bytes: %" PN_ZI, n);
+    return pn_error_format(messenger->error, n,
+                           "didn't receive pending bytes: %" PN_ZI " %" PN_ZI,
+                           n, pending);
   }
   n = pn_link_recv(receiver, encoded + pending, 1);
   pn_link_advance(receiver);
@@ -478,7 +480,10 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
     }
     pn_delivery_clear(d);
     if (pn_delivery_readable(d)) {
-      pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
+      int err = pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
+      if (err) {
+        fprintf(stderr, "%s\n", pn_messenger_error(messenger));
+      }
     }
     d = pn_work_next(d);
   }
@@ -947,12 +952,6 @@ int pn_messenger_get_outgoing_window(pn_messenger_t *messenger)
 
 int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window)
 {
-  if (window >= PN_SESSION_WINDOW) {
-    return pn_error_format(messenger->error, PN_ARG_ERR,
-                           "specified window (%i) exceeds max (%i)",
-                           window, PN_SESSION_WINDOW);
-  }
-
   pni_store_set_window(messenger->outgoing, window);
   return 0;
 }
@@ -964,12 +963,6 @@ int pn_messenger_get_incoming_window(pn_messenger_t *messenger)
 
 int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window)
 {
-  if (window >= PN_SESSION_WINDOW) {
-    return pn_error_format(messenger->error, PN_ARG_ERR,
-                           "specified window (%i) exceeds max (%i)",
-                           window, PN_SESSION_WINDOW);
-  }
-
   pni_store_set_window(messenger->incoming, window);
   return 0;
 }

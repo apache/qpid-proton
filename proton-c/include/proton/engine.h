@@ -111,8 +111,6 @@ typedef int pn_trace_t;
 #define PN_TRACE_FRM (2)
 #define PN_TRACE_DRV (4)
 
-#define PN_SESSION_WINDOW (1024)
-
 // connection
 
 /** Factory to construct a new Connection.
@@ -181,6 +179,12 @@ PN_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
  * @return pointer to new session
  */
 PN_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
+
+PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *ssn);
+PN_EXTERN void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity);
+
+PN_EXTERN size_t pn_session_outgoing_bytes(pn_session_t *ssn);
+PN_EXTERN size_t pn_session_incoming_bytes(pn_session_t *ssn);
 
 /** Factory for creating a transport.
  *

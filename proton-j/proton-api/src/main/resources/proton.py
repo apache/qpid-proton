@@ -56,8 +56,6 @@ class Constant(object):
 class Skipped(Exception):
   skipped = True
 
-PN_SESSION_WINDOW = JTransport.SESSION_WINDOW
-
 PENDING = "PENDING"
 ACCEPTED = "ACCEPTED"
 REJECTED = "REJECTED"
@@ -507,6 +505,10 @@ class Delivery(object):
   @property
   def work_next(self):
     return wrap_delivery(self.impl.getWorkNext())
+
+  @property
+  def pending(self):
+    return self.impl.pending()
 
 class Transport(object):
 
@@ -1461,7 +1463,6 @@ __all__ = [
            "MANUAL",
            "PENDING",
            "REJECTED",
-           "PN_SESSION_WINDOW",
            "char",
            "Condition",
            "Connection",

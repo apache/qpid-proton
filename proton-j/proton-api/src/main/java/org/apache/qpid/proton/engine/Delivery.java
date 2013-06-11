@@ -99,4 +99,7 @@ public interface Delivery
     public boolean isUpdated();
 
     public boolean isPartial();
+
+    public int pending();
+
 }
