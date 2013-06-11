@@ -60,7 +60,6 @@ end
 # Generates a random array of a random type.
 # Returns both the array and the type.
 def random_array(length, described = false, description = nil)
-  puts "Returning an array with #{length} values"
   result = []
   type = rand(128) % 4
   low = rand(512)
@@ -85,7 +84,6 @@ def random_array(length, described = false, description = nil)
 
   result.proton_array_header = Qpid::Proton::ArrayHeader.new(type, description)
 
-  puts "result = #{result}"
   return result
 end
 
