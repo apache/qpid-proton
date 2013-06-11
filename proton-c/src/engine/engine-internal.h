@@ -126,6 +126,7 @@ struct pn_transport_t {
   char *remote_hostname;
   pn_data_t *remote_offered_capabilities;
   pn_data_t *remote_desired_capabilities;
+  pn_data_t *remote_properties;
   //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
 #define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
   uint32_t   local_max_frame;
@@ -186,6 +187,7 @@ struct pn_connection_t {
   pn_string_t *hostname;
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;
+  pn_data_t *properties;
   void *context;
 };
 

@@ -1865,6 +1865,7 @@ class Connection(Endpoint):
       pn_connection_set_context(self._conn, self)
     self.offered_capabilities = None
     self.desired_capabilities = None
+    self.properties = None
 
   def __del__(self):
     if hasattr(self, "_conn"):
@@ -1906,7 +1907,7 @@ class Connection(Endpoint):
   def remote_hostname(self):
     return pn_connection_remote_hostname(self._conn)
 
-  def _dat2cap(self, dimpl):
+  def _dat2obj(self, dimpl):
     d = Data(dimpl)
     d.rewind()
     d.next()
@@ -1916,22 +1917,27 @@ class Connection(Endpoint):
 
   @property
   def remote_offered_capabilities(self):
-    return self._dat2cap(pn_connection_remote_offered_capabilities(self._conn))
+    return self._dat2obj(pn_connection_remote_offered_capabilities(self._conn))
 
   @property
   def remote_desired_capabilities(self):
-    return self._dat2cap(pn_connection_remote_desired_capabilities(self._conn))
+    return self._dat2obj(pn_connection_remote_desired_capabilities(self._conn))
 
-  def _cap2data(self, obj, dimpl):
+  @property
+  def remote_properties(self):
+    return self._dat2obj(pn_connection_remote_properties(self._conn))
+
+  def _obj2dat(self, obj, dimpl):
     if obj is not None:
       d = Data(dimpl)
       d.put_object(obj)
 
   def open(self):
-    self._cap2data(self.offered_capabilities,
-                   pn_connection_offered_capabilities(self._conn))
-    self._cap2data(self.desired_capabilities,
-                   pn_connection_desired_capabilities(self._conn))
+    self._obj2dat(self.offered_capabilities,
+                  pn_connection_offered_capabilities(self._conn))
+    self._obj2dat(self.desired_capabilities,
+                  pn_connection_desired_capabilities(self._conn))
+    self._obj2dat(self.properties, pn_connection_properties(self._conn))
     pn_connection_open(self._conn)
 
   def close(self):

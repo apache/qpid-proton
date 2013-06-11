@@ -185,8 +185,9 @@ void pn_transport_free(pn_transport_t *transport)
   pn_dispatcher_free(transport->disp);
   free(transport->remote_container);
   free(transport->remote_hostname);
-  pn_data_free(transport->remote_offered_capabilities);
-  pn_data_free(transport->remote_desired_capabilities);
+  pn_free(transport->remote_offered_capabilities);
+  pn_free(transport->remote_desired_capabilities);
+  pn_free(transport->remote_properties);
   pn_error_free(transport->error);
   pn_condition_tini(&transport->remote_condition);
   pn_free(transport->local_channels);
@@ -320,6 +321,7 @@ static void pn_connection_finalize(void *object)
   pn_free(conn->hostname);
   pn_free(conn->offered_capabilities);
   pn_free(conn->desired_capabilities);
+  pn_free(conn->properties);
   pn_endpoint_tini(&conn->endpoint);
 }
 
@@ -345,6 +347,7 @@ pn_connection_t *pn_connection()
   conn->hostname = pn_string(NULL);
   conn->offered_capabilities = pn_data(16);
   conn->desired_capabilities = pn_data(16);
+  conn->properties = pn_data(16);
 
   return conn;
 }
@@ -385,47 +388,61 @@ void pn_connection_set_hostname(pn_connection_t *connection, const char *hostnam
 
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
 {
+  assert(connection);
   return connection->offered_capabilities;
 }
 
 pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection)
 {
+  assert(connection);
   return connection->desired_capabilities;
+}
+
+pn_data_t *pn_connection_properties(pn_connection_t *connection)
+{
+  assert(connection);
+  return connection->properties;
 }
 
 pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection)
 {
-  if (!connection) return NULL;
+  assert(connection);
   return connection->transport ? connection->transport->remote_offered_capabilities : NULL;
 }
 
 pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection)
 {
-  if (!connection) return NULL;
+  assert(connection);
   return connection->transport ? connection->transport->remote_desired_capabilities : NULL;
+}
+
+pn_data_t *pn_connection_remote_properties(pn_connection_t *connection)
+{
+  assert(connection);
+  return connection->transport ? connection->transport->remote_properties : NULL;
 }
 
 const char *pn_connection_remote_container(pn_connection_t *connection)
 {
-  if (!connection) return NULL;
+  assert(connection);
   return connection->transport ? connection->transport->remote_container : NULL;
 }
 
 const char *pn_connection_remote_hostname(pn_connection_t *connection)
 {
-  if (!connection) return NULL;
+  assert(connection);
   return connection->transport ? connection->transport->remote_hostname : NULL;
 }
 
 pn_delivery_t *pn_work_head(pn_connection_t *connection)
 {
-  if (!connection) return NULL;
+  assert(connection);
   return connection->work_head;
 }
 
 pn_delivery_t *pn_work_next(pn_delivery_t *delivery)
 {
-  if (!delivery) return NULL;
+  assert(delivery);
 
   if (delivery->work)
     return delivery->work_next;
@@ -769,6 +786,7 @@ void pn_transport_init(pn_transport_t *transport)
   transport->last_bytes_output = 0;
   transport->remote_offered_capabilities = pn_data(16);
   transport->remote_desired_capabilities = pn_data(16);
+  transport->remote_properties = pn_data(16);
   transport->error = pn_error();
   pn_condition_init(&transport->remote_condition);
 
@@ -1408,12 +1426,14 @@ int pn_do_open(pn_dispatcher_t *disp)
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
-  int err = pn_scan_args(disp, "D.[?S?SI.I..CC]", &container_q,
+  pn_data_clear(transport->remote_properties);
+  int err = pn_scan_args(disp, "D.[?S?SI.I..CCC]", &container_q,
                          &remote_container, &hostname_q, &remote_hostname,
                          &transport->remote_max_frame,
                          &transport->remote_idle_timeout,
                          transport->remote_offered_capabilities,
-                         transport->remote_desired_capabilities);
+                         transport->remote_desired_capabilities,
+                         transport->remote_properties);
   if (err) return err;
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
@@ -2007,14 +2027,15 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
-      int err = pn_post_frame(transport->disp, 0, "DL[SS?In?InnCC]", OPEN,
+      int err = pn_post_frame(transport->disp, 0, "DL[SS?In?InnCCC]", OPEN,
                               pn_string_get(connection->container),
                               pn_string_get(connection->hostname),
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
                               (bool)transport->local_idle_timeout, transport->local_idle_timeout,
                               connection->offered_capabilities,
-                              connection->desired_capabilities);
+                              connection->desired_capabilities,
+                              connection->properties);
       if (err) return err;
       transport->open_sent = true;
     }

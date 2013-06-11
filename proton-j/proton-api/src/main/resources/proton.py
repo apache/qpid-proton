@@ -38,7 +38,7 @@ from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, Amqp
 from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedByte, UnsignedShort, Symbol, \
     Decimal32, Decimal64, Decimal128
 from jarray import zeros, array
-from java.util import EnumSet, UUID as JUUID, Date as JDate
+from java.util import EnumSet, UUID as JUUID, Date as JDate, HashMap
 from java.util.concurrent import TimeoutException as Timeout
 from java.nio import ByteBuffer
 from java.lang import Character as JCharacter, String as JString, Integer as JInteger
@@ -180,28 +180,6 @@ class Condition:
         self.description == o.description and \
         self.info == o.info)
 
-def convertToPyArray(t,a,f):
-    if a == None or len(a) == 0:
-        return None
-
-    return Array(UNDESCRIBED, t, *map(f,a))
-
-
-arrayElementMappings = {
-    JData.DataType.SYMBOL: lambda s: Symbol.valueOf(s)
-    }
-
-
-arrayTypeMappings = {
-    JData.DataType.SYMBOL: Symbol
-    }
-
-def convertFromPyArray(a):
-    if a == None:
-        return None
-
-    return array(map(arrayElementMappings[a.type],a.elements), arrayTypeMappings[a.type])
-
 def wrap_connection(impl):
   if impl: return Connection(_impl = impl)
 
@@ -210,8 +188,9 @@ class Connection(Endpoint):
   def __init__(self, _impl=None):
     Endpoint.__init__(self)
     self.impl = _impl or engineFactory.createConnection()
-    self._desired_capabilities = None
-    self._offered_capabilities = None
+    self.desired_capabilities = None
+    self.offered_capabilities = None
+    self.properties = None
 
   @property
   def writable(self):
@@ -256,35 +235,23 @@ class Connection(Endpoint):
       self.impl.setRemoteHostname(hostname)
   remote_hostname = property(_get_remote_hostname, _set_remote_hostname)
 
-  def _get_remote_offered_capabilities(self):
+  @property
+  def remote_offered_capabilities(self):
       return convertToPyArray(Data.SYMBOL, self.impl.getRemoteOfferedCapabilities(),symbol)
-  def _set_remote_offered_capabilities(self, capabilities):
-      self.impl.setRemoteOfferedCapabilities(convertFromPyArray(capabilities))
-  remote_offered_capabilities = property(_get_remote_offered_capabilities, _set_remote_offered_capabilities)
-  
-  def _get_remote_desired_capabilities(self):
-      return convertToPyArray(Data.SYMBOL, self.impl.getRemoteDesiredCapabilities(),symbol)
-  def _set_remote_desired_capabilities(self, capabilities):
-      self.impl.setRemoteDesiredCapabilities(convertFromPyArray(capabilities))
-  remote_desired_capabilities = property(_get_remote_desired_capabilities, _set_remote_desired_capabilities)
-  
-  
-  def _get_offered_capabilities(self):
-      return self._offered_capabilities
-  def _set_offered_capabilities(self, capabilities):
-      self._offered_capabilities = capabilities
-      self.impl.setOfferedCapabilities(convertFromPyArray(capabilities))
-  offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities)
-  
-  def _get_desired_capabilities(self):
-      return self._desired_capabilities
-  def _set_desired_capabilities(self, capabilities):
-      self._desired_capabilities = capabilities
-      self.impl.setDesiredCapabilities(convertFromPyArray(capabilities))
-  desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities)
-  
-  
 
+  @property
+  def remote_desired_capabilities(self):
+      return convertToPyArray(Data.SYMBOL, self.impl.getRemoteDesiredCapabilities(),symbol)
+
+  @property
+  def remote_properties(self):
+    return J2PY(self.impl.getRemoteProperties());
+
+  def open(self):
+    self.impl.setOfferedCapabilities(PY2J(self.offered_capabilities))
+    self.impl.setDesiredCapabilities(PY2J(self.desired_capabilities))
+    self.impl.setProperties(PY2J(self.properties))
+    Endpoint.open(self)
 
 def wrap_session(impl):
   # XXX
@@ -1454,6 +1421,46 @@ class Listener(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
     raise ProtonUnsupportedOperationException()
+
+def convertToPyArray(t,a,f):
+    if a == None or len(a) == 0:
+        return None
+
+    return Array(UNDESCRIBED, t, *map(f,a))
+
+
+arrayElementMappings = {
+    JData.DataType.SYMBOL: lambda s: Symbol.valueOf(s)
+    }
+
+arrayTypeMappings = {
+    JData.DataType.SYMBOL: Symbol
+    }
+
+conversions_J2PY = {
+  dict: lambda d: dict([(J2PY(k), J2PY(v)) for k, v in d.items()]),
+  HashMap: lambda m: dict([(J2PY(e.getKey()), J2PY(e.getValue())) for e in m.entrySet()]),
+  list: lambda l: [J2PY(x) for x in l],
+  Symbol: lambda s: symbol(s.toString())
+  }
+
+conversions_PY2J = {
+  dict: lambda d: dict([(PY2J(k), PY2J(v)) for k, v in d.items()]),
+  list: lambda l: [PY2J(x) for x in l],
+  symbol: lambda s: Symbol.valueOf(s),
+  Array: lambda a: array(map(arrayElementMappings[a.type], a.elements),
+                         arrayTypeMappings[a.type])
+  }
+
+def identity(x): return x
+
+def J2PY(obj):
+  result = conversions_J2PY.get(type(obj), identity)(obj)
+  return result
+
+def PY2J(obj):
+  result = conversions_PY2J.get(type(obj), identity)(obj)
+  return result
 
 __all__ = [
            "ACCEPTED",

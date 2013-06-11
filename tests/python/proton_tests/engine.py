@@ -186,6 +186,16 @@ class ConnectionTest(Test):
     rcond = self.c2.remote_condition
     assert rcond == cond, (rcond, cond)
 
+  def test_properties(self, p1={symbol("key"): symbol("value")}, p2=None):
+    self.c1.properties = p1
+    self.c2.properties = p2
+    self.c1.open()
+    self.c2.open()
+    self.pump()
+
+    assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
+    assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
+
 class SessionTest(Test):
 
   def setup(self):
