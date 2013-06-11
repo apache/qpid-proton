@@ -514,18 +514,18 @@ is_deeply((\@result, \@values), "List was populated correctly");
 
 # can put a map
 $data = qpid::proton::Data->new();
-my %map = random_hash(100);
+my $map = random_hash(100);
 $data->put_map;
 $data->enter;
-foreach my $key (keys %map) {
+foreach my $key (keys %{$map}) {
     $data->put_string($key);
-    $data->put_string($map{$key});
+    $data->put_string($map->{$key});
 }
 $data->exit;
 
 my $result = {};
 $data->enter;
-foreach my $key (keys %map) {
+foreach my $key (keys %{$map}) {
     $data->next;
     my $rkey = $data->get_string;
     $data->next;
@@ -533,4 +533,4 @@ foreach my $key (keys %map) {
     $result{$rkey} = $rval;
 }
 $data->exit;
-ok(eq_hash(\%result, \%map), "Map was populated correctly");
+ok(eq_hash(\%result, \%{$map}), "Map was populated correctly");
