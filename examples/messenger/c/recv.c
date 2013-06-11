@@ -96,9 +96,9 @@ int main(int argc, char** argv)
     }
   }
 
-  if((argc - optind) > 0)
+  if (optind < argc)
   {
-    address = argv[argc - optind];
+    address = argv[optind];
   }
 
   pn_message_t * message;

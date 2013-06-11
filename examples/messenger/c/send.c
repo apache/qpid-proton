@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     }
   }
 
-  if((argc - optind) > 0) msgtext = argv[argc - optind];
+  if (optind < argc) msgtext = argv[optind];
 
   pn_message_t * message;
   pn_messenger_t * messenger;
