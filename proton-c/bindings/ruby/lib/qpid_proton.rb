@@ -18,6 +18,7 @@
 #
 
 require "cproton"
+require "date"
 
 require "qpid_proton/described"
 require "qpid_proton/mapping"
