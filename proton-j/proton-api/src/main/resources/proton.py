@@ -523,11 +523,11 @@ class Transport(object):
 
 
   def _get_max_frame_size(self):
-    #return pn_transport_get_max_frame(self._trans)
-    raise ProtonUnsupportedOperationException()
+    return self.impl.getMaxFrameSize()
+
 
   def _set_max_frame_size(self, value):
-    #pn_transport_set_max_frame(self._trans, value)
+    self.impl.setMaxFrameSize(value)
     raise ProtonUnsupportedOperationException()
 
   max_frame_size = property(_get_max_frame_size, _set_max_frame_size,

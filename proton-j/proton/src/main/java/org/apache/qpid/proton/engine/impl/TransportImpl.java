@@ -68,7 +68,7 @@ public class TransportImpl extends EndpointImpl
 {
     private static final byte AMQP_FRAME_TYPE = 0;
 
-    private final FrameParser _frameParser;
+    private FrameParser _frameParser;
 
     private ConnectionImpl _connectionEndpoint;
 
@@ -91,7 +91,7 @@ public class TransportImpl extends EndpointImpl
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
 
-    private final ByteBuffer _outputOverflowBuffer;
+    private ByteBuffer _outputOverflowBuffer;
 
     private boolean _closeReceived;
     private Open _open;
@@ -102,6 +102,8 @@ public class TransportImpl extends EndpointImpl
     private ByteBuffer _lastInputBuffer;
 
     private TransportResult _lastTransportResult = TransportResultFactory.ok();
+
+    private boolean _init;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -121,11 +123,33 @@ public class TransportImpl extends EndpointImpl
         AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
 
         _maxFrameSize = maxFrameSize;
-        _frameParser = new FrameParser(this, _decoder, maxFrameSize);
 
-        _inputProcessor = _frameParser;
-        _outputProcessor = new TransportOutputAdaptor(this, maxFrameSize);
-        _outputOverflowBuffer = newReadableBuffer(maxFrameSize);
+    }
+
+    private void init()
+    {
+        if(!_init)
+        {
+            _init = true;
+            _frameParser = new FrameParser(this, _decoder, _maxFrameSize);
+            _inputProcessor = _frameParser;
+            _outputProcessor = new TransportOutputAdaptor(this, _maxFrameSize);
+            _outputOverflowBuffer = newReadableBuffer(_maxFrameSize);
+        }
+    }
+
+    public int getMaxFrameSize()
+    {
+        return _maxFrameSize;
+    }
+
+    public void setMaxFrameSize(int maxFrameSize)
+    {
+        if(_init)
+        {
+            throw new IllegalStateException("Cannot set max frame size after transport has been initialised");
+        }
+        _maxFrameSize = maxFrameSize;
     }
 
     @Override
@@ -134,7 +158,6 @@ public class TransportImpl extends EndpointImpl
         // TODO - check if already bound
         ((ConnectionImpl) conn).setBound(true);
         _connectionEndpoint = (ConnectionImpl) conn;
-
 
         _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
         _remoteSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
@@ -231,6 +254,7 @@ public class TransportImpl extends EndpointImpl
     {
         if(_sasl == null)
         {
+            init();
             _sasl = new SaslImpl(_maxFrameSize);
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
@@ -252,6 +276,7 @@ public class TransportImpl extends EndpointImpl
     {
         if (_ssl == null)
         {
+            init();
             _ssl = new SslImpl(sslDomain, sslPeerDetails);
             TransportWrapper transportWrapper = _ssl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
@@ -1163,6 +1188,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public ByteBuffer getInputBuffer()
     {
+        init();
         _lastTransportResult.checkIsOk();
         _lastInputBuffer = _inputProcessor.getInputBuffer();
         return _lastInputBuffer;
@@ -1183,6 +1209,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public ByteBuffer getOutputBuffer()
     {
+        init();
         return _outputProcessor.getOutputBuffer();
     }
 

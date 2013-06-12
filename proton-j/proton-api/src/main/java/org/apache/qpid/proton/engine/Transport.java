@@ -164,4 +164,13 @@ public interface Transport extends Endpoint
      */
     Ssl ssl(SslDomain sslDomain);
 
+
+    /**
+     * Get the maximum frame size for the transport
+     *
+     * @return the maximum frame size
+     */
+    int getMaxFrameSize();
+
+    void setMaxFrameSize(int size);
 }
