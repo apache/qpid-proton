@@ -49,20 +49,15 @@ public class DeliveryImpl implements Delivery
     private static final int DELIVERY_STATE_CHANGED = 1;
     private static final int ABLE_TO_SEND = 2;
     private static final int IO_WORK = 4;
+    private static final int DELIVERY_SETTLED = 8;
 
 
     /**
      * A bit-mask representing the outstanding work on this delivery received from the transport layer
      * that has not yet been processed by the application.
-     * Note that contrast with {@link #_transportFlags}.
      */
     private int _flags = (byte) 0;
 
-    /**
-     * A bit-mask representing the outstanding work done by the application on this delivery
-     * that has not yet been processed by the transport layer
-     */
-    private int _transportFlags = (byte) 0;
     private TransportDelivery _transportDelivery;
     private byte[] _data;
     private int _dataSize;
@@ -118,7 +113,7 @@ public class DeliveryImpl implements Delivery
         _deliveryState = state;
         if(!_remoteSettled)
         {
-            setTransportFlag(DELIVERY_STATE_CHANGED);
+            addToTransportWorkList();
         }
     }
 
@@ -128,7 +123,7 @@ public class DeliveryImpl implements Delivery
         _link.decrementUnsettled();
         if(!_remoteSettled)
         {
-            setTransportFlag(DELIVERY_STATE_CHANGED);
+            addToTransportWorkList();
         }
         else
         {
@@ -303,16 +298,6 @@ public class DeliveryImpl implements Delivery
     }
 
 
-    private void setTransportFlag(int flag)
-    {
-        boolean addWork = (_transportFlags == 0);
-        _transportFlags = _transportFlags | flag;
-        if(addWork)
-        {
-            addToTransportWorkList();
-        }
-    }
-
     DeliveryImpl getTransportWorkNext()
     {
         return _transportWorkNext;
@@ -332,11 +317,6 @@ public class DeliveryImpl implements Delivery
     void setTransportWorkPrev(DeliveryImpl transportWorkPrev)
     {
         _transportWorkPrev = transportWorkPrev;
-    }
-
-    boolean isLocalStateChange()
-    {
-        return (_transportFlags & DELIVERY_STATE_CHANGED) != 0;
     }
 
     TransportDelivery getTransportDelivery()
@@ -476,7 +456,6 @@ public class DeliveryImpl implements Delivery
             .append(", _remoteSettled=").append(_remoteSettled)
             .append(", _remoteDeliveryState=").append(_remoteDeliveryState)
             .append(", _flags=").append(_flags)
-            .append(", _transportFlags=").append(_transportFlags)
             .append(", _transportDelivery=").append(_transportDelivery)
             .append(", _dataSize=").append(_dataSize)
             .append(", _complete=").append(_complete)

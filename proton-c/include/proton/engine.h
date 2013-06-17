@@ -65,6 +65,8 @@ typedef enum {
   PN_CONNECTION_CLOSE,
   PN_NEVER
 } pn_expiry_policy_t;
+
+typedef struct pn_disposition_t pn_disposition_t;
 typedef struct pn_delivery_t pn_delivery_t;
 
 typedef struct pn_delivery_tag_t {
@@ -91,18 +93,17 @@ typedef int pn_state_t;     /**< encodes the state of an endpoint */
 #define PN_LOCAL_MASK (PN_LOCAL_UNINIT | PN_LOCAL_ACTIVE | PN_LOCAL_CLOSED)
 #define PN_REMOTE_MASK (PN_REMOTE_UNINIT | PN_REMOTE_ACTIVE | PN_REMOTE_CLOSED)
 
-/** @enum pn_disposition_t
+/**
  * The state/outcome of a message transfer.
  *
  * @todo document each value
  */
-typedef enum pn_disposition_t {
-  PN_RECEIVED=1,
-  PN_ACCEPTED=2,
-  PN_REJECTED=3,
-  PN_RELEASED=4,
-  PN_MODIFIED=5
-} pn_disposition_t;
+
+#define PN_RECEIVED (0x0000000000000023)
+#define PN_ACCEPTED (0x0000000000000024)
+#define PN_REJECTED (0x0000000000000025)
+#define PN_RELEASED (0x0000000000000026)
+#define PN_MODIFIED (0x0000000000000027)
 
 typedef int pn_trace_t;
 
@@ -489,15 +490,17 @@ PN_EXTERN pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 PN_EXTERN pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
 PN_EXTERN pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
 // how do we do delivery state?
-PN_EXTERN pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery);
-PN_EXTERN pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery);
+PN_EXTERN pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery);
+PN_EXTERN uint64_t pn_delivery_local_state(pn_delivery_t *delivery);
+PN_EXTERN pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery);
+PN_EXTERN uint64_t pn_delivery_remote_state(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_settled(pn_delivery_t *delivery);
 PN_EXTERN size_t pn_delivery_pending(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_partial(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_writable(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_readable(pn_delivery_t *delivery);
 PN_EXTERN bool pn_delivery_updated(pn_delivery_t *delivery);
-PN_EXTERN void pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition);
+PN_EXTERN void pn_delivery_update(pn_delivery_t *delivery, uint64_t state);
 PN_EXTERN void pn_delivery_clear(pn_delivery_t *delivery);
 //int pn_delivery_format(pn_delivery_t *delivery);
 PN_EXTERN void pn_delivery_settle(pn_delivery_t *delivery);
@@ -505,6 +508,20 @@ PN_EXTERN void pn_delivery_dump(pn_delivery_t *delivery);
 PN_EXTERN void *pn_delivery_get_context(pn_delivery_t *delivery);
 PN_EXTERN void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
 
+// disposition
+PN_EXTERN uint64_t pn_disposition_type(pn_disposition_t *disposition);
+PN_EXTERN pn_data_t *pn_disposition_data(pn_disposition_t *disposition);
+PN_EXTERN uint32_t pn_disposition_get_section_number(pn_disposition_t *disposition);
+PN_EXTERN void pn_disposition_set_section_number(pn_disposition_t *disposition, uint32_t section_number);
+PN_EXTERN uint64_t pn_disposition_get_section_offset(pn_disposition_t *disposition);
+PN_EXTERN void pn_disposition_set_section_offset(pn_disposition_t *disposition, uint64_t section_offset);
+PN_EXTERN bool pn_disposition_is_failed(pn_disposition_t *disposition);
+PN_EXTERN void pn_disposition_set_failed(pn_disposition_t *disposition, bool failed);
+PN_EXTERN bool pn_disposition_is_undeliverable(pn_disposition_t *disposition);
+PN_EXTERN void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeliverable);
+PN_EXTERN pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition);
+
+// conditions
 PN_EXTERN pn_condition_t *pn_connection_condition(pn_connection_t *connection);
 PN_EXTERN pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
 
@@ -513,6 +530,8 @@ PN_EXTERN pn_condition_t *pn_session_remote_condition(pn_session_t *session);
 
 PN_EXTERN pn_condition_t *pn_link_condition(pn_link_t *link);
 PN_EXTERN pn_condition_t *pn_link_remote_condition(pn_link_t *link);
+
+PN_EXTERN pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition);
 
 PN_EXTERN bool pn_condition_is_set(pn_condition_t *condition);
 PN_EXTERN void pn_condition_clear(pn_condition_t *condition);

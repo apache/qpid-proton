@@ -282,7 +282,7 @@ void *pni_entry_get_context(pni_entry_t *entry)
   return entry->context;
 }
 
-static pn_status_t disp2status(pn_disposition_t disp)
+static pn_status_t disp2status(uint64_t disp)
 {
   if (!disp) return PN_STATUS_PENDING;
 

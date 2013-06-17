@@ -394,7 +394,7 @@ public class TransportImpl extends EndpointImpl
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
             while(delivery != null && buffer.remaining() >= _maxFrameSize )
             {
-                if((delivery.getLink() instanceof SenderImpl) && delivery.isLocalStateChange() && delivery.getTransportDelivery() != null)
+                if((delivery.getLink() instanceof SenderImpl) && delivery.getTransportDelivery() != null)
                 {
                     TransportDelivery transportDelivery = delivery.getTransportDelivery();
                     Disposition disposition = new Disposition();
@@ -509,7 +509,7 @@ public class TransportImpl extends EndpointImpl
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
             while(delivery != null && buffer.remaining() >= _maxFrameSize)
             {
-                if((delivery.getLink() instanceof ReceiverImpl) && delivery.isLocalStateChange())
+                if((delivery.getLink() instanceof ReceiverImpl))
                 {
                     TransportDelivery transportDelivery = delivery.getTransportDelivery();
                     Disposition disposition = new Disposition();

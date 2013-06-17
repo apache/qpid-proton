@@ -1510,5 +1510,161 @@ class ServerTest(Test):
 
     self.server.stop()
 
+class NoValue:
 
+  def __init__(self):
+    pass
 
+  def apply(self, dlv):
+    pass
+
+  def check(self, dlv):
+    assert dlv.data == None
+    assert dlv.section_number == 0
+    assert dlv.section_offset == 0
+    assert dlv.condition == None
+    assert dlv.failed == False
+    assert dlv.undeliverable == False
+    assert dlv.annotations == None
+
+class RejectValue:
+  def __init__(self, condition):
+    self.condition = condition
+
+  def apply(self, dlv):
+    dlv.condition = self.condition
+
+  def check(self, dlv):
+    assert dlv.data == None, dlv.data
+    assert dlv.section_number == 0
+    assert dlv.section_offset == 0
+    assert dlv.condition == self.condition, (dlv.condition, self.condition)
+    assert dlv.failed == False
+    assert dlv.undeliverable == False
+    assert dlv.annotations == None
+
+class ReceivedValue:
+  def __init__(self, section_number, section_offset):
+    self.section_number = section_number
+    self.section_offset = section_offset
+
+  def apply(self, dlv):
+    dlv.section_number = self.section_number
+    dlv.section_offset = self.section_offset
+
+  def check(self, dlv):
+    assert dlv.data == None, dlv.data
+    assert dlv.section_number == self.section_number, (dlv.section_number, self.section_number)
+    assert dlv.section_offset == self.section_offset
+    assert dlv.condition == None
+    assert dlv.failed == False
+    assert dlv.undeliverable == False
+    assert dlv.annotations == None
+
+class ModifiedValue:
+  def __init__(self, failed, undeliverable, annotations):
+    self.failed = failed
+    self.undeliverable = undeliverable
+    self.annotations = annotations
+
+  def apply(self, dlv):
+    dlv.failed = self.failed
+    dlv.undeliverable = self.undeliverable
+    dlv.annotations = self.annotations
+
+  def check(self, dlv):
+    assert dlv.data == None, dlv.data
+    assert dlv.section_number == 0
+    assert dlv.section_offset == 0
+    assert dlv.condition == None
+    assert dlv.failed == self.failed
+    assert dlv.undeliverable == self.undeliverable
+    assert dlv.annotations == self.annotations, (dlv.annotations, self.annotations)
+
+class CustomValue:
+  def __init__(self, data):
+    self.data = data
+
+  def apply(self, dlv):
+    dlv.data = self.data
+
+  def check(self, dlv):
+    assert dlv.data == self.data, (dlv.data, self.data)
+    assert dlv.section_number == 0
+    assert dlv.section_offset == 0
+    assert dlv.condition == None
+    assert dlv.failed == False
+    assert dlv.undeliverable == False
+    assert dlv.annotations == None
+
+class DeliveryTest(Test):
+
+  def teardown(self):
+    self.cleanup()
+
+  def testDisposition(self, count=1, tag="tag%i", type=Delivery.ACCEPTED, value=NoValue()):
+    snd, rcv = self.link("test-link")
+    snd.open()
+    rcv.open()
+
+    snd_deliveries = []
+    for i in range(count):
+      d = snd.delivery(tag % i)
+      snd_deliveries.append(d)
+      snd.advance()
+
+    rcv.flow(count)
+    self.pump()
+
+    rcv_deliveries = []
+    for i in range(count):
+      d = rcv.current
+      assert d.tag == (tag % i)
+      rcv_deliveries.append(d)
+      rcv.advance()
+
+    for d in rcv_deliveries:
+      value.apply(d.local)
+      d.update(type)
+
+    self.pump()
+
+    for d in snd_deliveries:
+      assert d.remote_state == type
+      assert d.remote.type == type
+      value.check(d.remote)
+      value.apply(d.local)
+      d.update(type)
+
+    self.pump()
+
+    for d in rcv_deliveries:
+      assert d.remote_state == type
+      assert d.remote.type == type
+      value.check(d.remote)
+
+    for d in snd_deliveries:
+      d.settle()
+
+    self.pump()
+
+    for d in rcv_deliveries:
+      assert d.settled, d.settled
+      d.settle()
+
+  def testReceived(self):
+    self.testDisposition(type=Disposition.RECEIVED, value=ReceivedValue(1, 2))
+
+  def testRejected(self):
+    self.testDisposition(type=Disposition.REJECTED, value=RejectValue(Condition(symbol("foo"))))
+
+  def testReleased(self):
+    self.testDisposition(type=Disposition.RELEASED)
+
+  def testModified(self):
+    self.testDisposition(type=Disposition.MODIFIED,
+                         value=ModifiedValue(failed=True, undeliverable=True,
+                                             annotations={"key": "value"}))
+
+  def testCustom(self):
+    self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))

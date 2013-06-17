@@ -25,13 +25,16 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_delivery_t;
-import org.apache.qpid.proton.jni.pn_disposition_t;
+import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_disposition_t;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Received;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+
+import static org.apache.qpid.proton.jni.ProtonConstants.*;
+import java.math.BigInteger;
 
 public class JNIDelivery implements Delivery
 {
@@ -121,53 +124,53 @@ public class JNIDelivery implements Delivery
         //TODO
     }
 
-    private static pn_disposition_t convertState(DeliveryState state)
+    private static BigInteger convertState(DeliveryState state)
     {
         //TODO - disposition properties conversion
         if(state instanceof Accepted)
         {
-            return pn_disposition_t.PN_ACCEPTED;
+            return BigInteger.valueOf(PN_ACCEPTED);
         }
         else if(state instanceof Rejected)
         {
-            return pn_disposition_t.PN_REJECTED;
+            return BigInteger.valueOf(PN_REJECTED);
         }
         else if(state instanceof Modified)
         {
-            return pn_disposition_t.PN_MODIFIED;
+            return BigInteger.valueOf(PN_MODIFIED);
         }
         else if(state instanceof Received)
         {
-            return pn_disposition_t.PN_RECEIVED;
+            return BigInteger.valueOf(PN_RECEIVED);
         }
         else if(state instanceof Released)
         {
-            return pn_disposition_t.PN_RELEASED;
+            return BigInteger.valueOf(PN_RELEASED);
         }
 
-        return null;
+        return BigInteger.ZERO;
     }
 
-    private static DeliveryState convertDisposition(pn_disposition_t disposition)
+    private static DeliveryState convertDisposition(BigInteger disposition)
     {
         //TODO - disposition properties conversion
-        if(pn_disposition_t.PN_ACCEPTED.equals(disposition))
+        if (BigInteger.valueOf(PN_ACCEPTED).equals(disposition))
         {
             return Accepted.getInstance();
         }
-        else if(pn_disposition_t.PN_REJECTED.equals(disposition))
+        else if(BigInteger.valueOf(PN_REJECTED).equals(disposition))
         {
             return new Rejected();
         }
-        else if(pn_disposition_t.PN_MODIFIED.equals(disposition))
+        else if(BigInteger.valueOf(PN_MODIFIED).equals(disposition))
         {
             return new Modified();
         }
-        else if(pn_disposition_t.PN_MODIFIED.equals(disposition))
+        else if(BigInteger.valueOf(PN_RECEIVED).equals(disposition))
         {
-            return new Modified();
+            return new Received();
         }
-        else if(pn_disposition_t.PN_RELEASED.equals(disposition))
+        else if(BigInteger.valueOf(PN_RELEASED).equals(disposition))
         {
             return new Released();
         }

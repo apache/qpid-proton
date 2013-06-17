@@ -188,6 +188,7 @@ void pn_transport_free(pn_transport_t *transport)
   pn_free(transport->remote_offered_capabilities);
   pn_free(transport->remote_desired_capabilities);
   pn_free(transport->remote_properties);
+  pn_free(transport->disp_data);
   pn_error_free(transport->error);
   pn_condition_tini(&transport->remote_condition);
   pn_free(transport->local_channels);
@@ -472,7 +473,7 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   pn_link_t *link = pn_delivery_link(delivery);
   pn_delivery_t *current = pn_link_current(link);
-  if (delivery->updated && !delivery->local_settled) {
+  if (delivery->updated && !delivery->local.settled) {
     pn_add_work(connection, delivery);
   } else if (delivery == current) {
     if (link->endpoint.type == SENDER) {
@@ -787,6 +788,7 @@ void pn_transport_init(pn_transport_t *transport)
   transport->remote_offered_capabilities = pn_data(16);
   transport->remote_desired_capabilities = pn_data(16);
   transport->remote_properties = pn_data(16);
+  transport->disp_data = pn_data(16);
   transport->error = pn_error();
   pn_condition_init(&transport->remote_condition);
 
@@ -1162,11 +1164,40 @@ pn_session_t *pn_link_session(pn_link_t *link)
   return link->session;
 }
 
+static void pn_disposition_finalize(pn_disposition_t *ds)
+{
+  pn_free(ds->data);
+  pn_free(ds->annotations);
+  pn_condition_tini(&ds->condition);
+}
+
 static void pn_delivery_finalize(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
   pn_buffer_free(delivery->tag);
   pn_buffer_free(delivery->bytes);
+  pn_disposition_finalize(&delivery->local);
+  pn_disposition_finalize(&delivery->remote);
+}
+
+static void pn_disposition_init(pn_disposition_t *ds)
+{
+  ds->data = pn_data(16);
+  ds->annotations = pn_data(16);
+  pn_condition_init(&ds->condition);
+}
+
+static void pn_disposition_clear(pn_disposition_t *ds)
+{
+  ds->type = 0;
+  ds->section_number = 0;
+  ds->section_offset = 0;
+  ds->failed = false;
+  ds->undeliverable = false;
+  ds->settled = false;
+  pn_data_clear(ds->data);
+  pn_data_clear(ds->annotations);
+  pn_condition_clear(&ds->condition);
 }
 
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
@@ -1180,16 +1211,16 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
+    pn_disposition_init(&delivery->local);
+    pn_disposition_init(&delivery->remote);
   } else {
     assert(!delivery->tpwork);
   }
   delivery->link = link;
   pn_buffer_clear(delivery->tag);
   pn_buffer_append(delivery->tag, tag.bytes, tag.size);
-  delivery->local_state = 0;
-  delivery->remote_state = 0;
-  delivery->local_settled = false;
-  delivery->remote_settled = false;
+  pn_disposition_clear(&delivery->local);
+  pn_disposition_clear(&delivery->remote);
   delivery->updated = false;
   delivery->settled = false;
   LL_ADD(link, unsettled, delivery);
@@ -1225,7 +1256,7 @@ int pn_link_unsettled(pn_link_t *link)
 pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 {
   pn_delivery_t *d = link->unsettled_head;
-  while (d && d->local_settled) {
+  while (d && d->local.settled) {
     d = d->unsettled_next;
   }
   return d;
@@ -1234,7 +1265,7 @@ pn_delivery_t *pn_unsettled_head(pn_link_t *link)
 pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
 {
   pn_delivery_t *d = delivery->unsettled_next;
-  while (d && d->local_settled) {
+  while (d && d->local.settled) {
     d = d->unsettled_next;
   }
   return d;
@@ -1251,11 +1282,11 @@ void pn_delivery_dump(pn_delivery_t *d)
   char tag[1024];
   pn_bytes_t bytes = pn_buffer_bytes(d->tag);
   pn_quote_data(tag, 1024, bytes.start, bytes.size);
-  printf("{tag=%s, local_state=%u, remote_state=%u, local_settled=%u, "
-         "remote_settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
+  printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%u, "
+         "remote.settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
-         tag, d->local_state, d->remote_state, d->local_settled,
-         d->remote_settled, d->updated, pn_is_current(d),
+         tag, d->local.type, d->remote.type, d->local.settled,
+         d->remote.settled, d->updated, pn_is_current(d),
          pn_delivery_writable(d), pn_delivery_readable(d), d->work);
 }
 
@@ -1269,6 +1300,122 @@ void pn_delivery_set_context(pn_delivery_t *delivery, void *context)
 {
   assert(delivery);
   delivery->context = context;
+}
+
+uint64_t pn_disposition_type(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->type;
+}
+
+pn_data_t *pn_disposition_data(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->data;
+}
+
+uint32_t pn_disposition_get_section_number(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->section_number;
+}
+
+void pn_disposition_set_section_number(pn_disposition_t *disposition, uint32_t section_number)
+{
+  assert(disposition);
+  disposition->section_number = section_number;
+}
+
+uint64_t pn_disposition_get_section_offset(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->section_offset;
+}
+
+void pn_disposition_set_section_offset(pn_disposition_t *disposition, uint64_t section_offset)
+{
+  assert(disposition);
+  disposition->section_offset = section_offset;
+}
+
+bool pn_disposition_is_failed(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->failed;
+}
+
+void pn_disposition_set_failed(pn_disposition_t *disposition, bool failed)
+{
+  assert(disposition);
+  disposition->failed = failed;
+}
+
+bool pn_disposition_is_undeliverable(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->undeliverable;
+}
+
+void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeliverable)
+{
+  assert(disposition);
+  disposition->undeliverable = undeliverable;
+}
+
+pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->annotations;
+}
+
+pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition)
+{
+  assert(disposition);
+  return &disposition->condition;
+}
+
+bool pni_disposition_batchable(pn_disposition_t *disposition)
+{
+  switch (disposition->type) {
+  case PN_ACCEPTED:
+    return true;
+  case PN_RELEASED:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data)
+{
+  pn_condition_t *cond = &disposition->condition;
+  switch (disposition->type) {
+  case PN_RECEIVED:
+    pn_data_put_list(data);
+    pn_data_enter(data);
+    pn_data_put_uint(data, disposition->section_number);
+    pn_data_put_ulong(data, disposition->section_offset);
+    pn_data_exit(data);
+    break;
+  case PN_ACCEPTED:
+  case PN_RELEASED:
+    return;
+  case PN_REJECTED:
+    pn_data_fill(data, "[?DL[sSC]]", pn_condition_is_set(cond), ERROR,
+                 pn_condition_get_name(cond),
+                 pn_condition_get_description(cond),
+                 pn_condition_info(cond));
+    break;
+  case PN_MODIFIED:
+    pn_data_fill(data, "[ooC]",
+                 disposition->failed,
+                 disposition->undeliverable,
+                 disposition->annotations);
+    break;
+  default:
+    pn_data_copy(data, disposition->data);
+    break;
+  }
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
@@ -1377,7 +1524,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
   }
 
   link->unsettled_count--;
-  delivery->local_settled = true;
+  delivery->local.settled = true;
   pn_add_tpwork(delivery);
   pn_work_update(delivery->link->session->connection, delivery);
 }
@@ -1664,8 +1811,8 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     link->state.link_credit--;
     link->queued++;
 
-    // XXX: need to fill in remote state: delivery->remote_state = ...;
-    delivery->remote_settled = settled;
+    // XXX: need to fill in remote state: delivery->remote.state = ...;
+    delivery->remote.settled = settled;
     delivery->updated = true;
     pn_work_update(transport->connection, delivery);
   }
@@ -1734,36 +1881,38 @@ int pn_do_flow(pn_dispatcher_t *disp)
   return 0;
 }
 
+#define SCAN_ERROR_DEFAULT ("D.[D.[sSC]")
+#define SCAN_ERROR_DETACH ("D.[..D.[sSC]")
+#define SCAN_ERROR_DISP ("[D.[sSC]")
+
+static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char *fmt)
+{
+  pn_bytes_t cond;
+  pn_bytes_t desc;
+  pn_condition_clear(condition);
+  int err = pn_data_scan(data, fmt, &cond, &desc, condition->info);
+  if (err) return err;
+  strncat(condition->name, cond.start, cond.size);
+  strncat(condition->description, desc.start, desc.size);
+  pn_data_rewind(condition->info);
+  return 0;
+}
+
 int pn_do_disposition(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = (pn_transport_t *) disp->context;
   bool role;
   pn_sequence_t first, last;
-  uint64_t code;
-  bool last_init, settled, code_init;
-  int err = pn_scan_args(disp, "D.[oI?IoD?L[]]", &role, &first, &last_init,
-                         &last, &settled, &code_init, &code);
+  uint64_t type = 0;
+  bool last_init, settled, type_init;
+  pn_data_clear(transport->disp_data);
+  int err = pn_scan_args(disp, "D.[oI?IoD?LC]", &role, &first, &last_init,
+                         &last, &settled, &type_init, &type,
+                         transport->disp_data);
   if (err) return err;
   if (!last_init) last = first;
 
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
-  pn_disposition_t dispo = (pn_disposition_t) 0;
-  if (code_init) {
-    switch (code)
-    {
-    case ACCEPTED:
-      dispo = PN_ACCEPTED;
-      break;
-    case REJECTED:
-      dispo = PN_REJECTED;
-      break;
-    default:
-      // XXX
-      fprintf(stderr, "default %" PRIu64 "\n", code);
-      break;
-    }
-  }
-
   pn_delivery_map_t *deliveries;
   if (role) {
     deliveries = &ssn->state.outgoing;
@@ -1771,30 +1920,58 @@ int pn_do_disposition(pn_dispatcher_t *disp)
     deliveries = &ssn->state.incoming;
   }
 
+  pn_data_rewind(transport->disp_data);
+  bool remote_data = (pn_data_next(transport->disp_data) &&
+                      pn_data_get_list(transport->disp_data) > 0);
+
   for (pn_sequence_t id = first; id <= last; id++) {
     pn_delivery_t *delivery = pn_delivery_map_get(deliveries, id);
+    pn_disposition_t *remote = &delivery->remote;
     if (delivery) {
-      delivery->remote_state = dispo;
-      delivery->remote_settled = settled;
+      if (type_init) remote->type = type;
+      if (remote_data) {
+        switch (type) {
+        case PN_RECEIVED:
+          pn_data_rewind(transport->disp_data);
+          pn_data_next(transport->disp_data);
+          pn_data_enter(transport->disp_data);
+          if (pn_data_next(transport->disp_data))
+            remote->section_number = pn_data_get_uint(transport->disp_data);
+          if (pn_data_next(transport->disp_data))
+            remote->section_offset = pn_data_get_ulong(transport->disp_data);
+          break;
+        case PN_ACCEPTED:
+          break;
+        case PN_REJECTED:
+          err = pn_scan_error(transport->disp_data, &remote->condition, SCAN_ERROR_DISP);
+          if (err) return err;
+          break;
+        case PN_RELEASED:
+          break;
+        case PN_MODIFIED:
+          pn_data_rewind(transport->disp_data);
+          pn_data_next(transport->disp_data);
+          pn_data_enter(transport->disp_data);
+          if (pn_data_next(transport->disp_data))
+            remote->failed = pn_data_get_bool(transport->disp_data);
+          if (pn_data_next(transport->disp_data))
+            remote->undeliverable = pn_data_get_bool(transport->disp_data);
+          pn_data_narrow(transport->disp_data);
+          pn_data_clear(remote->data);
+          pn_data_appendn(remote->annotations, transport->disp_data, 1);
+          pn_data_widen(transport->disp_data);
+          break;
+        default:
+          pn_data_copy(remote->data, transport->disp_data);
+          break;
+        }
+      }
+      remote->settled = settled;
       delivery->updated = true;
       pn_work_update(transport->connection, delivery);
     }
   }
 
-  return 0;
-}
-
-static int pn_scan_error(pn_dispatcher_t *disp, pn_condition_t *condition, bool detach)
-{
-  pn_bytes_t cond;
-  pn_bytes_t desc;
-  pn_condition_clear(condition);
-  int err = pn_scan_args(disp, detach ? "D.[..D.[sSC]" : "D.[D.[sSC]",
-                         &cond, &desc, condition->info);
-  if (err) return err;
-  strncat(condition->name, cond.start, cond.size);
-  strncat(condition->description, desc.start, desc.size);
-  pn_data_rewind(condition->info);
   return 0;
 }
 
@@ -1812,7 +1989,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
   }
   pn_link_t *link = pn_handle_state(ssn, handle);
 
-  err = pn_scan_error(disp, &link->endpoint.remote_condition, true);
+  err = pn_scan_error(disp->args, &link->endpoint.remote_condition, SCAN_ERROR_DETACH);
   if (err) return err;
 
   pn_unmap_handle(ssn, link);
@@ -1831,7 +2008,7 @@ int pn_do_end(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
-  int err = pn_scan_error(disp, &ssn->endpoint.remote_condition, false);
+  int err = pn_scan_error(disp->args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   pn_unmap_channel(transport, ssn);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
@@ -1842,7 +2019,7 @@ int pn_do_close(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = (pn_transport_t *) disp->context;
   pn_connection_t *conn = transport->connection;
-  int err = pn_scan_error(disp, &transport->remote_condition, false);
+  int err = pn_scan_error(disp->args, &transport->remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   transport->close_rcvd = true;
   PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
@@ -2208,29 +2385,25 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_modified(transport->connection, &link->session->endpoint);
   pn_delivery_state_t *state = &delivery->state;
   assert(state->init);
-  uint64_t code;
-  switch(delivery->local_state) {
-  case PN_ACCEPTED:
-    code = ACCEPTED;
-    break;
-  case PN_RELEASED:
-    code = RELEASED;
-    break;
-  case PN_REJECTED:
-    code = REJECTED;
-    break;
-    //TODO: rejected and modified (both take extra data which may need to be passed through somehow) e.g. change from enum to discriminated union?
-  default:
-    code = 0;
-  }
+  bool role = (link->endpoint.type == RECEIVER);
+  uint64_t code = delivery->local.type;
 
-  if (!code && !delivery->local_settled) {
+  if (!code && !delivery->local.settled) {
     return 0;
   }
 
+  if (!pni_disposition_batchable(&delivery->local)) {
+    pn_data_clear(transport->disp_data);
+    pni_disposition_encode(&delivery->local, transport->disp_data);
+    return pn_post_frame(transport->disp, ssn->state.local_channel,
+                         "DL[oIIo?DLC]", DISPOSITION,
+                         role, state->id, state->id, delivery->local.settled,
+                         (bool)code, code, transport->disp_data);
+  }
+
   if (ssn_state->disp && code == ssn_state->disp_code &&
-      delivery->local_settled == ssn_state->disp_settled &&
-      ssn_state->disp_type == (link->endpoint.type == RECEIVER)) {
+      delivery->local.settled == ssn_state->disp_settled &&
+      ssn_state->disp_type == role) {
     if (state->id == ssn_state->disp_first - 1) {
       ssn_state->disp_first = state->id;
       return 0;
@@ -2245,9 +2418,9 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
     if (err) return err;
   }
 
-  ssn_state->disp_type = (link->endpoint.type == RECEIVER);
+  ssn_state->disp_type = role;
   ssn_state->disp_code = code;
-  ssn_state->disp_settled = delivery->local_settled;
+  ssn_state->disp_settled = delivery->local.settled;
   ssn_state->disp_first = state->id;
   ssn_state->disp_last = state->id;
   ssn_state->disp = true;
@@ -2280,7 +2453,7 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
                                          link_state->local_handle,
                                          state->id, &tag,
                                          0, // message-format
-                                         delivery->local_settled,
+                                         delivery->local.settled,
                                          !delivery->done,
                                          ssn_state->remote_incoming_window);
       if (count < 0) return count;
@@ -2300,13 +2473,13 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
   }
 
   pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
-  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote_settled
+  if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote.settled
       && state && state->sent && !xfr_posted) {
     int err = pn_post_disp(transport, delivery);
     if (err) return err;
   }
 
-  if (delivery->local_settled && state && state->sent) {
+  if (delivery->local.settled && state && state->sent) {
     pn_full_settle(&ssn_state->outgoing, delivery);
   }
 
@@ -2318,12 +2491,12 @@ int pn_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t *deliver
   pn_link_t *link = delivery->link;
   // XXX: need to prevent duplicate disposition sending
   pn_session_t *ssn = link->session;
-  if ((int16_t) ssn->state.local_channel >= 0 && !delivery->remote_settled && delivery->state.init) {
+  if ((int16_t) ssn->state.local_channel >= 0 && !delivery->remote.settled && delivery->state.init) {
     int err = pn_post_disp(transport, delivery);
     if (err) return err;
   }
 
-  if (delivery->local_settled) {
+  if (delivery->local.settled) {
     pn_full_settle(&ssn->state.incoming, delivery);
   }
 
@@ -2796,19 +2969,33 @@ pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
   return delivery->link;
 }
 
-pn_disposition_t pn_delivery_local_state(pn_delivery_t *delivery)
+pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery)
 {
-  return (pn_disposition_t) delivery->local_state;
+  assert(delivery);
+  return &delivery->local;
 }
 
-pn_disposition_t pn_delivery_remote_state(pn_delivery_t *delivery)
+uint64_t pn_delivery_local_state(pn_delivery_t *delivery)
 {
-  return (pn_disposition_t) delivery->remote_state;
+  assert(delivery);
+  return delivery->local.type;
+}
+
+pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery)
+{
+  assert(delivery);
+  return &delivery->remote;
+}
+
+uint64_t pn_delivery_remote_state(pn_delivery_t *delivery)
+{
+  assert(delivery);
+  return delivery->remote.type;
 }
 
 bool pn_delivery_settled(pn_delivery_t *delivery)
 {
-  return delivery ? delivery->remote_settled : false;
+  return delivery ? delivery->remote.settled : false;
 }
 
 bool pn_delivery_updated(pn_delivery_t *delivery)
@@ -2822,10 +3009,10 @@ void pn_delivery_clear(pn_delivery_t *delivery)
   pn_work_update(delivery->link->session->connection, delivery);
 }
 
-void pn_delivery_update(pn_delivery_t *delivery, pn_disposition_t disposition)
+void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
 {
   if (!delivery) return;
-  delivery->local_state = disposition;
+  delivery->local.type = state;
   pn_add_tpwork(delivery);
 }
 

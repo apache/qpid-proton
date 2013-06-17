@@ -34,7 +34,9 @@ from org.apache.qpid.proton.message import \
 from org.apache.qpid.proton.codec import \
     DataFactory, Data as JData
 from org.apache.qpid.proton.messenger import MessengerFactory, MessengerException, Status
-from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, AmqpValue
+from org.apache.qpid.proton.amqp.transport import ErrorCondition
+from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, \
+    Rejected, Received, Modified, Released, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedByte, UnsignedShort, Symbol, \
     Decimal32, Decimal64, Decimal128
 from jarray import zeros, array
@@ -147,26 +149,37 @@ class Endpoint(object):
 
   def close(self):
     if self.condition is not None:
-        if self.condition.impl is None:
-          self.condition.impl = self.impl.getCondition()
-        self.condition.impl.setCondition(Symbol.getSymbol(self.condition.name))
-        self.condition.impl.setDescription(self.condition.description)
-        self.condition.impl.setInfo(self.condition.info)
+      self.impl.setCondition(self.condition.impl)
     self.impl.close()
 
-class Condition:
+class Condition(object):
 
   def __init__(self, name=None, description=None, info=None, impl=None):
-    self.name = name
-    self.description = description
-    self.info = info
-    if impl is not None:
-      self.impl = impl
-      self.name = impl.getCondition()
-      self.description = impl.getDescription()
-      self.info = impl.getInfo()
-    else:
-      self.impl = None
+    if impl is None:
+      impl = ErrorCondition(Symbol.valueOf(name), description)
+      if info is not None:
+        impl.setInfo(info)
+    self.impl = impl
+
+  def _get_name(self):
+    c = self.impl.getCondition()
+    if c is not None:
+      return c.toString()
+  def _set_name(self, n):
+    self.impl.setCondition(Symbol.valueOf(n))
+  name = property(_get_name, _set_name)
+
+  def _get_description(self):
+    return self.impl.getDescription()
+  def _set_description(self, d):
+    self.impl.setDescription(d)
+  description = property(_get_description, _set_description)
+
+  def _get_info(self):
+    return self.impl.getInfo()
+  def _set_info(self, i):
+    self.impl.setInfo(i)
+  info = property(_get_info, _get_description)
 
   def __repr__(self):
     return "Condition(%s)" % ", ".join([repr(x) for x in
@@ -175,10 +188,10 @@ class Condition:
 
   def __eq__(self, o):
     if not isinstance(o, Condition): return False
-    return (self.impl is not None and o.impl is not None and self.impl.equals(o.impl)) or \
-        (self.name == o.name and \
-        self.description == o.description and \
-        self.info == o.info)
+    return self.impl.equals(o.impl)
+
+  def _2J(self):
+    return self.impl
 
 def wrap_connection(impl):
   if impl: return Connection(_impl = impl)
@@ -410,19 +423,175 @@ class Receiver(Link):
     else:
       raise Exception(n)
 
+class Disposition(object):
+
+  RECEIVED = 0x23
+  ACCEPTED = 0x24
+  REJECTED = 0x25
+  RELEASED = 0x26
+  MODIFIED = 0x27
+
+  def __init__(self):
+    self.type = 0
+    self._received = None
+    self._accepted = None
+    self._rejected = None
+    self._released = None
+    self._modified = None
+
+  def _get_section_number(self):
+    if self._received:
+      return J2PY(self._received.getSectionNumber())
+    else:
+      return 0
+  def _set_section_number(self, n):
+    if not self._received:
+      self._received = Received()
+    self._received.setSectionNumber(UnsignedInteger(n))
+  section_number = property(_get_section_number, _set_section_number)
+
+  def _get_section_offset(self):
+    if self._received:
+      return J2PY(self._received.getSectionOffset())
+    else:
+      return 0
+  def _set_section_offset(self, n):
+    if not self._received:
+      self._received = Received()
+    self._received.setSectionOffset(UnsignedLong(n))
+  section_offset = property(_get_section_offset, _set_section_offset)
+
+  def _get_failed(self):
+    if self._modified:
+      return self._modified.getDeliveryFailed()
+    else:
+      return False
+  def _set_failed(self, b):
+    if not self._modified:
+      self._modified = Modified()
+    self._modified.setDeliveryFailed(b)
+  failed = property(_get_failed, _set_failed)
+
+  def _get_undeliverable(self):
+    if self._modified:
+      return self._modified.getUndeliverableHere()
+    else:
+      return False
+  def _set_undeliverable(self, b):
+    if not self._modified:
+      self._modified = Modified()
+    self._modified.setUndeliverableHere(b)
+  undeliverable = property(_get_undeliverable, _set_undeliverable)
+
+  def _get_data(self):
+    return None
+  def _set_data(self, obj):
+    raise Skipped()
+  data = property(_get_data, _set_data)
+
+  def _get_annotations(self):
+    if self._modified:
+      return J2PY(self._modified.getMessageAnnotations())
+    else:
+      return None
+  def _set_annotations(self, obj):
+    if not self._modified:
+      self._modified = Modified()
+    self._modified.setMessageAnnotations(PY2J(obj))
+  annotations = property(_get_annotations, _set_annotations)
+
+  def _get_condition(self):
+    if self._rejected:
+      return Condition(impl = self._rejected.getError())
+    else:
+      return None
+  def _set_condition(self, obj):
+    if not self._rejected:
+      self._rejected = Rejected()
+    self._rejected.setError(obj._2J())
+  condition = property(_get_condition, _set_condition)
+
+  def _as_received(self):
+    if self._received is None:
+      self._received = Received()
+    return self._received
+
+  def _as_accepted(self):
+    if self._accepted is None:
+      self._accepted = Accepted.getInstance()
+    return self._accepted
+
+  def _as_rejected(self):
+    if self._rejected is None:
+      self._rejected = Rejected()
+    return self._rejected
+
+  def _as_released(self):
+    if self._released is None:
+      self._released = Released.getInstance()
+    return self._released
+
+  def _as_modified(self):
+    if self._modified is None:
+      self._modified = Modified()
+    return self._modified
+
+  PY2J = {
+    RECEIVED: _as_received,
+    ACCEPTED: _as_accepted,
+    REJECTED: _as_rejected,
+    RELEASED: _as_released,
+    MODIFIED: _as_modified
+  }
+
+  def _2J(self):
+    return self.PY2J[self.type](self)
+
+  def _from_received(self, s):
+    self.type = self.RECEIVED
+    self._received = s
+
+  def _from_accepted(self, s):
+    self.type = self.ACCEPTED
+    self._accepted = s
+
+  def _from_rejected(self, s):
+    self.type = self.REJECTED
+    self._rejected = s
+
+  def _from_released(self, s):
+    self.type = self.RELEASED
+    self._released = s
+
+  def _from_modified(self, s):
+    self.type = self.MODIFIED
+    self._modified = s
+
+  J2PY = {
+    Received: _from_received,
+    Accepted: _from_accepted,
+    Rejected: _from_rejected,
+    Released: _from_released,
+    Modified: _from_modified
+    }
+
+  def _2PY(self, impl):
+    self.J2PY[type(impl)](self, impl)
+
 def wrap_delivery(impl):
   if impl: return Delivery(impl)
 
 class Delivery(object):
 
-  RECEIVED = 1
-  ACCEPTED = 2
-  REJECTED = 3
-  RELEASED = 4
-  MODIFIED = 5
+  RECEIVED = Disposition.RECEIVED
+  ACCEPTED = Disposition.ACCEPTED
+  REJECTED = Disposition.REJECTED
+  RELEASED = Disposition.RELEASED
+  MODIFIED = Disposition.MODIFIED
 
   def __init__(self, impl):
     self.impl = impl
+    self.local = Disposition()
 
   @property
   def tag(self):
@@ -441,26 +610,22 @@ class Delivery(object):
     return self.impl.isUpdated()
 
   def update(self, disp):
-    if disp == self.ACCEPTED:
-      self.impl.disposition(Accepted.getInstance())
-    else:
-      raise Exception("xxx: %s" % disp)
+    self.local.type = disp
+    self.impl.disposition(self.local._2J())
+
+  @property
+  def remote(self):
+    d = Disposition()
+    d._2PY(self.impl.getRemoteState())
+    return d
 
   @property
   def remote_state(self):
-    rd = self.impl.getRemoteState()
-    if(rd == Accepted.getInstance()):
-      return self.ACCEPTED
-    else:
-      raise Exception("xxx: %s" % rd)
+    return self.remote.type
 
   @property
   def local_state(self):
-    ld = self.impl.getLocalState()
-    if(ld == Accepted.getInstance()):
-      return self.ACCEPTED
-    else:
-      raise Exception("xxx: %s" % ld)
+    return self.local.type
 
   def settle(self):
     self.impl.settle()
@@ -1441,7 +1606,9 @@ conversions_J2PY = {
   dict: lambda d: dict([(J2PY(k), J2PY(v)) for k, v in d.items()]),
   HashMap: lambda m: dict([(J2PY(e.getKey()), J2PY(e.getValue())) for e in m.entrySet()]),
   list: lambda l: [J2PY(x) for x in l],
-  Symbol: lambda s: symbol(s.toString())
+  Symbol: lambda s: symbol(s.toString()),
+  UnsignedInteger: lambda n: n.longValue(),
+  UnsignedLong: lambda n: n.longValue()
   }
 
 conversions_PY2J = {
@@ -1476,6 +1643,7 @@ __all__ = [
            "Connector",
            "Data",
            "Delivery",
+           "Disposition",
            "Described",
            "Driver",
            "Endpoint",

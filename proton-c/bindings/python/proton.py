@@ -1807,27 +1807,11 @@ class Endpoint(object):
     self.condition = None
 
   def _update_cond(self):
-    impl = self._get_cond_impl()
-    pn_condition_clear(impl)
-    if self.condition:
-      pn_condition_set_name(impl, self.condition.name)
-      pn_condition_set_description(impl, self.condition.description)
-      info = Data(pn_condition_info(impl))
-      if self.condition.info:
-        info.put_object(self.condition.info)
+    obj2cond(self.condition, self._get_cond_impl())
 
   @property
   def remote_condition(self):
-    impl = self._get_remote_cond_impl()
-    if pn_condition_is_set(impl):
-      info_impl = Data(pn_condition_info(impl))
-      info_impl.rewind()
-      info_impl.next()
-      info = info_impl.get_object()
-      info_impl.rewind()
-      return Condition(pn_condition_get_name(impl),
-                       pn_condition_get_description(impl),
-                       info)
+    return cond2obj(self._get_remote_cond_impl())
 
 class Condition:
 
@@ -1846,6 +1830,36 @@ class Condition:
     return self.name == o.name and \
         self.description == o.description and \
         self.info == o.info
+
+def obj2cond(obj, cond):
+  pn_condition_clear(cond)
+  if obj:
+    pn_condition_set_name(cond, str(obj.name))
+    pn_condition_set_description(cond, obj.description)
+    info = Data(pn_condition_info(cond))
+    if obj.info:
+      info.put_object(obj.info)
+
+def cond2obj(cond):
+  if pn_condition_is_set(cond):
+    return Condition(pn_condition_get_name(cond),
+                     pn_condition_get_description(cond),
+                     dat2obj(pn_condition_info(cond)))
+  else:
+    return None
+
+def dat2obj(dimpl):
+  d = Data(dimpl)
+  d.rewind()
+  d.next()
+  obj = d.get_object()
+  d.rewind()
+  return obj
+
+def obj2dat(obj, dimpl):
+  if obj is not None:
+    d = Data(dimpl)
+    d.put_object(obj)
 
 def wrap_connection(conn):
   if not conn: return None
@@ -1907,37 +1921,24 @@ class Connection(Endpoint):
   def remote_hostname(self):
     return pn_connection_remote_hostname(self._conn)
 
-  def _dat2obj(self, dimpl):
-    d = Data(dimpl)
-    d.rewind()
-    d.next()
-    obj = d.get_object()
-    d.rewind()
-    return obj
-
   @property
   def remote_offered_capabilities(self):
-    return self._dat2obj(pn_connection_remote_offered_capabilities(self._conn))
+    return dat2obj(pn_connection_remote_offered_capabilities(self._conn))
 
   @property
   def remote_desired_capabilities(self):
-    return self._dat2obj(pn_connection_remote_desired_capabilities(self._conn))
+    return dat2obj(pn_connection_remote_desired_capabilities(self._conn))
 
   @property
   def remote_properties(self):
-    return self._dat2obj(pn_connection_remote_properties(self._conn))
-
-  def _obj2dat(self, obj, dimpl):
-    if obj is not None:
-      d = Data(dimpl)
-      d.put_object(obj)
+    return dat2obj(pn_connection_remote_properties(self._conn))
 
   def open(self):
-    self._obj2dat(self.offered_capabilities,
-                  pn_connection_offered_capabilities(self._conn))
-    self._obj2dat(self.desired_capabilities,
-                  pn_connection_desired_capabilities(self._conn))
-    self._obj2dat(self.properties, pn_connection_properties(self._conn))
+    obj2dat(self.offered_capabilities,
+            pn_connection_offered_capabilities(self._conn))
+    obj2dat(self.desired_capabilities,
+            pn_connection_desired_capabilities(self._conn))
+    obj2dat(self.properties, pn_connection_properties(self._conn))
     pn_connection_open(self._conn)
 
   def close(self):
@@ -2259,12 +2260,97 @@ def wrap_delivery(dlv):
   pn_delivery_set_context(dlv, wrapper)
   return wrapper
 
+class Disposition(object):
+
+  RECEIVED = PN_RECEIVED
+  ACCEPTED = PN_ACCEPTED
+  REJECTED = PN_REJECTED
+  RELEASED = PN_RELEASED
+  MODIFIED = PN_MODIFIED
+
+  def __init__(self, impl, local):
+    self._impl = impl
+    self.local = local
+    self._data = None
+    self._condition = None
+    self._annotations = None
+
+  @property
+  def type(self):
+    return pn_disposition_type(self._impl)
+
+  def _get_section_number(self):
+    return pn_disposition_get_section_number(self._impl)
+  def _set_section_number(self, n):
+    pn_disposition_set_section_number(self._impl, n)
+  section_number = property(_get_section_number, _set_section_number)
+
+  def _get_section_offset(self):
+    return pn_disposition_get_section_offset(self._impl)
+  def _set_section_offset(self, n):
+    pn_disposition_set_section_offset(self._impl, n)
+  section_offset = property(_get_section_offset, _set_section_offset)
+
+  def _get_failed(self):
+    return pn_disposition_is_failed(self._impl)
+  def _set_failed(self, b):
+    pn_disposition_set_failed(self._impl, b)
+  failed = property(_get_failed, _set_failed)
+
+  def _get_undeliverable(self):
+    return pn_disposition_is_undeliverable(self._impl)
+  def _set_undeliverable(self, b):
+    pn_disposition_set_undeliverable(self._impl, b)
+  undeliverable = property(_get_undeliverable, _set_undeliverable)
+
+  def _get_data(self):
+    if self.local:
+      return self._data
+    else:
+      return dat2obj(pn_disposition_data(self._impl))
+  def _set_data(self, obj):
+    if self.local:
+      self._data = obj
+    else:
+      raise AttributeError("data attribute is read-only")
+  data = property(_get_data, _set_data)
+
+  def _get_annotations(self):
+    if self.local:
+      return self._annotations
+    else:
+      return dat2obj(pn_disposition_annotations(self._impl))
+  def _set_annotations(self, obj):
+    if self.local:
+      self._annotations = obj
+    else:
+      raise AttributeError("annotations attribute is read-only")
+  annotations = property(_get_annotations, _set_annotations)
+
+  def _get_condition(self):
+    if self.local:
+      return self._condition
+    else:
+      return cond2obj(pn_disposition_condition(self._impl))
+  def _set_condition(self, obj):
+    if self.local:
+      self._condition = obj
+    else:
+      raise AttributeError("condition attribute is read-only")
+  condition = property(_get_condition, _set_condition)
+
 class Delivery(object):
 
-  ACCEPTED = PN_ACCEPTED
+  RECEIVED = Disposition.RECEIVED
+  ACCEPTED = Disposition.ACCEPTED
+  REJECTED = Disposition.REJECTED
+  RELEASED = Disposition.RELEASED
+  MODIFIED = Disposition.MODIFIED
 
   def __init__(self, dlv):
     self._dlv = dlv
+    self.local = Disposition(pn_delivery_local(self._dlv), True)
+    self.remote = Disposition(pn_delivery_remote(self._dlv), False)
 
   @property
   def tag(self):
@@ -2283,6 +2369,9 @@ class Delivery(object):
     return pn_delivery_updated(self._dlv)
 
   def update(self, state):
+    obj2dat(self.local._data, pn_disposition_data(self.local._impl))
+    obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
+    obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
     pn_delivery_update(self._dlv, state)
 
   @property
@@ -2315,7 +2404,6 @@ class Delivery(object):
   @property
   def link(self):
     return wrap_link(pn_delivery_link(self._dlv))
-
 
 class TransportException(ProtonException):
   pass
@@ -2714,6 +2802,7 @@ __all__ = [
            "Connector",
            "Data",
            "Delivery",
+           "Disposition",
            "Described",
            "Driver",
            "DriverException",

@@ -1138,7 +1138,7 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
 int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
 {
   pni_store_t *store = pn_tracker_store(messenger, tracker);
-  return pni_store_update(store, pn_tracker_sequence(tracker), (pn_status_t) 0, flags, true, true);
+  return pni_store_update(store, pn_tracker_sequence(tracker), PN_STATUS_UNKNOWN, flags, true, true);
 }
 
 // true if all pending output has been sent to peer
@@ -1290,7 +1290,7 @@ int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
   }
 
   return pni_store_update(messenger->incoming, pn_tracker_sequence(tracker),
-                          (pn_status_t) PN_ACCEPTED, flags, false, false);
+                          PN_STATUS_ACCEPTED, flags, false, false);
 }
 
 int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
@@ -1301,7 +1301,7 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
   }
 
   return pni_store_update(messenger->incoming, pn_tracker_sequence(tracker),
-                          (pn_status_t) PN_REJECTED, flags, false, false);
+                          PN_STATUS_REJECTED, flags, false, false);
 }
 
 int pn_messenger_queued(pn_messenger_t *messenger, bool sender)

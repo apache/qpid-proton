@@ -127,6 +127,7 @@ struct pn_transport_t {
   pn_data_t *remote_offered_capabilities;
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;
+  pn_data_t *disp_data;
   //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
 #define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
   uint32_t   local_max_frame;
@@ -240,13 +241,23 @@ struct pn_link_t {
   pn_link_state_t state;
 };
 
+struct pn_disposition_t {
+  uint64_t type;
+  pn_data_t *data;
+  pn_data_t *annotations;
+  pn_condition_t condition;
+  uint32_t section_number;
+  uint64_t section_offset;
+  bool failed;
+  bool undeliverable;
+  bool settled;
+};
+
 struct pn_delivery_t {
   pn_link_t *link;
   pn_buffer_t *tag;
-  int local_state;
-  int remote_state;
-  bool local_settled;
-  bool remote_settled;
+  pn_disposition_t local;
+  pn_disposition_t remote;
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
   pn_delivery_t *unsettled_next;
