@@ -398,13 +398,12 @@ if (ruby_exe)
   set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
   set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
   set (rb_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
-  set_path (rb "$ENV{PATH}:${rb_bin}:${rb_bld}")
-  set_path (rb "$ENV{RUBYLIB}:${rb_root}:${rb_src}:${rb_bin}:${rb_bld}")
+  set (rb_path "$ENV{PATH}:${rb_bin}:${rb_bld}")
+  set (rb_rubylib "$ENV{RUBYLIB}:${rb_root}:${rb_src}:${rb_bin}:${rb_bld}")
 
   # ruby unit tests:  tests/ruby/proton-test
   add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
     "${rb_root}/proton-test")
-  set_tests_properties(ruby-unit-test PROPERTIES FAIL_REGULAR_EXPRESSION "Error;Failure")
 
   # ruby spec tests
   find_program(rspec_exe rspec)

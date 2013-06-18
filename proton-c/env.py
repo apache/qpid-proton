@@ -59,8 +59,7 @@ def main(argv=None):
         raise Exception("Error: syntax error in command arguments")
 
     p = subprocess.Popen(args, env=new_env)
-    p.wait()
-    return 0
+    return p.wait()
 
 if __name__ == "__main__":
     sys.exit(main())
