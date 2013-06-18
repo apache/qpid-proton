@@ -16,7 +16,7 @@
  */
 package org.apache.qpid.proton.jms;
 
-import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.*;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Footer;
@@ -261,18 +261,42 @@ public abstract class InboundTransformer {
 
 
     private void setProperty(Message msg, String key, Object value) throws JMSException {
-        //TODO support all types
-        msg.setObjectProperty(key, value);
-//        if( value instanceof String ) {
-//            msg.setStringProperty(key, (String) value);
-//        } else if( value instanceof Double ) {
-//            msg.setDoubleProperty(key, ((Double) value).doubleValue());
-//        } else if( value instanceof Integer ) {
-//            msg.setIntProperty(key, ((Integer) value).intValue());
-//        } else if( value instanceof Long ) {
-//            msg.setLongProperty(key, ((Long) value).longValue());
-//        } else {
-//            throw new RuntimeException("Unexpected value type: "+value.getClass());
-//        }
+        if( value instanceof UnsignedLong) {
+            long v = ((UnsignedLong) value).longValue();
+            msg.setLongProperty(key, v);
+        } else if( value instanceof UnsignedInteger) {
+            long v = ((UnsignedInteger) value).longValue();
+            if( Integer.MIN_VALUE <= v && v <= Integer.MAX_VALUE ) {
+                msg.setIntProperty(key, (int) v);
+            } else {
+                msg.setLongProperty(key, v);
+            }
+        } else if( value instanceof UnsignedShort) {
+            int v = ((UnsignedShort) value).intValue();
+            if( Short.MIN_VALUE <= v && v <= Short.MAX_VALUE ) {
+                msg.setShortProperty(key, (short) v);
+            } else {
+                msg.setIntProperty(key, v);
+            }
+        } else if( value instanceof UnsignedByte) {
+            short v = ((UnsignedByte) value).shortValue();
+            if( Byte.MIN_VALUE <= v && v <= Byte.MAX_VALUE ) {
+                msg.setByteProperty(key, (byte) v);
+            } else {
+                msg.setShortProperty(key, v);
+            }
+        } else if( value instanceof Symbol) {
+            msg.setStringProperty(key, value.toString());
+        } else if( value instanceof Decimal128 ) {
+            msg.setDoubleProperty(key, ((Decimal128)value).doubleValue());
+        } else if( value instanceof Decimal64 ) {
+            msg.setDoubleProperty(key, ((Decimal64)value).doubleValue());
+        } else if( value instanceof Decimal32 ) {
+            msg.setFloatProperty(key, ((Decimal32)value).floatValue());
+        } else if( value instanceof Binary ) {
+            msg.setStringProperty(key, value.toString());
+        } else {
+            msg.setObjectProperty(key, value);
+        }
     }
 }
