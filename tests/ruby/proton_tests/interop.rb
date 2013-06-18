@@ -3,9 +3,17 @@
 require 'test/unit'
 require 'qpid_proton'
 
+if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
+  require 'pathname'
+  class File
+    def self.absolute_path(name)
+      return Pathname.new(name).realpath
+    end
+  end
+end
+
 class InteropTest < Test::Unit::TestCase
   Data = Qpid::Proton::Data
-  Type = Data::Type
   Message = Qpid::Proton::Message
 
   def setup
