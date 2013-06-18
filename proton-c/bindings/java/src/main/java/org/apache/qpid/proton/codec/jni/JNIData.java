@@ -267,6 +267,7 @@ public class JNIData implements Data
         {
             buf = ByteBuffer.allocate(size);
             rval = encode(buf);
+            size = size * 2;
         }
         return new Binary(buf.array(), buf.arrayOffset(), buf.arrayOffset()+(int)rval);
     }
@@ -1122,6 +1123,49 @@ public class JNIData implements Data
         public Object getDescribed()
         {
             return _described;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o)
+            {
+                return true;
+            }
+            if (o == null || ! (o instanceof DescribedType))
+            {
+                return false;
+            }
+
+            DescribedType that = (DescribedType) o;
+
+            if (_described != null ? !_described.equals(that.getDescribed()) : that.getDescribed() != null)
+            {
+                return false;
+            }
+            if (_descriptor != null ? !_descriptor.equals(that.getDescriptor()) : that.getDescriptor() != null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = _descriptor != null ? _descriptor.hashCode() : 0;
+            result = 31 * result + (_described != null ? _described.hashCode() : 0);
+            return result;
+        }
+
+
+        @Override
+        public String toString()
+        {
+            return "{"  + _descriptor +
+                   ": " + _described +
+                   '}';
         }
     }
 }

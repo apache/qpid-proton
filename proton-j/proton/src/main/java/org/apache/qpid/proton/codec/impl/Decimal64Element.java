@@ -18,18 +18,59 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.codec.impl;
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
+import java.nio.ByteBuffer;
 
-public class DataFactoryImpl extends ProtonFactoryImpl implements DataFactory
+import org.apache.qpid.proton.amqp.Decimal64;
+import org.apache.qpid.proton.codec.Data;
+
+class Decimal64Element extends AtomicElement<Decimal64>
 {
-    @Override
-    public Data createData(final long capacity)
+
+    private final Decimal64 _value;
+
+    Decimal64Element(Element parent, Element prev, Decimal64 d)
     {
-        return new DataImpl();
+        super(parent, prev);
+        _value = d;
+    }
+
+    @Override
+    public int size()
+    {
+        return isElementOfArray() ? 8 : 9;
+    }
+
+    @Override
+    public Decimal64 getValue()
+    {
+        return _value;
+    }
+
+    @Override
+    public Data.DataType getDataType()
+    {
+        return Data.DataType.DECIMAL64;
+    }
+
+    @Override
+    public int encode(ByteBuffer b)
+    {
+        int size = size();
+        if(b.remaining()>=size)
+        {
+            if(size == 9)
+            {
+                b.put((byte)0x84);
+            }
+            b.putLong(_value.getBits());
+            return size;
+        }
+        else
+        {
+            return 0;
+        }
     }
 }

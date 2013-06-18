@@ -48,11 +48,13 @@ public class JythonTest
     private static final String PROTON_JYTHON_TEST_ROOT = "protonJythonTestRoot";
     private static final String PROTON_JYTHON_TEST_SCRIPT = "protonJythonTestScript";
     private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestXmlOutputDirectory";
+    private static final String PROTON_JYTHON_IGNORE_FILE = "protonJythonIgnoreFile";
 
     /** Name of the junit style xml report to be written by the python test script */
     private static final String XML_REPORT_NAME = "TEST-jython-test-results.xml";
 
     public static final String TEST_PATTERN_SYSTEM_PROPERTY = "proton.pythontest.pattern";
+    public static final String IGNORE_FILE_SYSTEM_PROPERTY = "proton.pythontest.ignore_file";
 
     /** The number of times to run the test, or forever if zero */
     public static final String TEST_INVOCATIONS_SYSTEM_PROPERTY = "proton.pythontest.invocations";
@@ -65,8 +67,9 @@ public class JythonTest
         String testScript = getJythonTestScript();
         String testRoot = getJythonTestRoot();
         String xmlReportFile = getOptionalXmlReportFilename();
+        String ignoreFile = getOptionalIgnoreFile();
 
-        PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile);
+        PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile, ignoreFile);
         interp.getSystemState().path.insert(0, new PyString(testRoot));
 
         LOGGER.info("About to call Jython test script: '" + testScript
@@ -116,7 +119,7 @@ public class JythonTest
         }
     }
 
-    private PythonInterpreter createInterpreterWithArgs(String xmlReportFile)
+    private PythonInterpreter createInterpreterWithArgs(String xmlReportFile, String ignoreFile)
     {
         PySystemState systemState = new PySystemState();
 
@@ -124,6 +127,17 @@ public class JythonTest
         {
             systemState.argv.append(new PyString("--xml"));
             systemState.argv.append(new PyString(xmlReportFile));
+        }
+
+        if(ignoreFile == null)
+        {
+            ignoreFile = System.getProperty(IGNORE_FILE_SYSTEM_PROPERTY);
+        }
+
+        if(ignoreFile != null)
+        {
+            systemState.argv.append(new PyString("-I"));
+            systemState.argv.append(new PyString(ignoreFile));
         }
 
         String testPattern = System.getProperty(TEST_PATTERN_SYSTEM_PROPERTY);
@@ -162,6 +176,26 @@ public class JythonTest
             throw new FileNotFoundException("Test root '" + testRoot + "' should be a directory.");
         }
         return testRoot.getAbsolutePath();
+    }
+
+    private String getOptionalIgnoreFile()
+    {
+        String ignoreFile = System.getProperty(PROTON_JYTHON_IGNORE_FILE);
+
+        if(ignoreFile != null)
+        {
+            File f = new File(ignoreFile);
+            if(f.exists() && f.canRead())
+            {
+                return ignoreFile;
+            }
+            else
+            {
+                LOGGER.info(PROTON_JYTHON_IGNORE_FILE + " system property set to " + ignoreFile + " but this cannot be read.");
+            }
+        }
+        return null;
+        
     }
 
     private String getOptionalXmlReportFilename()

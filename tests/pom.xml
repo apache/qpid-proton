@@ -57,6 +57,7 @@ directory &lt;basedir&gt;/build/proton-c.</description>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
+            <protonJythonIgnoreFile>${basedir}/java/pythonTests.ignore</protonJythonIgnoreFile>
             <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
             <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
             <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>

@@ -53,8 +53,6 @@ class InteropTest(common.Test):
             n = self.data.decode(buffer)
             buffer = buffer[n:]
         self.data.rewind()
-        # Test the round-trip re-encoding gives the same result.
-        assert encoded == self.data.encode()
 
     def decode_data_file(self, name): self.decode_data(self.get_data(name))
 

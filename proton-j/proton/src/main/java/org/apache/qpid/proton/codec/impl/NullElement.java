@@ -18,18 +18,46 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.codec.impl;
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
+import java.nio.ByteBuffer;
 
-public class DataFactoryImpl extends ProtonFactoryImpl implements DataFactory
+import org.apache.qpid.proton.codec.Data;
+
+class NullElement extends AtomicElement<Void>
 {
-    @Override
-    public Data createData(final long capacity)
+    NullElement(Element parent, Element prev)
     {
-        return new DataImpl();
+        super(parent, prev);
+    }
+
+    @Override
+    public int size()
+    {
+        return isElementOfArray() ? 0 : 1;
+    }
+
+    @Override
+    public Void getValue()
+    {
+        return null;
+    }
+
+    @Override
+    public Data.DataType getDataType()
+    {
+        return Data.DataType.NULL;
+    }
+
+    @Override
+    public int encode(ByteBuffer b)
+    {
+        if(b.hasRemaining() && !isElementOfArray())
+        {
+            b.put((byte)0x40);
+            return 1;
+        }
+        return 0;
     }
 }

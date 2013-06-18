@@ -1,0 +1,3 @@
+proton_tests.soak.*
+proton_tests.ssl.SslTest.test_defaults_messenger_app
+proton_tests.ssl.SslTest.test_server_authentication_messenger_app

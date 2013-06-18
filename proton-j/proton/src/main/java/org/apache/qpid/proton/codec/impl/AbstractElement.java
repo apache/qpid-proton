@@ -18,18 +18,50 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.codec.impl;
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
-
-public class DataFactoryImpl extends ProtonFactoryImpl implements DataFactory
+abstract class AbstractElement<T> implements Element<T>
 {
-    @Override
-    public Data createData(final long capacity)
+    private Element _parent;
+    private Element _next;
+    private Element _prev;
+
+    AbstractElement(Element parent, Element prev)
     {
-        return new DataImpl();
+        _parent = parent;
+        _prev = prev;
+    }
+
+    protected boolean isElementOfArray()
+    {
+        return _parent instanceof ArrayElement && !(((ArrayElement)parent()).isDescribed() && this == _parent.child());
+    }
+
+    @Override
+    public Element next()
+    {
+        // TODO
+        return _next;
+    }
+
+    @Override
+    public Element prev()
+    {
+        // TODO
+        return _prev;
+    }
+
+    @Override
+    public Element parent()
+    {
+        // TODO
+        return _parent;
+    }
+
+    @Override
+    public void setNext(Element elt)
+    {
+        _next = elt;
     }
 }

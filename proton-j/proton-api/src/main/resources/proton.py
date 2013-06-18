@@ -1128,7 +1128,7 @@ class Data(object):
     unicode: put_string,
     bytes: put_binary,
     symbol: put_symbol,
-    int: put_long,
+    int: put_int,
     char: put_char,
     long: put_long,
     ulong: put_ulong,

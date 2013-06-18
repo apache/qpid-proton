@@ -18,18 +18,60 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.codec.impl;
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
-import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 
-public class DataFactoryImpl extends ProtonFactoryImpl implements DataFactory
+import org.apache.qpid.proton.codec.Data;
+
+class UUIDElement extends AtomicElement<UUID>
 {
-    @Override
-    public Data createData(final long capacity)
+
+    private final UUID _value;
+
+    UUIDElement(Element parent, Element prev, UUID u)
     {
-        return new DataImpl();
+        super(parent, prev);
+        _value = u;
+    }
+
+    @Override
+    public int size()
+    {
+        return isElementOfArray() ? 16 : 17;
+    }
+
+    @Override
+    public UUID getValue()
+    {
+        return _value;
+    }
+
+    @Override
+    public Data.DataType getDataType()
+    {
+        return Data.DataType.UUID;
+    }
+
+    @Override
+    public int encode(ByteBuffer b)
+    {
+        int size = size();
+        if(b.remaining()>=size)
+        {
+            if(size == 17)
+            {
+                b.put((byte)0x98);
+            }
+            b.putLong(_value.getMostSignificantBits());
+            b.putLong(_value.getLeastSignificantBits());
+            return size;
+        }
+        else
+        {
+            return 0;
+        }
     }
 }
