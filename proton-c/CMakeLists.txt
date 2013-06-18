@@ -404,6 +404,7 @@ if (ruby_exe)
   # ruby unit tests:  tests/ruby/proton-test
   add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
     "${rb_root}/proton-test")
+  set_tests_properties(ruby-unit-test PROPERTIES FAIL_REGULAR_EXPRESSION "Error;Failure")
 
   # ruby spec tests
   find_program(rspec_exe rspec)
