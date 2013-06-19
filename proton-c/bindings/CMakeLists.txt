@@ -53,6 +53,7 @@ if (PHP_CONFIG_EXE)
 endif (PHP_CONFIG_EXE)
 
 # Prerequisites for Perl:
+include(FindPerl)
 include(FindPerlLibs)
 if (PERLLIBS_FOUND)
   set (DEFAULT_PERL ON)
