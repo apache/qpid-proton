@@ -396,10 +396,11 @@ find_program(ruby_exe "ruby")
 if (ruby_exe)
   set (rb_root "${pn_test_root}/ruby")
   set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
+  set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
   set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
   set (rb_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
   set (rb_path "$ENV{PATH}:${rb_bin}:${rb_bld}")
-  set (rb_rubylib "$ENV{RUBYLIB}:${rb_root}:${rb_src}:${rb_bin}:${rb_bld}")
+  set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
 
   # ruby unit tests:  tests/ruby/proton-test
   add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
