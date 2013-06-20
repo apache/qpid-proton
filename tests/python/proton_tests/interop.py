@@ -67,8 +67,7 @@ class InteropTest(common.Test):
         next_type = self.data.next()
         assert next_type == type, "Type mismatch: %s != %s"%(
             Data.type_names[next_type], Data.type_names[type])
-        getter = Data.get_mappings[type]
-        next_value = getter(self.data)
+        next_value = self.data.get_object()
         assert next_value == value, "Value mismatch: %s != %s"%(next_value, value)
 
     def test_message(self):
