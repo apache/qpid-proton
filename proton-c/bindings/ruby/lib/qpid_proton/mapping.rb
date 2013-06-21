@@ -38,6 +38,9 @@ module Qpid # :nodoc:
       # * klasses - the Ruby classes for this type
       # * getter  - overrides the get method for the type
       def initialize(code, name, klasses = nil, getter = nil)
+
+        @debug = (name == "bool")
+
         @code = code
         @name = name
 
@@ -85,7 +88,7 @@ module Qpid # :nodoc:
     end
 
     NULL       = Mapping.new(Cproton::PN_NULL, "null", [NilClass], "nil?")
-    BOOL       = Mapping.new(Cproton::PN_BOOL, "bool", [TrueClass, FalseClass])
+    BOOL       = Mapping.new(Cproton::PN_BOOL, "bool", [TrueClass, FalseClass], "bool")
     UBYTE      = Mapping.new(Cproton::PN_UBYTE, "ubyte")
     BYTE       = Mapping.new(Cproton::PN_BYTE, "byte")
     USHORT     = Mapping.new(Cproton::PN_USHORT, "ushort")
@@ -105,10 +108,10 @@ module Qpid # :nodoc:
     BINARY     = Mapping.new(Cproton::PN_BINARY, "binary")
     STRING     = Mapping.new(Cproton::PN_STRING, "string", [String])
     SYMBOL     = Mapping.new(Cproton::PN_SYMBOL, "symbol")
-    DESCRIBED  = Mapping.new(Cproton::PN_DESCRIBED, "described", [Qpid::Proton::Described])
-    ARRAY      = Mapping.new(Cproton::PN_ARRAY, "array")
-    LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array])
-    MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash])
+    DESCRIBED  = Mapping.new(Cproton::PN_DESCRIBED, "described", [Qpid::Proton::Described], "get_described")
+    ARRAY      = Mapping.new(Cproton::PN_ARRAY, "array", nil, "get_array")
+    LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array], "get_array")
+    MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
 
   end
 

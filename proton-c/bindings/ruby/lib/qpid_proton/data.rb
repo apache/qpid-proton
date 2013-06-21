@@ -128,8 +128,8 @@ module Qpid
       #
       # If there is no next sibling the current node remains unchanged
       # and nil is returned.
-      def next
-        return Cproton.pn_data_next(@data) ? type : nil
+      def next(print = false)
+        Cproton.pn_data_next(@data)
       end
 
       # Advances the current node to its previous sibling and returns its type.
@@ -267,6 +267,10 @@ module Qpid
         Cproton.pn_data_get_map(@data)
       end
 
+      def get_map # :nodoc:
+        ::Hash.proton_data_get(self)
+      end
+
       # Puts an array value.
       #
       # Elements may be filled by entering the array node and putting the
@@ -334,6 +338,10 @@ module Qpid
         [count, described, Mapping.for_code(array_type) ]
       end
 
+      def get_array # :nodoc:
+        ::Array.proton_get(self)
+      end
+
       # Puts a described value.
       #
       # A described node has two children, the descriptor and the value.
@@ -351,6 +359,19 @@ module Qpid
       #
       def put_described
         check(Cproton.pn_data_put_described(@data))
+      end
+
+      def get_described # :nodoc:
+        raise TypeError, "not a described type" unless self.described?
+        self.enter
+        self.next
+        type = self.type
+        descriptor = type.get(self)
+        self.next
+        type = self.type
+        value = type.get(self)
+        self.exit
+        Described.new(descriptor, value)
       end
 
       # Checks if the current node is a described value.

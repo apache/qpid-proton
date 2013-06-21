@@ -132,7 +132,8 @@ class Array
       raise TypeError, "not a list" unless data.enter
       elements = []
       (0...size).each do
-        type = data.next
+        data.next
+        type = data.type
         raise TypeError, "missing next element in list" unless type
         elements << type.get(data)
       end
@@ -155,10 +156,12 @@ class Array
 
       elements.proton_array_header = Qpid::Proton::ArrayHeader.new(type, descriptor)
       (0...count).each do |which|
-        etype = data.next
-        raise TypeError, "missing next element in array" unless etype
-        raise TypeError, "invalid array element: #{etype}" unless etype == type
-        elements << type.get(data)
+        if data.next
+          etype = data.type
+          raise TypeError, "missing next element in array" unless etype
+          raise TypeError, "invalid array element: #{etype}" unless etype == type
+          elements << type.get(data)
+        end
       end
       data.exit
       return elements

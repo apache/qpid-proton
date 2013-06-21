@@ -31,22 +31,6 @@ module Qpid # :nodoc:
         @value = value
       end
 
-      # Retrieves the descriptor and value from the supplied Data object.
-      #
-      # ==== Arguments
-      #
-      # * data - the Qpid::Proton::Data instance
-      #
-      def self.get(data)
-        type = data.next
-        raise TypeError, "not a described type" unless type == Mapping.SYMBOL
-        descriptor = data.symbol
-        type = data.next
-        raise TypeError, "not a described type" unless type == Mapping.STRING
-        value = data.string
-        Described.new(descriptor, value)
-      end
-
       # Puts the description into the Data object.
       #
       # ==== Arguments
@@ -63,6 +47,16 @@ module Qpid # :nodoc:
       def put(data)
         data.symbol = @descriptor
         data.string = @value
+      end
+
+      def ==(that) # :nodoc:
+        (that.is_a?(Qpid::Proton::Described) &&
+         (self.descriptor == that.descriptor) &&
+         (self.value == that.value))
+      end
+
+      def to_s # :nodoc:
+        "descriptor=#{descriptor} value=#{value}"
       end
 
     end

@@ -58,73 +58,84 @@ class InteropTest < Test::Unit::TestCase
     assert_equal(value, type.get(@data))
   end
 
+  def assert_array_next(expected, header)
+    assert_next(Qpid::Proton::ARRAY, expected)
+    result = @data.type.get(@data)
+    assert_equal(result.proton_array_header, header)
+  end
+
   def test_message
     decode_message_file("message")
-    assert_next(Data::STRING, "hello")
-    assert !@data.next()
+    assert_next(Qpid::Proton::STRING, "hello")
+    assert !@data.next
   end
 
   def test_primitives
     decode_data_file("primitives")
-    assert_next(Data::BOOL, true)
-    assert_next(Data::BOOL, false)
-    assert_next(Data::UBYTE, 42)
-    assert_next(Data::USHORT, 42)
-    assert_next(Data::SHORT, -42)
-    assert_next(Data::UINT, 12345)
-    assert_next(Data::INT, -12345)
-    assert_next(Data::ULONG, 12345)
-    assert_next(Data::LONG, -12345)
-    assert_next(Data::FLOAT, 0.125)
-    assert_next(Data::DOUBLE, 0.125)
-    assert !@data.next()
+    assert_next(Qpid::Proton::BOOL, true)
+    assert_next(Qpid::Proton::BOOL, false)
+    assert_next(Qpid::Proton::UBYTE, 42)
+    assert_next(Qpid::Proton::USHORT, 42)
+    assert_next(Qpid::Proton::SHORT, -42)
+    assert_next(Qpid::Proton::UINT, 12345)
+    assert_next(Qpid::Proton::INT, -12345)
+    assert_next(Qpid::Proton::ULONG, 12345)
+    assert_next(Qpid::Proton::LONG, -12345)
+    assert_next(Qpid::Proton::FLOAT, 0.125)
+    assert_next(Qpid::Proton::DOUBLE, 0.125)
+    assert !@data.next
   end
 
   def test_strings
     decode_data_file("strings")
-    assert_next(Data::BINARY, "abc\0defg")
-    assert_next(Data::STRING, "abcdefg")
-    assert_next(Data::SYMBOL, "abcdefg")
-    assert_next(Data::BINARY, "")
-    assert_next(Data::STRING, "")
-    assert_next(Data::SYMBOL, "")
-    assert !@data.next()
+    assert_next(Qpid::Proton::BINARY, "abc\0defg")
+    assert_next(Qpid::Proton::STRING, "abcdefg")
+    assert_next(Qpid::Proton::SYMBOL, "abcdefg")
+    assert_next(Qpid::Proton::BINARY, "")
+    assert_next(Qpid::Proton::STRING, "")
+    assert_next(Qpid::Proton::SYMBOL, "")
+    assert !@data.next
   end
 
   def test_described
     decode_data_file("described")
-    assert_next(Data::DESCRIBED, Data::Described.new("foo-descriptor", "foo-value"))
+    assert_next(Qpid::Proton::DESCRIBED, Qpid::Proton::Described.new("foo-descriptor", "foo-value"))
     assert(@data.described?)
-    assert_next(Data::DESCRIBED, Data::Described.new(12, 13))
+    assert_next(Qpid::Proton::DESCRIBED, Qpid::Proton::Described.new(12, 13))
     assert(@data.described?)
     assert !@data.next
   end
 
   def test_described_array
     decode_data_file("described_array")
-    assert_next(Data::ARRAY, Data::Array.new("int-array", Data::INT, 0...10))
+    assert_array_next((0...10).to_a,
+                       Qpid::Proton::ArrayHeader.new(Qpid::Proton::INT,
+                                                     "int-array"))
   end
 
   def test_arrays
     decode_data_file("arrays")
-    assert_next(Data::ARRAY, Data::Array.new(false, Data::INT, 0...100))
-    assert_next(Data::ARRAY, Data::Array.new(false, Data::STRING, ["a", "b", "c"]))
-    assert_next(Data::ARRAY, Data::Array.new(false, Data::INT))
+    assert_array_next((0...100).to_a,
+                      Qpid::Proton::ArrayHeader.new(Qpid::Proton::INT))
+    assert_array_next(["a", "b", "c"],
+                      Qpid::Proton::ArrayHeader.new(Qpid::Proton::STRING))
+    assert_array_next([],
+                      Qpid::Proton::ArrayHeader.new(Qpid::Proton::INT))
     assert !@data.next
   end
 
   def test_lists
     decode_data_file("lists")
-    assert_next(Data::LIST, [32, "foo", true])
-    assert_next(Data::LIST, [])
+    assert_next(Qpid::Proton::LIST, [32, "foo", true])
+    assert_next(Qpid::Proton::LIST, [])
     assert !@data.next
   end
 
   def test_maps
     decode_data_file("maps")
-    assert_next(Data::MAP, {"one" => 1, "two" => 2, "three" => 3 })
-    assert_next(Data::MAP, {1 => "one", 2 => "two", 3 => "three"})
-    assert_next(Data::MAP, {})
-    assert !@data.next()
+    assert_next(Qpid::Proton::MAP, {"one" => 1, "two" => 2, "three" => 3 })
+    assert_next(Qpid::Proton::MAP, {1 => "one", 2 => "two", 3 => "three"})
+    assert_next(Qpid::Proton::MAP, {})
+    assert !@data.next
   end
 end

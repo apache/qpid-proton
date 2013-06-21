@@ -67,9 +67,11 @@ class Hash
       data.enter
 
       (0...(count/2)).each do
-        type = data.next
+        data.next
+        type = data.type
         key = type.get(data)
-        type = data.next
+        data.next
+        type = data.type
         value = type.get(data)
         result[key] = value
       end
