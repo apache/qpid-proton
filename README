@@ -73,6 +73,33 @@ From the directory where you found this README file:
 Note that all installed files are stored in the install_manifest.txt
 file.
 
+NOTE: The CMAKE_INSTALL_PREFIX does not affect the location for where the language
+bindings (Ruby, Perl, PHP, Ruby) are installed. For those elements, the location is
+determined by the language itself; i.e., each one is interrogated for the proper
+location for extensions.
+
+NOTE: If you want to constrain where the Proton code is installed, you have to use
+the DESTDIR argument to make:
+
+  make install DESTDIR=[location]
+
+This will install all components (including the language bindings) in locations
+relative to the specified location. So, for example, if the Perl language bindings
+would normally install to /usr/lib/perl5/vendor_perl/ then, if you use:
+
+  make install DESTDIR=/opt
+
+the bindings would install to /opt/usr/lib/perl5/vendor_perl/ instead.
+
+== Disable Building The Language Bindings ==
+
+To disable any language bindings, you can disable them individually with:
+
+  cmake -DBUILD_[LANGUAGE]=OFF .
+
+where [LANGUAGE] is one of JAVA, PERL, PHP, PYTHON or RUBY. To disable building all
+language bindings then include a separate argument for each.
+
 == Build Instructions (Windows) ==
 
 This describes how to build the Proton library on Windows using Microsoft
