@@ -371,7 +371,6 @@ class Terminus(object):
     self.timeout = None
     self.durability = None
     self.expiry_policy = None
-    self.dynamic = None
     self.properties = DataDummy()
     self.outcomes = DataDummy()
     self.filter = DataDummy()
@@ -391,8 +390,16 @@ class Terminus(object):
     return self.impl.setTimeout(t)
   timeout = property(_get_timeout, _set_timeout)
 
+  def _is_dynamic(self):
+    return self.impl.getDynamic()
+  def _set_dynamic(self, dynamic):
+    self.impl.setDynamic(dynamic)
+  dynamic = property(_is_dynamic, _set_dynamic)
+
   def copy(self, src):
     self.address = src.address
+    self.timeout = src.timeout
+    self.dynamic = src.dynamic
 
 class Sender(Link):
 

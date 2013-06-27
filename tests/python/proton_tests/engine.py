@@ -479,6 +479,11 @@ class LinkTest(Test):
                                             timeout=7,
                                             capabilities=[]))
 
+  def test_dynamic_link(self):
+    self._test_source_target(TerminusConfig(address=None, dynamic=True), None)
+    assert self.rcv.remote_source.dynamic
+    assert self.rcv.remote_source.address is None
+
   def test_condition(self):
     self.snd.open()
     self.rcv.open()
@@ -502,12 +507,13 @@ class LinkTest(Test):
 class TerminusConfig:
 
   def __init__(self, address=None, timeout=None, durability=None, filter=None,
-               capabilities=None):
+               capabilities=None, dynamic=False):
     self.address = address
     self.timeout = timeout
     self.durability = durability
     self.filter = filter
     self.capabilities = capabilities
+    self.dynamic = dynamic
 
   def __call__(self, terminus):
     if self.address is not None:
@@ -527,6 +533,8 @@ class TerminusConfig:
       for (t, v) in self.filter:
         setter = getattr(terminus.filter, "put_%s" % t)
         setter(v)
+    if self.dynamic:
+      terminus.dynamic = True
 
 class TransferTest(Test):
 

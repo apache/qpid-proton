@@ -1710,7 +1710,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
   pn_map_handle(ssn, handle, link);
   PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_ACTIVE);
   pn_terminus_t *rsrc = &link->remote_source;
-  if (source.start) {
+  if (source.start || src_dynamic) {
     pn_terminus_set_type(rsrc, PN_SOURCE);
     pn_terminus_set_address_bytes(rsrc, source);
     pn_terminus_set_durability(rsrc, src_dr);
@@ -1721,7 +1721,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
     pn_terminus_set_type(rsrc, PN_UNSPECIFIED);
   }
   pn_terminus_t *rtgt = &link->remote_target;
-  if (target.start) {
+  if (target.start || tgt_dynamic) {
     pn_terminus_set_type(rtgt, PN_TARGET);
     pn_terminus_set_address_bytes(rtgt, target);
     pn_terminus_set_durability(rtgt, tgt_dr);
