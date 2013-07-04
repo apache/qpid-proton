@@ -365,6 +365,10 @@ class Terminus(object):
 
   UNSPECIFIED = None
 
+  DIST_MODE_UNSPECIFIED = None
+  DIST_MODE_COPY = "copy"
+  DIST_MODE_MOVE = "move"
+
   def __init__(self, impl):
     self.impl = impl
     self.type = None
@@ -396,10 +400,28 @@ class Terminus(object):
     self.impl.setDynamic(dynamic)
   dynamic = property(_is_dynamic, _set_dynamic)
 
+  def _get_distribution_mode(self):
+    if isinstance(self.impl, Source):
+      sym = self.impl.getDistributionMode()
+      if sym is None:
+        return self.DIST_MODE_UNSPECIFIED
+      else:
+        return sym.toString()
+    else:
+      return self.DIST_MODE_UNSPECIFIED
+  def _set_distribution_mode(self, mode):
+    if isinstance(self.impl, Source):
+      if mode in [None, "copy", "move"]:
+        self.impl.setDistributionMode(Symbol.valueOf(mode))
+      else:
+        self.impl.setDistributionMode(None)
+  distribution_mode = property(_get_distribution_mode, _set_distribution_mode)
+
   def copy(self, src):
     self.address = src.address
     self.timeout = src.timeout
     self.dynamic = src.dynamic
+    self.distribution_mode = src.distribution_mode
 
 class Sender(Link):
 

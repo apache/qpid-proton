@@ -2159,6 +2159,10 @@ class Terminus(object):
   CONFIGURATION = PN_CONFIGURATION
   DELIVERIES = PN_DELIVERIES
 
+  DIST_MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED
+  DIST_MODE_COPY = PN_DIST_MODE_COPY
+  DIST_MODE_MOVE = PN_DIST_MODE_MOVE
+
   def __init__(self, impl):
     self._impl = impl
 
@@ -2204,6 +2208,12 @@ class Terminus(object):
   def _set_dynamic(self, dynamic):
     self._check(pn_terminus_set_dynamic(self._impl, dynamic))
   dynamic = property(_is_dynamic, _set_dynamic)
+
+  def _get_distribution_mode(self):
+    return pn_terminus_get_distribution_mode(self._impl)
+  def _set_distribution_mode(self, mode):
+    self._check(pn_terminus_set_distribution_mode(self._impl, mode))
+  distribution_mode = property(_get_distribution_mode, _set_distribution_mode)
 
   @property
   def properties(self):

@@ -212,6 +212,7 @@ struct pn_terminus_t {
   pn_expiry_policy_t expiry_policy;
   pn_seconds_t timeout;
   bool dynamic;
+  pn_distribution_mode_t distribution_mode;
   pn_data_t *properties;
   pn_data_t *capabilities;
   pn_data_t *outcomes;

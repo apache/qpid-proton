@@ -898,6 +898,7 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->expiry_policy = PN_SESSION_CLOSE;
   terminus->timeout = 0;
   terminus->dynamic = false;
+  terminus->distribution_mode = PN_DIST_MODE_UNSPECIFIED;
   terminus->properties = pn_data(16);
   terminus->capabilities = pn_data(16);
   terminus->outcomes = pn_data(16);
@@ -1082,6 +1083,18 @@ pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
   return terminus ? terminus->filter : NULL;
 }
 
+pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus)
+{
+  return terminus ? terminus->distribution_mode : PN_DIST_MODE_UNSPECIFIED;
+}
+
+int pn_terminus_set_distribution_mode(pn_terminus_t *terminus, pn_distribution_mode_t m)
+{
+  if (!terminus) return PN_ARG_ERR;
+  terminus->distribution_mode = m;
+  return 0;
+}
+
 int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
 {
   if (!terminus || !src) {
@@ -1095,6 +1108,7 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   terminus->expiry_policy = src->expiry_policy;
   terminus->timeout = src->timeout;
   terminus->dynamic = src->dynamic;
+  terminus->distribution_mode = src->distribution_mode;
   err = pn_data_copy(terminus->properties, src->properties);
   if (err) return err;
   err = pn_data_copy(terminus->capabilities, src->capabilities);
@@ -1669,6 +1683,32 @@ static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
   return PN_SESSION_CLOSE;
 }
 
+static pn_distribution_mode_t symbol2dist_mode(const pn_bytes_t symbol)
+{
+  if (!symbol.start)
+    return PN_DIST_MODE_UNSPECIFIED;
+
+  if (!strncmp(symbol.start, "move", symbol.size))
+    return PN_DIST_MODE_MOVE;
+  if (!strncmp(symbol.start, "copy", symbol.size))
+    return PN_DIST_MODE_COPY;
+
+  return PN_DIST_MODE_UNSPECIFIED;
+}
+
+static const char *dist_mode2symbol(const pn_distribution_mode_t mode)
+{
+  switch (mode)
+  {
+  case PN_DIST_MODE_COPY:
+    return "copy";
+  case PN_DIST_MODE_MOVE:
+    return "move";
+  default:
+    return NULL;
+  }
+}
+
 int pn_do_attach(pn_dispatcher_t *disp)
 {
   pn_transport_t *transport = (pn_transport_t *) disp->context;
@@ -1681,9 +1721,10 @@ int pn_do_attach(pn_dispatcher_t *disp)
   pn_seconds_t src_timeout, tgt_timeout;
   bool src_dynamic, tgt_dynamic;
   pn_sequence_t idc;
-  int err = pn_scan_args(disp, "D.[SIo..D.[SIsIo]D.[SIsIo]..I]", &name, &handle,
+  pn_bytes_t dist_mode;
+  int err = pn_scan_args(disp, "D.[SIo..D.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
                          &is_sender,
-                         &source, &src_dr, &src_exp, &src_timeout, &src_dynamic,
+                         &source, &src_dr, &src_exp, &src_timeout, &src_dynamic, &dist_mode,
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
                          &idc);
   if (err) return err;
@@ -1717,6 +1758,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
     pn_terminus_set_expiry_policy(rsrc, symbol2policy(src_exp));
     pn_terminus_set_timeout(rsrc, src_timeout);
     pn_terminus_set_dynamic(rsrc, src_dynamic);
+    pn_terminus_set_distribution_mode(rsrc, symbol2dist_mode(dist_mode));
   } else {
     pn_terminus_set_type(rsrc, PN_UNSPECIFIED);
   }
@@ -2292,8 +2334,9 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     {
       state->local_handle = allocate_alias(ssn_state->local_handles);
       pn_hash_put(ssn_state->local_handles, state->local_handle, link);
+      const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
       int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                              "DL[SIonn?DL[SIsIoCnCnCC]?DL[SIsIoCC]nnI]", ATTACH,
+                              "DL[SIonn?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
                               pn_string_get(link->name),
                               state->local_handle,
                               endpoint->type == RECEIVER,
@@ -2304,6 +2347,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
                               link->source.timeout,
                               link->source.dynamic,
                               link->source.properties,
+                              (dist_mode != PN_DIST_MODE_UNSPECIFIED), dist_mode2symbol(dist_mode),
                               link->source.filter,
                               link->source.outcomes,
                               link->source.capabilities,

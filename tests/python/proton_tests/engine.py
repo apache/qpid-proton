@@ -473,11 +473,18 @@ class LinkTest(Test):
   def test_source_target_full(self):
     self._test_source_target(TerminusConfig(address="source",
                                             timeout=3,
+                                            dist_mode=Terminus.DIST_MODE_MOVE,
                                             filter=[("int", 1), ("symbol", "two"), ("string", "three")],
                                             capabilities=["one", "two", "three"]),
                              TerminusConfig(address="source",
                                             timeout=7,
                                             capabilities=[]))
+  def test_distribution_mode(self):
+    self._test_source_target(TerminusConfig(address="source",
+                                            dist_mode=Terminus.DIST_MODE_COPY),
+                             TerminusConfig(address="target"))
+    assert self.rcv.remote_source.distribution_mode == Terminus.DIST_MODE_COPY
+    assert self.rcv.remote_target.distribution_mode == Terminus.DIST_MODE_UNSPECIFIED
 
   def test_dynamic_link(self):
     self._test_source_target(TerminusConfig(address=None, dynamic=True), None)
@@ -507,13 +514,14 @@ class LinkTest(Test):
 class TerminusConfig:
 
   def __init__(self, address=None, timeout=None, durability=None, filter=None,
-               capabilities=None, dynamic=False):
+               capabilities=None, dynamic=False, dist_mode=None):
     self.address = address
     self.timeout = timeout
     self.durability = durability
     self.filter = filter
     self.capabilities = capabilities
     self.dynamic = dynamic
+    self.dist_mode = dist_mode
 
   def __call__(self, terminus):
     if self.address is not None:
@@ -535,6 +543,8 @@ class TerminusConfig:
         setter(v)
     if self.dynamic:
       terminus.dynamic = True
+    if self.dist_mode is not None:
+      terminus.distribution_mode = self.dist_mode
 
 class TransferTest(Test):
 

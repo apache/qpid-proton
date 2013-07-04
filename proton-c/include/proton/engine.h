@@ -65,6 +65,11 @@ typedef enum {
   PN_CONNECTION_CLOSE,
   PN_NEVER
 } pn_expiry_policy_t;
+typedef enum {
+  PN_DIST_MODE_UNSPECIFIED,
+  PN_DIST_MODE_COPY,
+  PN_DIST_MODE_MOVE
+} pn_distribution_mode_t;
 
 typedef struct pn_disposition_t pn_disposition_t;
 typedef struct pn_delivery_t pn_delivery_t;
@@ -483,6 +488,8 @@ PN_EXTERN pn_data_t *pn_terminus_properties(pn_terminus_t *terminus);
 PN_EXTERN pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus);
 PN_EXTERN pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus);
 PN_EXTERN pn_data_t *pn_terminus_filter(pn_terminus_t *terminus);
+PN_EXTERN pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus);
+PN_EXTERN int pn_terminus_set_distribution_mode(pn_terminus_t *terminus, pn_distribution_mode_t m);
 PN_EXTERN int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src);
 
 // delivery
