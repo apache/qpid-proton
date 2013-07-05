@@ -70,6 +70,15 @@ typedef enum {
   PN_DIST_MODE_COPY,
   PN_DIST_MODE_MOVE
 } pn_distribution_mode_t;
+typedef enum {
+  PN_SND_UNSETTLED = 0,
+  PN_SND_SETTLED = 1,
+  PN_SND_MIXED = 2
+} pn_snd_settle_mode_t;
+typedef enum {
+  PN_RCV_FIRST = 0,  /**< implicitly settle rcvd xfers */
+  PN_RCV_SECOND = 1  /**< explicit disposition required */
+} pn_rcv_settle_mode_t;
 
 typedef struct pn_disposition_t pn_disposition_t;
 typedef struct pn_delivery_t pn_delivery_t;
@@ -447,6 +456,12 @@ PN_EXTERN bool pn_link_advance(pn_link_t *link);
 PN_EXTERN int pn_link_credit(pn_link_t *link);
 PN_EXTERN int pn_link_queued(pn_link_t *link);
 PN_EXTERN int pn_link_available(pn_link_t *link);
+PN_EXTERN pn_snd_settle_mode_t pn_link_snd_settle_mode(pn_link_t *link);
+PN_EXTERN pn_rcv_settle_mode_t pn_link_rcv_settle_mode(pn_link_t *link);
+PN_EXTERN pn_snd_settle_mode_t pn_link_remote_snd_settle_mode(pn_link_t *link);
+PN_EXTERN pn_rcv_settle_mode_t pn_link_remote_rcv_settle_mode(pn_link_t *link);
+PN_EXTERN void pn_link_set_snd_settle_mode(pn_link_t *link, pn_snd_settle_mode_t);
+PN_EXTERN void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t);
 
 PN_EXTERN int pn_link_unsettled(pn_link_t *link);
 PN_EXTERN pn_delivery_t *pn_unsettled_head(pn_link_t *link);

@@ -232,6 +232,10 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
+  uint8_t snd_settle_mode;
+  uint8_t rcv_settle_mode;
+  uint8_t remote_snd_settle_mode;
+  uint8_t remote_rcv_settle_mode;
   size_t unsettled_count;
   pn_sequence_t available;
   pn_sequence_t credit;

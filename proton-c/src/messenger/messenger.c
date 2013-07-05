@@ -894,6 +894,12 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   pn_session_t *ssn = pn_session(connection);
   pn_session_open(ssn);
   link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
+  if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
+      (!sender && pn_messenger_get_incoming_window(messenger))) {
+      // use explicit settlement via dispositions (not pre-settled)
+      pn_link_set_snd_settle_mode( link, PN_SND_UNSETTLED );
+      pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
+  }
   // XXX
   pn_terminus_set_address(pn_link_target(link), name);
   pn_terminus_set_address(pn_link_source(link), name);

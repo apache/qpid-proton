@@ -949,6 +949,10 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->drain = false;
   link->drained = false;
   link->context = 0;
+  link->snd_settle_mode = PN_SND_MIXED;
+  link->rcv_settle_mode = PN_RCV_FIRST;
+  link->remote_snd_settle_mode = PN_SND_MIXED;
+  link->remote_rcv_settle_mode = PN_RCV_FIRST;
 
   // begin transport state
   link->state.local_handle = -1;
@@ -1508,6 +1512,40 @@ int pn_link_queued(pn_link_t *link)
   return link ? link->queued : 0;
 }
 
+pn_snd_settle_mode_t pn_link_snd_settle_mode(pn_link_t *link)
+{
+  return link ? (pn_snd_settle_mode_t)link->snd_settle_mode
+      : PN_SND_MIXED;
+}
+
+pn_rcv_settle_mode_t pn_link_rcv_settle_mode(pn_link_t *link)
+{
+  return link ? (pn_rcv_settle_mode_t)link->rcv_settle_mode
+      : PN_RCV_FIRST;
+}
+
+pn_snd_settle_mode_t pn_link_remote_snd_settle_mode(pn_link_t *link)
+{
+  return link ? (pn_snd_settle_mode_t)link->remote_snd_settle_mode
+      : PN_SND_MIXED;
+}
+
+pn_rcv_settle_mode_t pn_link_remote_rcv_settle_mode(pn_link_t *link)
+{
+  return link ? (pn_rcv_settle_mode_t)link->remote_rcv_settle_mode
+      : PN_RCV_FIRST;
+}
+void pn_link_set_snd_settle_mode(pn_link_t *link, pn_snd_settle_mode_t mode)
+{
+  if (link)
+    link->snd_settle_mode = (uint8_t)mode;
+}
+void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t mode)
+{
+  if (link)
+    link->rcv_settle_mode = (uint8_t)mode;
+}
+
 void pn_real_settle(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
@@ -1722,8 +1760,12 @@ int pn_do_attach(pn_dispatcher_t *disp)
   bool src_dynamic, tgt_dynamic;
   pn_sequence_t idc;
   pn_bytes_t dist_mode;
-  int err = pn_scan_args(disp, "D.[SIo..D.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
+  bool snd_settle, rcv_settle;
+  uint8_t snd_settle_mode, rcv_settle_mode;
+  int err = pn_scan_args(disp, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
                          &is_sender,
+                         &snd_settle, &snd_settle_mode,
+                         &rcv_settle, &rcv_settle_mode,
                          &source, &src_dr, &src_exp, &src_timeout, &src_dynamic, &dist_mode,
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
                          &idc);
@@ -1773,6 +1815,11 @@ int pn_do_attach(pn_dispatcher_t *disp)
   } else {
     pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
   }
+
+  if (snd_settle)
+    link->remote_snd_settle_mode = snd_settle_mode;
+  if (rcv_settle)
+    link->remote_rcv_settle_mode = rcv_settle_mode;
 
   pn_data_clear(link->remote_source.properties);
   pn_data_clear(link->remote_source.filter);
@@ -2336,10 +2383,12 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       pn_hash_put(ssn_state->local_handles, state->local_handle, link);
       const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
       int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                              "DL[SIonn?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
+                              "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
                               pn_string_get(link->name),
                               state->local_handle,
                               endpoint->type == RECEIVER,
+                              link->snd_settle_mode,
+                              link->rcv_settle_mode,
                               (bool) link->source.type, SOURCE,
                               pn_string_get(link->source.address),
                               link->source.durability,

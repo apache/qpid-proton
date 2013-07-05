@@ -511,6 +511,23 @@ class LinkTest(Test):
     rcond = self.rcv.remote_condition
     assert rcond == cond, (rcond, cond)
 
+  def test_settle_mode(self):
+    self.snd.snd_settle_mode = Link.SND_UNSETTLED
+    assert self.snd.snd_settle_mode == Link.SND_UNSETTLED
+    self.rcv.rcv_settle_mode = Link.RCV_SECOND
+    assert self.rcv.rcv_settle_mode == Link.RCV_SECOND
+
+    assert self.snd.remote_rcv_settle_mode != Link.RCV_SECOND
+    assert self.rcv.remote_snd_settle_mode != Link.SND_UNSETTLED
+
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+
+    assert self.snd.remote_rcv_settle_mode == Link.RCV_SECOND
+    assert self.rcv.remote_snd_settle_mode == Link.SND_UNSETTLED
+
+
 class TerminusConfig:
 
   def __init__(self, address=None, timeout=None, durability=None, filter=None,

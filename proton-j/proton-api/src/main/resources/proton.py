@@ -34,7 +34,7 @@ from org.apache.qpid.proton.message import \
 from org.apache.qpid.proton.codec import \
     DataFactory, Data as JData
 from org.apache.qpid.proton.messenger import MessengerFactory, MessengerException, Status
-from org.apache.qpid.proton.amqp.transport import ErrorCondition
+from org.apache.qpid.proton.amqp.transport import ErrorCondition, SenderSettleMode, ReceiverSettleMode
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, \
     Rejected, Received, Modified, Released, AmqpValue
 from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedByte, UnsignedShort, Symbol, \
@@ -297,6 +297,13 @@ def wrap_link(impl):
 
 class Link(Endpoint):
 
+  SND_UNSETTLED = SenderSettleMode.UNSETTLED
+  SND_SETTLED = SenderSettleMode.SETTLED
+  SND_MIXED = SenderSettleMode.MIXED
+
+  RCV_FIRST = ReceiverSettleMode.FIRST
+  RCV_SECOND = ReceiverSettleMode.SECOND
+
   def __init__(self, impl):
     Endpoint.__init__(self)
     self.impl = impl
@@ -352,6 +359,27 @@ class Link(Endpoint):
 
   def next(self, mask):
     return wrap_link(self.impl.next(*self._enums(mask)))
+
+  @property
+  def remote_snd_settle_mode(self):
+    return self.impl.getRemoteSenderSettleMode()
+
+  @property
+  def remote_rcv_settle_mode(self):
+    return self.impl.getRemoteReceiverSettleMode()
+
+  def _get_snd_settle_mode(self):
+    return self.impl.getSenderSettleMode()
+  def _set_snd_settle_mode(self, mode):
+    self.impl.setSenderSettleMode(mode)
+  snd_settle_mode = property(_get_snd_settle_mode, _set_snd_settle_mode)
+
+  def _get_rcv_settle_mode(self):
+    return self.impl.getReceiverSettleMode()
+  def _set_rcv_settle_mode(self, mode):
+    self.impl.setReceiverSettleMode(mode)
+  rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
+
 
 class DataDummy:
 

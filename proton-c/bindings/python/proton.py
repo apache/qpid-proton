@@ -2058,6 +2058,13 @@ def wrap_link(link):
 
 class Link(Endpoint):
 
+  SND_UNSETTLED = PN_SND_UNSETTLED
+  SND_SETTLED = PN_SND_SETTLED
+  SND_MIXED = PN_SND_MIXED
+
+  RCV_FIRST = PN_RCV_FIRST
+  RCV_SECOND = PN_RCV_SECOND
+
   def __init__(self, link):
     Endpoint.__init__(self)
     self._link = link
@@ -2146,6 +2153,26 @@ class Link(Endpoint):
   @property
   def is_receiver(self):
     return pn_link_is_receiver(self._link)
+
+  @property
+  def remote_snd_settle_mode(self):
+    return pn_link_remote_snd_settle_mode(self._link)
+
+  @property
+  def remote_rcv_settle_mode(self):
+    return pn_link_remote_rcv_settle_mode(self._link)
+
+  def _get_snd_settle_mode(self):
+    return pn_link_snd_settle_mode(self._link)
+  def _set_snd_settle_mode(self, mode):
+    pn_link_set_snd_settle_mode(self._link, mode)
+  snd_settle_mode = property(_get_snd_settle_mode, _set_snd_settle_mode)
+
+  def _get_rcv_settle_mode(self):
+    return pn_link_rcv_settle_mode(self._link)
+  def _set_rcv_settle_mode(self, mode):
+    pn_link_set_rcv_settle_mode(self._link, mode)
+  rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
 
 
 class Terminus(object):
