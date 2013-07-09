@@ -95,4 +95,7 @@ public interface Connection extends Endpoint
     Map<Symbol,Object> getRemoteProperties();
 
     void setProperties(Map<Symbol,Object> properties);
+
+    EngineLogger getEngineLogger();
+    void setEngineLogger(EngineLogger engineLogger);
 }

@@ -49,6 +49,7 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.EngineLogger;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -61,6 +62,7 @@ import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
+import org.apache.qpid.proton.logging.ProtonLogger;
 
 public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
@@ -105,25 +107,45 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _init;
 
+    private EngineLogger _engineLogger;
+
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link EngineFactory} instead
      */
-    @Deprecated public TransportImpl()
+    @Deprecated public TransportImpl(EngineLogger engineLogger)
     {
-        this(DEFAULT_MAX_FRAME_SIZE);
+        this(engineLogger, DEFAULT_MAX_FRAME_SIZE);
     }
+
 
     /**
      * Creates a transport with the given maximum frame size.
      * Note that the maximumFrameSize also determines the size of the output buffer.
      */
-    TransportImpl(int maxFrameSize)
+    TransportImpl(EngineLogger engineLogger, int maxFrameSize)
     {
         AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
 
+        _engineLogger = engineLogger;
         _maxFrameSize = maxFrameSize;
 
+    }
+
+    /**
+     * This constructor is intended to only be used by tests because it uses a hard-coded logger implementation
+     */
+    TransportImpl()
+    {
+        this(new ProtonLogger());
+    }
+
+    /**
+     * This constructor is intended to only be used by tests because it uses a hard-coded logger implementation
+     */
+    TransportImpl(int maxFrameSize)
+    {
+        this(new ProtonLogger(), maxFrameSize);
     }
 
     private void init()
@@ -138,11 +160,13 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
+    @Override
     public int getMaxFrameSize()
     {
         return _maxFrameSize;
     }
 
+    @Override
     public void setMaxFrameSize(int maxFrameSize)
     {
         if(_init)
@@ -896,6 +920,7 @@ public class TransportImpl extends EndpointImpl
             }
             _protocolTracer.sentFrame(new TransportFrame(channel, frameBody, Binary.create(originalPayload)));
         }
+        _engineLogger.outgoingBytes(channel, frameBody, payload);
 
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize - (buffer.position() - oldPosition));
         if(payloadSize > 0)
@@ -1239,5 +1264,17 @@ public class TransportImpl extends EndpointImpl
         {
             _transfer.setMore(true);
         }
+    }
+
+    @Override
+    public EngineLogger getEngineLogger()
+    {
+        return _engineLogger;
+    }
+
+    @Override
+    public void setEngineLogger(EngineLogger engineLogger)
+    {
+        _engineLogger = engineLogger;
     }
 }

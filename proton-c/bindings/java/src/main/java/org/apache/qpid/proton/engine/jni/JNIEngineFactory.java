@@ -21,6 +21,7 @@ package org.apache.qpid.proton.engine.jni;
 import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.EngineLogger;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
@@ -67,4 +68,14 @@ public class JNIEngineFactory extends JNIFactory implements EngineFactory
         };
     }
 
+    public EngineLogger getEngineLogger()
+    {
+        //TODO: implement
+        return null;
+    }
+
+    public void setEngineLogger(EngineLogger engineLogger)
+    {
+        //TODO: implement
+    }
 }

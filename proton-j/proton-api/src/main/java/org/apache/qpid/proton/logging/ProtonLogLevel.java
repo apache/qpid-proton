@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,29 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-package org.apache.qpid.proton.engine.impl;
-
-import org.apache.qpid.proton.engine.EngineLogger;
-import org.apache.qpid.proton.framing.TransportFrame;
+package org.apache.qpid.proton.logging;
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- *
- * @deprecated superseded by {@link EngineLogger}. TODO replace uses of this class with an EngineLogger instead.
+ * The level of a log message
  */
-@Deprecated
-public interface ProtocolTracer
+public enum ProtonLogLevel
 {
-    public void receivedFrame(TransportFrame transportFrame);
-    public void sentFrame(TransportFrame transportFrame);
+    /** potentially byte-by-byte output */
+    TRACE,
+
+    DEBUG,
+
+    /** Typical example: a normal lifecycle event has occurred on an endpoint */
+    INFO,
+
+    /** May indicate a problem */
+    WARN,
+
+    /**
+     * Indicates a problem which is either (1) invalid input or (2) a Proton internal error.
+     */
+    ERROR,
+
+    ;
 }

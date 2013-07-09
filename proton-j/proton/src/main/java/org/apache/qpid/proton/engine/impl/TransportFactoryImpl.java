@@ -29,10 +29,11 @@ class TransportFactoryImpl extends TransportFactory
     {
     }
 
+    @Override
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     public Transport transport(Connection c)
     {
-        TransportImpl t = new TransportImpl();
+        TransportImpl t = new TransportImpl(c.getEngineLogger());
         t.bind(c);
         return t;
     }

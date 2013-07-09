@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,43 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.EngineLogger;
-import org.apache.qpid.proton.framing.TransportFrame;
+import static org.junit.Assert.assertSame;
+import static org.mockito.Mockito.mock;
 
-/**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- *
- * @deprecated superseded by {@link EngineLogger}. TODO replace uses of this class with an EngineLogger instead.
- */
-@Deprecated
-public interface ProtocolTracer
+import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.EngineLogger;
+import org.junit.Before;
+import org.junit.Test;
+
+public class EngineFactoryImplTest
 {
-    public void receivedFrame(TransportFrame transportFrame);
-    public void sentFrame(TransportFrame transportFrame);
+    private final EngineLogger _engineLogger = mock(EngineLogger.class);
+
+    private final EngineFactory _engineFactory = new EngineFactoryImpl();
+
+    @Before
+    public void setUp()
+    {
+        _engineFactory.setEngineLogger(_engineLogger);
+    }
+
+    @Test
+    public void testCreateConnection_usesLogger()
+    {
+
+        assertSame(
+                _engineLogger,
+                _engineFactory.createConnection().getEngineLogger());
+    }
+
+    @Test
+    public void testCreateTransport_usesLogger()
+    {
+        assertSame(
+                _engineLogger,
+                _engineFactory.createTransport().getEngineLogger());
+    }
 }

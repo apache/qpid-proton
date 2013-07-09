@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,18 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-package org.apache.qpid.proton.engine.impl;
-
-import org.apache.qpid.proton.engine.EngineLogger;
-import org.apache.qpid.proton.framing.TransportFrame;
+package org.apache.qpid.proton.logging;
 
 /**
- * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ * A Service Provider Interface (SPI) that logs strings.
  *
- * @deprecated superseded by {@link EngineLogger}. TODO replace uses of this class with an EngineLogger instead.
+ * Deemed an SPI because Proton's clients may implement it but only Proton's internals should ever
+ * invoke it.
  */
-@Deprecated
-public interface ProtocolTracer
+public interface ProtonCategoryLogger
 {
-    public void receivedFrame(TransportFrame transportFrame);
-    public void sentFrame(TransportFrame transportFrame);
+    boolean isEnabled(String category, ProtonLogLevel level);
+
+    void log(String category, ProtonLogLevel level, String message);
 }

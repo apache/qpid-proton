@@ -173,4 +173,7 @@ public interface Transport extends Endpoint
     int getMaxFrameSize();
 
     void setMaxFrameSize(int size);
+
+    EngineLogger getEngineLogger();
+    void setEngineLogger(EngineLogger engineLogger);
 }

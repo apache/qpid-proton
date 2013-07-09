@@ -29,4 +29,14 @@
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>
   </scm>
 
+  <dependencies>
+    <dependency>
+      <!-- used to build SLF4JCategoryLogger, but marked 'optional' so application code does
+           not require it (unless it explicitly chooses to use the SLF4JCategoryLogger) -->
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.5</version>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
 </project>
