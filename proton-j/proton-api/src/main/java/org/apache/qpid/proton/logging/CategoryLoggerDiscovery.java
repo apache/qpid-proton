@@ -41,7 +41,7 @@ class CategoryLoggerDiscovery
         }
         else if(PROTON_CATEGORY_LOGGER_SLF4J.equals(loggerType))
         {
-            DEFAULT_LOGGER = new SLF4JCategoryLogger();
+            throw new UnsupportedOperationException("TODO reinstate SLF4JCategoryLogger");
         }
         else if(PROTON_CATEGORY_LOGGER_STDOUT.equals(loggerType))
         {
