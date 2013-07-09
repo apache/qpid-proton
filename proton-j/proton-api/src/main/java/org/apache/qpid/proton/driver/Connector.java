@@ -25,43 +25,54 @@ import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
 
 /**
- * Client API
+ * Intermediates between a proton engine {@link Connection} and the I/O
+ * layer.
+ *
+ * The top half of the engine can be access via {@link #getConnection()}.
+ * The bottom half of the engine is used by {@link #process()}.
+ * Stores application specific context using {@link #setContext(Object)}.
+ *
+ * Implementations are not necessarily thread-safe.
  *
  * @param <C> application supplied context
  */
 public interface Connector<C>
 {
-    /** Service the given connector.
-     *
+    /**
      * Handle any inbound data, outbound data, or timing events pending on
      * the connector.
-     *
+     * Typically, applications repeatedly invoke this method
+     * during the lifetime of a connection.
      */
     void process() throws IOException;
 
-    /** Access the listener which opened this connector.
+    /**
+     * Access the listener which opened this connector.
      *
-     * @return the listener which created this connector, or NULL if the
+     * @return the listener which created this connector, or null if the
      *         connector has no listener (e.g. an outbound client
      *         connection).
      */
     @SuppressWarnings("rawtypes")
     Listener listener();
 
-    /** Access the Authentication and Security context of the connector.
+    /**
+     * Access the Authentication and Security context of the connector.
      *
      * @return the Authentication and Security context for the connector,
-     *         or NULL if none.
+     *         or null if none.
      */
     Sasl sasl();
 
-    /** Access the AMQP Connection associated with the connector.
+    /**
+     * Access the AMQP Connection associated with the connector.
      *
-     * @return the connection context for the connector, or NULL if none.
+     * @return the connection context for the connector, or null if none.
      */
     Connection getConnection();
 
-    /** Assign the AMQP Connection associated with the connector.
+    /**
+     * Assign the AMQP Connection associated with the connector.
      *
      * @param connection the connection to associate with the connector.
      */
@@ -79,27 +90,27 @@ public interface Connector<C>
      */
     C getContext();
 
-    /** Assign a new application context to the connector.
+    /**
+     * Assign a new application context to the connector.
      *
      * @param context new application context to associate with the connector
      */
     void setContext(C context);
 
-    /** Close the socket used by the connector.
-     *
+    /**
+     * Close the socket used by the connector.
      */
     void close();
 
-    /** Determine if the connector is closed.
-     *
-     * @return True if closed, otherwise false
+    /**
+     * Determine if the connector is closed.
      */
     boolean isClosed();
 
-    /** Destructor for the given connector.
+    /**
+     * Destructor for the given connector.
      *
      * Assumes the connector's socket has been closed prior to call.
-     *
      */
     void destroy();
 }

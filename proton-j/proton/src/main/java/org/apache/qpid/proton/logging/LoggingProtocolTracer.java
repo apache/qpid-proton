@@ -34,6 +34,7 @@ public class LoggingProtocolTracer implements ProtocolTracer
 
     public LoggingProtocolTracer()
     {
+        this("Transport");
     }
 
     public LoggingProtocolTracer(String logMessagePrefix)

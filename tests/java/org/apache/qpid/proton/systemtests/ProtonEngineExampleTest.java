@@ -26,6 +26,7 @@ import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.CLOSED;
 import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
 import static org.apache.qpid.proton.systemtests.TestLoggingHelper.bold;
+import static org.apache.qpid.proton.systemtests.engine.ProtonFactoryTestFixture.isProtonJ;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
@@ -81,8 +82,6 @@ public class ProtonEngineExampleTest
 
     private final EngineFactory _engineFactory = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class).loadFactory();
     private final MessageFactory _messageFactory = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class).loadFactory();
-
-    private final boolean _isEngineProtonJ = !_engineFactory.getClass().getSimpleName().startsWith("JNI");
 
     @Test
     public void test() throws Exception
@@ -196,7 +195,7 @@ public class ProtonEngineExampleTest
         assertEquals("For simplicity, assume the sender can accept all the data",
                      lengthOfEncodedMessage, numberOfBytesAcceptedBySender);
 
-        if (_isEngineProtonJ)
+        if (isProtonJ(_engineFactory))
         {
             // TODO PROTON-261: Proton-c ProtonJNI.pn_delivery_local_state is returning 0, which doesn't map to an
             // value within the C enum.
@@ -214,7 +213,7 @@ public class ProtonEngineExampleTest
         _server.delivery = _server.connection.getWorkHead();
         assertEquals("The received delivery should be on our receiver",
                 _server.receiver, _server.delivery.getLink());
-        if (_isEngineProtonJ)
+        if (isProtonJ(_engineFactory))
         {
             assertNull(_server.delivery.getLocalState());
             assertNull(_server.delivery.getRemoteState());
