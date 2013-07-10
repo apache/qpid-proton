@@ -34,45 +34,50 @@ class CategoryLoggerDiscovery
     private static final ProtonCategoryLogger DEFAULT_LOGGER;
     static
     {
-        String loggerType = System.getProperty(PROTON_DEFAULT_CATEGORY_LOGGER_PROP, PROTON_CATEGORY_LOGGER_JUL);
-        if(PROTON_CATEGORY_LOGGER_JUL.equals(loggerType))
-        {
-            DEFAULT_LOGGER = new JULCategoryLogger();
-        }
-        else if(PROTON_CATEGORY_LOGGER_SLF4J.equals(loggerType))
-        {
-            throw new UnsupportedOperationException("TODO reinstate SLF4JCategoryLogger");
-        }
-        else if(PROTON_CATEGORY_LOGGER_STDOUT.equals(loggerType))
+        String loggerType = System.getProperty(PROTON_DEFAULT_CATEGORY_LOGGER_PROP, PROTON_CATEGORY_LOGGER_STDOUT);
+        if(PROTON_CATEGORY_LOGGER_STDOUT.equals(loggerType))
         {
             DEFAULT_LOGGER = new StdOutCategoryLogger();
         }
+        else if(PROTON_CATEGORY_LOGGER_JUL.equals(loggerType))
+        {
+            DEFAULT_LOGGER = createLogger("org.apache.qpid.proton.logging.JULCategoryLogger");
+        }
+        else if(PROTON_CATEGORY_LOGGER_SLF4J.equals(loggerType))
+        {
+            DEFAULT_LOGGER = createLogger("org.apache.qpid.proton.logging.SLF4JCategoryLogger");
+        }
         else
         {
-            try
-            {
-                Class<?> clazz = Class.forName(loggerType);
-                if(!ProtonCategoryLogger.class.isAssignableFrom(clazz))
-                {
-                    throw new IllegalArgumentException("Provided class name must be a " +
-                                                       ProtonCategoryLogger.class.getName() + ": " + loggerType);
-                }
+            DEFAULT_LOGGER = createLogger(loggerType);
+        }
+    }
 
-                Object obj = clazz.newInstance();
-                DEFAULT_LOGGER = (ProtonCategoryLogger) obj;
-            }
-            catch (ClassNotFoundException e)
+    private static ProtonCategoryLogger createLogger(String loggerClass)
+    {
+        try
+        {
+            Class<?> clazz = Class.forName(loggerClass);
+            if(!ProtonCategoryLogger.class.isAssignableFrom(clazz))
             {
-                throw new RuntimeException(e);
+                throw new IllegalArgumentException("Provided class name must be a " +
+                                                   ProtonCategoryLogger.class.getName() + ": " + loggerClass);
             }
-            catch (InstantiationException e)
-            {
-                throw new RuntimeException(e);
-            }
-            catch (IllegalAccessException e)
-            {
-                throw new RuntimeException(e);
-            }
+
+            Object obj = clazz.newInstance();
+            return (ProtonCategoryLogger) obj;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (InstantiationException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new RuntimeException(e);
         }
     }
 

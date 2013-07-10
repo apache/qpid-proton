@@ -30,9 +30,9 @@ public class CategoryLoggerDiscoveryTest
     private final CategoryLoggerDiscovery _discovery = new CategoryLoggerDiscovery();
 
     @Test
-    public void testDefaultLogger_isJavaUtilLogging()
+    public void testDefaultLogger_isStdOutLogger()
     {
-        assertThat(_discovery.getEffectiveLogger(), is(JULCategoryLogger.class));
+        assertThat(_discovery.getEffectiveLogger(), is(StdOutCategoryLogger.class));
     }
 
     @Test

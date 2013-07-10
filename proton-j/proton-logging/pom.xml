@@ -22,10 +22,27 @@
     <version>1.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
+  <description>Additional implementations of proton-api's logging interfaces</description>
 
-  <artifactId>proton-api</artifactId>
-  <name>proton-api</name>
+  <artifactId>proton-logging</artifactId>
+  <name>proton-logging</name>
   <scm>
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>
   </scm>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>proton-api</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <!-- used to build SLF4JCategoryLogger, but marked 'optional' so application code does
+           not require it (unless it explicitly chooses to use the SLF4JCategoryLogger) -->
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.5</version>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
 </project>

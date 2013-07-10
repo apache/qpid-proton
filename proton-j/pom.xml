@@ -44,6 +44,7 @@
 
   <modules>
     <module>proton-api</module>
+    <module>proton-logging</module>
     <module>proton</module>
     <module>contrib/proton-jms</module>
     <module>contrib/proton-hawtdispatch</module>

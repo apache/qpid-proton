@@ -30,10 +30,10 @@ import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.logging.CategoryAwareProtonLogger;
-import org.apache.qpid.proton.logging.JULCategoryLogger;
 import org.apache.qpid.proton.logging.ProtonCategoryLogger;
 import org.apache.qpid.proton.logging.ProtonLogLevel;
 import org.apache.qpid.proton.logging.ProtonLogger;
+import org.apache.qpid.proton.logging.StdOutCategoryLogger;
 import org.apache.qpid.proton.systemtests.engine.ProtonFactoryTestFixture;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -53,10 +53,10 @@ public class LoggingCustomisationTest
     }
 
     @Test
-    public void testDefaultCategoryLoggerUsesJavaUtilLogging()
+    public void testDefaultCategoryLoggerUsesStdOut()
     {
         CategoryAwareProtonLogger engineLogger = (CategoryAwareProtonLogger)_engineFactory.getEngineLogger();
-        assertThat(engineLogger.getCategoryLogger(), is(JULCategoryLogger.class));
+        assertThat(engineLogger.getCategoryLogger(), is(StdOutCategoryLogger.class));
     }
 
     @Test
