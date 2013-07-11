@@ -164,7 +164,7 @@ sub put {
 
 sub send {
     my ($self) = @_;
-    cproton_perl::pn_messenger_send($self->{_impl});
+    cproton_perl::pn_messenger_send($self->{_impl}, $_[1]);
 }
 
 sub get {

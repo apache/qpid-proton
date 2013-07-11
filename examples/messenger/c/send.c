@@ -101,7 +101,7 @@ int main(int argc, char** argv)
   pn_data_put_string(body, pn_bytes(strlen(msgtext), msgtext));
   pn_messenger_put(messenger, message);
   check(messenger);
-  pn_messenger_send(messenger);
+  pn_messenger_send(messenger, -1);
   check(messenger);
 
   pn_messenger_stop(messenger);

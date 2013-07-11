@@ -127,11 +127,11 @@ class Messenger
     $this->_check(pn_messenger_put($this->impl, $message->impl));
   }
 
-  public function send() {
-    $this->_check(pn_messenger_send($this->impl));
+  public function send($n = -1) {
+    $this->_check(pn_messenger_send($this->impl, $n));
   }
 
-  public function recv($n) {
+  public function recv($n = -1) {
     $this->_check(pn_messenger_recv($this->impl, $n));
   }
 

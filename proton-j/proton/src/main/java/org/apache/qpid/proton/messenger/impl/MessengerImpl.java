@@ -29,6 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.qpid.proton.ProtonFactoryLoader;
+import org.apache.qpid.proton.InterruptException;
 import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
@@ -53,6 +54,8 @@ import org.apache.qpid.proton.messenger.Tracker;
 import org.apache.qpid.proton.amqp.messaging.Source;
 import org.apache.qpid.proton.amqp.messaging.Target;
 
+import org.apache.qpid.proton.amqp.Binary;
+
 public class MessengerImpl implements Messenger
 {
     @SuppressWarnings("rawtypes")
@@ -69,6 +72,7 @@ public class MessengerImpl implements Messenger
     private final DriverFactory _driverFactory;
     private final MessageFactory _messageFactory;
     private long _timeout = -1;
+    private boolean _blocking = true;
     private long _nextTag = 1;
     private byte[] _buffer = new byte[5*1024];
     private Driver _driver;
@@ -119,6 +123,16 @@ public class MessengerImpl implements Messenger
         return _timeout;
     }
 
+    public boolean isBlocking()
+    {
+        return _blocking;
+    }
+
+    public void setBlocking(boolean b)
+    {
+        _blocking = b;
+    }
+
     public void start() throws IOException
     {
         _driver = _driverFactory.createDriver();
@@ -156,15 +170,24 @@ public class MessengerImpl implements Messenger
                 _logger.log(Level.WARNING, "Error while closing listener", e);
             }
         }
-        try
-        {
-            waitUntil(_allClosed);
-        }
-        catch(TimeoutException e)
-        {
-            _logger.log(Level.WARNING, "Timed out while waiting for close", e);
-        }
-        _driver.destroy();
+        waitUntil(_allClosed);
+        //_driver.destroy();
+    }
+
+    public boolean stopped()
+    {
+        return _allClosed.test();
+    }
+
+    public boolean work(long timeout)
+    {
+        _worked = false;
+        return waitUntil(_workPred, timeout);
+    }
+
+    public void interrupt()
+    {
+        _driver.wakeup();
     }
 
     public void put(Message m) throws MessengerException
@@ -210,6 +233,11 @@ public class MessengerImpl implements Messenger
 
     public void send() throws TimeoutException
     {
+        send(-1);
+    }
+
+    public void send(int n) throws TimeoutException
+    {
         if(_logger.isLoggable(Level.FINE))
         {
             _logger.fine(this + " about to send");
@@ -249,8 +277,8 @@ public class MessengerImpl implements Messenger
                     int size = read((Receiver) delivery.getLink());
                     Message message = _messageFactory.createMessage();
                     message.decode(_buffer, 0, size);
-                    _incoming.add(delivery);
                     delivery.getLink().advance();
+                    _incoming.add(delivery);
                     return message;
                 }
                 else
@@ -383,27 +411,24 @@ public class MessengerImpl implements Messenger
 
     private int read(Receiver receiver)
     {
-        //TODO: add pending count to Delivery?
-        int total = 0;
-        int start = 0;
-        while (true)
-        {
-            int read = receiver.recv(_buffer, start, _buffer.length - start);
-            total += read;
-            if (read == (_buffer.length - start))
-            {
-                //may need to expand the buffer (is there a better test?)
-                byte[] old = _buffer;
-                _buffer = new byte[_buffer.length*2];
-                System.arraycopy(old, 0, _buffer, 0, old.length);
-                start += read;
-            }
-            else
-            {
-                break;
-            }
+        Delivery dlv = receiver.current();
+
+        if (dlv.isPartial()) {
+            throw new IllegalStateException();
         }
-        return total;
+
+        int size = dlv.pending();
+
+        while (_buffer.length < size) {
+            _buffer = new byte[_buffer.length * 2];
+        }
+
+        int read = receiver.recv(_buffer, 0, _buffer.length);
+        if (read != size) {
+            throw new IllegalStateException();
+        }
+
+        return size;
     }
 
     private void processAllConnectors()
@@ -426,6 +451,7 @@ public class MessengerImpl implements Messenger
         //process active listeners
         for (Listener<?> l = _driver.listener(); l != null; l = _driver.listener())
         {
+            _worked = true;
             Connector<?> c = l.accept();
             Connection connection = _engineFactory.createConnection();
             connection.setContainer(_name);
@@ -443,6 +469,7 @@ public class MessengerImpl implements Messenger
         //process active connectors, handling opened & closed connections as needed
         for (Connector<?> c = _driver.connector(); c != null; c = _driver.connector())
         {
+            _worked = true;
             _logger.log(Level.FINE, "Processing active connector " + c);
             try
             {
@@ -524,12 +551,23 @@ public class MessengerImpl implements Messenger
         }
     }
 
-    private void waitUntil(Predicate condition) throws TimeoutException
+    private boolean waitUntil(Predicate condition) throws TimeoutException
     {
-        waitUntil(condition, _timeout);
+        if (_blocking) {
+            boolean done = waitUntil(condition, _timeout);
+            if (!done) {
+                _logger.log(Level.SEVERE, String.format
+                            ("Timeout when waiting for condition %s after %s ms",
+                             condition, _timeout));
+                throw new TimeoutException();
+            }
+            return done;
+        } else {
+            return waitUntil(condition, 0);
+        }
     }
 
-    private void waitUntil(Predicate condition, long timeout) throws TimeoutException
+    private boolean waitUntil(Predicate condition, long timeout)
     {
         processAllConnectors();
 
@@ -539,23 +577,22 @@ public class MessengerImpl implements Messenger
         boolean wait = deadline > System.currentTimeMillis();
         boolean first = true;
         boolean done = false;
+        boolean woken = false;
 
         while (first || (!done && wait))
         {
             if (wait && !done && !first) {
-                _driver.doWait(timeout < 0 ? 0 : deadline - System.currentTimeMillis());
+                woken = _driver.doWait(timeout < 0 ? 0 : deadline - System.currentTimeMillis());
             }
             processActive();
             wait = deadline > System.currentTimeMillis();
-            done = done || condition.test();
+            done = done || woken || condition.test();
             first = false;
         }
-        if (!done)
-        {
-            _logger.log(Level.SEVERE, String.format(
-                    "Timeout when waiting for condition %s after %s ms", condition, timeout));
-            throw new TimeoutException();
+        if (woken) {
+            throw new InterruptException();
         }
+        return done;
     }
 
     private Connection lookup(String host, String service)
@@ -724,12 +761,22 @@ public class MessengerImpl implements Messenger
             if (_driver.connectors().iterator().hasNext()) return false;
             else return true;
         }
+    }
 
+    private boolean _worked = false;
+
+    private class WorkPred implements Predicate
+    {
+        public boolean test()
+        {
+            return _worked;
+        }
     }
 
     private final SentSettled _sentSettled = new SentSettled();
     private final MessageAvailable _messageAvailable = new MessageAvailable();
     private final AllClosed _allClosed = new AllClosed();
+    private final WorkPred _workPred = new WorkPred();
 
     private interface LinkFinder<C extends Link>
     {

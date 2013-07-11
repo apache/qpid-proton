@@ -24,6 +24,7 @@ except NameError:
   bytes = str
 
 from org.apache.qpid.proton import ProtonFactoryLoader, ProtonUnsupportedOperationException
+from org.apache.qpid.proton import InterruptException as Interrupt
 from org.apache.qpid.proton.engine import \
     EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
@@ -44,6 +45,7 @@ from java.util import EnumSet, UUID as JUUID, Date as JDate, HashMap
 from java.util.concurrent import TimeoutException as Timeout
 from java.nio import ByteBuffer
 from java.lang import Character as JCharacter, String as JString, Integer as JInteger
+from java.lang import NoClassDefFoundError
 
 
 
@@ -1265,6 +1267,10 @@ class Messenger(object):
   def stop(self):
     self.impl.stop()
 
+  @property
+  def stopped(self):
+    return self.impl.stopped()
+
   def subscribe(self, source):
     self.impl.subscribe(source)
 
@@ -1272,14 +1278,21 @@ class Messenger(object):
     self.impl.put(message.impl)
     return self.impl.outgoingTracker()
 
-  def send(self):
-    self.impl.send()
+  def send(self, n=-1):
+    self.impl.send(n)
 
-  def recv(self, n):
+  def recv(self, n=-1):
     self.impl.recv(n)
+
+  def work(self, t):
+    return self.impl.work(t)
+
+  def interrupt(self):
+    self.impl.interrupt()
 
   def get(self, message=None):
     result = self.impl.get()
+    if not result: print "HA"
     if message and result:
       message.impl = result
     return self.impl.incomingTracker()
@@ -1298,6 +1311,13 @@ class Messenger(object):
     self.impl.setTimeout(t)
   timeout = property(_get_timeout, _set_timeout)
 
+  def _is_blocking(self):
+    return self.impl.isBlocking()
+
+  def _set_blocking(self, b):
+    self.impl.setBlocking(b)
+
+  blocking = property(_is_blocking, _set_blocking)
   def accept(self, tracker=None):
     if tracker is None:
       tracker = self.impl.incomingTracker()
@@ -1578,7 +1598,10 @@ class SSLDomain(object):
   ANONYMOUS_PEER = JSslDomain.VerifyMode.ANONYMOUS_PEER
 
   def __init__(self, mode):
-    self._domain = engineFactory.createSslDomain()
+    try:
+      self._domain = engineFactory.createSslDomain()
+    except NoClassDefFoundError, e:
+      raise SSLUnavailable()
     self._domain.init(mode)
 
   def set_credentials(self, cert_file, key_file, password):
@@ -1724,6 +1747,7 @@ __all__ = [
            "timestamp",
            "Terminus",
            "Timeout",
+           "Interrupt",
            "Transport",
            "TransportException",
            "ulong",

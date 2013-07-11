@@ -81,7 +81,13 @@ class JNIMessenger implements Messenger
     @Override
     public void send() throws TimeoutException
     {
-        int err = Proton.pn_messenger_send(_impl);
+        send(-1);
+    }
+
+    @Override
+    public void send(int n) throws TimeoutException
+    {
+        int err = Proton.pn_messenger_send(_impl, n);
         check(err);
     }
 
@@ -123,6 +129,29 @@ class JNIMessenger implements Messenger
     }
 
     @Override
+    public boolean stopped()
+    {
+        return Proton.pn_messenger_stopped(_impl);
+    }
+
+    @Override
+    public boolean work(long timeout)
+    {
+        int err = Proton.pn_messenger_work(_impl, (int) timeout);
+        if (err == Proton.PN_TIMEOUT)
+            return false;
+        check(err);
+        return true;
+    }
+
+    @Override
+    public void interrupt()
+    {
+        int err = Proton.pn_messenger_interrupt(_impl);
+        check(err);
+    }
+
+    @Override
     public void setTimeout(final long timeInMillis)
     {
         int err = Proton.pn_messenger_set_timeout(_impl, (int) timeInMillis);
@@ -133,6 +162,19 @@ class JNIMessenger implements Messenger
     public long getTimeout()
     {
         return Proton.pn_messenger_get_timeout(_impl);
+    }
+
+    @Override
+    public boolean isBlocking()
+    {
+        return Proton.pn_messenger_is_blocking(_impl);
+    }
+
+    @Override
+    public void setBlocking(boolean b)
+    {
+        int err = Proton.pn_messenger_set_blocking(_impl, b);
+        check(err);
     }
 
     @Override
@@ -232,7 +274,7 @@ class JNIMessenger implements Messenger
 
     private void check(int errorCode) throws ProtonException
     {
-        if(errorCode != 0)
+        if(errorCode != 0 && errorCode != Proton.PN_INPROGRESS)
         {
             String errorMessage = Proton.pn_messenger_error(_impl);
             if(errorCode == Proton.PN_TIMEOUT)

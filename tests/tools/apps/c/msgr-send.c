@@ -279,7 +279,7 @@ int main(int argc, char** argv)
                 }
             } else {
                 LOG("Calling pn_messenger_send()\n");
-                rc = pn_messenger_send(messenger);
+                rc = pn_messenger_send(messenger, -1);
                 check((rc == 0 || rc == PN_TIMEOUT), "pn_messenger_send() failed");
             }
         }
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
         }
     } else if (pn_messenger_outgoing(messenger) > 0) {
         LOG("Calling pn_messenger_send()\n");
-        rc = pn_messenger_send(messenger);
+        rc = pn_messenger_send(messenger, -1);
         check(rc == 0, "pn_messenger_send() failed");
     }
 

@@ -31,6 +31,7 @@ module Qpid
       STATE = Cproton::PN_STATE_ERR
       ARGUMENT = Cproton::PN_ARG_ERR
       TIMEOUT = Cproton::PN_TIMEOUT
+      INPROGRESS = Cproton::PN_INPROGRESS
 
     end
 

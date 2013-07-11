@@ -82,6 +82,7 @@ public interface Messenger
      * to cause the messages to actually be sent out.
      */
     void put(Message message) throws MessengerException;
+
     /**
      * Blocks until the outgoing queue is empty and, in the event that
      * an outgoing window has been set, until the messages in that
@@ -90,6 +91,8 @@ public interface Messenger
      * controls how long a Messenger will block before timing out.
      */
     void send() throws TimeoutException;
+
+    void send(int n) throws TimeoutException;
 
     /**
      * Subscribes the Messenger to messages originating from the
@@ -131,8 +134,17 @@ public interface Messenger
      */
     void stop();
 
+    boolean stopped();
+
+    boolean work(long timeout);
+
+    void interrupt();
+
     void setTimeout(long timeInMillis);
     long getTimeout();
+
+    boolean isBlocking();
+    void setBlocking(boolean b);
 
     /**
      * Returns a count of the messages currently on the outgoing queue

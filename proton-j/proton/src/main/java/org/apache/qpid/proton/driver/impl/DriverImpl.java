@@ -48,6 +48,8 @@ public class DriverImpl implements Driver
     private Collection<Listener> _listeners = new LinkedList();
     private Collection<Connector> _connectors = new LinkedList();
     private Logger _logger = Logger.getLogger("proton.driver");
+    private Object _wakeupLock = new Object();
+    private boolean _woken = false;
 
     DriverImpl() throws IOException
     {
@@ -56,15 +58,34 @@ public class DriverImpl implements Driver
 
     public void wakeup()
     {
+        synchronized (_wakeupLock) {
+            _woken = true;
+        }
         _selector.wakeup();
     }
 
-    public void doWait(long timeout)
+    public boolean doWait(long timeout)
     {
         try
         {
-            _selector.select(timeout);
+            boolean woken;
+            synchronized (_wakeupLock) {
+                woken = _woken;
+            }
+
+            if (woken) {
+                _selector.selectNow();
+            } else {
+                _selector.select(timeout);
+            }
             _selectedKeys = _selector.selectedKeys();
+
+            synchronized (_wakeupLock) {
+                woken = woken || _woken;
+                _woken = false;
+            }
+
+            return woken;
         }
         catch (IOException e)
         {

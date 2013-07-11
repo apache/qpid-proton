@@ -46,7 +46,6 @@ module Qpid
 
       def self.finalize!(impl) # :nodoc:
         proc {
-          Cproton.pn_messenger_stop(impl)
           Cproton.pn_messenger_free(impl)
         }
       end
@@ -74,6 +73,14 @@ module Qpid
       #
       def timeout
         Cproton.pn_messenger_get_timeout(@impl)
+      end
+
+      def blocking
+        Cproton.pn_mesenger_is_blocking(@impl)
+      end
+
+      def blocking=(blocking)
+        Cproton.pn_messenger_set_blocking(@impl, blocking)
       end
 
       # Reports whether an error occurred.
@@ -106,6 +113,10 @@ module Qpid
       #
       def stop
         check_for_error(Cproton.pn_messenger_stop(@impl))
+      end
+
+      def stopped
+        Cproton.pn_messenger_stopped(@impl)
       end
 
       # Subscribes the +Messenger+ to a remote address.
@@ -191,8 +202,8 @@ module Qpid
       # Sends all outgoing messages, blocking until the outgoing queue
       # is empty.
       #
-      def send
-        check_for_error(Cproton.pn_messenger_send(@impl))
+      def send(n = -1)
+        check_for_error(Cproton.pn_messenger_send(@impl, n))
       end
 
       # Gets a single message incoming message from the local queue.
@@ -215,12 +226,24 @@ module Qpid
       #
       # Options ====
       #
-      # * max - the maximum number of messages to receive
+      # * limit - the maximum number of messages to receive
       #
-      def receive(max)
-        raise TypeError.new("invalid max: #{max}") if max.nil? || max.to_i.zero?
-        raise RangeError.new("negative max: #{max}") if max < 0
-        check_for_error(Cproton.pn_messenger_recv(@impl, max))
+      def receive(limit=-1)
+        check_for_error(Cproton.pn_messenger_recv(@impl, limit))
+      end
+
+      def receiving
+        Cproton.pn_messenger_receiving(@impl)
+      end
+
+      def work(timeout=-1)
+        err = Cproton.pn_messenger_work(@impl, timeout)
+        if (err == Cproton::PN_TIMEOUT) then
+          return false
+        else
+          check_for_error(err)
+          return true
+        end
       end
 
       # Returns the number messages in the outgoing queue that have not been

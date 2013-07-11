@@ -54,6 +54,9 @@ module Qpid
         when Qpid::Proton::Error::TIMEOUT
           raise Qpid::Proton::TimeoutError.new(self.error)
 
+        when Qpid::Proton::Error::INPROGRESS
+          return
+
         else
 
           raise ::ArgumentError.new("Unknown error code: #{code}")

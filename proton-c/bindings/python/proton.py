@@ -113,6 +113,12 @@ class Timeout(ProtonException):
   """
   pass
 
+class Interrupt(ProtonException):
+  """
+  An interrupt exception indicaes that a blocking operation was interrupted.
+  """
+  pass
+
 class MessengerException(ProtonException):
   """
   The root of the messenger exception hierarchy. All exceptions
@@ -129,7 +135,8 @@ class MessageException(ProtonException):
   pass
 
 EXCEPTIONS = {
-  PN_TIMEOUT: Timeout
+  PN_TIMEOUT: Timeout,
+  PN_INTR: Interrupt
   }
 
 PENDING = Constant("PENDING")
@@ -225,6 +232,8 @@ class Messenger(object):
 
   def _check(self, err):
     if err < 0:
+      if (err == PN_INPROGRESS):
+        return
       exc = EXCEPTIONS.get(err, MessengerException)
       raise exc("[%s]: %s" % (err, pn_messenger_error(self._mng)))
     else:
@@ -306,6 +315,14 @@ The timeout property contains the default timeout for blocking
 operations performed by the L{Messenger}.
 """)
 
+  def _is_blocking(self):
+    return pn_messenger_is_blocking(self._mng)
+
+  def _set_blocking(self, b):
+    self._check(pn_messenger_set_blocking(self._mng, b))
+
+  blocking = property(_is_blocking, _set_blocking)
+
   def _get_incoming_window(self):
     return pn_messenger_get_incoming_window(self._mng)
 
@@ -351,6 +368,10 @@ send. Defaults to zero.
     connections.
     """
     self._check(pn_messenger_stop(self._mng))
+
+  @property
+  def stopped(self):
+    return pn_messenger_stopped(self._mng)
 
   def subscribe(self, source):
     """
@@ -410,13 +431,13 @@ send. Defaults to zero.
       flags = 0
     self._check(pn_messenger_settle(self._mng, tracker, flags))
 
-  def send(self):
+  def send(self, n=-1):
     """
     Blocks until the outgoing queue is empty or the operation times
     out. The L{timeout} property controls how long a L{Messenger} will
     block before timing out.
     """
-    self._check(pn_messenger_send(self._mng))
+    self._check(pn_messenger_send(self._mng, n))
 
   def recv(self, n=None):
     """
@@ -428,6 +449,17 @@ send. Defaults to zero.
     if n is None:
       n = -1
     self._check(pn_messenger_recv(self._mng, n))
+
+  def work(self, timeout=-1):
+    err = pn_messenger_work(self._mng, timeout)
+    if (err == PN_TIMEOUT):
+      return False
+    else:
+      self._check(err)
+      return True
+
+  def interrupt(self):
+    self._check(pn_messenger_interrupt(self._mng))
 
   def get(self, message=None):
     """
@@ -2861,6 +2893,7 @@ __all__ = [
            "SSLUnavailable",
            "Terminus",
            "Timeout",
+           "Interrupt",
            "Transport",
            "TransportException",
            "char",

@@ -148,6 +148,9 @@ PN_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
  */
 PN_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 
+PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
+PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
+
 /** Frees a Messenger.
  *
  * @param[in] messenger the messenger to free, no longer valid on
@@ -238,6 +241,8 @@ PN_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
 
+PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
+
 /** Subscribes a messenger to messages from the specified source.
  *
  * @param[in] messenger the messenger to subscribe
@@ -294,29 +299,60 @@ PN_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracke
  */
 PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
 
-/** Sends any messages in the outgoing message queue for a messenger.
- * This will block until the messages have been sent.
+/** Sends or receives any outstanding messages queued for a messenger.
+ * This will block for the indicated timeout.
+ *
+ * @param[in] messenger the Messenger
+ * @param[in] timeout the maximum time to block
+ */
+PN_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
+
+/** Interrupts a messenger that is blocking. This method may be safely
+ * called from a different thread than the one that is blocking.
+ *
+ * @param[in] messenger the Messenger
+ */
+PN_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
+
+/** Sends messages in the outgoing message queue for a messenger. This
+ * call will block until the indicated number of messages have been
+ * sent. If n is -1 this call will block until all outgoing messages
+ * have been sent. If n is 0 then this call won't block.
  *
  * @param[in] messenger the messager
+ * @param[in] n the number of messages to send
  *
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger);
+PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
 
-/** Receives up to n messages into the incoming message queue of a
- * messenger. If n is -1, Messenger will be able to receive as many
- * messages as it can buffer internally.  Blocks until at least one
- * message is available in the incoming queue.
+/** Instructs the messenger to receives up to limit messages into the
+ * incoming message queue of a messenger. If limit is -1, Messenger
+ * will receive as many messages as it can buffer internally. If the
+ * messenger is in blocking mode, this call will block until at least
+ * one message is available in the incoming queue.
+ *
+ * Each call to pn_messenger_recv replaces the previos receive
+ * operation, so pn_messenger_recv(messenger, 0) will cancel any
+ * outstanding receive.
  *
  * @param[in] messenger the messenger
- * @param[in] n the maximum number of messages to receive or -1 to to
- * receive as many messages as it can buffer internally.
+ * @param[in] limit the maximum number of messages to receive or -1 to
+ *                  to receive as many messages as it can buffer
+ *                  internally.
  *
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int n);
+PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
+
+/** Returns the number of messages currently being received by a
+ * messenger.
+ *
+ * @param[in] messenger the messenger
+ */
+PN_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
 
 /** Gets a message from the head of the incoming message queue of a
  * messenger.

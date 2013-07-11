@@ -56,8 +56,10 @@ public interface Driver
      * Thread-safe.
      *
      * @param timeout maximum time in milliseconds to wait. 0 means wait indefinitely.
+     *
+     * @param returns true if woken up
      */
-    void doWait(long timeout);
+    boolean doWait(long timeout);
 
     /**
      * Get the next listener with pending data in the driver.

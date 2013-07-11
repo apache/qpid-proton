@@ -49,27 +49,16 @@ class Test(common.Test):
 
   def _safelyStopClient(self):
     existing_exception = None
+    self.server.interrupt()
     try:
-      # send a message to cause the server to promptly exit
-      msg = Message()
-      msg.address="amqp://0.0.0.0:12345"
-      self.client.put(msg)
-      try:
-        self.client.send()
-      except:
-        print "Client failed to send shutdown message due to: %s" % sys.exc_info()[1]
-        existing_exception = sys.exc_info()[1]
+      self.client.stop()
+      self.client = None
+    except:
+      print "Client failed to stop due to: %s" % sys.exc_info()[1]
+      if existing_exception:
+        raise existing_exception
+      else:
         raise
-    finally:
-      try:
-        self.client.stop()
-        self.client = None
-      except:
-        print "Client failed to stop due to: %s" % sys.exc_info()[1]
-        if existing_exception:
-          raise existing_exception
-        else:
-          raise
 
   def teardown(self):
     try:
@@ -91,8 +80,11 @@ class MessengerTest(Test):
     try:
       while self.running:
         self.server_is_running_event.set()
-        self.server.recv(self.server_credit)
-        self.process_incoming(msg)
+        try:
+          self.server.recv(self.server_credit)
+          self.process_incoming(msg)
+        except Interrupt:
+          pass
     finally:
       self.server.stop()
       self.running = False
@@ -113,7 +105,7 @@ class MessengerTest(Test):
       self.server.put(msg)
       self.server.settle()
 
-  def _testSendReceive(self, size=None):
+  def testSendReceive(self, size=None):
     self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
@@ -129,33 +121,30 @@ class MessengerTest(Test):
 
     reply = Message()
     self.client.recv(1)
-    assert self.client.incoming == 1
+    assert self.client.incoming == 1, self.client.incoming
     self.client.get(reply)
 
     assert reply.subject == "Hello World!"
     rbod = reply.body
     assert rbod == body, (rbod, body)
 
-  def testSendReceive(self):
-    self._testSendReceive()
-
   def testSendReceive1K(self):
-    self._testSendReceive(1024)
+    self.testSendReceive(1024)
 
   def testSendReceive2K(self):
-    self._testSendReceive(2*1024)
+    self.testSendReceive(2*1024)
 
   def testSendReceive4K(self):
-    self._testSendReceive(4*1024)
+    self.testSendReceive(4*1024)
 
   def testSendReceive10K(self):
-    self._testSendReceive(10*1024)
+    self.testSendReceive(10*1024)
 
   def testSendReceive100K(self):
-    self._testSendReceive(100*1024)
+    self.testSendReceive(100*1024)
 
   def testSendReceive1M(self):
-    self._testSendReceive(1024*1024)
+    self.testSendReceive(1024*1024)
 
   # PROTON-285 - prevent continually failing test
   def xtestSendBogus(self):
@@ -589,3 +578,44 @@ class MessengerTest(Test):
   def testRewriteOverrideDefault(self):
     self.client.rewrite("*", "$1")
     self._testRewrite("amqp://user:pass@host", "amqp://user:pass@host")
+
+class NBMessengerTest(common.Test):
+
+  def setup(self):
+    self.client = Messenger()
+    self.server = Messenger()
+    self.client.blocking = False
+    self.server.blocking = False
+    self.server.start()
+    self.client.start()
+    self.server.subscribe("amqp://~0.0.0.0:12345")
+
+  def pump(self):
+    while self.client.work(0) or self.server.work(0): pass
+
+  def teardown(self):
+    self.server.stop()
+    self.client.stop()
+    self.pump()
+    assert self.server.stopped
+    assert self.client.stopped
+
+  def test(self, count=1):
+    self.server.recv()
+
+    msg = Message()
+    msg.address = "amqp://0.0.0.0:12345"
+    for i in range(count):
+      msg.body = "Hello %s" % i
+      self.client.put(msg)
+
+    self.pump()
+    assert self.client.outgoing == 0, self.client.outgoing
+
+    msg2 = Message()
+    for i in range(count):
+      self.server.get(msg2)
+      assert msg2.body == "Hello %s" % i, (msg2.body, i)
+
+  def test1024(self):
+    self.test(1024)

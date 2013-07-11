@@ -53,8 +53,10 @@ struct pn_messenger_t {
   char *password;
   char *trusted_certificates;
   int timeout;
+  bool blocking;
   pn_driver_t *driver;
-  bool unlimited_credit;
+  int send_threshold;
+  int receiving;
   int credit_batch;
   int credit;
   int distributed;
@@ -73,6 +75,7 @@ struct pn_messenger_t {
   pn_tracker_t incoming_tracker;
   pn_string_t *original;
   pn_string_t *rewritten;
+  bool worked;
 };
 
 struct pn_subscription_t {
@@ -182,8 +185,9 @@ pn_messenger_t *pn_messenger(const char *name)
     m->password = NULL;
     m->trusted_certificates = NULL;
     m->timeout = -1;
+    m->blocking = true;
     m->driver = pn_driver();
-    m->unlimited_credit = false;
+    m->receiving = 0;
     m->credit_batch = 10;
     m->credit = 0;
     m->distributed = 0;
@@ -272,6 +276,18 @@ int pn_messenger_get_timeout(pn_messenger_t *messenger)
   return messenger ? messenger->timeout : 0;
 }
 
+bool pn_messenger_is_blocking(pn_messenger_t *messenger)
+{
+  assert(messenger);
+  return messenger->blocking;
+}
+
+int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking)
+{
+  messenger->blocking = blocking;
+  return 0;
+}
+
 static void pni_driver_reclaim(pn_driver_t *driver)
 {
   pn_listener_t *l = pn_listener_head(driver);
@@ -342,8 +358,13 @@ void pn_messenger_flow(pn_messenger_t *messenger)
 
   if (link_ct == 0) return;
 
-  if (messenger->unlimited_credit)
+  if (messenger->receiving == -1) {
     messenger->credit = link_ct * messenger->credit_batch;
+  } else {
+    int total = messenger->credit + messenger->distributed;
+    if (messenger->receiving > total)
+      messenger->credit += (messenger->receiving - total);
+  }
 
   int batch = (messenger->credit < link_ct) ? 1
     : (messenger->credit/link_ct);
@@ -619,11 +640,11 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     if (pred || (timeout >= 0 && remaining < 0)) break;
 
     int error = pn_driver_wait(messenger->driver, remaining);
-    if (error)
-        return error;
+    if (error && error != PN_INTR) return error;
 
     pn_listener_t *l;
     while ((l = pn_driver_listener(messenger->driver))) {
+      messenger->worked = true;
       pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(l);
       pn_subscription_t *sub = ctx->subscription;
       char *scheme = sub->scheme;
@@ -654,6 +675,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 
     pn_connector_t *c;
     while ((c = pn_driver_connector(messenger->driver))) {
+      messenger->worked = true;
       pn_connector_process(c);
       pn_connection_t *conn = pn_connector_connection(c);
       pn_messenger_endpoints(messenger, conn, c);
@@ -673,6 +695,10 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     if (timeout >= 0) {
       now = pn_i_now();
     }
+
+    if (error == PN_INTR) {
+      return pred ? 0 : PN_INTR;
+    }
   }
 
   return pred ? 0 : PN_TIMEOUT;
@@ -680,7 +706,16 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
 
 int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *))
 {
-  return pn_messenger_tsync(messenger, predicate, messenger->timeout);
+  if (messenger->blocking) {
+    return pn_messenger_tsync(messenger, predicate, messenger->timeout);
+  } else {
+    int err = pn_messenger_tsync(messenger, predicate, 0);
+    if (err == PN_TIMEOUT) {
+      return PN_INPROGRESS;
+    } else {
+      return err;
+    }
+  }
 }
 
 int pn_messenger_start(pn_messenger_t *messenger)
@@ -1000,8 +1035,6 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
   if (heapbuf) free (heapbuf);
 }
 
-// static bool false_pred(pn_messenger_t *messenger) { return false; }
-
 int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender)
 {
   pni_entry_t *entry = pni_store_get(messenger->outgoing, address);
@@ -1026,8 +1059,6 @@ int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *send
   } else {
     pn_link_advance(sender);
     pni_entry_free(entry);
-    // XXX: doing this every time is slow, need to be smarter
-    //pn_messenger_tsync(messenger, false_pred, 0);
     return 0;
   }
 }
@@ -1150,7 +1181,7 @@ int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
 // true if all pending output has been sent to peer
 bool pn_messenger_sent(pn_messenger_t *messenger)
 {
-  if (pni_store_size(messenger->outgoing) > 0) return false;
+  int total = pni_store_size(messenger->outgoing);
 
   pn_connector_t *ctor = pn_connector_head(messenger->driver);
   while (ctor) {
@@ -1169,14 +1200,12 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
     pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (link) {
       if (pn_link_is_sender(link)) {
-        if (pn_link_queued(link)) {
-          return false;
-        }
+        total += pn_link_queued(link);
 
         pn_delivery_t *d = pn_unsettled_head(link);
         while (d) {
           if (!pn_delivery_remote_state(d) && !pn_delivery_settled(d)) {
-            return false;
+            total++;
           }
           d = pn_unsettled_next(d);
         }
@@ -1187,7 +1216,7 @@ bool pn_messenger_sent(pn_messenger_t *messenger)
     ctor = pn_connector_next(ctor);
   }
 
-  return true;
+  return total <= messenger->send_threshold;
 }
 
 bool pn_messenger_rcvd(pn_messenger_t *messenger)
@@ -1215,8 +1244,35 @@ bool pn_messenger_rcvd(pn_messenger_t *messenger)
   }
 }
 
-int pn_messenger_send(pn_messenger_t *messenger)
+static bool work_pred(pn_messenger_t *messenger) {
+  return messenger->worked;
+}
+
+int pn_messenger_work(pn_messenger_t *messenger, int timeout)
 {
+  messenger->worked = false;
+  return pn_messenger_tsync(messenger, work_pred, timeout);
+}
+
+int pn_messenger_interrupt(pn_messenger_t *messenger)
+{
+  assert(messenger);
+  if (messenger->driver) {
+    return pn_driver_wakeup(messenger->driver);
+  } else {
+    return 0;
+  }
+}
+
+int pn_messenger_send(pn_messenger_t *messenger, int n)
+{
+  if (n == -1) {
+    messenger->send_threshold = 0;
+  } else {
+    messenger->send_threshold = pn_messenger_outgoing(messenger) - n;
+    if (messenger->send_threshold < 0)
+      messenger->send_threshold = 0;
+  }
   return pn_messenger_sync(messenger, pn_messenger_sent);
 }
 
@@ -1225,14 +1281,7 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
   if (!messenger) return PN_ARG_ERR;
   if (!pn_listener_head(messenger->driver) && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
-  int total = messenger->credit + messenger->distributed;
-  if (n == -1) {
-    messenger->unlimited_credit = true;
-  } else  {
-    messenger->unlimited_credit = false;
-    if (n > total)
-      messenger->credit += (n - total);
-  }
+  messenger->receiving = n;
   pn_messenger_flow(messenger);
   int err = pn_messenger_sync(messenger, pn_messenger_rcvd);
   if (err) return err;
@@ -1243,6 +1292,12 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
   } else {
     return 0;
   }
+}
+
+int pn_messenger_receiving(pn_messenger_t *messenger)
+{
+  assert(messenger);
+  return messenger->receiving;
 }
 
 int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
