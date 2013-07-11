@@ -287,7 +287,6 @@ PN_EXTERN void pn_connector_set_connection(pn_connector_t *connector, pn_connect
  *  connector.
  *
  * @param[in] connector the connector whose context is to be returned.
-
  * @return the application context that was passed to pn_connector()
  *         or pn_connector_fd()
  */
@@ -300,6 +299,13 @@ PN_EXTERN void *pn_connector_context(pn_connector_t *connector);
  *                    connector
  */
 PN_EXTERN void pn_connector_set_context(pn_connector_t *connector, void *context);
+
+/** Access the name of the connector
+ *
+ * @param[in] connector the connector which will hole the name
+ * @return the name of the connector in the form of a null-terminated character string.
+ */
+PN_EXTERN const char *pn_connector_name(const pn_connector_t *connector);
 
 /** Access the transport used by this connector.
  *

@@ -463,6 +463,12 @@ void pn_connector_set_context(pn_connector_t *ctor, void *context)
   ctor->context = context;
 }
 
+const char *pn_connector_name(const pn_connector_t *ctor)
+{
+  if (!ctor) return 0;
+  return ctor->name;
+}
+
 pn_listener_t *pn_connector_listener(pn_connector_t *ctor)
 {
   return ctor ? ctor->listener : NULL;
