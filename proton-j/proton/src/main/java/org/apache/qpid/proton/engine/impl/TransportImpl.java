@@ -109,6 +109,8 @@ public class TransportImpl extends EndpointImpl
 
     private EngineLogger _engineLogger;
 
+    private FrameHandler _frameHandler = this;
+
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link EngineFactory} instead
@@ -153,7 +155,7 @@ public class TransportImpl extends EndpointImpl
         if(!_init)
         {
             _init = true;
-            _frameParser = new FrameParser(this, _decoder, _maxFrameSize);
+            _frameParser = new FrameParser(_frameHandler , _decoder, _maxFrameSize);
             _inputProcessor = _frameParser;
             _outputProcessor = new TransportOutputAdaptor(this, _maxFrameSize);
             _outputOverflowBuffer = newReadableBuffer(_maxFrameSize);
@@ -166,6 +168,9 @@ public class TransportImpl extends EndpointImpl
         return _maxFrameSize;
     }
 
+    /**
+     * TODO propagate the new value to {@link #_outputProcessor} etc
+     */
     @Override
     public void setMaxFrameSize(int maxFrameSize)
     {
@@ -1276,5 +1281,14 @@ public class TransportImpl extends EndpointImpl
     public void setEngineLogger(EngineLogger engineLogger)
     {
         _engineLogger = engineLogger;
+    }
+
+    /**
+     * Override the default frame handler. Must be called before the transport starts being used
+     * (e.g. {@link #getInputBuffer()}, {@link #getOutputBuffer()}, {@link #ssl(SslDomain)} etc).
+     */
+    public void setFrameHandler(FrameHandler frameHandler)
+    {
+        _frameHandler = frameHandler;
     }
 }
