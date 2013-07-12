@@ -1902,8 +1902,10 @@ int pn_do_transfer(pn_dispatcher_t *disp)
 
     // XXX: need to fill in remote state: delivery->remote.state = ...;
     delivery->remote.settled = settled;
-    delivery->updated = true;
-    pn_work_update(transport->connection, delivery);
+    if (settled) {
+      delivery->updated = true;
+      pn_work_update(transport->connection, delivery);
+    }
   }
 
   pn_buffer_append(delivery->bytes, disp->payload, disp->size);
