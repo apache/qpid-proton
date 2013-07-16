@@ -1,5 +1,7 @@
+#ifndef PNCOMAPT_MISC_DEFS_H
+#define PNCOMAPT_MISC_DEFS_H
+
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,21 +21,28 @@
  *
  */
 
-/*
- * Provides an embedded getopt implementation to the C file including
- * this.  Only intended for use by Proton examples and test/debug
- * programs to run on Windows.
- *
- * This file and any internal support files may change or be removed
- * at any time.
- */
-
 #if defined(qpid_proton_EXPORTS)
 #error This include file is not for use in the main proton library
 #endif
 
+/*
+ * Platform neutral definitions. Only intended for use by Proton
+ * examples and test/debug programs.
+ *
+ * This file and any related support files may change or be removed
+ * at any time.
+ */
+
+// getopt()
+
+#include <proton/types.h>
+
 #if !defined(_WIN32) || defined (__CYGWIN__)
-#error This include file only intended for Windows compatibility.
+#include <getopt.h>
+#else
+#include "internal/getopt.h"
 #endif
 
-#include "internal/getopt.c"
+pn_timestamp_t time_now();
+
+#endif /* PNCOMPAT_MISC_DEFS_H */

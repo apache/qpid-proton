@@ -19,11 +19,11 @@
  */
 
 #include "msgr-common.h"
+#include <pncompat/misc_funcs.inc>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <assert.h>
 
 void msgr_die(const char *file, int line, const char *message)
@@ -43,12 +43,11 @@ char *msgr_strdup( const char *src )
   return r;
 }
 
-//sigh part deux - would be nice if proton exported pn_i_now()
+
 pn_timestamp_t msgr_now()
 {
-  struct timeval now;
-  if (gettimeofday(&now, NULL)) abort();
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
+  // from "pncompat/misc_funcs.inc"
+  return time_now();
 }
 
 void addresses_init( Addresses_t *a )

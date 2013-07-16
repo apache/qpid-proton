@@ -18,17 +18,21 @@
  *
  */
 
-#if defined(_WIN32) && ! defined(__CYGWIN__)
-#include "../wincompat/getopt.h"
-#else
-#include <getopt.h>
-#endif
+#include "pncompat/misc_defs.h"
 
 #if defined(USE_INTTYPES)
+#ifdef __cplusplus
+#define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 #endif
 
-/* should be defined in inttypes.h, if not, best guess */
+#ifdef _MSC_VER
+#define PRIu64 "I64u"
+#define SCNu64 "I64u"
+#endif
+
+/* If still not defined, best guess */
 #if !defined(SCNu64)
 #define SCNu64 "ul"
 #endif
