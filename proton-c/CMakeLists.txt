@@ -410,8 +410,11 @@ if (ruby_exe)
   # ruby spec tests
   find_program(rspec_exe rspec)
   if (rspec_exe)
-    add_test (ruby-spec-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-      ${rspec_exe})
+    add_test (NAME ruby-spec-test
+              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
+              COMMAND python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                      ${rspec_exe})
+
   else(rspec_exe)
     message (STATUS "Cannot find rspec, skipping rspec tests")
   endif(rspec_exe)
