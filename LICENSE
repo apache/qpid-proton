@@ -206,4 +206,4 @@ PROTON SUBCOMPONENTS:
 
 Proton includes freegetopt with a separate BSD license.  Your use
 of the source code for freegetopt is subject to the terms and
-conditions of its license in proton-c/wincompat/internal/LICENSE.
+conditions of its license in examples/include/pncompat/internal/LICENSE.
