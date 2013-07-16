@@ -70,7 +70,7 @@ module Qpid
         @messenger.errno.should eq(0)
         # force an error
         expect {
-          @messenger.subscribe("amqp://farkle")
+          @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
         @messenger.error?.should be_true
         @messenger.errno.should_not eq(0)
@@ -81,7 +81,7 @@ module Qpid
         @messenger.error.should be_nil
         # force an error
         expect {
-          @messenger.subscribe("amqp://farkle")
+          @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
         @messenger.error?.should be_true
         @messenger.errno.should_not be_nil
@@ -107,7 +107,7 @@ module Qpid
 
       it "raises an error when subscribing to an invalid address" do
         expect {
-          @messenger.subscribe("amqp://farkle")
+          @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
         @messenger.error?.should be_true
         @messenger.errno.should_not be_nil
@@ -230,10 +230,6 @@ module Qpid
           @messenger.subscribe("amqp://~0.0.0.0").should_not be_nil
         end
 
-        it "does not return a tracker before sending messages" do
-          @messenger.outgoing_tracker.should be_nil
-        end
-
         it "returns a tracker's status"
 
         it "raises an error when settling with a nil flag" do
@@ -273,7 +269,10 @@ module Qpid
             rescue ProtonError => error
               # ignore this error
             end
-            @receiver.stop
+            begin
+              @receiver.stop
+            rescue
+            end
           end
 
           it "raises an error when queueing a nil message" do
@@ -349,10 +348,6 @@ module Qpid
 
           end
 
-          it "has a nil incoming tracker when no messages are received" do
-            @messenger.incoming_tracker.should be_nil
-          end
-
           it "has an incoming tracker"
 
           it "raises an error when rejecting with a nil flag" do
@@ -421,12 +416,6 @@ module Qpid
               expect {
                 @messenger.receive("farkle")
               }.to raise_error(TypeError)
-            end
-
-            it "raises an error when receiving with a negative max" do
-              expect {
-                @messenger.receive(-5)
-              }.to raise_error(RangeError)
             end
 
             it "can receive messages"

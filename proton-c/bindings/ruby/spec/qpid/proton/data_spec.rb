@@ -331,7 +331,7 @@ module Qpid
       end
 
       it "can hold a decimal128" do
-        value = 1 + rand(2**127)
+        value = rand(2**127)
         @data.decimal128 = value
         @data.decimal128.should == value
       end
@@ -414,7 +414,7 @@ module Qpid
       it "can hold an array" do
         values = []
         (1..(rand(100) + 5)).each { values << rand(2**16) }
-        @data.put_array false, Data::INT
+        @data.put_array false, Qpid::Proton::INT
         @data.enter
         values.each { |value| @data.int = value }
         @data.exit
@@ -430,13 +430,13 @@ module Qpid
         values = []
         (1..(rand(100) + 5)).each { values << random_string(64) }
         descriptor = random_string(32)
-        @data.put_array true, Data::STRING
+        @data.put_array true, Qpid::Proton::STRING
         @data.enter
         @data.symbol = descriptor
         values.each { |value| @data.string = value }
         @data.exit
 
-        @data.array.should == [values.size, true, Data::STRING]
+        @data.array.should == [values.size, true, Qpid::Proton::STRING]
         @data.enter
         @data.next
         @data.symbol.should == descriptor

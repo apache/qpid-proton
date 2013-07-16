@@ -640,7 +640,7 @@ module Qpid
       # * value - the decimal128 value
       def decimal128=(value)
         raise TypeError, "invalid decimal128 value: #{value}" if value.nil?
-        value = value.to_s.rjust(32, "0")
+        value = value.to_s(16).rjust(32, "0")
         bytes = []
         value.scan(/(..)/) {|v| bytes << v[0].to_i(16)}
         check(Cproton.pn_data_put_decimal128(@data, bytes))

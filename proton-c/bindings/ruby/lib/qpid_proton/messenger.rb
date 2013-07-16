@@ -228,7 +228,7 @@ module Qpid
       #
       # * limit - the maximum number of messages to receive
       #
-      def receive(limit=-1)
+      def receive(limit = -1)
         check_for_error(Cproton.pn_messenger_recv(@impl, limit))
       end
 

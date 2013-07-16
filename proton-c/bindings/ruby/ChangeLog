@@ -1,6 +1,10 @@
 version 0.5:
 	* Duck typed the Array class to work with Qpid::Proton::Data.
 	* Duck typed the Hash class to work with Qpid::Proton::Data.
+	* Fixed broken Rspec tests due to changes in under Proton C.
+	  - Messenger.receive can accept a negative maximum
+	  - When testing bad subscribe attempts, tests now use a random string.
+	* Fixed encoding decimal128 values.
 
 version 0.4:
 	* No language-specific features developed in this release.
