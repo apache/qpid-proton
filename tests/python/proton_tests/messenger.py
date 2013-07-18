@@ -588,6 +588,7 @@ class NBMessengerTest(common.Test):
     self.server.blocking = False
     self.server.start()
     self.client.start()
+    self.address = "amqp://0.0.0.0:12345"
     self.server.subscribe("amqp://~0.0.0.0:12345")
 
   def pump(self):
@@ -600,22 +601,42 @@ class NBMessengerTest(common.Test):
     assert self.server.stopped
     assert self.client.stopped
 
-  def test(self, count=1):
+  def testSmoke(self, count=1):
     self.server.recv()
 
     msg = Message()
-    msg.address = "amqp://0.0.0.0:12345"
+    msg.address = self.address
     for i in range(count):
       msg.body = "Hello %s" % i
       self.client.put(msg)
 
-    self.pump()
-    assert self.client.outgoing == 0, self.client.outgoing
-
     msg2 = Message()
     for i in range(count):
+      if self.server.incoming == 0:
+        self.pump()
+      assert self.server.incoming > 0
       self.server.get(msg2)
       assert msg2.body == "Hello %s" % i, (msg2.body, i)
 
-  def test1024(self):
-    self.test(1024)
+    assert self.client.outgoing == 0, self.client.outgoing
+    assert self.server.incoming == 0, self.client.incoming
+
+  def testSmoke1024(self):
+    self.testSmoke(1024)
+
+  def testSmoke4096(self):
+    self.testSmoke(4096)
+
+  def testPushback(self):
+    self.server.recv()
+
+    msg = Message()
+    msg.address = self.address
+    for i in xrange(16):
+      for i in xrange(1024):
+        self.client.put(msg)
+      self.pump()
+      if self.client.outgoing > 0:
+        break
+
+    assert self.client.outgoing > 0

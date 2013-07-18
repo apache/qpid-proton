@@ -44,14 +44,18 @@ class SmokeTest < Test::Unit::TestCase
       @client.put(msg)
     }
 
-    pump()
-
     msg2 = Message.new()
 
     count.times {|i|
+      if (@server.incoming == 0) then
+        pump()
+      end
       @server.get(msg2)
       assert msg2.content == "Hello World! #{i}"
     }
+
+    assert @client.outgoing == 0, @client.outgoing
+    assert @server.incoming == 0, @server.incoming
   end
 
 end

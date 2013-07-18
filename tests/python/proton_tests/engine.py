@@ -1157,6 +1157,33 @@ class CreditTest(Test):
     assert self.rcv.credit == 0
     assert self.rcv.queued == 0
 
+  def testPushback(self, count=10):
+    assert self.snd.credit == 0
+    assert self.rcv.credit == 0
+
+    self.rcv.flow(count)
+    self.pump()
+
+    for i in range(count):
+      d = self.snd.delivery("tag%s" % i)
+      assert d
+      self.snd.advance()
+
+    assert self.snd.queued == count
+    assert self.rcv.queued == 0
+    self.pump()
+    assert self.snd.queued == 0
+    assert self.rcv.queued == count
+
+    d = self.snd.delivery("extra")
+    self.snd.advance()
+
+    assert self.snd.queued == 1
+    assert self.rcv.queued == count
+    self.pump()
+    assert self.snd.queued == 1
+    assert self.rcv.queued == count
+
 class SessionCreditTest(Test):
 
   def teardown(self):

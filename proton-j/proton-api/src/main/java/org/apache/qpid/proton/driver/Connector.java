@@ -44,7 +44,7 @@ public interface Connector<C>
      * Typically, applications repeatedly invoke this method
      * during the lifetime of a connection.
      */
-    void process() throws IOException;
+    boolean process() throws IOException;
 
     /**
      * Access the listener which opened this connector.

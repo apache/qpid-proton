@@ -460,7 +460,8 @@ public class TransportImpl extends EndpointImpl
             while(delivery != null && buffer.remaining() >= _maxFrameSize)
             {
                 if((delivery.getLink() instanceof SenderImpl) && !(delivery.isDone() && delivery.getDataLength() == 0)
-                   && delivery.getLink().getSession().getTransportSession().hasOutgoingCredit())
+                   && delivery.getLink().getSession().getTransportSession().hasOutgoingCredit() &&
+                   delivery.getLink().getTransportLink().hasCredit())
                 {
                     SenderImpl sender = (SenderImpl) delivery.getLink();
 
@@ -916,16 +917,18 @@ public class TransportImpl extends EndpointImpl
             _encoder.writeObject(frameBody);
         }
 
+        ByteBuffer originalPayload = null;
+        if( payload!=null )
+        {
+            originalPayload = payload.duplicate();
+        }
+        TransportFrame frame = new TransportFrame(channel, frameBody, Binary.create(originalPayload));
+        log(OUTGOING, frame);
+
         if( _protocolTracer!=null )
         {
-            ByteBuffer originalPayload = null;
-            if( payload!=null )
-            {
-                originalPayload = payload.duplicate();
-            }
-            _protocolTracer.sentFrame(new TransportFrame(channel, frameBody, Binary.create(originalPayload)));
+            _protocolTracer.sentFrame(frame);
         }
-        _engineLogger.outgoingBytes(channel, frameBody, payload);
 
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), _maxFrameSize - (buffer.position() - oldPosition));
         if(payloadSize > 0)
@@ -1189,6 +1192,8 @@ public class TransportImpl extends EndpointImpl
             throw new IllegalStateException("Transport cannot accept frame: " + frame);
         }
 
+        log(INCOMING, frame);
+
         if( _protocolTracer != null )
         {
             _protocolTracer.receivedFrame(frame);
@@ -1291,4 +1296,20 @@ public class TransportImpl extends EndpointImpl
     {
         _frameHandler = frameHandler;
     }
+
+    private static String INCOMING = "<-";
+    private static String OUTGOING = "->";
+
+    private void log(String event, TransportFrame frame)
+    {
+        /*StringBuilder msg = new StringBuilder();
+        msg.append("[").append(System.identityHashCode(this)).append(":")
+            .append(frame.getChannel()).append("]");
+        msg.append(" ").append(event).append(" ").append(frame.getBody());
+        if (frame.getPayload() != null) {
+            msg.append(" \"").append(frame.getPayload()).append("\"");
+        }
+        System.out.println(msg.toString());*/
+    }
+
 }

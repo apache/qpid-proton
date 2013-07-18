@@ -188,7 +188,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->blocking = true;
     m->driver = pn_driver();
     m->receiving = 0;
-    m->credit_batch = 10;
+    m->credit_batch = 1024;
     m->credit = 0;
     m->distributed = 0;
     m->next_tag = 0;
@@ -359,7 +359,7 @@ void pn_messenger_flow(pn_messenger_t *messenger)
   if (link_ct == 0) return;
 
   if (messenger->receiving == -1) {
-    messenger->credit = link_ct * messenger->credit_batch;
+    messenger->credit = link_ct * messenger->credit_batch - pn_messenger_incoming(messenger);
   } else {
     int total = messenger->credit + messenger->distributed;
     if (messenger->receiving > total)

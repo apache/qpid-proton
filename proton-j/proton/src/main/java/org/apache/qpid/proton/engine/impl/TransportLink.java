@@ -105,6 +105,11 @@ class TransportLink<T extends LinkImpl>
         _linkCredit = UnsignedInteger.valueOf(_linkCredit.intValue() + credits);
     }
 
+    public boolean hasCredit()
+    {
+        return getLinkCredit().compareTo(UnsignedInteger.ZERO) > 0;
+    }
+
     public T getLink()
     {
         return _link;

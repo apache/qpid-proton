@@ -71,34 +71,45 @@ class ConnectorImpl<C> implements Connector<C>
         _readPending = true;
     }
 
-    public void process() throws IOException
+    public boolean process() throws IOException
     {
+        boolean processed = false;
         if (_channel.isOpen() && _channel.finishConnect())
         {
             if (_readPending)
             {
-                read();
+                if (read()) {
+                    processed = true;
+                }
                 _readPending = false;
-                if (isClosed()) return;
+                if (isClosed()) return processed;
             }
             else
             {
-                processInput();
+                if (processInput() > 0) {
+                    processed = true;
+                }
             }
-            write();
+            if (write()) {
+                processed = true;
+            }
         }
+        return processed;
     }
 
-    private void read() throws IOException
+    private boolean read() throws IOException
     {
+        boolean processed = false;
         int bytesRead = 0;
         while ((bytesRead = _channel.read(_readBuffer)) > 0)
         {
             processInput();
+            processed = true;
         }
         if (bytesRead == -1) {
             close();
         }
+        return processed;
     }
 
     private int processInput() throws IOException
@@ -127,8 +138,9 @@ class ConnectorImpl<C> implements Connector<C>
         return total;
     }
 
-    private void write() throws IOException
+    private boolean write() throws IOException
     {
+        boolean processed = false;
         int interest = _key.interestOps();
         boolean empty = _writeBuffer.position() == 0;
         boolean done = false;
@@ -138,6 +150,9 @@ class ConnectorImpl<C> implements Connector<C>
             _writeBuffer.position(_writeBuffer.position() + produced);
             _writeBuffer.flip();
             int wrote = _channel.write(_writeBuffer);
+            if (wrote > 0) {
+                processed = true;
+            }
             if (_logger.isLoggable(Level.FINE))
             {
                 _logger.log(Level.FINE, this + " wrote " + wrote + " bytes, " + _writeBuffer.remaining() + " remaining");
@@ -163,6 +178,7 @@ class ConnectorImpl<C> implements Connector<C>
         {
             _logger.log(Level.FINE, this + " finished writing output to the channel.");
         }
+        return processed;
     }
 
     public Listener<C> listener()

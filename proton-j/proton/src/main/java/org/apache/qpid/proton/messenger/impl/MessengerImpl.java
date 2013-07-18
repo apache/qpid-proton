@@ -76,9 +76,10 @@ public class MessengerImpl implements Messenger
     private long _nextTag = 1;
     private byte[] _buffer = new byte[5*1024];
     private Driver _driver;
-    private boolean _unlimitedCredit = false;
-    private static final int _creditBatch = 10;
+    private int _receiving = 0;
+    private static final int _creditBatch = 1024;
     private int _credit;
+    private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
 
@@ -251,15 +252,16 @@ public class MessengerImpl implements Messenger
         {
             _logger.fine(this + " about to wait for up to " + n + " messages to be received");
         }
-        if (n == -1) {
-            _unlimitedCredit = true;
-        } else {
-            _credit += n;
-            _unlimitedCredit = false;
-        }
+
+        _receiving = n;
         distributeCredit();
 
         waitUntil(_messageAvailable);
+    }
+
+    public int receiving()
+    {
+        return _receiving;
     }
 
     public Message get()
@@ -279,6 +281,7 @@ public class MessengerImpl implements Messenger
                     message.decode(_buffer, 0, size);
                     delivery.getLink().advance();
                     _incoming.add(delivery);
+                    _distributed--;
                     return message;
                 }
                 else
@@ -433,11 +436,14 @@ public class MessengerImpl implements Messenger
 
     private void processAllConnectors()
     {
+        distributeCredit();
         for (Connector<?> c : _driver.connectors())
         {
             try
             {
-                c.process();
+                if (c.process()) {
+                    _worked = true;
+                }
             }
             catch (IOException e)
             {
@@ -536,6 +542,9 @@ public class MessengerImpl implements Messenger
             {
                 reclaimCredit(connection);
                 c.destroy();
+                // XXX: could we do this once at the end of the loop
+                // instead of every time we reclaim?
+                distributeCredit();
             }
             else
             {
@@ -622,6 +631,7 @@ public class MessengerImpl implements Messenger
     private void reclaimCredit(int credit)
     {
         _credit += credit;
+        _distributed -= credit;
     }
 
     private void distributeCredit()
@@ -639,9 +649,13 @@ public class MessengerImpl implements Messenger
 
         if (linkCt == 0) return;
 
-        if (_unlimitedCredit)
+        if (_receiving < 0)
         {
-            _credit = linkCt * _creditBatch;
+            _credit = linkCt * _creditBatch - incoming();
+        } else {
+            int total = _credit + _distributed;
+            if (_receiving > total)
+                _credit += _receiving - total;
         }
 
         int batch = (_credit < linkCt) ? 1 : (_credit/linkCt);
@@ -659,6 +673,7 @@ public class MessengerImpl implements Messenger
                         int amount = (_credit < need) ? _credit : need;
                         ((Receiver) link).flow(amount);
                         _credit -= amount;
+                        _distributed += amount;
                         if (_credit == 0) return;
                     }
                 }
