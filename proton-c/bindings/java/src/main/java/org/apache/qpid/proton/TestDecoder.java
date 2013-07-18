@@ -18,8 +18,6 @@
  */
 package org.apache.qpid.proton;
 
-import org.apache.qpid.proton.TestDecoder;
-import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Decimal128;
 import org.apache.qpid.proton.amqp.Decimal32;
@@ -30,9 +28,7 @@ import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.codec.Data;
-import org.apache.qpid.proton.codec.DataFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
@@ -50,9 +46,7 @@ public class TestDecoder {
     private Data data;
 
     TestDecoder(byte[] encoded) {
-	DataFactory df =
-	    new ProtonFactoryLoader<DataFactory>(DataFactory.class).loadFactory();
-	data = df.createData(encoded.length);
+	data = Proton.data(encoded.length);
 	int offset = 0;
 	while (offset < encoded.length) {
 	    ByteBuffer buffer = ByteBuffer.wrap(encoded, offset, encoded.length-offset);

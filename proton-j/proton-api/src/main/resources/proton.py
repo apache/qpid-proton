@@ -23,18 +23,18 @@ try:
 except NameError:
   bytes = str
 
-from org.apache.qpid.proton import ProtonFactoryLoader, ProtonUnsupportedOperationException
+from org.apache.qpid.proton import Proton, ProtonUnsupportedOperationException
 from org.apache.qpid.proton import InterruptException as Interrupt
 from org.apache.qpid.proton.engine import \
-    EngineFactory, Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
+    Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
     EndpointState, TransportException
 
 from org.apache.qpid.proton.message import \
-    MessageFormat, MessageFactory, Message as JMessage
+    MessageFormat, Message as JMessage
 from org.apache.qpid.proton.codec import \
-    DataFactory, Data as JData
-from org.apache.qpid.proton.messenger import MessengerFactory, MessengerException, Status
+    Data as JData
+from org.apache.qpid.proton.messenger import MessengerException, Status
 from org.apache.qpid.proton.amqp.transport import ErrorCondition, SenderSettleMode, ReceiverSettleMode
 from org.apache.qpid.proton.amqp.messaging import Source, Target, Accepted, \
     Rejected, Received, Modified, Released, AmqpValue
@@ -74,15 +74,9 @@ STATUSES = {
 MANUAL = "MANUAL"
 AUTOMATIC = "AUTOMATIC"
 
-protonFactoryLoader = ProtonFactoryLoader()
-engineFactory = protonFactoryLoader.loadFactory(EngineFactory)
-messageFactory = protonFactoryLoader.loadFactory(MessageFactory)
-messengerFactory = protonFactoryLoader.loadFactory(MessengerFactory)
-dataFactory = protonFactoryLoader.loadFactory(DataFactory)
-
 API_LANGUAGE = "Java"
 IMPLEMENTATION_LANGUAGE = "C"
-if engineFactory.getImplementationType().name() == "PROTON_J":
+if Proton.getDefaultImplementationType().name() == "PROTON_J":
   IMPLEMENTATION_LANGUAGE = "Java"
 
 
@@ -202,7 +196,7 @@ class Connection(Endpoint):
 
   def __init__(self, _impl=None):
     Endpoint.__init__(self)
-    self.impl = _impl or engineFactory.createConnection()
+    self.impl = _impl or Proton.connection()
     self.desired_capabilities = None
     self.offered_capabilities = None
     self.properties = None
@@ -709,7 +703,7 @@ class Transport(object):
   TRACE_DRV = 4
 
   def __init__(self):
-    self.impl = engineFactory.createTransport()
+    self.impl = Proton.transport()
 
   def trace(self, mask):
     # XXX: self.impl.trace(mask)
@@ -889,7 +883,7 @@ class Data(object):
   MAP = JData.DataType.MAP;
 
   def __init__(self, capacity=16):
-    self._data = dataFactory.createData(capacity)
+    self._data = Proton.data(capacity)
 
   def __del__(self):
     if hasattr(self, "_data"):
@@ -1251,9 +1245,9 @@ class Messenger(object):
 
   def __init__(self, name=None):
     if name:
-      self.impl = messengerFactory.createMessenger(name)
+      self.impl = Proton.messenger(name)
     else:
-      self.impl = messengerFactory.createMessenger()
+      self.impl = Proton.messenger()
 
   def route(self, *args, **kwargs):
     raise Skipped()
@@ -1367,7 +1361,7 @@ class Message(object):
   DEFAULT_PRIORITY = JMessage.DEFAULT_PRIORITY
 
   def __init__(self):
-    self.impl = messageFactory.createMessage()
+    self.impl = Proton.message()
 
   def clear(self):
     self.impl.clear()
@@ -1598,7 +1592,7 @@ class SSLDomain(object):
 
   def __init__(self, mode):
     try:
-      self._domain = engineFactory.createSslDomain()
+      self._domain = Proton.sslDomain()
     except NoClassDefFoundError, e:
       raise SSLUnavailable()
     self._domain.init(mode)
@@ -1622,7 +1616,7 @@ class SSLDomain(object):
 class SSLSessionDetails(object):
 
   def __init__(self, session_id):
-    self._session_details = engineFactory.createSslPeerDetails(session_id, 1)
+    self._session_details = Proton.sslPeerDetails(session_id, 1)
 
 class SSL(object):
 

@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.InterruptException;
 import org.apache.qpid.proton.TimeoutException;
@@ -58,8 +59,6 @@ import org.apache.qpid.proton.amqp.Binary;
 
 public class MessengerImpl implements Messenger
 {
-    @SuppressWarnings("rawtypes")
-    private static ProtonFactoryLoader protonFactoryLoader = new ProtonFactoryLoader();
 
     private static final EnumSet<EndpointState> UNINIT = EnumSet.of(EndpointState.UNINITIALIZED);
     private static final EnumSet<EndpointState> ACTIVE = EnumSet.of(EndpointState.ACTIVE);
@@ -68,9 +67,6 @@ public class MessengerImpl implements Messenger
 
     private final Logger _logger = Logger.getLogger("proton.messenger");
     private final String _name;
-    private final EngineFactory _engineFactory;
-    private final DriverFactory _driverFactory;
-    private final MessageFactory _messageFactory;
     private long _timeout = -1;
     private boolean _blocking = true;
     private long _nextTag = 1;
@@ -99,19 +95,7 @@ public class MessengerImpl implements Messenger
      */
     @Deprecated public MessengerImpl(String name)
     {
-        this(name, defaultEngineFactory(), defaultDriverFactory(), defaultMessageFactory());
-    }
-
-    /**
-     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link MessengerFactory} instead
-     */
-    @Deprecated public MessengerImpl(String name, EngineFactory engineFactory, DriverFactory driverFactory, MessageFactory messageFactory)
-    {
         _name = name;
-        _engineFactory = engineFactory;
-        _driverFactory = driverFactory;
-        _messageFactory = messageFactory;
     }
 
     public void setTimeout(long timeInMillis)
@@ -136,7 +120,7 @@ public class MessengerImpl implements Messenger
 
     public void start() throws IOException
     {
-        _driver = _driverFactory.createDriver();
+        _driver = Proton.driver();
     }
 
     public void stop()
@@ -277,7 +261,7 @@ public class MessengerImpl implements Messenger
                 {
                     _logger.log(Level.FINE, "Readable delivery found: " + delivery);
                     int size = read((Receiver) delivery.getLink());
-                    Message message = _messageFactory.createMessage();
+                    Message message = Proton.message();
                     message.decode(_buffer, 0, size);
                     delivery.getLink().advance();
                     _incoming.add(delivery);
@@ -459,7 +443,7 @@ public class MessengerImpl implements Messenger
         {
             _worked = true;
             Connector<?> c = l.accept();
-            Connection connection = _engineFactory.createConnection();
+            Connection connection = Proton.connection();
             connection.setContainer(_name);
             c.setConnection(connection);
             //TODO: SSL and full SASL
@@ -869,7 +853,7 @@ public class MessengerImpl implements Messenger
         {
             Connector<?> connector = _driver.createConnector(host, port, null);
             _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
-            connection = _engineFactory.createConnection();
+            connection = Proton.connection();
             connection.setContainer(_name);
             connection.setHostname(host);
             connection.setContext(service);
@@ -1047,24 +1031,6 @@ public class MessengerImpl implements Messenger
     {
         if ("amqps".equals(scheme)) return 5671;
         else return 5672;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static EngineFactory defaultEngineFactory()
-    {
-        return (EngineFactory) protonFactoryLoader.loadFactory(EngineFactory.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static DriverFactory defaultDriverFactory()
-    {
-        return (DriverFactory) protonFactoryLoader.loadFactory(DriverFactory.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static MessageFactory defaultMessageFactory()
-    {
-        return (MessageFactory) protonFactoryLoader.loadFactory(MessageFactory.class);
     }
 
     @Override

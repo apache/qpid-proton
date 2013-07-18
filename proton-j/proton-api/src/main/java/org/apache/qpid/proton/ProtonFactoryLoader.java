@@ -54,7 +54,7 @@ public class ProtonFactoryLoader<C extends ProtonFactory>
         this(factoryInterface, getImpliedImplementationType());
     }
 
-    private static ImplementationType getImpliedImplementationType()
+    static ImplementationType getImpliedImplementationType()
     {
         String implementationTypeFromSystemProperty = System.getProperty(IMPLEMENTATION_TYPE_PROPERTY);
         if(implementationTypeFromSystemProperty != null)
