@@ -23,11 +23,28 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class CategoryLoggerDiscoveryTest
 {
     private final CategoryLoggerDiscovery _discovery = new CategoryLoggerDiscovery();
+    private ProtonCategoryLogger _protonCategoryLogger;
+
+    @Before
+    public void setUp() throws Exception
+    {
+        _protonCategoryLogger = CategoryLoggerDiscovery.getEffectiveDefaultLogger();
+
+    }
+
+    @After
+    public void tearDown() throws Exception
+    {
+        CategoryLoggerDiscovery.setDefault(_protonCategoryLogger);
+
+    }
 
     @Test
     public void testDefaultLogger_isStdOutLogger()
