@@ -1292,7 +1292,6 @@ class Messenger(object):
 
   def get(self, message=None):
     result = self.impl.get()
-    if not result: print "HA"
     if message and result:
       message.impl = result
     return self.impl.incomingTracker()
