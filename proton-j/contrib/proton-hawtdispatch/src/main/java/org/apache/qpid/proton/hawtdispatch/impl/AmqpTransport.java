@@ -109,7 +109,7 @@ public class AmqpTransport extends WatchBase {
 
                 @Override
                 public void onFailure(Throwable value) {
-                    if( state == CONNECTED ) {
+                    if( state == CONNECTED || state == CONNECTING ) {
                         failure = value;
                         disconnect();
                         fireWatches();
@@ -237,25 +237,30 @@ public class AmqpTransport extends WatchBase {
                     }
                     HashSet<String> mechanisims = new HashSet<String>(Arrays.asList(sasl.getRemoteMechanisms()));
                     if (!authSent && !mechanisims.isEmpty()) {
-                        if (!mechanisims.contains("PLAIN")) {
+                        if (mechanisims.contains("PLAIN")) {
+                            authSent = true;
+                            DataByteArrayOutputStream os = new DataByteArrayOutputStream();
+                            try {
+                                os.writeByte(0);
+                                os.write(new UTF8Buffer(options.getUser()));
+                                os.writeByte(0);
+                                if (options.getPassword() != null) {
+                                    os.write(new UTF8Buffer(options.getPassword()));
+                                }
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            Buffer buffer = os.toBuffer();
+                            sasl.setMechanisms(new String[]{"PLAIN"});
+                            sasl.send(buffer.data, buffer.offset, buffer.length);
+                        } else if (mechanisims.contains("ANONYMOUS")) {
+                            authSent = true;
+                            sasl.setMechanisms(new String[]{"ANONYMOUS"});
+                            sasl.send(new byte[0], 0, 0);
+                        } else {
                             next.onFailure(Support.illegalState("Remote does not support plain password authentication."));
                             return null;
                         }
-                        authSent = true;
-                        DataByteArrayOutputStream os = new DataByteArrayOutputStream();
-                        try {
-                            os.writeByte(0);
-                            os.write(new UTF8Buffer(options.getUser()));
-                            os.writeByte(0);
-                            if (options.getPassword() != null) {
-                                os.write(new UTF8Buffer(options.getPassword()));
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        Buffer buffer = os.toBuffer();
-                        sasl.setMechanisms(new String[]{"PLAIN"});
-                        sasl.send(buffer.data, buffer.offset, buffer.length);
                     }
                     return sasl;
                 }
