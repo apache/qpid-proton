@@ -17,6 +17,12 @@
 # under the License.
 #
 
+cmake_minimum_required (VERSION 2.6)
+
+find_path(PROTON_INCLUDE_DIR proton/types.h)
+find_library(PROTON_LIBRARY
+             NAMES qpid-proton)
+
 add_executable(recv recv.c)
 add_executable(send send.c)
 
