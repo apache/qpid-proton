@@ -69,6 +69,14 @@ set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration director
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
+if (WIN32)
+  set (EXAMPLES_INSTALL_DIR proton/examples)
+endif (WIN32)
+
+if (UNIX)
+  set (EXAMPLES_INSTALL_DIR ${SHARE_INSTALL_DIR}/proton/examples)
+endif (UNIX)
+
 set (JAVA_INSTALL_DIR ${SHARE_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs except those using JNI")
 set (JNI_INSTALL_DIR ${LIB_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs utilising JNI")
 set (JNI_SHARED_LIB_INSTALL_DIR ${LIB_INSTALL_DIR} CACHE PATH "Installation directory for shared objects used by JNI JARs")
@@ -98,6 +106,19 @@ add_subdirectory(proton-c)
 
 install (FILES LICENSE README TODO
          DESTINATION ${PROTON_SHARE})
+
+# install the C messenger example
+install (FILES examples/messenger/c/CMakeLists.txt
+               examples/messenger/c/send.c
+               examples/messenger/c/recv.c
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger)
+
+install (FILES examples/include/pncompat/internal/LICENSE
+               examples/include/pncompat/internal/getopt.c
+               examples/include/pncompat/internal/getopt.h
+               examples/include/pncompat/misc_defs.h
+               examples/include/pncompat/misc_funcs.inc
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
 
 # add relevant CTest support
 find_program (MAVEN_EXECUTABLE mvn DOC "Location of the maven program")
