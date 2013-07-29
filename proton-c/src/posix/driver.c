@@ -262,8 +262,11 @@ static void pn_configure_sock(int sock) {
     //
     // Disable the Nagle algorithm on TCP connections.
     //
+    // Note:  It would be more correct for the "level" argument to be SOL_TCP.  However, there
+    //        are portability issues with this macro so we use IPPROTO_TCP instead.
+    //
     int tcp_nodelay = 1;
-    if (setsockopt(sock, SOL_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0) {
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0) {
         perror("setsockopt");
     }
 }
