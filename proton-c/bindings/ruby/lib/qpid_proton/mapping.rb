@@ -98,7 +98,7 @@ module Qpid # :nodoc:
     CHAR       = Mapping.new(Cproton::PN_CHAR, "char")
     ULONG      = Mapping.new(Cproton::PN_ULONG, "ulong")
     LONG       = Mapping.new(Cproton::PN_LONG, "long", [Fixnum, Bignum])
-    TIMESTAMP  = Mapping.new(Cproton::PN_TIMESTAMP, "timestamp", [Date])
+    TIMESTAMP  = Mapping.new(Cproton::PN_TIMESTAMP, "timestamp", [Date, Time])
     FLOAT      = Mapping.new(Cproton::PN_FLOAT, "float")
     DOUBLE     = Mapping.new(Cproton::PN_DOUBLE, "double", [Float])
     DECIMAL32  = Mapping.new(Cproton::PN_DECIMAL32, "decimal32")
