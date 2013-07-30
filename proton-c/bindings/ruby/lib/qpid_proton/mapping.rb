@@ -113,6 +113,23 @@ module Qpid # :nodoc:
     LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array], "get_array")
     MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
 
+    class << MAP
+      def put(data, map)
+        data.put_map
+        data.enter
+        map.each_pair do |key, value|
+          Mapping.for_class(key.class).put(data, key)
+
+          if value.nil?
+            data.null
+          else
+            Mapping.for_class(value.class).put(data, value)
+          end
+        end
+        data.exit
+      end
+    end
+
   end
 
 end
