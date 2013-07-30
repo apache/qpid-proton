@@ -417,6 +417,56 @@ module Qpid
         @message.content.should eq(content)
       end
 
+      it "has properties" do
+        @message.should respond_to(:properties)
+        @message.should respond_to("[]".to_sym)
+        @message.should respond_to("[]=".to_sym)
+
+        @message.properties.should be_kind_of({}.class)
+      end
+
+      it "can set properties" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message[name] = value
+        @message[name].should eq(value)
+      end
+
+      it "can update properties" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message[name] = value
+        @message[name].should eq(value)
+
+        value = random_string(128)
+        @message[name] = value
+        @message[name].should eq(value)
+      end
+
+      it "can hold a null property" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message[name] = value
+        @message[name].should eq(value)
+
+        @message[name] = nil
+        @message[name].should be_nil
+      end
+
+      it "can delete a property" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message[name] = value
+        @message[name].should eq(value)
+
+        @message.delete_property(name)
+        @message.properties.keys.should_not include(name)
+      end
+
     end
 
   end

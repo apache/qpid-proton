@@ -196,6 +196,8 @@ module Qpid
       def put(message)
         raise TypeError.new("invalid message: #{message}") if message.nil?
         raise ArgumentError.new("invalid message type: #{message.class}") unless message.kind_of?(Message)
+        # encode the message first
+        message.pre_encode
         check_for_error(Cproton.pn_messenger_put(@impl, message.impl))
       end
 
@@ -218,6 +220,7 @@ module Qpid
       def get(msg = nil)
         msg = Qpid::Proton::Message.new if msg.nil?
         check_for_error(Cproton.pn_messenger_get(@impl, msg.impl))
+        msg.post_decode unless msg.nil?
         return msg
       end
 

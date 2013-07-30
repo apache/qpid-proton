@@ -73,6 +73,7 @@ loop do
     subject = msg.subject || "(no subject)"
     puts "Subject: #{subject}"
     puts "Content: #{body}"
+    puts "Properties: #{msg.properties}"
   end
 end
 

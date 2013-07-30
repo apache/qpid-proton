@@ -5,6 +5,7 @@ version 0.5:
 	  - Messenger.receive can accept a negative maximum
 	  - When testing bad subscribe attempts, tests now use a random string.
 	* Fixed encoding decimal128 values.
+	* Added properties field to Qpid::Proton::Message.
 
 version 0.4:
 	* No language-specific features developed in this release.

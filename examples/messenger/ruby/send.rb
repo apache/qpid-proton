@@ -43,8 +43,10 @@ msg = Qpid::Proton::Message.new
 
 messages.each do |message|
   msg.address = options[:address]
-  msg.subject = "The time is #{Time.new}"
+  msg.subject = "How are you?"
   msg.content = message
+  msg["sent"] = Time.new
+  msg["hostname"] = ENV["HOSTNAME"]
   begin
     messenger.put(msg)
   rescue Qpid::Proton::ProtonError => error

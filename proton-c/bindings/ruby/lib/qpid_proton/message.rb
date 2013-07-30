@@ -36,12 +36,46 @@ module Qpid
       #
       def decode(encoded)
         check(Cproton.pn_message_decode(@impl, encoded, encoded.length))
+
+        post_decode
+      end
+
+      def post_decode # :nodoc:
+        # decode elements from the message
+        @properties = nil
+        props = Qpid::Proton::Data.new(Cproton::pn_message_properties(@impl))
+        if props.next
+          @properties = props.type.get(props)
+        end
+      end
+
+      # Encodes the message.
+      def encode
+        pre_encode
+        size = 16
+        loop do
+          error, data = Cproton::pn_message_encode(@impl, size)
+          if error == Qpid::Proton::Error::OVERFLOW
+            size *= 2
+          else
+            check(error)
+            return data
+          end
+        end
+      end
+
+      def pre_encode # :nodoc:
+        # encode elements from the message
+        props = Qpid::Proton::Data.new(Cproton::pn_message_properties(@impl))
+        props.clear
+        Qpid::Proton::Mapping.for_class(@properties.class).put(props, @properties) unless @properties.empty?
       end
 
       # Creates a new +Message+ instance.
       def initialize
         @impl = Cproton.pn_message
         ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
+        @properties = {}
       end
 
       # Invoked by garbage collection to clean up resources used
@@ -436,6 +470,41 @@ module Qpid
       #
       def reply_to_group_id
         Cproton.pn_message_get_reply_to_group_id(@impl)
+      end
+
+      # Returns the list of property names for associated with this message.
+      #
+      # ==== Examples
+      #
+      #   msg.properties.each do |name|
+      #   end
+      #
+      def properties
+        @properties
+      end
+
+      # Assigns the value given to the named property.
+      #
+      # ==== Arguments
+      #
+      # * name - the property name
+      # * value - the property value
+      #
+      def []=(name, value)
+        @properties[name] = value
+      end
+
+      # Retrieves the vaue for the specified property name. If not found, then
+      # it returns nil.
+      #
+      def [](name)
+        @properties[name]
+      end
+
+      # Deletes the named property.
+      #
+      def delete_property(name)
+        @properties.delete(name)
       end
 
       private
