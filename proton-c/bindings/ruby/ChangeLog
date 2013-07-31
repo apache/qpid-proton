@@ -9,6 +9,7 @@ version 0.5:
 	* Hashes are now automatically encoded into Data objects.
 	* Fixed encoding Time objects.
 	* Added instructions field to Qpid::Proton::Message.
+	* Added annotations field to Qpid::Proton::Message.
 	* Fixed encoding Symbol objects.
 
 version 0.4:

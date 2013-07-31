@@ -525,6 +525,65 @@ module Qpid
         @message.instructions.should be_nil
       end
 
+      it "has annotations" do
+        @message.should respond_to(:annotations)
+        @message.should respond_to(:annotations=)
+      end
+
+      it "can set an annotation" do
+        name = random_hash(32)
+        value = random_hash(256)
+
+        @message.annotations[name] = value
+        @message.annotations[name].should eq(value)
+      end
+
+      it "can update an annotation" do
+        name = random_hash(32)
+        value = random_hash(256)
+
+        @message.annotations[name] = value
+        @message.annotations[name].should eq(value)
+
+        value = random_hash(128)
+
+        @message.annotations[name] = value
+        @message.annotations[name].should eq(value)
+      end
+
+      it "can delete an annotation" do
+        name = random_hash(32)
+        value = random_hash(256)
+
+        @message.annotations[name] = value
+        @message.annotations[name].should eq(value)
+
+        @message.annotations[name] = nil
+        @message.annotations[name].should be_nil
+      end
+
+      it "can replace all annotations" do
+        values = random_hash(rand(128) + 1)
+
+        @message.annotations = values
+        @message.annotations.should eq values
+
+        values = random_hash(rand(64) + 1)
+
+        @message.annotations = values
+        @message.annotations.should eq values
+      end
+
+      it "can delete the set of annotations" do
+        values = random_hash(rand(128) + 1)
+
+        @message.annotations = values
+        @message.annotations.should eq values
+
+        @message.annotations = nil
+        @message.annotations.should be_nil
+      end
+
     end
 
   end

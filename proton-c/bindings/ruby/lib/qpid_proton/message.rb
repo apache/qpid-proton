@@ -52,6 +52,11 @@ module Qpid
         if insts.next
           @instructions = insts.type.get(insts)
         end
+        @annotations = nil
+        annts = Qpid::Proton::Data.new(Cproton::pn_message_annotations(@impl))
+        if annts.next
+          @annotations = annts.type.get(annts)
+        end
       end
 
       # Encodes the message.
@@ -80,6 +85,12 @@ module Qpid
           mapping = Qpid::Proton::Mapping.for_class(@instructions.class)
           mapping.put(insts, @instructions)
         end
+        annts = Qpid::Proton::Data.new(Cproton::pn_message_annotations(@impl))
+        annts.clear
+        if !@annotations.nil?
+          mapping = Qpid::Proton::Mapping.for_class(@annotations.class)
+          mapping.put(annts, @annotations)
+        end
       end
 
       # Creates a new +Message+ instance.
@@ -88,6 +99,7 @@ module Qpid
         ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
         @properties = {}
         @instructions = {}
+        @annotations = {}
       end
 
       # Invoked by garbage collection to clean up resources used
@@ -508,7 +520,7 @@ module Qpid
         @properties[name] = value
       end
 
-      # Retrieves the vaue for the specified property name. If not found, then
+      # Retrieves the value for the specified property name. If not found, then
       # it returns nil.
       #
       def [](name)
@@ -531,6 +543,18 @@ module Qpid
       #
       def instructions=(instr)
         @instructions = instr.nil? ? nil : instr.clone
+      end
+
+      # Returns the annotations for this message.
+      #
+      def annotations
+        @annotations
+      end
+
+      # Assigns annotations to this message.
+      #
+      def annotations=(annotations)
+        @annotations = annotations.nil? ? nil : annotations.clone
       end
 
       private

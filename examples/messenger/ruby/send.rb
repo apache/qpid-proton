@@ -50,6 +50,9 @@ messages.each do |message|
   msg.instructions["fold"] = "yes"
   msg.instructions["spindle"] = "no"
   msg.instructions["mutilate"] = "no"
+  msg.annotations["version"] = 1.0
+  msg.annotations["pill"] = :RED
+
   begin
     messenger.put(msg)
   rescue Qpid::Proton::ProtonError => error
