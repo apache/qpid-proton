@@ -42,7 +42,7 @@ module Qpid
 
       def post_decode # :nodoc:
         # decode elements from the message
-        @properties = nil
+        @properties = {}
         props = Qpid::Proton::Data.new(Cproton::pn_message_properties(@impl))
         if props.next
           @properties = props.type.get(props)
@@ -96,6 +96,7 @@ module Qpid
       #
       def clear
         Cproton.pn_message_clear(@impl)
+        @properties.clear unless @properties.nil?
       end
 
       # Returns the most recent error number.
