@@ -106,7 +106,14 @@ module Qpid # :nodoc:
     DECIMAL128 = Mapping.new(Cproton::PN_DECIMAL128, "decimal128")
     UUID       = Mapping.new(Cproton::PN_UUID, "uuid")
     BINARY     = Mapping.new(Cproton::PN_BINARY, "binary")
-    STRING     = Mapping.new(Cproton::PN_STRING, "string", [String])
+    STRING     = Mapping.new(Cproton::PN_STRING, "string", [String, Symbol])
+
+    class << STRING
+      def put(data, value)
+        data.string = value.to_s
+      end
+    end
+
     SYMBOL     = Mapping.new(Cproton::PN_SYMBOL, "symbol")
     DESCRIBED  = Mapping.new(Cproton::PN_DESCRIBED, "described", [Qpid::Proton::Described], "get_described")
     ARRAY      = Mapping.new(Cproton::PN_ARRAY, "array", nil, "get_array")
