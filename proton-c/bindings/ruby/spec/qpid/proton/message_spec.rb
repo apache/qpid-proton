@@ -467,6 +467,64 @@ module Qpid
         @message.properties.keys.should_not include(name)
       end
 
+      it "has instructions" do
+        @message.should respond_to(:instructions)
+        @message.should respond_to("instructions=".to_sym)
+      end
+
+      it "can set an instruction" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.instructions[name] = value
+        @message.instructions[name].should eq(value)
+      end
+
+      it "can update an instruction" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.instructions[name] = value
+        @message.instructions[name].should eq(value)
+
+        value = random_string(128)
+        @message.instructions[name] = value
+        @message.instructions[name].should eq(value)
+      end
+
+      it "can delete the instructions" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.instructions[name] = value
+        @message.instructions.should_not be_empty
+
+        @message.instructions = nil
+        @message.instructions.should be_nil
+      end
+
+      it "can replace the instructions" do
+        values = random_hash(rand(128) + 1)
+
+        @message.instructions = values
+        @message.instructions.should eq values
+
+        values = random_hash(rand(64) + 1)
+
+        @message.instructions = values
+        @message.instructions.should eq values
+      end
+
+      it "can delete the set of instructions" do
+        values = random_hash(rand(128) + 1)
+
+        @message.instructions = values
+        @message.instructions.should eq values
+
+        @message.instructions = nil
+        @message.instructions.should be_nil
+      end
+
     end
 
   end

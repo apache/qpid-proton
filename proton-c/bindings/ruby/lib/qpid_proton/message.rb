@@ -47,6 +47,11 @@ module Qpid
         if props.next
           @properties = props.type.get(props)
         end
+        @instructions = nil
+        insts = Qpid::Proton::Data.new(Cproton::pn_message_instructions(@impl))
+        if insts.next
+          @instructions = insts.type.get(insts)
+        end
       end
 
       # Encodes the message.
@@ -69,6 +74,12 @@ module Qpid
         props = Qpid::Proton::Data.new(Cproton::pn_message_properties(@impl))
         props.clear
         Qpid::Proton::Mapping.for_class(@properties.class).put(props, @properties) unless @properties.empty?
+        insts = Qpid::Proton::Data.new(Cproton::pn_message_instructions(@impl))
+        insts.clear
+        if !@instructions.nil?
+          mapping = Qpid::Proton::Mapping.for_class(@instructions.class)
+          mapping.put(insts, @instructions)
+        end
       end
 
       # Creates a new +Message+ instance.
@@ -76,6 +87,7 @@ module Qpid
         @impl = Cproton.pn_message
         ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
         @properties = {}
+        @instructions = {}
       end
 
       # Invoked by garbage collection to clean up resources used
@@ -97,6 +109,7 @@ module Qpid
       def clear
         Cproton.pn_message_clear(@impl)
         @properties.clear unless @properties.nil?
+        @instructions.clear unless @instructions.nil?
       end
 
       # Returns the most recent error number.
@@ -506,6 +519,18 @@ module Qpid
       #
       def delete_property(name)
         @properties.delete(name)
+      end
+
+      # Returns the instructions for this message.
+      #
+      def instructions
+        @instructions
+      end
+
+      # Assigns instructions to this message.
+      #
+      def instructions=(instr)
+        @instructions = instr.nil? ? nil : instr.clone
       end
 
       private

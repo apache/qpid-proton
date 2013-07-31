@@ -47,6 +47,9 @@ messages.each do |message|
   msg.content = message
   msg["sent"] = Time.new
   msg["hostname"] = ENV["HOSTNAME"]
+  msg.instructions["fold"] = "yes"
+  msg.instructions["spindle"] = "no"
+  msg.instructions["mutilate"] = "no"
   begin
     messenger.put(msg)
   rescue Qpid::Proton::ProtonError => error
