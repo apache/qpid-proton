@@ -43,4 +43,13 @@ public interface Session extends Endpoint
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
     public Connection getConnection();
+
+    public int getIncomingCapacity();
+
+    public void setIncomingCapacity(int bytes);
+
+    public int getIncomingBytes();
+
+    public int getOutgoingBytes();
+
 }

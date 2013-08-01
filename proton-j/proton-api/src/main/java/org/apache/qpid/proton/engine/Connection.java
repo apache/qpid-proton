@@ -98,4 +98,8 @@ public interface Connection extends Endpoint
 
     EngineLogger getEngineLogger();
     void setEngineLogger(EngineLogger engineLogger);
+
+    Object getContext();
+
+    void setContext(Object context);
 }

@@ -40,7 +40,6 @@ import org.apache.qpid.proton.amqp.security.SaslInit;
 import org.apache.qpid.proton.amqp.security.SaslMechanisms;
 import org.apache.qpid.proton.amqp.security.SaslResponse;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
-import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
@@ -59,7 +58,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
     private final ByteBuffer _inputBuffer;
     private final ByteBuffer _outputBuffer;
-    private final ByteBuffer _outputOverflowBuffer;
+    private final FrameWriter _frameWriter;
 
     private ByteBuffer _pending;
 
@@ -92,10 +91,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     {
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
-        _outputOverflowBuffer = newReadableBuffer(maxFrameSize);
 
         AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);
         _frameParser = new SaslFrameParser(this, _decoder);
+        _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null);
     }
 
     @Override
@@ -106,23 +105,8 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
     private void writeSaslOutput()
     {
-        if(_outputOverflowBuffer.hasRemaining())
-        {
-            _outputBuffer.put(_outputOverflowBuffer);
-        }
-        if(!_outputOverflowBuffer.hasRemaining())
-        {
-            _outputOverflowBuffer.clear();
-
-            CompositeWritableBuffer compositeOutputBuffer =
-                    new CompositeWritableBuffer(
-                       new WritableBuffer.ByteBufferWrapper(_outputBuffer),
-                       new WritableBuffer.ByteBufferWrapper(_outputOverflowBuffer));
-
-            process(compositeOutputBuffer);
-
-            _outputOverflowBuffer.flip();
-        }
+        process();
+        _frameWriter.readBytes(_outputBuffer);
 
         if(_logger.isLoggable(Level.FINER))
         {
@@ -130,9 +114,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         }
     }
 
-    private void process(WritableBuffer buffer)
+    private void process()
     {
-        processHeader(buffer);
+        processHeader();
 
         if(_role == Role.SERVER)
         {
@@ -141,7 +125,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                 SaslMechanisms mechanisms = new SaslMechanisms();
 
                 mechanisms.setSaslServerMechanisms(_mechanisms);
-                writeFrame(buffer, mechanisms);
+                writeFrame(mechanisms);
                 _mechanismsSent = true;
                 _state = SaslState.PN_SASL_STEP;
             }
@@ -150,7 +134,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             {
                 SaslChallenge challenge = new SaslChallenge();
                 challenge.setChallenge(getChallengeResponse());
-                writeFrame(buffer, challenge);
+                writeFrame(challenge);
                 setChallengeResponse(null);
             }
 
@@ -159,14 +143,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                 org.apache.qpid.proton.amqp.security.SaslOutcome outcome =
                         new org.apache.qpid.proton.amqp.security.SaslOutcome();
                 outcome.setCode(SaslCode.values()[_outcome.getCode()]);
-                writeFrame(buffer, outcome);
+                writeFrame(outcome);
             }
         }
         else if(_role == Role.CLIENT)
         {
             if(getState() == SaslState.PN_SASL_IDLE && _chosenMechanism != null)
             {
-                processInit(buffer);
+                processInit();
                 _state = SaslState.PN_SASL_STEP;
 
                 //HACK: if we received an outcome before
@@ -179,32 +163,15 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
             if(getState() == SaslState.PN_SASL_STEP && getChallengeResponse() != null)
             {
-                processResponse(buffer);
+                processResponse();
             }
 
         }
     }
 
-    private void writeFrame(WritableBuffer buffer, SaslFrameBody frameBody)
+    private void writeFrame(SaslFrameBody frameBody)
     {
-        int oldPosition = buffer.position();
-        buffer.position(buffer.position()+8);
-        _encoder.setByteBuffer(buffer);
-        _encoder.writeObject(frameBody);
-
-        int frameSize = buffer.position() - oldPosition;
-        int limit = buffer.position();
-        buffer.position(oldPosition);
-        buffer.putInt(frameSize);
-        buffer.put((byte) 2);
-        buffer.put(SASL_FRAME_TYPE);
-        buffer.putShort((short) 0);
-        buffer.position(limit);
-
-        if(_logger.isLoggable(Level.FINE))
-        {
-            _logger.fine(this + " wrote frame " + frameBody + " (" + frameSize + ") bytes");
-        }
+        _frameWriter.writeFrame(frameBody);
     }
 
     @Override
@@ -231,12 +198,12 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         return size;
     }
 
-    final int processHeader(WritableBuffer outputBuffer)
+    final int processHeader()
     {
 
         if(!_headerWritten)
         {
-            outputBuffer.put(AmqpHeader.SASL_HEADER,0, AmqpHeader.SASL_HEADER.length);
+            _frameWriter.writeHeader(AmqpHeader.SASL_HEADER);
 
             _headerWritten = true;
             return AmqpHeader.SASL_HEADER.length;
@@ -437,15 +404,15 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         return outcome == SaslOutcome.PN_SASL_OK ? SaslState.PN_SASL_PASS : SaslState.PN_SASL_FAIL;
     }
 
-    private void processResponse(WritableBuffer buffer)
+    private void processResponse()
     {
         SaslResponse response = new SaslResponse();
         response.setResponse(getChallengeResponse());
         setChallengeResponse(null);
-        writeFrame(buffer, response);
+        writeFrame(response);
     }
 
-    private void processInit(WritableBuffer buffer)
+    private void processInit()
     {
         SaslInit init = new SaslInit();
         init.setHostname(_hostname);
@@ -456,7 +423,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             setChallengeResponse(null);
         }
         _initSent = true;
-        writeFrame(buffer, init);
+        writeFrame(init);
     }
 
     @Override

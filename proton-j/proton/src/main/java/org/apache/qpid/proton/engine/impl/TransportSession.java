@@ -32,13 +32,14 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 
 class TransportSession
 {
+    private final TransportImpl _transport;
     private final SessionImpl _session;
     private int _localChannel = -1;
     private int _remoteChannel = -1;
     private boolean _openSent;
     private UnsignedInteger       _handleMax = UnsignedInteger.valueOf(1024);
-    private UnsignedInteger _incomingWindowSize = UnsignedInteger.valueOf(TransportImpl.SESSION_WINDOW);
-    private UnsignedInteger _outgoingWindowSize = UnsignedInteger.valueOf(TransportImpl.SESSION_WINDOW);
+    private UnsignedInteger _incomingWindowSize = UnsignedInteger.ZERO;
+    private UnsignedInteger _outgoingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _nextOutgoingId = UnsignedInteger.ONE;
     private UnsignedInteger _nextIncomingId = null;
 
@@ -57,13 +58,12 @@ class TransportSession
     private Map<UnsignedInteger, DeliveryImpl>
             _unsettledOutgoingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
     private int _unsettledIncomingSize;
-    private boolean _incomingWindowSizeChange;
-    private boolean _outgoingWindowSizeChange;
     private boolean _endReceived;
     private boolean _beginSent;
 
-    TransportSession(SessionImpl session)
+    TransportSession(TransportImpl transport, SessionImpl session)
     {
+        _transport = transport;
         _session = session;
     }
 
@@ -133,22 +133,38 @@ class TransportSession
         return _incomingWindowSize;
     }
 
+    public void updateWindows()
+    {
+        // incoming window
+        int size = _transport.getMaxFrameSize();
+        if (size <= 0) {
+            _incomingWindowSize = UnsignedInteger.valueOf(2147483647); // biggest legal value
+        } else {
+            _incomingWindowSize = UnsignedInteger.valueOf((_session.getIncomingCapacity() - _session.getIncomingBytes())/size);
+        }
+
+        // outgoing window
+        int outgoingDeliveries = _session.getOutgoingDeliveries();
+        if (size <= 0) {
+            _outgoingWindowSize = UnsignedInteger.valueOf(outgoingDeliveries);
+        } else {
+            int outgoingBytes = _session.getOutgoingBytes();
+            int frames = outgoingBytes/size;
+            if (outgoingBytes % size > 0) {
+                frames++;
+            }
+            if (frames > outgoingDeliveries) {
+                _outgoingWindowSize = UnsignedInteger.valueOf(frames);
+            } else {
+                _outgoingWindowSize = UnsignedInteger.valueOf(outgoingDeliveries);
+            }
+        }
+    }
+
     public UnsignedInteger getOutgoingWindowSize()
     {
         return _outgoingWindowSize;
     }
-
-    public void incrementOutgoingWindow()
-    {
-        _outgoingWindowSize = _outgoingWindowSize.add(UnsignedInteger.ONE);
-    }
-
-    public void decrementOutgoingWindow()
-    {
-        _outgoingWindowSize = _outgoingWindowSize.subtract(UnsignedInteger.ONE);
-    }
-
-
 
     public UnsignedInteger getNextOutgoingId()
     {
@@ -232,6 +248,7 @@ class TransportSession
             TransportDelivery transportDelivery = new TransportDelivery(_currentDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);
             _unsettledIncomingDeliveriesById.put(_currentDeliveryId, delivery);
+            getSession().incrementIncomingDeliveries(1);
         }
         if( transfer.getState()!=null ) 
         {
@@ -256,6 +273,7 @@ class TransportSession
                 delivery.setDataOffset(0);
                 delivery.setDataLength(data.length);
             }
+            getSession().incrementIncomingBytes(payload.getLength());
         }
         delivery.addIOWork();
 
@@ -263,7 +281,6 @@ class TransportSession
         if(!(transfer.getMore() || transfer.getAborted()))
         {
             delivery.setComplete();
-            _incomingWindowSize = _incomingWindowSize.subtract(UnsignedInteger.ONE);
             delivery.getLink().getTransportLink().decrementLinkCredit();
             delivery.getLink().getTransportLink().incrementDeliveryCount();
         }
@@ -272,6 +289,12 @@ class TransportSession
             delivery.setRemoteSettled(true);
         }
 
+        _incomingWindowSize = _incomingWindowSize.subtract(UnsignedInteger.ONE);
+
+        // this will cause a flow to happen
+        if (_incomingWindowSize.equals(UnsignedInteger.ZERO)) {
+            delivery.getLink().modified();
+        }
     }
 
     public void freeLocalChannel()
@@ -284,6 +307,11 @@ class TransportSession
         _remoteIncomingWindow = incomingWindow;
     }
 
+    void decrementRemoteIncomingWindow()
+    {
+        _remoteIncomingWindow = _remoteIncomingWindow.subtract(UnsignedInteger.ONE);
+    }
+
     private void setRemoteOutgoingWindow(UnsignedInteger outgoingWindow)
     {
         _remoteOutgoingWindow = outgoingWindow;
@@ -291,13 +319,20 @@ class TransportSession
 
     void handleFlow(Flow flow)
     {
-        setRemoteIncomingWindow(flow.getIncomingWindow());
-        setRemoteOutgoingWindow(flow.getOutgoingWindow());
-        if(flow.getNextIncomingId() != null)
+        UnsignedInteger inext = flow.getNextIncomingId();
+        UnsignedInteger iwin = flow.getIncomingWindow();
+
+        if(inext != null)
         {
-            setRemoteNextIncomingId(flow.getNextIncomingId());
+            setRemoteNextIncomingId(inext);
+            setRemoteIncomingWindow(inext.add(iwin).subtract(_nextOutgoingId));
+        }
+        else
+        {
+            setRemoteIncomingWindow(iwin);
         }
         setRemoteNextOutgoingId(flow.getNextOutgoingId());
+        setRemoteOutgoingWindow(flow.getOutgoingWindow());
 
         if(flow.getHandle() != null)
         {
@@ -306,7 +341,6 @@ class TransportSession
 
 
         }
-
     }
 
     private void setRemoteNextOutgoingId(UnsignedInteger nextOutgoingId)
@@ -351,15 +385,12 @@ class TransportSession
     void addUnsettledOutgoing(UnsignedInteger deliveryId, DeliveryImpl delivery)
     {
         _unsettledOutgoingDeliveriesById.put(deliveryId, delivery);
-        _outgoingWindowSize = _outgoingWindowSize.subtract(UnsignedInteger.valueOf(delivery.getTransportDelivery().getSessionSize()));
     }
 
     public boolean hasOutgoingCredit()
     {
-        return _remoteIncomingWindow == null
-                   ? false
-                   : _remoteIncomingWindow.add(_remoteNextIncomingId).compareTo(_nextOutgoingId)>0
-                     && _outgoingWindowSize.compareTo(UnsignedInteger.ZERO)>0;
+        return _remoteIncomingWindow == null ? false
+            : _remoteIncomingWindow.compareTo(UnsignedInteger.ZERO)>0;
 
     }
 
@@ -373,39 +404,14 @@ class TransportSession
         if(transportDelivery.getTransportLink().getLink() instanceof ReceiverImpl)
         {
             _unsettledIncomingDeliveriesById.remove(transportDelivery.getDeliveryId());
-            _incomingWindowSize = _incomingWindowSize.add( UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
-            _incomingWindowSizeChange = true;
             getSession().modified();
         }
         else
         {
             _unsettledOutgoingDeliveriesById.remove(transportDelivery.getDeliveryId());
-            _outgoingWindowSize = _outgoingWindowSize.add(UnsignedInteger.valueOf(transportDelivery.getSessionSize()));
-            _outgoingWindowSizeChange = true;
             getSession().modified();
         }
     }
-
-    public boolean clearIncomingWindowResize()
-    {
-        if(_incomingWindowSizeChange)
-        {
-            _incomingWindowSizeChange = false;
-            return true;
-        }
-        return false;
-    }
-
-    public boolean clearOutgoingWindowResize()
-    {
-        if(_outgoingWindowSizeChange)
-        {
-            _outgoingWindowSizeChange = false;
-            return true;
-        }
-        return false;
-    }
-
 
     public UnsignedInteger getNextIncomingId()
     {

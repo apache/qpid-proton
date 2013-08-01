@@ -66,6 +66,8 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 
     private EngineLogger _engineLogger;
 
+    private Object _context;
+
     private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
     /**
@@ -534,4 +536,15 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     {
         _engineLogger = engineLogger;
     }
+
+    public Object getContext()
+    {
+        return _context;
+    }
+
+    public void setContext(Object context)
+    {
+        _context = context;
+    }
+
 }

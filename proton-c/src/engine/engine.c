@@ -2541,7 +2541,6 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       pn_set_payload(transport->disp, bytes.start, bytes.size);
-      link->session->outgoing_bytes -= bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
       int count = pn_post_transfer_frame(transport->disp,
                                          ssn_state->local_channel,
@@ -2556,7 +2555,9 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
 
-      pn_buffer_trim(delivery->bytes, bytes.size - transport->disp->output_size, 0);
+      int sent = bytes.size - transport->disp->output_size;
+      pn_buffer_trim(delivery->bytes, sent, 0);
+      link->session->outgoing_bytes -= sent;
       if (!pn_buffer_size(delivery->bytes) && delivery->done) {
         state->sent = true;
         link_state->delivery_count++;

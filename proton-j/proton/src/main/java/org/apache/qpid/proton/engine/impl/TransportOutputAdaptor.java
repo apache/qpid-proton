@@ -33,7 +33,11 @@ class TransportOutputAdaptor implements TransportOutput
     TransportOutputAdaptor(TransportOutputWriter transportOutputWriter, int maxFrameSize)
     {
         _transportOutputWriter = transportOutputWriter;
-        _outputBuffer = newWriteableBuffer(maxFrameSize);
+        if (maxFrameSize > 0) {
+            _outputBuffer = newWriteableBuffer(maxFrameSize);
+        } else {
+            _outputBuffer = newWriteableBuffer(4*1024);
+        }
     }
 
     @Override

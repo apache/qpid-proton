@@ -115,9 +115,9 @@ public final class Binary
         StringBuilder str = new StringBuilder();
 
 
-        for (int i = _offset; i < _length; i++)
+        for (int i = 0; i < _length; i++)
         {
-            byte c = _data[i];
+            byte c = _data[_offset + i];
 
             if (c > 31 && c < 127 && c != '\\')
             {

@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import java.util.Iterator;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
 
@@ -30,15 +31,21 @@ public class ReceiverImpl extends LinkImpl implements Receiver
     @Override
     public boolean advance()
     {
-        if(current() != null)
+        DeliveryImpl current = current();
+        if(current != null)
         {
-            current().setDone();
+            current.setDone();
         }
         final boolean advance = super.advance();
         if(advance)
         {
             decrementQueued();
             decrementCredit();
+            getSession().incrementIncomingBytes(-current.pending());
+            getSession().incrementIncomingDeliveries(-1);
+            if (getSession().getTransportSession().getIncomingWindowSize().equals(UnsignedInteger.ZERO)) {
+                modified();
+            }
         }
         return advance;
     }
@@ -70,7 +77,14 @@ public class ReceiverImpl extends LinkImpl implements Receiver
 
     public int recv(final byte[] bytes, int offset, int size)
     {
-        return _current.recv(bytes, offset, size);
+        int consumed = _current.recv(bytes, offset, size);
+        if (consumed > 0) {
+            getSession().incrementIncomingBytes(-consumed);
+            if (getSession().getTransportSession().getIncomingWindowSize().equals(UnsignedInteger.ZERO)) {
+                modified();
+            }
+        }
+        return consumed;
     }
 
     public Iterator<Delivery> unsettled()

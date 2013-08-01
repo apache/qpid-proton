@@ -52,6 +52,30 @@ public class JNISession implements Session
     }
 
     @Override
+    public int getIncomingCapacity()
+    {
+        return (int) Proton.pn_session_get_incoming_capacity(_impl);
+    }
+
+    @Override
+    public void setIncomingCapacity(int capacity)
+    {
+        Proton.pn_session_set_incoming_capacity(_impl, capacity);
+    }
+
+    @Override
+    public int getIncomingBytes()
+    {
+        return (int) Proton.pn_session_incoming_bytes(_impl);
+    }
+
+    @Override
+    public int getOutgoingBytes()
+    {
+        return (int) Proton.pn_session_outgoing_bytes(_impl);
+    }
+
+    @Override
     @ProtonCEquivalent("pn_sender")
     public Sender sender(String name)
     {
@@ -206,4 +230,5 @@ public class JNISession implements Session
         }
         return null;
     }
+
 }

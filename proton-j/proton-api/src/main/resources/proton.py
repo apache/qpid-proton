@@ -190,20 +190,24 @@ class Condition(object):
     return self.impl
 
 def wrap_connection(impl):
-  if impl: return Connection(_impl = impl)
+  if impl:
+    return impl.getContext()
+  else:
+    return None
 
 class Connection(Endpoint):
 
-  def __init__(self, _impl=None):
+  def __init__(self):
     Endpoint.__init__(self)
-    self.impl = _impl or Proton.connection()
+    self.impl = Proton.connection()
+    self.impl.setContext(self)
     self.desired_capabilities = None
     self.offered_capabilities = None
     self.properties = None
 
   @property
   def writable(self):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Connection.writable")
 
   def session(self):
     return wrap_session(self.impl.session())
@@ -282,6 +286,22 @@ class Session(Endpoint):
   def receiver(self, name):
     return wrap_link(self.impl.receiver(name))
 
+  def _get_incoming_capacity(self):
+    return self.impl.getIncomingCapacity()
+
+  def _set_incoming_capacity(self, capacity):
+    self.impl.setIncomingCapacity(capacity)
+
+  incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity)
+
+  @property
+  def outgoing_bytes(self):
+    return self.impl.getOutgoingBytes()
+
+  @property
+  def incoming_bytes(self):
+    return self.impl.getIncomingBytes()
+
 def wrap_link(impl):
   if impl is None: return None
   elif isinstance(impl, JSender):
@@ -347,7 +367,7 @@ class Link(Endpoint):
 
   @property
   def available(self):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Link.available")
 
   @property
   def queued(self):
@@ -383,7 +403,7 @@ class DataDummy:
     pass
 
   def put_array(self, *args, **kwargs):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Data.put_array")
 
 class Terminus(object):
 
@@ -450,7 +470,7 @@ class Terminus(object):
 class Sender(Link):
 
   def offered(self, n):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Sender.offered")
 
   def send(self, bytes):
     return self.impl.send(bytes, 0, len(bytes))
@@ -746,7 +766,6 @@ class Transport(object):
 
   def _set_max_frame_size(self, value):
     self.impl.setMaxFrameSize(value)
-    raise ProtonUnsupportedOperationException()
 
   max_frame_size = property(_get_max_frame_size, _set_max_frame_size,
                             doc="""
@@ -755,17 +774,16 @@ Sets the maximum size for received frames (in bytes).
 
   @property
   def remote_max_frame_size(self):
-    #return pn_transport_get_remote_max_frame(self._trans)
-    raise ProtonUnsupportedOperationException()
+    return self.impl.getRemoteMaxFrameSize()
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
     #return pn_transport_get_idle_timeout(self._trans)
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Transport.idle_timeout")
 
   def _set_idle_timeout(self, value):
     #pn_transport_set_idle_timeout(self._trans, value)
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Transport.idle_timeout")
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -775,17 +793,17 @@ The idle timeout of the connection (in milliseconds).
   @property
   def remote_idle_timeout(self):
     #return pn_transport_get_remote_idle_timeout(self._trans)
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Transport.remote_idle_timeout")
 
   @property
   def frames_output(self):
     #return pn_transport_get_frames_output(self._trans)
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Transport.frames_output")
 
   @property
   def frames_input(self):
     #return pn_transport_get_frames_input(self._trans)
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Transport.frames_input")
 
 class UnmappedType:
 
@@ -1650,15 +1668,15 @@ class SSL(object):
 class Driver(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Driver")
 class Connector(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Connector")
 class Listener(object):
   """ Proton-c platform abstraction - not needed."""
   def __init__(self, *args, **kwargs):
-    raise ProtonUnsupportedOperationException()
+    raise ProtonUnsupportedOperationException("Listener")
 
 def convertToPyArray(t,a,f):
     if a == None or len(a) == 0:

@@ -52,7 +52,11 @@ public class SenderImpl  extends LinkImpl implements Sender
         {
             throw new IllegalArgumentException();//TODO.
         }
-        return current.send(bytes, offset, length);
+        int sent = current.send(bytes, offset, length);
+        if (sent > 0) {
+            getSession().incrementOutgoingBytes(sent);
+        }
+        return sent;
     }
 
     public void abort()
@@ -87,6 +91,7 @@ public class SenderImpl  extends LinkImpl implements Sender
         {
             decrementCredit();
             delivery.addToTransportWorkList();
+            getSession().incrementOutgoingDeliveries(1);
         }
 
         return advance;

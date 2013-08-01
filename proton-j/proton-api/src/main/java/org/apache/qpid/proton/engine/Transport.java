@@ -63,7 +63,7 @@ import java.nio.ByteBuffer;
  */
 public interface Transport extends Endpoint
 {
-    public static final int DEFAULT_MAX_FRAME_SIZE = 16 * 1024;
+    public static final int DEFAULT_MAX_FRAME_SIZE = -1;
 
     /** the lower bound for the agreed maximum frame size (in bytes). */
     public int MIN_MAX_FRAME_SIZE = 512;
@@ -173,6 +173,8 @@ public interface Transport extends Endpoint
     int getMaxFrameSize();
 
     void setMaxFrameSize(int size);
+
+    int getRemoteMaxFrameSize();
 
     EngineLogger getEngineLogger();
     void setEngineLogger(EngineLogger engineLogger);

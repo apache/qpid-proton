@@ -89,7 +89,11 @@ class FrameParser implements TransportInput
     {
         _frameHandler = frameHandler;
         _decoder = decoder;
-        _inputBuffer = newWriteableBuffer(maxFrameSize);
+        if (maxFrameSize > 0) {
+            _inputBuffer = newWriteableBuffer(maxFrameSize);
+        } else {
+            _inputBuffer = newWriteableBuffer(4*1024);
+        }
     }
 
     private TransportResult input(ByteBuffer in)

@@ -1110,7 +1110,7 @@ class CreditTest(Test):
     assert self.rcv.queued == 0
     self.pump()
     assert self.rcv.credit == 1
-    assert self.rcv.queued == 1
+    assert self.rcv.queued == 1, self.rcv.queued
 
     c = self.rcv.current
     assert c
@@ -1210,7 +1210,7 @@ class SessionCreditTest(Test):
     while snd.credit:
       d = snd.delivery("tag%s" % idx)
       assert d
-      n = snd.send("x"*size)
+      n = snd.send(chr(ord("a") + idx)*size)
       assert n == size, (n, size)
       assert snd.advance()
       self.pump()
@@ -1220,17 +1220,20 @@ class SessionCreditTest(Test):
 
     assert snd.session.outgoing_bytes < total_bytes, (snd.session.outgoing_bytes, total_bytes)
     assert rcv.session.incoming_bytes < capacity, (rcv.session.incoming_bytes, capacity)
+    assert snd.session.outgoing_bytes + rcv.session.incoming_bytes == total_bytes, \
+        (snd.session.outgoing_bytes, rcv.session.incoming_bytes, total_bytes)
     if snd.session.outgoing_bytes > 0:
       available = rcv.session.incoming_capacity - rcv.session.incoming_bytes
-      assert available < max_frame, available
+      assert available < max_frame, (available, max_frame)
 
     for i in range(count):
       d = rcv.current
+      assert d, i
       pending = d.pending
       before = rcv.session.incoming_bytes
       assert rcv.advance()
       after = rcv.session.incoming_bytes
-      assert before - after == pending
+      assert before - after == pending, (before, after, pending)
       snd_before = snd.session.incoming_bytes
       self.pump()
       snd_after = snd.session.incoming_bytes

@@ -364,6 +364,12 @@ public class JNITransport implements Transport
         return (int) Proton.pn_transport_get_max_frame(_impl);
     }
 
+    @Override
+        public int getRemoteMaxFrameSize()
+    {
+        return (int) Proton.pn_transport_get_remote_max_frame(_impl);
+    }
+
 
     @Override
     public Object getContext()

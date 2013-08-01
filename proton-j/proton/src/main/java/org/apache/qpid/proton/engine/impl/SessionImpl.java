@@ -32,6 +32,11 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     private Map<String, SenderImpl> _senders = new LinkedHashMap<String, SenderImpl>();
     private Map<String, ReceiverImpl>  _receivers = new LinkedHashMap<String, ReceiverImpl>();
     private TransportSession _transportSession;
+    private int _incomingCapacity = 1024*1024;
+    private int _incomingBytes = 0;
+    private int _outgoingBytes = 0;
+    private int _incomingDeliveries = 0;
+    private int _outgoingDeliveries = 0;
 
     private LinkNode<SessionImpl> _node;
 
@@ -141,8 +146,53 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _receivers.remove(receiver.getName());
     }
 
-    public boolean clearIncomingWindowResize()
+    @Override
+    public int getIncomingCapacity()
     {
-        return getTransportSession().clearIncomingWindowResize();
+        return _incomingCapacity;
     }
+
+    @Override
+    public void setIncomingCapacity(int capacity)
+    {
+        _incomingCapacity = capacity;
+    }
+
+    @Override
+    public int getIncomingBytes()
+    {
+        return _incomingBytes;
+    }
+
+    void incrementIncomingBytes(int delta)
+    {
+        _incomingBytes += delta;
+    }
+
+    @Override
+    public int getOutgoingBytes()
+    {
+        return _outgoingBytes;
+    }
+
+    void incrementOutgoingBytes(int delta)
+    {
+        _outgoingBytes += delta;
+    }
+
+    void incrementIncomingDeliveries(int delta)
+    {
+        _incomingDeliveries += delta;
+    }
+
+    int getOutgoingDeliveries()
+    {
+        return _outgoingDeliveries;
+    }
+
+    void incrementOutgoingDeliveries(int delta)
+    {
+        _outgoingDeliveries += delta;
+    }
+
 }
