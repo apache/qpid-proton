@@ -584,6 +584,54 @@ module Qpid
         @message.annotations.should be_nil
       end
 
+      it "has a body property" do
+        @message.should respond_to(:body)
+        @message.should respond_to(:body=)
+      end
+
+      it "has a default body that is nil" do
+        @message.body.should be_nil
+      end
+
+      it "can set the body property" do
+        (1..3).each do |which|
+          case which
+            when 0
+            value = random_string(32)
+            when 1
+            value = random_array(100)
+            when 2
+            value = random_hash(100)
+            when 3
+            value = rand(512)
+          end
+
+          @message.body = value
+          @message.body.should eq(value)
+        end
+      end
+
+      it "can update the body property" do
+        (1..3).each do |which|
+          case which
+            when 0
+            value = random_string(32)
+            when 1
+            value = random_array(100)
+            when 2
+            value = random_hash(100)
+            when 3
+            value = rand(512)
+          end
+
+          @message.body = value
+          @message.body.should eq(value)
+
+          @message.body = nil
+          @message.body.should be_nil
+        end
+      end
+
     end
 
   end

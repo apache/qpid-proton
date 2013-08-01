@@ -76,6 +76,7 @@ loop do
     puts "Properties: #{msg.properties}"
     puts "Instructions: #{msg.instructions}"
     puts "Annotations: #{msg.annotations}"
+    puts "Body: #{msg.body}"
   end
 end
 

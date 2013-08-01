@@ -57,6 +57,11 @@ module Qpid
         if annts.next
           @annotations = annts.type.get(annts)
         end
+        @body = nil
+        body = Qpid::Proton::Data.new(Cproton::pn_message_body(@impl))
+        if body.next
+          @body = body.type.get(body)
+        end
       end
 
       # Encodes the message.
@@ -91,6 +96,12 @@ module Qpid
           mapping = Qpid::Proton::Mapping.for_class(@annotations.class)
           mapping.put(annts, @annotations)
         end
+        body = Qpid::Proton::Data.new(Cproton::pn_message_body(@impl))
+        body.clear
+        if !@body.nil?
+          mapping = Qpid::Proton::Mapping.for_class(@body.class)
+          mapping.put(body, @body)
+        end
       end
 
       # Creates a new +Message+ instance.
@@ -100,6 +111,7 @@ module Qpid
         @properties = {}
         @instructions = {}
         @annotations = {}
+        @body = nil
       end
 
       # Invoked by garbage collection to clean up resources used
@@ -555,6 +567,18 @@ module Qpid
       #
       def annotations=(annotations)
         @annotations = annotations.nil? ? nil : annotations.clone
+      end
+
+      # Returns the body property of the message.
+      #
+      def body
+        @body
+      end
+
+      # Assigns a new value to the body of the message.
+      #
+      def body=(body)
+        @body = body
       end
 
       private

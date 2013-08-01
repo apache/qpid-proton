@@ -11,6 +11,7 @@ version 0.5:
 	* Added instructions field to Qpid::Proton::Message.
 	* Added annotations field to Qpid::Proton::Message.
 	* Fixed encoding Symbol objects.
+	* Added body field to Qpid::Proton::Message.
 
 version 0.4:
 	* No language-specific features developed in this release.

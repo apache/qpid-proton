@@ -52,6 +52,7 @@ messages.each do |message|
   msg.instructions["mutilate"] = "no"
   msg.annotations["version"] = 1.0
   msg.annotations["pill"] = :RED
+  msg.body = "This is a message body. There are many like it but this one is mine."
 
   begin
     messenger.put(msg)
