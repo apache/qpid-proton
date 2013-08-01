@@ -419,10 +419,18 @@ module Qpid
 
       it "has properties" do
         @message.should respond_to(:properties)
-        @message.should respond_to("[]".to_sym)
-        @message.should respond_to("[]=".to_sym)
+        @message.should respond_to(:properties=)
+        @message.should respond_to(:[])
+        @message.should respond_to(:[]=)
 
         @message.properties.should be_kind_of({}.class)
+      end
+
+      it "can replace the set of properties" do
+        values = random_hash(128)
+
+        @message.properties = values.clone
+        @message.properties.should eq values
       end
 
       it "can set properties" do
@@ -467,6 +475,17 @@ module Qpid
         @message.properties.keys.should_not include(name)
       end
 
+      it "has no properties after being cleared" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message[name] = value
+        @message[name].should eq(value)
+
+        @message.clear
+        @message.properties.should be_empty
+      end
+
       it "has instructions" do
         @message.should respond_to(:instructions)
         @message.should respond_to("instructions=".to_sym)
@@ -506,23 +525,34 @@ module Qpid
       it "can replace the instructions" do
         values = random_hash(rand(128) + 1)
 
-        @message.instructions = values
+        @message.instructions = values.clone
         @message.instructions.should eq values
 
         values = random_hash(rand(64) + 1)
 
-        @message.instructions = values
+        @message.instructions = values.clone
         @message.instructions.should eq values
       end
 
       it "can delete the set of instructions" do
         values = random_hash(rand(128) + 1)
 
-        @message.instructions = values
+        @message.instructions = values.clone
         @message.instructions.should eq values
 
         @message.instructions = nil
         @message.instructions.should be_nil
+      end
+
+      it "has no instructions after being cleared" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.instructions = value
+        @message.instructions.should eq(value)
+
+        @message.clear
+        @message.instructions.should be_empty
       end
 
       it "has annotations" do
@@ -534,7 +564,7 @@ module Qpid
         name = random_hash(32)
         value = random_hash(256)
 
-        @message.annotations[name] = value
+        @message.annotations[name] = value.clone
         @message.annotations[name].should eq(value)
       end
 
@@ -542,12 +572,12 @@ module Qpid
         name = random_hash(32)
         value = random_hash(256)
 
-        @message.annotations[name] = value
+        @message.annotations[name] = value.clone
         @message.annotations[name].should eq(value)
 
         value = random_hash(128)
 
-        @message.annotations[name] = value
+        @message.annotations[name] = value.clone
         @message.annotations[name].should eq(value)
       end
 
@@ -555,7 +585,7 @@ module Qpid
         name = random_hash(32)
         value = random_hash(256)
 
-        @message.annotations[name] = value
+        @message.annotations[name] = value.clone
         @message.annotations[name].should eq(value)
 
         @message.annotations[name] = nil
@@ -565,23 +595,34 @@ module Qpid
       it "can replace all annotations" do
         values = random_hash(rand(128) + 1)
 
-        @message.annotations = values
+        @message.annotations = values.clone
         @message.annotations.should eq values
 
         values = random_hash(rand(64) + 1)
 
-        @message.annotations = values
+        @message.annotations = values.clone
         @message.annotations.should eq values
       end
 
       it "can delete the set of annotations" do
         values = random_hash(rand(128) + 1)
 
-        @message.annotations = values
+        @message.annotations = values.clone
         @message.annotations.should eq values
 
         @message.annotations = nil
         @message.annotations.should be_nil
+      end
+
+      it "has no annotations after being cleared" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.annotations = value
+        @message.annotations.should eq(value)
+
+        @message.clear
+        @message.annotations.should be_empty
       end
 
       it "has a body property" do
@@ -590,6 +631,17 @@ module Qpid
       end
 
       it "has a default body that is nil" do
+        @message.body.should be_nil
+      end
+
+      it "has no body after being cleared" do
+        name = random_string(16)
+        value = random_string(128)
+
+        @message.body = value
+        @message.body.should eq(value)
+
+        @message.clear
         @message.body.should be_nil
       end
 

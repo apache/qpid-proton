@@ -134,6 +134,8 @@ module Qpid
         Cproton.pn_message_clear(@impl)
         @properties.clear unless @properties.nil?
         @instructions.clear unless @instructions.nil?
+        @annotations.clear unless @annotations.nil?
+        @body = nil
       end
 
       # Returns the most recent error number.
@@ -521,6 +523,12 @@ module Qpid
         @properties
       end
 
+      # Replaces the entire set of properties with the specified hash.
+      #
+      def properties=(properties)
+        @properties = properties
+      end
+
       # Assigns the value given to the named property.
       #
       # ==== Arguments
@@ -554,7 +562,7 @@ module Qpid
       # Assigns instructions to this message.
       #
       def instructions=(instr)
-        @instructions = instr.nil? ? nil : instr.clone
+        @instructions = instr
       end
 
       # Returns the annotations for this message.
@@ -566,7 +574,7 @@ module Qpid
       # Assigns annotations to this message.
       #
       def annotations=(annotations)
-        @annotations = annotations.nil? ? nil : annotations.clone
+        @annotations = annotations
       end
 
       # Returns the body property of the message.
