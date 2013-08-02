@@ -2614,6 +2614,8 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
     bool allocation_blocked = false;
     while (delivery)
     {
+      pn_delivery_t *tp_next = delivery->tpwork_next;
+
       if (!delivery->state.init && transport->disp->available > 0) {
         break;
       }
@@ -2631,7 +2633,7 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
         pn_clear_tpwork(delivery);
       }
 
-      delivery = delivery->tpwork_next;
+      delivery = tp_next;
     }
   }
 

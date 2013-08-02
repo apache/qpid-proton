@@ -71,14 +71,19 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
     if (!LL_HEAD(ROOT, LIST)) LL_HEAD(ROOT, LIST) = (NODE);   \
   }
 
-#define LL_POP(ROOT, LIST)                                       \
-  {                                                              \
-    if (LL_HEAD(ROOT, LIST)) {                                   \
-      void *_head = LL_HEAD(ROOT, LIST);                         \
+#define LL_POP(ROOT, LIST)                                    \
+  {                                                           \
+    if (LL_HEAD(ROOT, LIST)) {                                \
+      void *_old = LL_HEAD(ROOT, LIST);                       \
+      void **_old_next = (void **) &(LL_HEAD(ROOT, LIST)->LIST ## _next); \
       LL_HEAD(ROOT, LIST) = LL_HEAD(ROOT, LIST)-> LIST ## _next; \
-      if (_head == LL_TAIL(ROOT, LIST))                          \
-        LL_TAIL(ROOT, LIST) = NULL;                              \
-    }                                                            \
+      *_old_next = NULL;                                      \
+      if (_old == LL_TAIL(ROOT, LIST)) {                      \
+        LL_TAIL(ROOT, LIST) = NULL;                           \
+      } else {                                                \
+        LL_HEAD(ROOT, LIST)-> LIST ## _prev = NULL;           \
+      }                                                       \
+    }                                                         \
   }
 
 #define LL_REMOVE(ROOT, LIST, NODE)                                    \
@@ -91,6 +96,8 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
       LL_HEAD(ROOT, LIST) = (NODE)-> LIST ## _next;                    \
     if ((NODE) == LL_TAIL(ROOT, LIST))                                 \
       LL_TAIL(ROOT, LIST) = (NODE)-> LIST ## _prev;                    \
+    (NODE)-> LIST ## _next = NULL;                                     \
+    (NODE)-> LIST ## _prev = NULL;                                     \
   }
 
 char *pn_strdup(const char *src);
