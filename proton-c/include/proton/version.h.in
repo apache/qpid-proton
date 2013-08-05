@@ -1,5 +1,5 @@
-#ifndef _PROTON_CONFIG_H
-#define _PROTON_CONFIG_H 1
+#ifndef _PROTON_VERSION_H
+#define _PROTON_VERSION_H 1
 
 /*
  *
@@ -25,4 +25,4 @@
 #define PN_VERSION_MAJOR @PN_VERSION_MAJOR@
 #define PN_VERSION_MINOR @PN_VERSION_MINOR@
 
-#endif /* pn_config.h */
+#endif /* version.h */

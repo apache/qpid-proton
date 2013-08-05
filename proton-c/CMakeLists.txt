@@ -51,8 +51,8 @@ endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
 
 configure_file (
-  "${CMAKE_CURRENT_SOURCE_DIR}/pn_config.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/pn_config.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h"
   )
 
 include_directories ("${CMAKE_CURRENT_BINARY_DIR}")
@@ -316,6 +316,8 @@ install (TARGETS proton proton-dump qpid-proton
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
+install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
+         DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
 # Pkg config file
 # Compatible variable names used in the pkg config files also for autoconf
