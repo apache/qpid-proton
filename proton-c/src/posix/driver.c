@@ -805,6 +805,24 @@ int pn_driver_wait_3(pn_driver_t *d)
       c->pending_tick = (c->wakeup &&  c->wakeup <= now);
       if (idx && d->fds[idx].revents & POLLERR)
           pn_connector_close(c);
+      else if (idx && (d->fds[idx].revents & POLLHUP)) {
+        if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
+          fprintf(stderr, "hangup on connector %s\n", c->name);
+        }
+        /* poll() is signalling POLLHUP. to see what happened we need
+         * to do an actual recv() to get the error code. But we might
+         * be in a state where we're not interested in input, in that
+         * case try to get the error code via send() */
+        if (d->fds[idx].events & POLLIN)
+          c->pending_read = true;
+        else if (d->fds[idx].events & POLLOUT)
+          c->pending_write = true;
+      } else if (idx && (d->fds[idx].revents & ~(POLLIN|POLLOUT|POLLERR|POLLHUP))) {
+          if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
+            fprintf(stderr, "Unexpected poll events: %04x on %s\n",
+                    d->fds[idx].revents, c->name);
+          }
+      }
     }
     c = c->connector_next;
   }
