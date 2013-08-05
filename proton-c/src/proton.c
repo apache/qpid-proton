@@ -34,7 +34,7 @@
 #include <proton/message.h>
 #include <proton/util.h>
 #include "util.h"
-#include "pn_config.h"
+#include <proton/version.h>
 #include <proton/codec.h>
 #include <proton/buffer.h>
 #include <proton/parser.h>
