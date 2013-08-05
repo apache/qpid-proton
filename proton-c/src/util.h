@@ -71,13 +71,12 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
     if (!LL_HEAD(ROOT, LIST)) LL_HEAD(ROOT, LIST) = (NODE);   \
   }
 
-#define LL_POP(ROOT, LIST)                                    \
+#define LL_POP(ROOT, LIST, TYPE)                              \
   {                                                           \
     if (LL_HEAD(ROOT, LIST)) {                                \
-      void *_old = LL_HEAD(ROOT, LIST);                       \
-      void **_old_next = (void **) &(LL_HEAD(ROOT, LIST)->LIST ## _next); \
+      TYPE *_old = LL_HEAD(ROOT, LIST);                       \
       LL_HEAD(ROOT, LIST) = LL_HEAD(ROOT, LIST)-> LIST ## _next; \
-      *_old_next = NULL;                                      \
+      _old-> LIST ## _next = NULL;                            \
       if (_old == LL_TAIL(ROOT, LIST)) {                      \
         LL_TAIL(ROOT, LIST) = NULL;                           \
       } else {                                                \

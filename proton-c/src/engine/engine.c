@@ -915,12 +915,12 @@ static void pn_link_finalize(void *object)
   pn_terminus_free(&link->remote_target);
   while (link->settled_head) {
     pn_delivery_t *d = link->settled_head;
-    LL_POP(link, settled);
+    LL_POP(link, settled, pn_delivery_t);
     pn_free(d);
   }
   while (link->unsettled_head) {
     pn_delivery_t *d = link->unsettled_head;
-    LL_POP(link, unsettled);
+    LL_POP(link, unsettled, pn_delivery_t);
     pn_free(d);
   }
   pn_free(link->name);
@@ -1222,7 +1222,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
   pn_delivery_t *delivery = link->settled_head;
-  LL_POP(link, settled);
+  LL_POP(link, settled, pn_delivery_t);
   if (!delivery) {
     static pn_class_t clazz = {pn_delivery_finalize};
     delivery = (pn_delivery_t *) pn_new(sizeof(pn_delivery_t), &clazz);
