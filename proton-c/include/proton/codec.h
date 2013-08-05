@@ -23,6 +23,7 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/object.h>
 #include <proton/types.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -182,6 +183,9 @@ PN_EXTERN int pn_data_append(pn_data_t *data, pn_data_t *src);
 PN_EXTERN int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit);
 PN_EXTERN void pn_data_narrow(pn_data_t *data);
 PN_EXTERN void pn_data_widen(pn_data_t *data);
+PN_EXTERN pn_handle_t pn_data_point(pn_data_t *data);
+PN_EXTERN bool pn_data_restore(pn_data_t *data, pn_handle_t point);
+
 
 PN_EXTERN void pn_data_dump(pn_data_t *data);
 

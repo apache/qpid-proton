@@ -66,6 +66,7 @@ PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
 
 typedef uintptr_t pn_handle_t;
+typedef intptr_t pn_shandle_t;
 
 typedef struct pn_map_t pn_map_t;
 

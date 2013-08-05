@@ -1032,11 +1032,6 @@ struct pn_data_t {
   pn_error_t *error;
 };
 
-typedef struct {
-  size_t parent;
-  size_t current;
-} pn_point_t;
-
 static void pn_data_finalize(void *object)
 {
   pn_data_t *data = (pn_data_t *) object;
@@ -1853,24 +1848,26 @@ void pn_data_widen(pn_data_t *data)
   data->base_current = 0;
 }
 
-pn_point_t pn_data_point(pn_data_t *data)
+pn_handle_t pn_data_point(pn_data_t *data)
 {
-  pn_point_t point;
-  point.parent = data->parent;
-  point.current = data->current;
-  return point;
+  if (data->current) {
+    return data->current;
+  } else {
+    return -data->parent;
+  }
 }
 
-bool pn_data_restore(pn_data_t *data, pn_point_t point)
+bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 {
-  if (point.current && point.current <= data->size) {
-    data->current = point.current;
+  pn_shandle_t spoint = (pn_shandle_t) point;
+  if (spoint < 0 && ((size_t) (-spoint)) <= data->size) {
+    data->parent = -((pn_shandle_t) point);
+    data->current = 0;
+    return true;
+  } else if (point && point <= data->size) {
+    data->current = point;
     pn_node_t *current = pn_data_current(data);
     data->parent = current->parent;
-    return true;
-  } else if (point.parent && point.parent <= data->size) {
-    data->parent = point.parent;
-    data->current = 0;
     return true;
   } else {
     return false;
@@ -3040,7 +3037,7 @@ int pn_data_appendn(pn_data_t *data, pn_data_t *src, int limit)
   int err = 0;
   int level = 0, count = 0;
   bool stop = false;
-  pn_point_t point = pn_data_point(src);
+  pn_handle_t point = pn_data_point(src);
   pn_data_rewind(src);
 
   while (true) {
