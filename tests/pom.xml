@@ -21,8 +21,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>tests</artifactId>
-  <name>tests</name>
+  <artifactId>proton-tests</artifactId>
+  <name>proton-tests</name>
 
   <description>The Proton system tests execute against either the Java or the C implementations,
 based on the chosen profile.
