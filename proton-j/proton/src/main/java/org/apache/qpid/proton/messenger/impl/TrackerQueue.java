@@ -163,7 +163,7 @@ class TrackerQueue
     private Delivery getDelivery(Tracker tracker)
     {
         int seq = ((TrackerImpl) tracker).getSequence();
-        if (seq < _lwm || seq > _hwm) return null;
+        if ((seq - _lwm) < 0 || (seq - _hwm) > 0) return null;
         int index = seq - _lwm;
         return index < _deliveries.size() ? _deliveries.get(index) : null;
     }
@@ -176,7 +176,7 @@ class TrackerQueue
     private void apply(Tracker tracker, int flags, DeliveryOperation operation)
     {
         int seq = ((TrackerImpl) tracker).getSequence();
-        if (seq < _lwm || seq > _hwm) return;
+        if ((seq - _lwm) < 0 || (seq - _hwm) > 0) return;
         int last = seq - _lwm;
         int start = (flags & Messenger.CUMULATIVE) != 0 ? 0 : last;
         for (int i = start; i <= last && i < _deliveries.size(); ++i)
