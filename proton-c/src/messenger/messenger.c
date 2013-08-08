@@ -413,6 +413,7 @@ static void pn_transport_config(pn_messenger_t *messenger,
     }
     pn_ssl_t *ssl = pn_ssl(transport);
     pn_ssl_init(ssl, d, NULL);
+    pn_ssl_set_peer_hostname(ssl, pn_connection_get_hostname(connection));
     pn_ssl_domain_free( d );
   }
 
