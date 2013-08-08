@@ -47,41 +47,23 @@ class TransportTest(Test):
     except TransportException:
       pass
 
-  def testGarbage(self):
+  def testGarbage(self, garbage="GARBAGE_"):
     try:
-      n = self.transport.input("GARBAGE_")
+      n = self.transport.input(garbage)
       assert False, n
     except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
+      assert "AMQP header mismatch" in str(e), str(e)
     try:
       n = self.transport.input("")
       assert False, n
     except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
+      pass
 
   def testSmallGarbage(self):
-    try:
-      n = self.transport.input("XXX")
-      assert False, n
-    except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
+    self.testGarbage("XXX")
 
   def testBigGarbage(self):
-    try:
-      n = self.transport.input("GARBAGE_XXX")
-      assert False, n
-    except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException, e:
-      assert "AMQP header mismatch" in str(e)
+    self.testGarbage("GARBAGE_XXX")
 
   def testHeader(self):
     n = self.transport.input("AMQP\x00\x01\x00\x00")
