@@ -194,7 +194,7 @@ void server_callback(pn_connector_t *ctor)
         printf("  payload = \"");
       }
       while (true) {
-        ssize_t n = pn_link_recv(link, msg, 1024);
+        ssize_t n = pn_link_recv(link, msg, 48);
         if (n == PN_EOS) {
           pn_link_advance(link);
           pn_delivery_update(delivery, PN_ACCEPTED);
@@ -296,7 +296,7 @@ void client_callback(pn_connector_t *ctor)
 
   pn_connection_t *connection = pn_connector_connection(ctor);
   char tagstr[1024];
-  PN_ENSURE(client_msg.buf, client_msg.capacity, (size_t) ctx->size, char);
+  PN_ENSURE(client_msg.buf, client_msg.capacity, (size_t) ctx->size + 16, char);
   char *msg = client_msg.buf;
   PN_ENSURE(client_data.buf, client_data.capacity, (size_t) ctx->size + 16, char);
   char *data = client_data.buf;
