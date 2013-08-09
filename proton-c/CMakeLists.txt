@@ -284,6 +284,11 @@ set_target_properties (
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 
+if (MSVC)
+  # guard against use of C99 violating functions on Windows
+  include(WindowsC99CheckDef)
+endif(MSVC)
+
 add_executable (proton src/proton.c)
 target_link_libraries (proton qpid-proton)
 

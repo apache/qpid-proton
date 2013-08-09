@@ -133,3 +133,32 @@ int64_t pn_i_atoll(const char* num) {
 #else
 #error "Don't know how to convert int64_t values on this platform"
 #endif
+
+#ifdef _MSC_VER
+// [v]snprintf on Windows only matches C99 when no errors or overflow.
+int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap) {
+  if (fmt == NULL)
+    return -1;
+  if ((buf == NULL) && (count > 0))
+    return -1;
+  if (count > 0) {
+    int n = vsnprintf_s(buf, count, _TRUNCATE, fmt, ap);
+    if (n >= 0)  // no overflow
+      return n;  // same as C99
+    buf[count-1] = '\0';
+  }
+  // separate call to get needed buffer size on overflow
+  int n = _vscprintf(fmt, ap);
+  if (n >= (int) count)
+    return n;
+  return -1;
+}
+
+int pn_i_snprintf(char *buf, size_t count, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  int n = pn_i_vsnprintf(buf, count, fmt, ap);
+  va_end(ap);
+  return n;
+}
+#endif

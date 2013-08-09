@@ -31,6 +31,7 @@
 
 #include "../sasl/sasl-internal.h"
 #include "../ssl/ssl-internal.h"
+#include "../platform.h"
 #include "../platform_fmt.h"
 
 static ssize_t transport_consume(pn_transport_t *transport);

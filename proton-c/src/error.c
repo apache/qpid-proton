@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util.h"
+#include "platform.h"
 
 struct pn_error_t {
   int code;

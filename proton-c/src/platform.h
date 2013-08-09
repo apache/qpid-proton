@@ -73,8 +73,15 @@ int pn_i_error_from_errno(pn_error_t *error, const char *msg);
 int64_t pn_i_atoll(const char* num);
 
 #ifdef _MSC_VER
-// TODO: PROTON-212
-#define snprintf _snprintf
+/** Windows snprintf and vsnprintf substitutes.
+ *
+ * Provide the expected C99 behavior for these functions.
+ */
+#include <stdio.h>
+#define snprintf pn_i_snprintf
+#define vsnprintf pn_i_vsnprintf
+int pn_i_snprintf(char *buf, size_t count, const char *fmt, ...);
+int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 #endif
 
 

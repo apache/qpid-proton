@@ -19,6 +19,7 @@
  *
  */
 
+#include "../platform.h"
 #include <proton/error.h>
 #include <proton/object.h>
 #include <stdio.h>

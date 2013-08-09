@@ -32,6 +32,7 @@
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
+#include "../platform.h"
 #include "../platform_fmt.h"
 #include "../util.h"
 
