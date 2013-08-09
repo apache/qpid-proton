@@ -29,3 +29,29 @@ set_target_properties(cproton-ruby
 install(TARGETS cproton-ruby
         DESTINATION ${RUBY_ARCH_DIR}
         COMPONENT Ruby)
+
+# Install the Ruby libraries
+set(RUBY_LIBRARIES
+    lib/qpid_proton/array.rb
+    lib/qpid_proton/data.rb
+    lib/qpid_proton/described.rb
+    lib/qpid_proton/exception_handling.rb
+    lib/qpid_proton/exceptions.rb
+    lib/qpid_proton/hash.rb
+    lib/qpid_proton/helper.rb
+    lib/qpid_proton/mapping.rb
+    lib/qpid_proton/message_format.rb
+    lib/qpid_proton/message.rb
+    lib/qpid_proton/messenger.rb
+    lib/qpid_proton/subscription.rb
+    lib/qpid_proton/tracker.rb
+    lib/qpid_proton/tracker_status.rb
+)
+
+install(FILES lib/qpid_proton.rb
+        DESTINATION ${RUBY_VENDORLIB_DIR}
+        COMPONENT Ruby)
+
+install(FILES ${RUBY_LIBRARIES}
+        DESTINATION ${RUBY_VENDORLIB_DIR}/qpid_proton
+        COMPONENT RUby)
