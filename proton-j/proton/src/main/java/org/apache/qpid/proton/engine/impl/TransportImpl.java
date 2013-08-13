@@ -473,8 +473,7 @@ public class TransportImpl extends EndpointImpl
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
            tpSession.hasOutgoingCredit() && tpLink.hasCredit())
         {
-            // XXX: this looks wrong, need to test with multiple links on a session to verify
-            UnsignedInteger deliveryId = tpLink.getDeliveryCount();
+            UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
             TransportDelivery tpDelivery = new TransportDelivery(deliveryId, delivery, tpLink);
             delivery.setTransportDelivery(tpDelivery);
 
@@ -519,6 +518,7 @@ public class TransportImpl extends EndpointImpl
                     delivery.setDone();
                     tpLink.setDeliveryCount(tpLink.getDeliveryCount().add(UnsignedInteger.ONE));
                     tpLink.setLinkCredit(tpLink.getLinkCredit().subtract(UnsignedInteger.ONE));
+                    tpSession.incrementOutgoingDeliveryId();
                     session.incrementOutgoingDeliveries(-1);
                     snd.decrementQueued();
                 }

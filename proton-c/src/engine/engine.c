@@ -73,6 +73,7 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   pn_hash_del(db->deliveries, delivery->state.id);
   delivery->state.init = false;
+  delivery->state.sent = false;
 }
 
 void pn_delivery_map_clear(pn_delivery_map_t *dm)
@@ -1255,6 +1256,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   // begin delivery state
   delivery->state.init = false;
+  delivery->state.sent = false;
   // end delivery state
 
   if (!link->current)
@@ -2285,10 +2287,10 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
   if (delivery->settled) return false;
   if (pn_link_is_sender(delivery->link)) {
     pn_delivery_state_t *state = &delivery->state;
-    if (state->init) {
-      return (delivery->done && !state->sent) || pn_buffer_size(delivery->bytes) > 0;
+    if (state->sent) {
+      return false;
     } else {
-      return delivery->done;
+      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
     }
   } else {
     return false;
@@ -2524,22 +2526,20 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   return 0;
 }
 
-int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery, bool* allocation_blocked)
+int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
   bool xfr_posted = false;
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
-    if (!(*allocation_blocked) && !state) {
-      state = pn_delivery_map_push(&ssn_state->outgoing, delivery);
-    } else {
-      *allocation_blocked = true;
-    }
-
-    if (state && !state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
+    pn_delivery_state_t *state = &delivery->state;
+    if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
+      if (!state->init) {
+        state = pn_delivery_map_push(&ssn_state->outgoing, delivery);
+      }
+
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       pn_set_payload(transport->disp, bytes.start, bytes.size);
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
@@ -2612,18 +2612,13 @@ int pn_process_tpwork(pn_transport_t *transport, pn_endpoint_t *endpoint)
   {
     pn_connection_t *conn = (pn_connection_t *) endpoint;
     pn_delivery_t *delivery = conn->tpwork_head;
-    bool allocation_blocked = false;
     while (delivery)
     {
       pn_delivery_t *tp_next = delivery->tpwork_next;
 
-      if (!delivery->state.init && transport->disp->available > 0) {
-        break;
-      }
-
       pn_link_t *link = delivery->link;
       if (pn_link_is_sender(link)) {
-        int err = pn_process_tpwork_sender(transport, delivery, &allocation_blocked);
+        int err = pn_process_tpwork_sender(transport, delivery);
         if (err) return err;
       } else {
         int err = pn_process_tpwork_receiver(transport, delivery);

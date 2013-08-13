@@ -626,7 +626,7 @@ class TransferTest(Test):
     self.pump()
 
     bytes = self.rcv.recv(1024)
-    assert bytes == msg
+    assert bytes == msg, (bytes, msg)
 
     bytes = self.rcv.recv(1024)
     assert bytes is None
@@ -1183,6 +1183,45 @@ class CreditTest(Test):
     self.pump()
     assert self.snd.queued == 1
     assert self.rcv.queued == count
+
+  def testHeadOfLineBlocking(self):
+      self.snd2 = self.snd.session.sender("link-2")
+      self.rcv2 = self.rcv.session.receiver("link-2")
+      self.snd2.open()
+      self.rcv2.open()
+      self.pump()
+      assert self.snd2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+      assert self.rcv2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+      self.rcv.flow(5)
+      self.rcv2.flow(10)
+      self.pump()
+
+      assert self.snd.credit == 5
+      assert self.snd2.credit == 10
+
+      for i in range(10):
+          tag = "test %d" % i
+          self.snd.delivery( tag )
+          self.snd.send( tag )
+          assert self.snd.advance()
+          self.snd2.delivery( tag )
+          self.snd2.send( tag )
+          assert self.snd2.advance()
+
+      self.pump()
+
+      for i in range(5):
+          b = self.rcv.recv( 512 )
+          assert self.rcv.advance()
+          b = self.rcv2.recv( 512 )
+          assert self.rcv2.advance()
+
+      for i in range(5):
+          b = self.rcv2.recv( 512 )
+          assert self.rcv2.advance()
+
+
 
 class SessionCreditTest(Test):
 
