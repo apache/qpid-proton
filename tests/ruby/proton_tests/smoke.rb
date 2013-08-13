@@ -40,7 +40,7 @@ class SmokeTest < Test::Unit::TestCase
     @server.receive()
 
     count.times {|i|
-      msg.content = "Hello World! #{i}"
+      msg.body = "Hello World! #{i}"
       @client.put(msg)
     }
 
@@ -51,7 +51,7 @@ class SmokeTest < Test::Unit::TestCase
         pump()
       end
       @server.get(msg2)
-      assert msg2.content == "Hello World! #{i}"
+      assert msg2.body == "Hello World! #{i}"
     }
 
     assert @client.outgoing == 0, @client.outgoing
