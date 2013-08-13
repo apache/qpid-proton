@@ -26,14 +26,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLException;
 
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -132,36 +131,40 @@ public class SimpleSslTransportWrapperTest
         SSLException sslException = new SSLException("unwrap exception");
         _dummySslEngine.rejectNextEncodedPacket(sslException);
 
-        _sslWrapper.getInputBuffer().put("<-A->".getBytes());
-        TransportResult result = _sslWrapper.processInput();
-        assertEquals(TransportResult.Status.ERROR, result.getStatus());
-        assertSame(sslException, result.getException().getCause());
-        assertEquals("", _underlyingInput.getAcceptedInput());
+        _sslWrapper.tail().put("<-A->".getBytes());
+        try {
+            _sslWrapper.process();
+            fail("no exception");
+        } catch (TransportException e) {
+            assertSame(sslException, e.getCause());
+            assertEquals("", _underlyingInput.getAcceptedInput());
+        }
 
         _expectedException.expect(TransportException.class);
-        _sslWrapper.getInputBuffer();
+        _sslWrapper.tail();
     }
 
     @Test
     public void testUnderlyingInputReturnsErrorResult_returnsErrorResultAndRefusesFurtherInput() throws Exception
     {
         String underlyingErrorDescription = "dummy underlying error";
-        TransportResult underlyingErrorResult = TransportResultFactory.error(underlyingErrorDescription);
-        _underlyingInput.rejectNextInput(underlyingErrorResult);
+        _underlyingInput.rejectNextInput(underlyingErrorDescription);
 
-        _sslWrapper.getInputBuffer().put("<-A->".getBytes());
+        _sslWrapper.tail().put("<-A->".getBytes());
 
-        TransportResult result = _sslWrapper.processInput();
-
-        assertEquals(TransportResult.Status.ERROR, result.getStatus());
-        assertEquals(underlyingErrorDescription, result.getErrorDescription());
+        try {
+            _sslWrapper.process();
+            fail("no exception");
+        } catch (TransportException e) {
+            assertEquals(underlyingErrorDescription, e.getMessage());
+        }
     }
 
     @Test
-    public void testGetOutputBufferIsReadOnly()
+    public void testHeadIsReadOnly()
     {
         _underlyingOutput.setOutput("");
-        assertTrue(_sslWrapper.getOutputBuffer().isReadOnly());
+        assertTrue(_sslWrapper.head().isReadOnly());
     }
 
     @Test
@@ -169,7 +172,7 @@ public class SimpleSslTransportWrapperTest
     {
         _underlyingOutput.setOutput("a_");
 
-        ByteBuffer outputBuffer = _sslWrapper.getOutputBuffer();
+        ByteBuffer outputBuffer = _sslWrapper.head();
 
         assertByteBufferContentEquals("<-A->".getBytes(), outputBuffer);
     }
@@ -196,17 +199,17 @@ public class SimpleSslTransportWrapperTest
         _underlyingOutput.setOutput("a_b_");
 
         {
-            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            ByteBuffer buffer = _sslWrapper.head();
             String output = pourBufferToString(buffer, 2);
             assertEquals("<-", output);
-            _sslWrapper.outputConsumed();
+            _sslWrapper.pop(buffer.position());
         }
 
         {
-            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            ByteBuffer buffer = _sslWrapper.head();
             String output = pourBufferToString(buffer, 3);
             assertEquals("A->", output);
-            _sslWrapper.outputConsumed();
+            _sslWrapper.pop(buffer.position());
         }
 
         assertEquals("<-B->", getAllBytesFromTransport());
@@ -217,7 +220,7 @@ public class SimpleSslTransportWrapperTest
     {
         _underlyingOutput.setOutput("");
 
-        assertFalse(_sslWrapper.getOutputBuffer().hasRemaining());
+        assertFalse(_sslWrapper.head().hasRemaining());
     }
 
     private void putBytesIntoTransport(String encodedBytes)
@@ -225,10 +228,10 @@ public class SimpleSslTransportWrapperTest
         ByteBuffer byteBuffer = ByteBuffer.wrap(encodedBytes.getBytes());
         while(byteBuffer.hasRemaining())
         {
-            int numberPoured = pour(byteBuffer, _sslWrapper.getInputBuffer());
+            int numberPoured = pour(byteBuffer, _sslWrapper.tail());
             assertTrue("We should be able to pour some bytes into the input buffer",
                     numberPoured > 0);
-            _sslWrapper.processInput().checkIsOk();
+            _sslWrapper.process();
         }
     }
 
@@ -238,12 +241,12 @@ public class SimpleSslTransportWrapperTest
         boolean continueLooping;
         do
         {
-            ByteBuffer buffer = _sslWrapper.getOutputBuffer();
+            ByteBuffer buffer = _sslWrapper.head();
             continueLooping = buffer.hasRemaining();
 
             readBytes.append(pourBufferToString(buffer));
 
-            _sslWrapper.outputConsumed();
+            _sslWrapper.pop(buffer.position());
         }
         while(continueLooping);
 

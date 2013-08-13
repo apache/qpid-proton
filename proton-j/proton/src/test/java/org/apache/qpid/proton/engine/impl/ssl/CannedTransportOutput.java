@@ -28,6 +28,7 @@ public class CannedTransportOutput implements TransportOutput
 {
 
     private ByteBuffer _cannedOutput;
+    private ByteBuffer _head;
 
     public CannedTransportOutput()
     {
@@ -41,18 +42,32 @@ public class CannedTransportOutput implements TransportOutput
     public void setOutput(String output)
     {
         _cannedOutput = ByteBuffer.wrap(output.getBytes());
+        _head = _cannedOutput.asReadOnlyBuffer();
     }
 
     @Override
-    public ByteBuffer getOutputBuffer()
+    public int pending()
     {
-        return _cannedOutput;
+        return _head.remaining();
     }
 
     @Override
-    public void outputConsumed()
+    public ByteBuffer head()
     {
-        // no-op
+        return _head;
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        _cannedOutput.position(bytes);
+        _head.position(bytes);
+    }
+
+    @Override
+    public void close_head()
+    {
+        // do nothing
     }
 
 

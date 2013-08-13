@@ -233,6 +233,7 @@ class MessengerTest(Test):
 
   def reject_individual(self, msg):
     if self.server.incoming < 10:
+      self.server.work(0)
       return
     while self.server.incoming:
       t = self.server.get(msg)

@@ -22,13 +22,15 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.engine.Transport;
+
 class TransportOutputAdaptor implements TransportOutput
 {
     private TransportOutputWriter _transportOutputWriter;
 
     private final ByteBuffer _outputBuffer;
-
-    private ByteBuffer _readOnlyOutputBufferView;
+    private final ByteBuffer _head;
+    private boolean _head_closed = false;
 
     TransportOutputAdaptor(TransportOutputWriter transportOutputWriter, int maxFrameSize)
     {
@@ -38,29 +40,44 @@ class TransportOutputAdaptor implements TransportOutput
         } else {
             _outputBuffer = newWriteableBuffer(4*1024);
         }
+        _head = _outputBuffer.asReadOnlyBuffer();
+        _head.limit(0);
     }
 
     @Override
-    public ByteBuffer getOutputBuffer()
+    public int pending()
     {
-        _transportOutputWriter.writeInto(_outputBuffer);
-        _outputBuffer.flip();
+        _head_closed = _transportOutputWriter.writeInto(_outputBuffer);
+        _head.limit(_outputBuffer.position());
 
-        _readOnlyOutputBufferView = _outputBuffer.asReadOnlyBuffer();
-        return _readOnlyOutputBufferView;
-    }
-
-    @Override
-    public void outputConsumed()
-    {
-        if(_readOnlyOutputBufferView == null)
-        {
-            throw new IllegalStateException("Illegal invocation with previously calling getOutputBuffer");
+        if (_head_closed && _outputBuffer.position() == 0) {
+            return Transport.END_OF_STREAM;
+        } else {
+            return _outputBuffer.position();
         }
+    }
 
-        _outputBuffer.position(_readOnlyOutputBufferView.position());
-        _readOnlyOutputBufferView = null;
+    @Override
+    public ByteBuffer head()
+    {
+        pending();
+        return _head;
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        _outputBuffer.flip();
+        _outputBuffer.position(bytes);
         _outputBuffer.compact();
+        _head.position(0);
+        _head.limit(_outputBuffer.position());
+    }
+
+    @Override
+    public void close_head()
+    {
+        _transportOutputWriter.closed();
     }
 
 }

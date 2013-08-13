@@ -516,10 +516,6 @@ public class MessengerImpl implements Messenger
                 {
                     connection.close();
                 }
-                else if (connection.getLocalState() == EndpointState.CLOSED)
-                {
-                    c.close();
-                }
             }
 
             if (c.isClosed())
@@ -564,27 +560,26 @@ public class MessengerImpl implements Messenger
     {
         processAllConnectors();
 
-        //wait until timeout expires or until test is true
-        long deadline = timeout < 0 ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
-
-        boolean wait = deadline > System.currentTimeMillis();
-        boolean first = true;
+        // wait until timeout expires or until test is true
+        long now = System.currentTimeMillis();
+        long deadline = timeout < 0 ? Long.MAX_VALUE : now + timeout;
         boolean done = false;
-        boolean woken = false;
 
-        while (first || (!done && wait))
+        while (true)
         {
-            if (wait && !done && !first) {
-                woken = _driver.doWait(timeout < 0 ? 0 : deadline - System.currentTimeMillis());
-            }
+            done = condition.test();
+            long remaining = deadline - now;
+            if (done || (timeout >= 0 && remaining < 0)) break;
+            boolean woken = _driver.doWait(remaining);
             processActive();
-            wait = deadline > System.currentTimeMillis();
-            done = done || woken || condition.test();
-            first = false;
+            if (woken) {
+                throw new InterruptException();
+            }
+            if (timeout >= 0) {
+                now = System.currentTimeMillis();
+            }
         }
-        if (woken) {
-            throw new InterruptException();
-        }
+
         return done;
     }
 

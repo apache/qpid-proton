@@ -35,8 +35,7 @@ import org.apache.qpid.proton.codec.ByteBufferDecoder;
 import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResult.Status;
+import org.apache.qpid.proton.engine.TransportException;
 import org.junit.Test;
 
 /**
@@ -73,8 +72,7 @@ public class SaslFrameParserTest
 
         when(_mockSaslFrameHandler.isDone()).thenReturn(false);
 
-        TransportResult result = _frameParser.input(_saslFrameBytes);
-        result.checkIsOk();
+        _frameParser.input(_saslFrameBytes);
 
         verify(_mockSaslFrameHandler).handle(isA(SaslInit.class), (Binary)isNull());
     }
@@ -88,16 +86,22 @@ public class SaslFrameParserTest
         when(_mockDecoder.readObject()).thenThrow(new DecodeException(exceptionMessage));
 
         // We send a valid frame but the mock decoder has been configured to reject it
-        TransportResult result = _frameParserWithMockDecoder.input(_saslFrameBytes);
-
-        assertEquals(Status.ERROR, result.getStatus());
-        assertThat(result.getErrorDescription(), containsString(exceptionMessage));
+        try {
+            _frameParserWithMockDecoder.input(_saslFrameBytes);
+            fail("expected exception");
+        } catch (TransportException e) {
+            assertThat(e.getMessage(), containsString(exceptionMessage));
+        }
 
         verify(_mockSaslFrameHandler, never()).handle(any(SaslFrameBody.class), any(Binary.class));
 
         // Check that any further interaction causes an error TransportResult.
-        result = _frameParserWithMockDecoder.input(ByteBuffer.wrap("".getBytes()));
-        assertEquals(Status.ERROR, result.getStatus());
+        try {
+            _frameParserWithMockDecoder.input(ByteBuffer.wrap("".getBytes()));
+            fail("expected exception");
+        } catch (TransportException e) {
+            // this is expected
+        }
     }
 
     @Test
@@ -109,21 +113,27 @@ public class SaslFrameParserTest
         when(_mockDecoder.readObject()).thenReturn(nonSaslFrame);
 
         // We send a valid frame but the mock decoder has been configured to reject it
-        TransportResult result = _frameParserWithMockDecoder.input(_saslFrameBytes);
-
-        assertEquals(Status.ERROR, result.getStatus());
-        assertThat(result.getErrorDescription(), containsString("Unexpected frame type encountered."));
+        try {
+            _frameParserWithMockDecoder.input(_saslFrameBytes);
+            fail("expected exception");
+        } catch (TransportException e) {
+            assertThat(e.getMessage(), containsString("Unexpected frame type encountered."));
+        }
 
         verify(_mockSaslFrameHandler, never()).handle(any(SaslFrameBody.class), any(Binary.class));
 
         // Check that any further interaction causes an error TransportResult.
-        result = _frameParserWithMockDecoder.input(ByteBuffer.wrap("".getBytes()));
-        assertEquals(Status.ERROR, result.getStatus());
+        try {
+            _frameParserWithMockDecoder.input(ByteBuffer.wrap("".getBytes()));
+            fail("expected exception");
+        } catch (TransportException e) {
+            // this is expected
+        }
     }
 
     private void sendAmqpSaslHeader(SaslFrameParser saslFrameParser)
     {
-        saslFrameParser.input(ByteBuffer.wrap(AmqpHeader.SASL_HEADER)).checkIsOk();
+        saslFrameParser.input(ByteBuffer.wrap(AmqpHeader.SASL_HEADER));
     }
 
 }

@@ -447,6 +447,12 @@ JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1bytes_1from
 
 
 
+int  pn_transport_push(pn_transport_t *transport, char *DATA, size_t SIZE);
+%ignore pn_transport_push;
+
+int pn_transport_peek(pn_transport_t *transport, char *DATA, size_t SIZE);
+%ignore pn_transport_peek;
+
 ssize_t  pn_transport_input(pn_transport_t *transport, char *DATA, size_t SIZE);
 %ignore pn_transport_input;
 

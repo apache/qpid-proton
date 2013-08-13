@@ -37,7 +37,7 @@ public class TransportOutputAdaptorTest
     @Test
     public void testThatOutputBufferIsReadOnly()
     {
-        assertTrue(_transportOutput.getOutputBuffer().isReadOnly());
+        assertTrue(_transportOutput.head().isReadOnly());
     }
 
     @Test
@@ -46,16 +46,17 @@ public class TransportOutputAdaptorTest
         byte[] testBytes = "testbytes".getBytes();
         _transportOutputWriter.setNextCannedOutput(testBytes);
 
-        final ByteBuffer outputBuffer = _transportOutput.getOutputBuffer();
+        assertEquals(testBytes.length, _transportOutput.pending());
+        final ByteBuffer outputBuffer = _transportOutput.head();
         assertEquals(testBytes.length, outputBuffer.remaining());
 
         byte[] outputBytes = new byte[testBytes.length];
         outputBuffer.get(outputBytes);
         assertByteArrayContentEquals(testBytes, outputBytes);
 
-        _transportOutput.outputConsumed();
+        _transportOutput.pop(outputBuffer.position());
 
-        final ByteBuffer outputBuffer2 = _transportOutput.getOutputBuffer();
+        final ByteBuffer outputBuffer2 = _transportOutput.head();
         assertEquals(0, outputBuffer2.remaining());
     }
 
@@ -71,18 +72,18 @@ public class TransportOutputAdaptorTest
         int chunk2Size = testBytes.length - chunk1Size;
 
         {
-            final ByteBuffer outputBuffer1 = _transportOutput.getOutputBuffer();
+            final ByteBuffer outputBuffer1 = _transportOutput.head();
             byte[] byteArray1 = new byte[chunk1Size];
 
             outputBuffer1.get(byteArray1);
             assertEquals(chunk2Size, outputBuffer1.remaining());
             assertByteArrayContentEquals(copyOfRange(testBytes, 0, chunk1Size), byteArray1);
 
-            _transportOutput .outputConsumed();
+            _transportOutput.pop(outputBuffer1.position());
         }
 
         {
-            final ByteBuffer outputBuffer2 = _transportOutput.getOutputBuffer();
+            final ByteBuffer outputBuffer2 = _transportOutput.head();
             int chunk2Offset = chunk1Size;
             assertByteBufferContentEquals(copyOfRange(testBytes, chunk2Offset, testBytes.length), outputBuffer2);
         }
@@ -99,21 +100,21 @@ public class TransportOutputAdaptorTest
         int initialRemaining = initialBytes.length - chunk1Size;
 
         {
-            final ByteBuffer outputBuffer1 = _transportOutput.getOutputBuffer();
+            final ByteBuffer outputBuffer1 = _transportOutput.head();
             byte[] byteArray1 = new byte[chunk1Size];
 
             outputBuffer1.get(byteArray1);
             assertEquals(initialRemaining, outputBuffer1.remaining());
             assertByteArrayContentEquals(copyOfRange(initialBytes, 0, chunk1Size), byteArray1);
 
-            _transportOutput .outputConsumed();
+            _transportOutput.pop(outputBuffer1.position());
         }
 
         byte[] additionalBytes = "wxyz".getBytes();
         _transportOutputWriter.setNextCannedOutput(additionalBytes);
 
         {
-            final ByteBuffer outputBuffer2 = _transportOutput.getOutputBuffer();
+            final ByteBuffer outputBuffer2 = _transportOutput.head();
 
             byte[] expectedBytes = "cdwxyz".getBytes();
             assertByteBufferContentEquals(expectedBytes, outputBuffer2);
@@ -122,10 +123,11 @@ public class TransportOutputAdaptorTest
 
     private static final class CannedTransportOutputWriter implements TransportOutputWriter
     {
+
         byte[] _cannedOutput = new byte[0];
 
         @Override
-        public void writeInto(ByteBuffer outputBuffer)
+        public boolean writeInto(ByteBuffer outputBuffer)
         {
             int bytesWritten = ByteBufferUtils.pourArrayToBuffer(_cannedOutput, 0, _cannedOutput.length, outputBuffer);
             if(bytesWritten < _cannedOutput.length)
@@ -133,11 +135,17 @@ public class TransportOutputAdaptorTest
                 fail("Unable to write all " + _cannedOutput.length + " bytes of my canned output to the provided output buffer: " + outputBuffer);
             }
             _cannedOutput = new byte[0];
+            return false;
         }
 
         void setNextCannedOutput(byte[] cannedOutput)
         {
             _cannedOutput = cannedOutput;
+        }
+
+        public void closed()
+        {
+            // do nothing
         }
     }
 }

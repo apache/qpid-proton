@@ -120,6 +120,17 @@ ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_link_recv;
 
+int pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH);
+%ignore pn_transport_push;
+
+%rename(pn_transport_peek) wrap_pn_transport_peek;
+%inline %{
+  int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    return pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
+  }
+%}
+%ignore pn_transport_peek;
+
 ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_transport_input;
 

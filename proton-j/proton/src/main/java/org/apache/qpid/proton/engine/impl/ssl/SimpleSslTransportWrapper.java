@@ -34,9 +34,8 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 
@@ -53,9 +52,12 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     private final TransportInput _underlyingInput;
     private final TransportOutput _underlyingOutput;
 
+    private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
 
+    private boolean _head_closed = true;
     private final ByteBuffer _outputBuffer;
+    private final ByteBuffer _head;
 
     /**
      * A buffer for the decoded bytes that will be passed to _underlyingInput.
@@ -73,13 +75,6 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     private String _protocolName;
 
 
-    /**
-     * We store the last input result so that we know not to process any more input
-     * if it failed.
-     */
-    private TransportResult _lastInputResult = TransportResultFactory.ok();
-
-
     SimpleSslTransportWrapper(ProtonSslEngine sslEngine, TransportInput underlyingInput, TransportOutput underlyingOutput)
     {
         _underlyingInput = underlyingInput;
@@ -93,6 +88,8 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         // as stated in SSLEngine JavaDoc.
         _inputBuffer = newWriteableBuffer(packetSize);
         _outputBuffer = newWriteableBuffer(packetSize);
+        _head = _outputBuffer.asReadOnlyBuffer();
+        _head.limit(0);
 
         _decodedInputBuffer = newReadableBuffer(effectiveAppBufferMax);
 
@@ -111,11 +108,10 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
      * - On exit, it is still readable and its "remaining" bytes are those that we were unable
      * to unwrap (e.g. if they don't form a whole packet).
      */
-    private TransportResult unwrapInput()
+    private void unwrapInput() throws TransportException
     {
         try
         {
-            TransportResult underlyingResult = TransportResultFactory.ok();
             boolean keepLooping = true;
             do
             {
@@ -152,21 +148,19 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                         _logger.warning("WARN unexpectedly produced bytes for the underlying input when handshaking");
                     }
 
-                    underlyingResult = pourAll(_decodedInputBuffer, _underlyingInput);
+                    pourAll(_decodedInputBuffer, _underlyingInput);
                 }
 
                 keepLooping = handshakeStatus == HandshakeStatus.NOT_HANDSHAKING
-                            && sslResultStatus != Status.BUFFER_UNDERFLOW
-                            && underlyingResult.isOk();
+                            && sslResultStatus != Status.BUFFER_UNDERFLOW;
             }
             while(keepLooping);
-
-            return underlyingResult;
         }
         catch(SSLException e)
         {
-            return TransportResultFactory.error(new TransportException(
-                    "Problem during input. useClientMode: " + _sslEngine.getUseClientMode(), e));
+            throw new TransportException("Problem during input. useClientMode: "
+                                         + _sslEngine.getUseClientMode(),
+                                         e);
         }
     }
 
@@ -181,7 +175,14 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         boolean keepWrapping = hasSpaceForSslPacket(_outputBuffer);
         while(keepWrapping)
         {
-            ByteBuffer clearOutputBuffer = _underlyingOutput.getOutputBuffer();
+            int pending = _underlyingOutput.pending();
+            if (pending == Transport.END_OF_STREAM)
+            {
+                _head_closed = true;
+                keepWrapping = false;
+            }
+
+            ByteBuffer clearOutputBuffer = _underlyingOutput.head();
             try
             {
                 if(clearOutputBuffer.hasRemaining())
@@ -218,7 +219,7 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             }
             finally
             {
-                _underlyingOutput.outputConsumed();
+                _underlyingOutput.pop(clearOutputBuffer.position());
             }
         }
     }
@@ -288,21 +289,35 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     }
 
     @Override
-    public ByteBuffer getInputBuffer()
+    public int capacity()
     {
-        _lastInputResult.checkIsOk();
+        if (_tail_closed) return Transport.END_OF_STREAM;
+        return _inputBuffer.remaining();
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
+        if (_tail_closed) throw new TransportException("tail closed");
         return _inputBuffer;
     }
 
     @Override
-    public TransportResult processInput()
+    public void process() throws TransportException
     {
+        if (_tail_closed) throw new TransportException("tail closed");
+
         _inputBuffer.flip();
 
         try
         {
-            _lastInputResult = unwrapInput();
-            return _lastInputResult;
+            unwrapInput();
+        }
+        catch (TransportException e)
+        {
+            _inputBuffer.position(_inputBuffer.limit());
+            _tail_closed = true;
+            throw e;
         }
         finally
         {
@@ -310,31 +325,51 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         }
     }
 
-    /*
-     * Pre-condition of {@link #_outputBuffer}: it's writeable
-     * Post-condition of {@link #_outputBuffer}: it's readable
-     */
     @Override
-    public ByteBuffer getOutputBuffer()
+    public void close_tail()
     {
-        wrapOutput();
-        _outputBuffer.flip();
-
-        _readOnlyOutputBufferView = _outputBuffer.asReadOnlyBuffer();
-        return _readOnlyOutputBufferView;
+        try {
+            _underlyingInput.close_tail();
+        } finally {
+            _tail_closed = true;
+        }
     }
 
     @Override
-    public void outputConsumed()
+    public int pending()
     {
-        if(_readOnlyOutputBufferView == null)
-        {
-            throw new IllegalStateException("Illegal invocation with previously calling getOutputBuffer");
-        }
+        wrapOutput();
+        _head.limit(_outputBuffer.position());
 
-        _outputBuffer.position(_readOnlyOutputBufferView.position());
-        _readOnlyOutputBufferView = null;
+        if (_head_closed && _outputBuffer.position() == 0)
+        {
+            return Transport.END_OF_STREAM;
+        } else {
+            return _outputBuffer.position();
+        }
+    }
+
+    @Override
+    public ByteBuffer head()
+    {
+        pending();
+        return _head;
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        _outputBuffer.flip();
+        _outputBuffer.position(bytes);
         _outputBuffer.compact();
+        _head.position(0);
+        _head.limit(_outputBuffer.position());
+    }
+
+    @Override
+    public void close_head()
+    {
+        _underlyingOutput.close_head();
     }
 
 

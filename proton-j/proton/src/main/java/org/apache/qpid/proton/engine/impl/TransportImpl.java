@@ -253,7 +253,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void writeInto(ByteBuffer outputBuffer)
+    public boolean writeInto(ByteBuffer outputBuffer)
     {
         processHeader();
         processOpen();
@@ -271,6 +271,8 @@ public class TransportImpl extends EndpointImpl
         processClose();
 
         _frameWriter.readBytes(outputBuffer);
+
+        return _isCloseSent;
     }
 
     @Override
@@ -331,7 +333,8 @@ public class TransportImpl extends EndpointImpl
                     TransportSession transportSession = getTransportState(session);
 
                     if(link.getLocalState() == EndpointState.CLOSED
-                       && transportLink.isLocalHandleSet())
+                       && transportLink.isLocalHandleSet()
+                       && !_isCloseSent)
                     {
                         if(!(link instanceof SenderImpl)
                            || link.getQueued() == 0
@@ -826,7 +829,8 @@ public class TransportImpl extends EndpointImpl
                 if((endpoint instanceof SessionImpl)
                    && (session = (SessionImpl)endpoint).getLocalState() == EndpointState.CLOSED
                    && (transportSession = session.getTransportSession()).isLocalChannelSet()
-                   && !hasSendableMessages(session))
+                   && !hasSendableMessages(session)
+                   && !_isCloseSent)
                 {
                     int channel = freeLocalChannel(transportSession);
                     End end = new End();
@@ -1134,7 +1138,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void handleFrame(TransportFrame frame)
+    public boolean handleFrame(TransportFrame frame)
     {
         if (!isHandlingFrames())
         {
@@ -1149,6 +1153,15 @@ public class TransportImpl extends EndpointImpl
         }
 
         frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
+        return _closeReceived;
+    }
+
+    @Override
+    public void closed()
+    {
+        if (!_closeReceived) {
+            throw new TransportException("connection aborted");
+        }
     }
 
     @Override
@@ -1172,35 +1185,86 @@ public class TransportImpl extends EndpointImpl
     @Override
     public ByteBuffer getInputBuffer()
     {
-        init();
-        _lastTransportResult.checkIsOk();
-        _lastInputBuffer = _inputProcessor.getInputBuffer();
-        return _lastInputBuffer;
+        return tail();
     }
 
     @Override
     public TransportResult processInput()
     {
-        if (_lastInputBuffer == null)
-        {
-            throw new IllegalStateException("Unexpected invocation of processInput(), it is required to invoke getInputBuffer() first");
+        try {
+            process();
+            return TransportResultFactory.ok();
+        } catch (TransportException e) {
+            return TransportResultFactory.error(e);
         }
-
-        _lastTransportResult = _inputProcessor.processInput();
-        return _lastTransportResult;
     }
 
     @Override
     public ByteBuffer getOutputBuffer()
     {
-        init();
-        return _outputProcessor.getOutputBuffer();
+        pending();
+        return head();
     }
 
     @Override
     public void outputConsumed()
     {
-        _outputProcessor.outputConsumed();
+        pop(_outputProcessor.head().position());
+    }
+
+    @Override
+    public int capacity()
+    {
+        init();
+        return _inputProcessor.capacity();
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
+        init();
+        return _inputProcessor.tail();
+    }
+
+    @Override
+    public void process() throws TransportException
+    {
+        init();
+        _inputProcessor.process();
+    }
+
+    @Override
+    public void close_tail()
+    {
+        init();
+        _inputProcessor.close_tail();
+    }
+
+    @Override
+    public int pending()
+    {
+        init();
+        return _outputProcessor.pending();
+    }
+
+    @Override
+    public ByteBuffer head()
+    {
+        init();
+        return _outputProcessor.head();
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        init();
+        _outputProcessor.pop(bytes);
+    }
+
+    @Override
+    public void close_head()
+    {
+        _outputProcessor.close_head();
     }
 
     @Override

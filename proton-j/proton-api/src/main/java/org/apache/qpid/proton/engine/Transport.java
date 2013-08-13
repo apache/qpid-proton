@@ -72,6 +72,17 @@ public interface Transport extends Endpoint
 
     public void bind(Connection connection);
 
+    public int capacity();
+    public ByteBuffer tail();
+    public void process() throws TransportException;
+    public void close_tail();
+
+
+    public int pending();
+    public ByteBuffer head();
+    public void pop(int bytes);
+    public void close_head();
+
     /**
      * Processes the provided input.
      *

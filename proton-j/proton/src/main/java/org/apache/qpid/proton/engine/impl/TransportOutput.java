@@ -26,13 +26,13 @@ import org.apache.qpid.proton.engine.Transport;
 
 public interface TransportOutput
 {
-    /**
-     * @see Transport#getOutputBuffer()
-     */
-    ByteBuffer getOutputBuffer();
 
-    /**
-     * @see Transport#outputConsumed()
-     */
-    void outputConsumed();
+    int pending();
+
+    ByteBuffer head();
+
+    void pop(int bytes);
+
+    void close_head();
+
 }

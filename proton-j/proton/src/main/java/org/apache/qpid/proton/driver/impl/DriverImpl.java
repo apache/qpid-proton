@@ -29,11 +29,12 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Set;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,12 +45,13 @@ import org.apache.qpid.proton.driver.Listener;
 public class DriverImpl implements Driver
 {
     private Selector _selector;
-    private Set<SelectionKey> _selectedKeys = Collections.emptySet();
     private Collection<Listener> _listeners = new LinkedList();
     private Collection<Connector> _connectors = new LinkedList();
     private Logger _logger = Logger.getLogger("proton.driver");
     private Object _wakeupLock = new Object();
     private boolean _woken = false;
+    private Queue<ConnectorImpl> _selectedConnectors = new ArrayDeque<ConnectorImpl>();
+    private Queue<ListenerImpl> _selectedListeners = new ArrayDeque<ListenerImpl>();
 
     DriverImpl() throws IOException
     {
@@ -73,17 +75,30 @@ public class DriverImpl implements Driver
                 woken = _woken;
             }
 
-            if (woken) {
+            if (woken || timeout == 0) {
                 _selector.selectNow();
+            } else if (timeout < 0) {
+                _selector.select(0);
             } else {
                 _selector.select(timeout);
             }
-            _selectedKeys = _selector.selectedKeys();
 
             synchronized (_wakeupLock) {
                 woken = woken || _woken;
                 _woken = false;
             }
+
+            for (SelectionKey key : _selector.selectedKeys()) {
+                if (key.isAcceptable()) {
+                    ListenerImpl l = (ListenerImpl) key.attachment();
+                    l.selected();
+                } else {
+                    ConnectorImpl c = (ConnectorImpl) key.attachment();
+                    c.selected();
+                }
+            }
+
+            _selector.selectedKeys().clear();
 
             return woken;
         }
@@ -94,90 +109,34 @@ public class DriverImpl implements Driver
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    void selectListener(ListenerImpl l)
+    {
+        _selectedListeners.add(l);
+    }
+
     public Listener listener()
     {
-        Listener listener = null;
-        listener = getFirstListener();
-        if(listener == null)
-        {
-            try
-            {
-                selectNow();
-            }
-            catch (IOException e)
-            {
-                _logger.log(Level.SEVERE, "Exception when selecting",e);
-                throw new RuntimeException(e);
-            }
-            listener = getFirstListener();
+        ListenerImpl listener = _selectedListeners.poll();
+        if (listener != null) {
+            listener.unselected();
         }
+
         return listener;
     }
 
-    private void selectNow() throws IOException
+    void selectConnector(ConnectorImpl c)
     {
-        _selector.selectNow();
-        _selectedKeys = _selector.selectedKeys();
+        _selectedConnectors.add(c);
     }
 
-    @SuppressWarnings("rawtypes")
-    private Listener getFirstListener()
-    {
-        Iterator<SelectionKey> selectedIter = _selectedKeys.iterator();
-
-        while(selectedIter.hasNext())
-        {
-            SelectionKey key = selectedIter.next();
-            selectedIter.remove();
-            if(key.isAcceptable())
-            {
-                return (Listener) key.attachment();
-            }
-        }
-        return null;
-    }
-
-    @SuppressWarnings("rawtypes")
     public Connector connector()
     {
-        Connector connector = null;
-        connector = getFirstConnector();
-        if(connector == null)
-        {
-            try
-            {
-                selectNow();
-            }
-            catch (IOException e)
-            {
-                _logger.log(Level.SEVERE, "Exception when selecting",e);
-                throw new RuntimeException(e);
-            }
-            connector = getFirstConnector();
+        ConnectorImpl connector = _selectedConnectors.poll();
+        if (connector != null) {
+            connector.unselected();
         }
         return connector;
     }
-
-    @SuppressWarnings("rawtypes")
-    private Connector getFirstConnector()
-    {
-        Iterator<SelectionKey> selectedIter = _selectedKeys.iterator();
-
-        while(selectedIter.hasNext())
-        {
-            SelectionKey key = selectedIter.next();
-            selectedIter.remove();
-            if(key.isReadable() || key.isWritable())
-            {
-                ConnectorImpl c = (ConnectorImpl) key.attachment();
-                c.selected();
-                return c;
-            }
-        }
-        return null;
-    }
-
 
     public void destroy()
     {

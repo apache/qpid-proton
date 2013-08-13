@@ -575,13 +575,17 @@ void pn_connector_process(pn_connector_t *c)
             c->input_done = true;
             pn_transport_close_tail( transport );
           } else {
-            if (pn_transport_push(transport, (size_t) n) < 0) {
+            if (pn_transport_process(transport, (size_t) n) < 0) {
               c->status &= ~PN_SEL_RD;
               c->input_done = true;
             }
           }
         }
-      } else if (capacity < 0) {
+      }
+
+      capacity = pn_transport_capacity(transport);
+
+      if (capacity < 0) {
         c->status &= ~PN_SEL_RD;
         c->input_done = true;
       }

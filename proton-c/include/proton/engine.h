@@ -317,8 +317,9 @@ PN_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, si
  * such as encountering an error condition or reaching the end of
  * stream state, a negative value will be returned indicating the
  * condition. If an error is indicated, futher details can be obtained
- * from ::pn_transport_error. Calls to ::pn_transport_push may alter
- * the value of this pointer. See ::pn_transport_push for details.
+ * from ::pn_transport_error. Calls to ::pn_transport_process may
+ * alter the value of this pointer. See ::pn_transport_process for
+ * details.
  *
  * @param[in] transport the transport
  * @return the free space in the transport, PN_EOS or error code if < 0
@@ -327,26 +328,36 @@ PN_EXTERN ssize_t pn_transport_capacity(pn_transport_t *transport);
 
 /** Return the transport's tail pointer. The amount of free space
  * following this pointer is reported by ::pn_transport_capacity.
- * Calls to ::pn_transport_push may alther the value of this pointer.
- * See ::pn_transport_push for details.
+ * Calls to ::pn_transport_process may alther the value of this
+ * pointer. See ::pn_transport_process for details.
  *
  * @param[in] transport the transport
  * @return a pointer to the transport's input buffer, NULL if no capacity available.
  */
 PN_EXTERN char *pn_transport_tail(pn_transport_t *transport);
 
-/** Push input data following the tail pointer into the transport.
- * Calling this function will cause the transport to consume ::size
- * bytes of input occupying the free space following the tail pointer.
- * Calls to this function may change the value of ::pn_transport_tail,
- * as well as the amount of free space reported by
+/** Pushes the supplied bytes into the tail of the transport. This is
+ * equivalent to copying ::size bytes afther the tail pointer and then
+ * calling ::pn_transport_process with an argument of ::size. It is an
+ * error to call this with a size larger than the capacity reported by
  * ::pn_transport_capacity.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+PN_EXTERN int pn_transport_push(pn_transport_t *transport, const char *src, size_t size);
+
+/** Process input data following the tail pointer. Calling this
+ * function will cause the transport to consume ::size bytes of input
+ * occupying the free space following the tail pointer. Calls to this
+ * function may change the value of ::pn_transport_tail, as well as
+ * the amount of free space reported by ::pn_transport_capacity.
  *
  * @param[in] transport the transport
  * @param[size] the amount of data written to the transport's input buffer
  * @return 0 on success, or error code if < 0
  */
-PN_EXTERN int pn_transport_push(pn_transport_t *transport, size_t size);
+PN_EXTERN int pn_transport_process(pn_transport_t *transport, size_t size);
 
 /** Indicate that the input has reached End Of Stream (EOS).  This
  * tells the transport that no more input will be forthcoming.
@@ -376,10 +387,19 @@ PN_EXTERN ssize_t pn_transport_pending(pn_transport_t *transport);
  * ::pn_transport_pop may alter this pointer and any data it
  * references. See ::pn_transport_pop for details.
  *
- * @param[in] the transport
+ * @param[in] transport the transport
  * @return a pointer to the transport's output buffer, or NULL if no pending output.
  */
 PN_EXTERN const char *pn_transport_head(pn_transport_t *transport);
+
+/** Copies ::size bytes from the head of the transport to the ::dst
+ * pointer. It is an error to call this with a value of ::size that is
+ * greater than the value reported by ::pn_transport_pending.
+ *
+ * @param[in] transport the transport
+ * @return 0 on success, or error code if < 0
+ */
+PN_EXTERN int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size);
 
 /** Removes ::size bytes of output from the pending output queue
  * following the transport's head pointer. Calls to this function may

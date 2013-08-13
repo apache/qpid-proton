@@ -21,17 +21,13 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.TransportResultFactory.error;
-import static org.apache.qpid.proton.engine.TransportResultFactory.ok;
-
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.security.SaslFrameBody;
 import org.apache.qpid.proton.codec.ByteBufferDecoder;
 import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.TransportException;
 
 class SaslFrameParser
 {
@@ -67,9 +63,9 @@ class SaslFrameParser
     /**
      * Parse the provided SASL input and call my SASL frame handler with the result
      */
-    public TransportResult input(ByteBuffer input)
+    public void input(ByteBuffer input) throws TransportException
     {
-        TransportResult frameParsingError = null;
+        TransportException frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
@@ -123,9 +119,9 @@ class SaslFrameParser
                 case PRE_PARSE:
                     if(size < 8)
                     {
-                        frameParsingError = error("specified frame size %d smaller than minimum frame header "
-                                                         + "size %d",
-                                                         _size, 8);
+                        frameParsingError = new TransportException("specified frame size %d smaller than minimum frame header "
+                                                                   + "size %d",
+                                                                   _size, 8);
                         state = State.ERROR;
                         break;
                     }
@@ -164,13 +160,13 @@ class SaslFrameParser
 
                     if(dataOffset < 8)
                     {
-                        frameParsingError = error("specified frame data offset %d smaller than minimum frame header size %d", dataOffset, 8);
+                        frameParsingError = new TransportException("specified frame data offset %d smaller than minimum frame header size %d", dataOffset, 8);
                         state = State.ERROR;
                         break;
                     }
                     else if(dataOffset > size)
                     {
-                        frameParsingError = error("specified frame data offset %d larger than the frame size %d", dataOffset, _size);
+                        frameParsingError = new TransportException("specified frame data offset %d larger than the frame size %d", dataOffset, _size);
                         state = State.ERROR;
                         break;
                     }
@@ -184,7 +180,7 @@ class SaslFrameParser
 
                     if(type != SaslImpl.SASL_FRAME_TYPE)
                     {
-                        frameParsingError = error("unknown frame type: %d", type);
+                        frameParsingError = new TransportException("unknown frame type: %d", type);
                         state = State.ERROR;
                         break;
                     }
@@ -237,15 +233,15 @@ class SaslFrameParser
                         else
                         {
                             state = State.ERROR;
-                            frameParsingError = error("Unexpected frame type encountered."
-                                   + " Found a %s which does not implement %s",
-                                    val == null ? "null" : val.getClass(), SaslFrameBody.class);
+                            frameParsingError = new TransportException("Unexpected frame type encountered."
+                                                                       + " Found a %s which does not implement %s",
+                                                                       val == null ? "null" : val.getClass(), SaslFrameBody.class);
                         }
                     }
                     catch (DecodeException ex)
                     {
                         state = State.ERROR;
-                        frameParsingError = error(ex);
+                        frameParsingError = new TransportException(ex);
                     }
                     break;
                 case ERROR:
@@ -261,16 +257,12 @@ class SaslFrameParser
         {
             if(frameParsingError != null)
             {
-                return frameParsingError;
+                throw frameParsingError;
             }
             else
             {
-                return TransportResultFactory.error("Unable to parse, probably because of a previous error");
+                throw new TransportException("Unable to parse, probably because of a previous error");
             }
-        }
-        else
-        {
-            return ok();
         }
     }
 

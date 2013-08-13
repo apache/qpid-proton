@@ -27,12 +27,16 @@ public interface FrameHandler
     /**
      * @throws IllegalStateException if I am not currently accepting input
      * @see #isHandlingFrames()
+     * @returns false on end of stream
      */
-    void handleFrame(TransportFrame frame);
+    boolean handleFrame(TransportFrame frame);
+
+    void closed();
 
     /**
      * Returns whether I am currently able to handle frames.
      * MUST be checked before calling {@link #handleFrame(TransportFrame)}.
      */
     boolean isHandlingFrames();
+
 }

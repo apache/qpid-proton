@@ -72,28 +72,29 @@ public class SslHandshakeSniffingTransportWrapperTest
         ByteBuffer underlyingOutputBuffer = ByteBuffer.wrap(output);
 
         // set up underlying transport
-        when(transportThatShouldBeUsed.getInputBuffer()).thenReturn(underlyingInputBuffer);
-        when(transportThatShouldBeUsed.getOutputBuffer()).thenReturn(underlyingOutputBuffer);
+        when(transportThatShouldBeUsed.tail()).thenReturn(underlyingInputBuffer);
+        when(transportThatShouldBeUsed.head()).thenReturn(underlyingOutputBuffer);
 
         // do input and verify underlying calls were made
-        ByteBuffer inputBuffer = _sniffingWrapper.getInputBuffer();
+        ByteBuffer inputBuffer = _sniffingWrapper.tail();
         inputBuffer.put(input);
-        _sniffingWrapper.processInput();
+        _sniffingWrapper.process();
 
-        verify(transportThatShouldBeUsed).getInputBuffer();
-        verify(transportThatShouldBeUsed).processInput();
+        verify(transportThatShouldBeUsed).tail();
+        verify(transportThatShouldBeUsed).process();
 
         // check the wrapped input actually received the expected bytes
         underlyingInputBuffer.flip();
         assertByteBufferContentEquals(input, underlyingInputBuffer);
 
         // do output and check we get the correct transport's output
-        ByteBuffer outputBuffer = _sniffingWrapper.getOutputBuffer();
-        verify(transportThatShouldBeUsed).getOutputBuffer();
+        ByteBuffer outputBuffer = _sniffingWrapper.head();
+        verify(transportThatShouldBeUsed).head();
 
         assertByteBufferContentEquals(output, outputBuffer);
-        _sniffingWrapper.outputConsumed();
-        verify(transportThatShouldBeUsed).outputConsumed();
+        int consumed = outputBuffer.position();
+        _sniffingWrapper.pop(consumed);
+        verify(transportThatShouldBeUsed).pop(consumed);
 
         verifyZeroInteractionsWithOtherTransport(transportThatShouldBeUsed);
     }
@@ -105,10 +106,10 @@ public class SslHandshakeSniffingTransportWrapperTest
 
         try
         {
-            _sniffingWrapper.getInputBuffer().put(sourceBuffer);
+            _sniffingWrapper.tail().put(sourceBuffer);
 
             _expectedException.expect(IllegalArgumentException.class);
-            _sniffingWrapper.processInput();
+            _sniffingWrapper.process();
         }
         finally
         {
@@ -150,10 +151,10 @@ public class SslHandshakeSniffingTransportWrapperTest
             String expectedCipherName, String expectedProtocolName)
     {
         ByteBuffer underlyingInputBuffer = ByteBuffer.allocate(1024);
-        when(transportThatShouldBeUsed.getInputBuffer()).thenReturn(underlyingInputBuffer);
+        when(transportThatShouldBeUsed.tail()).thenReturn(underlyingInputBuffer);
 
-        _sniffingWrapper.getInputBuffer().put(input);
-        _sniffingWrapper.processInput();
+        _sniffingWrapper.tail().put(input);
+        _sniffingWrapper.process();
 
         assertEquals(expectedCipherName, _sniffingWrapper.getCipherName());
         assertEquals(expectedProtocolName, _sniffingWrapper.getProtocolName());

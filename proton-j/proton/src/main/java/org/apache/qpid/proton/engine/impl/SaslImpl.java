@@ -44,8 +44,8 @@ import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
 
 public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>, SaslFrameHandler
 {
@@ -56,7 +56,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private final DecoderImpl _decoder = new DecoderImpl();
     private final EncoderImpl _encoder = new EncoderImpl(_decoder);
 
+    private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
+    private boolean _head_closed = false;
     private final ByteBuffer _outputBuffer;
     private final FrameWriter _frameWriter;
 
@@ -491,17 +493,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         private final TransportOutput _underlyingOutput;
         private boolean _outputComplete;
 
-        /**
-         * We store the last result when processing input so that
-         * we know not to process any more input if it was an error.
-         */
-        private TransportResult _lastInputResult = TransportResultFactory.ok();
-        private ByteBuffer _readOnlyOutputBufferView;
+        private ByteBuffer _head;
 
         private SaslTransportWrapper(TransportInput input, TransportOutput output)
         {
             _underlyingInput = input;
             _underlyingOutput = output;
+            _head = _outputBuffer.asReadOnlyBuffer();
+            _head.limit(0);
         }
 
         private void fillOutputBuffer()
@@ -519,14 +518,22 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             }
             else
             {
-                ByteBuffer outputBuffer = _underlyingOutput.getOutputBuffer();
-                pour(outputBuffer, _outputBuffer);
-
-                _underlyingOutput.outputConsumed();
-
-                if(_logger.isLoggable(Level.FINER))
+                int pending = _underlyingOutput.pending();
+                if (pending == Transport.END_OF_STREAM)
                 {
-                    _logger.log(Level.FINER, SaslImpl.this + " filled output buffer with plain output");
+                    _head_closed = true;
+                }
+                else
+                {
+                    ByteBuffer outputBuffer = _underlyingOutput.head();
+                    pour(outputBuffer, _outputBuffer);
+
+                    _underlyingOutput.pop(outputBuffer.position());
+
+                    if(_logger.isLoggable(Level.FINER))
+                    {
+                        _logger.log(Level.FINER, SaslImpl.this + " filled output buffer with plain output");
+                    }
                 }
             }
         }
@@ -546,24 +553,38 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         }
 
         @Override
-        public ByteBuffer getInputBuffer()
+        public int capacity()
+        {
+            if (_tail_closed) return Transport.END_OF_STREAM;
+            if (isInputInSaslMode()) {
+                return _inputBuffer.remaining();
+            } else {
+                int capacity = _underlyingInput.capacity();
+                if (capacity < 0) {
+                    return capacity;
+                } else {
+                    return _inputBuffer.remaining();
+                }
+            }
+        }
+
+        @Override
+        public ByteBuffer tail()
         {
             // TODO if the SASL negotiation is complete, it would be more efficient
             // to return the underlying transport input's buffer.
             // The same optimisation would be possible in getOutputBuffer
-            _lastInputResult.checkIsOk();
             return _inputBuffer;
         }
 
         @Override
-        public TransportResult processInput()
+        public void process() throws TransportException
         {
             _inputBuffer.flip();
 
             try
             {
-                _lastInputResult = reallyProcessInput();
-                return _lastInputResult;
+                reallyProcessInput();
             }
             finally
             {
@@ -571,10 +592,14 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             }
         }
 
-        private TransportResult reallyProcessInput()
+        @Override
+        public void close_tail()
         {
-            TransportResult transportResult = TransportResultFactory.ok();
+            _tail_closed = true;
+        }
 
+        private void reallyProcessInput() throws TransportException
+        {
             if(isInputInSaslMode())
             {
                 if(_logger.isLoggable(Level.FINER))
@@ -582,36 +607,58 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                     _logger.log(Level.FINER, SaslImpl.this + " about to call input.");
                 }
 
-                transportResult = _frameParser.input(_inputBuffer);
+                _frameParser.input(_inputBuffer);
             }
 
-            if(!isInputInSaslMode() && transportResult.isOk())
+            if(!isInputInSaslMode())
             {
                 if(_logger.isLoggable(Level.FINER))
                 {
                     _logger.log(Level.FINER, SaslImpl.this + " about to call plain input");
                 }
 
-                transportResult = pourAll(_inputBuffer, _underlyingInput);
+                int bytes = pourAll(_inputBuffer, _underlyingInput);
+                if (bytes == Transport.END_OF_STREAM)
+                {
+                    _tail_closed = true;
+                }
             }
-            return transportResult;
         }
 
         @Override
-        public ByteBuffer getOutputBuffer()
+        public int pending()
         {
             fillOutputBuffer();
-            _outputBuffer.flip();
+            _head.limit(_outputBuffer.position());
 
-            _readOnlyOutputBufferView = _outputBuffer.asReadOnlyBuffer();
-            return _readOnlyOutputBufferView;
+            if (_head_closed && _outputBuffer.position() == 0) {
+                return Transport.END_OF_STREAM;
+            } else {
+                return _outputBuffer.position();
+            }
         }
 
         @Override
-        public void outputConsumed()
+        public ByteBuffer head()
         {
-            _outputBuffer.position(_readOnlyOutputBufferView.position());
+            pending();
+            return _head;
+        }
+
+        @Override
+        public void pop(int bytes)
+        {
+            _outputBuffer.flip();
+            _outputBuffer.position(bytes);
             _outputBuffer.compact();
+            _head.position(0);
+            _head.limit(_outputBuffer.position());
+        }
+
+        @Override
+        public void close_head()
+        {
+            _underlyingOutput.close_head();
         }
 
     }

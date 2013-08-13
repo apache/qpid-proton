@@ -22,16 +22,15 @@ package org.apache.qpid.proton.engine.impl.ssl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 
 class RememberingTransportInput implements TransportInput
 {
     private StringBuilder _receivedInput = new StringBuilder();
-    private ByteBuffer _buffer;
-    private TransportResult _nextErrorResult;
+    private String _nextError;
     private int _inputBufferSize = 1024;
+    private ByteBuffer _buffer = ByteBuffer.allocate(_inputBufferSize);
 
     String getAcceptedInput()
     {
@@ -45,30 +44,41 @@ class RememberingTransportInput implements TransportInput
     }
 
     @Override
-    public ByteBuffer getInputBuffer()
+    public int capacity()
     {
-        _buffer = ByteBuffer.allocate(_inputBufferSize);
+        return _buffer.remaining();
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
         return _buffer;
     }
 
     @Override
-    public TransportResult processInput()
+    public void process() throws TransportException
     {
-        if(_nextErrorResult != null)
+        if(_nextError != null)
         {
-            return _nextErrorResult;
+            throw new TransportException(_nextError);
         }
 
         _buffer.flip();
         byte[] receivedInputBuffer = new byte[_buffer.remaining()];
         _buffer.get(receivedInputBuffer);
+        _buffer.compact();
         _receivedInput.append(new String(receivedInputBuffer));
-        return TransportResultFactory.ok();
     }
 
-    public void rejectNextInput(TransportResult nextErrorResult)
+    @Override
+    public void close_tail()
     {
-        _nextErrorResult = nextErrorResult;
+        // do nothing
+    }
+
+    public void rejectNextInput(String nextError)
+    {
+        _nextError = nextError;
     }
 
     public void setInputBufferSize(int inputBufferSize)

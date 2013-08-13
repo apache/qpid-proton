@@ -23,6 +23,7 @@ import static org.apache.qpid.proton.engine.impl.AmqpHeader.HEADER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.junit.matchers.JUnitMatchers.containsString;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
@@ -76,68 +77,70 @@ public class FrameParserTest
     @Test
     public void testInputOfInvalidProtocolHeader_causesErrorAndRefusesFurtherInput()
     {
-        ByteBuffer buffer = _frameParser.getInputBuffer();
-        buffer.put("hello".getBytes());
-        TransportResult result = _frameParser.processInput();
-
         String headerMismatchMessage = "AMQP header mismatch";
-        assertThat(result.getErrorDescription(), containsString(headerMismatchMessage));
-        assertEquals(Status.ERROR, result.getStatus());
+        ByteBuffer buffer = _frameParser.tail();
+        buffer.put("hello".getBytes());
+        try {
+            _frameParser.process();
+            fail("expected exception");
+        } catch (TransportException e) {
+            assertThat(e.getMessage(), containsString(headerMismatchMessage));
+        }
 
         _expectedException.expect(TransportException.class);
         _expectedException.expectMessage(headerMismatchMessage);
-        _frameParser.getInputBuffer();
+        _frameParser.tail();
     }
 
     @Test
     public void testInputOfValidProtocolHeader()
     {
-        ByteBuffer buffer = _frameParser.getInputBuffer();
+        ByteBuffer buffer = _frameParser.tail();
         buffer.put(HEADER);
-        _frameParser.processInput().checkIsOk();
+        _frameParser.process();
 
-        assertNotNull(_frameParser.getInputBuffer());
+        assertNotNull(_frameParser.tail());
     }
 
     @Test
     public void testInputOfValidProtocolHeaderInMultipleChunks()
     {
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
             buffer.put(HEADER, 0, 2);
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
 
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
             buffer.put(HEADER, 2, HEADER.length - 2);
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
 
-        assertNotNull(_frameParser.getInputBuffer());
+        assertNotNull(_frameParser.tail());
     }
 
     @Test
     public void testInputOfValidFrame_invokesFrameTransportCallback()
     {
-        sendHeader().checkIsOk();
+        sendHeader();
 
         // now send an open frame
-        ByteBuffer buffer = _frameParser.getInputBuffer();
+        ByteBuffer buffer = _frameParser.tail();
 
         Open openFrame = generateOpenFrame();
         int channel = 0;
         byte[] frame = _amqpFramer.generateFrame(channel, openFrame);
         buffer.put(frame);
 
-        _frameParser.processInput().checkIsOk();
+        _frameParser.process();
         verify(_mockFrameHandler).handleFrame(frameMatching(channel, openFrame));
     }
 
     @Test
     public void testInputOfFrameInMultipleChunks_invokesFrameTransportCallback()
     {
-        sendHeader().checkIsOk();
+        sendHeader();
 
         Open openFrame = generateOpenFrame();
         int channel = 0;
@@ -148,34 +151,34 @@ public class FrameParserTest
 
         // send the first chunk
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             buffer.put(frame, 0, lengthOfFirstChunk);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
 
             verify(_mockFrameHandler, never()).handleFrame(any(TransportFrame.class));
         }
 
         // send the second chunk
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             int secondChunkOffset = lengthOfFirstChunk;
             buffer.put(frame, secondChunkOffset, lengthOfSecondChunk);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
             verify(_mockFrameHandler, never()).handleFrame(any(TransportFrame.class));
         }
 
         // send the third and final chunk
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             int thirdChunkOffset = lengthOfFirstChunk + lengthOfSecondChunk;
             buffer.put(frame, thirdChunkOffset, lengthOfThirdChunk);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
             verify(_mockFrameHandler).handleFrame(frameMatching(channel, openFrame));
         }
     }
@@ -183,7 +186,7 @@ public class FrameParserTest
     @Test
     public void testInputOfTwoFrames_invokesFrameTransportTwice()
     {
-        sendHeader().checkIsOk();
+        sendHeader();
 
         int channel = 0;
         Open openFrame = generateOpenFrame();
@@ -192,11 +195,11 @@ public class FrameParserTest
         Close closeFrame = generateCloseFrame();
         byte[] closeFrameBytes = _amqpFramer.generateFrame(channel, closeFrame);
 
-        _frameParser.getInputBuffer()
+        _frameParser.tail()
             .put(openFrameBytes)
             .put(closeFrameBytes);
 
-        _frameParser.processInput().checkIsOk();
+        _frameParser.process();
 
         InOrder inOrder = inOrder(_mockFrameHandler);
         inOrder.verify(_mockFrameHandler).handleFrame(frameMatching(channel, openFrame));
@@ -208,18 +211,18 @@ public class FrameParserTest
     {
         when(_mockFrameHandler.isHandlingFrames()).thenReturn(false);
 
-        sendHeader().checkIsOk();
+        sendHeader();
 
         // now send an open frame
         int channel = 0;
         Open openFrame = generateOpenFrame();
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             byte[] frame = _amqpFramer.generateFrame(channel, openFrame);
             buffer.put(frame);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
 
         verify(_mockFrameHandler, never()).handleFrame(any(TransportFrame.class));
@@ -229,12 +232,12 @@ public class FrameParserTest
         // now ensure that the held frame gets sent on second input
         Close closeFrame = generateCloseFrame();
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             byte[] frame = _amqpFramer.generateFrame(channel, closeFrame);
             buffer.put(frame);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
 
         InOrder inOrder = inOrder(_mockFrameHandler);
@@ -247,30 +250,30 @@ public class FrameParserTest
     {
         when(_mockFrameHandler.isHandlingFrames()).thenReturn(false);
 
-        sendHeader().checkIsOk();
+        sendHeader();
 
         // now send an open frame
         int channel = 0;
         Open openFrame = generateOpenFrame();
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             byte[] frame = _amqpFramer.generateFrame(channel, openFrame);
             buffer.put(frame);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
         verify(_mockFrameHandler, never()).handleFrame(any(TransportFrame.class));
 
         // now send a close frame
         Close closeFrame = generateCloseFrame();
         {
-            ByteBuffer buffer = _frameParser.getInputBuffer();
+            ByteBuffer buffer = _frameParser.tail();
 
             byte[] frame = _amqpFramer.generateFrame(channel, closeFrame);
             buffer.put(frame);
 
-            _frameParser.processInput().checkIsOk();
+            _frameParser.process();
         }
         verify(_mockFrameHandler, never()).handleFrame(any(TransportFrame.class));
 
@@ -283,11 +286,11 @@ public class FrameParserTest
         inOrder.verify(_mockFrameHandler).handleFrame(frameMatching(channel, closeFrame));
     }
 
-    private TransportResult sendHeader()
+    private void sendHeader() throws TransportException
     {
-        ByteBuffer buffer = _frameParser.getInputBuffer();
+        ByteBuffer buffer = _frameParser.tail();
         buffer.put(HEADER);
-        return _frameParser.processInput();
+        _frameParser.process();
     }
 
     private Open generateOpenFrame()

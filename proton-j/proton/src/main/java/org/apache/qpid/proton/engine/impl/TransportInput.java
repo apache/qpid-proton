@@ -23,19 +23,18 @@ package org.apache.qpid.proton.engine.impl;
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportException;
 
 
 public interface TransportInput
 {
-    /**
-     * @see Transport#getInputBuffer()
-     */
-    ByteBuffer getInputBuffer();
 
-    /**
-     * @see Transport#processInput()
-     */
-    TransportResult processInput();
+    int capacity();
+
+    ByteBuffer tail();
+
+    void process() throws TransportException;
+
+    void close_tail();
 
 }

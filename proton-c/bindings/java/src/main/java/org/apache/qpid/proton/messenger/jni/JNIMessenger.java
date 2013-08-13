@@ -26,6 +26,7 @@ import org.apache.qpid.proton.ProtonCEquivalent;
 import org.apache.qpid.proton.ProtonException;
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.TimeoutException;
+import org.apache.qpid.proton.InterruptException;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_message_t;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_messenger_t;
@@ -280,6 +281,10 @@ class JNIMessenger implements Messenger
             if(errorCode == Proton.PN_TIMEOUT)
             {
                 throw new TimeoutException(errorMessage);
+            }
+            else if (errorCode == Proton.PN_INTR)
+            {
+                throw new InterruptException();
             }
             else
             {

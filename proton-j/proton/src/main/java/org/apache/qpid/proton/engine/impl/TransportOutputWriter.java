@@ -23,7 +23,11 @@ import java.nio.ByteBuffer;
 interface TransportOutputWriter
 {
     /**
-     * Writes my pending output bytes into outputBuffer. Does not subsequently flip it.
+     * Writes my pending output bytes into outputBuffer. Does not
+     * subsequently flip it. Returns true on end of stream.
      */
-    void writeInto(ByteBuffer outputBuffer);
+    boolean writeInto(ByteBuffer outputBuffer);
+
+    void closed();
+
 }

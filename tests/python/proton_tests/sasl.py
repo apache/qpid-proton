@@ -167,5 +167,4 @@ class SaslTest(Test):
     while out:
       out = self.t1.output(1024)
 
-    assert self.s1.outcome == SASL.OK
-
+    assert self.s1.outcome == SASL.OK, self.s1.outcome

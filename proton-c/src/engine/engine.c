@@ -2135,7 +2135,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
     memmove( dest, bytes, count );
     available -= count;
     bytes += count;
-    int rc = pn_transport_push( transport, count );
+    int rc = pn_transport_process( transport, count );
     if (rc < 0) return rc;
     capacity = pn_transport_capacity(transport);
     if (capacity < 0) return capacity;
@@ -3302,7 +3302,8 @@ pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *io_layer, pn_timestamp_t
 // input
 ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
-  if (pn_error_code(transport->error)) return pn_error_code(transport->error);
+  if (transport->tail_closed) return PN_EOS;
+  //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
 
   ssize_t capacity = transport->input_size - transport->input_pending;
   if (!capacity) {
@@ -3336,16 +3337,37 @@ char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-int pn_transport_push(pn_transport_t *transport, size_t size)
+int pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
-  if (!transport) return PN_ARG_ERR;
+  assert(transport);
+
+  ssize_t capacity = pn_transport_capacity(transport);
+  if (capacity < 0) {
+    return capacity;
+  } else if (size > (size_t) capacity) {
+    return PN_OVERFLOW;
+  }
+
+  char *dst = pn_transport_tail(transport);
+  assert(dst);
+  memmove(dst, src, size);
+
+  return pn_transport_process(transport, size);
+}
+
+int pn_transport_process(pn_transport_t *transport, size_t size)
+{
+  assert(transport);
   size = pn_min( size, (transport->input_size - transport->input_pending) );
   transport->input_pending += size;
   transport->bytes_input += size;
 
   ssize_t n = transport_consume( transport );
-  if (n < 0) return n;
-  return size;
+  if (n == PN_EOS) {
+    transport->tail_closed = true;
+  }
+  if (n < 0 && n != PN_EOS) return n;
+  return 0;
 }
 
 // input stream has closed
@@ -3371,6 +3393,26 @@ const char *pn_transport_head(pn_transport_t *transport)
     return transport->output_buf;
   }
   return NULL;
+}
+
+int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+{
+  assert(transport);
+
+  ssize_t pending = pn_transport_pending(transport);
+  if (pending < 0) {
+    return pending;
+  } else if (size > (size_t) pending) {
+    return PN_UNDERFLOW;
+  }
+
+  if (pending > 0) {
+    const char *src = pn_transport_head(transport);
+    assert(src);
+    memmove(dst, src, size);
+  }
+
+  return 0;
 }
 
 void pn_transport_pop(pn_transport_t *transport, size_t size)

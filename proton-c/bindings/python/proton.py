@@ -2512,20 +2512,60 @@ class Transport(object):
   def tick(self, now):
     return pn_transport_tick(self._trans, now)
 
-  def output(self, n):
-    cd, out = pn_transport_output(self._trans, n)
+  def capacity(self):
+    c = pn_transport_capacity(self._trans)
+    if c >= PN_EOS:
+      return c
+    else:
+      return self._check(c)
+
+  def push(self, bytes):
+    self._check(pn_transport_push(self._trans, bytes))
+
+  def close_tail(self):
+    self._check(pn_transport_close_tail(self._trans))
+
+  def pending(self):
+    p = pn_transport_pending(self._trans)
+    if p >= PN_EOS:
+      return p
+    else:
+      return self._check(p)
+
+  def peek(self, size):
+    cd, out = pn_transport_peek(self._trans, size)
     if cd == PN_EOS:
       return None
     else:
       self._check(cd)
       return out
 
-  def input(self, binary):
-    n = pn_transport_input(self._trans, binary)
-    if n == PN_EOS:
+  def pop(self, size):
+    pn_transport_pop(self._trans, size)
+
+  def close_head(self):
+    self._check(pn_transport_close_head(self._trans))
+
+  def output(self, size):
+    p = self.pending()
+    if p < 0:
       return None
     else:
-      return self._check(n)
+      out = self.peek(min(size, p))
+      self.pop(len(out))
+      return out
+
+  def input(self, bytes):
+    if not bytes:
+      self.close_tail()
+      return None
+    else:
+      c = self.capacity()
+      if (c < 0):
+        return None
+      trimmed = bytes[:c]
+      self.push(trimmed)
+      return len(trimmed)
 
   # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):

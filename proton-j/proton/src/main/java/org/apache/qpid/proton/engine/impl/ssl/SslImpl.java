@@ -26,7 +26,7 @@ import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
@@ -100,32 +100,60 @@ public class SslImpl implements Ssl
         }
 
         @Override
-        public ByteBuffer getInputBuffer()
+        public int capacity()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.getInputBuffer();
+            return _transportWrapper.capacity();
+        }
+
+        @Override
+        public ByteBuffer tail()
+        {
+            initTransportWrapperOnFirstIO();
+            return _transportWrapper.tail();
         }
 
 
         @Override
-        public TransportResult processInput()
+        public void process() throws TransportException
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.processInput();
+            _transportWrapper.process();
         }
 
         @Override
-        public ByteBuffer getOutputBuffer()
+        public void close_tail()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.getOutputBuffer();
+            _transportWrapper.process();
         }
 
         @Override
-        public void outputConsumed()
+        public int pending()
         {
             initTransportWrapperOnFirstIO();
-            _transportWrapper.outputConsumed();
+            return _transportWrapper.pending();
+        }
+
+        @Override
+        public ByteBuffer head()
+        {
+            initTransportWrapperOnFirstIO();
+            return _transportWrapper.head();
+        }
+
+        @Override
+        public void pop(int bytes)
+        {
+            initTransportWrapperOnFirstIO();
+            _transportWrapper.pop(bytes);
+        }
+
+        @Override
+        public void close_head()
+        {
+            initTransportWrapperOnFirstIO();
+            _transportWrapper.close_head();
         }
 
         @Override

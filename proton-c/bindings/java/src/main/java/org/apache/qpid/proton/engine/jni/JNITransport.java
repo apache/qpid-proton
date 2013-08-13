@@ -51,7 +51,7 @@ public class JNITransport implements Transport
      * and {@link #processInput()}.
      * Null at all other times.
      */
-    private ByteBuffer _inputBuffer;
+    private ByteBuffer _inputBuffer = ByteBuffer.allocate(0);
 
     /**
      * Long-lived buffer to hold the output.
@@ -64,6 +64,15 @@ public class JNITransport implements Transport
 //        Proton.pn_transport_trace(_impl,Proton.PN_TRACE_FRM);
     }
 
+    private void check(int errno)
+    {
+        if (errno < 0) {
+            SWIGTYPE_p_pn_error_t err = Proton.pn_transport_error(_impl);
+            String errorText = Proton.pn_error_text(err);
+            throw new TransportException(errorText);
+        }
+    }
+
     @Override
     @ProtonCEquivalent("pn_transport_bind")
     public void bind(Connection connection)
@@ -71,6 +80,86 @@ public class JNITransport implements Transport
         JNIConnection jniConn = (JNIConnection)connection;
         SWIGTYPE_p_pn_connection_t connImpl = jniConn.getImpl();
         Proton.pn_transport_bind(_impl, connImpl);
+    }
+
+    @Override
+    public int capacity()
+    {
+        return Proton.pn_transport_capacity(_impl);
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
+        int capacity = capacity();
+        if (_inputBuffer.capacity() < capacity) {
+            ByteBuffer old = _inputBuffer;
+            _inputBuffer = ByteBuffer.allocate(capacity);
+            old.flip();
+            _inputBuffer.put(old);
+        }
+        return _inputBuffer;
+    }
+
+    @Override
+    public void process()
+    {
+        _inputBuffer.flip();
+        int err = Proton.pn_transport_push(_impl, _inputBuffer);
+        _inputBuffer.clear();
+        check(err);
+    }
+
+    @Override
+    public void close_tail()
+    {
+        int err = Proton.pn_transport_close_tail(_impl);
+        check(err);
+    }
+
+    @Override
+    public int pending()
+    {
+        int pending = Proton.pn_transport_pending(_impl);
+        if (pending < 0) return pending;
+
+        if (_outputBuffer.capacity() < pending) {
+            _outputBuffer = _inputBuffer.allocate(pending);
+            _outputBuffer.flip();
+        }
+
+        if (_outputBuffer.limit() < pending) {
+            int oldpos = _outputBuffer.position();
+            _outputBuffer.limit(pending);
+            _outputBuffer.position(0);
+            int err = Proton.pn_transport_peek(_impl, _outputBuffer);
+            _outputBuffer.position(oldpos);
+            check(err);
+        }
+
+        return pending;
+    }
+
+    @Override
+    public ByteBuffer head()
+    {
+        pending();
+        return _outputBuffer;
+    }
+
+    @Override
+    public void pop(int size)
+    {
+        Proton.pn_transport_pop(_impl, size);
+        _outputBuffer.clear();
+        _outputBuffer.flip();
+    }
+
+    @Override
+    public void close_head()
+    {
+        int err = Proton.pn_transport_close_head(_impl);
+        check(err);
     }
 
 
@@ -200,7 +289,6 @@ public class JNITransport implements Transport
             throw new IllegalStateException("Called outputConsumed without a preceding getOutputBuffer call");
         }
     }
-
 
     private ByteBuffer newWriteableBuffer(int capacity)
     {
@@ -365,7 +453,7 @@ public class JNITransport implements Transport
     }
 
     @Override
-        public int getRemoteMaxFrameSize()
+    public int getRemoteMaxFrameSize()
     {
         return (int) Proton.pn_transport_get_remote_max_frame(_impl);
     }

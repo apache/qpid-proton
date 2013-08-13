@@ -63,10 +63,16 @@ public class TransportImplTest
     }
 
     @Test
-    public void testUseOfProcessInputBeforeGetInputBuffer_causesIllegalStateException()
+    public void testInitialProcessIsNoop()
     {
-        _expectedException.expect(IllegalStateException.class);
-        _transport.processInput();
+        _transport.process();
+    }
+
+    @Test
+    public void testProcessIsIdempotent()
+    {
+        _transport.process();
+        _transport.process();
     }
 
     /**

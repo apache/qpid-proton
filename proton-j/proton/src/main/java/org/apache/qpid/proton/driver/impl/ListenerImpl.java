@@ -35,12 +35,26 @@ class ListenerImpl<C> implements Listener<C>
     private final ServerSocketChannel _channel;
     private final DriverImpl _driver;
     private final Logger _logger = Logger.getLogger("proton.driver");
+    private boolean _selected = false;
 
     ListenerImpl(DriverImpl driver, ServerSocketChannel c, C context)
     {
         _driver = driver;
         _channel = c;
         _context = context;
+    }
+
+    void selected()
+    {
+        if (!_selected) {
+            _selected = true;
+            _driver.selectListener(this);
+        }
+    }
+
+    void unselected()
+    {
+        _selected = false;
     }
 
     public Connector<C> accept()

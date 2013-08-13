@@ -22,7 +22,8 @@ package org.apache.qpid.proton.engine.impl.ssl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
 public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
@@ -31,6 +32,8 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     private final SslTransportWrapper _secureTransportWrapper;
     private final TransportWrapper _plainTransportWrapper;
 
+    private boolean _tail_closed = false;
+    private boolean _head_closed = true;
     private TransportWrapper _selectedTransportWrapper;
 
     private final ByteBuffer _determinationBuffer = ByteBuffer.allocate(MINIMUM_LENGTH_FOR_DETERMINATION);
@@ -44,11 +47,25 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     }
 
     @Override
-    public ByteBuffer getInputBuffer()
+    public int capacity()
     {
         if (isDeterminationMade())
         {
-            return _selectedTransportWrapper.getInputBuffer();
+            return _secureTransportWrapper.capacity();
+        }
+        else
+        {
+            if (_tail_closed) { return Transport.END_OF_STREAM; }
+            return _determinationBuffer.capacity();
+        }
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
+        if (isDeterminationMade())
+        {
+            return _selectedTransportWrapper.tail();
         }
         else
         {
@@ -57,11 +74,11 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     }
 
     @Override
-    public TransportResult processInput()
+    public void process() throws TransportException
     {
         if (isDeterminationMade())
         {
-            return _selectedTransportWrapper.processInput();
+            _selectedTransportWrapper.process();
         }
         else
         {
@@ -72,25 +89,54 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
             _determinationBuffer.rewind();
 
             // TODO what if the selected transport has insufficient capacity?? Maybe use pour, and then try to finish pouring next time round.
-            _selectedTransportWrapper.getInputBuffer().put(_determinationBuffer);
-            return _selectedTransportWrapper.processInput();
+            _selectedTransportWrapper.tail().put(_determinationBuffer);
+            _selectedTransportWrapper.process();
         }
     }
 
     @Override
-    public ByteBuffer getOutputBuffer()
+    public void close_tail()
     {
-        makePlainUnlessDeterminationAlreadyMade();
-
-        return _selectedTransportWrapper.getOutputBuffer();
+        try {
+            if (isDeterminationMade())
+            {
+                _selectedTransportWrapper.close_tail();
+            }
+        } finally {
+            _tail_closed = true;
+        }
     }
 
     @Override
-    public void outputConsumed()
+    public int pending()
+    {
+        if (_head_closed) { return Transport.END_OF_STREAM; }
+        makePlainUnlessDeterminationAlreadyMade();
+
+        return _selectedTransportWrapper.pending();
+    }
+
+    @Override
+    public ByteBuffer head()
     {
         makePlainUnlessDeterminationAlreadyMade();
 
-        _selectedTransportWrapper.outputConsumed();
+        return _selectedTransportWrapper.head();
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        makePlainUnlessDeterminationAlreadyMade();
+
+        _selectedTransportWrapper.pop(bytes);
+    }
+
+    @Override
+    public void close_head()
+    {
+        makePlainUnlessDeterminationAlreadyMade();
+        _selectedTransportWrapper.close_head();
     }
 
     @Override

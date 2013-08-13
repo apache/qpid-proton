@@ -22,7 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportResult;
+import org.apache.qpid.proton.engine.TransportException;
 
 public class PlainTransportWrapper implements TransportWrapper
 {
@@ -37,26 +37,51 @@ public class PlainTransportWrapper implements TransportWrapper
     }
 
     @Override
-    public ByteBuffer getInputBuffer()
+    public int capacity()
     {
-        return _inputProcessor.getInputBuffer();
+        return _inputProcessor.capacity();
     }
 
     @Override
-    public TransportResult processInput()
+    public ByteBuffer tail()
     {
-        return _inputProcessor.processInput();
+        return _inputProcessor.tail();
     }
 
     @Override
-    public ByteBuffer getOutputBuffer()
+    public void process() throws TransportException
     {
-        return _outputProcessor.getOutputBuffer();
+        _inputProcessor.process();
     }
 
     @Override
-    public void outputConsumed()
+    public void close_tail()
     {
-        _outputProcessor.outputConsumed();
+        _inputProcessor.close_tail();
     }
+
+    @Override
+    public int pending()
+    {
+        return _outputProcessor.pending();
+    }
+
+    @Override
+    public ByteBuffer head()
+    {
+        return _outputProcessor.head();
+    }
+
+    @Override
+    public void pop(int bytes)
+    {
+        _outputProcessor.pop(bytes);
+    }
+
+    @Override
+    public void close_head()
+    {
+        _outputProcessor.close_head();
+    }
+
 }

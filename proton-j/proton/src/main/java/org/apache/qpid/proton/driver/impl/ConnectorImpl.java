@@ -53,9 +53,12 @@ class ConnectorImpl<C> implements Connector<C>
     private SelectionKey _key;
     private ConnectorState _state = UNINITIALIZED;
 
-    private ByteBuffer _readBuffer = ByteBuffer.allocate(readBufferSize);
-    private ByteBuffer _writeBuffer = ByteBuffer.allocate(writeBufferSize);
     private boolean _readPending = true;
+    private boolean _inputDone = false;
+    private boolean _outputDone = false;
+    private boolean _closed = false;
+
+    private boolean _selected = false;
 
     ConnectorImpl(DriverImpl driver, Listener<C> listener, SocketChannel c, C context, SelectionKey key)
     {
@@ -68,13 +71,25 @@ class ConnectorImpl<C> implements Connector<C>
 
     void selected()
     {
+        if (!_selected) {
+            _selected = true;
+            _driver.selectConnector(this);
+        }
+
         _readPending = true;
+    }
+
+    void unselected()
+    {
+        _selected = false;
     }
 
     public boolean process() throws IOException
     {
+        if (isClosed() || !_channel.finishConnect()) return false;
+
         boolean processed = false;
-        if (_channel.isOpen() && _channel.finishConnect())
+        if (!_inputDone)
         {
             if (_readPending)
             {
@@ -82,102 +97,91 @@ class ConnectorImpl<C> implements Connector<C>
                     processed = true;
                 }
                 _readPending = false;
-                if (isClosed()) return processed;
             }
-            else
-            {
-                if (processInput() > 0) {
-                    processed = true;
-                }
-            }
+        }
+
+        if (!_outputDone)
+        {
             if (write()) {
                 processed = true;
             }
         }
+
+        if (_outputDone && _inputDone)
+        {
+            close();
+        }
+
         return processed;
     }
 
     private boolean read() throws IOException
     {
         boolean processed = false;
-        int bytesRead = 0;
-        while ((bytesRead = _channel.read(_readBuffer)) > 0)
-        {
-            processInput();
-            processed = true;
-        }
-        if (bytesRead == -1) {
-            close();
-        }
-        return processed;
-    }
 
-    private int processInput() throws IOException
-    {
-        _readBuffer.flip();
-        int total = 0;
-        while (_readBuffer.hasRemaining())
+        int interest = _key.interestOps();
+        int capacity = _transport.capacity();
+        if (capacity == Transport.END_OF_STREAM)
         {
-            int consumed = _transport.input(_readBuffer.array(), _readBuffer.position(), _readBuffer.remaining());
-            if (consumed == Transport.END_OF_STREAM)
-            {
-                continue;
-            }
-            else if (consumed == 0)
-            {
-                break;
-            }
-            _readBuffer.position(_readBuffer.position() + consumed);
-            if (_logger.isLoggable(Level.FINE))
-            {
-                _logger.log(Level.FINE, this + " consumed " + consumed + " bytes, " + _readBuffer.remaining() + " available");
-            }
-            total += consumed;
+            _inputDone = true;
         }
-        _readBuffer.compact();
-        return total;
+        else
+        {
+            int bytesRead = _channel.read(_transport.tail());
+            if (bytesRead < 0) {
+                _transport.close_tail();
+                _inputDone = true;
+            } else if (bytesRead > 0) {
+                _transport.process();
+                processed = true;
+            }
+        }
+
+        capacity = _transport.capacity();
+        if (capacity > 0) {
+            interest |= SelectionKey.OP_READ;
+        } else {
+            interest &= ~SelectionKey.OP_READ;
+            if (capacity < 0) {
+                _inputDone = true;
+            }
+        }
+        _key.interestOps(interest);
+
+        return processed;
     }
 
     private boolean write() throws IOException
     {
         boolean processed = false;
+
         int interest = _key.interestOps();
-        boolean empty = _writeBuffer.position() == 0;
-        boolean done = false;
-        while (!done)
+        int pending = _transport.pending();
+        if (pending >= 0)
         {
-            int produced = _transport.output(_writeBuffer.array(), _writeBuffer.position(), _writeBuffer.remaining());
-            _writeBuffer.position(_writeBuffer.position() + produced);
-            _writeBuffer.flip();
-            int wrote = _channel.write(_writeBuffer);
+            int wrote = _channel.write(_transport.head());
             if (wrote > 0) {
                 processed = true;
+                _transport.pop(wrote);
             }
-            if (_logger.isLoggable(Level.FINE))
-            {
-                _logger.log(Level.FINE, this + " wrote " + wrote + " bytes, " + _writeBuffer.remaining() + " remaining");
-            }
-            if (_writeBuffer.hasRemaining())
-            {
-                //weren't able to write all available data, ask to be notfied when we can write again
-                _writeBuffer.compact();
-                interest |= SelectionKey.OP_WRITE;
-                done = true;
-            }
-            else
-            {
-                //we are done if buffer was empty to begin with and we did not produce anything
-                _writeBuffer.clear();
-                interest &= ~SelectionKey.OP_WRITE;
-                done = empty && produced == 0;
-                empty = true;
+        }
+        else
+        {
+            _outputDone = true;
+        }
+
+        pending = _transport.pending();
+        if (pending > 0) {
+            interest |= SelectionKey.OP_WRITE;
+
+        } else {
+            interest &= ~SelectionKey.OP_WRITE;
+            if (pending < 0) {
+                _outputDone = true;
             }
         }
         _key.interestOps(interest);
-        if (_logger.isLoggable(Level.FINE))
-        {
-            _logger.log(Level.FINE, this + " finished writing output to the channel.");
-        }
+
         return processed;
     }
 
@@ -225,20 +229,23 @@ class ConnectorImpl<C> implements Connector<C>
         {
             try
             {
-                write();
                 _channel.close();
             }
             catch (IOException e)
             {
                 _logger.log(Level.SEVERE, "Exception when closing connection",e);
             }
+            finally
+            {
+                _closed = true;
+                selected();
+            }
         }
     }
 
     public boolean isClosed()
     {
-        boolean result = !(_channel.isOpen() && _channel.isConnected());
-        return result;
+        return _closed;
     }
 
     public void destroy()

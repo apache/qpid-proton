@@ -21,8 +21,6 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.TransportResultFactory.error;
-import static org.apache.qpid.proton.engine.TransportResultFactory.ok;
 import static org.apache.qpid.proton.engine.impl.AmqpHeader.HEADER;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
 
@@ -34,9 +32,8 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.transport.FrameBody;
 import org.apache.qpid.proton.codec.ByteBufferDecoder;
 import org.apache.qpid.proton.codec.DecodeException;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.framing.TransportFrame;
 
 class FrameParser implements TransportInput
@@ -67,6 +64,7 @@ class FrameParser implements TransportInput
     private final ByteBufferDecoder _decoder;
 
     private final ByteBuffer _inputBuffer;
+    private boolean _tail_closed = false;
 
     private State _state = State.HEADER0;
 
@@ -77,13 +75,13 @@ class FrameParser implements TransportInput
     private ByteBuffer _frameBuffer;
 
     private TransportFrame _heldFrame;
+    private TransportException _parsingError;
 
 
     /**
      * We store the last result when processing input so that
      * we know not to process any more input if it was an error.
      */
-    private TransportResult _lastInputResult = ok();
 
     FrameParser(FrameHandler frameHandler, ByteBufferDecoder decoder, int maxFrameSize)
     {
@@ -96,15 +94,15 @@ class FrameParser implements TransportInput
         }
     }
 
-    private TransportResult input(ByteBuffer in)
+    private void input(ByteBuffer in) throws TransportException
     {
         flushHeldFrame();
         if (_heldFrame != null)
         {
-            return ok();
+            return;
         }
 
-        TransportResult frameParsingError = null;
+        TransportException frameParsingError = null;
         int size = _size;
         State state = _state;
         ByteBuffer oldIn = null;
@@ -121,7 +119,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[0])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[0], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[0], state);
                             state = State.ERROR;
                             break;
                         }
@@ -137,7 +135,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[1])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[1], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[1], state);
                             state = State.ERROR;
                             break;
                         }
@@ -153,7 +151,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[2])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[2], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[2], state);
                             state = State.ERROR;
                             break;
                         }
@@ -169,7 +167,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[3])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[3], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[3], state);
                             state = State.ERROR;
                             break;
                         }
@@ -185,7 +183,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[4])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[4], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[4], state);
                             state = State.ERROR;
                             break;
                         }
@@ -201,7 +199,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[5])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[5], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[5], state);
                             state = State.ERROR;
                             break;
                         }
@@ -217,7 +215,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[6])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[6], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[6], state);
                             state = State.ERROR;
                             break;
                         }
@@ -233,7 +231,7 @@ class FrameParser implements TransportInput
                         byte c = in.get();
                         if(c != HEADER[7])
                         {
-                            frameParsingError = error("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[7], state);
+                            frameParsingError = new TransportException("AMQP header mismatch value %x, expecting %x. In state: %s", c, HEADER[7], state);
                             state = State.ERROR;
                             break;
                         }
@@ -285,9 +283,9 @@ class FrameParser implements TransportInput
                     ;
                     if(size < 8)
                     {
-                        frameParsingError = error("specified frame size %d smaller than minimum frame header "
+                        frameParsingError = new TransportException("specified frame size %d smaller than minimum frame header "
                                                          + "size %d",
-                                                         _size, 8);
+                                                         size, 8);
                         state = State.ERROR;
                         break;
                     }
@@ -326,13 +324,13 @@ class FrameParser implements TransportInput
 
                     if(dataOffset < 8)
                     {
-                        frameParsingError = error("specified frame data offset %d smaller than minimum frame header size %d", dataOffset, 8);
+                        frameParsingError = new TransportException("specified frame data offset %d smaller than minimum frame header size %d", dataOffset, 8);
                         state = State.ERROR;
                         break;
                     }
                     else if(dataOffset > size)
                     {
-                        frameParsingError = error("specified frame data offset %d larger than the frame size %d", dataOffset, _size);
+                        frameParsingError = new TransportException("specified frame data offset %d larger than the frame size %d", dataOffset, _size);
                         state = State.ERROR;
                         break;
                     }
@@ -344,7 +342,7 @@ class FrameParser implements TransportInput
 
                     if(type != 0)
                     {
-                        frameParsingError = error("unknown frame type: %d", type);
+                        frameParsingError = new TransportException("unknown frame type: %d", type);
                         state = State.ERROR;
                         break;
                     }
@@ -399,7 +397,7 @@ class FrameParser implements TransportInput
 
                                 if(_frameHandler.isHandlingFrames())
                                 {
-                                    _frameHandler.handleFrame(frame);
+                                    _tail_closed = _frameHandler.handleFrame(frame);
                                 }
                                 else
                                 {
@@ -431,7 +429,7 @@ class FrameParser implements TransportInput
                     catch (DecodeException ex)
                     {
                         state = State.ERROR;
-                        frameParsingError = error(ex);
+                        frameParsingError = new TransportException(ex);
                     }
                     break;
                 case ERROR:
@@ -440,47 +438,80 @@ class FrameParser implements TransportInput
 
         }
 
+        if (_tail_closed)
+        {
+            if (in.hasRemaining()) {
+                state = State.ERROR;
+                frameParsingError = new TransportException("framing error");
+            } else if (state != State.SIZE_0) {
+                state = State.ERROR;
+                frameParsingError = new TransportException("connection aborted");
+            } else {
+                _frameHandler.closed();
+            }
+        }
+
         _state = state;
         _size = size;
 
         if(_state == State.ERROR)
         {
+            _tail_closed = true;
             if(frameParsingError != null)
             {
-                return frameParsingError;
+                _parsingError = frameParsingError;
+                throw frameParsingError;
             }
             else
             {
-                return TransportResultFactory.error("Unable to parse, probably because of a previous error");
+                throw new TransportException("Unable to parse, probably because of a previous error");
             }
-        }
-        else
-        {
-            return ok();
         }
     }
 
     @Override
-    public ByteBuffer getInputBuffer()
+    public int capacity()
     {
-        _lastInputResult.checkIsOk();
+        if (_tail_closed) {
+            return Transport.END_OF_STREAM;
+        } else {
+            return _inputBuffer.remaining();
+        }
+    }
+
+    @Override
+    public ByteBuffer tail()
+    {
+        if (_tail_closed) {
+            if (_parsingError != null) {
+                throw new TransportException(_parsingError.getMessage());
+            } else {
+                throw new TransportException("tail closed");
+            }
+        }
         return _inputBuffer;
     }
 
     @Override
-    public TransportResult processInput()
+    public void process() throws TransportException
     {
         _inputBuffer.flip();
 
         try
         {
-            _lastInputResult = input(_inputBuffer);
-            return _lastInputResult;
+            input(_inputBuffer);
         }
         finally
         {
             _inputBuffer.compact();
         }
+    }
+
+    @Override
+    public void close_tail()
+    {
+        _tail_closed = true;
+        process();
     }
 
     /**
@@ -493,7 +524,7 @@ class FrameParser implements TransportInput
 
         if (_heldFrame == null)
         {
-            processAnyLeftoverInput();
+            process();
         }
     }
 
@@ -501,15 +532,9 @@ class FrameParser implements TransportInput
     {
         if(_heldFrame != null && _frameHandler.isHandlingFrames())
         {
-            _frameHandler.handleFrame(_heldFrame);
+            _tail_closed = _frameHandler.handleFrame(_heldFrame);
             _heldFrame = null;
         }
-    }
-
-    private void processAnyLeftoverInput()
-    {
-        getInputBuffer();
-        processInput();
     }
 
     private void reset()

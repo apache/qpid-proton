@@ -21,8 +21,8 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
 
 public class ByteBufferUtils
 {
@@ -57,21 +57,28 @@ public class ByteBufferUtils
      * the TransportInput many times if necessary.  If the TransportInput returns a {@link TransportResult}
      * other than ok, data may remain in source.
      */
-    public static TransportResult pourAll(ByteBuffer source, TransportInput destinationTransportInput)
+    public static int pourAll(ByteBuffer source, TransportInput destinationTransportInput) throws TransportException
     {
-        TransportResult transportResult = TransportResultFactory.ok();
-        while(transportResult.isOk() && source.hasRemaining())
+        int capacity = destinationTransportInput.capacity();
+        if (capacity == Transport.END_OF_STREAM)
         {
-            int numberPoured = pour(source, destinationTransportInput.getInputBuffer());
-            if (numberPoured == 0)
-            {
-                throw new IllegalStateException("Destination " + destinationTransportInput
-                        + " has unexpectedly stopped accepting input. "
-                        + " Source buffer with unconsumed bytes : " + source);
+            if (source.hasRemaining()) {
+                throw new IllegalStateException("Destination has reached end of stream: " +
+                                                destinationTransportInput);
+            } else {
+                return Transport.END_OF_STREAM;
             }
-            transportResult = destinationTransportInput.processInput();
         }
-        return transportResult;
+
+        int total = source.remaining();
+
+        while(source.hasRemaining() && destinationTransportInput.capacity() > 0)
+        {
+            pour(source, destinationTransportInput.tail());
+            destinationTransportInput.process();
+        }
+
+        return total - source.remaining();
     }
 
     /**

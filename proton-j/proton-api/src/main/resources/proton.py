@@ -732,33 +732,55 @@ class Transport(object):
   def bind(self, connection):
     self.impl.bind(connection.impl)
 
-  def output(self, size):
-    """ has the transport produce up to size bytes returning what was
-        produced to the caller"""
+  def capacity(self):
+    return self.impl.capacity()
 
-    output_buffer = self.impl.getOutputBuffer()
+  def push(self, bytes):
+    input_buffer = self.impl.tail()
+    input_buffer.put(bytes)
+    self.impl.process()
+
+  def close_tail(self):
+    self.impl.close_tail()
+
+  def pending(self):
+    return self.impl.pending()
+
+  def peek(self, size):
+    output_buffer = self.impl.head()
     output_length = min(size, output_buffer.remaining())
     output = zeros(output_length, "b")
+    output_buffer.mark()
     output_buffer.get(output)
-    self.impl.outputConsumed()
+    output_buffer.reset()
     return output.tostring()
 
+  def pop(self, size):
+    self.impl.pop(size)
+
+  def close_head(self):
+    self.impl.close_head()
+
+  def output(self, size):
+    p = self.pending()
+    if p < 0:
+      return None
+    else:
+      out = self.peek(min(size, p))
+      self.pop(len(out))
+      return out
+
   def input(self, bytes):
-
-    # Python tests currently assume the old API.  We call this method
-    # in order to fulfil the contract.
-    self.impl.oldApiCheckStateBeforeInput(len(bytes)).checkIsOk()
-
-    input_buffer = self.impl.getInputBuffer()
-    length = min(len(bytes), input_buffer.remaining())
-    input_buffer.put(bytes, 0, length)
-    input_result = self.impl.processInput()
-    if not input_result.isOk():
-      raise TransportException("processInput failed due to %s. Input was: %r" % \
-                               (input_result.getErrorDescription(), bytes), \
-                               input_result.getException())
-    return length
-
+    if not bytes:
+      self.close_tail()
+      return None
+    else:
+      c = self.capacity()
+      if (c < 0):
+        return None
+      trimmed = bytes[:c]
+      self.push(trimmed)
+      return len(trimmed)
 
   def _get_max_frame_size(self):
     return self.impl.getMaxFrameSize()
