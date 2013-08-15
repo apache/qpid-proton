@@ -1318,7 +1318,11 @@ class Messenger(object):
   def recv(self, n=-1):
     self.impl.recv(n)
 
-  def work(self, t):
+  def work(self, timeout=None):
+    if timeout is None:
+      t = -1
+    else:
+      t = long(1000*timeout)
     return self.impl.work(t)
 
   def interrupt(self):
@@ -1339,8 +1343,16 @@ class Messenger(object):
     return self.impl.incoming()
 
   def _get_timeout(self):
-    return self.impl.getTimeout()
-  def _set_timeout(self, t):
+    t = self.impl.getTimeout()
+    if t == -1:
+      return None
+    else:
+      return float(t)/1000
+  def _set_timeout(self, timeout):
+    if timeout is None:
+      t = -1
+    else:
+      t = long(1000*timeout)
     self.impl.setTimeout(t)
   timeout = property(_get_timeout, _set_timeout)
 

@@ -304,10 +304,18 @@ will not be verified.
 """)
 
   def _get_timeout(self):
-    return pn_messenger_get_timeout(self._mng)
+    t = pn_messenger_get_timeout(self._mng)
+    if t == -1:
+      return None
+    else:
+      return float(t)/1000
 
   def _set_timeout(self, value):
-    self._check(pn_messenger_set_timeout(self._mng, value))
+    if value is None:
+      t = -1
+    else:
+      t = long(1000*value)
+    self._check(pn_messenger_set_timeout(self._mng, t))
 
   timeout = property(_get_timeout, _set_timeout,
                      doc="""
@@ -450,8 +458,12 @@ send. Defaults to zero.
       n = -1
     self._check(pn_messenger_recv(self._mng, n))
 
-  def work(self, timeout=-1):
-    err = pn_messenger_work(self._mng, timeout)
+  def work(self, timeout=None):
+    if timeout is None:
+      t = -1
+    else:
+      t = long(1000*timeout)
+    err = pn_messenger_work(self._mng, t)
     if (err == PN_TIMEOUT):
       return False
     else:

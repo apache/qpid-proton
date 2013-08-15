@@ -433,6 +433,7 @@ public class MessengerImpl implements Messenger
             {
                 _logger.log(Level.SEVERE, "Error processing connection", e);
             }
+            processEndpoints(c);
         }
     }
 
@@ -467,75 +468,80 @@ public class MessengerImpl implements Messenger
             } catch (IOException e) {
                 _logger.log(Level.SEVERE, "Error processing connection", e);
             }
-            Connection connection = c.getConnection();
+            processEndpoints(c);
+        }
+    }
 
-            if (connection.getLocalState() == EndpointState.UNINITIALIZED)
-            {
-                connection.open();
-            }
+    private void processEndpoints(Connector c)
+    {
+        Connection connection = c.getConnection();
 
-            Delivery delivery = connection.getWorkHead();
-            while (delivery != null)
-            {
-                if (delivery.getLink() instanceof Sender && delivery.isUpdated())
-                {
-                    delivery.disposition(delivery.getRemoteState());
-                }
-                //TODO: delivery.clear(); What's the equivalent in java?
-                delivery = delivery.getWorkNext();
-            }
-            _outgoing.slide();
+        if (connection.getLocalState() == EndpointState.UNINITIALIZED)
+        {
+            connection.open();
+        }
 
-            for (Session session : new Sessions(connection, UNINIT, ANY))
+        Delivery delivery = connection.getWorkHead();
+        while (delivery != null)
+        {
+            if (delivery.getLink() instanceof Sender && delivery.isUpdated())
             {
-                session.open();
-                _logger.log(Level.FINE, "Opened session " + session);
+                delivery.disposition(delivery.getRemoteState());
             }
-            for (Link link : new Links(connection, UNINIT, ANY))
-            {
-                //TODO: the following is not correct; should only copy those properties that we understand
-                link.setSource(link.getRemoteSource());
-                link.setTarget(link.getRemoteTarget());
-                link.open();
-                _logger.log(Level.FINE, "Opened link " + link);
-            }
+            //TODO: delivery.clear(); What's the equivalent in java?
+            delivery = delivery.getWorkNext();
+        }
+        _outgoing.slide();
 
+        for (Session session : new Sessions(connection, UNINIT, ANY))
+        {
+            session.open();
+            _logger.log(Level.FINE, "Opened session " + session);
+        }
+        for (Link link : new Links(connection, UNINIT, ANY))
+        {
+            //TODO: the following is not correct; should only copy those properties that we understand
+            link.setSource(link.getRemoteSource());
+            link.setTarget(link.getRemoteTarget());
+            link.open();
+            _logger.log(Level.FINE, "Opened link " + link);
+        }
+
+        distributeCredit();
+
+        for (Link link : new Links(connection, ACTIVE, CLOSED))
+        {
+            link.close();
+        }
+        for (Session session : new Sessions(connection, ACTIVE, CLOSED))
+        {
+            session.close();
+        }
+        if (connection.getRemoteState() == EndpointState.CLOSED)
+        {
+            if (connection.getLocalState() == EndpointState.ACTIVE)
+            {
+                connection.close();
+            }
+        }
+
+        if (c.isClosed())
+        {
+            reclaimCredit(connection);
+            c.destroy();
+            // XXX: could we do this once at the end of the loop
+            // instead of every time we reclaim?
             distributeCredit();
-
-            for (Link link : new Links(connection, ACTIVE, CLOSED))
+        }
+        else
+        {
+            try
             {
-                link.close();
+                c.process();
             }
-            for (Session session : new Sessions(connection, ACTIVE, CLOSED))
+            catch (IOException e)
             {
-                session.close();
-            }
-            if (connection.getRemoteState() == EndpointState.CLOSED)
-            {
-                if (connection.getLocalState() == EndpointState.ACTIVE)
-                {
-                    connection.close();
-                }
-            }
-
-            if (c.isClosed())
-            {
-                reclaimCredit(connection);
-                c.destroy();
-                // XXX: could we do this once at the end of the loop
-                // instead of every time we reclaim?
-                distributeCredit();
-            }
-            else
-            {
-                try
-                {
-                    c.process();
-                }
-                catch (IOException e)
-                {
-                    _logger.log(Level.SEVERE, "Error processing connection", e);
-                }
+                _logger.log(Level.SEVERE, "Error processing connection", e);
             }
         }
     }

@@ -1280,13 +1280,15 @@ int pn_messenger_send(pn_messenger_t *messenger, int n)
 int pn_messenger_recv(pn_messenger_t *messenger, int n)
 {
   if (!messenger) return PN_ARG_ERR;
-  if (!pn_listener_head(messenger->driver) && !pn_connector_head(messenger->driver))
+  if (messenger->blocking && !pn_listener_head(messenger->driver)
+      && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
   messenger->receiving = n;
   pn_messenger_flow(messenger);
   int err = pn_messenger_sync(messenger, pn_messenger_rcvd);
   if (err) return err;
   if (!pn_messenger_incoming(messenger) &&
+      messenger->blocking &&
       !pn_listener_head(messenger->driver) &&
       !pn_connector_head(messenger->driver)) {
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");

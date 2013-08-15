@@ -29,7 +29,7 @@ class Test(common.Test):
     self.server_credit = 10
     self.server_received = 0
     self.server = Messenger("server")
-    self.server.timeout = int(self.timeout*1000)
+    self.server.timeout = self.timeout
     self.server.start()
     self.server.subscribe("amqp://~0.0.0.0:12345")
     self.server_thread = Thread(name="server-thread", target=self.run_server)
@@ -39,7 +39,7 @@ class Test(common.Test):
     self.server_thread_started = False
 
     self.client = Messenger("client")
-    self.client.timeout = int(self.timeout*1000)
+    self.client.timeout = self.timeout
 
   def start(self):
     self.server_thread_started = True
@@ -276,10 +276,6 @@ class MessengerTest(Test):
       assert self.client.status(t) is ACCEPTED, (t, self.client.status(t))
 
   def testIncomingQueueBiggerThanWindow(self, size=10):
-    if IMPLEMENTATION_LANGUAGE == "Java":
-      # Currently fails with proton-j. See https://issues.apache.org/jira/browse/PROTON-315
-      raise Skipped
-
     self.server.outgoing_window = size
     self.client.incoming_window = size
     self.start()
@@ -583,8 +579,8 @@ class MessengerTest(Test):
 class NBMessengerTest(common.Test):
 
   def setup(self):
-    self.client = Messenger()
-    self.server = Messenger()
+    self.client = Messenger("client")
+    self.server = Messenger("server")
     self.client.blocking = False
     self.server.blocking = False
     self.server.start()
@@ -592,7 +588,10 @@ class NBMessengerTest(common.Test):
     self.address = "amqp://0.0.0.0:12345"
     self.server.subscribe("amqp://~0.0.0.0:12345")
 
-  def pump(self):
+  def pump(self, timeout=0):
+    while self.client.work(0) or self.server.work(0): pass
+    self.client.work(timeout)
+    self.server.work(timeout)
     while self.client.work(0) or self.server.work(0): pass
 
   def teardown(self):
@@ -641,3 +640,23 @@ class NBMessengerTest(common.Test):
         break
 
     assert self.client.outgoing > 0
+
+  def testRecvBeforeSubscribe(self):
+    self.client.recv()
+    self.client.subscribe(self.address + "/foo")
+
+    self.pump()
+
+    msg = Message()
+    msg.address = "amqp://client/foo"
+    msg.body = "Hello World!"
+    self.server.put(msg)
+
+    assert self.client.incoming == 0
+    self.pump(self.delay)
+    assert self.client.incoming == 1
+
+    msg2 = Message()
+    self.client.get(msg2)
+    assert msg2.address == msg.address
+    assert msg2.body == msg.body

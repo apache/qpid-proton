@@ -53,7 +53,6 @@ class ConnectorImpl<C> implements Connector<C>
     private SelectionKey _key;
     private ConnectorState _state = UNINITIALIZED;
 
-    private boolean _readPending = true;
     private boolean _inputDone = false;
     private boolean _outputDone = false;
     private boolean _closed = false;
@@ -75,8 +74,6 @@ class ConnectorImpl<C> implements Connector<C>
             _selected = true;
             _driver.selectConnector(this);
         }
-
-        _readPending = true;
     }
 
     void unselected()
@@ -91,12 +88,8 @@ class ConnectorImpl<C> implements Connector<C>
         boolean processed = false;
         if (!_inputDone)
         {
-            if (_readPending)
-            {
-                if (read()) {
-                    processed = true;
-                }
-                _readPending = false;
+            if (read()) {
+                processed = true;
             }
         }
 
