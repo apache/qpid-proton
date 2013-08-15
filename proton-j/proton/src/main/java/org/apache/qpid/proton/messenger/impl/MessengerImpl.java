@@ -23,8 +23,10 @@ package org.apache.qpid.proton.messenger.impl;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,6 +80,7 @@ public class MessengerImpl implements Messenger
     private int _distributed;
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
+    private List<Connector> _awaitingDestruction = new ArrayList<Connector>();
 
 
     /**
@@ -418,6 +421,15 @@ public class MessengerImpl implements Messenger
         return size;
     }
 
+    private void bringDestruction()
+    {
+        for (Connector<?> c : _awaitingDestruction)
+        {
+            c.destroy();
+        }
+        _awaitingDestruction.clear();
+    }
+
     private void processAllConnectors()
     {
         distributeCredit();
@@ -435,6 +447,8 @@ public class MessengerImpl implements Messenger
             }
             processEndpoints(c);
         }
+        bringDestruction();
+        distributeCredit();
     }
 
     private void processActive()
@@ -470,6 +484,8 @@ public class MessengerImpl implements Messenger
             }
             processEndpoints(c);
         }
+        bringDestruction();
+        distributeCredit();
     }
 
     private void processEndpoints(Connector c)
@@ -527,11 +543,8 @@ public class MessengerImpl implements Messenger
 
         if (c.isClosed())
         {
+            _awaitingDestruction.add(c);
             reclaimCredit(connection);
-            c.destroy();
-            // XXX: could we do this once at the end of the loop
-            // instead of every time we reclaim?
-            distributeCredit();
         }
         else
         {

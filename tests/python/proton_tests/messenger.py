@@ -48,17 +48,9 @@ class Test(common.Test):
     self.client.start()
 
   def _safelyStopClient(self):
-    existing_exception = None
     self.server.interrupt()
-    try:
-      self.client.stop()
-      self.client = None
-    except:
-      print "Client failed to stop due to: %s" % sys.exc_info()[1]
-      if existing_exception:
-        raise existing_exception
-      else:
-        raise
+    self.client.stop()
+    self.client = None
 
   def teardown(self):
     try:
