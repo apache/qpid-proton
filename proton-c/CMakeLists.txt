@@ -211,6 +211,10 @@ if (CMAKE_COMPILER_IS_GNUCC)
   endif (ENABLE_UNDEFINED_ERROR)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
+if (MSVC)
+	set(CMAKE_DEBUG_POSTFIX "d")
+endif (MSVC)
+
 find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
