@@ -321,6 +321,7 @@ pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-
 # Install executables and libraries
 install (TARGETS proton proton-dump qpid-proton
   RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION bin
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
 # Install header files
