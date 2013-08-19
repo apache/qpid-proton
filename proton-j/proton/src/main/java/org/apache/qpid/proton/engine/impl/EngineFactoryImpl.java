@@ -20,31 +20,27 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.ProtonFactoryImpl;
 import org.apache.qpid.proton.engine.EngineFactory;
-import org.apache.qpid.proton.engine.EngineLogger;
 import org.apache.qpid.proton.engine.ProtonJConnection;
 import org.apache.qpid.proton.engine.ProtonJSslDomain;
 import org.apache.qpid.proton.engine.ProtonJSslPeerDetails;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
 import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
-import org.apache.qpid.proton.logging.ProtonLogger;
 
 public class EngineFactoryImpl extends ProtonFactoryImpl implements EngineFactory
 {
-    private EngineLogger _logger = new ProtonLogger();
-
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJConnection createConnection()
     {
-        return new ConnectionImpl(_logger);
+        return new ConnectionImpl();
     }
 
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
     @Override
     public ProtonJTransport createTransport()
     {
-        return new TransportImpl(_logger);
+        return new TransportImpl();
     }
 
     @SuppressWarnings("deprecation") // TODO remove once the constructor is made non-public (and therefore non-deprecated)
@@ -59,21 +55,5 @@ public class EngineFactoryImpl extends ProtonFactoryImpl implements EngineFactor
     public ProtonJSslPeerDetails createSslPeerDetails(String hostname, int port)
     {
         return new SslPeerDetailsImpl(hostname, port);
-    }
-
-    @Override
-    public void setEngineLogger(EngineLogger logger)
-    {
-        if(logger == null)
-        {
-            throw new NullPointerException();
-        }
-        _logger = logger;
-    }
-
-    @Override
-    public EngineLogger getEngineLogger()
-    {
-        return _logger;
     }
 }

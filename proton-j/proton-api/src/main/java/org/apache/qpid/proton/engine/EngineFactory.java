@@ -26,11 +26,4 @@ public interface EngineFactory extends ProtonFactory
     Transport createTransport();
     SslDomain createSslDomain();
     SslPeerDetails createSslPeerDetails(String hostname, int port);
-
-    /**
-     * Sets the engine logger used by all Engine objects subsequently
-     * created by this factory.
-     */
-    void setEngineLogger(EngineLogger logger);
-    EngineLogger getEngineLogger();
 }

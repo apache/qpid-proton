@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.*;
-import org.apache.qpid.proton.logging.ProtonLogger;
 import org.apache.qpid.proton.amqp.transport.Open;
 
 public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
@@ -64,25 +63,16 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private Map<Symbol, Object> _properties;
     private Map<Symbol, Object> _remoteProperties;
 
-    private EngineLogger _engineLogger;
-
     private Object _context;
 
     private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Intended to only be used by tests.
      * Client code outside this module should use a {@link EngineFactory} instead
      */
     @Deprecated public ConnectionImpl()
     {
-        _engineLogger = new ProtonLogger();
-    }
-
-    ConnectionImpl(EngineLogger engineLogger)
-    {
-        _engineLogger = engineLogger;
     }
 
     public SessionImpl session()
@@ -524,17 +514,6 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
                 delivery.clearWork();
             }
         }
-    }
-
-    @Override
-    public EngineLogger getEngineLogger()
-    {
-        return _engineLogger;
-    }
-
-    public void setEngineLogger(EngineLogger engineLogger)
-    {
-        _engineLogger = engineLogger;
     }
 
     public Object getContext()

@@ -96,9 +96,6 @@ public interface Connection extends Endpoint
 
     void setProperties(Map<Symbol,Object> properties);
 
-    EngineLogger getEngineLogger();
-    void setEngineLogger(EngineLogger engineLogger);
-
     Object getContext();
 
     void setContext(Object context);

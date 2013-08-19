@@ -20,15 +20,11 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.EngineLogger;
 import org.apache.qpid.proton.framing.TransportFrame;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
- *
- * @deprecated superseded by {@link EngineLogger}. TODO replace uses of this class with an EngineLogger instead.
  */
-@Deprecated
 public interface ProtocolTracer
 {
     public void receivedFrame(TransportFrame transportFrame);

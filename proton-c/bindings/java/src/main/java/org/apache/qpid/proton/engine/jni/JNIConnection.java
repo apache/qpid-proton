@@ -34,7 +34,6 @@ import org.apache.qpid.proton.codec.jni.JNIData;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineLogger;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.jni.Proton;
@@ -307,16 +306,5 @@ public class JNIConnection implements Connection
     public void setProperties(Map<Symbol, Object> properties)
     {
         throw new ProtonUnsupportedOperationException();
-    }
-
-    public EngineLogger getEngineLogger()
-    {
-        //TODO: implement
-        return null;
-    }
-
-    public void setEngineLogger(EngineLogger engineLogger)
-    {
-        //TODO: implement
     }
 }

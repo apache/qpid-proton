@@ -471,15 +471,4 @@ public class JNITransport implements Transport
         free();
         super.finalize();
     }
-
-    public EngineLogger getEngineLogger()
-    {
-        //TODO: implement
-        return null;
-    }
-
-    public void setEngineLogger(EngineLogger engineLogger)
-    {
-        //TODO: implement
-    }
 }

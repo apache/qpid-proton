@@ -186,7 +186,4 @@ public interface Transport extends Endpoint
     void setMaxFrameSize(int size);
 
     int getRemoteMaxFrameSize();
-
-    EngineLogger getEngineLogger();
-    void setEngineLogger(EngineLogger engineLogger);
 }
