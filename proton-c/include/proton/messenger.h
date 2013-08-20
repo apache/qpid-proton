@@ -42,7 +42,8 @@ typedef enum {
   PN_STATUS_UNKNOWN = 0,
   PN_STATUS_PENDING = 1,
   PN_STATUS_ACCEPTED = 2,
-  PN_STATUS_REJECTED = 3
+  PN_STATUS_REJECTED = 3,
+  PN_STATUS_MODIFIED = 4
 } pn_status_t;
 
 /** Construct a new Messenger with the given name. The name is global.

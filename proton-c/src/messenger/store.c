@@ -287,10 +287,16 @@ static pn_status_t disp2status(uint64_t disp)
   if (!disp) return PN_STATUS_PENDING;
 
   switch (disp) {
+  case PN_RECEIVED:
+    return PN_STATUS_PENDING;
   case PN_ACCEPTED:
     return PN_STATUS_ACCEPTED;
   case PN_REJECTED:
     return PN_STATUS_REJECTED;
+  case PN_RELEASED:
+    return PN_STATUS_PENDING;
+  case PN_MODIFIED:
+    return PN_STATUS_MODIFIED;
   default:
     assert(0);
   }
