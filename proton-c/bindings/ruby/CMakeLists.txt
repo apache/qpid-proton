@@ -38,7 +38,6 @@ set(RUBY_LIBRARIES
     lib/qpid_proton/exception_handling.rb
     lib/qpid_proton/exceptions.rb
     lib/qpid_proton/hash.rb
-    lib/qpid_proton/helper.rb
     lib/qpid_proton/mapping.rb
     lib/qpid_proton/message_format.rb
     lib/qpid_proton/message.rb
