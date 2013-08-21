@@ -92,14 +92,18 @@ set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
 # Pull in local cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
 
-find_package( Java )
-if (JAVA_FOUND)
-  message(STATUS "Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
-  include(UseJava)
-  include(ProtonUseJava)
+set (java_default ON)
+option(GEN_JAVA "Include java-related artifacts" ${java_default})
+if (GEN_JAVA)
+  find_package( Java )
+  if (JAVA_FOUND)
+    message(STATUS "Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
+    include(UseJava)
+    include(ProtonUseJava)
 
-  add_subdirectory(proton-j/proton-api)
-  add_subdirectory(proton-j/proton)
+    add_subdirectory(proton-j/proton-api)
+    add_subdirectory(proton-j/proton)
+  endif()
 endif()
 
 add_subdirectory(proton-c)
