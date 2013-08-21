@@ -65,7 +65,7 @@ sub get_map_from {
         $data->next;
         $type = $data->get_type;
         my $value = $type->get($data);
-        %{$result}->{$key} = $value;
+        $result{$key} = $value;
     }
     $data->exit;
 

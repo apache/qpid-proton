@@ -889,6 +889,25 @@ The format of the message.
         self._check(err)
         return data
 
+  def __repr2__(self):
+    props = []
+    for attr in ("inferred", "address", "reply_to", "durable", "ttl",
+                 "priority", "first_acquirer", "delivery_count", "id",
+                 "correlation_id", "user_id", "group_id", "group_sequence",
+                 "reply_to_group_id", "instructions", "annotations",
+                 "properties", "body"):
+      value = getattr(self, attr)
+      if value: props.append("%s=%r" % (attr, value))
+    return "Message(%s)" % ", ".join(props)
+
+  def __repr__(self):
+    tmp = pn_string(None)
+    err = pn_inspect(self._msg, tmp)
+    result = pn_string_get(tmp)
+    pn_free(tmp)
+    self._check(err)
+    return result
+
 class DataException(ProtonException):
   """
   The DataException class is the root of the Data exception hierarchy.

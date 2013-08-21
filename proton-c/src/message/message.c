@@ -30,6 +30,7 @@
 #include <assert.h>
 #include "protocol.h"
 #include "../util.h"
+#include "../platform_fmt.h"
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
@@ -79,9 +80,242 @@ struct pn_message_t {
   pn_error_t *error;
 };
 
+void pn_message_finalize(void *obj)
+{
+  pn_message_t *msg = (pn_message_t *) obj;
+  pn_free(msg->user_id);
+  pn_free(msg->address);
+  pn_free(msg->subject);
+  pn_free(msg->reply_to);
+  pn_free(msg->content_type);
+  pn_free(msg->content_encoding);
+  pn_free(msg->group_id);
+  pn_free(msg->reply_to_group_id);
+  pn_data_free(msg->id);
+  pn_data_free(msg->correlation_id);
+  pn_data_free(msg->data);
+  pn_data_free(msg->instructions);
+  pn_data_free(msg->annotations);
+  pn_data_free(msg->properties);
+  pn_data_free(msg->body);
+  pn_parser_free(msg->parser);
+  pn_error_free(msg->error);
+}
+
+int pn_message_inspect(void *obj, pn_string_t *dst)
+{
+  pn_message_t *msg = (pn_message_t *) obj;
+  int err = pn_string_addf(dst, "Message{");
+  if (err) return err;
+
+  bool comma = false;
+
+  if (pn_string_get(msg->address)) {
+    err = pn_string_addf(dst, "address=");
+    if (err) return err;
+    err = pn_inspect(msg->address, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->durable) {
+    err = pn_string_addf(dst, "durable=%i, ", msg->durable);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->priority != PN_DEFAULT_PRIORITY) {
+    err = pn_string_addf(dst, "priority=%i, ", msg->priority);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->ttl) {
+    err = pn_string_addf(dst, "ttl=%" PRIu32 ", ", msg->ttl);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->first_acquirer) {
+    err = pn_string_addf(dst, "first_acquirer=%i, ", msg->first_acquirer);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->delivery_count) {
+    err = pn_string_addf(dst, "delivery_count=%" PRIu32 ", ", msg->delivery_count);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->id)) {
+    err = pn_string_addf(dst, "id=");
+    if (err) return err;
+    err = pn_inspect(msg->id, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->user_id)) {
+    err = pn_string_addf(dst, "user_id=");
+    if (err) return err;
+    err = pn_inspect(msg->user_id, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->subject)) {
+    err = pn_string_addf(dst, "subject=");
+    if (err) return err;
+    err = pn_inspect(msg->subject, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->reply_to)) {
+    err = pn_string_addf(dst, "reply_to=");
+    if (err) return err;
+    err = pn_inspect(msg->reply_to, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->correlation_id)) {
+    err = pn_string_addf(dst, "correlation_id=");
+    if (err) return err;
+    err = pn_inspect(msg->correlation_id, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->content_type)) {
+    err = pn_string_addf(dst, "content_type=");
+    if (err) return err;
+    err = pn_inspect(msg->content_type, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->content_encoding)) {
+    err = pn_string_addf(dst, "content_encoding=");
+    if (err) return err;
+    err = pn_inspect(msg->content_encoding, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->expiry_time) {
+    err = pn_string_addf(dst, "expiry_time=%" PRIi64 ", ", msg->expiry_time);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->creation_time) {
+    err = pn_string_addf(dst, "creation_time=%" PRIi64 ", ", msg->creation_time);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->group_id)) {
+    err = pn_string_addf(dst, "group_id=");
+    if (err) return err;
+    err = pn_inspect(msg->group_id, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->group_sequence) {
+    err = pn_string_addf(dst, "group_sequence=%" PRIi32 ", ", msg->group_sequence);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_string_get(msg->reply_to_group_id)) {
+    err = pn_string_addf(dst, "reply_to_group_id=");
+    if (err) return err;
+    err = pn_inspect(msg->reply_to_group_id, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (msg->inferred) {
+    err = pn_string_addf(dst, "inferred=%i, ", msg->inferred);
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->instructions)) {
+    err = pn_string_addf(dst, "instructions=");
+    if (err) return err;
+    err = pn_inspect(msg->instructions, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->annotations)) {
+    err = pn_string_addf(dst, "annotations=");
+    if (err) return err;
+    err = pn_inspect(msg->annotations, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->properties)) {
+    err = pn_string_addf(dst, "properties=");
+    if (err) return err;
+    err = pn_inspect(msg->properties, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (pn_data_size(msg->body)) {
+    err = pn_string_addf(dst, "body=");
+    if (err) return err;
+    err = pn_inspect(msg->body, dst);
+    if (err) return err;
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    comma = true;
+  }
+
+  if (comma) {
+    int err = pn_string_resize(dst, pn_string_size(dst) - 2);
+    if (err) return err;
+  }
+
+  return pn_string_addf(dst, "}");
+}
+
 pn_message_t *pn_message()
 {
-  pn_message_t *msg = (pn_message_t *) malloc(sizeof(pn_message_t));
+  static pn_class_t clazz = {pn_message_finalize, NULL, NULL, pn_message_inspect};
+  pn_message_t *msg = (pn_message_t *) pn_new(sizeof(pn_message_t), &clazz);
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;
   msg->ttl = 0;
@@ -116,26 +350,7 @@ pn_message_t *pn_message()
 
 void pn_message_free(pn_message_t *msg)
 {
-  if (msg) {
-    pn_free(msg->user_id);
-    pn_free(msg->address);
-    pn_free(msg->subject);
-    pn_free(msg->reply_to);
-    pn_free(msg->content_type);
-    pn_free(msg->content_encoding);
-    pn_free(msg->group_id);
-    pn_free(msg->reply_to_group_id);
-    pn_data_free(msg->id);
-    pn_data_free(msg->correlation_id);
-    pn_data_free(msg->data);
-    pn_data_free(msg->instructions);
-    pn_data_free(msg->annotations);
-    pn_data_free(msg->properties);
-    pn_data_free(msg->body);
-    pn_parser_free(msg->parser);
-    pn_error_free(msg->error);
-    free(msg);
-  }
+  pn_free(msg);
 }
 
 void pn_message_clear(pn_message_t *msg)

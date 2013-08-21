@@ -579,6 +579,18 @@ static void test_string_format()
   pn_free(str);
 }
 
+static void test_string_addf()
+{
+  pn_string_t *str = pn_string("hello ");
+  assert(str);
+  int err = pn_string_addf(str, "%s", "this is a string that should be long "
+                           "enough to force growth but just in case we'll "
+                           "tack this other really long string on for the "
+                           "heck of it");
+  assert(err == 0);
+  pn_free(str);
+}
+
 static void test_map_iteration(int n)
 {
   pn_list_t *pairs = pn_list(2*n, PN_REFCOUNT);
@@ -658,6 +670,7 @@ int main(int argc, char **argv)
   test_stringn("this has an embedded \000 in it", 28);
 
   test_string_format();
+  test_string_addf();
 
   test_build_list();
   test_build_map();

@@ -35,6 +35,16 @@ sub new {
     return $self;
 }
 
+use overload fallback => 1,
+    '""' => sub {
+        my ($self) = @_;
+        my $tmp = cproton_perl::pn_string("");
+        cproton_perl::pn_inspect($self->{_impl}, $tmp);
+        my $result = cproton_perl::pn_string_get($tmp);
+        cproton_perl::pn_free($tmp);
+        return $result;
+};
+
 sub DESTROY {
     my ($self) = @_;
     my $impl = $self->{_impl};

@@ -164,7 +164,9 @@ sub put {
 
 sub send {
     my ($self) = @_;
-    cproton_perl::pn_messenger_send($self->{_impl}, $_[1]);
+    my $n = $_[1];
+    $n = -1 if !defined $n;
+    cproton_perl::pn_messenger_send($self->{_impl}, $n);
 }
 
 sub get {
@@ -177,7 +179,9 @@ sub get {
 
 sub receive {
     my ($self) = @_;
-    cproton_perl::pn_messenger_recv($self->{_impl}, $_[1]);
+    my $n = $_[1];
+    $n = -1 if !defined $n;
+    cproton_perl::pn_messenger_recv($self->{_impl}, $n);
 }
 
 sub outgoing {
@@ -188,6 +192,34 @@ sub outgoing {
 sub incoming {
     my ($self) = @_;
     return cproton_perl::pn_messenger_incoming($self->{_impl});
+}
+
+sub accept {
+    my ($self) = @_;
+    my $tracker = $_[1];
+    my $flags = 0;
+    if (!defined $tracker) {
+        $tracker = cproton_perl::pn_messenger_incoming_tracker($self->{_impl});
+        $flags = $cproton_perl::PN_CUMULATIVE;
+    }
+    return cproton_perl::pn_messenger_accept($self->{_impl}, $tracker, $flags);
+}
+
+sub reject {
+    my ($self) = @_;
+    my $tracker = $_[1];
+    my $flags = 0;
+    if (!defined $tracker) {
+        $tracker = cproton_perl::pn_messenger_incoming_tracker($self->{_impl});
+        $flags = $cproton_perl::PN_CUMULATIVE;
+    }
+    return cproton_perl::pn_messenger_reject($self->{_impl}, $tracker, $flags);
+}
+
+sub status {
+    my ($self) = @_;
+    my $tracker = $_[1];
+    return cproton_perl::pn_messenger_status($self->{_impl}, $tracker);
 }
 
 1;

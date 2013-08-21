@@ -23,6 +23,7 @@
  */
 
 #include <proton/types.h>
+#include <stdarg.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #include <stdint.h>
@@ -36,10 +37,19 @@
 extern "C" {
 #endif
 
+typedef uintptr_t pn_handle_t;
+typedef intptr_t pn_shandle_t;
+
+typedef struct pn_list_t pn_list_t;
+typedef struct pn_map_t pn_map_t;
+typedef struct pn_hash_t pn_hash_t;
+typedef struct pn_string_t pn_string_t;
+
 typedef struct {
   void (*finalize)(void *);
   uintptr_t (*hashcode)(void *);
   intptr_t (*compare)(void *, void *);
+  int (*inspect)(void *, pn_string_t *);
 } pn_class_t;
 
 PN_EXTERN void *pn_new(size_t size, pn_class_t *clazz);
@@ -51,10 +61,9 @@ PN_EXTERN pn_class_t *pn_class(void *object);
 PN_EXTERN uintptr_t pn_hashcode(void *object);
 PN_EXTERN intptr_t pn_compare(void *a, void *b);
 PN_EXTERN bool pn_equals(void *a, void *b);
+PN_EXTERN int pn_inspect(void *object, pn_string_t *dst);
 
 #define PN_REFCOUNT (0x1)
-
-typedef struct pn_list_t pn_list_t;
 
 PN_EXTERN pn_list_t *pn_list(size_t capacity, int options);
 PN_EXTERN size_t pn_list_size(pn_list_t *list);
@@ -64,11 +73,6 @@ PN_EXTERN int pn_list_add(pn_list_t *list, void *value);
 PN_EXTERN ssize_t pn_list_index(pn_list_t *list, void *value);
 PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
-
-typedef uintptr_t pn_handle_t;
-typedef intptr_t pn_shandle_t;
-
-typedef struct pn_map_t pn_map_t;
 
 #define PN_REFCOUNT_KEY (0x2)
 #define PN_REFCOUNT_VALUE (0x4)
@@ -83,8 +87,6 @@ PN_EXTERN pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry);
 PN_EXTERN void *pn_map_key(pn_map_t *map, pn_handle_t entry);
 PN_EXTERN void *pn_map_value(pn_map_t *map, pn_handle_t entry);
 
-typedef struct pn_hash_t pn_hash_t;
-
 PN_EXTERN pn_hash_t *pn_hash(size_t capacity, float load_factor, int options);
 PN_EXTERN size_t pn_hash_size(pn_hash_t *hash);
 PN_EXTERN int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value);
@@ -94,8 +96,6 @@ PN_EXTERN pn_handle_t pn_hash_head(pn_hash_t *hash);
 PN_EXTERN pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry);
 PN_EXTERN uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry);
 PN_EXTERN void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry);
-
-typedef struct pn_string_t pn_string_t;
 
 PN_EXTERN pn_string_t *pn_string(const char *bytes);
 PN_EXTERN pn_string_t *pn_stringn(const char *bytes, size_t n);
@@ -110,6 +110,14 @@ PN_EXTERN int pn_string_format(pn_string_t *string, const char *format, ...)
   __attribute__ ((format (printf, 2, 3)))
 #endif
     ;
+PN_EXTERN int pn_string_vformat(pn_string_t *string, const char *format, va_list ap);
+PN_EXTERN int pn_string_addf(pn_string_t *string, const char *format, ...)
+#ifdef __GNUC__
+  __attribute__ ((format (printf, 2, 3)))
+#endif
+    ;
+PN_EXTERN int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap);
+PN_EXTERN int pn_string_grow(pn_string_t *string, size_t capacity);
 PN_EXTERN char *pn_string_buffer(pn_string_t *string);
 PN_EXTERN size_t pn_string_capacity(pn_string_t *string);
 PN_EXTERN int pn_string_resize(pn_string_t *string, size_t size);

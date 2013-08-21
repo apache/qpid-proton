@@ -134,6 +134,7 @@ static bool pni_match_r(pn_matcher_t *matcher, const char *pattern, const char *
 
 static bool pni_match(pn_matcher_t *matcher, const char *pattern, const char *text)
 {
+  text = text ? text : "";
   matcher->groups = 0;
   if (pni_match_r(matcher, pattern, text, 1, 0)) {
     matcher->group[0].start = text;

@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 typedef struct {
   pn_class_t *clazz;
@@ -124,6 +125,26 @@ intptr_t pn_compare(void *a, void *b)
 bool pn_equals(void *a, void *b)
 {
   return !pn_compare(a, b);
+}
+
+int pn_inspect(void *object, pn_string_t *dst)
+{
+  if (!pn_string_get(dst)) {
+    pn_string_set(dst, "");
+  }
+
+  if (object) {
+    pni_head_t *head = pni_head(object);
+    if (head->clazz) {
+      pn_class_t *clazz = head->clazz;
+      if (clazz->inspect) {
+        return clazz->inspect(object, dst);
+      }
+    }
+    return pn_string_addf(dst, "object<%p>", object);
+  } else {
+    return pn_string_addf(dst, "(null)");
+  }
 }
 
 struct pn_list_t {
@@ -330,7 +351,7 @@ static void pni_map_allocate(pn_map_t *map)
 
 pn_map_t *pn_map(size_t capacity, float load_factor, int options)
 {
-  static pn_class_t clazz = {pn_map_finalize, pn_map_hashcode};
+  static pn_class_t clazz = {pn_map_finalize, pn_map_hashcode, NULL};
 
   pn_map_t *map = (pn_map_t *) pn_new(sizeof(pn_map_t), &clazz);
   map->capacity = capacity ? capacity : 16;
@@ -626,13 +647,36 @@ static intptr_t pn_string_compare(void *oa, void *ob)
   }
 }
 
+static int pn_string_inspect(void *obj, pn_string_t *dst)
+{
+  pn_string_t *str = (pn_string_t *) obj;
+  if (str->size == PNI_NULL_SIZE) {
+    return pn_string_addf(dst, "null");
+  }
+
+  int err = pn_string_addf(dst, "\"");
+
+  for (int i = 0; i < str->size; i++) {
+    uint8_t c = str->bytes[i];
+    if (isprint(c)) {
+      err = pn_string_addf(dst, "%c", c);
+      if (err) return err;
+    } else {
+      err = pn_string_addf(dst, "\\x%.2x", c);
+      if (err) return err;
+    }
+  }
+
+  return pn_string_addf(dst, "\"");
+}
+
 pn_string_t *pn_string(const char *bytes)
 {
   return pn_stringn(bytes, bytes ? strlen(bytes) : 0);
 }
 
 static pn_class_t clazz = {pn_string_finalize, pn_string_hashcode,
-                           pn_string_compare};
+                           pn_string_compare, pn_string_inspect};
 
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
@@ -669,7 +713,7 @@ int pn_string_set(pn_string_t *string, const char *bytes)
   return pn_string_setn(string, bytes, bytes ? strlen(bytes) : 0);
 }
 
-static int pn_string_grow(pn_string_t *string, size_t capacity)
+int pn_string_grow(pn_string_t *string, size_t capacity)
 {
   bool grow = false;
   while (string->capacity < (capacity*sizeof(char) + 1)) {
@@ -726,16 +770,46 @@ int pn_string_format(pn_string_t *string, const char *format, ...)
 {
   va_list ap;
 
+  va_start(ap, format);
+  int err = pn_string_vformat(string, format, ap);
+  va_end(ap);
+  return err;
+}
+
+int pn_string_vformat(pn_string_t *string, const char *format, va_list ap)
+{
+  pn_string_set(string, "");
+  return pn_string_vaddf(string, format, ap);
+}
+
+int pn_string_addf(pn_string_t *string, const char *format, ...)
+{
+  va_list ap;
+
+  va_start(ap, format);
+  int err = pn_string_vaddf(string, format, ap);
+  va_end(ap);
+  return err;
+}
+
+int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
+{
+  va_list copy;
+
+  if (string->size == PNI_NULL_SIZE) {
+    return PN_ERR;
+  }
+
   while (true) {
-    va_start(ap, format);
-    int err = vsnprintf(string->bytes, string->capacity, format, ap);
-    va_end(ap);
+    va_copy(copy, ap);
+    int err = vsnprintf(string->bytes + string->size, string->capacity - string->size, format, copy);
+    va_end(copy);
     if (err < 0) {
       return err;
-    } else if ((size_t) err >= string->capacity) {
-      pn_string_grow(string, err);
+    } else if ((size_t) err >= string->capacity - string->size) {
+      pn_string_grow(string, string->size + err);
     } else {
-      string->size = err;
+      string->size += err;
       return 0;
     }
   }

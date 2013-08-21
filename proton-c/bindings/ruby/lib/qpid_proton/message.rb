@@ -114,6 +114,14 @@ module Qpid
         @body = nil
       end
 
+      def to_s
+        tmp = Cproton.pn_string("")
+        Cproton.pn_inspect(@impl, tmp)
+        result = Cproton.pn_string_get(tmp)
+        Cproton.pn_free(tmp)
+        return result
+      end
+
       # Invoked by garbage collection to clean up resources used
       # by the underlying message implementation.
       def self.finalize!(impl) # :nodoc:

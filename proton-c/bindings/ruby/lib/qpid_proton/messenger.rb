@@ -199,6 +199,7 @@ module Qpid
         # encode the message first
         message.pre_encode
         check_for_error(Cproton.pn_messenger_put(@impl, message.impl))
+        return outgoing_tracker
       end
 
       # Sends all outgoing messages, blocking until the outgoing queue
@@ -218,10 +219,15 @@ module Qpid
       # * msg - the (optional) +Message+ instance to be used
       #
       def get(msg = nil)
-        msg = Qpid::Proton::Message.new if msg.nil?
-        check_for_error(Cproton.pn_messenger_get(@impl, msg.impl))
+        msg_impl = nil
+        if msg.nil? then
+          msg_impl = nil
+        else
+          msg_impl = msg.impl
+        end
+        check_for_error(Cproton.pn_messenger_get(@impl, msg_impl))
         msg.post_decode unless msg.nil?
-        return msg
+        return incoming_tracker
       end
 
       # Receives up to the specified number of messages, blocking until at least
@@ -287,9 +293,14 @@ module Qpid
       # * tracker - the tracker
       # * flag - the flag
       #
-      def accept(tracker, flag)
-        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
-        raise TypeError.new("invalid flag: #{flag}") unless Qpid::Proton::Tracker.valid_flag?(flag)
+      def accept(tracker = nil)
+        raise TypeError.new("invalid tracker: #{tracker}") unless tracker.nil? or valid_tracker?(tracker)
+        if tracker.nil? then
+          tracker = self.incoming_tracker
+          flag = Cproton::PN_CUMULATIVE
+        else
+          flag = 0
+        end
         check_for_error(Cproton.pn_messenger_accept(@impl, tracker.impl, flag))
       end
 
@@ -300,8 +311,14 @@ module Qpid
       # * tracker - the tracker
       # * flag - the flag
       #
-      def reject(tracker, flag)
-        raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
+      def reject(tracker)
+        raise TypeError.new("invalid tracker: #{tracker}") unless tracker.nil? or valid_tracker?(tracker)
+        if tracker.nil? then
+          tracker = self.incoming_tracker
+          flag = Cproton::PN_CUMULATIVE
+        else
+          flag = 0
+        end
         check_for_error(Cproton.pn_messenger_reject(@impl, tracker.impl, flag))
       end
 

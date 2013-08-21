@@ -1042,9 +1042,27 @@ static void pn_data_finalize(void *object)
   free(data->iatoms);
 }
 
+static int pn_data_inspect(void *obj, pn_string_t *dst)
+{
+  pn_data_t *data = (pn_data_t *) obj;
+  while (true) {
+    char *bytes = pn_string_buffer(dst) + pn_string_size(dst);
+    size_t size = pn_string_capacity(dst) - pn_string_size(dst);
+    int err = pn_data_format(data, bytes, &size);
+    if (err == PN_OVERFLOW) {
+      err = pn_string_grow(dst, pn_string_capacity(dst)*2);
+      if (err) return err;
+    } else if (err) {
+      return err;
+    } else {
+      return pn_string_resize(dst, pn_string_size(dst) + size);
+    }
+  }
+}
+
 pn_data_t *pn_data(size_t capacity)
 {
-  static pn_class_t clazz = {pn_data_finalize};
+  static pn_class_t clazz = {pn_data_finalize, NULL, NULL, pn_data_inspect};
   pn_data_t *data = (pn_data_t *) pn_new(sizeof(pn_data_t), &clazz);
   data->capacity = capacity;
   data->size = 0;

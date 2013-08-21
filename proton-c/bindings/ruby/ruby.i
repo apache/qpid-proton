@@ -236,16 +236,6 @@
     }
 }
 
-%typemap (in) void *
-{
-  $1 = (void *) $input;
-}
-
-%typemap (out) void *
-{
-  $result = (VALUE) $1;
-}
-
 int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
 %ignore pn_message_load;
 

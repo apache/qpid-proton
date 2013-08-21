@@ -802,7 +802,7 @@ static int pni_route(pn_messenger_t *messenger, const char *address)
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
 {
   char domain[1024];
-  if (sizeof(domain) < strlen(address) + 1) {
+  if (address && sizeof(domain) < strlen(address) + 1) {
     pn_error_format(messenger->error, PN_ERR,
                     "address exceeded maximum length: %s", address);
     return NULL;

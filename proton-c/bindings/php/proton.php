@@ -102,6 +102,12 @@ class Messenger
     case "timeout":
       $this->_check(pn_messenger_set_timeout($this->impl, $value));
       break;
+    case "outgoing_window":
+      $this->_check(pn_messenger_set_outgoing_window($this->impl, $value));
+      break;
+    case "incoming_window":
+      $this->_check(pn_messenger_set_incoming_window($this->impl, $value));
+      break;
     default:
       throw new Exception("unknown property: " . $name);
     }
@@ -122,9 +128,14 @@ class Messenger
     $this->_check(pn_messenger_subscribe($this->impl, $source));
   }
 
+  public function outgoing_tracker() {
+    return pn_messenger_outgoing_tracker($this->impl);
+  }
+
   public function put($message) {
     $message->_pre_encode();
     $this->_check(pn_messenger_put($this->impl, $message->impl));
+    return $this->outgoing_tracker();
   }
 
   public function send($n = -1) {
@@ -135,9 +146,34 @@ class Messenger
     $this->_check(pn_messenger_recv($this->impl, $n));
   }
 
+  public function incoming_tracker() {
+    return pn_messenger_incoming_tracker($this->impl);
+  }
+
   public function get($message) {
     $this->_check(pn_messenger_get($this->impl, $message->impl));
     $message->_post_decode();
+    return $this->incoming_tracker();
+  }
+
+  public function accept($tracker = null) {
+    if ($tracker == null) {
+      $tracker = $this->incoming_tracker();
+      $flag = PN_CUMULATIVE;
+    } else {
+      $flag = 0;
+    }
+    $this->_check(pn_messenger_accept($this->impl, $tracker, $flag));
+  }
+
+  public function reject($tracker = null) {
+    if ($tracker == null) {
+      $tracker = $this->incoming_tracker();
+      $flag = PN_CUMULATIVE;
+    } else {
+      $flag = 0;
+    }
+    $this->_check(pn_messenger_reject($this->impl, $tracker, $flag));
   }
 
   public function route($pattern, $address) {
@@ -150,6 +186,10 @@ class Messenger
 
   public function incoming() {
     return pn_messenger_incoming($this->impl);
+  }
+
+  public function status($tracker) {
+    return pn_messenger_status($this->impl, $tracker);
   }
 
 }
@@ -179,6 +219,14 @@ class Message {
 
   public function __destruct() {
     pn_message_free($this->impl);
+  }
+
+  public function __tostring() {
+    $tmp = pn_string("");
+    pn_inspect($this->impl, $tmp);
+    $result = pn_string_get($tmp);
+    pn_free($tmp);
+    return $result;
   }
 
   private function _check($value) {
