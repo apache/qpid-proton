@@ -98,7 +98,7 @@ module Qpid
       # Returns the most recent error message.
       #
       def error
-        Cproton.pn_messenger_error(@impl)
+        Cproton.pn_error_text(Cproton.pn_messenger_error(@impl))
       end
 
       # Starts the +Messenger+, allowing it to begin sending and

@@ -172,10 +172,10 @@ PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
  *
  * @param[in] messenger the messenger to check for errors
  *
- * @return a descriptive error message or NULL if no error has
- *         occurred
+ * @return a pointer to the messenger's error descriptor
+ * @see error.h
  */
-PN_EXTERN const char *pn_messenger_error(pn_messenger_t *messenger);
+PN_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
 
 /** Gets the outgoing window for a Messenger. @see
  * ::pn_messenger_set_outgoing_window

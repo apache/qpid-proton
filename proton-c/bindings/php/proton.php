@@ -58,7 +58,7 @@ class Messenger
     if ($value < 0) {
       $exc = code2exc($value);
       if ($exc == null) $exc = "MessengerException";
-      throw new $exc("[$value]: " . pn_messenger_error($this->impl));
+      throw new $exc("[$value]: " . pn_error_text(pn_messenger_error($this->impl)));
     } else {
       return $value;
     }

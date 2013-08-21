@@ -155,7 +155,7 @@ module Qpid
       # Returns the most recent error message.
       #
       def error
-        Cproton.pn_message_error(@impl)
+        Cproton.pn_error_text(Cproton.pn_message_error(@impl))
       end
 
       # Returns whether there is currently an error reported.

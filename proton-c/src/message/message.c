@@ -387,10 +387,10 @@ int pn_message_errno(pn_message_t *msg)
   return pn_error_code(msg->error);
 }
 
-const char *pn_message_error(pn_message_t *msg)
+pn_error_t *pn_message_error(pn_message_t *msg)
 {
   assert(msg);
-  return pn_error_text(msg->error);
+  return msg->error;
 }
 
 bool pn_message_is_inferred(pn_message_t *msg)
@@ -839,9 +839,14 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 
   size_t remaining = *size;
   ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
-  if (encoded < 0)
-    return pn_error_format(msg->error, encoded, "data error: %s",
-                           pn_data_error(msg->data));
+  if (encoded < 0) {
+    if (encoded == PN_OVERFLOW) {
+      return encoded;
+    } else {
+      return pn_error_format(msg->error, encoded, "data error: %s",
+                             pn_data_error(msg->data));
+    }
+  }
 
   bytes += encoded;
   remaining -= encoded;

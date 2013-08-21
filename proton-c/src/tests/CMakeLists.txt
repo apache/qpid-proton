@@ -26,4 +26,14 @@ set_target_properties (
   )
 pn_c_files (object.c)
 
+add_executable (c-message-tests message.c)
+target_link_libraries (c-message-tests qpid-proton)
+set_target_properties (
+  c-message-tests
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  )
+pn_c_files (message.c)
+
 add_test (c-object-tests c-object-tests)
+add_test (c-message-tests c-message-tests)

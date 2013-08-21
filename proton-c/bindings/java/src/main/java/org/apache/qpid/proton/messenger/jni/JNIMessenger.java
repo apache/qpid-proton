@@ -277,7 +277,7 @@ class JNIMessenger implements Messenger
     {
         if(errorCode != 0 && errorCode != Proton.PN_INPROGRESS)
         {
-            String errorMessage = Proton.pn_messenger_error(_impl);
+            String errorMessage = Proton.pn_error_text(Proton.pn_messenger_error(_impl));
             if(errorCode == Proton.PN_TIMEOUT)
             {
                 throw new TimeoutException(errorMessage);

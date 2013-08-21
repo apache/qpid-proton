@@ -25,6 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/types.h>
 #include <proton/codec.h>
+#include <proton/error.h>
 #include <sys/types.h>
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -50,7 +51,7 @@ PN_EXTERN void           pn_message_free(pn_message_t *msg);
 
 PN_EXTERN void           pn_message_clear(pn_message_t *msg);
 PN_EXTERN int            pn_message_errno(pn_message_t *msg);
-PN_EXTERN const char *   pn_message_error(pn_message_t *msg);
+PN_EXTERN pn_error_t    *pn_message_error(pn_message_t *msg);
 
 PN_EXTERN bool           pn_message_is_inferred(pn_message_t *msg);
 PN_EXTERN int            pn_message_set_inferred(pn_message_t *msg, bool inferred);

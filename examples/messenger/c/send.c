@@ -27,13 +27,13 @@
 #include <string.h>
 #include <ctype.h>
 
-#define check(messenger)                                         \
-  {                                                              \
-    if(pn_messenger_errno(messenger))                            \
-    {                                                            \
-      die(__FILE__, __LINE__, pn_messenger_error(messenger));    \
-    }                                                            \
-  }                                                              \
+#define check(messenger)                                                     \
+  {                                                                          \
+    if(pn_messenger_errno(messenger))                                        \
+    {                                                                        \
+      die(__FILE__, __LINE__, pn_error_text(pn_messenger_error(messenger))); \
+    }                                                                        \
+  }                                                                          \
 
 void die(const char *file, int line, const char *message)
 {

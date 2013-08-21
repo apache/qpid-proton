@@ -235,7 +235,7 @@ class Messenger(object):
       if (err == PN_INPROGRESS):
         return
       exc = EXCEPTIONS.get(err, MessengerException)
-      raise exc("[%s]: %s" % (err, pn_messenger_error(self._mng)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_messenger_error(self._mng))))
     else:
       return err
 

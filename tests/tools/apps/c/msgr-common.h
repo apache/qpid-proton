@@ -50,7 +50,7 @@ pn_timestamp_t msgr_now();
 void parse_password( const char *, char ** );
 
 #define check_messenger(m)  \
-  { check(pn_messenger_errno(m) == 0, pn_messenger_error(m)) }
+  { check(pn_messenger_errno(m) == 0, pn_error_text(pn_messenger_error(m))) }
 
 #define check( expression, message )  \
   { if (!(expression)) msgr_die(__FILE__,__LINE__, message); }

@@ -92,7 +92,7 @@ sub get_incoming_window {
 
 sub get_error {
     my ($self) = @_;
-    return cproton_perl::pn_messenger_error($self->{_impl});
+    return cproton_perl::pn_error_text(cproton_perl::pn_messenger_error($self->{_impl}));
 }
 
 sub get_errno {

@@ -332,13 +332,10 @@ int pn_messenger_errno(pn_messenger_t *messenger)
   }
 }
 
-const char *pn_messenger_error(pn_messenger_t *messenger)
+pn_error_t *pn_messenger_error(pn_messenger_t *messenger)
 {
-  if (messenger) {
-    return pn_error_text(messenger->error);
-  } else {
-    return NULL;
-  }
+  assert(messenger);
+  return messenger->error;
 }
 
 void pn_messenger_flow(pn_messenger_t *messenger)
@@ -504,7 +501,7 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
     if (pn_delivery_readable(d)) {
       int err = pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
       if (err) {
-        fprintf(stderr, "%s\n", pn_messenger_error(messenger));
+        fprintf(stderr, "%s\n", pn_error_text(messenger->error));
       }
     }
     d = pn_work_next(d);
