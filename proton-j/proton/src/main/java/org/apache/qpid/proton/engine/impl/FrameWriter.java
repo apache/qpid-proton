@@ -46,13 +46,14 @@ class FrameWriter
     private int _maxFrameSize;
     private byte _frameType;
     private ProtocolTracer _protocolTracer;
+    private Object _logCtx;
 
     private int _frameStart = 0;
     private int _payloadStart;
     private int _performativeSize;
 
     FrameWriter(EncoderImpl encoder, int maxFrameSize, byte frameType,
-                ProtocolTracer protocolTracer)
+                ProtocolTracer protocolTracer, Object logCtx)
     {
         _encoder = encoder;
         _bbuf = ByteBuffer.allocate(1024);
@@ -61,6 +62,7 @@ class FrameWriter
         _maxFrameSize = maxFrameSize;
         _frameType = frameType;
         _protocolTracer = protocolTracer;
+        _logCtx = logCtx;
     }
 
     void setMaxFrameSize(int maxFrameSize)
@@ -153,7 +155,7 @@ class FrameWriter
         // code, further refactor will fix this
         if (_frameType == AMQP_FRAME_TYPE) {
             TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload));
-            TransportImpl.log(this, TransportImpl.OUTGOING, frame);
+            TransportImpl.log(_logCtx, TransportImpl.OUTGOING, frame);
 
             if( _protocolTracer!=null )
             {

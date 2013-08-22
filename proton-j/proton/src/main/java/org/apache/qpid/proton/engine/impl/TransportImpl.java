@@ -128,7 +128,8 @@ public class TransportImpl extends EndpointImpl
         _maxFrameSize = maxFrameSize;
         _frameWriter = new FrameWriter(_encoder, _remoteMaxFrameSize,
                                        FrameWriter.AMQP_FRAME_TYPE,
-                                       _protocolTracer);
+                                       _protocolTracer,
+                                       this);
 
     }
 
