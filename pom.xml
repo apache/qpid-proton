@@ -87,6 +87,7 @@
       <modules>
         <module>proton-j</module>
         <module>tests</module>
+        <module>examples/messenger/java</module>
       </modules>
     </profile>
     <profile>
@@ -96,6 +97,7 @@
         <!--proton-j-impl is required so we can use its EncoderImpl and DecoderImpl to generate test data -->
         <module>proton-j/proton</module>
         <module>tests</module>
+        <module>examples/messenger/java</module>
       </modules>
     </profile>
   </profiles>

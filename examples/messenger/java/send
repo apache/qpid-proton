@@ -1,0 +1,10 @@
+#! /bin/bash
+# Usage: send [-a ADDRESS] [-s SUBJECT] MESSAGE ... MESSAGE
+# sends each arg as a text-message to the given adress (by default, to amqp://localhost/test)
+
+HERE=$(cd $(dirname $0); pwd)
+TOP=$(cd $(dirname $0); cd  ../../..; pwd)
+LIBS=$HERE/target/classes:$TOP/proton-j/proton-api/target/classes:$TOP/proton-j/proton/target/classes
+JFLAGS="-Djava.util.logging.config.file=$HERE/send.trace.props -cp $LIBS"
+java -cp $LIBS org.apache.qpid.proton.example.Send "$@"
+

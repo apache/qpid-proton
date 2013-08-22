@@ -1,0 +1,12 @@
+#! /bin/bash
+# Usage: recv [-v] [-n MAXMESSAGES] [-a ADDRESS]*"
+# Subscribes to the given amqp addresses (by default, to amqp://localhost/test),
+# and prints messages received, upt to MAXMESSAGES. 
+# Prints message headers and body; -v means print all message properties.
+
+HERE=$(cd $(dirname $0); pwd)
+TOP=$(cd $(dirname $0); cd  ../../..; pwd)
+LIBS=$HERE/target/classes:$TOP/proton-j/proton-api/target/classes:$TOP/proton-j/proton/target/classes
+JFLAGS="-Djava.util.logging.config.file=$HERE/recv.trace.props -cp $LIBS"
+java -cp $LIBS org.apache.qpid.proton.example.Recv "$@"
+
