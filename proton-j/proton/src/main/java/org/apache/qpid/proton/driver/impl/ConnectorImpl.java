@@ -58,6 +58,7 @@ class ConnectorImpl<C> implements Connector<C>
     private boolean _closed = false;
 
     private boolean _selected = false;
+    private boolean _readAllowed = false;
 
     ConnectorImpl(DriverImpl driver, Listener<C> listener, SocketChannel c, C context, SelectionKey key)
     {
@@ -73,6 +74,7 @@ class ConnectorImpl<C> implements Connector<C>
         if (!_selected) {
             _selected = true;
             _driver.selectConnector(this);
+            _readAllowed = true;
         }
     }
 
@@ -110,6 +112,8 @@ class ConnectorImpl<C> implements Connector<C>
 
     private boolean read() throws IOException
     {
+        if (!_readAllowed) return false;
+        _readAllowed = false;
         boolean processed = false;
 
         int interest = _key.interestOps();
