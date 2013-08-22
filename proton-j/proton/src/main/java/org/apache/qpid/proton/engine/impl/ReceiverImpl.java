@@ -77,6 +77,10 @@ public class ReceiverImpl extends LinkImpl implements Receiver
 
     public int recv(final byte[] bytes, int offset, int size)
     {
+        if (_current == null) {
+            throw new IllegalStateException("no current delivery");
+        }
+
         int consumed = _current.recv(bytes, offset, size);
         if (consumed > 0) {
             getSession().incrementIncomingBytes(-consumed);
