@@ -64,6 +64,8 @@ parser.add_option("-x", "--xml", metavar="XML", dest="xml",
                   help="write test results in Junit style xml suitable for use by CI tools etc")
 parser.add_option("-a", "--always-colorize", action="store_true", dest="always_colorize", default=False,
                   help="always colorize the test results rather than relying on terminal tty detection. Useful when invoked from Jython/Maven.")
+parser.add_option("-n", metavar="count", dest="count", type=int, default=1,
+                  help="run the tests <count> times")
 
 class Config:
 
@@ -594,67 +596,78 @@ if opts.xml and not list_only:
 else:
    xmlr = None
 
-passed = 0
-failed = 0
-skipped = 0
-start = time.time()
-for t in filtered:
-  if list_only:
-    print t.name()
-  else:
-    st = t.run()
-    if xmlr:
-      xmlr.report(t.name(), st)
-    if st.passed:
-      passed += 1
-    elif st.skipped:
-      skipped += 1
-    elif st.failed:
-      failed += 1
-      if opts.hoe:
-        break
-end = time.time()
+def runthrough():
+  passed = 0
+  failed = 0
+  skipped = 0
+  start = time.time()
+  for t in filtered:
+    if list_only:
+      print t.name()
+    else:
+      st = t.run()
+      if xmlr:
+        xmlr.report(t.name(), st)
+      if st.passed:
+        passed += 1
+      elif st.skipped:
+        skipped += 1
+      elif st.failed:
+        failed += 1
+        if opts.hoe:
+          break
+  end = time.time()
 
-run = passed + failed
+  run = passed + failed
 
-if not list_only:
-  if passed:
-    _pass = "pass"
-  else:
-    _pass = "fail"
-  if failed:
-    outcome = "fail"
-  else:
-    outcome = "pass"
-  if ignored:
-    ign = "ignored"
-  else:
-    ign = "pass"
-  if skipped:
-    skip = "skip"
-  else:
-    skip = "pass"
-  print colorize("Totals:", 1),
-  totals = [colorize_word("total", "%s tests" % total),
-            colorize_word(_pass, "%s passed" % passed),
-            colorize_word(skip, "%s skipped" % skipped),
-            colorize_word(ign, "%s ignored" % len(ignored)),
-            colorize_word(outcome, "%s failed" % failed)]
-  print ", ".join(totals),
-  if opts.hoe and failed > 0:
-    print " -- (halted after %s)" % run
-  else:
-    print
-  if opts.time and run > 0:
-    print colorize("Timing:", 1),
-    timing = [colorize_word("elapsed", "%.2fs elapsed" % (end - start)),
-              colorize_word("average", "%.2fs average" % ((end - start)/run))]
-    print ", ".join(timing)
+  if not list_only:
+    if passed:
+      _pass = "pass"
+    else:
+      _pass = "fail"
+    if failed:
+      outcome = "fail"
+    else:
+      outcome = "pass"
+    if ignored:
+      ign = "ignored"
+    else:
+      ign = "pass"
+    if skipped:
+      skip = "skip"
+    else:
+      skip = "pass"
+    print colorize("Totals:", 1),
+    totals = [colorize_word("total", "%s tests" % total),
+              colorize_word(_pass, "%s passed" % passed),
+              colorize_word(skip, "%s skipped" % skipped),
+              colorize_word(ign, "%s ignored" % len(ignored)),
+              colorize_word(outcome, "%s failed" % failed)]
+    print ", ".join(totals),
+    if opts.hoe and failed > 0:
+      print " -- (halted after %s)" % run
+    else:
+      print
+    if opts.time and run > 0:
+      print colorize("Timing:", 1),
+      timing = [colorize_word("elapsed", "%.2fs elapsed" % (end - start)),
+                colorize_word("average", "%.2fs average" % ((end - start)/run))]
+      print ", ".join(timing)
 
-if xmlr:
-   xmlr.end()
+  if xmlr:
+     xmlr.end()
 
-if failed:
-  sys.exit(1)
-else:
-  sys.exit(0)
+  return failed
+
+limit = opts.count
+count = 0
+while limit == 0 or count < limit:
+  count += 1
+  if runthrough():
+    if count > 1:
+      print " -- (failures after %s runthroughs)" % count
+    sys.exit(1)
+  else:
+    continue
+
+sys.exit(0)
