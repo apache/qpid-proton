@@ -100,6 +100,12 @@ class JNIMessenger implements Messenger
     }
 
     @Override
+    public void recv() throws TimeoutException
+    {
+        recv(-1);
+    }
+
+    @Override
     public void recv(final int count) throws TimeoutException
     {
         int err = Proton.pn_messenger_recv(_impl, count);

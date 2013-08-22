@@ -106,6 +106,12 @@ public interface Messenger
      */
     void subscribe(String source) throws MessengerException;
     /**
+     * Receives an arbitrary number of messages into the
+     * incoming queue of the Messenger. This method will block until
+     * at least one message is available or the operation times out.
+     */
+    void recv() throws TimeoutException;
+    /**
      * Receives up to the specified number of messages into the
      * incoming queue of the Messenger. This method will block until
      * at least one message is available or the operation times out.

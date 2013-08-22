@@ -137,14 +137,6 @@ public class MessengerImpl implements Messenger
         {
             Connection connection = c.getConnection();
             connection.close();
-            try
-            {
-                c.process();
-            }
-            catch (IOException e)
-            {
-                _logger.log(Level.WARNING, "Error while sending close", e);
-            }
         }
         //stop listeners
         for (Listener<?> l : _driver.listeners())
@@ -244,6 +236,11 @@ public class MessengerImpl implements Messenger
         distributeCredit();
 
         waitUntil(_messageAvailable);
+    }
+
+    public void recv() throws TimeoutException
+    {
+        recv(-1);
     }
 
     public int receiving()
@@ -435,6 +432,7 @@ public class MessengerImpl implements Messenger
         distributeCredit();
         for (Connector<?> c : _driver.connectors())
         {
+            processEndpoints(c);
             try
             {
                 if (c.process()) {
@@ -445,7 +443,6 @@ public class MessengerImpl implements Messenger
             {
                 _logger.log(Level.SEVERE, "Error processing connection", e);
             }
-            processEndpoints(c);
         }
         bringDestruction();
         distributeCredit();
@@ -483,6 +480,22 @@ public class MessengerImpl implements Messenger
                 _logger.log(Level.SEVERE, "Error processing connection", e);
             }
             processEndpoints(c);
+            if (c.isClosed())
+            {
+                _awaitingDestruction.add(c);
+                reclaimCredit(c.getConnection());
+            }
+            else
+            {
+                try
+                {
+                    c.process();
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.SEVERE, "Error processing connection", e);
+                }
+            }
         }
         bringDestruction();
         distributeCredit();
@@ -538,23 +551,6 @@ public class MessengerImpl implements Messenger
             if (connection.getLocalState() == EndpointState.ACTIVE)
             {
                 connection.close();
-            }
-        }
-
-        if (c.isClosed())
-        {
-            _awaitingDestruction.add(c);
-            reclaimCredit(connection);
-        }
-        else
-        {
-            try
-            {
-                c.process();
-            }
-            catch (IOException e)
-            {
-                _logger.log(Level.SEVERE, "Error processing connection", e);
             }
         }
     }
@@ -771,8 +767,12 @@ public class MessengerImpl implements Messenger
     {
         public boolean test()
         {
-            if (_driver.connectors().iterator().hasNext()) return false;
-            else return true;
+            for (Connector<?> c : _driver.connectors()) {
+                if (!c.isClosed()) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
