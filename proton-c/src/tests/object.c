@@ -630,6 +630,101 @@ static void test_map_iteration(int n)
   pn_decref(pairs);
 }
 
+void test_inspect(void *o, const char *expected)
+{
+  pn_string_t *dst = pn_string(NULL);
+  pn_inspect(o, dst);
+  assert(pn_strequals(pn_string_get(dst), expected));
+  pn_free(dst);
+}
+
+void test_list_inspect()
+{
+  pn_list_t *l = build_list(0, PN_REFCOUNT, END);
+  test_inspect(l, "[]");
+  pn_free(l);
+
+  l = build_list(0, PN_REFCOUNT, pn_string("one"), END);
+  test_inspect(l, "[\"one\"]");
+  pn_free(l);
+
+  l = build_list(0, PN_REFCOUNT,
+                 pn_string("one"),
+                 pn_string("two"),
+                 END);
+  test_inspect(l, "[\"one\", \"two\"]");
+  pn_free(l);
+
+  l = build_list(0, PN_REFCOUNT,
+                 pn_string("one"),
+                 pn_string("two"),
+                 pn_string("three"),
+                 END);
+  test_inspect(l, "[\"one\", \"two\", \"three\"]");
+  pn_free(l);
+}
+
+void test_map_inspect()
+{
+  // note that when there is more than one entry in a map, the order
+  // of the entries is dependent on the hashes involved, it will be
+  // deterministic though
+  pn_map_t *m = build_map(0, 0.75, PN_REFCOUNT, END);
+  test_inspect(m, "{}");
+  pn_free(m);
+
+  m = build_map(0, 0.75, PN_REFCOUNT,
+                pn_string("key"), pn_string("value"),
+                END);
+  test_inspect(m, "{\"key\": \"value\"}");
+  pn_free(m);
+
+  m = build_map(0, 0.75, PN_REFCOUNT,
+                pn_string("k1"), pn_string("v1"),
+                pn_string("k2"), pn_string("v2"),
+                END);
+  test_inspect(m, "{\"k1\": \"v1\", \"k2\": \"v2\"}");
+  pn_free(m);
+
+  m = build_map(0, 0.75, PN_REFCOUNT,
+                pn_string("k1"), pn_string("v1"),
+                pn_string("k2"), pn_string("v2"),
+                pn_string("k3"), pn_string("v3"),
+                END);
+  test_inspect(m, "{\"k3\": \"v3\", \"k1\": \"v1\", \"k2\": \"v2\"}");
+  pn_free(m);
+}
+
+void test_list_compare()
+{
+  pn_list_t *a = pn_list(0, PN_REFCOUNT);
+  pn_list_t *b = pn_list(0, PN_REFCOUNT);
+
+  assert(pn_equals(a, b));
+
+  void *one = pn_new(0, NULL);
+  void *two = pn_new(0, NULL);
+  void *three = pn_new(0, NULL);
+
+  pn_list_add(a, one);
+  assert(!pn_equals(a, b));
+  pn_list_add(b, one);
+  assert(pn_equals(a, b));
+
+  pn_list_add(b, two);
+  assert(!pn_equals(a, b));
+  pn_list_add(a, two);
+  assert(pn_equals(a, b));
+
+  pn_list_add(a, three);
+  assert(!pn_equals(a, b));
+  pn_list_add(b, three);
+  assert(pn_equals(a, b));
+
+  pn_free(a); pn_free(b);
+  pn_free(one); pn_free(two); pn_free(three);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -680,6 +775,10 @@ int main(int argc, char **argv)
   {
     test_map_iteration(i);
   }
+
+  test_list_inspect();
+  test_map_inspect();
+  test_list_compare();
 
   return 0;
 }

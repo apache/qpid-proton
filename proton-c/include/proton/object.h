@@ -52,6 +52,13 @@ typedef struct {
   int (*inspect)(void *, pn_string_t *);
 } pn_class_t;
 
+#define PN_CLASS(PREFIX) {                      \
+    PREFIX ## _finalize,                        \
+    PREFIX ## _hashcode,                        \
+    PREFIX ## _compare,                         \
+    PREFIX ## _inspect                          \
+}
+
 PN_EXTERN void *pn_new(size_t size, pn_class_t *clazz);
 PN_EXTERN void *pn_incref(void *object);
 PN_EXTERN void pn_decref(void *object);
