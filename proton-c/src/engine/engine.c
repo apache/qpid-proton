@@ -156,16 +156,6 @@ void pn_connection_set_context(pn_connection_t *conn, void *context)
         conn->context = context;
 }
 
-void pn_transport_open(pn_transport_t *transport)
-{
-  pn_open((pn_endpoint_t *) transport);
-}
-
-void pn_transport_close(pn_transport_t *transport)
-{
-  pn_close((pn_endpoint_t *) transport);
-}
-
 void pn_condition_init(pn_condition_t *condition)
 {
   condition->name[0] = '\0';
