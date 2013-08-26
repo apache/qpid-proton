@@ -331,11 +331,22 @@ install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
          DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
 # Pkg config file
-# Compatible variable names used in the pkg config files also for autoconf
-get_filename_component (PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
-get_filename_component (EXEC_PREFIX ${CMAKE_INSTALL_PREFIX} ABSOLUTE)
-get_filename_component (LIBDIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR} ABSOLUTE)
-get_filename_component (INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/${INCLUDE_INSTALL_DIR} ABSOLUTE)
+# make sure the install prefix is absolute
+set(INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+
+macro (pn_pkgconfig_dir NAME VALUE PREFIX)
+  if(IS_ABSOLUTE ${VALUE})
+    set(${NAME} "${VALUE}")
+  else(IS_ABSOLUTE ${VALUE})
+    set(${NAME} "${PREFIX}/${VALUE}")
+  endif(IS_ABSOLUTE ${VALUE})
+  get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
+endmacro(pn_pkgconfig_dir)
+
+pn_pkgconfig_dir(PREFIX ${INSTALL_PREFIX} ${INSTALL_PREFIX})
+pn_pkgconfig_dir(EXEC_PREFIX ${INSTALL_PREFIX} ${INSTALL_PREFIX})
+pn_pkgconfig_dir(LIBDIR ${LIB_INSTALL_DIR} ${INSTALL_PREFIX})
+pn_pkgconfig_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${INSTALL_PREFIX})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
