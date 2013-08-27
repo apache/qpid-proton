@@ -38,16 +38,17 @@ typedef struct {
 
 void *pn_new(size_t size, pn_class_t *clazz)
 {
-  pni_head_t *obj = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
-  obj->clazz = clazz;
-  obj->refcount = 1;
-  return obj + 1;
+  pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
+  void *object = head + 1;
+  pn_initialize(object, clazz);
+  return object;
 }
 
-void pn_convert(void *object, pn_class_t *clazz)
+void pn_initialize(void *object, pn_class_t *clazz)
 {
   pni_head_t *head = pni_head(object);
   head->clazz = clazz;
+  head->refcount = 1;
 }
 
 void *pn_incref(void *object)
@@ -62,13 +63,24 @@ void pn_decref(void *object)
 {
   if (object) {
     pni_head_t *head = pni_head(object);
-    head->refcount--;
-    if (!head->refcount) {
-      if (head->clazz && head->clazz->finalize) {
-        head->clazz->finalize(object);
-      }
+    if (head->refcount > 1) {
+      head->refcount--;
+    } else if (head->refcount == 1) {
+      pn_finalize(object);
       free(head);
     }
+  }
+}
+
+void pn_finalize(void *object)
+{
+  if (object) {
+    pni_head_t *head = pni_head(object);
+    assert(head->refcount == 1);
+    if (head->clazz && head->clazz->finalize) {
+      head->clazz->finalize(object);
+    }
+    head->refcount = 0;
   }
 }
 
