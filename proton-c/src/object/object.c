@@ -49,6 +49,9 @@ void pn_initialize(void *object, pn_class_t *clazz)
   pni_head_t *head = pni_head(object);
   head->clazz = clazz;
   head->refcount = 1;
+  if (clazz && clazz->initialize) {
+    clazz->initialize(object);
+  }
 }
 
 void *pn_incref(void *object)
@@ -319,6 +322,8 @@ static int pn_list_inspect(void *obj, pn_string_t *dst)
   return pn_string_addf(dst, "]");
 }
 
+#define pn_list_initialize NULL
+
 pn_list_t *pn_list(size_t capacity, int options)
 {
   static pn_class_t clazz = PN_CLASS(pn_list);
@@ -425,6 +430,7 @@ static int pn_map_inspect(void *obj, pn_string_t *dst)
   return pn_string_addf(dst, "}");
 }
 
+#define pn_map_initialize NULL
 #define pn_map_compare NULL
 
 pn_map_t *pn_map(size_t capacity, float load_factor, int options)
@@ -752,6 +758,8 @@ pn_string_t *pn_string(const char *bytes)
 {
   return pn_stringn(bytes, bytes ? strlen(bytes) : 0);
 }
+
+#define pn_string_initialize NULL
 
 static pn_class_t clazz = PN_CLASS(pn_string);
 

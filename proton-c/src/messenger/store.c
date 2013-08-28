@@ -197,10 +197,15 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
   return pni_stream(store, address, false);
 }
 
+#define pni_entry_initialize NULL
+#define pni_entry_hashcode NULL
+#define pni_entry_compare NULL
+#define pni_entry_inspect NULL
+
 pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
 {
   assert(store);
-  static pn_class_t clazz = {pni_entry_finalize};
+  static pn_class_t clazz = PN_CLASS(pni_entry);
 
   if (!address) address = "";
   pni_stream_t *stream = pni_stream_put(store, address);

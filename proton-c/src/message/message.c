@@ -312,9 +312,13 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
   return pn_string_addf(dst, "}");
 }
 
+#define pn_message_initialize NULL
+#define pn_message_hashcode NULL
+#define pn_message_compare NULL
+
 pn_message_t *pn_message()
 {
-  static pn_class_t clazz = {pn_message_finalize, NULL, NULL, pn_message_inspect};
+  static pn_class_t clazz = PN_CLASS(pn_message);
   pn_message_t *msg = (pn_message_t *) pn_new(sizeof(pn_message_t), &clazz);
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;

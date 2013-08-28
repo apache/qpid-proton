@@ -46,6 +46,7 @@ typedef struct pn_hash_t pn_hash_t;
 typedef struct pn_string_t pn_string_t;
 
 typedef struct {
+  void (*initialize)(void *);
   void (*finalize)(void *);
   uintptr_t (*hashcode)(void *);
   intptr_t (*compare)(void *, void *);
@@ -53,6 +54,7 @@ typedef struct {
 } pn_class_t;
 
 #define PN_CLASS(PREFIX) {                      \
+    PREFIX ## _initialize,                      \
     PREFIX ## _finalize,                        \
     PREFIX ## _hashcode,                        \
     PREFIX ## _compare,                         \

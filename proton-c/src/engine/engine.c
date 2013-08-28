@@ -242,9 +242,14 @@ static void pn_connection_finalize(void *object)
   pn_endpoint_tini(&conn->endpoint);
 }
 
+#define pn_connection_initialize NULL
+#define pn_connection_hashcode NULL
+#define pn_connection_compare NULL
+#define pn_connection_inspect NULL
+
 pn_connection_t *pn_connection()
 {
-  static pn_class_t clazz = {pn_connection_finalize};
+  static pn_class_t clazz = PN_CLASS(pn_connection);
   pn_connection_t *conn = (pn_connection_t *) pn_new(sizeof(pn_connection_t), &clazz);
   if (!conn) return NULL;
 
@@ -542,10 +547,15 @@ static void pn_session_finalize(void *object)
   pn_free(session->state.remote_handles);
 }
 
+#define pn_session_initialize NULL
+#define pn_session_hashcode NULL
+#define pn_session_compare NULL
+#define pn_session_inspect NULL
+
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
-  static pn_class_t clazz = {pn_session_finalize};
+  static pn_class_t clazz = PN_CLASS(pn_session);
   pn_session_t *ssn = (pn_session_t *) pn_new(sizeof(pn_session_t), &clazz);
   if (!ssn) return NULL;
 
@@ -645,9 +655,14 @@ static void pn_link_finalize(void *object)
   pn_endpoint_tini(&link->endpoint);
 }
 
+#define pn_link_initialize NULL
+#define pn_link_hashcode NULL
+#define pn_link_compare NULL
+#define pn_link_inspect NULL
+
 pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
 {
-  static pn_class_t clazz = {pn_link_finalize};
+  static pn_class_t clazz = PN_CLASS(pn_link);
   pn_link_t *link = (pn_link_t *) pn_new(sizeof(pn_link_t), &clazz);
 
   pn_endpoint_init(&link->endpoint, type, session->connection);
@@ -908,13 +923,18 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   pn_condition_clear(&ds->condition);
 }
 
+#define pn_delivery_initialize NULL
+#define pn_delivery_hashcode NULL
+#define pn_delivery_compare NULL
+#define pn_delivery_inspect NULL
+
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled, pn_delivery_t);
   if (!delivery) {
-    static pn_class_t clazz = {pn_delivery_finalize};
+    static pn_class_t clazz = PN_CLASS(pn_delivery);
     delivery = (pn_delivery_t *) pn_new(sizeof(pn_delivery_t), &clazz);
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);

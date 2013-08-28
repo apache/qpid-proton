@@ -55,9 +55,14 @@ static void pn_rule_finalize(void *object)
   pn_free(rule->substitution);
 }
 
+#define pn_rule_initialize NULL
+#define pn_rule_hashcode NULL
+#define pn_rule_compare NULL
+#define pn_rule_inspect NULL
+
 pn_rule_t *pn_rule(const char *pattern, const char *substitution)
 {
-  static pn_class_t clazz = {pn_rule_finalize};
+  static pn_class_t clazz = PN_CLASS(pn_rule);
   pn_rule_t *rule = (pn_rule_t *) pn_new(sizeof(pn_rule_t), &clazz);
   rule->pattern = pn_string(pattern);
   rule->substitution = pn_string(substitution);
@@ -70,9 +75,14 @@ static void pn_transform_finalize(void *object)
   pn_free(transform->rules);
 }
 
+#define pn_transform_initialize NULL
+#define pn_transform_hashcode NULL
+#define pn_transform_compare NULL
+#define pn_transform_inspect NULL
+
 pn_transform_t *pn_transform()
 {
-  static pn_class_t clazz = {pn_transform_finalize};
+  static pn_class_t clazz = PN_CLASS(pn_transform);
   pn_transform_t *transform = (pn_transform_t *) pn_new(sizeof(pn_transform_t), &clazz);
   transform->rules = pn_list(0, PN_REFCOUNT);
   transform->matched = false;
