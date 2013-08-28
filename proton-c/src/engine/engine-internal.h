@@ -296,4 +296,12 @@ ssize_t pn_io_layer_input_passthru(pn_io_layer_t *, const char *, size_t );
 ssize_t pn_io_layer_output_passthru(pn_io_layer_t *, char *, size_t );
 pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *, pn_timestamp_t);
 
+void pn_condition_init(pn_condition_t *condition);
+void pn_condition_tini(pn_condition_t *condition);
+void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
+void pn_real_settle(pn_delivery_t *delivery);
+void pn_clear_tpwork(pn_delivery_t *delivery);
+void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
+void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
+
 #endif /* engine-internal.h */
