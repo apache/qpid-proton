@@ -1289,11 +1289,11 @@ class Messenger(object):
     else:
       self.impl = Proton.messenger()
 
-  def route(self, *args, **kwargs):
-    raise Skipped()
+  def route(self, pattern, address):
+    self.impl.route(pattern, address)
 
-  def rewrite(self, *args, **kwargs):
-    raise Skipped()
+  def rewrite(self, pattern, address):
+    self.impl.rewrite(pattern, address)
 
   def start(self):
     self.impl.start()

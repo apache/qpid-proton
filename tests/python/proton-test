@@ -346,7 +346,7 @@ class Runner:
       self.exception_phase_name = phase_name
       self.exception = sys.exc_info()
       exception_type = self.exception[0]
-      self.skip = getattr(exception_type, "skipped", False) or getattr(exception_type, "protonUnsupportedOperation", False)
+      self.skip = getattr(exception_type, "skipped", False)
 
   def status(self):
     if self.passed():

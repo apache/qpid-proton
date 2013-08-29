@@ -21,8 +21,6 @@
 package org.apache.qpid.proton.messenger.impl;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -81,6 +79,9 @@ public class MessengerImpl implements Messenger
     private TrackerQueue _incoming = new TrackerQueue();
     private TrackerQueue _outgoing = new TrackerQueue();
     private List<Connector> _awaitingDestruction = new ArrayList<Connector>();
+
+    private Transform _routes = new Transform();
+    private Transform _rewrites = new Transform();
 
 
     /**
@@ -174,6 +175,60 @@ public class MessengerImpl implements Messenger
         }
     }
 
+    private String defaultRewrite(String address) {
+        if (address != null && address.contains("@")) {
+            Address addr = new Address(address);
+            String scheme = addr.getScheme();
+            String host = addr.getHost();
+            String port = addr.getPort();
+            String name = addr.getName();
+
+            StringBuilder sb = new StringBuilder();
+            if (scheme != null) {
+                sb.append(scheme).append("://");
+            }
+            if (host != null) {
+                sb.append(host);
+            }
+            if (port != null) {
+                sb.append(":").append(port);
+            }
+            if (name != null) {
+                sb.append("/").append(name);
+            }
+            return sb.toString();
+        } else {
+            return address;
+        }
+    }
+
+
+    private String _original;
+
+    private void rewriteMessage(Message m)
+    {
+        _original = m.getAddress();
+        if (_rewrites.apply(_original)) {
+            m.setAddress(_rewrites.result());
+        } else {
+            m.setAddress(defaultRewrite(_original));
+        }
+    }
+
+    private void restoreMessage(Message m)
+    {
+        m.setAddress(_original);
+    }
+
+    private String routeAddress(String addr)
+    {
+        if (_routes.apply(addr)) {
+            return _routes.result();
+        } else {
+            return addr;
+        }
+    }
+
     public void put(Message m) throws MessengerException
     {
         if (_driver == null) {
@@ -184,15 +239,19 @@ public class MessengerImpl implements Messenger
         {
             _logger.fine(this + " about to put message: " + m);
         }
-        try
-        {
-            URI address = new URI(m.getAddress());
+
+        String addr = routeAddress(m.getAddress());
+        rewriteMessage(m);
+
+        try {
+            Address address = new Address(addr);
             if (address.getHost() == null)
             {
-                throw new MessengerException("unable to send to address: " + m.getAddress());
+                throw new MessengerException("unable to send to address: " + addr);
             }
-            int port = address.getPort() < 0 ? defaultPort(address.getScheme()) : address.getPort();
-            Sender sender = getLink(address.getHost(), port, new SenderFinder(cleanPath(address.getPath())));
+            String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
+            int port = Integer.valueOf(ports);
+            Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getName()));
 
             adjustReplyTo(m);
 
@@ -213,9 +272,9 @@ public class MessengerImpl implements Messenger
             _outgoing.add(delivery);
             sender.advance();
         }
-        catch (URISyntaxException e)
+        finally
         {
-            throw new MessengerException("Invalid address: " + m.getAddress(), e);
+            restoreMessage(m);
         }
     }
 
@@ -302,39 +361,30 @@ public class MessengerImpl implements Messenger
             throw new IllegalStateException("messenger is stopped");
         }
 
-        //the following is not safe or accurate, but it appears '~' is
-        //invalid as the start of the hostname and URI can't handle
-        //it, so this is a quick hack to avoid rewriting the parsing
-        //logic for URLs right now...
-        boolean listen = source.contains("~");
-        try
-        {
-            URI address = new URI(listen ? source.replace("~", "") : source);
-            String hostName = address.getHost();
-            if (hostName == null) throw new MessengerException("Invalid source address (hostname cannot be null): " + source);
-            int port = address.getPort() < 0 ? defaultPort(address.getScheme()) : address.getPort();
-            if (listen)
-            {
-                if(_logger.isLoggable(Level.FINE))
-                {
-                    _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
-                }
-                _driver.createListener(hostName, port, null);
-            }
-            else
-            {
-                if(_logger.isLoggable(Level.FINE))
-                {
-                    _logger.fine(this + " about to subscribe to source " + source);
-                }
-                getLink(hostName, port, new ReceiverFinder(cleanPath(address.getPath())));
-            }
-        }
-        catch (URISyntaxException e)
-        {
-            throw new MessengerException("Invalid source: " + source, e);
-        }
 
+        String routed = routeAddress(source);
+        Address address = new Address(routed);
+
+        String hostName = address.getHost();
+        if (hostName == null) throw new MessengerException("Invalid address (hostname cannot be null): " + routed);
+        String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
+        int port = Integer.valueOf(ports);
+        if (address.isPassive())
+        {
+            if(_logger.isLoggable(Level.FINE))
+            {
+                _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
+            }
+            _driver.createListener(hostName, port, null);
+        }
+        else
+        {
+            if(_logger.isLoggable(Level.FINE))
+            {
+                _logger.fine(this + " about to subscribe to source " + source);
+            }
+            getLink(hostName, port, new ReceiverFinder(address.getName()));
+        }
     }
 
     public int outgoing()
@@ -379,14 +429,20 @@ public class MessengerImpl implements Messenger
     {
         return TrackerQueue.isOutgoing(tracker) ? _outgoing : _incoming;
     }
+
+    @Override
     public void reject(Tracker tracker, int flags)
     {
         getTrackerQueue(tracker).reject(tracker, flags);
     }
+
+    @Override
     public void accept(Tracker tracker, int flags)
     {
         getTrackerQueue(tracker).accept(tracker, flags);
     }
+
+    @Override
     public void settle(Tracker tracker, int flags)
     {
         getTrackerQueue(tracker).settle(tracker, flags);
@@ -395,6 +451,18 @@ public class MessengerImpl implements Messenger
     public Status getStatus(Tracker tracker)
     {
         return getTrackerQueue(tracker).getStatus(tracker);
+    }
+
+    @Override
+    public void route(String pattern, String address)
+    {
+        _routes.rule(pattern, address);
+    }
+
+    @Override
+    public void rewrite(String pattern, String address)
+    {
+        _rewrites.rule(pattern, address);
     }
 
     private int queued(boolean outgoing)
@@ -841,7 +909,7 @@ public class MessengerImpl implements Messenger
 
         SenderFinder(String path)
         {
-            _path = path;
+            _path = path == null ? "" : path;
         }
 
         public Sender test(Link link)
@@ -872,7 +940,7 @@ public class MessengerImpl implements Messenger
 
         ReceiverFinder(String path)
         {
-            _path = path;
+            _path = path == null ? "" : path;
         }
 
         public Receiver test(Link link)
@@ -1054,19 +1122,6 @@ public class MessengerImpl implements Messenger
         }
     }
 
-    private static String cleanPath(String path)
-    {
-        //remove leading '/'
-        if (path != null && path.length() > 0 && path.charAt(0) == '/')
-        {
-            return path.substring(1);
-        }
-        else
-        {
-            return path;
-        }
-    }
-
     private static boolean matchTarget(Target target, String path)
     {
         if (target == null) return path.isEmpty();
@@ -1079,10 +1134,10 @@ public class MessengerImpl implements Messenger
         else return path.equals(source.getAddress());
     }
 
-    private static int defaultPort(String scheme)
+    private static String defaultPort(String scheme)
     {
-        if ("amqps".equals(scheme)) return 5671;
-        else return 5672;
+        if ("amqps".equals(scheme)) return "5671";
+        else return "5672";
     }
 
     @Override

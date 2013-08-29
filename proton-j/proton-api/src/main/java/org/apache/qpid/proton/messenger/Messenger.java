@@ -204,4 +204,9 @@ public interface Messenger
      * with the given tracker.
      */
     Status getStatus(Tracker tracker);
+
+    public void route(String pattern, String address);
+
+    public void rewrite(String pattern, String address);
+
 }

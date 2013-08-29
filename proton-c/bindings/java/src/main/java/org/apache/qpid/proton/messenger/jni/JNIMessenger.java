@@ -279,6 +279,20 @@ class JNIMessenger implements Messenger
         return Status.UNKNOWN;  //TODO - is this correct?
     }
 
+    @Override
+    public void route(String pattern, String address)
+    {
+        int err = Proton.pn_messenger_route(_impl, pattern, address);
+        check(err);
+    }
+
+    @Override
+    public void rewrite(String pattern, String address)
+    {
+        int err = Proton.pn_messenger_rewrite(_impl, pattern, address);
+        check(err);
+    }
+
     private void check(int errorCode) throws ProtonException
     {
         if(errorCode != 0 && errorCode != Proton.PN_INPROGRESS)

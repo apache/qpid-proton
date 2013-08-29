@@ -158,9 +158,9 @@ public class DriverImpl implements Driver
         try
         {
             ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-            serverSocketChannel.configureBlocking(false);
             ServerSocket serverSocket = serverSocketChannel.socket();
             serverSocket.bind(new InetSocketAddress(host, port));
+            serverSocketChannel.configureBlocking(false);
             Listener<C> listener = createListener(serverSocketChannel, context);
             _logger.fine("Created listener on " + host + ":" + port + ": " + context);
 
