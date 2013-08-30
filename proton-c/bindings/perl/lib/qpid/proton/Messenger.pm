@@ -175,10 +175,12 @@ sub send {
 
 sub get {
     my ($self) = @_;
-
+    my $impl = $self->{_impl};
     my $message = $_[1] || new proton::Message();
-    cproton_perl::pn_messenger_get($self->{_impl}, $message->get_impl());
-    return $message;
+
+    cproton_perl::pn_messenger_get($impl, $message->get_impl());
+
+    return cproton_perl::pn_messenger_incoming_tracker($impl);
 }
 
 sub receive {
