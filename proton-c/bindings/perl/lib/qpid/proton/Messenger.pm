@@ -158,8 +158,12 @@ sub get_trusted_certificates {
 
 sub put {
     my ($self) = @_;
+    my $impl = $self->{_impl};
     my $message = $_[1];
-    cproton_perl::pn_messenger_put($self->{_impl}, $message->get_impl);
+
+    cproton_perl::pn_messenger_put($impl, $message->get_impl);
+
+    return cproton_perl::pn_messenger_outgoing_tracker($impl);
 }
 
 sub send {
