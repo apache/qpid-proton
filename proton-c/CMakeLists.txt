@@ -244,6 +244,7 @@ set (qpid-proton-core
   src/framing/framing.c
 
   src/codec/codec.c
+  src/codec/decoder.c
 
   src/dispatcher/dispatcher.c
   src/engine/engine.c
