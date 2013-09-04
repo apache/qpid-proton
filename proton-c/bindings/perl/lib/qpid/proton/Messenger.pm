@@ -161,7 +161,9 @@ sub put {
     my $impl = $self->{_impl};
     my $message = $_[1];
 
-    cproton_perl::pn_messenger_put($impl, $message->get_impl);
+    $message->preencode();
+    my $msgimpl = $message->get_impl();
+    cproton_perl::pn_messenger_put($impl, $msgimpl);
 
     return cproton_perl::pn_messenger_outgoing_tracker($impl);
 }
@@ -179,6 +181,7 @@ sub get {
     my $message = $_[1] || new proton::Message();
 
     cproton_perl::pn_messenger_get($impl, $message->get_impl());
+    $message->postdecode();
 
     return cproton_perl::pn_messenger_incoming_tracker($impl);
 }

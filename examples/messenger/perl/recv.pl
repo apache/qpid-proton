@@ -51,6 +51,7 @@ for(;;)
         print "Address: " . $msg->get_address() . "\n";
         print "Subject: " . $msg->get_subject() . "\n";
         print "Content: " . $msg->get_content() . "\n";
+        print "Body:    " . $msg->get_body() . "\n";
     }
 }
 

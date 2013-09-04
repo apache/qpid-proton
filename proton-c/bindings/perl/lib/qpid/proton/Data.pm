@@ -17,6 +17,8 @@
 # under the License.
 #
 
+use Scalar::Util qw(looks_like_number);
+
 =pod
 
 =head1 NAME
@@ -68,8 +70,16 @@ sub new {
     my ($class) = @_;
     my ($self) = {};
     my $capacity = $_[1] || 16;
+    my $impl = $capacity;
+    $self->{_free} = 0;
 
-    my $impl = cproton_perl::pn_data($capacity);
+    if($capacity) {
+        if (::looks_like_number($capacity)) {
+            $impl = cproton_perl::pn_data($capacity);
+            $self->{_free} = 1;
+        }
+    }
+
     $self->{_impl} = $impl;
 
     bless $self, $class;
@@ -80,8 +90,30 @@ sub DESTROY {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    cproton_perl::pn_data_free($impl);
+    cproton_perl::pn_data_free($impl) if $self->{_free};
 }
+
+=pod
+
+=head1 ACTIONS
+
+Clear all content for the data object.
+
+=over
+
+=item my $data->clear();
+
+=back
+
+=cut
+
+sub clear {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    cproton_perl::pn_data_clear($impl);
+}
+
 
 =pod
 
@@ -177,16 +209,14 @@ sub next {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    my $type = cproton_perl::pn_data_next($impl);
-    return qpid::proton::Mapping->find_by_type_value($type);
+    return cproton_perl::pn_data_next($impl);
 }
 
 sub prev {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
-    my $type = cproton_perl::pn_data_prev($impl);
-    return qpid::proton::Mapping->find_by_type_value($type);
+    return cproton_perl::pn_data_prev($impl);
 }
 
 

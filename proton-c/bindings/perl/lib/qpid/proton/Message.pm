@@ -30,6 +30,8 @@ sub new {
 
     my $impl = cproton_perl::pn_message();
     $self->{_impl} = $impl;
+    $self->{_body} = undef;
+    $self->{_body_type} = undef;
 
     bless $self, $class;
     return $self;
@@ -54,7 +56,8 @@ sub DESTROY {
 
 sub get_impl {
     my ($self) = @_;
-    return $self->{_impl};
+    my $impl = $self->{_impl};
+    return $impl;
 }
 
 sub clear {
@@ -310,6 +313,72 @@ sub set_reply_to_group_id {
 sub get_reply_to_group_id {
     my ($self) = @_;
     return cproton_perl::pn_message_get_reply_to_group_id($self->{_impl});
+}
+
+=pod
+
+=head2 BODY
+
+The body of the message. When setting the body value a type must be specified,
+such as I<qpid::proton::INT>. If unspecified, the body type will default to
+B<qpid::proton::STRING>.
+
+=over
+
+=item $msg->set_body( [VALUE], [TYPE] );
+
+=item $msg->get_body();
+
+=item $msg->get_body_type();
+
+=back
+
+=cut
+
+sub set_body {
+    my ($self) = @_;
+    my $body = $_[1];
+    my $body_type = $_[2] || qpid::proton::STRING;
+
+    $self->{_body} = $body;
+    $self->{_body_type} = $body_type;
+}
+
+sub get_body {
+    my ($self) = @_;
+    my $body = $self->{_body};
+
+    return $body;
+}
+
+sub get_body_type {
+    my ($self) = @_;
+
+    return $self->{_body_type};
+}
+
+sub preencode() {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+    my $my_body = $self->{_body};
+    my $body_type = $self->{_body_type};
+
+    my $body = new qpid::proton::Data(cproton_perl::pn_message_body($impl));
+    $body->clear();
+    $body_type->put($body, $my_body) if($my_body && $body_type);
+}
+
+sub postdecode() {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    $self->{_body} = undef;
+    $self->{_body_type} = undef;
+    my $body = new qpid::proton::Data(cproton_perl::pn_message_body($impl));
+    if ($body->next()) {
+        $self->{_body_type} = $body->get_type();
+        $self->{_body} = $body->get_type()->get($body);
+    }
 }
 
 1;
