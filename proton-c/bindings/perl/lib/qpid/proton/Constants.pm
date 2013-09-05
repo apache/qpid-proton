@@ -134,8 +134,8 @@ use constant {
     MAP      => qpid::proton::Mapping->new(
         "map",
         $cproton_perl::PN_MAP,
-        "put_map",
-        "get_map"),
+        "put_map_helper",
+        "get_map_helper"),
 };
 
 1;

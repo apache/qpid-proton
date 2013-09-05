@@ -30,6 +30,7 @@ sub new {
 
     my $impl = cproton_perl::pn_message();
     $self->{_impl} = $impl;
+    $self->{_properties} = {};
     $self->{_body} = undef;
     $self->{_body_type} = undef;
 
@@ -317,6 +318,57 @@ sub get_reply_to_group_id {
 
 =pod
 
+=head2 PROPERTIES
+
+Allows for accessing and updating the set of properties associated with the
+message.
+
+=over
+
+=item my $props = $msg->get_properties;
+
+=item $msg->set_properties( [VAL] );
+
+=item my $value = $msg->get_property( [KEY] );
+
+=item $msg->set_propert( [KEY], [VALUE] );
+
+=back
+
+=cut
+
+sub get_properties {
+    my ($self) = @_;
+
+    return $self->{_properties};
+}
+
+sub set_properties {
+    my ($self) = @_;
+    my ($properties) = $_[1];
+
+    $self->{_properties} = $properties;
+}
+
+sub get_property {
+    my ($self) = @_;
+    my $name = $_[1];
+    my $properties = $self->{_properties};
+
+    return $properties{$name};
+}
+
+sub set_property {
+    my ($self) = @_;
+    my $name = $_[1];
+    my $value = $_[2];
+    my $properties = $self->{_properties};
+
+    $properties->{"$name"} = $value;
+}
+
+=pod
+
 =head2 BODY
 
 The body of the message. When setting the body value a type must be specified,
@@ -366,6 +418,12 @@ sub preencode() {
     my $body = new qpid::proton::Data(cproton_perl::pn_message_body($impl));
     $body->clear();
     $body_type->put($body, $my_body) if($my_body && $body_type);
+
+    my $my_props = $self->{_properties};
+
+    my $props = new qpid::proton::Data(cproton_perl::pn_message_properties($impl));
+    $props->clear();
+    qpid::proton::MAP->put($props, $my_props) if $my_props;
 }
 
 sub postdecode() {
@@ -378,6 +436,14 @@ sub postdecode() {
     if ($body->next()) {
         $self->{_body_type} = $body->get_type();
         $self->{_body} = $body->get_type()->get($body);
+    }
+
+    my $props = new qpid::proton::Data(cproton_perl::pn_message_properties($impl));
+
+    $props->rewind;
+    if ($props->next) {
+        my $properties = $props->get_type->get($props);
+        $self->{_properties} = $props->get_type->get($props);
     }
 }
 

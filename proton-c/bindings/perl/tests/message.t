@@ -251,3 +251,4 @@ ok(!$message->get_content(), 'Content can be null');
 $message->set_content($content);
 ok($message->get_content() eq $content,
    'Content was saved correctly');
+

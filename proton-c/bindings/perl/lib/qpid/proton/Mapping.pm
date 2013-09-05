@@ -17,6 +17,8 @@
 # under the License.
 #
 
+use qpid_proton;
+
 package qpid::proton::Mapping;
 
 our %by_type_value = ();
@@ -55,8 +57,6 @@ sub stringify {
 sub equals {
     my ($self) = @_;
     my $that = $_[1];
-
-    return 0 if !defined($that);
 
     return ($self->get_type_value == $that->get_type_value);
 }

@@ -52,6 +52,11 @@ for(;;)
         print "Subject: " . $msg->get_subject() . "\n";
         print "Content: " . $msg->get_content() . "\n";
         print "Body:    " . $msg->get_body() . "\n";
+        print "Properties:\n";
+        my $props = $msg->get_properties();
+        foreach (keys $props) {
+            print "\t$_=$props->{$_}\n";
+        }
     }
 }
 

@@ -1159,4 +1159,45 @@ sub get_map {
     cproton_perl::pn_data_get_map($impl);
 }
 
+sub put_map_helper {
+    my ($self) = @_;
+    my ($hash) = $_[1];
+
+    $self->put_map;
+    $self->enter;
+
+    foreach(keys $hash) {
+        $self->put_string("$_");
+        $self->put_string("$hash->{$_}");
+    }
+
+    $self->exit;
+}
+
+sub get_map_helper {
+    my ($self) = @_;
+    my $result = {};
+    my $type = $self->get_type;
+
+    if ($cproton_perl::PN_MAP == $type->get_type_value) {
+        my $size = $self->get_map;
+
+        $self->enter;
+
+        for($count = 0; $count < $size; $count++) {
+            if($self->next) {
+                my $key = $self->get_type->get($self);
+                if($self->next) {
+                    my $value = $self->get_type->get($self);
+                    $result->{$key} = $value;
+                }
+            }
+        }
+    }
+
+    $self->exit;
+
+    return $result;
+}
+
 1;

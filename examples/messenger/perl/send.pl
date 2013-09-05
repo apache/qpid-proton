@@ -50,6 +50,7 @@ foreach (@messages)
     $msg->set_content($_);
     # try a few different body types
     my $body_type = int(rand(4));
+    $msg->set_property("sent", "" . localtime(time));
   SWITCH: {
       $body_type == 0 && do { $msg->set_body("It is now " . localtime(time));};
       $body_type == 1 && do { $msg->set_body(rand(65536), qpid::proton::FLOAT); };
