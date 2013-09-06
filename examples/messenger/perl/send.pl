@@ -51,6 +51,9 @@ foreach (@messages)
     # try a few different body types
     my $body_type = int(rand(4));
     $msg->set_property("sent", "" . localtime(time));
+    $msg->get_instructions->{"fold"} = "yes";
+    $msg->get_instructions->{"spindle"} = "no";
+    $msg->get_instructions->{"mutilate"} = "no";
     $msg->get_annotations->{"version"} = 1.0;
     $msg->get_annotations->{"pill"} = "RED";
 

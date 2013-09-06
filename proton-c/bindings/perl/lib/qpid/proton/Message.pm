@@ -31,6 +31,7 @@ sub new {
     my $impl = cproton_perl::pn_message();
     $self->{_impl} = $impl;
     $self->{_properties} = {};
+    $self->{_instructions} = {};
     $self->{_annotations} = {};
     $self->{_body} = undef;
     $self->{_body_type} = undef;
@@ -65,6 +66,7 @@ sub get_impl {
 sub clear {
     my ($self) = @_;
     cproton__perl::pn_message_clear($self->{_impl});
+    $self->{_instructions} = {};
 }
 
 sub errno {
@@ -401,6 +403,22 @@ sub set_annotations {
 
 =pod
 
+=cut
+
+sub get_instructions {
+    my ($self) = @_;
+    return $self->{_instructions};
+}
+
+sub set_instructions {
+    my ($self) = @_;
+    my $instructions = $_[1];
+
+    $self->{_instructions} = $instructions;
+}
+
+=pod
+
 =head2 BODY
 
 The body of the message. When setting the body value a type must be specified,
@@ -456,6 +474,11 @@ sub preencode() {
     $props->clear();
     qpid::proton::MAP->put($props, $my_props) if $my_props;
 
+    my $my_insts = $self->{_instructions};
+    my $insts = new qpid::proton::Data(cproton_perl::pn_message_instructions($impl));
+    $insts->clear;
+    qpid::proton::MAP->put($insts, $my_insts) if $my_insts;
+
     my $my_annots = $self->{_annotations};
     my $annotations = new qpid::proton::Data(cproton_perl::pn_message_annotations($impl));
     $annotations->clear();
@@ -479,6 +502,12 @@ sub postdecode() {
     if ($props->next) {
         my $properties = $props->get_type->get($props);
         $self->{_properties} = $props->get_type->get($props);
+    }
+
+    my $insts = new qpid::proton::Data(cproton_perl::pn_message_instructions($impl));
+    $insts->rewind;
+    if ($insts->next) {
+        $self->{_instructions} = $insts->get_type->get($insts);
     }
 
     my $annotations = new qpid::proton::Data(cproton_perl::pn_message_annotations($impl));

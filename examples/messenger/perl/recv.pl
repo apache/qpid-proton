@@ -57,6 +57,11 @@ for(;;)
         foreach (keys $props) {
             print "\t$_=$props->{$_}\n";
         }
+        print "Instructions:\n";
+        my $instructions = $msg->get_instructions;
+        foreach (keys $instructions) {
+            print "\t$_=" . $instructions->{$_} . "\n";
+        }
         print "Annotations:\n";
         my $annotations = $msg->get_annotations();
         foreach (keys $annotations) {
