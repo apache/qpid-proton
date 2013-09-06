@@ -31,6 +31,7 @@ sub new {
     my $impl = cproton_perl::pn_message();
     $self->{_impl} = $impl;
     $self->{_properties} = {};
+    $self->{_annotations} = {};
     $self->{_body} = undef;
     $self->{_body_type} = undef;
 
@@ -369,6 +370,37 @@ sub set_property {
 
 =pod
 
+=head2 ANNOTATIONS
+
+Allows for accessing and updatin ghte set of annotations associated with the
+message.
+
+=over
+
+=item my $annotations = $msg->get_annotations;
+
+=item $msg->get_annotations->{ [KEY] } = [VALUE];
+
+=item $msg->set_annotations( [VALUE ]);
+
+=back
+
+=cut
+
+sub get_annotations {
+    my ($self) = @_;
+    return $self->{_annotations};
+}
+
+sub set_annotations {
+    my ($self) = @_;
+    my $annotations = $_[1];
+
+    $self->{_annotations} = $annotations;
+}
+
+=pod
+
 =head2 BODY
 
 The body of the message. When setting the body value a type must be specified,
@@ -412,18 +444,22 @@ sub get_body_type {
 sub preencode() {
     my ($self) = @_;
     my $impl = $self->{_impl};
+
     my $my_body = $self->{_body};
     my $body_type = $self->{_body_type};
-
     my $body = new qpid::proton::Data(cproton_perl::pn_message_body($impl));
     $body->clear();
     $body_type->put($body, $my_body) if($my_body && $body_type);
 
     my $my_props = $self->{_properties};
-
     my $props = new qpid::proton::Data(cproton_perl::pn_message_properties($impl));
     $props->clear();
     qpid::proton::MAP->put($props, $my_props) if $my_props;
+
+    my $my_annots = $self->{_annotations};
+    my $annotations = new qpid::proton::Data(cproton_perl::pn_message_annotations($impl));
+    $annotations->clear();
+    qpid::proton::MAP->put($annotations, $my_annots);
 }
 
 sub postdecode() {
@@ -439,11 +475,19 @@ sub postdecode() {
     }
 
     my $props = new qpid::proton::Data(cproton_perl::pn_message_properties($impl));
-
     $props->rewind;
     if ($props->next) {
         my $properties = $props->get_type->get($props);
         $self->{_properties} = $props->get_type->get($props);
+    }
+
+    my $annotations = new qpid::proton::Data(cproton_perl::pn_message_annotations($impl));
+    $annotations->rewind;
+    if ($annotations->next) {
+        my $annots = $annotations->get_type->get($annotations);
+        $self->{_annotations} = $annots;
+    } else {
+        $self->{_annotations} = {};
     }
 }
 
