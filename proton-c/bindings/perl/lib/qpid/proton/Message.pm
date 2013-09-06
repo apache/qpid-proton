@@ -66,7 +66,10 @@ sub get_impl {
 sub clear {
     my ($self) = @_;
     cproton__perl::pn_message_clear($self->{_impl});
+    $self->{_body} = undef;
+    $self->{_properties} = {};
     $self->{_instructions} = {};
+    $self->{_annotations} = {};
 }
 
 sub errno {
