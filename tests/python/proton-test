@@ -66,6 +66,10 @@ parser.add_option("-a", "--always-colorize", action="store_true", dest="always_c
                   help="always colorize the test results rather than relying on terminal tty detection. Useful when invoked from Jython/Maven.")
 parser.add_option("-n", metavar="count", dest="count", type=int, default=1,
                   help="run the tests <count> times")
+parser.add_option("-b", "--bare", action="store_true", default=False,
+                  help="Run bare, i.e. don't capture stack traces. This is useful under Jython as " +
+                  "captured stack traces do not include the Java portion of the stack," +
+                  "whereas non captured stack traces do.")
 
 class Config:
 
@@ -338,15 +342,21 @@ class Runner:
     """invokes a test-phase method (which can be the test method itself or a setup/teardown
        method).  If the method raises an exception the exception is examined to see if the
        exception should be classified as a 'skipped' test"""
-    try:
+    # we don't try to catch exceptions for jython because currently a
+    # jython bug will prevent the java portion of the stack being
+    # stored with the exception info in the sys module
+    if opts.bare:
       phase()
-    except KeyboardInterrupt:
-      raise
-    except:
-      self.exception_phase_name = phase_name
-      self.exception = sys.exc_info()
-      exception_type = self.exception[0]
-      self.skip = getattr(exception_type, "skipped", False)
+    else:
+      try:
+        phase()
+      except KeyboardInterrupt:
+        raise
+      except:
+        self.exception_phase_name = phase_name
+        self.exception = sys.exc_info()
+        exception_type = self.exception[0]
+        self.skip = getattr(exception_type, "skipped", False)
 
   def status(self):
     if self.passed():
