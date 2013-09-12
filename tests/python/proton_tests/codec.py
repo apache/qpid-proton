@@ -261,7 +261,9 @@ class DataTest(Test):
     dst = Data()
     dst.copy(self.data)
 
-    assert dst.format() == self.data.format()
+    copy = dst.format()
+    orig = self.data.format()
+    assert copy == orig, (copy, orig)
 
   def testCopyNested(self):
     nested = [1, 2, 3, [4, 5, 6], 7, 8, 9]
