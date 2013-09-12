@@ -322,7 +322,12 @@ endmacro(pn_c_files)
 pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
 
 # Install executables and libraries
-install (TARGETS proton proton-dump qpid-proton
+install (TARGETS proton proton-dump
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION bin
+  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+install (TARGETS qpid-proton
+  EXPORT  proton
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION bin
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
@@ -355,6 +360,15 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.cmake @ONLY)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.cmake
+  DESTINATION ${LIB_INSTALL_DIR}/proton.cmake)
+install (EXPORT proton FILE proton-config.cmake DESTINATION lib/proton.cmake)
+file(WRITE ${LIB_INSTALL_DIR}/proton.cmake/proton-config-version.cmake
+    "set(PACKAGE_VERSION ${PN_VERSION})\n")
+install (FILES ${LIB_INSTALL_DIR}/proton.cmake/proton-config-version.cmake
+    DESTINATION lib/proton.cmake)
 
 # CTest
 
