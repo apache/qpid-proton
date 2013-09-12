@@ -23,15 +23,16 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include "encodings.h"
+#include "decoder.h"
 
 #include <string.h>
 
-typedef struct {
+struct pn_decoder_t {
   const char *input;
   size_t size;
   const char *position;
   pn_error_t *error;
-} pn_decoder_t;
+};
 
 static void pn_decoder_initialize(void *obj)
 {

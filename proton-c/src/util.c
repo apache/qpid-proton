@@ -46,14 +46,18 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
       if (idx < (int) (capacity - 1)) {
         dst[idx++] = c;
       } else {
-        dst[idx - 1] = '\0';
+        if (idx > 0) {
+          dst[idx - 1] = '\0';
+        }
         return PN_OVERFLOW;
       }
     } else {
       if (idx < (int) (capacity - 4)) {
         idx += sprintf(dst + idx, "\\x%.2x", c);
       } else {
-        dst[idx - 1] = '\0';
+        if (idx > 0) {
+          dst[idx - 1] = '\0';
+        }
         return PN_OVERFLOW;
       }
     }
@@ -61,6 +65,24 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 
   dst[idx] = '\0';
   return idx;
+}
+
+int pn_quote(pn_string_t *dst, const char *src, size_t size)
+{
+  while (true) {
+    size_t str_size = pn_string_size(dst);
+    char *str = pn_string_buffer(dst) + str_size;
+    size_t capacity = pn_string_capacity(dst) - str_size;
+    ssize_t ssize = pn_quote_data(str, capacity, src, size);
+    if (ssize == PN_OVERFLOW) {
+      int err = pn_string_grow(dst, (str_size + capacity) ? 2*(str_size + capacity) : 16);
+      if (err) return err;
+    } else if (ssize >= 0) {
+      return pn_string_resize(dst, str_size + ssize);
+    } else {
+      return ssize;
+    }
+  }
 }
 
 void pn_fprint_data(FILE *stream, const char *bytes, size_t size)

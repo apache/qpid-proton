@@ -111,6 +111,14 @@ module Qpid
         }
       end
 
+      def to_s
+        tmp = Cproton.pn_string("")
+        Cproton.pn_inspect(@data, tmp)
+        result = Cproton.pn_string_get(tmp)
+        Cproton.pn_free(tmp)
+        return result
+      end
+
       # Clears the object.
       def clear
         Cproton.pn_data_clear(@data)
