@@ -123,8 +123,8 @@ JAVA_ARRAYS_TYPEMAPS(char, byte, jbyte, Byte, "[B")     /* char[ANY] */
   jmethodID remainingId= JCALL3(GetMethodID,jenv, bbclass, "remaining", "()I");
   isDirect = JCALL2(CallBooleanMethod,jenv, $input, isDirectId);
   jint position = JCALL2(CallIntMethod,jenv, $input, positionId);
-  jint size = (JCALL2(CallIntMethod,jenv, $input, remainingId));
-  $2 = (size_t*)&size; // todo what if length of size_t is not the same as jint
+  size_t size = (JCALL2(CallIntMethod,jenv, $input, remainingId));
+  $2 = &size;
 
   if(isDirect) {
     $1 =  (char*)JCALL1(GetDirectBufferAddress,jenv, $input) + position;
