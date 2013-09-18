@@ -24,17 +24,25 @@ use Getopt::Std;
 
 use qpid_proton;
 
-sub usage {
-    exit(0);
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+
+sub VERSION_MESSAGE() {
 }
 
-my $address = "0.0.0.0";
+sub HELP_MESSAGE() {
+    print "Usage: send.pl [OPTIONS] -a <ADDRESS>\n";
+    print "Options:\n";
+    print "\t-s        - the message subject\n";
+    print "\t-C        - the message content\n";
+    print "\t<ADDRESS> - amqp://<domain>[/<name>]";
+}
 
 my %options = ();
-getopts("ha:", \%options) or usage();
-usage if $options{h};
+getopts("a:C:s:", \%options) or usage();
 
-$address = $options{a} if defined $options{a};
+my $address = $options{a} || "amqp://0.0.0.0";
+my $subject = $options{s} || localtime(time);
+my $content = $options{C} || "";
 
 my $msg  = new qpid::proton::Message();
 my $messenger = new qpid::proton::Messenger();
@@ -47,7 +55,8 @@ my @messages = @ARGV;
 foreach (@messages)
 {
     $msg->set_address($address);
-    $msg->set_content($_);
+    $msg->set_subject($subject);
+    $msg->set_content($content);
     # try a few different body types
     my $body_type = int(rand(4));
     $msg->set_property("sent", "" . localtime(time));
