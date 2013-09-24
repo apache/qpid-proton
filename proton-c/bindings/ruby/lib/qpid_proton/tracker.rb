@@ -35,10 +35,6 @@ module Qpid
         @impl
       end
 
-      def self.valid_flag?(flag) # :nodoc:
-        [0, CUMULATIVE].include?(flag)
-      end
-
     end
 
   end
