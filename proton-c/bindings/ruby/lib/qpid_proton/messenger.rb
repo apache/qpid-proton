@@ -291,7 +291,6 @@ module Qpid
       # ==== Options
       #
       # * tracker - the tracker
-      # * flag - the flag
       #
       def accept(tracker = nil)
         raise TypeError.new("invalid tracker: #{tracker}") unless tracker.nil? or valid_tracker?(tracker)
@@ -309,7 +308,6 @@ module Qpid
       # ==== Options
       #
       # * tracker - the tracker
-      # * flag - the flag
       #
       def reject(tracker)
         raise TypeError.new("invalid tracker: #{tracker}") unless tracker.nil? or valid_tracker?(tracker)
