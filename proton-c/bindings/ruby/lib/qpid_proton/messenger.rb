@@ -338,13 +338,17 @@ module Qpid
       # ==== Options
       #
       # * tracker - the tracker
-      # * flag - the flag
       #
       # ==== Examples
       #
-      def settle(tracker, flag)
+      def settle(tracker)
         raise TypeError.new("invalid tracker: #{tracker}") unless valid_tracker?(tracker)
-        raise TypeError.new("invalid flag: #{flag}") unless Qpid::Proton::Tracker.valid_flag?(flag)
+        if tracker.nil? then
+          tracker = self.incoming_tracker
+          flag = Cproton::PN_CUMULATIVE
+        else
+          flag = 0
+        end
         Cproton.pn_messenger_settle(@impl, tracker.impl, flag)
       end
 

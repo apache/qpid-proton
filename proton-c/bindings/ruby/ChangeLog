@@ -1,3 +1,6 @@
+Version 0.6:
+	* PROTON-427: Removed the flag argument from Messenger.settle.
+
 version 0.5:
 	* Duck typed the Array class to work with Qpid::Proton::Data.
 	* Duck typed the Hash class to work with Qpid::Proton::Data.
