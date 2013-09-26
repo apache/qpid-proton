@@ -288,12 +288,21 @@ int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking)
   return 0;
 }
 
-static void pni_driver_reclaim(pn_driver_t *driver)
+static void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn);
+
+static void pni_driver_reclaim(pn_messenger_t *messenger, pn_driver_t *driver)
 {
   pn_listener_t *l = pn_listener_head(driver);
   while (l) {
     pn_listener_ctx_free(l);
     l = pn_listener_next(l);
+  }
+
+  pn_connector_t *c = pn_connector_head(driver);
+  while (c) {
+    pn_connection_t *conn = pn_connector_connection(c);
+    pni_messenger_reclaim(messenger, conn);
+    c = pn_connector_next(c);
   }
 }
 
@@ -308,7 +317,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->private_key);
     free(messenger->password);
     free(messenger->trusted_certificates);
-    pni_driver_reclaim(messenger->driver);
+    pni_driver_reclaim(messenger, messenger->driver);
     pn_driver_free(messenger->driver);
     pn_error_free(messenger->error);
     pni_store_free(messenger->incoming);
@@ -578,8 +587,10 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
   }
 }
 
-void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
+void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 {
+  if (!conn) return;
+
   pn_link_t *link = pn_link_head(conn, 0);
   while (link) {
     if (pn_link_is_receiver(link) && pn_link_credit(link) > 0) {
@@ -599,6 +610,9 @@ void pn_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 
     link = pn_link_next(link, 0);
   }
+
+  pn_connection_ctx_free(conn);
+  pn_connection_free(conn);
 }
 
 
@@ -680,9 +694,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       if (pn_connector_closed(c)) {
         pn_connector_free(c);
         if (conn) {
-          pn_messenger_reclaim(messenger, conn);
-          pn_connection_ctx_free(conn);
-          pn_connection_free(conn);
+          pni_messenger_reclaim(messenger, conn);
           pn_messenger_flow(messenger);
         }
       } else {
