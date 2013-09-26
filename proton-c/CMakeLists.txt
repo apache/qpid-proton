@@ -356,19 +356,30 @@ pn_pkgconfig_dir(EXEC_PREFIX ${INSTALL_PREFIX} ${INSTALL_PREFIX})
 pn_pkgconfig_dir(LIBDIR ${LIB_INSTALL_DIR} ${INSTALL_PREFIX})
 pn_pkgconfig_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${INSTALL_PREFIX})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
+install (FILES 
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.cmake.in
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.cmake @ONLY)
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.cmake
+install (FILES 
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.cmake
   DESTINATION ${LIB_INSTALL_DIR}/proton.cmake)
-install (EXPORT proton FILE proton-config.cmake DESTINATION lib/proton.cmake)
-file(WRITE ${LIB_INSTALL_DIR}/proton.cmake/proton-config-version.cmake
-    "set(PACKAGE_VERSION ${PN_VERSION})\n")
-install (FILES ${LIB_INSTALL_DIR}/proton.cmake/proton-config-version.cmake
-    DESTINATION lib/proton.cmake)
+
+install (EXPORT proton 
+  FILE proton-config.cmake 
+  DESTINATION ${LIB_INSTALL_DIR}/proton.cmake)
+
+file(WRITE 
+  ${CMAKE_CURRENT_BINARY_DIR}/proton.cmake/proton-config-version.cmake
+  "set(PACKAGE_VERSION ${PN_VERSION})\n")
+install (FILES 
+  ${CMAKE_CURRENT_BINARY_DIR}/proton.cmake/proton-config-version.cmake
+  DESTINATION ${LIB_INSTALL_DIR}/proton.cmake)
 
 # CTest
 
