@@ -88,7 +88,6 @@ typedef struct {
     pn_decimal128_t as_decimal128;
     pn_uuid_t as_uuid;
     pn_bytes_t as_bytes;
-    size_t as_count;
   } u;
 } pn_atom_t;
 
