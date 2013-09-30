@@ -2237,6 +2237,8 @@ class Link(Endpoint):
     pn_link_set_rcv_settle_mode(self._link, mode)
   rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
 
+  def drained(self):
+    return pn_link_drained(self._link)
 
 class Terminus(object):
 
@@ -2332,9 +2334,6 @@ class Sender(Link):
 
   def send(self, bytes):
     return self._check(pn_link_send(self._link, bytes))
-
-  def drained(self):
-    pn_link_drained(self._link)
 
 class Receiver(Link):
 

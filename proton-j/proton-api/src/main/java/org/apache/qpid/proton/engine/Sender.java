@@ -55,8 +55,6 @@ public interface Sender extends Link
      */
     public void abort();
 
-    public void drained();
-
     /**
      * {@inheritDoc}
      *
@@ -70,4 +68,5 @@ public interface Sender extends Link
      */
     @Override
     public boolean advance();
+
 }

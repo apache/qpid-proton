@@ -241,7 +241,7 @@ struct pn_link_t {
   pn_sequence_t credit;
   pn_sequence_t queued;
   bool drain;
-  bool drained; // sender only
+  int drained; // number of drained credits
   void *context;
   pn_link_state_t state;
 };

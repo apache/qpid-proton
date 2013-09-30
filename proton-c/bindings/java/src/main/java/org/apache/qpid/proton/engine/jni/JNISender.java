@@ -55,10 +55,4 @@ public class JNISender extends JNILink implements Sender
         // TODO
     }
 
-    @Override
-    @ProtonCEquivalent("pn_link_drained")
-    public void drained()
-    {
-        Proton.pn_link_drained(getImpl());
-    }
 }

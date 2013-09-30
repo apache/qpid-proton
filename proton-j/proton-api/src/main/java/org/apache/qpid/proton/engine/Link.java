@@ -179,4 +179,7 @@ public interface Link extends Endpoint
      */
     @Deprecated
     void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
+
+    public int drained();
+
 }

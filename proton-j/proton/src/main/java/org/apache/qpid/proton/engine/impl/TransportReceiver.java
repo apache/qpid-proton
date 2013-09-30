@@ -42,11 +42,15 @@ class TransportReceiver extends TransportLink<ReceiverImpl>
     void handleFlow(Flow flow)
     {
         super.handleFlow(flow);
-        if(getRemoteDeliveryCount().compareTo(getDeliveryCount())>=0)
+        int remote = getRemoteDeliveryCount().intValue();
+        int local = getDeliveryCount().intValue();
+        int delta = remote - local;
+        if(delta > 0)
         {
-            getLink().setCredit(getLink().getQueued());
+            getLink().addCredit(-delta);
             setLinkCredit(getRemoteLinkCredit());
             setDeliveryCount(getRemoteDeliveryCount());
+            getLink().setDrained(getLink().getDrained() + delta);
         }
 
 

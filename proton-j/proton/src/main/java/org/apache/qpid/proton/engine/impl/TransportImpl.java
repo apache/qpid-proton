@@ -382,7 +382,7 @@ public class TransportImpl extends EndpointImpl
                 if(endpoint instanceof SenderImpl)
                 {
                     SenderImpl sender = (SenderImpl) endpoint;
-                    if(sender.getDrain() && sender.clearDrained())
+                    if(sender.getDrain() && sender.getDrained() > 0)
                     {
                         TransportSender transportLink = sender.getTransportLink();
                         TransportSession transportSession = sender.getSession().getTransportSession();
@@ -390,6 +390,7 @@ public class TransportImpl extends EndpointImpl
                         transportLink.setLinkCredit(UnsignedInteger.valueOf(0));
                         transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(credits));
                         transportLink.setLinkCredit(UnsignedInteger.ZERO);
+                        sender.setDrained(0);
 
                         writeFlow(transportSession, transportLink);
 

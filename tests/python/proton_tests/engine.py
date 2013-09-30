@@ -1049,6 +1049,8 @@ class CreditTest(Test):
     self.pump()
     assert self.rcv.credit == 0
     assert self.snd.credit == 0
+    drained = self.rcv.drained()
+    assert drained == 10, drained
 
   def testPartialDrain(self):
     self.rcv.drain(2)
@@ -1066,6 +1068,8 @@ class CreditTest(Test):
     assert self.rcv.advance()
     assert not self.rcv.current
     assert self.rcv.credit == 0, self.rcv.credit
+    drained = self.rcv.drained()
+    assert drained == 1, drained
 
   def testDrainFlow(self):
     assert self.rcv.credit == 0
@@ -1094,6 +1098,8 @@ class CreditTest(Test):
     self.pump()
     assert self.rcv.credit == 10
     assert self.snd.credit == 10
+    drained = self.rcv.drained()
+    assert drained == 10, drained
 
   def testNegative(self):
     assert self.snd.credit == 0
@@ -1123,6 +1129,8 @@ class CreditTest(Test):
     assert self.snd.credit == 0
     assert self.rcv.credit == 0
     assert self.rcv.queued == 0
+    drained = self.rcv.drained()
+    assert drained == 0
 
     self.rcv.flow(10)
     self.pump()
@@ -1135,6 +1143,8 @@ class CreditTest(Test):
     assert self.snd.credit == 10
     assert self.rcv.credit == 10
     assert self.rcv.queued == 0
+    drained = self.rcv.drained()
+    assert drained == 0
 
     self.rcv.drain(0)
     assert self.snd.credit == 10
@@ -1151,11 +1161,112 @@ class CreditTest(Test):
     assert self.snd.credit == 0
     assert self.rcv.credit == 10
     assert self.rcv.queued == 0
+    drained = self.rcv.drained()
+    assert drained == 0
     self.pump()
 
     assert self.snd.credit == 0
     assert self.rcv.credit == 0
     assert self.rcv.queued == 0
+    drained = self.rcv.drained()
+    assert drained == 10
+
+
+  def testDrainOrder(self):
+    """ Verify drain/drained works regardless of ordering.  See PROTON-401
+    """
+    assert self.snd.credit == 0
+    assert self.rcv.credit == 0
+    assert self.rcv.queued == 0
+
+    #self.rcv.session.connection._transport.trace(Transport.TRACE_FRM)
+    #self.snd.session.connection._transport.trace(Transport.TRACE_FRM)
+
+    ## verify that a sender that has reached the drain state will respond
+    ## promptly to a drain issued by the peer.
+    self.rcv.flow(10)
+    self.pump()
+    assert self.snd.credit == 10, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    sd = self.snd.delivery("tagA")
+    assert sd
+    n = self.snd.send("A")
+    assert n == 1
+    self.pump()
+    self.snd.advance()
+
+    # done sending, so signal that we are drained:
+    self.snd.drained()
+    self.pump()
+    assert self.snd.credit == 9, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    self.rcv.drain(0)
+    self.pump()
+    assert self.snd.credit == 9, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    bytes = self.rcv.recv(10)
+    assert bytes == "A", bytes
+    self.rcv.advance()
+    self.pump()
+    assert self.snd.credit == 9, self.snd.credit
+    assert self.rcv.credit == 9, self.rcv.credit
+
+    self.snd.drained()
+    self.pump()
+    assert self.snd.credit == 0, self.snd.credit
+    assert self.rcv.credit == 0, self.rcv.credit
+
+    # verify that a drain requested by the peer is not "acknowledged" until
+    # after the sender has completed sending its pending messages
+
+    self.rcv.flow(10)
+    self.pump()
+    assert self.snd.credit == 10, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    sd = self.snd.delivery("tagB")
+    assert sd
+    n = self.snd.send("B")
+    assert n == 1
+    self.snd.advance()
+    self.pump()
+    assert self.snd.credit == 9, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    self.rcv.drain(0)
+    self.pump()
+    assert self.snd.credit == 9, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    sd = self.snd.delivery("tagC")
+    assert sd
+    n = self.snd.send("C")
+    assert n == 1
+    self.snd.advance()
+    self.pump()
+    assert self.snd.credit == 8, self.snd.credit
+    assert self.rcv.credit == 10, self.rcv.credit
+
+    # now that the sender has finished sending everything, it can signal
+    # drained
+    self.snd.drained()
+    self.pump()
+    assert self.snd.credit == 0, self.snd.credit
+    assert self.rcv.credit == 2, self.rcv.credit
+
+    bytes = self.rcv.recv(10)
+    assert bytes == "B", bytes
+    self.rcv.advance()
+    bytes = self.rcv.recv(10)
+    assert bytes == "C", bytes
+    self.rcv.advance()
+    self.pump()
+    assert self.snd.credit == 0, self.snd.credit
+    assert self.rcv.credit == 0, self.rcv.credit
+
 
   def testPushback(self, count=10):
     assert self.snd.credit == 0

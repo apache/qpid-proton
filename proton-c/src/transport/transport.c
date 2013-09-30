@@ -750,6 +750,7 @@ int pn_do_flow(pn_dispatcher_t *disp)
         link->state.delivery_count += delta;
         link->state.link_credit -= delta;
         link->credit -= delta;
+        link->drained += delta;
       }
     }
   }
@@ -1471,7 +1472,7 @@ int pn_process_flow_sender(pn_transport_t *transport, pn_endpoint_t *endpoint)
       if (!tail || !pn_delivery_buffered(tail)) {
         state->delivery_count += state->link_credit;
         state->link_credit = 0;
-        snd->drained = false;
+        snd->drained = 0;
         return pn_post_flow(transport, ssn, snd);
       }
     }

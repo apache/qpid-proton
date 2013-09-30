@@ -44,7 +44,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private int _queued;
     private int _credit;
     private int _unsettled;
-
+    private int _drained;
 
     private SenderSettleMode _senderSettleMode;
     private SenderSettleMode _remoteSenderSettleMode;
@@ -353,4 +353,35 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         _remoteReceiverSettleMode = remoteReceiverSettleMode;
     }
+
+    public int drained()
+    {
+        int drained = 0;
+
+        if (this instanceof SenderImpl) {
+            if(getDrain() && hasCredit())
+            {
+                _drained = getCredit();
+                setCredit(0);
+                modified();
+                drained = _drained;
+            }
+        } else {
+            drained = _drained;
+            _drained = 0;
+        }
+
+        return drained;
+    }
+
+    int getDrained()
+    {
+        return _drained;
+    }
+
+    void setDrained(int value)
+    {
+        _drained = value;
+    }
+
 }

@@ -530,4 +530,12 @@ abstract class JNILink implements Link
         free();
         super.finalize();
     }
+
+    @Override
+    @ProtonCEquivalent("pn_link_drained")
+    public int drained()
+    {
+        return Proton.pn_link_drained(getImpl());
+    }
+
 }

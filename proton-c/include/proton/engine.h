@@ -496,7 +496,7 @@ PN_EXTERN void pn_link_set_context(pn_link_t *link, void *context);
 // sender
 PN_EXTERN void pn_link_offered(pn_link_t *sender, int credit);
 PN_EXTERN ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
-PN_EXTERN void pn_link_drained(pn_link_t *sender);
+PN_EXTERN int pn_link_drained(pn_link_t *sender);
 //void pn_link_abort(pn_sender_t *sender);
 
 // receiver

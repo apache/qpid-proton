@@ -396,6 +396,9 @@ class Link(Endpoint):
     self.impl.setReceiverSettleMode(mode)
   rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
 
+  def drained(self):
+    return self.impl.drained()
+
 
 class DataDummy:
 
@@ -474,9 +477,6 @@ class Sender(Link):
 
   def send(self, bytes):
     return self.impl.send(bytes, 0, len(bytes))
-
-  def drained(self):
-    self.impl.drained()
 
 class Receiver(Link):
 
