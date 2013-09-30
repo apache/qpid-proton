@@ -131,4 +131,10 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         flow(credit);
         setDrain(true);
     }
+
+    public boolean draining()
+    {
+        return getDrain() && (getCredit() > getQueued());
+    }
+
 }

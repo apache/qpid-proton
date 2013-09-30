@@ -1038,29 +1038,36 @@ class CreditTest(Test):
     assert self.rcv.credit == 0
     assert self.snd.credit == 0
     self.rcv.drain(10)
+    assert self.rcv.draining()
     assert self.rcv.credit == 10
     assert self.snd.credit == 0
     self.pump()
     assert self.rcv.credit == 10
     assert self.snd.credit == 10
+    assert self.rcv.draining()
     self.snd.drained()
     assert self.rcv.credit == 10
     assert self.snd.credit == 0
+    assert self.rcv.draining()
     self.pump()
     assert self.rcv.credit == 0
     assert self.snd.credit == 0
+    assert not self.rcv.draining()
     drained = self.rcv.drained()
     assert drained == 10, drained
 
   def testPartialDrain(self):
     self.rcv.drain(2)
+    assert self.rcv.draining()
     self.pump()
 
     d = self.snd.delivery("tag")
     assert d
     assert self.snd.advance()
     self.snd.drained()
+    assert self.rcv.draining()
     self.pump()
+    assert not self.rcv.draining()
 
     c = self.rcv.current
     assert self.rcv.queued == 1, self.rcv.queued
@@ -1068,6 +1075,7 @@ class CreditTest(Test):
     assert self.rcv.advance()
     assert not self.rcv.current
     assert self.rcv.credit == 0, self.rcv.credit
+    assert not self.rcv.draining()
     drained = self.rcv.drained()
     assert drained == 1, drained
 

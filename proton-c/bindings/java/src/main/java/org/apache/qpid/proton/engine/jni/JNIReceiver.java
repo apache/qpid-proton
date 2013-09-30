@@ -54,4 +54,12 @@ public class JNIReceiver extends JNILink implements Receiver
     {
         Proton.pn_link_drain(getImpl(), credit);
     }
+
+    @Override
+    @ProtonCEquivalent("pn_link_draining")
+    public boolean draining()
+    {
+        return Proton.pn_link_draining(getImpl());
+    }
+
 }

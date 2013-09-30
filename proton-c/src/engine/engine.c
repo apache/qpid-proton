@@ -1312,6 +1312,13 @@ void pn_link_drain(pn_link_t *receiver, int credit)
   receiver->drain = true;
 }
 
+bool pn_link_draining(pn_link_t *receiver)
+{
+  assert(receiver);
+  assert(pn_link_is_receiver(receiver));
+  return receiver->drain && (pn_link_credit(receiver) > pn_link_queued(receiver));
+}
+
 pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   if (!delivery) return NULL;

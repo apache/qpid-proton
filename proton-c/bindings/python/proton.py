@@ -2351,6 +2351,9 @@ class Receiver(Link):
   def drain(self, n):
     pn_link_drain(self._link, n)
 
+  def draining(self):
+    return pn_link_draining(self._link)
+
 def wrap_delivery(dlv):
   if not dlv: return None
   ctx = pn_delivery_get_context(dlv)

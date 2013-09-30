@@ -503,6 +503,7 @@ PN_EXTERN int pn_link_drained(pn_link_t *sender);
 PN_EXTERN void pn_link_flow(pn_link_t *receiver, int credit);
 PN_EXTERN void pn_link_drain(pn_link_t *receiver, int credit);
 PN_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
+PN_EXTERN bool pn_link_draining(pn_link_t *receiver);
 
 // terminus
 PN_EXTERN pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus);

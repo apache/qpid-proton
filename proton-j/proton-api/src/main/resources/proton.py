@@ -486,6 +486,9 @@ class Receiver(Link):
   def drain(self, n):
     self.impl.drain(n)
 
+  def draining(self):
+    return self.impl.draining()
+
   def recv(self, size):
     output = zeros(size, "b")
     n = self.impl.recv(output, 0, size)

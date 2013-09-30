@@ -68,4 +68,7 @@ public interface Receiver extends Link
      */
     @Override
     public boolean advance();
+
+    public boolean draining();
+
 }
