@@ -91,6 +91,14 @@ would normally install to /usr/lib/perl5/vendor_perl/ then, if you use:
 
 the bindings would install to /opt/usr/lib/perl5/vendor_perl/ instead.
 
+NOTE: The use of DESTDIR does not affect the contents of libqpid-proton.pc. The
+contents of that file are based on the values provided when the CMake environment
+was created.
+
+For more on the use of DESTDIR, see the following:
+
+http://www.gnu.org/prep/standards/html_node/DESTDIR.html
+
 == Disable Building The Language Bindings ==
 
 To disable any language bindings, you can disable them individually with:
