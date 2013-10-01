@@ -68,15 +68,13 @@ loop do
       exit
     end
 
-    (cd, body) = msg.content
     puts "Address: #{msg.address}"
     subject = msg.subject || "(no subject)"
     puts "Subject: #{subject}"
-    puts "Content: #{body}"
+    puts "Body: #{msg.body}"
     puts "Properties: #{msg.properties}"
     puts "Instructions: #{msg.instructions}"
     puts "Annotations: #{msg.annotations}"
-    puts "Body: #{msg.body}"
   end
 end
 

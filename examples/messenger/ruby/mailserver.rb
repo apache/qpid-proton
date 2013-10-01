@@ -73,7 +73,7 @@ loop do
       puts msg.reply_to
       reply.address = msg.reply_to
       reply.correlation_id = msg.correlation_id
-      reply.content = msg.content
+      reply.body = msg.body
     end
     dispatch(msg, reply)
     msgr.put(reply)

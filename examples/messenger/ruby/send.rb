@@ -44,7 +44,6 @@ msg = Qpid::Proton::Message.new
 messages.each do |message|
   msg.address = options[:address]
   msg.subject = "How are you?"
-  msg.content = message
   msg["sent"] = Time.new
   msg["hostname"] = ENV["HOSTNAME"]
   msg.instructions["fold"] = "yes"
@@ -52,7 +51,7 @@ messages.each do |message|
   msg.instructions["mutilate"] = "no"
   msg.annotations["version"] = 1.0
   msg.annotations["pill"] = :RED
-  msg.body = "This is a message body. There are many like it but this one is mine."
+  msg.body = message
 
   begin
     messenger.put(msg)
