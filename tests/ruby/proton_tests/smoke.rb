@@ -54,8 +54,10 @@ class SmokeTest < Test::Unit::TestCase
       assert msg2.body == "Hello World! #{i}"
     }
 
-    assert @client.outgoing == 0, @client.outgoing
-    assert @server.incoming == 0, @server.incoming
+    assert(@client.outgoing == 0,
+           "Expected 0 outgoing messages, found #{@client.outgoing}")
+    assert(@server.incoming == 0,
+           "Expected 0 incoming messages, found #{@server.incoming}")
   end
 
 end
