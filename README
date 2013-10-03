@@ -49,7 +49,8 @@ language:
   yum install openssl-devel
 
   # dependencies needed for bindings
-  yum install swig python-devel ruby-devel php-devel java-1.6.0-openjdk
+  yum install swig python-devel ruby-devel php-devel perl-devel \
+              java-1.6.0-openjdk
 
   # dependencies needed for python docs
   yum install epydoc
