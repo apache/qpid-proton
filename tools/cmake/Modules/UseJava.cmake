@@ -190,8 +190,6 @@
 # (To distribute this file outside of CMake, substitute the full
 #  License text for the above reference.)
 
-message("Loading Proton's UseJava module")
-
 function (__java_copy_file src dest comment)
     add_custom_command(
         OUTPUT  ${dest}
