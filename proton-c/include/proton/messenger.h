@@ -63,8 +63,10 @@ PN_EXTERN pn_messenger_t *pn_messenger(const char *name);
  */
 PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
 
-/** Provides a certificate that will be used to identify the local
- * Messenger to the peer.
+/** Sets the path that will be used to get the certificate
+ * that will be used to identify this messenger to its
+ * peers.  The validity of the path is not checked by
+ * this function.
  *
  * @param[in] messenger the messenger
  * @param[in] certificate a path to a certificate file
@@ -73,7 +75,9 @@ PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
 
-/** Gets the certificate file for a Messenger.
+/** Return the certificate path. This value may be set by
+ * pn_messenger_set_certificate. The default certificate
+ * path is null.
  *
  * @param[in] messenger the messenger
  * @return the certificate file path
@@ -131,8 +135,10 @@ PN_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, c
  */
 PN_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
 
-/** Sets the timeout for a Messenger. A negative timeout means
- * infinite.
+/** Any messenger call that blocks during execution will stop
+ * blocking and return control when this timeout is reached,
+ * if you have set it to a value greater than zero.
+ * Expressed in milliseconds.
  *
  * @param[in] messenger the messenger
  * @param[in] timeout the new timeout for the messenger, in milliseconds
@@ -149,7 +155,21 @@ PN_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
  */
 PN_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 
+/** Accessor for messenger blocking mode.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return true if blocking has been enabled.
+ */
 PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
+
+/** Enable or disable blocking behavior during calls to
+ * pn_messenger_send and pn_messenger_recv.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return true if blocking has been enabled.
+ */
 PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
 
 /** Frees a Messenger.
@@ -159,7 +179,10 @@ PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking
  */
 PN_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
 
-/** Returns the error code for the Messenger.
+/** Return the code for the most recent error,
+ * initialized to zero at messenger creation.
+ * The error number is "sticky" i.e. are not reset to 0
+ * at the end of successful API calls.
  *
  * @param[in] messenger the messenger to check for errors
  *
@@ -168,7 +191,9 @@ PN_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
 
-/** Returns the error info for a Messenger.
+/** Returns a pointer to a pn_error_t. The pn_error_* API
+ * allows you to access the text, error number, and lets you
+ * set or clear the error code explicitly.
  *
  * @param[in] messenger the messenger to check for errors
  *
@@ -177,8 +202,9 @@ PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
  */
 PN_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
 
-/** Gets the outgoing window for a Messenger. @see
- * ::pn_messenger_set_outgoing_window
+/** Returns the size of the incoming window that was
+ * set with pn_messenger_set_incoming_window.  The
+ * default is 0.
  *
  * @param[in] messenger the messenger
  *
@@ -186,10 +212,11 @@ PN_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
 
-/** Sets the outgoing window for a Messenger. If the outgoing window
- *  is set to a positive value, then after each call to
- *  pn_messenger_send, the Messenger will track the status of that
- *  many deliveries. @see ::pn_messenger_status
+/** The size of the outgoing window limits the number of messages whose
+ * status you can check with a tracker. A message enters this window
+ * when you call pn_messenger_put on the message.  If your outgoing window
+ * size is 10, and you call pn_messenger_put 12, new status information
+ * will no longer be available for the first 2 messages.
  *
  * @param[in] messenger the Messenger
  * @param[in] window the number of deliveries to track
@@ -199,8 +226,9 @@ PN_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
 
-/** Gets the incoming window for a Messenger. @see
- * ::pn_messenger_set_incoming_window
+/** Returns the size of the incoming window that was
+ * set with pn_messenger_set_incoming_window.
+ * The default is 0.
  *
  * @param[in] messenger the Messenger
  *
@@ -208,12 +236,17 @@ PN_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int wi
  */
 PN_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
 
-/** Sets the incoming window for a Messenger. If the incoming window
- *  is set to a positive value, then after each call to
- *  pn_messenger_accept or pn_messenger_reject, the Messenger will
- *  track the status of that many deliveries. @see
- *  ::pn_messenger_status
- *
+/** The size of your incoming window limits the number of messages
+ * that can be accepted or rejected using trackers.  Messages do
+ * not enter this window when they have been received (pn_messenger_recv)
+ * onto you incoming queue.  
+ * 
+ * Messages enter this window only when you
+ * take them into your application using pn_messenger_get.
+ * If your incoming window size is N, and you get N+1 messages without
+ * explicitly accepting or rejecting the oldest message, then it will be
+ * implicitly accepted when it falls off the edge of the incoming window.
+ * 
  * @param[in] messenger the Messenger
  * @param[in] window the number of deliveries to track
  *
@@ -222,8 +255,9 @@ PN_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int window);
 
-/** Starts a messenger. A messenger cannot send or recv messages until
- * it is started.
+/** Currently a no-op placeholder.
+ * For future compatibility, do not send or receive messages
+ * before starting the messenger.
  *
  * @param[in] messenger the messenger to start
  *
@@ -232,8 +266,11 @@ PN_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger, int wi
  */
 PN_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
 
-/** Stops a messenger. A messenger cannot send or recv messages when
- *  it is stopped.
+/** Stops a messenger.  A messenger cannot send or
+ * receive messages after it is stopped.  The messenger may require
+ * some time to stop if it is busy, and in that case will return
+ * PN_INPROGRESS.  In that case, call pn_messenger_stopped to see
+ * if it has fully stopped.
  *
  * @param[in] messenger the messenger to stop
  *
@@ -242,6 +279,12 @@ PN_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
 
+/** Returns true if a messenger is in the stopped state.
+ * This function does not block.
+ *
+ * @param[in] messenger the messenger to stop
+ *
+ */
 PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 
 /** Subscribes a messenger to messages from the specified source.
@@ -257,7 +300,9 @@ PN_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
 
 PN_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
-/** Puts a message on the outgoing message queue for a messenger.
+/** Puts the message onto the messenger's outgoing queue.
+ * The message may also be sent if transmission would not cause
+ * blocking.  This call will not block.
  *
  * @param[in] messenger the messenger
  * @param[in] msg the message to put on the outgoing queue
@@ -267,8 +312,9 @@ PN_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context
  */
 PN_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
 
-/** Gets the last known remote state of the delivery associated with
- * the given tracker.
+/** Find the current delivery status of the outgoing message
+ * associated with this tracker, as long as the message is still
+ * within your outgoing window.within your outgoing window.
  *
  * @param[in] messenger the messenger
  * @param[in] tracker the tracker identify the delivery
@@ -290,8 +336,10 @@ PN_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_
  */
 PN_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
-/** Gets the tracker for the message most recently provided to
- * pn_messenger_put.
+/** Returns a tracker for the outgoing message most recently given
+ * to pn_messenger_put.  Use this tracker with pn_messenger_status
+ * to determine the delivery status of the message, as long as the
+ * message is still within your outgoing window.
  *
  * @param[in] messenger the messenger
  *
@@ -308,17 +356,30 @@ PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
 
-/** Interrupts a messenger that is blocking. This method may be safely
- * called from a different thread than the one that is blocking.
+/** The messenger interface is single-threaded.
+ * This is the only messenger function intended to be called
+ * from outside of the messenger thread.
+ * It will interrupt any messenger function which is currently blocking.
  *
  * @param[in] messenger the Messenger
  */
 PN_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
 
-/** Sends messages in the outgoing message queue for a messenger. This
- * call will block until the indicated number of messages have been
- * sent. If n is -1 this call will block until all outgoing messages
- * have been sent. If n is 0 then this call won't block.
+/** If blocking has been set with pn_messenger_set_blocking, this call
+ * will block until N messages have been sent.  A value of -1 for N means
+ * "all messages in the outgoing queue".
+ *
+ * In addition, if a nonzero size has been set for the outgoing window,
+ * this call will block until all messages within that window have
+ * been settled, or until all N messages have been settled, whichever
+ * comes first.
+ *
+ * Any blocking will end upon timeout, if one has been set by
+ * pn_messenger_timeout.
+ *
+ * If blocking has not been enabled, this call will stop transmitting
+ * messages when further transmission would require blocking, or when
+ * the outgoing queue is empty, or when n messages have been sent.
  *
  * @param[in] messenger the messager
  * @param[in] n the number of messages to send
@@ -343,20 +404,28 @@ PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
  *                  to receive as many messages as it can buffer
  *                  internally.
  *
+ * After receiving messages onto your incoming queue
+ * use pn_messenger_get to bring messages into your application code.
+ * 
  * @return an error code or zero on success
  * @see error.h
  */
 PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
 
-/** Returns the number of messages currently being received by a
- * messenger.
+/** Returns the number of messages that was requested by
+ * the most recent call to pn_messenger_recv.
  *
  * @param[in] messenger the messenger
  */
 PN_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
 
-/** Gets a message from the head of the incoming message queue of a
- * messenger.
+/** Pop the oldest message off your incoming message queue,
+ * and copy it into the given message structure.
+ * If the given pointer to a message structure is NULL,
+ * the popped message is discarded.
+ * Returns PN_EOS if there are no messages to get.
+ * Returns an error code only if there is a problem in
+ * decoding the message.
  *
  * @param[in] messenger the messenger
  * @param[out] msg upon return contains the message from the head of the queue
@@ -366,8 +435,10 @@ PN_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
 
-/** Gets the tracker for the message most recently fetched by
- * pn_messenger_get.
+/** Returns a tracker for the message most recently fetched by
+ * pn_messenger_get.  The tracker allows you to accept or reject its
+ * message, or its message plus all prior messages that are still within
+ * your incoming window.
  *
  * @param[in] messenger the messenger
  *
@@ -376,13 +447,23 @@ PN_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg);
  */
 PN_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
 
+/** Returns a pointer to the subscription of the message returned by the
+ * most recent call to pn_messenger_get, or NULL if pn_messenger_get
+ * has not yet been called.
+ *
+ * @param[in] messenger the messenger
+ *
+ * @return a pn_subscription_t or NULL if pn_messenger_get
+ *         has never been called for the given messenger
+ */
 PN_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 #define PN_CUMULATIVE (0x1)
 
-/** Accepts the incoming messages identified by the tracker. Use the
- * PN_CUMULATIVE flag to accept everything prior to the supplied
- * tracker.
+/** Signal the sender that you have acted on the message
+ * pointed to by the tracker.  If the PN_CUMULATIVE flag is set, all
+ * messages prior to the tracker will also be accepted, back to the
+ * beginning of your incoming window.
  *
  * @param[in] messenger the messenger
  * @param[in] tracker an incoming tracker
@@ -393,9 +474,10 @@ PN_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *
  */
 PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
-/** Rejects the incoming messages identified by the tracker. Use the
- * PN_CUMULATIVE flag to reject everything prior to the supplied
- * tracker.
+/** Rejects the message indicated by the tracker.  If the PN_CUMULATIVE
+ * flag is used this call will also reject all prior messages that
+ * have not already been settled.  The semantics of message rejection
+ * are application-specific.
  *
  * @param[in] messenger the Messenger
  * @param[in] tracker an incoming tracker
@@ -489,6 +571,24 @@ PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
                                  const char *address);
 
+/** Similar to pn_messenger_route, except that the destination of
+ * the message is determined before the message address is rewritten.
+ *
+ * The outgoing address is only rewritten after routing has been
+ * finalized.  If a message has an outgoing address of
+ * "amqp://0.0.0.0:5678", and a rewriting rule that changes its
+ * outgoing address to "foo", it will still arrive at the peer that
+ * is listening on "amqp://0.0.0.0:5678", but when it arrives there,
+ * the receiver will see its outgoing address as "foo".
+ *
+ * The default rewrite rule removes username and password from addresses
+ * before they are transmitted.
+ * 
+ * @param[in] messenger the Messenger
+ * @param[in] pattern a glob pattern to select messages
+ * @param[in] address an address indicating outgoing address rewrite
+ *
+ */
 PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
                                    const char *address);
 
