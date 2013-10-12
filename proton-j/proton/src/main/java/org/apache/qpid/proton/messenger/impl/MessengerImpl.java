@@ -679,9 +679,16 @@ public class MessengerImpl implements Messenger
         while (true)
         {
             done = condition.test();
-            long remaining = deadline - now;
-            if (done || (timeout >= 0 && remaining < 0)) break;
-            boolean woken = _driver.doWait(remaining);
+            if (done) break;
+
+            boolean woken;
+            if ( timeout >= 0 ) {
+                long remaining = deadline - now;
+                if (remaining < 0) break;
+                woken = _driver.doWait(remaining);
+            } else {
+                woken = _driver.doWait(-1);
+            }
             processActive();
             if (woken) {
                 throw new InterruptException();

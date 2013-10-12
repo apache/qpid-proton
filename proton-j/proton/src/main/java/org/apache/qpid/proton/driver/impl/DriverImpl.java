@@ -78,7 +78,7 @@ public class DriverImpl implements Driver
             if (woken || timeout == 0) {
                 _selector.selectNow();
             } else if (timeout < 0) {
-                _selector.select(0);
+                _selector.select();
             } else {
                 _selector.select(timeout);
             }
@@ -192,6 +192,7 @@ public class DriverImpl implements Driver
         {
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(false);
+            System.out.println("host:port:" + host + ", " + port);
             channel.connect(new InetSocketAddress(host, port));
             return createConnector(channel, context);
         }
