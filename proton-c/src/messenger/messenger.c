@@ -35,6 +35,8 @@
 #include "store.h"
 #include "transform.h"
 
+typedef struct pn_link_ctx_t pn_link_ctx_t;
+
 typedef struct {
   pn_string_t *text;
   bool passive;
@@ -46,6 +48,13 @@ typedef struct {
   char *name;
 } pn_address_t;
 
+// algorithm for granting credit to receivers
+typedef  enum {
+  // pn_messenger_recv( X ), where:
+  LINK_CREDIT_EXPLICIT,  // X > 0
+  LINK_CREDIT_AUTO   // X == -1
+} pn_link_credit_mode_t;
+
 struct pn_messenger_t {
   char *name;
   char *certificate;
@@ -56,10 +65,15 @@ struct pn_messenger_t {
   bool blocking;
   pn_driver_t *driver;
   int send_threshold;
-  int receiving;
-  int credit_batch;
-  int credit;
-  int distributed;
+  pn_link_credit_mode_t credit_mode;
+  int credit_batch;  // when LINK_CREDIT_AUTO
+  int credit;        // available
+  int distributed;   // credit
+  int receivers;     // # receiver links
+  int draining;      // # links in drain state
+  pn_list_t *credited;
+  pn_list_t *blocked;
+  pn_timestamp_t next_drain;
   uint64_t next_tag;
   pni_store_t *outgoing;
   pni_store_t *incoming;
@@ -125,9 +139,11 @@ typedef struct {
   char *pass;
   char *host;
   char *port;
+  pn_connector_t *connector;
 } pn_connection_ctx_t;
 
 static pn_connection_ctx_t *pn_connection_ctx(pn_connection_t *conn,
+                                              pn_connector_t *connector,
                                               const char *scheme,
                                               const char *user,
                                               const char *pass,
@@ -142,6 +158,7 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_connection_t *conn,
   ctx->pass = pn_strdup(pass);
   ctx->host = pn_strdup(host);
   ctx->port = pn_strdup(port);
+  ctx->connector = connector;
   pn_connection_set_context(conn, ctx);
   return ctx;
 }
@@ -174,6 +191,53 @@ static char *build_name(const char *name)
   }
 }
 
+struct pn_link_ctx_t {
+  pn_subscription_t *subscription;
+};
+
+// compute the maximum amount of credit each receiving link is
+// entitled to.  The actual credit given to the link depends on what
+// amount of credit is actually available.
+static int per_link_credit( pn_messenger_t *messenger )
+{
+  if (messenger->receivers == 0) return 0;
+  int total = messenger->credit + messenger->distributed;
+  return pn_max(total/messenger->receivers, 1);
+}
+
+static void link_ctx_setup( pn_messenger_t *messenger,
+                            pn_connection_t *connection,
+                            pn_link_t *link )
+{
+  if (pn_link_is_receiver(link)) {
+    messenger->receivers++;
+    pn_link_ctx_t *ctx = (pn_link_ctx_t *) calloc(1, sizeof(pn_link_ctx_t));
+    assert( ctx );
+    assert( !pn_link_get_context(link) );
+    pn_link_set_context( link, ctx );
+    pn_list_add(messenger->blocked, link);
+  }
+}
+
+static void link_ctx_release( pn_messenger_t *messenger, pn_link_t *link )
+{
+  if (pn_link_is_receiver(link)) {
+    assert( messenger->receivers > 0 );
+    messenger->receivers--;
+    pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( link );
+    assert( ctx );
+    if (pn_link_get_drain(link)) {
+      pn_link_set_drain(link, false);
+      assert( messenger->draining > 0 );
+      messenger->draining--;
+    }
+    pn_list_remove(messenger->credited, link);
+    pn_list_remove(messenger->blocked, link);
+    pn_link_set_context( link, NULL );
+    free( ctx );
+  }
+}
+
 pn_messenger_t *pn_messenger(const char *name)
 {
   pn_messenger_t *m = (pn_messenger_t *) malloc(sizeof(pn_messenger_t));
@@ -187,10 +251,15 @@ pn_messenger_t *pn_messenger(const char *name)
     m->timeout = -1;
     m->blocking = true;
     m->driver = pn_driver();
-    m->receiving = 0;
+    m->credit_mode = LINK_CREDIT_EXPLICIT;
     m->credit_batch = 1024;
     m->credit = 0;
     m->distributed = 0;
+    m->receivers = 0;
+    m->draining = 0;
+    m->credited = pn_list(0, 0);
+    m->blocked = pn_list(0, 0);
+    m->next_drain = 0;
     m->next_tag = 0;
     m->outgoing = pni_store();
     m->incoming = pni_store();
@@ -328,6 +397,8 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->subscriptions);
     pn_free(messenger->rewrites);
     pn_free(messenger->routes);
+    pn_free(messenger->credited);
+    pn_free(messenger->blocked);
     free(messenger);
   }
 }
@@ -347,55 +418,99 @@ pn_error_t *pn_messenger_error(pn_messenger_t *messenger)
   return messenger->error;
 }
 
-void pn_messenger_flow(pn_messenger_t *messenger)
+// Run the credit scheduler, grant flow as needed.  Return True if
+// credit allocation for any link has changed.
+bool pn_messenger_flow(pn_messenger_t *messenger)
 {
-  int link_ct = 0;
-  pn_connector_t *ctor = pn_connector_head(messenger->driver);
-  while (ctor) {
-    pn_connection_t *conn = pn_connector_connection(ctor);
+  bool updated = false;
+  if (messenger->receivers == 0) return updated;
 
-    pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
-    while (link) {
-      if (pn_link_is_receiver(link)) link_ct++;
-      link = pn_link_next(link, PN_LOCAL_ACTIVE);
-    }
-    ctor = pn_connector_next(ctor);
+  if (messenger->credit_mode == LINK_CREDIT_AUTO) {
+    // replenish, but limit the max total messages buffered
+    const int max = messenger->receivers * messenger->credit_batch;
+    const int used = messenger->distributed + pn_messenger_incoming(messenger);
+    if (max > used)
+      messenger->credit = max - used;
   }
 
-  if (link_ct == 0) return;
-
-  if (messenger->receiving == -1) {
-    messenger->credit = link_ct * messenger->credit_batch - pn_messenger_incoming(messenger);
-  } else {
-    int total = messenger->credit + messenger->distributed;
-    if (messenger->receiving > total)
-      messenger->credit += (messenger->receiving - total);
-  }
-
-  int batch = (messenger->credit < link_ct) ? 1
-    : (messenger->credit/link_ct);
-
-  ctor = pn_connector_head(messenger->driver);
-  while (ctor) {
-    pn_connection_t *conn = pn_connector_connection(ctor);
-    pn_link_t *link = pn_link_head(conn, PN_LOCAL_ACTIVE);
-    while (link) {
-      if (pn_link_is_receiver(link)) {
-
-        int have = pn_link_credit(link);
-        if (have < batch) {
-          int need = batch - have;
-          int amount = (messenger->credit < need) ? messenger->credit : need;
-          pn_link_flow(link, amount);
-          messenger->distributed += amount;
-          messenger->credit -= amount;
-          if (messenger->credit == 0) return;
+  // account for any credit left over after draining links has completed
+  if (messenger->draining > 0) {
+    for (size_t i = 0; i < pn_list_size(messenger->credited); i++) {
+      pn_link_t *link = (pn_link_t *) pn_list_get(messenger->credited, i);
+      if (pn_link_get_drain(link)) {
+        if (!pn_link_draining(link)) {
+          // drain completed!
+          int drained = pn_link_drained(link);
+          //          printf("%s: drained %i from %p\n", messenger->name, drained, (void *) ctx->link);
+          messenger->distributed -= drained;
+          messenger->credit += drained;
+          pn_link_set_drain(link, false);
+          messenger->draining--;
+          pn_list_remove(messenger->credited, link);
+          pn_list_add(messenger->blocked, link);
         }
       }
-      link = pn_link_next(link, PN_LOCAL_ACTIVE);
     }
-    ctor = pn_connector_next(ctor);
   }
+
+  const int batch = per_link_credit(messenger);
+  while (messenger->credit > 0 && pn_list_size(messenger->blocked)) {
+    pn_link_t *link = (pn_link_t *) pn_list_get(messenger->blocked, 0);
+    pn_list_del(messenger->blocked, 0, 1);
+
+    const int more = pn_min( messenger->credit, batch );
+    messenger->distributed += more;
+    messenger->credit -= more;
+    //    printf("%s: flowing %i to %p\n", messenger->name, more, (void *) ctx->link);
+    pn_link_flow(link, more);
+    pn_list_add(messenger->credited, link);
+    pn_connection_t *conn = pn_session_connection(pn_link_session(link));
+    pn_connection_ctx_t *cctx;
+    cctx = (pn_connection_ctx_t *)pn_connection_get_context(conn);
+    // flow changed, must process it
+    pn_connector_process( cctx->connector );
+    updated = true;
+  }
+
+  if (!pn_list_size(messenger->blocked)) {
+    messenger->next_drain = 0;
+  } else {
+    // not enough credit for all links
+    if (!messenger->draining) {
+      //      printf("%s: let's drain\n", messenger->name);
+      if (messenger->next_drain == 0) {
+        messenger->next_drain = pn_i_now() + 250;
+        //        printf("%s: initializing next_drain\n", messenger->name);
+      } else if (messenger->next_drain <= pn_i_now()) {
+        // initiate drain, free up at most enough to satisfy blocked
+        messenger->next_drain = 0;
+        int needed = pn_list_size(messenger->blocked) * batch;
+        for (size_t i = 0; i < pn_list_size(messenger->credited); i++) {
+          pn_link_t *link = (pn_link_t *) pn_list_get(messenger->credited, i);
+          if (!pn_link_get_drain(link)) {
+            //            printf("%s: initiating drain from %p\n", messenger->name, (void *) ctx->link);
+            pn_link_set_drain(link, true);
+            needed -= pn_link_remote_credit(link);
+            messenger->draining++;
+            pn_connection_t *conn =
+              pn_session_connection(pn_link_session(link));
+            pn_connection_ctx_t *cctx;
+            cctx = (pn_connection_ctx_t *)pn_connection_get_context(conn);
+            // drain requested on link, must process it
+            pn_connector_process( cctx->connector );
+            updated = true;
+          }
+
+          if (needed <= 0) {
+            break;
+          }
+        }
+      } else {
+        //        printf("%s: delaying\n", messenger->name);
+      }
+    }
+  }
+  return updated;
 }
 
 static void pn_transport_config(pn_messenger_t *messenger,
@@ -465,8 +580,8 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   pn_buffer_t *buf = pni_entry_bytes(entry);
   pni_entry_set_delivery(entry, d);
 
-  pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(receiver);
-  pni_entry_set_context(entry, sub);
+  pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( receiver );
+  pni_entry_set_context(entry, ctx ? ctx->subscription : NULL);
 
   size_t pending = pn_delivery_pending(d);
   int err = pn_buffer_ensure(buf, pending + 1);
@@ -480,6 +595,35 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   }
   n = pn_link_recv(receiver, encoded + pending, 1);
   pn_link_advance(receiver);
+
+  // account for the used credit
+  assert( ctx );
+  assert( messenger->distributed );
+  messenger->distributed--;
+
+  pn_link_t *link = receiver;
+  // replenish if low (< 20% maximum batch) and credit available
+  if (!pn_link_get_drain(link) && pn_list_size(messenger->blocked) == 0 && messenger->credit > 0) {
+    const int max = per_link_credit(messenger);
+    const int lo_thresh = (int)(max * 0.2 + 0.5);
+    if (pn_link_remote_credit(link) < lo_thresh) {
+      const int more = pn_min(messenger->credit, max - pn_link_remote_credit(link));
+      messenger->credit -= more;
+      messenger->distributed += more;
+      pn_link_flow(link, more);
+    }
+  }
+  // check if blocked
+  if (pn_list_index(messenger->blocked, link) < 0 && pn_link_remote_credit(link) == 0) {
+    pn_list_remove(messenger->credited, link);
+    if (pn_link_get_drain(link)) {
+      pn_link_set_drain(link, false);
+      assert( messenger->draining > 0 );
+      messenger->draining--;
+    }
+    pn_list_add(messenger->blocked, link);
+  }
+
   if (n != PN_EOS) {
     return pn_error_format(messenger->error, n, "PN_EOS expected");
   }
@@ -530,11 +674,12 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
   while (link) {
     pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
     pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
+    link_ctx_setup( messenger, conn, link );
     pn_link_open(link);
     if (pn_link_is_receiver(link)) {
       pn_listener_t *listener = pn_connector_listener(ctor);
       pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(listener);
-      pn_link_set_context(link, ctx ? ctx->subscription : NULL);
+      ((pn_link_ctx_t *)pn_link_get_context(link))->subscription = ctx ? ctx->subscription : NULL;
     }
     link = pn_link_next(link, PN_LOCAL_UNINIT);
   }
@@ -547,8 +692,6 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
     link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
   }
 
-  pn_messenger_flow(messenger);
-
   ssn = pn_session_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
   while (ssn) {
     pn_condition_report("SESSION", pn_session_remote_condition(ssn));
@@ -556,12 +699,16 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
     ssn = pn_session_next(ssn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
   }
 
-  link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+  link = pn_link_head(conn, PN_REMOTE_CLOSED);
   while (link) {
-    pn_condition_report("LINK", pn_link_remote_condition(link));
-    pn_link_close(link);
-    // XXX: should free link
-    link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+    if (PN_LOCAL_ACTIVE | pn_link_state(link)) {
+      pn_condition_report("LINK", pn_link_remote_condition(link));
+      pn_link_close(link);
+    } else {
+      link_ctx_release( messenger, link );
+      pn_link_free(link);
+    }
+    link = pn_link_next(link, PN_REMOTE_CLOSED);
   }
 
   if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
@@ -585,6 +732,8 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
   } else if (pn_connector_closed(ctor) && !(pn_connection_state(conn) & PN_REMOTE_CLOSED)) {
     pn_error_report("CONNECTION", "connection aborted");
   }
+
+  pn_messenger_flow(messenger);
 }
 
 void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
@@ -608,6 +757,8 @@ void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
       d = pn_unsettled_next(d);
     }
 
+    link_ctx_release(messenger, link);
+
     link = pn_link_next(link, 0);
   }
 
@@ -617,6 +768,7 @@ void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 
 
 pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
+                                         pn_connector_t *connector,
                                          char *scheme,
                                          char *user,
                                          char *pass,
@@ -625,7 +777,7 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
 {
   pn_connection_t *connection = pn_connection();
   if (!connection) return NULL;
-  pn_connection_ctx(connection, scheme, user, pass, host, port);
+  pn_connection_ctx(connection, connector, scheme, user, pass, host, port);
 
   pn_connection_set_container(connection, messenger->name);
   pn_connection_set_hostname(connection, host);
@@ -651,6 +803,17 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
     int remaining = deadline - now;
     if (pred || (timeout >= 0 && remaining < 0)) break;
 
+    // Update the credit scheduler. If the scheduler detects credit
+    // imbalance on the links, wake up in time to service credit drain
+    pn_messenger_flow(messenger);
+    if (messenger->next_drain) {
+      if (now >= messenger->next_drain)
+        remaining = 0;
+      else {
+        const int delay = messenger->next_drain - now;
+        remaining = (remaining < 0) ? delay : pn_min( remaining, delay );
+      }
+    }
     int error = pn_driver_wait(messenger->driver, remaining);
     if (error && error != PN_INTR) return error;
 
@@ -681,7 +844,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       pn_sasl_server(sasl);
       pn_sasl_done(sasl, PN_SASL_OK);
       pn_connection_t *conn =
-        pn_messenger_connection(messenger, scheme, NULL, NULL, NULL, NULL);
+        pn_messenger_connection(messenger, c, scheme, NULL, NULL, NULL, NULL);
       pn_connector_set_connection(c, conn);
     }
 
@@ -695,7 +858,6 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
         pn_connector_free(c);
         if (conn) {
           pni_messenger_reclaim(messenger, conn);
-          pn_messenger_flow(messenger);
         }
       } else {
         pn_connector_process(c);
@@ -889,7 +1051,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   }
 
   pn_connection_t *connection =
-    pn_messenger_connection(messenger, scheme, user, pass, host, port);
+    pn_messenger_connection(messenger, connector, scheme, user, pass, host, port);
   pn_transport_config(messenger, connector, connection);
   pn_connection_open(connection);
   pn_connector_set_connection(connector, connection);
@@ -941,16 +1103,18 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
-      // use explicit settlement via dispositions (not pre-settled)
-      pn_link_set_snd_settle_mode( link, PN_SND_UNSETTLED );
-      pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
+    // use explicit settlement via dispositions (not pre-settled)
+    pn_link_set_snd_settle_mode( link, PN_SND_UNSETTLED );
+    pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
   }
   // XXX
   pn_terminus_set_address(pn_link_target(link), name);
   pn_terminus_set_address(pn_link_source(link), name);
+  link_ctx_setup( messenger, connection, link );
   if (!sender) {
-    pn_subscription_t *sub = pn_subscription(messenger, NULL);
-    pn_link_set_context(link, sub);
+    pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
+    assert( ctx );
+    ctx->subscription = pn_subscription(messenger, NULL);
   }
   pn_link_open(link);
   return link;
@@ -991,8 +1155,8 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
   } else {
     pn_link_t *src = pn_messenger_source(messenger, source);
     if (!src) return NULL;
-    pn_subscription_t *sub = (pn_subscription_t *) pn_link_get_context(src);
-    return sub;
+    pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( src );
+    return ctx ? ctx->subscription : NULL;
   }
 }
 
@@ -1048,7 +1212,11 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
 int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender)
 {
   pni_entry_t *entry = pni_store_get(messenger->outgoing, address);
-  if (!entry) return 0;
+  if (!entry) {
+    pn_link_drained(sender);
+    return 0;
+  }
+
   pn_buffer_t *buf = pni_entry_bytes(entry);
   pn_bytes_t bytes = pn_buffer_bytes(buf);
   char *encoded = bytes.start;
@@ -1292,7 +1460,17 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
   if (messenger->blocking && !pn_listener_head(messenger->driver)
       && !pn_connector_head(messenger->driver))
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
-  messenger->receiving = n;
+
+  // re-compute credit, and update credit scheduler
+  if (n == -1) {
+    messenger->credit_mode = LINK_CREDIT_AUTO;
+  } else {
+    messenger->credit_mode = LINK_CREDIT_EXPLICIT;
+    if (n > messenger->distributed)
+      messenger->credit = n - messenger->distributed;
+    else  // cancel unallocated
+      messenger->credit = 0;
+  }
   pn_messenger_flow(messenger);
   int err = pn_messenger_sync(messenger, pn_messenger_rcvd);
   if (err) return err;
@@ -1309,7 +1487,7 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
 int pn_messenger_receiving(pn_messenger_t *messenger)
 {
   assert(messenger);
-  return messenger->receiving;
+  return messenger->credit + messenger->distributed;
 }
 
 int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
@@ -1326,7 +1504,6 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
   const char *encoded = bytes.start;
   size_t size = bytes.size;
 
-  messenger->distributed--;
   messenger->incoming_subscription = (pn_subscription_t *) pni_entry_get_context(entry);
 
   if (msg) {

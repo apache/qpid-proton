@@ -470,6 +470,10 @@ send. Defaults to zero.
       self._check(err)
       return True
 
+  @property
+  def receiving(self):
+    return pn_messenger_receiving(self._mng)
+
   def interrupt(self):
     self._check(pn_messenger_interrupt(self._mng))
 

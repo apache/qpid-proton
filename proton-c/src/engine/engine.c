@@ -680,6 +680,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->credit = 0;
   link->queued = 0;
   link->drain = false;
+  link->drain_flag_mode = true;
   link->drained = 0;
   link->context = 0;
   link->snd_settle_mode = PN_SND_MIXED;
@@ -1179,6 +1180,18 @@ int pn_link_queued(pn_link_t *link)
   return link ? link->queued : 0;
 }
 
+int pn_link_remote_credit(pn_link_t *link)
+{
+  assert(link);
+  return link->credit - link->queued;
+}
+
+bool pn_link_get_drain(pn_link_t *link)
+{
+  assert(link);
+  return link->drain;
+}
+
 pn_snd_settle_mode_t pn_link_snd_settle_mode(pn_link_t *link)
 {
   return link ? (pn_snd_settle_mode_t)link->snd_settle_mode
@@ -1297,10 +1310,13 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
 
 void pn_link_flow(pn_link_t *receiver, int credit)
 {
-  if (receiver && pn_link_is_receiver(receiver)) {
-    receiver->credit += credit;
-    receiver->drain = false;
-    pn_modified(receiver->session->connection, &receiver->endpoint);
+  assert(receiver);
+  assert(pn_link_is_receiver(receiver));
+  receiver->credit += credit;
+  pn_modified(receiver->session->connection, &receiver->endpoint);
+  if (!receiver->drain_flag_mode) {
+    pn_link_set_drain(receiver, false);
+    receiver->drain_flag_mode = false;
   }
 }
 
@@ -1308,8 +1324,18 @@ void pn_link_drain(pn_link_t *receiver, int credit)
 {
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
+  pn_link_set_drain(receiver, true);
   pn_link_flow(receiver, credit);
-  receiver->drain = true;
+  receiver->drain_flag_mode = false;
+}
+
+void pn_link_set_drain(pn_link_t *receiver, bool drain)
+{
+  assert(receiver);
+  assert(pn_link_is_receiver(receiver));
+  receiver->drain = drain;
+  pn_modified(receiver->session->connection, &receiver->endpoint);
+  receiver->drain_flag_mode = true;
 }
 
 bool pn_link_draining(pn_link_t *receiver)

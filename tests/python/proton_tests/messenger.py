@@ -28,6 +28,7 @@ class Test(common.Test):
   def setup(self):
     self.server_credit = 10
     self.server_received = 0
+    self.server_finite_credit = False
     self.server = Messenger("server")
     self.server.timeout = self.timeout
     self.server.start()
@@ -68,6 +69,14 @@ REJECT_ME = "*REJECT-ME*"
 class MessengerTest(Test):
 
   def run_server(self):
+    if self.server_finite_credit:
+      self._run_server_finite_credit()
+    else:
+      self._run_server_recv()
+
+  def _run_server_recv(self):
+    """ Use recv() to replenish credit each time the server waits
+    """
     msg = Message()
     try:
       while self.running:
@@ -77,6 +86,23 @@ class MessengerTest(Test):
           self.process_incoming(msg)
         except Interrupt:
           pass
+    finally:
+      self.server.stop()
+      self.running = False
+
+  def _run_server_finite_credit(self):
+    """ Grant credit once, process until credit runs out
+    """
+    msg = Message()
+    self.server_is_running_event.set()
+    try:
+      self.server.recv(self.server_credit)
+      while self.running:
+        # do not grant additional credit (eg. call recv())
+        self.process_incoming(msg)
+        self.server.work()
+    except Interrupt:
+      pass
     finally:
       self.server.stop()
       self.running = False
@@ -568,6 +594,57 @@ class MessengerTest(Test):
     self.client.rewrite("*", "$1")
     self._testRewrite("amqp://user:pass@host", "amqp://user:pass@host")
 
+  def testCreditBlockingRebalance(self):
+    """ The server is given a fixed amount of credit, and runs until that
+    credit is exhausted.
+    """
+    if sys.platform.startswith("java"):
+        raise Skipped("Skipping testCreditBlockingRebalance - credit scheduler TBD for Java Messenger")
+
+    self.server_finite_credit = True
+    self.server_credit = 11
+    self.start()
+
+    # put one message out on "Link1" - since there are no other links, it
+    # should get all the credit (10 after sending)
+    msg = Message()
+    msg.address="amqp://0.0.0.0:12345/Link1"
+    msg.subject="Hello World!"
+    body = "First the world, then the galaxy!"
+    msg.body = body
+    self.client.put(msg)
+    self.client.send()
+    self.client.recv(1)
+    assert self.client.incoming == 1
+
+    # Now attempt to exhaust credit using a different link
+    for i in range(10):
+      msg.address="amqp://0.0.0.0:12345/Link2"
+      self.client.put(msg)
+    self.client.send()
+
+    deadline = time() + self.timeout
+    count = 0
+    while count < 11 and time() < deadline:
+        self.client.recv(-1)
+        while self.client.incoming:
+            self.client.get(msg)
+            count += 1
+    assert count == 11, count
+
+    # now attempt to send one more.  There isn't enough credit, so it should
+    # not be sent
+    self.client.timeout = 1
+    msg.address="amqp://0.0.0.0:12345/Link2"
+    self.client.put(msg)
+    try:
+      self.client.send()
+      assert False, "expected client to time out in send()"
+    except Timeout:
+      pass
+    assert self.client.outgoing == 1
+
+
 class NBMessengerTest(common.Test):
 
   def setup(self):
@@ -652,3 +729,170 @@ class NBMessengerTest(common.Test):
     self.client.get(msg2)
     assert msg2.address == msg.address
     assert msg2.body == msg.body
+
+  def testCreditAutoBackpressure(self):
+    """ Verify that use of automatic credit (pn_messenger_recv(-1)) does not
+    fill the incoming queue indefinitely.  If the receiver does not 'get' the
+    message, eventually the sender will block.  See PROTON-350 """
+    self.server.recv()
+    msg = Message()
+    msg.address = self.address
+    deadline = time() + self.timeout
+    while time() < deadline:
+        old = self.server.incoming
+        for j in xrange(1001):
+            self.client.put(msg)
+        self.pump()
+        if old == self.server.incoming:
+            break;
+    assert old == self.server.incoming, "Backpressure not active!"
+
+  def testCreditRedistribution(self):
+    """ Verify that a fixed amount of credit will redistribute to new
+    links.
+    """
+    if sys.platform.startswith("java"):
+        raise Skipped("Skipping testCreditRedistribution - credit scheduler TBD for Java Messenger")
+
+    self.server.recv( 5 )
+
+    # first link will get all credit
+    msg1 = Message()
+    msg1.address = self.address + "/msg1"
+    self.client.put(msg1)
+    self.pump()
+    assert self.server.incoming == 1, self.server.incoming
+    assert self.server.receiving == 4, self.server.receiving
+
+    # no credit left over for this link
+    msg2 = Message()
+    msg2.address = self.address + "/msg2"
+    self.client.put(msg2)
+    self.pump()
+    assert self.server.incoming == 1, self.server.incoming
+    assert self.server.receiving == 4, self.server.receiving
+
+    # eventually, credit will rebalance and the new link will send
+    deadline = time() + self.timeout
+    while time() < deadline:
+        sleep(.1)
+        self.pump()
+        if self.server.incoming == 2:
+            break;
+    assert self.server.incoming == 2, self.server.incoming
+    assert self.server.receiving == 3, self.server.receiving
+
+  def testCreditReclaim(self):
+    """ Verify that credit is reclaimed when a link with outstanding credit is
+    torn down.
+    """
+    if sys.platform.startswith("java"):
+        raise Skipped("Skipping testCreditReclaim - credit scheduler TBD for Java Messenger")
+
+    self.server.recv( 9 )
+
+    # first link will get all credit
+    msg1 = Message()
+    msg1.address = self.address + "/msg1"
+    self.client.put(msg1)
+    self.pump()
+    assert self.server.incoming == 1, self.server.incoming
+    assert self.server.receiving == 8, self.server.receiving
+
+    # no credit left over for this link
+    msg2 = Message()
+    msg2.address = self.address + "/msg2"
+    self.client.put(msg2)
+    self.pump()
+    assert self.server.incoming == 1, self.server.incoming
+    assert self.server.receiving == 8, self.server.receiving
+
+    # and none for this new client
+    client2 = Messenger("client2")
+    client2.blocking = False
+    client2.start()
+    msg3 = Message()
+    msg3.address = self.address + "/msg3"
+    client2.put(msg3)
+    while client2.work(0):
+        self.pump()
+    assert self.server.incoming == 1, self.server.incoming
+    assert self.server.receiving == 8, self.server.receiving
+
+    # eventually, credit will rebalance and all links will
+    # send a message
+    deadline = time() + self.timeout
+    while time() < deadline:
+        sleep(.1)
+        self.pump()
+        client2.work(0)
+        if self.server.incoming == 3:
+            break;
+    assert self.server.incoming == 3, self.server.incoming
+    assert self.server.receiving == 6, self.server.receiving
+
+    # now tear down client two, this should cause its outstanding credit to be
+    # made available to the other links
+    client2.stop()
+    self.pump()
+
+    for i in range(4):
+        self.client.put(msg1)
+        self.client.put(msg2)
+
+    # should exhaust all credit
+    deadline = time() + self.timeout
+    while time() < deadline:
+        sleep(.1)
+        self.pump()
+        if self.server.incoming == 9:
+            break;
+    assert self.server.incoming == 9, self.server.incoming
+    assert self.server.receiving == 0, self.server.receiving
+
+
+
+  def testCreditReplenish(self):
+    """ When extra credit is available it should be granted to the first
+    link that can use it.
+    """
+    if sys.platform.startswith("java"):
+        raise Skipped("Skipping testCreditReplenish - credit scheduler TBD for Java Messenger")
+
+    # create three links
+    msg = Message()
+    for i in range(3):
+        msg.address = self.address + "/%d" % i
+        self.client.put(msg)
+
+    self.server.recv( 50 )  # 50/3 = 16 per link + 2 extra
+
+    self.pump()
+    assert self.server.incoming == 3, self.server.incoming
+    assert self.server.receiving == 47, self.server.receiving
+
+    # 47/3 = 15 per link, + 2 extra
+
+    # verify one link can send 15 + the two extra (17)
+    for i in range(17):
+        msg.address = self.address + "/0"
+        self.client.put(msg)
+    self.pump()
+    assert self.server.incoming == 20, self.server.incoming
+    assert self.server.receiving == 30, self.server.receiving
+
+    # now verify that the remaining credit (30) will eventually rebalance
+    # across all links (10 per link)
+    for j in range(10):
+        for i in range(3):
+            msg.address = self.address + "/%d" % i
+            self.client.put(msg)
+
+    deadline = time() + self.timeout
+    while time() < deadline:
+        sleep(.1)
+        self.pump()
+        if self.server.incoming == 50:
+            break
+    assert self.server.incoming == 50, self.server.incoming
+    assert self.server.receiving == 0, self.server.receiving

@@ -395,7 +395,7 @@ PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
  * messenger is in blocking mode, this call will block until at least
  * one message is available in the incoming queue.
  *
- * Each call to pn_messenger_recv replaces the previos receive
+ * Each call to pn_messenger_recv replaces the previous receive
  * operation, so pn_messenger_recv(messenger, 0) will cancel any
  * outstanding receive.
  *
@@ -412,8 +412,11 @@ PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
  */
 PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
 
-/** Returns the number of messages that was requested by
- * the most recent call to pn_messenger_recv.
+/** Returns the capacity of the incoming message queue of
+ * messenger. Note this count does not include those messages already
+ * available on the incoming queue (@see
+ * pn_messenger_incoming()). Rather it returns the number of incoming
+ * queue entries available for receiving messages
  *
  * @param[in] messenger the messenger
  */

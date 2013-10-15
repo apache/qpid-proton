@@ -97,8 +97,6 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
       LL_HEAD(ROOT, LIST) = (NODE)-> LIST ## _next;                    \
     if ((NODE) == LL_TAIL(ROOT, LIST))                                 \
       LL_TAIL(ROOT, LIST) = (NODE)-> LIST ## _prev;                    \
-    (NODE)-> LIST ## _next = NULL;                                     \
-    (NODE)-> LIST ## _prev = NULL;                                     \
   }
 
 char *pn_strdup(const char *src);

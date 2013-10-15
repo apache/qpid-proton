@@ -475,6 +475,7 @@ PN_EXTERN pn_delivery_t *pn_link_current(pn_link_t *link);
 PN_EXTERN bool pn_link_advance(pn_link_t *link);
 PN_EXTERN int pn_link_credit(pn_link_t *link);
 PN_EXTERN int pn_link_queued(pn_link_t *link);
+PN_EXTERN int pn_link_remote_credit(pn_link_t *link);
 PN_EXTERN int pn_link_available(pn_link_t *link);
 PN_EXTERN pn_snd_settle_mode_t pn_link_snd_settle_mode(pn_link_t *link);
 PN_EXTERN pn_rcv_settle_mode_t pn_link_rcv_settle_mode(pn_link_t *link);
@@ -492,6 +493,7 @@ PN_EXTERN void pn_link_close(pn_link_t *sender);
 PN_EXTERN void pn_link_free(pn_link_t *sender);
 PN_EXTERN void *pn_link_get_context(pn_link_t *link);
 PN_EXTERN void pn_link_set_context(pn_link_t *link, void *context);
+PN_EXTERN bool pn_link_get_drain(pn_link_t *link);
 
 // sender
 PN_EXTERN void pn_link_offered(pn_link_t *sender, int credit);
@@ -502,6 +504,7 @@ PN_EXTERN int pn_link_drained(pn_link_t *sender);
 // receiver
 PN_EXTERN void pn_link_flow(pn_link_t *receiver, int credit);
 PN_EXTERN void pn_link_drain(pn_link_t *receiver, int credit);
+PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
 PN_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
 PN_EXTERN bool pn_link_draining(pn_link_t *receiver);
 

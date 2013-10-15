@@ -240,6 +240,7 @@ struct pn_link_t {
   pn_sequence_t available;
   pn_sequence_t credit;
   pn_sequence_t queued;
+  bool drain_flag_mode; // receiver only
   bool drain;
   int drained; // number of drained credits
   void *context;
