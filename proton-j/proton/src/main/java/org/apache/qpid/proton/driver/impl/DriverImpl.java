@@ -192,7 +192,6 @@ public class DriverImpl implements Driver
         {
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(false);
-            System.out.println("host:port:" + host + ", " + port);
             channel.connect(new InetSocketAddress(host, port));
             return createConnector(channel, context);
         }
