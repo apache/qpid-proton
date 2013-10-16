@@ -98,11 +98,12 @@ class MessengerTest(Test):
     try:
       self.server.recv(self.server_credit)
       while self.running:
-        # do not grant additional credit (eg. call recv())
-        self.process_incoming(msg)
-        self.server.work()
-    except Interrupt:
-      pass
+        try:
+          # do not grant additional credit (eg. call recv())
+          self.process_incoming(msg)
+          self.server.work()
+        except Interrupt:
+          break
     finally:
       self.server.stop()
       self.running = False
