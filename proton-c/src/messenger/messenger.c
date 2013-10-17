@@ -34,6 +34,7 @@
 #include "../platform_fmt.h"
 #include "store.h"
 #include "transform.h"
+#include "subscription.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 
@@ -77,9 +78,7 @@ struct pn_messenger_t {
   uint64_t next_tag;
   pni_store_t *outgoing;
   pni_store_t *incoming;
-  pn_subscription_t *subscriptions;
-  size_t sub_capacity;
-  size_t sub_count;
+  pn_list_t *subscriptions;
   pn_subscription_t *incoming_subscription;
   pn_error_t *error;
   pn_transform_t *routes;
@@ -92,18 +91,11 @@ struct pn_messenger_t {
   bool worked;
 };
 
-struct pn_subscription_t {
-  char *scheme;
-  void *context;
-};
-
 typedef struct {
   char *host;
   char *port;
   pn_subscription_t *subscription;
 } pn_listener_ctx_t;
-
-pn_subscription_t *pn_subscription(pn_messenger_t *messenger, const char *scheme);
 
 static pn_listener_ctx_t *pn_listener_ctx(pn_listener_t *lnr,
                                           pn_messenger_t *messenger,
@@ -263,9 +255,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->next_tag = 0;
     m->outgoing = pni_store();
     m->incoming = pni_store();
-    m->subscriptions = NULL;
-    m->sub_capacity = 0;
-    m->sub_count = 0;
+    m->subscriptions = pn_list(0, PN_REFCOUNT);
     m->incoming_subscription = NULL;
     m->error = pn_error();
     m->routes = pn_transform();
@@ -279,6 +269,12 @@ pn_messenger_t *pn_messenger(const char *name)
 
   return m;
 }
+
+int pni_messenger_add_subscription(pn_messenger_t *messenger, pn_subscription_t *subscription)
+{
+  return pn_list_add(messenger->subscriptions, subscription);
+}
+
 
 const char *pn_messenger_name(pn_messenger_t *messenger)
 {
@@ -391,10 +387,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     pn_error_free(messenger->error);
     pni_store_free(messenger->incoming);
     pni_store_free(messenger->outgoing);
-    for (unsigned i = 0; i < messenger->sub_count; i++) {
-      free(messenger->subscriptions[i].scheme);
-    }
-    free(messenger->subscriptions);
+    pn_free(messenger->subscriptions);
     pn_free(messenger->rewrites);
     pn_free(messenger->routes);
     pn_free(messenger->credited);
@@ -769,7 +762,7 @@ void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 
 pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
                                          pn_connector_t *connector,
-                                         char *scheme,
+                                         const char *scheme,
                                          char *user,
                                          char *pass,
                                          char *host,
@@ -822,7 +815,7 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       messenger->worked = true;
       pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(l);
       pn_subscription_t *sub = ctx->subscription;
-      char *scheme = sub->scheme;
+      const char *scheme = pn_subscription_scheme(sub);
       pn_connector_t *c = pn_listener_accept(l);
       pn_transport_t *t = pn_connector_transport(c);
 
@@ -1057,27 +1050,6 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   pn_connector_set_connection(connector, connection);
 
   return connection;
-}
-
-pn_subscription_t *pn_subscription(pn_messenger_t *messenger, const char *scheme)
-{
-  PN_ENSURE(messenger->subscriptions, messenger->sub_capacity, messenger->sub_count + 1, pn_subscription_t);
-  pn_subscription_t *sub = messenger->subscriptions + messenger->sub_count++;
-  sub->scheme = pn_strdup(scheme);
-  sub->context = NULL;
-  return sub;
-}
-
-void *pn_subscription_get_context(pn_subscription_t *sub)
-{
-  assert(sub);
-  return sub->context;
-}
-
-void pn_subscription_set_context(pn_subscription_t *sub, void *context)
-{
-  assert(sub);
-  sub->context = context;
 }
 
 pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)

@@ -254,6 +254,7 @@ set (qpid-proton-core
   src/sasl/sasl.c
 
   src/messenger/messenger.c
+  src/messenger/subscription.c
   src/messenger/store.c
   src/messenger/transform.c
 
