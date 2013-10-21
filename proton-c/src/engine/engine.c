@@ -104,14 +104,16 @@ void pn_connection_set_context(pn_connection_t *conn, void *context)
 
 void pn_condition_init(pn_condition_t *condition)
 {
-  condition->name[0] = '\0';
-  condition->description[0] = '\0';
+  condition->name = pn_string(NULL);
+  condition->description = pn_string(NULL);
   condition->info = pn_data(16);
 }
 
 void pn_condition_tini(pn_condition_t *condition)
 {
   pn_data_free(condition->info);
+  pn_free(condition->description);
+  pn_free(condition->name);
 }
 
 void pn_add_session(pn_connection_t *conn, pn_session_t *ssn)
@@ -1465,55 +1467,39 @@ pn_condition_t *pn_link_remote_condition(pn_link_t *link)
 
 bool pn_condition_is_set(pn_condition_t *condition)
 {
-  return condition && condition->name[0];
+  return condition && pn_string_get(condition->name);
 }
 
 void pn_condition_clear(pn_condition_t *condition)
 {
   assert(condition);
-  condition->name[0] = '\0';
-  condition->description[0] = '\0';
+  pn_string_clear(condition->name);
+  pn_string_clear(condition->description);
   pn_data_clear(condition->info);
 }
 
 const char *pn_condition_get_name(pn_condition_t *condition)
 {
   assert(condition);
-  return condition->name[0] ? condition->name : NULL;
-}
-
-static inline int pn_set_buf(char *dst, const char *src, size_t capacity)
-{
-  if (!src) {
-    dst[0] = '\0';
-    return 0;
-  } else {
-    unsigned n = strlen(src) + 1;
-    if (n > capacity) {
-      return PN_ARG_ERR;
-    } else {
-      strncpy(dst, src, n);
-      return 0;
-    }
-  }
+  return pn_string_get(condition->name);
 }
 
 int pn_condition_set_name(pn_condition_t *condition, const char *name)
 {
   assert(condition);
-  return pn_set_buf(condition->name, name, COND_NAME_MAX);
+  return pn_string_set(condition->name, name);
 }
 
 const char *pn_condition_get_description(pn_condition_t *condition)
 {
   assert(condition);
-  return condition->description[0] ? condition->description : NULL;
+  return pn_string_get(condition->description);
 }
 
 int pn_condition_set_description(pn_condition_t *condition, const char *description)
 {
   assert(condition);
-  return pn_set_buf(condition->description, description, COND_DESC_MAX);
+  return pn_string_set(condition->description, description);
 }
 
 pn_data_t *pn_condition_info(pn_condition_t *condition)

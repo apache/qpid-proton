@@ -33,12 +33,9 @@ typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpo
 
 typedef struct pn_endpoint_t pn_endpoint_t;
 
-#define COND_NAME_MAX (256)
-#define COND_DESC_MAX (1024)
-
 struct pn_condition_t {
-  char name[COND_NAME_MAX];
-  char description[COND_DESC_MAX];
+  pn_string_t *name;
+  pn_string_t *description;
   pn_data_t *info;
 };
 
