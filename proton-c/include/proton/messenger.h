@@ -595,11 +595,6 @@ PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
 PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
                                    const char *address);
 
-#include <proton/engine.h>
-
-PN_EXTERN pn_transport_t *pn_messenger_get_transport(pn_messenger_t *messenger, pn_handle_t handle);
-PN_EXTERN pn_handle_t pn_messenger_next_transport(pn_messenger_t *messenger, pn_handle_t previous);
-
 #ifdef __cplusplus
 }
 #endif
