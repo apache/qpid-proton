@@ -311,6 +311,8 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %}
 %ignore pn_delivery;
 
+// Suppress "Warning(451): Setting a const char * variable may leak memory." on pn_delivery_tag_t
+%warnfilter(451) pn_delivery_tag_t;
 %rename(pn_delivery_tag) wrap_pn_delivery_tag;
 %inline %{
   void wrap_pn_delivery_tag(pn_delivery_t *delivery, char **ALLOC_OUTPUT, size_t *ALLOC_SIZE) {

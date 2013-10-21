@@ -357,6 +357,8 @@ JNIEXPORT void JNICALL Java_org_apache_qpid_proton_jni_ProtonJNI_pn_1delivery_1s
 %}
 %ignore pn_delivery_set_context;
 
+// Suppress "Warning(451): Setting a const char * variable may leak memory." on pn_delivery_tag_t
+%warnfilter(451) pn_delivery_tag_t;
 %native (pn_delivery_tag) jbyteArray pn_delivery_tag(pn_delivery_t);
 %{
 

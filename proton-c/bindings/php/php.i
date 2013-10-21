@@ -224,6 +224,9 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
     // This allocates a copy of the binary buffer for return to the caller
     ZVAL_STRINGL($result, *($1), *($2), 1); // 1 = duplicate the input buffer
 }
+
+// Suppress "Warning(451): Setting a const char * variable may leak memory." on pn_delivery_tag_t
+%warnfilter(451) pn_delivery_tag_t;
 %rename(pn_delivery_tag) wrap_pn_delivery_tag;
 // in PHP: str = pn_delivery_tag(delivery);
 //
