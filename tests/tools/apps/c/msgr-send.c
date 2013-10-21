@@ -227,6 +227,7 @@ int main(int argc, char** argv)
 
     message = pn_message();
     check(message, "failed to allocate a message");
+    pn_message_set_reply_to(message, "~");
     pn_data_t *body = pn_message_body(message);
     char *data = (char *)calloc(1, opts.msg_size);
     pn_data_put_binary(body, pn_bytes(opts.msg_size, data));

@@ -1119,13 +1119,15 @@ public class MessengerImpl implements Messenger
     private void adjustReplyTo(Message m)
     {
         String original = m.getReplyTo();
-        if (original == null || original.length() == 0)
-        {
-            m.setReplyTo("amqp://" + _name);
-        }
-        else if (original.startsWith("~/"))
-        {
-            m.setReplyTo("amqp://" + _name + "/" + original.substring(2));
+        if (original != null) {
+            if (original.startsWith("~/"))
+            {
+                m.setReplyTo("amqp://" + _name + "/" + original.substring(2));
+            }
+            else if (original.equals("~"))
+            {
+                m.setReplyTo("amqp://" + _name);
+            }
         }
     }
 

@@ -1169,7 +1169,7 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
     }
     sprintf(buf, "amqp://%s/%s", mng->name, address + 2);
     pn_message_set_reply_to(msg, buf);
-  } else if (len == 0) {
+  } else if (len == 1 && address[0] == '~') {
     unsigned needed = strlen(mng->name) + 8;
     if (needed > sizeof(stackbuf)) {
       heapbuf = (char *) malloc(needed);

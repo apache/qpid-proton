@@ -128,6 +128,7 @@ class MessengerTest(Test):
     self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
+    msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
     if size is not None:
@@ -268,6 +269,7 @@ class MessengerTest(Test):
     self.start()
     msg = Message()
     msg.address="amqp://0.0.0.0:12345"
+    msg.reply_to = "~"
     msg.subject="Hello World!"
 
     self.client.outgoing_window = 10
@@ -301,6 +303,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address = "amqp://0.0.0.0:12345"
+    msg.reply_to = "~"
     msg.subject = "Hello World!"
 
     for i in range(2*size):
@@ -354,6 +357,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address="amqp://0.0.0.0:12345/XXX"
+    msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
     msg.body = body
@@ -371,6 +375,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address="amqp://0.0.0.0:12345/YYY"
+    msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
     msg.body = body
@@ -416,6 +421,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address = "route1"
+    msg.reply_to = "~"
     msg.body = "test"
     self.client.put(msg)
     self.client.recv(1)
@@ -425,6 +431,7 @@ class MessengerTest(Test):
 
     msg = Message()
     msg.address = "route2"
+    msg.reply_to = "~"
     msg.body = "test"
     self.client.put(msg)
     self.client.recv(1)
@@ -439,6 +446,7 @@ class MessengerTest(Test):
     msg = Message()
     msg.address = "asdf"
     msg.body = "test"
+    msg.reply_to = "~"
 
     self.client.put(msg)
     self.client.recv(1)
@@ -454,6 +462,7 @@ class MessengerTest(Test):
     msg = Message()
     msg.address = "asdf"
     msg.body = "test"
+    msg.reply_to = "~"
 
     self.client.put(msg)
     self.client.recv(1)
@@ -492,6 +501,7 @@ class MessengerTest(Test):
     msg = Message()
     msg.address = original
     msg.body = "test"
+    msg.reply_to = "~"
 
     self.client.put(msg)
     assert msg.address == original
@@ -613,6 +623,7 @@ class MessengerTest(Test):
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
     msg.body = body
+    msg.reply_to = "~"
     self.client.put(msg)
     self.client.send()
     self.client.recv(1)
