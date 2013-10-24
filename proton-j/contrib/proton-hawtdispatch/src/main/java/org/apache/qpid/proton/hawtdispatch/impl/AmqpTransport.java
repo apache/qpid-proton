@@ -21,6 +21,7 @@ import org.apache.qpid.proton.hawtdispatch.api.Callback;
 import org.apache.qpid.proton.hawtdispatch.api.ChainedCallback;
 import org.apache.qpid.proton.hawtdispatch.api.TransportState;
 import org.apache.qpid.proton.engine.*;
+import org.apache.qpid.proton.engine.impl.ByteBufferUtils;
 import org.apache.qpid.proton.engine.impl.EngineFactoryImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
 import org.fusesource.hawtbuf.Buffer;
@@ -34,6 +35,7 @@ import org.fusesource.hawtdispatch.transport.Transport;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -468,7 +470,12 @@ public class AmqpTransport extends WatchBase {
                 } else {
                     buffer = (Buffer) command;
                 }
-                protonTransport.input(buffer.data, buffer.offset, buffer.length);
+                ByteBuffer bbuffer = buffer.toByteBuffer();
+                do {
+                  ByteBuffer input = protonTransport.getInputBuffer();
+                  ByteBufferUtils.pour(bbuffer, input);
+                  protonTransport.processInput();
+                } while (bbuffer.remaining() > 0);
                 process();
                 pumpOut();
             } catch (Exception e) {
