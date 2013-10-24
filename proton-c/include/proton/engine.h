@@ -553,6 +553,7 @@ PN_EXTERN void pn_delivery_settle(pn_delivery_t *delivery);
 PN_EXTERN void pn_delivery_dump(pn_delivery_t *delivery);
 PN_EXTERN void *pn_delivery_get_context(pn_delivery_t *delivery);
 PN_EXTERN void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
+PN_EXTERN bool pn_delivery_buffered(pn_delivery_t *delivery);
 
 // disposition
 PN_EXTERN uint64_t pn_disposition_type(pn_disposition_t *disposition);

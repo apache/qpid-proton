@@ -1322,6 +1322,18 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
   }
 }
 
+bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker)
+{
+  pni_store_t *store = pn_tracker_store(messenger, tracker);
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
+  if (e) {
+    pn_delivery_t *d = pni_entry_get_delivery(e);
+    return d && pn_delivery_buffered(d);
+  } else {
+    return false;
+  }
+}
+
 int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags)
 {
   pni_store_t *store = pn_tracker_store(messenger, tracker);

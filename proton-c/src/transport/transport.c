@@ -1065,21 +1065,6 @@ static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now)
   return timeout;
 }
 
-bool pn_delivery_buffered(pn_delivery_t *delivery)
-{
-  if (delivery->settled) return false;
-  if (pn_link_is_sender(delivery->link)) {
-    pn_delivery_state_t *state = &delivery->state;
-    if (state->sent) {
-      return false;
-    } else {
-      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
-    }
-  } else {
-    return false;
-  }
-}
-
 int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION)

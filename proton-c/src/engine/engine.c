@@ -980,6 +980,22 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
+bool pn_delivery_buffered(pn_delivery_t *delivery)
+{
+  assert(delivery);
+  if (delivery->settled) return false;
+  if (pn_link_is_sender(delivery->link)) {
+    pn_delivery_state_t *state = &delivery->state;
+    if (state->sent) {
+      return false;
+    } else {
+      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
+    }
+  } else {
+    return false;
+  }
+}
+
 int pn_link_unsettled(pn_link_t *link)
 {
   return link->unsettled_count;
