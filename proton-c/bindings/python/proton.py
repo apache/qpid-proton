@@ -161,6 +161,11 @@ class Messenger(object):
   of outgoing messages. These messages in these queues may be destined
   for, or originate from, a variety of addresses.
 
+  The messenger interface is single-threaded.  All methods
+  except one (L{interrupt}) are intended to be used from within
+  the messenger thread.
+
+
   Address Syntax
   ==============
 
@@ -187,12 +192,14 @@ class Messenger(object):
   Sending & Receiving Messages
   ============================
 
-  The L{Messenger} class works in conjuction with the L{Message}
-  class. The L{Message} class is a mutable holder of message content.
-  The L{put} method will encode the content in a given L{Message}
-  object into the outgoing message queue leaving that L{Message}
-  object free to be modified or discarded without having any impact on
-  the content in the outgoing queue.
+  The L{Messenger} class works in conjuction with the L{Message} class. The
+  L{Message} class is a mutable holder of message content.
+
+  The L{put} method copies its L{Message} to the outgoing queue, and may
+  send queued messages if it can do so without blocking.  The L{send}
+  method blocks until it has sent the requested number of messages,
+  or until a timeout interrupts the attempt.
+
 
     >>> message = Message()
     >>> for i in range(3):
@@ -201,8 +208,13 @@ class Messenger(object):
     ...   messenger.put(message)
     >>> messenger.send()
 
-  Similarly, the L{get} method will decode the content in the incoming
-  message queue into the supplied L{Message} object.
+  Similarly, the L{recv} method receives messages into the incoming
+  queue, and may block as it attempts to receive the requested number
+  of messages,  or until timeout is reached. It may receive fewer
+  than the requested number.  The L{get} method pops the
+  eldest L{Message} off the incoming queue and copies it into the L{Message}
+  object that you supply.  It will not block.
+
 
     >>> message = Message()
     >>> messenger.recv(10):
@@ -212,6 +224,12 @@ class Messenger(object):
     Hello World 0
     Hello World 1
     Hello World 2
+
+  The blocking flag allows you to turn off blocking behavior entirely,
+  in which case L{send} and L{recv} will do whatever they can without
+  blocking, and then return.  You can then look at the number
+  of incoming and outgoing messages to see how much outstanding work
+  still remains.
   """
 
   def __init__(self, name=None):
@@ -226,6 +244,11 @@ class Messenger(object):
     self._mng = pn_messenger(name)
 
   def __del__(self):
+    """
+    Destroy the L{Messenger}.  This will close all connections that
+    are managed by the L{Messenger}.  Call the L{stop} method before
+    destroying the L{Messenger}.
+    """
     if hasattr(self, "_mng"):
       pn_messenger_free(self._mng)
       del self._mng
@@ -298,7 +321,7 @@ file, or None if the file is not encrypted.
   trusted_certificates = property(_get_trusted_certificates,
                                   _set_trusted_certificates,
                                   doc="""
-A path do a database of trusted certificates for use in verifying the
+A path to a database of trusted certificates for use in verifying the
 peer on an SSL/TLS connection. If this property is None, then the peer
 will not be verified.
 """)
@@ -329,7 +352,13 @@ operations performed by the L{Messenger}.
   def _set_blocking(self, b):
     self._check(pn_messenger_set_blocking(self._mng, b))
 
-  blocking = property(_is_blocking, _set_blocking)
+  blocking = property(_is_blocking, _set_blocking,
+                      doc="""
+Enable or disable blocking behavior during L{Message} sending
+and receiving.  This affects every blocking call, with the
+exception of L{work}.  Currently, the affected calls are
+L{send}, L{recv}, and L{stop}.
+""")
 
   def _get_incoming_window(self):
     return pn_messenger_get_incoming_window(self._mng)
@@ -342,6 +371,12 @@ operations performed by the L{Messenger}.
 The incoming tracking window for the messenger. The messenger will
 track the remote status of this many incoming deliveries after they
 have been accepted or rejected. Defaults to zero.
+
+L{Messages<Message>} enter this window only when you take them into your application
+using L{get}.  If your incoming window size is I{n}, and you get I{n}+1 L{messages<Message>}
+without explicitly accepting or rejecting the oldest message, then the
+message that passes beyond the edge of the incoming window will be assigned
+the default disposition of its link.
 """)
 
   def _get_outgoing_window(self):
@@ -355,15 +390,18 @@ have been accepted or rejected. Defaults to zero.
 The outgoing tracking window for the messenger. The messenger will
 track the remote status of this many outgoing deliveries after calling
 send. Defaults to zero.
+
+A L{Message} enters this window when you call the put() method with the
+message.  If your outgoing window size is I{n}, and you call L{put} I{n}+1
+times, status information will no longer be available for the
+first message.
 """)
 
   def start(self):
     """
-    Transitions the L{Messenger} to an active state. A L{Messenger} is
-    initially created in an inactive state. When inactive a
-    L{Messenger} will not send or receive messages from its internal
-    queues. A L{Messenger} must be started before calling L{send} or
-    L{recv}.
+    Currently a no-op placeholder.
+    For future compatibility, do not L{send} or L{recv} messages
+    before starting the L{Messenger}.
     """
     self._check(pn_messenger_start(self._mng))
 
@@ -379,6 +417,10 @@ send. Defaults to zero.
 
   @property
   def stopped(self):
+    """
+    Returns true iff a L{Messenger} is in the stopped state.
+    This function does not block.
+    """
     return pn_messenger_stopped(self._mng)
 
   def subscribe(self, source):
@@ -410,6 +452,13 @@ send. Defaults to zero.
     block until the outgoing queue is empty. The L{outgoing} property
     may be used to check the depth of the outgoing queue.
 
+    When the content in a given L{Message} object is copied to the outgoing
+    message queue, you may then modify or discard the L{Message} object
+    without having any impact on the content in the outgoing queue.
+
+    This method returns an outgoing tracker for the L{Message}.  The tracker
+    can be used to determine the delivery status of the L{Message}.
+
     @type message: Message
     @param message: the message to place in the outgoing queue
     @return: a tracker
@@ -432,6 +481,11 @@ send. Defaults to zero.
     return STATUSES.get(disp, disp)
 
   def settle(self, tracker=None):
+    """
+    Frees a L{Messenger} from tracking the status associated with a given
+    tracker. If you don't supply a tracker, all outgoing L{messages<Message>} up
+    to the most recent will be settled.
+    """
     if tracker is None:
       tracker = pn_messenger_outgoing_tracker(self._mng)
       flags = PN_CUMULATIVE
@@ -441,24 +495,33 @@ send. Defaults to zero.
 
   def send(self, n=-1):
     """
-    Blocks until the outgoing queue is empty or the operation times
-    out. The L{timeout} property controls how long a L{Messenger} will
-    block before timing out.
+    This call will block until the indicated number of L{messages<Message>}
+    have been sent, or until the operation times out.  If n is -1 this call will
+    block until all outgoing L{messages<Message>} have been sent. If n is 0 then
+    this call will send whatever it can without blocking.
     """
     self._check(pn_messenger_send(self._mng, n))
 
   def recv(self, n=None):
     """
-    Receives up to I{n} messages into the incoming queue of the
-    L{Messenger}. If I{n} is not specified, L{Messenger} will receive as many
-    messages as it can buffer internally. This method will block until at least
-    one message is available or the operation times out.
+    Receives up to I{n} L{messages<Message>} into the incoming queue.  If no value
+    for I{n} is supplied, this call will receive as many L{messages<Message>} as it
+    can buffer internally.  If the L{Messenger} is in blocking mode, this
+    call will block until at least one L{Message} is available in the
+    incoming queue.
     """
     if n is None:
       n = -1
     self._check(pn_messenger_recv(self._mng, n))
 
   def work(self, timeout=None):
+    """
+    Sends or receives any outstanding L{messages<Message>} queued for a L{Messenger}.
+    This will block for the indicated timeout.
+    This method may also do I/O work other than sending and receiving
+    L{messages<Message>}.  For example, closing connections after messenger.L{stop}()
+    has been called.
+    """
     if timeout is None:
       t = -1
     else:
@@ -475,6 +538,17 @@ send. Defaults to zero.
     return pn_messenger_receiving(self._mng)
 
   def interrupt(self):
+    """
+    The L{Messenger} interface is single-threaded.
+    This is the only L{Messenger} function intended to be called
+    from outside of the L{Messenger} thread.
+    Call this from a non-messenger thread to interrupt
+    a L{Messenger} that is blocking.
+    This will cause any in-progress blocking call to throw
+    the L{Interrupt} exception.  If there is no currently blocking
+    call, then the next blocking call will be affected, even if it
+    is within the same thread that interrupt was called from.
+    """
     self._check(pn_messenger_interrupt(self._mng))
 
   def get(self, message=None):
@@ -482,6 +556,13 @@ send. Defaults to zero.
     Moves the message from the head of the incoming message queue into
     the supplied message object. Any content in the message will be
     overwritten.
+
+    A tracker for the incoming L{Message} is returned.  The tracker can
+    later be used to communicate your acceptance or rejection of the
+    L{Message}.
+
+    If None is passed in for the L{Message} object, the L{Message}
+    popped from the head of the queue is discarded.
 
     @type message: Message
     @param message: the destination message object
@@ -498,7 +579,11 @@ send. Defaults to zero.
 
   def accept(self, tracker=None):
     """
-    Accepts messages retreived from the incoming message queue.
+    Signal the sender that you have acted on the L{Message}
+    pointed to by the tracker.  If no tracker is supplied,
+    then all messages that have been returned by the L{get}
+    method are accepted, except those that have already been
+    auto-settled by passing beyond your incoming window size.
 
     @type tracker: tracker
     @param tracker: a tracker as returned by get
@@ -512,7 +597,10 @@ send. Defaults to zero.
 
   def reject(self, tracker=None):
     """
-    Rejects messages retreived from the incoming message queue.
+    Rejects the L{Message} indicated by the tracker.  If no tracker
+    is supplied, all messages that have been returned by the L{get}
+    method are rejected, except those that have already been auto-settled
+    by passing beyond your outgoing window size.
 
     @type tracker: tracker
     @param tracker: a tracker as returned by get
@@ -539,9 +627,80 @@ send. Defaults to zero.
     return pn_messenger_incoming(self._mng)
 
   def route(self, pattern, address):
+    """
+          Adds a routing rule to a L{Messenger's<Messenger>} internal routing table.
+
+          The route procedure may be used to influence how a L{Messenger} will
+          internally treat a given address or class of addresses. Every call
+          to the route procedure will result in L{Messenger} appending a routing
+          rule to its internal routing table.
+
+          Whenever a L{Message} is presented to a L{Messenger} for delivery, it
+          will match the address of this message against the set of routing
+          rules in order. The first rule to match will be triggered, and
+          instead of routing based on the address presented in the message,
+          the L{Messenger} will route based on the address supplied in the rule.
+
+          The pattern matching syntax supports two types of matches, a '%'
+          will match any character except a '/', and a '*' will match any
+          character including a '/'.
+
+          A routing address is specified as a normal AMQP address, however it
+          may additionally use substitution variables from the pattern match
+          that triggered the rule.
+
+          Any message sent to "foo" will be routed to "amqp://foo.com":
+
+             >>> messenger.route("foo", "amqp://foo.com");
+
+          Any message sent to "foobar" will be routed to
+          "amqp://foo.com/bar":
+
+             >>> messenger.route("foobar", "amqp://foo.com/bar");
+
+          Any message sent to bar/<path> will be routed to the corresponding
+          path within the amqp://bar.com domain:
+
+             >>> messenger.route("bar/*", "amqp://bar.com/$1");
+
+          Route all L{messages<Message>} over TLS:
+
+             >>> messenger.route("amqp:*", "amqps:$1")
+
+          Supply credentials for foo.com:
+
+             >>> messenger.route("amqp://foo.com/*", "amqp://user:password@foo.com/$1");
+
+          Supply credentials for all domains:
+
+             >>> messenger.route("amqp://*", "amqp://user:password@$1");
+
+          Route all addresses through a single proxy while preserving the
+          original destination:
+
+             >>> messenger.route("amqp://%/*", "amqp://user:password@proxy/$1/$2");
+
+          Route any address through a single broker:
+
+             >>> messenger.route("*", "amqp://user:password@broker/$1");
+    """
     self._check(pn_messenger_route(self._mng, pattern, address))
 
   def rewrite(self, pattern, address):
+    """
+    Similar to route(), except that the destination of
+    the L{Message} is determined before the message address is rewritten.
+
+    The outgoing address is only rewritten after routing has been
+    finalized.  If a message has an outgoing address of
+    "amqp://0.0.0.0:5678", and a rewriting rule that changes its
+    outgoing address to "foo", it will still arrive at the peer that
+    is listening on "amqp://0.0.0.0:5678", but when it arrives there,
+    the receiver will see its outgoing address as "foo".
+
+    The default rewrite rule removes username and password from addresses
+    before they are transmitted.
+    """
     self._check(pn_messenger_rewrite(self._mng, pattern, address))
 
 class Message(object):
