@@ -184,6 +184,8 @@ static int ssl_failed(pn_ssl_t *ssl)
 {
   ssl->ssl_closed = true;
   ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
+  // fake a shutdown so the i/o processing code will close properly
+  SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   // try to grab the first SSL error to add to the failure log
   char buf[128] = "Unknown error.";
   unsigned long ssl_err = ERR_get_error();
