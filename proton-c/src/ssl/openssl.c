@@ -182,6 +182,7 @@ static void _log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
 // unrecoverable SSL failure occured, notify transport and generate error code.
 static int ssl_failed(pn_ssl_t *ssl)
 {
+    SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   ssl->ssl_closed = true;
   ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
   // fake a shutdown so the i/o processing code will close properly

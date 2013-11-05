@@ -352,6 +352,7 @@ public class MessengerImpl implements Messenger
                 }
             }
         }
+
         return null;
     }
 
@@ -609,8 +610,9 @@ public class MessengerImpl implements Messenger
             {
                 delivery.disposition(delivery.getRemoteState());
             }
-            //TODO: delivery.clear(); What's the equivalent in java?
-            delivery = delivery.getWorkNext();
+            Delivery next = delivery.getWorkNext();
+            delivery.clear();
+            delivery = next;
         }
         _outgoing.slide();
 

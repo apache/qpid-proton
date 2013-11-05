@@ -384,35 +384,52 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 
     void removeWork(DeliveryImpl delivery)
     {
+        if (!delivery._work) return;
+
+        DeliveryImpl next = delivery.getWorkNext();
+        DeliveryImpl prev = delivery.getWorkPrev();
+
+        if (prev != null) {
+            prev.setWorkNext(next);
+        }
+
+        if (next != null) {
+            next.setWorkPrev(prev);
+        }
+
+
         if(_workHead == delivery)
         {
-            _workHead = delivery.getWorkNext();
+            _workHead = next;
 
         }
+
         if(_workTail == delivery)
         {
-            _workTail = delivery.getWorkPrev();
+            _workTail = prev;
         }
+
+        delivery._work = false;
     }
 
     void addWork(DeliveryImpl delivery)
     {
-        if(_workHead != delivery && delivery.getWorkNext() == null && delivery.getWorkPrev() == null)
-        {
-            if(_workTail == null)
-            {
-                delivery.setWorkNext(null);
-                delivery.setWorkPrev(null);
-                _workHead = _workTail = delivery;
-            }
-            else
-            {
-                _workTail.setWorkNext(delivery);
-                delivery.setWorkPrev(_workTail);
-                _workTail = delivery;
-                delivery.setWorkNext(null);
-            }
+        if (delivery._work) return;
+
+        delivery.setWorkNext(null);
+        delivery.setWorkPrev(_workTail);
+
+        if (_workTail != null) {
+            _workTail.setWorkNext(delivery);
         }
+
+        _workTail = delivery;
+
+        if (_workHead == null) {
+            _workHead = delivery;
+        }
+
+        delivery._work = true;
     }
 
     public Iterator<DeliveryImpl> getWorkSequence()
@@ -469,49 +486,68 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 
     public void removeTransportWork(DeliveryImpl delivery)
     {
-        DeliveryImpl oldHead = _transportWorkHead;
-        DeliveryImpl oldTail = _transportWorkTail;
+        if (!delivery._transportWork) return;
+
+        DeliveryImpl next = delivery.getTransportWorkNext();
+        DeliveryImpl prev = delivery.getTransportWorkPrev();
+
+        if (prev != null) {
+            prev.setTransportWorkNext(next);
+        }
+
+        if (next != null) {
+            next.setTransportWorkPrev(prev);
+        }
+
+
         if(_transportWorkHead == delivery)
         {
-            _transportWorkHead = delivery.getTransportWorkNext();
+            _transportWorkHead = next;
 
         }
+
         if(_transportWorkTail == delivery)
         {
-            _transportWorkTail = delivery.getTransportWorkPrev();
+            _transportWorkTail = prev;
         }
-    }
 
+        delivery._transportWork = false;
+    }
 
     void addTransportWork(DeliveryImpl delivery)
     {
-        if(_transportWorkTail == null)
-        {
-            delivery.setTransportWorkNext(null);
-            delivery.setTransportWorkPrev(null);
-            _transportWorkHead = _transportWorkTail = delivery;
-        }
-        else
-        {
+        if (delivery._transportWork) return;
+
+        delivery.setTransportWorkNext(null);
+        delivery.setTransportWorkPrev(_transportWorkTail);
+
+        if (_transportWorkTail != null) {
             _transportWorkTail.setTransportWorkNext(delivery);
-            delivery.setTransportWorkPrev(_transportWorkTail);
-            _transportWorkTail = delivery;
-            delivery.setTransportWorkNext(null);
         }
+
+        _transportWorkTail = delivery;
+
+        if (_transportWorkHead == null) {
+            _transportWorkHead = delivery;
+        }
+
+        delivery._transportWork = true;
     }
 
     void workUpdate(DeliveryImpl delivery)
     {
         if(delivery != null)
         {
-            LinkImpl link = delivery.getLink();
-            if(link.workUpdate(delivery))
+            if(!delivery.isSettled() &&
+               (delivery.isReadable() ||
+                delivery.isWritable() ||
+                delivery.isUpdated()))
             {
                 addWork(delivery);
             }
             else
             {
-                delivery.clearWork();
+                removeWork(delivery);
             }
         }
     }

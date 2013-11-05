@@ -60,6 +60,6 @@ public class TransportDelivery
     void settled()
     {
         _transportLink.settled(this);
-        _delivery.clearWork();
+        _delivery.updateWork();
     }
 }

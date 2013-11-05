@@ -142,8 +142,10 @@ EXCEPTIONS = {
 PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
+ABORTED = Constant("ABORTED")
 
 STATUSES = {
+  PN_STATUS_ABORTED: ABORTED,
   PN_STATUS_ACCEPTED: ACCEPTED,
   PN_STATUS_REJECTED: REJECTED,
   PN_STATUS_PENDING: PENDING,
@@ -3095,6 +3097,7 @@ class Driver(object):
 __all__ = [
            "API_LANGUAGE",
            "IMPLEMENTATION_LANGUAGE",
+           "ABORTED",
            "ACCEPTED",
            "AUTOMATIC",
            "PENDING",

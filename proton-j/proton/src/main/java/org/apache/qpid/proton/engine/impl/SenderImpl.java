@@ -80,6 +80,9 @@ public class SenderImpl  extends LinkImpl implements Sender
     public boolean advance()
     {
         DeliveryImpl delivery = current();
+        if (delivery != null) {
+            delivery.setComplete();
+        }
 
         boolean advance = super.advance();
         if(advance && _offered > 0)
@@ -112,12 +115,6 @@ public class SenderImpl  extends LinkImpl implements Sender
         _transportLink = transportLink;
     }
 
-
-    @Override
-    boolean workUpdate(DeliveryImpl delivery)
-    {
-        return (delivery == current()) && hasCredit();
-    }
 
     @Override
     public void setCredit(int credit)

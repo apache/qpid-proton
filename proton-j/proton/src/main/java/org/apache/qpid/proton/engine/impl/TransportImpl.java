@@ -420,7 +420,6 @@ public class TransportImpl extends EndpointImpl
         if(_connectionEndpoint != null)
         {
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
-
             while(delivery != null)
             {
                 LinkImpl link = delivery.getLink();
@@ -513,7 +512,7 @@ public class TransportImpl extends EndpointImpl
             }
         }
 
-        if(wasDone)
+        if(wasDone && delivery.getLocalState() != null)
         {
             TransportDelivery tpDelivery = delivery.getTransportDelivery();
             Disposition disposition = new Disposition();
@@ -531,7 +530,7 @@ public class TransportImpl extends EndpointImpl
                        null);
         }
 
-        return delivery.isDone();
+        return !delivery.isBuffered();
     }
 
     private boolean processTransportWorkReceiver(DeliveryImpl delivery,

@@ -1405,6 +1405,12 @@ class Messenger(object):
     self.impl.setOutgoingWindow(window)
   outgoing_window = property(_get_outgoing_window, _set_outgoing_window)
 
+  def _get_certificate(self):
+    raise Skipped()
+  def _set_certificate(self, xxx):
+    raise Skipped()
+  certificate = property(_get_certificate, _set_certificate)
+
 
 class Message(object):
 

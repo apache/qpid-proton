@@ -101,6 +101,7 @@ struct pn_listener_t {
   int idx;
   bool pending;
   int fd;
+  bool closed;
   void *context;
 };
 
@@ -213,6 +214,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
   l->idx = 0;
   l->pending = false;
   l->fd = fd;
+  l->closed = false;
   l->context = context;
 
   pn_driver_add_listener(driver, l);
@@ -305,9 +307,11 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
 void pn_listener_close(pn_listener_t *l)
 {
   if (!l) return;
+  if (l->closed) return;
 
   if (close(l->fd) == -1)
     perror("close");
+  l->closed = true;
 }
 
 void pn_listener_free(pn_listener_t *l)

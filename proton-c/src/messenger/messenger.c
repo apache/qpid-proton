@@ -89,12 +89,14 @@ struct pn_messenger_t {
   pn_string_t *original;
   pn_string_t *rewritten;
   bool worked;
+  int connection_error;
 };
 
 typedef struct {
   char *host;
   char *port;
   pn_subscription_t *subscription;
+  pn_ssl_domain_t *domain;
 } pn_listener_ctx_t;
 
 static pn_listener_ctx_t *pn_listener_ctx(pn_listener_t *lnr,
@@ -106,6 +108,24 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_listener_t *lnr,
   pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(lnr);
   assert(!ctx);
   ctx = (pn_listener_ctx_t *) malloc(sizeof(pn_listener_ctx_t));
+  ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
+  if (messenger->certificate) {
+    int err = pn_ssl_domain_set_credentials(ctx->domain, messenger->certificate,
+                                            messenger->private_key,
+                                            messenger->password);
+
+    if (err) {
+      pn_error_format(messenger->error, PN_ERR, "invalid credentials");
+      pn_ssl_domain_free(ctx->domain);
+      free(ctx);
+      return NULL;
+    }
+  }
+
+  if (!(scheme && !strcmp(scheme, "amqps"))) {
+    pn_ssl_domain_allow_unsecured_client(ctx->domain);
+  }
+
   pn_subscription_t *sub = pn_subscription(messenger, scheme);
   ctx->subscription = sub;
   ctx->host = pn_strdup(host);
@@ -120,6 +140,7 @@ static void pn_listener_ctx_free(pn_listener_t *lnr)
   // XXX: subscriptions are freed when the messenger is freed pn_subscription_free(ctx->subscription);
   free(ctx->host);
   free(ctx->port);
+  pn_ssl_domain_free(ctx->domain);
   free(ctx);
   pn_listener_set_context(lnr, NULL);
 }
@@ -265,6 +286,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->address.text = pn_string(NULL);
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
+    m->connection_error = 0;
   }
 
   return m;
@@ -506,24 +528,44 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
   return updated;
 }
 
-static void pn_transport_config(pn_messenger_t *messenger,
-                                pn_connector_t *connector,
-                                pn_connection_t *connection)
+static void pn_error_report(const char *pfx, const char *error)
+{
+  fprintf(stderr, "%s ERROR %s\n", pfx, error);
+}
+
+static int pn_transport_config(pn_messenger_t *messenger,
+                               pn_connector_t *connector,
+                               pn_connection_t *connection)
 {
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_transport_t *transport = pn_connector_transport(connector);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
-    pn_ssl_domain_t *d = pn_ssl_domain( PN_SSL_MODE_CLIENT );
+    pn_ssl_domain_t *d = pn_ssl_domain(PN_SSL_MODE_CLIENT);
     if (messenger->certificate && messenger->private_key) {
-      pn_ssl_domain_set_credentials( d, messenger->certificate,
-                                     messenger->private_key,
-                                     messenger->password);
+      int err = pn_ssl_domain_set_credentials( d, messenger->certificate,
+                                               messenger->private_key,
+                                               messenger->password);
+      if (err) {
+        pn_error_report("CONNECTION", "invalid credentials");
+        return err;
+      }
     }
     if (messenger->trusted_certificates) {
-      pn_ssl_domain_set_trusted_ca_db(d, messenger->trusted_certificates);
-      pn_ssl_domain_set_peer_authentication(d, PN_SSL_VERIFY_PEER, NULL);
+      int err = pn_ssl_domain_set_trusted_ca_db(d, messenger->trusted_certificates);
+      if (err) {
+        pn_error_report("CONNECTION", "invalid certificate db");
+        return err;
+      }
+      err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_VERIFY_PEER_NAME, NULL);
+      if (err) {
+        pn_error_report("CONNECTION", "error configuring ssl to verify peer");
+      }
     } else {
-      pn_ssl_domain_set_peer_authentication(d, PN_SSL_ANONYMOUS_PEER, NULL);
+      int err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_ANONYMOUS_PEER, NULL);
+      if (err) {
+        pn_error_report("CONNECTION", "error configuring ssl for anonymous peer");
+        return err;
+      }
     }
     pn_ssl_t *ssl = pn_ssl(transport);
     pn_ssl_init(ssl, d, NULL);
@@ -538,11 +580,8 @@ static void pn_transport_config(pn_messenger_t *messenger,
     pn_sasl_mechanisms(sasl, "ANONYMOUS");
     pn_sasl_client(sasl);
   }
-}
 
-static void pn_error_report(const char *pfx, const char *error)
-{
-  fprintf(stderr, "%s ERROR %s\n", pfx, error);
+  return 0;
 }
 
 static void pn_condition_report(const char *pfx, pn_condition_t *condition)
@@ -746,6 +785,9 @@ void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
       pni_entry_t *e = (pni_entry_t *) pn_delivery_get_context(d);
       if (e) {
         pni_entry_set_delivery(e, NULL);
+        if (pn_delivery_buffered(d)) {
+          pni_entry_set_status(e, PN_STATUS_ABORTED);
+        }
       }
       d = pn_unsettled_next(d);
     }
@@ -819,18 +861,8 @@ int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger
       pn_connector_t *c = pn_listener_accept(l);
       pn_transport_t *t = pn_connector_transport(c);
 
-      pn_ssl_domain_t *d = pn_ssl_domain( PN_SSL_MODE_SERVER );
-      if (messenger->certificate) {
-        pn_ssl_domain_set_credentials(d, messenger->certificate,
-                                      messenger->private_key,
-                                      messenger->password);
-      }
-      if (!(scheme && !strcmp(scheme, "amqps"))) {
-        pn_ssl_domain_allow_unsecured_client(d);
-      }
       pn_ssl_t *ssl = pn_ssl(t);
-      pn_ssl_init(ssl, d, NULL);
-      pn_ssl_domain_free( d );
+      pn_ssl_init(ssl, ctx->domain, NULL);
 
       pn_sasl_t *sasl = pn_sasl(t);
       pn_sasl_mechanisms(sasl, "ANONYMOUS");
@@ -917,6 +949,7 @@ int pn_messenger_stop(pn_messenger_t *messenger)
     pn_listener_t *prev = l;
     l = pn_listener_next(l);
     pn_listener_ctx_free(prev);
+    pn_listener_close(prev);
     pn_listener_free(prev);
   }
 
@@ -965,6 +998,8 @@ static int pni_route(pn_messenger_t *messenger, const char *address)
 
 pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *address, char **name)
 {
+  assert(messenger);
+  messenger->connection_error = 0;
   char domain[1024];
   if (address && sizeof(domain) < strlen(address) + 1) {
     pn_error_format(messenger->error, PN_ERR,
@@ -995,7 +1030,11 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 
     lnr = pn_listener(messenger->driver, host, port ? port : default_port(scheme), NULL);
     if (lnr) {
-      pn_listener_ctx(lnr, messenger, scheme, host, port);
+      pn_listener_ctx_t *ctx = pn_listener_ctx(lnr, messenger, scheme, host, port);
+      if (!ctx) {
+        pn_listener_close(lnr);
+        pn_listener_free(lnr);
+      }
     } else {
       pn_error_format(messenger->error, PN_ERR,
                       "unable to bind to address %s: %s:%s", address, host, port,
@@ -1045,7 +1084,15 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 
   pn_connection_t *connection =
     pn_messenger_connection(messenger, connector, scheme, user, pass, host, port);
-  pn_transport_config(messenger, connector, connection);
+  err = pn_transport_config(messenger, connector, connection);
+  if (err) {
+    pni_messenger_reclaim(messenger, connection);
+    pn_connector_close(connector);
+    pn_connector_free(connector);
+    messenger->connection_error = err;
+    return NULL;
+  }
+
   pn_connection_open(connection);
   pn_connector_set_connection(connector, connection);
 
@@ -1117,7 +1164,13 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
                                      port ? port : default_port(scheme), NULL);
     if (lnr) {
       pn_listener_ctx_t *ctx = pn_listener_ctx(lnr, messenger, scheme, host, port);
-      return ctx->subscription;
+      if (ctx) {
+        return ctx->subscription;
+      } else {
+        pn_listener_close(lnr);
+        pn_listener_free(lnr);
+        return NULL;
+      }
     } else {
       pn_error_format(messenger->error, PN_ERR,
                       "unable to subscribe to address %s: %s", source,
@@ -1179,6 +1232,16 @@ static void outward_munge(pn_messenger_t *mng, pn_message_t *msg)
     pn_message_set_reply_to(msg, buf);
   }
   if (heapbuf) free (heapbuf);
+}
+
+int pni_bump_out(pn_messenger_t *messenger, const char *address)
+{
+  pni_entry_t *entry = pni_store_get(messenger->outgoing, address);
+  if (!entry) return 0;
+
+  pni_entry_set_status(entry, PN_STATUS_ABORTED);
+  pni_entry_free(entry);
+  return 0;
 }
 
 int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender)
@@ -1289,8 +1352,18 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
       pni_restore(messenger, msg);
       pn_buffer_append(buf, encoded, size); // XXX
       pn_link_t *sender = pn_messenger_target(messenger, address);
-      if (!sender) return 0;
-      return pni_pump_out(messenger, address, sender);
+      if (!sender) {
+        int err = pn_error_code(messenger->error);
+        if (err) {
+          return err;
+        } else if (messenger->connection_error) {
+          return pni_bump_out(messenger, address);
+        } else {
+          return 0;
+        }
+      } else {
+        return pni_pump_out(messenger, address, sender);
+      }
     }
   }
 

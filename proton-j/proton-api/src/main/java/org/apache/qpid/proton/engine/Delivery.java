@@ -98,6 +98,8 @@ public interface Delivery
      */
     public boolean isUpdated();
 
+    public void clear();
+
     public boolean isPartial();
 
     public int pending();

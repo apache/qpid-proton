@@ -20,7 +20,7 @@
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
-from subprocess import Popen,PIPE
+from subprocess import Popen,PIPE,STDOUT
 import sys, os
 from proton import Driver, Connection, Transport, SASL, Endpoint, Delivery
 
@@ -333,7 +333,7 @@ class MessengerApp(object):
             print("COMMAND='%s'" % str(cmd))
         #print("ENV='%s'" % str(os.environ.copy()))
         try:
-            self._process = Popen(cmd, stdout=PIPE, bufsize=4096)
+            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
         except OSError, e:
             assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
         self._ready()  # wait for it to initialize

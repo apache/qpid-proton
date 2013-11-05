@@ -231,12 +231,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     abstract TransportLink getTransportLink();
 
-    /**
-     * TODO:  Confirm What does this method does.  It seems to
-     * merely make an observation rather than mutate state.  Rename???
-     */
-    abstract boolean workUpdate(DeliveryImpl delivery);
-
     public int getCredit()
     {
         return _credit;

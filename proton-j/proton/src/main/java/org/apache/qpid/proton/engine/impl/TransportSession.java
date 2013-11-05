@@ -286,7 +286,7 @@ class TransportSession
             }
             getSession().incrementIncomingBytes(payload.getLength());
         }
-        delivery.addIOWork();
+        delivery.updateWork();
 
 
         if(!(transfer.getMore() || transfer.getAborted()))
@@ -386,7 +386,7 @@ class TransportSession
                     delivery.setRemoteSettled(true);
                     unsettledDeliveries.remove(id);
                 }
-                delivery.addToWorkList();
+                delivery.updateWork();
             }
             id = id.add(UnsignedInteger.ONE);
         }

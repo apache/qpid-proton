@@ -120,12 +120,6 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return _transportReceiver;
     }
 
-    @Override
-    boolean workUpdate(DeliveryImpl delivery)
-    {
-        return (delivery == current());
-    }
-
     public void drain(int credit)
     {
         flow(credit);

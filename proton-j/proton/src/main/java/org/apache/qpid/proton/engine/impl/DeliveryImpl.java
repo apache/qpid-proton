@@ -33,9 +33,11 @@ public class DeliveryImpl implements Delivery
 
     private DeliveryImpl _workNext;
     private DeliveryImpl _workPrev;
+    boolean _work;
 
     private DeliveryImpl _transportWorkNext;
     private DeliveryImpl _transportWorkPrev;
+    boolean _transportWork;
 
     private Object _context;
 
@@ -119,6 +121,10 @@ public class DeliveryImpl implements Delivery
 
     public void settle()
     {
+        if (_settled) {
+            return;
+        }
+
         _settled = true;
         _link.decrementUnsettled();
         if(!_remoteSettled)
@@ -143,7 +149,7 @@ public class DeliveryImpl implements Delivery
         {
             _linkNext._linkPrevious = _linkPrevious;
         }
-        clearWork();
+        updateWork();
     }
 
     DeliveryImpl getLinkNext()
@@ -199,102 +205,24 @@ public class DeliveryImpl implements Delivery
         {
             _dataSize =  consumed = 0;
         }
-        if(_dataSize == 0)
-        {
-            clearFlag(IO_WORK);
-        }
         return (_complete && consumed == 0) ? Transport.END_OF_STREAM : consumed;  //TODO - Implement
     }
 
-    private void clearFlag(int ioWork)
+    void updateWork()
     {
-        _flags = _flags & (~IO_WORK);
-        if(_flags == 0)
-        {
-            clearWork();
-        }
-    }
-
-    void clearWork()
-    {
-        getLink().getConnectionImpl().removeWork(this);
-        if(_workPrev != null)
-        {
-            _workPrev.setWorkNext(_workNext);
-        }
-        if(_workNext != null)
-        {
-            _workNext.setWorkPrev(_workPrev);
-
-        }
-        _workPrev = null;
-    }
-
-    void addToWorkList()
-    {
-        getLink().getConnectionImpl().addWork(this);
-    }
-
-    void addIOWork()
-    {
-        setFlag(IO_WORK);
-    }
-
-    private void setFlag(int flag)
-    {
-        boolean addWork;
-        if(flag == IO_WORK && (_flags & flag) == 0)
-        {
-            clearWork();
-            addWork = true;
-        }
-        else
-        {
-            addWork = (_flags == 0);
-        }
-        _flags = _flags | flag;
-        if(addWork)
-        {
-            addToWorkList();
-        }
-    }
-
-
-    private void clearTransportFlag(int ioWork)
-    {
-        _flags = _flags & (~IO_WORK);
-        if(_flags == 0)
-        {
-            clearTransportWork();
-        }
+        getLink().getConnectionImpl().workUpdate(this);
     }
 
     DeliveryImpl clearTransportWork()
     {
         DeliveryImpl next = _transportWorkNext;
         getLink().getConnectionImpl().removeTransportWork(this);
-        if(_transportWorkPrev != null)
-        {
-            _transportWorkPrev.setTransportWorkNext(_transportWorkNext);
-        }
-        if(_transportWorkNext != null)
-        {
-            _transportWorkNext.setTransportWorkPrev(_transportWorkPrev);
-
-        }
-        _transportWorkNext = null;
-        _transportWorkPrev = null;
         return next;
     }
 
     void addToTransportWorkList()
     {
-        if(_transportWorkNext == null
-           && _transportWorkPrev == null
-           && getLink().getConnectionImpl().getTransportWorkHead() != this)
-        {
-            getLink().getConnectionImpl().addTransportWork(this);
-        }
+        getLink().getConnectionImpl().addTransportWork(this);
     }
 
 
@@ -393,8 +321,7 @@ public class DeliveryImpl implements Delivery
     public boolean isReadable()
     {
         return getLink() instanceof ReceiverImpl
-                && getLink().current() == this
-                && _dataSize > 0;
+            && getLink().current() == this;
     }
 
     void setComplete()
@@ -418,6 +345,12 @@ public class DeliveryImpl implements Delivery
         return _updated;
     }
 
+    public void clear()
+    {
+        _updated = false;
+        getLink().getConnectionImpl().workUpdate(this);
+    }
+
 
     void setDone()
     {
@@ -433,6 +366,20 @@ public class DeliveryImpl implements Delivery
     {
         _remoteSettled = remoteSettled;
         _updated = true;
+    }
+
+    boolean isBuffered()
+    {
+        if (_remoteSettled) return false;
+        if (getLink() instanceof SenderImpl) {
+            if (isDone()) {
+                return false;
+            } else {
+                return _complete || _dataSize > 0;
+            }
+        } else {
+            return false;
+        }
     }
 
     public Object getContext()

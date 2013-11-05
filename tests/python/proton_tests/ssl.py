@@ -23,12 +23,17 @@ from proton import *
 from common import Skipped, pump
 
 
-class SslTest(common.Test):
+def _testpath(file):
+    """ Set the full path to the certificate,keyfile, etc. for the test.
+    """
+    return os.path.join(os.path.dirname(__file__),
+                        "ssl_db/%s" % file)
 
-    _timeout = 60
+class SslTest(common.Test):
 
     def __init__(self, *args):
         common.Test.__init__(self, *args)
+        self._testpath = _testpath
 
     def setup(self):
         try:
@@ -58,12 +63,6 @@ class SslTest(common.Test):
 
     def _pump(self, ssl_client, ssl_server, buffer_size=1024):
         pump(ssl_client.transport, ssl_server.transport, buffer_size)
-
-    def _testpath(self, file):
-        """ Set the full path to the certificate,keyfile, etc. for the test.
-        """
-        return os.path.join(os.path.dirname(__file__),
-                            "ssl_db/%s" % file)
 
     def _do_handshake(self, client, server):
         """ Attempt to connect client to server. Will throw a TransportException if the SSL
@@ -695,13 +694,13 @@ class SslTest(common.Test):
         receiver = common.MessengerReceiverC()
         receiver.subscriptions = ["amqps://~0.0.0.0:%s" % port]
         receiver.receive_count = 1
-        receiver.timeout = SslTest._timeout
+        receiver.timeout = self.timeout
         receiver.start()
 
         sender = common.MessengerSenderC()
         sender.targets = ["amqps://0.0.0.0:%s/X" % port]
         sender.send_count = 1
-        sender.timeout = SslTest._timeout
+        sender.timeout = self.timeout
         sender.start()
         sender.wait()
         assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
@@ -717,10 +716,11 @@ class SslTest(common.Test):
         receiver = common.MessengerReceiverC()
         receiver.subscriptions = ["amqps://~0.0.0.0:%s" % port]
         receiver.receive_count = 1
-        receiver.timeout = SslTest._timeout
-        # Note hack - we use the client-certificate for the _server_ because
-        # the client-certificate's common name field is "127.0.0.1", which will
-        # match the target address used by the sender.
+        receiver.timeout = self.timeout
+        # Note hack - by default we use the client-certificate for the
+        # _server_ because the client-certificate's common name field
+        # is "127.0.0.1", which will match the target address used by
+        # the sender.
         receiver.certificate = self._testpath("client-certificate.pem")
         receiver.privatekey = self._testpath("client-private-key.pem")
         receiver.password = "client-password"
@@ -729,7 +729,7 @@ class SslTest(common.Test):
         sender = common.MessengerSenderC()
         sender.targets = ["amqps://127.0.0.1:%s/X" % port]
         sender.send_count = 1
-        sender.timeout = SslTest._timeout
+        sender.timeout = self.timeout
         sender.ca_db = self._testpath("ca-certificate.pem")
         sender.start()
         sender.wait()
@@ -737,7 +737,6 @@ class SslTest(common.Test):
 
         receiver.wait()
         assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
-
 
     def DISABLED_test_defaults_valgrind(self):
         """ Run valgrind over a simple SSL connection (no certificates)
@@ -751,13 +750,13 @@ class SslTest(common.Test):
         receiver = common.MessengerReceiverValgrind()
         receiver.subscriptions = ["amqps://~127.0.0.1:%s" % port]
         receiver.receive_count = 1
-        receiver.timeout = SslTest._timeout
+        receiver.timeout = self.timeout
         receiver.start()
 
         sender = common.MessengerSenderValgrind()
         sender.targets = ["amqps://127.0.0.1:%s/X" % port]
         sender.send_count = 1
-        sender.timeout = SslTest._timeout
+        sender.timeout = self.timeout
         sender.start()
         sender.wait()
         assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
@@ -773,3 +772,116 @@ class SslTest(common.Test):
         # self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
 
+class MessengerSSLTests(common.Test):
+
+    def setup(self):
+        self.server = Messenger()
+        self.client = Messenger()
+        self.server.blocking = False
+        self.client.blocking = False
+
+    def teardown(self):
+        self.server.stop()
+        self.client.stop()
+        self.pump()
+        assert self.server.stopped
+        assert self.client.stopped
+
+    def pump(self, timeout=0):
+        while self.client.work(0) or self.server.work(0): pass
+        self.client.work(timeout)
+        self.server.work(timeout)
+        while self.client.work(0) or self.server.work(0): pass
+
+    def test_server_credentials(self,
+                                cert="server-certificate.pem",
+                                key="server-private-key.pem",
+                                password="server-password",
+                                exception=None):
+        self.server.certificate = _testpath(cert)
+        self.server.private_key = _testpath(key)
+        self.server.password = password
+        try:
+            self.server.start()
+            self.server.subscribe("amqps://~0.0.0.0:12345")
+            if exception is not None:
+                assert False, "expected failure did not occur"
+        except MessengerException, e:
+            if exception:
+                assert exception in str(e), str(e)
+            else:
+                raise e
+
+    def test_server_credentials_bad_cert(self):
+        self.test_server_credentials(cert="bad",
+                                     exception="invalid credentials")
+
+    def test_server_credentials_bad_key(self):
+        self.test_server_credentials(key="bad",
+                                     exception="invalid credentials")
+
+    def test_server_credentials_bad_password(self):
+        self.test_server_credentials(password="bad",
+                                     exception="invalid credentials")
+
+    def test_client_credentials(self,
+                                trusted="ca-certificate.pem",
+                                cert="client-certificate.pem",
+                                key="client-private-key.pem",
+                                password="client-password",
+                                altserv=False,
+                                fail=False):
+        if altserv:
+            self.server.certificate = _testpath("bad-server-certificate.pem")
+            self.server.private_key = _testpath("bad-server-private-key.pem")
+            self.server.password = "server-password"
+        else:
+            self.server.certificate = _testpath("client-certificate.pem")
+            self.server.private_key = _testpath("client-private-key.pem")
+            self.server.password = "client-password"
+        self.server.start()
+        self.server.subscribe("amqps://~0.0.0.0:12345")
+        self.server.incoming_window = 10
+
+        self.client.trusted_certificates = _testpath(trusted)
+        self.client.certificate = _testpath(cert)
+        self.client.private_key = _testpath(key)
+        self.client.password = password
+        self.client.outgoing_window = 10
+        self.client.start()
+
+        self.server.recv()
+
+        msg = Message()
+        msg.address = "amqps://127.0.0.1:12345"
+        msg.body = "Hello World!"
+        trk = self.client.put(msg)
+        self.client.send()
+
+        self.pump()
+
+        if fail:
+            assert self.server.incoming == 0, self.server.incoming
+            assert self.client.status(trk) == ABORTED, self.client.status(trk)
+        else:
+            assert self.server.incoming == 1, self.server.incoming
+
+            rmsg = Message()
+            self.server.get(rmsg)
+            assert rmsg.body == msg.body
+            self.server.accept()
+            self.pump()
+
+            assert self.client.status(trk) == ACCEPTED, self.client.status(trk)
+
+    def test_client_credentials_bad_cert(self):
+        self.test_client_credentials(cert="bad", fail=True)
+
+    def test_client_credentials_bad_trusted(self):
+        self.test_client_credentials(trusted="bad", fail=True)
+
+    def test_client_credentials_bad_password(self):
+        self.test_client_credentials(password="bad", fail=True)
+
+    def test_client_credentials_untrusted(self):
+        self.test_client_credentials(altserv=True, fail=True)

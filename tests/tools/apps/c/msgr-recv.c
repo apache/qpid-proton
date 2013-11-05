@@ -167,21 +167,25 @@ int main(int argc, char** argv)
     /* load the various command line options if they're set */
     if (opts.certificate) {
         rc = pn_messenger_set_certificate(messenger, opts.certificate);
+        check_messenger(messenger);
         check( rc == 0, "Failed to set certificate" );
     }
 
     if (opts.privatekey) {
         rc = pn_messenger_set_private_key(messenger, opts.privatekey);
+        check_messenger(messenger);
         check( rc == 0, "Failed to set private key" );
     }
 
     if (opts.password) {
         rc = pn_messenger_set_password(messenger, opts.password);
+        check_messenger(messenger);
         check( rc == 0, "Failed to set password" );
     }
 
     if (opts.ca_db) {
         rc = pn_messenger_set_trusted_certificates(messenger, opts.ca_db);
+        check_messenger(messenger);
         check( rc == 0, "Failed to set trusted CA database" );
     }
 
@@ -213,8 +217,8 @@ int main(int argc, char** argv)
 
         LOG("Calling pn_messenger_recv(%d)\n", opts.recv_count);
         rc = pn_messenger_recv(messenger, opts.recv_count);
-        check(rc == 0 || (opts.timeout == 0 && rc == PN_TIMEOUT), "pn_messenger_recv() failed");
         check_messenger(messenger);
+        check(rc == 0 || (opts.timeout == 0 && rc == PN_TIMEOUT), "pn_messenger_recv() failed");
 
         // start the timer only after receiving the first msg
         if (received == 0) statistics_start( &stats );
@@ -258,6 +262,7 @@ int main(int argc, char** argv)
     if (pn_messenger_outgoing(messenger) > 0) {
         LOG("Calling pn_messenger_send()\n");
         rc = pn_messenger_send(messenger, -1);
+        check_messenger(messenger);
         check(rc == 0, "pn_messenger_send() failed");
     }
 
