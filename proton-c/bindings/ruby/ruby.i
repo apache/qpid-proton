@@ -345,4 +345,24 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 %ignore pn_ssl_get_protocol_name;
 
 
+ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
+%ignore pn_data_decode;
+
+%rename(pn_data_encode) wrap_pn_data_encode;
+%inline %{
+  int wrap_pn_data_encode(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_data_encode(data, OUTPUT, *OUTPUT_SIZE);
+    if (sz >= 0) {
+      *OUTPUT_SIZE = sz;
+    } else {
+      *OUTPUT_SIZE = 0;
+    }
+    return sz;
+  }
+%}
+%ignore pn_data_encode;
+
+int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
+%ignore pn_data_format;
+
 %include "proton/cproton.i"
