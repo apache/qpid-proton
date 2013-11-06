@@ -1,5 +1,7 @@
 Version 0.6:
 	* PROTON-427: Removed the flag argument from Messenger.settle.
+	* PROTON-448: Ruby bindings need to have their set calls updated to
+                      properly map values to pn_data_t*
 
 version 0.5:
 	* Duck typed the Array class to work with Qpid::Proton::Data.
