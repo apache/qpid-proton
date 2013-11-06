@@ -230,6 +230,12 @@ public class JNIDelivery implements Delivery
     }
 
     @Override
+    public void clear()
+    {
+        Proton.pn_delivery_clear(_impl);
+    }
+
+    @Override
     @ProtonCEquivalent("pn_delivery_partial")
     public boolean isPartial()
     {
