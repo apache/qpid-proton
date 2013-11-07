@@ -169,6 +169,7 @@ void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 
 void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 {
+  link->session = NULL;
   pn_list_remove(ssn->links, link);
 }
 

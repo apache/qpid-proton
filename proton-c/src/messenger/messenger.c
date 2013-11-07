@@ -664,29 +664,6 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   return 0;
 }
 
-void pni_messenger_reclaim_link(pn_messenger_t *messenger, pn_link_t *link)
-{
-  if (pn_link_is_receiver(link) && pn_link_credit(link) > 0) {
-    int credit = pn_link_credit(link);
-    messenger->credit += credit;
-    messenger->distributed -= credit;
-  }
-
-  pn_delivery_t *d = pn_unsettled_head(link);
-  while (d) {
-    pni_entry_t *e = (pni_entry_t *) pn_delivery_get_context(d);
-    if (e) {
-      pni_entry_set_delivery(e, NULL);
-      if (pn_delivery_buffered(d)) {
-        pni_entry_set_status(e, PN_STATUS_ABORTED);
-      }
-    }
-    d = pn_unsettled_next(d);
-  }
-
-  link_ctx_release(messenger, link);
-}
-
 int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender);
 
 void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn_connector_t *ctor)
@@ -756,10 +733,11 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
 
   link = pn_link_head(conn, PN_REMOTE_CLOSED);
   while (link) {
-    if (PN_LOCAL_ACTIVE & pn_link_state(link)) {
+    if (PN_LOCAL_ACTIVE | pn_link_state(link)) {
       pn_condition_report("LINK", pn_link_remote_condition(link));
       pn_link_close(link);
-      pni_messenger_reclaim_link(messenger, link);
+    } else {
+      link_ctx_release( messenger, link );
       pn_link_free(link);
     }
     link = pn_link_next(link, PN_REMOTE_CLOSED);
@@ -796,13 +774,33 @@ void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 
   pn_link_t *link = pn_link_head(conn, 0);
   while (link) {
-    pni_messenger_reclaim_link(messenger, link);
+    if (pn_link_is_receiver(link) && pn_link_credit(link) > 0) {
+      int credit = pn_link_credit(link);
+      messenger->credit += credit;
+      messenger->distributed -= credit;
+    }
+
+    pn_delivery_t *d = pn_unsettled_head(link);
+    while (d) {
+      pni_entry_t *e = (pni_entry_t *) pn_delivery_get_context(d);
+      if (e) {
+        pni_entry_set_delivery(e, NULL);
+        if (pn_delivery_buffered(d)) {
+          pni_entry_set_status(e, PN_STATUS_ABORTED);
+        }
+      }
+      d = pn_unsettled_next(d);
+    }
+
+    link_ctx_release(messenger, link);
+
     link = pn_link_next(link, 0);
   }
 
   pn_connection_ctx_free(conn);
   pn_connection_free(conn);
 }
+
 
 pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
                                          pn_connector_t *connector,
