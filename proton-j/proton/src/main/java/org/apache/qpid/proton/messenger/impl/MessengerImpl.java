@@ -54,6 +54,8 @@ import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
 import org.apache.qpid.proton.amqp.messaging.Source;
 import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 
 import org.apache.qpid.proton.amqp.Binary;
 
@@ -70,15 +72,17 @@ public class MessengerImpl implements Messenger
     private long _timeout = -1;
     private boolean _blocking = true;
     private long _nextTag = 1;
-    private byte[] _buffer = new byte[5*1024];
     private Driver _driver;
     private int _receiving = 0;
     private static final int _creditBatch = 1024;
     private int _credit;
     private int _distributed;
-    private TrackerQueue _incoming = new TrackerQueue();
-    private TrackerQueue _outgoing = new TrackerQueue();
+    private TrackerImpl _incomingTracker;
+    private TrackerImpl _outgoingTracker;
+    private Store _incomingStore = new Store();
+    private Store _outgoingStore = new Store();
     private List<Connector> _awaitingDestruction = new ArrayList<Connector>();
+    private int _sendThreshold;
 
     private Transform _routes = new Transform();
     private Transform _rewrites = new Transform();
@@ -240,41 +244,67 @@ public class MessengerImpl implements Messenger
             _logger.fine(this + " about to put message: " + m);
         }
 
-        String addr = routeAddress(m.getAddress());
+        StoreEntry entry = _outgoingStore.put( m.getAddress() );
+        _outgoingTracker = new TrackerImpl(TrackerImpl.Type.OUTGOING,
+                                           _outgoingStore.trackEntry(entry));
+
+        String routedAddress = routeAddress(m.getAddress());
+        Address address = new Address(routedAddress);
+        if (address.getHost() == null)
+        {
+            throw new MessengerException("unable to send to address: " + routedAddress);
+        }
+
         rewriteMessage(m);
 
         try {
-            Address address = new Address(addr);
-            if (address.getHost() == null)
-            {
-                throw new MessengerException("unable to send to address: " + addr);
-            }
-            String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
-            int port = Integer.valueOf(ports);
-            Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getName()));
-
             adjustReplyTo(m);
 
-            byte[] tag = String.valueOf(_nextTag++).getBytes();
-            Delivery delivery = sender.delivery(tag);
             int encoded;
+            byte[] buffer = new byte[5*1024];
             while (true)
             {
                 try
                 {
-                    encoded = m.encode(_buffer, 0, _buffer.length);
+                    encoded = m.encode(buffer, 0, buffer.length);
                     break;
                 } catch (java.nio.BufferOverflowException e) {
-                    _buffer = new byte[_buffer.length*2];
+                    buffer = new byte[buffer.length*2];
                 }
             }
-            sender.send(_buffer, 0, encoded);
-            _outgoing.add(delivery);
-            sender.advance();
+            entry.setEncodedMsg( buffer, encoded );
         }
         finally
         {
             restoreMessage(m);
+        }
+
+        String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
+        int port = Integer.valueOf(ports);
+        Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getName()));
+        pumpOut(m.getAddress(), sender);
+    }
+
+    private int pumpOut( String address, Sender sender )
+    {
+        StoreEntry entry = _outgoingStore.get( address );
+        if (entry == null) {
+            return 0;
+        }
+
+        byte[] tag = String.valueOf(_nextTag++).getBytes();
+        Delivery delivery = sender.delivery(tag);
+        entry.setDelivery( delivery );
+        _logger.log(Level.FINE, "Sending on delivery: " + delivery);
+        int n = sender.send( entry.getEncodedMsg(), 0, entry.getEncodedLength());
+        if (n < 0) {
+            _outgoingStore.freeEntry( entry );
+            _logger.log(Level.WARNING, "Send error: " + n);
+            return n;
+        } else {
+            sender.advance();
+            _outgoingStore.freeEntry( entry );
+            return 0;
         }
     }
 
@@ -293,6 +323,16 @@ public class MessengerImpl implements Messenger
         {
             _logger.fine(this + " about to send");
         }
+
+        if (n == -1)
+            _sendThreshold = 0;
+        else
+        {
+            _sendThreshold = outgoing() - n;
+            if (_sendThreshold < 0)
+                _sendThreshold = 0;
+        }
+
         waitUntil(_sentSettled);
     }
 
@@ -325,35 +365,43 @@ public class MessengerImpl implements Messenger
 
     public Message get()
     {
-        if (_driver != null) {
-            for (Connector<?> c : _driver.connectors())
-            {
-                Connection connection = c.getConnection();
-                _logger.log(Level.FINE, "Attempting to get message from " + connection);
-                Delivery delivery = connection.getWorkHead();
-                while (delivery != null)
-                {
-                    if (delivery.isReadable() && !delivery.isPartial())
-                    {
-                        _logger.log(Level.FINE, "Readable delivery found: " + delivery);
-                        int size = read((Receiver) delivery.getLink());
-                        Message message = Proton.message();
-                        message.decode(_buffer, 0, size);
-                        delivery.getLink().advance();
-                        _incoming.add(delivery);
-                        _distributed--;
-                        return message;
-                    }
-                    else
-                    {
-                        _logger.log(Level.FINE, "Delivery not readable: " + delivery);
-                        delivery = delivery.getWorkNext();
-                    }
-                }
-            }
+        StoreEntry entry = _incomingStore.get( null );
+        if (entry != null)
+        {
+            Message message = Proton.message();
+            message.decode( entry.getEncodedMsg(), 0, entry.getEncodedLength() );
+
+            _incomingTracker = new TrackerImpl(TrackerImpl.Type.INCOMING,
+                                               _incomingStore.trackEntry(entry));
+
+            _incomingStore.freeEntry( entry );
+            _distributed--;
+            return message;
         }
 
         return null;
+    }
+
+    private int pumpIn(String address, Receiver receiver)
+    {
+        Delivery delivery = receiver.current();
+        if (delivery.isReadable() && !delivery.isPartial())
+        {
+            StoreEntry entry = _incomingStore.put( address );
+            entry.setDelivery( delivery );
+
+            _logger.log(Level.FINE, "Readable delivery found: " + delivery);
+
+            int size = delivery.pending();
+            byte[] buffer = new byte[size];
+            int read = receiver.recv( buffer, 0, buffer.length );
+            if (read != size) {
+                throw new IllegalStateException();
+            }
+            entry.setEncodedMsg( buffer, size );
+            receiver.advance();
+        }
+        return 0;
     }
 
     public void subscribe(String source) throws MessengerException
@@ -361,7 +409,6 @@ public class MessengerImpl implements Messenger
         if (_driver == null) {
             throw new IllegalStateException("messenger is stopped");
         }
-
 
         String routed = routeAddress(source);
         Address address = new Address(routed);
@@ -390,68 +437,78 @@ public class MessengerImpl implements Messenger
 
     public int outgoing()
     {
-        return queued(true);
+        return _outgoingStore.size() + queued(true);
     }
 
     public int incoming()
     {
-        return queued(false);
+        return _incomingStore.size() + queued(false);
     }
-
 
     public int getIncomingWindow()
     {
-        return _incoming.getWindow();
+        return _incomingStore.getWindow();
     }
+
     public void setIncomingWindow(int window)
     {
-        _incoming.setWindow(window);
+        _incomingStore.setWindow(window);
     }
 
     public int getOutgoingWindow()
     {
-        return _outgoing.getWindow();
+        return _outgoingStore.getWindow();
     }
+
     public void setOutgoingWindow(int window)
     {
-        _outgoing.setWindow(window);
+        _outgoingStore.setWindow(window);
     }
 
     public Tracker incomingTracker()
     {
-        return new TrackerImpl(false, _incoming.getHighWaterMark() - 1);
+        return _incomingTracker;
     }
     public Tracker outgoingTracker()
     {
-        return new TrackerImpl(true, _outgoing.getHighWaterMark() - 1);
+        return _outgoingTracker;
     }
 
-    private TrackerQueue getTrackerQueue(Tracker tracker)
+    private Store getTrackerStore(Tracker tracker)
     {
-        return TrackerQueue.isOutgoing(tracker) ? _outgoing : _incoming;
+        return ((TrackerImpl)tracker).isOutgoing() ? _outgoingStore : _incomingStore;
     }
 
     @Override
     public void reject(Tracker tracker, int flags)
     {
-        getTrackerQueue(tracker).reject(tracker, flags);
+        int id = ((TrackerImpl)tracker).getSequence();
+        getTrackerStore(tracker).update(id, Status.REJECTED, flags, false, false);
     }
 
     @Override
     public void accept(Tracker tracker, int flags)
     {
-        getTrackerQueue(tracker).accept(tracker, flags);
+        int id = ((TrackerImpl)tracker).getSequence();
+        getTrackerStore(tracker).update(id, Status.ACCEPTED, flags, false, false);
     }
 
     @Override
     public void settle(Tracker tracker, int flags)
     {
-        getTrackerQueue(tracker).settle(tracker, flags);
+        int id = ((TrackerImpl)tracker).getSequence();
+        getTrackerStore(tracker).update(id, Status.UNKNOWN, flags, true, true);
     }
 
     public Status getStatus(Tracker tracker)
     {
-        return getTrackerQueue(tracker).getStatus(tracker);
+        int id = ((TrackerImpl)tracker).getSequence();
+        StoreEntry e = getTrackerStore(tracker).getEntry(id);
+        if (e != null)
+        {
+            return e.getStatus();
+        }
+        return Status.UNKNOWN;
     }
 
     @Override
@@ -487,28 +544,6 @@ public class MessengerImpl implements Messenger
             }
         }
         return count;
-    }
-
-    private int read(Receiver receiver)
-    {
-        Delivery dlv = receiver.current();
-
-        if (dlv.isPartial()) {
-            throw new IllegalStateException();
-        }
-
-        int size = dlv.pending();
-
-        while (_buffer.length < size) {
-            _buffer = new byte[_buffer.length * 2];
-        }
-
-        int read = receiver.recv(_buffer, 0, _buffer.length);
-        if (read != size) {
-            throw new IllegalStateException();
-        }
-
-        return size;
     }
 
     private void bringDestruction()
@@ -606,15 +641,26 @@ public class MessengerImpl implements Messenger
         Delivery delivery = connection.getWorkHead();
         while (delivery != null)
         {
-            if (delivery.getLink() instanceof Sender && delivery.isUpdated())
+            Link link = delivery.getLink();
+            if (delivery.isUpdated())
             {
-                delivery.disposition(delivery.getRemoteState());
+                if (link instanceof Sender)
+                {
+                    delivery.disposition(delivery.getRemoteState());
+                }
+                StoreEntry e = (StoreEntry) delivery.getContext();
+                if (e != null) e.updated();
             }
+
+            if (delivery.isReadable())
+            {
+                pumpIn( link.getSource().getAddress(), (Receiver)link );
+            }
+
             Delivery next = delivery.getWorkNext();
             delivery.clear();
             delivery = next;
         }
-        _outgoing.slide();
 
         for (Session session : new Sessions(connection, UNINIT, ANY))
         {
@@ -631,6 +677,14 @@ public class MessengerImpl implements Messenger
         }
 
         distributeCredit();
+
+        for (Link link : new Links(connection, ACTIVE, ACTIVE))
+        {
+            if (link instanceof Sender)
+            {
+                pumpOut(link.getTarget().getAddress(), (Sender)link);
+            }
+        }
 
         for (Link link : new Links(connection, ACTIVE, CLOSED))
         {
@@ -792,56 +846,50 @@ public class MessengerImpl implements Messenger
         public boolean test()
         {
             //are all sent messages settled?
+            int total = _outgoingStore.size();
+
             for (Connector<?> c : _driver.connectors())
             {
+                // TBD
+                // check if transport is done generating output
+                // pn_transport_t *transport = pn_connector_transport(ctor);
+                // if (transport) {
+                //    if (!pn_transport_quiesced(transport)) {
+                //        pn_connector_process(ctor);
+                //        return false;
+                //    }
+                // }
+
                 Connection connection = c.getConnection();
                 for (Link link : new Links(connection, ACTIVE, ANY))
                 {
                     if (link instanceof Sender)
                     {
-                        if (link.getQueued() > 0)
-                        {
-                            return false;
-                        }
-                        //TODO: Sender.unsettled() not yet implemented, when it is change to the following
-                        //if (checkSettled(link.unsettled())
-                        //{
-                        //    return false;
-                        //}
+                        total += link.getQueued();
                     }
                 }
-            }
-            //TODO: Sender.unsettled() not yet implemented, when it is change to the following
-            //return true;
-            return checkSettled(_outgoing.deliveries());
-        }
 
-        boolean checkSettled(Iterator<Delivery> unsettled)
-        {
-            if (unsettled != null)
-            {
-                while (unsettled.hasNext())
+                // TBD: there is no per-link unsettled
+                // deliveries iterator, so for now get the
+                // deliveries by walking the outgoing trackers
+                Iterator<StoreEntry> entries = _outgoingStore.trackedEntries();
+                while (entries.hasNext() && total <= _sendThreshold)
                 {
-                    Delivery d = unsettled.next();
-                    if (d == null)
+                    StoreEntry e = (StoreEntry) entries.next();
+                    if (e != null )
                     {
-                        break;
-                    }
-                    if (d.getRemoteState() != null || d.remotelySettled())
-                    {
-                        d.settle();
-                    }
-                    else if (d.getLink().getSession().getConnection().getRemoteState() == EndpointState.CLOSED)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        return false;
+                        Delivery d = e.getDelivery();
+                        if (d != null)
+                        {
+                            if (d.getRemoteState() == null && !d.remotelySettled())
+                            {
+                                total++;
+                            }
+                        }
                     }
                 }
             }
-            return true;
+            return total <= _sendThreshold;
         }
     }
 
@@ -849,7 +897,8 @@ public class MessengerImpl implements Messenger
     {
         public boolean test()
         {
-            //do we have at least one message?
+            //do we have at least one pending message?
+            if (_incomingStore.size() > 0) return true;
             for (Connector<?> c : _driver.connectors())
             {
                 Connection connection = c.getConnection();
@@ -866,6 +915,10 @@ public class MessengerImpl implements Messenger
                     }
                 }
             }
+            // if no connections, or not listening, exit as there won't ever be a message
+            if (!_driver.listeners().iterator().hasNext() && !_driver.connectors().iterator().hasNext())
+                return true;
+
             return false;
         }
     }
@@ -939,6 +992,16 @@ public class MessengerImpl implements Messenger
             Target target = new Target();
             target.setAddress(_path);
             sender.setTarget(target);
+            // the C implemenation does this:
+            Source source = new Source();
+            source.setAddress(_path);
+            sender.setSource(source);
+            if (getOutgoingWindow() > 0)
+            {
+                // use explicit settlement via dispositions (not pre-settled)
+                sender.setSenderSettleMode(SenderSettleMode.UNSETTLED);
+                sender.setReceiverSettleMode(ReceiverSettleMode.SECOND);  // desired
+            }
             return sender;
         }
     }
@@ -970,6 +1033,16 @@ public class MessengerImpl implements Messenger
             Source source = new Source();
             source.setAddress(_path);
             receiver.setSource(source);
+            // the C implemenation does this:
+            Target target = new Target();
+            target.setAddress(_path);
+            receiver.setTarget(target);
+            if (getIncomingWindow() > 0)
+            {
+                // use explicit settlement via dispositions (not pre-settled)
+                receiver.setSenderSettleMode(SenderSettleMode.UNSETTLED);  // desired
+                receiver.setReceiverSettleMode(ReceiverSettleMode.SECOND);
+            }
             return receiver;
         }
     }

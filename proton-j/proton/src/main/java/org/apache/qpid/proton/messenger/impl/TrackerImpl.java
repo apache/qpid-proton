@@ -24,18 +24,23 @@ import org.apache.qpid.proton.messenger.Tracker;
 
 class TrackerImpl implements Tracker
 {
-    private boolean _outgoing;
+    public enum Type {
+        OUTGOING,
+        INCOMING
+    }
+
+    private Type _type;
     private int _sequence;
 
-    TrackerImpl(boolean outgoing, int sequence)
+    TrackerImpl(Type type, int sequence)
     {
-        _outgoing = outgoing;
+        _type = type;
         _sequence = sequence;
     }
 
     boolean isOutgoing()
     {
-        return _outgoing;
+        return _type == Type.OUTGOING;
     }
 
     int getSequence()
@@ -45,6 +50,6 @@ class TrackerImpl implements Tracker
 
     public String toString()
     {
-        return (_outgoing ? "O:" : "I:") + Integer.toString(_sequence);
+        return (isOutgoing() ? "O:" : "I:") + Integer.toString(_sequence);
     }
 }

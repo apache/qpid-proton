@@ -25,5 +25,6 @@ public enum Status
     UNKNOWN,
     PENDING,
     ACCEPTED,
-    REJECTED
+    REJECTED,
+    MODIFIED
 }

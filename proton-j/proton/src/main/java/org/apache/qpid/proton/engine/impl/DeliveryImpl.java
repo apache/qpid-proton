@@ -169,7 +169,12 @@ public class DeliveryImpl implements Delivery
 
     public DeliveryImpl getWorkNext()
     {
-        return _workNext;
+        if (_workNext != null)
+            return _workNext;
+        // the following hack is brought to you by the C implementation!
+        if (!_work)  // not on the work list
+            return _link.getConnectionImpl().getWorkHead();
+        return null;
     }
 
     DeliveryImpl getWorkPrev()

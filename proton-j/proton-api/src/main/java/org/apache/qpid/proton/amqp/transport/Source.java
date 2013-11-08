@@ -22,4 +22,5 @@ package org.apache.qpid.proton.amqp.transport;
 
 public interface Source
 {
+    public String getAddress();
 }

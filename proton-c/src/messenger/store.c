@@ -220,6 +220,7 @@ pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
   entry->store_prev = NULL;
   entry->delivery = NULL;
   entry->bytes = pn_buffer(64);
+  entry->status = PN_STATUS_UNKNOWN;
   LL_ADD(stream, stream, entry);
   LL_ADD(store, store, entry);
   store->size++;

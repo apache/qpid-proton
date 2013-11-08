@@ -50,5 +50,10 @@ public final class Coordinator
                "capabilities=" + (_capabilities == null ? null : Arrays.asList(_capabilities)) +
                '}';
     }
+
+    public String getAddress()
+    {
+        return null;
+    }
 }
-  
+
