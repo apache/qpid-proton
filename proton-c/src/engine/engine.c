@@ -169,7 +169,6 @@ void pn_add_link(pn_session_t *ssn, pn_link_t *link)
 
 void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 {
-  link->session = NULL;
   pn_list_remove(ssn->links, link);
 }
 
@@ -194,8 +193,11 @@ void pn_terminus_free(pn_terminus_t *terminus)
 
 void pn_link_free(pn_link_t *link)
 {
-  if (link && link->session)
+  if (link && link->session) {
     pn_remove_link(link->session, link);
+    pn_endpoint_t *endpoint = (pn_endpoint_t *) link;
+    LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
+  }
 }
 
 void *pn_link_get_context(pn_link_t *link)
