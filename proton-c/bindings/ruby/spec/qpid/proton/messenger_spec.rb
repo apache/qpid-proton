@@ -227,7 +227,7 @@ module Qpid
         end
 
         it "can subscribe to an address" do
-          @messenger.subscribe("amqp://~0.0.0.0").should_not be_nil
+          @messenger.subscribe("amqp://~0.0.0.0:#{5700+rand(1024)}").should_not be_nil
         end
 
         it "returns a tracker's status"
@@ -236,8 +236,9 @@ module Qpid
 
           before (:each) do
             # create a receiver
+            @port = 5700 + rand(1024)
             @receiver = Qpid::Proton::Messenger.new("receiver")
-            @receiver.subscribe("amqp://~0.0.0.0")
+            @receiver.subscribe("amqp://~0.0.0.0:#{@port}")
             @messenger.timeout = 0
             @receiver.timeout = 0
             @receiver.start
@@ -247,7 +248,7 @@ module Qpid
             end
 
             @msg = Qpid::Proton::Message.new
-            @msg.address = "amqp://0.0.0.0"
+            @msg.address = "amqp://0.0.0.0:#{@port}"
             @msg.content = "Test sent #{Time.new}"
           end
 
