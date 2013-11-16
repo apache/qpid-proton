@@ -22,7 +22,8 @@ from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
 import sys, os
-from proton import Driver, Connection, Transport, SASL, Endpoint, Delivery
+from proton import Driver, Connection, Transport, SASL, Endpoint, Delivery, \
+    SSLDomain, SSLUnavailable
 
 
 def free_tcp_ports(count=1):
@@ -81,6 +82,16 @@ def pump(transport1, transport2, buffer_size=1024):
 
     if not out1 and not out2: break
     i = i + 1
+
+def isSSLPresent():
+    """ True if a suitable SSL library is available.
+    """
+    try:
+        xxx = SSLDomain(SSLDomain.MODE_CLIENT)
+        return True
+    except SSLUnavailable, e:
+        # SSL libraries not installed
+        return False
 
 class Test:
 

@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.jni;
 import static org.apache.qpid.proton.jni.ExceptionHelper.checkProtonCReturnValue;
 
 import org.apache.qpid.proton.ProtonCEquivalent;
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.jni.Proton;
 import org.apache.qpid.proton.jni.SWIGTYPE_p_pn_ssl_domain_t;
@@ -44,6 +45,8 @@ public class JNISslDomain implements SslDomain
     public void init(Mode mode)
     {
         _impl = Proton.pn_ssl_domain(convertMode(mode));
+        if (_impl == null)
+            throw new ProtonUnsupportedOperationException("No SSL libraries available.");
     }
 
     private pn_ssl_mode_t convertMode(Mode mode)

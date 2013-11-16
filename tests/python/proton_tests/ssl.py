@@ -36,11 +36,10 @@ class SslTest(common.Test):
         self._testpath = _testpath
 
     def setup(self):
-        try:
-            self.server_domain = SSLDomain(SSLDomain.MODE_SERVER)
-            self.client_domain = SSLDomain(SSLDomain.MODE_CLIENT)
-        except SSLUnavailable, e:
-            raise Skipped(e)
+        if not common.isSSLPresent():
+            raise Skipped("No SSL libraries found.")
+        self.server_domain = SSLDomain(SSLDomain.MODE_SERVER)
+        self.client_domain = SSLDomain(SSLDomain.MODE_CLIENT)
 
     def teardown(self):
         self.server_domain = None
@@ -50,16 +49,16 @@ class SslTest(common.Test):
         """ Represents a single SSL connection.
         """
         def __init__(self, domain=None, session_details=None):
-            try:
-                self.ssl = None
-                self.domain = domain
-                self.transport = Transport()
-                self.connection = Connection()
-                self.transport.bind(self.connection)
-                if domain:
-                    self.ssl = SSL( self.transport, self.domain, session_details )
-            except SSLUnavailable, e:
-                raise Skipped(e)
+            if not common.isSSLPresent():
+                raise Skipped("No SSL libraries found.")
+
+            self.ssl = None
+            self.domain = domain
+            self.transport = Transport()
+            self.connection = Connection()
+            self.transport.bind(self.connection)
+            if domain:
+                self.ssl = SSL( self.transport, self.domain, session_details )
 
     def _pump(self, ssl_client, ssl_server, buffer_size=1024):
         pump(ssl_client.transport, ssl_server.transport, buffer_size)
@@ -775,6 +774,8 @@ class SslTest(common.Test):
 class MessengerSSLTests(common.Test):
 
     def setup(self):
+        if not common.isSSLPresent():
+            raise Skipped("No SSL libraries found.")
         self.server = Messenger()
         self.client = Messenger()
         self.server.blocking = False

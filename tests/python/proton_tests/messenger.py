@@ -414,10 +414,14 @@ class MessengerTest(Test):
     self.client.start()
 
   def testRoute(self):
-    self.server.subscribe("amqps://~0.0.0.0:12346")
+    if not common.isSSLPresent():
+        domain = "amqp"
+    else:
+        domain = "amqps"
+    self.server.subscribe(domain + "://~0.0.0.0:12346")
     self.start()
     self.client.route("route1", "amqp://0.0.0.0:12345")
-    self.client.route("route2", "amqps://0.0.0.0:12346")
+    self.client.route("route2", domain + "://0.0.0.0:12346")
 
     msg = Message()
     msg.address = "route1"

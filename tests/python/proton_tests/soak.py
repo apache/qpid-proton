@@ -21,7 +21,8 @@ import sys
 from common import Test, Skipped, free_tcp_ports, \
     MessengerReceiverC, MessengerSenderC, \
     MessengerReceiverValgrind, MessengerSenderValgrind, \
-    MessengerReceiverPython, MessengerSenderPython
+    MessengerReceiverPython, MessengerSenderPython, \
+    isSSLPresent
 from proton import *
 
 #
@@ -108,6 +109,10 @@ class AppTests(Test):
 class MessengerTests(AppTests):
 
     _timeout = 60
+
+    def _ssl_check(self):
+        if not isSSLPresent():
+            raise Skipped("No SSL libraries found.")
 
     def __init__(self, *args):
         AppTests.__init__(self, *args)
@@ -269,6 +274,7 @@ class MessengerTests(AppTests):
         self._do_oneway_test(MessengerReceiverC(), MessengerSenderC())
 
     def test_oneway_C_SSL(self):
+        self._ssl_check()
         self._do_oneway_test(MessengerReceiverC(), MessengerSenderC(), "amqps")
 
     def test_oneway_valgrind(self):
@@ -288,6 +294,7 @@ class MessengerTests(AppTests):
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC())
 
     def test_echo_C_SSL(self):
+        self._ssl_check()
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC(), "amqps")
 
     def test_echo_valgrind(self):
@@ -307,6 +314,7 @@ class MessengerTests(AppTests):
         self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC())
 
     def test_relay_C_SSL(self):
+        self._ssl_check()
         self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC(), "amqps")
 
     def test_relay_valgrind(self):
@@ -323,6 +331,7 @@ class MessengerTests(AppTests):
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC )
 
     def test_star_topology_C_SSL(self):
+        self._ssl_check()
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC, "amqps" )
 
     def test_star_topology_valgrind(self):
