@@ -245,6 +245,22 @@ module Qpid
         Cproton.pn_messenger_receiving(@impl)
       end
 
+      # Attempts interrupting of the messenger thread.
+      #
+      # The Messenger interface is single-threaded, and this is the only
+      # function intended to be called from outside of is thread.
+      #
+      # Call this from a non-Messenger thread to interrupt it while it
+      # is blocking. This will cause a ::InterruptError to be raised.
+      #
+      # If there is no currently blocking call, then the next blocking
+      # call will be affected, even if it is within the same thread that
+      # originated the interrupt.
+      #
+      def interrupt
+        check_for_error(Cproton.pn_messenger_interrupt(@impl))
+      end
+
       def work(timeout=-1)
         err = Cproton.pn_messenger_work(@impl, timeout)
         if (err == Cproton::PN_TIMEOUT) then

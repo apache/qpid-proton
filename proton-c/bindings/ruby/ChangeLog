@@ -1,3 +1,6 @@
+Version 0.7:
+	* PROTON-452: Exposed Messenger interrupt method.
+
 Version 0.6:
 	* PROTON-427: Removed the flag argument from Messenger.settle.
 

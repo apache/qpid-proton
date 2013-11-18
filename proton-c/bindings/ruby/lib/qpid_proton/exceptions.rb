@@ -31,6 +31,7 @@ module Qpid
       STATE = Cproton::PN_STATE_ERR
       ARGUMENT = Cproton::PN_ARG_ERR
       TIMEOUT = Cproton::PN_TIMEOUT
+      INTERRUPTED = Cproton::PN_INTR
       INPROGRESS = Cproton::PN_INPROGRESS
 
     end
@@ -63,6 +64,14 @@ module Qpid
     # Represents a timeout during messaging.
     #
     class TimeoutError < ProtonError
+    end
+
+    # Represents an interrupting during a blocking I/O operation.
+    #
+    class InterruptedError < ProtonError
+    end
+
+    class InProgressError < ProtonError
     end
 
   end

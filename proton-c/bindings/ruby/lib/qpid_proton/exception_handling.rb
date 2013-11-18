@@ -57,6 +57,12 @@ module Qpid
         when Qpid::Proton::Error::INPROGRESS
           return
 
+        when Qpid::Proton::Error::INTERRUPTED
+          raise Qpid::Proton::InterruptedError.new(self.error)
+
+        when Qpid::Proton::Error::INPROGRESS
+          raise Qpid::Proton::InProgressError.new(self.error)
+
         else
 
           raise ::ArgumentError.new("Unknown error code: #{code}")
