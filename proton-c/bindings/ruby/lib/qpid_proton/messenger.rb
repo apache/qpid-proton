@@ -56,6 +56,23 @@ module Qpid
         Cproton.pn_messenger_name(@impl)
       end
 
+      # This property contains the password for the Messenger.private_key
+      # file, or +nil+ if the file is not encrypted.
+      #
+      # ==== Arguments
+      #
+      # * password - the password
+      #
+      def password=(password)
+        check_for_error(Cproton.pn_messenger_set_password(@impl, password))
+      end
+
+      # Returns the password property for the Messenger.private_key file.
+      #
+      def password
+        Cproton.pn_messenger_get_password(@impl)
+      end
+
       # Sets the timeout period, in milliseconds.
       #
       # A negative timeout period implies an infinite timeout.
