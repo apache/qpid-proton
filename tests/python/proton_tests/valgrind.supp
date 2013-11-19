@@ -75,3 +75,11 @@
    fun:SSL_library_init
 }
 
+{
+   Since we can never safely uninitialize SSL, allow this
+   Memcheck:Leak
+   fun:malloc
+   obj:*
+   fun:CRYPTO_malloc
+}
+
