@@ -343,6 +343,28 @@ module Qpid
         check_for_error(Cproton.pn_messenger_route(@impl, pattern, address))
       end
 
+      # Similar to #route, except that the destination of
+      # the Message is determined before the message address is rewritten.
+      #
+      # The outgoing address is only rewritten after routing has been
+      # finalized.  If a message has an outgoing address of
+      # "amqp://0.0.0.0:5678", and a rewriting rule that changes its
+      # outgoing address to "foo", it will still arrive at the peer that
+      # is listening on "amqp://0.0.0.0:5678", but when it arrives there,
+      # the receiver will see its outgoing address as "foo".
+      #
+      # The default rewrite rule removes username and password from addresses
+      # before they are transmitted.
+      #
+      # ==== Arguments
+      #
+      # * pattern - the outgoing address
+      # * address - the target address
+      #
+      def rewrite(pattern, address)
+        check_for_error(Cproton.pn_messenger_rewrite(@impl, pattern, address))
+      end
+
       # Returns a +Tracker+ for the message most recently sent via the put
       # method.
       #
