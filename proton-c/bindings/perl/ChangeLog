@@ -1,3 +1,6 @@
+version 0.7:
+	* PROTON-457: Add interrupt method to Messenger.
+
 version 0.6:
 	* qpid::proton::Messenger returns incoming trackers on get.
 	* qpid::proton::Messenger returns outgoing tracker on put.

@@ -193,6 +193,12 @@ sub receive {
     cproton_perl::pn_messenger_recv($self->{_impl}, $n);
 }
 
+sub interrupt {
+    my ($self) = @_;
+
+    return cproton_perl::pn_messenger_interrupt($self->{_impl});
+}
+
 sub outgoing {
     my ($self) = @_;
     return cproton_perl::pn_messenger_outgoing($self->{_impl});
