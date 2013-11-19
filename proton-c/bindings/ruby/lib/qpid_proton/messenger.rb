@@ -285,6 +285,64 @@ module Qpid
         Cproton.pn_messenger_incoming(@impl)
       end
 
+      # Adds a routing rule to the Messenger's internal routing table.
+      #
+      # The route procedure may be used to influence how a Messenger will
+      # internally treat a given address or class of addresses. Every call
+      # to the route procedure will result in Messenger appending a routing
+      # rule to its internal routing table.
+      #
+      # Whenever a Message is presented to a Messenger for delivery, it
+      # will match the address of this message against the set of routing
+      # rules in order. The first rule to match will be triggered, and
+      # instead of routing based on the address presented in the message,
+      # the Messenger will route based on the address supplied in the rule.
+      #
+      # The pattern matching syntax supports two types of matches, a '%'
+      # will match any character except a '/', and a '*' will match any
+      # character including a '/'.
+      #
+      # A routing address is specified as a normal AMQP address, however it
+      # may additionally use substitution variables from the pattern match
+      # that triggered the rule.
+      #
+      # ==== Arguments
+      #
+      # * pattern - the address pattern
+      # * address - the target address
+      #
+      # ==== Examples
+      #
+      #   # route messages sent to foo to the destionaty amqp://foo.com
+      #   messenger.route("foo", "amqp://foo.com")
+      #
+      #   # any message to foobar will be routed to amqp://foo.com/bar
+      #   messenger.route("foobar", "amqp://foo.com/bar")
+      #
+      #   # any message to bar/<path> will be routed to the same path within
+      #   # the amqp://bar.com domain
+      #   messenger.route("bar/*", "amqp://bar.com/$1")
+      #
+      #   # route all Message objects over TLS
+      #   messenger.route("amqp:*", "amqps:$1")
+      #
+      #   # supply credentials for foo
+      #   messenger.route("amqp://foo.com/*", "amqp://user:password@foo.com/$1")
+      #
+      #   # supply credentials for all domains
+      #   messenger.route("amqp://*", "amqp://user:password@$1")
+      #
+      #   # route all addresses through a single proxy while preserving the
+      #   # original destination
+      #   messenger.route("amqp://%$/*", "amqp://user:password@proxy/$1/$2")
+      #
+      #   # route any address through a single broker
+      #   messenger.route("*", "amqp://user:password@broker/$1")
+      #
+      def route(pattern, address)
+        check_for_error(Cproton.pn_messenger_route(@impl, pattern, address))
+      end
+
       # Returns a +Tracker+ for the message most recently sent via the put
       # method.
       #
