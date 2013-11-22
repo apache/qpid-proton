@@ -1,0 +1,75 @@
+Qpid Proton JavaScript Language Bindings
+========================================
+
+The code contained herein provides JavaScript language bindings for working
+with the Qpid Proton AMQP 1.0 protocol engine and messenger library.
+
+Creating The Bindings
+=====================
+
+To generate the JavaScript bindings we actually cross-compile from proton-c
+
+You will need to have emscripten (https://github.com/kripken/emscripten) installed
+to do the cross-compilation and in addition you will require a few things that
+emscripten itself depends upon https://github.com/kripken/emscripten/wiki/Emscripten-SDK
+provides some fairly easy to follow instructions for getting started on several
+platforms the main dependencies are as follows (on Windows the SDK includes these):
+
+* The Emscripten code, from github (git clone git://github.com/kripken/emscripten.git. The documentation suggests
+  master branch but in the short term incoming is probably better as a few updates to emscripten have been added
+  to help get proton working and these may take a little while to get merged back to master.
+* LLVM with Clang. Version 3.2 is the officially supported version, others may not work. There are official clang
+  binaries that include LLVM for some platforms, if yours is not there then you should get the LLVM and Clang
+  sources and build them.
+* Node.js (0.8 or above; 0.10.17 or above to run websocket-using servers in node)
+* Python 2.7.3
+* Optionally, if you want to use Closure Compiler to minify your code as much as possible, you will also need Java.
+
+If you haven't run Emscripten before it's agood idea to have a play with the tutorial
+https://github.com/kripken/emscripten/wiki/Tutorial
+
+
+when you are all set up with emscripten and have got the basic tests in the tutorial running
+building Proton should be simple, simply go to the Proton root directory and follow the main
+instructions in the README there, in precis (from the root directory) it's:
+
+  mkdir build
+  cd build
+  cmake ..
+  make
+
+
+In order to use WebSockets from Node.js you will need to install the "ws" package, the easiest
+way to do this is to use npm. From <proton-root>/build/proton-c/bindings/javascript (or where
+ever you decide to put the JavaScript binding library created by this build) simply do:
+
+  npm install ws
+
+and you should be all set, to test it's all working do:
+
+  node recv-async.js
+
+in one window and
+
+  node send-async.js
+
+in another
+
+
+KNOWN ISSUES
+============
+
+send-async and recv-async are both pretty hacky at the moment and not really asynchronous, this will
+be addressed ASAP.
+
+
+SUPPORT
+=======
+
+To report bugs in the bindings, or to request an enhancement, please file
+a tracker request:
+
+    https://issues.apache.org/jira/browse/PROTON
+
+You can also directly interact with the development team and other users
+in the #qpid channel on irc.freenode.net.
