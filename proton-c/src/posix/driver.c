@@ -620,9 +620,6 @@ void pn_connector_process(pn_connector_t *c)
             }
           } else if (n) {
             pn_transport_pop(transport, (size_t) n);
-            pending -= n;
-            if (pending == 0)
-              c->status &= ~PN_SEL_WR;
           }
         }
       } else if (pending == 0) {
