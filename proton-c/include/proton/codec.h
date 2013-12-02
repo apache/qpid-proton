@@ -25,6 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/object.h>
 #include <proton/types.h>
+#include <proton/error.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #include <stdint.h>
@@ -98,7 +99,7 @@ typedef struct pn_data_t pn_data_t;
 PN_EXTERN pn_data_t *pn_data(size_t capacity);
 PN_EXTERN void pn_data_free(pn_data_t *data);
 PN_EXTERN int pn_data_errno(pn_data_t *data);
-PN_EXTERN const char *pn_data_error(pn_data_t *data);
+PN_EXTERN pn_error_t *pn_data_error(pn_data_t *data);
 PN_EXTERN int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
 PN_EXTERN int pn_data_fill(pn_data_t *data, const char *fmt, ...);
 PN_EXTERN int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);

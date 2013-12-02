@@ -1293,7 +1293,7 @@ class Data:
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, DataException)
-      raise exc("[%s]: %s" % (err, pn_data_error(self._data)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_data_error(self._data))))
     else:
       return err
 
