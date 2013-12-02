@@ -99,8 +99,12 @@ int pni_subscription_set_address(pn_subscription_t *sub, const char *address)
 
   if (!address) return 0;
 
-  pn_string_set(sub->address, "");
-  if (strncmp(address, "amqp:", 5) != 0) {
+  bool absolute = strncmp(address, "amqp:", 5) == 0;
+
+  if (absolute) {
+    return pn_string_set(sub->address, address);
+  } else {
+    pn_string_set(sub->address, "");
     bool scheme = pn_string_get(sub->scheme);
     if (scheme) {
       int e = pn_string_addf(sub->address, "%s:", pn_string_get(sub->scheme));
@@ -114,8 +118,8 @@ int pni_subscription_set_address(pn_subscription_t *sub, const char *address)
       int e = pn_string_addf(sub->address, ":%s", pn_string_get(sub->port));
       if (e) return e;
     }
+    return pn_string_addf(sub->address, "/%s", address);
   }
-  return pn_string_addf(sub->address, "/%s", address);
 }
 
 const char *pn_subscription_address(pn_subscription_t *sub)
