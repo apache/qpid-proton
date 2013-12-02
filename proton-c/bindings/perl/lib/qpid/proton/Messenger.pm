@@ -165,7 +165,20 @@ sub put {
     my $msgimpl = $message->get_impl();
     cproton_perl::pn_messenger_put($impl, $msgimpl);
 
-    return cproton_perl::pn_messenger_outgoing_tracker($impl);
+    my $tracker = $self->get_outgoing_tracker();
+    return $tracker;
+}
+
+sub get_outgoing_tracker {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    my $tracker = cproton_perl::pn_messenger_outgoing_tracker($impl);
+    if ($tracker != -1) {
+        return qpid::proton::Tracker->new($tracker);
+    } else {
+        return undef;
+    }
 }
 
 sub send {
@@ -184,6 +197,16 @@ sub get {
     $message->postdecode();
 
     return cproton_perl::pn_messenger_incoming_tracker($impl);
+}
+
+sub incoming_tracker {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    my $tracker = cproton_perl::pn_messenger_incoming_tracker($impl);
+    return undef if $tracker == -1;
+
+    return qpid::proton::Tracker->new($tracker);
 }
 
 sub receive {
