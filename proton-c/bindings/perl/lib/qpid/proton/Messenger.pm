@@ -196,17 +196,20 @@ sub get {
     cproton_perl::pn_messenger_get($impl, $message->get_impl());
     $message->postdecode();
 
-    return cproton_perl::pn_messenger_incoming_tracker($impl);
+    my $tracker = $self->get_incoming_tracker();
+    return $tracker;
 }
 
-sub incoming_tracker {
+sub get_incoming_tracker {
     my ($self) = @_;
     my $impl = $self->{_impl};
 
     my $tracker = cproton_perl::pn_messenger_incoming_tracker($impl);
-    return undef if $tracker == -1;
-
-    return qpid::proton::Tracker->new($tracker);
+    if ($tracker != -1) {
+        return qpid::proton::Tracker->new($tracker);
+    } else {
+        return undef;
+    }
 }
 
 sub receive {
