@@ -1,6 +1,7 @@
 version 0.7:
 	* PROTON-457: Add interrupt method to Messenger.
 	* PROTON-463: Add qpid::proton::Tracker type.
+	* PROTON-458: Perl dies on error.
 
 version 0.6:
 	* qpid::proton::Messenger returns incoming trackers on get.

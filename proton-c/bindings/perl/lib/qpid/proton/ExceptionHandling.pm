@@ -21,15 +21,16 @@ use strict;
 use warnings;
 use cproton_perl;
 
-use qpid::proton::ExceptionHandling;
-use qpid::proton::Data;
-use qpid::proton::Mapping;
-use qpid::proton::Constants;
-use qpid::proton::Tracker;
-use qpid::proton::Messenger;
-use qpid::proton::Message;
+package qpid::proton;
 
-use qpid::proton;
+sub check_for_error {
+    my $rc = $_[0];
+
+    if($rc < 0) {
+        my $source = $_[1];
+
+        die "ERROR[$rc] " . $source->get_error();
+    }
+}
 
 1;
-
