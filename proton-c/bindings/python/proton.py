@@ -483,6 +483,18 @@ first message.
     disp = pn_messenger_status(self._mng, tracker);
     return STATUSES.get(disp, disp)
 
+  def buffered(self, tracker):
+    """
+    Checks if the delivery associated with the given tracker is still
+    waiting to be sent.
+
+    @type tracker: tracker
+    @param tracker: the tracker whose status is to be retrieved
+
+    @return true if delivery is still buffered
+    """
+    return pn_messenger_buffered(self._mng, tracker);
+
   def settle(self, tracker=None):
     """
     Frees a L{Messenger} from tracking the status associated with a given

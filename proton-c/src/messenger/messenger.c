@@ -1419,7 +1419,12 @@ bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker)
   pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
   if (e) {
     pn_delivery_t *d = pni_entry_get_delivery(e);
-    return d && pn_delivery_buffered(d);
+    if (d) {
+      bool b = pn_delivery_buffered(d);
+      return b;
+    } else {
+      return true;
+    }
   } else {
     return false;
   }

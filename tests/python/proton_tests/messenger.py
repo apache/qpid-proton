@@ -332,6 +332,33 @@ class MessengerTest(Test):
   def testIncomingQueueBiggerThanSessionWindow(self):
     self.testIncomingQueueBiggerThanWindow(2048)
 
+  def testBuffered(self):
+    self.client.outgoing_window = 1000
+    self.client.incoming_window = 1000
+    self.start();
+    assert self.server_received == 0
+    buffering = 0
+    count = 100
+    for i in range(count):
+      msg = Message()
+      msg.address="amqp://0.0.0.0:12345"
+      msg.subject="Hello World!"
+      msg.body = "First the world, then the galaxy!"
+      t = self.client.put(msg)
+      buffered = self.client.buffered(t)
+      # allow transition from False to True, but not back
+      if buffered:
+          buffering += 1
+      else:
+        assert not buffering, ("saw %s buffered deliveries before?" % buffering)
+
+    while self.client.outgoing:
+        last = self.client.outgoing
+        self.client.send()
+        print "sent ", last - self.client.outgoing
+
+    assert self.server_received == count
+
   def test_proton222(self):
     self.start()
     msg = Message()
