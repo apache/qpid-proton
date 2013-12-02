@@ -1411,6 +1411,9 @@ class Messenger(object):
     raise Skipped()
   certificate = property(_get_certificate, _set_certificate)
 
+  def buffered(self, tracker):
+    raise Skipped()
+
 
 class Message(object):
 
