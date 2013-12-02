@@ -26,5 +26,6 @@
 
 pn_subscription_t *pn_subscription(pn_messenger_t *messenger, const char *scheme);
 const char *pn_subscription_scheme(pn_subscription_t *sub);
+int pni_subscription_set_address(pn_subscription_t *sub, const char *address);
 
 #endif /* subscription.h */

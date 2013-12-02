@@ -443,6 +443,7 @@ first message.
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
       self._check(PN_ERR)
+    return Subscription(sub_impl)
 
   def put(self, message):
     """
@@ -1072,6 +1073,15 @@ The format of the message.
     pn_free(tmp)
     self._check(err)
     return result
+
+class Subscription(object):
+
+  def __init__(self, impl):
+    self._impl = impl
+
+  @property
+  def address(self):
+    return pn_subscription_address(self._impl)
 
 class DataException(ProtonException):
   """

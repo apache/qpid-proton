@@ -743,6 +743,12 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
   while (link) {
     if (pn_link_is_sender(link)) {
       pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
+    } else {
+      pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context(link);
+      if (ctx) {
+        const char *addr = pn_terminus_get_address(pn_link_remote_source(link));
+        pni_subscription_set_address(ctx->subscription, addr);
+      }
     }
     link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
   }
@@ -1129,8 +1135,16 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
     pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
   }
   // XXX
-  pn_terminus_set_address(pn_link_target(link), name);
-  pn_terminus_set_address(pn_link_source(link), name);
+  if (pn_streq(name, "#")) {
+    if (pn_link_is_sender(link)) {
+      pn_terminus_set_dynamic(pn_link_target(link), true);
+    } else {
+      pn_terminus_set_dynamic(pn_link_source(link), true);
+    }
+  } else {
+    pn_terminus_set_address(pn_link_target(link), name);
+    pn_terminus_set_address(pn_link_source(link), name);
+  }
   link_ctx_setup( messenger, connection, link );
   if (!sender) {
     pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
@@ -1489,6 +1503,20 @@ int pn_messenger_work(pn_messenger_t *messenger, int timeout)
 {
   messenger->worked = false;
   return pn_messenger_tsync(messenger, work_pred, timeout);
+}
+
+int pni_messenger_work(pn_messenger_t *messenger)
+{
+  if (messenger->blocking) {
+    return pn_messenger_work(messenger, messenger->timeout);
+  } else {
+    int err = pn_messenger_work(messenger, 0);
+    if (err == PN_TIMEOUT) {
+      return PN_INPROGRESS;
+    } else {
+      return err;
+    }
+  }
 }
 
 int pn_messenger_interrupt(pn_messenger_t *messenger)

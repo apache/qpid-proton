@@ -28,6 +28,7 @@
 struct pn_subscription_t {
   pn_messenger_t *messenger;
   pn_string_t *scheme;
+  pn_string_t *address;
   void *context;
 };
 
@@ -36,6 +37,7 @@ void pn_subscription_initialize(void *obj)
   pn_subscription_t *sub = (pn_subscription_t *) obj;
   sub->messenger = NULL;
   sub->scheme = pn_string(NULL);
+  sub->address = pn_string(NULL);
   sub->context = NULL;
 }
 
@@ -76,4 +78,20 @@ void pn_subscription_set_context(pn_subscription_t *sub, void *context)
 {
   assert(sub);
   sub->context = context;
+}
+
+int pni_subscription_set_address(pn_subscription_t *sub, const char *address)
+{
+  assert(sub);
+  return pn_string_set(sub->address, address);
+}
+
+const char *pn_subscription_address(pn_subscription_t *sub)
+{
+  assert(sub);
+  while (!pn_string_get(sub->address)) {
+    int err = pni_messenger_work(sub->messenger);
+    if (err) return NULL;
+  }
+  return pn_string_get(sub->address);
 }

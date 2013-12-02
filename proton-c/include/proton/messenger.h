@@ -301,6 +301,8 @@ PN_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
 
 PN_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
+PN_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
+
 /** Puts the message onto the messenger's outgoing queue.
  * The message may also be sent if transmission would not cause
  * blocking.  This call will not block.
