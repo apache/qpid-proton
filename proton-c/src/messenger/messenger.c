@@ -126,7 +126,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_listener_t *lnr,
     pn_ssl_domain_allow_unsecured_client(ctx->domain);
   }
 
-  pn_subscription_t *sub = pn_subscription(messenger, scheme);
+  pn_subscription_t *sub = pn_subscription(messenger, scheme, host, port);
   ctx->subscription = sub;
   ctx->host = pn_strdup(host);
   ctx->port = pn_strdup(port);
@@ -1114,6 +1114,7 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
   if (!connection) return NULL;
+  pn_connection_ctx_t *cctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
@@ -1151,7 +1152,8 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   if (!sender) {
     pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
     assert( ctx );
-    ctx->subscription = pn_subscription(messenger, NULL);
+    ctx->subscription = pn_subscription(messenger, cctx->scheme, cctx->host,
+                                        cctx->port);
   }
   pn_link_open(link);
   return link;
@@ -1390,6 +1392,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
 pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger)
 {
+  assert(messenger);
   return messenger->outgoing_tracker;
 }
 
@@ -1617,6 +1620,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 
 pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
 {
+  assert(messenger);
   return messenger->incoming_tracker;
 }
 
