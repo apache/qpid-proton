@@ -747,7 +747,9 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
       pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context(link);
       if (ctx) {
         const char *addr = pn_terminus_get_address(pn_link_remote_source(link));
-        pni_subscription_set_address(ctx->subscription, addr);
+        if (ctx->subscription) {
+          pni_subscription_set_address(ctx->subscription, addr);
+        }
       }
     }
     link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);

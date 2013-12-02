@@ -45,6 +45,7 @@ void pn_subscription_finalize(void *obj)
 {
   pn_subscription_t *sub = (pn_subscription_t *) obj;
   pn_free(sub->scheme);
+  pn_free(sub->address);
 }
 
 #define pn_subscription_hashcode NULL
