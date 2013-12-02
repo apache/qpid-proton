@@ -22,6 +22,7 @@
 #include <proton/messenger.h>
 #include <proton/object.h>
 #include <assert.h>
+#include <string.h>
 
 #include "messenger.h"
 
@@ -95,19 +96,24 @@ void pn_subscription_set_context(pn_subscription_t *sub, void *context)
 int pni_subscription_set_address(pn_subscription_t *sub, const char *address)
 {
   assert(sub);
+
+  if (!address) return 0;
+
   pn_string_set(sub->address, "");
-  bool scheme = pn_string_get(sub->scheme);
-  if (scheme) {
-    int e = pn_string_addf(sub->address, "%s:", pn_string_get(sub->scheme));
-    if (e) return e;
-  }
-  if (pn_string_get(sub->host)) {
-    int e = pn_string_addf(sub->address, scheme ? "//%s" : "%s", pn_string_get(sub->host));
-    if (e) return e;
-  }
-  if (pn_string_get(sub->port)) {
-    int e = pn_string_addf(sub->address, ":%s", pn_string_get(sub->port));
-    if (e) return e;
+  if (strncmp(address, "amqp:", 5) != 0) {
+    bool scheme = pn_string_get(sub->scheme);
+    if (scheme) {
+      int e = pn_string_addf(sub->address, "%s:", pn_string_get(sub->scheme));
+      if (e) return e;
+    }
+    if (pn_string_get(sub->host)) {
+      int e = pn_string_addf(sub->address, scheme ? "//%s" : "%s", pn_string_get(sub->host));
+      if (e) return e;
+    }
+    if (pn_string_get(sub->port)) {
+      int e = pn_string_addf(sub->address, ":%s", pn_string_get(sub->port));
+      if (e) return e;
+    }
   }
   return pn_string_addf(sub->address, "/%s", address);
 }
