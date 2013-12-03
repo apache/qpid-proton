@@ -29,7 +29,10 @@ module Qpid
       #
       # Expects the class to provide an +error+ method.
       def check_for_error(code)
+
         raise ::ArgumentError.new("Invalid error code: #{code}") if code.nil?
+
+	return code if code > 0
 
         case(code)
 
