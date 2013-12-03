@@ -143,6 +143,7 @@ struct pn_listener_t {
   int idx;
   bool pending;
   pn_socket_t fd;
+  bool closed;
   void *context;
 };
 
@@ -204,7 +205,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s\n", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
     return NULL;
   }
 
@@ -255,6 +256,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd, void *context
   l->idx = 0;
   l->pending = false;
   l->fd = fd;
+  l->closed = false;
   l->context = context;
 
   pn_driver_add_listener(driver, l);
@@ -341,9 +343,11 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
 void pn_listener_close(pn_listener_t *l)
 {
   if (!l) return;
+  if (l->closed) return;
 
   if (close(l->fd) == -1)
     perror("close");
+  l->closed = true;
 }
 
 void pn_listener_free(pn_listener_t *l)
@@ -391,7 +395,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *hostarg,
   struct addrinfo *addr;
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo: %s", gai_strerror(code));
+    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
     return NULL;
   }
 
@@ -623,7 +627,11 @@ void pn_connector_process(pn_connector_t *c)
             }
           }
         }
-      } else if (capacity < 0) {
+      }
+
+      capacity = pn_transport_capacity(transport);
+
+      if (capacity < 0) {
         c->status &= ~PN_SEL_RD;
         c->input_done = true;
       }
@@ -654,9 +662,6 @@ void pn_connector_process(pn_connector_t *c)
             }
           } else if (n) {
             pn_transport_pop(transport, (size_t) n);
-            pending -= n;
-            if (pending == 0)
-              c->status &= ~PN_SEL_WR;
           }
         }
       } else if (pending == 0) {
@@ -818,7 +823,7 @@ static void pn_driver_rebuild(pn_driver_t *d)
           d->overflow = true;
           break;
         }
-      }   
+      }
       // if (c->fd > d->max_fds) d->max_fds = c->fd;
     }
     c = c->connector_next;
