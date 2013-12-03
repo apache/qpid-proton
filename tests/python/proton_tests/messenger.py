@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -640,9 +640,6 @@ class MessengerTest(Test):
     """ The server is given a fixed amount of credit, and runs until that
     credit is exhausted.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditBlockingRebalance - credit scheduler TBD for Java Messenger")
-
     self.server_finite_credit = True
     self.server_credit = 11
     self.start()
@@ -794,9 +791,6 @@ class NBMessengerTest(common.Test):
     """ Verify that a fixed amount of credit will redistribute to new
     links.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditRedistribution - credit scheduler TBD for Java Messenger")
-
     self.server.recv( 5 )
 
     # first link will get all credit
@@ -829,9 +823,6 @@ class NBMessengerTest(common.Test):
     """ Verify that credit is reclaimed when a link with outstanding credit is
     torn down.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditReclaim - credit scheduler TBD for Java Messenger")
-
     self.server.recv( 9 )
 
     # first link will get all credit
@@ -893,15 +884,10 @@ class NBMessengerTest(common.Test):
     assert self.server.incoming == 9, self.server.incoming
     assert self.server.receiving == 0, self.server.receiving
 
-
-
   def testCreditReplenish(self):
     """ When extra credit is available it should be granted to the first
     link that can use it.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditReplenish - credit scheduler TBD for Java Messenger")
-
     # create three links
     msg = Message()
     for i in range(3):

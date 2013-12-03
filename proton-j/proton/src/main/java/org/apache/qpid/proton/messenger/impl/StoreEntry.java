@@ -123,6 +123,10 @@ class StoreEntry
         return _status;
     }
 
+    public void setStatus(Status status)
+    {
+        _status = status;
+    }
 
     private static Status _disp2status(DeliveryState disp)
     {

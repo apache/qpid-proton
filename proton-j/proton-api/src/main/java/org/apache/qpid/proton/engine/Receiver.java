@@ -71,4 +71,6 @@ public interface Receiver extends Link
 
     public boolean draining();
 
+    public void setDrain(boolean drain);
+
 }

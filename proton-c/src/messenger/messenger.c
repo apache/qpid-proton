@@ -1512,7 +1512,9 @@ static bool work_pred(pn_messenger_t *messenger) {
 int pn_messenger_work(pn_messenger_t *messenger, int timeout)
 {
   messenger->worked = false;
-  return pn_messenger_tsync(messenger, work_pred, timeout);
+  int err = pn_messenger_tsync(messenger, work_pred, timeout);
+  if (err) return err;
+  return (int) (messenger->worked ? 1 : 0);
 }
 
 int pni_messenger_work(pn_messenger_t *messenger)

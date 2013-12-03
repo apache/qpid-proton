@@ -538,4 +538,17 @@ abstract class JNILink implements Link
         return Proton.pn_link_drained(getImpl());
     }
 
+    @Override
+    @ProtonCEquivalent("pn_link_remote_credit")
+    public int getRemoteCredit()
+    {
+        return Proton.pn_link_remote_credit(getImpl());
+    }
+
+    @Override
+    @ProtonCEquivalent("pn_link_get_drain")
+    public boolean getDrain()
+    {
+        return Proton.pn_link_get_drain(getImpl());
+    }
 }

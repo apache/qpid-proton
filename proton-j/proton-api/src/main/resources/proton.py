@@ -25,6 +25,7 @@ except NameError:
 
 from org.apache.qpid.proton import Proton, ProtonUnsupportedOperationException
 from org.apache.qpid.proton import InterruptException as Interrupt
+from org.apache.qpid.proton import TimeoutException as Timeout
 from org.apache.qpid.proton.engine import \
     Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
@@ -42,7 +43,6 @@ from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedB
     Decimal32, Decimal64, Decimal128
 from jarray import zeros, array
 from java.util import EnumSet, UUID as JUUID, Date as JDate, HashMap
-from java.util.concurrent import TimeoutException as Timeout
 from java.nio import ByteBuffer
 from java.lang import Character as JCharacter, String as JString, Integer as JInteger
 from java.lang import NoClassDefFoundError
@@ -1321,12 +1321,20 @@ class Messenger(object):
   def recv(self, n=-1):
     self.impl.recv(n)
 
+  @property
+  def receiving(self):
+    return self.impl.receiving()
+
   def work(self, timeout=None):
     if timeout is None:
       t = -1
     else:
       t = long(1000*timeout)
-    return self.impl.work(t)
+    try:
+        err = self.impl.work(t)
+    except Timeout, e:
+        return False
+    return err
 
   def interrupt(self):
     self.impl.interrupt()

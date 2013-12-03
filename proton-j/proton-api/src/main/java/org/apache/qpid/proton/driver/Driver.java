@@ -55,7 +55,7 @@ public interface Driver
      *
      * Thread-safe.
      *
-     * @param timeout maximum time in milliseconds to wait. 0 means wait indefinitely.
+     * @param timeout maximum time in milliseconds to wait. -1 means wait indefinitely.
      *
      * @param returns true if woken up
      */

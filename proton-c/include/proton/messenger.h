@@ -365,7 +365,10 @@ PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
  * This will block for the indicated timeout.
  *
  * @param[in] messenger the Messenger
- * @param[in] timeout the maximum time to block
+ * @param[in] timeout the maximum time to block in milliseconds, -1 ==
+ * forever, 0 == do not block
+ *
+ * @return 0 if no work to do, < 0 if error, or 1 if work was done.
  */
 PN_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
 

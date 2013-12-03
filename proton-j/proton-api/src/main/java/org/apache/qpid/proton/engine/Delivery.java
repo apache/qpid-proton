@@ -104,4 +104,6 @@ public interface Delivery
 
     public int pending();
 
+    public boolean isBuffered();
+
 }

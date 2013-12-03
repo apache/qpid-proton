@@ -27,6 +27,7 @@ import org.apache.qpid.proton.engine.Receiver;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
 {
+    private boolean _drainFlagMode = true;
 
     @Override
     public boolean advance()
@@ -61,10 +62,14 @@ public class ReceiverImpl extends LinkImpl implements Receiver
 
     public void flow(final int credits)
     {
-        modified();
         addCredit(credits);
-        setDrain(false);
         _unsentCredits += credits;
+        modified();
+        if (!_drainFlagMode)
+        {
+            setDrain(false);
+            _drainFlagMode = false;
+        }
     }
 
     int clearUnsentCredits()
@@ -122,8 +127,9 @@ public class ReceiverImpl extends LinkImpl implements Receiver
 
     public void drain(int credit)
     {
-        flow(credit);
         setDrain(true);
+        flow(credit);
+        _drainFlagMode = false;
     }
 
     public boolean draining()
@@ -131,4 +137,11 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return getDrain() && (getCredit() > getQueued());
     }
 
+    @Override
+    public void setDrain(boolean drain)
+    {
+        super.setDrain(drain);
+        modified();
+        _drainFlagMode = true;
+    }
 }
