@@ -37,6 +37,13 @@ endif (PYTHONLIBS_FOUND)
 
 # Prerequisites for Ruby:
 find_package(Ruby)
+
+if (NOT RUBY_FOUND)
+  if (RUBY_EXECUTABLE)
+    set (RUBY_FOUND 1)
+  endif (RUBY_EXECUTABLE)
+endif (NOT RUBY_FOUND)
+
 if (RUBY_FOUND)
   set (DEFAULT_RUBY ON)
 endif (RUBY_FOUND)
