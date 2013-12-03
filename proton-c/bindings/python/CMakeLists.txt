@@ -30,12 +30,14 @@ set_target_properties(_cproton
 
 find_package(PythonInterp REQUIRED)
 
-if (NOT PYTHON_SITEARCH_PACKAGES)
-   execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                           -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
-                           OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES
-                           OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif ()
+if (NOT PYTHON_INSTALL_PREFIX)
+  set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+endif (NOT PYTHON_INSTALL_PREFIX)
+
+execute_process(COMMAND ${PYTHON_EXECUTABLE}
+  -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True, prefix='${PYTHON_INSTALL_PREFIX}')"
+  OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile cproton.py
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
