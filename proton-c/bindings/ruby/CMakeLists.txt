@@ -26,6 +26,10 @@ set_target_properties(cproton-ruby
     OUTPUT_NAME "cproton"
     LINK_FLAGS "${CATCH_UNDEFINED}" )
 
+install(TARGETS cproton-ruby
+        DESTINATION ${RUBY_ARCH_DIR}
+        COMPONENT Ruby)
+
 # Install the Ruby libraries
 set(RUBY_LIBRARIES
     lib/qpid_proton/array.rb
@@ -43,89 +47,30 @@ set(RUBY_LIBRARIES
     lib/qpid_proton/tracker_status.rb
 )
 
-if (NOT RUBY_INSTALL_PREFIX)
-  set(RUBY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-endif (NOT RUBY_INSTALL_PREFIX)
-
-# if the CMAKE_INSTALL_PREFIX isn't defined, then set it
-# using the prefix from Ruby
-execute_process(COMMAND ${RUBY_EXECUTABLE}
-  -r rbconfig -e "print RbConfig::CONFIG['prefix']"
-  OUTPUT_VARIABLE RUBY_PREFIX)
-
 set(RUBY_ARCHLIB_DIR "${RUBY_VENDORLIB_DIR}")
 
-# Get the Ruby arch directory for where platform-specific code
-execute_process(COMMAND ${RUBY_EXECUTABLE}
-  -r rbconfig -e "install_prefix = '${RUBY_INSTALL_PREFIX}';
-                                  path = RbConfig::CONFIG['vendorarchdir'];
-                                  unless path.nil?
-                                    path.gsub!('${RUBY_PREFIX}',
-                                               install_prefix);
-                                  else
-                                    path = '';
-                                  end;
-                                  print path;"
-  RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
-  OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
-
-# fallback for older versions of Ruby
-if(OUTPUT_RUBY_ARCHLIB_DIR STREQUAL "")
+if (NOT RUBY_ARCHLIB_DIR)
   execute_process(COMMAND ${RUBY_EXECUTABLE}
-    -r rbconfig -e "install_prefix = '${RUBY_INSTALL_PREFIX}';
-                                    path = RbConfig::CONFIG['archdir'];
-                                    path.gsub!('${RUBY_PREFIX}',
-                                               install_prefix);
-                                    print path;"
+                  -r rbconfig -e "print RbConfig::CONFIG['vendorlibdir']"
     RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
     OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
-endif (OUTPUT_RUBY_ARCHLIB_DIR STREQUAL "")
 
+  if(NOT RESULT_RUBY_ARCHLIB_DIR AND OUTPUT_RUBY_ARCHLIB_DIR )
+    execute_process(COMMAND ${RUBY_EXECUTABLE}
+                    -r rbconfig -e "print RbConfig::CONFIG['sitearchdir']"
+      RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
+      OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
 
-set(RUBY_ARCHLIB_DIR "${OUTPUT_RUBY_ARCHLIB_DIR}")
+  endif()
 
-MESSAGE(STATUS "RUBY_ARCHLIB_DIR=${RUBY_ARCHLIB_DIR}")
+  set(RUBY_ARCHLIB_DIR "${OUTPUT_RUBY_ARCHLIB_DIR}")
 
-# Get the Ruby library directory for platform independent code
-execute_process(COMMAND ${RUBY_EXECUTABLE}
-  -r rbconfig -e "install_prefix = '${RUBY_INSTALL_PREFIX}';
-                                  path = RbConfig::CONFIG['vendorlibdir'];
-                                  unless path.nil?
-                                    path.gsub!('${RUBY_PREFIX}',
-                                               install_prefix);
-                                  else
-                                    path = '';
-                                  end;
-                                  print path;"
-  RESULT_VARIABLE RESULT_RUBY_SITELIB_DIR
-  OUTPUT_VARIABLE OUTPUT_RUBY_SITELIB_DIR)
-
-# fallback for older versions of Ruby
-if(OUTPUT_RUBY_SITELIB_DIR STREQUAL "")
-  execute_process(COMMAND ${RUBY_EXECUTABLE}
-    -r rbconfig -e "install_prefix = '${RUBY_INSTALL_PREFIX}';
-                                    path = RbConfig::CONFIG['libdir'];
-                                    path.gsub!('${RUBY_PREFIX}',
-                                               install_prefix);
-                                    print path;"
-    RESULT_VARIABLE RESULT_RUBY_SITELIB_DIR
-    OUTPUT_VARIABLE OUTPUT_RUBY_SITELIB_DIR)
-
-endif(OUTPUT_RUBY_SITELIB_DIR STREQUAL "")
-
-set(RUBY_SITELIB_DIR "${OUTPUT_RUBY_SITELIB_DIR}")
-
-MESSAGE(STATUS "RUBY_SITELIB_DIR=${RUBY_SITELIB_DIR}")
+endif ()
 
 install(FILES lib/qpid_proton.rb
-        DESTINATION ${RUBY_SITELIB_DIR}
-        COMPONENT Ruby)
-
-install(FILES ${RUBY_LIBRARIES}
-        DESTINATION ${RUBY_SITELIB_DIR}/qpid_proton
-        COMPONENT Ruby)
-
-install(TARGETS cproton-ruby
         DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)
 
+install(FILES ${RUBY_LIBRARIES}
+        DESTINATION ${RUBY_ARCHLIB_DIR}/qpid_proton
+        COMPONENT Ruby)
