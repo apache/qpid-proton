@@ -58,46 +58,16 @@ if ("${PHP_INCLUDE_DIR_DEFAULT}" STREQUAL "")
   set(PHP_INCLUDE_DIR_DEFAULT "/usr/share/php")
 endif()
 
-if (NOT PHP_INSTALL_PREFIX)
-  set (PHP_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-endif (NOT PHP_INSTALL_PREFIX)
-
-execute_process (COMMAND ${PHP_CONFIG_EXE} --prefix
-  OUTPUT_VARIABLE PHP_PREFIX
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
 string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
 set (PHP_INI_DIR_DEFAULT ${CMAKE_MATCH_1})
 
 if ("${PHP_INI_DIR_DEFAULT}" STREQUAL "")
-  set(PHP_INI_DIR_DEFAULT ${PHP_PREFIX}/etc/php.d)
+  set(PHP_INI_DIR_DEFAULT "/etc/php.d")
 endif()
-
-# if not installing to the system directory, then update the prefix to the ini directory
-if (NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
-  set(PHP_INI_DIR_DEFAULT ${PHP_INSTALL_PREFIX}/${PHP_INI_DIR_DEFAULT})
-endif()
-
-MESSAGE(STATUS "PHP_INI_DIR_DEFAULT=${PHP_INI_DIR_DEFAULT}")
 
 set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
 set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
 set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
-
-macro(replace_prefix prefix new_prefix source varname)
-  MESSAGE(STATUS "1:${${varname}}=${varname}")
-  string(REGEX REPLACE
-    "(.*)${${prefix}}(.*)"
-    "\\1${${new_prefix}}\\2"
-    ${varname}
-    "${${source}}")
-
-  MESSAGE(STATUS "2:${${varname}}=${varname}")
-endmacro()
-
-replace_prefix(PHP_PREFIX PHP_INSTALL_PREFIX PHP_EXT_DIR PHP_EXT_DIR)
-replace_prefix(PHP_PREFIX PHP_INSTALL_PREFIX PHP_INI_DIR PHP_INI_DIR)
-replace_prefix(PHP_PREFIX PHP_INSTALL_PREFIX PHP_INCLUDE_DIR PHP_INCLUDE_DIR)
 
 install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}
