@@ -235,6 +235,15 @@ sub incoming {
     return cproton_perl::pn_messenger_incoming($self->{_impl});
 }
 
+sub route {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+    my $pattern = $_[1];
+    my $address = $_[2];
+
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_route($impl, $pattern, $address));
+}
+
 sub accept {
     my ($self) = @_;
     my $tracker = $_[1];
