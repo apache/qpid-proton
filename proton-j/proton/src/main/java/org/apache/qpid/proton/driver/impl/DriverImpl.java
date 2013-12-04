@@ -23,7 +23,6 @@ package org.apache.qpid.proton.driver.impl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.StandardSocketOptions;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -194,7 +193,7 @@ public class DriverImpl implements Driver
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(false);
             // Disable the Nagle algorithm on TCP connections.
-            channel.setOption(StandardSocketOptions.TCP_NODELAY, true);
+            channel.socket().setTcpNoDelay(true);
             channel.connect(new InetSocketAddress(host, port));
             return createConnector(channel, context);
         }
