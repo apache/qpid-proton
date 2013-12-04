@@ -110,6 +110,7 @@ typedef struct pn_io_layer_t {
 } pn_io_layer_t;
 
 struct pn_transport_t {
+  pn_tracer_t *tracer;
   size_t header_count;
   pn_sasl_t *sasl;
   pn_ssl_t *ssl;
@@ -150,7 +151,7 @@ struct pn_transport_t {
   pn_error_t *error;
   pn_hash_t *local_channels;
   pn_hash_t *remote_channels;
-  char scratch[SCRATCH];
+  pn_string_t *scratch;
 
   /* statistics */
   uint64_t bytes_input;
