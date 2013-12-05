@@ -168,6 +168,7 @@ struct pn_transport_t {
   char *input_buf;
   bool tail_closed;      // input stream closed by driver
 
+  void *context;
 };
 
 struct pn_connection_t {

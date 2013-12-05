@@ -438,6 +438,8 @@ PN_EXTERN pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timesta
 PN_EXTERN void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 PN_EXTERN void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t *tracer);
 PN_EXTERN pn_tracer_t *pn_transport_get_tracer(pn_transport_t *transport);
+PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context);
+PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
 PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
 // max frame of zero means "unlimited"

@@ -1754,6 +1754,18 @@ pn_tracer_t *pn_transport_get_tracer(pn_transport_t *transport)
   return transport->tracer;
 }
 
+void pn_transport_set_context(pn_transport_t *transport, void *context)
+{
+  assert(transport);
+  transport->context = context;
+}
+
+void *pn_transport_get_context(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->context;
+}
+
 void pn_transport_log(pn_transport_t *transport, const char *message)
 {
   assert(transport);
