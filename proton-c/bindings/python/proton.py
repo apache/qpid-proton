@@ -2730,7 +2730,11 @@ class Transport(object):
     pn_transport_trace(self._trans, n)
 
   def tick(self, now):
-    return pn_transport_tick(self._trans, now)
+    """Process any timed events (like heartbeat generation).
+    now = seconds since epoch (float).
+    """
+    next = pn_transport_tick(self._trans, long(now * 1000))
+    return float(next) / 1000.0
 
   def capacity(self):
     c = pn_transport_capacity(self._trans)
@@ -2805,10 +2809,11 @@ Sets the maximum size for received frames (in bytes).
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    return pn_transport_get_idle_timeout(self._trans)
+    msec = pn_transport_get_idle_timeout(self._trans)
+    return float(msec)/1000.0
 
-  def _set_idle_timeout(self, value):
-    pn_transport_set_idle_timeout(self._trans, value)
+  def _set_idle_timeout(self, sec):
+    pn_transport_set_idle_timeout(self._trans, long(sec * 1000))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -2817,7 +2822,8 @@ The idle timeout of the connection (in milliseconds).
 
   @property
   def remote_idle_timeout(self):
-    return pn_transport_get_remote_idle_timeout(self._trans)
+    msec = pn_transport_get_remote_idle_timeout(self._trans)
+    return float(msec)/1000.0
 
   @property
   def frames_output(self):
@@ -3092,8 +3098,12 @@ class Driver(object):
       pn_driver_free(self._driver)
       del self._driver
 
-  def wait(self, timeout):
-    return pn_driver_wait(self._driver, timeout)
+  def wait(self, timeout_sec):
+    if timeout_sec is None or timeout_sec < 0.0:
+      t = -1
+    else:
+      t = long(1000*timeout_sec)
+    return pn_driver_wait(self._driver, t)
 
   def wakeup(self):
     return pn_driver_wakeup(self._driver)
