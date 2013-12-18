@@ -156,7 +156,12 @@ class StoreEntry
             }
             else if (_delivery.remotelySettled())
             {
-                _status = _disp2status(_delivery.getLocalState());
+                DeliveryState disp = _delivery.getLocalState();
+                if (disp == null) {
+                    _status = Status.SETTLED;
+                } else {
+                    _status = _disp2status(_delivery.getLocalState());
+                }
             }
             else
             {

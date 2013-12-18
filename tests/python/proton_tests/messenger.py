@@ -314,13 +314,13 @@ class MessengerTest(Test):
       self.client.recv(2*size - len(trackers))
       while self.client.incoming:
         t = self.client.get(msg)
-        assert self.client.status(t) is PENDING, (t, self.client.status(t))
+        assert self.client.status(t) is SETTLED, (t, self.client.status(t))
         trackers.append(t)
 
     for t in trackers[:size]:
       assert self.client.status(t) is None, (t, self.client.status(t))
     for t in trackers[size:]:
-      assert self.client.status(t) is PENDING, (t, self.client.status(t))
+      assert self.client.status(t) is SETTLED, (t, self.client.status(t))
 
     self.client.accept()
 

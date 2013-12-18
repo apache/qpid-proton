@@ -27,5 +27,6 @@ public enum Status
     ACCEPTED,
     REJECTED,
     MODIFIED,
-    ABORTED
+    ABORTED,
+    SETTLED
 }

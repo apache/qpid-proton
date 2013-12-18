@@ -143,12 +143,14 @@ PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
 ABORTED = Constant("ABORTED")
+SETTLED = Constant("SETTLED")
 
 STATUSES = {
   PN_STATUS_ABORTED: ABORTED,
   PN_STATUS_ACCEPTED: ACCEPTED,
   PN_STATUS_REJECTED: REJECTED,
   PN_STATUS_PENDING: PENDING,
+  PN_STATUS_SETTLED: SETTLED,
   PN_STATUS_UNKNOWN: None
   }
 
@@ -3181,6 +3183,7 @@ __all__ = [
            "PENDING",
            "MANUAL",
            "REJECTED",
+           "SETTLED",
            "UNDESCRIBED",
            "Array",
            "Condition",
