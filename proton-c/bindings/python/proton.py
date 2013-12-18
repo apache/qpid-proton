@@ -2402,6 +2402,10 @@ class Link(Endpoint):
     return wrap_link(pn_link_next(self._link, mask))
 
   @property
+  def name(self):
+      return pn_link_name(self._link)
+
+  @property
   def is_sender(self):
     return pn_link_is_sender(self._link)
 

@@ -379,6 +379,10 @@ class Link(Endpoint):
     return wrap_link(self.impl.next(*self._enums(mask)))
 
   @property
+  def name(self):
+      return self.impl.getName()
+
+  @property
   def remote_snd_settle_mode(self):
     return self.impl.getRemoteSenderSettleMode()
 

@@ -388,6 +388,7 @@ class LinkTest(Test):
 
   def test_multiple(self):
     rcv = self.snd.session.receiver("second-rcv")
+    assert rcv.name == "second-rcv"
     self.snd.open()
     rcv.open()
     self.pump()
