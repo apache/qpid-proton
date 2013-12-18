@@ -153,4 +153,15 @@ use constant {
     INPROGRESS => $cproton_perl::PN_INPROGRESS,
 };
 
+package qpid::proton::Tracker;
+
+use constant {
+    ABORTED => $cproton_perl::PN_STATUS_ABORTED,
+    ACCEPTED => $cproton_perl::PN_STATUS_ACCEPTED,
+    REJECTED => $cproton_perl::PN_STATUS_REJECTED,
+    PENDING => $cproton_perl::PN_STATUS_PENDING,
+    SETTLED => $cproton_perl::PN_STATUS_SETTLED,
+    UNKNOWN => undef,
+};
+
 1;
