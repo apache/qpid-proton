@@ -127,7 +127,9 @@ const char *pn_subscription_address(pn_subscription_t *sub)
   assert(sub);
   while (!pn_string_get(sub->address)) {
     int err = pni_messenger_work(sub->messenger);
-    if (err) return NULL;
+    if (err < 0) {
+      return NULL;
+    }
   }
   return pn_string_get(sub->address);
 }
