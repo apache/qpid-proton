@@ -300,7 +300,7 @@ static pn_status_t disp2status(uint64_t disp)
   case PN_REJECTED:
     return PN_STATUS_REJECTED;
   case PN_RELEASED:
-    return PN_STATUS_PENDING;
+    return PN_STATUS_RELEASED;
   case PN_MODIFIED:
     return PN_STATUS_MODIFIED;
   default:

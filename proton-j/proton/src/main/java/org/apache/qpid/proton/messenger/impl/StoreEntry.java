@@ -139,7 +139,7 @@ class StoreEntry
         if (disp instanceof Rejected)
             return Status.REJECTED;
         if (disp instanceof Released)
-            return Status.PENDING;
+            return Status.RELEASED;
         if (disp instanceof Modified)
             return Status.MODIFIED;
         assert(false);

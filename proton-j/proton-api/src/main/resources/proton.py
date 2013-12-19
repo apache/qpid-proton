@@ -63,12 +63,14 @@ class Skipped(Exception):
 PENDING = "PENDING"
 ACCEPTED = "ACCEPTED"
 REJECTED = "REJECTED"
+RELEASED = "RELEASED"
 SETTLED = "SETTLED"
 
 STATUSES = {
   Status.ACCEPTED: ACCEPTED,
   Status.REJECTED: REJECTED,
   Status.PENDING: PENDING,
+  Status.RELEASED: RELEASED,
   Status.SETTLED: SETTLED,
   Status.UNKNOWN: None
   }
@@ -1844,6 +1846,7 @@ __all__ = [
            "MANUAL",
            "PENDING",
            "REJECTED",
+           "RELEASED",
            "SETTLED",
            "char",
            "Condition",

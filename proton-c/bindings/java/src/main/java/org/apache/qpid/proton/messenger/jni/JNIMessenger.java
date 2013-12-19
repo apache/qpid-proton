@@ -277,6 +277,10 @@ class JNIMessenger implements Messenger
         {
             return Status.REJECTED;
         }
+        else if (status == pn_status_t.PN_STATUS_RELEASED)
+        {
+            return Status.RELEASED;
+        }
         else if (status == pn_status_t.PN_STATUS_SETTLED)
         {
             return Status.SETTLED;
