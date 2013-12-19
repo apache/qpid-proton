@@ -51,13 +51,13 @@ set(RUBY_ARCHLIB_DIR "${RUBY_VENDORLIB_DIR}")
 
 if (NOT RUBY_ARCHLIB_DIR)
   execute_process(COMMAND ${RUBY_EXECUTABLE}
-                  -r rbconfig -e "print RbConfig::CONFIG['vendorlibdir']"
+                  -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
     RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
     OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
 
-  if(NOT RESULT_RUBY_ARCHLIB_DIR AND OUTPUT_RUBY_ARCHLIB_DIR )
+  if(OUTPUT_RUBY_ARCHLIB_DIR STREQUAL "")
     execute_process(COMMAND ${RUBY_EXECUTABLE}
-                    -r rbconfig -e "print RbConfig::CONFIG['sitearchdir']"
+                    -r rbconfig -e "print RbConfig::CONFIG['sitearchdir'] || ''"
       RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
       OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
 
