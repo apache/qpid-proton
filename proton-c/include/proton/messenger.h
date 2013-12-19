@@ -525,70 +525,68 @@ PN_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
  */
 PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 
-/** Adds a routing rule to a Messenger's internal routing table.
- *
- * The route procedure may be used to influence how a messenger will
- * internally treat a given address or class of addresses. Every call
- * to the route procedure will result in messenger appending a routing
- * rule to its internal routing table.
- *
- * Whenever a message is presented to a messenger for delivery, it
- * will match the address of this message against the set of routing
- * rules in order. The first rule to match will be triggered, and
- * instead of routing based on the address presented in the message,
- * the messenger will route based on the address supplied in the rule.
- *
- * The pattern matching syntax supports two types of matches, a '%'
- * will match any character except a '/', and a '*' will match any
- * character including a '/'.
- *
- * A routing address is specified as a normal AMQP address, however it
- * may additionally use substitution variables from the pattern match
- * that triggered the rule.
- *
- * Any message sent to "foo" will be routed to "amqp://foo.com":
- *
- *   pn_messenger_route("foo", "amqp://foo.com");
- *
- * Any message sent to "foobar" will be routed to
- * "amqp://foo.com/bar":
- *
- *   pn_messenger_route("foobar", "amqp://foo.com/bar");
- *
- * Any message sent to bar/<path> will be routed to the corresponding
- * path within the amqp://bar.com domain:
- *
- *   pn_messenger_route("bar/*", "amqp://bar.com/$1");
- *
- * Route all messages over TLS:
- *
- *   pn_messenger_route("amqp:*", "amqps:$1")
- *
- * Supply credentials for foo.com:
- *
- *   pn_messenger_route("amqp://foo.com/*", "amqp://user:password@foo.com/$1");
- *
- * Supply credentials for all domains:
- *
- *   pn_messenger_route("amqp://*", "amqp://user:password@$1");
- *
- * Route all addresses through a single proxy while preserving the
- * original destination:
- *
- *   pn_messenger_route("amqp://%/*", "amqp://user:password@proxy/$1/$2");
- *
- * Route any address through a single broker:
- *
- *   pn_messenger_route("*", "amqp://user:password@broker/$1");
- *
- * @param[in] messenger the Messenger
- * @param[in] pattern a glob pattern
- * @param[in] address an address indicating alternative routing
- *
- * @return an error code or zero on success
- * @see error.h
- *
- */
+//! Adds a routing rule to a Messenger's internal routing table.
+//!
+//! The route procedure may be used to influence how a messenger will
+//! internally treat a given address or class of addresses. Every call
+//! to the route procedure will result in messenger appending a routing
+//! rule to its internal routing table.
+//!
+//! Whenever a message is presented to a messenger for delivery, it
+//! will match the address of this message against the set of routing
+//! rules in order. The first rule to match will be triggered, and
+//! instead of routing based on the address presented in the message,
+//! the messenger will route based on the address supplied in the rule.
+//!
+//! The pattern matching syntax supports two types of matches, a '%'
+//! will match any character except a '/', and a '*' will match any
+//! character including a '/'.
+//!
+//! A routing address is specified as a normal AMQP address, however it
+//! may additionally use substitution variables from the pattern match
+//! that triggered the rule.
+//!
+//! Any message sent to "foo" will be routed to "amqp://foo.com":
+//!
+//!   pn_messenger_route("foo", "amqp://foo.com");
+//!
+//! Any message sent to "foobar" will be routed to
+//! "amqp://foo.com/bar":
+//!
+//!   pn_messenger_route("foobar", "amqp://foo.com/bar");
+//!
+//! Any message sent to bar/<path> will be routed to the corresponding
+//! path within the amqp://bar.com domain:
+//!
+//!   pn_messenger_route("bar/*", "amqp://bar.com/$1");
+//!
+//! Route all messages over TLS:
+//!
+//!   pn_messenger_route("amqp:*", "amqps:$1")
+//!
+//! Supply credentials for foo.com:
+//!
+//!   pn_messenger_route("amqp://foo.com/*", "amqp://user:password@foo.com/$1");
+//!
+//! Supply credentials for all domains:
+//!
+//!   pn_messenger_route("amqp://*", "amqp://user:password@$1");
+//!
+//! Route all addresses through a single proxy while preserving the
+//! original destination:
+//!
+//!   pn_messenger_route("amqp://%/*", "amqp://user:password@proxy/$1/$2");
+//!
+//! Route any address through a single broker:
+//!
+//!   pn_messenger_route("*", "amqp://user:password@broker/$1");
+//!
+//! @param[in] messenger the Messenger
+//! @param[in] pattern a glob pattern
+//! @param[in] address an address indicating alternative routing
+//!
+//! @return an error code or zero on success
+//! @see error.h
 PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
                                  const char *address);
 
