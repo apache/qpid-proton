@@ -67,7 +67,7 @@ sub set_outgoing_window {
     $window = 0 if !defined($window);
     $window = int($window);
 
-    cproton_perl::pn_messenger_set_outgoing_window($self->{_impl}, $window);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_set_outgoing_window($self->{_impl}, $window), $self);
 }
 
 sub get_outgoing_window {
@@ -75,14 +75,14 @@ sub get_outgoing_window {
     return cproton_perl::pn_messenger_get_outgoing_window($self->{_impl});
 }
 
-sub set_incoming_window {
+sub set_incoming_window{
     my ($self) = @_;
     my $window = $_[1];
 
     $window = 0 if !defined($window);
     $window = int($window);
 
-    cproton_perl::pn_messenger_set_incoming_window($self->{_impl}, $window);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_set_incoming_window($self->{_impl}, $window), $self);
 }
 
 sub get_incoming_window {
@@ -102,12 +102,12 @@ sub get_errno {
 
 sub start {
     my ($self) = @_;
-    cproton_perl::pn_messenger_start($self->{_impl});
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_start($self->{_impl}), $self);
 }
 
 sub stop {
     my ($self) = @_;
-    cproton_perl::pn_messenger_stop($self->{_impl});
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_stop($self->{_impl}), $self);
 }
 
 sub subscribe {
@@ -138,7 +138,7 @@ sub get_private_key {
 sub set_password {
     my ($self) = @_;
 
-    cproton_perl::pn_messenger_set_password($self->{_impl}, $_[1]);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_set_password($self->{_impl}, $_[1]), $self);
 }
 
 sub get_password {
@@ -163,16 +163,29 @@ sub put {
 
     $message->preencode();
     my $msgimpl = $message->get_impl();
-    cproton_perl::pn_messenger_put($impl, $msgimpl);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_put($impl, $msgimpl), $self);
 
-    return cproton_perl::pn_messenger_outgoing_tracker($impl);
+    my $tracker = $self->get_outgoing_tracker();
+    return $tracker;
+}
+
+sub get_outgoing_tracker {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    my $tracker = cproton_perl::pn_messenger_outgoing_tracker($impl);
+    if ($tracker != -1) {
+        return qpid::proton::Tracker->new($tracker);
+    } else {
+        return undef;
+    }
 }
 
 sub send {
     my ($self) = @_;
     my $n = $_[1];
     $n = -1 if !defined $n;
-    cproton_perl::pn_messenger_send($self->{_impl}, $n);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_send($self->{_impl}, $n), $self);
 }
 
 sub get {
@@ -180,23 +193,36 @@ sub get {
     my $impl = $self->{_impl};
     my $message = $_[1] || new proton::Message();
 
-    cproton_perl::pn_messenger_get($impl, $message->get_impl());
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_get($impl, $message->get_impl()), $self);
     $message->postdecode();
 
-    return cproton_perl::pn_messenger_incoming_tracker($impl);
+    my $tracker = $self->get_incoming_tracker();
+    return $tracker;
+}
+
+sub get_incoming_tracker {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+
+    my $tracker = cproton_perl::pn_messenger_incoming_tracker($impl);
+    if ($tracker != -1) {
+        return qpid::proton::Tracker->new($tracker);
+    } else {
+        return undef;
+    }
 }
 
 sub receive {
     my ($self) = @_;
     my $n = $_[1];
     $n = -1 if !defined $n;
-    cproton_perl::pn_messenger_recv($self->{_impl}, $n);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_recv($self->{_impl}, $n), $self);
 }
 
 sub interrupt {
     my ($self) = @_;
 
-    return cproton_perl::pn_messenger_interrupt($self->{_impl});
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_interrupt($self->{_impl}), $self);
 }
 
 sub outgoing {
@@ -209,6 +235,24 @@ sub incoming {
     return cproton_perl::pn_messenger_incoming($self->{_impl});
 }
 
+sub route {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+    my $pattern = $_[1];
+    my $address = $_[2];
+
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_route($impl, $pattern, $address));
+}
+
+sub rewrite {
+    my ($self) = @_;
+    my $impl = $self->{_impl};
+    my $pattern = $_[1];
+    my $address = $_[2];
+
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_rewrite($impl, $pattern, $address));
+}
+
 sub accept {
     my ($self) = @_;
     my $tracker = $_[1];
@@ -217,7 +261,7 @@ sub accept {
         $tracker = cproton_perl::pn_messenger_incoming_tracker($self->{_impl});
         $flags = $cproton_perl::PN_CUMULATIVE;
     }
-    return cproton_perl::pn_messenger_accept($self->{_impl}, $tracker, $flags);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_accept($self->{_impl}, $tracker, $flags), $self);
 }
 
 sub reject {
@@ -228,7 +272,7 @@ sub reject {
         $tracker = cproton_perl::pn_messenger_incoming_tracker($self->{_impl});
         $flags = $cproton_perl::PN_CUMULATIVE;
     }
-    return cproton_perl::pn_messenger_reject($self->{_impl}, $tracker, $flags);
+    qpid::proton::check_for_error(cproton_perl::pn_messenger_reject($self->{_impl}, $tracker, $flags), $self);
 }
 
 sub status {

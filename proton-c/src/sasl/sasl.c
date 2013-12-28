@@ -67,7 +67,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
     pn_sasl_t *sasl = (pn_sasl_t *) malloc(sizeof(pn_sasl_t));
-    sasl->disp = pn_dispatcher(1, sasl);
+    sasl->disp = pn_dispatcher(1, transport);
     sasl->disp->batch = false;
 
     pn_dispatcher_action(sasl->disp, SASL_INIT, pn_do_init);
@@ -356,7 +356,7 @@ ssize_t pn_sasl_output(pn_sasl_t *sasl, char *bytes, size_t size)
 
 int pn_do_init(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
+  pn_sasl_t *sasl = disp->transport->sasl;
   pn_bytes_t mech;
   pn_bytes_t recv;
   int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
@@ -369,14 +369,14 @@ int pn_do_init(pn_dispatcher_t *disp)
 
 int pn_do_mechanisms(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
+  pn_sasl_t *sasl = disp->transport->sasl;
   sasl->rcvd_init = true;
   return 0;
 }
 
 int pn_do_recv(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
+  pn_sasl_t *sasl = disp->transport->sasl;
   pn_bytes_t recv;
   int err = pn_scan_args(disp, "D.[z]", &recv);
   if (err) return err;
@@ -396,7 +396,7 @@ int pn_do_response(pn_dispatcher_t *disp)
 
 int pn_do_outcome(pn_dispatcher_t *disp)
 {
-  pn_sasl_t *sasl = (pn_sasl_t *) disp->context;
+  pn_sasl_t *sasl = disp->transport->sasl;
   uint8_t outcome;
   int err = pn_scan_args(disp, "D.[B]", &outcome);
   if (err) return err;
@@ -425,7 +425,7 @@ static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *by
     if (sasl->header_count == SASL_HEADER_LEN) {
       sasl->io_layer->process_input = pn_input_read_sasl;
       if (sasl->disp->trace & PN_TRACE_FRM)
-        fprintf(stderr, "    <- %s\n", "SASL");
+        pn_transport_logf(sasl->transport, "  <- %s", "SASL");
     }
     return delta;
   }
@@ -447,7 +447,7 @@ static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes,
 {
   pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
   if (sasl->disp->trace & PN_TRACE_FRM)
-    fprintf(stderr, "    -> %s\n", "SASL");
+    pn_transport_logf(sasl->transport, "  -> %s", "SASL");
   if (size >= SASL_HEADER_LEN) {
     memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
     sasl->io_layer->process_output = pn_output_write_sasl;

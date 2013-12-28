@@ -104,11 +104,18 @@ static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes,
 static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t available);
 static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now);
 
+static void pni_default_tracer(pn_transport_t *transport, const char *message)
+{
+  fprintf(stderr, "[%p]:%s\n", (void *) transport, message);
+}
+
 void pn_transport_init(pn_transport_t *transport)
 {
+  transport->tracer = pni_default_tracer;
   transport->header_count = 0;
   transport->sasl = NULL;
   transport->ssl = NULL;
+  transport->scratch = pn_string(NULL);
   transport->disp = pn_dispatcher(0, transport);
 
   pn_io_layer_t *io_layer = transport->io_layers;
@@ -233,6 +240,7 @@ void pn_transport_free(pn_transport_t *transport)
   pn_free(transport->remote_channels);
   free(transport->input_buf);
   free(transport->output_buf);
+  pn_free(transport->scratch);
   free(transport);
 }
 
@@ -377,7 +385,7 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     transport->close_sent = true;
   }
   transport->disp->halt = true;
-  fprintf(stderr, "ERROR %s %s\n", condition, pn_error_text(transport->error));
+  pn_transport_logf(transport, "ERROR %s %s", condition, pn_error_text(transport->error));
   return PN_ERR;
 }
 
@@ -388,7 +396,7 @@ static char *pn_bytes_strdup(pn_bytes_t str)
 
 int pn_do_open(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   pn_connection_t *conn = transport->connection;
   bool container_q, hostname_q;
   pn_bytes_t remote_container, remote_hostname;
@@ -405,8 +413,8 @@ int pn_do_open(pn_dispatcher_t *disp)
   if (err) return err;
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
-      fprintf(stderr, "Peer advertised bad max-frame (%u), forcing to %u\n",
-              transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
+      pn_transport_logf(transport, "Peer advertised bad max-frame (%u), forcing to %u",
+                        transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
     disp->remote_max_frame = transport->remote_max_frame;
@@ -436,7 +444,7 @@ int pn_do_open(pn_dispatcher_t *disp)
 
 int pn_do_begin(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
@@ -524,7 +532,7 @@ int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
 
 int pn_do_attach(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   pn_bytes_t name;
   uint32_t handle;
   bool is_sender;
@@ -641,7 +649,7 @@ void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 int pn_do_transfer(pn_dispatcher_t *disp)
 {
   // XXX: multi transfer
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   uint32_t handle;
   pn_bytes_t tag;
   bool id_present;
@@ -710,7 +718,7 @@ int pn_do_transfer(pn_dispatcher_t *disp)
 
 int pn_do_flow(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   pn_sequence_t onext, inext, delivery_count;
   uint32_t iwin, owin, link_credit;
   uint32_t handle;
@@ -777,7 +785,7 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
 
 int pn_do_disposition(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   bool role;
   pn_sequence_t first, last;
   uint64_t type = 0;
@@ -854,7 +862,7 @@ int pn_do_disposition(pn_dispatcher_t *disp)
 
 int pn_do_detach(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   uint32_t handle;
   bool closed;
   int err = pn_scan_args(disp, "D.[Io]", &handle, &closed);
@@ -883,7 +891,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
 
 int pn_do_end(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
   int err = pn_scan_error(disp->args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
@@ -894,7 +902,7 @@ int pn_do_end(pn_dispatcher_t *disp)
 
 int pn_do_close(pn_dispatcher_t *disp)
 {
-  pn_transport_t *transport = (pn_transport_t *) disp->context;
+  pn_transport_t *transport = disp->transport;
   pn_connection_t *conn = transport->connection;
   int err = pn_scan_error(disp->args, &transport->remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
@@ -947,12 +955,12 @@ static ssize_t transport_consume(pn_transport_t *transport)
       break;
     } else {
       if (n != PN_EOS) {
-        pn_dispatcher_trace(transport->disp, 0, "ERROR[%i] %s\n",
-                            pn_error_code(transport->error),
-                            pn_error_text(transport->error));
+        pn_transport_logf(transport, "ERROR[%i] %s\n",
+                          pn_error_code(transport->error),
+                          pn_error_text(transport->error));
       }
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-        pn_dispatcher_trace(transport->disp, 0, "<- EOS\n");
+        pn_transport_log(transport, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
       return n;
     }
@@ -983,7 +991,7 @@ static ssize_t pn_input_read_header(pn_transport_t *transport, const char *bytes
       transport->io_layers[PN_IO_AMQP].process_input = next;
 
       if (transport->disp->trace & PN_TRACE_FRM)
-        fprintf(stderr, "    <- %s\n", protocol);
+        pn_transport_logf(transport, "  <- %s", protocol);
     }
     return delta;
   }
@@ -1623,7 +1631,7 @@ static ssize_t pn_output_write_header(pn_transport_t *transport,
                                       ssize_t (*next)(pn_io_layer_t *, char *, size_t))
 {
   if (transport->disp->trace & PN_TRACE_FRM)
-    fprintf(stderr, "    -> %s\n", protocol);
+    pn_transport_logf(transport, "  -> %s", protocol);
   if (size >= hdrsize) {
     memmove(bytes, header, hdrsize);
     transport->io_layers[PN_IO_AMQP].process_output = next;
@@ -1700,10 +1708,10 @@ static ssize_t transport_produce(pn_transport_t *transport)
         break;   // return what is available
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
         if (n == PN_EOS)
-          pn_dispatcher_trace(transport->disp, 0, "-> EOS\n");
+          pn_transport_log(transport, "  -> EOS");
         else
-          pn_dispatcher_trace(transport->disp, 0, "-> EOS (%" PN_ZI ") %s\n", n,
-                              pn_error_text(transport->error));
+          pn_transport_logf(transport, "  -> EOS (%" PN_ZI ") %s", n,
+                            pn_error_text(transport->error));
       }
       return n;
     }
@@ -1730,6 +1738,49 @@ void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
   if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
   if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
   transport->disp->trace = trace;
+}
+
+void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t *tracer)
+{
+  assert(transport);
+  assert(tracer);
+
+  transport->tracer = tracer;
+}
+
+pn_tracer_t *pn_transport_get_tracer(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->tracer;
+}
+
+void pn_transport_set_context(pn_transport_t *transport, void *context)
+{
+  assert(transport);
+  transport->context = context;
+}
+
+void *pn_transport_get_context(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->context;
+}
+
+void pn_transport_log(pn_transport_t *transport, const char *message)
+{
+  assert(transport);
+  transport->tracer(transport, message);
+}
+
+void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  pn_string_vformat(transport->scratch, fmt, ap);
+  va_end(ap);
+
+  pn_transport_log(transport, pn_string_get(transport->scratch));
 }
 
 uint32_t pn_transport_get_max_frame(pn_transport_t *transport)

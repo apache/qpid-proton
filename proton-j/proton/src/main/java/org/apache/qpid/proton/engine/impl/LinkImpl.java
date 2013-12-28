@@ -55,7 +55,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private final LinkNode<LinkImpl> _node;
     private boolean _drain;
 
-
     LinkImpl(SessionImpl session, String name)
     {
         _session = session;
@@ -296,7 +295,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         _drain = drain;
     }
 
-    boolean getDrain()
+    public boolean getDrain()
     {
         return _drain;
     }
@@ -378,4 +377,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         _drained = value;
     }
 
+    public int getRemoteCredit()
+    {
+        return _credit - _queued;
+    }
 }

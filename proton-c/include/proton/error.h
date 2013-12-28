@@ -43,7 +43,7 @@ typedef struct pn_error_t pn_error_t;
 
 PN_EXTERN const char *pn_code(int code);
 
-PN_EXTERN pn_error_t *pn_error();
+PN_EXTERN pn_error_t *pn_error(void);
 PN_EXTERN void pn_error_free(pn_error_t *error);
 PN_EXTERN void pn_error_clear(pn_error_t *error);
 PN_EXTERN int pn_error_set(pn_error_t *error, int code, const char *text);

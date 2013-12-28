@@ -192,6 +192,8 @@ public class DriverImpl implements Driver
         {
             SocketChannel channel = SocketChannel.open();
             channel.configureBlocking(false);
+            // Disable the Nagle algorithm on TCP connections.
+            channel.socket().setTcpNoDelay(true);
             channel.connect(new InetSocketAddress(host, port));
             return createConnector(channel, context);
         }

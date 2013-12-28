@@ -138,4 +138,30 @@ use constant {
         "get_map_helper"),
 };
 
+package qpid::proton::Errors;
+
+use constant {
+    NONE => 0,
+    EOS => $cproton_perl::PN_EOS,
+    ERROR => $cproton_perl::PN_ERR,
+    OVERFLOW => $cproton_perl::PN_OVERFLOW,
+    UNDERFLOW => $cproton_perl::PN_UNDERFLOW,
+    STATE => $cproton_perl::PN_STATE_ERR,
+    ARGUMENT => $cproton_perl::PN_ARG_ERR,
+    TIMEOUT => $cproton_perl::PN_TIMEOUT,
+    INTERRUPTED => $cproton_perl::PN_INTR,
+    INPROGRESS => $cproton_perl::PN_INPROGRESS,
+};
+
+package qpid::proton::Tracker;
+
+use constant {
+    ABORTED => $cproton_perl::PN_STATUS_ABORTED,
+    ACCEPTED => $cproton_perl::PN_STATUS_ACCEPTED,
+    REJECTED => $cproton_perl::PN_STATUS_REJECTED,
+    PENDING => $cproton_perl::PN_STATUS_PENDING,
+    SETTLED => $cproton_perl::PN_STATUS_SETTLED,
+    UNKNOWN => undef,
+};
+
 1;

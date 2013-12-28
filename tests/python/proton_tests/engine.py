@@ -68,6 +68,7 @@ class Test(common.Test):
       c1._transport.max_frame_size = max_frame[0]
       c2._transport.max_frame_size = max_frame[1]
     if idle_timeout:
+      # idle_timeout in seconds expressed as float
       c1._transport.idle_timeout = idle_timeout[0]
       c2._transport.idle_timeout = idle_timeout[1]
     c1.open()
@@ -387,6 +388,7 @@ class LinkTest(Test):
 
   def test_multiple(self):
     rcv = self.snd.session.receiver("second-rcv")
+    assert rcv.name == "second-rcv"
     self.snd.open()
     rcv.open()
     self.pump()
@@ -866,16 +868,16 @@ class IdleTimeoutTest(Test):
     Verify the configuration and negotiation of the idle timeout.
     """
 
-    self.snd, self.rcv = self.link("test-link", idle_timeout=[1000,2000])
+    self.snd, self.rcv = self.link("test-link", idle_timeout=[1.0,2.0])
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
     self.snd.open()
     self.rcv.open()
     self.pump()
-    assert self.rcv.session.connection._transport.idle_timeout == 2000
-    assert self.rcv.session.connection._transport.remote_idle_timeout == 1000
-    assert self.snd.session.connection._transport.idle_timeout == 1000
-    assert self.snd.session.connection._transport.remote_idle_timeout == 2000
+    assert self.rcv.session.connection._transport.idle_timeout == 2.0
+    assert self.rcv.session.connection._transport.remote_idle_timeout == 1.0
+    assert self.snd.session.connection._transport.idle_timeout == 1.0
+    assert self.snd.session.connection._transport.remote_idle_timeout == 2.0
 
   def testTimeout(self):
     """
@@ -883,7 +885,7 @@ class IdleTimeoutTest(Test):
     """
 
     # snd will timeout the Connection if no frame is received within 1000 ticks
-    self.snd, self.rcv = self.link("test-link", idle_timeout=[1000,0])
+    self.snd, self.rcv = self.link("test-link", idle_timeout=[1.0,0])
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
     self.snd.open()
@@ -892,32 +894,32 @@ class IdleTimeoutTest(Test):
 
     t_snd = self.snd.session.connection._transport
     t_rcv = self.rcv.session.connection._transport
-    assert t_rcv.idle_timeout == 0
-    assert t_rcv.remote_idle_timeout == 1000
-    assert t_snd.idle_timeout == 1000
-    assert t_snd.remote_idle_timeout == 0
+    assert t_rcv.idle_timeout == 0.0
+    assert t_rcv.remote_idle_timeout == 1.0
+    assert t_snd.idle_timeout == 1.0
+    assert t_snd.remote_idle_timeout == 0.0
 
     sndr_frames_in = t_snd.frames_input
     rcvr_frames_out = t_rcv.frames_output
 
-    # at t+1, nothing should happen:
-    clock = 1
-    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 501,  "deadline to send keepalive"
+    # at t+1msec, nothing should happen:
+    clock = 0.001
+    assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # at one tick from expected idle frame send, nothing should happen:
-    clock = 500
-    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 501,  "deadline to send keepalive"
+    clock = 0.500
+    assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # this should cause rcvr to expire and send a keepalive
-    clock = 502
-    assert t_snd.tick(clock) == 1001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1002, "deadline to send keepalive"
+    clock = 0.502
+    assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
     self.pump()
     sndr_frames_in += 1
     rcvr_frames_out += 1
@@ -926,14 +928,14 @@ class IdleTimeoutTest(Test):
 
     # since a keepalive was received, sndr will rebase its clock against this tick:
     # and the receiver should not change its deadline
-    clock = 503
-    assert t_snd.tick(clock) == 1503, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1002, "deadline to send keepalive"
+    clock = 0.503
+    assert t_snd.tick(clock) == 1.503, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # now expire sndr
-    clock = 1504
+    clock = 1.504
     t_snd.tick(clock)
     try:
       self.pump()
@@ -1642,7 +1644,7 @@ class ServerTest(Test):
     self.server.start()
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
-    self.cxtr.transport.idle_timeout = int(idle_timeout_secs * 1000)  #msecs
+    self.cxtr.transport.idle_timeout = idle_timeout_secs
     self.cxtr.sasl().mechanisms("ANONYMOUS")
     self.cxtr.sasl().client()
     self.conn = Connection()
@@ -1659,7 +1661,7 @@ class ServerTest(Test):
     while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
           and time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(1)
+      self.driver.wait(0.001)
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
@@ -1670,7 +1672,7 @@ class ServerTest(Test):
     deadline = time() + duration
     while time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(1)
+      self.driver.wait(0.001)
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
@@ -1683,7 +1685,7 @@ class ServerTest(Test):
     arrive in a timely manner.
     """
     idle_timeout_secs = self.delay
-    self.server = common.TestServerDrain(idle_timeout=int(idle_timeout_secs * 1000))
+    self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
     self.server.start()
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
@@ -1699,7 +1701,7 @@ class ServerTest(Test):
     while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
           and time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(int(self.timeout * 1000))
+      self.driver.wait(self.timeout)
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
@@ -1711,7 +1713,7 @@ class ServerTest(Test):
     deadline = time() + duration
     while time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(int(10 * duration * 1000))
+      self.driver.wait(10 * duration)
       self.cxtr.process()
 
     assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
@@ -1726,7 +1728,7 @@ class ServerTest(Test):
     deadline = time() + self.timeout
     while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= deadline:
       self.cxtr.process()
-      self.driver.wait(int(self.timeout*1000))
+      self.driver.wait(self.timeout)
       self.cxtr.process()
 
     assert self.conn.state & Endpoint.REMOTE_CLOSED, "Connection failed to close"

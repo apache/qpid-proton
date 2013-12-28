@@ -25,6 +25,7 @@ except NameError:
 
 from org.apache.qpid.proton import Proton, ProtonUnsupportedOperationException
 from org.apache.qpid.proton import InterruptException as Interrupt
+from org.apache.qpid.proton import TimeoutException as Timeout
 from org.apache.qpid.proton.engine import \
     Transport as JTransport, Sender as JSender, Receiver as JReceiver, \
     Sasl, SslDomain as JSslDomain, \
@@ -42,7 +43,6 @@ from org.apache.qpid.proton.amqp import UnsignedInteger, UnsignedLong, UnsignedB
     Decimal32, Decimal64, Decimal128
 from jarray import zeros, array
 from java.util import EnumSet, UUID as JUUID, Date as JDate, HashMap
-from java.util.concurrent import TimeoutException as Timeout
 from java.nio import ByteBuffer
 from java.lang import Character as JCharacter, String as JString, Integer as JInteger
 from java.lang import NoClassDefFoundError
@@ -63,11 +63,15 @@ class Skipped(Exception):
 PENDING = "PENDING"
 ACCEPTED = "ACCEPTED"
 REJECTED = "REJECTED"
+RELEASED = "RELEASED"
+SETTLED = "SETTLED"
 
 STATUSES = {
   Status.ACCEPTED: ACCEPTED,
   Status.REJECTED: REJECTED,
   Status.PENDING: PENDING,
+  Status.RELEASED: RELEASED,
+  Status.SETTLED: SETTLED,
   Status.UNKNOWN: None
   }
 
@@ -375,6 +379,10 @@ class Link(Endpoint):
 
   def next(self, mask):
     return wrap_link(self.impl.next(*self._enums(mask)))
+
+  @property
+  def name(self):
+      return self.impl.getName()
 
   @property
   def remote_snd_settle_mode(self):
@@ -727,6 +735,22 @@ class Transport(object):
 
   def __init__(self):
     self.impl = Proton.transport()
+    self._ssl = None
+    self._sasl = None
+
+  def __del__(self):
+    if hasattr(self, ".impl") and self.impl:
+      pn_transport_free(self.impl)
+      if hasattr(self, "_sasl") and self._sasl:
+        # pn_transport_free deallocs the C sasl associated with the
+        # transport, so erase the reference if a SASL object was used.
+        self._sasl._sasl = None
+        self._sasl = None
+      if hasattr(self, "_ssl") and self._ssl:
+        # ditto the owned c SSL object
+        self._ssl._ssl = None
+        self._ssl = None
+      del self._trans
 
   def trace(self, mask):
     # XXX: self.impl.trace(mask)
@@ -829,6 +853,18 @@ The idle timeout of the connection (in milliseconds).
   def frames_input(self):
     #return pn_transport_get_frames_input(self._trans)
     raise ProtonUnsupportedOperationException("Transport.frames_input")
+
+  def sasl(self):
+    # SASL factory (singleton for this transport)
+    if not self._sasl:
+      self._sasl = SASL(self)
+    return self._sasl
+
+  def ssl(self, domain=None, session_details=None):
+    # SSL factory (singleton for this transport)
+    if not self._ssl:
+      self._ssl = SSL(self, domain, session_details)
+    return self._ssl
 
 class UnmappedType:
 
@@ -1321,12 +1357,20 @@ class Messenger(object):
   def recv(self, n=-1):
     self.impl.recv(n)
 
+  @property
+  def receiving(self):
+    return self.impl.receiving()
+
   def work(self, timeout=None):
     if timeout is None:
       t = -1
     else:
       t = long(1000*timeout)
-    return self.impl.work(t)
+    try:
+        err = self.impl.work(t)
+    except Timeout, e:
+        return False
+    return err
 
   def interrupt(self):
     self.impl.interrupt()
@@ -1410,6 +1454,9 @@ class Messenger(object):
   def _set_certificate(self, xxx):
     raise Skipped()
   certificate = property(_get_certificate, _set_certificate)
+
+  def buffered(self, tracker):
+    raise Skipped()
 
 
 class Message(object):
@@ -1594,8 +1641,13 @@ class SASL(object):
   OK = Sasl.PN_SASL_OK
   AUTH = Sasl.PN_SASL_AUTH
 
-  def __init__(self,transport):
-    self._sasl = transport.impl.sasl()
+  def __new__(cls, transport):
+    """Enforce a singleton SASL object per Transport"""
+    if not transport._sasl:
+      obj = super(SASL, cls).__new__(cls)
+      obj._sasl = transport.impl.sasl()
+      transport._sasl = obj
+    return transport._sasl
 
   def mechanisms(self, mechanisms):
     self._sasl.setMechanisms(mechanisms.split())
@@ -1680,6 +1732,29 @@ class SSLSessionDetails(object):
     self._session_details = Proton.sslPeerDetails(session_id, 1)
 
 class SSL(object):
+
+  def __new__(cls, transport, domain, session_details=None):
+    """Enforce a singleton SSL object per Transport"""
+    if transport._ssl:
+      # unfortunately, we've combined the allocation and the configuration in a
+      # single step.  So catch any attempt by the application to provide what
+      # may be a different configuration than the original (hack)
+      ssl = transport._ssl
+      if (domain and (ssl._domain is not domain) or
+          session_details and (ssl._session_details is not session_details)):
+        raise SSLException("Cannot re-configure existing SSL object!")
+    else:
+      obj = super(SSL, cls).__new__(cls)
+      obj._domain = domain
+      obj._session_details = session_details
+
+      internal_session_details = None
+      if session_details:
+        internal_session_details = session_details._session_details
+
+      obj._ssl = transport.impl.ssl(domain._domain, internal_session_details)
+      transport._ssl = obj
+    return transport._ssl
 
   def __init__(self, transport, domain, session_details=None):
 
@@ -1771,6 +1846,8 @@ __all__ = [
            "MANUAL",
            "PENDING",
            "REJECTED",
+           "RELEASED",
+           "SETTLED",
            "char",
            "Condition",
            "Connection",

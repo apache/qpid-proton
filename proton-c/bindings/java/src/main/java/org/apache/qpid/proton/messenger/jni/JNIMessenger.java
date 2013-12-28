@@ -113,6 +113,12 @@ class JNIMessenger implements Messenger
     }
 
     @Override
+    public int receiving()
+    {
+        return Proton.pn_messenger_receiving(_impl);
+    }
+
+    @Override
     public Message get()
     {
         SWIGTYPE_p_pn_message_t msg = Proton.pn_message();
@@ -271,6 +277,14 @@ class JNIMessenger implements Messenger
         {
             return Status.REJECTED;
         }
+        else if (status == pn_status_t.PN_STATUS_RELEASED)
+        {
+            return Status.RELEASED;
+        }
+        else if (status == pn_status_t.PN_STATUS_SETTLED)
+        {
+            return Status.SETTLED;
+        }
         else if(status == pn_status_t.PN_STATUS_UNKNOWN)
         {
             return Status.UNKNOWN;
@@ -295,7 +309,7 @@ class JNIMessenger implements Messenger
 
     private void check(int errorCode) throws ProtonException
     {
-        if(errorCode != 0 && errorCode != Proton.PN_INPROGRESS)
+        if(errorCode < 0 && errorCode != Proton.PN_INPROGRESS)
         {
             String errorMessage = Proton.pn_error_text(Proton.pn_messenger_error(_impl));
             if(errorCode == Proton.PN_TIMEOUT)

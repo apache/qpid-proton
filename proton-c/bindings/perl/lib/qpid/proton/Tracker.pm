@@ -21,15 +21,23 @@ use strict;
 use warnings;
 use cproton_perl;
 
-use qpid::proton::ExceptionHandling;
-use qpid::proton::Data;
-use qpid::proton::Mapping;
-use qpid::proton::Constants;
-use qpid::proton::Tracker;
-use qpid::proton::Messenger;
-use qpid::proton::Message;
+package qpid::proton::Tracker;
 
-use qpid::proton;
+sub new {
+    my ($class) = @_;
+    my ($self) = {};
+
+    $self->{_impl} = $_[1];
+
+    bless $self, $class;
+    return $self;
+}
+
+sub get_impl {
+    my ($self) = @_;
+
+
+    return $self->{_impl};
+}
 
 1;
-

@@ -770,6 +770,24 @@ class SslTest(common.Test):
         # self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         # self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
+    def test_singleton(self):
+        """Verify that only a single instance of SSL can exist per Transport"""
+        transport = Transport()
+        ssl1 = SSL(transport, self.client_domain)
+        ssl2 = transport.ssl(self.client_domain)
+        ssl3 = transport.ssl(self.client_domain)
+        assert ssl1 is ssl2
+        assert ssl1 is ssl3
+        transport = Transport()
+        ssl1 = transport.ssl(self.client_domain)
+        ssl2 = SSL(transport, self.client_domain)
+        assert ssl1 is ssl2
+        # catch attempt to re-configure existing SSL
+        try:
+            ssl3 = SSL(transport, self.server_domain)
+            assert False, "Expected error did not occur!"
+        except SSLException, e:
+            pass
 
 class MessengerSSLTests(common.Test):
 

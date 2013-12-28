@@ -64,6 +64,7 @@ module Qpid
         self.add_item :PENDING,  Cproton::PN_STATUS_PENDING
         self.add_item :ACCEPTED, Cproton::PN_STATUS_ACCEPTED
         self.add_item :REJECTED, Cproton::PN_STATUS_REJECTED
+        self.add_item :SETTLED,  Cproton::PN_STATUS_SETTLED
 
     end
 

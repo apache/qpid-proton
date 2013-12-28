@@ -126,7 +126,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_listener_t *lnr,
     pn_ssl_domain_allow_unsecured_client(ctx->domain);
   }
 
-  pn_subscription_t *sub = pn_subscription(messenger, scheme);
+  pn_subscription_t *sub = pn_subscription(messenger, scheme, host, port);
   ctx->subscription = sub;
   ctx->host = pn_strdup(host);
   ctx->port = pn_strdup(port);
@@ -743,6 +743,14 @@ void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn
   while (link) {
     if (pn_link_is_sender(link)) {
       pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
+    } else {
+      pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context(link);
+      if (ctx) {
+        const char *addr = pn_terminus_get_address(pn_link_remote_source(link));
+        if (ctx->subscription) {
+          pni_subscription_set_address(ctx->subscription, addr);
+        }
+      }
     }
     link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
   }
@@ -1106,6 +1114,7 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
   if (!connection) return NULL;
+  pn_connection_ctx_t *cctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
@@ -1129,13 +1138,22 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
     pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
   }
   // XXX
-  pn_terminus_set_address(pn_link_target(link), name);
-  pn_terminus_set_address(pn_link_source(link), name);
+  if (pn_streq(name, "#")) {
+    if (pn_link_is_sender(link)) {
+      pn_terminus_set_dynamic(pn_link_target(link), true);
+    } else {
+      pn_terminus_set_dynamic(pn_link_source(link), true);
+    }
+  } else {
+    pn_terminus_set_address(pn_link_target(link), name);
+    pn_terminus_set_address(pn_link_source(link), name);
+  }
   link_ctx_setup( messenger, connection, link );
   if (!sender) {
     pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
     assert( ctx );
-    ctx->subscription = pn_subscription(messenger, NULL);
+    ctx->subscription = pn_subscription(messenger, cctx->scheme, cctx->host,
+                                        cctx->port);
   }
   pn_link_open(link);
   return link;
@@ -1374,6 +1392,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
 pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger)
 {
+  assert(messenger);
   return messenger->outgoing_tracker;
 }
 
@@ -1403,7 +1422,12 @@ bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker)
   pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
   if (e) {
     pn_delivery_t *d = pni_entry_get_delivery(e);
-    return d && pn_delivery_buffered(d);
+    if (d) {
+      bool b = pn_delivery_buffered(d);
+      return b;
+    } else {
+      return true;
+    }
   } else {
     return false;
   }
@@ -1488,7 +1512,23 @@ static bool work_pred(pn_messenger_t *messenger) {
 int pn_messenger_work(pn_messenger_t *messenger, int timeout)
 {
   messenger->worked = false;
-  return pn_messenger_tsync(messenger, work_pred, timeout);
+  int err = pn_messenger_tsync(messenger, work_pred, timeout);
+  if (err) return err;
+  return (int) (messenger->worked ? 1 : 0);
+}
+
+int pni_messenger_work(pn_messenger_t *messenger)
+{
+  if (messenger->blocking) {
+    return pn_messenger_work(messenger, messenger->timeout);
+  } else {
+    int err = pn_messenger_work(messenger, 0);
+    if (err == PN_TIMEOUT) {
+      return PN_INPROGRESS;
+    } else {
+      return err;
+    }
+  }
 }
 
 int pn_messenger_interrupt(pn_messenger_t *messenger)
@@ -1582,6 +1622,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
 
 pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
 {
+  assert(messenger);
   return messenger->incoming_tracker;
 }
 

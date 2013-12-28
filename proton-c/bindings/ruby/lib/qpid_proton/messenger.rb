@@ -21,10 +21,39 @@ module Qpid
 
   module Proton
 
-    # A +Messenger+ provides a high-level means for sending and
-    # receiving AMQP messages.
+    # The +Messenger+ class defines a high level interface for
+    # sending and receiving Messages. Every Messenger contains
+    # a single logical queue of incoming messages and a single
+    # logical queue of outgoing messages. These messages in these
+    # queues may be destined for, or originate from, a variety of
+    # addresses.
     #
-    # ==== Examples
+    # The messenger interface is single-threaded.  All methods
+    # except one ( #interrupt ) are intended to be used from within
+    # the messenger thread.
+    #
+    # === Sending & Receiving Messages
+    #
+    # The Messenger class works in conjuction with the Message class. The
+    # Message class is a mutable holder of message content.
+    # 
+    # The put method copies its Message to the outgoing queue, and may 
+    # send queued messages if it can do so without blocking.  The send
+    # method blocks until it has sent the requested number of messages,
+    # or until a timeout interrupts the attempt.
+    # 
+    # Similarly, the recv method receives messages into the incoming
+    # queue, and may block as it attempts to receive the requested number
+    # of messages,  or until timeout is reached. It may receive fewer
+    # than the requested number.  The get method pops the
+    # eldest Message off the incoming queue and copies it into the Message
+    # object that you supply.  It will not block.
+    # 
+    # The blocking attribute allows you to turn off blocking behavior entirely,
+    # in which case send and recv will do whatever they can without
+    # blocking, and then return.  You can then look at the number
+    # of incoming and outgoing messages to see how much outstanding work
+    # still remains.
     #
     class Messenger
 
@@ -92,6 +121,12 @@ module Qpid
         Cproton.pn_messenger_get_timeout(@impl)
       end
 
+      # Blocking Attribute
+      #
+      # Enable or disable blocking behavior during message sending
+      # and receiving.  This affects every blocking call, with the
+      # exception of work().  Currently, the affected calls are
+      # send, recv, and stop.
       def blocking
         Cproton.pn_mesenger_is_blocking(@impl)
       end
@@ -118,8 +153,9 @@ module Qpid
         Cproton.pn_error_text(Cproton.pn_messenger_error(@impl))
       end
 
-      # Starts the +Messenger+, allowing it to begin sending and
-      # receiving messages.
+      # Currently a no-op placeholder.
+      # For future compatibility, do not send or recv messages
+      # before starting the +Messenger+.
       #
       def start
         check_for_error(Cproton.pn_messenger_start(@impl))
@@ -132,11 +168,22 @@ module Qpid
         check_for_error(Cproton.pn_messenger_stop(@impl))
       end
 
+      # Returns true iff a Messenger is in the stopped state.
+      # This function does not block.
+      #
       def stopped
         Cproton.pn_messenger_stopped(@impl)
       end
 
-      # Subscribes the +Messenger+ to a remote address.
+      # Subscribes the Messenger to messages originating from the
+      # specified source. The source is an address as specified in the
+      # Messenger introduction with the following addition. If the
+      # domain portion of the address begins with the '~' character, the
+      # Messenger will interpret the domain as host/port, bind to it,
+      # and listen for incoming messages. For example "~0.0.0.0",
+      # "amqp://~0.0.0.0" will all bind to any local interface and 
+      # listen for incoming messages.  Ad address of # "amqps://~0.0.0.0" 
+      # will only permit incoming SSL connections.
       #
       def subscribe(address)
         raise TypeError.new("invalid address: #{address}") if address.nil?
@@ -148,7 +195,10 @@ module Qpid
       # Path to a certificate file for the +Messenger+.
       #
       # This certificate is used when the +Messenger+ accepts or establishes
-      # SSL/TLS connections.
+      # SSL/TLS connections.  This property must be specified for the
+      # Messenger to accept incoming SSL/TLS connections and to establish
+      # client authenticated outgoing SSL/TLS connection.  Non client authenticated
+      # outgoing SSL/TLS connections do not require this property.
       #
       # ==== Options
       #
@@ -168,7 +218,8 @@ module Qpid
       #
       # The property must be specified for the +Messenger+ to accept incoming
       # SSL/TLS connections and to establish client authenticated outgoing
-      # SSL/TLS connections.
+      # SSL/TLS connections.  Non client authenticated SSL/TLS connections
+      # do not require this property.
       #
       # ==== Options
       #
@@ -202,9 +253,15 @@ module Qpid
         Cproton.pn_messenger_get_trusted_certificates(@impl)
       end
 
-      # Puts a single message into the outgoing queue.
+      # Places the content contained in the message onto the outgoing
+      # queue of the Messenger.
       #
-      # To ensure messages are sent, you should then call ::send.
+      # This method will never block, however it will send any unblocked 
+      # Messages in the outgoing queue immediately and leave any blocked
+      # Messages remaining in the outgoing queue.
+      # The send call may then be used to block until the outgoing queue 
+      # is empty.  The outgoing attribute may be used to check the depth
+      # of the outgoing queue.
       #
       # ==== Options
       #
@@ -219,14 +276,22 @@ module Qpid
         return outgoing_tracker
       end
 
-      # Sends all outgoing messages, blocking until the outgoing queue
-      # is empty.
+      # This call will block until the indicated number of messages
+      # have been sent, or until the operation times out.
+      # If n is -1 this call will block until all outgoing messages 
+      # have been sent. If n is 0 then this call will send whatever 
+      # it can without blocking.
       #
       def send(n = -1)
         check_for_error(Cproton.pn_messenger_send(@impl, n))
       end
 
-      # Gets a single message incoming message from the local queue.
+      # Moves the message from the head of the incoming message queue into
+      # the supplied message object. Any content in the supplied message
+      # will be overwritten.
+      # A tracker for the incoming Message is returned.  The tracker can
+      # later be used to communicate your acceptance or rejection of the
+      # Message.
       #
       # If no message is provided in the argument, then one is created. In
       # either case, the one returned will be the fetched message.
@@ -247,8 +312,11 @@ module Qpid
         return incoming_tracker
       end
 
-      # Receives up to the specified number of messages, blocking until at least
-      # one message is received.
+      # Receives up to limit messages into the incoming queue.  If no value
+      # for limit is supplied, this call will receive as many messages as it
+      # can buffer internally.  If the Messenger is in blocking mode, this
+      # call will block until at least one Message is available in the
+      # incoming queue.
       #
       # Options ====
       #
@@ -278,6 +346,12 @@ module Qpid
         check_for_error(Cproton.pn_messenger_interrupt(@impl))
       end
 
+      # Sends or receives any outstanding messages queued for a Messenger.
+      #
+      # This will block for the indicated timeout.  This method may also do I/O
+      # other than sending and receiving messages.  For example, closing
+      # connections after stop() has been called.
+      # 
       def work(timeout=-1)
         err = Cproton.pn_messenger_work(@impl, timeout)
         if (err == Cproton::PN_TIMEOUT) then
@@ -399,7 +473,11 @@ module Qpid
         Qpid::Proton::Tracker.new(impl)
       end
 
-      # Accepts the incoming message identified by the tracker.
+      # Signal the sender that you have acted on the Message
+      # pointed to by the tracker.  If no tracker is supplied,
+      # then all messages that have been returned by the get
+      # method are accepted, except those that have already been
+      # auto-settled by passing beyond your incoming window size.
       #
       # ==== Options
       #
@@ -417,6 +495,9 @@ module Qpid
       end
 
       # Rejects the incoming message identified by the tracker.
+      # If no tracker is supplied, all messages that have been returned
+      # by the get method are rejected, except those that have already
+      # been auto-settled by passing beyond your outgoing window size.
       #
       # ==== Options
       #
@@ -434,8 +515,10 @@ module Qpid
       end
 
       # Gets the last known remote state of the delivery associated with
-      # the given tracker. See TrackerStatus for details on the values
-      # returned.
+      # the given tracker, as long as the Message is still within your 
+      # outgoing window. (Also works on incoming messages that are still 
+      # within your incoming queue. See TrackerStatus for details on the 
+      # values returned.
       #
       # ==== Options
       #
@@ -446,7 +529,9 @@ module Qpid
         Qpid::Proton::TrackerStatus.by_value(Cproton.pn_messenger_status(@impl, tracker.impl))
       end
 
-      # Settles messages for a tracker.
+      # Frees a Messenger from tracking the status associated
+      # with a given tracker. If you don't supply a tracker, all
+      # outgoing messages up to the most recent will be settled.
       #
       # ==== Options
       #
@@ -467,9 +552,14 @@ module Qpid
 
       # Sets the incoming window.
       #
-      # If the incoming window is set to a positive value, then after each
-      # call to #accept or #reject, the object will track the status of that
-      # many deliveries.
+      # The Messenger will track the remote status of this many incoming 
+      # deliveries after they have been accepted or rejected.
+      #
+      # Messages enter this window only when you take them into your application
+      # using get().  If your incoming window size is n, and you get n+1 messages
+      # without explicitly accepting or rejecting the oldest message, then the
+      # message that passes beyond the edge of the incoming window will be 
+      # assigned the default disposition of its link.
       #
       # ==== Options
       #
@@ -486,10 +576,14 @@ module Qpid
         Cproton.pn_messenger_get_incoming_window(@impl)
       end
 
-      #Sets the outgoing window.
+      # Sets the outgoing window.
       #
-      # If the outgoing window is set to a positive value, then after each call
-      # to #send, the object will track the status of that  many deliveries.
+      # The Messenger will track the remote status of this many outgoing 
+      # deliveries after calling send.
+      # A Message enters this window when you call the put() method with the
+      # message.  If your outgoing window size is n, and you call put n+1
+      # times, status information will no longer be available for the
+      # first message.
       #
       # ==== Options
       #

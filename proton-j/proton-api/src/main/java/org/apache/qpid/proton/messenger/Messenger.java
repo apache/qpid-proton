@@ -118,6 +118,14 @@ public interface Messenger
      */
     void recv(int count) throws TimeoutException;
     /**
+     * Returns the capacity of the incoming message queue of
+     * messenger. Note this count does not include those messages
+     * already available on the incoming queue (see
+     * incoming()). Rather it returns the number of incoming queue
+     * entries available for receiving messages
+     */
+    int receiving();
+    /**
      * Returns the message from the head of the incoming message
      * queue.
      */
@@ -142,7 +150,12 @@ public interface Messenger
 
     boolean stopped();
 
-    boolean work(long timeout);
+    /** Sends or receives any outstanding messages queued for a
+     * messenger.  If timeout is zero, no blocking is done.  A timeout
+     * of -1 blocks forever, otherwise timeout is the maximum time (in
+     * millisecs) to block.  Returns True if work was performed.
+     */
+    boolean work(long timeout) throws TimeoutException;
 
     void interrupt();
 

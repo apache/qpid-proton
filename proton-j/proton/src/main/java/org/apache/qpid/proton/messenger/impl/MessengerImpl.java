@@ -61,6 +61,12 @@ import org.apache.qpid.proton.amqp.Binary;
 
 public class MessengerImpl implements Messenger
 {
+    private enum LinkCreditMode
+    {
+        // method for replenishing credit
+        LINK_CREDIT_EXPLICIT,   // recv(N)
+        LINK_CREDIT_AUTO;       // recv()
+    }
 
     private static final EnumSet<EndpointState> UNINIT = EnumSet.of(EndpointState.UNINITIALIZED);
     private static final EnumSet<EndpointState> ACTIVE = EnumSet.of(EndpointState.ACTIVE);
@@ -73,10 +79,15 @@ public class MessengerImpl implements Messenger
     private boolean _blocking = true;
     private long _nextTag = 1;
     private Driver _driver;
-    private int _receiving = 0;
-    private static final int _creditBatch = 1024;
-    private int _credit;
-    private int _distributed;
+    private LinkCreditMode _credit_mode = LinkCreditMode.LINK_CREDIT_EXPLICIT;
+    private final int _credit_batch = 1024;   // credit_mode == LINK_CREDIT_AUTO
+    private int _credit;        // available
+    private int _distributed;    // outstanding credit
+    private int _receivers;      // total # receiver Links
+    private int _draining;       // # Links in drain state
+    private List<Receiver> _credited = new ArrayList<Receiver>();
+    private List<Receiver> _blocked = new ArrayList<Receiver>();
+    private long _next_drain;
     private TrackerImpl _incomingTracker;
     private TrackerImpl _outgoingTracker;
     private Store _incomingStore = new Store();
@@ -165,7 +176,7 @@ public class MessengerImpl implements Messenger
         return _allClosed.test();
     }
 
-    public boolean work(long timeout)
+    public boolean work(long timeout) throws TimeoutException
     {
         if (_driver == null) { return false; }
         _worked = false;
@@ -285,10 +296,38 @@ public class MessengerImpl implements Messenger
         pumpOut(m.getAddress(), sender);
     }
 
+    private void reclaimLink(Link link)
+    {
+        if (link instanceof Receiver)
+        {
+            int credit = link.getCredit();
+            if (credit > 0)
+            {
+                _credit += credit;
+                _distributed -= credit;
+            }
+        }
+
+        Iterator<Delivery> dIter = link.unsettled();
+        while (dIter != null && dIter.hasNext())
+        {
+            Delivery delivery = (Delivery) dIter.next();
+            StoreEntry entry = (StoreEntry) delivery.getContext();
+            if (entry != null)
+            {
+                entry.setDelivery(null);
+                if (delivery.isBuffered())
+                    entry.setStatus(Status.ABORTED);
+            }
+        }
+        linkRemoved(link);
+    }
+
     private int pumpOut( String address, Sender sender )
     {
         StoreEntry entry = _outgoingStore.get( address );
         if (entry == null) {
+            sender.drained();
             return 0;
         }
 
@@ -342,12 +381,24 @@ public class MessengerImpl implements Messenger
             throw new IllegalStateException("cannot recv while messenger is stopped");
         }
 
-        if(_logger.isLoggable(Level.FINE))
+        if (_logger.isLoggable(Level.FINE) && n != -1)
         {
             _logger.fine(this + " about to wait for up to " + n + " messages to be received");
         }
 
-        _receiving = n;
+        if (n == -1)
+        {
+            _credit_mode = LinkCreditMode.LINK_CREDIT_AUTO;
+        }
+        else
+        {
+            _credit_mode = LinkCreditMode.LINK_CREDIT_EXPLICIT;
+            if (n > _distributed)
+                _credit = n - _distributed;
+            else        // cancel unallocated
+                _credit = 0;
+        }
+
         distributeCredit();
 
         waitUntil(_messageAvailable);
@@ -360,7 +411,7 @@ public class MessengerImpl implements Messenger
 
     public int receiving()
     {
-        return _receiving;
+        return _credit + _distributed;
     }
 
     public Message get()
@@ -375,10 +426,8 @@ public class MessengerImpl implements Messenger
                                                _incomingStore.trackEntry(entry));
 
             _incomingStore.freeEntry( entry );
-            _distributed--;
             return message;
         }
-
         return null;
     }
 
@@ -400,6 +449,36 @@ public class MessengerImpl implements Messenger
             }
             entry.setEncodedMsg( buffer, size );
             receiver.advance();
+
+            // account for the used credit, replenish if
+            // low (< 20% maximum per-link batch) and
+            // extra credit available
+            assert(_distributed > 0);
+            _distributed--;
+            if (!receiver.getDrain() && _blocked.isEmpty() && _credit > 0)
+            {
+                final int max = perLinkCredit();
+                final int lo_thresh = (int)(max * 0.2 + 0.5);
+                if (receiver.getRemoteCredit() < lo_thresh)
+                {
+                    final int more = Math.min(_credit, max - receiver.getRemoteCredit());
+                    _credit -= more;
+                    _distributed += more;
+                    receiver.flow(more);
+                }
+            }
+            // check if blocked
+            if (receiver.getRemoteCredit() == 0 && _credited.contains(receiver))
+            {
+                _credited.remove(receiver);
+                if (receiver.getDrain())
+                {
+                    receiver.setDrain(false);
+                    assert( _draining > 0 );
+                    _draining--;
+                }
+                _blocked.add(receiver);
+            }
         }
         return 0;
     }
@@ -423,7 +502,8 @@ public class MessengerImpl implements Messenger
             {
                 _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
             }
-            _driver.createListener(hostName, port, null);
+            ListenerContext ctx = new ListenerContext( address.getScheme(), hostName, ports );
+            _driver.createListener(hostName, port, ctx);
         }
         else
         {
@@ -585,6 +665,8 @@ public class MessengerImpl implements Messenger
             Connector<?> c = l.accept();
             Connection connection = Proton.connection();
             connection.setContainer(_name);
+            ListenerContext ctx = (ListenerContext) l.getContext();
+            connection.setContext(new ConnectionContext(ctx.getService(), c));
             c.setConnection(connection);
             //TODO: SSL and full SASL
             Sasl sasl = c.sasl();
@@ -596,18 +678,10 @@ public class MessengerImpl implements Messenger
             }
             connection.open();
         }
-        //process active connectors, handling opened & closed connections as needed
+        // process connectors, reclaiming credit on closed connectors
         for (Connector<?> c = _driver.connector(); c != null; c = _driver.connector())
         {
             _worked = true;
-            _logger.log(Level.FINE, "Processing active connector " + c);
-            try
-            {
-                c.process();
-            } catch (IOException e) {
-                _logger.log(Level.SEVERE, "Error processing connection", e);
-            }
-            processEndpoints(c);
             if (c.isClosed())
             {
                 _awaitingDestruction.add(c);
@@ -615,8 +689,11 @@ public class MessengerImpl implements Messenger
             }
             else
             {
+                _logger.log(Level.FINE, "Processing active connector " + c);
                 try
                 {
+                    c.process();
+                    processEndpoints(c);
                     c.process();
                 }
                 catch (IOException e)
@@ -672,6 +749,7 @@ public class MessengerImpl implements Messenger
             //TODO: the following is not correct; should only copy those properties that we understand
             link.setSource(link.getRemoteSource());
             link.setTarget(link.getRemoteTarget());
+            linkAdded(link);
             link.open();
             _logger.log(Level.FINE, "Opened link " + link);
         }
@@ -686,14 +764,23 @@ public class MessengerImpl implements Messenger
             }
         }
 
-        for (Link link : new Links(connection, ACTIVE, CLOSED))
-        {
-            link.close();
-        }
         for (Session session : new Sessions(connection, ACTIVE, CLOSED))
         {
             session.close();
         }
+
+        for (Link link : new Links(connection, ANY, CLOSED))
+        {
+            if (link.getLocalState() == EndpointState.ACTIVE)
+            {
+                link.close();
+            }
+            else
+            {
+                reclaimLink(link);
+            }
+        }
+
         if (connection.getRemoteState() == EndpointState.CLOSED)
         {
             if (connection.getLocalState() == EndpointState.ACTIVE)
@@ -729,7 +816,7 @@ public class MessengerImpl implements Messenger
 
         // wait until timeout expires or until test is true
         long now = System.currentTimeMillis();
-        long deadline = timeout < 0 ? Long.MAX_VALUE : now + timeout;
+        final long deadline = timeout < 0 ? Long.MAX_VALUE : now + timeout;
         boolean done = false;
 
         while (true)
@@ -737,21 +824,31 @@ public class MessengerImpl implements Messenger
             done = condition.test();
             if (done) break;
 
-            boolean woken;
-            if ( timeout >= 0 ) {
-                long remaining = deadline - now;
+            long remaining;
+            if (timeout < 0)
+                remaining = -1;
+            else {
+                remaining = deadline - now;
                 if (remaining < 0) break;
-                woken = _driver.doWait(remaining);
-            } else {
-                woken = _driver.doWait(-1);
             }
+
+            // Update the credit scheduler. If the scheduler detects
+            // credit imbalance on the links, wake up in time to
+            // service credit drain
+            distributeCredit();
+            if (_next_drain != 0)
+            {
+                long wakeup = (_next_drain > now) ? _next_drain - now : 0;
+                remaining = (remaining == -1) ? wakeup : Math.min(remaining, wakeup);
+            }
+
+            boolean woken;
+            woken = _driver.doWait(remaining);
             processActive();
             if (woken) {
                 throw new InterruptException();
             }
-            if (timeout >= 0) {
-                now = System.currentTimeMillis();
-            }
+            now = System.currentTimeMillis();
         }
 
         return done;
@@ -762,7 +859,8 @@ public class MessengerImpl implements Messenger
         for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
-            if (host.equals(connection.getRemoteContainer()) || service.equals(connection.getContext()))
+            ConnectionContext ctx = (ConnectionContext) connection.getContext();
+            if (host.equals(connection.getRemoteContainer()) || service.equals(ctx.getService()))
             {
                 return connection;
             }
@@ -774,62 +872,108 @@ public class MessengerImpl implements Messenger
     {
         for (Link link : new Links(connection, ANY, ANY))
         {
-            if (link instanceof Receiver && link.getCredit() > 0)
-            {
-                reclaimCredit(link.getCredit());
-            }
+            reclaimLink(link);
         }
-    }
-
-    private void reclaimCredit(int credit)
-    {
-        _credit += credit;
-        _distributed -= credit;
     }
 
     private void distributeCredit()
     {
-        int linkCt = 0;
-        // @todo track the number of opened receive links
-        for (Connector<?> c : _driver.connectors())
+        if (_receivers == 0) return;
+
+        if (_credit_mode == LinkCreditMode.LINK_CREDIT_AUTO)
         {
-            if (c.isClosed()) continue;
-            Connection connection = c.getConnection();
-            for (Link link : new Links(connection, ACTIVE, ANY))
+            // replenish, but limit the max total messages buffered
+            final int max = _receivers * _credit_batch;
+            final int used = _distributed + incoming();
+            if (max > used)
+                _credit = max - used;
+        }
+
+        // reclaim any credit left over after draining links has completed
+        if (_draining > 0)
+        {
+            Iterator<Receiver> itr = _credited.iterator();
+            while (itr.hasNext())
             {
-                if (link instanceof Receiver) linkCt++;
+                Receiver link = (Receiver) itr.next();
+                if (link.getDrain())
+                {
+                    if (!link.draining())
+                    {
+                        // drain completed for this link
+                        int drained = link.drained();
+                        assert(_distributed >= drained);
+                        _distributed -= drained;
+                        _credit += drained;
+                        link.setDrain(false);
+                        _draining--;
+                        itr.remove();
+                        _blocked.add(link);
+                    }
+                }
             }
         }
 
-        if (linkCt == 0) return;
-
-        if (_receiving < 0)
+        // distribute available credit to blocked links
+        final int batch = perLinkCredit();
+        while (_credit > 0 && !_blocked.isEmpty())
         {
-            _credit = linkCt * _creditBatch - incoming();
-        } else {
-            int total = _credit + _distributed;
-            if (_receiving > total)
-                _credit += _receiving - total;
+            Receiver link = _blocked.get(0);
+            _blocked.remove(0);
+
+            final int more = Math.min(_credit, batch);
+            _distributed += more;
+            _credit -= more;
+
+            link.flow(more);
+            _credited.add(link);
+
+            // flow changed, must process it
+            ConnectionContext ctx = (ConnectionContext) link.getSession().getConnection().getContext();
+            try
+            {
+                ctx.getConnector().process();
+            } catch (IOException e) {
+                _logger.log(Level.SEVERE, "Error processing connection", e);
+            }
         }
 
-        int batch = (_credit < linkCt) ? 1 : (_credit/linkCt);
-        for (Connector<?> c : _driver.connectors())
+        if (_blocked.isEmpty())
         {
-            if (c.isClosed()) continue;
-            Connection connection = c.getConnection();
-            for (Link link : new Links(connection, ACTIVE, ANY))
+            _next_drain = 0;
+        }
+        else
+        {
+            // not enough credit for all links - start draining granted credit
+            if (_draining == 0)
             {
-                if (link instanceof Receiver)
+                // don't do it too often - pace ourselves (it's expensive)
+                if (_next_drain == 0)
                 {
-                    int have = ((Receiver) link).getCredit();
-                    if (have < batch)
+                    _next_drain = System.currentTimeMillis() + 250;
+                }
+                else if (_next_drain <= System.currentTimeMillis())
+                {
+                    // initiate drain, free up at most enough to satisfy blocked
+                    _next_drain = 0;
+                    int needed = _blocked.size() * batch;
+
+                    for (Receiver link : _credited)
                     {
-                        int need = batch - have;
-                        int amount = (_credit < need) ? _credit : need;
-                        ((Receiver) link).flow(amount);
-                        _credit -= amount;
-                        _distributed += amount;
-                        if (_credit == 0) return;
+                        if (!link.getDrain()) {
+                            link.setDrain(true);
+                            needed -= link.getRemoteCredit();
+                            _draining++;
+                            // drain requested on link, must process it
+                            ConnectionContext ctx = (ConnectionContext) link.getSession().getConnection().getContext();
+                            try
+                            {
+                                ctx.getConnector().process();
+                            } catch (IOException e) {
+                                _logger.log(Level.SEVERE, "Error processing connection", e);
+                            }
+                            if (needed <= 0) break;
+                        }
                     }
                 }
             }
@@ -1058,7 +1202,7 @@ public class MessengerImpl implements Messenger
             connection = Proton.connection();
             connection.setContainer(_name);
             connection.setHostname(host);
-            connection.setContext(service);
+            connection.setContext(new ConnectionContext(service, connector));
             connector.setConnection(connection);
             Sasl sasl = connector.sasl();
             if (sasl != null)
@@ -1077,6 +1221,7 @@ public class MessengerImpl implements Messenger
         Session session = connection.session();
         session.open();
         C link = finder.create(session);
+        linkAdded(link);
         link.open();
         return link;
     }
@@ -1232,4 +1377,97 @@ public class MessengerImpl implements Messenger
         return builder.toString();
     }
 
+    // compute the maximum amount of credit each receiving link is
+    // entitled to.  The actual credit given to the link depends on
+    // what amount of credit is actually available.
+    private int perLinkCredit()
+    {
+        if (_receivers == 0) return 0;
+        int total = _credit + _distributed;
+        return Math.max(total/_receivers, 1);
+    }
+
+    // a new link has been created, account for it.
+    private void linkAdded(Link link)
+    {
+        if (link instanceof Receiver)
+        {
+            _receivers++;
+            _blocked.add((Receiver)link);
+        }
+    }
+
+    // a link is being removed, account for it.
+    private void linkRemoved(Link _link)
+    {
+        if (_link instanceof Receiver)
+        {
+            Receiver link = (Receiver)_link;
+            assert _receivers > 0;
+            _receivers--;
+            if (link.getDrain())
+            {
+                link.setDrain(false);
+                assert _draining > 0;
+                _draining--;
+            }
+            if (_blocked.contains(link))
+                _blocked.remove(link);
+            else if (_credited.contains(link))
+                _credited.remove(link);
+            else
+                assert(false);
+        }
+    }
+
+    private class ConnectionContext
+    {
+        private String _service;
+        private Connector _connector;
+
+        public ConnectionContext(String service, Connector connector)
+        {
+            _service = service;
+            _connector = connector;
+        }
+
+        public String getService()
+        {
+            return _service;
+        }
+
+        public Connector getConnector()
+        {
+            return _connector;
+        }
+    }
+
+    private class ListenerContext
+    {
+        private String _host;
+        private String _port;
+        private String _service;  // for now. move to subscription later
+
+        public ListenerContext(String service, String host, String port)
+        {
+            _service = service;
+            _host = host;
+            _port = port;
+        }
+
+        public String getService()
+        {
+            return _service;
+        }
+
+        public String getHost()
+        {
+            return _host;
+        }
+
+        public String getPort()
+        {
+            return _port;
+        }
+    }
 }

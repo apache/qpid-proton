@@ -182,4 +182,6 @@ public interface Link extends Endpoint
 
     public int drained();
 
+    public int getRemoteCredit();
+    public boolean getDrain();
 }

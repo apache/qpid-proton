@@ -30,12 +30,12 @@
 #include "../util.h"
 #include "../platform_fmt.h"
 
-pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
+pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 {
   pn_dispatcher_t *disp = (pn_dispatcher_t *) calloc(sizeof(pn_dispatcher_t), 1);
 
   disp->frame_type = frame_type;
-  disp->context = context;
+  disp->transport = transport;
   disp->trace = PN_TRACE_OFF;
 
   disp->input = pn_buffer(1024);
@@ -57,6 +57,8 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, void *context)
   disp->halt = false;
   disp->batch = true;
 
+  disp->scratch = pn_string(NULL);
+
   return disp;
 }
 
@@ -68,6 +70,7 @@ void pn_dispatcher_free(pn_dispatcher_t *disp)
     pn_data_free(disp->output_args);
     pn_buffer_free(disp->frame);
     free(disp->output);
+    pn_free(disp->scratch);
     free(disp);
   }
 }
@@ -84,45 +87,35 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
                         pn_data_t *args, const char *payload, size_t size)
 {
   if (disp->trace & PN_TRACE_FRM) {
-    size_t n = SCRATCH;
-    pn_data_format(args, disp->scratch, &n);
-    pn_dispatcher_trace(disp, ch, "%s %s", dir == OUT ? "->" : "<-",
-                        disp->scratch);
+    pn_string_format(disp->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
+    pn_inspect(args, disp->scratch);
+
     if (size) {
       char buf[1024];
       int e = pn_quote_data(buf, 1024, payload, size);
-      fprintf(stderr, " (%" PN_ZU ") \"%s\"%s\n", size, buf,
-              e == PN_OVERFLOW ? "... (truncated)" : "");
-    } else {
-      fprintf(stderr, "\n");
+      pn_string_addf(disp->scratch, " (%" PN_ZU ") \"%s\"%s", size, buf,
+                     e == PN_OVERFLOW ? "... (truncated)" : "");
     }
+
+    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
   }
-}
-
-void pn_dispatcher_trace(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
-{
-  va_list ap;
-  fprintf(stderr, "[%p:%u] ", (void *) disp, ch);
-
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
 }
 
 int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
 {
   if (frame.size == 0) { // ignore null frames
     if (disp->trace & PN_TRACE_FRM)
-      pn_dispatcher_trace(disp, frame.channel, "<- (EMPTY FRAME)\n");
+      pn_transport_logf(disp->transport, "%u <- (EMPTY FRAME)\n", frame.channel);
     return 0;
   }
 
   ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
   if (dsize < 0) {
-    fprintf(stderr, "Error decoding frame: %s %s\n", pn_code(dsize),
-            pn_data_error(disp->args));
-    pn_fprint_data(stderr, frame.payload, frame.size);
-    fprintf(stderr, "\n");
+    pn_string_format(disp->scratch,
+                     "Error decoding frame: %s %s\n", pn_code(dsize),
+                     pn_error_text(pn_data_error(disp->args)));
+    pn_quote(disp->scratch, frame.payload, frame.size);
+    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
     return dsize;
   }
 
@@ -132,11 +125,11 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
   bool scanned;
   int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
   if (e) {
-    fprintf(stderr, "Scan error\n");
+    pn_transport_log(disp->transport, "Scan error");
     return e;
   }
   if (!scanned) {
-    fprintf(stderr, "Error dispatching frame\n");
+    pn_transport_log(disp->transport, "Error dispatching frame");
     return PN_ERR;
   }
   uint8_t code = lcode;
@@ -207,7 +200,9 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
   int err = pn_data_vfill(disp->output_args, fmt, ap);
   va_end(ap);
   if (err) {
-    fprintf(stderr, "error posting frame: %s, %s: %s\n", fmt, pn_code(err), pn_data_error(disp->output_args));
+    pn_transport_logf(disp->transport,
+                      "error posting frame: %s, %s: %s", fmt, pn_code(err),
+                      pn_error_text(pn_data_error(disp->output_args)));
     return PN_ERR;
   }
 
@@ -224,7 +219,8 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
       pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
       goto encode_performatives;
     }
-    fprintf(stderr, "error posting frame: %s", pn_code(wr));
+    pn_transport_logf(disp->transport,
+                      "error posting frame: %s", pn_code(wr));
     return PN_ERR;
   }
 
@@ -240,9 +236,10 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
   }
   disp->output_frames_ct += 1;
   if (disp->trace & PN_TRACE_RAW) {
-    fprintf(stderr, "RAW: \"");
-    pn_fprint_data(stderr, disp->output + disp->available, n);
-    fprintf(stderr, "\"\n");
+    pn_string_set(disp->scratch, "RAW: \"");
+    pn_quote(disp->scratch, disp->output + disp->available, n);
+    pn_string_addf(disp->scratch, "\"");
+    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
   }
   disp->available += n;
 
@@ -281,7 +278,9 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
                          message_format,
                          settled, more_flag);
   if (err) {
-    fprintf(stderr, "error posting transfer frame: %s: %s\n", pn_code(err), pn_data_error(disp->output_args));
+    pn_transport_logf(disp->transport,
+                      "error posting transfer frame: %s: %s", pn_code(err),
+                      pn_error_text(pn_data_error(disp->output_args)));
     return PN_ERR;
   }
 
@@ -298,7 +297,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
         pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
         goto encode_performatives;
       }
-      fprintf(stderr, "error posting frame: %s", pn_code(wr));
+      pn_transport_logf(disp->transport, "error posting frame: %s", pn_code(wr));
       return PN_ERR;
     }
     buf.size = wr;
@@ -346,9 +345,10 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
     disp->output_frames_ct += 1;
     framecount++;
     if (disp->trace & PN_TRACE_RAW) {
-      fprintf(stderr, "RAW: \"");
-      pn_fprint_data(stderr, disp->output + disp->available, n);
-      fprintf(stderr, "\"\n");
+      pn_string_set(disp->scratch, "RAW: \"");
+      pn_quote(disp->scratch, disp->output + disp->available, n);
+      pn_string_addf(disp->scratch, "\"");
+      pn_transport_log(disp->transport, pn_string_get(disp->scratch));
     }
     disp->available += n;
   } while (disp->output_size > 0 && framecount < frame_limit);

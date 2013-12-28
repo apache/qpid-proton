@@ -123,6 +123,10 @@ class StoreEntry
         return _status;
     }
 
+    public void setStatus(Status status)
+    {
+        _status = status;
+    }
 
     private static Status _disp2status(DeliveryState disp)
     {
@@ -135,7 +139,7 @@ class StoreEntry
         if (disp instanceof Rejected)
             return Status.REJECTED;
         if (disp instanceof Released)
-            return Status.PENDING;
+            return Status.RELEASED;
         if (disp instanceof Modified)
             return Status.MODIFIED;
         assert(false);
@@ -152,7 +156,12 @@ class StoreEntry
             }
             else if (_delivery.remotelySettled())
             {
-                _status = _disp2status(_delivery.getLocalState());
+                DeliveryState disp = _delivery.getLocalState();
+                if (disp == null) {
+                    _status = Status.SETTLED;
+                } else {
+                    _status = _disp2status(_delivery.getLocalState());
+                }
             }
             else
             {

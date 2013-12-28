@@ -383,9 +383,9 @@ int pn_data_errno(pn_data_t *data)
   return pn_error_code(data->error);
 }
 
-const char *pn_data_error(pn_data_t *data)
+pn_error_t *pn_data_error(pn_data_t *data)
 {
-  return pn_error_text(data->error);
+  return data->error;
 }
 
 size_t pn_data_size(pn_data_t *data)

@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -314,13 +314,13 @@ class MessengerTest(Test):
       self.client.recv(2*size - len(trackers))
       while self.client.incoming:
         t = self.client.get(msg)
-        assert self.client.status(t) is PENDING, (t, self.client.status(t))
+        assert self.client.status(t) is SETTLED, (t, self.client.status(t))
         trackers.append(t)
 
     for t in trackers[:size]:
       assert self.client.status(t) is None, (t, self.client.status(t))
     for t in trackers[size:]:
-      assert self.client.status(t) is PENDING, (t, self.client.status(t))
+      assert self.client.status(t) is SETTLED, (t, self.client.status(t))
 
     self.client.accept()
 
@@ -331,6 +331,33 @@ class MessengerTest(Test):
 
   def testIncomingQueueBiggerThanSessionWindow(self):
     self.testIncomingQueueBiggerThanWindow(2048)
+
+  def testBuffered(self):
+    self.client.outgoing_window = 1000
+    self.client.incoming_window = 1000
+    self.start();
+    assert self.server_received == 0
+    buffering = 0
+    count = 100
+    for i in range(count):
+      msg = Message()
+      msg.address="amqp://0.0.0.0:12345"
+      msg.subject="Hello World!"
+      msg.body = "First the world, then the galaxy!"
+      t = self.client.put(msg)
+      buffered = self.client.buffered(t)
+      # allow transition from False to True, but not back
+      if buffered:
+          buffering += 1
+      else:
+        assert not buffering, ("saw %s buffered deliveries before?" % buffering)
+
+    while self.client.outgoing:
+        last = self.client.outgoing
+        self.client.send()
+        print "sent ", last - self.client.outgoing
+
+    assert self.server_received == count
 
   def test_proton222(self):
     self.start()
@@ -613,9 +640,6 @@ class MessengerTest(Test):
     """ The server is given a fixed amount of credit, and runs until that
     credit is exhausted.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditBlockingRebalance - credit scheduler TBD for Java Messenger")
-
     self.server_finite_credit = True
     self.server_credit = 11
     self.start()
@@ -767,9 +791,6 @@ class NBMessengerTest(common.Test):
     """ Verify that a fixed amount of credit will redistribute to new
     links.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditRedistribution - credit scheduler TBD for Java Messenger")
-
     self.server.recv( 5 )
 
     # first link will get all credit
@@ -802,9 +823,6 @@ class NBMessengerTest(common.Test):
     """ Verify that credit is reclaimed when a link with outstanding credit is
     torn down.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditReclaim - credit scheduler TBD for Java Messenger")
-
     self.server.recv( 9 )
 
     # first link will get all credit
@@ -866,15 +884,10 @@ class NBMessengerTest(common.Test):
     assert self.server.incoming == 9, self.server.incoming
     assert self.server.receiving == 0, self.server.receiving
 
-
-
   def testCreditReplenish(self):
     """ When extra credit is available it should be granted to the first
     link that can use it.
     """
-    if sys.platform.startswith("java"):
-        raise Skipped("Skipping testCreditReplenish - credit scheduler TBD for Java Messenger")
-
     # create three links
     msg = Message()
     for i in range(3):

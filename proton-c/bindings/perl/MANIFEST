@@ -1,4 +1,3 @@
-ChangeLog
 CMakeLists.txt
 lib/qpid/proton/Message.pm
 lib/qpid/proton/Messenger.pm

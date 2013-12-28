@@ -168,3 +168,16 @@ class SaslTest(Test):
       out = self.t1.output(1024)
 
     assert self.s1.outcome == SASL.OK, self.s1.outcome
+
+  def test_singleton(self):
+      """Verify that only a single instance of SASL can exist per Transport"""
+      transport = Transport()
+      sasl1 = SASL(transport)
+      sasl2 = transport.sasl()
+      sasl3 = SASL(transport)
+      assert sasl1 is sasl2
+      assert sasl1 is sasl3
+      transport = Transport()
+      sasl1 = transport.sasl()
+      sasl2 = SASL(transport)
+      assert sasl1 is sasl2

@@ -300,7 +300,7 @@ static pn_status_t disp2status(uint64_t disp)
   case PN_REJECTED:
     return PN_STATUS_REJECTED;
   case PN_RELEASED:
-    return PN_STATUS_PENDING;
+    return PN_STATUS_RELEASED;
   case PN_MODIFIED:
     return PN_STATUS_MODIFIED;
   default:
@@ -319,7 +319,12 @@ void pni_entry_updated(pni_entry_t *entry)
     if (pn_delivery_remote_state(d)) {
       entry->status = disp2status(pn_delivery_remote_state(d));
     } else if (pn_delivery_settled(d)) {
-      entry->status = disp2status(pn_delivery_local_state(d));
+      uint64_t disp = pn_delivery_local_state(d);
+      if (disp) {
+        entry->status = disp2status(disp);
+      } else {
+        entry->status = PN_STATUS_SETTLED;
+      }
     } else {
       entry->status = PN_STATUS_PENDING;
     }

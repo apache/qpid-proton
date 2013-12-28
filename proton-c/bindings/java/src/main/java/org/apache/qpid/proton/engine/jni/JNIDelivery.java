@@ -266,4 +266,9 @@ public class JNIDelivery implements Delivery
         return (int) Proton.pn_delivery_pending(_impl);
     }
 
+    @ProtonCEquivalent("pn_delivery_buffered")
+    public boolean isBuffered()
+    {
+        return Proton.pn_delivery_buffered(_impl);
+    }
 }

@@ -42,7 +42,7 @@ except ImportError:
     class UUID:
       def __init__(self, hex=None, bytes=None):
         if [hex, bytes].count(None) != 1:
-          raise TypeErrror("need one of hex or bytes")
+          raise TypeError("need one of hex or bytes")
         if bytes is not None:
           self.bytes = bytes
         elif hex is not None:
@@ -142,13 +142,17 @@ EXCEPTIONS = {
 PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
+RELEASED = Constant("RELEASED")
 ABORTED = Constant("ABORTED")
+SETTLED = Constant("SETTLED")
 
 STATUSES = {
   PN_STATUS_ABORTED: ABORTED,
   PN_STATUS_ACCEPTED: ACCEPTED,
   PN_STATUS_REJECTED: REJECTED,
+  PN_STATUS_RELEASED: RELEASED,
   PN_STATUS_PENDING: PENDING,
+  PN_STATUS_SETTLED: SETTLED,
   PN_STATUS_UNKNOWN: None
   }
 
@@ -443,6 +447,7 @@ first message.
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
       self._check(PN_ERR)
+    return Subscription(sub_impl)
 
   def put(self, message):
     """
@@ -481,6 +486,18 @@ first message.
     """
     disp = pn_messenger_status(self._mng, tracker);
     return STATUSES.get(disp, disp)
+
+  def buffered(self, tracker):
+    """
+    Checks if the delivery associated with the given tracker is still
+    waiting to be sent.
+
+    @type tracker: tracker
+    @param tracker: the tracker whose status is to be retrieved
+
+    @return true if delivery is still buffered
+    """
+    return pn_messenger_buffered(self._mng, tracker);
 
   def settle(self, tracker=None):
     """
@@ -1073,6 +1090,15 @@ The format of the message.
     self._check(err)
     return result
 
+class Subscription(object):
+
+  def __init__(self, impl):
+    self._impl = impl
+
+  @property
+  def address(self):
+    return pn_subscription_address(self._impl)
+
 class DataException(ProtonException):
   """
   The DataException class is the root of the Data exception hierarchy.
@@ -1271,7 +1297,7 @@ class Data:
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, DataException)
-      raise exc("[%s]: %s" % (err, pn_data_error(self._data)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_data_error(self._data))))
     else:
       return err
 
@@ -1694,7 +1720,7 @@ class Data:
     """
     Checks if the current node is a null.
     """
-    self._check(pn_data_get_null(self._data))
+    return pn_data_is_null(self._data)
 
   def get_bool(self):
     """
@@ -2041,6 +2067,13 @@ class Endpoint(object):
   def remote_condition(self):
     return cond2obj(self._get_remote_cond_impl())
 
+  # the following must be provided by subclasses
+  def _get_cond_impl(self):
+      assert False, "Subclass must override this!"
+
+  def _get_remote_cond_impl(self):
+      assert False, "Subclass must override this!"
+
 class Condition:
 
   def __init__(self, name, description=None, info=None):
@@ -2176,10 +2209,6 @@ class Connection(Endpoint):
   @property
   def state(self):
     return pn_connection_state(self._conn)
-
-  @property
-  def writable(self):
-    return pn_connection_writable(self._conn)
 
   def session(self):
     return wrap_session(pn_session(self._conn))
@@ -2373,6 +2402,10 @@ class Link(Endpoint):
 
   def next(self, mask):
     return wrap_link(pn_link_next(self._link, mask))
+
+  @property
+  def name(self):
+      return pn_link_name(self._link)
 
   @property
   def is_sender(self):
@@ -2687,11 +2720,22 @@ class Transport(object):
     else:
       self._shared_trans = True
       self._trans = _trans
+    self._sasl = None
+    self._ssl = None
 
   def __del__(self):
     if hasattr(self, "_trans"):
       if not hasattr(self, "_shared_trans"):
         pn_transport_free(self._trans)
+        if hasattr(self, "_sasl") and self._sasl:
+            # pn_transport_free deallocs the C sasl associated with the
+            # transport, so erase the reference if a SASL object was used.
+            self._sasl._sasl = None
+            self._sasl = None
+        if hasattr(self, "_ssl") and self._ssl:
+            # ditto the owned c SSL object
+            self._ssl._ssl = None
+            self._ssl = None
       del self._trans
 
   def _check(self, err):
@@ -2708,7 +2752,11 @@ class Transport(object):
     pn_transport_trace(self._trans, n)
 
   def tick(self, now):
-    return pn_transport_tick(self._trans, now)
+    """Process any timed events (like heartbeat generation).
+    now = seconds since epoch (float).
+    """
+    next = pn_transport_tick(self._trans, long(now * 1000))
+    return float(next) / 1000.0
 
   def capacity(self):
     c = pn_transport_capacity(self._trans)
@@ -2783,10 +2831,11 @@ Sets the maximum size for received frames (in bytes).
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    return pn_transport_get_idle_timeout(self._trans)
+    msec = pn_transport_get_idle_timeout(self._trans)
+    return float(msec)/1000.0
 
-  def _set_idle_timeout(self, value):
-    pn_transport_set_idle_timeout(self._trans, value)
+  def _set_idle_timeout(self, sec):
+    pn_transport_set_idle_timeout(self._trans, long(sec * 1000))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -2795,7 +2844,8 @@ The idle timeout of the connection (in milliseconds).
 
   @property
   def remote_idle_timeout(self):
-    return pn_transport_get_remote_idle_timeout(self._trans)
+    msec = pn_transport_get_remote_idle_timeout(self._trans)
+    return float(msec)/1000.0
 
   @property
   def frames_output(self):
@@ -2805,6 +2855,18 @@ The idle timeout of the connection (in milliseconds).
   def frames_input(self):
     return pn_transport_get_frames_input(self._trans)
 
+  def sasl(self):
+    # SASL factory (singleton for this transport)
+    if not self._sasl:
+      self._sasl = SASL(self)
+    return self._sasl
+
+  def ssl(self, domain=None, session_details=None):
+    # SSL factory (singleton for this transport)
+    if not self._ssl:
+      self._ssl = SSL(self, domain, session_details)
+    return self._ssl
+
 class SASLException(TransportException):
   pass
 
@@ -2813,8 +2875,13 @@ class SASL(object):
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
 
-  def __init__(self, transport):
-    self._sasl = pn_sasl(transport._trans)
+  def __new__(cls, transport):
+    """Enforce a singleton SASL object per Transport"""
+    if not transport._sasl:
+      obj = super(SASL, cls).__new__(cls)
+      obj._sasl = pn_sasl(transport._trans)
+      transport._sasl = obj
+    return transport._sasl
 
   def _check(self, err):
     if err < 0:
@@ -2923,14 +2990,29 @@ class SSL(object):
     else:
       return err
 
-  def __init__(self, transport, domain, session_details=None):
-    session_id = None
-    if session_details:
-      session_id = session_details.get_session_id()
-    self._ssl = pn_ssl( transport._trans )
-    if self._ssl is None:
-      raise SSLUnavailable()
-    pn_ssl_init( self._ssl, domain._domain, session_id )
+  def __new__(cls, transport, domain, session_details=None):
+    """Enforce a singleton SSL object per Transport"""
+    if transport._ssl:
+      # unfortunately, we've combined the allocation and the configuration in a
+      # single step.  So catch any attempt by the application to provide what
+      # may be a different configuration than the original (hack)
+      ssl = transport._ssl
+      if (domain and (ssl._domain is not domain) or
+          session_details and (ssl._session_details is not session_details)):
+        raise SSLException("Cannot re-configure existing SSL object!")
+    else:
+      obj = super(SSL, cls).__new__(cls)
+      obj._domain = domain
+      obj._session_details = session_details
+      session_id = None
+      if session_details:
+        session_id = session_details.get_session_id()
+      obj._ssl = pn_ssl( transport._trans )
+      if obj._ssl is None:
+        raise SSLUnavailable()
+      pn_ssl_init( obj._ssl, domain._domain, session_id )
+      transport._ssl = obj
+    return transport._ssl
 
   def cipher_name(self):
     rc, name = pn_ssl_get_cipher_name( self._ssl, 128 )
@@ -3070,8 +3152,12 @@ class Driver(object):
       pn_driver_free(self._driver)
       del self._driver
 
-  def wait(self, timeout):
-    return pn_driver_wait(self._driver, timeout)
+  def wait(self, timeout_sec):
+    if timeout_sec is None or timeout_sec < 0.0:
+      t = -1
+    else:
+      t = long(1000*timeout_sec)
+    return pn_driver_wait(self._driver, t)
 
   def wakeup(self):
     return pn_driver_wakeup(self._driver)
@@ -3103,6 +3189,8 @@ __all__ = [
            "PENDING",
            "MANUAL",
            "REJECTED",
+           "RELEASED",
+           "SETTLED",
            "UNDESCRIBED",
            "Array",
            "Condition",
@@ -3130,6 +3218,7 @@ __all__ = [
            "SSLDomain",
            "SSLSessionDetails",
            "SSLUnavailable",
+           "SSLException",
            "Terminus",
            "Timeout",
            "Interrupt",

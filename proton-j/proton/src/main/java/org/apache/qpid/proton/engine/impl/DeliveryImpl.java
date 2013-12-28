@@ -373,7 +373,7 @@ public class DeliveryImpl implements Delivery
         _updated = true;
     }
 
-    boolean isBuffered()
+    public boolean isBuffered()
     {
         if (_remoteSettled) return false;
         if (getLink() instanceof SenderImpl) {
