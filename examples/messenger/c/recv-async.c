@@ -58,17 +58,22 @@ void usage()
   exit(0);
 }
 
-void main_loop(void *arg) {
+void process(void *arg) {
+//printf("                          *** process ***\n");
 
-    pn_messenger_recv(messenger, -1);
-    //pn_messenger_recv(messenger, 1024);
-    //pn_messenger_recv(messenger, 0);
-    check(messenger);
+    //int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
+    //printf("err = %d\n", err);
+
+    // Process incoming messages
 
     while(pn_messenger_incoming(messenger))
     {
+printf("in while loop\n");
+
       pn_messenger_get(messenger, message);
       check(messenger);
+      pn_tracker_t tracker = pn_messenger_incoming_tracker(messenger);
+
 
       char buffer[1024];
       size_t buffsize = sizeof(buffer);
@@ -79,8 +84,12 @@ void main_loop(void *arg) {
       const char* subject = pn_message_get_subject(message);
       printf("Subject: %s\n", subject ? subject : "(no subject)");
       printf("Content: %s\n", buffer);
-    }
 
+
+
+      int err = pn_messenger_accept(messenger, tracker, 0);
+printf("err = %d\n", err);
+    }
 }
 
 int main(int argc, char** argv)
@@ -138,6 +147,10 @@ int main(int argc, char** argv)
 pn_messenger_set_blocking(messenger, false); // FA Addition.
 
 
+//pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
+pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
+
+
 
   /* load the various command line options if they're set */
   if(certificate)
@@ -161,43 +174,18 @@ pn_messenger_set_blocking(messenger, false); // FA Addition.
   pn_messenger_subscribe(messenger, address);
   check(messenger);
 
+  pn_messenger_recv(messenger, -1); // Receive as many messages as messenger can buffer
+
 #if EMSCRIPTEN
-  emscripten_set_main_loop(main_loop, 0, 0);
+  emscripten_set_main_loop(process, 0, 0);
 #else
   while (1) {
-    main_loop(NULL);
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 16667;
-    select(0, NULL, NULL, NULL, &timeout);
+    //pn_messenger_wait(messenger, -1); // Block indefinitely until there has been socket activity.
+    pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
+    process(NULL);
   }
 #endif
 
-
-/*
-  for(;;)
-  {
-    pn_messenger_recv(messenger, 1024);
-    check(messenger);
-
-    while(pn_messenger_incoming(messenger))
-    {
-      pn_messenger_get(messenger, message);
-      check(messenger);
-
-      char buffer[1024];
-      size_t buffsize = sizeof(buffer);
-      pn_data_t *body = pn_message_body(message);
-      pn_data_format(body, buffer, &buffsize);
-
-      printf("Address: %s\n", pn_message_get_address(message));
-      const char* subject = pn_message_get_subject(message);
-      printf("Subject: %s\n", subject ? subject : "(no subject)");
-      printf("Content: %s\n", buffer);
-    }
-  }
-*/
-
   return 0;
 }
+

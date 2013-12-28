@@ -20,6 +20,7 @@
 
 #include "proton/message.h"
 #include "proton/messenger.h"
+#include "proton/driver.h"
 
 #include "pncompat/misc_funcs.inc"
 #include <stdio.h>
@@ -42,7 +43,10 @@
 // FA Temporarily make global
   pn_message_t * message;
   pn_messenger_t * messenger;
-int count = 0;
+
+pn_tracker_t tracker;
+int tracked = 1;
+
 
 void die(const char *file, int line, const char *message)
 {
@@ -58,20 +62,51 @@ void usage()
   exit(0);
 }
 
-
-void main_loop(void *arg) {
-//printf("                          *** main_loop ***\n");
-
-    pn_messenger_work(messenger, 0); // FA Addition.
-
 /*
-count++;
-if (count % 100 == 0) {
-exit(1);
+void process(void *arg) {
+printf("                          *** process ***\n");
+
+    //int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
+    int pending = pn_messenger_outgoing(messenger); // Get the number of pending messages in the outgoing message queue.
+
+//printf("err = %d\n", err);
+printf("pending = %d\n", pending);
+
+    if (state == SENT_MESSAGE && !pending) {
+printf("calling stop\n");
+        pn_message_free(message); // Release message.
+        pn_messenger_stop(messenger);
+        state = STOPPING;
+    } else if (state == STOPPING && !err) {
+printf("exiting\n");
+        pn_messenger_free(messenger);
+        exit(0);
+    }
 }
 */
 
+
+void process(void *arg) {
+printf("                          *** process ***\n");
+
+    // Process outgoing messages
+
+    pn_status_t status = pn_messenger_status(messenger, tracker);
+printf("status = %d\n", status);
+
+/*
+    if (status != PN_STATUS_PENDING) {
+printf("status = %d\n", status);
+
+        pn_messenger_settle(messenger, tracker, 0);
+        tracked--;
+    }
+*/
+
+
+
 }
+
 
 
 int main(int argc, char** argv)
@@ -114,8 +149,10 @@ int main(int argc, char** argv)
 
   message = pn_message();
   messenger = pn_messenger(NULL);
-pn_messenger_set_blocking(messenger, false); // FA Addition.
+  pn_messenger_set_blocking(messenger, false); // Put messenger into non-blocking mode.
 
+pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
+//pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
 
 
 
@@ -128,30 +165,20 @@ pn_messenger_set_blocking(messenger, false); // FA Addition.
   pn_messenger_put(messenger, message);
   check(messenger);
 
-  //pn_messenger_send(messenger, -1);
-  pn_messenger_send(messenger, 0); // FA Addition.
-  check(messenger);
+  tracker = pn_messenger_outgoing_tracker(messenger);
+//printf("tracker = %lld\n", (long long int)tracker);
+
 
 #if EMSCRIPTEN
-  emscripten_set_main_loop(main_loop, 0, 0);
+  emscripten_set_main_loop(process, 0, 0);
 #else
-
   while (1) {
-    main_loop(NULL);
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 16667;
-    select(0, NULL, NULL, NULL, &timeout);
+    //pn_messenger_wait(messenger, -1); // Block indefinitely until there has been socket activity.
+    pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
+    process(NULL);
   }
 #endif
 
-
-/*
-  pn_messenger_stop(messenger);
-  pn_messenger_free(messenger);
-  pn_message_free(message);
-*/
-
   return 0;
 }
+

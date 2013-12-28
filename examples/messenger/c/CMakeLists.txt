@@ -25,16 +25,20 @@ find_library(PROTON_LIBRARY
 
 add_executable(recv recv.c)
 add_executable(send send.c)
+add_executable(recv-async recv-async.c)
+add_executable(send-async send-async.c)
 
 target_link_libraries(recv qpid-proton)
 target_link_libraries(send qpid-proton)
+target_link_libraries(recv-async qpid-proton)
+target_link_libraries(send-async qpid-proton)
 
 set_target_properties (
-  recv send
+  recv send recv-async send-async
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
 )
 
 if (BUILD_WITH_CXX)
-  set_source_files_properties (recv.c send.c PROPERTIES LANGUAGE CXX)
+  set_source_files_properties (recv.c send.c recv-async.c send-async.c PROPERTIES LANGUAGE CXX)
 endif (BUILD_WITH_CXX)

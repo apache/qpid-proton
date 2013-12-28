@@ -111,8 +111,7 @@ message(STATUS "PLATFORM_LIBS: ${PLATFORM_LIBS}") # can be empty for emscripten
 
 # The following is copied from the the main proton-c/CMakeLists.txt and annotated where there are differences
 # to make it easier to refactor if we want to keep the main compilation and cross-compilation consistent.
-# The main differences are prefixing paths with ${PN_PATH}/ as we can't use a relative path from this
-# CMakeLists.txt and marking the library as "STATIC", as the library is really LLVM bitcode.
+# The main difference is prefixing paths with ${PN_PATH}/ as we can't use a relative path from this CMakeLists.txt.
 
 set(qpid-proton-platform
   ${pn_driver_impl}
@@ -187,10 +186,10 @@ set_target_properties(
 #add_executable(proton-dump.js ${PN_PATH}/src/proton-dump.c)
 #target_link_libraries(proton-dump.js qpid-proton-js)
 
-add_executable(send-async.js examples/send-async.c)
+add_executable(send-async.js ${PN_PATH}/../examples/messenger/c/send-async.c)
 target_link_libraries(send-async.js qpid-proton-js)
 
-add_executable(recv-async.js examples/recv-async.c)
+add_executable(recv-async.js ${PN_PATH}/../examples/messenger/c/recv-async.c)
 target_link_libraries(recv-async.js qpid-proton-js)
 
 #add_executable(msgr-send.js ${PN_PATH}/../tests/tools/apps/c/msgr-common.c ${PN_PATH}/../tests/tools/apps/c/msgr-send.c)

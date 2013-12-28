@@ -21,7 +21,8 @@
 
 
 mergeInto(LibraryManager.library, {
-
+// Add to main emscripten library.js
+/*
   $PROTOCOLS: null,
   __buildProtocols__deps: ['$PROTOCOLS'],
   __buildProtocols: function() {
@@ -67,7 +68,7 @@ mergeInto(LibraryManager.library, {
     }
 
     var result = PROTOCOLS[name];
-    return {{{ makeGetValue(0, 'result', 'i8*') }}};
+    return result;
   },
   getprotobynumber__deps: ['getprotobyname'],
   getprotobynumber: function(number) {
@@ -75,7 +76,7 @@ mergeInto(LibraryManager.library, {
   },
 
 
-
+*/
 
 
 
