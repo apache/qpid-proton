@@ -58,11 +58,8 @@ void usage()
   exit(0);
 }
 
-void process(void *arg) {
+void process() {
 //printf("                          *** process ***\n");
-
-    //int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
-    //printf("err = %d\n", err);
 
     // Process incoming messages
 
@@ -89,6 +86,18 @@ printf("in while loop\n");
 
       int err = pn_messenger_accept(messenger, tracker, 0);
 printf("err = %d\n", err);
+    }
+}
+
+// Callback used by emscripten to ensure pn_messenger_work gets called.
+void work() {
+//printf("                          *** work ***\n");
+
+    int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
+//printf("err = %d\n", err);
+
+    if (err >= 0) {
+        process();
     }
 }
 
@@ -147,8 +156,8 @@ int main(int argc, char** argv)
 pn_messenger_set_blocking(messenger, false); // FA Addition.
 
 
-//pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
-pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
+
+//pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
 
 
 
@@ -177,12 +186,11 @@ pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
   pn_messenger_recv(messenger, -1); // Receive as many messages as messenger can buffer
 
 #if EMSCRIPTEN
-  emscripten_set_main_loop(process, 0, 0);
+  emscripten_set_main_loop(work, 0, 0);
 #else
   while (1) {
-    //pn_messenger_wait(messenger, -1); // Block indefinitely until there has been socket activity.
     pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
-    process(NULL);
+    process();
   }
 #endif
 

@@ -28,26 +28,26 @@ message(STATUS "Found emscripten, using that to build JavaScript binding")
 set(CMAKE_C_COMPILER "${EMCC}")
 
 # Specify the archiver to use for cross-compilation.
-find_program(EMAR emar)
-set(CMAKE_AR "${EMAR}")
+#find_program(EMAR emar)
+#set(CMAKE_AR "${EMAR}")
 
 # Specify the ranlib to use for cross-compilation.
-find_program(EMRANLIB emranlib)
-set(CMAKE_RANLIB "${EMRANLIB}")
+#find_program(EMRANLIB emranlib)
+#set(CMAKE_RANLIB "${EMRANLIB}")
 
 # Don't do compiler autodetection, since we are cross-compiling.
 include(CMakeForceCompiler)
 CMAKE_FORCE_C_COMPILER("${CMAKE_C_COMPILER}" Clang)
 
 # Specify the program to use when building static libraries. Force Emscripten-related command line options to clang.
-set(CMAKE_C_ARCHIVE_CREATE "${CMAKE_AR} rc <TARGET> ${CMAKE_START_TEMP_FILE} <LINK_FLAGS> <OBJECTS>${CMAKE_END_TEMP_FILE}")
+#set(CMAKE_C_ARCHIVE_CREATE "${CMAKE_AR} rc <TARGET> ${CMAKE_START_TEMP_FILE} <LINK_FLAGS> <OBJECTS>${CMAKE_END_TEMP_FILE}")
 
 # From this point we should be using emscripten compilation tools rather than default ones
 message(STATUS "emscripten compilation environment:")
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
-message(STATUS "CMAKE_AR: ${CMAKE_AR}")
-message(STATUS "CMAKE_RANLIB: ${CMAKE_RANLIB}")
-message(STATUS "CMAKE_C_ARCHIVE_CREATE: ${CMAKE_C_ARCHIVE_CREATE}")
+#message(STATUS "CMAKE_AR: ${CMAKE_AR}")
+#message(STATUS "CMAKE_RANLIB: ${CMAKE_RANLIB}")
+#message(STATUS "CMAKE_C_ARCHIVE_CREATE: ${CMAKE_C_ARCHIVE_CREATE}")
 
 # Set this to the proton-c directory, we're cross-compiling code from there.
 set(PN_PATH ${CMAKE_SOURCE_DIR}/proton-c)
@@ -60,20 +60,10 @@ set(PN_PATH ${CMAKE_SOURCE_DIR}/proton-c)
 #  set(pn_driver_ssl_impl src/ssl/openssl.c)
 #  set(SSL_LIB ${OPENSSL_LIBRARIES})
 set(pn_driver_ssl_impl ${PN_PATH}/src/ssl/ssl_stub.c)
-set(SSL_LIB "")
 
 # emscripten is Linux like so use the posix driver.
 set(pn_driver_impl ${PN_PATH}/src/posix/driver.c)
 
-
-# Use stub UUID library (implemented in JavaScript)
-# TODO push proper libuuid back to emscripten and remove this from here.
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/uuid/include")
-set(UUID_LIB "")
-set(UUID_STUB_LIB ${CMAKE_CURRENT_SOURCE_DIR}/uuid/src/library_uuid.js)
-
-# The time lib is in the standard emscripten libraries.
-set(TIME_LIB "")
 
 # Generate encodings.h and protocol.h
 # It may be possible to use the ones generated for the main proton-c build but qpid-proton-core has
@@ -170,8 +160,6 @@ add_library(
   ${qpid-proton-platform}
   )
 
-target_link_libraries(qpid-proton-js ${UUID_LIB} ${SSL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
-
 set_target_properties(
   qpid-proton-js
   PROPERTIES
@@ -198,12 +186,12 @@ target_link_libraries(recv-async.js qpid-proton-js)
 #add_executable(msgr-recv.js ${PN_PATH}/../tests/tools/apps/c/msgr-common.c ${PN_PATH}/../tests/tools/apps/c/msgr-recv.c)
 #target_link_libraries(msgr-recv.js qpid-proton-js)
 
-# TODO get the uuid library and the patches in my-library.js pushed properly into emscripten ASAP
+# TODO get the patches in my-library.js pushed properly into emscripten ASAP
 set_target_properties(
   send-async.js recv-async.js
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  LINK_FLAGS "-s SOCKET_DEBUG=1 --js-library ${UUID_STUB_LIB} --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  LINK_FLAGS "-s SOCKET_DEBUG=1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
   )
 
 

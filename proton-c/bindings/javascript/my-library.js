@@ -22,63 +22,6 @@
 
 mergeInto(LibraryManager.library, {
 // Add to main emscripten library.js
-/*
-  $PROTOCOLS: null,
-  __buildProtocols__deps: ['$PROTOCOLS'],
-  __buildProtocols: function() {
-
-    // Allocate and populate a protoent structure given a name, protocol number and array of aliases
-    function allocprotoent(name, proto, aliases) {
-      // write name into buffer
-      var nameBuf = _malloc(name.length + 1);
-      writeAsciiToMemory(name, nameBuf);
-
-      // write aliases into buffer
-      var j = 0;
-      var length = aliases.length;
-      var aliasListBuf = _malloc((length + 1) * 4); // Use length + 1 so we have space for the terminating NULL pointer.
-
-      for (var i = 0; i < length; i++, j += 4) {
-        var alias = aliases[i];
-        var aliasBuf = _malloc(alias.length + 1);
-        writeAsciiToMemory(alias, aliasBuf);
-        {{{ makeSetValue('aliasListBuf', 'j', 'aliasBuf', 'i8*') }}};
-      }
-      {{{ makeSetValue('aliasListBuf', 'j', '0', 'i8*') }}}; // Terminating NULL pointer.
-
-      // generate protoent
-      var pe = _malloc({{{ C_STRUCTS.protoent.__size__ }}});
-      {{{ makeSetValue('pe', C_STRUCTS.protoent.p_name, 'nameBuf', 'i8*') }}};
-      {{{ makeSetValue('pe', C_STRUCTS.protoent.p_aliases, 'aliasListBuf', 'i8**') }}};
-      {{{ makeSetValue('pe', C_STRUCTS.protoent.p_proto, 'proto', 'i32') }}};
-      return pe;
-    };
-
-    PROTOCOLS = {};
-    PROTOCOLS['tcp'] = PROTOCOLS['6'] = allocprotoent('tcp', 6, ['TCP']);
-    PROTOCOLS['udp'] = PROTOCOLS['17'] = allocprotoent('udp', 17, ['UDP']);
-  },
-
-  getprotobyname__deps: ['__buildProtocols', '$PROTOCOLS'],
-  getprotobyname: function(name) {
-    // struct protoent *getprotobyname (const char *);
-    name = Pointer_stringify(name);
-    if (!PROTOCOLS) {
-        ___buildProtocols();
-    }
-
-    var result = PROTOCOLS[name];
-    return result;
-  },
-  getprotobynumber__deps: ['getprotobyname'],
-  getprotobynumber: function(number) {
-    _getprotobyname(number);
-  },
-
-
-*/
-
-
 
 
 // Hacks below

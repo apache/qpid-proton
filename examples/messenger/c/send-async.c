@@ -62,52 +62,39 @@ void usage()
   exit(0);
 }
 
-/*
-void process(void *arg) {
-printf("                          *** process ***\n");
-
-    //int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
-    int pending = pn_messenger_outgoing(messenger); // Get the number of pending messages in the outgoing message queue.
-
-//printf("err = %d\n", err);
-printf("pending = %d\n", pending);
-
-    if (state == SENT_MESSAGE && !pending) {
-printf("calling stop\n");
-        pn_message_free(message); // Release message.
-        pn_messenger_stop(messenger);
-        state = STOPPING;
-    } else if (state == STOPPING && !err) {
-printf("exiting\n");
-        pn_messenger_free(messenger);
-        exit(0);
-    }
-}
-*/
-
-
-void process(void *arg) {
-printf("                          *** process ***\n");
+void process() {
+//printf("                          *** process ***\n");
 
     // Process outgoing messages
 
     pn_status_t status = pn_messenger_status(messenger, tracker);
-printf("status = %d\n", status);
+//printf("status = %d\n", status);
 
-/*
     if (status != PN_STATUS_PENDING) {
 printf("status = %d\n", status);
 
-        pn_messenger_settle(messenger, tracker, 0);
-        tracked--;
+        //pn_messenger_settle(messenger, tracker, 0);
+        //tracked--;
+
+printf("exiting\n");
+        pn_message_free(message); // Release message.
+        pn_messenger_stop(messenger);
+        pn_messenger_free(messenger);
+        exit(0);
     }
-*/
-
-
-
 }
 
+// Callback used by emscripten to ensure pn_messenger_work gets called.
+void work() {
+//printf("                          *** work ***\n");
 
+    int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
+//printf("err = %d\n", err);
+
+    if (err >= 0) {
+        process();
+    }
+}
 
 int main(int argc, char** argv)
 {
@@ -151,8 +138,9 @@ int main(int argc, char** argv)
   messenger = pn_messenger(NULL);
   pn_messenger_set_blocking(messenger, false); // Put messenger into non-blocking mode.
 
-pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
-//pn_messenger_set_incoming_window(messenger, 1024); // FA Addition.
+
+  pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
+
 
 
 
@@ -170,12 +158,11 @@ pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
 
 
 #if EMSCRIPTEN
-  emscripten_set_main_loop(process, 0, 0);
+  emscripten_set_main_loop(work, 0, 0);
 #else
   while (1) {
-    //pn_messenger_wait(messenger, -1); // Block indefinitely until there has been socket activity.
     pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
-    process(NULL);
+    process();
   }
 #endif
 
