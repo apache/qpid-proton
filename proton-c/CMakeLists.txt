@@ -220,11 +220,6 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
-# TODO Make these tests more idiomatic cmake as per comments by Andrew Stitcher.
-# The idiomatic approach involves writing smaller FindXXX.cmake files
-# which return a fixed set of variables and using find_package(XXX...) in
-# the main cmake file.
-#
 # Build the JavaScript language binding.
 # This is somewhat different to the other language bindings in that it does not use swig. It uses a C/C++ to
 # JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
@@ -232,19 +227,10 @@ endif (SWIG_FOUND)
 # be aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
 option("BUILD_JAVASCRIPT" "Build JavaScript language binding" ON)
 if (BUILD_JAVASCRIPT)
-  # First check that Node.js is installed as that is needed by emscripten.
-  find_program(NODE node)
-  if (NOT NODE)
-    message(STATUS "Node.js (http://nodejs.org) is not installed: can't build JavaScript binding")
-  else (NOT NODE)
-    # Check that the emscripten C/C++ to JavaScript cross-compiler is installed.
-    find_program(EMCC emcc)
-    if (NOT EMCC)
-      message(STATUS "Emscripten (https://github.com/kripken/emscripten) is not installed: can't build JavaScript binding")
-    else (NOT EMCC)
-      add_subdirectory(bindings/javascript)
-    endif (NOT EMCC)
-  endif (NOT NODE)
+  find_package(Emscripten)
+  if (EMSCRIPTEN_FOUND)
+    add_subdirectory(bindings/javascript)
+  endif (EMSCRIPTEN_FOUND)
 endif (BUILD_JAVASCRIPT)
 
 add_subdirectory(docs/api)
