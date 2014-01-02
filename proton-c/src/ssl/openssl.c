@@ -340,7 +340,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 // this code was generated using the command:
 // "openssl dhparam -C -2 2048"
-static DH *get_dh2048()
+static DH *get_dh2048(void)
 {
   static unsigned char dh2048_p[]={
     0xAE,0xF7,0xE9,0x66,0x26,0x7A,0xAC,0x0A,0x6F,0x1E,0xCD,0x81,

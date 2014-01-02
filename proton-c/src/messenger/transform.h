@@ -26,7 +26,7 @@
 
 typedef struct pn_transform_t pn_transform_t;
 
-pn_transform_t *pn_transform();
+pn_transform_t *pn_transform(void);
 void pn_transform_rule(pn_transform_t *transform, const char *pattern,
                        const char *substitution);
 int pn_transform_apply(pn_transform_t *transform, const char *src,

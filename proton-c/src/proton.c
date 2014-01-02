@@ -47,7 +47,7 @@ typedef struct {
 } heap_buffer;
 
 heap_buffer client_msg, client_data, server_data, server_iresp;
-void free_heap_buffers() {
+void free_heap_buffers(void) {
   free(client_msg.buf);
   free(client_data.buf);
   free(server_data.buf);

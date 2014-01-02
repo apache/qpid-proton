@@ -24,7 +24,7 @@
 
 typedef struct pn_encoder_t pn_encoder_t;
 
-pn_encoder_t *pn_encoder();
+pn_encoder_t *pn_encoder(void);
 ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size);
 
 #endif /* encoder.h */

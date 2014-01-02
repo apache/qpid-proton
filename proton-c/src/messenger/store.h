@@ -27,7 +27,7 @@
 typedef struct pni_store_t pni_store_t;
 typedef struct pni_entry_t pni_entry_t;
 
-pni_store_t *pni_store();
+pni_store_t *pni_store(void);
 void pni_store_free(pni_store_t *store);
 size_t pni_store_size(pni_store_t *store);
 pni_entry_t *pni_store_put(pni_store_t *store, const char *address);

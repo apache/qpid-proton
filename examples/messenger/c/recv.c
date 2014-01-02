@@ -40,7 +40,7 @@ void die(const char *file, int line, const char *message)
   exit(1);
 }
 
-void usage()
+void usage(void)
 {
   printf("Usage: recv [options] <addr>\n");
   printf("-c    \tPath to the certificate file.\n");

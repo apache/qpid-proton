@@ -117,7 +117,7 @@ static void finalizer(void *object)
   (**called)++;
 }
 
-static void test_finalize()
+static void test_finalize(void)
 {
   static pn_class_t clazz = {NULL, finalizer};
 
@@ -131,7 +131,7 @@ static void test_finalize()
   assert(called == 1);
 }
 
-static void test_free()
+static void test_free(void)
 {
   // just to make sure it doesn't seg fault or anything
   pn_free(NULL);
@@ -139,7 +139,7 @@ static void test_free()
 
 static uintptr_t hashcode(void *obj) { return (uintptr_t) obj; }
 
-static void test_hashcode()
+static void test_hashcode(void)
 {
   static pn_class_t clazz = {NULL, NULL, hashcode};
   void *obj = pn_new(0, &clazz);
@@ -149,7 +149,7 @@ static void test_hashcode()
   pn_free(obj);
 }
 
-static void test_compare()
+static void test_compare(void)
 {
   static pn_class_t clazz = {NULL, NULL, NULL, delta};
 
@@ -279,7 +279,7 @@ static void check_list_index(pn_list_t *list, void *value, ssize_t idx)
   assert(pn_list_index(list, value) == idx);
 }
 
-static void test_list_index()
+static void test_list_index(void)
 {
   pn_list_t *l = pn_list(0, 0);
   void *one = pn_string("one");
@@ -322,7 +322,7 @@ static bool pn_strequals(const char *a, const char *b)
   return !strcmp(a, b);
 }
 
-static void test_build_list()
+static void test_build_list(void)
 {
   pn_list_t *l = build_list(0, PN_REFCOUNT,
                             pn_string("one"),
@@ -342,7 +342,7 @@ static void test_build_list()
   pn_free(l);
 }
 
-static void test_build_map()
+static void test_build_map(void)
 {
   pn_map_t *m = build_map(0, 0.75, PN_REFCOUNT,
                           pn_string("key"),
@@ -366,7 +366,7 @@ static void test_build_map()
   pn_free(key);
 }
 
-static void test_build_map_odd()
+static void test_build_map_odd(void)
 {
   pn_map_t *m = build_map(0, 0.75, PN_REFCOUNT,
                           pn_string("key"),
@@ -393,7 +393,7 @@ static void test_build_map_odd()
   pn_free(key);
 }
 
-static void test_map()
+static void test_map(void)
 {
   void *one = pn_new(0, NULL);
   void *two = pn_new(0, NULL);
@@ -456,7 +456,7 @@ static void test_map()
   pn_decref(map);
 }
 
-static void test_hash()
+static void test_hash(void)
 {
   void *one = pn_new(0, NULL);
   void *two = pn_new(0, NULL);
@@ -567,7 +567,7 @@ static void test_stringn(const char *value, size_t size)
   pn_free(strsetn);
 }
 
-static void test_string_format()
+static void test_string_format(void)
 {
   pn_string_t *str = pn_string("");
   assert(str);
@@ -579,7 +579,7 @@ static void test_string_format()
   pn_free(str);
 }
 
-static void test_string_addf()
+static void test_string_addf(void)
 {
   pn_string_t *str = pn_string("hello ");
   assert(str);
@@ -638,7 +638,7 @@ void test_inspect(void *o, const char *expected)
   pn_free(dst);
 }
 
-void test_list_inspect()
+void test_list_inspect(void)
 {
   pn_list_t *l = build_list(0, PN_REFCOUNT, END);
   test_inspect(l, "[]");
@@ -664,7 +664,7 @@ void test_list_inspect()
   pn_free(l);
 }
 
-void test_map_inspect()
+void test_map_inspect(void)
 {
   // note that when there is more than one entry in a map, the order
   // of the entries is dependent on the hashes involved, it will be
@@ -695,7 +695,7 @@ void test_map_inspect()
   pn_free(m);
 }
 
-void test_list_compare()
+void test_list_compare(void)
 {
   pn_list_t *a = pn_list(0, PN_REFCOUNT);
   pn_list_t *b = pn_list(0, PN_REFCOUNT);
