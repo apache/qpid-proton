@@ -191,7 +191,10 @@ set_target_properties(
   send-async.js recv-async.js
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  LINK_FLAGS "-s SOCKET_DEBUG=1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  #LINK_FLAGS "-s SOCKET_DEBUG=1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  LINK_FLAGS "-O2 --closure 1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  #LINK_FLAGS "-s VERBOSE=1 -O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  #LINK_FLAGS "-O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
   )
 
 

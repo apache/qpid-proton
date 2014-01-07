@@ -267,6 +267,24 @@ console.log('e: ' + e);
           }
 
           sock.recv_queue.push({ addr: peer.addr, port: peer.port, data: data });
+
+// TODO trigger new emscripten_set_network_callback here.
+
+          if (Module['networkCallback']) {
+console.log("triggering networkCallback");
+
+            try {
+              Runtime.dynCall('v', Module['networkCallback']);
+            } catch (e) {
+              if (e instanceof ExitStatus) {
+                return;
+              } else {
+                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
+                throw e;
+              }
+            }
+          }
+
         };
 
         if (ENVIRONMENT_IS_NODE) {
@@ -420,6 +438,7 @@ console.log('close');
         if (sock.server) {
            throw new FS.ErrnoError(ERRNO_CODES.EINVAL);  // already listening
         }
+
         var WebSocketServer = require('ws').Server;
         var host = sock.saddr;
 #if SOCKET_DEBUG
@@ -451,6 +470,29 @@ console.log('close');
             // to the correct client
             SOCKFS.websocket_sock_ops.createPeer(sock, ws);
           }
+
+
+
+
+// TODO trigger new emscripten_set_network_callback here.
+
+          if (Module['networkCallback']) {
+console.log("triggering networkCallback");
+
+            try {
+              Runtime.dynCall('v', Module['networkCallback']);
+            } catch (e) {
+              if (e instanceof ExitStatus) {
+                return;
+              } else {
+                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
+                throw e;
+              }
+            }
+          }
+
+
+
         });
         sock.server.on('closed', function() {
 console.log('closed');
@@ -462,7 +504,6 @@ console.log('error');
         });
       },
       accept: function(listensock) {
-console.log('accept');
         if (!listensock.server) {
           throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
         }
@@ -549,8 +590,10 @@ console.log('getname');
 #if SOCKET_DEBUG
           Module.print('websocket send (' + length + ' bytes): ' + [Array.prototype.slice.call(new Uint8Array(data))]);
 #endif
+
           // send the actual data
           dest.socket.send(data);
+
           return length;
         } catch (e) {
           throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
@@ -616,6 +659,9 @@ console.log('getname');
     }
   },
 
-
+  emscripten_set_network_callback: function(func) {
+    Module['noExitRuntime'] = true;
+    Module['networkCallback'] = func;
+  }
 
 });

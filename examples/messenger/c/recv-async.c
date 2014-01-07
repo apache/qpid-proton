@@ -28,6 +28,7 @@
 
 #if EMSCRIPTEN
 #include <emscripten.h>
+void emscripten_set_network_callback(void (*func)());
 #endif
 
 #define check(messenger)                                                     \
@@ -93,8 +94,15 @@ printf("err = %d\n", err);
 void work() {
 //printf("                          *** work ***\n");
 
-    int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
-//printf("err = %d\n", err);
+    int err = pn_messenger_work(messenger, 0);
+printf("err = %d\n", err);
+
+    if (err >= 0) {
+        process();
+    }
+
+    err = pn_messenger_work(messenger, 0);
+printf("err = %d\n", err);
 
     if (err >= 0) {
         process();
@@ -186,7 +194,9 @@ pn_messenger_set_blocking(messenger, false); // FA Addition.
   pn_messenger_recv(messenger, -1); // Receive as many messages as messenger can buffer
 
 #if EMSCRIPTEN
-  emscripten_set_main_loop(work, 0, 0);
+  //emscripten_set_main_loop(work, 0, 0);
+
+  emscripten_set_network_callback(work);
 #else
   while (1) {
     pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.

@@ -30,6 +30,7 @@
 
 #if EMSCRIPTEN
 #include <emscripten.h>
+void emscripten_set_network_callback(void (*func)());
 #endif
 
 #define check(messenger)                                                     \
@@ -46,6 +47,8 @@
 
 pn_tracker_t tracker;
 int tracked = 1;
+
+int running = 1;
 
 
 void die(const char *file, int line, const char *message)
@@ -76,20 +79,36 @@ printf("status = %d\n", status);
         //pn_messenger_settle(messenger, tracker, 0);
         //tracked--;
 
+        if (running) {
+printf("stopping\n");
+            pn_messenger_stop(messenger);
+            running = 0;
+        } 
+    }
+
+    if (pn_messenger_stopped(messenger)) {
 printf("exiting\n");
-        pn_message_free(message); // Release message.
-        pn_messenger_stop(messenger);
+        pn_message_free(message);
         pn_messenger_free(messenger);
         exit(0);
     }
 }
 
+
+
 // Callback used by emscripten to ensure pn_messenger_work gets called.
 void work() {
 //printf("                          *** work ***\n");
 
-    int err = pn_messenger_work(messenger, 0); // Sends any outstanding messages queued for messenger.
-//printf("err = %d\n", err);
+    int err = pn_messenger_work(messenger, 0);
+printf("err = %d\n", err);
+
+    if (err >= 0) {
+        process();
+    }
+
+    err = pn_messenger_work(messenger, 0);
+printf("err = %d\n", err);
 
     if (err >= 0) {
         process();
@@ -158,7 +177,9 @@ int main(int argc, char** argv)
 
 
 #if EMSCRIPTEN
-  emscripten_set_main_loop(work, 0, 0);
+  //emscripten_set_main_loop(work, 0, 0);
+
+  emscripten_set_network_callback(work);
 #else
   while (1) {
     pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
