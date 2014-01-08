@@ -38,7 +38,6 @@ class App(CallbackAdapter):
         self.message.address = opts.address
         self.message.reply_to = opts.reply_to
         for a in args:
-            print "Sending:", a
             self.message.body = a
             self.send(self.message, self.on_status)
 

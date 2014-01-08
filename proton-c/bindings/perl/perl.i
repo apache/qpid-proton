@@ -13,6 +13,39 @@
 
 %include <cstring.i>
 
+%typemap(in) bool
+{
+  if(!$input)
+    {
+      $1 = false;
+    }
+  else if((IV)$input == 0)
+    {
+      $1 = false;
+    }
+  else
+    {
+      $1 = true;
+    }
+}
+
+%typemap(out) bool
+{
+  SV* obj = sv_newmortal();
+
+  if($1)
+    {
+      sv_setiv(obj, (IV)1);
+    }
+  else
+    {
+      sv_setsv(obj, &PL_sv_undef);
+    }
+
+  $result = obj;
+  argvi++;
+}
+
 %typemap(in) pn_atom_t
 {
   if(!$input)

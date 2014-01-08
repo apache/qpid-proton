@@ -17,10 +17,6 @@
 # under the License.
 #
 
-use strict;
-use warnings;
-use cproton_perl;
-
 package qpid::proton::Tracker;
 
 sub new {
@@ -30,12 +26,12 @@ sub new {
     $self->{_impl} = $_[1];
 
     bless $self, $class;
+
     return $self;
 }
 
 sub get_impl {
     my ($self) = @_;
-
 
     return $self->{_impl};
 }

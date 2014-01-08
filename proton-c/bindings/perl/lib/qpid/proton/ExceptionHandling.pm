@@ -20,6 +20,7 @@
 use strict;
 use warnings;
 use cproton_perl;
+use Devel::StackTrace;
 
 package qpid::proton;
 
@@ -29,7 +30,11 @@ sub check_for_error {
     if($rc < 0) {
         my $source = $_[1];
 
-        die "ERROR[$rc] " . $source->get_error();
+        my $trace = Devel::StackTrace->new;
+
+        print $trace->as_string;
+
+        die "ERROR[$rc] " . $source->get_error() . "\n";
     }
 }
 
