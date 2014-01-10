@@ -46,7 +46,7 @@
 
 void msgr_die(const char *file, int line, const char *message);
 char *msgr_strdup( const char *src );
-pn_timestamp_t msgr_now();
+pn_timestamp_t msgr_now(void);
 void parse_password( const char *, char ** );
 
 #define check_messenger(m)  \
@@ -84,6 +84,6 @@ void statistics_start( Statistics_t *s );
 void statistics_msg_received( Statistics_t *s, pn_message_t *message );
 void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
 
-void enable_logging();
+void enable_logging(void);
 void LOG( const char *fmt, ... );
 

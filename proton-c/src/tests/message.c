@@ -28,7 +28,7 @@
 
 #define assert(E) ((E) ? 0 : (abort(), 0))
 
-static void test_overflow_error()
+static void test_overflow_error(void)
 {
   pn_message_t *message = pn_message();
   char buf[8];

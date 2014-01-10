@@ -52,7 +52,7 @@ static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
     return send(sockfd, buf, len, MSG_NOSIGNAL);
 }
 
-static inline int pn_create_socket() {
+static inline int pn_create_socket(void) {
     return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
 }
 #elif defined(SO_NOSIGPIPE)
@@ -60,7 +60,7 @@ static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
     return send(sockfd, buf, len, 0);
 }
 
-static inline int pn_create_socket() {
+static inline int pn_create_socket(void) {
     int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
     if (sock == -1) return sock;
 

@@ -43,6 +43,6 @@
 #include "internal/getopt.h"
 #endif
 
-pn_timestamp_t time_now();
+pn_timestamp_t time_now(void);
 
 #endif /* PNCOMPAT_MISC_DEFS_H */

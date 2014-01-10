@@ -41,7 +41,7 @@ void die(const char *file, int line, const char *message)
   exit(1);
 }
 
-void usage()
+void usage(void)
 {
   printf("Usage: send [-a addr] [message]\n");
   printf("-a     \tThe target address [amqp[s]://domain[/name]]\n");
