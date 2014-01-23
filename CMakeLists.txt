@@ -127,8 +127,7 @@ install (FILES examples/include/pncompat/internal/LICENSE
 # add relevant CTest support
 find_program (MAVEN_EXECUTABLE mvn DOC "Location of the maven program")
 if (JAVA_FOUND AND MAVEN_EXECUTABLE)
-  add_test (proton-jni mvn test -P proton-jni --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
   add_test (proton-java mvn test --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
 else (JAVA_FOUND AND MAVEN_EXECUTABLE)
-  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J and JNI Bindings")
+  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
 endif (JAVA_FOUND AND MAVEN_EXECUTABLE)
