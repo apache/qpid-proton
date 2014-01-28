@@ -419,11 +419,13 @@ set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
 
 find_program(VALGRIND valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-if (ENABLE_VALGRIND AND NOT VALGRIND)
-  message(STATUS "Can't locate the valgrind command; no run-time error detection")
-else (ENABLE_VALGRIND AND NOT VALGRIND)
-  set (VALGRIND_ENV "VALGRIND=${VALGRIND}")
-endif (ENABLE_VALGRIND AND NOT VALGRIND)
+if (ENABLE_VALGRIND)
+  if (VALGRIND STREQUAL VALGRIND-NOTFOUND)
+    message(STATUS "Can't locate the valgrind command; no run-time error detection")
+  else (VALGRIND STREQUAL VALGRIND-NOTFOUND)
+    set (VALGRIND_ENV "VALGRIND=${VALGRIND}")
+  endif (VALGRIND STREQUAL VALGRIND-NOTFOUND)
+endif (ENABLE_VALGRIND)
 
 # c tests:
 
