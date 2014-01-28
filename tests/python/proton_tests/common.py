@@ -525,7 +525,7 @@ class MessengerSenderValgrind(MessengerSenderC):
         if not suppressions:
             suppressions = os.path.join(os.path.dirname(__file__),
                                         "valgrind.supp" )
-        self._command = ["valgrind", "--error-exitcode=1", "--quiet",
+        self._command = [os.environ["VALGRIND"], "--error-exitcode=1", "--quiet",
                          "--trace-children=yes", "--leak-check=full",
                          "--suppressions=%s" % suppressions] + self._command
 
@@ -544,7 +544,7 @@ class MessengerReceiverValgrind(MessengerReceiverC):
         if not suppressions:
             suppressions = os.path.join(os.path.dirname(__file__),
                                         "valgrind.supp" )
-        self._command = ["valgrind", "--error-exitcode=1", "--quiet",
+        self._command = [os.environ["VALGRIND"], "--error-exitcode=1", "--quiet",
                          "--trace-children=yes", "--leak-check=full",
                          "--suppressions=%s" % suppressions] + self._command
 

@@ -422,7 +422,7 @@ option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND AND NOT VALGRIND)
   message(STATUS "Can't locate the valgrind command; no run-time error detection")
 else (ENABLE_VALGRIND AND NOT VALGRIND)
-  set (VALGRIND_ENV "VALGRIND=1")
+  set (VALGRIND_ENV "VALGRIND=${VALGRIND}")
 endif (ENABLE_VALGRIND AND NOT VALGRIND)
 
 # c tests:
