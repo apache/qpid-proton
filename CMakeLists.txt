@@ -84,8 +84,6 @@ set (JNI_SHARED_LIB_INSTALL_DIR ${LIB_INSTALL_DIR} CACHE PATH "Installation dire
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-# Location of proton-api jar created by the build; used by proton-jni and proton-j-impl
-set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
 set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
       "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
@@ -101,8 +99,7 @@ if (GEN_JAVA)
     include(UseJava)
     include(ProtonUseJava)
 
-    add_subdirectory(proton-j/proton-api)
-    add_subdirectory(proton-j/proton)
+    add_subdirectory(proton-j)
   endif()
 endif()
 

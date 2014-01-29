@@ -20,12 +20,12 @@
     <groupId>org.apache.qpid</groupId>
     <artifactId>proton-project</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <relativePath>../../..</relativePath>
+    <relativePath>../..</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>proton-j-messenger-example</artifactId>
-  <name>proton-j-messenger-example</name>
+  <artifactId>proton-jms</artifactId>
+  <name>proton-jms</name>
 
   <dependencies>
     <dependency>
@@ -33,9 +33,18 @@
       <artifactId>proton-j</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-jms_1.1_spec</artifactId>
+      <version>1.1.1</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
+  <build> 
+  </build>
   <scm>
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>
   </scm>
+
 </project>

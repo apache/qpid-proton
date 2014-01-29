@@ -25,31 +25,8 @@
 
   <artifactId>proton-j</artifactId>
   <name>proton-j</name>
-  <packaging>pom</packaging>
 
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit-version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>1.9.5</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <modules>
-    <module>proton-api</module>
-    <module>proton</module>
-    <module>contrib/proton-jms</module>
-    <module>contrib/proton-hawtdispatch</module>
-  </modules>
   <scm>
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>
   </scm>
-    
 </project>

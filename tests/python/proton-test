@@ -676,7 +676,6 @@ while limit == 0 or count < limit:
   if runthrough():
     if count > 1:
       print " -- (failures after %s runthroughs)" % count
-    sys.exit(1)
   else:
     continue
 
