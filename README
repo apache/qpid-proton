@@ -17,8 +17,8 @@ Proton is designed to scale up and down:
 
 Proton is multi-lingual:
 
-  + Proton-C - a C implementation with lanuage bindings in Python, Php, Perl,
-    Ruby, and Java (via JNI).
+  + Proton-C - a C implementation with lanuage bindings in Python,
+               Php, Perl, and Ruby
   + Proton-J - a pure Java implementation
 
 Please see http://qpid.apache.org/proton for a more info.
@@ -31,16 +31,16 @@ two implementations.
    + Proton-C and the language bindings use CMake.
    + Proton-J uses Maven.
 
-The two build systems are independent of one and other, that is, Proton-C
-may be built independently of Proton-J, and vice-versa.
+The two build systems are independent of one and other, that is,
+Proton-C may be built independently of Proton-J, and vice-versa.
 
 === Proton-C ===
 
 == Build Instructions (Linux) ==
 
-The following prerequesuites are required to do a full build. If you do not
-wish to build a given language binding you can omit the package for that
-language:
+The following prerequesuites are required to do a full build. If you
+do not wish to build a given language binding you can omit the package
+for that language:
 
   # required dependencies
   yum install gcc cmake libuuid-devel
@@ -201,9 +201,10 @@ To test Proton, run the system tests (located in the tests subdirectory).
 The system tests are applicable to both the Proton-C and Proton-J
 implementations.
 
-== Test Instructions (Proton-C only) ==
+== Test Instructions ==
 
-To run the system tests against Proton-C, from your build directory above:
+To run the system tests using the CMake build system, from your build
+directory above:
 
    # to run all the tests, summary mode
    ctest
@@ -211,20 +212,16 @@ To run the system tests against Proton-C, from your build directory above:
    # to run a single test, full output
    ctest -V -R proton-c
 
-== Test Instructions (Proton-J and Proton-C) ==
+== Test Instructions (Proton-J only) ==
 
-To run the system tests, execute Maven specifying profile 'proton-j' to
-test Proton-J, and 'proton-jni' to test the Proton-C implementation via the
-JNI bindings.  (To test Proton-C via the JNI Bindings the JNI Binding must have
-been built with Cmake as described above).
+To run the java system tests, run:
 
   # To test Proton-J
-  mvn test -P proton-j
-
-  # To test Proton-C via the JNI Bindings
-  mvn test -P proton-jni
+  mvn test
 
   # To produce a nicely formated report containing the test results
   # (in tests/target/site/surefire-report.html)
   mvn surefire-report:report
 
+Note that if Java is built, these tests will be automatically run from
+the CMake build.
