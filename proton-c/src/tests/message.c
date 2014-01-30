@@ -37,6 +37,7 @@ static void test_overflow_error(void)
   int err = pn_message_encode(message, buf, &size);
   assert(err == PN_OVERFLOW);
   assert(pn_message_errno(message) == 0);
+  pn_message_free(message);
 }
 
 int main(int argc, char **argv)

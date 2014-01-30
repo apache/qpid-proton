@@ -23,6 +23,7 @@ set_target_properties (
   c-object-tests
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  OUTPUT_NAME c-object-tests
   )
 pn_c_files (object.c)
 
@@ -32,8 +33,15 @@ set_target_properties (
   c-message-tests
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  OUTPUT_NAME c-message-tests
   )
 pn_c_files (message.c)
 
-add_test (c-object-tests c-object-tests)
-add_test (c-message-tests c-message-tests)
+if (ENABLE_VALGRIND AND VALGRIND)
+  set(memcheck-cmd ${VALGRIND} --error-exitcode=1 --quiet
+                   --leak-check=full --trace-children=yes)
+endif (ENABLE_VALGRIND AND VALGRIND)
+
+add_test (c-object-tests ${memcheck-cmd} ./c-object-tests)
+add_test (c-message-tests ${memcheck-cmd} ./c-message-tests)
+
