@@ -74,7 +74,7 @@ fi
 export PATH="$PATH:$PROTON_HOME/tests/python"
 
 # can the test harness use valgrind?
-VALGRIND_EXECUTABLE=$(type -p valgrind)
+VALGRIND_EXECUTABLE="$(type -p valgrind)"
 if [[ -x $VALGRIND_EXECUTABLE ]] ; then
     export VALGRIND=$VALGRIND_EXECUTABLE
 fi
