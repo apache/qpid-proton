@@ -29,9 +29,9 @@ if [ -z "$CPROTON_BUILD" ]; then
         PROTON_BINDINGS=$PROTON_HOME/proton-c/bindings
     fi
     if [ -d $PROTON_HOME/build/proton-j ]; then
-        PROTON_JARS=$PROTON_HOME/build/proton-j/proton/proton-j.jar
+        PROTON_JARS=$PROTON_HOME/build/proton-j/proton-j.jar
     else
-        PROTON_JARS=$PROTON_HOME/proton-j/proton/proton-j.jar
+        PROTON_JARS=$PROTON_HOME/proton-j/proton-j.jar
     fi
 else
     PROTON_BINDINGS=$CPROTON_BUILD/bindings
@@ -41,7 +41,7 @@ fi
 export PYTHON_BINDINGS=$PROTON_BINDINGS/python
 export COMMON_PYPATH=$PROTON_HOME/tests/python
 export PYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-c/bindings/python:$PYTHON_BINDINGS
-export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/proton/src/main/resources:$PROTON_JARS
+export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/resources:$PROTON_JARS
 export CLASSPATH=$PROTON_JARS
 
 # PHP
