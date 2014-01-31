@@ -138,9 +138,15 @@ public final class UnsignedLong extends Number implements Comparable<UnsignedLon
     public static UnsignedLong valueOf(final String value)
     {
         BigInteger bigInt = new BigInteger(value);
-        if(bigInt.signum() == -1 || bigInt.bitCount()>64)
+
+        return valueOf(bigInt);
+    }
+
+    public static UnsignedLong valueOf(BigInteger bigInt)
+    {
+        if(bigInt.signum() == -1 || bigInt.bitLength() > 64)
         {
-            throw new NumberFormatException("Value \""+value+"\" lies outside the range [" + 0L + "- 2^64).");
+            throw new NumberFormatException("Value \""+bigInt+"\" lies outside the range [0 - 2^64).");
         }
         else if(bigInt.compareTo(LONG_MAX_VALUE)>=0)
         {
@@ -150,6 +156,5 @@ public final class UnsignedLong extends Number implements Comparable<UnsignedLon
         {
             return UnsignedLong.valueOf(TWO_TO_THE_SIXTY_FOUR.subtract(bigInt).negate().longValue());
         }
-
     }
 }
