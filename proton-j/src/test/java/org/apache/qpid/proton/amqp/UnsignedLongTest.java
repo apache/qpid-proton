@@ -138,7 +138,7 @@ public class UnsignedLongTest
         aboveLimit = aboveLimit.subtract(BigInteger.ONE);
         try
         {
-            UnsignedLong.valueOf(aboveLimit.toString());
+            UnsignedLong.valueOf(aboveLimit);
             fail("Expected exception was not thrown");
         }
         catch(NumberFormatException nfe)
