@@ -2839,7 +2839,7 @@ Sets the maximum size for received frames (in bytes).
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
-The idle timeout of the connection (in milliseconds).
+The idle timeout of the connection (float, in seconds).
 """)
 
   @property
