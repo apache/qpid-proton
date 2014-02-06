@@ -90,6 +90,8 @@ public class TransportImpl extends EndpointImpl
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int _remoteMaxFrameSize = 512;
+    private int _channelMax = 65535;
+    private int _remoteChannelMax = 65535;
 
     private final FrameWriter _frameWriter;
 
@@ -167,6 +169,24 @@ public class TransportImpl extends EndpointImpl
             throw new IllegalStateException("Cannot set max frame size after transport has been initialised");
         }
         _maxFrameSize = maxFrameSize;
+    }
+
+    @Override
+    public int getChannelMax()
+    {
+        return _channelMax;
+    }
+
+    @Override
+    public void setChannelMax(int n)
+    {
+        _channelMax = n;
+    }
+
+    @Override
+    public int getRemoteChannelMax()
+    {
+        return _remoteChannelMax;
     }
 
     @Override
@@ -704,7 +724,9 @@ public class TransportImpl extends EndpointImpl
             if (_maxFrameSize > 0) {
                 open.setMaxFrameSize(UnsignedInteger.valueOf(_maxFrameSize));
             }
-            // TODO - populate;
+            if (_channelMax > 0) {
+                open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
+            }
 
             _isOpenSent = true;
 
@@ -915,6 +937,11 @@ public class TransportImpl extends EndpointImpl
         {
             _remoteMaxFrameSize = (int) open.getMaxFrameSize().longValue();
             _frameWriter.setMaxFrameSize(_remoteMaxFrameSize);
+        }
+
+        if (open.getChannelMax().longValue() > 0)
+        {
+            _remoteChannelMax = (int) open.getChannelMax().longValue();
         }
     }
 

@@ -197,6 +197,12 @@ class ConnectionTest(Test):
     assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
     assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
 
+  def test_channel_max(self, value=1234):
+    self.c1._transport.channel_max = value
+    self.c1.open()
+    self.pump()
+    assert self.c2._transport.remote_channel_max == value, (self.c2._transport.remote_channel_max, value)
+
 class SessionTest(Test):
 
   def setup(self):

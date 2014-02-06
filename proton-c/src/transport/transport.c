@@ -158,6 +158,8 @@ void pn_transport_init(pn_transport_t *transport)
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
   transport->remote_max_frame = 0;
+  transport->channel_max = 0;
+  transport->remote_channel_max = 0;
   transport->local_idle_timeout = 0;
   transport->dead_remote_deadline = 0;
   transport->last_bytes_input = 0;
@@ -403,9 +405,10 @@ int pn_do_open(pn_dispatcher_t *disp)
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
-  int err = pn_scan_args(disp, "D.[?S?SI.I..CCC]", &container_q,
+  int err = pn_scan_args(disp, "D.[?S?SIHI..CCC]", &container_q,
                          &remote_container, &hostname_q, &remote_hostname,
                          &transport->remote_max_frame,
+                         &transport->remote_channel_max,
                          &transport->remote_idle_timeout,
                          transport->remote_offered_capabilities,
                          transport->remote_desired_capabilities,
@@ -1080,11 +1083,12 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
-      int err = pn_post_frame(transport->disp, 0, "DL[SS?In?InnCCC]", OPEN,
+      int err = pn_post_frame(transport->disp, 0, "DL[SS?I?H?InnCCC]", OPEN,
                               pn_string_get(connection->container),
                               pn_string_get(connection->hostname),
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
+                              (bool)transport->channel_max, transport->channel_max,
                               (bool)transport->local_idle_timeout, transport->local_idle_timeout,
                               connection->offered_capabilities,
                               connection->desired_capabilities,
@@ -1781,6 +1785,21 @@ void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
   va_end(ap);
 
   pn_transport_log(transport, pn_string_get(transport->scratch));
+}
+
+uint16_t pn_transport_get_channel_max(pn_transport_t *transport)
+{
+  return transport->channel_max;
+}
+
+void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max)
+{
+  transport->channel_max = channel_max;
+}
+
+uint16_t pn_transport_remote_channel_max(pn_transport_t *transport)
+{
+  return transport->remote_channel_max;
 }
 
 uint32_t pn_transport_get_max_frame(pn_transport_t *transport)

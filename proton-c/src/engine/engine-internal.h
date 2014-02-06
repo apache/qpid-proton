@@ -122,6 +122,8 @@ struct pn_transport_t {
   bool close_rcvd;
   char *remote_container;
   char *remote_hostname;
+  uint16_t channel_max;
+  uint16_t remote_channel_max;
   pn_data_t *remote_offered_capabilities;
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;

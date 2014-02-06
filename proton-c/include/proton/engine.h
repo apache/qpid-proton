@@ -442,14 +442,21 @@ PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context
 PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
 PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
+
+PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
+PN_EXTERN void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
+PN_EXTERN uint16_t pn_transport_remote_channel_max(pn_transport_t *transport);
+
 // max frame of zero means "unlimited"
 PN_EXTERN uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
 PN_EXTERN void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
 PN_EXTERN uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
+
 /* timeout of zero means "no timeout" */
 PN_EXTERN pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
 PN_EXTERN void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
 PN_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
+
 PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
 PN_EXTERN bool pn_transport_quiesced(pn_transport_t *transport);

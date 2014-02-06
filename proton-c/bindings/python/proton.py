@@ -2829,6 +2829,21 @@ Sets the maximum size for received frames (in bytes).
   def remote_max_frame_size(self):
     return pn_transport_get_remote_max_frame(self._trans)
 
+  def _get_channel_max(self):
+    return pn_transport_get_channel_max(self._trans)
+
+  def _set_channel_max(self, value):
+    pn_transport_set_channel_max(self._trans, value)
+
+  channel_max = property(_get_channel_max, _set_channel_max,
+                         doc="""
+Sets the maximum channel that may be used on the transport.
+""")
+
+  @property
+  def remote_channel_max(self):
+    return pn_transport_remote_channel_max(self._trans)
+
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
     msec = pn_transport_get_idle_timeout(self._trans)

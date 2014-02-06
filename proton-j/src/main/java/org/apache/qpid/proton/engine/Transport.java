@@ -186,4 +186,11 @@ public interface Transport extends Endpoint
     void setMaxFrameSize(int size);
 
     int getRemoteMaxFrameSize();
+
+    int getChannelMax();
+
+    void setChannelMax(int n);
+
+    int getRemoteChannelMax();
+
 }
