@@ -21,9 +21,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourAll;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
@@ -42,7 +40,6 @@ import org.apache.qpid.proton.amqp.security.SaslResponse;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
@@ -96,8 +93,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
         AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);
         _frameParser = new SaslFrameParser(this, _decoder);
-        _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null,
-                                       this);
+        _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null, this);
     }
 
     @Override
@@ -168,7 +164,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             {
                 processResponse();
             }
-
         }
     }
 
@@ -203,7 +198,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
     final int processHeader()
     {
-
         if(!_headerWritten)
         {
             _frameWriter.writeHeader(AmqpHeader.SASL_HEADER);
@@ -329,7 +323,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         if(saslInit.getInitialResponse() != null)
         {
             setPending(saslInit.getInitialResponse().asByteBuffer());
-
         }
     }
 
@@ -441,7 +434,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         System.arraycopy(passwordBytes, 0, data, 2+usernameBytes.length, passwordBytes.length);
 
         setChallengeResponse(new Binary(data));
-
     }
 
     @Override
@@ -468,7 +460,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         _role = Role.SERVER;
     }
 
-
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
         return new SaslTransportWrapper(input, output);
@@ -487,14 +478,12 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         return builder.toString();
     }
 
-
     private class SaslTransportWrapper implements TransportWrapper
     {
         private final TransportInput _underlyingInput;
         private final TransportOutput _underlyingOutput;
         private boolean _outputComplete;
-
-        private ByteBuffer _head;
+        private final ByteBuffer _head;
 
         private SaslTransportWrapper(TransportInput input, TransportOutput output)
         {
@@ -512,29 +501,6 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                 if(_done)
                 {
                     _outputComplete = true;
-                }
-
-                // TODO if sasl is now 'done', it would be more efficient if any remaining space is
-                // now offered directly to _output rather than awaiting the next invocation.
-            }
-            else
-            {
-                int pending = _underlyingOutput.pending();
-                if (pending == Transport.END_OF_STREAM)
-                {
-                    _head_closed = true;
-                }
-                else
-                {
-                    ByteBuffer outputBuffer = _underlyingOutput.head();
-                    pour(outputBuffer, _outputBuffer);
-
-                    _underlyingOutput.pop(outputBuffer.position());
-
-                    if(_logger.isLoggable(Level.FINER))
-                    {
-                        _logger.log(Level.FINER, SaslImpl.this + " filled output buffer with plain output");
-                    }
                 }
             }
         }
@@ -557,24 +523,24 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         public int capacity()
         {
             if (_tail_closed) return Transport.END_OF_STREAM;
-            if (isInputInSaslMode()) {
+            if (isInputInSaslMode())
+            {
                 return _inputBuffer.remaining();
-            } else {
-                int capacity = _underlyingInput.capacity();
-                if (capacity < 0) {
-                    return capacity;
-                } else {
-                    return _inputBuffer.remaining();
-                }
+            }
+            else
+            {
+                return _underlyingInput.capacity();
             }
         }
 
         @Override
         public ByteBuffer tail()
         {
-            // TODO if the SASL negotiation is complete, it would be more efficient
-            // to return the underlying transport input's buffer.
-            // The same optimisation would be possible in getOutputBuffer
+            if (!isInputInSaslMode())
+            {
+                return _underlyingInput.tail();
+            }
+
             return _inputBuffer;
         }
 
@@ -618,10 +584,19 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
                     _logger.log(Level.FINER, SaslImpl.this + " about to call plain input");
                 }
 
-                int bytes = pourAll(_inputBuffer, _underlyingInput);
-                if (bytes == Transport.END_OF_STREAM)
+                if (_inputBuffer.hasRemaining())
                 {
-                    _tail_closed = true;
+                    int bytes = pourAll(_inputBuffer, _underlyingInput);
+                    if (bytes == Transport.END_OF_STREAM)
+                    {
+                        _tail_closed = true;
+                    }
+
+                    _underlyingInput.process();
+                }
+                else
+                {
+                    _underlyingInput.process();
                 }
             }
         }
@@ -629,31 +604,55 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         @Override
         public int pending()
         {
-            fillOutputBuffer();
-            _head.limit(_outputBuffer.position());
+            if (isOutputInSaslMode() || _outputBuffer.position() != 0)
+            {
+                fillOutputBuffer();
+                _head.limit(_outputBuffer.position());
 
-            if (_head_closed && _outputBuffer.position() == 0) {
-                return Transport.END_OF_STREAM;
-            } else {
-                return _outputBuffer.position();
+                if (_head_closed && _outputBuffer.position() == 0)
+                {
+                    return Transport.END_OF_STREAM;
+                }
+                else
+                {
+                    return _outputBuffer.position();
+                }
+            }
+            else
+            {
+                return _underlyingOutput.pending();
             }
         }
 
         @Override
         public ByteBuffer head()
         {
-            pending();
-            return _head;
+            if (isOutputInSaslMode() || _outputBuffer.position() != 0)
+            {
+                pending();
+                return _head;
+            }
+            else
+            {
+                return _underlyingOutput.head();
+            }
         }
 
         @Override
         public void pop(int bytes)
         {
-            _outputBuffer.flip();
-            _outputBuffer.position(bytes);
-            _outputBuffer.compact();
-            _head.position(0);
-            _head.limit(_outputBuffer.position());
+            if (isOutputInSaslMode() || _outputBuffer.position() != 0)
+            {
+                _outputBuffer.flip();
+                _outputBuffer.position(bytes);
+                _outputBuffer.compact();
+                _head.position(0);
+                _head.limit(_outputBuffer.position());
+            }
+            else
+            {
+                _underlyingOutput.pop(bytes);
+            }
         }
 
         @Override
@@ -661,6 +660,5 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         {
             _underlyingOutput.close_head();
         }
-
     }
 }

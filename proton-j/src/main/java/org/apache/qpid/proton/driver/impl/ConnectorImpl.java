@@ -154,24 +154,22 @@ class ConnectorImpl<C> implements Connector<C>
         boolean processed = false;
 
         int interest = _key.interestOps();
-        int pending = _transport.pending();
-        if (pending >= 0)
+        boolean writeBlocked = false;
+
+        while (_transport.pending() >= 0 && !writeBlocked)
         {
             int wrote = _channel.write(_transport.head());
             if (wrote > 0) {
                 processed = true;
                 _transport.pop(wrote);
+            } else {
+                writeBlocked = true;
             }
         }
-        else
-        {
-            _outputDone = true;
-        }
 
-        pending = _transport.pending();
+        int pending = _transport.pending();
         if (pending > 0) {
             interest |= SelectionKey.OP_WRITE;
-
         } else {
             interest &= ~SelectionKey.OP_WRITE;
             if (pending < 0) {
