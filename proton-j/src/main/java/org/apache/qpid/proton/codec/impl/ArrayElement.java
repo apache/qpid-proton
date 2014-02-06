@@ -355,6 +355,12 @@ class ArrayElement extends AbstractElement<Object[]>
     }
 
     @Override
+    public void setChild(Element elt)
+    {
+        _first = elt;
+    }
+
+    @Override
     public Element addChild(Element element)
     {
         if(isDescribed() || element.getDataType() == _arrayType)
@@ -367,6 +373,7 @@ class ArrayElement extends AbstractElement<Object[]>
             Element replacement = coerce(element);
             if(replacement != null)
             {
+                _first = replacement;
                 return replacement;
             }
             throw new IllegalArgumentException("Attempting to add instance of " + element.getDataType() + " to array of " + _arrayType);
@@ -375,45 +382,44 @@ class ArrayElement extends AbstractElement<Object[]>
 
     private Element coerce(Element element)
     {
-        /*switch (_arrayType)
+        switch (_arrayType)
         {
-            case INT:
-
-                int i;
-                switch (element.getDataType())
-                {
-                    case BYTE:
-                        i = ((ByteElement)element).getValue().intValue();
-                        break;
-                    case SHORT:
-                        i = ((ShortElement)element).getValue().intValue();
-                        break;
-                    case LONG:
-                        i = ((LongElement)element).getValue().intValue();
-                        break;
-                    default:
-                        return null;
-                }
-                return new IntegerElement(element.parent(),element.prev(),i);
-
+        case INT:
+            int i;
+            switch (element.getDataType())
+            {
+            case BYTE:
+                i = ((ByteElement)element).getValue().intValue();
+                break;
+            case SHORT:
+                i = ((ShortElement)element).getValue().intValue();
+                break;
             case LONG:
-                long l;
-                switch (element.getDataType())
-                {
-                    case BYTE:
-                        l = ((ByteElement)element).getValue().longValue();
-                        break;
-                    case SHORT:
-                        l = ((ShortElement)element).getValue().longValue();
-                        break;
-                    case INT:
-                        l = ((IntegerElement)element).getValue().longValue();
-                        break;
-                    default:
-                        return null;
-                }
-                return new LongElement(element.parent(),element.prev(),l);
-        }*/
+                i = ((LongElement)element).getValue().intValue();
+                break;
+            default:
+                return null;
+            }
+            return new IntegerElement(element.parent(),element.prev(),i);
+
+        case LONG:
+            long l;
+            switch (element.getDataType())
+            {
+            case BYTE:
+                l = ((ByteElement)element).getValue().longValue();
+                break;
+            case SHORT:
+                l = ((ShortElement)element).getValue().longValue();
+                break;
+            case INT:
+                l = ((IntegerElement)element).getValue().longValue();
+                break;
+            default:
+                return null;
+            }
+            return new LongElement(element.parent(),element.prev(),l);
+        }
         return null;
     }
 
@@ -459,4 +465,15 @@ class ArrayElement extends AbstractElement<Object[]>
     {
         return _arrayType;
     }
+
+    @Override
+    String startSymbol() {
+        return String.format("%s%s[", isDescribed() ? "D" : "", getArrayDataType());
+    }
+
+    @Override
+    String stopSymbol() {
+        return "]";
+    }
+
 }

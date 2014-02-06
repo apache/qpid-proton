@@ -31,7 +31,7 @@ import org.apache.qpid.proton.driver.Listener;
 
 class ListenerImpl<C> implements Listener<C>
 {
-    private final C _context;
+    private C _context;
     private final ServerSocketChannel _channel;
     private final DriverImpl _driver;
     private final Logger _logger = Logger.getLogger("proton.driver");
@@ -65,7 +65,7 @@ class ListenerImpl<C> implements Listener<C>
             if(c != null)
             {
                 c.configureBlocking(false);
-                return _driver.createServerConnector(c, _context, this);
+                return _driver.createServerConnector(c, null, this);
             }
         }
         catch (IOException e)
@@ -78,6 +78,11 @@ class ListenerImpl<C> implements Listener<C>
     public C getContext()
     {
         return _context;
+    }
+
+    public void setContext(C context)
+    {
+        _context = context;
     }
 
     public void close() throws IOException

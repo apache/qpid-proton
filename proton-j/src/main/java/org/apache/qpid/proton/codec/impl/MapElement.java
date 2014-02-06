@@ -200,6 +200,12 @@ class MapElement extends AbstractElement<Map<Object,Object>>
     }
 
     @Override
+    public void setChild(Element elt)
+    {
+        _first = elt;
+    }
+
+    @Override
     public Element checkChild(Element element)
     {
         return element;
@@ -210,6 +216,16 @@ class MapElement extends AbstractElement<Map<Object,Object>>
     {
         _first = element;
         return element;
+    }
+
+    @Override
+    String startSymbol() {
+        return "{";
+    }
+
+    @Override
+    String stopSymbol() {
+        return "}";
     }
 
 }

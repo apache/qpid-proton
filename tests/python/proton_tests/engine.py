@@ -555,7 +555,7 @@ class TerminusConfig:
       for c in self.capabilities:
         terminus.capabilities.put_symbol(c)
     if self.filter is not None:
-      terminus.filter.put_list()
+      terminus.filter.put_map()
       terminus.filter.enter()
       for (t, v) in self.filter:
         setter = getattr(terminus.filter, "put_%s" % t)
@@ -615,7 +615,7 @@ class TransferTest(Test):
     assert d.readable
 
     bytes = self.rcv.recv(1024)
-    assert bytes == msg
+    assert bytes == msg, (bytes, msg)
 
     bytes = self.rcv.recv(1024)
     assert bytes == ""
@@ -1634,11 +1634,16 @@ class PipelineTest(Test):
 
     assert rcv.queued == 0, rcv.queued
 
+import sys
+from common import Skipped
+
 class ServerTest(Test):
 
   def testKeepalive(self):
     """ Verify that idle frames are sent to keep a Connection alive
     """
+    if "java" in sys.platform:
+      raise Skipped()
     idle_timeout_secs = self.delay
     self.server = common.TestServerDrain()
     self.server.start()
@@ -1684,6 +1689,8 @@ class ServerTest(Test):
     """ Verify that a Connection is terminated properly when Idle frames do not
     arrive in a timely manner.
     """
+    if "java" in sys.platform:
+      raise Skipped()
     idle_timeout_secs = self.delay
     self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
     self.server.start()

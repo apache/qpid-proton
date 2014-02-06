@@ -39,8 +39,8 @@ fi
 
 # Python & Jython
 export PYTHON_BINDINGS=$PROTON_BINDINGS/python
-export COMMON_PYPATH=$PROTON_HOME/tests/python
-export PYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-c/bindings/python:$PYTHON_BINDINGS
+export COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python
+export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/resources:$PROTON_JARS
 export CLASSPATH=$PROTON_JARS
 

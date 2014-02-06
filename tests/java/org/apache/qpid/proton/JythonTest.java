@@ -45,6 +45,7 @@ public class JythonTest
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
     /* System properties expected to be defined in test/pom.xml */
+    private static final String PROTON_JYTHON_BINDING = "protonJythonBinding";
     private static final String PROTON_JYTHON_TEST_ROOT = "protonJythonTestRoot";
     private static final String PROTON_JYTHON_TEST_SCRIPT = "protonJythonTestScript";
     private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestXmlOutputDirectory";
@@ -65,11 +66,13 @@ public class JythonTest
     public void test() throws Exception
     {
         String testScript = getJythonTestScript();
+        String binding = getJythonBinding();
         String testRoot = getJythonTestRoot();
         String xmlReportFile = getOptionalXmlReportFilename();
         String ignoreFile = getOptionalIgnoreFile();
 
         PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile, ignoreFile);
+        interp.getSystemState().path.insert(0, new PyString(binding));
         interp.getSystemState().path.insert(0, new PyString(testRoot));
 
         LOGGER.info("About to call Jython test script: '" + testScript
@@ -164,6 +167,17 @@ public class JythonTest
             throw new FileNotFoundException("Can't read python test script " + testScript);
         }
         return testScript.getAbsolutePath();
+    }
+
+    private String getJythonBinding() throws FileNotFoundException
+    {
+        String str = getNonNullSystemProperty(PROTON_JYTHON_BINDING, "System property '%s' must provide the location of the python test root");
+        File file = new File(str);
+        if (!file.isDirectory())
+        {
+            throw new FileNotFoundException("Binding location '" + file + "' should be a directory.");
+        }
+        return file.getAbsolutePath();
     }
 
 

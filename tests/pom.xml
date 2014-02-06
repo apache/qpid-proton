@@ -68,6 +68,7 @@ directory &lt;basedir&gt;/build/proton-c.</description>
           <systemPropertyVariables>
             <protonJythonIgnoreFile>${basedir}/java/pythonTests.ignore</protonJythonIgnoreFile>
             <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
+            <protonJythonBinding>${basedir}/../proton-c/bindings/python</protonJythonBinding>
             <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
             <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>
             <java.util.logging.config.file>${project.build.outputDirectory}/logging.properties</java.util.logging.config.file>

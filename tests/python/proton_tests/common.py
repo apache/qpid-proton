@@ -336,8 +336,6 @@ class MessengerApp(object):
 
     def start(self, verbose=False):
         """ Begin executing the test """
-        if sys.platform.startswith("java"):
-            raise Skipped("Skipping soak tests - not supported under Jython")
         cmd = self.cmdline()
         self._verbose = verbose
         if self._verbose:

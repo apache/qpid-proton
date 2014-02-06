@@ -140,6 +140,12 @@ class DescribedTypeElement extends AbstractElement<DescribedType>
     }
 
     @Override
+    public void setChild(Element elt)
+    {
+        _first = elt;
+    }
+
+    @Override
     public Element checkChild(Element element)
     {
         if(element.prev() != _first)
@@ -155,6 +161,16 @@ class DescribedTypeElement extends AbstractElement<DescribedType>
     {
         _first = element;
         return element;
+    }
+
+    @Override
+    String startSymbol() {
+        return "(";
+    }
+
+    @Override
+    String stopSymbol() {
+        return ")";
     }
 
 }

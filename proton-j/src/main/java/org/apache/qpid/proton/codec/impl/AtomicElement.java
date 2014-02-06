@@ -32,7 +32,12 @@ abstract class AtomicElement<T> extends AbstractElement<T>
     @Override
     public Element child()
     {
-        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setChild(Element elt)
+    {
         throw new UnsupportedOperationException();
     }
 
@@ -54,4 +59,15 @@ abstract class AtomicElement<T> extends AbstractElement<T>
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    String startSymbol() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    String stopSymbol() {
+        throw new UnsupportedOperationException();
+    }
+
 }

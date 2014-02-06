@@ -187,7 +187,12 @@ public class DataImpl implements Data
         {
             if(_current == null)
             {
-                element = _parent.addChild(element);
+                if (_parent == null) {
+                    _first = _first.replaceWith(element);
+                    element = _first;
+                } else {
+                    element = _parent.addChild(element);
+                }
             }
             else
             {
@@ -780,7 +785,7 @@ public class DataImpl implements Data
     @Override
     public Object getObject()
     {
-        return _current.getValue();
+        return _current == null ? null : _current.getValue();
     }
 
     @Override
@@ -861,6 +866,47 @@ public class DataImpl implements Data
         // TODO
 
         throw new ProtonUnsupportedOperationException();
+    }
+
+
+    @Override
+    public String format()
+    {
+        StringBuilder sb = new StringBuilder();
+        Element el = _first;
+        boolean first = true;
+        while (el != null) {
+            if (first) {
+                first = false;
+            } else {
+                sb.append(", ");
+            }
+            el.render(sb);
+            el = el.next();
+        }
+
+        return sb.toString();
+    }
+
+    private void render(StringBuilder sb, Element el)
+    {
+        if (el == null) return;
+        sb.append("    ").append(el).append("\n");
+        if (el.canEnter()) {
+            render(sb, el.child());
+        }
+        render(sb, el.next());
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        render(sb, _first);
+        return String.format("Data[current=%h, parent=%h]{\n%s}",
+                             System.identityHashCode(_current),
+                             System.identityHashCode(_parent),
+                             sb);
     }
 
 }

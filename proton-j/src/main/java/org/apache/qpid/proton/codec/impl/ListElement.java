@@ -202,8 +202,13 @@ class ListElement extends AbstractElement<List<Object>>
     @Override
     public Element child()
     {
-        // TODO
         return _first;
+    }
+
+    @Override
+    public void setChild(Element elt)
+    {
+        _first = elt;
     }
 
     @Override
@@ -217,6 +222,16 @@ class ListElement extends AbstractElement<List<Object>>
     {
         _first = element;
         return element;
+    }
+
+    @Override
+    String startSymbol() {
+        return "[";
+    }
+
+    @Override
+    String stopSymbol() {
+        return "]";
     }
 
 }

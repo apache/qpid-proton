@@ -46,6 +46,12 @@ public interface Listener<C>
     C getContext();
 
     /**
+     * Set the application context that is associated with this listener.
+     *
+     */
+    void setContext(C ctx);
+
+    /**
      * Close the socket used by the listener.
      *
      */

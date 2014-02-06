@@ -150,7 +150,7 @@ public class MapType extends AbstractPrimitiveType<Map>
             int size = decoder.readRawInt();
             // todo - limit the decoder with size
             int count = decoder.readRawInt();
-            Map map = new HashMap(count);
+            Map map = new LinkedHashMap(count);
             for(int i = 0; i < count; i++)
             {
                 Object key = decoder.readObject();
@@ -231,7 +231,7 @@ public class MapType extends AbstractPrimitiveType<Map>
             // todo - limit the decoder with size
             int count = ((int)decoder.readRawByte()) & 0xff;
 
-            Map map = new HashMap(count);
+            Map map = new LinkedHashMap(count);
             for(int i = 0; i < count; i++)
             {
                 Object key = decoder.readObject();

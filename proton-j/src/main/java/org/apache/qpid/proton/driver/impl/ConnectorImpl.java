@@ -25,6 +25,7 @@ import java.nio.channels.SocketChannel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
@@ -49,7 +50,7 @@ class ConnectorImpl<C> implements Connector<C>
     private C _context;
 
     private Connection _connection;
-    private Transport _transport = null;
+    private Transport _transport = Proton.transport();
     private SelectionKey _key;
     private ConnectorState _state = UNINITIALIZED;
 
@@ -207,7 +208,12 @@ class ConnectorImpl<C> implements Connector<C>
     public void setConnection(Connection connection)
     {
         _connection = connection;
-        _transport = TransportFactory.getDefaultTransportFactory().transport(_connection);
+        _transport.bind(_connection);
+    }
+
+    public Transport getTransport()
+    {
+        return _transport;
     }
 
     public C getContext()

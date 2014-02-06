@@ -163,6 +163,8 @@ public interface Data
     void narrow();
     void widen();
 
+    String format();
+
     // void dump();
 
 

@@ -23,6 +23,7 @@ package org.apache.qpid.proton.driver;
 import java.io.IOException;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.Transport;
 
 /**
  * Intermediates between a proton engine {@link Connection} and the I/O
@@ -63,6 +64,13 @@ public interface Connector<C>
      *         or null if none.
      */
     Sasl sasl();
+
+    /**
+     * Access the Transport associated with the connector.
+     *
+     */
+
+    Transport getTransport();
 
     /**
      * Access the AMQP Connection associated with the connector.
