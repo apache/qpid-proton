@@ -1663,6 +1663,9 @@ static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t
     pn_error_set(transport->error, pn_process(transport), "process error");
   }
 
+  // write out any buffered data _before_ returning an error code,
+  // else we could truncate an outgoing Close frame containing a
+  // useful error status
   if (!transport->disp->available && (transport->close_sent || pn_error_code(transport->error))) {
     if (pn_error_code(transport->error))
       return pn_error_code(transport->error);
