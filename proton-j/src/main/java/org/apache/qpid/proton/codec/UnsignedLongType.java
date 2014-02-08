@@ -56,7 +56,7 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
         long l = val.longValue();
         return l == 0L
             ? _zeroUnsignedLongEncoding
-            : (l <= 255L) ? _smallUnsignedLongEncoding : _unsignedLongEncoding;
+            : (l >= 0 && l <= 255L) ? _smallUnsignedLongEncoding : _unsignedLongEncoding;
     }
 
 
