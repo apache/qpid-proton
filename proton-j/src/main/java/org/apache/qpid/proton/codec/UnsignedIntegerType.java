@@ -56,7 +56,7 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
         int i = val.intValue();
         return i == 0
             ? _zeroUnsignedIntegerEncoding
-            : (i <= 255) ? _smallUnsignedIntegerEncoding : _unsignedIntegerEncoding;
+            : (i >= 0 && i <= 255) ? _smallUnsignedIntegerEncoding : _unsignedIntegerEncoding;
     }
 
 
