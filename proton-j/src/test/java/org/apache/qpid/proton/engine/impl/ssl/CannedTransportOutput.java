@@ -29,6 +29,7 @@ public class CannedTransportOutput implements TransportOutput
 
     private ByteBuffer _cannedOutput;
     private ByteBuffer _head;
+    private int _popped;
 
     public CannedTransportOutput()
     {
@@ -43,6 +44,7 @@ public class CannedTransportOutput implements TransportOutput
     {
         _cannedOutput = ByteBuffer.wrap(output.getBytes());
         _head = _cannedOutput.asReadOnlyBuffer();
+        _popped = 0;
     }
 
     @Override
@@ -60,8 +62,8 @@ public class CannedTransportOutput implements TransportOutput
     @Override
     public void pop(int bytes)
     {
-        _cannedOutput.position(bytes);
-        _head.position(bytes);
+        _popped += bytes;
+        _head.position(_popped);
     }
 
     @Override

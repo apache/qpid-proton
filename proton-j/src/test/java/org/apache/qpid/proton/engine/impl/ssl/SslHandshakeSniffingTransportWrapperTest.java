@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 import org.junit.Rule;
 import org.junit.Test;
@@ -107,8 +108,9 @@ public class SslHandshakeSniffingTransportWrapperTest
         try
         {
             _sniffingWrapper.tail().put(sourceBuffer);
+            _sniffingWrapper.close_tail();
 
-            _expectedException.expect(IllegalArgumentException.class);
+            _expectedException.expect(TransportException.class);
             _sniffingWrapper.process();
         }
         finally

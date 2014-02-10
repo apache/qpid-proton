@@ -63,12 +63,6 @@ public class SenderImpl  extends LinkImpl implements Sender
         //TODO.
     }
 
-    public Iterator<Delivery> unsettled()
-    {
-        return null;  //TODO.
-    }
-
-
     public void free()
     {
         getSession().freeSender(this);

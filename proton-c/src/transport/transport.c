@@ -1083,8 +1083,9 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
       pn_connection_t *connection = (pn_connection_t *) endpoint;
+      const char *cid = pn_string_get(connection->container);
       int err = pn_post_frame(transport->disp, 0, "DL[SS?I?H?InnCCC]", OPEN,
-                              pn_string_get(connection->container),
+                              cid ? cid : "",
                               pn_string_get(connection->hostname),
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,

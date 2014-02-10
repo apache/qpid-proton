@@ -26,6 +26,7 @@ import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
@@ -40,6 +41,7 @@ public class SslImpl implements Ssl
     private final ProtonSslEngineProvider _protonSslEngineProvider;
 
     private final SslPeerDetails _peerDetails;
+    private TransportException _initException;
 
     /**
      * @param sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
@@ -103,14 +105,22 @@ public class SslImpl implements Ssl
         public int capacity()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.capacity();
+            if (_initException == null) {
+                return _transportWrapper.capacity();
+            } else {
+                return Transport.END_OF_STREAM;
+            }
         }
 
         @Override
         public ByteBuffer tail()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.tail();
+            if (_initException == null) {
+                return _transportWrapper.tail();
+            } else {
+                return null;
+            }
         }
 
 
@@ -118,42 +128,60 @@ public class SslImpl implements Ssl
         public void process() throws TransportException
         {
             initTransportWrapperOnFirstIO();
-            _transportWrapper.process();
+            if (_initException == null) {
+                _transportWrapper.process();
+            } else {
+                throw new TransportException(_initException);
+            }
         }
 
         @Override
         public void close_tail()
         {
             initTransportWrapperOnFirstIO();
-            _transportWrapper.process();
+            if (_initException == null) {
+                _transportWrapper.close_tail();
+            }
         }
 
         @Override
         public int pending()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.pending();
+            if (_initException == null) {
+                return _transportWrapper.pending();
+            } else {
+                throw new TransportException(_initException);
+            }
         }
 
         @Override
         public ByteBuffer head()
         {
             initTransportWrapperOnFirstIO();
-            return _transportWrapper.head();
+            if (_initException == null) {
+                return _transportWrapper.head();
+            } else {
+                return null;
+            }
         }
 
         @Override
         public void pop(int bytes)
         {
             initTransportWrapperOnFirstIO();
-            _transportWrapper.pop(bytes);
+            if (_initException == null) {
+                _transportWrapper.pop(bytes);
+            }
         }
 
         @Override
         public void close_head()
         {
             initTransportWrapperOnFirstIO();
-            _transportWrapper.close_head();
+            if (_initException == null) {
+                _transportWrapper.close_head();
+            }
         }
 
         @Override
@@ -184,22 +212,27 @@ public class SslImpl implements Ssl
 
         private void initTransportWrapperOnFirstIO()
         {
-            if (_transportWrapper == null)
-            {
-                SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper(
-                        _protonSslEngineProvider.createSslEngine(_peerDetails),
-                        _inputProcessor,
-                        _outputProcessor);
+            try {
+                if (_initException == null && _transportWrapper == null)
+                {
+                    SslTransportWrapper sslTransportWrapper = new SimpleSslTransportWrapper
+                        (_protonSslEngineProvider.createSslEngine(_peerDetails),
+                         _inputProcessor, _outputProcessor);
 
-                if (_domain.allowUnsecuredClient())
-                {
-                    TransportWrapper plainTransportWrapper = new PlainTransportWrapper(_outputProcessor, _inputProcessor);
-                    _transportWrapper = new SslHandshakeSniffingTransportWrapper(sslTransportWrapper, plainTransportWrapper);
+                    if (_domain.allowUnsecuredClient() && _domain.getMode() == SslDomain.Mode.SERVER)
+                    {
+                        TransportWrapper plainTransportWrapper = new PlainTransportWrapper
+                            (_outputProcessor, _inputProcessor);
+                        _transportWrapper = new SslHandshakeSniffingTransportWrapper
+                            (sslTransportWrapper, plainTransportWrapper);
+                    }
+                    else
+                    {
+                        _transportWrapper = sslTransportWrapper;
+                    }
                 }
-                else
-                {
-                    _transportWrapper = sslTransportWrapper;
-                }
+            } catch (TransportException e) {
+                _initException = e;
             }
         }
     }

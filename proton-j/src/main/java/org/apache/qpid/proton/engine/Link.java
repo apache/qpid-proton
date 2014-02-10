@@ -75,9 +75,9 @@ public interface Link extends Endpoint
     public Delivery delivery(byte[] tag, int offset, int length);
 
     /**
-     * @return the unsettled deliveries for this link
+     * Returns the head delivery on the link.
      */
-    public Iterator<Delivery> unsettled();
+    Delivery head();
 
     /**
      * Returns the current delivery

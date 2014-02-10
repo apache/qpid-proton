@@ -108,6 +108,7 @@ public class TransportImpl extends EndpointImpl
     private boolean _init;
 
     private FrameHandler _frameHandler = this;
+    private boolean _head_closed = false;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -272,7 +273,7 @@ public class TransportImpl extends EndpointImpl
 
         _frameWriter.readBytes(outputBuffer);
 
-        return _isCloseSent;
+        return _isCloseSent || _head_closed;
     }
 
     @Override
@@ -716,7 +717,8 @@ public class TransportImpl extends EndpointImpl
         if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
         {
             Open open = new Open();
-            open.setContainerId(_connectionEndpoint.getLocalContainerId());
+            String cid = _connectionEndpoint.getLocalContainerId();
+            open.setContainerId(cid == null ? "" : cid);
             open.setHostname(_connectionEndpoint.getHostname());
             open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
             open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
@@ -1236,8 +1238,13 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void process() throws TransportException
     {
-        init();
-        _inputProcessor.process();
+        try {
+            init();
+            _inputProcessor.process();
+        } catch (TransportException e) {
+            _head_closed = true;
+            throw e;
+        }
     }
 
     @Override

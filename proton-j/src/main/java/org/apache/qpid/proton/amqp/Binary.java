@@ -165,7 +165,7 @@ public final class Binary
     {
         if( buffer == null )
             return null;
-        if( buffer.isDirect() ) 
+        if( buffer.isDirect() || buffer.isReadOnly() )
         {
             byte data[] = new byte [buffer.remaining()];
             ByteBuffer dup = buffer.duplicate();
@@ -177,4 +177,5 @@ public final class Binary
             return new Binary(buffer.array(), buffer.arrayOffset()+buffer.position(), buffer.remaining());
         }
     }
+
 }

@@ -218,8 +218,48 @@ public interface Messenger
      */
     Status getStatus(Tracker tracker);
 
-    public void route(String pattern, String address);
+    void route(String pattern, String address);
 
-    public void rewrite(String pattern, String address);
+    void rewrite(String pattern, String address);
+
+    /**
+     * Set the path to the certificate file.
+     */
+    void setCertificate(String certificate);
+
+    /**
+     * Get the path to the certificate file.
+     */
+    String getCertificate();
+
+    /**
+     * Set the path to private key file.
+     */
+    void setPrivateKey(String privateKey);
+
+    /**
+     * Get the path to the private key file.
+     */
+    String getPrivateKey();
+
+    /**
+     * Set the password for private key file.
+     */
+    void setPassword(String password);
+
+    /**
+     * Get the password for the priate key file.
+     */
+    String getPassword();
+
+    /**
+     * Set the path to the trusted certificate database.
+     */
+    void setTrustedCertificates(String trusted);
+
+    /**
+     * Get the path to the trusted certificate database.
+     */
+    String getTrustedCertificates();
 
 }

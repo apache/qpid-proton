@@ -45,6 +45,9 @@ import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
+import org.apache.qpid.proton.engine.SslDomain;
+import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.messenger.Messenger;
@@ -98,6 +101,11 @@ public class MessengerImpl implements Messenger
     private Transform _routes = new Transform();
     private Transform _rewrites = new Transform();
 
+    private String _certificate;
+    private String _privateKey;
+    private String _password;
+    private String _trustedDb;
+
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -135,6 +143,46 @@ public class MessengerImpl implements Messenger
     public void setBlocking(boolean b)
     {
         _blocking = b;
+    }
+
+    public void setCertificate(String certificate)
+    {
+        _certificate = certificate;
+    }
+
+    public String getCertificate()
+    {
+        return _certificate;
+    }
+
+    public void setPrivateKey(String privateKey)
+    {
+        _privateKey = privateKey;
+    }
+
+    public String getPrivateKey()
+    {
+        return _privateKey;
+    }
+
+    public void setPassword(String password)
+    {
+        _password = password;
+    }
+
+    public String getPassword()
+    {
+        return _password;
+    }
+
+    public void setTrustedCertificates(String trusted)
+    {
+        _trustedDb = trusted;
+    }
+
+    public String getTrustedCertificates()
+    {
+        return _trustedDb;
     }
 
     public void start() throws IOException
@@ -290,9 +338,7 @@ public class MessengerImpl implements Messenger
             restoreMessage(m);
         }
 
-        String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
-        int port = Integer.valueOf(ports);
-        Sender sender = getLink(address.getHost(), port, new SenderFinder(address.getName()));
+        Sender sender = getLink(address, new SenderFinder(address.getName()));
         pumpOut(m.getAddress(), sender);
     }
 
@@ -308,17 +354,18 @@ public class MessengerImpl implements Messenger
             }
         }
 
-        Iterator<Delivery> dIter = link.unsettled();
-        while (dIter != null && dIter.hasNext())
+        Delivery delivery = link.head();
+        while (delivery != null)
         {
-            Delivery delivery = (Delivery) dIter.next();
             StoreEntry entry = (StoreEntry) delivery.getContext();
             if (entry != null)
             {
                 entry.setDelivery(null);
-                if (delivery.isBuffered())
+                if (delivery.isBuffered()) {
                     entry.setStatus(Status.ABORTED);
+                }
             }
+            delivery = delivery.next();
         }
         linkRemoved(link);
     }
@@ -494,15 +541,14 @@ public class MessengerImpl implements Messenger
 
         String hostName = address.getHost();
         if (hostName == null) throw new MessengerException("Invalid address (hostname cannot be null): " + routed);
-        String ports = address.getPort() == null ? defaultPort(address.getScheme()) : address.getPort();
-        int port = Integer.valueOf(ports);
+        int port = Integer.valueOf(address.getImpliedPort());
         if (address.isPassive())
         {
             if(_logger.isLoggable(Level.FINE))
             {
                 _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
             }
-            ListenerContext ctx = new ListenerContext( address.getScheme(), hostName, ports );
+            ListenerContext ctx = new ListenerContext(address);
             _driver.createListener(hostName, port, ctx);
         }
         else
@@ -511,7 +557,7 @@ public class MessengerImpl implements Messenger
             {
                 _logger.fine(this + " about to subscribe to source " + source);
             }
-            getLink(hostName, port, new ReceiverFinder(address.getName()));
+            getLink(address, new ReceiverFinder(address.getName()));
         }
     }
 
@@ -666,9 +712,10 @@ public class MessengerImpl implements Messenger
             Connection connection = Proton.connection();
             connection.setContainer(_name);
             ListenerContext ctx = (ListenerContext) l.getContext();
-            connection.setContext(new ConnectionContext(ctx.getService(), c));
+            connection.setContext(new ConnectionContext(ctx.getAddress(), c));
             c.setConnection(connection);
-            //TODO: SSL and full SASL
+            Transport transport = c.getTransport();
+            //TODO: full SASL
             Sasl sasl = c.sasl();
             if (sasl != null)
             {
@@ -676,6 +723,7 @@ public class MessengerImpl implements Messenger
                 sasl.setMechanisms(new String[]{"ANONYMOUS"});
                 sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
             }
+            transport.ssl(ctx.getDomain());
             connection.open();
         }
         // process connectors, reclaiming credit on closed connectors
@@ -854,13 +902,13 @@ public class MessengerImpl implements Messenger
         return done;
     }
 
-    private Connection lookup(String host, String service)
+    private Connection lookup(Address address)
     {
         for (Connector<?> c : _driver.connectors())
         {
             Connection connection = c.getConnection();
             ConnectionContext ctx = (ConnectionContext) connection.getContext();
-            if (host.equals(connection.getRemoteContainer()) || service.equals(ctx.getService()))
+            if (ctx.matches(address))
             {
                 return connection;
             }
@@ -1191,24 +1239,37 @@ public class MessengerImpl implements Messenger
         }
     }
 
-    private <C extends Link> C getLink(String host, int port, LinkFinder<C> finder)
+    private <C extends Link> C getLink(Address address, LinkFinder<C> finder)
     {
-        String service = host + ":" + port;
-        Connection connection = lookup(host, service);
+        Connection connection = lookup(address);
         if (connection == null)
         {
+            String host = address.getHost();
+            int port = Integer.valueOf(address.getImpliedPort());
             Connector<?> connector = _driver.createConnector(host, port, null);
             _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
             connection = Proton.connection();
             connection.setContainer(_name);
             connection.setHostname(host);
-            connection.setContext(new ConnectionContext(service, connector));
+            connection.setContext(new ConnectionContext(address, connector));
             connector.setConnection(connection);
             Sasl sasl = connector.sasl();
             if (sasl != null)
             {
                 sasl.client();
                 sasl.setMechanisms(new String[]{"ANONYMOUS"});
+            }
+            if ("amqps".equalsIgnoreCase(address.getScheme())) {
+                Transport transport = connector.getTransport();
+                SslDomain domain = makeDomain(address, SslDomain.Mode.CLIENT);
+                if (_trustedDb != null) {
+                    domain.setPeerAuthentication(SslDomain.VerifyMode.VERIFY_PEER);
+                    //domain.setPeerAuthentication(SslDomain.VerifyMode.VERIFY_PEER_NAME);
+                } else {
+                    domain.setPeerAuthentication(SslDomain.VerifyMode.ANONYMOUS_PEER);
+                }
+                Ssl ssl = transport.ssl(domain);
+                //ssl.setPeerHostname(host);
             }
             connection.open();
         }
@@ -1363,12 +1424,6 @@ public class MessengerImpl implements Messenger
         else return path.equals(source.getAddress());
     }
 
-    private static String defaultPort(String scheme)
-    {
-        if ("amqps".equals(scheme)) return "5671";
-        else return "5672";
-    }
-
     @Override
     public String toString()
     {
@@ -1422,18 +1477,27 @@ public class MessengerImpl implements Messenger
 
     private class ConnectionContext
     {
-        private String _service;
+        private Address _address;
         private Connector _connector;
 
-        public ConnectionContext(String service, Connector connector)
+        public ConnectionContext(Address address, Connector connector)
         {
-            _service = service;
+            _address = address;
             _connector = connector;
         }
 
-        public String getService()
+        public Address getAddress()
         {
-            return _service;
+            return _address;
+        }
+
+        public boolean matches(Address address)
+        {
+            String host = address.getHost();
+            String port = address.getImpliedPort();
+            Connection conn = _connector.getConnection();
+            return host.equals(conn.getRemoteContainer()) ||
+                (_address.getHost().equals(host) && _address.getImpliedPort().equals(port));
         }
 
         public Connector getConnector()
@@ -1442,32 +1506,47 @@ public class MessengerImpl implements Messenger
         }
     }
 
+    private SslDomain makeDomain(Address address, SslDomain.Mode mode)
+    {
+        SslDomain domain = Proton.sslDomain();
+        domain.init(mode);
+        if (_certificate != null) {
+            domain.setCredentials(_certificate, _privateKey, _password);
+        }
+        if (_trustedDb != null) {
+            domain.setTrustedCaDb(_trustedDb);
+        }
+
+        if ("amqps".equalsIgnoreCase(address.getScheme())) {
+            domain.allowUnsecuredClient(false);
+        } else {
+            domain.allowUnsecuredClient(true);
+        }
+
+        return domain;
+    }
+
+
     private class ListenerContext
     {
-        private String _host;
-        private String _port;
-        private String _service;  // for now. move to subscription later
+        private Address _address;
+        private SslDomain _domain;
 
-        public ListenerContext(String service, String host, String port)
+        public ListenerContext(Address address)
         {
-            _service = service;
-            _host = host;
-            _port = port;
+            _address = address;
+            _domain = makeDomain(address, SslDomain.Mode.SERVER);
         }
 
-        public String getService()
+        public SslDomain getDomain()
         {
-            return _service;
+            return _domain;
         }
 
-        public String getHost()
+        public Address getAddress()
         {
-            return _host;
+            return _address;
         }
 
-        public String getPort()
-        {
-            return _port;
-        }
     }
 }

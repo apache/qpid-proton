@@ -33,14 +33,14 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     private final TransportWrapper _plainTransportWrapper;
 
     private boolean _tail_closed = false;
-    private boolean _head_closed = true;
+    private boolean _head_closed = false;
     private TransportWrapper _selectedTransportWrapper;
 
     private final ByteBuffer _determinationBuffer = ByteBuffer.allocate(MINIMUM_LENGTH_FOR_DETERMINATION);
 
-    SslHandshakeSniffingTransportWrapper(
-            SslTransportWrapper secureTransportWrapper,
-            TransportWrapper plainTransportWrapper)
+    SslHandshakeSniffingTransportWrapper
+        (SslTransportWrapper secureTransportWrapper,
+         TransportWrapper plainTransportWrapper)
     {
         _secureTransportWrapper = secureTransportWrapper;
         _plainTransportWrapper = plainTransportWrapper;
@@ -51,12 +51,12 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     {
         if (isDeterminationMade())
         {
-            return _secureTransportWrapper.capacity();
+            return _selectedTransportWrapper.capacity();
         }
         else
         {
             if (_tail_closed) { return Transport.END_OF_STREAM; }
-            return _determinationBuffer.capacity();
+            return _determinationBuffer.remaining();
         }
     }
 
@@ -80,7 +80,7 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
         {
             _selectedTransportWrapper.process();
         }
-        else
+        else if (_determinationBuffer.remaining() == 0)
         {
             _determinationBuffer.flip();
             byte[] bytesInput = new byte[_determinationBuffer.remaining()];
@@ -91,6 +91,8 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
             // TODO what if the selected transport has insufficient capacity?? Maybe use pour, and then try to finish pouring next time round.
             _selectedTransportWrapper.tail().put(_determinationBuffer);
             _selectedTransportWrapper.process();
+        } else if (_tail_closed) {
+            throw new TransportException("connection aborted");
         }
     }
 
@@ -111,32 +113,43 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     public int pending()
     {
         if (_head_closed) { return Transport.END_OF_STREAM; }
-        makePlainUnlessDeterminationAlreadyMade();
 
-        return _selectedTransportWrapper.pending();
+        if (isDeterminationMade()) {
+            return _selectedTransportWrapper.pending();
+        } else {
+            return 0;
+        }
+
     }
 
     @Override
     public ByteBuffer head()
     {
-        makePlainUnlessDeterminationAlreadyMade();
-
-        return _selectedTransportWrapper.head();
+        if (isDeterminationMade()) {
+            return _selectedTransportWrapper.head();
+        } else {
+            return null;
+        }
     }
 
     @Override
     public void pop(int bytes)
     {
-        makePlainUnlessDeterminationAlreadyMade();
-
-        _selectedTransportWrapper.pop(bytes);
+        if (isDeterminationMade()) {
+            _selectedTransportWrapper.pop(bytes);
+        } else if (bytes > 0) {
+            throw new IllegalStateException("no bytes have been read");
+        }
     }
 
     @Override
     public void close_head()
     {
-        makePlainUnlessDeterminationAlreadyMade();
-        _selectedTransportWrapper.close_head();
+        if (isDeterminationMade()) {
+            _selectedTransportWrapper.close_head();
+        } else {
+            _head_closed = true;
+        }
     }
 
     @Override
@@ -235,11 +248,4 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
         }
     }
 
-    private void makePlainUnlessDeterminationAlreadyMade()
-    {
-        if (!isDeterminationMade())
-        {
-            _selectedTransportWrapper = _plainTransportWrapper;
-        }
-    }
 }

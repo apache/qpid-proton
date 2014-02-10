@@ -56,6 +56,7 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.ProtonUnsupportedOperationException;
+import org.apache.qpid.proton.engine.TransportException;
 
 public class SslEngineFacadeFactory
 {
@@ -93,7 +94,7 @@ public class SslEngineFacadeFactory
         try {
             return klass.getConstructor(params);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         }
     }
 
@@ -105,7 +106,7 @@ public class SslEngineFacadeFactory
         try {
             return klass.getMethod(name, params);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         }
     }
 
@@ -260,19 +261,19 @@ public class SslEngineFacadeFactory
             }
             catch (NoSuchAlgorithmException e)
             {
-                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+                throw new TransportException("Unexpected exception creating SSLContext", e);
             }
             catch (KeyStoreException e)
             {
-                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+                throw new TransportException("Unexpected exception creating SSLContext", e);
             }
             catch (UnrecoverableKeyException e)
             {
-                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+                throw new TransportException("Unexpected exception creating SSLContext", e);
             }
             catch (KeyManagementException e)
             {
-                throw new IllegalStateException("Unexpected exception creating SSLContext", e);
+                throw new TransportException("Unexpected exception creating SSLContext", e);
             }
         }
         return _sslContext;
@@ -318,7 +319,7 @@ public class SslEngineFacadeFactory
                 else
                 {
                     // Should not happen - readPemObject will have already verified key type
-                    throw new IllegalStateException("Unexpected key type " + keyOrKeyPair);
+                    throw new TransportException("Unexpected key type " + keyOrKeyPair);
                 }
 
                 keystore.setKeyEntry(clientPrivateKeyAlias, clientPrivateKey,
@@ -328,19 +329,19 @@ public class SslEngineFacadeFactory
         }
         catch (KeyStoreException e)
         {
-           throw new IllegalStateException("Unexpected exception creating keystore", e);
+           throw new TransportException("Unexpected exception creating keystore", e);
         }
         catch (NoSuchAlgorithmException e)
         {
-            throw new IllegalStateException("Unexpected exception creating keystore", e);
+            throw new TransportException("Unexpected exception creating keystore", e);
         }
         catch (CertificateException e)
         {
-            throw new IllegalStateException("Unexpected exception creating keystore", e);
+            throw new TransportException("Unexpected exception creating keystore", e);
         }
         catch (IOException e)
         {
-            throw new IllegalStateException("Unexpected exception creating keystore", e);
+            throw new TransportException("Unexpected exception creating keystore", e);
         }
     }
 
@@ -370,9 +371,10 @@ public class SslEngineFacadeFactory
 
         if (addedAnonymousCipherSuites == 0)
         {
-            throw new IllegalStateException("None of " + anonymousCipherSuites
-                    + " anonymous cipher suites are within the supported list "
-                    + supportedSuites);
+            throw new TransportException
+                ("None of " + anonymousCipherSuites
+                 + " anonymous cipher suites are within the supported list "
+                 + supportedSuites);
         }
 
         if(_logger.isLoggable(Level.FINE))
@@ -423,29 +425,31 @@ public class SslEngineFacadeFactory
             Object pemObject = readObjectMeth.invoke(pemReader);
             if (!checkPemObjectIsOfAllowedTypes(pemObject, expectedInterfaces))
             {
-                throw new IllegalStateException("File " + pemFile + " does not provide a object of the required type."
-                        + " Read an object of class " + pemObject.getClass().getName()
-                        + " whilst expecting an implementation of one of the following  : " + Arrays.asList(expectedInterfaces));
+                throw new TransportException
+                    ("File " + pemFile + " does not provide a object of the required type."
+                     + " Read an object of class " + pemObject.getClass().getName()
+                     + " whilst expecting an implementation of one of the following  : "
+                     + Arrays.asList(expectedInterfaces));
             }
             return pemObject;
         }
         catch(InstantiationException e)
         {
             _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new IllegalStateException("Unable to read PEM object from file " + pemFile, e);
+            throw new TransportException("Unable to read PEM object from file " + pemFile, e);
         }
         catch(InvocationTargetException e)
         {
             _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new IllegalStateException("Unable to read PEM object from file " + pemFile, e);
+            throw new TransportException("Unable to read PEM object from file " + pemFile, e);
         }
         catch (IllegalAccessException e)
         {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         }
         catch (IOException e)
         {
-            throw new RuntimeException("Unable to read PEM object from file " + pemFile, e);
+            throw new TransportException("Unable to read PEM object from file " + pemFile, e);
         }
         finally
         {
@@ -508,13 +512,13 @@ public class SslEngineFacadeFactory
 
             return finder;
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         } catch (InstantiationException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
+            throw new TransportException(e);
         }
     }
 

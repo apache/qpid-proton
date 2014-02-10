@@ -41,7 +41,10 @@ class pn_messenger_wrapper:
     self.error = pn_error(0, None)
 
 def pn_messenger(name):
-  return pn_messenger_wrapper(Proton.messenger(name));
+  if name is None:
+    return pn_messenger_wrapper(Proton.messenger())
+  else:
+    return pn_messenger_wrapper(Proton.messenger(name))
 
 def pn_messenger_error(m):
   return m.error
@@ -55,7 +58,20 @@ def pn_messenger_set_blocking(m, b):
   return 0
 
 def pn_messenger_set_certificate(m, c):
-  raise Skipped()
+  m.impl.setCertificate(c)
+  return 0
+
+def pn_messenger_set_private_key(m, p):
+  m.impl.setPrivateKey(p)
+  return 0
+
+def pn_messenger_set_password(m, p):
+  m.impl.setPassword(p)
+  return 0
+
+def pn_messenger_set_trusted_certificates(m, t):
+  m.impl.setTrustedCertificates(t)
+  return 0
 
 def pn_messenger_set_incoming_window(m, w):
   m.impl.setIncomingWindow(w)
@@ -102,6 +118,8 @@ def pn_messenger_interrupt(m):
 
 def pn_messenger_buffered(m, t):
   raise Skipped()
+
+from org.apache.qpid.proton.engine import TransportException
 
 def pn_messenger_stop(m):
   m.impl.stop()

@@ -96,11 +96,6 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return consumed;
     }
 
-    public Iterator<Delivery> unsettled()
-    {
-        return null;  //TODO.
-    }
-
     public void free()
     {
         getSession().freeReceiver(this);

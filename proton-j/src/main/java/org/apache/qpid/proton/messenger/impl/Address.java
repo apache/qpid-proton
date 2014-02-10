@@ -132,6 +132,21 @@ class Address
         return _port;
     }
 
+    public String getImpliedPort()
+    {
+        if (_port == null) {
+            return getDefaultPort();
+        } else {
+            return getPort();
+        }
+    }
+
+    public String getDefaultPort()
+    {
+        if ("amqps".equals(_scheme)) return "5671";
+        else return "5672";
+    }
+
     public String getName()
     {
         return _name;

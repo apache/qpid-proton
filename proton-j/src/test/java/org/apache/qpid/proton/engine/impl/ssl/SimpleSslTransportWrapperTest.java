@@ -238,17 +238,18 @@ public class SimpleSslTransportWrapperTest
     private String getAllBytesFromTransport()
     {
         StringBuilder readBytes = new StringBuilder();
-        boolean continueLooping;
-        do
+        while (true)
         {
-            ByteBuffer buffer = _sslWrapper.head();
-            continueLooping = buffer.hasRemaining();
-
-            readBytes.append(pourBufferToString(buffer));
-
-            _sslWrapper.pop(buffer.position());
+            int pending = _sslWrapper.pending();
+            if (pending > 0) {
+                ByteBuffer buffer = _sslWrapper.head();
+                readBytes.append(pourBufferToString(buffer));
+                _sslWrapper.pop(pending);
+                continue;
+            } else {
+                break;
+            }
         }
-        while(continueLooping);
 
         return readBytes.toString();
     }

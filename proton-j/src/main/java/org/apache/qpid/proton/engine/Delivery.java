@@ -78,6 +78,8 @@ public interface Delivery
      */
     public Delivery getWorkNext();
 
+    public Delivery next();
+
     public boolean isWritable();
 
     /**

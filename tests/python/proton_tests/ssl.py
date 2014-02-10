@@ -817,6 +817,10 @@ class MessengerSSLTests(common.Test):
                                 key="server-private-key.pem",
                                 password="server-password",
                                 exception=None):
+        import sys
+        # java doesn't do validation in the same way (yet)
+        if exception and "java" in sys.platform:
+            raise Skipped()
         self.server.certificate = _testpath(cert)
         self.server.private_key = _testpath(key)
         self.server.password = password

@@ -563,6 +563,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         public void close_tail()
         {
             _tail_closed = true;
+            if (isInputInSaslMode()) {
+                _head_closed = true;
+            }
         }
 
         private void reallyProcessInput() throws TransportException

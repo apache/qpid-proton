@@ -31,6 +31,7 @@ import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.TransportFactory;
 
 class ConnectorImpl<C> implements Connector<C>
@@ -125,12 +126,17 @@ class ConnectorImpl<C> implements Connector<C>
         }
         else
         {
-            int bytesRead = _channel.read(_transport.tail());
+            ByteBuffer tail = _transport.tail();
+            int bytesRead = _channel.read(tail);
             if (bytesRead < 0) {
                 _transport.close_tail();
                 _inputDone = true;
             } else if (bytesRead > 0) {
-                _transport.process();
+                try {
+                    _transport.process();
+                } catch (TransportException e) {
+                    _logger.log(Level.SEVERE, this + " error processing input", e);
+                }
                 processed = true;
             }
         }
@@ -156,26 +162,35 @@ class ConnectorImpl<C> implements Connector<C>
         int interest = _key.interestOps();
         boolean writeBlocked = false;
 
-        while (_transport.pending() >= 0 && !writeBlocked)
-        {
-            int wrote = _channel.write(_transport.head());
-            if (wrote > 0) {
-                processed = true;
-                _transport.pop(wrote);
-            } else {
-                writeBlocked = true;
+        try {
+            while (_transport.pending() > 0 && !writeBlocked)
+            {
+                ByteBuffer head = _transport.head();
+                int wrote = _channel.write(head);
+                if (wrote > 0) {
+                    processed = true;
+                    _transport.pop(wrote);
+                } else {
+                    writeBlocked = true;
+                }
             }
+
+            int pending = _transport.pending();
+            if (pending > 0) {
+                interest |= SelectionKey.OP_WRITE;
+            } else {
+                interest &= ~SelectionKey.OP_WRITE;
+                if (pending < 0) {
+                    _outputDone = true;
+                }
+            }
+        } catch (TransportException e) {
+            _logger.log(Level.SEVERE, this + " error", e);
+            interest &= ~SelectionKey.OP_WRITE;
+            _inputDone = true;
+            _outputDone = true;
         }
 
-        int pending = _transport.pending();
-        if (pending > 0) {
-            interest |= SelectionKey.OP_WRITE;
-        } else {
-            interest &= ~SelectionKey.OP_WRITE;
-            if (pending < 0) {
-                _outputDone = true;
-            }
-        }
         _key.interestOps(interest);
 
         return processed;

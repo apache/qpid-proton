@@ -157,6 +157,11 @@ public class DeliveryImpl implements Delivery
         return _linkNext;
     }
 
+    public DeliveryImpl next()
+    {
+        return getLinkNext();
+    }
+
     public void free()
     {
 

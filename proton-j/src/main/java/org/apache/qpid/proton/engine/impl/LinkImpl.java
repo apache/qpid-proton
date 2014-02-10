@@ -381,4 +381,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         return _credit - _queued;
     }
+
+    public DeliveryImpl head()
+    {
+        return _head;
+    }
+
 }

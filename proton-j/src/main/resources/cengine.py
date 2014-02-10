@@ -879,10 +879,11 @@ def pn_transport_pending(trans):
     return trans.error.set(PN_ERR, str(e))
 
 def pn_transport_peek(trans, size):
-  bb = trans.impl.head()
-  size = min(bb.remaining(), size)
+  size = min(trans.impl.pending(), size)
   ba = zeros(size, 'b')
-  bb.get(ba)
+  if size:
+    bb = trans.impl.head()
+    bb.get(ba)
   return 0, ba.tostring()
 
 def pn_transport_pop(trans, size):
