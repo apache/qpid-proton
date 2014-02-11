@@ -918,3 +918,13 @@ def pn_transport_close_tail(trans):
 
 def pn_transport_error(trans):
   return trans.error
+
+PN_CONNECTION_STATE = "PN_CONNECTION_STATE"
+PN_SESSION_STATE = "PN_SESSION_STATE"
+PN_LINK_STATE = "PN_LINK_STATE"
+PN_LINK_FLOW = "PN_LINK_FLOW"
+PN_DELIVERY = "PN_DELIVERY"
+PN_TRANSPORT = "PN_TRANSPORT"
+
+def pn_collector():
+  raise Skipped()

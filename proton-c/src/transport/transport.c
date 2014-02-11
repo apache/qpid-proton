@@ -29,6 +29,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "../engine/event.h"
+
 #include "../sasl/sasl-internal.h"
 #include "../ssl/ssl-internal.h"
 #include "../platform.h"
@@ -255,6 +257,10 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   connection->transport = transport;
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
+    pn_event_t *event = pn_collector_put(connection->collector, PN_CONNECTION_STATE);
+    if (event) {
+      pn_event_init_connection(event, connection);
+    }
     if (!pn_error_code(transport->error)) {
       transport->disp->halt = false;
       transport_consume(transport);        // blech - testBindAfterOpen
@@ -434,8 +440,14 @@ int pn_do_open(pn_dispatcher_t *disp)
   } else {
     transport->remote_hostname = NULL;
   }
+
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
+
+    pn_event_t *event = pn_collector_put(conn->collector, PN_CONNECTION_STATE);
+    if (event) {
+      pn_event_init_connection(event, conn);
+    }
   } else {
     transport->disp->halt = true;
   }
@@ -464,6 +476,11 @@ int pn_do_begin(pn_dispatcher_t *disp)
   ssn->state.incoming_transfer_count = next;
   pn_map_channel(transport, disp->channel, ssn);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_ACTIVE);
+
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_SESSION_STATE);
+  if (event) {
+    pn_event_init_session(event, ssn);
+  }
 
   return 0;
 }
@@ -634,6 +651,11 @@ int pn_do_attach(pn_dispatcher_t *disp)
     link->state.delivery_count = idc;
   }
 
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_LINK_STATE);
+  if (event) {
+    pn_event_init_link(event, link);
+  }
+
   return 0;
 }
 
@@ -716,6 +738,11 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     pn_post_flow(transport, ssn, link);
   }
 
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_DELIVERY);
+  if (event) {
+    pn_event_init_delivery(event, delivery);
+  }
+
   return 0;
 }
 
@@ -763,6 +790,11 @@ int pn_do_flow(pn_dispatcher_t *disp)
         link->credit -= delta;
         link->drained += delta;
       }
+    }
+
+    pn_event_t *event = pn_collector_put(transport->connection->collector, PN_LINK_FLOW);
+    if (event) {
+      pn_event_init_link(event, link);
     }
   }
 
@@ -885,6 +917,10 @@ int pn_do_detach(pn_dispatcher_t *disp)
   if (closed)
   {
     PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_CLOSED);
+    pn_event_t *event = pn_collector_put(transport->connection->collector, PN_LINK_STATE);
+    if (event) {
+      pn_event_init_link(event, link);
+    }
   } else {
     // TODO: implement
   }
@@ -900,6 +936,10 @@ int pn_do_end(pn_dispatcher_t *disp)
   if (err) return err;
   pn_unmap_channel(transport, ssn);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_SESSION_STATE);
+  if (event) {
+    pn_event_init_session(event, ssn);
+  }
   return 0;
 }
 
@@ -911,6 +951,10 @@ int pn_do_close(pn_dispatcher_t *disp)
   if (err) return err;
   transport->close_rcvd = true;
   PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_LINK_STATE);
+  if (event) {
+    pn_event_init_connection(event, conn);
+  }
   return 0;
 }
 
@@ -1957,6 +2001,7 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
   if (n == PN_EOS) {
     transport->tail_closed = true;
   }
+
   if (n < 0 && n != PN_EOS) return n;
   return 0;
 }

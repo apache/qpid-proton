@@ -1906,3 +1906,71 @@ class DeliveryTest(Test):
 
   def testCustom(self):
     self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
+
+class EventTest(Test):
+
+  def list(self, collector):
+    result = []
+    while True:
+      e = collector.peek()
+      if e:
+        result.append(e)
+        collector.pop()
+      else:
+        break
+    return result
+
+  def expect(self, collector, *types):
+    events = self.list(collector)
+    assert types == tuple([e.type for e in events]), (types, events)
+
+  def testEndpointEvents(self):
+    c1, c2 = self.connection()
+    coll = Collector()
+    c1.collect(coll)
+    self.expect(coll)
+    self.pump()
+    self.expect(coll)
+    c2.open()
+    self.pump()
+    self.expect(coll, Event.CONNECTION_STATE)
+    self.pump()
+    self.expect(coll)
+
+    ssn = c2.session()
+    snd = ssn.sender("sender")
+    ssn.open()
+    snd.open()
+
+    self.expect(coll)
+    self.pump()
+    self.expect(coll, Event.SESSION_STATE, Event.LINK_STATE)
+
+  def testFlowEvents(self):
+    snd, rcv = self.link("test-link")
+    coll = Collector()
+    snd.session.connection.collect(coll)
+    rcv.open()
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.LINK_STATE, Event.LINK_FLOW)
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.LINK_FLOW)
+
+  def testDeliveryEvents(self):
+    snd, rcv = self.link("test-link")
+    coll = Collector()
+    rcv.session.connection.collect(coll)
+    rcv.open()
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT)
+    snd.delivery("delivery")
+    snd.send("Hello World!")
+    snd.advance()
+    self.pump()
+    self.expect(coll)
+    snd.open()
+    self.pump()
+    self.expect(coll, Event.LINK_STATE, Event.DELIVERY)

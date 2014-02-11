@@ -251,6 +251,8 @@ static void pn_connection_finalize(void *object)
 #define pn_connection_compare NULL
 #define pn_connection_inspect NULL
 
+#include "event.h"
+
 pn_connection_t *pn_connection()
 {
   static pn_class_t clazz = PN_CLASS(pn_connection);
@@ -274,8 +276,14 @@ pn_connection_t *pn_connection()
   conn->offered_capabilities = pn_data(16);
   conn->desired_capabilities = pn_data(16);
   conn->properties = pn_data(16);
+  conn->collector = NULL;
 
   return conn;
+}
+
+void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector)
+{
+  connection->collector = collector;
 }
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
@@ -454,6 +462,10 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
     endpoint->modified = true;
+  }
+  pn_event_t *event = pn_collector_put(connection->collector, PN_TRANSPORT);
+  if (event) {
+    pn_event_init_connection(event, connection);
   }
 }
 

@@ -191,6 +191,7 @@ struct pn_connection_t {
   pn_data_t *desired_capabilities;
   pn_data_t *properties;
   void *context;
+  pn_collector_t *collector;
 };
 
 struct pn_session_t {

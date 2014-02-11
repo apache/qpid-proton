@@ -41,12 +41,20 @@ extern "C" {
  * @todo
  */
 
-typedef struct pn_transport_t pn_transport_t;
+// top half
+typedef struct pn_container_t pn_container_t;
 typedef struct pn_connection_t pn_connection_t; /**< Connection */
 typedef struct pn_session_t pn_session_t;       /**< Session */
 typedef struct pn_link_t pn_link_t;             /**< Link */
 typedef struct pn_terminus_t pn_terminus_t;
 typedef struct pn_condition_t pn_condition_t;
+
+// bottom half
+typedef struct pn_transport_t pn_transport_t;
+
+// shared
+typedef struct pn_collector_t pn_collector_t;
+typedef struct pn_event_t pn_event_t;
 
 typedef enum {
   PN_UNSPECIFIED = 0,
@@ -127,6 +135,32 @@ typedef void (pn_tracer_t)(pn_transport_t *transport, const char *message);
 #define PN_TRACE_FRM (2)
 #define PN_TRACE_DRV (4)
 
+// event
+
+typedef enum {
+  PN_EVENT_NONE = 0,
+  PN_CONNECTION_STATE = 1,
+  PN_SESSION_STATE = 2,
+  PN_LINK_STATE = 4,
+  PN_LINK_FLOW = 8,
+  PN_DELIVERY = 16,
+  PN_TRANSPORT = 32
+} pn_event_type_t;
+
+PN_EXTERN const char *pn_event_type_name(pn_event_type_t type);
+
+PN_EXTERN pn_collector_t *pn_collector(void);
+PN_EXTERN void pn_collector_free(pn_collector_t *collector);
+PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
+PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
+
+PN_EXTERN pn_event_type_t pn_event_type(pn_event_t *event);
+PN_EXTERN pn_connection_t *pn_event_connection(pn_event_t *event);
+PN_EXTERN pn_session_t *pn_event_session(pn_event_t *event);
+PN_EXTERN pn_link_t *pn_event_link(pn_event_t *event);
+PN_EXTERN pn_delivery_t *pn_event_delivery(pn_event_t *event);
+PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
+
 // connection
 
 /** Factory to construct a new Connection.
@@ -134,6 +168,8 @@ typedef void (pn_tracer_t)(pn_transport_t *transport, const char *message);
  * @return pointer to a new connection object.
  */
 PN_EXTERN pn_connection_t *pn_connection(void);
+
+PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector);
 
 /** Retrieve the state of the connection.
  *

@@ -2160,6 +2160,9 @@ class Connection(Endpoint):
   def _get_remote_cond_impl(self):
     return pn_connection_remote_condition(self._conn)
 
+  def collect(self, collector):
+    pn_connection_collect(self._conn, collector._impl)
+
   def _get_container(self):
     return pn_connection_get_container(self._conn)
   def _set_container(self, name):
@@ -3072,6 +3075,57 @@ class SSLSessionDetails(object):
     return self._session_id
 
 
+class Collector:
+
+  def __init__(self):
+    self._impl = pn_collector()
+
+  def peek(self):
+    event = pn_collector_peek(self._impl)
+    if event is None:
+      return None
+
+    tpi = pn_event_transport(event)
+    if tpi:
+      tp = Transport(tpi)
+    else:
+      tp = None
+    return Event(type=pn_event_type(event),
+                 connection=wrap_connection(pn_event_connection(event)),
+                 session=wrap_session(pn_event_session(event)),
+                 link=wrap_link(pn_event_link(event)),
+                 delivery=wrap_delivery(pn_event_delivery(event)),
+                 transport=tp)
+
+  def pop(self):
+    pn_collector_pop(self._impl)
+
+  def __del__(self):
+    pn_collector_free(self._impl)
+
+class Event:
+
+  CONNECTION_STATE = PN_CONNECTION_STATE
+  SESSION_STATE = PN_SESSION_STATE
+  LINK_STATE = PN_LINK_STATE
+  LINK_FLOW = PN_LINK_FLOW
+  DELIVERY = PN_DELIVERY
+  TRANSPORT = PN_TRANSPORT
+
+  def __init__(self, type, connection, session, link, delivery, transport):
+    self.type = type
+    self.connection = connection
+    self.session = session
+    self.link = link
+    self.delivery = delivery
+    self.transport = transport
+
+  def __repr__(self):
+    objects = [self.connection, self.session, self.link, self.delivery,
+               self.transport]
+    return "%s(%s)" % (pn_event_type_name(self.type),
+                       ", ".join([str(o) for o in objects if o is not None]))
+
 ###
 # Driver
 ###
@@ -3208,6 +3262,7 @@ __all__ = [
            "SETTLED",
            "UNDESCRIBED",
            "Array",
+           "Collector",
            "Condition",
            "Connection",
            "Connector",
@@ -3218,6 +3273,7 @@ __all__ = [
            "Driver",
            "DriverException",
            "Endpoint",
+           "Event",
            "Link",
            "Listener",
            "Message",
