@@ -65,6 +65,7 @@ struct pn_messenger_t {
   int timeout;
   bool blocking;
   pn_driver_t *driver;
+  pn_collector_t *collector;
   int send_threshold;
   pn_link_credit_mode_t credit_mode;
   int credit_batch;  // when LINK_CREDIT_AUTO
@@ -179,13 +180,15 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_connection_t *conn,
 static void pn_connection_ctx_free(pn_connection_t *conn)
 {
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
-  free(ctx->scheme);
-  free(ctx->user);
-  free(ctx->pass);
-  free(ctx->host);
-  free(ctx->port);
-  free(ctx);
-  pn_connection_set_context(conn, NULL);
+  if (ctx) {
+    free(ctx->scheme);
+    free(ctx->user);
+    free(ctx->pass);
+    free(ctx->host);
+    free(ctx->port);
+    free(ctx);
+    pn_connection_set_context(conn, NULL);
+  }
 }
 
 #define OUTGOING (0x0000000000000000)
@@ -264,6 +267,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->timeout = -1;
     m->blocking = true;
     m->driver = pn_driver();
+    m->collector = pn_collector();
     m->credit_mode = LINK_CREDIT_EXPLICIT;
     m->credit_batch = 1024;
     m->credit = 0;
@@ -406,6 +410,7 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->trusted_certificates);
     pni_driver_reclaim(messenger, messenger->driver);
     pn_driver_free(messenger->driver);
+    pn_collector_free(messenger->collector);
     pn_error_free(messenger->error);
     pni_store_free(messenger->incoming);
     pni_store_free(messenger->outgoing);
@@ -448,26 +453,6 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
       messenger->credit = max - used;
   }
 
-  // account for any credit left over after draining links has completed
-  if (messenger->draining > 0) {
-    for (size_t i = 0; i < pn_list_size(messenger->credited); i++) {
-      pn_link_t *link = (pn_link_t *) pn_list_get(messenger->credited, i);
-      if (pn_link_get_drain(link)) {
-        if (!pn_link_draining(link)) {
-          // drain completed!
-          int drained = pn_link_drained(link);
-          //          printf("%s: drained %i from %p\n", messenger->name, drained, (void *) ctx->link);
-          messenger->distributed -= drained;
-          messenger->credit += drained;
-          pn_link_set_drain(link, false);
-          messenger->draining--;
-          pn_list_remove(messenger->credited, link);
-          pn_list_add(messenger->blocked, link);
-        }
-      }
-    }
-  }
-
   const int batch = per_link_credit(messenger);
   while (messenger->credit > 0 && pn_list_size(messenger->blocked)) {
     pn_link_t *link = (pn_link_t *) pn_list_get(messenger->blocked, 0);
@@ -479,11 +464,6 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
     //    printf("%s: flowing %i to %p\n", messenger->name, more, (void *) ctx->link);
     pn_link_flow(link, more);
     pn_list_add(messenger->credited, link);
-    pn_connection_t *conn = pn_session_connection(pn_link_session(link));
-    pn_connection_ctx_t *cctx;
-    cctx = (pn_connection_ctx_t *)pn_connection_get_context(conn);
-    // flow changed, must process it
-    pn_connector_process( cctx->connector );
     updated = true;
   }
 
@@ -507,12 +487,6 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
             pn_link_set_drain(link, true);
             needed -= pn_link_remote_credit(link);
             messenger->draining++;
-            pn_connection_t *conn =
-              pn_session_connection(pn_link_session(link));
-            pn_connection_ctx_t *cctx;
-            cctx = (pn_connection_ctx_t *)pn_connection_get_context(conn);
-            // drain requested on link, must process it
-            pn_connector_process( cctx->connector );
             updated = true;
           }
 
@@ -687,117 +661,6 @@ void pni_messenger_reclaim_link(pn_messenger_t *messenger, pn_link_t *link)
   link_ctx_release(messenger, link);
 }
 
-int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender);
-
-void pn_messenger_endpoints(pn_messenger_t *messenger, pn_connection_t *conn, pn_connector_t *ctor)
-{
-  if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
-    pn_connection_open(conn);
-  }
-
-  pn_delivery_t *d = pn_work_head(conn);
-  while (d) {
-    pn_link_t *link = pn_delivery_link(d);
-    if (pn_delivery_updated(d)) {
-      if (pn_link_is_sender(link)) {
-        pn_delivery_update(d, pn_delivery_remote_state(d));
-      }
-      pni_entry_t *e = (pni_entry_t *) pn_delivery_get_context(d);
-      if (e) pni_entry_updated(e);
-    }
-    pn_delivery_clear(d);
-    if (pn_delivery_readable(d)) {
-      int err = pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
-      if (err) {
-        fprintf(stderr, "%s\n", pn_error_text(messenger->error));
-      }
-    }
-    d = pn_work_next(d);
-  }
-
-  if (pn_work_head(conn)) {
-    return;
-  }
-
-  pn_session_t *ssn = pn_session_head(conn, PN_LOCAL_UNINIT);
-  while (ssn) {
-    pn_session_open(ssn);
-    ssn = pn_session_next(ssn, PN_LOCAL_UNINIT);
-  }
-
-  pn_link_t *link = pn_link_head(conn, PN_LOCAL_UNINIT);
-  while (link) {
-    pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
-    pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
-    link_ctx_setup( messenger, conn, link );
-    pn_link_open(link);
-    if (pn_link_is_receiver(link)) {
-      pn_listener_t *listener = pn_connector_listener(ctor);
-      pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(listener);
-      ((pn_link_ctx_t *)pn_link_get_context(link))->subscription = ctx ? ctx->subscription : NULL;
-    }
-    link = pn_link_next(link, PN_LOCAL_UNINIT);
-  }
-
-  link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-  while (link) {
-    if (pn_link_is_sender(link)) {
-      pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
-    } else {
-      pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context(link);
-      if (ctx) {
-        const char *addr = pn_terminus_get_address(pn_link_remote_source(link));
-        if (ctx->subscription) {
-          pni_subscription_set_address(ctx->subscription, addr);
-        }
-      }
-    }
-    link = pn_link_next(link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-  }
-
-  ssn = pn_session_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
-  while (ssn) {
-    pn_condition_report("SESSION", pn_session_remote_condition(ssn));
-    pn_session_close(ssn);
-    ssn = pn_session_next(ssn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
-  }
-
-  link = pn_link_head(conn, PN_REMOTE_CLOSED);
-  while (link) {
-    if (PN_LOCAL_ACTIVE & pn_link_state(link)) {
-      pn_condition_report("LINK", pn_link_remote_condition(link));
-      pn_link_close(link);
-      pni_messenger_reclaim_link(messenger, link);
-      pn_link_free(link);
-    }
-    link = pn_link_next(link, PN_REMOTE_CLOSED);
-  }
-
-  if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
-    pn_condition_t *condition = pn_connection_remote_condition(conn);
-    pn_condition_report("CONNECTION", condition);
-    pn_connection_close(conn);
-    if (pn_condition_is_redirect(condition)) {
-      const char *host = pn_condition_redirect_host(condition);
-      char buf[1024];
-      sprintf(buf, "%i", pn_condition_redirect_port(condition));
-
-      pn_connector_process(ctor);
-      pn_connector_set_connection(ctor, NULL);
-      pn_driver_t *driver = messenger->driver;
-      pn_connector_t *connector = pn_connector(driver, host, buf, NULL);
-      pn_transport_unbind(pn_connector_transport(ctor));
-      pn_connection_reset(conn);
-      pn_transport_config(messenger, connector, conn);
-      pn_connector_set_connection(connector, conn);
-    }
-  } else if (pn_connector_closed(ctor) && !(pn_connection_state(conn) & PN_REMOTE_CLOSED)) {
-    pn_error_report("CONNECTION", "connection aborted");
-  }
-
-  pn_messenger_flow(messenger);
-}
-
 void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *conn)
 {
   if (!conn) return;
@@ -822,6 +685,7 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
 {
   pn_connection_t *connection = pn_connection();
   if (!connection) return NULL;
+  pn_connection_collect(connection, messenger->collector);
   pn_connection_ctx(connection, connector, scheme, user, pass, host, port);
 
   pn_connection_set_container(connection, messenger->name);
@@ -829,75 +693,266 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
   return connection;
 }
 
-int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
+void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *event)
 {
-  pn_connector_t *ctor = pn_connector_head(messenger->driver);
-  while (ctor) {
-    pn_connection_t *conn = pn_connector_connection(ctor);
-    pn_messenger_endpoints(messenger, conn, ctor);
-    pn_connector_process(ctor);
-    ctor = pn_connector_next(ctor);
+  pn_connection_t *conn = pn_event_connection(event);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
+  pn_connector_t *ctor = ctx ? ctx->connector : NULL;
+
+  if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
+    pn_connection_open(conn);
   }
 
+  if (ctor && pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+    pn_condition_t *condition = pn_connection_remote_condition(conn);
+    pn_condition_report("CONNECTION", condition);
+    pn_connection_close(conn);
+    if (pn_condition_is_redirect(condition)) {
+      const char *host = pn_condition_redirect_host(condition);
+      char buf[1024];
+      sprintf(buf, "%i", pn_condition_redirect_port(condition));
+
+      pn_connector_set_connection(ctor, NULL);
+      pn_driver_t *driver = messenger->driver;
+      pn_connector_t *connector = pn_connector(driver, host, buf, NULL);
+      pn_transport_unbind(pn_connector_transport(ctor));
+      pn_connection_reset(conn);
+      pn_transport_config(messenger, connector, conn);
+      pn_connector_set_connection(connector, conn);
+    }
+  } else if ((ctor == NULL || pn_connector_closed(ctor))
+             && !(pn_connection_state(conn) & PN_REMOTE_CLOSED)) {
+    pn_error_report("CONNECTION", "connection aborted");
+  }
+}
+
+void pn_messenger_process_session(pn_messenger_t *messenger, pn_event_t *event)
+{
+  pn_session_t *ssn = pn_event_session(event);
+
+  if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
+    pn_session_open(ssn);
+  }
+
+  if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+    pn_session_close(ssn);
+  }
+}
+
+void pn_messenger_process_link(pn_messenger_t *messenger, pn_event_t *event)
+{
+  pn_link_t *link = pn_event_link(event);
+  pn_connection_t *conn = pn_event_connection(event);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
+  pn_connector_t *ctor = ctx ? ctx->connector : NULL;
+
+  if (pn_link_state(link) & PN_LOCAL_UNINIT) {
+    pn_terminus_copy(pn_link_source(link), pn_link_remote_source(link));
+    pn_terminus_copy(pn_link_target(link), pn_link_remote_target(link));
+    link_ctx_setup( messenger, conn, link );
+    pn_link_open(link);
+    if (pn_link_is_receiver(link) && ctor) {
+      pn_listener_t *listener = pn_connector_listener(ctor);
+      pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(listener);
+      ((pn_link_ctx_t *)pn_link_get_context(link))->subscription = ctx ? ctx->subscription : NULL;
+    }
+  }
+
+  if (pn_link_state(link) & PN_REMOTE_ACTIVE) {
+    pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context(link);
+    if (ctx) {
+      const char *addr = pn_terminus_get_address(pn_link_remote_source(link));
+      if (ctx->subscription) {
+        pni_subscription_set_address(ctx->subscription, addr);
+      }
+    }
+  }
+
+  if (pn_link_state(link) & PN_REMOTE_CLOSED) {
+    if (PN_LOCAL_ACTIVE & pn_link_state(link)) {
+      pn_condition_report("LINK", pn_link_remote_condition(link));
+      pn_link_close(link);
+      pni_messenger_reclaim_link(messenger, link);
+      pn_link_free(link);
+    }
+  }
+}
+
+int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *sender);
+
+void pn_messenger_process_flow(pn_messenger_t *messenger, pn_event_t *event)
+{
+  pn_link_t *link = pn_event_link(event);
+
+  if (pn_link_is_sender(link)) {
+    pni_pump_out(messenger, pn_terminus_get_address(pn_link_target(link)), link);
+  } else {
+    // account for any credit left over after draining links has completed
+    if (pn_link_get_drain(link)) {
+      if (!pn_link_draining(link)) {
+        // drain completed!
+        int drained = pn_link_drained(link);
+        //          printf("%s: drained %i from %p\n", messenger->name, drained, (void *) ctx->link);
+        messenger->distributed -= drained;
+        messenger->credit += drained;
+        pn_link_set_drain(link, false);
+        messenger->draining--;
+        pn_list_remove(messenger->credited, link);
+        pn_list_add(messenger->blocked, link);
+      }
+    }
+  }
+}
+
+void pn_messenger_process_delivery(pn_messenger_t *messenger, pn_event_t *event)
+{
+  pn_delivery_t *d = pn_event_delivery(event);
+  pn_link_t *link = pn_event_link(event);
+  if (pn_delivery_updated(d)) {
+    if (pn_link_is_sender(link)) {
+      pn_delivery_update(d, pn_delivery_remote_state(d));
+    }
+    pni_entry_t *e = (pni_entry_t *) pn_delivery_get_context(d);
+    if (e) pni_entry_updated(e);
+  }
+  pn_delivery_clear(d);
+  if (pn_delivery_readable(d)) {
+    int err = pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
+    if (err) {
+      fprintf(stderr, "%s\n", pn_error_text(messenger->error));
+    }
+  }
+}
+
+void pn_messenger_process_transport(pn_messenger_t *messenger, pn_event_t *event)
+{
+  pn_connection_t *conn = pn_event_connection(event);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(conn);
+  if (ctx) {
+    pn_connector_t *ctor = ctx->connector;
+    if (ctor) {
+      pn_connector_process(ctor);
+    }
+  }
+}
+
+int pn_messenger_process_events(pn_messenger_t *messenger)
+{
+  int processed = 0;
+  pn_event_t *event;
+  while ((event = pn_collector_peek(messenger->collector))) {
+    processed++;
+    switch (pn_event_type(event)) {
+    case PN_CONNECTION_STATE:
+      pn_messenger_process_connection(messenger, event);
+      break;
+    case PN_SESSION_STATE:
+      pn_messenger_process_session(messenger, event);
+      break;
+    case PN_LINK_STATE:
+      pn_messenger_process_link(messenger, event);
+      break;
+    case PN_LINK_FLOW:
+      pn_messenger_process_flow(messenger, event);
+      break;
+    case PN_DELIVERY:
+      pn_messenger_process_delivery(messenger, event);
+      break;
+    case PN_TRANSPORT:
+      pn_messenger_process_transport(messenger, event);
+      break;
+    case PN_EVENT_NONE:
+      break;
+    }
+    pn_collector_pop(messenger->collector);
+  }
+
+  return processed;
+}
+
+void pn_messenger_process_listeners(pn_messenger_t *messenger)
+{
+  pn_listener_t *l;
+  while ((l = pn_driver_listener(messenger->driver))) {
+    messenger->worked = true;
+    pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(l);
+    pn_subscription_t *sub = ctx->subscription;
+    const char *scheme = pn_subscription_scheme(sub);
+    pn_connector_t *c = pn_listener_accept(l);
+    pn_transport_t *t = pn_connector_transport(c);
+
+    pn_ssl_t *ssl = pn_ssl(t);
+    pn_ssl_init(ssl, ctx->domain, NULL);
+
+    pn_sasl_t *sasl = pn_sasl(t);
+    pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    pn_sasl_server(sasl);
+    pn_sasl_done(sasl, PN_SASL_OK);
+    pn_connection_t *conn =
+      pn_messenger_connection(messenger, c, scheme, NULL, NULL, NULL, NULL);
+    pn_connector_set_connection(c, conn);
+  }
+}
+
+void pn_messenger_process_connectors(pn_messenger_t *messenger)
+{
+  pn_connector_t *c;
+  while ((c = pn_driver_connector(messenger->driver))) {
+    messenger->worked = true;
+    pn_connector_process(c);
+    pn_connection_t *conn = pn_connector_connection(c);
+    if (pn_connector_closed(c)) {
+      pn_connector_free(c);
+      if (conn) {
+        pni_messenger_reclaim(messenger, conn);
+      }
+    }
+  }
+}
+
+int pn_messenger_process(pn_messenger_t *messenger)
+{
+  pn_messenger_process_listeners(messenger);
+  pn_messenger_process_connectors(messenger);
+  int first = pn_messenger_process_events(messenger);
+  if (first < 0) return first;
+  // Update the credit scheduler.
+  pn_messenger_flow(messenger);
+  int second = pn_messenger_process_events(messenger);
+  if (second < 0) return second;
+  return first + second;
+}
+
+pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger)
+{
+  // If the scheduler detects credit imbalance on the links, wake up
+  // in time to service credit drain
+  return messenger->next_drain;
+}
+
+int pn_messenger_tsync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_t *), int timeout)
+{
   pn_timestamp_t now = pn_i_now();
   long int deadline = now + timeout;
   bool pred;
 
   while (true) {
+    pn_messenger_process(messenger);
     pred = predicate(messenger);
     int remaining = deadline - now;
     if (pred || (timeout >= 0 && remaining < 0)) break;
 
-    // Update the credit scheduler. If the scheduler detects credit
-    // imbalance on the links, wake up in time to service credit drain
-    pn_messenger_flow(messenger);
-    if (messenger->next_drain) {
-      if (now >= messenger->next_drain)
+    pn_timestamp_t mdeadline = pn_messenger_deadline(messenger);
+    if (mdeadline) {
+      if (now >= mdeadline)
         remaining = 0;
       else {
-        const int delay = messenger->next_drain - now;
+        const int delay = mdeadline - now;
         remaining = (remaining < 0) ? delay : pn_min( remaining, delay );
       }
     }
     int error = pn_driver_wait(messenger->driver, remaining);
     if (error && error != PN_INTR) return error;
-
-    pn_listener_t *l;
-    while ((l = pn_driver_listener(messenger->driver))) {
-      messenger->worked = true;
-      pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_listener_context(l);
-      pn_subscription_t *sub = ctx->subscription;
-      const char *scheme = pn_subscription_scheme(sub);
-      pn_connector_t *c = pn_listener_accept(l);
-      pn_transport_t *t = pn_connector_transport(c);
-
-      pn_ssl_t *ssl = pn_ssl(t);
-      pn_ssl_init(ssl, ctx->domain, NULL);
-
-      pn_sasl_t *sasl = pn_sasl(t);
-      pn_sasl_mechanisms(sasl, "ANONYMOUS");
-      pn_sasl_server(sasl);
-      pn_sasl_done(sasl, PN_SASL_OK);
-      pn_connection_t *conn =
-        pn_messenger_connection(messenger, c, scheme, NULL, NULL, NULL, NULL);
-      pn_connector_set_connection(c, conn);
-    }
-
-    pn_connector_t *c;
-    while ((c = pn_driver_connector(messenger->driver))) {
-      messenger->worked = true;
-      pn_connector_process(c);
-      pn_connection_t *conn = pn_connector_connection(c);
-      pn_messenger_endpoints(messenger, conn, c);
-      if (pn_connector_closed(c)) {
-        pn_connector_free(c);
-        if (conn) {
-          pni_messenger_reclaim(messenger, conn);
-        }
-      } else {
-        pn_connector_process(c);
-      }
-    }
 
     if (timeout >= 0) {
       now = pn_i_now();
