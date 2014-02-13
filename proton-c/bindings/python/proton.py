@@ -2161,7 +2161,10 @@ class Connection(Endpoint):
     return pn_connection_remote_condition(self._conn)
 
   def collect(self, collector):
-    pn_connection_collect(self._conn, collector._impl)
+    if collector is None:
+      pn_connection_collect(self._conn, None)
+    else:
+      pn_connection_collect(self._conn, collector._impl)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)

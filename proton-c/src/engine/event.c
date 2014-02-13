@@ -136,6 +136,11 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   event->next = collector->free_head;
   collector->free_head = event;
+
+  if (event->connection) {
+    pn_decref(event->connection);
+  }
+
   return true;
 }
 
@@ -191,6 +196,7 @@ void pn_event_init_connection(pn_event_t *event, pn_connection_t *connection)
 {
   event->connection = connection;
   pn_event_init_transport(event, event->connection->transport);
+  pn_incref(event->connection);
 }
 
 void pn_event_init_session(pn_event_t *event, pn_session_t *session)

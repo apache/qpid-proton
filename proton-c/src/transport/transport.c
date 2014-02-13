@@ -288,7 +288,7 @@ int pn_transport_unbind(pn_transport_t *transport)
   pn_endpoint_t *endpoint = conn->endpoint_head;
   while (endpoint) {
     pn_condition_clear(&endpoint->remote_condition);
-    pn_modified(conn, endpoint);
+    pn_modified(conn, endpoint, true);
     endpoint = endpoint->endpoint_next;
   }
 
@@ -889,6 +889,11 @@ int pn_do_disposition(pn_dispatcher_t *disp)
       remote->settled = settled;
       delivery->updated = true;
       pn_work_update(transport->connection, delivery);
+
+      pn_event_t *event = pn_collector_put(transport->connection->collector, PN_DELIVERY);
+      if (event) {
+        pn_event_init_delivery(event, delivery);
+      }
     }
   }
 
@@ -951,7 +956,7 @@ int pn_do_close(pn_dispatcher_t *disp)
   if (err) return err;
   transport->close_rcvd = true;
   PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
-  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_LINK_STATE);
+  pn_event_t *event = pn_collector_put(transport->connection->collector, PN_CONNECTION_STATE);
   if (event) {
     pn_event_init_connection(event, conn);
   }
@@ -1329,7 +1334,7 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   pn_link_t *link = delivery->link;
   pn_session_t *ssn = link->session;
   pn_session_state_t *ssn_state = &ssn->state;
-  pn_modified(transport->connection, &link->session->endpoint);
+  pn_modified(transport->connection, &link->session->endpoint, false);
   pn_delivery_state_t *state = &delivery->state;
   assert(state->init);
   bool role = (link->endpoint.type == RECEIVER);
@@ -1667,7 +1672,7 @@ int pn_process(pn_transport_t *transport)
   if ((err = pn_phase(transport, pn_process_conn_teardown))) return err;
 
   if (transport->connection->tpwork_head) {
-    pn_modified(transport->connection, &transport->connection->endpoint);
+    pn_modified(transport->connection, &transport->connection->endpoint, false);
   }
 
   return 0;

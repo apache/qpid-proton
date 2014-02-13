@@ -1923,6 +1923,10 @@ class EventTest(Test):
   def expect(self, collector, *types):
     events = self.list(collector)
     assert types == tuple([e.type for e in events]), (types, events)
+    if len(events) == 1:
+      return events[0]
+    elif len(events) > 1:
+      return events
 
   def testEndpointEvents(self):
     c1, c2 = self.connection()
@@ -1957,6 +1961,7 @@ class EventTest(Test):
     rcv.flow(10)
     self.pump()
     self.expect(coll, Event.LINK_FLOW)
+    return snd, rcv, coll
 
   def testDeliveryEvents(self):
     snd, rcv = self.link("test-link")
@@ -1974,3 +1979,22 @@ class EventTest(Test):
     snd.open()
     self.pump()
     self.expect(coll, Event.LINK_STATE, Event.DELIVERY)
+
+  def testDeliveryEventsDisp(self):
+    # XXX: we can't let coll go out of scope or the connection will be
+    # pointing to garbage
+    snd, rcv, coll = self.testFlowEvents()
+    snd.open()
+    dlv = snd.delivery("delivery")
+    snd.send("Hello World!")
+    assert snd.advance()
+    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT)
+    self.pump()
+    self.expect(coll)
+    rdlv = rcv.current
+    assert rdlv != None
+    assert rdlv.tag == "delivery"
+    rdlv.update(Delivery.ACCEPTED)
+    self.pump()
+    event = self.expect(coll, Event.DELIVERY)
+    assert event.delivery == dlv
