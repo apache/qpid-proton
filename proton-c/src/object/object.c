@@ -761,11 +761,10 @@ pn_string_t *pn_string(const char *bytes)
 
 #define pn_string_initialize NULL
 
-static pn_class_t clazz = PN_CLASS(pn_string);
 
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
-
+  static pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_new(sizeof(pn_string_t), &clazz);
   string->capacity = n ? n * sizeof(char) : 16;
   string->bytes = (char *) malloc(string->capacity);
@@ -926,4 +925,51 @@ int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
+}
+
+struct pn_iterator_t {
+  pn_iterator_next_t *next;
+  size_t size;
+  void *state;
+};
+
+static void pn_iterator_initialize(void *object)
+{
+  pn_iterator_t *it = (pn_iterator_t *) object;
+  it->next = NULL;
+  it->size = 0;
+  it->state = NULL;
+}
+
+static void pn_iterator_finalize(void *object)
+{
+  pn_iterator_t *it = (pn_iterator_t *) object;
+  free(it->state);
+}
+
+#define pn_iterator_hashcode NULL
+#define pn_iterator_compare NULL
+#define pn_iterator_inspect NULL
+
+pn_iterator_t *pn_iterator()
+{
+  static pn_class_t clazz = PN_CLASS(pn_iterator);
+  pn_iterator_t *it = (pn_iterator_t *) pn_new(sizeof(pn_iterator_t), &clazz);
+  return it;
+}
+
+void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t *next,
+                         size_t size) {
+  assert(iterator);
+  assert(next);
+  iterator->next = next;
+  if (iterator->size < size) {
+    iterator->state = realloc(iterator->state, size);
+  }
+  return iterator->state;
+}
+
+void *pn_iterator_next(pn_iterator_t *iterator) {
+  assert(iterator);
+  return iterator->next(iterator->state);
 }
