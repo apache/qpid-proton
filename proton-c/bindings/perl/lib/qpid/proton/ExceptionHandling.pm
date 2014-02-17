@@ -33,4 +33,6 @@ sub check_for_error {
     }
 }
 
+package qpid::proton::ExceptionHandling;
+
 1;

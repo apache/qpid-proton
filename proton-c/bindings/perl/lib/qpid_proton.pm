@@ -31,5 +31,7 @@ use qpid::proton::Message;
 
 use qpid::proton;
 
+package qpid_proton;
+
 1;
 
