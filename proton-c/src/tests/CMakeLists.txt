@@ -37,6 +37,16 @@ set_target_properties (
   )
 pn_c_files (message.c)
 
+add_executable (c-engine-tests engine.c)
+target_link_libraries (c-engine-tests qpid-proton)
+set_target_properties (
+  c-engine-tests
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  OUTPUT_NAME c-engine-tests
+  )
+pn_c_files (engine.c)
+
 if (ENABLE_VALGRIND AND VALGRIND)
   set(memcheck-cmd ${VALGRIND} --error-exitcode=1 --quiet
                    --leak-check=full --trace-children=yes)
@@ -44,4 +54,5 @@ endif (ENABLE_VALGRIND AND VALGRIND)
 
 add_test (c-object-tests ${memcheck-cmd} ./c-object-tests)
 add_test (c-message-tests ${memcheck-cmd} ./c-message-tests)
+add_test (c-engine-tests ${memcheck-cmd} ./c-engine-tests)
 

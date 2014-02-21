@@ -50,6 +50,7 @@ struct pn_endpoint_t {
   pn_endpoint_t *transport_next;
   pn_endpoint_t *transport_prev;
   bool modified;
+  bool freed;
 };
 
 typedef struct {
@@ -110,11 +111,12 @@ typedef struct pn_io_layer_t {
 } pn_io_layer_t;
 
 struct pn_transport_t {
+  bool freed;
   pn_tracer_t *tracer;
   size_t header_count;
   pn_sasl_t *sasl;
   pn_ssl_t *ssl;
-  pn_connection_t *connection;
+  pn_connection_t *connection;  // reference counted
   pn_dispatcher_t *disp;
   bool open_sent;
   bool open_rcvd;
@@ -177,13 +179,13 @@ struct pn_connection_t {
   pn_endpoint_t endpoint;
   pn_endpoint_t *endpoint_head;
   pn_endpoint_t *endpoint_tail;
-  pn_endpoint_t *transport_head;
+  pn_endpoint_t *transport_head;  // reference counted
   pn_endpoint_t *transport_tail;
   pn_list_t *sessions;
   pn_transport_t *transport;
   pn_delivery_t *work_head;
   pn_delivery_t *work_tail;
-  pn_delivery_t *tpwork_head;
+  pn_delivery_t *tpwork_head;  // reference counted
   pn_delivery_t *tpwork_tail;
   pn_string_t *container;
   pn_string_t *hostname;
@@ -196,7 +198,7 @@ struct pn_connection_t {
 
 struct pn_session_t {
   pn_endpoint_t endpoint;
-  pn_connection_t *connection;
+  pn_connection_t *connection;  // reference counted
   pn_list_t *links;
   void *context;
   size_t incoming_capacity;
@@ -224,7 +226,7 @@ struct pn_terminus_t {
 struct pn_link_t {
   pn_endpoint_t endpoint;
   pn_string_t *name;
-  pn_session_t *session;
+  pn_session_t *session;  // reference counted
   pn_terminus_t source;
   pn_terminus_t target;
   pn_terminus_t remote_source;
@@ -262,7 +264,7 @@ struct pn_disposition_t {
 };
 
 struct pn_delivery_t {
-  pn_link_t *link;
+  pn_link_t *link;  // reference counted
   pn_buffer_t *tag;
   pn_disposition_t local;
   pn_disposition_t remote;
@@ -302,9 +304,10 @@ pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *, pn_timestamp_t);
 void pn_condition_init(pn_condition_t *condition);
 void pn_condition_tini(pn_condition_t *condition);
 void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit);
-void pn_real_settle(pn_delivery_t *delivery);
+void pn_real_settle(pn_delivery_t *delivery);  // will free delivery if link is freed
 void pn_clear_tpwork(pn_delivery_t *delivery);
 void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
+void pn_connection_unbound(pn_connection_t *conn);
 
 #endif /* engine-internal.h */

@@ -25,5 +25,7 @@
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next);
 void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery);
 void pn_delivery_map_free(pn_delivery_map_t *db);
+void pn_unmap_handle(pn_session_t *ssn, pn_link_t *link);
+void pn_unmap_channel(pn_transport_t *transport, pn_session_t *ssn);
 
 #endif /* transport.h */

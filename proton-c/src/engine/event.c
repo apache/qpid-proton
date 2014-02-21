@@ -118,6 +118,20 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
 
 pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
+  // discard any events for objects that no longer exist
+  pn_event_t *event = collector->head;
+  while (event && ((event->delivery && event->delivery->local.settled)
+                   ||
+                   (event->link && event->link->endpoint.freed)
+                   ||
+                   (event->session && event->session->endpoint.freed)
+                   ||
+                   (event->connection && event->connection->endpoint.freed)
+                   ||
+                   (event->transport && event->transport->freed))) {
+    pn_collector_pop(collector);
+    event = collector->head;
+  }
   return collector->head;
 }
 
@@ -137,9 +151,11 @@ bool pn_collector_pop(pn_collector_t *collector)
   event->next = collector->free_head;
   collector->free_head = event;
 
-  if (event->connection) {
-    pn_decref(event->connection);
-  }
+  if (event->connection) pn_decref(event->connection);
+  if (event->session) pn_decref(event->session);
+  if (event->link) pn_decref(event->link);
+  if (event->delivery) pn_decref(event->delivery);
+  if (event->transport) pn_decref(event->transport);
 
   return true;
 }
@@ -190,6 +206,7 @@ pn_event_t *pn_event(void)
 void pn_event_init_transport(pn_event_t *event, pn_transport_t *transport)
 {
   event->transport = transport;
+  pn_incref(event->transport);
 }
 
 void pn_event_init_connection(pn_event_t *event, pn_connection_t *connection)
@@ -203,18 +220,21 @@ void pn_event_init_session(pn_event_t *event, pn_session_t *session)
 {
   event->session = session;
   pn_event_init_connection(event, pn_session_connection(event->session));
+  pn_incref(event->session);
 }
 
 void pn_event_init_link(pn_event_t *event, pn_link_t *link)
 {
   event->link = link;
   pn_event_init_session(event, pn_link_session(event->link));
+  pn_incref(event->link);
 }
 
 void pn_event_init_delivery(pn_event_t *event, pn_delivery_t *delivery)
 {
   event->delivery = delivery;
   pn_event_init_link(event, pn_delivery_link(delivery));
+  pn_incref(event->delivery);
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
