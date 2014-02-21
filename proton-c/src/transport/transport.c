@@ -1131,6 +1131,11 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
   {
     if (!(endpoint->state & PN_LOCAL_UNINIT) && !transport->open_sent)
     {
+      // as per the recommendation in the spec, advertise half our
+      // actual timeout to the remote
+      const pn_millis_t idle_timeout = transport->local_idle_timeout
+          ? (transport->local_idle_timeout/2)
+          : 0;
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       const char *cid = pn_string_get(connection->container);
       int err = pn_post_frame(transport->disp, 0, "DL[SS?I?H?InnCCC]", OPEN,
@@ -1139,7 +1144,7 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
                               (bool)transport->channel_max, transport->channel_max,
-                              (bool)transport->local_idle_timeout, transport->local_idle_timeout,
+                              (bool)idle_timeout, idle_timeout,
                               connection->offered_capabilities,
                               connection->desired_capabilities,
                               connection->properties);

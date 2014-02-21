@@ -880,10 +880,11 @@ class IdleTimeoutTest(Test):
     self.snd.open()
     self.rcv.open()
     self.pump()
+    # proton advertises 1/2 the configured timeout to the peer:
     assert self.rcv.session.connection._transport.idle_timeout == 2.0
-    assert self.rcv.session.connection._transport.remote_idle_timeout == 1.0
+    assert self.rcv.session.connection._transport.remote_idle_timeout == 0.5
     assert self.snd.session.connection._transport.idle_timeout == 1.0
-    assert self.snd.session.connection._transport.remote_idle_timeout == 2.0
+    assert self.snd.session.connection._transport.remote_idle_timeout == 1.0
 
   def testTimeout(self):
     """
@@ -901,7 +902,8 @@ class IdleTimeoutTest(Test):
     t_snd = self.snd.session.connection._transport
     t_rcv = self.rcv.session.connection._transport
     assert t_rcv.idle_timeout == 0.0
-    assert t_rcv.remote_idle_timeout == 1.0
+    # proton advertises 1/2 the timeout (see spec)
+    assert t_rcv.remote_idle_timeout == 0.5
     assert t_snd.idle_timeout == 1.0
     assert t_snd.remote_idle_timeout == 0.0
 
@@ -911,21 +913,21 @@ class IdleTimeoutTest(Test):
     # at t+1msec, nothing should happen:
     clock = 0.001
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # at one tick from expected idle frame send, nothing should happen:
-    clock = 0.500
+    clock = 0.250
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # this should cause rcvr to expire and send a keepalive
-    clock = 0.502
+    clock = 0.251
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.501, "deadline to send keepalive"
     self.pump()
     sndr_frames_in += 1
     rcvr_frames_out += 1
@@ -934,14 +936,14 @@ class IdleTimeoutTest(Test):
 
     # since a keepalive was received, sndr will rebase its clock against this tick:
     # and the receiver should not change its deadline
-    clock = 0.503
-    assert t_snd.tick(clock) == 1.503, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
+    clock = 0.498
+    assert t_snd.tick(clock) == 1.498, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 0.501, "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # now expire sndr
-    clock = 1.504
+    clock = 1.499
     t_snd.tick(clock)
     try:
       self.pump()
