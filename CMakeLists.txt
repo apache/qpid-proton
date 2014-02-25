@@ -69,6 +69,27 @@ set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration director
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
+## LANGUAGE BINDINGS
+#  If ASK_$LANG is 1 then the language is queried for the directory into which
+#  those language bindings are to be installed. If it is 0 then the bindings
+#  are installed to $CMAKE_INSTALL_PREFIX/bindings/$LANG
+#
+set (BINDINGS_DIR bindings CACHE PATH "Default directory for language bindings")
+set (ASK_PERL 0 CACHE INTEGER "Ask Perl for install directories")
+set (ASK_PHP 0 CACHE INTEGER "Ask PHP for install directories")
+set (ASK_PYTHON 0 CACHE INTEGER "Ask Python for install directories")
+set (ASK_RUBY 0 CACHE INTEGER "Ask Ruby for install directories")
+set (ASK_ALL 0 CACHE INTEGER "If 1 then ask all languages for their directory")
+
+if (ASK_ALL)
+  set (ASK_PERL 1)
+  set (ASK_PHP 1)
+  set (ASK_PYTHON 1)
+  set (ASK_RUBY 1)
+endif (ASK_ALL)
+
+message(STATUS "PYTHON_ARCHLIB_DIR=${PYTHON_ARCHLIB_DIR}")
+
 if (WIN32)
   set (EXAMPLES_INSTALL_DIR proton/examples)
 endif (WIN32)

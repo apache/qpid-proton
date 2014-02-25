@@ -100,6 +100,34 @@ For more on the use of DESTDIR, see the following:
 
 http://www.gnu.org/prep/standards/html_node/DESTDIR.html
 
+== Specifying The Language Binding Install Directories ==
+
+Most dynamic languages provide a way for asking where to install libraries in
+order to place them in a default search path.
+
+By default, Proton installs all dynamic language bindings into a central,
+default location:
+
+  $CMAKE_INSTALL_PREFIX/bindings/$LANG
+
+In order to use these bindings, you'll need to modify any environment variable
+to include the appropriate directories. The environment variables to be set are:
+
+ * Perl   - Add the bindings/perl and bindings/perl/lib path to PERL5PATH
+ * PHP    - Set the PHPRC variable to point to bindings/php/ini/php.ini
+ * Python - Add the bindings/python path to PYTHONPATH
+ * Ruby   - Add the bindings/ruby and bindings/ruby/lib path to RUBYLIB
+
+You can tell any single language to install to the correct path for that
+language with:
+
+  cmake -DASK_[LANGUAGE]=1 .
+
+where [LANGUAGE] is one of: PERL, PHP, PYTHON or RUBY. To tell the build system
+to ask ALL languages, use:
+
+  cmake -DASK_ALL=1 .
+
 == Disable Building The Language Bindings ==
 
 To disable any language bindings, you can disable them individually with:
