@@ -1835,7 +1835,7 @@ void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
   transport->disp->trace = trace;
 }
 
-void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t *tracer)
+void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer)
 {
   assert(transport);
   assert(tracer);
@@ -1843,7 +1843,7 @@ void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t *tracer)
   transport->tracer = tracer;
 }
 
-pn_tracer_t *pn_transport_get_tracer(pn_transport_t *transport)
+pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport)
 {
   assert(transport);
   return transport->tracer;

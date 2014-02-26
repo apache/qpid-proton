@@ -134,12 +134,12 @@ PN_EXTERN size_t pn_string_capacity(pn_string_t *string);
 PN_EXTERN int pn_string_resize(pn_string_t *string, size_t size);
 PN_EXTERN int pn_string_copy(pn_string_t *string, pn_string_t *src);
 
-typedef void *(pn_iterator_next_t)(void *state);
+typedef void *(*pn_iterator_next_t)(void *state);
 typedef struct pn_iterator_t pn_iterator_t;
 
 PN_EXTERN pn_iterator_t *pn_iterator(void);
 PN_EXTERN void *pn_iterator_start(pn_iterator_t *iterator,
-                                  pn_iterator_next_t *next, size_t size);
+                                  pn_iterator_next_t next, size_t size);
 PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
 
 #ifdef __cplusplus

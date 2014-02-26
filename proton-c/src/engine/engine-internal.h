@@ -112,7 +112,7 @@ typedef struct pn_io_layer_t {
 
 struct pn_transport_t {
   bool freed;
-  pn_tracer_t *tracer;
+  pn_tracer_t tracer;
   size_t header_count;
   pn_sasl_t *sasl;
   pn_ssl_t *ssl;

@@ -928,7 +928,7 @@ int pn_string_copy(pn_string_t *string, pn_string_t *src)
 }
 
 struct pn_iterator_t {
-  pn_iterator_next_t *next;
+  pn_iterator_next_t next;
   size_t size;
   void *state;
 };
@@ -958,7 +958,7 @@ pn_iterator_t *pn_iterator()
   return it;
 }
 
-void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t *next,
+void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t next,
                          size_t size) {
   assert(iterator);
   assert(next);
