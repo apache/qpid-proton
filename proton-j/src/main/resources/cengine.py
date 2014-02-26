@@ -324,6 +324,9 @@ def pn_sender(ssn, name):
 def pn_receiver(ssn, name):
   return wrap(ssn.impl.receiver(name), pn_link_wrapper)
 
+def pn_session_free(ssn):
+  ssn.impl = None
+
 TERMINUS_TYPES_J2P = {
   Source: PN_SOURCE,
   Target: PN_TARGET,
@@ -648,6 +651,9 @@ def pn_link_advance(link):
 def pn_link_current(link):
   return wrap(link.impl.current(), pn_delivery_wrapper)
 
+def pn_link_free(link):
+  link.impl = None
+
 def pn_work_head(conn):
   return wrap(conn.impl.getWorkHead(), pn_delivery_wrapper)
 
@@ -830,6 +836,9 @@ def pn_delivery_remote_state(dlv):
 def pn_delivery_update(dlv, state):
   dlv.local.type = state
   dlv.impl.disposition(dlv.local.encode())
+
+def pn_delivery_link(dlv):
+  return wrap(dlv.impl.getLink(), pn_link_wrapper)
 
 def pn_delivery_settle(dlv):
   dlv.impl.settle()

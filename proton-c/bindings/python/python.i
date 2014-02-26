@@ -183,19 +183,22 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %}
 %ignore pn_message_data;
 
-%rename(pn_listener) wrap_pn_listener;
+%rename(pn_listener_set_context) wrap_pn_listener_set_context;
 %inline {
-  pn_listener_t *wrap_pn_listener(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
-    Py_XINCREF(context);
-    return pn_listener(driver, host, port, context);
+  void wrap_pn_listener_set_context(pn_listener_t *l, PyObject *context) {
+    // don't incref context: we 'borrow' the reference - prevents
+    // reference loops.  Should be safe as the Python object must
+    // outlive the C object.
+    pn_listener_set_context(l, context);
   }
 }
-%ignore pn_listener;
+%ignore pn_listener_set_context;
 
 %rename(pn_listener_context) wrap_pn_listener_context;
 %inline {
   PyObject *wrap_pn_listener_context(pn_listener_t *l) {
     PyObject *result = (PyObject *) pn_listener_context(l);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -206,39 +209,22 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 }
 %ignore pn_listener_context;
 
-%rename(pn_listener_set_context) wrap_pn_listener_set_context;
+%rename(pn_connector_set_context) wrap_pn_connector_set_context;
 %inline {
-  void wrap_pn_listener_set_context(pn_listener_t *l, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_listener_context(l));
-    Py_XINCREF(context);
-    pn_listener_set_context(l, context);
+  void wrap_pn_connector_set_context(pn_connector_t *c, PyObject *context) {
+    // don't incref context: we 'borrow' the reference - prevents
+    // reference loops.  Should be safe as the Python object must
+    // outlive the C object.
+    pn_connector_set_context(c, context);
   }
 }
-%ignore pn_listener_set_context;
-
-%rename(pn_listener_free) wrap_pn_listener_free;
-%inline %{
-  void wrap_pn_listener_free(pn_listener_t *l) {
-    PyObject *obj = (PyObject *) pn_listener_context(l);
-    Py_XDECREF(obj);
-    pn_listener_free(l);
-  }
-%}
-%ignore pn_listener_free;
-
-%rename(pn_connector) wrap_pn_connector;
-%inline {
-  pn_connector_t *wrap_pn_connector(pn_driver_t *driver, const char *host, const char *port, PyObject *context) {
-    Py_XINCREF(context);
-    return pn_connector(driver, host, port, context);
-  }
-}
-%ignore pn_connector;
+%ignore pn_connector_set_context;
 
 %rename(pn_connector_context) wrap_pn_connector_context;
 %inline {
   PyObject *wrap_pn_connector_context(pn_connector_t *c) {
     PyObject *result = (PyObject *) pn_connector_context(c);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -249,30 +235,11 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 }
 %ignore pn_connector_context;
 
-%rename(pn_connector_set_context) wrap_pn_connector_set_context;
-%inline {
-  void wrap_pn_connector_set_context(pn_connector_t *ctor, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_connector_context(ctor));
-    Py_XINCREF(context);
-    pn_connector_set_context(ctor, context);
-  }
-}
-%ignore pn_connector_set_context;
-
-%rename(pn_connector_free) wrap_pn_connector_free;
-%inline %{
-  void wrap_pn_connector_free(pn_connector_t *c) {
-    PyObject *obj = (PyObject *) pn_connector_context(c);
-    Py_XDECREF(obj);
-    pn_connector_free(c);
-  }
-%}
-%ignore pn_connector_free;
-
 %rename(pn_connection_get_context) wrap_pn_connection_get_context;
 %inline {
   PyObject *wrap_pn_connection_get_context(pn_connection_t *c) {
     PyObject *result = (PyObject *) pn_connection_get_context(c);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -286,27 +253,17 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_connection_set_context) wrap_pn_connection_set_context;
 %inline {
   void wrap_pn_connection_set_context(pn_connection_t *c, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_connection_get_context(c));
-    Py_XINCREF(context);
+    // don't incref context: we 'borrow' the reference
     pn_connection_set_context(c, context);
   }
 }
 %ignore pn_connection_set_context;
 
-%rename(pn_connection_free) wrap_pn_connection_free;
-%inline %{
-  void wrap_pn_connection_free(pn_connection_t *c) {
-    PyObject *obj = (PyObject *) pn_connection_get_context(c);
-    Py_XDECREF(obj);
-    pn_connection_free(c);
-  }
-%}
-%ignore pn_connection_free;
-
 %rename(pn_session_get_context) wrap_pn_session_get_context;
 %inline {
   PyObject *wrap_pn_session_get_context(pn_session_t *s) {
     PyObject *result = (PyObject *) pn_session_get_context(s);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -320,27 +277,17 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_session_set_context) wrap_pn_session_set_context;
 %inline {
   void wrap_pn_session_set_context(pn_session_t *s, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_session_get_context(s));
-    Py_XINCREF(context);
+    // don't incref context: we 'borrow' the reference
     pn_session_set_context(s, context);
   }
 }
 %ignore pn_session_set_context;
 
-%rename(pn_session_free) wrap_pn_session_free;
-%inline %{
-  void wrap_pn_session_free(pn_session_t *s) {
-    PyObject *obj = (PyObject *) pn_session_get_context(s);
-    Py_XDECREF(obj);
-    pn_session_free(s);
-  }
-%}
-%ignore pn_session_free;
-
 %rename(pn_link_get_context) wrap_pn_link_get_context;
 %inline {
   PyObject *wrap_pn_link_get_context(pn_link_t *l) {
     PyObject *result = (PyObject *) pn_link_get_context(l);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -354,27 +301,17 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_link_set_context) wrap_pn_link_set_context;
 %inline {
   void wrap_pn_link_set_context(pn_link_t *l, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_link_get_context(l));
-    Py_XINCREF(context);
+    // don't incref context: we 'borrow' the reference
     pn_link_set_context(l, context);
   }
 }
 %ignore pn_link_set_context;
 
-%rename(pn_link_free) wrap_pn_link_free;
-%inline %{
-  void wrap_pn_link_free(pn_link_t *l) {
-    PyObject *obj = (PyObject *) pn_link_get_context(l);
-    Py_XDECREF(obj);
-    pn_link_free(l);
-  }
-%}
-%ignore pn_link_free;
-
 %rename(pn_delivery_get_context) wrap_pn_delivery_get_context;
 %inline {
   PyObject *wrap_pn_delivery_get_context(pn_delivery_t *d) {
     PyObject *result = (PyObject *) pn_delivery_get_context(d);
+    // incref the returned context, as the caller expects this
     if (result) {
       Py_INCREF(result);
       return result;
@@ -388,22 +325,11 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_delivery_set_context) wrap_pn_delivery_set_context;
 %inline {
   void wrap_pn_delivery_set_context(pn_delivery_t *d, PyObject *context) {
-    Py_XDECREF((PyObject *)pn_delivery_get_context(d));
-    Py_XINCREF(context);
+    // don't incref context: we 'borrow' the reference
     pn_delivery_set_context(d, context);
   }
 }
 %ignore pn_delivery_set_context;
-
-%rename(pn_delivery_settle) wrap_pn_delivery_settle;
-%inline %{
-  void wrap_pn_delivery_settle(pn_delivery_t *d) {
-    PyObject *obj = (PyObject *) pn_delivery_get_context(d);
-    Py_XDECREF(obj);
-    pn_delivery_settle(d);
-  }
-%}
-%ignore pn_delivery_settle;
 
 ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %ignore pn_data_decode;

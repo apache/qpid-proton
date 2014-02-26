@@ -1105,6 +1105,12 @@ typedef long long int int64_t;
   listener != NULL;
 }
 
+%contract pn_listener_set_context(pn_listener_t *listener, void *context)
+{
+ require:
+  listener != NULL;
+}
+
 %contract pn_listener_close(pn_listener_t *listener)
 {
  require:
@@ -1173,7 +1179,6 @@ typedef long long int int64_t;
 {
  require:
   ctor != NULL;
-  connection != NULL;
 }
 
 %contract pn_connector_context(pn_connector_t *connector)
