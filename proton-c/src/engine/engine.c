@@ -51,14 +51,14 @@ pn_connection_t *pn_ep_get_connection(pn_endpoint_t *endpoint)
   return NULL;
 }
 
-void pn_open(pn_endpoint_t *endpoint)
+static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
   pn_modified(pn_ep_get_connection(endpoint), endpoint, true);
 }
 
-void pn_close(pn_endpoint_t *endpoint)
+void pn_endpoint_close(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
@@ -74,12 +74,12 @@ void pn_connection_reset(pn_connection_t *connection)
 
 void pn_connection_open(pn_connection_t *connection)
 {
-  if (connection) pn_open((pn_endpoint_t *) connection);
+  if (connection) pn_endpoint_open((pn_endpoint_t *) connection);
 }
 
 void pn_connection_close(pn_connection_t *connection)
 {
-  if (connection) pn_close((pn_endpoint_t *) connection);
+  if (connection) pn_endpoint_close((pn_endpoint_t *) connection);
 }
 
 void pn_endpoint_tini(pn_endpoint_t *endpoint);
@@ -144,6 +144,12 @@ void pn_connection_set_context(pn_connection_t *conn, void *context)
         conn->context = context;
 }
 
+pn_transport_t *pn_connection_transport(pn_connection_t *connection)
+{
+  assert(connection);
+  return connection->transport;
+}
+
 void pn_condition_init(pn_condition_t *condition)
 {
   condition->name = pn_string(NULL);
@@ -179,12 +185,12 @@ pn_connection_t *pn_session_connection(pn_session_t *session)
 
 void pn_session_open(pn_session_t *session)
 {
-  if (session) pn_open((pn_endpoint_t *) session);
+  if (session) pn_endpoint_open((pn_endpoint_t *) session);
 }
 
 void pn_session_close(pn_session_t *session)
 {
-  if (session) pn_close((pn_endpoint_t *) session);
+  if (session) pn_endpoint_close((pn_endpoint_t *) session);
 }
 
 void pn_session_free(pn_session_t *session)
@@ -228,12 +234,12 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 
 void pn_link_open(pn_link_t *link)
 {
-  if (link) pn_open((pn_endpoint_t *) link);
+  if (link) pn_endpoint_open((pn_endpoint_t *) link);
 }
 
 void pn_link_close(pn_link_t *link)
 {
-  if (link) pn_close((pn_endpoint_t *) link);
+  if (link) pn_endpoint_close((pn_endpoint_t *) link);
 }
 
 void pn_terminus_free(pn_terminus_t *terminus)
