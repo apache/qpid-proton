@@ -249,6 +249,7 @@ class Messenger(object):
     @param name: the name of the messenger or None
     """
     self._mng = pn_messenger(name)
+    self._selectables = {}
 
   def __del__(self):
     """
@@ -367,6 +368,20 @@ exception of L{work}.  Currently, the affected calls are
 L{send}, L{recv}, and L{stop}.
 """)
 
+  def _is_passive(self):
+    return pn_messenger_is_passive(self._mng)
+
+  def _set_passive(self, b):
+    self._check(pn_messenger_set_passive(self._mng, b))
+
+  passive = property(_is_passive, _set_passive,
+                      doc="""
+When passive is set to true, Messenger will not attempt to perform I/O
+internally. In this mode it is necessary to use the selectables API to
+drive any I/O needed to perform requested actions. In this mode
+Messenger will never block.
+""")
+
   def _get_incoming_window(self):
     return pn_messenger_get_incoming_window(self._mng)
 
@@ -447,7 +462,7 @@ first message.
     """
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
-      self._check(PN_ERR)
+      self._check(pn_error_code(pn_messenger_error(self._mng)))
     return Subscription(sub_impl)
 
   def put(self, message):
@@ -722,6 +737,18 @@ first message.
     before they are transmitted.
     """
     self._check(pn_messenger_rewrite(self._mng, pattern, address))
+
+  def selectable(self):
+    impl = pn_messenger_selectable(self._mng)
+    if impl:
+      fd = pn_selectable_fd(impl)
+      sel = self._selectables.get(fd, None)
+      if sel is None:
+        sel = Selectable(self, impl)
+        self._selectables[fd] = sel
+      return sel
+    else:
+      return None
 
 class Message(object):
   """
@@ -1099,6 +1126,70 @@ class Subscription(object):
   @property
   def address(self):
     return pn_subscription_address(self._impl)
+
+class Selectable(object):
+
+  def __init__(self, messenger, impl):
+    self.messenger = messenger
+    self._impl = impl
+
+  def fileno(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_fd(self._impl)
+
+  @property
+  def capacity(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_capacity(self._impl)
+
+  @property
+  def pending(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_pending(self._impl)
+
+  @property
+  def deadline(self):
+    if not self._impl: raise ValueError("selectable freed")
+
+  def readable(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_readable(self._impl)
+
+  def writable(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_writable(self._impl)
+
+  def expired(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_expired(self._impl)
+
+  def _is_registered(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_is_registered(self._impl)
+
+  def _set_registered(self, registered):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_set_registered(self._impl, registered)
+
+  registered = property(_is_registered, _set_registered,
+                    doc="""
+The registered property may be get/set by an I/O polling system to
+indicate whether the fd has been registered or not.
+""")
+
+  @property
+  def is_terminal(self):
+    if not self._impl: return True
+    return pn_selectable_is_terminal(self._impl)
+
+  def free(self):
+    if self._impl:
+      del self.messenger._selectables[self.fileno()]
+      pn_selectable_free(self._impl)
+      self._impl = None
+
+  def __del__(self):
+    self.free()
 
 class DataException(ProtonException):
   """

@@ -217,3 +217,9 @@ STATUS_J2P = {
 
 def pn_messenger_status(m, tracker):
   return STATUS_J2P[m.impl.getStatus(tracker)]
+
+def pn_messenger_set_passive(m, passive):
+  raise Skipped()
+
+def pn_messenger_selectable(m):
+  raise Skipped()

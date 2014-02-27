@@ -74,8 +74,10 @@ add_custom_command (
 
 # Select driver
 if(PN_WINAPI)
+  set (pn_io_impl src/windows/io.c)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
+  set (pn_io_impl src/posix/io.c)
   set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
 
@@ -227,6 +229,7 @@ add_subdirectory(../examples/messenger/c examples/messenger/c)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 set (qpid-proton-platform
+  ${pn_io_impl}
   ${pn_driver_impl}
   src/platform.c
   ${pn_driver_ssl_impl}
@@ -259,6 +262,8 @@ set (qpid-proton-core
   src/messenger/subscription.c
   src/messenger/store.c
   src/messenger/transform.c
+  src/selectable.c
+  src/selector.c
 
   ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/protocol.h

@@ -2128,3 +2128,11 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   }
   return true;
 }
+
+bool pn_transport_closed(pn_transport_t *transport)
+{
+  assert(transport);
+  ssize_t capacity = pn_transport_capacity(transport);
+  ssize_t pending = pn_transport_pending(transport);
+  return capacity < 0 && pending < 0;
+}

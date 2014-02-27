@@ -1322,6 +1322,8 @@ typedef long long int int64_t;
 
 %include "proton/messenger.h"
 
+%include "proton/selectable.h"
+
 %include "proton/ssl.h"
 
 %ignore pn_decode_atoms;

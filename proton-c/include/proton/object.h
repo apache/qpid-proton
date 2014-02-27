@@ -44,6 +44,8 @@ typedef struct pn_list_t pn_list_t;
 typedef struct pn_map_t pn_map_t;
 typedef struct pn_hash_t pn_hash_t;
 typedef struct pn_string_t pn_string_t;
+typedef void *(*pn_iterator_next_t)(void *state);
+typedef struct pn_iterator_t pn_iterator_t;
 
 typedef struct {
   void (*initialize)(void *);
@@ -84,6 +86,8 @@ PN_EXTERN int pn_list_add(pn_list_t *list, void *value);
 PN_EXTERN ssize_t pn_list_index(pn_list_t *list, void *value);
 PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
+PN_EXTERN void pn_list_clear(pn_list_t *list);
+PN_EXTERN void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
 
 #define PN_REFCOUNT_KEY (0x2)
 #define PN_REFCOUNT_VALUE (0x4)
@@ -133,9 +137,6 @@ PN_EXTERN char *pn_string_buffer(pn_string_t *string);
 PN_EXTERN size_t pn_string_capacity(pn_string_t *string);
 PN_EXTERN int pn_string_resize(pn_string_t *string, size_t size);
 PN_EXTERN int pn_string_copy(pn_string_t *string, pn_string_t *src);
-
-typedef void *(*pn_iterator_next_t)(void *state);
-typedef struct pn_iterator_t pn_iterator_t;
 
 PN_EXTERN pn_iterator_t *pn_iterator(void);
 PN_EXTERN void *pn_iterator_start(pn_iterator_t *iterator,

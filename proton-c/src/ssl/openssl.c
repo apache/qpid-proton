@@ -194,6 +194,7 @@ static int ssl_failed(pn_ssl_t *ssl)
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
   }
   _log_ssl_error(NULL);    // spit out any remaining errors to the log file
+  ssl->transport->tail_closed = true;
   return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
 }
 

@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/message.h>
+#include <proton/selectable.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -174,6 +175,10 @@ PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
  * @return true if blocking has been enabled.
  */
 PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
+
+PN_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
+
+PN_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive);
 
 /** Frees a Messenger.
  *
@@ -610,6 +615,8 @@ PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
  */
 PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
                                    const char *address);
+
+PN_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 
 #ifdef __cplusplus
 }

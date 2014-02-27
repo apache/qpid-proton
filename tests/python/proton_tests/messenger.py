@@ -355,7 +355,7 @@ class MessengerTest(Test):
     while self.client.outgoing:
         last = self.client.outgoing
         self.client.send()
-        print "sent ", last - self.client.outgoing
+        #print "sent ", last - self.client.outgoing
 
     assert self.server_received == count
 
@@ -723,7 +723,7 @@ class NBMessengerTest(common.Test):
     for i in range(count):
       if self.server.incoming == 0:
         self.pump()
-      assert self.server.incoming > 0
+      assert self.server.incoming > 0, self.server.incoming
       self.server.get(msg2)
       assert msg2.body == "Hello %s" % i, (msg2.body, i)
 
@@ -925,3 +925,95 @@ class NBMessengerTest(common.Test):
             break
     assert self.server.incoming == 50, self.server.incoming
     assert self.server.receiving == 0, self.server.receiving
+
+from select import select
+
+class Pump:
+
+  def __init__(self, *messengers):
+    self.messengers = messengers
+    self.selectables = []
+
+  def pump_once(self):
+    for m in self.messengers:
+      while True:
+        sel = m.selectable()
+        if sel:
+          self.selectables.append(sel)
+        else:
+          break
+
+    reading = []
+    writing = []
+
+    for sel in self.selectables[:]:
+      if sel.is_terminal:
+        sel.free()
+        self.selectables.remove(sel)
+      else:
+        if sel.capacity > 0:
+          reading.append(sel)
+        if sel.pending > 0:
+          writing.append(sel)
+
+    readable, writable, _ = select(reading, writing, [], 0)
+
+    count = 0
+    for s in readable:
+      s.readable()
+      count += 1
+    for s in writable:
+      s.writable()
+      count += 1
+    return count
+
+  def pump(self):
+    while self.pump_once(): pass
+
+
+class SelectableMessengerTest(common.Test):
+
+  def testSelectable(self, count = 1):
+    mrcv = Messenger()
+    mrcv.passive = True
+    mrcv.subscribe("amqp://~0.0.0.0:1234")
+
+    msnd = Messenger()
+    msnd.passive = True
+    m = Message()
+    m.address = "amqp://0.0.0.0:1234"
+
+    for i in range(count):
+      m.body = u"Hello World! %s" % i
+      msnd.put(m)
+
+    p = Pump(msnd, mrcv)
+    p.pump()
+
+    assert msnd.outgoing == count
+    assert mrcv.incoming == 0
+
+    mrcv.recv()
+
+    mc = Message()
+
+    for i in range(count):
+      if mrcv.incoming == 0:
+        p.pump()
+      assert mrcv.incoming > 0
+      mrcv.get(mc)
+      assert mc.body == u"Hello World! %s" % i, (i, mc.body)
+
+    mrcv.stop()
+    assert not mrcv.stopped
+    p.pump()
+    assert mrcv.stopped
+
+  def testSelectable16(self):
+    self.testSelectable(count=16)
+
+  def testSelectable1024(self):
+    self.testSelectable(count=1024)
+
+  def testSelectable4096(self):
+    self.testSelectable(count=4096)

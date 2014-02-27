@@ -341,6 +341,8 @@ PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
  */
 PN_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *context);
 
+PN_EXTERN pn_transport_t *pn_connection_transport(pn_connection_t *connection);
+
 
 // transport
 PN_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
@@ -496,6 +498,7 @@ PN_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *trans
 PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
 PN_EXTERN bool pn_transport_quiesced(pn_transport_t *transport);
+PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
 PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 
 // session
