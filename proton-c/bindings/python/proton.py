@@ -242,11 +242,12 @@ class Messenger(object):
   def __init__(self, name=None):
     """
     Construct a new L{Messenger} with the given name. The name has
-    global scope. If a NULL name is supplied, a L{uuid.UUID} based
-    name will be chosen.
+    global scope. If a NULL name is supplied, a UUID based name will
+    be chosen.
 
     @type name: string
     @param name: the name of the messenger or None
+
     """
     self._mng = pn_messenger(name)
     self._selectables = {}
@@ -511,7 +512,7 @@ first message.
     @type tracker: tracker
     @param tracker: the tracker whose status is to be retrieved
 
-    @return true if delivery is still buffered
+    @return: true if delivery is still buffered
     """
     return pn_messenger_buffered(self._mng, tracker);
 

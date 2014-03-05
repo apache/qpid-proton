@@ -33,6 +33,9 @@ extern "C" {
 /** @file
  * The messenger API provides a high level interface for sending and
  * receiving AMQP messages.
+ *
+ * @defgroup messenger Messenger
+ * @{
  */
 
 typedef struct pn_messenger_t pn_messenger_t; /**< Messenger*/
@@ -168,11 +171,12 @@ PN_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
 
 /** Enable or disable blocking behavior during calls to
- * pn_messenger_send and pn_messenger_recv.
+ * ::pn_messenger_send and ::pn_messenger_recv.
  *
  * @param[in] messenger the messenger
+ * @param[in] blocking the value of the blocking flag
  *
- * @return true if blocking has been enabled.
+ * @return an error code or zero if there is no error
  */
 PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
 
@@ -560,7 +564,7 @@ PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 //!
 //!   pn_messenger_route("foobar", "amqp://foo.com/bar");
 //!
-//! Any message sent to bar/<path> will be routed to the corresponding
+//! Any message sent to bar/&lt;path&gt; will be routed to the corresponding
 //! path within the amqp://bar.com domain:
 //!
 //!   pn_messenger_route("bar/*", "amqp://bar.com/$1");
@@ -621,5 +625,9 @@ PN_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @}
+ */
 
 #endif /* messenger.h */

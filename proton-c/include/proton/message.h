@@ -35,6 +35,13 @@
 extern "C" {
 #endif
 
+/** @file
+ * Message API for encoding/decoding AMQP Messages.
+ *
+ * @defgroup message Message
+ * @{
+ */
+
 typedef struct pn_message_t pn_message_t;
 
 typedef enum {
@@ -137,6 +144,9 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
 PN_EXTERN ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size);
+
+/** @}
+ */
 
 #ifdef __cplusplus
 }

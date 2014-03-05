@@ -30,10 +30,21 @@
 #include <proton/type_compat.h>
 #endif
 
+/**
+ * @file
+ *
+ * @defgroup types Types
+ * @{
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup primitives Primitive Types
+ * @{
+ */
 
 typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
@@ -57,8 +68,65 @@ typedef struct {
 PN_EXTERN pn_bytes_t pn_bytes(size_t size, char *start);
 PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
 
+/** @}
+ */
+
+/**
+ * @defgroup abstract Abstract Types
+ * @{
+ */
+
+/**
+ * Encodes the state of an endpoint.
+ * @ingroup connection
+ */
+typedef int pn_state_t;
+
+/**
+ * Encapsulates the endpoint state associated with an AMQP Connection.
+ * @ingroup connection
+ */
+typedef struct pn_connection_t pn_connection_t;
+
+/**
+ * Encapsulates the endpoint state associated with an AMQP Session.
+ * @ingroup session
+ */
+typedef struct pn_session_t pn_session_t;
+
+/**
+ * Encapsulates the endpoint state associated with an AMQP Link.
+ * @ingroup link
+ */
+typedef struct pn_link_t pn_link_t;
+
+/**
+ * Encapsulates the endpoint state associated with an AMQP Delivery.
+ * @ingroup delivery
+ */
+typedef struct pn_delivery_t pn_delivery_t;
+
+/**
+ * An event collector.
+ * @ingroup event
+ */
+typedef struct pn_collector_t pn_collector_t;
+
+/**
+ * Encapsulates the transport state of all AMQP endpoints associated
+ * with a physical network connection.
+ * @ingroup transport
+ */
+
+typedef struct pn_transport_t pn_transport_t;
+
+/** @}
+ */
 #ifdef __cplusplus
 }
 #endif
+
+/** @}
+ */
 
 #endif /* types.h */

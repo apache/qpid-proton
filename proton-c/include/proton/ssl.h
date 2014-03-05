@@ -66,7 +66,7 @@ extern "C" {
  * must have its database of trusted CAs configured (see ::pn_ssl_domain_set_trusted_ca_db()).
  *
  * An SSL server connection may allow the remote client to connect without SSL (eg. "in
- * the clear"), see ::pn_ssl_allow_unsecured_client().
+ * the clear"), see ::pn_ssl_domain_allow_unsecured_client().
  *
  * The level of verification required of the remote may be configured (see
  * ::pn_ssl_domain_set_default_peer_authentication ::pn_ssl_set_peer_authentication,
@@ -74,6 +74,10 @@ extern "C" {
  *
  * Support for SSL Client Session resume is provided (see ::pn_ssl_get_state,
  * ::pn_ssl_resume_state).
+ *
+ * @defgroup ssl SSL
+ * @ingroup transport
+ * @{
  */
 
 typedef struct pn_ssl_domain_t pn_ssl_domain_t;
@@ -310,6 +314,8 @@ PN_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
  * @return 0 on success.
  */
 PN_EXTERN int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
+
+/** @} */
 
 #ifdef __cplusplus
 }

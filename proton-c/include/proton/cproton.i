@@ -587,7 +587,15 @@ typedef long long int int64_t;
   delivery != NULL;
 }
 
-%include "proton/engine.h"
+%include "proton/condition.h"
+%include "proton/connection.h"
+%include "proton/session.h"
+%include "proton/link.h"
+%include "proton/terminus.h"
+%include "proton/delivery.h"
+%include "proton/disposition.h"
+%include "proton/transport.h"
+%include "proton/event.h"
 
 %contract pn_message_free(pn_message_t *msg)
 {
