@@ -34,6 +34,7 @@ import org.apache.qpid.proton.codec.Data;
 import org.apache.qpid.proton.codec.DataFactory;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.DriverFactory;
+import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.SslDomain;
@@ -43,6 +44,8 @@ import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerFactory;
+
+import org.apache.qpid.proton.engine.impl.CollectorImpl;
 
 public final class Proton
 {
@@ -73,6 +76,11 @@ public final class Proton
     public static ProtonFactory.ImplementationType getDefaultImplementationType()
     {
         return DEFAULT_IMPLEMENTATION;
+    }
+
+    public static Collector collector()
+    {
+        return new CollectorImpl();
     }
 
     public static Connection connection()

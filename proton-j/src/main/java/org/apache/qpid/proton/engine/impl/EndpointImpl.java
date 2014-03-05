@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJEndpoint;
 
 public abstract class EndpointImpl implements ProtonJEndpoint
@@ -47,6 +48,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
             case UNINITIALIZED:
                 _localState = EndpointState.ACTIVE;
         }
+        modified();
     }
 
     public void close()
@@ -61,6 +63,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
             case ACTIVE:
                 _localState = EndpointState.CLOSED;
         }
+        modified();
     }
 
     public EndpointState getLocalState()
@@ -109,10 +112,23 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
     void modified()
     {
+        modified(true);
+    }
+
+    void modified(boolean emit)
+    {
         if(!_modified)
         {
             _modified = true;
             getConnectionImpl().addModified(this);
+        }
+
+        if (emit) {
+            ConnectionImpl conn = getConnectionImpl();
+            EventImpl ev = conn.put(Event.Type.TRANSPORT);
+            if (ev != null) {
+                ev.init(conn);
+            }
         }
     }
 

@@ -49,11 +49,11 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private DeliveryImpl _workHead;
     private DeliveryImpl _workTail;
 
+    private TransportImpl _transport;
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
     private String _localContainerId = "";
     private String _localHostname = "";
-    private boolean _bound;
     private String _remoteContainer;
     private String _remoteHostname;
     private Symbol[] _offeredCapabilities;
@@ -64,6 +64,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private Map<Symbol, Object> _remoteProperties;
 
     private Object _context;
+    private CollectorImpl _collector;
 
     private static final Symbol[] EMPTY_SYMBOL_ARRAY = new Symbol[0];
 
@@ -191,7 +192,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         _sessions = null;
     }
 
-    public void handleOpen(Open open)
+    void handleOpen(Open open)
     {
         // TODO - store state
         setRemoteState(EndpointState.ACTIVE);
@@ -200,6 +201,10 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteDesiredCapabilities(open.getDesiredCapabilities());
         setRemoteOfferedCapabilities(open.getOfferedCapabilities());
         setRemoteProperties(open.getProperties());
+        EventImpl ev = put(Event.Type.CONNECTION_STATE);
+        if (ev != null) {
+            ev.init(this);
+        }
     }
 
 
@@ -437,14 +442,14 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return new WorkSequence(_workHead);
     }
 
-    public void setBound(boolean bound)
+    void setTransport(TransportImpl transport)
     {
-        _bound = true;
+        _transport = transport;
     }
 
-    public boolean isBound()
+    TransportImpl getTransport()
     {
-        return _bound;
+        return _transport;
     }
 
     private class WorkSequence implements Iterator<DeliveryImpl>
@@ -516,6 +521,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 
     void addTransportWork(DeliveryImpl delivery)
     {
+        modified();
         if (delivery._transportWork) return;
 
         delivery.setTransportWorkNext(null);
@@ -560,6 +566,20 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     public void setContext(Object context)
     {
         _context = context;
+    }
+
+    public void collect(Collector collector)
+    {
+        _collector = (CollectorImpl) collector;
+    }
+
+    EventImpl put(Event.Type type)
+    {
+        if (_collector != null) {
+            return _collector.put(type);
+        } else {
+            return null;
+        }
     }
 
 }

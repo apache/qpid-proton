@@ -35,6 +35,7 @@ import org.apache.qpid.proton.amqp.Symbol;
  */
 public interface Connection extends Endpoint
 {
+
     /**
      * Returns a newly created session
      *
@@ -99,4 +100,7 @@ public interface Connection extends Endpoint
     Object getContext();
 
     void setContext(Object context);
+
+    void collect(Collector collector);
+
 }

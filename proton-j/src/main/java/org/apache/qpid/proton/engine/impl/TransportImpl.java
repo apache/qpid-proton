@@ -48,6 +48,7 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -194,7 +195,7 @@ public class TransportImpl extends EndpointImpl
     public void bind(Connection conn)
     {
         // TODO - check if already bound
-        ((ConnectionImpl) conn).setBound(true);
+        ((ConnectionImpl) conn).setTransport(this);
         _connectionEndpoint = (ConnectionImpl) conn;
 
         _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
@@ -472,7 +473,8 @@ public class TransportImpl extends EndpointImpl
 
         if(!delivery.isDone() &&
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
-           tpSession.hasOutgoingCredit() && tpLink.hasCredit())
+           tpSession.hasOutgoingCredit() && tpLink.hasCredit() &&
+           tpLink.getLocalHandle() != null)
         {
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
             TransportDelivery tpDelivery = new TransportDelivery(deliveryId, delivery, tpLink);
@@ -976,7 +978,10 @@ public class TransportImpl extends EndpointImpl
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
             _remoteSessions[channel] = transportSession;
 
-
+            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_STATE);
+            if (ev != null) {
+                ev.init(session);
+            }
         }
 
     }
@@ -1030,6 +1035,11 @@ public class TransportImpl extends EndpointImpl
                 transportLink.setRemoteHandle(attach.getHandle());
                 transportSession.addLinkRemoteHandle(transportLink, attach.getHandle());
 
+            }
+
+            EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_STATE);
+            if (ev != null) {
+                ev.init(link);
             }
         }
     }
@@ -1100,6 +1110,11 @@ public class TransportImpl extends EndpointImpl
                 {
                     link.getRemoteCondition().copyFrom(detach.getError());
                 }
+
+                EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_STATE);
+                if (ev != null) {
+                    ev.init(link);
+                }
             }
             else
             {
@@ -1127,6 +1142,11 @@ public class TransportImpl extends EndpointImpl
             {
                 session.getRemoteCondition().copyFrom(errorCondition);
             }
+
+            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_STATE);
+            if (ev != null) {
+                ev.init(session);
+            }
         }
     }
 
@@ -1141,6 +1161,11 @@ public class TransportImpl extends EndpointImpl
             if(close.getError() != null)
             {
                 _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
+            }
+
+            EventImpl ev = _connectionEndpoint.put(Event.Type.CONNECTION_STATE);
+            if (ev != null) {
+                ev.init(_connectionEndpoint);
             }
         }
 

@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.transport.Flow;
+import org.apache.qpid.proton.engine.Event;
 
 class TransportLink<T extends LinkImpl>
 {
@@ -121,6 +122,10 @@ class TransportLink<T extends LinkImpl>
         _remoteLinkCredit = flow.getLinkCredit();
 
 
+        EventImpl ev = _link.getConnectionImpl().put(Event.Type.LINK_FLOW);
+        if (ev != null) {
+            ev.init(_link);
+        }
     }
 
     void setLinkCredit(UnsignedInteger linkCredit)

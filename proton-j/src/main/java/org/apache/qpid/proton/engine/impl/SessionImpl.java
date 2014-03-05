@@ -47,19 +47,6 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _node = _connection.addSessionEndpoint(this);
     }
 
-    public void open()
-    {
-        super.open();
-        modified();
-    }
-
-    public void close()
-    {
-
-        super.close();
-        modified();
-    }
-
     public SenderImpl sender(String name)
     {
         SenderImpl sender = _senders.get(name);

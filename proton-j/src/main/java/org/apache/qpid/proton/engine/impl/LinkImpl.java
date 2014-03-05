@@ -63,18 +63,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     }
 
 
-    public void open()
-    {
-        super.open();
-        modified();
-    }
-
-    public void close()
-    {
-        super.close();
-        modified();
-    }
-
     public String getName()
     {
         return _name;
@@ -203,7 +191,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         // TODO - should be an error if local state is ACTIVE
         _source = source;
-        modified();
     }
 
     public Target getTarget()
@@ -215,7 +202,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         // TODO - should be an error if local state is ACTIVE
         _target = target;
-        modified();
     }
 
     public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)

@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.transport.Disposition;
 import org.apache.qpid.proton.amqp.transport.Flow;
 import org.apache.qpid.proton.amqp.transport.Role;
 import org.apache.qpid.proton.amqp.transport.Transfer;
+import org.apache.qpid.proton.engine.Event;
 
 class TransportSession
 {
@@ -304,7 +305,12 @@ class TransportSession
 
         // this will cause a flow to happen
         if (_incomingWindowSize.equals(UnsignedInteger.ZERO)) {
-            delivery.getLink().modified();
+            delivery.getLink().modified(false);
+        }
+
+        EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
+        if (ev != null) {
+            ev.init(delivery);
         }
     }
 
@@ -387,6 +393,11 @@ class TransportSession
                     unsettledDeliveries.remove(id);
                 }
                 delivery.updateWork();
+
+                EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
+                if (ev != null) {
+                    ev.init(delivery);
+                }
             }
             id = id.add(UnsignedInteger.ONE);
         }
@@ -415,12 +426,12 @@ class TransportSession
         if(transportDelivery.getTransportLink().getLink() instanceof ReceiverImpl)
         {
             _unsettledIncomingDeliveriesById.remove(transportDelivery.getDeliveryId());
-            getSession().modified();
+            getSession().modified(false);
         }
         else
         {
             _unsettledOutgoingDeliveriesById.remove(transportDelivery.getDeliveryId());
-            getSession().modified();
+            getSession().modified(false);
         }
     }
 

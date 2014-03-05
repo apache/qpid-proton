@@ -928,12 +928,44 @@ def pn_transport_close_tail(trans):
 def pn_transport_error(trans):
   return trans.error
 
-PN_CONNECTION_STATE = "PN_CONNECTION_STATE"
-PN_SESSION_STATE = "PN_SESSION_STATE"
-PN_LINK_STATE = "PN_LINK_STATE"
-PN_LINK_FLOW = "PN_LINK_FLOW"
-PN_DELIVERY = "PN_DELIVERY"
-PN_TRANSPORT = "PN_TRANSPORT"
+from org.apache.qpid.proton.engine import Event
+
+PN_CONNECTION_STATE = Event.Type.CONNECTION_STATE
+PN_SESSION_STATE = Event.Type.SESSION_STATE
+PN_LINK_STATE = Event.Type.LINK_STATE
+PN_LINK_FLOW = Event.Type.LINK_FLOW
+PN_DELIVERY = Event.Type.DELIVERY
+PN_TRANSPORT = Event.Type.TRANSPORT
 
 def pn_collector():
-  raise Skipped()
+  return Proton.collector()
+
+def pn_connection_collect(conn, coll):
+  conn.impl.collect(coll)
+
+def pn_collector_peek(coll):
+  return coll.peek()
+
+def pn_collector_pop(coll):
+  coll.pop()
+
+def pn_event_connection(event):
+  return wrap(event.getConnection(), pn_connection_wrapper)
+
+def pn_event_session(event):
+  return wrap(event.getSession(), pn_session_wrapper)
+
+def pn_event_link(event):
+  return wrap(event.getLink(), pn_link_wrapper)
+
+def pn_event_delivery(event):
+  return wrap(event.getDelivery(), pn_delivery_wrapper)
+
+def pn_event_transport(event):
+  return wrap(event.getTransport(), pn_transport_wrapper)
+
+def pn_event_type(event):
+  return event.getType()
+
+def pn_event_type_name(etype):
+  return str(etype)
