@@ -106,7 +106,11 @@ void pn_print_data(const char *bytes, size_t size)
   pn_fprint_data(stdout, bytes, size);
 }
 
-void parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
+// Parse URL syntax:
+// [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
+// <user>, <password>, <host>, <port> cannot contain any of '@', ':', '/'
+// <path> can contain any character
+void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
 {
   if (url) {
     char *scheme_end = strstr(url, "://");

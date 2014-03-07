@@ -1401,7 +1401,7 @@ static void pni_parse(pn_address_t *address)
   address->host = NULL;
   address->port = NULL;
   address->name = NULL;
-  parse_url(pn_string_buffer(address->text), &address->scheme, &address->user,
+  pni_parse_url(pn_string_buffer(address->text), &address->scheme, &address->user,
             &address->pass, &address->host, &address->port, &address->name);
   if (address->host[0] == '~') {
     address->passive = true;
