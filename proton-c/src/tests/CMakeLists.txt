@@ -17,42 +17,21 @@
 # under the License.
 #
 
-add_executable (c-object-tests object.c)
-target_link_libraries (c-object-tests qpid-proton)
-set_target_properties (
-  c-object-tests
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  OUTPUT_NAME c-object-tests
-  )
-pn_c_files (object.c)
-
-add_executable (c-message-tests message.c)
-target_link_libraries (c-message-tests qpid-proton)
-set_target_properties (
-  c-message-tests
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  OUTPUT_NAME c-message-tests
-  )
-pn_c_files (message.c)
-
-add_executable (c-engine-tests engine.c)
-target_link_libraries (c-engine-tests qpid-proton)
-set_target_properties (
-  c-engine-tests
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  OUTPUT_NAME c-engine-tests
-  )
-pn_c_files (engine.c)
+add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 
 if (ENABLE_VALGRIND AND VALGRIND)
   set(memcheck-cmd ${VALGRIND} --error-exitcode=1 --quiet
                    --leak-check=full --trace-children=yes)
 endif (ENABLE_VALGRIND AND VALGRIND)
 
-add_test (c-object-tests ${memcheck-cmd} ./c-object-tests)
-add_test (c-message-tests ${memcheck-cmd} ./c-message-tests)
-add_test (c-engine-tests ${memcheck-cmd} ./c-engine-tests)
+macro (pn_add_c_test test file)
+  add_executable (${test} ${file})
+  target_link_libraries (${test} qpid-proton)
+  pn_c_files (${file})
+  add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test})
+endmacro(pn_add_c_test)
+
+pn_add_c_test (c-object-tests object.c)
+pn_add_c_test (c-message-tests message.c)
+pn_add_c_test (c-engine-tests engine.c)
 
