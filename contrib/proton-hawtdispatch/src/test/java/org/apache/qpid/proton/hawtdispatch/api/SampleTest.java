@@ -273,7 +273,7 @@ public class SampleTest {
 		try {
 			_logger.fine("Waiting...");
 			Future<Void> disconnectedFuture = conn.getDisconnectedFuture();
-			disconnectedFuture.await(300, TimeUnit.SECONDS);
+			disconnectedFuture.await(10, TimeUnit.SECONDS);
 			_logger.fine("done");
 			assertEquals(expected, server.getMessagesReceived());
 		} catch (Exception e) {

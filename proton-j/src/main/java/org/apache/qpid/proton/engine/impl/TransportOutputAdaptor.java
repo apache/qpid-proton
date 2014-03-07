@@ -30,6 +30,7 @@ class TransportOutputAdaptor implements TransportOutput
 
     private final ByteBuffer _outputBuffer;
     private final ByteBuffer _head;
+    private boolean _output_done = false;
     private boolean _head_closed = false;
 
     TransportOutputAdaptor(TransportOutputWriter transportOutputWriter, int maxFrameSize)
@@ -47,10 +48,14 @@ class TransportOutputAdaptor implements TransportOutput
     @Override
     public int pending()
     {
-        _head_closed = _transportOutputWriter.writeInto(_outputBuffer);
+        if (_head_closed) {
+            return Transport.END_OF_STREAM;
+        }
+
+        _output_done = _transportOutputWriter.writeInto(_outputBuffer);
         _head.limit(_outputBuffer.position());
 
-        if (_head_closed && _outputBuffer.position() == 0) {
+        if (_output_done && _outputBuffer.position() == 0) {
             return Transport.END_OF_STREAM;
         } else {
             return _outputBuffer.position();
@@ -77,6 +82,7 @@ class TransportOutputAdaptor implements TransportOutput
     @Override
     public void close_head()
     {
+        _head_closed = true;
         _transportOutputWriter.closed();
     }
 

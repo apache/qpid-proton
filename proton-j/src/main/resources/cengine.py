@@ -917,6 +917,14 @@ def pn_transport_push(trans, input):
       trans.error = pn_error(PN_ERR, str(e))
       return PN_ERR
 
+def pn_transport_close_head(trans):
+  try:
+    trans.impl.close_head()
+    return 0
+  except TransportException, e:
+    trans.error = pn_error(PN_ERR, str(e))
+    return PN_ERR
+
 def pn_transport_close_tail(trans):
   try:
     trans.impl.close_tail()

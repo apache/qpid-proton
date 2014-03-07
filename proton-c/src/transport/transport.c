@@ -165,6 +165,7 @@ static void pn_transport_initialize(void *object)
   transport->close_sent = false;
   transport->close_rcvd = false;
   transport->tail_closed = false;
+  transport->head_closed = false;
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
@@ -1064,7 +1065,8 @@ static ssize_t pn_input_read_header(pn_transport_t *transport, const char *bytes
     char quoted[1024];
     pn_quote_data(quoted, 1024, bytes, available);
     return pn_error_format(transport->error, PN_ERR,
-                           "%s header mismatch: '%s'", protocol, quoted);
+                           "%s header mismatch: '%s'%s", protocol, quoted,
+                           available ? "" : " (connection aborted)");
   } else {
     transport->header_count += delta;
     if (transport->header_count == size) {
@@ -2062,7 +2064,8 @@ int pn_transport_close_tail(pn_transport_t *transport)
 // output
 ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
-  if (!transport) return PN_ARG_ERR;
+  assert(transport);
+  if (transport->head_closed) return PN_EOS;
   return transport_produce( transport );
 }
 
@@ -2109,7 +2112,12 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 
 int pn_transport_close_head(pn_transport_t *transport)
 {
-  return 0;
+  transport->head_closed = true;
+  if (transport->close_sent && transport->output_pending == 0) {
+    return 0;
+  } else {
+    return pn_error_set(transport->error, PN_ERR, "connection aborted");
+  }
 }
 
 // true if the transport will not generate further output
