@@ -513,6 +513,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'z':
       {
+	// For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
         char *start = va_arg(ap, char *);
         if (start) {
