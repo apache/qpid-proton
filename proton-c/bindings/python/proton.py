@@ -751,6 +751,14 @@ first message.
     else:
       return None
 
+  @property
+  def deadline(self):
+    tstamp = pn_messenger_deadline(self._mng)
+    if tstamp:
+      return float(tstamp)/1000
+    else:
+      return None
+
 class Message(object):
   """
   The L{Message} class is a mutable holder of message content.
@@ -1151,6 +1159,11 @@ class Selectable(object):
   @property
   def deadline(self):
     if not self._impl: raise ValueError("selectable freed")
+    tstamp = pn_selectable_deadline(self._impl)
+    if tstamp:
+      return float(tstamp)/1000
+    else:
+      return None
 
   def readable(self):
     if not self._impl: raise ValueError("selectable freed")

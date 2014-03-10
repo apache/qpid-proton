@@ -622,6 +622,8 @@ PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *patter
 
 PN_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 
+PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
+
 #ifdef __cplusplus
 }
 #endif
