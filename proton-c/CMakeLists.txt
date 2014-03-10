@@ -44,6 +44,8 @@ endif()
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
+find_package (PythonInterp REQUIRED)
+
 set(ssl_impl, none)
 if (OPENSSL_FOUND)
   set(ssl_impl openssl)
@@ -62,13 +64,13 @@ include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/../examples/include")
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
-  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
   )
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
-  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
@@ -452,7 +454,7 @@ set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bl
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-add_test (python-test python ${env_py}
+add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
          "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
          ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
@@ -468,7 +470,7 @@ if (ruby_exe)
   set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
 
   # ruby unit tests:  tests/ruby/proton-test
-  add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+  add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
     "${rb_root}/proton-test")
 
   # ruby spec tests
@@ -476,7 +478,7 @@ if (ruby_exe)
   if (rspec_exe)
     add_test (NAME ruby-spec-test
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-              COMMAND python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+              COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
                       ${rspec_exe})
 
   else(rspec_exe)
