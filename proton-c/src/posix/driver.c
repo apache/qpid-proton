@@ -135,7 +135,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
   if (!driver) return NULL;
 
   pn_socket_t sock = pn_listen(driver->io, host, port);
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     return NULL;
   } else {
     pn_listener_t *l = pn_listener_fd(driver, sock, context);
@@ -202,7 +202,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
   char name[PN_NAME_MAX];
 
   pn_socket_t sock = pn_accept(l->driver->io, l->fd, name, PN_NAME_MAX);
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     return NULL;
   } else {
     if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))

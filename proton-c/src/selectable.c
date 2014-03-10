@@ -20,6 +20,7 @@
  */
 
 #include <proton/error.h>
+#include <proton/io.h>
 #include "selectable.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -40,7 +41,7 @@ void pn_selectables_free(pn_selectables_t *selectables)
 }
 
 struct pn_selectable_t {
-  int fd;
+  pn_socket_t fd;
   int index;
   void *context;
   ssize_t (*capacity)(pn_selectable_t *);
@@ -57,7 +58,7 @@ struct pn_selectable_t {
 void pn_selectable_initialize(void *obj)
 {
   pn_selectable_t *sel = (pn_selectable_t *) obj;
-  sel->fd = -1;
+  sel->fd = PN_INVALID_SOCKET;
   sel->index = -1;
   sel->context = NULL;
   sel->capacity = NULL;
@@ -125,13 +126,13 @@ void pni_selectable_set_index(pn_selectable_t *selectable, int index)
   selectable->index = index;
 }
 
-int pn_selectable_fd(pn_selectable_t *selectable)
+pn_socket_t pn_selectable_fd(pn_selectable_t *selectable)
 {
   assert(selectable);
   return selectable->fd;
 }
 
-void pni_selectable_set_fd(pn_selectable_t *selectable, int fd)
+void pni_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd)
 {
   assert(selectable);
   selectable->fd = fd;

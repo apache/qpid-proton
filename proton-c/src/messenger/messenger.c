@@ -20,7 +20,6 @@
  */
 
 #include <proton/messenger.h>
-#include <proton/io.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/util.h>
@@ -221,7 +220,7 @@ static void pni_connection_readable(pn_selectable_t *sel)
     ssize_t n = pn_recv(messenger->io, pn_selectable_fd(sel),
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      if (n == 0 || !pn_wouldblock(messenger->io)) {
         if (n < 0) perror("recv");
         pn_transport_close_tail(transport);
         if (!(pn_connection_state(connection) & PN_REMOTE_CLOSED)) {
@@ -249,7 +248,7 @@ static void pni_connection_writable(pn_selectable_t *sel)
     ssize_t n = pn_send(messenger->io, pn_selectable_fd(sel),
                         pn_transport_head(transport), pending);
     if (n < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      if (!pn_wouldblock(messenger->io)) {
         perror("send");
         pn_transport_close_head(transport);
       }
@@ -369,7 +368,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
                                           const char *port)
 {
   pn_socket_t socket = pn_listen(messenger->io, host, port ? port : default_port(scheme));
-  if (socket == INVALID_SOCKET) {
+  if (socket == PN_INVALID_SOCKET) {
     pn_error_copy(messenger->error, pn_io_error(messenger->io));
     return NULL;
   }
@@ -1480,7 +1479,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   }
 
   pn_socket_t sock = pn_connect(messenger->io, host, port ? port : default_port(scheme));
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     return NULL;
   }
 

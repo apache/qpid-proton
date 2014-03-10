@@ -25,6 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/error.h>
 #include <sys/types.h>
+#include <proton/type_compat.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -34,10 +35,15 @@ extern "C" {
 #endif
 
 #if defined(_WIN32) && ! defined(__CYGWIN__)
-typedef SOCKET pn_socket_t;
+#ifdef _WIN64
+typedef unsigned __int64 pn_socket_t;
+#else
+typedef unsigned int pn_socket_t;
+#endif
+#define PN_INVALID_SOCKET (pn_socket_t)(~0)
 #else
 typedef int pn_socket_t;
-#define INVALID_SOCKET (-1)
+#define PN_INVALID_SOCKET (-1)
 #endif
 
 typedef struct pn_io_t pn_io_t;
@@ -54,6 +60,7 @@ PN_EXTERN ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t siz
 PN_EXTERN int pn_pipe(pn_io_t *io, pn_socket_t *dest);
 PN_EXTERN ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size);
 PN_EXTERN ssize_t pn_write(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size);
+PN_EXTERN bool pn_wouldblock(pn_io_t *io);
 
 #ifdef __cplusplus
 }

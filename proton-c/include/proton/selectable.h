@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/object.h>
+#include <proton/io.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -39,7 +40,7 @@ PN_EXTERN pn_selectables_t *pn_selectables(void);
 PN_EXTERN pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables);
 PN_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
 
-PN_EXTERN int pn_selectable_fd(pn_selectable_t *selectable);
+PN_EXTERN pn_socket_t pn_selectable_fd(pn_selectable_t *selectable);
 PN_EXTERN ssize_t pn_selectable_capacity(pn_selectable_t *selectable);
 PN_EXTERN ssize_t pn_selectable_pending(pn_selectable_t *selectable);
 PN_EXTERN pn_timestamp_t pn_selectable_deadline(pn_selectable_t *selectable);

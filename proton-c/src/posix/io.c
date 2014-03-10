@@ -43,12 +43,14 @@ struct pn_io_t {
   char host[MAX_HOST];
   char serv[MAX_SERV];
   pn_error_t *error;
+  bool wouldblock;
 };
 
 void pn_io_initialize(void *obj)
 {
   pn_io_t *io = (pn_io_t *) obj;
   io->error = pn_error();
+  io->wouldblock = false;
 }
 
 void pn_io_finalize(void *obj)
@@ -125,27 +127,27 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   pn_socket_t sock = pn_create_socket();
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "pn_create_socket");
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   int optval = 1;
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
     pn_i_error_from_errno(io->error, "setsockopt");
     close(sock);
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
     pn_i_error_from_errno(io->error, "bind");
     freeaddrinfo(addr);
     close(sock);
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   freeaddrinfo(addr);
@@ -153,7 +155,7 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
   if (listen(sock, 50) == -1) {
     pn_i_error_from_errno(io->error, "listen");
     close(sock);
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   return sock;
@@ -165,13 +167,13 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
   int code = getaddrinfo(host, port, NULL, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   pn_socket_t sock = pn_create_socket();
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "pn_create_socket");
-    return INVALID_SOCKET;
+    return PN_INVALID_SOCKET;
   }
 
   pn_configure_sock(io, sock);
@@ -181,7 +183,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
       pn_i_error_from_errno(io->error, "connect");
       freeaddrinfo(addr);
       close(sock);
-      return INVALID_SOCKET;
+      return PN_INVALID_SOCKET;
     }
   }
 
@@ -196,7 +198,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
   addr.sin_family = AF_INET;
   socklen_t addrlen = sizeof(addr);
   pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
-  if (sock == INVALID_SOCKET) {
+  if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "accept");
     return sock;
   } else {
@@ -205,7 +207,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
       pn_error_format(io->error, PN_ERR, "getnameinfo: %s\n", gai_strerror(code));
       if (close(sock) == -1)
         pn_i_error_from_errno(io->error, "close");
-      return INVALID_SOCKET;
+      return PN_INVALID_SOCKET;
     } else {
       pn_configure_sock(io, sock);
       snprintf(name, size, "%s:%s", io->host, io->serv);
@@ -217,7 +219,9 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 /* Abstract away turning off SIGPIPE */
 #ifdef MSG_NOSIGNAL
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len) {
-  return send(socket, buf, len, MSG_NOSIGNAL);
+  ssize_t count = send(socket, buf, len, MSG_NOSIGNAL);
+  io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  return count;
 }
 
 static inline int pn_create_socket(void) {
@@ -225,7 +229,9 @@ static inline int pn_create_socket(void) {
 }
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
-  return send(socket, buf, len, 0);
+  ssize_t count = return send(socket, buf, len, 0);
+  io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  return count;
 }
 
 static inline int pn_create_socket(void) {
@@ -245,7 +251,9 @@ static inline int pn_create_socket(void) {
 
 ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 {
-  return recv(socket, buf, size, 0);
+  ssize_t count = recv(socket, buf, size, 0);
+  io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  return count;
 }
 
 ssize_t pn_write(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size)
@@ -261,4 +269,9 @@ ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 void pn_close(pn_io_t *io, pn_socket_t socket)
 {
   close(socket);
+}
+
+bool pn_wouldblock(pn_io_t *io)
+{
+  return io->wouldblock;
 }

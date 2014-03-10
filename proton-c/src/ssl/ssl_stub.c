@@ -20,7 +20,6 @@
  */
 
 #include <proton/ssl.h>
-#include "ssl-internal.h"
 
 
 /** @file

@@ -1330,6 +1330,8 @@ typedef long long int int64_t;
 
 %include "proton/messenger.h"
 
+%include "proton/io.h"
+
 %include "proton/selectable.h"
 
 %include "proton/ssl.h"
