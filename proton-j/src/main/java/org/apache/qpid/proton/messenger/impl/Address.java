@@ -56,35 +56,39 @@ class Address
 
         int start = 0;
         int schemeEnd = _address.indexOf("://", start);
-        if (schemeEnd > 0) {
+        if (schemeEnd >= 0) {
             _scheme = _address.substring(start, schemeEnd);
             start = schemeEnd + 3;
         }
 
-        int at = _address.indexOf('@', start);
-        if (at > 0) {
-            String up = _address.substring(start, at);
+        String uphp;
+        int slash = _address.indexOf("/", start);
+        if (slash > 0) {
+            uphp = _address.substring(start, slash);
+            _name = _address.substring(slash + 1);
+        } else {
+            uphp = _address.substring(start);
+        }
+
+        String hp;
+        int at = uphp.indexOf('@');
+        if (at >= 0) {
+            String up = uphp.substring(0, at);
+            hp = uphp.substring(at + 1);
+
             int colon = up.indexOf(':');
-            if (colon > 0) {
+            if (colon >= 0) {
                 _user = up.substring(0, colon);
                 _pass = up.substring(colon + 1);
             } else {
                 _user = up;
             }
-            start = at + 1;
-        }
-
-        int slash = _address.indexOf("/", start);
-        String hp;
-        if (slash > 0) {
-            hp = _address.substring(start, slash);
-            _name = _address.substring(slash + 1);
         } else {
-            hp = _address.substring(start);
+            hp = uphp;
         }
 
         int colon = hp.indexOf(':');
-        if (colon > 0) {
+        if (colon >= 0) {
             _host = hp.substring(0, colon);
             _port = hp.substring(colon + 1);
         } else {
