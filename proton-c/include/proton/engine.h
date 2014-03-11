@@ -23,7 +23,9 @@
  */
 
 /** @file
- * API for the proton Engine.
+ *
+ * The proton Engine API. The Engine API provides a complete
+ * implementation of AMQP as a Protocol Engine.
  *
  * @defgroup engine Engine
  */

@@ -76,45 +76,97 @@ PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
  * @{
  */
 
-/**
- * Encodes the state of an endpoint.
+/** Holds the state flags for an AMQP endpoint.
+ *
+ * A pn_state_t is an integral value with flags that encode both the
+ * local and remote state of an AMQP Endpoint (@link pn_connection_t
+ * Connection @endlink, @link pn_session_t Session @endlink, or @link
+ * pn_link_t Link @endlink). The local portion of the state may be
+ * accessed using ::PN_LOCAL_MASK, and the remote portion may be
+ * accessed using ::PN_REMOTE_MASK. Individual bits may be accessed
+ * using ::PN_LOCAL_UNINIT, ::PN_LOCAL_ACTIVE, ::PN_LOCAL_CLOSED, and
+ * ::PN_REMOTE_UNINIT, ::PN_REMOTE_ACTIVE, ::PN_REMOTE_CLOSED.
+ *
+ * Every AMQP endpoint (@link pn_connection_t Connection @endlink,
+ * @link pn_session_t Session @endlink, or @link pn_link_t Link
+ * @endlink) starts out in an uninitialized state and then proceeds
+ * linearly to an active and then closed state. This lifecycle occurs
+ * at both endpoints involved, and so the state model for an endpoint
+ * includes not only the known local state, but also the last known
+ * state of the remote endpoint.
+ *
  * @ingroup connection
  */
 typedef int pn_state_t;
 
-/**
- * Encapsulates the endpoint state associated with an AMQP Connection.
+/** An AMQP Connection object.
+ *
+ * A pn_connection_t object encapsulates all of the endpoint state
+ * associated with an AMQP Connection. A pn_connection_t object
+ * contains zero or more ::pn_session_t objects, which in turn contain
+ * zero or more ::pn_link_t objects. Each ::pn_link_t object contains
+ * an ordered sequence of ::pn_delivery_t objects. A link is either a
+ * @link sender Sender @endlink, or a @link receiver Receiver
+ * @endlink, but never both.
+ *
  * @ingroup connection
  */
 typedef struct pn_connection_t pn_connection_t;
 
-/**
- * Encapsulates the endpoint state associated with an AMQP Session.
+/** An AMQP Session object.
+ *
+ * A pn_session_t object encapsulates all of the endpoint state
+ * associated with an AMQP Session. A pn_session_t object contains
+ * zero or more ::pn_link_t objects.
+ *
  * @ingroup session
  */
 typedef struct pn_session_t pn_session_t;
 
-/**
- * Encapsulates the endpoint state associated with an AMQP Link.
+/** An AMQP Link object.
+ *
+ * A pn_link_t object encapsulates all of the endpoint state
+ * associated with an AMQP Link. A pn_link_t object contains an
+ * ordered sequence of ::pn_delivery_t objects representing in-flight
+ * deliveries. A pn_link_t may be either a @link sender Sender
+ * @endlink, or a @link receiver Receiver @endlink, but never both.
+ *
+ * A pn_link_t object maintains a pointer to the *current* delivery
+ * within the ordered sequence of deliveries contained by the link
+ * (See ::pn_link_current). The *current* delivery is the target of a
+ * number of operations associated with the link, such as sending
+ * (::pn_link_send) and receiving (::pn_link_recv) message data.
+ *
  * @ingroup link
  */
 typedef struct pn_link_t pn_link_t;
 
-/**
- * Encapsulates the endpoint state associated with an AMQP Delivery.
+/** An AMQP Delivery object.
+ *
+ * A pn_delivery_t object encapsulates all of the endpoint state
+ * associated with an AMQP Delivery. Every delivery exists within the
+ * context of a ::pn_link_t object.
+ *
  * @ingroup delivery
  */
 typedef struct pn_delivery_t pn_delivery_t;
 
-/**
- * An event collector.
+/** An event collector.
+ *
+ * A pn_collector_t may be used to register interest in being notified
+ * of various high level events that can occur to the various objects
+ * representing AMQP endpoint state. See ::pn_connection_collect.
+ *
  * @ingroup event
  */
 typedef struct pn_collector_t pn_collector_t;
 
-/**
- * Encapsulates the transport state of all AMQP endpoints associated
- * with a physical network connection.
+/** An AMQP Transport object.
+ *
+ * A pn_transport_t encapsulates the transport related state of all
+ * AMQP endpoint objects associated with a physical network connection
+ * at a given point in time.
+ *
  * @ingroup transport
  */
 
