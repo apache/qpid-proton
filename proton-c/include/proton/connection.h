@@ -166,24 +166,24 @@ PN_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *cont
 PN_EXTERN pn_state_t pn_connection_state(pn_connection_t *connection);
 
 /**
- * Open a connection object.
+ * Open a connection.
  *
  * Once this operation has completed, the PN_LOCAL_ACTIVE state flag
  * will be set.
  *
- * @param[in] connection the connection object
+ * @param[in] connection a connection object
  */
 PN_EXTERN void pn_connection_open(pn_connection_t *connection);
 
 /**
- * Close a connection object.
+ * Close a connection.
  *
  * Once this operation has completed, the PN_LOCAL_CLOSED state flag
  * will be set. This may be called without calling
  * ::pn_connection_open, in this case it is equivalent to calling
  * ::pn_connection_open followed by ::pn_connection_close.
  *
- * @param[in] connection the connection object
+ * @param[in] connection a connection object
  */
 PN_EXTERN void pn_connection_close(pn_connection_t *connection);
 
@@ -193,7 +193,7 @@ PN_EXTERN void pn_connection_close(pn_connection_t *connection);
  * Note that this does *not* remove any contained ::pn_session_t,
  * ::pn_link_t, and ::pn_delivery_t objects.
  *
- * @param[in] connection the connection object
+ * @param[in] connection a connection object
  */
 PN_EXTERN void pn_connection_reset(pn_connection_t *connection);
 
