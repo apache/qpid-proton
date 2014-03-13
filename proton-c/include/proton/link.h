@@ -442,6 +442,38 @@ PN_EXTERN int pn_link_drained(pn_link_t *link);
 PN_EXTERN int pn_link_available(pn_link_t *link);
 
 /**
+ * Describes the permitted/expected settlement behaviours of a sending
+ * link.
+ *
+ * The sender settle mode describes the permitted and expected
+ * behaviour of a sending link with respect to settling of deliveries.
+ * See ::pn_delivery_settle for more details.
+ */
+typedef enum {
+  PN_SND_UNSETTLED = 0, /**< The sender will send all deliveries
+                           initially unsettled. */
+  PN_SND_SETTLED = 1, /**< The sender will send all deliveries settled
+                         to the receiver. */
+  PN_SND_MIXED = 2 /**< The sender may send a mixure of settled and
+                      unsettled deliveries. */
+} pn_snd_settle_mode_t;
+
+/**
+ * Describes the permitted/expected settlement behaviours of a
+ * receiving link.
+ *
+ * The receiver settle mode describes the permitted and expected
+ * behaviour of a receiving link with respect to settling of
+ * deliveries. See ::pn_delivery_settle for more details.
+ */
+typedef enum {
+  PN_RCV_FIRST = 0,  /**< The receiver will settle deliveries
+                        regardless of what the sender does. */
+  PN_RCV_SECOND = 1  /**< The receiver will only settle deliveries
+                        after the sender settles. */
+} pn_rcv_settle_mode_t;
+
+/**
  * Get the local sender settle mode for a link.
  *
  * @param[in] link a link object
