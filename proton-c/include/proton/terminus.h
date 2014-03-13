@@ -196,7 +196,7 @@ PN_EXTERN pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *termin
  * Set the expiry policy of a terminus object.
  *
  * @param[in] terminus a terminus object
- * @param[in] expiry the expiry policy for the terminus
+ * @param[in] policy the expiry policy for the terminus
  * @return 0 on success or an error code on failure
  */
 PN_EXTERN int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
