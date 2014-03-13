@@ -26,6 +26,7 @@
 #include <assert.h>
 #include "platform.h"
 #include "selectable.h"
+#include "util.h"
 
 struct pn_selector_t {
   struct pollfd *fds;
@@ -136,9 +137,9 @@ int pn_selector_select(pn_selector_t *selector, int timeout)
   if (timeout) {
     pn_timestamp_t deadline = 0;
     for (size_t i = 0; i < size; i++) {
-      if (selector->deadlines[i] > deadline) {
-        deadline = selector->deadlines[i];
-      }
+      pn_timestamp_t d = selector->deadlines[i];
+      if (d)
+        deadline = (deadline == 0) ? d : pn_min(deadline, d);
     }
 
     if (deadline) {
