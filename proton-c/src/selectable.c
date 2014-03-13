@@ -171,7 +171,7 @@ void pn_selectable_writable(pn_selectable_t *selectable)
 void pn_selectable_expired(pn_selectable_t *selectable)
 {
   assert(selectable);
-  selectable->writable(selectable);
+  selectable->expired(selectable);
 }
 
 bool pn_selectable_is_registered(pn_selectable_t *selectable)
