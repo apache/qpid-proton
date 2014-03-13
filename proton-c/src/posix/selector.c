@@ -24,9 +24,9 @@
 #include <poll.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "platform.h"
-#include "selectable.h"
-#include "util.h"
+#include "../platform.h"
+#include "../selectable.h"
+#include "../util.h"
 
 struct pn_selector_t {
   struct pollfd *fds;

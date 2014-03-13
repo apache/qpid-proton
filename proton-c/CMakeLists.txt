@@ -81,7 +81,7 @@ if(PN_WINAPI)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
   set (pn_io_impl src/posix/io.c)
-  set (pn_selector_impl src/selector.c)
+  set (pn_selector_impl src/posix/selector.c)
   set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
 
