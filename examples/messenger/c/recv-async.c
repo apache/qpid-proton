@@ -49,7 +49,7 @@ void die(const char *file, int line, const char *message)
   exit(1);
 }
 
-void usage()
+void usage(void)
 {
   printf("Usage: recv [options] <addr>\n");
   printf("-c    \tPath to the certificate file.\n");
@@ -59,7 +59,7 @@ void usage()
   exit(0);
 }
 
-void process() {
+void process(void) {
 //printf("                          *** process ***\n");
 
     // Process incoming messages
@@ -91,7 +91,7 @@ printf("err = %d\n", err);
 }
 
 // Callback used by emscripten to ensure pn_messenger_work gets called.
-void work() {
+void work(void) {
 //printf("                          *** work ***\n");
 
     int err = pn_messenger_work(messenger, 0);

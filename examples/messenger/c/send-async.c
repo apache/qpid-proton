@@ -57,7 +57,7 @@ void die(const char *file, int line, const char *message)
   exit(1);
 }
 
-void usage()
+void usage(void)
 {
   printf("Usage: send [-a addr] [message]\n");
   printf("-a     \tThe target address [amqp[s]://domain[/name]]\n");
@@ -65,7 +65,7 @@ void usage()
   exit(0);
 }
 
-void process() {
+void process(void) {
 //printf("                          *** process ***\n");
 
     // Process outgoing messages
@@ -97,7 +97,7 @@ printf("exiting\n");
 
 
 // Callback used by emscripten to ensure pn_messenger_work gets called.
-void work() {
+void work(void) {
 //printf("                          *** work ***\n");
 
     int err = pn_messenger_work(messenger, 0);

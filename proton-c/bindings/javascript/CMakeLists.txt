@@ -67,6 +67,8 @@ set(PN_PATH ${CMAKE_SOURCE_DIR}/proton-c)
 set(pn_driver_ssl_impl ${PN_PATH}/src/ssl/ssl_stub.c)
 
 # emscripten is Linux like so use the posix driver.
+set(pn_io_impl ${PN_PATH}/src/posix/io.c)
+set(pn_selector_impl ${PN_PATH}/src/posix/selector.c)
 set(pn_driver_impl ${PN_PATH}/src/posix/driver.c)
 
 
@@ -108,6 +110,8 @@ message(STATUS "PLATFORM_LIBS: ${PLATFORM_LIBS}") # can be empty for emscripten
 # The main difference is prefixing paths with ${PN_PATH}/ as we can't use a relative path from this CMakeLists.txt.
 
 set(qpid-proton-platform
+  ${pn_io_impl}
+  ${pn_selector_impl}
   ${pn_driver_impl}
   ${PN_PATH}/src/platform.c
   ${pn_driver_ssl_impl}
@@ -131,6 +135,7 @@ set(qpid-proton-core
 
   ${PN_PATH}/src/dispatcher/dispatcher.c
   ${PN_PATH}/src/engine/engine.c
+  ${PN_PATH}/src/engine/event.c
   ${PN_PATH}/src/transport/transport.c
   ${PN_PATH}/src/message/message.c
   ${PN_PATH}/src/sasl/sasl.c
@@ -139,6 +144,7 @@ set(qpid-proton-core
   ${PN_PATH}/src/messenger/subscription.c
   ${PN_PATH}/src/messenger/store.c
   ${PN_PATH}/src/messenger/transform.c
+  ${PN_PATH}/src/selectable.c
 
   ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
@@ -159,6 +165,7 @@ set_source_files_properties(
 
 add_library(
   qpid-proton-js SHARED
+
   ${qpid-proton-core}
   ${qpid-proton-platform}
   )

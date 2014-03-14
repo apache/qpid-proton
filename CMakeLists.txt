@@ -69,6 +69,27 @@ set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration director
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
+## LANGUAGE BINDINGS
+#  If ASK_$LANG is 1 then the language is queried for the directory into which
+#  those language bindings are to be installed. If it is 0 then the bindings
+#  are installed to $CMAKE_INSTALL_PREFIX/bindings/$LANG
+#
+set (BINDINGS_DIR bindings CACHE PATH "Default directory for language bindings")
+set (ASK_PERL 0 CACHE INTEGER "Ask Perl for install directories")
+set (ASK_PHP 0 CACHE INTEGER "Ask PHP for install directories")
+set (ASK_PYTHON 0 CACHE INTEGER "Ask Python for install directories")
+set (ASK_RUBY 0 CACHE INTEGER "Ask Ruby for install directories")
+set (ASK_ALL 0 CACHE INTEGER "If 1 then ask all languages for their directory")
+
+if (ASK_ALL)
+  set (ASK_PERL 1)
+  set (ASK_PHP 1)
+  set (ASK_PYTHON 1)
+  set (ASK_RUBY 1)
+endif (ASK_ALL)
+
+message(STATUS "PYTHON_ARCHLIB_DIR=${PYTHON_ARCHLIB_DIR}")
+
 if (WIN32)
   set (EXAMPLES_INSTALL_DIR proton/examples)
 endif (WIN32)
@@ -84,8 +105,6 @@ set (JNI_SHARED_LIB_INSTALL_DIR ${LIB_INSTALL_DIR} CACHE PATH "Installation dire
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-# Location of proton-api jar created by the build; used by proton-jni and proton-j-impl
-set (PROTON_API_TARGET_JAR ${CMAKE_BINARY_DIR}/proton-j/proton-api/proton-api-${PN_VERSION}.jar)
 set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
       "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
@@ -101,8 +120,7 @@ if (GEN_JAVA)
     include(UseJava)
     include(ProtonUseJava)
 
-    add_subdirectory(proton-j/proton-api)
-    add_subdirectory(proton-j/proton)
+    add_subdirectory(proton-j)
   endif()
 endif()
 
@@ -127,8 +145,7 @@ install (FILES examples/include/pncompat/internal/LICENSE
 # add relevant CTest support
 find_program (MAVEN_EXECUTABLE mvn DOC "Location of the maven program")
 if (JAVA_FOUND AND MAVEN_EXECUTABLE)
-  add_test (proton-jni mvn test -P proton-jni --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
   add_test (proton-java mvn test --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
 else (JAVA_FOUND AND MAVEN_EXECUTABLE)
-  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J and JNI Bindings")
+  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
 endif (JAVA_FOUND AND MAVEN_EXECUTABLE)
