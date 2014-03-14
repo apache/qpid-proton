@@ -76,7 +76,8 @@ PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
  * @{
  */
 
-/** Holds the state flags for an AMQP endpoint.
+/**
+ * Holds the state flags for an AMQP endpoint.
  *
  * A pn_state_t is an integral value with flags that encode both the
  * local and remote state of an AMQP Endpoint (@link pn_connection_t
@@ -99,7 +100,8 @@ PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
  */
 typedef int pn_state_t;
 
-/** An AMQP Connection object.
+/**
+ * An AMQP Connection object.
  *
  * A pn_connection_t object encapsulates all of the endpoint state
  * associated with an AMQP Connection. A pn_connection_t object
@@ -113,7 +115,8 @@ typedef int pn_state_t;
  */
 typedef struct pn_connection_t pn_connection_t;
 
-/** An AMQP Session object.
+/**
+ * An AMQP Session object.
  *
  * A pn_session_t object encapsulates all of the endpoint state
  * associated with an AMQP Session. A pn_session_t object contains
@@ -123,7 +126,8 @@ typedef struct pn_connection_t pn_connection_t;
  */
 typedef struct pn_session_t pn_session_t;
 
-/** An AMQP Link object.
+/**
+ * An AMQP Link object.
  *
  * A pn_link_t object encapsulates all of the endpoint state
  * associated with an AMQP Link. A pn_link_t object contains an
@@ -141,7 +145,8 @@ typedef struct pn_session_t pn_session_t;
  */
 typedef struct pn_link_t pn_link_t;
 
-/** An AMQP Delivery object.
+/**
+ * An AMQP Delivery object.
  *
  * A pn_delivery_t object encapsulates all of the endpoint state
  * associated with an AMQP Delivery. Every delivery exists within the
@@ -151,17 +156,20 @@ typedef struct pn_link_t pn_link_t;
  */
 typedef struct pn_delivery_t pn_delivery_t;
 
-/** An event collector.
+/**
+ * An event collector.
  *
  * A pn_collector_t may be used to register interest in being notified
- * of various high level events that can occur to the various objects
- * representing AMQP endpoint state. See ::pn_connection_collect.
+ * of high level events that can occur to the various objects
+ * representing AMQP endpoint state. See ::pn_event_t for more
+ * details.
  *
  * @ingroup event
  */
 typedef struct pn_collector_t pn_collector_t;
 
-/** An AMQP Transport object.
+/**
+ * An AMQP Transport object.
  *
  * A pn_transport_t encapsulates the transport related state of all
  * AMQP endpoint objects associated with a physical network connection

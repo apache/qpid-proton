@@ -96,11 +96,11 @@ typedef struct pn_disposition_t pn_disposition_t;
  *
  * Defined values are:
  *
- *  - PN_RECEIVED
- *  - PN_ACCEPTED
- *  - PN_REJECTED
- *  - PN_RELEASED
- *  - PN_MODIFIED
+ *  - ::PN_RECEIVED
+ *  - ::PN_ACCEPTED
+ *  - ::PN_REJECTED
+ *  - ::PN_RELEASED
+ *  - ::PN_MODIFIED
  *
  * @param[in] disposition a disposition object
  * @return the type of the disposition
