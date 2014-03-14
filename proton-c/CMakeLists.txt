@@ -44,8 +44,6 @@ endif()
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 
-find_package (PythonInterp REQUIRED)
-
 set(ssl_impl, none)
 if (OPENSSL_FOUND)
   set(ssl_impl openssl)
@@ -64,24 +62,20 @@ include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/../examples/include")
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
   )
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
 # Select driver
 if(PN_WINAPI)
-  set (pn_io_impl src/windows/io.c)
-  set (pn_selector_impl src/windows/selector.c)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
-  set (pn_io_impl src/posix/io.c)
-  set (pn_selector_impl src/posix/selector.c)
   set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
 
@@ -193,9 +187,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
-  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors -Wno-comment")
   if (NOT BUILD_WITH_CXX)
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes")
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
     set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 
@@ -227,14 +220,25 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
+# Build the JavaScript language binding.
+# This is somewhat different to the other language bindings in that it does not use swig. It uses a C/C++ to
+# JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
+# and compiles it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can be
+# aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
+option("BUILD_JAVASCRIPT" "Build JavaScript language binding" ON)
+if (BUILD_JAVASCRIPT)
+  find_package(Emscripten)
+  if (EMSCRIPTEN_FOUND)
+    add_subdirectory(bindings/javascript)
+  endif (EMSCRIPTEN_FOUND)
+endif (BUILD_JAVASCRIPT)
+
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../examples/messenger/c examples/messenger/c)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 set (qpid-proton-platform
-  ${pn_io_impl}
-  ${pn_selector_impl}
   ${pn_driver_impl}
   src/platform.c
   ${pn_driver_ssl_impl}
@@ -258,7 +262,6 @@ set (qpid-proton-core
 
   src/dispatcher/dispatcher.c
   src/engine/engine.c
-  src/engine/event.c
   src/transport/transport.c
   src/message/message.c
   src/sasl/sasl.c
@@ -267,7 +270,6 @@ set (qpid-proton-core
   src/messenger/subscription.c
   src/messenger/store.c
   src/messenger/transform.c
-  src/selectable.c
 
   ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
@@ -430,13 +432,11 @@ set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
 
 find_program(VALGRIND valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-if (ENABLE_VALGRIND)
-  if (VALGRIND STREQUAL VALGRIND-NOTFOUND)
-    message(STATUS "Can't locate the valgrind command; no run-time error detection")
-  else (VALGRIND STREQUAL VALGRIND-NOTFOUND)
-    set (VALGRIND_ENV "VALGRIND=${VALGRIND}")
-  endif (VALGRIND STREQUAL VALGRIND-NOTFOUND)
-endif (ENABLE_VALGRIND)
+if (ENABLE_VALGRIND AND NOT VALGRIND)
+  message(STATUS "Can't locate the valgrind command; no run-time error detection")
+else (ENABLE_VALGRIND AND NOT VALGRIND)
+  set (VALGRIND_ENV "VALGRIND=1")
+endif (ENABLE_VALGRIND AND NOT VALGRIND)
 
 # c tests:
 
@@ -454,7 +454,7 @@ set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bl
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
+add_test (python-test python ${env_py}
          "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
          ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
@@ -470,7 +470,7 @@ if (ruby_exe)
   set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
 
   # ruby unit tests:  tests/ruby/proton-test
-  add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+  add_test (ruby-unit-test python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
     "${rb_root}/proton-test")
 
   # ruby spec tests
@@ -478,7 +478,7 @@ if (ruby_exe)
   if (rspec_exe)
     add_test (NAME ruby-spec-test
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-              COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+              COMMAND python ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
                       ${rspec_exe})
 
   else(rspec_exe)

@@ -110,3 +110,23 @@ class TransportTest(Test):
       n = self.transport.input(out)
       assert n == len(out), (n, out)
     assert c.session_head(0) != None
+
+  def testCloseHead(self):
+    n = self.transport.pending()
+    assert n > 0, n
+    try:
+      self.transport.close_head()
+    except TransportException, e:
+      assert "aborted" in str(e), str(e)
+    n = self.transport.pending()
+    assert n < 0, n
+
+  def testCloseTail(self):
+    n = self.transport.capacity()
+    assert n > 0, n
+    try:
+      self.transport.close_tail()
+    except TransportException, e:
+      assert "aborted" in str(e), str(e)
+    n = self.transport.capacity()
+    assert n < 0, n

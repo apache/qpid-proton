@@ -24,15 +24,20 @@
   <artifactId>proton-tests</artifactId>
   <name>proton-tests</name>
 
+  <parent>
+    <groupId>org.apache.qpid</groupId>
+    <artifactId>proton-project</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+
   <description>The Proton system tests execute against either the Java or the C implementations,
 based on the chosen profile.
 
-To execute, run either &quot;mvn test&quot; or &quot;mvn test -P proton-jni&quot;.
+To execute, &quot;mvn test&quot;.
 
 Example of advanced usage (all of the -D flags are optional):
 
 mvn test \
--P proton-jni \
 -Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*' \
 -Dproton.pythontest.invocations=20 \
 -Dproton.pythontest.always_colorize=true \
@@ -40,6 +45,10 @@ mvn test \
 
 By default, the proton-jni profile looks for the JNI jar and native libraries under
 directory &lt;basedir&gt;/build/proton-c.</description>
+
+  <scm>
+    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
+  </scm>
 
   <properties>
     <testReportOutputDirectory>${basedir}/target/surefire-reports</testReportOutputDirectory>
@@ -59,6 +68,7 @@ directory &lt;basedir&gt;/build/proton-c.</description>
           <systemPropertyVariables>
             <protonJythonIgnoreFile>${basedir}/java/pythonTests.ignore</protonJythonIgnoreFile>
             <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
+            <protonJythonBinding>${basedir}/../proton-c/bindings/python</protonJythonBinding>
             <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
             <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>
             <java.util.logging.config.file>${project.build.outputDirectory}/logging.properties</java.util.logging.config.file>
@@ -71,15 +81,14 @@ directory &lt;basedir&gt;/build/proton-c.</description>
 
   <dependencies>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit-version}</version>
-      <scope>test</scope>
+      <groupId>org.apache.qpid</groupId>
+      <artifactId>proton-j</artifactId>
+      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>proton-api</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.47</version>
     </dependency>
     <dependency>
         <groupId>org.python</groupId>
@@ -87,87 +96,5 @@ directory &lt;basedir&gt;/build/proton-c.</description>
         <version>2.5.3</version>
       <scope>test</scope>
     </dependency>
-
-    <dependency>
-      <!-- proton-j-impl is even required for profile proton-jni so we can use EncoderImpl and DecoderImpl to
-           generate test data, hence this dependency appearing here and not just in the proton-j profile -->
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>proton-j-impl</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <!-- Depend on test helper classes contained with test-jar from proton-j-impl -->
-      <groupId>org.apache.qpid</groupId>
-      <artifactId>proton-j-impl</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>test</scope>
-      <type>test-jar</type>
-    </dependency>
   </dependencies>
-
-  <profiles>
-    <profile>
-      <id>proton-j</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <systemPropertyVariables>
-                <qpid.proton.implementationtype>PROTON_J</qpid.proton.implementationtype>
-              </systemPropertyVariables>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>proton-jni</id>
-      <properties>
-        <!-- Uses the JNI jar and the native libraries, neither of which are built by Maven,
-             therefore their location needs to be set explicitly in the following properties. -->
-        <proton-c-build-dir>${basedir}/../build/proton-c</proton-c-build-dir>
-        <jni-native-path>${proton-c-build-dir}:${proton-c-build-dir}/bindings/java</jni-native-path>
-        <jni-jar>${proton-c-build-dir}/bindings/java/proton-jni.jar</jni-jar>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <forkMode>once</forkMode>
-              <argLine>-Djava.library.path=${jni-native-path}</argLine>
-              <systemPropertyVariables>
-                <qpid.proton.implementationtype>PROTON_C</qpid.proton.implementationtype>
-              </systemPropertyVariables>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.qpid</groupId>
-          <artifactId>proton-jni</artifactId>
-          <version>${project.parent.version}</version>
-          <scope>system</scope>
-          <systemPath>${jni-jar}</systemPath>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
-
-  <parent>
-    <groupId>org.apache.qpid</groupId>
-    <artifactId>proton-project</artifactId>
-    <version>1.0-SNAPSHOT</version>
-  </parent>
-  <scm>
-    <url>http://svn.apache.org/viewvc/qpid/proton/</url>
-  </scm>
 </project>

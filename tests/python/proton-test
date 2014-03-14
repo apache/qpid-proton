@@ -671,13 +671,17 @@ def runthrough():
 
 limit = opts.count
 count = 0
+failures = False
 while limit == 0 or count < limit:
   count += 1
   if runthrough():
+    failures = True
     if count > 1:
       print " -- (failures after %s runthroughs)" % count
-    sys.exit(1)
   else:
     continue
 
-sys.exit(0)
+if failures:
+  sys.exit(1)
+else:
+  sys.exit(0)

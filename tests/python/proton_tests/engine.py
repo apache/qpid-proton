@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,10 +17,14 @@
 # under the License.
 #
 
-import os, common
+import os, common, gc
 from time import time, sleep
 from proton import *
 from common import pump
+
+# older versions of gc do not provide the garbage list
+if not hasattr(gc, "garbage"):
+  gc.garbage=[]
 
 # future test areas
 #  + different permutations of setup
@@ -84,7 +88,11 @@ class Test(common.Test):
     return snd, rcv
 
   def cleanup(self):
-    pass
+    # release resources created by this class
+    for w in self._wires:
+        w[0]._transport = None
+        w[2]._transport = None
+    self._wires = []
 
   def pump(self, buffer_size=OUTPUT_SIZE):
     for c1, t1, c2, t2 in self._wires:
@@ -93,10 +101,19 @@ class Test(common.Test):
 class ConnectionTest(Test):
 
   def setup(self):
+    gc.enable()
     self.c1, self.c2 = self.connection()
+
+  def cleanup(self):
+    # release resources created by this class
+    super(ConnectionTest, self).cleanup()
+    self.c1 = None
+    self.c2 = None
 
   def teardown(self):
     self.cleanup()
+    gc.collect()
+    assert not gc.garbage
 
   def test_open_close(self):
     assert self.c1.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
@@ -197,16 +214,49 @@ class ConnectionTest(Test):
     assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
     assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
 
+  def test_channel_max(self, value=1234):
+    self.c1._transport.channel_max = value
+    self.c1.open()
+    self.pump()
+    assert self.c2._transport.remote_channel_max == value, (self.c2._transport.remote_channel_max, value)
+
+  def test_cleanup(self):
+    self.c1.open()
+    self.c2.open()
+    self.pump()
+    assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    t1 = self.c1._transport
+    t2 = self.c2._transport
+    c2 = self.c2
+    self.c1.close()
+    # release all references to C1, except that held by the transport
+    self.cleanup()
+    gc.collect()
+    # transport should flush last state from C1:
+    pump(t1, t2)
+    assert c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
 class SessionTest(Test):
 
   def setup(self):
+    gc.enable()
     self.c1, self.c2 = self.connection()
     self.ssn = self.c1.session()
     self.c1.open()
     self.c2.open()
 
+  def cleanup(self):
+    # release resources created by this class
+    super(SessionTest, self).cleanup()
+    self.c1 = None
+    self.c2 = None
+    self.ssn = None
+
   def teardown(self):
     self.cleanup()
+    gc.collect()
+    assert not gc.garbage
 
   def test_open_close(self):
     assert self.ssn.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
@@ -308,13 +358,38 @@ class SessionTest(Test):
     rcond = ssn.remote_condition
     assert rcond == cond, (rcond, cond)
 
+  def test_cleanup(self):
+    snd, rcv = self.link("test-link")
+    snd.open()
+    rcv.open()
+    self.pump()
+    snd_ssn = snd.session
+    rcv_ssn = rcv.session
+    assert rcv_ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    self.ssn = None
+    snd_ssn.close()
+    snd_ssn.free()
+    del snd_ssn
+    gc.collect()
+    self.pump()
+    assert rcv_ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
 class LinkTest(Test):
 
   def setup(self):
+    gc.enable()
     self.snd, self.rcv = self.link("test-link")
+
+  def cleanup(self):
+    # release resources created by this class
+    super(LinkTest, self).cleanup()
+    self.snd = None
+    self.rcv = None
 
   def teardown(self):
     self.cleanup()
+    gc.collect()
+    assert not gc.garbage
 
   def test_open_close(self):
     assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
@@ -529,6 +604,18 @@ class LinkTest(Test):
     assert self.snd.remote_rcv_settle_mode == Link.RCV_SECOND
     assert self.rcv.remote_snd_settle_mode == Link.SND_UNSETTLED
 
+  def test_cleanup(self):
+    snd, rcv = self.link("test-link")
+    snd.open()
+    rcv.open()
+    self.pump()
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    snd.close()
+    snd.free()
+    del snd
+    gc.collect()
+    self.pump()
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
 class TerminusConfig:
 
@@ -555,7 +642,7 @@ class TerminusConfig:
       for c in self.capabilities:
         terminus.capabilities.put_symbol(c)
     if self.filter is not None:
-      terminus.filter.put_list()
+      terminus.filter.put_map()
       terminus.filter.enter()
       for (t, v) in self.filter:
         setter = getattr(terminus.filter, "put_%s" % t)
@@ -568,6 +655,7 @@ class TerminusConfig:
 class TransferTest(Test):
 
   def setup(self):
+    gc.enable()
     self.snd, self.rcv = self.link("test-link")
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
@@ -575,8 +663,18 @@ class TransferTest(Test):
     self.rcv.open()
     self.pump()
 
+  def cleanup(self):
+    # release resources created by this class
+    super(TransferTest, self).cleanup()
+    self.c1 = None
+    self.c2 = None
+    self.snd = None
+    self.rcv = None
+
   def teardown(self):
     self.cleanup()
+    gc.collect()
+    assert not gc.garbage
 
   def test_work_queue(self):
     assert self.c1.work_head is None
@@ -615,7 +713,7 @@ class TransferTest(Test):
     assert d.readable
 
     bytes = self.rcv.recv(1024)
-    assert bytes == msg
+    assert bytes == msg, (bytes, msg)
 
     bytes = self.rcv.recv(1024)
     assert bytes == ""
@@ -661,11 +759,11 @@ class TransferTest(Test):
     assert sd.updated
 
     sd.update(Delivery.ACCEPTED)
-    sd.settle()
 
     self.pump()
 
     assert sd.local_state == rd.remote_state == Delivery.ACCEPTED
+    sd.settle()
 
   def test_delivery_id_ordering(self):
     self.rcv.flow(1024)
@@ -704,10 +802,11 @@ class TransferTest(Test):
     #handle all disposition changes to sent messages
     d = self.c1.work_head
     while d:
+      next_d = d.work_next
       if d.updated:
         d.update(Delivery.ACCEPTED)
         d.settle()
-      d = d.work_next
+      d = next_d
 
     #submit some more deliveries
     for m in range(1450, 1500):
@@ -731,11 +830,46 @@ class TransferTest(Test):
       rd.update(Delivery.ACCEPTED)
       rd.settle()
 
+  def test_cleanup(self):
+    self.rcv.flow(10)
+    self.pump()
+
+    for x in range(10):
+        self.snd.delivery("tag%d" % x)
+        msg = "this is a test"
+        n = self.snd.send(msg)
+        assert n == len(msg)
+        assert self.snd.advance()
+    self.snd.close()
+    self.snd.free()
+    self.snd = None
+    gc.collect()
+
+    self.pump()
+
+    for x in range(10):
+        rd = self.rcv.current
+        assert rd is not None
+        assert rd.tag == "tag%d" % x
+        rmsg = self.rcv.recv(1024)
+        assert self.rcv.advance()
+        assert rmsg == msg
+        # close of snd should've settled:
+        assert rd.settled
+        rd.settle()
 
 class MaxFrameTransferTest(Test):
 
   def setup(self):
     pass
+
+  def cleanup(self):
+    # release resources created by this class
+    super(MaxFrameTransferTest, self).cleanup()
+    self.c1 = None
+    self.c2 = None
+    self.snd = None
+    self.rcv = None
 
   def teardown(self):
     self.cleanup()
@@ -854,6 +988,14 @@ class IdleTimeoutTest(Test):
   def setup(self):
     pass
 
+  def cleanup(self):
+    # release resources created by this class
+    super(IdleTimeoutTest, self).cleanup()
+    self.snd = None
+    self.rcv = None
+    self.c1 = None
+    self.c2 = None
+
   def teardown(self):
     self.cleanup()
 
@@ -874,10 +1016,11 @@ class IdleTimeoutTest(Test):
     self.snd.open()
     self.rcv.open()
     self.pump()
+    # proton advertises 1/2 the configured timeout to the peer:
     assert self.rcv.session.connection._transport.idle_timeout == 2.0
-    assert self.rcv.session.connection._transport.remote_idle_timeout == 1.0
+    assert self.rcv.session.connection._transport.remote_idle_timeout == 0.5
     assert self.snd.session.connection._transport.idle_timeout == 1.0
-    assert self.snd.session.connection._transport.remote_idle_timeout == 2.0
+    assert self.snd.session.connection._transport.remote_idle_timeout == 1.0
 
   def testTimeout(self):
     """
@@ -895,7 +1038,8 @@ class IdleTimeoutTest(Test):
     t_snd = self.snd.session.connection._transport
     t_rcv = self.rcv.session.connection._transport
     assert t_rcv.idle_timeout == 0.0
-    assert t_rcv.remote_idle_timeout == 1.0
+    # proton advertises 1/2 the timeout (see spec)
+    assert t_rcv.remote_idle_timeout == 0.5
     assert t_snd.idle_timeout == 1.0
     assert t_snd.remote_idle_timeout == 0.0
 
@@ -905,21 +1049,21 @@ class IdleTimeoutTest(Test):
     # at t+1msec, nothing should happen:
     clock = 0.001
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # at one tick from expected idle frame send, nothing should happen:
-    clock = 0.500
+    clock = 0.250
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 0.501,  "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # this should cause rcvr to expire and send a keepalive
-    clock = 0.502
+    clock = 0.251
     assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
+    assert t_rcv.tick(clock) == 0.501, "deadline to send keepalive"
     self.pump()
     sndr_frames_in += 1
     rcvr_frames_out += 1
@@ -928,14 +1072,14 @@ class IdleTimeoutTest(Test):
 
     # since a keepalive was received, sndr will rebase its clock against this tick:
     # and the receiver should not change its deadline
-    clock = 0.503
-    assert t_snd.tick(clock) == 1.503, "deadline for remote timeout"
-    assert t_rcv.tick(clock) == 1.002, "deadline to send keepalive"
+    clock = 0.498
+    assert t_snd.tick(clock) == 1.498, "deadline for remote timeout"
+    assert t_rcv.tick(clock) == 0.501, "deadline to send keepalive"
     self.pump()
     assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
     # now expire sndr
-    clock = 1.504
+    clock = 1.499
     t_snd.tick(clock)
     try:
       self.pump()
@@ -952,6 +1096,15 @@ class CreditTest(Test):
     self.snd.open()
     self.rcv.open()
     self.pump()
+
+  def cleanup(self):
+    # release resources created by this class
+    super(CreditTest, self).cleanup()
+    self.c1 = None
+    self.snd = None
+    self.c2 = None
+    self.rcv2 = None
+    self.snd2 = None
 
   def teardown(self):
     self.cleanup()
@@ -1467,6 +1620,15 @@ class SettlementTest(Test):
     self.rcv.open()
     self.pump()
 
+  def cleanup(self):
+    # release resources created by this class
+    super(SettlementTest, self).cleanup()
+    self.c1 = None
+    self.snd = None
+    self.c2 = None
+    self.rcv2 = None
+    self.snd2 = None
+
   def teardown(self):
     self.cleanup()
 
@@ -1578,6 +1740,12 @@ class PipelineTest(Test):
   def setup(self):
     self.c1, self.c2 = self.connection()
 
+  def cleanup(self):
+    # release resources created by this class
+    super(PipelineTest, self).cleanup()
+    self.c1 = None
+    self.c2 = None
+
   def teardown(self):
     self.cleanup()
 
@@ -1634,11 +1802,16 @@ class PipelineTest(Test):
 
     assert rcv.queued == 0, rcv.queued
 
+import sys
+from common import Skipped
+
 class ServerTest(Test):
 
   def testKeepalive(self):
     """ Verify that idle frames are sent to keep a Connection alive
     """
+    if "java" in sys.platform:
+      raise Skipped()
     idle_timeout_secs = self.delay
     self.server = common.TestServerDrain()
     self.server.start()
@@ -1684,6 +1857,8 @@ class ServerTest(Test):
     """ Verify that a Connection is terminated properly when Idle frames do not
     arrive in a timely manner.
     """
+    if "java" in sys.platform:
+      raise Skipped()
     idle_timeout_secs = self.delay
     self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
     self.server.start()
@@ -1893,3 +2068,96 @@ class DeliveryTest(Test):
 
   def testCustom(self):
     self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
+
+class EventTest(Test):
+
+  def teardown(self):
+    self.cleanup()
+
+  def list(self, collector):
+    result = []
+    while True:
+      e = collector.peek()
+      if e:
+        result.append(e)
+        collector.pop()
+      else:
+        break
+    return result
+
+  def expect(self, collector, *types):
+    events = self.list(collector)
+    assert types == tuple([e.type for e in events]), (types, events)
+    if len(events) == 1:
+      return events[0]
+    elif len(events) > 1:
+      return events
+
+  def testEndpointEvents(self):
+    c1, c2 = self.connection()
+    coll = Collector()
+    c1.collect(coll)
+    self.expect(coll)
+    self.pump()
+    self.expect(coll)
+    c2.open()
+    self.pump()
+    self.expect(coll, Event.CONNECTION_STATE)
+    self.pump()
+    self.expect(coll)
+
+    ssn = c2.session()
+    snd = ssn.sender("sender")
+    ssn.open()
+    snd.open()
+
+    self.expect(coll)
+    self.pump()
+    self.expect(coll, Event.SESSION_STATE, Event.LINK_STATE)
+
+  def testFlowEvents(self):
+    snd, rcv = self.link("test-link")
+    coll = Collector()
+    snd.session.connection.collect(coll)
+    rcv.open()
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.LINK_STATE, Event.LINK_FLOW)
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.LINK_FLOW)
+    return snd, rcv, coll
+
+  def testDeliveryEvents(self):
+    snd, rcv = self.link("test-link")
+    coll = Collector()
+    rcv.session.connection.collect(coll)
+    rcv.open()
+    rcv.flow(10)
+    self.pump()
+    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT)
+    snd.delivery("delivery")
+    snd.send("Hello World!")
+    snd.advance()
+    self.pump()
+    self.expect(coll)
+    snd.open()
+    self.pump()
+    self.expect(coll, Event.LINK_STATE, Event.DELIVERY)
+
+  def testDeliveryEventsDisp(self):
+    snd, rcv, coll = self.testFlowEvents()
+    snd.open()
+    dlv = snd.delivery("delivery")
+    snd.send("Hello World!")
+    assert snd.advance()
+    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT)
+    self.pump()
+    self.expect(coll)
+    rdlv = rcv.current
+    assert rdlv != None
+    assert rdlv.tag == "delivery"
+    rdlv.update(Delivery.ACCEPTED)
+    self.pump()
+    event = self.expect(coll, Event.DELIVERY)
+    assert event.delivery == dlv

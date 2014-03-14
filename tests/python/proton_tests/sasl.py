@@ -111,18 +111,19 @@ class SaslTest(Test):
     self.s2.send(challenge)
     self.pump()
     ch = self.s1.recv()
-    assert ch == challenge, ch
+    assert ch == challenge, (ch, challenge)
 
     response = "It is I, Secundus!"
     self.s1.send(response)
     self.pump()
     re = self.s2.recv()
-    assert re == response, re
+    assert re == response, (re, response)
 
   def testInitialResponse(self):
     self.s1.plain("secundus", "trustno1")
     self.pump()
-    assert self.s2.recv() == "\x00secundus\x00trustno1"
+    re = self.s2.recv()
+    assert re == "\x00secundus\x00trustno1", repr(re)
 
   def testPipelined2(self):
     self.s1.mechanisms("ANONYMOUS")
