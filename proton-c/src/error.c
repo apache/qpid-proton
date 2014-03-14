@@ -22,6 +22,7 @@
 #include <proton/error.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "util.h"
 #include "platform.h"
 
@@ -60,6 +61,7 @@ void pn_error_clear(pn_error_t *error)
 
 int pn_error_set(pn_error_t *error, int code, const char *text)
 {
+  assert(error);
   pn_error_clear(error);
   if (code) {
     error->code = code;
@@ -70,6 +72,7 @@ int pn_error_set(pn_error_t *error, int code, const char *text)
 
 int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
 {
+  assert(error);
   char text[1024];
   int n = vsnprintf(text, 1024, fmt, ap);
   if (n >= 1024) {
@@ -80,6 +83,7 @@ int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
 
 int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
 {
+  assert(error);
   va_list ap;
   va_start(ap, fmt);
   int rcode = pn_error_vformat(error, code, fmt, ap);
@@ -89,12 +93,25 @@ int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
 
 int pn_error_code(pn_error_t *error)
 {
-  return error ? error->code : PN_ARG_ERR;
+  assert(error);
+  return error->code;
 }
 
 const char *pn_error_text(pn_error_t *error)
 {
-  return error ? error->text : NULL;
+  assert(error);
+  return error->text;
+}
+
+int pn_error_copy(pn_error_t *error, pn_error_t *src)
+{
+  assert(error);
+  if (src) {
+    return pn_error_set(error, pn_error_code(src), pn_error_text(src));
+  } else {
+    pn_error_clear(error);
+    return 0;
+  }
 }
 
 const char *pn_code(int code)

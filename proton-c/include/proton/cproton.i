@@ -587,7 +587,15 @@ typedef long long int int64_t;
   delivery != NULL;
 }
 
-%include "proton/engine.h"
+%include "proton/condition.h"
+%include "proton/connection.h"
+%include "proton/session.h"
+%include "proton/link.h"
+%include "proton/terminus.h"
+%include "proton/delivery.h"
+%include "proton/disposition.h"
+%include "proton/transport.h"
+%include "proton/event.h"
 
 %contract pn_message_free(pn_message_t *msg)
 {
@@ -1105,6 +1113,12 @@ typedef long long int int64_t;
   listener != NULL;
 }
 
+%contract pn_listener_set_context(pn_listener_t *listener, void *context)
+{
+ require:
+  listener != NULL;
+}
+
 %contract pn_listener_close(pn_listener_t *listener)
 {
  require:
@@ -1173,7 +1187,6 @@ typedef long long int int64_t;
 {
  require:
   ctor != NULL;
-  connection != NULL;
 }
 
 %contract pn_connector_context(pn_connector_t *connector)
@@ -1316,6 +1329,10 @@ typedef long long int int64_t;
 
 
 %include "proton/messenger.h"
+
+%include "proton/io.h"
+
+%include "proton/selectable.h"
 
 %include "proton/ssl.h"
 

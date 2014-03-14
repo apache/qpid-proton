@@ -164,4 +164,6 @@ use constant {
     UNKNOWN => undef,
 };
 
+package qpid::proton::Constants;
+
 1;

@@ -66,9 +66,9 @@ void pn_decref(void *object)
 {
   if (object) {
     pni_head_t *head = pni_head(object);
-    if (head->refcount > 1) {
-      head->refcount--;
-    } else if (head->refcount == 1) {
+    assert(head->refcount > 0);
+    head->refcount--;
+    if (!head->refcount) {
       pn_finalize(object);
       free(head);
     }
@@ -79,7 +79,7 @@ void pn_finalize(void *object)
 {
   if (object) {
     pni_head_t *head = pni_head(object);
-    assert(head->refcount == 1);
+    assert(head->refcount == 0);
     if (head->clazz && head->clazz->finalize) {
       head->clazz->finalize(object);
     }
@@ -254,11 +254,39 @@ void pn_list_del(pn_list_t *list, int index, int n)
   list->size -= n;
 }
 
+void pn_list_clear(pn_list_t *list)
+{
+  assert(list);
+  pn_list_del(list, 0, list->size);
+}
+
 void pn_list_fill(pn_list_t *list, void *value, int n)
 {
   for (int i = 0; i < n; i++) {
     pn_list_add(list, value);
   }
+}
+
+typedef struct {
+  pn_list_t *list;
+  size_t index;
+} pni_list_iter_t;
+
+static void *pni_list_next(void *ctx)
+{
+  pni_list_iter_t *iter = (pni_list_iter_t *) ctx;
+  if (iter->index < pn_list_size(iter->list)) {
+    return pn_list_get(iter->list, iter->index++);
+  } else {
+    return NULL;
+  }
+}
+
+void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter)
+{
+  pni_list_iter_t *liter = (pni_list_iter_t *) pn_iterator_start(iter, pni_list_next, sizeof(pni_list_iter_t));
+  liter->list = list;
+  liter->index = 0;
 }
 
 static void pn_list_finalize(void *object)
@@ -761,11 +789,10 @@ pn_string_t *pn_string(const char *bytes)
 
 #define pn_string_initialize NULL
 
-static pn_class_t clazz = PN_CLASS(pn_string);
 
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
-
+  static pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_new(sizeof(pn_string_t), &clazz);
   string->capacity = n ? n * sizeof(char) : 16;
   string->bytes = (char *) malloc(string->capacity);
@@ -926,4 +953,57 @@ int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
   assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
+}
+
+struct pn_iterator_t {
+  pn_iterator_next_t next;
+  size_t size;
+  void *state;
+};
+
+static void pn_iterator_initialize(void *object)
+{
+  pn_iterator_t *it = (pn_iterator_t *) object;
+  it->next = NULL;
+  it->size = 0;
+  it->state = NULL;
+}
+
+static void pn_iterator_finalize(void *object)
+{
+  pn_iterator_t *it = (pn_iterator_t *) object;
+  free(it->state);
+}
+
+#define pn_iterator_hashcode NULL
+#define pn_iterator_compare NULL
+#define pn_iterator_inspect NULL
+
+pn_iterator_t *pn_iterator()
+{
+  static pn_class_t clazz = PN_CLASS(pn_iterator);
+  pn_iterator_t *it = (pn_iterator_t *) pn_new(sizeof(pn_iterator_t), &clazz);
+  return it;
+}
+
+void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t next,
+                         size_t size) {
+  assert(iterator);
+  assert(next);
+  iterator->next = next;
+  if (iterator->size < size) {
+    iterator->state = realloc(iterator->state, size);
+  }
+  return iterator->state;
+}
+
+void *pn_iterator_next(pn_iterator_t *iterator) {
+  assert(iterator);
+  if (iterator->next) {
+    void *result = iterator->next(iterator->state);
+    if (!result) iterator->next = NULL;
+    return result;
+  } else {
+    return NULL;
+  }
 }

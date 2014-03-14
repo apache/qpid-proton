@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -31,6 +31,7 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
+import weakref
 try:
   import uuid
 except ImportError:
@@ -241,13 +242,15 @@ class Messenger(object):
   def __init__(self, name=None):
     """
     Construct a new L{Messenger} with the given name. The name has
-    global scope. If a NULL name is supplied, a L{uuid.UUID} based
-    name will be chosen.
+    global scope. If a NULL name is supplied, a UUID based name will
+    be chosen.
 
     @type name: string
     @param name: the name of the messenger or None
+
     """
     self._mng = pn_messenger(name)
+    self._selectables = {}
 
   def __del__(self):
     """
@@ -366,6 +369,20 @@ exception of L{work}.  Currently, the affected calls are
 L{send}, L{recv}, and L{stop}.
 """)
 
+  def _is_passive(self):
+    return pn_messenger_is_passive(self._mng)
+
+  def _set_passive(self, b):
+    self._check(pn_messenger_set_passive(self._mng, b))
+
+  passive = property(_is_passive, _set_passive,
+                      doc="""
+When passive is set to true, Messenger will not attempt to perform I/O
+internally. In this mode it is necessary to use the selectables API to
+drive any I/O needed to perform requested actions. In this mode
+Messenger will never block.
+""")
+
   def _get_incoming_window(self):
     return pn_messenger_get_incoming_window(self._mng)
 
@@ -446,7 +463,7 @@ first message.
     """
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
-      self._check(PN_ERR)
+      self._check(pn_error_code(pn_messenger_error(self._mng)))
     return Subscription(sub_impl)
 
   def put(self, message):
@@ -495,7 +512,7 @@ first message.
     @type tracker: tracker
     @param tracker: the tracker whose status is to be retrieved
 
-    @return true if delivery is still buffered
+    @return: true if delivery is still buffered
     """
     return pn_messenger_buffered(self._mng, tracker);
 
@@ -721,6 +738,26 @@ first message.
     before they are transmitted.
     """
     self._check(pn_messenger_rewrite(self._mng, pattern, address))
+
+  def selectable(self):
+    impl = pn_messenger_selectable(self._mng)
+    if impl:
+      fd = pn_selectable_fd(impl)
+      sel = self._selectables.get(fd, None)
+      if sel is None:
+        sel = Selectable(self, impl)
+        self._selectables[fd] = sel
+      return sel
+    else:
+      return None
+
+  @property
+  def deadline(self):
+    tstamp = pn_messenger_deadline(self._mng)
+    if tstamp:
+      return float(tstamp)/1000
+    else:
+      return None
 
 class Message(object):
   """
@@ -1098,6 +1135,75 @@ class Subscription(object):
   @property
   def address(self):
     return pn_subscription_address(self._impl)
+
+class Selectable(object):
+
+  def __init__(self, messenger, impl):
+    self.messenger = messenger
+    self._impl = impl
+
+  def fileno(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_fd(self._impl)
+
+  @property
+  def capacity(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_capacity(self._impl)
+
+  @property
+  def pending(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_pending(self._impl)
+
+  @property
+  def deadline(self):
+    if not self._impl: raise ValueError("selectable freed")
+    tstamp = pn_selectable_deadline(self._impl)
+    if tstamp:
+      return float(tstamp)/1000
+    else:
+      return None
+
+  def readable(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_readable(self._impl)
+
+  def writable(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_writable(self._impl)
+
+  def expired(self):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_expired(self._impl)
+
+  def _is_registered(self):
+    if not self._impl: raise ValueError("selectable freed")
+    return pn_selectable_is_registered(self._impl)
+
+  def _set_registered(self, registered):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_set_registered(self._impl, registered)
+
+  registered = property(_is_registered, _set_registered,
+                    doc="""
+The registered property may be get/set by an I/O polling system to
+indicate whether the fd has been registered or not.
+""")
+
+  @property
+  def is_terminal(self):
+    if not self._impl: return True
+    return pn_selectable_is_terminal(self._impl)
+
+  def free(self):
+    if self._impl:
+      del self.messenger._selectables[self.fileno()]
+      pn_selectable_free(self._impl)
+      self._impl = None
+
+  def __del__(self):
+    self.free()
 
 class DataException(ProtonException):
   """
@@ -2122,14 +2228,19 @@ def obj2dat(obj, dimpl):
     d = Data(dimpl)
     d.put_object(obj)
 
-def wrap_connection(conn):
-  if not conn: return None
-  ctx = pn_connection_get_context(conn)
-  if ctx: return ctx
-  wrapper = Connection(_conn=conn)
-  return wrapper
-
 class Connection(Endpoint):
+
+  @staticmethod
+  def _wrap_connection(c_conn):
+    """Maintain only a single instance of this class for each Connection
+    object that exists in the the C Engine.  This is done by storing a (weak)
+    reference to the python instance in the context field of the C object.
+    """
+    if not c_conn: return None
+    py_conn = pn_connection_get_context(c_conn)
+    if py_conn: return py_conn
+    wrapper = Connection(_conn=c_conn)
+    return wrapper
 
   def __init__(self, _conn=None):
     Endpoint.__init__(self)
@@ -2137,15 +2248,21 @@ class Connection(Endpoint):
       self._conn = _conn
     else:
       self._conn = pn_connection()
-      pn_connection_set_context(self._conn, self)
+    pn_connection_set_context(self._conn, self)
     self.offered_capabilities = None
     self.desired_capabilities = None
     self.properties = None
+    self._sessions = set()
 
   def __del__(self):
-    if hasattr(self, "_conn"):
+    if hasattr(self, "_conn") and self._conn:
+      # pn_connection_free will release all child sessions in the C Engine, so
+      # free all child python Sessions to avoid dangling references
+      if hasattr(self, "_sessions") and self._sessions:
+        for s in self._sessions:
+          s._release()
+      pn_connection_set_context(self._conn, None)
       pn_connection_free(self._conn)
-      del self._conn
 
   def _check(self, err):
     if err < 0:
@@ -2159,6 +2276,15 @@ class Connection(Endpoint):
 
   def _get_remote_cond_impl(self):
     return pn_connection_remote_condition(self._conn)
+
+  def collect(self, collector):
+    if collector is None:
+      pn_connection_collect(self._conn, None)
+    else:
+      pn_connection_collect(self._conn, collector._impl)
+    # XXX: we can't let coll go out of scope or the connection will be
+    # pointing to garbage
+    self._collector = collector
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
@@ -2211,17 +2337,17 @@ class Connection(Endpoint):
     return pn_connection_state(self._conn)
 
   def session(self):
-    return wrap_session(pn_session(self._conn))
+    return Session._wrap_session(pn_session(self._conn))
 
   def session_head(self, mask):
-    return wrap_session(pn_session_head(self._conn, mask))
+    return Session._wrap_session(pn_session_head(self._conn, mask))
 
   def link_head(self, mask):
-    return wrap_link(pn_link_head(self._conn, mask))
+    return Link._wrap_link(pn_link_head(self._conn, mask))
 
   @property
   def work_head(self):
-    return wrap_delivery(pn_work_head(self._conn))
+    return Delivery._wrap_delivery(pn_work_head(self._conn))
 
   @property
   def error(self):
@@ -2230,26 +2356,47 @@ class Connection(Endpoint):
 class SessionException(ProtonException):
   pass
 
-def wrap_session(ssn):
-  if ssn is None: return None
-  ctx = pn_session_get_context(ssn)
-  if ctx:
-    return ctx
-  else:
-    wrapper = Session(ssn)
-    pn_session_set_context(ssn, wrapper)
-    return wrapper
-
 class Session(Endpoint):
+
+  @staticmethod
+  def _wrap_session(c_ssn):
+    """Maintain only a single instance of this class for each Session object that
+    exists in the C Engine.
+    """
+    if c_ssn is None: return None
+    py_ssn = pn_session_get_context(c_ssn)
+    if py_ssn: return py_ssn
+    wrapper = Session(c_ssn)
+    return wrapper
 
   def __init__(self, ssn):
     Endpoint.__init__(self)
     self._ssn = ssn
+    pn_session_set_context(self._ssn, self)
+    self._links = set()
+    self.connection._sessions.add(self)
 
-  def __del__(self):
-    if hasattr(self, "_ssn"):
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if self._ssn:
+      # pn_session_free will release all child links in the C Engine, so free
+      # all child python Links to avoid dangling references
+      for l in self._links:
+        l._release()
+      pn_session_set_context(self._ssn, None)
       pn_session_free(self._ssn)
-      del self._ssn
+      self._ssn = None
+
+  def free(self):
+    """Release the Session, freeing its resources.
+
+    Call this when you no longer need the session.  This will allow the
+    session's resources to be reclaimed.  Once called, you should no longer
+    reference the session.
+
+    """
+    self.connection._sessions.remove(self)
+    self._release()
 
   def _get_cond_impl(self):
     return pn_session_condition(self._ssn)
@@ -2281,7 +2428,7 @@ class Session(Endpoint):
     pn_session_close(self._ssn)
 
   def next(self, mask):
-    return wrap_session(pn_session_next(self._ssn, mask))
+    return Session._wrap_session(pn_session_next(self._ssn, mask))
 
   @property
   def state(self):
@@ -2289,29 +2436,16 @@ class Session(Endpoint):
 
   @property
   def connection(self):
-    return wrap_connection(pn_session_connection(self._ssn))
+    return Connection._wrap_connection(pn_session_connection(self._ssn))
 
   def sender(self, name):
-    return wrap_link(pn_sender(self._ssn, name))
+    return Link._wrap_link(pn_sender(self._ssn, name))
 
   def receiver(self, name):
-    return wrap_link(pn_receiver(self._ssn, name))
+    return Link._wrap_link(pn_receiver(self._ssn, name))
 
 class LinkException(ProtonException):
   pass
-
-def wrap_link(link):
-  if link is None: return None
-  ctx = pn_link_get_context(link)
-  if ctx:
-    return ctx
-  else:
-    if pn_link_is_sender(link):
-      wrapper = Sender(link)
-    else:
-      wrapper = Receiver(link)
-    pn_link_set_context(link, wrapper)
-    return wrapper
 
 class Link(Endpoint):
 
@@ -2322,14 +2456,42 @@ class Link(Endpoint):
   RCV_FIRST = PN_RCV_FIRST
   RCV_SECOND = PN_RCV_SECOND
 
-  def __init__(self, link):
-    Endpoint.__init__(self)
-    self._link = link
+  @staticmethod
+  def _wrap_link(c_link):
+    """Maintain only a single instance of this class for each Session object that
+    exists in the C Engine.
+    """
+    if c_link is None: return None
+    py_link = pn_link_get_context(c_link)
+    if py_link: return py_link
+    if pn_link_is_sender(c_link):
+      wrapper = Sender(c_link)
+    else:
+      wrapper = Receiver(c_link)
+    return wrapper
 
-  def __del__(self):
-    if hasattr(self, "_link"):
+  def __init__(self, c_link):
+    Endpoint.__init__(self)
+    self._link = c_link
+    pn_link_set_context(self._link, self)
+    self._deliveries = set()
+    self.session._links.add(self)
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if self._link:
+      # pn_link_free will settle all child deliveries in the C Engine, so free
+      # all child python deliveries to avoid dangling references
+      for d in self._deliveries:
+        d._release()
+      pn_link_set_context(self._link, None)
       pn_link_free(self._link)
-      del self._link
+      self._link = None
+
+  def free(self):
+    """Release the Link, freeing its resources"""
+    self.session._links.remove(self)
+    self._release()
 
   def _check(self, err):
     if err < 0:
@@ -2372,14 +2534,14 @@ class Link(Endpoint):
 
   @property
   def session(self):
-    return wrap_session(pn_link_session(self._link))
+    return Session._wrap_session(pn_link_session(self._link))
 
   def delivery(self, tag):
-    return wrap_delivery(pn_delivery(self._link, tag))
+    return Delivery._wrap_delivery(pn_delivery(self._link, tag))
 
   @property
   def current(self):
-    return wrap_delivery(pn_link_current(self._link))
+    return Delivery._wrap_delivery(pn_link_current(self._link))
 
   def advance(self):
     return pn_link_advance(self._link)
@@ -2401,7 +2563,7 @@ class Link(Endpoint):
     return pn_link_queued(self._link)
 
   def next(self, mask):
-    return wrap_link(pn_link_next(self._link, mask))
+    return Link._wrap_link(pn_link_next(self._link, mask))
 
   @property
   def name(self):
@@ -2524,8 +2686,10 @@ class Terminus(object):
   def copy(self, src):
     self._check(pn_terminus_copy(self._impl, src._impl))
 
-
 class Sender(Link):
+
+  def __init__(self, c_link):
+    super(Sender, self).__init__(c_link)
 
   def offered(self, n):
     pn_link_offered(self._link, n)
@@ -2534,6 +2698,9 @@ class Sender(Link):
     return self._check(pn_link_send(self._link, bytes))
 
 class Receiver(Link):
+
+  def __init__(self, c_link):
+    super(Receiver, self).__init__(c_link)
 
   def flow(self, n):
     pn_link_flow(self._link, n)
@@ -2551,14 +2718,6 @@ class Receiver(Link):
 
   def draining(self):
     return pn_link_draining(self._link)
-
-def wrap_delivery(dlv):
-  if not dlv: return None
-  ctx = pn_delivery_get_context(dlv)
-  if ctx: return ctx
-  wrapper = Delivery(dlv)
-  pn_delivery_set_context(dlv, wrapper)
-  return wrapper
 
 class Disposition(object):
 
@@ -2647,10 +2806,30 @@ class Delivery(object):
   RELEASED = Disposition.RELEASED
   MODIFIED = Disposition.MODIFIED
 
+  @staticmethod
+  def _wrap_delivery(c_dlv):
+    """Maintain only a single instance of this class for each Delivery object that
+    exists in the C Engine.
+    """
+    if not c_dlv: return None
+    py_dlv = pn_delivery_get_context(c_dlv)
+    if py_dlv: return py_dlv
+    wrapper = Delivery(c_dlv)
+    return wrapper
+
   def __init__(self, dlv):
     self._dlv = dlv
+    pn_delivery_set_context(self._dlv, self)
     self.local = Disposition(pn_delivery_local(self._dlv), True)
     self.remote = Disposition(pn_delivery_remote(self._dlv), False)
+    self.link._deliveries.add(self)
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if self._dlv:
+      pn_delivery_set_context(self._dlv, None)
+      pn_delivery_settle(self._dlv)
+      self._dlv = None
 
   @property
   def tag(self):
@@ -2695,15 +2874,17 @@ class Delivery(object):
     return pn_delivery_settled(self._dlv)
 
   def settle(self):
-    pn_delivery_settle(self._dlv)
+    """Release the delivery"""
+    self.link._deliveries.remove(self)
+    self._release()
 
   @property
   def work_next(self):
-    return wrap_delivery(pn_work_next(self._dlv))
+    return Delivery._wrap_delivery(pn_work_next(self._dlv))
 
   @property
   def link(self):
-    return wrap_link(pn_delivery_link(self._dlv))
+    return Link._wrap_link(pn_delivery_link(self._dlv))
 
 class TransportException(ProtonException):
   pass
@@ -2746,7 +2927,15 @@ class Transport(object):
       return err
 
   def bind(self, connection):
+    """Assign a connection to the transport"""
     self._check(pn_transport_bind(self._trans, connection._conn))
+    # keep python connection from being garbage collected:
+    self._connection = connection
+
+  def unbind(self):
+    """Release the connection"""
+    self._check(pn_transport_unbind(self._trans))
+    self._connection = None
 
   def trace(self, n):
     pn_transport_trace(self._trans, n)
@@ -2829,6 +3018,21 @@ Sets the maximum size for received frames (in bytes).
   def remote_max_frame_size(self):
     return pn_transport_get_remote_max_frame(self._trans)
 
+  def _get_channel_max(self):
+    return pn_transport_get_channel_max(self._trans)
+
+  def _set_channel_max(self, value):
+    pn_transport_set_channel_max(self._trans, value)
+
+  channel_max = property(_get_channel_max, _set_channel_max,
+                         doc="""
+Sets the maximum channel that may be used on the transport.
+""")
+
+  @property
+  def remote_channel_max(self):
+    return pn_transport_remote_channel_max(self._trans)
+
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
     msec = pn_transport_get_idle_timeout(self._trans)
@@ -2839,7 +3043,7 @@ Sets the maximum size for received frames (in bytes).
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
-The idle timeout of the connection (in milliseconds).
+The idle timeout of the connection (float, in seconds).
 """)
 
   @property
@@ -3057,6 +3261,57 @@ class SSLSessionDetails(object):
     return self._session_id
 
 
+class Collector:
+
+  def __init__(self):
+    self._impl = pn_collector()
+
+  def peek(self):
+    event = pn_collector_peek(self._impl)
+    if event is None:
+      return None
+
+    tpi = pn_event_transport(event)
+    if tpi:
+      tp = Transport(tpi)
+    else:
+      tp = None
+    return Event(type=pn_event_type(event),
+                 connection=Connection._wrap_connection(pn_event_connection(event)),
+                 session=Session._wrap_session(pn_event_session(event)),
+                 link=Link._wrap_link(pn_event_link(event)),
+                 delivery=Delivery._wrap_delivery(pn_event_delivery(event)),
+                 transport=tp)
+
+  def pop(self):
+    pn_collector_pop(self._impl)
+
+  def __del__(self):
+    pn_collector_free(self._impl)
+
+class Event:
+
+  CONNECTION_STATE = PN_CONNECTION_STATE
+  SESSION_STATE = PN_SESSION_STATE
+  LINK_STATE = PN_LINK_STATE
+  LINK_FLOW = PN_LINK_FLOW
+  DELIVERY = PN_DELIVERY
+  TRANSPORT = PN_TRANSPORT
+
+  def __init__(self, type, connection, session, link, delivery, transport):
+    self.type = type
+    self.connection = connection
+    self.session = session
+    self.link = link
+    self.delivery = delivery
+    self.transport = transport
+
+  def __repr__(self):
+    objects = [self.connection, self.session, self.link, self.delivery,
+               self.transport]
+    return "%s(%s)" % (pn_event_type_name(self.type),
+                       ", ".join([str(o) for o in objects if o is not None]))
+
 ###
 # Driver
 ###
@@ -3067,27 +3322,55 @@ class DriverException(ProtonException):
   """
   pass
 
-
-def wrap_connector(cxtr):
-  if not cxtr: return None
-  ctx = pn_connector_context(cxtr)
-  if ctx: return ctx
-  wrapper = Connector(_cxtr=cxtr)
-  pn_connector_set_context(cxtr, wrapper)
-  return wrapper
-
 class Connector(object):
-  def __init__(self, _cxtr):
+
+  @staticmethod
+  def _wrap_connector(c_cxtr, py_driver=None):
+    """Maintain only a single instance of this class for each Connector object that
+    exists in the C Driver.
+    """
+    if not c_cxtr: return None
+    py_cxtr = pn_connector_context(c_cxtr)
+    if py_cxtr: return py_cxtr
+    wrapper = Connector(_cxtr=c_cxtr, _py_driver=py_driver)
+    return wrapper
+
+  def __init__(self, _cxtr, _py_driver):
     self._cxtr = _cxtr
+    assert(_py_driver)
+    self._driver = weakref.ref(_py_driver)
+    pn_connector_set_context(self._cxtr, self)
+    self._connection = None
+    self._driver()._connectors.add(self)
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if self._cxtr:
+      pn_connector_set_context(self._cxtr, None)
+      pn_connector_free(self._cxtr)
+      self._cxtr = None
+
+  def free(self):
+    """Release the Connector, freeing its resources.
+
+    Call this when you no longer need the Connector.  This will allow the
+    connector's resources to be reclaimed.  Once called, you should no longer
+    reference this connector.
+
+    """
+    self.connection = None
+    d = self._driver()
+    if d: d._connectors.remove(self)
+    self._release()
 
   def next(self):
-    return wrap_connector(pn_connector_next(self._cxtr))
+    return Connector._wrap_connector(pn_connector_next(self._cxtr))
 
   def process(self):
     pn_connector_process(self._cxtr)
 
   def listener(self):
-    return wrap_listener(pn_connector_listener(self._cxtr))
+    return Listener._wrap_listener(pn_connector_listener(self._cxtr))
 
   def sasl(self):
     ## seems easier just to grab the SASL associated with the transport:
@@ -3111,34 +3394,64 @@ class Connector(object):
     return pn_connector_closed(self._cxtr)
 
   def _get_connection(self):
-    return wrap_connection(pn_connector_connection(self._cxtr))
+    return self._connection
 
   def _set_connection(self, conn):
-    pn_connector_set_connection(self._cxtr, conn._conn)
+    if conn:
+      pn_connector_set_connection(self._cxtr, conn._conn)
+    else:
+      pn_connector_set_connection(self._cxtr, None)
+    self._connection = conn
+
 
   connection = property(_get_connection, _set_connection,
                         doc="""
 Associate a Connection with this Connector.
 """)
 
-def wrap_listener(lsnr):
-  if not lsnr: return None
-  ctx = pn_listener_context(lsnr)
-  if ctx: return ctx
-  wrapper = Listener(_lsnr=lsnr)
-  pn_listener_set_context(lsnr, wrapper)
-  return wrapper
-
 class Listener(object):
-  def __init__(self, _lsnr=None):
+
+  @staticmethod
+  def _wrap_listener(c_lsnr, py_driver=None):
+    """Maintain only a single instance of this class for each Listener object that
+    exists in the C Driver.
+    """
+    if not c_lsnr: return None
+    py_lsnr = pn_listener_context(c_lsnr)
+    if py_lsnr: return py_lsnr
+    wrapper = Listener(_lsnr=c_lsnr, _py_driver=py_driver)
+    return wrapper
+
+  def __init__(self, _lsnr, _py_driver):
     self._lsnr = _lsnr
+    assert(_py_driver)
+    self._driver = weakref.ref(_py_driver)
+    pn_listener_set_context(self._lsnr, self)
+    self._driver()._listeners.add(self)
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if self._lsnr:
+      pn_listener_set_context(self._lsnr, None);
+      pn_listener_free(self._lsnr)
+      self._lsnr = None
+
+  def free(self):
+    """Release the Listener, freeing its resources"""
+    d = self._driver()
+    if d: d._listeners.remove(self)
+    self._release()
 
   def next(self):
-    return wrap_listener(pn_listener_next(self._lsnr))
+    return Listener._wrap_listener(pn_listener_next(self._lsnr))
 
   def accept(self):
-    cxtr = pn_listener_accept(self._lsnr)
-    return wrap_connector(cxtr)
+    d = self._driver()
+    if d:
+      cxtr = pn_listener_accept(self._lsnr)
+      c = Connector._wrap_connector(cxtr, d)
+      return c
+    return None
 
   def close(self):
     pn_listener_close(self._lsnr)
@@ -3146,9 +3459,17 @@ class Listener(object):
 class Driver(object):
   def __init__(self):
     self._driver = pn_driver()
+    self._listeners = set()
+    self._connectors = set()
 
   def __del__(self):
-    if hasattr(self, "_driver"):
+    # freeing the driver will release all child objects in the C Engine, so
+    # clean up their references in the corresponding Python objects
+    for c in self._connectors:
+      c._release()
+    for l in self._listeners:
+      l._release()
+    if hasattr(self, "_driver") and self._driver:
       pn_driver_free(self._driver)
       del self._driver
 
@@ -3163,22 +3484,25 @@ class Driver(object):
     return pn_driver_wakeup(self._driver)
 
   def listener(self, host, port):
-    return wrap_listener(pn_listener(self._driver, host, port, None))
+    """Construct a listener"""
+    return Listener._wrap_listener(pn_listener(self._driver, host, port, None),
+                                   self)
 
   def pending_listener(self):
-    return wrap_listener(pn_driver_listener(self._driver))
+    return Listener._wrap_listener(pn_driver_listener(self._driver))
 
   def head_listener(self):
-    return wrap_listener(pn_listener_head(self._driver))
+    return Listener._wrap_listener(pn_listener_head(self._driver))
 
   def connector(self, host, port):
-    return wrap_connector(pn_connector(self._driver, host, port, None))
+    return Connector._wrap_connector(pn_connector(self._driver, host, port, None),
+                                     self)
 
   def head_connector(self):
-    return wrap_connector(pn_connector_head(self._driver))
+    return Connector._wrap_connector(pn_connector_head(self._driver))
 
   def pending_connector(self):
-    return wrap_connector(pn_driver_connector(self._driver))
+    return Connector._wrap_connector(pn_driver_connector(self._driver))
 
 __all__ = [
            "API_LANGUAGE",
@@ -3193,6 +3517,7 @@ __all__ = [
            "SETTLED",
            "UNDESCRIBED",
            "Array",
+           "Collector",
            "Condition",
            "Connection",
            "Connector",
@@ -3203,6 +3528,7 @@ __all__ = [
            "Driver",
            "DriverException",
            "Endpoint",
+           "Event",
            "Link",
            "Listener",
            "Message",

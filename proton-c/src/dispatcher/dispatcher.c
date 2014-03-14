@@ -36,7 +36,9 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 
   disp->frame_type = frame_type;
   disp->transport = transport;
-  disp->trace = PN_TRACE_OFF;
+  disp->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
+    (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
+    (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 
   disp->input = pn_buffer(1024);
   disp->fragment = 0;

@@ -473,7 +473,7 @@ int main(int argc, char **argv)
   char *port = (char *) "5672";
   char *path = NULL;
 
-  parse_url(url, &scheme, &user, &pass, &host, &port, &path);
+  pni_parse_url(url, &scheme, &user, &pass, &host, &port, &path);
 
   pn_driver_t *drv = pn_driver();
   if (url) {

@@ -39,35 +39,44 @@ set_target_properties(cproton
     PREFIX ""
     LINK_FLAGS "${ALLOW_UNDEFINED}")
 
-execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
-                OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
-                OUTPUT_VARIABLE QPHP_PREFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
-                OUTPUT_VARIABLE PHP_OPTS
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (ASK_PHP)
+  execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
+    OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND ${PHP_CONFIG_EXE} --prefix
+    OUTPUT_VARIABLE QPHP_PREFIX
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND ${PHP_CONFIG_EXE} --config-options
+    OUTPUT_VARIABLE PHP_OPTS
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-set(GET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/get_include_dir.php)
-execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${QPHP_PREFIX}
-                OUTPUT_VARIABLE PHP_INCLUDE_DIR_DEFAULT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(GET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/get_include_dir.php)
+  execute_process(COMMAND ${PHP_EXE} -n ${GET_INCLUDE_DIR} ${QPHP_PREFIX}
+    OUTPUT_VARIABLE PHP_INCLUDE_DIR_DEFAULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-if ("${PHP_INCLUDE_DIR_DEFAULT}" STREQUAL "")
-  set(PHP_INCLUDE_DIR_DEFAULT "/usr/share/php")
-endif()
+  if ("${PHP_INCLUDE_DIR_DEFAULT}" STREQUAL "")
+    set(PHP_INCLUDE_DIR_DEFAULT "/usr/share/php")
+  endif()
 
-string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
-set (PHP_INI_DIR_DEFAULT ${CMAKE_MATCH_1})
+  string(REGEX MATCH "--with-config-file-scan-dir=([^ ]*)" PHP_OPT_MATCH ${PHP_OPTS})
+  set (PHP_INI_DIR_DEFAULT ${CMAKE_MATCH_1})
 
-if ("${PHP_INI_DIR_DEFAULT}" STREQUAL "")
-  set(PHP_INI_DIR_DEFAULT "/etc/php.d")
-endif()
+  if ("${PHP_INI_DIR_DEFAULT}" STREQUAL "")
+    set(PHP_INI_DIR_DEFAULT "/etc/php.d")
+  endif()
 
-set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
-set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
-set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
+  set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
+  set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
+  set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
+
+else (ASK_PHP)
+
+  set (PHP_EXT_DIR ${BINDINGS_DIR}/php CACHE PATH "PHP extensions directory")
+  set (PHP_INCLUDE_DIR ${BINDINGS_DIR}/php/include CACHE PATH "PHP include directory")
+  set (PHP_INI_DIR ${BINDINGS_DIR}/php/ini CACHE PATH "PHP ini directory")
+
+endif (ASK_PHP)
 
 install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}

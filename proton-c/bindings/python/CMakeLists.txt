@@ -30,12 +30,19 @@ set_target_properties(_cproton
 
 find_package(PythonInterp REQUIRED)
 
-if (NOT PYTHON_SITEARCH_PACKAGES)
-   execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                           -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
-                           OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES
-                           OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif ()
+if (ASK_PYTHON)
+
+  if (NOT PYTHON_SITEARCH_PACKAGES)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE}
+      -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
+      OUTPUT_VARIABLE PYTHON_ARCHLIB_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  else (NOT PYTHON_SITEARCH_PACKAGES)
+    set (PYTHON_ARCHLIB_DIR "${PYTHON_SITEARCH_PACKAGES}")
+  endif ()
+else (ASK_PYTHON)
+  set (PYTHON_ARCHLIB_DIR ${BINDINGS_DIR}/python/lib${LIB_SUFFIX} CACHE PATH "Python platform code")
+endif (ASK_PYTHON)
 
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile cproton.py
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
@@ -64,8 +71,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyc
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
-        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+        DESTINATION ${PYTHON_ARCHLIB_DIR}
         COMPONENT Python)
 install(TARGETS _cproton
-        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+        DESTINATION ${PYTHON_ARCHLIB_DIR}
         COMPONENT Python)

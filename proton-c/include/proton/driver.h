@@ -26,6 +26,7 @@
 #include <proton/error.h>
 #include <proton/engine.h>
 #include <proton/sasl.h>
+#include <proton/selectable.h>
 #include <proton/ssl.h>
 
 #ifdef __cplusplus

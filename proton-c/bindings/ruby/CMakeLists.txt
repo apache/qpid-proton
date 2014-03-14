@@ -26,38 +26,16 @@ set_target_properties(cproton-ruby
     OUTPUT_NAME "cproton"
     LINK_FLAGS "${CATCH_UNDEFINED}" )
 
-install(TARGETS cproton-ruby
-        DESTINATION ${RUBY_ARCH_DIR}
-        COMPONENT Ruby)
+if (ASK_RUBY)
 
-# Install the Ruby libraries
-set(RUBY_LIBRARIES
-    lib/qpid_proton/array.rb
-    lib/qpid_proton/data.rb
-    lib/qpid_proton/described.rb
-    lib/qpid_proton/exception_handling.rb
-    lib/qpid_proton/exceptions.rb
-    lib/qpid_proton/hash.rb
-    lib/qpid_proton/mapping.rb
-    lib/qpid_proton/message_format.rb
-    lib/qpid_proton/message.rb
-    lib/qpid_proton/messenger.rb
-    lib/qpid_proton/subscription.rb
-    lib/qpid_proton/tracker.rb
-    lib/qpid_proton/tracker_status.rb
-)
-
-set(RUBY_ARCHLIB_DIR "${RUBY_VENDORLIB_DIR}")
-
-if (NOT RUBY_ARCHLIB_DIR)
   execute_process(COMMAND ${RUBY_EXECUTABLE}
-                  -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
+    -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
     RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
     OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
 
   if(OUTPUT_RUBY_ARCHLIB_DIR STREQUAL "")
     execute_process(COMMAND ${RUBY_EXECUTABLE}
-                    -r rbconfig -e "print RbConfig::CONFIG['sitearchdir'] || ''"
+      -r rbconfig -e "print RbConfig::CONFIG['archdir'] || ''"
       RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
       OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
 
@@ -65,12 +43,20 @@ if (NOT RUBY_ARCHLIB_DIR)
 
   set(RUBY_ARCHLIB_DIR "${OUTPUT_RUBY_ARCHLIB_DIR}")
 
-endif ()
+else (ASK_RUBY)
 
+  set (RUBY_SITELIB_DIR ${BINDINGS_DIR}/ruby CACHE PATH "Ruby portable code")
+  set (RUBY_ARCHLIB_DIR ${BINDINGS_DIR}/ruby/lib${LIB_SUFFIX} CACHE PATH "Ruby platform code")
+
+endif (ASK_RUBY)
+
+
+install(TARGETS cproton-ruby
+        DESTINATION ${RUBY_ARCHLIB_DIR}
+        COMPONENT Ruby)
 install(FILES lib/qpid_proton.rb
         DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)
-
-install(FILES ${RUBY_LIBRARIES}
-        DESTINATION ${RUBY_ARCHLIB_DIR}/qpid_proton
+install(DIRECTORY lib/qpid_proton
+        DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)

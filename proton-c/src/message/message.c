@@ -787,7 +787,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 
   err = pn_data_fill(msg->data, "DL[CzSSSCssttSIS]", PROPERTIES,
                      msg->id,
-                     pn_string_get_bytes(msg->user_id),
+                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_get(msg->address),
                      pn_string_get(msg->subject),
                      pn_string_get(msg->reply_to),

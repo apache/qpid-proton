@@ -725,6 +725,45 @@ void test_list_compare(void)
   pn_free(one); pn_free(two); pn_free(three);
 }
 
+typedef struct {
+  pn_list_t *list;
+  size_t index;
+} pn_it_state_t;
+
+static void *pn_it_next(void *state) {
+  pn_it_state_t *it = (pn_it_state_t *) state;
+  if (it->index < pn_list_size(it->list)) {
+    return pn_list_get(it->list, it->index++);
+  } else {
+    return NULL;
+  }
+}
+
+void test_iterator(void)
+{
+  pn_list_t *list = build_list(0, PN_REFCOUNT,
+                               pn_string("one"),
+                               pn_string("two"),
+                               pn_string("three"),
+                               pn_string("four"),
+                               END);
+  pn_iterator_t *it = pn_iterator();
+  pn_it_state_t *state = (pn_it_state_t *) pn_iterator_start
+    (it, pn_it_next, sizeof(pn_it_state_t));
+  state->list = list;
+  state->index = 0;
+
+  void *obj;
+  int index = 0;
+  while ((obj = pn_iterator_next(it))) {
+    assert(obj == pn_list_get(list, index++));
+  }
+  assert(index == 4);
+
+  pn_free(list);
+  pn_free(it);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -779,6 +818,7 @@ int main(int argc, char **argv)
   test_list_inspect();
   test_map_inspect();
   test_list_compare();
+  test_iterator();
 
   return 0;
 }

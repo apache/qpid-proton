@@ -34,9 +34,11 @@
 #include <proton/driver.h>
 #include <proton/driver_extras.h>
 #include <proton/error.h>
+#include <proton/io.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/util.h>
+#include <proton/object.h>
 #include "../util.h"
 #include "../platform.h"
 #include "../ssl/ssl-internal.h"
@@ -46,37 +48,9 @@
 #define PN_SEL_RD (0x0001)
 #define PN_SEL_WR (0x0002)
 
-/* Abstract away turning off SIGPIPE */
-#ifdef MSG_NOSIGNAL
-static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
-    return send(sockfd, buf, len, MSG_NOSIGNAL);
-}
-
-static inline int pn_create_socket(void) {
-    return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
-}
-#elif defined(SO_NOSIGPIPE)
-static inline ssize_t pn_send(int sockfd, const void *buf, size_t len) {
-    return send(sockfd, buf, len, 0);
-}
-
-static inline int pn_create_socket(void) {
-    int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
-    if (sock == -1) return sock;
-
-    int optval = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-        close(sock);
-        return -1;
-    }
-    return sock;
-}
-#else
-#error "Don't know how to turn off SIGPIPE on this platform"
-#endif
-
 struct pn_driver_t {
   pn_error_t *error;
+  pn_io_t *io;
   pn_listener_t *listener_head;
   pn_listener_t *listener_tail;
   pn_listener_t *listener_next;
@@ -160,46 +134,17 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
 {
   if (!driver) return NULL;
 
-  struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
-  if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
+  pn_socket_t sock = pn_listen(driver->io, host, port);
+  if (sock == PN_INVALID_SOCKET) {
     return NULL;
+  } else {
+    pn_listener_t *l = pn_listener_fd(driver, sock, context);
+
+    if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+      fprintf(stderr, "Listening on %s:%s\n", host, port);
+
+    return l;
   }
-
-  int sock = pn_create_socket();
-  if (sock == -1) {
-    pn_i_error_from_errno(driver->error, "pn_create_socket");
-    return NULL;
-  }
-
-  int optval = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-    pn_i_error_from_errno(driver->error, "setsockopt");
-    close(sock);
-    return NULL;
-  }
-
-  if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    pn_i_error_from_errno(driver->error, "bind");
-    freeaddrinfo(addr);
-    close(sock);
-    return NULL;
-  }
-
-  freeaddrinfo(addr);
-
-  if (listen(sock, 50) == -1) {
-    pn_i_error_from_errno(driver->error, "listen");
-    close(sock);
-    return NULL;
-  }
-
-  pn_listener_t *l = pn_listener_fd(driver, sock, context);
-
-  if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-    fprintf(stderr, "Listening on %s:%s\n", host, port);
-  return l;
 }
 
 pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
@@ -219,6 +164,12 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, int fd, void *context)
 
   pn_driver_add_listener(driver, l);
   return l;
+}
+
+pn_socket_t pn_listener_get_fd(pn_listener_t *listener)
+{
+  assert(listener);
+  return listener->fd;
 }
 
 pn_listener_t *pn_listener_head(pn_driver_t *driver)
@@ -245,62 +196,21 @@ void pn_listener_set_context(pn_listener_t *listener, void *context)
   listener->context = context;
 }
 
-static void pn_configure_sock(int sock) {
-  // this would be nice, but doesn't appear to exist on linux
-  /*
-  int set = 1;
-  if (!setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int))) {
-    perror("setsockopt");
-  };
-  */
-
-    int flags = fcntl(sock, F_GETFL);
-    flags |= O_NONBLOCK;
-
-    if (fcntl(sock, F_SETFL, flags) < 0) {
-        perror("fcntl");
-    }
-
-    //
-    // Disable the Nagle algorithm on TCP connections.
-    //
-    // Note:  It would be more correct for the "level" argument to be SOL_TCP.  However, there
-    //        are portability issues with this macro so we use IPPROTO_TCP instead.
-    //
-    int tcp_nodelay = 1;
-    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0) {
-        perror("setsockopt");
-    }
-}
-
 pn_connector_t *pn_listener_accept(pn_listener_t *l)
 {
   if (!l || !l->pending) return NULL;
+  char name[PN_NAME_MAX];
 
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;
-  socklen_t addrlen = sizeof(addr);
-  int sock = accept(l->fd, (struct sockaddr *) &addr, &addrlen);
-  if (sock == -1) {
-    perror("accept");
+  pn_socket_t sock = pn_accept(l->driver->io, l->fd, name, PN_NAME_MAX);
+  if (sock == PN_INVALID_SOCKET) {
     return NULL;
   } else {
-    char host[1024], serv[64];
-    int code;
-    if ((code = getnameinfo((struct sockaddr *) &addr, addrlen, host, 1024, serv, 64, 0))) {
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(code));
-      if (close(sock) == -1)
-        perror("close");
-      return NULL;
-    } else {
-      pn_configure_sock(sock);
-      if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-        fprintf(stderr, "Accepted from %s:%s\n", host, serv);
-      pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
-      snprintf(c->name, PN_NAME_MAX, "%s:%s", host, serv);
-      c->listener = l;
-      return c;
-    }
+    if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+      fprintf(stderr, "Accepted from %s\n", name);
+    pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
+    snprintf(c->name, PN_NAME_MAX, "%s", name);
+    c->listener = l;
+    return c;
   }
 }
 
@@ -353,31 +263,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
 {
   if (!driver) return NULL;
 
-  struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
-  if (code) {
-    pn_error_format(driver->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
-    return NULL;
-  }
-
-  int sock = pn_create_socket();
-  if (sock == -1) {
-    pn_i_error_from_errno(driver->error, "pn_create_socket");
-    return NULL;
-  }
-
-  pn_configure_sock(sock);
-
-  if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    if (errno != EINPROGRESS) {
-      pn_i_error_from_errno(driver->error, "connect");
-      freeaddrinfo(addr);
-      close(sock);
-      return NULL;
-    }
-  }
-
-  freeaddrinfo(addr);
+  pn_socket_t sock = pn_connect(driver->io, host, port);
 
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
   snprintf(c->name, PN_NAME_MAX, "%s:%s", host, port);
@@ -419,6 +305,12 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, int fd, void *context)
   return c;
 }
 
+pn_socket_t pn_connector_get_fd(pn_connector_t *connector)
+{
+  assert(connector);
+  return connector->fd;
+}
+
 pn_connector_t *pn_connector_head(pn_driver_t *driver)
 {
   return driver ? driver->connector_head : NULL;
@@ -449,8 +341,15 @@ pn_transport_t *pn_connector_transport(pn_connector_t *ctor)
 void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
 {
   if (!ctor) return;
+  if (ctor->connection) {
+    pn_decref(ctor->connection);
+    pn_transport_unbind(ctor->transport);
+  }
   ctor->connection = connection;
-  pn_transport_bind(ctor->transport, connection);
+  if (ctor->connection) {
+    pn_incref(ctor->connection);
+    pn_transport_bind(ctor->transport, connection);
+  }
   if (ctor->transport) pn_transport_trace(ctor->transport, ctor->trace);
 }
 
@@ -503,9 +402,10 @@ void pn_connector_free(pn_connector_t *ctor)
   if (!ctor) return;
 
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
-  ctor->connection = NULL;
   pn_transport_free(ctor->transport);
   ctor->transport = NULL;
+  if (ctor->connection) pn_decref(ctor->connection);
+  ctor->connection = NULL;
   free(ctor);
 }
 
@@ -566,7 +466,7 @@ void pn_connector_process(pn_connector_t *c)
         c->status |= PN_SEL_RD;
         if (c->pending_read) {
           c->pending_read = false;
-          ssize_t n =  recv(c->fd, pn_transport_tail(transport), capacity, 0);
+          ssize_t n =  pn_recv(c->driver->io, c->fd, pn_transport_tail(transport), capacity);
           if (n < 0) {
             if (errno != EAGAIN) {
               perror("read");
@@ -609,7 +509,7 @@ void pn_connector_process(pn_connector_t *c)
         c->status |= PN_SEL_WR;
         if (c->pending_write) {
           c->pending_write = false;
-          ssize_t n = pn_send(c->fd, pn_transport_head(transport), pending);
+          ssize_t n = pn_send(c->driver->io, c->fd, pn_transport_head(transport), pending);
           if (n < 0) {
             // XXX
             if (errno != EAGAIN) {
@@ -648,6 +548,7 @@ pn_driver_t *pn_driver()
   pn_driver_t *d = (pn_driver_t *) malloc(sizeof(pn_driver_t));
   if (!d) return NULL;
   d->error = pn_error();
+  d->io = pn_io();
   d->listener_head = NULL;
   d->listener_tail = NULL;
   d->listener_next = NULL;
@@ -702,6 +603,7 @@ void pn_driver_free(pn_driver_t *d)
     pn_listener_free(d->listener_head);
   free(d->fds);
   pn_error_free(d->error);
+  pn_io_free(d->io);
   free(d);
 }
 

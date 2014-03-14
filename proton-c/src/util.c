@@ -106,45 +106,48 @@ void pn_print_data(const char *bytes, size_t size)
   pn_fprint_data(stdout, bytes, size);
 }
 
-void parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
+// Parse URL syntax:
+// [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
+// <user>, <password>, <host>, <port> cannot contain any of '@', ':', '/'
+// <path> can contain any character
+void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
 {
-  if (url) {
-    char *scheme_end = strstr(url, "://");
-    if (scheme_end) {
-      *scheme_end = '\0';
-      *scheme = url;
-      url = scheme_end + 3;
-    }
+  if (!url) return;
 
-    char *at = strchr(url, '@');
-    if (at) {
-      *at = '\0';
-      char *up = url;
-      *user = up;
-      url = at + 1;
-      char *colon = strchr(up, ':');
-      if (colon) {
-        *colon = '\0';
-        *pass = colon + 1;
-      }
-    }
+  char *scheme_end = strstr(url, "://");
+  if (scheme_end) {
+    *scheme_end = '\0';
+    *scheme = url;
+    url = scheme_end + 3;
+  }
 
-    char *slash = strchr(url, '/');
-    if (slash) {
-      *slash = '\0';
-      *host = url;
-      url = slash + 1;
-      *path = url;
-    } else {
-      *host = url;
-    }
+  char *slash = strchr(url, '/');
+  if (slash) {
+    *slash = '\0';
+    *path = slash + 1;
+  }
 
-    char *colon = strchr(*host, ':');
+  char *at = strchr(url, '@');
+  if (at) {
+    *at = '\0';
+    char *up = url;
+    *user = up;
+    url = at + 1;
+    char *colon = strchr(up, ':');
     if (colon) {
       *colon = '\0';
-      *port = colon + 1;
+      *pass = colon + 1;
     }
   }
+
+  *host = url;
+
+  char *colon = strchr(*host, ':');
+  if (colon) {
+    *colon = '\0';
+    *port = colon + 1;
+  }
+
 }
 
 void pn_vfatal(const char *fmt, va_list ap)
