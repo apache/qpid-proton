@@ -223,8 +223,8 @@ endif (SWIG_FOUND)
 # Build the JavaScript language binding.
 # This is somewhat different to the other language bindings in that it does not use swig. It uses a C/C++ to
 # JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
-# and "compiles" it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can
-# be aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
+# and compiles it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can be
+# aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
 option("BUILD_JAVASCRIPT" "Build JavaScript language binding" ON)
 if (BUILD_JAVASCRIPT)
   find_package(Emscripten)

@@ -24,6 +24,11 @@
 
 message(STATUS "Found emscripten, using that to build JavaScript binding")
 
+# The following variables describe the target OS we are building to - Emscripten mimics the Linux platform.
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_VERSION 1)
+set(CMAKE_CROSSCOMPILING TRUE)
+
 # Specify the compiler to use for cross-compilation.
 set(CMAKE_C_COMPILER "${EMCC}")
 
@@ -99,8 +104,7 @@ message(STATUS "PLATFORM_LIBS: ${PLATFORM_LIBS}") # can be empty for emscripten
 
 
 
-# The following is copied from the the main proton-c/CMakeLists.txt and annotated where there are differences
-# to make it easier to refactor if we want to keep the main compilation and cross-compilation consistent.
+# The following is more or less a direct copy from the the main proton-c/CMakeLists.txt.
 # The main difference is prefixing paths with ${PN_PATH}/ as we can't use a relative path from this CMakeLists.txt.
 
 set(qpid-proton-platform
@@ -155,7 +159,6 @@ set_source_files_properties(
 
 add_library(
   qpid-proton-js SHARED
-
   ${qpid-proton-core}
   ${qpid-proton-platform}
   )
@@ -168,33 +171,55 @@ set_target_properties(
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 
-#add_executable(proton.js ${PN_PATH}/src/proton.c)
-#target_link_libraries(proton.js qpid-proton-js)
 
-#add_executable(proton-dump.js ${PN_PATH}/src/proton-dump.c)
-#target_link_libraries(proton-dump.js qpid-proton-js)
 
 add_executable(send-async.js ${PN_PATH}/../examples/messenger/c/send-async.c)
 target_link_libraries(send-async.js qpid-proton-js)
 
+#add_executable(send-async.html ${PN_PATH}/../examples/messenger/c/send-async.c)
+#target_link_libraries(send-async.html qpid-proton-js)
+
 add_executable(recv-async.js ${PN_PATH}/../examples/messenger/c/recv-async.c)
 target_link_libraries(recv-async.js qpid-proton-js)
 
-#add_executable(msgr-send.js ${PN_PATH}/../tests/tools/apps/c/msgr-common.c ${PN_PATH}/../tests/tools/apps/c/msgr-send.c)
-#target_link_libraries(msgr-send.js qpid-proton-js)
 
-#add_executable(msgr-recv.js ${PN_PATH}/../tests/tools/apps/c/msgr-common.c ${PN_PATH}/../tests/tools/apps/c/msgr-recv.c)
-#target_link_libraries(msgr-recv.js qpid-proton-js)
 
 # TODO get the patches in my-library.js pushed properly into emscripten ASAP
+# Note there is currently an issue with varargs that makes it necessary
+# to compile with 'EMCC_LLVM_TARGET=i386-pc-linux-gnu make'
+#
 set_target_properties(
+  #send-async.js recv-async.js send-async.html
   send-async.js recv-async.js
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  #LINK_FLAGS "-s SOCKET_DEBUG=1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
-  #LINK_FLAGS "-O2 --closure 1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
-  #LINK_FLAGS "-s VERBOSE=1 -O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
-  LINK_FLAGS "-O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+
+  # This build shows socket messages - useful for debugging.
+  #LINK_FLAGS "-s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -s SOCKET_DEBUG=1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+
+  # Optimised build - takes somewhat longer to build.
+  #LINK_FLAGS "-s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --closure 1 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+
+  # This build shows up emscripten warnings when building - should be able to remove it.
+  #LINK_FLAGS "-s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -s VERBOSE=1 -O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+
+  # This build is optimised but not minified
+  LINK_FLAGS "-s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js"
+  )
+
+
+
+# Compile with 'EMCC_LLVM_TARGET=i386-pc-linux-gnu make'
+add_executable(messenger.js messenger.c)
+target_link_libraries(messenger.js qpid-proton-js)
+
+set_target_properties(
+  messenger.js
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+
+  # This build is optimised but not minified
+  LINK_FLAGS "-s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/pre-wrap.js --post-js ${CMAKE_CURRENT_SOURCE_DIR}/post-wrap.js --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=\"[]\" -s EXPORTED_FUNCTIONS=\"['_test', '_pn_messenger', '_pn_messenger_name', '_pn_messenger_set_blocking', '_pn_error_text', '_pn_code', '_pn_messenger_free', '_pn_messenger_errno', '_pn_messenger_error', '_pn_messenger_get_outgoing_window', '_pn_messenger_set_outgoing_window', '_pn_messenger_get_incoming_window', '_pn_messenger_set_incoming_window', '_pn_messenger_start', '_pn_messenger_stop', '_pn_messenger_stopped', '_pn_messenger_subscribe', '_pn_subscription_get_context', '_pn_subscription_set_context', '_pn_subscription_address', '_pn_messenger_put', '_pn_messenger_status', '_pn_messenger_buffered', '_pn_messenger_settle', '_pn_messenger_outgoing_tracker', '_pn_messenger_work', '_pn_messenger_recv', '_pn_messenger_receiving', '_pn_messenger_get', '_pn_messenger_incoming_tracker', '_pn_messenger_incoming_subscription', '_pn_messenger_accept', '_pn_messenger_reject', '_pn_messenger_outgoing', '_pn_messenger_incoming', '_pn_messenger_route', '_pn_messenger_rewrite']\""
   )
 
 

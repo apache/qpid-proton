@@ -162,14 +162,44 @@ console.log('stream_ops.close');
             port = parseInt(result[2], 10);
           }
         } else {
-          // create the actual websocket object and connect
+          // Create the actual websocket object and connect.
           try {
-            var url = 'ws://' + addr + ':' + port;
+            // runtimeConfig gets set to true if WebSocket runtime configuration is available.
+            var runtimeConfig = (Module['websocket'] && ('object' === typeof Module['websocket']));
+
+            // The default value is 'ws://' the replace is needed because the compiler replaces "//" comments with '#'
+            // comments without checking context, so we'd end up with ws:#, the replace swaps the "#" for "//" again.
+            var url = '{{{ WEBSOCKET_URL }}}'.replace('#', '//');
+
+            if (runtimeConfig) {
+              if ('string' === typeof Module['websocket']['url']) {
+                url = Module['websocket']['url']; // Fetch runtime WebSocket URL config.
+              }
+            }
+
+            if (url === 'ws://' || url === 'wss://') { // Is the supplied URL config just a prefix, if so complete it.
+              url = url + addr + ':' + port;
+            }
+
+            // Make the WebSocket subprotocol (Sec-WebSocket-Protocol) default to binary if no configuration is set.
+            var subProtocols = '{{{ WEBSOCKET_SUBPROTOCOL }}}'; // The default value is 'binary'
+
+            if (runtimeConfig) {
+              if ('string' === typeof Module['websocket']['subprotocol']) {
+                subProtocols = Module['websocket']['subprotocol']; // Fetch runtime WebSocket subprotocol config.
+              }
+            }
+
+            // The regex trims the string (removes spaces at the beginning and end, then splits the string by
+            // <any space>,<any space> into an Array. Whitespace removal is important for Websockify and ws.
+            subProtocols = subProtocols.replace(/^ +| +$/g,"").split(/ *, */);
+
+            // The node ws library API for specifying optional subprotocol is slightly different than the browser's.
+            var opts = ENVIRONMENT_IS_NODE ? {'protocol': subProtocols.toString()} : subProtocols;
+
 #if SOCKET_DEBUG
-            console.log('connect: ' + url);
+            Module.print('connect: ' + url + ', ' + subProtocols.toString());
 #endif
-            // the node ws library API is slightly different than the browser's
-            var opts = ENVIRONMENT_IS_NODE ? {headers: {'websocket-protocol': ['binary']}} : ['binary'];
             // If node we use the ws library.
             var WebSocket = ENVIRONMENT_IS_NODE ? require('ws') : window['WebSocket'];
             ws = new WebSocket(url, opts);
@@ -240,6 +270,26 @@ console.log('e: ' + e);
             // lied and said this data was sent. shut it down.
             peer.socket.close();
           }
+
+
+
+          if (Module['networkCallback']) {
+console.log("handleOpen triggering networkCallback");
+
+            try {
+              Runtime.dynCall('v', Module['networkCallback']);
+            } catch (e) {
+              if (e instanceof ExitStatus) {
+                return;
+              } else {
+                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
+                throw e;
+              }
+            }
+          }
+
+
+
         };
 
         function handleMessage(data) {
@@ -271,7 +321,7 @@ console.log('e: ' + e);
 // TODO trigger new emscripten_set_network_callback here.
 
           if (Module['networkCallback']) {
-console.log("triggering networkCallback");
+console.log("handleMessage triggering networkCallback");
 
             try {
               Runtime.dynCall('v', Module['networkCallback']);
@@ -284,6 +334,7 @@ console.log("triggering networkCallback");
               }
             }
           }
+
 
         };
 
@@ -477,7 +528,7 @@ console.log('close');
 // TODO trigger new emscripten_set_network_callback here.
 
           if (Module['networkCallback']) {
-console.log("triggering networkCallback");
+console.log("On connection triggering networkCallback");
 
             try {
               Runtime.dynCall('v', Module['networkCallback']);
@@ -495,11 +546,11 @@ console.log("triggering networkCallback");
 
         });
         sock.server.on('closed', function() {
-console.log('closed');
+console.log('sock.server closed');
           sock.server = null;
         });
         sock.server.on('error', function() {
-console.log('error');
+console.log('sock.server error');
           // don't throw
         });
       },
