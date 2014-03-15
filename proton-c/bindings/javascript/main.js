@@ -1,13 +1,13 @@
 
 // Check if the environment is Node.js and if so import the required library.
 if (typeof exports !== "undefined" && exports !== null) {
-    Module = require("../../../bld/proton-c/bindings/javascript/messenger.js");
+    Proton = require("../../../bld/proton-c/bindings/javascript/messenger.js");
 }
 
 
 try {
 
-    var messenger = Module.Messenger();
+    var messenger = Proton.Messenger();
 
     console.log("name = " + messenger.getName());
 
@@ -31,9 +31,15 @@ try {
     console.log("subscription address = " + subscription.getAddress());
 
 
+    var message = Proton.Message();
+
 
     messenger.stop();
     console.log("isStopped = " + messenger.isStopped());
+
+
+
+    message.free();
 
     messenger.free();
 

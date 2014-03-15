@@ -149,9 +149,6 @@ Module["Messenger"] = function(name) {
 */
 
 
-    //message = pn_message();
-
-
     // *************************************** Private methods ******************************************
 
     /**
@@ -591,6 +588,63 @@ console.log("rewrite: not fully tested yet");
 
     return _public;
 };
+
+
+
+
+Module["Message"] = function(name) {
+    var _public = {};
+
+    var _message = _pn_message();
+
+
+    // *************************************** Private methods ******************************************
+
+    /**
+     * 
+     */
+/*
+    function _check(code) {
+
+    };*/
+
+    // **************************************** Public methods ******************************************
+
+    /**
+     * Export the underlying message implementation reference, which is needed
+     * by Messenger.put() and Messenger.get(). We use the dot notation rather
+     * than associative array form so it is visible to Messenger, but the Closure
+     * compiler will minify it effectively making it a "protected" property.
+     */
+    _public.impl = _message;
+
+    /**
+     * Retrieves the name of a Messenger.
+     * @return the name of the messenger.
+     */
+    /*_public["getName"] = function() {
+        //return Pointer_stringify(_pn_messenger_name(_messenger));
+    };*/
+
+
+
+    /**
+     * Free the Message.
+     * N.B. This method has to be called explicitly in JavaScript as we can't
+     * intercept finalisers so we need to remember to free before removing refs.
+     */
+    _public["free"] = function() {
+        _pn_message_free(_message);
+    };
+
+
+    return _public;
+};
+
+
+
+
+
 
 /*
 Module["Inflate"] = function(size) {
