@@ -31,7 +31,7 @@ import org.apache.qpid.proton.amqp.transport.Open;
 
 public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 {
-    public static final int MAX_CHANNELS = 255;
+    public static final int MAX_CHANNELS = 65535;
 
     private List<SessionImpl> _sessions = new ArrayList<SessionImpl>();
     private EndpointImpl _transportTail;

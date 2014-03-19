@@ -76,8 +76,8 @@ public class TransportImpl extends EndpointImpl
     private boolean _isCloseSent;
 
     private boolean _headerWritten;
-    private TransportSession[] _remoteSessions;
-    private TransportSession[] _localSessions;
+    private Map<Integer, TransportSession> _remoteSessions = new HashMap<Integer, TransportSession>();
+    private Map<Integer, TransportSession> _localSessions = new HashMap<Integer, TransportSession>();
 
     private TransportInput _inputProcessor;
     private TransportOutput _outputProcessor;
@@ -197,10 +197,6 @@ public class TransportImpl extends EndpointImpl
         // TODO - check if already bound
         ((ConnectionImpl) conn).setTransport(this);
         _connectionEndpoint = (ConnectionImpl) conn;
-
-        _localSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
-        _remoteSessions = new TransportSession[_connectionEndpoint.getMaxChannels()+1];
-
 
         if(getRemoteState() != EndpointState.UNINITIALIZED)
         {
@@ -802,22 +798,23 @@ public class TransportImpl extends EndpointImpl
 
     private int allocateLocalChannel(TransportSession transportSession)
     {
-        for( int i=0; i < _localSessions.length; i++)
+        for (int i = 0; i < _connectionEndpoint.getMaxChannels(); i++)
         {
-            if( _localSessions[i] == null )
+            if (!_localSessions.containsKey(i))
             {
-                _localSessions[i] = transportSession;
+                _localSessions.put(i, transportSession);
                 transportSession.setLocalChannel(i);
                 return i;
             }
         }
+
         return -1;
     }
 
     private int freeLocalChannel(TransportSession transportSession)
     {
         final int channel = transportSession.getLocalChannel();
-        _localSessions[channel] = null;
+        _localSessions.remove(channel);
         transportSession.freeLocalChannel();
         return channel;
     }
@@ -953,7 +950,7 @@ public class TransportImpl extends EndpointImpl
     public void handleBegin(Begin begin, Binary payload, Integer channel)
     {
         // TODO - check channel < max_channel
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession != null)
         {
             // TODO - fail due to begin on begun session
@@ -969,14 +966,14 @@ public class TransportImpl extends EndpointImpl
             else
             {
                 // TODO check null
-                transportSession = _localSessions[begin.getRemoteChannel().intValue()];
+                transportSession = _localSessions.get(begin.getRemoteChannel().intValue());
                 session = transportSession.getSession();
 
             }
             transportSession.setRemoteChannel(channel);
             session.setRemoteState(EndpointState.ACTIVE);
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
-            _remoteSessions[channel] = transportSession;
+            _remoteSessions.put(channel, transportSession);
 
             EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_STATE);
             if (ev != null) {
@@ -989,7 +986,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void handleAttach(Attach attach, Binary payload, Integer channel)
     {
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
@@ -1047,7 +1044,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void handleFlow(Flow flow, Binary payload, Integer channel)
     {
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
@@ -1063,7 +1060,7 @@ public class TransportImpl extends EndpointImpl
     public void handleTransfer(Transfer transfer, Binary payload, Integer channel)
     {
         // TODO - check channel < max_channel
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession != null)
         {
             transportSession.handleTransfer(transfer, payload);
@@ -1077,7 +1074,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void handleDisposition(Disposition disposition, Binary payload, Integer channel)
     {
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
@@ -1091,7 +1088,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void handleDetach(Detach detach, Binary payload, Integer channel)
     {
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
@@ -1126,14 +1123,14 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void handleEnd(End end, Binary payload, Integer channel)
     {
-        TransportSession transportSession = _remoteSessions[channel];
+        TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
         }
         else
         {
-            _remoteSessions[channel] = null;
+            _remoteSessions.remove(channel);
             transportSession.receivedEnd();
             SessionImpl session = transportSession.getSession();
             session.setRemoteState(EndpointState.CLOSED);
