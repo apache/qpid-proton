@@ -333,6 +333,7 @@ class MessengerApp(object):
         self.certificate = None
         self.privatekey = None
         self.password = None
+        self._output = None
 
     def start(self, verbose=False):
         """ Begin executing the test """
@@ -363,7 +364,14 @@ class MessengerApp(object):
 
     def stdout(self):
         #self._process.communicate()[0]
+        if not self._output or not self._output[0]:
+            return "*** NO STDOUT ***"
         return self._output[0]
+
+    def stderr(self):
+        if not self._output or not self._output[1]:
+            return "*** NO STDERR ***"
+        return self._output[1]
 
     def cmdline(self):
         if not self._cmdline:
