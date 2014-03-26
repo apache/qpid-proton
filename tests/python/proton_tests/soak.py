@@ -44,31 +44,31 @@ class AppTests(Test):
 
     @property
     def iterations(self):
-        return int(self.default("iterations", 2, fast=1, valgrind=1))
+        return int(self.default("iterations", 2, fast=1, valgrind=2))
 
     @property
     def send_count(self):
-        return int(self.default("send_count", 17, fast=1, valgrind=1))
+        return int(self.default("send_count", 17, fast=1, valgrind=2))
 
     @property
     def target_count(self):
-        return int(self.default("target_count", 5, fast=1, valgrind=1))
+        return int(self.default("target_count", 5, fast=1, valgrind=2))
 
     @property
     def send_batch(self):
-        return int(self.default("send_batch", 7, fast=1, valgrind=1))
+        return int(self.default("send_batch", 7, fast=1, valgrind=2))
 
     @property
     def forward_count(self):
-        return int(self.default("forward_count", 5, fast=1, valgrind=1))
+        return int(self.default("forward_count", 5, fast=1, valgrind=2))
 
     @property
     def port_count(self):
-        return int(self.default("port_count", 3, fast=1, valgrind=1))
+        return int(self.default("port_count", 3, fast=1, valgrind=2))
 
     @property
     def sender_count(self):
-        return int(self.default("sender_count", 3, fast=1, valgrind=1))
+        return int(self.default("sender_count", 3, fast=1, valgrind=2))
 
     def valgrind_test(self):
         self.is_valgrind = True
