@@ -55,8 +55,9 @@ package for that language:
     # dependencies needed for bindings
     yum install swig python-devel ruby-devel php-devel perl-devel
 
-    # dependencies needed for java
-    yum install java-1.6.0-openjdk
+    # dependencies needed for java (note that any non-ancient jvm will
+    # work, 1.8.0 is just what is current for fedora 20)
+    yum install java-1.8.0-openjdk-devel
 
     # dependencies needed for python docs
     yum install epydoc
