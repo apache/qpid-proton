@@ -39,7 +39,7 @@ set_target_properties(cproton
     PREFIX ""
     LINK_FLAGS "${ALLOW_UNDEFINED}")
 
-if (ASK_PHP)
+if (CHECK_SYSINSTALL_PHP)
   execute_process(COMMAND ${PHP_CONFIG_EXE} --extension-dir
     OUTPUT_VARIABLE PHP_EXT_DIR_DEFAULT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -65,18 +65,24 @@ if (ASK_PHP)
   if ("${PHP_INI_DIR_DEFAULT}" STREQUAL "")
     set(PHP_INI_DIR_DEFAULT "/etc/php.d")
   endif()
+else (CHECK_SYSINSTALL_PHP)
+  set (PHP_EXT_DIR_DEFAULT ${BINDINGS_DIR}/php)
+  set (PHP_INI_DIR_DEFAULT ${BINDINGS_DIR}/php/ini)
+  set (PHP_INCLUDE_DIR_DEFAULT ${BINDINGS_DIR}/php/include)
+endif (CHECK_SYSINSTALL_PHP)
 
-  set(PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT} CACHE PATH "PHP extensions directory.")
-  set(PHP_INI_DIR ${PHP_INI_DIR_DEFAULT} CACHE PATH "Directory scanned for PHP ini files.")
-  set(PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT} CACHE PATH "PHP include directory.")
-
-else (ASK_PHP)
-
-  set (PHP_EXT_DIR ${BINDINGS_DIR}/php CACHE PATH "PHP extensions directory")
-  set (PHP_INCLUDE_DIR ${BINDINGS_DIR}/php/include CACHE PATH "PHP include directory")
-  set (PHP_INI_DIR ${BINDINGS_DIR}/php/ini CACHE PATH "PHP ini directory")
-
-endif (ASK_PHP)
+# PHP extensions directory
+if (NOT PHP_EXT_DIR)
+  set (PHP_EXT_DIR ${PHP_EXT_DIR_DEFAULT})
+endif()
+# PHP ini directory
+if (NOT PHP_INI_DIR)
+  set (PHP_INI_DIR ${PHP_INI_DIR_DEFAULT})
+endif()
+# PHP include directory
+if (NOT PHP_INCLUDE_DIR)
+  set (PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT})
+endif()
 
 install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}

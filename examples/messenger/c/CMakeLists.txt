@@ -17,24 +17,12 @@
 # under the License.
 #
 
-cmake_minimum_required (VERSION 2.6)
-
-find_path(PROTON_INCLUDE_DIR proton/types.h)
-find_library(PROTON_LIBRARY
-             NAMES qpid-proton)
+find_package(Proton REQUIRED)
 
 add_executable(recv recv.c)
 add_executable(send send.c)
 
-target_link_libraries(recv qpid-proton)
-target_link_libraries(send qpid-proton)
+include_directories(${Proton_INCLUDE_DIRS})
 
-set_target_properties (
-  recv send
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
-)
-
-if (BUILD_WITH_CXX)
-  set_source_files_properties (recv.c send.c PROPERTIES LANGUAGE CXX)
-endif (BUILD_WITH_CXX)
+target_link_libraries(recv ${Proton_LIBRARIES})
+target_link_libraries(send ${Proton_LIBRARIES})

@@ -47,10 +47,12 @@ endif (RUBY_FOUND)
 find_program(PHP_CONFIG_EXE php-config)
 if (PHP_CONFIG_EXE)
   find_program(PHP_EXE php)
+  mark_as_advanced (PHP_EXE)
   if (PHP_EXE)
     set (DEFAULT_PHP ON)
   endif (PHP_EXE)
 endif (PHP_CONFIG_EXE)
+mark_as_advanced (PHP_CONFIG_EXE)
 
 # Prerequisites for Perl:
 include(FindPerl)

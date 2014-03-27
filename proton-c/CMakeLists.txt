@@ -51,6 +51,7 @@ if (OPENSSL_FOUND)
   set(ssl_impl openssl)
 endif(OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
+mark_as_advanced (SSL_IMPL)
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
@@ -229,7 +230,6 @@ endif (SWIG_FOUND)
 
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
-add_subdirectory(../examples/messenger/c examples/messenger/c)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 set (qpid-proton-platform
@@ -431,15 +431,17 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
 
-find_program(VALGRIND valgrind DOC "Location of the valgrind program")
+find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND)
-  if (VALGRIND STREQUAL VALGRIND-NOTFOUND)
+  if (NOT VALGRIND_EXE)
     message(STATUS "Can't locate the valgrind command; no run-time error detection")
-  else (VALGRIND STREQUAL VALGRIND-NOTFOUND)
-    set (VALGRIND_ENV "VALGRIND=${VALGRIND}")
-  endif (VALGRIND STREQUAL VALGRIND-NOTFOUND)
+  else ()
+    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
+  endif ()
 endif (ENABLE_VALGRIND)
+
+mark_as_advanced (VALGRIND_EXE)
 
 # c tests:
 
@@ -462,8 +464,8 @@ add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
          ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-find_program(ruby_exe "ruby")
-if (ruby_exe)
+find_program(RUBY_EXE "ruby")
+if (RUBY_EXE)
   set (rb_root "${pn_test_root}/ruby")
   set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
   set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
@@ -477,16 +479,21 @@ if (ruby_exe)
     "${rb_root}/proton-test")
 
   # ruby spec tests
-  find_program(rspec_exe rspec)
-  if (rspec_exe)
+  find_program(RSPEC_EXE rspec)
+  if (RSPEC_EXE)
     add_test (NAME ruby-spec-test
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
               COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-                      ${rspec_exe})
+                      ${RSPEC_EXE})
 
-  else(rspec_exe)
+  else(RSPEC_EXE)
     message (STATUS "Cannot find rspec, skipping rspec tests")
-  endif(rspec_exe)
-else (ruby_exe)
+  endif(RSPEC_EXE)
+else (RUBY_EXE)
   message (STATUS "Cannot find ruby, skipping ruby tests")
-endif (ruby_exe)
+endif (RUBY_EXE)
+
+mark_as_advanced (RUBY_EXE RSPEC_EXE)
+
+# build examples to make sure they still work
+add_subdirectory(../examples ../examples)
