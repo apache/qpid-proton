@@ -67,8 +67,8 @@ if (CHECK_SYSINSTALL_PHP)
   endif()
 else (CHECK_SYSINSTALL_PHP)
   set (PHP_EXT_DIR_DEFAULT ${BINDINGS_DIR}/php)
-  set (PHP_INI_DIR_DEFAULT ${BINDINGS_DIR}/php/ini)
-  set (PHP_INCLUDE_DIR_DEFAULT ${BINDINGS_DIR}/php/include)
+  set (PHP_INI_DIR_DEFAULT ${BINDINGS_DIR}/php)
+  set (PHP_INCLUDE_DIR_DEFAULT ${BINDINGS_DIR}/php)
 endif (CHECK_SYSINSTALL_PHP)
 
 # PHP extensions directory
@@ -84,6 +84,18 @@ if (NOT PHP_INCLUDE_DIR)
   set (PHP_INCLUDE_DIR ${PHP_INCLUDE_DIR_DEFAULT})
 endif()
 
+if (CHECK_SYSINSTALL_PHP)
+  set (PROTON_INI "extension=cproton.so")
+else ()
+  pn_absolute_install_dir(PHP_INCLUDE_PATH ${PHP_INCLUDE_DIR} ${CMAKE_INSTALL_PREFIX})
+  pn_absolute_install_dir(PHP_EXTENSION_LIB ${PHP_EXT_DIR}/cproton.so ${CMAKE_INSTALL_PREFIX})
+  set (PROTON_INI "include_path=${PHP_INCLUDE_PATH}\nextension=${PHP_EXTENSION_LIB}")
+endif()
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/proton.ini.in
+                ${CMAKE_CURRENT_BINARY_DIR}/proton.ini
+                @ONLY)
+
 install(TARGETS cproton
         DESTINATION ${PHP_EXT_DIR}
         COMPONENT PHP)
@@ -95,7 +107,7 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/proton.php
         COMPONENT PHP)
 
 if (NOT ${PHP_INI_DIR} STREQUAL "")
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cproton.ini
-          DESTINATION ${PHP_INI_DIR}
-          COMPONENT PHP)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proton.ini
+    DESTINATION ${PHP_INI_DIR}
+    COMPONENT PHP)
 endif ()

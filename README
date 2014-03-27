@@ -107,9 +107,9 @@ dynamic language bindings into a central, default location:
 In order to use these bindings, you'll need to configure your
 interpreter to load the bindings from the appropriate directory:
 
- * Perl   - Add ${BINDINGS}/perl to PERL5PATH
+ * Perl   - Add ${BINDINGS}/perl to PERL5LIB
  * PHP    - Set the PHPRC environment variable to point to
-            ${BINDINGS}/php/ini/php.ini
+            ${BINDINGS}/php/proton.ini
  * Python - Add ${BINDINGS}/python to PYTHONPATH
  * Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
 

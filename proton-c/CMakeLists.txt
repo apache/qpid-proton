@@ -223,6 +223,17 @@ if (MSVC)
 	set(CMAKE_DEBUG_POSTFIX "d")
 endif (MSVC)
 
+macro (pn_absolute_install_dir NAME VALUE PREFIX)
+  if(IS_ABSOLUTE ${VALUE})
+    set(${NAME} "${VALUE}")
+  elseif(IS_ABSOLUTE ${PREFIX})
+    set(${NAME} "${PREFIX}/${VALUE}")
+  else()
+    set(${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
+  endif(IS_ABSOLUTE ${VALUE})
+  get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
+endmacro()
+
 find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
@@ -350,26 +361,12 @@ install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
          DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
+pn_absolute_install_dir(PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+
 # Pkg config file
-# make sure the install prefix is absolute
-set(INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-
-macro (pn_pkgconfig_dir NAME VALUE PREFIX)
-  if(IS_ABSOLUTE ${VALUE})
-    set(${NAME} "${VALUE}")
-  elseif(IS_ABSOLUTE ${PREFIX})
-    set(${NAME} "${PREFIX}/${VALUE}")
-  else()
-    set(${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
-  endif(IS_ABSOLUTE ${VALUE})
-  get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
-endmacro(pn_pkgconfig_dir)
-
-pn_pkgconfig_dir(PREFIX "." ${INSTALL_PREFIX})
-pn_pkgconfig_dir(EXEC_PREFIX "." ${INSTALL_PREFIX})
-pn_pkgconfig_dir(LIBDIR ${LIB_INSTALL_DIR} ${INSTALL_PREFIX})
-pn_pkgconfig_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${INSTALL_PREFIX})
-
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)

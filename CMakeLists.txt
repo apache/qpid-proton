@@ -87,7 +87,7 @@ endif ()
 set (BINDING_LANGS PERL PHP PYTHON RUBY)
 
 foreach (LANG ${BINDING_LANGS})
-  set (SYSINSTALL_${LANG} ${SYSINSTALL_BINDINGS} CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
+  set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
   if (SYSINSTALL_BINDINGS OR SYSINSTALL_${LANG})
     set (CHECK_SYSINSTALL_${LANG} ON)
   else ()
