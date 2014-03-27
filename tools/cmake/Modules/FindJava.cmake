@@ -107,7 +107,7 @@ if(Java_JAVA_EXECUTABLE)
       # 2. OpenJDK 1.6
       # 3. GCJ 1.5
       # 4. Kaffe 1.4.2
-      if(var MATCHES "java version \"[0-9]+\\.[0-9]+\\.[0-9_.]+.*\".*")
+      if(var MATCHES "(java|openjdk) version \"[0-9]+\\.[0-9]+\\.[0-9_.]+.*\".*")
         # This is most likely Sun / OpenJDK, or maybe GCJ-java compat layer
         string( REGEX REPLACE ".* version \"([0-9]+\\.[0-9]+\\.[0-9_.]+.*)\".*"
                 "\\1" Java_VERSION_STRING "${var}" )
