@@ -280,7 +280,7 @@ class Message {
     $body = new Data(pn_message_body($this->impl));
 
     if ($inst->next())
-      $this->instructions = $inst.get_object();
+      $this->instructions = $inst->get_object();
     else
       $this->instructions = null;
     if ($ann->next())
