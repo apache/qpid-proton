@@ -472,20 +472,25 @@ if (RUBY_EXE)
   set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
 
   # ruby unit tests:  tests/ruby/proton-test
-  add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-    "${rb_root}/proton-test")
+  # only enable the tests if the Ruby gem dependencies were found
+  if (DEFAULT_RUBY_TESTING)
+    add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+      "${rb_root}/proton-test")
 
-  # ruby spec tests
-  find_program(RSPEC_EXE rspec)
-  if (RSPEC_EXE)
-    add_test (NAME ruby-spec-test
-              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-              COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-                      ${RSPEC_EXE})
+    # ruby spec tests
+    find_program(RSPEC_EXE rspec)
+    if (RSPEC_EXE)
+      add_test (NAME ruby-spec-test
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
+                COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                        ${RSPEC_EXE})
 
-  else(RSPEC_EXE)
-    message (STATUS "Cannot find rspec, skipping rspec tests")
-  endif(RSPEC_EXE)
+    else(RSPEC_EXE)
+      message (STATUS "Cannot find rspec, skipping rspec tests")
+    endif(RSPEC_EXE)
+  else (DEFAULT_RUBY_TESTING)
+    message(STATUS "Skipping Ruby tests: missing dependencies")
+  endif (DEFAULT_RUBY_TESTING)
 else (RUBY_EXE)
   message (STATUS "Cannot find ruby, skipping ruby tests")
 endif (RUBY_EXE)

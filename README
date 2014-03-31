@@ -236,10 +236,14 @@ Testing
 
 Additional packages required for testing:
 
-    yum install rubygem-minitest
+    yum install rubygem-minitest rubygem-rspec rubygem-simplecov
+
+On non-RPM based systems, you can install them using:
+
+    gem install minitest rspec simplecov
 
 To test Proton, use the cmake build and run 'make test'. Note that
-this will invoke the maven tests as well, so the maven prerequisates
+this will invoke the maven tests as well, so the maven prerequisites
 are required in addition to the cmake prerequisites.
 
 Running Tests
