@@ -121,16 +121,17 @@ module Qpid
         Cproton.pn_messenger_get_timeout(@impl)
       end
 
-      # Blocking Attribute
+      # Returns true if blocking mode is enabled.
       #
       # Enable or disable blocking behavior during message sending
       # and receiving.  This affects every blocking call, with the
       # exception of work().  Currently, the affected calls are
       # send, recv, and stop.
-      def blocking
-        Cproton.pn_mesenger_is_blocking(@impl)
+      def blocking?
+        Cproton.pn_messenger_is_blocking(@impl)
       end
 
+      # Sets the blocking mode.
       def blocking=(blocking)
         Cproton.pn_messenger_set_blocking(@impl, blocking)
       end
