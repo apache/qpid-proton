@@ -373,7 +373,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
     return NULL;
   }
 
-  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) malloc(sizeof(pn_listener_ctx_t));
+  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_new(sizeof(pn_listener_ctx_t), NULL);
   ctx->messenger = messenger;
   ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   if (messenger->certificate) {
@@ -384,7 +384,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
     if (err) {
       pn_error_format(messenger->error, PN_ERR, "invalid credentials");
       pn_ssl_domain_free(ctx->domain);
-      free(ctx);
+      pn_free(ctx);
       pn_close(messenger->io, socket);
       return NULL;
     }
@@ -423,7 +423,7 @@ static void pn_listener_ctx_free(pn_messenger_t *messenger, pn_listener_ctx_t *c
   free(ctx->host);
   free(ctx->port);
   pn_ssl_domain_free(ctx->domain);
-  free(ctx);
+  pn_free(ctx);
 }
 
 static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
