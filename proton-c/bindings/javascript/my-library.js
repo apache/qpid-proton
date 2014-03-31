@@ -276,16 +276,7 @@ console.log('e: ' + e);
           if (Module['networkCallback']) {
 console.log("handleOpen triggering networkCallback");
 
-            try {
-              Runtime.dynCall('v', Module['networkCallback']);
-            } catch (e) {
-              if (e instanceof ExitStatus) {
-                return;
-              } else {
-                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
-                throw e;
-              }
-            }
+            Module['networkCallback']();
           }
 
 
@@ -318,21 +309,12 @@ console.log("handleOpen triggering networkCallback");
 
           sock.recv_queue.push({ addr: peer.addr, port: peer.port, data: data });
 
-// TODO trigger new emscripten_set_network_callback here.
+
 
           if (Module['networkCallback']) {
 console.log("handleMessage triggering networkCallback");
 
-            try {
-              Runtime.dynCall('v', Module['networkCallback']);
-            } catch (e) {
-              if (e instanceof ExitStatus) {
-                return;
-              } else {
-                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
-                throw e;
-              }
-            }
+            Module['networkCallback']();
           }
 
 
@@ -525,21 +507,12 @@ console.log('close');
 
 
 
-// TODO trigger new emscripten_set_network_callback here.
+
 
           if (Module['networkCallback']) {
 console.log("On connection triggering networkCallback");
 
-            try {
-              Runtime.dynCall('v', Module['networkCallback']);
-            } catch (e) {
-              if (e instanceof ExitStatus) {
-                return;
-              } else {
-                if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
-                throw e;
-              }
-            }
+            Module['networkCallback']();
           }
 
 
@@ -711,8 +684,22 @@ console.log('getname');
   },
 
   emscripten_set_network_callback: function(func) {
+
+    function _func() {
+      try {
+        Runtime.dynCall('v', func);
+      } catch (e) {
+        if (e instanceof ExitStatus) {
+          return;
+        } else {
+          if (e && typeof e === 'object' && e.stack) Module.printErr('exception thrown: ' + [e, e.stack]);
+          throw e;
+        }
+      }
+    };
+
     Module['noExitRuntime'] = true;
-    Module['networkCallback'] = func;
+    Module['networkCallback'] = _func;
   }
 
 });

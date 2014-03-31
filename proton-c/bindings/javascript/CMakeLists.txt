@@ -32,27 +32,15 @@ set(CMAKE_CROSSCOMPILING TRUE)
 # Specify the compiler to use for cross-compilation.
 set(CMAKE_C_COMPILER "${EMCC}")
 
-# Specify the archiver to use for cross-compilation.
-#find_program(EMAR emar)
-#set(CMAKE_AR "${EMAR}")
-
-# Specify the ranlib to use for cross-compilation.
-#find_program(EMRANLIB emranlib)
-#set(CMAKE_RANLIB "${EMRANLIB}")
-
 # Don't do compiler autodetection, since we are cross-compiling.
 include(CMakeForceCompiler)
 CMAKE_FORCE_C_COMPILER("${CMAKE_C_COMPILER}" Clang)
 
-# Specify the program to use when building static libraries. Force Emscripten-related command line options to clang.
-#set(CMAKE_C_ARCHIVE_CREATE "${CMAKE_AR} rc <TARGET> ${CMAKE_START_TEMP_FILE} <LINK_FLAGS> <OBJECTS>${CMAKE_END_TEMP_FILE}")
 
 # From this point we should be using emscripten compilation tools rather than default ones
 message(STATUS "emscripten compilation environment:")
 message(STATUS "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}")
-#message(STATUS "CMAKE_AR: ${CMAKE_AR}")
-#message(STATUS "CMAKE_RANLIB: ${CMAKE_RANLIB}")
-#message(STATUS "CMAKE_C_ARCHIVE_CREATE: ${CMAKE_C_ARCHIVE_CREATE}")
+
 
 # Set this to the proton-c directory, we're cross-compiling code from there.
 set(PN_PATH ${CMAKE_SOURCE_DIR}/proton-c)
@@ -74,7 +62,7 @@ set(pn_driver_impl ${PN_PATH}/src/posix/driver.c)
 
 # Generate encodings.h and protocol.h
 # It may be possible to use the ones generated for the main proton-c build but qpid-proton-core has
-# a dependency on the generated files so I'm not sure if it'll work without a command that can
+# a dependency on the generated files, so I'm not sure if it'll work without a command that can
 # be run as a dependency. Probably best do it this way when cross-compiling - though more copy'n'paste
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
@@ -163,15 +151,17 @@ set_source_files_properties(
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
+# Compile Proton into LLVM bitcode which will be used later in the linking stage
+# of add_executable for compilation into Javascript.
 add_library(
-  qpid-proton-js SHARED
+  qpid-proton-bitcode SHARED
 
   ${qpid-proton-core}
   ${qpid-proton-platform}
   )
 
 set_target_properties(
-  qpid-proton-js
+  qpid-proton-bitcode
   PROPERTIES
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
@@ -181,19 +171,17 @@ set_target_properties(
 
 
 add_executable(send-async.js ${PN_PATH}/../examples/messenger/c/send-async.c)
-target_link_libraries(send-async.js qpid-proton-js)
+target_link_libraries(send-async.js qpid-proton-bitcode)
 
 #add_executable(send-async.html ${PN_PATH}/../examples/messenger/c/send-async.c)
-#target_link_libraries(send-async.html qpid-proton-js)
+#target_link_libraries(send-async.html qpid-proton-bitcode)
 
 add_executable(recv-async.js ${PN_PATH}/../examples/messenger/c/recv-async.c)
-target_link_libraries(recv-async.js qpid-proton-js)
+target_link_libraries(recv-async.js qpid-proton-bitcode)
 
 
 
 # TODO get the patches in my-library.js pushed properly into emscripten ASAP
-# Note there is currently an issue with varargs that makes it necessary
-# to compile with 'EMCC_LLVM_TARGET=i386-pc-linux-gnu make'
 #
 set_target_properties(
   #send-async.js recv-async.js send-async.html
@@ -216,19 +204,20 @@ set_target_properties(
 
 
 
-# Compile with 'EMCC_LLVM_TARGET=i386-pc-linux-gnu make'
-add_executable(messenger.js messenger.c)
-target_link_libraries(messenger.js qpid-proton-js)
+# Build the main JavaScript library called proton.js
+add_executable(proton.js binding.c)
+target_link_libraries(proton.js qpid-proton-bitcode)
 
 set_target_properties(
-  messenger.js
+  proton.js
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
 
-  # This build is optimised but not minified
-  LINK_FLAGS "-s \"EXPORT_NAME='Proton'\" -s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/pre-wrap.js --post-js ${CMAKE_CURRENT_SOURCE_DIR}/post-wrap.js --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=\"[]\" -s EXPORTED_FUNCTIONS=\"['_test', '_pn_messenger', '_pn_messenger_name', '_pn_messenger_set_blocking', '_pn_error_text', '_pn_code', '_pn_messenger_free', '_pn_messenger_errno', '_pn_messenger_error', '_pn_messenger_get_outgoing_window', '_pn_messenger_set_outgoing_window', '_pn_messenger_get_incoming_window', '_pn_messenger_set_incoming_window', '_pn_messenger_start', '_pn_messenger_stop', '_pn_messenger_stopped', '_pn_messenger_subscribe', '_pn_subscription_get_context', '_pn_subscription_set_context', '_pn_subscription_address', '_pn_messenger_put', '_pn_messenger_status', '_pn_messenger_buffered', '_pn_messenger_settle', '_pn_messenger_outgoing_tracker', '_pn_messenger_work', '_pn_messenger_recv', '_pn_messenger_receiving', '_pn_messenger_get', '_pn_messenger_incoming_tracker', '_pn_messenger_incoming_subscription', '_pn_messenger_accept', '_pn_messenger_reject', '_pn_messenger_outgoing', '_pn_messenger_incoming', '_pn_messenger_route', '_pn_messenger_rewrite', '_pn_message', '_pn_message_free']\""
-  )
+  # This build is optimised and minified
+  #LINK_FLAGS "-s \"EXPORT_NAME='proton'\" -s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --closure 1 --pre-js
 
+  LINK_FLAGS "-s \"EXPORT_NAME='proton'\" -s \"WEBSOCKET_SUBPROTOCOL='AMQPWSB10'\" -O2 --pre-js ${CMAKE_CURRENT_SOURCE_DIR}/binding.js --post-js ${CMAKE_CURRENT_SOURCE_DIR}/binding-close.js --js-library ${CMAKE_CURRENT_SOURCE_DIR}/my-library.js -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=\"[]\" -s EXPORTED_FUNCTIONS=\"['_test', '_uuid_generate', '_pn_bytes', '_pn_error_text', '_pn_code', '_pn_messenger', '_pn_messenger_name', '_pn_messenger_set_blocking', '_pn_messenger_free', '_pn_messenger_errno', '_pn_messenger_error', '_pn_messenger_get_outgoing_window', '_pn_messenger_set_outgoing_window', '_pn_messenger_get_incoming_window', '_pn_messenger_set_incoming_window', '_pn_messenger_start', '_pn_messenger_stop', '_pn_messenger_stopped', '_pn_messenger_subscribe', '_pn_messenger_put', '_pn_messenger_status', '_pn_messenger_buffered', '_pn_messenger_settle', '_pn_messenger_outgoing_tracker', '_pn_messenger_work', '_pn_messenger_recv', '_pn_messenger_receiving', '_pn_messenger_get', '_pn_messenger_incoming_tracker', '_pn_messenger_incoming_subscription', '_pn_messenger_accept', '_pn_messenger_reject', '_pn_messenger_outgoing', '_pn_messenger_incoming',  '_pn_messenger_route', '_pn_messenger_rewrite', '_pn_subscription_get_context', '_pn_subscription_set_context', '_pn_subscription_address', '_pn_message', '_pn_message_free', '_pn_message_get_address', '_pn_message_errno', '_pn_message_error', '_pn_message_set_address', '_pn_message_get_subject', '_pn_message_set_subject', '_pn_message_instructions', '_pn_message_annotations', '_pn_message_properties', '_pn_message_body', '_pn_data', '_pn_data_free', '_pn_data_error', '_pn_data_errno', '_pn_data_clear', '_pn_data_rewind', '_pn_data_next', '_pn_data_prev', '_pn_data_enter', '_pn_data_exit', '_pn_data_lookup', '_pn_data_narrow', '_pn_data_widen', '_pn_data_type', '_pn_data_encode', '_pn_data_decode', '_pn_data_put_list', '_pn_data_put_map', '_pn_data_put_array', '_pn_data_put_described', '_pn_data_put_null', '_pn_data_put_bool', '_pn_data_put_ubyte', '_pn_data_put_byte', '_pn_data_put_ushort', '_pn_data_put_short', '_pn_data_put_uint', '_pn_data_put_int', '_pn_data_put_char', '_pn_data_put_ulong', '_pn_data_put_long', '_pn_data_put_timestamp', '_pn_data_put_float', '_pn_data_put_double', '_pn_data_put_decimal32', '_pn_data_put_decimal64', '_pn_data_put_decimal128', '_pn_data_put_uuid', '_pn_data_put_binary', '_pn_data_put_string', '_pn_data_put_symbol', '_pn_data_get_list', '_pn_data_get_map', '_pn_data_get_array', '_pn_data_is_described', '_pn_data_is_null', '_pn_data_get_bool', '_pn_data_get_ubyte', '_pn_data_get_byte', '_pn_data_get_ushort', '_pn_data_get_short', '_pn_data_get_uint', '_pn_data_get_int', '_pn_data_get_char', '_pn_data_get_ulong', '_pn_data_get_long', '_pn_data_get_timestamp', '_pn_data_get_float', '_pn_data_get_double', '_pn_data_get_decimal32', '_pn_data_get_decimal64', '_pn_data_get_decimal128', '_pn_data_get_uuid', '_pn_data_get_binary', '_pn_data_get_string', '_pn_data_get_symbol', '_pn_data_copy', '_pn_data_format', '_pn_data_dump']\""
+  )
 
 
 # Some hacks so check what's getting built TODO to get rid of eventually 

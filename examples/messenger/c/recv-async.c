@@ -71,7 +71,7 @@ printf("in while loop\n");
       pn_messenger_get(messenger, message);
       check(messenger);
       pn_tracker_t tracker = pn_messenger_incoming_tracker(messenger);
-
+printf("tracker = %ld:%ld\n", (long)(tracker >> 32), (long)tracker);
 
       char buffer[1024];
       size_t buffsize = sizeof(buffer);
@@ -86,7 +86,7 @@ printf("in while loop\n");
 
 
       int err = pn_messenger_accept(messenger, tracker, 0);
-printf("err = %d\n", err);
+printf("err = %d\n\n", err);
     }
 }
 
