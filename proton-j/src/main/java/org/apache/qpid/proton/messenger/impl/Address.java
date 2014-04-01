@@ -87,12 +87,24 @@ class Address
             hp = uphp;
         }
 
-        int colon = hp.indexOf(':');
-        if (colon >= 0) {
-            _host = hp.substring(0, colon);
-            _port = hp.substring(colon + 1);
-        } else {
-            _host = hp;
+        if (hp.startsWith("[")) {
+            int close = hp.indexOf(']');
+            if (close >= 0) {
+                _host = hp.substring(1, close);
+                if (hp.substring(close + 1).startsWith(":")) {
+                    _port = hp.substring(close + 2);
+                }
+            }
+        }
+
+        if (_host == null) {
+            int colon = hp.indexOf(':');
+            if (colon >= 0) {
+                _host = hp.substring(0, colon);
+                _port = hp.substring(colon + 1);
+            } else {
+                _host = hp;
+            }
         }
 
         if (_host.startsWith("~")) {

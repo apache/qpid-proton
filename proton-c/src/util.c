@@ -141,8 +141,17 @@ void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **ho
   }
 
   *host = url;
+  char *open = (*url == '[') ? url : 0;
+  if (open) {
+    char *close = strchr(open, ']');
+    if (close) {
+        *host = open + 1;
+        *close = '\0';
+        url = close + 1;
+    }
+  }
 
-  char *colon = strchr(*host, ':');
+  char *colon = strchr(url, ':');
   if (colon) {
     *colon = '\0';
     *port = colon + 1;
