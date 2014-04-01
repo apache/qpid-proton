@@ -137,7 +137,9 @@ typedef int int32_t;
 
 %typemap(in) pn_uuid_t
 {
-  AV* tmpav = SvRV($input);
+  // XXX: I believe there is a typemap or something similar for
+  // typechecking the input. We should probably use it.
+  AV* tmpav = (AV *) SvRV($input);
   int index = 0;
 
   for(index = 0; index < 16; index++)
