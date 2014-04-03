@@ -55,9 +55,10 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile prot
 find_program(EPYDOC_EXE epydoc)
 mark_as_advanced (EPYDOC_EXE)
 if (EPYDOC_EXE)
-   add_custom_target(docs-py COMMAND ${EPYDOC_EXE} -v --no-private --html
-                     -o ${CMAKE_CURRENT_BINARY_DIR}/html
-                     ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
+   add_custom_target(docs-py COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
+     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+     ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
+     ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"
