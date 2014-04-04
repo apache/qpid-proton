@@ -20,11 +20,7 @@
  */
 
 #include <stdarg.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#else
 #include <proton/type_compat.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -23,12 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#ifndef __cplusplus
-#include <stdint.h>
-#include <stdbool.h>
-#else
 #include <proton/type_compat.h>
-#endif
 #include <ctype.h>
 #include <string.h>
 #include <proton/error.h>

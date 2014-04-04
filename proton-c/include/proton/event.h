@@ -23,9 +23,7 @@
  */
 
 #include <proton/import_export.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include <proton/type_compat.h>
 #include <stddef.h>
 #include <sys/types.h>
 

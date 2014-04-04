@@ -27,9 +27,7 @@
 #include <proton/codec.h>
 #include <proton/error.h>
 #include <sys/types.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include <proton/type_compat.h>
 
 #ifdef __cplusplus
 extern "C" {
