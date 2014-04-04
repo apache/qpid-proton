@@ -47,8 +47,8 @@
 pn_timestamp_t time_now(void)
 {
   FILETIME now;
-  GetSystemTimeAsFileTime(&now);
   ULARGE_INTEGER t;
+  GetSystemTimeAsFileTime(&now);
   t.u.HighPart = now.dwHighDateTime;
   t.u.LowPart = now.dwLowDateTime;
   // Convert to milliseconds and adjust base epoch

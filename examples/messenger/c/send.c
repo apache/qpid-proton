@@ -52,9 +52,9 @@ void usage(void)
 int main(int argc, char** argv)
 {
   int c;
-  opterr = 0;
   char * address = (char *) "amqp://0.0.0.0";
   char * msgtext = (char *) "Hello World!";
+  opterr = 0;
 
   while((c = getopt(argc, argv, "ha:b:c:")) != -1)
   {
@@ -84,8 +84,10 @@ int main(int argc, char** argv)
 
   if (optind < argc) msgtext = argv[optind];
 
+  {
   pn_message_t * message;
   pn_messenger_t * messenger;
+  pn_data_t * body;
 
   message = pn_message();
   messenger = pn_messenger(NULL);
@@ -93,7 +95,7 @@ int main(int argc, char** argv)
   pn_messenger_start(messenger);
 
   pn_message_set_address(message, address);
-  pn_data_t *body = pn_message_body(message);
+  body = pn_message_body(message);
   pn_data_put_string(body, pn_bytes(strlen(msgtext), msgtext));
   pn_messenger_put(messenger, message);
   check(messenger);
@@ -103,6 +105,7 @@ int main(int argc, char** argv)
   pn_messenger_stop(messenger);
   pn_messenger_free(messenger);
   pn_message_free(message);
+  }
 
   return 0;
 }
