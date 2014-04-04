@@ -101,6 +101,42 @@ void pn_print_data(const char *bytes, size_t size)
   pn_fprint_data(stdout, bytes, size);
 }
 
+void pni_urldecode(const char *src, char *dst)
+{
+  const char *in = src;
+  char *out = dst;
+  while (*in != '\0')
+  {
+    if ('%' == *in)
+    {
+      if ((in[1] != '\0') && (in[2] != '\0'))
+      {
+        char esc[3];
+        esc[0] = in[1];
+        esc[1] = in[2];
+        esc[2] = '\0';
+        unsigned long d = strtoul(esc, NULL, 16);
+        *out = (char)d;
+        in += 3;
+        out++;
+      }
+      else
+      {
+        *out = *in;
+        in++;
+        out++;
+      }
+    }
+    else
+    {
+      *out = *in;
+      in++;
+      out++;
+    }
+  }
+  *out = '\0';
+}
+
 // Parse URL syntax:
 // [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
 // <user>, <password>, <host>, <port> cannot contain any of '@', ':', '/'
@@ -152,6 +188,8 @@ void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **ho
     *port = colon + 1;
   }
 
+  if (*user) pni_urldecode(*user, *user);
+  if (*pass) pni_urldecode(*pass, *pass);
 }
 
 void pn_vfatal(const char *fmt, va_list ap)

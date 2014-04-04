@@ -91,5 +91,10 @@ int main(int argc, char **argv)
   assert(test_url_parse("amqp://bigbird@host/queue@host", "amqp", "bigbird", 0, "host", 0, "queue@host"));
   assert(test_url_parse("amqp://host/queue@host", "amqp", 0, 0, "host", 0, "queue@host"));
   assert(test_url_parse("amqp://host:9765/queue@host", "amqp", 0, 0, "host", "9765", "queue@host"));
+  assert(test_url_parse("user:pass%2fword@host", 0, "user", "pass/word", "host", 0, 0));
+  assert(test_url_parse("user:pass%2Fword@host", 0, "user", "pass/word", "host", 0, 0));
+  assert(test_url_parse("us%2fer:password@host", 0, "us/er", "password", "host", 0, 0));
+  assert(test_url_parse("us%2Fer:password@host", 0, "us/er", "password", "host", 0, 0));
+  assert(test_url_parse("user:pass%2fword%@host", 0, "user", "pass/word%", "host", 0, 0));
   return 0;
 }
