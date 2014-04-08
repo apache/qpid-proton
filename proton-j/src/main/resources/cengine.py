@@ -938,9 +938,14 @@ def pn_transport_error(trans):
 
 from org.apache.qpid.proton.engine import Event
 
-PN_CONNECTION_STATE = Event.Type.CONNECTION_STATE
-PN_SESSION_STATE = Event.Type.SESSION_STATE
-PN_LINK_STATE = Event.Type.LINK_STATE
+PN_EVENT_CATEGORY_PROTOCOL = Event.Category.PROTOCOL
+
+PN_CONNECTION_LOCAL_STATE = Event.Type.CONNECTION_LOCAL_STATE
+PN_CONNECTION_REMOTE_STATE = Event.Type.CONNECTION_REMOTE_STATE
+PN_SESSION_LOCAL_STATE = Event.Type.SESSION_LOCAL_STATE
+PN_SESSION_REMOTE_STATE = Event.Type.SESSION_REMOTE_STATE
+PN_LINK_LOCAL_STATE = Event.Type.LINK_LOCAL_STATE
+PN_LINK_REMOTE_STATE = Event.Type.LINK_REMOTE_STATE
 PN_LINK_FLOW = Event.Type.LINK_FLOW
 PN_DELIVERY = Event.Type.DELIVERY
 PN_TRANSPORT = Event.Type.TRANSPORT
@@ -957,6 +962,9 @@ def pn_collector_peek(coll):
 def pn_collector_pop(coll):
   coll.pop()
 
+def pn_collector_free(coll):
+  pass
+
 def pn_event_connection(event):
   return wrap(event.getConnection(), pn_connection_wrapper)
 
@@ -972,8 +980,14 @@ def pn_event_delivery(event):
 def pn_event_transport(event):
   return wrap(event.getTransport(), pn_transport_wrapper)
 
+def pn_event_class(event):
+  return event.getClass()
+
 def pn_event_type(event):
   return event.getType()
 
 def pn_event_type_name(etype):
   return str(etype)
+
+def pn_event_category(event):
+  return event.getCategory()

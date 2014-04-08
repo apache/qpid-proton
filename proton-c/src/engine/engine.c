@@ -33,6 +33,7 @@
 #include "../platform.h"
 #include "../platform_fmt.h"
 #include "../transport/transport.h"
+#include "../engine/event.h"
 
 // endpoints
 
@@ -51,18 +52,61 @@ pn_connection_t *pn_ep_get_connection(pn_endpoint_t *endpoint)
   return NULL;
 }
 
+/* map the endpoint type to its local event type */
+static const pn_event_type_t endpoint_event_map[] = {
+  PN_CONNECTION_LOCAL_STATE,  /* CONNECTION */
+  PN_SESSION_LOCAL_STATE,     /* SESSION */
+  PN_LINK_LOCAL_STATE,        /* SENDER */
+  PN_LINK_LOCAL_STATE};       /* RECEIVER */
+
+/* setup the event given the endpoint that generated the event */
+static void endpoint_init_event(pn_event_t *event,
+                                pn_endpoint_t *endpoint)
+{
+  switch (endpoint->type) {
+  case CONNECTION: {
+      pn_connection_t *conn = (pn_connection_t *) endpoint;
+      pn_event_init_connection(event, conn);
+    }
+    break;
+  case SESSION: {
+      pn_session_t *ssn = (pn_session_t *) endpoint;
+      pn_event_init_session(event, ssn);
+    }
+    break;
+  case SENDER:
+  case RECEIVER: {
+      pn_link_t *link = (pn_link_t*) endpoint;
+      pn_event_init_link(event, link);
+    }
+    break;
+  }
+}
+
 static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
-  pn_modified(pn_ep_get_connection(endpoint), endpoint, true);
+  pn_connection_t *conn = pn_ep_get_connection(endpoint);
+  pn_event_t *event = pn_collector_put(conn->collector,
+                                       endpoint_event_map[endpoint->type]);
+  if (event) {
+    endpoint_init_event(event, endpoint);
+  }
+  pn_modified(conn, endpoint, true);
 }
 
-void pn_endpoint_close(pn_endpoint_t *endpoint)
+static void pn_endpoint_close(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
-  pn_modified(pn_ep_get_connection(endpoint), endpoint, true);
+  pn_connection_t *conn = pn_ep_get_connection(endpoint);
+  pn_event_t *event = pn_collector_put(conn->collector,
+                                       endpoint_event_map[endpoint->type]);
+  if (event) {
+    endpoint_init_event(event, endpoint);
+  }
+  pn_modified(conn, endpoint, true);
 }
 
 void pn_connection_reset(pn_connection_t *connection)
@@ -74,12 +118,14 @@ void pn_connection_reset(pn_connection_t *connection)
 
 void pn_connection_open(pn_connection_t *connection)
 {
-  if (connection) pn_endpoint_open((pn_endpoint_t *) connection);
+  assert(connection);
+  pn_endpoint_open(&connection->endpoint);
 }
 
 void pn_connection_close(pn_connection_t *connection)
 {
-  if (connection) pn_endpoint_close((pn_endpoint_t *) connection);
+  assert(connection);
+  pn_endpoint_close(&connection->endpoint);
 }
 
 void pn_endpoint_tini(pn_endpoint_t *endpoint);
@@ -185,12 +231,14 @@ pn_connection_t *pn_session_connection(pn_session_t *session)
 
 void pn_session_open(pn_session_t *session)
 {
-  if (session) pn_endpoint_open((pn_endpoint_t *) session);
+  assert(session);
+  pn_endpoint_open(&session->endpoint);
 }
 
 void pn_session_close(pn_session_t *session)
 {
-  if (session) pn_endpoint_close((pn_endpoint_t *) session);
+  assert(session);
+  pn_endpoint_close(&session->endpoint);
 }
 
 void pn_session_free(pn_session_t *session)
@@ -234,12 +282,14 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 
 void pn_link_open(pn_link_t *link)
 {
-  if (link) pn_endpoint_open((pn_endpoint_t *) link);
+  assert(link);
+  pn_endpoint_open(&link->endpoint);
 }
 
 void pn_link_close(pn_link_t *link)
 {
-  if (link) pn_endpoint_close((pn_endpoint_t *) link);
+  assert(link);
+  pn_endpoint_close(&link->endpoint);
 }
 
 void pn_terminus_free(pn_terminus_t *terminus)

@@ -201,7 +201,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteDesiredCapabilities(open.getDesiredCapabilities());
         setRemoteOfferedCapabilities(open.getOfferedCapabilities());
         setRemoteProperties(open.getProperties());
-        EventImpl ev = put(Event.Type.CONNECTION_STATE);
+        EventImpl ev = put(Event.Type.CONNECTION_REMOTE_STATE);
         if (ev != null) {
             ev.init(this);
         }
@@ -582,4 +582,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
     }
 
+    @Override
+    protected void localStateChanged()
+    {
+        EventImpl ev = put(Event.Type.CONNECTION_LOCAL_STATE);
+        if (ev != null) {
+            ev.init(this);
+        }
+    }
 }

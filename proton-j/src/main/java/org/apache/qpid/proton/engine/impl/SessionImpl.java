@@ -24,6 +24,7 @@ import java.util.*;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Session;
+import org.apache.qpid.proton.engine.Event;
 
 public class SessionImpl extends EndpointImpl implements ProtonJSession
 {
@@ -182,4 +183,12 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _outgoingDeliveries += delta;
     }
 
+    @Override
+    protected void localStateChanged()
+    {
+        EventImpl ev = getConnectionImpl().put(Event.Type.SESSION_LOCAL_STATE);
+        if (ev != null) {
+            ev.init(this);
+        }
+    }
 }

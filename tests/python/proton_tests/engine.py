@@ -2102,7 +2102,7 @@ class EventTest(Test):
     self.expect(coll)
     c2.open()
     self.pump()
-    self.expect(coll, Event.CONNECTION_STATE)
+    self.expect(coll, Event.CONNECTION_REMOTE_STATE)
     self.pump()
     self.expect(coll)
 
@@ -2113,7 +2113,21 @@ class EventTest(Test):
 
     self.expect(coll)
     self.pump()
-    self.expect(coll, Event.SESSION_STATE, Event.LINK_STATE)
+    self.expect(coll, Event.SESSION_REMOTE_STATE, Event.LINK_REMOTE_STATE)
+
+    c1.open()
+    ssn2 = c1.session()
+    ssn2.open()
+    rcv = ssn2.receiver("receiver")
+    rcv.open()
+    self.pump()
+    self.expect(coll,
+                Event.CONNECTION_LOCAL_STATE,
+                Event.TRANSPORT,
+                Event.SESSION_LOCAL_STATE,
+                Event.TRANSPORT,
+                Event.LINK_LOCAL_STATE,
+                Event.TRANSPORT)
 
   def testFlowEvents(self):
     snd, rcv = self.link("test-link")
@@ -2122,7 +2136,7 @@ class EventTest(Test):
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_STATE, Event.LINK_FLOW)
+    self.expect(coll, Event.LINK_REMOTE_STATE, Event.LINK_FLOW)
     rcv.flow(10)
     self.pump()
     self.expect(coll, Event.LINK_FLOW)
@@ -2135,7 +2149,7 @@ class EventTest(Test):
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT)
+    self.expect(coll, Event.LINK_LOCAL_STATE, Event.TRANSPORT, Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()
@@ -2143,7 +2157,7 @@ class EventTest(Test):
     self.expect(coll)
     snd.open()
     self.pump()
-    self.expect(coll, Event.LINK_STATE, Event.DELIVERY)
+    self.expect(coll, Event.LINK_REMOTE_STATE, Event.DELIVERY)
 
   def testDeliveryEventsDisp(self):
     snd, rcv, coll = self.testFlowEvents()
@@ -2151,7 +2165,11 @@ class EventTest(Test):
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(coll, Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT)
+    self.expect(coll,
+                Event.LINK_LOCAL_STATE,
+                Event.TRANSPORT,
+                Event.TRANSPORT,
+                Event.TRANSPORT)
     self.pump()
     self.expect(coll)
     rdlv = rcv.current

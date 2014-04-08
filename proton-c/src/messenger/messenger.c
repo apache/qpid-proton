@@ -1217,13 +1217,16 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
   while ((event = pn_collector_peek(messenger->collector))) {
     processed++;
     switch (pn_event_type(event)) {
-    case PN_CONNECTION_STATE:
+    case PN_CONNECTION_REMOTE_STATE:
+    case PN_CONNECTION_LOCAL_STATE:
       pn_messenger_process_connection(messenger, event);
       break;
-    case PN_SESSION_STATE:
+    case PN_SESSION_REMOTE_STATE:
+    case PN_SESSION_LOCAL_STATE:
       pn_messenger_process_session(messenger, event);
       break;
-    case PN_LINK_STATE:
+    case PN_LINK_REMOTE_STATE:
+    case PN_LINK_LOCAL_STATE:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:

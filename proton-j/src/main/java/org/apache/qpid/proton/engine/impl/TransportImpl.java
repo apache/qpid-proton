@@ -975,7 +975,7 @@ public class TransportImpl extends EndpointImpl
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
             _remoteSessions.put(channel, transportSession);
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_STATE);
+            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
             if (ev != null) {
                 ev.init(session);
             }
@@ -1034,7 +1034,7 @@ public class TransportImpl extends EndpointImpl
 
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_STATE);
+            EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
             if (ev != null) {
                 ev.init(link);
             }
@@ -1108,7 +1108,7 @@ public class TransportImpl extends EndpointImpl
                     link.getRemoteCondition().copyFrom(detach.getError());
                 }
 
-                EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_STATE);
+                EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
                 if (ev != null) {
                     ev.init(link);
                 }
@@ -1140,7 +1140,7 @@ public class TransportImpl extends EndpointImpl
                 session.getRemoteCondition().copyFrom(errorCondition);
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_STATE);
+            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
             if (ev != null) {
                 ev.init(session);
             }
@@ -1160,7 +1160,7 @@ public class TransportImpl extends EndpointImpl
                 _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.CONNECTION_STATE);
+            EventImpl ev = _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_STATE);
             if (ev != null) {
                 ev.init(_connectionEndpoint);
             }
@@ -1365,4 +1365,8 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
+    @Override
+    protected void localStateChanged()
+    {
+    }
 }

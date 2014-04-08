@@ -27,6 +27,7 @@ import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.amqp.transport.Target;
+import org.apache.qpid.proton.engine.Event;
 
 public abstract class LinkImpl extends EndpointImpl implements Link
 {
@@ -373,4 +374,12 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         return _head;
     }
 
+    @Override
+    protected void localStateChanged()
+    {
+        EventImpl ev = getConnectionImpl().put(Event.Type.LINK_LOCAL_STATE);
+        if (ev != null) {
+            ev.init(this);
+        }
+    }
 }

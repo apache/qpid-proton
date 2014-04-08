@@ -37,6 +37,8 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     private EndpointImpl _transportPrev;
     private Object _context;
 
+    protected abstract void localStateChanged();
+
     public void open()
     {
         switch(_localState)
@@ -47,6 +49,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case UNINITIALIZED:
                 _localState = EndpointState.ACTIVE;
+                localStateChanged();
         }
         modified();
     }
@@ -62,6 +65,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case ACTIVE:
                 _localState = EndpointState.CLOSED;
+                localStateChanged();
         }
         modified();
     }
