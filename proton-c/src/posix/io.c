@@ -229,7 +229,7 @@ static inline int pn_create_socket(int af) {
 }
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
-  ssize_t count = return send(socket, buf, len, 0);
+  ssize_t count = send(socket, buf, size, 0);
   io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
   return count;
 }
