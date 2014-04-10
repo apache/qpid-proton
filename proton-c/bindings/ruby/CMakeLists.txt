@@ -17,6 +17,10 @@
 # under the License.
 #
 
+if (NOT DEFAULT_RUBY_TESTING)
+  message(FATAL_ERROR "Ruby bindings cannot be tested while missing dependencies")
+endif (NOT DEFAULT_RUBY_TESTING)
+
 include_directories (${RUBY_INCLUDE_PATH})
 swig_add_module(cproton-ruby ruby ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
