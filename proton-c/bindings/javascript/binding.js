@@ -20,24 +20,28 @@
 
 /**
  * This file provides a JavaScript wrapper around the Proton Messenger API.
- * It will be used to wrap the emscripten compiled proton-c code and minified by
+ * It will be used to wrap the emscripten compiled proton-c code and be minified by
  * the Closure compiler, so all comments will be stripped from the actual library.
- *
- * This JavaScript wrapper provides a slightly more object oriented interface which
- * abstracts the low-level emscripten based implementation details from client code.
+ * <p>
+ * This JavaScript wrapper provides a somewhat more idiomatic object oriented
+ * interface which abstracts the low-level emscripten based implementation details
+ * from client code.
+ * @file
  */
-(function() { // Start of self-calling lambda used to avoid polluting global namespace.
 
 /**
  * The Module Object is exported by emscripten for all execution platforms, we
  * use it as a namespace to allow us to selectively export only what we wish to
  * be publicly visible from this package/module. We will use the associative
  * array form for declaring exported properties to prevent the Closure compiler
- * from minifying e.g. Module['Messenger'] = ... to export the Messenger Object.
+ * from minifying e.g. <pre>Module['Messenger'] = ...</pre>
  * Exported Objects can be used in client code using the appropriate namespace:
+ * <pre>
  * proton = require("proton.js");
  * var messenger = new proton.Messenger();
  * var message = new proton.Message();
+ * </pre>
+ * @namespace proton
  */
 var Module = {
     // Prevent emscripten runtime exiting, we will be enabling network callbacks.
@@ -101,18 +105,23 @@ var Buffer = function(size) {
 /*                                                                           */
 /*****************************************************************************/
 
-// Export Status Enum, avoiding minification.
+/**
+ * Export Status Enum, avoiding minification.
+ * @enum
+ * @alias Status
+ * @memberof proton
+ */
 Module['Status'] = {
-    'UNKNOWN':  0, // PN_STATUS_UNKNOWN  The tracker is unknown.
-    'PENDING':  1, // PN_STATUS_PENDING  The message is in flight.
-                   //                    For outgoing messages, use messenger.isBuffered()
-                   //                    to see if it has been sent or not.
-    'ACCEPTED': 2, // PN_STATUS_ACCEPTED The message was accepted.
-    'REJECTED': 3, // PN_STATUS_REJECTED The message was rejected.
-    'RELEASED': 4, // PN_STATUS_RELEASED The message was released.
-    'MODIFIED': 5, // PN_STATUS_MODIFIED The message was modified.
-    'ABORTED':  6, // PN_STATUS_ABORTED  The message was aborted.
-    'SETTLED':  7  // PN_STATUS_SETTLED  The remote party has settled the message.
+    /** PN_STATUS_UNKNOWN */  'UNKNOWN':  0, // The tracker is unknown.
+    /** PN_STATUS_PENDING */  'PENDING':  1, // The message is in flight.
+                                             // For outgoing messages, use messenger.isBuffered()
+                                             // to see if it has been sent or not.
+    /** PN_STATUS_ACCEPTED */ 'ACCEPTED': 2, // The message was accepted.
+    /** PN_STATUS_REJECTED */ 'REJECTED': 3, // The message was rejected.
+    /** PN_STATUS_RELEASED */ 'RELEASED': 4, // The message was released.
+    /** PN_STATUS_MODIFIED */ 'MODIFIED': 5, // The message was modified.
+    /** PN_STATUS_ABORTED */  'ABORTED':  6, // The message was aborted.
+    /** PN_STATUS_SETTLED */  'SETTLED':  7  // The remote party has settled the message.
 };
 
 
@@ -122,17 +131,22 @@ Module['Status'] = {
 /*                                                                           */
 /*****************************************************************************/
 
-// Export Error Enum, avoiding minification.
+/**
+ * Export Error Enum, avoiding minification.
+ * @enum
+ * @alias Error
+ * @memberof proton
+ */
 Module['Error'] = {
-    'EOS':        -1, // PN_EOS
-    'ERR':        -2, // PN_ERR
-    'OVERFLOW':   -3, // PN_OVERFLOW
-    'UNDERFLOW':  -4, // PN_UNDERFLOW
-    'STATE_ERR':  -5, // PN_STATE_ERR
-    'ARG_ERR':    -6, // PN_ARG_ERR
-    'TIMEOUT':    -7, // PN_TIMEOUT
-    'INTR':       -8, // PN_INTR
-    'INPROGRESS': -9  // PN_INPROGRESS
+    /** PN_EOS */        'EOS':        -1,
+    /** PN_ERR */        'ERR':        -2,
+    /** PN_OVERFLOW */   'OVERFLOW':   -3,
+    /** PN_UNDERFLOW */  'UNDERFLOW':  -4,
+    /** PN_STATE_ERR */  'STATE_ERR':  -5,
+    /** PN_ARG_ERR */    'ARG_ERR':    -6,
+    /** PN_TIMEOUT */    'TIMEOUT':    -7,
+    /** PN_INTR */       'INTR':       -8,
+    /** PN_INPROGRESS */ 'INPROGRESS': -9
 };
 
 
@@ -142,8 +156,17 @@ Module['Error'] = {
 /*                                                                           */
 /*****************************************************************************/
 
+/**
+ * Constructs a proton.Messenger instance giving it an (optional) name. If name
+ * is supplied that will be used as the name of the Messenger, otherwise a UUID
+ * will be used. The Messenger is initialised to non-blocking mode as it makes
+ * little sense to have blocking behaviour in a JavaScript implementation.
+ * @classdesc This class is
+ * @constructor proton.Messenger
+ * @param {string} name the name of this Messenger instance.
+ */
 Module['Messenger'] = function(name) { // Messenger Constructor.
-    /**
+    /*
      * The emscripten idiom below is used in a number of places in the JavaScript
      * bindings to map JavaScript Strings to C style strings. ALLOC_STACK will
      * increase the stack and place the item there. When the stack is next restored
@@ -234,7 +257,9 @@ _Messenger_._check = function(code) {
 
 /**
  * Retrieves the name of a Messenger.
- * @return the name of the messenger.
+ * @method getName
+ * @memberof! proton.Messenger#
+ * @returns {string} the name of the messenger.
  */
 _Messenger_['getName'] = function() {
     return Pointer_stringify(_pn_messenger_name(this._messenger));
@@ -242,7 +267,9 @@ _Messenger_['getName'] = function() {
 
 /**
  * Retrieves the timeout for a Messenger.
- * @return zero because JavaScript is fundamentally non-blocking.
+ * @method getTimeout
+ * @memberof! proton.Messenger#
+ * @returns {number} zero because JavaScript is fundamentally non-blocking.
  */
 _Messenger_['getTimeout'] = function() {
     return 0;
@@ -250,40 +277,51 @@ _Messenger_['getTimeout'] = function() {
 
 /**
  * Accessor for messenger blocking mode.
- * @return false because JavaScript is fundamentally non-blocking.
+ * @method isBlocking
+ * @memberof! proton.Messenger#
+ * @returns {boolean} false because JavaScript is fundamentally non-blocking.
  */
 _Messenger_['isBlocking'] = function() {
-    return true;
+    return false;
 };
 
 /**
  * Free the Messenger. This will close all connections that are managed
  * by the Messenger. Call the stop method before destroying the Messenger.
+ * <p>
  * N.B. This method has to be called explicitly in JavaScript as we can't
  * intercept finalisers, so we need to remember to free before removing refs.
+ * @method free
+ * @memberof! proton.Messenger#
  */
 _Messenger_['free'] = function() {
     _pn_messenger_free(this._messenger);
 };
 
 /**
- * @return the most recent error message code.
+ * @method getErrno
+ * @memberof! proton.Messenger#
+ * @returns {number} the most recent error message code.
  */
 _Messenger_['getErrno'] = function() {
     return _pn_messenger_errno(this._messenger);
 };
 
 /**
- * @return the most recent error message as a String.
+ * @method getError
+ * @memberof! proton.Messenger#
+ * @returns {string} the most recent error message as a String.
  */
 _Messenger_['getError'] = function() {
     return Pointer_stringify(_pn_error_text(_pn_messenger_error(this._messenger)));
 };
 
 /**
- * Returns the size of the outgoing window that was set with
- * pn_messenger_set_outgoing_window. The default is 0.
- * @return the outgoing window.
+ * Returns the size of the outgoing window that was set with setOutgoingWindow.
+ * The default is 0.
+ * @method getOutgoingWindow
+ * @memberof! proton.Messenger#
+ * @returns {number} the outgoing window size.
  */
 _Messenger_['getOutgoingWindow'] = function() {
     return _pn_messenger_get_outgoing_window(this._messenger);
@@ -293,20 +331,24 @@ _Messenger_['getOutgoingWindow'] = function() {
  * Sets the outgoing tracking window for the Messenger. The Messenger will
  * track the remote status of this many outgoing deliveries after calling
  * send. Defaults to zero.
- *
+ * <p>
  * A Message enters this window when you call put() with the Message.
  * If your outgoing window size is n, and you call put() n+1 times, status
  * information will no longer be available for the first Message.
- * @param window the size of the tracking window in messages.
+ * @method setOutgoingWindow
+ * @memberof! proton.Messenger#
+ * @param {number} window the size of the tracking window in messages.
  */
 _Messenger_['setOutgoingWindow'] = function(window) {
     this._check(_pn_messenger_set_outgoing_window(this._messenger, window));
 };
 
 /**
- * Returns the size of the incoming window that was set with
- * pn_messenger_set_incoming_window. The default is 0.
- * @return the incoming window.
+ * Returns the size of the incoming window that was set with setIncomingWindow.
+ * The default is 0.
+ * @method getIncomingWindow
+ * @memberof! proton.Messenger#
+ * @returns {number} the incoming window size.
  */
 _Messenger_['getIncomingWindow'] = function() {
     return _pn_messenger_get_incoming_window(this._messenger);
@@ -316,13 +358,15 @@ _Messenger_['getIncomingWindow'] = function() {
  * Sets the incoming tracking window for the Messenger. The Messenger will
  * track the remote status of this many incoming deliveries after calling
  * send. Defaults to zero.
- *
+ * <p>
  * Messages enter this window only when you take them into your application
  * using get(). If your incoming window size is n, and you get() n+1 messages
  * without explicitly accepting or rejecting the oldest message, then the
  * Message that passes beyond the edge of the incoming window will be assigned
  * the default disposition of its link.
- * @param window the size of the tracking window in messages.
+ * @method setIncomingWindow
+ * @memberof! proton.Messenger#
+ * @param {number} window the size of the tracking window in messages.
  */
 _Messenger_['setIncomingWindow'] = function(window) {
     this._check(_pn_messenger_set_incoming_window(this._messenger, window));
@@ -331,6 +375,8 @@ _Messenger_['setIncomingWindow'] = function(window) {
 /**
  * Currently a no-op placeholder. For future compatibility, do not send or
  * recv messages before starting the Messenger.
+ * @method start
+ * @memberof! proton.Messenger#
  */
 _Messenger_['start'] = function() {
     this._check(_pn_messenger_start(this._messenger));
@@ -341,17 +387,23 @@ _Messenger_['start'] = function() {
  * will not send or receive messages from its internal queues. A Messenger
  * should be stopped before being discarded to ensure a clean shutdown
  * handshake occurs on any internally managed connections.
- *
+ * <p>
  * The Messenger may require some time to stop if it is busy, and in that
- * case will return PN_INPROGRESS. In that case, call isStopped to see if
- * it has fully stopped.
+ * case will return {@link proton.Error.INPROGRESS}. In that case, call isStopped
+ * to see if it has fully stopped.
+ * @method stop
+ * @memberof! proton.Messenger#
+ * @returns {@link proton.Error.INPROGRESS} if still busy.
  */
 _Messenger_['stop'] = function() {
     return this._check(_pn_messenger_stop(this._messenger));
 };
 
 /**
- * @return Returns true iff a Messenger is in the stopped state.
+ * Returns true iff a Messenger is in the stopped state.
+ * @method isStopped
+ * @memberof! proton.Messenger#
+ * @returns {boolean} true iff a Messenger is in the stopped state.
  */
 _Messenger_['isStopped'] = function() {
     return (_pn_messenger_stopped(this._messenger) > 0);
@@ -367,8 +419,10 @@ _Messenger_['isStopped'] = function() {
  * "amqp://~0.0.0.0", and "amqps://~0.0.0.0" will all bind to any
  * local interface and listen for incoming messages with the last
  * variant only permitting incoming SSL connections.
- * @param source the source address we're subscribing to.
- * @return a subscription.
+ * @method subscribe
+ * @memberof! proton.Messenger#
+ * @param {string} source the source address we're subscribing to.
+ * @returns {Subscription} a subscription.
  */
 _Messenger_['subscribe'] = function(source) {
     if (!source) {
@@ -391,15 +445,17 @@ _Messenger_['subscribe'] = function(source) {
  * Messages remaining in the outgoing queue. The send call may be used to
  * block until the outgoing queue is empty. The outgoing property may be
  * used to check the depth of the outgoing queue.
- *
+ * <p>
  * When the content in a given Message object is copied to the outgoing
  * message queue, you may then modify or discard the Message object
  * without having any impact on the content in the outgoing queue.
- *
+ * <p>
  * This method returns an outgoing tracker for the Message.  The tracker
  * can be used to determine the delivery status of the Message.
- * @param message a Message to send.
- * @return a tracker.
+ * @method put
+ * @memberof! proton.Messenger#
+ * @param {proton.Message} message a Message to send.
+ * @returns {proton.Data.Long} a tracker.
  */
 _Messenger_['put'] = function(message) {
     message._preEncode();
@@ -416,8 +472,10 @@ _Messenger_['put'] = function(message) {
 
 /**
  * Gets the last known remote state of the delivery associated with the given tracker.
- * @param tracker the tracker whose status is to be retrieved.
- * @return one of None, PENDING, REJECTED, or ACCEPTED.
+ * @method status
+ * @memberof! proton.Messenger#
+ * @param {proton.Data.Long} tracker the tracker whose status is to be retrieved.
+ * @returns {proton.Status} one of None, PENDING, REJECTED, or ACCEPTED.
  */
 _Messenger_['status'] = function(tracker) {
     return _pn_messenger_status(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits());
@@ -425,8 +483,10 @@ _Messenger_['status'] = function(tracker) {
 
 /**
  * Checks if the delivery associated with the given tracker is still waiting to be sent.
- * @param tracker the tracker identifying the delivery.
- * @return true if delivery is still buffered.
+ * @method isBuffered
+ * @memberof! proton.Messenger#
+ * @param {proton.Data.Long} tracker the tracker identifying the delivery.
+ * @returns {boolean} true if delivery is still buffered.
  */
 _Messenger_['isBuffered'] = function(tracker) {
     return (_pn_messenger_buffered(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits()) > 0);
@@ -436,7 +496,9 @@ _Messenger_['isBuffered'] = function(tracker) {
  * Frees a Messenger from tracking the status associated with a given tracker.
  * If you don't supply a tracker, all outgoing messages up to the most recent
  * will be settled.
- * @param tracker the tracker identifying the delivery.
+ * @method settle
+ * @memberof! proton.Messenger#
+ * @param {proton.Data.Long} tracker the tracker identifying the delivery.
  */
 _Messenger_['settle'] = function(tracker) {
 console.log("settle: not fully tested yet");
@@ -460,7 +522,9 @@ console.log("settle: not fully tested yet");
  * For JavaScript the only timeout that makes sense is 0 == do not block.
  * This method may also do I/O work other than sending and receiving messages.
  * For example, closing connections after messenger.stop() has been called.
- * @return 0 if no work to do, < 0 if error, or 1 if work was done.
+ * @method work
+ * @memberof! proton.Messenger#
+ * @returns {number} 0 if no work to do, < 0 if error, or 1 if work was done.
  */
 _Messenger_['work'] = function() {
     return _pn_messenger_work(this._messenger, 0);
@@ -469,7 +533,9 @@ _Messenger_['work'] = function() {
 /**
  * Receives up to limit messages into the incoming queue.  If no value for limit
  * is supplied, this call will receive as many messages as it can buffer internally.
- * @param limit the maximum number of messages to receive or -1 to to receive
+ * @method recv
+ * @memberof! proton.Messenger#
+ * @param {number} limit the maximum number of messages to receive or -1 to to receive
  *        as many messages as it can buffer internally.
  */
 _Messenger_['recv'] = function(limit) {
@@ -479,7 +545,9 @@ _Messenger_['recv'] = function(limit) {
 /**
  * Returns the capacity of the incoming message queue of messenger. Note this
  * count does not include those messages already available on the incoming queue.
- * @return the message queue capacity.
+ * @method receiving
+ * @memberof! proton.Messenger#
+ * @returns {number} the message queue capacity.
  */
 _Messenger_['receiving'] = function() {
     return _pn_messenger_receiving(this._messenger);
@@ -488,13 +556,14 @@ _Messenger_['receiving'] = function() {
 /**
  * Moves the message from the head of the incoming message queue into the
  * supplied message object. Any content in the message will be overwritten.
- *
+ * <p>
  * A tracker for the incoming Message is returned. The tracker can later be
  * used to communicate your acceptance or rejection of the Message.
- *
- * @param message the destination message object. If no Message object is
- *        passed, the Message popped from the head of the queue is discarded.
- * @return a tracker for the incoming Message.
+ * @method get
+ * @memberof! proton.Messenger#
+ * @param {proton.Message} message the destination message object. If no Message
+ *        object is supplied, the Message popped from the head of the queue is discarded.
+ * @returns {proton.Data.Long} a tracker for the incoming Message.
  */
 _Messenger_['get'] = function(message) {
     var impl = null;
@@ -516,15 +585,21 @@ _Messenger_['get'] = function(message) {
     var high = tempRet0;
 console.log("get low = " + low);
 console.log("get high = " + high);
+
+console.log("get asm = " + asm);
+console.log("get asm['tempRet0'] = " + asm['tempRet0']);
     return new Data.Long(low, high);
 };
 
 /**
  * Returns the Subscription of the Message returned by the most recent call
  * to get, or null if pn_messenger_get has not yet been called.
- * @return a Subscription or null if get has never been called for this Messenger.
+ * @method incomingSubscription
+ * @memberof! proton.Messenger#
+ * @returns {Subscription} a Subscription or null if get has never been called
+ *          for this Messenger.
  */
-_Messenger_['incomingSubscription'] = function() {row
+_Messenger_['incomingSubscription'] = function() {
 console.log("incomingSubscription: haven't yet proved this works yet");
 
     var subscription = _pn_messenger_incoming_subscription(this._messenger);
@@ -540,7 +615,9 @@ console.log("incomingSubscription: haven't yet proved this works yet");
  * If no tracker is supplied, then all messages that have been returned by the
  * get method are accepted, except those that have already been auto-settled
  * by passing beyond your incoming window size.
- * @param tracker the tracker identifying the delivery.
+ * @method accept
+ * @memberof! proton.Messenger#
+ * @param {proton.Data.Long} tracker the tracker identifying the delivery.
  */
 _Messenger_['accept'] = function(tracker) {
 console.log("accept: not fully tested yet");
@@ -563,7 +640,9 @@ console.log("accept: not fully tested yet");
  * Rejects the Message indicated by the tracker.  If no tracker is supplied,
  * all messages that have been returned by the get method are rejected, except
  * those already auto-settled by passing beyond your outgoing window size.
- * @param tracker the tracker identifying the delivery.
+ * @method reject
+ * @memberof! proton.Messenger#
+ * @param {proton.Data.Long} tracker the tracker identifying the delivery.
  */
 _Messenger_['reject'] = function(tracker) {
 console.log("reject: not fully tested yet");
@@ -584,7 +663,9 @@ console.log("reject: not fully tested yet");
 
 /**
  * Returns the number of messages in the outgoing message queue of a messenger.
- * @return the outgoing queue depth.
+ * @method outgoing
+ * @memberof! proton.Messenger#
+ * @returns {number} the outgoing queue depth.
  */
 _Messenger_['outgoing'] = function() {
     return _pn_messenger_outgoing(this._messenger);
@@ -592,7 +673,9 @@ _Messenger_['outgoing'] = function() {
 
 /**
  * Returns the number of messages in the incoming message queue of a messenger.
- * @return the incoming queue depth.
+ * @method incoming
+ * @memberof! proton.Messenger#
+ * @returns {number} the incoming queue depth.
  */
 _Messenger_['incoming'] = function() {
     return _pn_messenger_incoming(this._messenger);
@@ -602,8 +685,10 @@ _Messenger_['incoming'] = function() {
 
 /**
  * 
- * @param pattern a glob pattern to select messages.
- * @param address an address indicating outgoing address rewrite.
+ * @method route
+ * @memberof! proton.Messenger#
+ * @param {string} pattern a glob pattern to select messages.
+ * @param {string} address an address indicating outgoing address rewrite.
  */
 _Messenger_['route'] = function(pattern, address) {
 console.log("route: not fully tested yet");
@@ -617,17 +702,19 @@ console.log("route: not fully tested yet");
 /**
  * Similar to route(), except that the destination of the Message is determined
  * before the message address is rewritten.
- *
+ * <p>
  * The outgoing address is only rewritten after routing has been finalized. If
  * a message has an outgoing address of "amqp://0.0.0.0:5678", and a rewriting
  * rule that changes its outgoing address to "foo", it will still arrive at the
  * peer that is listening on "amqp://0.0.0.0:5678", but when it arrives there,
  * the receiver will see its outgoing address as "foo".
- *
+ * <p>
  * The default rewrite rule removes username and password from addresses
  * before they are transmitted.
- * @param pattern a glob pattern to select messages.
- * @param address an address indicating outgoing address rewrite.
+ * @method rewrite
+ * @memberof! proton.Messenger#
+ * @param {string} pattern a glob pattern to select messages.
+ * @param {string} address an address indicating outgoing address rewrite.
  */
 _Messenger_['rewrite'] = function(pattern, address) {
 console.log("rewrite: not fully tested yet");
@@ -683,10 +770,12 @@ _Messenger_['setNetworkCallback'] = function(callback) {
 /*****************************************************************************/
 
 /**
- * This class is a wrapper for Messenger's subscriptions.
+ * Constructs a Subscription instance.
+ * @classdesc This class is a wrapper for Messenger's subscriptions.
  * Subscriptions should never be *directly* instantiated by client code only via
  * Messenger.subscribe() or Messenger.incomingSubscription(), so we declare the
  * constructor in the scope of the package and don't export it via Module.
+ * @constructor Subscription                                                              
  */
 var Subscription = function(subscription) { // Subscription Constructor.
     this._subscription = subscription;
@@ -694,7 +783,9 @@ var Subscription = function(subscription) { // Subscription Constructor.
 
 /**
  * TODO Not sure exactly what pn_subscription_get_context does.
- * @return the Subscription's Context.
+ * @method getContext
+ * @memberof! Subscription#
+ * @returns the Subscription's Context.
  */
 Subscription.prototype['getContext'] = function() {
     return _pn_subscription_get_context(this._subscription);
@@ -702,6 +793,8 @@ Subscription.prototype['getContext'] = function() {
 
 /**
  * TODO Not sure exactly what pn_subscription_set_context does.
+ * @method setContext
+ * @memberof! Subscription#
  * @param context the Subscription's new Context.
  */
 Subscription.prototype['setContext'] = function(context) {
@@ -709,7 +802,9 @@ Subscription.prototype['setContext'] = function(context) {
 };
 
 /**
- * @return the Subscription's Address.
+ * @method getAddress
+ * @memberof! Subscription#
+ * @returns the Subscription's Address.
  */
 Subscription.prototype['getAddress'] = function() {
     return Pointer_stringify(_pn_subscription_address(this._subscription));
@@ -724,6 +819,11 @@ Subscription.prototype['getAddress'] = function() {
 /*                                                                           */
 /*****************************************************************************/
 
+/**
+ * Constructs a proton.Message instance.
+ * @classdesc This class is
+ * @constructor proton.Message
+ */
 Module['Message'] = function() { // Message Constructor.
     this._message = _pn_message();
 
@@ -857,29 +957,38 @@ _Message_._postDecode = function() {
 
 /**
  * Free the Message.
+ * <p>
  * N.B. This method has to be called explicitly in JavaScript as we can't
  * intercept finalisers, so we need to remember to free before removing refs.
+ * @method free
+ * @memberof! proton.Message#
  */
 _Message_['free'] = function() {
     _pn_message_free(this._message);
 };
 
 /**
- * @return the most recent error message code.
+ * @method getErrno
+ * @memberof! proton.Message#
+ * @returns {number the most recent error message code.
  */
 _Message_['getErrno'] = function() {
     return _pn_message_errno(this._message);
 };
 
 /**
- * @return the most recent error message as a String.
+ * @method getError
+ * @memberof! proton.Message#
+ * @returns {string} the most recent error message as a String.
  */
 _Message_['getError'] = function() {
     return Pointer_stringify(_pn_error_text(_pn_message_error(this._message)));
 };
 
 /**
- * @return the address of the Message.
+ * @method getAddress
+ * @memberof! proton.Message#
+ * @return {string} the address of the Message.
  */
 _Message_['getAddress'] = function() {
     return Pointer_stringify(_pn_message_get_address(this._message));
@@ -887,7 +996,9 @@ _Message_['getAddress'] = function() {
 
 /**
  * Set the address of the Message.
- * @param address the address we want to send the Message to.
+ * @method setAddress
+ * @memberof! proton.Message#
+ * @param {string} address the address we want to send the Message to.
  */
 _Message_['setAddress'] = function(address) {
     var sp = Runtime.stackSave();
@@ -896,7 +1007,9 @@ _Message_['setAddress'] = function(address) {
 };
 
 /**
- * @return the subject of the Message.
+ * @method getSubject
+ * @memberof! proton.Message#
+ * @returns {string} the subject of the Message.
  */
 _Message_['getSubject'] = function() {
     return Pointer_stringify(_pn_message_get_subject(this._message));
@@ -904,7 +1017,9 @@ _Message_['getSubject'] = function() {
 
 /**
  * Set the subject of the Message.
- * @param subject the subject we want to set for the Message.
+ * @method setSubject
+ * @memberof! proton.Message#
+ * @param {string} subject the subject we want to set for the Message.
  */
 _Message_['setSubject'] = function(subject) {
     var sp = Runtime.stackSave();
@@ -932,6 +1047,8 @@ _Message_['setSubject'] = function(subject) {
 /*****************************************************************************/
 
 /**
+ * Constructs a proton.Data instance.
+ * @classdesc
  * The Data class provides an interface for decoding, extracting, creating, and
  * encoding arbitrary AMQP data. A Data object contains a tree of AMQP values.
  * Leaf nodes in this tree correspond to scalars in the AMQP type system such as
@@ -939,19 +1056,20 @@ _Message_['setSubject'] = function(subject) {
  * values in the AMQP type system such as lists<LIST>, maps<MAP>, arrays<ARRAY>,
  * or described values<DESCRIBED>. The root node of the tree is the Data object
  * itself and can have an arbitrary number of children.
- *
+ * <p>
  * A Data object maintains the notion of the current sibling node and a current
  * parent node. Siblings are ordered within their parent. Values are accessed
  * and/or added by using the next, prev, enter, and exit methods to navigate to
  * the desired location in the tree and using the supplied variety of put* and
  * get* methods to access or add a value of the desired type.
- *
+ * <p>
  * The put* methods will always add a value after the current node in the tree.
  * If the current node has a next sibling the put* method will overwrite the value
  * on this node. If there is no current node or the current node has no next
  * sibling then one will be added. The put* methods always set the added/modified
  * node to the current node. The get* methods read the value of the current node
- * and do not change which node is current.                                                                         
+ * and do not change which node is current.
+ * @constructor proton.Data                                                                
  */
 Module['Data'] = function(data) { // Data Constructor.
     this._data = data;
@@ -971,6 +1089,8 @@ var _Data_ = Data.prototype;
  * Look-up table mapping proton-c types to the accessor method used to
  * deserialise the type. N.B. this is a simple Array and not a map because the
  * types that we get back from pn_data_type are integers from the pn_type_t enum.
+ * @property {Array<String>} GetMappings
+ * @memberof! proton.Data
  */
 Data.GetMappings = [
     'getNull',            // 0
@@ -1005,8 +1125,10 @@ Data.GetMappings = [
 
 /**
  * Test if a given Object is an Array.
- * @param o the Object that we wish to test.
- * @return true iff the Object is an Array.
+ * @method isArray
+ * @memberof! proton.Data
+ * @param {object} o the Object that we wish to test.
+ * @returns {boolean} true iff the Object is an Array.
  */
 Data.isArray = Array.isArray || function(o) {
 console.log("Data.isArray");
@@ -1015,8 +1137,10 @@ console.log("Data.isArray");
 
 /**
  * Test if a given Object is a Number.
- * @param o the Object that we wish to test.
- * @return true iff the Object is a Number.
+ * @method isNumber
+ * @memberof! proton.Data
+ * @param {object} o the Object that we wish to test.
+ * @returns {boolean} true iff the Object is a Number.
  */
 Data.isNumber = function(o) {
     return typeof o === 'number' || 
@@ -1025,8 +1149,10 @@ Data.isNumber = function(o) {
 
 /**
  * Test if a given Object is a String.
- * @param o the Object that we wish to test.
- * @return true iff the Object is a String.
+ * @method isString
+ * @memberof! proton.Data
+ * @param {object} o the Object that we wish to test.
+ * @returns {boolean} true iff the Object is a String.
  */
 Data.isString = function(o) {
     return typeof o === 'string' ||
@@ -1035,8 +1161,10 @@ Data.isString = function(o) {
 
 /**
  * Test if a given Object is a Boolean.
- * @param o the Object that we wish to test.
- * @return true iff the Object is a Boolean.
+ * @method isBoolean
+ * @memberof! proton.Data
+ * @param {object} o the Object that we wish to test.
+ * @returns {boolean} true iff the Object is a Boolean.
  */
 Data.isBoolean = function(o) {
     return typeof o === 'boolean' ||
@@ -1048,11 +1176,15 @@ Data.isBoolean = function(o) {
 // --------------------------- proton.Data.UUID -------------------------------
 /**
  * Create a proton.Data.UUID which is a type 4 UUID.
+ * @classdesc
+ * This class represents a type 4 UUID, wich may use crypto libraries to generate
+ * the UUID if supported by the platform (e.g. node.js or a modern browser)
+ * @constructor proton.Data.UUID
  * @param u a UUID. If null a type 4 UUID is generated wich may use crypto if
  *        supported by the platform. If u is an emscripten "pointer" we copy the
  *        data from that. If u is a JavaScript Array we use it as-is. If u is a
  *        String then we try to parse that as a UUID.
- * @properties uuid is the compact array form of the UUID.
+ * @property {Array} uuid is the compact array form of the UUID.
  */
 Data['UUID'] = function(u) { // Data.UUID Constructor.
     // Helper to copy from emscriptem allocated storage into JavaScript Array.
@@ -1090,7 +1222,11 @@ Data['UUID'] = function(u) { // Data.UUID Constructor.
 };
 
 /**
- * @return the String form of a proton.Data.UUID.
+ * @method toString
+ * @memberof! proton.Data.UUID#
+ * @returns {string} the String
+ *          /[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}/
+ *          form of a {@link proton.Data.UUID}.
  */
 Data['UUID'].prototype.toString = function() {
     if (!this.string) { // Check if we've cached the string version.
@@ -1109,8 +1245,10 @@ Data['UUID'].prototype.toString = function() {
 
 /**
  * Compare two instances of proton.Data.UUID for equality.
- * @param rhs the instance we wish to compare this instance with.
- * @return true iff the two compared instances are equal.
+ * @method equals
+ * @memberof! proton.Data.UUID#
+ * @param {proton.Data.UUID} rhs the instance we wish to compare this instance with.
+ * @returns {boolean} true iff the two compared instances are equal.
  */
 Data['UUID'].prototype['equals'] = function(rhs) {
     return this.toString() === rhs.toString();
@@ -1120,7 +1258,12 @@ Data['UUID'].prototype['equals'] = function(rhs) {
 // ---------------------------- proton.Data.Symbol ---------------------------- 
 /**
  * Create a proton.Data.Symbol.
- * @param s a symbol
+ * @classdesc
+ * This class represents an AMQP Symbol. This class is necessary primarily as a
+ * way to enable us to distinguish between a native String and a Symbol in the
+ * JavaScript type system.
+ * @constructor proton.Data.Symbol
+ * @param {string} s a symbol.
  */
 Data['Symbol'] = function(s) { // Data.Symbol Constructor.
     this.value = s;
@@ -1128,7 +1271,9 @@ Data['Symbol'] = function(s) { // Data.Symbol Constructor.
 };
 
 /**
- * @return the String form of a proton.Data.Symbol.
+ * @method toString
+ * @memberof! proton.Data.Symbol#
+ * @returns {string} the String form of a {@link proton.Data.Symbol}.
  */
 Data['Symbol'].prototype.toString = Data['Symbol'].prototype.valueOf = function() {
     return this.value;
@@ -1136,8 +1281,10 @@ Data['Symbol'].prototype.toString = Data['Symbol'].prototype.valueOf = function(
 
 /**
  * Compare two instances of proton.Data.Symbol for equality.
- * @param rhs the instance we wish to compare this instance with.
- * @return true iff the two compared instances are equal.
+ * @method equals
+ * @memberof! proton.Data.Symbol#
+ * @param {proton.Data.Symbol} rhs the instance we wish to compare this instance with.
+ * @returns {boolean} true iff the two compared instances are equal.
  */
 Data['Symbol'].prototype['equals'] = function(rhs) {
     return this.toString() === rhs.toString();
@@ -1146,7 +1293,15 @@ Data['Symbol'].prototype['equals'] = function(rhs) {
 
 // ----------------------------- proton.Data.Long ----------------------------- 
 /**
-
+ * Create a proton.Data.Long.
+ * @classdesc
+ * This class represents a 64 bit Integer value. It is used primarily to pass and
+ * return 64 bit Integer values to and from the emscripten compiled proton-c library.
+ * This class is needed because JavaScript cannot natively represent 64 bit
+ * Integers with sufficient accuracy.
+ * @constructor proton.Data.Long
+ * @param {number} low the least significant word.
+ * @param {number} high the most significant word.
  */
 Data.Long = function(low, high) { // Data.Long Constructor.
     this.low  = low  | 0;  // force into 32 signed bits.
@@ -1163,6 +1318,12 @@ Data.Long.MIN_VALUE = new Data.Long(0, 0x80000000 | 0);
 Data.Long.ZERO = new Data.Long(0, 0);
 Data.Long.ONE  = new Data.Long(1, 0);
 
+/**
+ * @method fromNumber
+ * @memberof! proton.Data.Long#
+ * @returns {proton.Data.Long} an instance of {@link proton.Data.Long} created
+ *          using a native JavaScript number.
+ */
 Data.Long.fromNumber = function(value) {
     if (isNaN(value) || !isFinite(value)) {
         return Data.Long.ZERO;
@@ -1179,6 +1340,12 @@ Data.Long.fromNumber = function(value) {
     }
 };
 
+/**
+ * Return the twos complement of this instance.
+ * @method negate
+ * @memberof! proton.Data.Long#
+ * @returns {proton.Data.Long} the twos complement of this instance.
+ */
 Data.Long.prototype.negate = function() {
     if (this.equals(Data.Long.MIN_VALUE)) {
         return Data.Long.MIN_VALUE;
@@ -1187,7 +1354,14 @@ Data.Long.prototype.negate = function() {
     }
 };
 
-Data.Long.prototype.add = function(other) {
+/**
+ * Add two instances of {@link proton.Data.Long}.
+ * @method add
+ * @memberof! proton.Data.Long#
+ * @param {proton.Data.Long} rhs the instance we wish to add to this instance.
+ * @returns {proton.Data.Long} the sum of this value and the rhs.
+ */
+Data.Long.prototype.add = function(rhs) {
     // Divide each number into 4 chunks of 16 bits, and then sum the chunks.
 
     var a48 = this.high >>> 16;
@@ -1195,10 +1369,10 @@ Data.Long.prototype.add = function(other) {
     var a16 = this.low >>> 16;
     var a00 = this.low & 0xFFFF;
 
-    var b48 = other.high >>> 16;
-    var b32 = other.high & 0xFFFF;
-    var b16 = other.low >>> 16;
-    var b00 = other.low & 0xFFFF;
+    var b48 = rhs.high >>> 16;
+    var b32 = rhs.high & 0xFFFF;
+    var b16 = rhs.low >>> 16;
+    var b00 = rhs.low & 0xFFFF;
 
     var c48 = 0, c32 = 0, c16 = 0, c00 = 0;
     c00 += a00 + b00;
@@ -1215,35 +1389,180 @@ Data.Long.prototype.add = function(other) {
     return new Data.Long((c16 << 16) | c00, (c48 << 16) | c32);
 };
 
+/**
+ * Return the complement of this instance.
+ * @method not
+ * @memberof! proton.Data.Long#
+ * @returns {proton.Data.Long} the complement of this instance.
+ */
 Data.Long.prototype.not = function() {
     return new Data.Long(~this.low, ~this.high);
 };
 
+/**
+ * Compare two instances of {@link proton.Data.Long} for equality.
+ * @method equals
+ * @memberof! proton.Data.Long#
+ * @param {proton.Data.Long} rhs the instance we wish to compare this instance with.
+ * @returns {boolean} true iff the two compared instances are equal.
+ */
 Data.Long.prototype.equals = function(other) {
     return (this.high == other.high) && (this.low == other.low);
 };
 
+/**
+ * @method getHighBits
+ * @memberof! proton.Data.Long#
+ * @returns {number} the most significant word of a {@link proton.Data.Long}.
+ */
 Data.Long.prototype.getHighBits = function() {
     return this.high;
 };
 
+/**
+ * @method getLowBits
+ * @memberof! proton.Data.Long#
+ * @returns {number} the least significant word of a {@link proton.Data.Long}.
+ */
 Data.Long.prototype.getLowBits = function() {
     return this.low;
 };
 
+/**
+ * @method getLowBitsUnsigned
+ * @memberof! proton.Data.Long#
+ * @returns {number} the least significant word of a {@link proton.Data.Long}
+ *          as an unsigned value.
+ */
 Data.Long.prototype.getLowBitsUnsigned = function() {
     return (this.low >= 0) ? this.low : Data.Long.TWO_PWR_32_DBL_ + this.low;
 };
 
+/**
+ * @method toNumber
+ * @memberof! proton.Data.Long#
+ * @returns {number} a native JavaScript number (with possible loss of precision).
+ */
 Data.Long.prototype.toNumber = function() {
     return (this.high * Data.Long.TWO_PWR_32_DBL_) + this.getLowBitsUnsigned();
 };
 
+/**
+ * @method toString
+ * @memberof! proton.Data.Long#
+ * @returns {string} the String form of a {@link proton.Data.Long}.
+ */
 Data.Long.prototype.toString = function() {
     return this.high + ":" + this.getLowBitsUnsigned();
 };
 
 // ---------------------------- proton.Data.Binary ---------------------------- 
+
+/*
+    function freeBuffer() {
+        if (ptr !== 0) {
+            _free(ptr);
+        }
+    };
+
+    // Public methods
+    _public.destroy = function() {
+        freeBuffer();
+    };
+
+    _public.setSize = function(size) {
+        if (size > asize) {
+            freeBuffer();
+            ptr = _malloc(size); // Get output buffer from emscripten.
+            asize = size;
+        }
+        _public.size = size;
+    };
+
+    _public.getRaw = function() {
+        return ptr;
+    };
+
+    _public.getBuffer = function() {
+        // Get a Uint8Array view on the input buffer.
+        return new Uint8Array(HEAPU8.buffer, ptr, _public.size);
+*/
+
+/**
+ * Create a proton.Data.Binary. This constructor takes one or two parameters,
+ * size specifies the size in bytes of the Binary buffer, start is a pointer
+ * to the data in an internal data store. If start is not specified then size
+ * bytes will be allocated in the internal data store and start will point to
+ * the start of that block of data.
+ * @classdesc
+ * This class represents an AMQP Binary type. This class allows us to create and
+ * use raw binary data and map it efficiently between JavaScript client code and
+ * the underlying implementation, where all data is managed on a virtual heap.
+ * <p>
+ * Client applications should not have to care about memory management. A client
+ * should create a {@link proton.Data.Binary} specifying the required size then
+ * call getBuffer to access the underlying Uint8Array. When {@link proton.Data.putBinary}
+ * is called ownership of the bytes transfers from the Binary to the Data and
+ * putBinary can then safely call free. Conversely when receiving data a Binary
+ * may be created by {@link proton.Data.getBinary} in this case the Binary is
+ * simply a "view" onto the bytes owned by the Data instance. A client application
+ * can safely access the bytes from the view, but if it wishes to use the bytes
+ * beyond the scope of the Data instance (for example after the next
+ * {@link proton.Messenger.get} call then the client must explicitly *copy* the
+ * bytes into a new buffer via copyBuffer().
+ * @constructor proton.Data.Binary
+ * @param {number} size the size of the Binary data buffer.
+ * @param {number} start an optional data pointer to the start of the Binary data buffer.
+ */
+Data['Binary'] = function(size, start) { // Data.Binary Constructor.
+    if (start) {
+        this.free = function() {};
+    } else {
+        start = _malloc(size); // Allocate storage from emscripten heap.
+        this.free = function() {_free(start);};
+    }
+
+    this.size = size;
+    this.start = start;
+};
+
+/*
+ * Get a Uint8Array view of the data. N.B. this is just a *view* of the data,
+ * which will out of scope on the next call to {@link proton.Messenger.get}. If
+ * a client wants to retain the data then copyBuffer should be used to explicitly
+ * create a copy of the data which the client then owns to do with as it wishes.
+ * @method getBuffer
+ * @memberof! proton.Data.Binary#
+ */
+Data['Binary'].prototype['getBuffer'] = function() {
+    return new Uint8Array(HEAPU8.buffer, this.start, this.size);
+};
+
+/*
+ * Explicitly create a *copy* of the underlying binary data and present a Uint8Array
+ * view of that copy. This method should be used if a client application wishes to
+ * retain an interest in the binary data for longer than it wishes to retain an
+ * interest in say a {@link proton.Message}, if that's not the case getBuffer
+ * should be used as that avoids the need to copy the data.
+ * @method copyBuffer
+ * @memberof! proton.Data.Binary#
+ */
+Data['Binary'].prototype['copyBuffer'] = function() {
+    return new Uint8Array(new Uint8Array(HEAPU8.buffer, this.start, this.size));
+};
+
+/**
+ * Converts the {@link proton.Data.Binary} to a string. This is clearly most
+ * useful when the binary data is actually a binary representation of a string
+ * such as a C style ASCII string.
+ * @method toString
+ * @memberof! proton.Data.Binary#
+ * @returns {string} the String form of a {@link proton.Data.Binary}.
+ */
+Data['Binary'].prototype.toString = Data['Binary'].prototype.valueOf = function() {
+    // Create a native JavaScript String from the start/size information.
+    return Pointer_stringify(this.start, this.size);
+};
 
 
 // ************************* Protected methods ********************************
@@ -1279,14 +1598,18 @@ _Data_._check = function(code) {
 // *************************** Public methods *********************************
 
 /**
- * @return the most recent error message code.
+ * @method getErrno
+ * @memberof! proton.Data#
+ * @returns {number} the most recent error message code.
  */
 _Data_['getErrno'] = function() {
     return _pn_data_errno(this._data);
 };
 
 /**
- * @return the most recent error message as a String.
+ * @method getError
+ * @memberof! proton.Data#
+ * @returns {string} the most recent error message as a String.
  */
 _Data_['getError'] = function() {
     return Pointer_stringify(_pn_error_text(_pn_data_error(this._data)));
@@ -1294,6 +1617,8 @@ _Data_['getError'] = function() {
 
 /**
  * Clears the data object.
+ * @method clear
+ * @memberof! proton.Data#
  */
 _Data_['clear'] = function() {
     _pn_data_clear(this._data);
@@ -1303,6 +1628,8 @@ _Data_['clear'] = function() {
  * Clears current node and sets the parent to the root node.  Clearing the
  * current node sets it _before_ the first node, calling next() will advance
  * to the first node.
+ * @method rewind
+ * @memberof! proton.Data#
  */
 _Data_['rewind'] = function() {
     _pn_data_rewind(this._data);
@@ -1312,6 +1639,9 @@ _Data_['rewind'] = function() {
  * Advances the current node to its next sibling and returns its
  * type. If there is no next sibling the current node remains
  * unchanged and null is returned.
+ * @method next
+ * @memberof! proton.Data#
+ * @returns {number} the type of the next sibling or null.
  */
 _Data_['next'] = function() {
     var found = _pn_data_next(this._data);
@@ -1326,6 +1656,9 @@ _Data_['next'] = function() {
  * Advances the current node to its previous sibling and returns its
  * type. If there is no previous sibling the current node remains
  * unchanged and null is returned.
+ * @method prev
+ * @memberof! proton.Data#
+ * @returns {number} the type of the previous sibling or null.
  */
 _Data_['prev'] = function() {
     var found = _pn_data_prev(this._data);
@@ -1340,6 +1673,8 @@ _Data_['prev'] = function() {
  * Sets the parent node to the current node and clears the current node.
  * Clearing the current node sets it _before_ the first child,
  * call next() advances to the first child.
+ * @method enter
+ * @memberof! proton.Data#
  */
 _Data_['enter'] = function() {
     return (_pn_data_enter(this._data) > 0);
@@ -1348,13 +1683,18 @@ _Data_['enter'] = function() {
 /**
  * Sets the current node to the parent node and the parent node to
  * its own parent.
+ * @method exit
+ * @memberof! proton.Data#
  */
 _Data_['exit'] = function() {
     return (_pn_data_exit(this._data) > 0);
 };
 
 
-
+/**
+ * @method lookup
+ * @memberof! proton.Data#
+ */
 _Data_['lookup'] = function(name) {
     var sp = Runtime.stackSave();
     var lookup = _pn_data_lookup(this._data, allocate(intArrayFromString(name), 'i8', ALLOC_STACK));
@@ -1372,7 +1712,9 @@ _Data_['widen'] = function() {
 
 
 /**
- * @return the type of the current node.
+ * @method type
+ * @memberof! proton.Data#
+ * @returns the type of the current node or null if the type is unknown.
  */
 _Data_['type'] = function() {
     var dtype = _pn_data_type(this._data);
@@ -1388,7 +1730,7 @@ _Data_['type'] = function() {
 /**
  * Puts a list value. Elements may be filled by entering the list
  * node and putting element values.
- *
+ * <pre>
  *  data = new Data();
  *  data.putList();
  *  data.enter();
@@ -1396,6 +1738,9 @@ _Data_['type'] = function() {
  *  data.putInt(2);
  *  data.putInt(3);
  *  data.exit();
+ * </pre>
+ * @method putList
+ * @memberof! proton.Data#
  */
 _Data_['putList'] = function() {
     this._check(_pn_data_put_list(this._data));
@@ -1404,13 +1749,16 @@ _Data_['putList'] = function() {
 /**
  * Puts a map value. Elements may be filled by entering the map node
  * and putting alternating key value pairs.
- *
+ * <pre>
  *  data = new Data();
  *  data.putMap();
  *  data.enter();
  *  data.putString("key");
  *  data.putString("value");
  *  data.exit();
+ * </pre>
+ * @method putMap
+ * @memberof! proton.Data#
  */
 _Data_['putMap'] = function() {
     this._check(_pn_data_put_map(this._data));
@@ -1420,6 +1768,8 @@ _Data_['putMap'] = function() {
 
 /**
  * Puts a null value.
+ * @method putNull
+ * @memberof! proton.Data#
  */
 _Data_['putNull'] = function() {
     this._check(_pn_data_put_null(this._data));
@@ -1427,7 +1777,9 @@ _Data_['putNull'] = function() {
 
 /**
  * Puts a boolean value.
- * @param b a boolean value.
+ * @method putBoolean
+ * @memberof! proton.Data#
+ * @param {boolean} b a boolean value.
  */
 _Data_['putBoolean'] = function(b) {
     this._check(_pn_data_put_bool(this._data, b));
@@ -1435,7 +1787,9 @@ _Data_['putBoolean'] = function(b) {
 
 /**
  * Puts a unsigned byte value.
- * @param ub an integral value.
+ * @method putUnsignedByte
+ * @memberof! proton.Data#
+ * @param {number} ub an integral value.
  */
 _Data_['putUnsignedByte'] = function(ub) {
     this._check(_pn_data_put_ubyte(this._data, ub));
@@ -1443,7 +1797,9 @@ _Data_['putUnsignedByte'] = function(ub) {
 
 /**
  * Puts a signed byte value.
- * @param b an integral value.
+ * @method putByte
+ * @memberof! proton.Data#
+ * @param {number} b an integral value.
  */
 _Data_['putByte'] = function(b) {
     this._check(_pn_data_put_byte(this._data, b));
@@ -1451,7 +1807,9 @@ _Data_['putByte'] = function(b) {
 
 /**
  * Puts a unsigned short value.
- * @param us an integral value.
+ * @method putUnsignedShort
+ * @memberof! proton.Data#
+ * @param {number} us an integral value.
  */
 _Data_['putUnsignedShort'] = function(us) {
     this._check(_pn_data_put_ushort(this._data, us));
@@ -1459,7 +1817,9 @@ _Data_['putUnsignedShort'] = function(us) {
 
 /**
  * Puts a signed short value.
- * @param s an integral value.
+ * @method putShort
+ * @memberof! proton.Data#
+ * @param {number} s an integral value.
  */
 _Data_['putShort'] = function(s) {
     this._check(_pn_data_put_short(this._data, s));
@@ -1467,7 +1827,9 @@ _Data_['putShort'] = function(s) {
 
 /**
  * Puts a unsigned integer value.
- * @param ui an integral value.
+ * @method putUnsignedInteger
+ * @memberof! proton.Data#
+ * @param {number} ui an integral value.
  */
 _Data_['putUnsignedInteger'] = function(ui) {
     this._check(_pn_data_put_uint(this._data, ui));
@@ -1475,7 +1837,9 @@ _Data_['putUnsignedInteger'] = function(ui) {
 
 /**
  * Puts a signed integer value.
- * @param i an integral value.
+ * @method putInteger
+ * @memberof! proton.Data#
+ * @param {number} i an integral value.
  */
 _Data_['putInteger'] = function(i) {
     this._check(_pn_data_put_int(this._data, i));
@@ -1483,7 +1847,9 @@ _Data_['putInteger'] = function(i) {
 
 /**
  * Puts a signed char value.
- * @param c a single character.
+ * @method putChar
+ * @memberof! proton.Data#
+ * @param {number} c a single character.
  */
 _Data_['putChar'] = function(c) {
 console.log("putChar not properly implemented yet");
@@ -1492,7 +1858,9 @@ console.log("putChar not properly implemented yet");
 
 /**
  * Puts a unsigned long value.
- * @param ul an integral value.
+ * @method putUnsignedLong
+ * @memberof! proton.Data#
+ * @param {number} ul an integral value.
  */
 _Data_['putUnsignedLong'] = function(ul) {
     this._check(_pn_data_put_ulong(this._data, ul));
@@ -1500,7 +1868,9 @@ _Data_['putUnsignedLong'] = function(ul) {
 
 /**
  * Puts a signed long value.
- * @param i an integral value.
+ * @method putLong
+ * @memberof! proton.Data#
+ * @param {number} i an integral value.
  */
 _Data_['putLong'] = function(l) {
 console.log("putLong " + l);
@@ -1511,7 +1881,9 @@ console.log("putLong " + l);
 
 /**
  * Puts a timestamp.
- * @param t an integral value.
+ * @method putTimestamp
+ * @memberof! proton.Data#
+ * @param {number} t an integral value.
  */
 _Data_['putTimestamp'] = function(t) {
 console.log("putTimestamp not properly implemented yet");
@@ -1520,7 +1892,9 @@ console.log("putTimestamp not properly implemented yet");
 
 /**
  * Puts a float value.
- * @param f a floating point value.
+ * @method putFloat
+ * @memberof! proton.Data#
+ * @param {number} f a floating point value.
  */
 _Data_['putFloat'] = function(f) {
     this._check(_pn_data_put_float(this._data, f));
@@ -1528,7 +1902,9 @@ _Data_['putFloat'] = function(f) {
 
 /**
  * Puts a double value.
- * @param d a floating point value.
+ * @method putDouble
+ * @memberof! proton.Data#
+ * @param {number} d a floating point value.
  */
 _Data_['putDouble'] = function(d) {
     this._check(_pn_data_put_double(this._data, d));
@@ -1536,7 +1912,9 @@ _Data_['putDouble'] = function(d) {
 
 /**
  * Puts a decimal32 value.
- * @param d a decimal32 value.
+ * @method putDecimal32
+ * @memberof! proton.Data#
+ * @param {number} d a decimal32 value.
  */
 _Data_['putDecimal32'] = function(d) {
     this._check(_pn_data_put_decimal32(this._data, d));
@@ -1544,7 +1922,9 @@ _Data_['putDecimal32'] = function(d) {
 
 /**
  * Puts a decimal64 value.
- * @param d a decimal64 value.
+ * @method putDecimal64
+ * @memberof! proton.Data#
+ * @param {number} d a decimal64 value.
  */
 _Data_['putDecimal64'] = function(d) {
     this._check(_pn_data_put_decimal64(this._data, d));
@@ -1552,7 +1932,9 @@ _Data_['putDecimal64'] = function(d) {
 
 /**
  * Puts a decimal128 value.
- * @param d a decimal128 value.
+ * @method putDecimal128
+ * @memberof! proton.Data#
+ * @param {number} d a decimal128 value.
  */
 _Data_['putDecimal128'] = function(d) {
     this._check(_pn_data_put_decimal128(this._data, d));
@@ -1560,7 +1942,9 @@ _Data_['putDecimal128'] = function(d) {
 
 /**
  * Puts a UUID value.
- * @param u a uuid value
+ * @method putUUID
+ * @memberof! proton.Data#
+ * @param {proton.Data.UUID} u a uuid value
  */
 _Data_['putUUID'] = function(u) {
     var sp = Runtime.stackSave();
@@ -1570,6 +1954,8 @@ _Data_['putUUID'] = function(u) {
 
 /**
  * Puts a binary value.
+ * @method putBinary
+ * @memberof! proton.Data#
  * @param b a binary value.
  */
 _Data_['putBinary'] = function(d) {
@@ -1579,7 +1965,9 @@ console.log("putBinary not properly implemented yet");
 
 /**
  * Puts a unicode string value.
- * @param s a unicode string value.
+ * @method putString
+ * @memberof! proton.Data#
+ * @param {string} s a unicode string value.
  */
 _Data_['putString'] = function(s) {
     var sp = Runtime.stackSave();
@@ -1616,7 +2004,9 @@ _Data_['putString'] = function(s) {
  * open-ended, typically the both number and size of symbols in use for any
  * given application will be small, e.g. small enough that it is reasonable to
  * cache all the distinct values. Symbols are encoded as ASCII characters.
- * @param s the symbol name.
+ * @method putSymbol
+ * @memberof! proton.Data#
+ * @param {proton.Data.Symbol} s the symbol name.
  */
 _Data_['putSymbol'] = function(s) {
     var sp = Runtime.stackSave();
@@ -1679,6 +2069,8 @@ _Data_['putSymbol'] = function(s) {
 // TODO getArray and isDescribed
 
 /**
+ * @method getNull
+ * @memberof! proton.Data#
  * @return a null value.
  */
 _Data_['getNull'] = function() {
@@ -1687,27 +2079,37 @@ _Data_['getNull'] = function() {
 
 /**
  * Checks if the current node is a null.
+ * @method isNull
+ * @memberof! proton.Data#
+ * @returns {boolean} true iff the current node is null.
  */
 _Data_['isNull'] = function() {
-    return _pn_data_is_null(this._data);
+    return (_pn_data_is_null(this._data) > 0);
 };
 
 /**
- * @return value if the current node is a boolean, returns false otherwise.
+ * @method getBoolean
+ * @memberof! proton.Data#
+ * @returns {boolean} a boolean value if the current node is a boolean, returns
+ *          false otherwise.
  */
 _Data_['getBoolean'] = function() {
     return (_pn_data_get_bool(this._data) > 0);
 };
 
 /**
- * @return value if the current node is an unsigned byte, returns 0 otherwise.
+ * @method getUnsignedByte
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is an unsigned byte, returns 0 otherwise.
  */
 _Data_['getUnsignedByte'] = function() {
     return _pn_data_get_ubyte(this._data);
 };
 
 /**
- * @return value if the current node is a signed byte, returns 0 otherwise.
+ * @method getByte
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a signed byte, returns 0 otherwise.
  */
 _Data_['getByte'] = function() {
     return _pn_data_get_byte(this._data);
@@ -1721,29 +2123,38 @@ _Data_['getUnsignedShort'] = function() {
 };
 
 /**
- * @return value if the current node is a signed short, returns 0 otherwise.
+ * @method getShort
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a signed short, returns 0 otherwise.
  */
 _Data_['getShort'] = function() {
     return _pn_data_get_short(this._data);
 };
 
 /**
- * @return value if the current node is an unsigned int, returns 0 otherwise.
+ * @method getUnsignedInteger
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is an unsigned int, returns 0 otherwise.
  */
 _Data_['getUnsignedInteger'] = function() {
     return _pn_data_get_uint(this._data);
 };
 
 /**
- * @return value if the current node is a signed int, returns 0 otherwise.
+ * @method getInteger
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a signed int, returns 0 otherwise.
  */
 _Data_['getInteger'] = function() {
     return _pn_data_put_int(this._data);
 };
 
 /**
- * @return value if the current node is a character, returns 0 otherwise.
+ * @method getChar
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a character, returns 0 otherwise.
  */
+// TODO should this be dealing with strings not numbers?
 _Data_['getChar'] = function() {
 console.log("getChar not properly implemented yet");
 return "character";
@@ -1751,14 +2162,18 @@ return "character";
 };
 
 /**
- * @return value if the current node is an unsigned long, returns 0 otherwise.
+ * @method getUnsignedLong
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is an unsigned long, returns 0 otherwise.
  */
 _Data_['getUnsignedLong'] = function() {
     return _pn_data_get_ulong(this._data);
 };
 
 /**
- * @return value if the current node is a signed long, returns 0 otherwise.
+ * @method getLong
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a signed long, returns 0 otherwise.
  */
 _Data_['getLong'] = function() {
 console.log("getLong");
@@ -1778,7 +2193,9 @@ console.log("Data.getLong() long = " + long);
 };
 
 /**
- * @return value if the current node is a timestamp, returns 0 otherwise.
+ * @method getTimestamp
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a timestamp, returns 0 otherwise.
  */
 _Data_['getTimestamp'] = function() {
 console.log("getTimestamp not properly implemented yet");
@@ -1787,21 +2204,27 @@ return 123456;
 };
 
 /**
- * @return value if the current node is a float, returns 0 otherwise.
+ * @method getFloat
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a float, returns 0 otherwise.
  */
 _Data_['getFloat'] = function() {
     return _pn_data_get_float(this._data);
 };
 
 /**
- * @return value if the current node is a double, returns 0 otherwise.
+ * @method getDouble
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a double, returns 0 otherwise.
  */
 _Data_['getDouble'] = function() {
     return _pn_data_get_double(this._data);
 };
 
 /**
- * @return value if the current node is a decimal32, returns 0 otherwise.
+ * @method getDecimal32
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a decimal32, returns 0 otherwise.
  */
 _Data_['getDecimal32'] = function() {
 console.log("getDecimal32 not properly implemented yet");
@@ -1809,7 +2232,9 @@ console.log("getDecimal32 not properly implemented yet");
 };
 
 /**
- * @return value if the current node is a decimal64, returns 0 otherwise.
+ * @method getDecimal64
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a decimal64, returns 0 otherwise.
  */
 _Data_['getDecimal64'] = function() {
 console.log("getDecimal64 not properly implemented yet");
@@ -1817,7 +2242,9 @@ console.log("getDecimal64 not properly implemented yet");
 };
 
 /**
- * @return value if the current node is a decimal128, returns 0 otherwise.
+ * @method getDecimal128
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is a decimal128, returns 0 otherwise.
  */
 _Data_['getDecimal128'] = function() {
 console.log("getDecimal128 not properly implemented yet");
@@ -1825,7 +2252,9 @@ console.log("getDecimal128 not properly implemented yet");
 };
 
 /**
- * @return value if the current node is a UUID, returns null otherwise.
+ * @method getUUID
+ * @memberof! proton.Data#
+ * @return {proton.Data.UUID} value if the current node is a UUID, returns null otherwise.
  */
 _Data_['getUUID'] = function() {
     var sp = Runtime.stackSave();
@@ -1848,7 +2277,9 @@ _Data_['getUUID'] = function() {
 };
 
 /**
- * @return value if the current node is a Binary, returns null otherwise.
+ * @method getBinary
+ * @memberof! proton.Data#
+ * @returns {proton.Data.Binary} value if the current node is a Binary, returns null otherwise.
  */
 _Data_['getBinary'] = function() {
 console.log("getBinary not properly implemented yet");
@@ -1856,7 +2287,10 @@ console.log("getBinary not properly implemented yet");
 };
 
 /**
- * @return value if the current node is a String, returns "" otherwise.
+ * Gets a unicode String value from the current node.
+ * @method getString
+ * @memberof! proton.Data#
+ * @return {string} value if the current node is a String, returns "" otherwise.
  */
 _Data_['getString'] = function() {
     var sp = Runtime.stackSave();
@@ -1894,9 +2328,9 @@ _Data_['getString'] = function() {
  * open-ended, typically the both number and size of symbols in use for any
  * given application will be small, e.g. small enough that it is reasonable to
  * cache all the distinct values. Symbols are encoded as ASCII characters.
-
-
- * @return value if the current node is a Symbol, returns "" otherwise.
+ * @method getSymbol
+ * @memberof! proton.Data#
+ * @return {proton.Data.Symbol} value if the current node is a Symbol, returns "" otherwise.
  */
 _Data_['getSymbol'] = function() {
     var sp = Runtime.stackSave();
@@ -1936,7 +2370,9 @@ _Data_['getSymbol'] = function() {
 
 /**
  * Serialise a Native JavaScript Object into an AMQP Map.
- * @param object the Native JavaScript Object that we wish to serialise.
+ * @method putDictionary
+ * @memberof! proton.Data#
+ * @param {object} object the Native JavaScript Object that we wish to serialise.
  */
 _Data_['putDictionary'] = function(object) {
     this['putMap']();
@@ -1952,7 +2388,9 @@ _Data_['putDictionary'] = function(object) {
 
 /**
  * Deserialise from an AMQP Map into a Native JavaScript Object.
- * @return the deserialised Native JavaScript Object.
+ * @method getDictionary
+ * @memberof! proton.Data#
+ * @returns {object} the deserialised Native JavaScript Object.
  */
 _Data_['getDictionary'] = function() {
     if (this['enter']()) {
@@ -1973,7 +2411,9 @@ _Data_['getDictionary'] = function() {
 
 /**
  * Serialise a Native JavaScript Array into an AMQP List.
- * @param array the Native JavaScript Array that we wish to serialise.
+ * @method putJSArray
+ * @memberof! proton.Data#
+ * @param {Array} array the Native JavaScript Array that we wish to serialise.
  */
 _Data_['putJSArray'] = function(array) {
     this['putList']();
@@ -1986,7 +2426,9 @@ _Data_['putJSArray'] = function(array) {
 
 /**
  * Deserialise from an AMQP List into a Native JavaScript Array.
- * @return the deserialised Native JavaScript Array.
+ * @method getJSArray
+ * @memberof! proton.Data#
+ * @returns {array} the deserialised Native JavaScript Array.
  */
 _Data_['getJSArray'] = function() {
     if (this['enter']()) {
@@ -2013,7 +2455,9 @@ _Data_['getJSArray'] = function() {
  * and we could employ a look-up table but in practice the JavaScript type system
  * doesn't really lend itself to that and we have to employ extra checks,
  * heuristics and inferences.
- * @param obj the JavaScript Object or primitive to be serialised.
+ * @method putObject
+ * @memberof! proton.Data#
+ * @param {object} obj the JavaScript Object or primitive to be serialised.
  */
 _Data_['putObject'] = function(obj) {
 console.log("Data.putObject");
@@ -2083,8 +2527,12 @@ console.log(obj + " is Float Type");
 _Data_.putObject = _Data_['putObject'];
 
 
-// TODO
-_Data_['getObject'] = function(obj) {
+/**
+ * @method getObject
+ * @memberof! proton.Data#
+ * @returns {object} the JavaScript Object or primitive being deserialised.
+ */
+_Data_['getObject'] = function() {
 console.log("Data.getObject: not fully implemented yet");
 
     var type = this.type();
@@ -2150,5 +2598,6 @@ Module['Inflate'] = function(size) {
     return _public;
 };
 */
+
 
 
