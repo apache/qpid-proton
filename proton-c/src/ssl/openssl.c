@@ -906,7 +906,7 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
               // no max frame limit - grow it.
               char *newbuf = (char *)malloc( max_frame );
               if (newbuf) {
-                ssl->in_size *= max_frame;
+                ssl->in_size = max_frame;
                 memmove( newbuf, ssl->inbuf, ssl->in_count );
                 free( ssl->inbuf );
                 ssl->inbuf = newbuf;
