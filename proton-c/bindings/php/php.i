@@ -22,6 +22,9 @@
 // provided by SWIG development libraries
 %include php.swg
 
+#if SWIG_VERSION < 0x020000
+%include compat.swg
+#endif
 
 %header %{
 /* Include the headers needed by the code in this wrapper file */
