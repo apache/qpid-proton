@@ -70,6 +70,14 @@ console.log("exiting");
     //message.body = msgtext;
     //message.body = new proton.Data.UUID();
     //message.body = new proton.Data.Symbol("My Symbol");
+    message.body = new proton.Data.Binary(4);
+    var buffer = message.body.getBuffer();
+    buffer[0] = 65;
+    buffer[1] = 77;
+    buffer[2] = 81;
+    buffer[3] = 80;
+
+
     //message.body = true;
     //message.body = "   \"127.0\"  ";
 
@@ -80,7 +88,7 @@ console.log("exiting");
     //message.body = 2147483647.000001; // double
 
     //message.body = ['Rod', 'Jane', 'Freddy'];
-    message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
+    //message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
 
 
     tracker = messenger.put(message);

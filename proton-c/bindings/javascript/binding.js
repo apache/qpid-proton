@@ -49,56 +49,6 @@ var Module = {
 };
 
 
-
-/**
- * This class is a buffer for use with the emscripten based port of zlib. It allows creation management of a 
- * buffer in the virtual heap space of the zlib library hiding the implementation detail from client code.
- */
-/*
-var Buffer = function(size) {
-    var _public = {};
-    var asize = 0; // The allocated size of the input buffer.
-    var ptr   = 0; // Handle to the input buffer.
-
-    // Private methods.
-    function freeBuffer() {
-        if (ptr !== 0) {
-            _free(ptr);
-        }
-    };
-
-    // Public methods
-    _public.destroy = function() {
-        freeBuffer();
-    };
-
-    _public.setSize = function(size) {
-        if (size > asize) {
-            freeBuffer();
-            ptr = _malloc(size); // Get output buffer from emscripten.
-            asize = size;
-        }
-        _public.size = size;
-    };
-
-    _public.getRaw = function() {
-        return ptr;
-    };
-
-    _public.getBuffer = function() {
-        // Get a Uint8Array view on the input buffer.
-        return new Uint8Array(HEAPU8.buffer, ptr, _public.size);
-    };
-
-    if (size) {
-        _public.setSize(size);
-    }
-
-    return _public;
-};
-*/
-
-
 /*****************************************************************************/
 /*                                                                           */
 /*                                   Status                                  */
@@ -1515,6 +1465,18 @@ Data.Long.prototype.toString = function() {
  * @param {number} start an optional data pointer to the start of the Binary data buffer.
  */
 Data['Binary'] = function(size, start) { // Data.Binary Constructor.
+    /*
+     * If the start pointer is specified then the underlying binary data is owned
+     * by another object, so we set the call to free to be a null function. If
+     * the start pointer is not passed then we allocate storage of the specified
+     * size on the emscripten heap and set the call to free to free the data from
+     * the emscripten heap. We have made the call to free a protected method that
+     * is only visible within the scope of the binding closure, clients should
+     * not have to call free themselves as the data is either already "owned" by
+     * a Data object or is destined to be passed to a Data object, which will in
+     * turn take responsibility for calling free once it has taken ownership of
+     * the underlying binary data.
+     */
     if (start) {
         this.free = function() {};
     } else {
@@ -1528,7 +1490,7 @@ Data['Binary'] = function(size, start) { // Data.Binary Constructor.
 
 /*
  * Get a Uint8Array view of the data. N.B. this is just a *view* of the data,
- * which will out of scope on the next call to {@link proton.Messenger.get}. If
+ * which will go out of scope on the next call to {@link proton.Messenger.get}. If
  * a client wants to retain the data then copyBuffer should be used to explicitly
  * create a copy of the data which the client then owns to do with as it wishes.
  * @method getBuffer
@@ -1956,11 +1918,34 @@ _Data_['putUUID'] = function(u) {
  * Puts a binary value.
  * @method putBinary
  * @memberof! proton.Data#
- * @param b a binary value.
+ * @param {proton.Data.Binary} b a binary value.
  */
-_Data_['putBinary'] = function(d) {
-console.log("putBinary not properly implemented yet");
-    this._check(_pn_data_put_binary(this._data, b));
+_Data_['putBinary'] = function(b) {
+console.log("putBinary");
+
+    var sp = Runtime.stackSave();
+    // The implementation here is a bit "quirky" due to some low-level details
+    // of the interaction between emscripten and LLVM and the use of pn_bytes.
+    // The JavaScript code below is basically a binding to:
+    //
+    // pn_data_put_binary(data, pn_bytes(b.size, b.start));
+
+    // Here's the quirky bit, pn_bytes actually returns pn_bytes_t *by value* but
+    // the low-level code handles this *by pointer* so we first need to allocate
+    // 8 bytes storage for {size, start} on the emscripten stack and then we
+    // pass the pointer to that storage as the first parameter to the compiled
+    // pn_bytes.
+    var bytes = allocate(8, 'i8', ALLOC_STACK);
+    _pn_bytes(bytes, b.size, b.start);
+
+    // The compiled pn_data_put_binary takes the pn_bytes_t by reference not value.
+    this._check(_pn_data_put_binary(this._data, bytes));
+
+    // After calling _pn_data_put_binary the underlying data object "owns" the
+    // binary data, so we can call free on the proton.Data.Binary instance to
+    // release any storage it has acquired back to the emscripten heap.
+    b.free();
+    Runtime.stackRestore(sp);
 };
 
 /**
@@ -2282,8 +2267,34 @@ _Data_['getUUID'] = function() {
  * @returns {proton.Data.Binary} value if the current node is a Binary, returns null otherwise.
  */
 _Data_['getBinary'] = function() {
-console.log("getBinary not properly implemented yet");
-    //this._check(_pn_data_put_binary(this._data, b));
+console.log("getBinary");
+    var sp = Runtime.stackSave();
+    // The implementation here is a bit "quirky" due to some low-level details
+    // of the interaction between emscripten and LLVM and the use of pn_bytes.
+    // The JavaScript code below is basically a binding to:
+    //
+    // pn_bytes bytes = pn_data_get_binary(data);
+
+    // Here's the quirky bit, pn_data_get_binary actually returns pn_bytes_t 
+    // *by value* but the low-level code handles this *by pointer* so we first
+    // need to allocate 8 bytes storage for {size, start} on the emscripten stack
+    // and then we pass the pointer to that storage as the first parameter to the
+    // compiled pn_data_get_binary.
+    var bytes = allocate(8, 'i8', ALLOC_STACK);
+    _pn_data_get_binary(bytes, this._data);
+
+    // The bytes variable is really of type pn_bytes_t* so we use emscripten's
+    // getValue() call to retrieve the size and then the start pointer.
+    var size  = getValue(bytes, 'i32');
+    var start = getValue(bytes + 4, '*');
+
+    // Create a proton.Data.Binary from the pn_bytes_t information.
+    var binary = new Data['Binary'](size, start);
+
+    // Tidy up the memory that we allocated on emscripten's stack.
+    Runtime.stackRestore(sp);
+
+    return binary;
 };
 
 /**
@@ -2484,6 +2495,8 @@ console.log("obj is quoted String " + quoted);
         }   
     } else if (obj instanceof Data['UUID']) {
         this['putUUID'](obj);
+    } else if (obj instanceof Data['Binary']) {
+        this['putBinary'](obj);
     } else if (obj instanceof Data['Symbol']) {
         this['putSymbol'](obj);
     } else if (Data.isNumber(obj)) {
@@ -2545,59 +2558,6 @@ console.log("getter = " + getter);
     return this[getter]();
 };
 _Data_.getObject = _Data_['getObject'];
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-Module['Inflate'] = function(size) {
-    var _public = {};
-    var stream = _inflateInitialise();
-    var inputBuffer  = Buffer(size);
-    var outputBuffer = Buffer(size);
-
-    // Public methods
-    _public['destroy'] = function() {
-        _inflateDestroy(stream);
-        inputBuffer.destroy();
-        outputBuffer.destroy();
-    };
-
-    _public['reset'] = function() {
-        _inflateReset(stream);
-    };
-
-    _public['inflate'] = function(ptr) {
-        ptr = ptr ? ptr : outputBuffer.getRaw();
-        var inflatedSize; // Pass by reference variable - need to use Module.setValue to initialise it.
-        setValue(inflatedSize, outputBuffer.size, 'i32');
-        var err = _zinflate(stream, ptr, inflatedSize, inputBuffer.getRaw(), inputBuffer.size);
-        inflatedSize = getValue(inflatedSize, 'i32'); // Dereference the real inflatedSize value;
-        outputBuffer.setSize(inflatedSize);
-        return ((err < 0) ? err : inflatedSize); // Return the inflated size, or error code if inflation fails.
-    };
-
-    // Export methods from the input and output buffers for use by client code.
-    _public['setInputBufferSize'] = inputBuffer.setSize;
-    _public['getRawInputBuffer'] = inputBuffer.getRaw;
-    _public['getInputBuffer'] = inputBuffer.getBuffer;
-
-    _public['setOutputBufferSize'] = outputBuffer.setSize;
-    _public['getRawOutBuffer'] = outputBuffer.getRaw;
-    _public['getOutputBuffer'] = outputBuffer.getBuffer;
-
-    return _public;
-};
-*/
 
 
 
