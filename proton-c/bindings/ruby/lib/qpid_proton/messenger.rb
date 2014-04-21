@@ -36,19 +36,19 @@ module Qpid
     #
     # The Messenger class works in conjuction with the Message class. The
     # Message class is a mutable holder of message content.
-    # 
-    # The put method copies its Message to the outgoing queue, and may 
+    #
+    # The put method copies its Message to the outgoing queue, and may
     # send queued messages if it can do so without blocking.  The send
     # method blocks until it has sent the requested number of messages,
     # or until a timeout interrupts the attempt.
-    # 
+    #
     # Similarly, the recv method receives messages into the incoming
     # queue, and may block as it attempts to receive the requested number
     # of messages,  or until timeout is reached. It may receive fewer
     # than the requested number.  The get method pops the
     # eldest Message off the incoming queue and copies it into the Message
     # object that you supply.  It will not block.
-    # 
+    #
     # The blocking attribute allows you to turn off blocking behavior entirely,
     # in which case send and recv will do whatever they can without
     # blocking, and then return.  You can then look at the number
