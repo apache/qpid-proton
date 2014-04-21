@@ -70,6 +70,7 @@ module Qpid
       #
       def initialize(name = nil)
         @impl = Cproton.pn_messenger(name)
+        @selectables = {}
         ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
       end
 
@@ -143,8 +144,21 @@ module Qpid
       end
 
       # Turns passive mode on or off.
+      #
+      # When set to passive mode, Messenger will not attempt to perform I/O
+      # operations internally. In this mode it is necesssary to use the
+      # Selectable type to drive any I/O needed to perform requestioned
+      # actions.
+      #
+      # In this mode Messenger will never block.
+      #
       def passive=(mode)
         Cproton.pn_messenger_set_passive(@impl, mode)
+      end
+
+      def deadline
+        tstamp = Cproton.pn_messenger_deadline(@impl)
+        return tstamp / 1000.0 unless tstamp.nil?
       end
 
       # Reports whether an error occurred.
@@ -468,6 +482,22 @@ module Qpid
         check_for_error(Cproton.pn_messenger_rewrite(@impl, pattern, address))
       end
 
+      def selectable
+        impl = Cproton.pn_messenger_selectable(@impl)
+
+        # if we don't have any selectables, then return
+        return nil if impl.nil?
+
+        fd = Cproton.pn_selectable_fd(impl)
+
+        selectable = @selectables[fd]
+        if selectable.nil?
+          selectable = Selectable.new(self, impl)
+          @selectables[fd] = selectable
+        end
+        return selectable
+      end
+
       # Returns a +Tracker+ for the message most recently sent via the put
       # method.
       #
@@ -610,6 +640,11 @@ module Qpid
       #
       def outgoing_window
         Cproton.pn_messenger_get_outgoing_window(@impl)
+      end
+
+      # Unregisters a selectable object.
+      def unregister_selectable(fileno) # :nodoc:
+        @selectables.delete(fileno)
       end
 
       private

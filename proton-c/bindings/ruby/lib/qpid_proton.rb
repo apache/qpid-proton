@@ -33,5 +33,5 @@ require "qpid_proton/message"
 require "qpid_proton/subscription"
 require "qpid_proton/tracker_status"
 require "qpid_proton/tracker"
+require "qpid_proton/selectable"
 require "qpid_proton/messenger"
-
