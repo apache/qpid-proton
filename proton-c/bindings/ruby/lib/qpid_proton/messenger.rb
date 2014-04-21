@@ -136,6 +136,17 @@ module Qpid
         Cproton.pn_messenger_set_blocking(@impl, blocking)
       end
 
+      # Returns true if passive mode is enabled.
+      #
+      def passive?
+        Cproton.pn_messenger_is_passive(@impl)
+      end
+
+      # Turns passive mode on or off.
+      def passive=(mode)
+        Cproton.pn_messenger_set_passive(@impl, mode)
+      end
+
       # Reports whether an error occurred.
       #
       def error?
