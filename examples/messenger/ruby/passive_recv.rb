@@ -62,7 +62,7 @@ loop do
   # wait for incoming messages
   sel = messenger.selectable
   while !sel.nil?
-    if sel.terminal? && sel.killable?
+    if sel.terminal?
       selectables.delete(sel.fileno)
       read_array.delete(sel)
       write_array.delete(sel)

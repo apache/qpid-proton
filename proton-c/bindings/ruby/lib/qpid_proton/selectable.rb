@@ -113,8 +113,6 @@ module Qpid
         @freed
       end
 
-      def killable?; !@impl.nil?; end
-
       private
 
       def check_is_initialized
