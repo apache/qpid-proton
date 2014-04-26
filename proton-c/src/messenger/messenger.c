@@ -602,6 +602,10 @@ pn_messenger_t *pn_messenger(const char *name)
        pni_interruptor_finalize);
     pn_list_add(m->pending, m->interruptor);
     m->interrupted = false;
+    // Explicitly initialise pipe file descriptors to invalid values in case pipe
+    // fails, if we don't do this m->ctrl[0] could default to 0 - which is stdin.
+    m->ctrl[0] = -1;
+    m->ctrl[1] = -1;
     pn_pipe(m->io, m->ctrl);
     pni_selectable_set_fd(m->interruptor, m->ctrl[0]);
     pni_selectable_set_context(m->interruptor, m);
