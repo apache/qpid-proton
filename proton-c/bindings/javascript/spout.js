@@ -70,6 +70,8 @@ console.log("exiting");
     //message.body = msgtext;
     //message.body = new proton.Data.UUID();
     //message.body = new proton.Data.Symbol("My Symbol");
+    //message.body = new proton.Data.Binary("Monkey Bathпогромзхцвбнм");
+
     message.body = new proton.Data.Binary(4);
     var buffer = message.body.getBuffer();
     buffer[0] = 65;

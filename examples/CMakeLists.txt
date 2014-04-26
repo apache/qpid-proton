@@ -17,12 +17,6 @@
 # under the License.
 #
 
-find_package(Proton REQUIRED)
+set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(recv recv.c)
-add_executable(send send.c)
-
-include_directories(${Proton_INCLUDE_DIRS})
-
-target_link_libraries(recv ${Proton_LIBRARIES})
-target_link_libraries(send ${Proton_LIBRARIES})
+add_subdirectory(messenger/c)

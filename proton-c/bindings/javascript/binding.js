@@ -48,7 +48,6 @@ var Module = {
     'noExitRuntime' : true
 };
 
-
 /*****************************************************************************/
 /*                                                                           */
 /*                                   Status                                  */
@@ -116,7 +115,7 @@ Module['Error'] = {
  * @param {string} name the name of this Messenger instance.
  */
 Module['Messenger'] = function(name) { // Messenger Constructor.
-    /*
+    /**
      * The emscripten idiom below is used in a number of places in the JavaScript
      * bindings to map JavaScript Strings to C style strings. ALLOC_STACK will
      * increase the stack and place the item there. When the stack is next restored
@@ -759,8 +758,6 @@ Subscription.prototype['setContext'] = function(context) {
 Subscription.prototype['getAddress'] = function() {
     return Pointer_stringify(_pn_subscription_address(this._subscription));
 };
-
-
 
 
 /*****************************************************************************/
@@ -1406,38 +1403,7 @@ Data.Long.prototype.toString = function() {
     return this.high + ":" + this.getLowBitsUnsigned();
 };
 
-// ---------------------------- proton.Data.Binary ---------------------------- 
-
-/*
-    function freeBuffer() {
-        if (ptr !== 0) {
-            _free(ptr);
-        }
-    };
-
-    // Public methods
-    _public.destroy = function() {
-        freeBuffer();
-    };
-
-    _public.setSize = function(size) {
-        if (size > asize) {
-            freeBuffer();
-            ptr = _malloc(size); // Get output buffer from emscripten.
-            asize = size;
-        }
-        _public.size = size;
-    };
-
-    _public.getRaw = function() {
-        return ptr;
-    };
-
-    _public.getBuffer = function() {
-        // Get a Uint8Array view on the input buffer.
-        return new Uint8Array(HEAPU8.buffer, ptr, _public.size);
-*/
-
+// ---------------------------- proton.Data.Binary ----------------------------
 /**
  * Create a proton.Data.Binary. This constructor takes one or two parameters,
  * size specifies the size in bytes of the Binary buffer, start is a pointer
@@ -1461,11 +1427,16 @@ Data.Long.prototype.toString = function() {
  * {@link proton.Messenger.get} call then the client must explicitly *copy* the
  * bytes into a new buffer via copyBuffer().
  * @constructor proton.Data.Binary
- * @param {number} size the size of the Binary data buffer.
+ * @param {object} data. If data is a number then it represents the size of the
+ *        Binary data buffer, if it is a string then we copy the string to the
+ *        buffer, if it is an Array or a TypedArray then we copy the data to
+ *        the buffer. N.B. although convenient do bear in mind that every method
+ *        other than constructing with a size followed by a call to getBuffer will
+ *        result in some form of additional data copy.
  * @param {number} start an optional data pointer to the start of the Binary data buffer.
  */
-Data['Binary'] = function(size, start) { // Data.Binary Constructor.
-    /*
+Data['Binary'] = function(data, start) { // Data.Binary Constructor.
+    /**
      * If the start pointer is specified then the underlying binary data is owned
      * by another object, so we set the call to free to be a null function. If
      * the start pointer is not passed then we allocate storage of the specified
@@ -1477,10 +1448,30 @@ Data['Binary'] = function(size, start) { // Data.Binary Constructor.
      * turn take responsibility for calling free once it has taken ownership of
      * the underlying binary data.
      */
+    var size = data;
     if (start) {
         this.free = function() {};
-    } else {
-        start = _malloc(size); // Allocate storage from emscripten heap.
+    } else { // Create Binary from Array, ArrayBuffer or TypedArray
+        if (Data.isArray(data) ||
+            (data instanceof ArrayBuffer) || 
+            (data.buffer && data.buffer instanceof ArrayBuffer)) {
+            data = new Uint8Array(data);
+            size = data.length;
+            start = _malloc(size); // Allocate storage from emscripten heap.
+            Module.HEAPU8.set(data, start);
+        } else if (Data.isString(data)) { // Create Binary from native string
+            data = unescape(encodeURIComponent(data)); // Create a C-like UTF representation.
+            size = data.length;
+            start = _malloc(size); // Allocate storage from emscripten heap.
+            for (var i = 0; i < size; i++) {
+                setValue(start + i, data.charCodeAt(i), 'i8', 1);
+            }
+        } else { // Create unpopulated Binary of specified size.
+            // If the type is not a number by this point then an unrecognised data
+            // type has been passed so we create a zero length Binary.
+            size = Data.isNumber(size) ? size : 0;
+            start = _malloc(size); // Allocate storage from emscripten heap.
+        }
         this.free = function() {_free(start);};
     }
 
@@ -1488,7 +1479,7 @@ Data['Binary'] = function(size, start) { // Data.Binary Constructor.
     this.start = start;
 };
 
-/*
+/**
  * Get a Uint8Array view of the data. N.B. this is just a *view* of the data,
  * which will go out of scope on the next call to {@link proton.Messenger.get}. If
  * a client wants to retain the data then copyBuffer should be used to explicitly
@@ -1500,7 +1491,7 @@ Data['Binary'].prototype['getBuffer'] = function() {
     return new Uint8Array(HEAPU8.buffer, this.start, this.size);
 };
 
-/*
+/**
  * Explicitly create a *copy* of the underlying binary data and present a Uint8Array
  * view of that copy. This method should be used if a client application wishes to
  * retain an interest in the binary data for longer than it wishes to retain an
@@ -1921,8 +1912,6 @@ _Data_['putUUID'] = function(u) {
  * @param {proton.Data.Binary} b a binary value.
  */
 _Data_['putBinary'] = function(b) {
-console.log("putBinary");
-
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -1933,8 +1922,7 @@ console.log("putBinary");
     // Here's the quirky bit, pn_bytes actually returns pn_bytes_t *by value* but
     // the low-level code handles this *by pointer* so we first need to allocate
     // 8 bytes storage for {size, start} on the emscripten stack and then we
-    // pass the pointer to that storage as the first parameter to the compiled
-    // pn_bytes.
+    // pass the pointer to that storage as the first parameter to the pn_bytes.
     var bytes = allocate(8, 'i8', ALLOC_STACK);
     _pn_bytes(bytes, b.size, b.start);
 
@@ -1965,18 +1953,16 @@ _Data_['putString'] = function(s) {
     // First create an array from the JavaScript String using the intArrayFromString
     // helper function (from emscripten/src/preamble.js). We use this idiom in a
     // few places but here we create array as a separate var as we need its length.
-    var array = intArrayFromString(s);
+    var array = intArrayFromString(s, true); // The true means don't add NULL.
     // Allocate temporary storage for the array on the emscripten stack.
     var str = allocate(array, 'i8', ALLOC_STACK);
 
     // Here's the quirky bit, pn_bytes actually returns pn_bytes_t *by value* but
     // the low-level code handles this *by pointer* so we first need to allocate
     // 8 bytes storage for {size, start} on the emscripten stack and then we
-    // pass the pointer to that storage as the first parameter to the compiled
-    // pn_bytes. The second parameter is the length of the array - 1 because it
-    // is a NULL terminated C style string at this point.
+    // pass the pointer to that storage as the first parameter to the pn_bytes.
     var bytes = allocate(8, 'i8', ALLOC_STACK);
-    _pn_bytes(bytes, array.length - 1, str);
+    _pn_bytes(bytes, array.length, str);
 
     // The compiled pn_data_put_string takes the pn_bytes_t by reference not value.
     this._check(_pn_data_put_string(this._data, bytes));
@@ -2004,52 +1990,21 @@ _Data_['putSymbol'] = function(s) {
     // First create an array from the JavaScript String using the intArrayFromString
     // helper function (from emscripten/src/preamble.js). We use this idiom in a
     // few places but here we create array as a separate var as we need its length.
-    var array = intArrayFromString(s);
+    var array = intArrayFromString(s, true); // The true means don't add NULL.
     // Allocate temporary storage for the array on the emscripten stack.
     var str = allocate(array, 'i8', ALLOC_STACK);
 
     // Here's the quirky bit, pn_bytes actually returns pn_bytes_t *by value* but
     // the low-level code handles this *by pointer* so we first need to allocate
     // 8 bytes storage for {size, start} on the emscripten stack and then we
-    // pass the pointer to that storage as the first parameter to the compiled
-    // pn_bytes. The second parameter is the length of the array - 1 because it
-    // is a NULL terminated C style string at this point.
+    // pass the pointer to that storage as the first parameter to the pn_bytes.
     var bytes = allocate(8, 'i8', ALLOC_STACK);
-    _pn_bytes(bytes, array.length - 1, str);
+    _pn_bytes(bytes, array.length, str);
 
     // The compiled pn_data_put_symbol takes the pn_bytes_t by reference not value.
     this._check(_pn_data_put_symbol(this._data, bytes));
     Runtime.stackRestore(sp);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // TODO getArray and isDescribed
 
@@ -2267,7 +2222,6 @@ _Data_['getUUID'] = function() {
  * @returns {proton.Data.Binary} value if the current node is a Binary, returns null otherwise.
  */
 _Data_['getBinary'] = function() {
-console.log("getBinary");
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2377,8 +2331,6 @@ _Data_['getSymbol'] = function() {
 // TODO copy, format and dump
 
 
-
-
 /**
  * Serialise a Native JavaScript Object into an AMQP Map.
  * @method putDictionary
@@ -2419,7 +2371,6 @@ _Data_['getDictionary'] = function() {
     }
 };
 
-
 /**
  * Serialise a Native JavaScript Array into an AMQP List.
  * @method putJSArray
@@ -2451,14 +2402,6 @@ _Data_['getJSArray'] = function() {
         return result;
     }
 };
-
-
-
-
-
-
-
-
 
 /**
  * This method is the entry point for serialising native JavaScript types into
@@ -2538,7 +2481,6 @@ console.log(obj + " is Float Type");
     }
 };
 _Data_.putObject = _Data_['putObject'];
-
 
 /**
  * @method getObject

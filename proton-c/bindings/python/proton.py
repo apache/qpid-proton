@@ -3277,6 +3277,7 @@ class Collector:
     else:
       tp = None
     return Event(type=pn_event_type(event),
+                 category=pn_event_category(event),
                  connection=Connection._wrap_connection(pn_event_connection(event)),
                  session=Session._wrap_session(pn_event_session(event)),
                  link=Link._wrap_link(pn_event_link(event)),
@@ -3291,15 +3292,22 @@ class Collector:
 
 class Event:
 
-  CONNECTION_STATE = PN_CONNECTION_STATE
-  SESSION_STATE = PN_SESSION_STATE
-  LINK_STATE = PN_LINK_STATE
+  CATEGORY_PROTOCOL = PN_EVENT_CATEGORY_PROTOCOL
+
+  CONNECTION_LOCAL_STATE = PN_CONNECTION_LOCAL_STATE
+  CONNECTION_REMOTE_STATE = PN_CONNECTION_REMOTE_STATE
+  SESSION_LOCAL_STATE = PN_SESSION_LOCAL_STATE
+  SESSION_REMOTE_STATE = PN_SESSION_REMOTE_STATE
+  LINK_LOCAL_STATE = PN_LINK_LOCAL_STATE
+  LINK_REMOTE_STATE = PN_LINK_REMOTE_STATE
   LINK_FLOW = PN_LINK_FLOW
   DELIVERY = PN_DELIVERY
   TRANSPORT = PN_TRANSPORT
 
-  def __init__(self, type, connection, session, link, delivery, transport):
+  def __init__(self, type, category,
+               connection, session, link, delivery, transport):
     self.type = type
+    self.category = category
     self.connection = connection
     self.session = session
     self.link = link

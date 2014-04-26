@@ -119,7 +119,7 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
   }
 }
 
-static inline int pn_create_socket(void);
+static inline int pn_create_socket(int af);
 
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
@@ -130,7 +130,7 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return PN_INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket();
+  pn_socket_t sock = pn_create_socket(addr->ai_family);
   if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "pn_create_socket");
     return PN_INVALID_SOCKET;
@@ -170,7 +170,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
     return PN_INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket();
+  pn_socket_t sock = pn_create_socket(addr->ai_family);
   if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "pn_create_socket");
     return PN_INVALID_SOCKET;
@@ -195,7 +195,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
 pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 {
   struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;
+  addr.sin_family = AF_UNSPEC;
   socklen_t addrlen = sizeof(addr);
   pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
   if (sock == PN_INVALID_SOCKET) {
@@ -224,18 +224,18 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len) {
   return count;
 }
 
-static inline int pn_create_socket(void) {
-  return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+static inline int pn_create_socket(int af) {
+  return socket(af, SOCK_STREAM, getprotobyname("tcp")->p_proto);
 }
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
-  ssize_t count = return send(socket, buf, len, 0);
+  ssize_t count = send(socket, buf, size, 0);
   io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
   return count;
 }
 
-static inline int pn_create_socket(void) {
-  int sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+static inline int pn_create_socket(int af) {
+  int sock = socket(af, SOCK_STREAM, getprotobyname("tcp")->p_proto);
   if (sock == -1) return sock;
 
   int optval = 1;

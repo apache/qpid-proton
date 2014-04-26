@@ -17,12 +17,14 @@
 # under the License.
 #
 
-find_package(Proton REQUIRED)
+# Name: Proton
+# Description: Qpid Proton C library
+# Version: @PN_VERSION@
+# URL: http://qpid.apache.org/proton/
 
-add_executable(recv recv.c)
-add_executable(send send.c)
+set (Proton_VERSION       @PN_VERSION@)
 
-include_directories(${Proton_INCLUDE_DIRS})
+set (Proton_INCLUDE_DIRS  @INCLUDEDIR@)
+set (Proton_LIBRARIES     optimized @LIBDIR@/@PROTONLIB@ debug @LIBDIR@/@PROTONLIBDEBUG@)
 
-target_link_libraries(recv ${Proton_LIBRARIES})
-target_link_libraries(send ${Proton_LIBRARIES})
+set (Proton_FOUND True)

@@ -25,9 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/object.h>
 #include <proton/io.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include <proton/type_compat.h>
 
 #ifdef __cplusplus
 extern "C" {

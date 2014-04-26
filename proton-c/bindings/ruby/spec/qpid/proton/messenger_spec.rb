@@ -212,6 +212,16 @@ module Qpid
         @messenger.incoming_window.should eq(window)
       end
 
+      it "can be put into passive mode" do
+        @messenger.passive = true
+        @messenger.passive?.should be_true
+      end
+
+      it "can be taken out of passive mode" do
+        @messenger.passive = false
+        @messenger.passive?.should_not be_true
+      end
+
       describe "once started" do
 
         before (:each) do

@@ -41,12 +41,23 @@
 #include "platform_fmt.h"
 #include "protocol.h"
 
+void error_exit(const char* fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  exit(1);
+}
+
+
 typedef struct {
   char *buf;
   size_t capacity;
 } heap_buffer;
 
 heap_buffer client_msg, client_data, server_data, server_iresp;
+
 void free_heap_buffers(void) {
   free(client_msg.buf);
   free(client_data.buf);
@@ -309,7 +320,7 @@ void client_callback(pn_connector_t *ctor)
     ctx->init = true;
 
     char container[1024];
-    if (gethostname(container, 1024)) pn_fatal("hostname lookup failed");
+    if (gethostname(container, 1024)) error_exit("hostname lookup failed");
 
     pn_connection_set_container(connection, container);
     pn_connection_set_hostname(connection, ctx->hostname);
@@ -418,7 +429,7 @@ int main(int argc, char **argv)
   {
     switch (opt) {
     case 'c':
-      if (url) pn_fatal("multiple connect urls not allowed\n");
+      if (url) error_exit("multiple connect urls not allowed\n");
       url = optarg;
       break;
     case 'a':
@@ -462,7 +473,7 @@ int main(int argc, char **argv)
       printf("    -h    Print this help.\n");
       exit(EXIT_SUCCESS);
     default: /* '?' */
-      pn_fatal("Usage: %s -h\n", argv[0]);
+      error_exit("Usage: %s -h\n", argv[0]);
     }
   }
 
@@ -484,7 +495,7 @@ int main(int argc, char **argv)
     ctx.hostname = host;
     ctx.address = address;
     pn_connector_t *ctor = pn_connector(drv, host, port, &ctx);
-    if (!ctor) pn_fatal("connector failed\n");
+    if (!ctor) error_exit("connector failed\n");
     pn_connector_set_connection(ctor, pn_connection());
     while (!ctx.done) {
       pn_driver_wait(drv, -1);
@@ -502,7 +513,7 @@ int main(int argc, char **argv)
     }
   } else {
     struct server_context ctx = {0, quiet, size};
-    if (!pn_listener(drv, host, port, &ctx)) pn_fatal("listener failed\n");
+    if (!pn_listener(drv, host, port, &ctx)) error_exit("listener failed\n");
     while (true) {
       pn_driver_wait(drv, -1);
       pn_listener_t *l;

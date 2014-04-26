@@ -69,26 +69,31 @@ set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration director
 set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
+mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
+
 ## LANGUAGE BINDINGS
-#  If ASK_$LANG is 1 then the language is queried for the directory into which
-#  those language bindings are to be installed. If it is 0 then the bindings
-#  are installed to $CMAKE_INSTALL_PREFIX/bindings/$LANG
-#
-set (BINDINGS_DIR bindings CACHE PATH "Default directory for language bindings")
-set (ASK_PERL 0 CACHE INTEGER "Ask Perl for install directories")
-set (ASK_PHP 0 CACHE INTEGER "Ask PHP for install directories")
-set (ASK_PYTHON 0 CACHE INTEGER "Ask Python for install directories")
-set (ASK_RUBY 0 CACHE INTEGER "Ask Ruby for install directories")
-set (ASK_ALL 0 CACHE INTEGER "If 1 then ask all languages for their directory")
 
-if (ASK_ALL)
-  set (ASK_PERL 1)
-  set (ASK_PHP 1)
-  set (ASK_PYTHON 1)
-  set (ASK_RUBY 1)
-endif (ASK_ALL)
+# Default directory for language bindings not being installed into
+# system specified locations.
+set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
 
-message(STATUS "PYTHON_ARCHLIB_DIR=${PYTHON_ARCHLIB_DIR}")
+set (SYSINSTALL_BINDINGS "*UNSPECIFIED*" CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
+
+if (SYSINSTALL_BINDINGS STREQUAL "*UNSPECIFIED*")
+  message(WARNING "SYSINSTALL_BINDINGS is unspecified, defaulting it to OFF. Please note that the default install behaviour of proton has changed. Proton bindings by default will now be installed under ${BINDINGS_DIR} and will no longer be found by system interpreters. This means that every user will be required to manually configure their interpreters to locate the proton bindings. If you wish proton bindings to be installed into the interpreter specified locations as was the default in prior releases, please specify -DSYSINSTALL_BINDINGS=ON")
+  set (SYSINSTALL_BINDINGS OFF)
+endif ()
+
+set (BINDING_LANGS PERL PHP PYTHON RUBY)
+
+foreach (LANG ${BINDING_LANGS})
+  set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
+  if (SYSINSTALL_BINDINGS OR SYSINSTALL_${LANG})
+    set (CHECK_SYSINSTALL_${LANG} ON)
+  else ()
+    set (CHECK_SYSINSTALL_${LANG} OFF)
+  endif ()
+endforeach()
 
 if (WIN32)
   set (EXAMPLES_INSTALL_DIR proton/examples)
@@ -98,30 +103,27 @@ if (UNIX)
   set (EXAMPLES_INSTALL_DIR ${SHARE_INSTALL_DIR}/proton/examples)
 endif (UNIX)
 
-set (JAVA_INSTALL_DIR ${SHARE_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs except those using JNI")
-set (JNI_INSTALL_DIR ${LIB_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs utilising JNI")
-set (JNI_SHARED_LIB_INSTALL_DIR ${LIB_INSTALL_DIR} CACHE PATH "Installation directory for shared objects used by JNI JARs")
-
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
-
-set (PROTON_JAR_DEPEND_DIR /usr/share/java/ CACHE PATH
-      "When locating compile-time dependencies, the build system searches this location in addition to the default ones provided by find_jar")
 
 # Pull in local cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
 
-set (java_default ON)
-option(GEN_JAVA "Include java-related artifacts" ${java_default})
-if (GEN_JAVA)
-  find_package( Java )
+if (NOBUILD_JAVA)
+  set (DEFAULT_JAVA OFF)
+else()
+  find_package(Java)
   if (JAVA_FOUND)
-    message(STATUS "Java version: ${Java_VERSION}. javac is at: ${Java_JAVAC_EXECUTABLE}")
-    include(UseJava)
-    include(ProtonUseJava)
-
-    add_subdirectory(proton-j)
+    set (DEFAULT_JAVA ON)
+  else()
+    set (DEFAULT_JAVA OFF)
   endif()
+endif()
+
+option (BUILD_JAVA "Build proton-j." ${DEFAULT_JAVA})
+
+if (BUILD_JAVA)
+  add_subdirectory(proton-j)
 endif()
 
 add_subdirectory(proton-c)
@@ -143,9 +145,10 @@ install (FILES examples/include/pncompat/internal/LICENSE
          DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
 
 # add relevant CTest support
-find_program (MAVEN_EXECUTABLE mvn DOC "Location of the maven program")
-if (JAVA_FOUND AND MAVEN_EXECUTABLE)
+find_program (MAVEN_EXE mvn DOC "Location of the maven program")
+mark_as_advanced (MAVEN_EXE)
+if (JAVA_FOUND AND MAVEN_EXE)
   add_test (proton-java mvn test --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
-else (JAVA_FOUND AND MAVEN_EXECUTABLE)
+else (JAVA_FOUND AND MAVEN_EXE)
   message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
-endif (JAVA_FOUND AND MAVEN_EXECUTABLE)
+endif (JAVA_FOUND AND MAVEN_EXE)

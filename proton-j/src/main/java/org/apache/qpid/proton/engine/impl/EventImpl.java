@@ -47,6 +47,11 @@ class EventImpl implements Event
         this.type = type;
     }
 
+    public Category getCategory()
+    {
+        return type.getCategory();
+    }
+
     public Type getType()
     {
         return type;

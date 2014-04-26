@@ -82,15 +82,11 @@ int64_t pn_i_atoll(const char* num);
 #define vsnprintf pn_i_vsnprintf
 int pn_i_snprintf(char *buf, size_t count, const char *fmt, ...);
 int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
-
-/** Windows va_copy
- *
- * Provide function/macro definition
- */
-#define va_copy(d,s) ((d) = (s))
 #endif
 
-
+#if defined _MSC_VER || defined _OPENVMS
+#define va_copy(d,s) ((d) = (s))
+#endif
 
 #ifdef __cplusplus
 }

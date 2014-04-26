@@ -31,7 +31,7 @@ import org.apache.qpid.proton.amqp.transport.Open;
 
 public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 {
-    public static final int MAX_CHANNELS = 255;
+    public static final int MAX_CHANNELS = 65535;
 
     private List<SessionImpl> _sessions = new ArrayList<SessionImpl>();
     private EndpointImpl _transportTail;
@@ -201,7 +201,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteDesiredCapabilities(open.getDesiredCapabilities());
         setRemoteOfferedCapabilities(open.getOfferedCapabilities());
         setRemoteProperties(open.getProperties());
-        EventImpl ev = put(Event.Type.CONNECTION_STATE);
+        EventImpl ev = put(Event.Type.CONNECTION_REMOTE_STATE);
         if (ev != null) {
             ev.init(this);
         }
@@ -582,4 +582,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
     }
 
+    @Override
+    protected void localStateChanged()
+    {
+        EventImpl ev = put(Event.Type.CONNECTION_LOCAL_STATE);
+        if (ev != null) {
+            ev.init(this);
+        }
+    }
 }

@@ -37,6 +37,25 @@
 #define PN_ZI "zi"
 #define PN_ZU "zu"
 
+#ifdef _OPENVMS
+
+#undef PN_ZI
+#undef PN_ZU
+#define PN_ZI "i"
+#define PN_ZU "u"
+#define PRIu64 "llu"
+#define PRIu8 "u"
+#define PRIu16 "u"
+#define PRIu32 "u"
+#define PRIu64 "llu"
+
+#define PRIi8 "i"
+#define PRIi16 "i"
+#define PRIi32 "i"
+#define PRIi64 "lli"
+
+#endif /* _OPENVMS */
+
 #else
 
 #ifdef _MSC_VER

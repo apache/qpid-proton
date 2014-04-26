@@ -23,9 +23,7 @@
  */
 
 #include <proton/import_export.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include <proton/type_compat.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -79,6 +77,15 @@ extern "C" {
 typedef struct pn_event_t pn_event_t;
 
 /**
+ * Related events are grouped into categories
+ */
+typedef enum {
+    PN_EVENT_CATEGORY_NONE   = 0,
+    PN_EVENT_CATEGORY_PROTOCOL = 0x00010000,
+    PN_EVENT_CATEGORY_COUNT = 2
+} pn_event_category_t;
+
+/**
  * An event type.
  */
 typedef enum {
@@ -92,37 +99,40 @@ typedef enum {
    * this type point to the relevant connection as well as its
    * associated transport.
    */
-  PN_CONNECTION_STATE = 1,
+  PN_CONNECTION_REMOTE_STATE = PN_EVENT_CATEGORY_PROTOCOL+1,
+  PN_CONNECTION_LOCAL_STATE = PN_EVENT_CATEGORY_PROTOCOL+2,
   /**
    * The endpoint state flags for a session have changed. Events of
    * this type point to the relevant session as well as its associated
    * connection and transport.
    */
-  PN_SESSION_STATE = 2,
+  PN_SESSION_REMOTE_STATE = PN_EVENT_CATEGORY_PROTOCOL+3,
+  PN_SESSION_LOCAL_STATE = PN_EVENT_CATEGORY_PROTOCOL+4,
   /**
    * The endpoint state flags for a link have changed. Events of this
    * type point to the relevant link as well as its associated
    * session, connection, and transport.
    */
-  PN_LINK_STATE = 4,
+  PN_LINK_REMOTE_STATE = PN_EVENT_CATEGORY_PROTOCOL+5,
+  PN_LINK_LOCAL_STATE = PN_EVENT_CATEGORY_PROTOCOL+6,
   /**
    * The flow control state for a link has changed. Events of this
    * type point to the relevant link along with its associated
    * session, connection, and transport.
    */
-  PN_LINK_FLOW = 8,
+  PN_LINK_FLOW = PN_EVENT_CATEGORY_PROTOCOL+7,
   /**
    * A delivery has been created or updated. Events of this type point
    * to the relevant delivery as well as its associated link, session,
    * connection, and transport.
    */
-  PN_DELIVERY = 16,
+  PN_DELIVERY = PN_EVENT_CATEGORY_PROTOCOL+8,
   /**
    * The transport has new data to read and/or write. Events of this
    * type point to the relevant transport as well as its associated
    * connection.
    */
-  PN_TRANSPORT = 32
+  PN_TRANSPORT = PN_EVENT_CATEGORY_PROTOCOL+9
 } pn_event_type_t;
 
 /**
@@ -178,6 +188,14 @@ PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
  * @return the type of the event
  */
 PN_EXTERN pn_event_type_t pn_event_type(pn_event_t *event);
+
+/**
+ * Get the category an event belongs to.
+ *
+ * @param[in] event an event object
+ * @return the category the event belongs to
+ */
+PN_EXTERN pn_event_category_t pn_event_category(pn_event_t *event);
 
 /**
  * Get the connection associated with an event.

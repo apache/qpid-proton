@@ -48,12 +48,14 @@ console.log("tracker = " + tracker);
     };
 
     //messenger.setIncomingWindow(1024);
-
+console.log("Break A");
     messenger.setNetworkCallback(_process);
     messenger.start();
-
+console.log("Break B");
     messenger.subscribe(address);
+console.log("Break C");
     messenger.recv(); // Receive as many messages as messenger can buffer.
+console.log("Break D");
 } catch(e) {
     console.log("Caught Exception " + e);
 }

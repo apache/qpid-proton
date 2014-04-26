@@ -28,15 +28,37 @@ package org.apache.qpid.proton.engine;
 
 public interface Event
 {
+    public enum Category {
+        PROTOCOL;
+    }
 
     public enum Type {
-        CONNECTION_STATE,
-        SESSION_STATE,
-        LINK_STATE,
-        LINK_FLOW,
-        DELIVERY,
-        TRANSPORT
+        CONNECTION_REMOTE_STATE(Category.PROTOCOL, 1),
+        CONNECTION_LOCAL_STATE(Category.PROTOCOL, 2),
+        SESSION_REMOTE_STATE(Category.PROTOCOL, 3),
+        SESSION_LOCAL_STATE(Category.PROTOCOL, 4),
+        LINK_REMOTE_STATE(Category.PROTOCOL, 5),
+        LINK_LOCAL_STATE(Category.PROTOCOL, 6),
+        LINK_FLOW(Category.PROTOCOL, 7),
+        DELIVERY(Category.PROTOCOL, 8),
+        TRANSPORT(Category.PROTOCOL, 9);
+
+        private int _opcode;
+        private Category _category;
+
+        private Type(Category c, int o)
+        {
+            this._category = c;
+            this._opcode = o;
+        }
+
+        public Category getCategory()
+        {
+            return this._category;
+        }
     }
+
+    Category getCategory();
 
     Type getType();
 

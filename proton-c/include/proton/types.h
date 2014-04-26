@@ -24,11 +24,7 @@
 
 #include <proton/import_export.h>
 #include <sys/types.h>
-#ifndef __cplusplus
-#include <stdint.h>
-#else
 #include <proton/type_compat.h>
-#endif
 
 /**
  * @file
@@ -151,6 +147,85 @@ typedef struct pn_link_t pn_link_t;
  * A pn_delivery_t object encapsulates all of the endpoint state
  * associated with an AMQP Delivery. Every delivery exists within the
  * context of a ::pn_link_t object.
+ *
+ * The AMQP model for settlement is based on the lifecycle of a
+ * delivery at an endpoint. At each end of a link, a delivery is
+ * created, it exists for some period of time, and finally it is
+ * forgotten, aka settled. Note that because this lifecycle happens
+ * independently at both the sender and the receiver, there are
+ * actually four events of interest in the combined lifecycle of a
+ * given delivery:
+ *
+ *   - created at sender
+ *   - created at receiver
+ *   - settled at sender
+ *   - settled at receiver
+ *
+ * Because the sender and receiver are operating concurrently, these
+ * events can occur in a variety of different orders, and the order of
+ * these events impacts the types of failures that may occur when
+ * transferring a delivery. Eliminating scenarios where the receiver
+ * creates the delivery first, we have the following possible
+ * sequences of interest:
+ *
+ * Sender presettles (aka at-most-once):
+ * -------------------------------------
+ *
+ *   1. created at sender
+ *   2. settled at sender
+ *   3. created at receiver
+ *   4. settled at receiver
+ *
+ * In this configuration the sender settles (i.e. forgets about) the
+ * delivery before it even reaches the receiver, and if anything
+ * should happen to the delivery in-flight, there is no way to
+ * recover, hence the "at most once" semantics.
+ *
+ * Receiver settles first (aka at-least-once):
+ * -------------------------------------------
+ *
+ *   1. created at sender
+ *   2. created at receiver
+ *   3. settled at receiver
+ *   4. settled at sender
+ *
+ * In this configuration the receiver settles the delivery first, and
+ * the sender settles once it sees the receiver has settled. Should
+ * anything happen to the delivery in-flight, the sender can resend,
+ * however the receiver may have already forgotten the delivery and so
+ * it could interpret the resend as a new delivery, hence the "at
+ * least once" semantics.
+ *
+ * Receiver settles second (aka exactly-once):
+ * -------------------------------------------
+ *
+ *   1. created at sender
+ *   2. created at receiver
+ *   3. settled at sender
+ *   4. settled at receiver
+ *
+ * In this configuration the receiver settles only once it has seen
+ * that the sender has settled. This provides the sender the option to
+ * retransmit, and the receiver has the option to recognize (and
+ * discard) duplicates, allowing for exactly once semantics.
+ *
+ * Note that in the last scenario the sender needs some way to know
+ * when it is safe to settle. This is where delivery state comes in.
+ * In addition to these lifecycle related events surrounding
+ * deliveries there is also the notion of a delivery state that can
+ * change over the lifetime of a delivery, e.g. it might start out as
+ * nothing, transition to ::PN_RECEIVED and then transition to
+ * ::PN_ACCEPTED. In the first two scenarios the delivery state isn't
+ * required, however in final scenario the sender would typically
+ * trigger settlement based on seeing the delivery state transition to
+ * a terminal state like ::PN_ACCEPTED or ::PN_REJECTED.
+ *
+ * In practice settlement is controlled by application policy, so
+ * there may well be more options here, e.g. a sender might not settle
+ * strictly based on what has happened at the receiver, it might also
+ * choose to impose some time limit and settle after that period has
+ * expired, or it could simply have a sliding window of the last N
+ * deliveries and settle the oldest whenever a new one comes along.
  *
  * @ingroup delivery
  */

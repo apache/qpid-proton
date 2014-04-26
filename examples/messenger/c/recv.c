@@ -57,6 +57,13 @@ int main(int argc, char** argv)
   char* password = NULL;
   char* address = (char *) "amqp://~0.0.0.0";
   int c;
+
+  pn_message_t * message;
+  pn_messenger_t * messenger;
+
+  message = pn_message();
+  messenger = pn_messenger(NULL);
+
   opterr = 0;
 
   while((c = getopt(argc, argv, "hc:k:p:")) != -1)
@@ -97,12 +104,6 @@ int main(int argc, char** argv)
     address = argv[optind];
   }
 
-  pn_message_t * message;
-  pn_messenger_t * messenger;
-
-  message = pn_message();
-  messenger = pn_messenger(NULL);
-
   /* load the various command line options if they're set */
   if(certificate)
   {
@@ -135,15 +136,17 @@ int main(int argc, char** argv)
       pn_messenger_get(messenger, message);
       check(messenger);
 
+      {
       char buffer[1024];
       size_t buffsize = sizeof(buffer);
+      const char* subject = pn_message_get_subject(message);
       pn_data_t *body = pn_message_body(message);
       pn_data_format(body, buffer, &buffsize);
 
       printf("Address: %s\n", pn_message_get_address(message));
-      const char* subject = pn_message_get_subject(message);
       printf("Subject: %s\n", subject ? subject : "(no subject)");
       printf("Content: %s\n", buffer);
+      }
     }
   }
 

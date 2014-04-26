@@ -877,13 +877,13 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
     // write incoming data to app layer
 
     if (!ssl->app_input_closed) {
-      char *data = ssl->inbuf;
       if (ssl->in_count > 0 || ssl->ssl_closed) {  /* if ssl_closed, send 0 count */
         pn_io_layer_t *io_next = ssl->io_layer->next;
-        ssize_t consumed = io_next->process_input( io_next, data, ssl->in_count);
+        ssize_t consumed = io_next->process_input( io_next, ssl->inbuf, ssl->in_count);
         if (consumed > 0) {
           ssl->in_count -= consumed;
-          data += consumed;
+          if (ssl->in_count)
+            memmove( ssl->inbuf, ssl->inbuf + consumed, ssl->in_count );
           work_pending = true;
           _log( ssl, "Application consumed %d bytes from peer\n", (int) consumed );
         } else if (consumed < 0) {
@@ -906,7 +906,7 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
               // no max frame limit - grow it.
               char *newbuf = (char *)malloc( max_frame );
               if (newbuf) {
-                ssl->in_size *= max_frame;
+                ssl->in_size = max_frame;
                 memmove( newbuf, ssl->inbuf, ssl->in_count );
                 free( ssl->inbuf );
                 ssl->inbuf = newbuf;
@@ -923,8 +923,6 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
           }
         }
       }
-      if (ssl->in_count > 0 && data != ssl->inbuf)
-        memmove( ssl->inbuf, data, ssl->in_count );
     }
 
   } while (work_pending);

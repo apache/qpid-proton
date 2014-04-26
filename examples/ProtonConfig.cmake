@@ -17,13 +17,7 @@
 # under the License.
 #
 
-# Name: Proton
-# Description: Qpid Proton C library
-# Version: @PN_VERSION@
-# URL: http://qpid.apache.org/proton/
-
-set (PROTON_FOUND         "True")
-set (PROTON_VERSION       @PN_VERSION@)
-set (PROTON_INCLUDE_DIRS  "@INCLUDEDIR@")
-set (PROTON_LIBRARY_DIRS  "@PREFIX@/bin")
-set (PROTON_LIBRARIES     "qpid-proton")
+set (Proton_VERSION       ${PN_VERSION})
+set (Proton_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include)
+set (Proton_LIBRARIES     qpid-proton)
+set (Proton_FOUND True)

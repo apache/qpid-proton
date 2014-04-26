@@ -242,6 +242,11 @@ pn_event_type_t pn_event_type(pn_event_t *event)
   return event->type;
 }
 
+pn_event_category_t pn_event_category(pn_event_t *event)
+{
+  return (pn_event_category_t)(event->type & 0xFFFF0000);
+}
+
 pn_connection_t *pn_event_connection(pn_event_t *event)
 {
   return event->connection;
@@ -272,12 +277,18 @@ const char *pn_event_type_name(pn_event_type_t type)
   switch (type) {
   case PN_EVENT_NONE:
     return "PN_EVENT_NONE";
-  case PN_CONNECTION_STATE:
-    return "PN_CONNECTION_STATE";
-  case PN_SESSION_STATE:
-    return "PN_SESSION_STATE";
-  case PN_LINK_STATE:
-    return "PN_LINK_STATE";
+  case PN_CONNECTION_REMOTE_STATE:
+    return "PN_CONNECTION_REMOTE_STATE";
+  case PN_CONNECTION_LOCAL_STATE:
+    return "PN_CONNECTION_LOCAL_STATE";
+  case PN_SESSION_REMOTE_STATE:
+    return "PN_SESSION_REMOTE_STATE";
+  case PN_SESSION_LOCAL_STATE:
+    return "PN_SESSION_LOCAL_STATE";
+  case PN_LINK_REMOTE_STATE:
+    return "PN_LINK_REMOTE_STATE";
+  case PN_LINK_LOCAL_STATE:
+    return "PN_LINK_LOCAL_STATE";
   case PN_LINK_FLOW:
     return "PN_LINK_FLOW";
   case PN_DELIVERY:

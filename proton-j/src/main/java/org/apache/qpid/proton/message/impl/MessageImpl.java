@@ -44,6 +44,20 @@ public class MessageImpl implements ProtonJMessage
     private Section _body;
     private Footer _footer;
     private MessageFormat _format = MessageFormat.DATA;
+    
+    private static class EncoderDecoderPair {
+      DecoderImpl decoder = new DecoderImpl();
+      EncoderImpl encoder = new EncoderImpl(decoder);
+      {
+          AMQPDefinedTypes.registerAllTypes(decoder, encoder);
+      }
+    }
+
+    private static final ThreadLocal<EncoderDecoderPair> tlsCodec = new ThreadLocal<EncoderDecoderPair>() {
+          @Override protected EncoderDecoderPair initialValue() {
+            return new EncoderDecoderPair();
+          }
+      };
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -559,10 +573,7 @@ public class MessageImpl implements ProtonJMessage
     @Override
     public int decode(byte[] data, int offset, int length)
     {
-        DecoderImpl decoder = new DecoderImpl();
-        EncoderImpl encoder = new EncoderImpl(decoder);
-
-        AMQPDefinedTypes.registerAllTypes(decoder, encoder);
+        DecoderImpl decoder = tlsCodec.get().decoder;
         final ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
         decoder.setByteBuffer(buffer);
 
@@ -668,6 +679,8 @@ public class MessageImpl implements ProtonJMessage
 
         }
 
+        decoder.setByteBuffer(null);
+        
         return length-buffer.remaining();
 
     }
@@ -695,9 +708,7 @@ public class MessageImpl implements ProtonJMessage
     public int encode(WritableBuffer buffer)
     {
         int length = buffer.remaining();
-        DecoderImpl decoder = new DecoderImpl();
-        EncoderImpl encoder = new EncoderImpl(decoder);
-        AMQPDefinedTypes.registerAllTypes(decoder, encoder);
+        EncoderImpl encoder = tlsCodec.get().encoder;
         encoder.setByteBuffer(buffer);
 
         if(getHeader() != null)
@@ -728,6 +739,7 @@ public class MessageImpl implements ProtonJMessage
         {
             encoder.writeObject(getFooter());
         }
+        encoder.setByteBuffer((WritableBuffer)null);
 
         return length - buffer.remaining();
     }

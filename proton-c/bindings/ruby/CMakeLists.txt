@@ -17,6 +17,10 @@
 # under the License.
 #
 
+if (NOT DEFAULT_RUBY_TESTING)
+  message(FATAL_ERROR "Ruby bindings cannot be tested while missing dependencies")
+endif (NOT DEFAULT_RUBY_TESTING)
+
 include_directories (${RUBY_INCLUDE_PATH})
 swig_add_module(cproton-ruby ruby ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
@@ -26,8 +30,7 @@ set_target_properties(cproton-ruby
     OUTPUT_NAME "cproton"
     LINK_FLAGS "${CATCH_UNDEFINED}" )
 
-if (ASK_RUBY)
-
+if (CHECK_SYSINSTALL_RUBY)
   execute_process(COMMAND ${RUBY_EXECUTABLE}
     -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
     RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
@@ -38,18 +41,16 @@ if (ASK_RUBY)
       -r rbconfig -e "print RbConfig::CONFIG['archdir'] || ''"
       RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
       OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
-
   endif()
 
-  set(RUBY_ARCHLIB_DIR "${OUTPUT_RUBY_ARCHLIB_DIR}")
+  set(RUBY_ARCHLIB_DIR_DEFAULT "${OUTPUT_RUBY_ARCHLIB_DIR}")
+else (CHECK_SYSINSTALL_RUBY)
+  set (RUBY_ARCHLIB_DIR_DEFAULT ${BINDINGS_DIR}/ruby)
+endif (CHECK_SYSINSTALL_RUBY)
 
-else (ASK_RUBY)
-
-  set (RUBY_SITELIB_DIR ${BINDINGS_DIR}/ruby CACHE PATH "Ruby portable code")
-  set (RUBY_ARCHLIB_DIR ${BINDINGS_DIR}/ruby/lib${LIB_SUFFIX} CACHE PATH "Ruby platform code")
-
-endif (ASK_RUBY)
-
+if (NOT RUBY_ARCHLIB_DIR)
+  set (RUBY_ARCHLIB_DIR ${RUBY_ARCHLIB_DIR_DEFAULT})
+endif()
 
 install(TARGETS cproton-ruby
         DESTINATION ${RUBY_ARCHLIB_DIR}

@@ -44,31 +44,31 @@ class AppTests(Test):
 
     @property
     def iterations(self):
-        return int(self.default("iterations", 2, fast=1, valgrind=1))
+        return int(self.default("iterations", 2, fast=1, valgrind=2))
 
     @property
     def send_count(self):
-        return int(self.default("send_count", 17, fast=1, valgrind=1))
+        return int(self.default("send_count", 17, fast=1, valgrind=2))
 
     @property
     def target_count(self):
-        return int(self.default("target_count", 5, fast=1, valgrind=1))
+        return int(self.default("target_count", 5, fast=1, valgrind=2))
 
     @property
     def send_batch(self):
-        return int(self.default("send_batch", 7, fast=1, valgrind=1))
+        return int(self.default("send_batch", 7, fast=1, valgrind=2))
 
     @property
     def forward_count(self):
-        return int(self.default("forward_count", 5, fast=1, valgrind=1))
+        return int(self.default("forward_count", 5, fast=1, valgrind=2))
 
     @property
     def port_count(self):
-        return int(self.default("port_count", 3, fast=1, valgrind=1))
+        return int(self.default("port_count", 3, fast=1, valgrind=2))
 
     @property
     def sender_count(self):
-        return int(self.default("sender_count", 3, fast=1, valgrind=1))
+        return int(self.default("sender_count", 3, fast=1, valgrind=2))
 
     def valgrind_test(self):
         self.is_valgrind = True
@@ -94,13 +94,21 @@ class AppTests(Test):
                 S.wait()
                 #print("SENDER OUTPUT:")
                 #print( S.stdout() )
-                assert S.status() == 0, "Command '%s' failed" % str(S.cmdline())
+                assert S.status() == 0, ("Command '%s' failed status=%d: '%s' '%s'"
+                                         % (str(S.cmdline()),
+                                            S.status(),
+                                            S.stdout(),
+                                            S.stderr()))
 
         for R in self.receivers:
             R.wait()
             #print("RECEIVER OUTPUT")
             #print( R.stdout() )
-            assert R.status() == 0, "Command '%s' failed" % str(R.cmdline())
+            assert R.status() == 0, ("Command '%s' failed status=%d: '%s' '%s'"
+                                     % (str(R.cmdline()),
+                                        R.status(),
+                                        R.stdout(),
+                                        R.stderr()))
 
 #
 # Traffic passing tests based on the Messenger apps

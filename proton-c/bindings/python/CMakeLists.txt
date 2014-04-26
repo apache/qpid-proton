@@ -30,19 +30,18 @@ set_target_properties(_cproton
 
 find_package(PythonInterp REQUIRED)
 
-if (ASK_PYTHON)
+if (CHECK_SYSINSTALL_PYTHON)
+  execute_process(COMMAND ${PYTHON_EXECUTABLE}
+    -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
+    OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+else ()
+  set (PYTHON_SITEARCH_PACKAGES_DEFAULT ${BINDINGS_DIR}/python)
+endif ()
 
-  if (NOT PYTHON_SITEARCH_PACKAGES)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE}
-      -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)"
-      OUTPUT_VARIABLE PYTHON_ARCHLIB_DIR
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-  else (NOT PYTHON_SITEARCH_PACKAGES)
-    set (PYTHON_ARCHLIB_DIR "${PYTHON_SITEARCH_PACKAGES}")
-  endif ()
-else (ASK_PYTHON)
-  set (PYTHON_ARCHLIB_DIR ${BINDINGS_DIR}/python/lib${LIB_SUFFIX} CACHE PATH "Python platform code")
-endif (ASK_PYTHON)
+if (NOT PYTHON_SITEARCH_PACKAGES)
+  set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
+endif()
 
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile cproton.py
                               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
@@ -54,10 +53,12 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile prot
                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
 
 find_program(EPYDOC_EXE epydoc)
+mark_as_advanced (EPYDOC_EXE)
 if (EPYDOC_EXE)
-   add_custom_target(docs-py COMMAND ${EPYDOC_EXE} -v --no-private --html
-                     -o ${CMAKE_CURRENT_BINARY_DIR}/html
-                     ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
+   add_custom_target(docs-py COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
+     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+     ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
+     ${CMAKE_CURRENT_SOURCE_DIR}/proton.py)
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"
@@ -71,8 +72,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyc
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
-        DESTINATION ${PYTHON_ARCHLIB_DIR}
+        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
 install(TARGETS _cproton
-        DESTINATION ${PYTHON_ARCHLIB_DIR}
+        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)

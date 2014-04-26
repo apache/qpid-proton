@@ -484,17 +484,21 @@ size_t pn_map_size(pn_map_t *map)
   return map->size;
 }
 
+static float pni_map_load(pn_map_t *map)
+{
+  return ((float) map->size) / ((float) map->addressable);
+}
+
 static bool pni_map_ensure(pn_map_t *map, size_t capacity)
 {
-  float load = map->size / map->addressable;
+  float load = pni_map_load(map);
   if (capacity <= map->capacity && load < map->load_factor) {
     return false;
   }
 
   size_t oldcap = map->capacity;
 
-  while (map->capacity < capacity ||
-         (map->size / map->addressable) > map->load_factor) {
+  while (map->capacity < capacity || pni_map_load(map) > map->load_factor) {
     map->capacity *= 2;
     map->addressable = (size_t) (0.86 * map->capacity);
   }

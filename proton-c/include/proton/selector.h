@@ -24,9 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/selectable.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include <proton/type_compat.h>
 
 #ifdef __cplusplus
 extern "C" {

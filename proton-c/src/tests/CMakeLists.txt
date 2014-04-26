@@ -19,10 +19,10 @@
 
 add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 
-if (ENABLE_VALGRIND AND VALGRIND)
-  set(memcheck-cmd ${VALGRIND} --error-exitcode=1 --quiet
+if (ENABLE_VALGRIND AND VALGRIND_EXE)
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet
                    --leak-check=full --trace-children=yes)
-endif (ENABLE_VALGRIND AND VALGRIND)
+endif ()
 
 macro (pn_add_c_test test file)
   add_executable (${test} ${file})

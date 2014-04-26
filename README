@@ -1,3 +1,6 @@
+Proton Project
+==============
+
 Proton is a library for speaking AMQP, including:
 
   + The AMQP Messenger API, a simple but powerful interface to send and receive
@@ -17,171 +20,204 @@ Proton is designed to scale up and down:
 
 Proton is multi-lingual:
 
-  + Proton-C - a C implementation with lanuage bindings in Python, Php, Perl,
-    Ruby, and Java (via JNI).
+  + Proton-C - a C implementation with language bindings in Python,
+               Php, Perl, and Ruby
   + Proton-J - a pure Java implementation
 
 Please see http://qpid.apache.org/proton for a more info.
 
-==== Build Instructions ====
+Build Instructions
+==================
 
-Proton has two separate build systems reflecting the nature of its
-two implementations.
+Proton comes with two separate build systems. The CMake build system
+builds the entire codebase including the C implementation, all the
+bindings of the C implementation, and the pure Java implementation.
 
-   + Proton-C and the language bindings use CMake.
-   + Proton-J uses Maven.
+The maven build system builds only the Java portions of the code.
+Developers wishing to work across multiple languages should become
+familiar with the cmake build system as this will build and run all
+available tests and code whereas the maven build system only runs Java
+tests.
 
-The two build systems are independent of one and other, that is, Proton-C
-may be built independently of Proton-J, and vice-versa.
+CMake (Linux)
+-------------
 
-=== Proton-C ===
+The following prerequisites are required to do a full build. If you do
+not wish to build a given language binding you can omit the devel
+package for that language:
 
-== Build Instructions (Linux) ==
+    # required dependencies
+    yum install gcc cmake libuuid-devel
 
-The following prerequesuites are required to do a full build. If you do not
-wish to build a given language binding you can omit the package for that
-language:
+    # dependencies needed for ssl support
+    yum install openssl-devel
 
-  # required dependencies
-  yum install gcc cmake libuuid-devel
+    # dependencies needed for bindings
+    yum install swig python-devel ruby-devel php-devel perl-devel
 
-  # dependencies needed for ssl support
-  yum install openssl-devel
+    # dependencies needed for java (note that any non-ancient jvm will
+    # work, 1.8.0 is just what is current for fedora 20)
+    yum install java-1.8.0-openjdk-devel
 
-  # dependencies needed for bindings
-  yum install swig python-devel ruby-devel php-devel perl-devel \
-              java-1.6.0-openjdk
-
-  # dependencies needed for python docs
-  yum install epydoc
+    # dependencies needed for python docs
+    yum install epydoc
 
 From the directory where you found this README file:
 
-  mkdir build
-  cd build
+    mkdir build
+    cd build
 
-  # Set the install prefix. You may need to adjust depending on your
-  # system.
-  cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+    # Set the install prefix. You may need to adjust depending on your
+    # system.
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON
 
-  # Omit the docs target if you do not wish to build or install
-  # documentation.
-  make all docs
+    # Omit the docs target if you do not wish to build or install
+    # documentation.
+    make all docs
 
-  # Note that this step will require root privileges.
-  make install
+    # Note that this step will require root privileges.
+    make install
 
-Note that all installed files are stored in the install_manifest.txt
-file.
+When make install completes, all installed files are listed in the
+install_manifest.txt file. The contents of this file may be used to
+uninstall.
 
-NOTE: The CMAKE_INSTALL_PREFIX does not affect the location for where the language
-bindings (Ruby, Perl, PHP, Ruby) are installed. For those elements, the location is
-determined by the language itself; i.e., each one is interrogated for the proper
-location for extensions.
+Note: When SYSINSTALL_BINDINGS is enabled (ON), the
+CMAKE_INSTALL_PREFIX does not affect the location for where the
+language bindings (Python, Perl, PHP, Ruby) are installed. For those
+elements, the location is determined by the language interpreter
+itself; i.e., each interpreter is queried for the proper location for
+extensions. If you want to constrain where the Proton code is
+installed, set SYSINSTALL_BINDINGS to OFF. This will install all
+bindings to a common location under ${CMAKE_INSTALL_PREFIX}. When
+installed like this, each user will need to manually configure their
+interpreters with the respective binding location.
 
-NOTE: If you want to constrain where the Proton code is installed, you have to use
-the DESTDIR argument to make:
+Installing Language Bindings
+----------------------------
 
-  make install DESTDIR=[location]
+Most dynamic languages provide a way for asking where to install
+libraries in order to place them in a default search path.
 
-This will install all components (including the language bindings) in locations
-relative to the specified location. So, for example, if the Perl language bindings
-would normally install to /usr/lib/perl5/vendor_perl/ then, if you use:
+When SYSINSTALL_BINDINGS is disabled (OFF), Proton installs all
+dynamic language bindings into a central, default location:
 
-  make install DESTDIR=/opt
+    BINDINGS=${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/proton/bindings
 
-the bindings would install to /opt/usr/lib/perl5/vendor_perl/ instead.
+In order to use these bindings, you'll need to configure your
+interpreter to load the bindings from the appropriate directory:
 
-NOTE: The paths in libqpid-proton.pc are not updated if, when installing, DESTDIR
-is used. The contents of that file are based on the values provided when the
-CMake environment was created.
+ * Perl   - Add ${BINDINGS}/perl to PERL5LIB
+ * PHP    - Set the PHPRC environment variable to point to
+            ${BINDINGS}/php/proton.ini
+ * Python - Add ${BINDINGS}/python to PYTHONPATH
+ * Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
 
-For more on the use of DESTDIR, see the following:
+You can configure the build to install a specific binding to the
+location specified by the system interpreter with the
+SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of JAVA, PERL,
+PHP, PYTHON, or RUBY.:
 
-http://www.gnu.org/prep/standards/html_node/DESTDIR.html
+    cmake .. -DSYSINSTALL_PHP=ON
 
-== Disable Building The Language Bindings ==
+Disabling Language Bindings
+---------------------------
 
-To disable any language bindings, you can disable them individually with:
+To disable any given language bindings, you can use the
+BUILD_[LANGUAGE] option where [LANGUAGE] is one of JAVA, PERL, PHP,
+PYTHON or RUBY, e.g.:
 
-  cmake -DBUILD_[LANGUAGE]=OFF .
+    cmake .. -DBUILD_PHP=OFF
 
-where [LANGUAGE] is one of JAVA, PERL, PHP, PYTHON or RUBY. To disable building all
-language bindings then include a separate argument for each.
+CMake (Windows)
+---------------
 
-== Build Instructions (Windows) ==
+This describes how to build the Proton library on Windows using
+Microsoft Visual C++.
 
-This describes how to build the Proton library on Windows using Microsoft
-Visual C++.
+The Proton build uses the cmake tool to generate the Visual Studio
+project files. These project files can then be loaded into Visual
+Studio and used to build the Proton library.
 
-The Proton build uses the cmake tool to generate the Visual Studio project
-files.  These project files can then be loaded into Visual Studio and used to
-build the Proton library.
-
-These instructions assume use of a command shell.  If you use the Visual
-Studio supplied Command Prompt, cmake is even more likely to guess the
-intended compiler.
+These instructions assume use of a command shell. If you use the
+Visual Studio supplied Command Prompt, cmake is even more likely to
+guess the intended compiler.
 
 The following packages must be installed:
 
-    Visual Studio 2005 or newer (regular or C++ Express)
-    Python (www.python.org)
-    Cmake (www.cmake.org)
+  - Visual Studio 2005 or newer (regular or C++ Express)
+  - Python (www.python.org)
+  - Cmake (www.cmake.org)
 
-Optional: to run the python or java driven test suites
+The following packages are optionally required in order to run the
+python or java driven test suites:
 
-    swig (www.swig.org)
+  - swig (www.swig.org)
 
-    Notes:
-        - Be sure to install relevant Microsoft Service Packs and updates
-        - python.exe _must_ be in your path
-        - cmake.exe _must_ be in your path
-        - swig.exe optional (but should be in your path for building test modules)
+Notes:
 
+  - be sure to install relevant Microsoft Service Packs and updates
+  - python.exe _must_ be in your path
+  - cmake.exe _must_ be in your path
+  - swig.exe optional (but should be in your path for building test
+    modules)
 
-Step 1: Create a 'build' directory - this must be at the same level as the
-        'proton-c' directory.  Example:
+### Step 1:
 
-     From the directory where you found this README file:
-     > mkdir build
+Create a 'build' directory - this must be at the same level as the
+'proton-c' directory. For example, from the directory where you found
+this README file:
 
-Step 2: cd into the build directory
+    > mkdir build
 
-     > cd build
+### Step 2:
 
-Step 3: Generate the Visual Studio project files using cmake.  The command contains
+  cd into the build directory
 
-        1) the name of the compiler you are using (if cmake guesses wrongly)
-        2) the path (required) to the _directory_ that contains the top level
-           "CMakeLists.txt" file (the parent directory, in this case).
-     Example:
+    > cd build
 
-     > cmake ..
+### Step 3:
 
-     If cmake doesn't guess things correctly, useful additional arguments are:
+Generate the Visual Studio project files using cmake. The command
+contains:
 
-        -G "Visual Studio 10"
-        -DSWIG_EXECUTABLE=C:\swigwin-2.0.7\swig.exe
+  1. the name of the compiler you are using (if cmake guesses wrongly)
+  2. the path (required) to the _directory_ that contains the top
+     level "CMakeLists.txt" file (the parent directory, in this case).
 
-     Refer to the cmake documentation for more information.
+  Example:
 
-Step 4: Load the ALL_BUILD project into Visual Studio
+    > cmake ..
 
-     4a: Run the Microsoft Visual Studio IDE
-     4b: From within the IDE, open the ALL_BUILD project file or proton solution
-         file - it should be in the 'build' directory you created above.
-     4c: select the appropriate configuration.  RelWithDebInfo works best with
-         the included CMake/CTest scripts
+  If cmake doesn't guess things correctly, useful additional arguments
+  are:
 
-Step 5: Build the ALL_BUILD project.
+    -G "Visual Studio 10"
+    -DSWIG_EXECUTABLE=C:\swigwin-2.0.7\swig.exe
 
-Note that if you wish to build debug version of proton for use with swig
-bindings on Windows, you must have the appropriate debug target libraries to
-link against.
+  Refer to the cmake documentation for more information.
 
-=== Proton-J ===
+### Step 4:
 
-== Build Instructions (All platforms) ==
+Load the ALL_BUILD project into Visual Studio
+
+  a. Run the Microsoft Visual Studio IDE
+  b. From within the IDE, open the ALL_BUILD project file or proton
+     solution file - it should be in the 'build' directory you created
+     above.
+  c. select the appropriate configuration. RelWithDebInfo works best
+     with the included CMake/CTest scripts
+
+### Step 5:
+
+Build the ALL_BUILD project.
+
+Note that if you wish to build debug version of proton for use with
+swig bindings on Windows, you must have the appropriate debug target
+libraries to link against.
+
+Maven (All platforms)
+---------------------
 
 The following prerequesuites are required to do a full build.
 
@@ -189,42 +225,35 @@ The following prerequesuites are required to do a full build.
 
 From the directory where you found this README file:
 
-  # To compile and package all Java modules (omitting the tests)
-  mvn -DskipTests package
+    # To compile and package all Java modules (omitting the tests)
+    mvn -DskipTests package
 
-  # To install the packages in the local Maven repository (usually ~/.m2/repo)
-  mvn -DskipTests install
+    # To install the packages in the local Maven repository (usually ~/.m2/repo)
+    mvn -DskipTests install
 
-=== Testing ===
+Testing
+=======
 
-To test Proton, run the system tests (located in the tests subdirectory).
-The system tests are applicable to both the Proton-C and Proton-J
-implementations.
+Additional packages required for testing:
 
-== Test Instructions (Proton-C only) ==
+    yum install rubygem-minitest rubygem-rspec rubygem-simplecov
 
-To run the system tests against Proton-C, from your build directory above:
+On non-RPM based systems, you can install them using:
 
-   # to run all the tests, summary mode
-   ctest
+    gem install minitest rspec simplecov
 
-   # to run a single test, full output
-   ctest -V -R proton-c
+To test Proton, use the cmake build and run 'make test'. Note that
+this will invoke the maven tests as well, so the maven prerequisites
+are required in addition to the cmake prerequisites.
 
-== Test Instructions (Proton-J and Proton-C) ==
+Running Tests
+-------------
 
-To run the system tests, execute Maven specifying profile 'proton-j' to
-test Proton-J, and 'proton-jni' to test the Proton-C implementation via the
-JNI bindings.  (To test Proton-C via the JNI Bindings the JNI Binding must have
-been built with Cmake as described above).
+To run the system tests using the CMake build system, cd into your
+build directory and use the following commands:
 
-  # To test Proton-J
-  mvn test -P proton-j
+    # to run all the tests, summary mode
+    ctest
 
-  # To test Proton-C via the JNI Bindings
-  mvn test -P proton-jni
-
-  # To produce a nicely formated report containing the test results
-  # (in tests/target/site/surefire-report.html)
-  mvn surefire-report:report
-
+    # to run a single test, full output
+    ctest -V -R proton-c
