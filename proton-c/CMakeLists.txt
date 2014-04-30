@@ -355,6 +355,18 @@ install (TARGETS qpid-proton
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
+# Install windows qpid-proton pdb files
+if (MSVC)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
+    DESTINATION bin 
+    CONFIGURATIONS Debug
+    OPTIONAL)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
+    DESTINATION bin 
+    CONFIGURATIONS RelWithDebInfo
+    OPTIONAL)
+endif (MSVC)
+
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
