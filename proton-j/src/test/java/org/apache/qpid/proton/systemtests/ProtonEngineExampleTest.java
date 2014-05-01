@@ -26,7 +26,6 @@ import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.CLOSED;
 import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
 import static org.apache.qpid.proton.systemtests.TestLoggingHelper.bold;
-import static org.apache.qpid.proton.systemtests.engine.ProtonFactoryTestFixture.isProtonJ;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
@@ -34,7 +33,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-import org.apache.qpid.proton.ProtonFactoryLoader;
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Section;
@@ -45,10 +44,8 @@ import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.MessageFactory;
 import org.junit.Test;
 
 /**
@@ -80,26 +77,23 @@ public class ProtonEngineExampleTest
 
     private final String _targetAddress = _server.containerId + "-link1-target";
 
-    private final EngineFactory _engineFactory = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class).loadFactory();
-    private final MessageFactory _messageFactory = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class).loadFactory();
-
     @Test
     public void test() throws Exception
     {
         LOGGER.fine(bold("======== About to create transports"));
 
-        _client.transport = _engineFactory.createTransport();
+        _client.transport = Proton.transport();
         ProtocolTracerEnabler.setProtocolTracer(_client.transport, TestLoggingHelper.CLIENT_PREFIX);
 
-        _server.transport = _engineFactory.createTransport();
+        _server.transport = Proton.transport();
         ProtocolTracerEnabler.setProtocolTracer(_server.transport, "            " + TestLoggingHelper.SERVER_PREFIX);
 
         doOutputInputCycle();
 
-        _client.connection = _engineFactory.createConnection();
+        _client.connection = Proton.connection();
         _client.transport.bind(_client.connection);
 
-        _server.connection = _engineFactory.createConnection();
+        _server.connection = Proton.connection();
         _server.transport.bind(_server.connection);
 
 
@@ -182,7 +176,7 @@ public class ProtonEngineExampleTest
 
         LOGGER.fine(bold("======== About to create a message and send it to the server"));
 
-        _client.message = _messageFactory.createMessage();
+        _client.message = Proton.message();
         Section messageBody = new AmqpValue("Hello");
         _client.message.setBody(messageBody);
         _client.messageData = new byte[BUFFER_SIZE];
@@ -195,12 +189,7 @@ public class ProtonEngineExampleTest
         assertEquals("For simplicity, assume the sender can accept all the data",
                      lengthOfEncodedMessage, numberOfBytesAcceptedBySender);
 
-        if (isProtonJ(_engineFactory))
-        {
-            // TODO PROTON-261: Proton-c ProtonJNI.pn_delivery_local_state is returning 0, which doesn't map to an
-            // value within the C enum.
-            assertNull(_client.delivery.getLocalState());
-        }
+        assertNull(_client.delivery.getLocalState());
 
         boolean senderAdvanced = _client.sender.advance();
         assertTrue("sender has not advanced", senderAdvanced);
@@ -213,11 +202,8 @@ public class ProtonEngineExampleTest
         _server.delivery = _server.connection.getWorkHead();
         assertEquals("The received delivery should be on our receiver",
                 _server.receiver, _server.delivery.getLink());
-        if (isProtonJ(_engineFactory))
-        {
-            assertNull(_server.delivery.getLocalState());
-            assertNull(_server.delivery.getRemoteState());
-        }
+        assertNull(_server.delivery.getLocalState());
+        assertNull(_server.delivery.getRemoteState());
 
         assertFalse(_server.delivery.isPartial());
         assertTrue(_server.delivery.isReadable());
@@ -226,7 +212,7 @@ public class ProtonEngineExampleTest
         int numberOfBytesProducedByReceiver = _server.receiver.recv(_server.messageData, 0, BUFFER_SIZE);
         assertEquals(numberOfBytesAcceptedBySender, numberOfBytesProducedByReceiver);
 
-        _server.message = _messageFactory.createMessage();
+        _server.message = Proton.message();
         _server.message.decode(_server.messageData, 0, numberOfBytesProducedByReceiver);
 
         boolean messageProcessed = applicationProcessMessage(_server.message);

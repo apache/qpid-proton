@@ -25,7 +25,6 @@ import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.*;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
@@ -37,7 +36,6 @@ import java.util.UUID;
  */
 public class AmqpSession extends AmqpEndpointBase {
 
-    private final MessageFactoryImpl messageFactory = new MessageFactoryImpl();
     final AmqpConnection parent;
     final ProtonJSession session;
 
@@ -124,7 +122,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createTextMessage(String value) {
-        Message msg = messageFactory.createMessage();
+        Message msg = Message.Factory.create();
         Section body = new AmqpValue(value);
         msg.setBody(body);
         return msg;
@@ -135,7 +133,7 @@ public class AmqpSession extends AmqpEndpointBase {
     }
 
     public Message createBinaryMessage(byte value[], int offset, int len) {
-        Message msg = messageFactory.createMessage();
+        Message msg = Message.Factory.create();
         Data body = new Data(new Binary(value, offset,len));
         msg.setBody(body);
         return msg;

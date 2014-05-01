@@ -19,13 +19,11 @@
 package org.apache.qpid.proton;
 
 import org.apache.qpid.proton.TestDecoder;
-import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.DescribedType;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.MessageFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
@@ -69,8 +67,7 @@ public class InteropTest
     Message decodeMessage(String name) throws IOException
     {
         byte[] data = getBytes(name);
-        MessageFactory mf = new ProtonFactoryLoader<MessageFactory>(MessageFactory.class).loadFactory();
-        Message m = mf.createMessage();
+        Message m = Proton.message();
         m.decode(data, 0, data.length);
         return m;
     }

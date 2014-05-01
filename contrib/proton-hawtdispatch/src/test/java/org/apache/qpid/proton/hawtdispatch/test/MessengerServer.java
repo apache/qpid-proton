@@ -7,11 +7,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.InterruptException;
-import org.apache.qpid.proton.ProtonFactoryLoader;
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
-import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.apache.qpid.proton.messenger.Tracker;
 
 public class MessengerServer {
@@ -33,7 +32,7 @@ public class MessengerServer {
 		if (!serverShouldRun.compareAndSet(false, true)) {
 			throw new IllegalStateException("started twice");
 		}
-		msgr = new ProtonFactoryLoader<MessengerFactory>(MessengerFactory.class).loadFactory().createMessenger();
+		msgr = Proton.messenger();
 		serverStart = new CountDownLatch(1);
 		thread = new Thread(new Runnable() {
 

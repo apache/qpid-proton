@@ -18,14 +18,12 @@ package org.apache.qpid.proton.jms;
 
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 public class EncodedMessage
 {
-    private final MessageFactoryImpl messageFactory = new MessageFactoryImpl();
 
     private final Binary data;
     final long messageFormat;
@@ -40,7 +38,7 @@ public class EncodedMessage
     }
 
     public Message decode() throws Exception {
-        Message amqp = messageFactory.createMessage();
+        Message amqp = Message.Factory.create();
 
         int offset = getArrayOffset();
         int len = getLength();

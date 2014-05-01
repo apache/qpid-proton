@@ -53,7 +53,7 @@ public class DriverImpl implements Driver
     private Queue<ConnectorImpl> _selectedConnectors = new ArrayDeque<ConnectorImpl>();
     private Queue<ListenerImpl> _selectedListeners = new ArrayDeque<ListenerImpl>();
 
-    DriverImpl() throws IOException
+    public DriverImpl() throws IOException
     {
         _selector = Selector.open();
     }

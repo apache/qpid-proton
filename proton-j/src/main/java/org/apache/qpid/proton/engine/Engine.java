@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,19 +18,43 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.driver.impl;
+package org.apache.qpid.proton.engine;
 
-import java.io.IOException;
+/**
+ * Engine
+ *
+ */
 
-import org.apache.qpid.proton.ProtonFactoryImpl;
-import org.apache.qpid.proton.driver.Driver;
-import org.apache.qpid.proton.driver.DriverFactory;
-
-public class DriverFactoryImpl extends ProtonFactoryImpl implements DriverFactory
+public final class Engine
 {
-    @Override
-    public Driver createDriver() throws IOException
+
+    private Engine()
     {
-        return new DriverImpl();
     }
+
+    public static Collector collector()
+    {
+        return Collector.Factory.create();
+    }
+
+    public static Connection connection()
+    {
+        return Connection.Factory.create();
+    }
+
+    public static Transport transport()
+    {
+        return Transport.Factory.create();
+    }
+
+    public static SslDomain sslDomain()
+    {
+        return SslDomain.Factory.create();
+    }
+
+    public static SslPeerDetails sslPeerDetails(String hostname, int port)
+    {
+        return SslPeerDetails.Factory.create(hostname, port);
+    }
+
 }

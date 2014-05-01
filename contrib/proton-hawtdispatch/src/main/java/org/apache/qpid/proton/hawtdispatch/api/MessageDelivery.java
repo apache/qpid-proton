@@ -23,7 +23,6 @@ import org.apache.qpid.proton.hawtdispatch.impl.Watch;
 import org.apache.qpid.proton.hawtdispatch.impl.WatchBase;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.ProtonJMessage;
-import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtdispatch.Task;
 
@@ -32,7 +31,6 @@ import org.fusesource.hawtdispatch.Task;
  */
 public abstract class MessageDelivery extends WatchBase {
 
-    private static final  MessageFactoryImpl MESSAGE_FACTORY = new MessageFactoryImpl();
     final int initialSize;
     private Message message;
     private Buffer encoded;
@@ -50,7 +48,7 @@ public abstract class MessageDelivery extends WatchBase {
     }
 
     static Message decode(Buffer buffer) {
-        Message msg = MESSAGE_FACTORY.createMessage();
+        Message msg = Message.Factory.create();
         int offset = buffer.offset;
         int len = buffer.length;
         while( len > 0 ) {

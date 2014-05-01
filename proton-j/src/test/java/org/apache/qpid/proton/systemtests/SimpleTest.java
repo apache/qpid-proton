@@ -20,10 +20,9 @@ package org.apache.qpid.proton.systemtests;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.qpid.proton.ProtonFactoryLoader;
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Transport;
 import org.junit.Test;
 
@@ -33,14 +32,12 @@ public class SimpleTest
     @Test
     public void test()
     {
-        EngineFactory engineFactory = new ProtonFactoryLoader<EngineFactory>(EngineFactory.class).loadFactory();
-
-        Connection connection1 = engineFactory.createConnection();
-        Connection connection2 = engineFactory.createConnection();;
-        Transport transport1 = engineFactory.createTransport();
+        Connection connection1 = Proton.connection();
+        Connection connection2 = Proton.connection();;
+        Transport transport1 = Proton.transport();
         transport1.bind(connection1);
 
-        Transport transport2 = engineFactory.createTransport();
+        Transport transport2 = Proton.transport();
         transport2.bind(connection2);
 
         assertEquals(EndpointState.UNINITIALIZED, connection1.getLocalState());

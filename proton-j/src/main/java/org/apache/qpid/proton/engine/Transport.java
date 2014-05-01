@@ -22,6 +22,8 @@ package org.apache.qpid.proton.engine;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.engine.impl.TransportImpl;
+
 
 /**
  * <p>
@@ -63,6 +65,14 @@ import java.nio.ByteBuffer;
  */
 public interface Transport extends Endpoint
 {
+
+    public static final class Factory
+    {
+        public static Transport create() {
+            return new TransportImpl();
+        }
+    }
+
     public static final int DEFAULT_MAX_FRAME_SIZE = -1;
 
     /** the lower bound for the agreed maximum frame size (in bytes). */

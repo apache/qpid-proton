@@ -28,6 +28,8 @@ import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
 
+import org.apache.qpid.proton.message.impl.MessageImpl;
+
 /**
  * Represents a Message within Proton.
  *
@@ -36,6 +38,27 @@ import org.apache.qpid.proton.amqp.messaging.Section;
  */
 public interface Message
 {
+
+    public static final class Factory
+    {
+        public static Message create() {
+            return new MessageImpl();
+        }
+
+        public static Message create(Header header,
+                                     DeliveryAnnotations deliveryAnnotations,
+                                     MessageAnnotations messageAnnotations,
+                                     Properties properties,
+                                     ApplicationProperties applicationProperties,
+                                     Section body,
+                                     Footer footer) {
+            return new MessageImpl(header, deliveryAnnotations,
+                                   messageAnnotations, properties,
+                                   applicationProperties, body, footer);
+        }
+    }
+
+
     short DEFAULT_PRIORITY = 4;
 
     boolean isDurable();

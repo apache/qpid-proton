@@ -1,4 +1,5 @@
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +16,25 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-package org.apache.qpid.proton;
+package org.apache.qpid.proton.codec;
 
-public class ProtonFactoryImpl implements ProtonFactory
+/**
+ * Codec
+ *
+ */
+
+public final class Codec
 {
-    @Override
-    public final ImplementationType getImplementationType()
+
+    private Codec()
     {
-        return ImplementationType.PROTON_J;
     }
+
+    public static Data data(long capacity)
+    {
+        return Data.Factory.create();
+    }
+
 }

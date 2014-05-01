@@ -21,7 +21,6 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.codec.DroppingWritableBuffer;
 import org.apache.qpid.proton.message.ProtonJMessage;
-import org.apache.qpid.proton.message.impl.MessageFactoryImpl;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
@@ -40,8 +39,6 @@ import java.util.HashMap;
 * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
 */
 public class JMSMappingOutboundTransformer extends OutboundTransformer {
-
-    private static final MessageFactoryImpl MESSAGE_FACTORY = new MessageFactoryImpl();
 
     String prefixDeliveryAnnotations = "DA_";
     String prefixMessageAnnotations= "MA_";
@@ -212,7 +209,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         Footer footer=null;
         if( footerMap!=null ) footer = new Footer(footerMap);
 
-        ProtonJMessage amqp = MESSAGE_FACTORY.createMessage(header, da, ma, props, ap, body, footer);
+        ProtonJMessage amqp = (ProtonJMessage) org.apache.qpid.proton.message.Message.Factory.create(header, da, ma, props, ap, body, footer);
 
         ByteBuffer buffer = ByteBuffer.wrap(new byte[1024*4]);
         final DroppingWritableBuffer overflow = new DroppingWritableBuffer();

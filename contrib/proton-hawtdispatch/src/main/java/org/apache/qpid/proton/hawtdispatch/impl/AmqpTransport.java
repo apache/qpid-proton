@@ -22,7 +22,6 @@ import org.apache.qpid.proton.hawtdispatch.api.ChainedCallback;
 import org.apache.qpid.proton.hawtdispatch.api.TransportState;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.engine.impl.ByteBufferUtils;
-import org.apache.qpid.proton.engine.impl.EngineFactoryImpl;
 import org.apache.qpid.proton.engine.impl.ProtocolTracer;
 import org.fusesource.hawtbuf.Buffer;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
@@ -53,7 +52,6 @@ public class AmqpTransport extends WatchBase {
 
     final DispatchQueue queue;
     final ProtonJConnection connection;
-    private final EngineFactoryImpl engineFactory = new EngineFactoryImpl();
     Transport hawtdispatchTransport;
     ProtonJTransport protonTransport;
     Throwable failure;
@@ -63,7 +61,7 @@ public class AmqpTransport extends WatchBase {
 
     private AmqpTransport(DispatchQueue queue) {
         this.queue = queue;
-        this.connection = engineFactory.createConnection();
+        this.connection = (ProtonJConnection) Connection.Factory.create();
 
         defers = Dispatch.createSource(EventAggregators.<Defer>linkedList(), this.queue);
         defers.setEventHandler(new Task(){
@@ -324,7 +322,7 @@ public class AmqpTransport extends WatchBase {
 
     private void bind(final Transport transport) {
         this.hawtdispatchTransport = transport;
-        this.protonTransport = engineFactory.createTransport();
+        this.protonTransport = (ProtonJTransport) org.apache.qpid.proton.engine.Transport.Factory.create();
         this.protonTransport.bind(connection);
         if( transport.getProtocolCodec()==null ) {
             try {
