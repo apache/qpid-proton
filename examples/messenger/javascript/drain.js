@@ -20,7 +20,7 @@
 
 // Check if the environment is Node.js and if so import the required library.
 if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("../../../bld/proton-c/bindings/javascript/proton.js");
+    proton = require("qpid-proton");
 }
 
 try {
@@ -48,14 +48,13 @@ console.log("tracker = " + tracker);
     };
 
     //messenger.setIncomingWindow(1024);
-console.log("Break A");
+
     messenger.setNetworkCallback(_process);
     messenger.start();
-console.log("Break B");
+
     messenger.subscribe(address);
-console.log("Break C");
     messenger.recv(); // Receive as many messages as messenger can buffer.
-console.log("Break D");
+
 } catch(e) {
     console.log("Caught Exception " + e);
 }

@@ -15,35 +15,34 @@ emscripten itself depends upon. https://github.com/kripken/emscripten/wiki/Emscr
 provides some fairly easy to follow instructions for getting started on several
 platforms the main dependencies are as follows (on Windows the SDK includes these):
 
-* The Emscripten code, from github (git clone git://github.com/kripken/emscripten.git. The documentation suggests
-  master branch but in the short term incoming is probably better as a few updates to emscripten have been added
-  to help get proton working and these may take a little while to get merged back to master.
-* LLVM with Clang. Version 3.2 is the officially supported version, others may not work. There are official clang
-  binaries that include LLVM for some platforms, if yours is not there then you should get the LLVM and Clang
-  sources and build them.
+* The Emscripten code, from github (git clone git://github.com/kripken/emscripten.git.
+  The documentation suggests master branch but in the short term incoming is
+  probably better as a few updates to emscripten have been added to help get
+  proton working and these may take a little while to get merged back to master.
+* LLVM with Clang. Emscripten uses LLVM and Clang, but at the moment the JavaScript
+  back-end for LLVM is off on a branch so you can't use a stock LLVM/Clang.
+  https://github.com/kripken/emscripten/wiki/LLVM-Backend has lots of explanation
+  and some easy to follow instructions for downloading and building fast-comp
 * Node.js (0.8 or above; 0.10.17 or above to run websocket-using servers in node)
 * Python 2.7.3
-* Optionally, if you want to use Closure Compiler to minify your code as much as possible, you will also need Java.
+* Java is required in order to use the Closure Compiler to minify the code.
+  
 
-If you haven't run Emscripten before it's a good idea to have a play with the tutorial
-https://github.com/kripken/emscripten/wiki/Tutorial
+If you haven't run Emscripten before it's a good idea to have a play with the
+tutorial https://github.com/kripken/emscripten/wiki/Tutorial
 
 
-when you are all set up with emscripten and have got the basic tests in the tutorial running
-building Proton should be simple, simply go to the Proton root directory and follow the main
-instructions in the README there, in precis (from the root directory) it's:
+
+
+when you are all set up with emscripten and have got the basic tests in the
+tutorial running building Proton should be simple, simply go to the Proton root
+directory and follow the main instructions in the README there, in precis (from
+the root directory) it's:
 
   mkdir build
   cd build
   cmake ..
   make
-
-
-In order to use WebSockets from Node.js you will need to install the "ws" package, the easiest
-way to do this is to use npm. From <proton-root>/build/proton-c/bindings/javascript (or where
-ever you decide to put the JavaScript binding library created by this build) simply do:
-
-  npm install ws
 
 and you should be all set, to test it's all working do:
 
@@ -59,8 +58,7 @@ in another
 KNOWN ISSUES
 ============
 
-send-async and recv-async are both pretty hacky at the moment and not really asynchronous, this will
-be addressed ASAP.
+send-async and recv-async are both pretty hacky at the moment.
 
 
 SUPPORT

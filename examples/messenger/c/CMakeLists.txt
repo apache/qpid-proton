@@ -21,8 +21,12 @@ find_package(Proton REQUIRED)
 
 add_executable(recv recv.c)
 add_executable(send send.c)
+add_executable(recv-async recv-async.c)
+add_executable(send-async send-async.c)
 
 include_directories(${Proton_INCLUDE_DIRS})
 
 target_link_libraries(recv ${Proton_LIBRARIES})
 target_link_libraries(send ${Proton_LIBRARIES})
+target_link_libraries(recv-async ${Proton_LIBRARIES})
+target_link_libraries(send-async ${Proton_LIBRARIES})

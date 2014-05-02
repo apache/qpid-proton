@@ -25,7 +25,7 @@
  * <p>
  * This JavaScript wrapper provides a somewhat more idiomatic object oriented
  * interface which abstracts the low-level emscripten based implementation details
- * from client code.
+ * from client code. Any similarities to the Proton Python binding are deliberate.
  * @file
  */
 
@@ -123,7 +123,7 @@ Module['Messenger'] = function(name) { // Messenger Constructor.
      * freed. In C code compiled by emscripten saving and restoring of the stack
      * is automatic, but if we want to us ALLOC_STACK from native JavaScript we
      * need to explicitly save and restore the stack using Runtime.stackSave()
-     * and Runtime.stackRestore() or we will leak memory.
+     * and Runtime.stackRestore() or we will leak emscripten heap memory.
      * See https://github.com/kripken/emscripten/wiki/Interacting-with-code
      * The _pn_messenger constructor copies the char* passed to it.
      */
@@ -415,7 +415,7 @@ _Messenger_['put'] = function(message) {
     // the high 32 bits via the tempRet0 variable. We use Data.Long to pass the
     // low/high pair around to methods that require a tracker.
     var low = _pn_messenger_outgoing_tracker(this._messenger);
-    var high = tempRet0;
+    var high = Runtime.getTempRet0();
     return new Data.Long(low, high);
 };
 
@@ -458,7 +458,7 @@ console.log("settle: not fully tested yet");
     var flags = 0;
     if (tracker == null) {
         var low = _pn_messenger_outgoing_tracker(this._messenger);
-        var high = tempRet0;
+        var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
         flags = Module['Messenger'].PN_CUMULATIVE;
     }
@@ -531,12 +531,10 @@ _Messenger_['get'] = function(message) {
     // the high 32 bits via the tempRet0 variable. We use Data.Long to pass the
     // low/high pair around to methods that require a tracker.
     var low = _pn_messenger_incoming_tracker(this._messenger);
-    var high = tempRet0;
+    var high = Runtime.getTempRet0();
 console.log("get low = " + low);
 console.log("get high = " + high);
 
-console.log("get asm = " + asm);
-console.log("get asm['tempRet0'] = " + asm['tempRet0']);
     return new Data.Long(low, high);
 };
 
@@ -577,7 +575,7 @@ console.log("accept: not fully tested yet");
     var flags = 0;
     if (tracker == null) {
         var low = _pn_messenger_incoming_tracker(this._messenger);
-        var high = tempRet0;
+        var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
         flags = Module['Messenger'].PN_CUMULATIVE;
     }
@@ -602,7 +600,7 @@ console.log("reject: not fully tested yet");
     var flags = 0;
     if (tracker == null) {
         var low = _pn_messenger_incoming_tracker(this._messenger);
-        var high = tempRet0;
+        var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
         flags = Module['Messenger'].PN_CUMULATIVE;
     }
@@ -1237,6 +1235,77 @@ Data['Symbol'].prototype['equals'] = function(rhs) {
     return this.toString() === rhs.toString();
 };
 
+// ---------------------- JavaScript Number Extensions ------------------------ 
+
+Number.prototype['asUnsignedByte'] = function() {
+    return new Data.TypedNumber('UnsignedByte', this);
+};
+
+Number.prototype['asByte'] = function() {
+    return new Data.TypedNumber('Byte', this);
+};
+
+Number.prototype['asUnsignedShort'] = function() {
+    return new Data.TypedNumber('UnsignedShort', this);
+};
+
+Number.prototype['asShort'] = function() {
+    return new Data.TypedNumber('Short', this);
+};
+
+Number.prototype['asUnsignedInteger'] = function() {
+    return new Data.TypedNumber('UnsignedInteger', this);
+};
+
+Number.prototype['asInteger'] = function() {
+    return new Data.TypedNumber('Integer', this);
+};
+
+Number.prototype['asUnsignedLong'] = function() {
+    return new Data.TypedNumber('UnsignedLong', this);
+};
+
+Number.prototype['asLong'] = function() {
+    return new Data.TypedNumber('Long', this);
+};
+
+Number.prototype['asFloat'] = function() {
+    return new Data.TypedNumber('Float', this);
+};
+
+Number.prototype['asDouble'] = function() {
+    return new Data.TypedNumber('Double', this);
+};
+
+Number.prototype['asChar'] = function() {
+    return new Data.TypedNumber('Char', this);
+};
+
+String.prototype['asChar'] = function() {
+    return new Data.TypedNumber('Char', this.charCodeAt(0));
+};
+
+// ------------------------- proton.Data.TypedNumber -------------------------- 
+/**
+ * Create a proton.Data.TypedNumber.
+ * @classdesc
+ * This class is a simple wrapper class that allows a "type" to be recorded for
+ * a number. The idea is that the JavaScript Number class is extended with extra
+ * methods to allow numbers to be "modified" to TypedNumbers, so for example
+ * 1.0.asFloat() would modify 1.0 by returning a TypedNumber with type = Float
+ * and value = 1. The strings used for type correspond to the names of the Data
+ * put* methods e.g. UnsignedByte, Byte, UnsignedShort, Short, UnsignedInteger,
+ * Integer, UnsignedLong, Long, Float, Double, Char so that the correct method
+ * to call can be easily derived from the TypedNumber's type.
+ * @constructor proton.Data.TypedNumber
+ * @param {string} type the type of the Number.
+ * @param {number} value the most significant word.
+ */
+// Use dot notation as it is a "protected" inner class not exported from the closure.
+Data.TypedNumber = function(type, value) { // Data.TypedNumber Constructor.
+    this.type  = type;
+    this.value = value;
+};
 
 // ----------------------------- proton.Data.Long ----------------------------- 
 /**
@@ -1250,6 +1319,7 @@ Data['Symbol'].prototype['equals'] = function(rhs) {
  * @param {number} low the least significant word.
  * @param {number} high the most significant word.
  */
+// Use dot notation as it is a "protected" inner class not exported from the closure.
 Data.Long = function(low, high) { // Data.Long Constructor.
     this.low  = low  | 0;  // force into 32 signed bits.
     this.high = high | 0;  // force into 32 signed bits.
@@ -1805,7 +1875,6 @@ _Data_['putInteger'] = function(i) {
  * @param {number} c a single character.
  */
 _Data_['putChar'] = function(c) {
-console.log("putChar not properly implemented yet");
     this._check(_pn_data_put_char(this._data, c));
 };
 
@@ -1850,6 +1919,7 @@ console.log("putTimestamp not properly implemented yet");
  * @param {number} f a floating point value.
  */
 _Data_['putFloat'] = function(f) {
+console.log("putFloat f = " + f);
     this._check(_pn_data_put_float(this._data, f));
 };
 
@@ -2043,7 +2113,7 @@ _Data_['getBoolean'] = function() {
  * @returns {number} value if the current node is an unsigned byte, returns 0 otherwise.
  */
 _Data_['getUnsignedByte'] = function() {
-    return _pn_data_get_ubyte(this._data);
+    return _pn_data_get_ubyte(this._data) & 0xFF; // & 0xFF converts to unsigned;
 };
 
 /**
@@ -2059,7 +2129,7 @@ _Data_['getByte'] = function() {
  * @return value if the current node is an unsigned short, returns 0 otherwise.
  */
 _Data_['getUnsignedShort'] = function() {
-    return _pn_data_get_ushort(this._data);
+    return _pn_data_get_ushort(this._data) & 0xFFFF; // & 0xFFFF converts to unsigned;
 };
 
 /**
@@ -2077,7 +2147,8 @@ _Data_['getShort'] = function() {
  * @returns {number} value if the current node is an unsigned int, returns 0 otherwise.
  */
 _Data_['getUnsignedInteger'] = function() {
-    return _pn_data_get_uint(this._data);
+    var value = _pn_data_get_uint(this._data);
+    return (value > 0) ? value : 4294967296 + value; // 4294967296 == 2^32
 };
 
 /**
@@ -2092,13 +2163,10 @@ _Data_['getInteger'] = function() {
 /**
  * @method getChar
  * @memberof! proton.Data#
- * @returns {number} value if the current node is a character, returns 0 otherwise.
+ * @returns {string} the character represented by the unicode value of the current node.
  */
-// TODO should this be dealing with strings not numbers?
 _Data_['getChar'] = function() {
-console.log("getChar not properly implemented yet");
-return "character";
-    //return _pn_data_get_char(this._data);
+    return String.fromCharCode(_pn_data_get_char(this._data));
 };
 
 /**
@@ -2107,6 +2175,7 @@ return "character";
  * @returns {number} value if the current node is an unsigned long, returns 0 otherwise.
  */
 _Data_['getUnsignedLong'] = function() {
+console.log("getUnsignedLong");
     return _pn_data_get_ulong(this._data);
 };
 
@@ -2123,7 +2192,7 @@ console.log("getLong");
     // the 64 bit number and Data.Long.toNumber() to convert it back into a
     // JavaScript number.
     var low = _pn_data_get_long(this._data);
-    var high = tempRet0;
+    var high = Runtime.getTempRet0();
     var long = new Data.Long(low, high);
     long = long.toNumber();
 
@@ -2442,8 +2511,12 @@ console.log("obj is quoted String " + quoted);
         this['putBinary'](obj);
     } else if (obj instanceof Data['Symbol']) {
         this['putSymbol'](obj);
+    } else if (obj instanceof Data.TypedNumber) { // Dot notation used for "protected" inner class.
+        // Call the appropriate serialisation method based upon the numerical type.
+        this['put' + obj.type](obj.value);
     } else if (Data.isNumber(obj)) {
         /**
+         * This block encodes standard JavaScript numbers by making some inferences.
          * Encoding JavaScript numbers is surprisingly complex and has several
          * gotchas. The code here tries to do what the author believes is the
          * most intuitive encoding of the native JavaScript Number. It first
@@ -2454,9 +2527,10 @@ console.log("obj is quoted String " + quoted);
          * 32 bit Int value. N.B. JavaScript automagically coerces floating
          * point numbers with a zero Fractional Part into an exact integer so
          * numbers like 1.0, 100.0 etc. will be encoded as int or long here,
-         * which is unlikely to be what is wanted. There's no easy way around this
-         * the two main options are to add a very small fractional number or to
-         * represent the number in a String literal e.g. "1.0f", "1.0d", "1l"
+         * which is unlikely to be what is wanted. There's no easy "transparent"
+         * way around this. The TypedNumber approach above allows applications
+         * to express more explicitly what is require, for example 1.0.asFloat()
+         * (1).asUnsignedByte(), (5).asLong() etc.
          */
         if (obj % 1 === 0) {
 console.log(obj + " is Integer Type " + (obj|0));

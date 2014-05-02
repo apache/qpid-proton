@@ -20,7 +20,7 @@
 
 // Check if the environment is Node.js and if so import the required library.
 if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("../../../bld/proton-c/bindings/javascript/proton.js");
+    proton = require("qpid-proton");
 }
 
 try {
@@ -72,12 +72,12 @@ console.log("exiting");
     //message.body = new proton.Data.Symbol("My Symbol");
     //message.body = new proton.Data.Binary("Monkey Bathпогромзхцвбнм");
 
-    message.body = new proton.Data.Binary(4);
+    /*message.body = new proton.Data.Binary(4);
     var buffer = message.body.getBuffer();
     buffer[0] = 65;
     buffer[1] = 77;
     buffer[2] = 81;
-    buffer[3] = 80;
+    buffer[3] = 80;*/
 
 
     //message.body = true;
@@ -87,11 +87,15 @@ console.log("exiting");
     //message.body = -2147483649; // long
     //message.body = 12147483649; // long
 
-    //message.body = 2147483647.000001; // double
+
+    message.body = (121474.836490).asFloat(); // float TODO check me
+    //message.body = 12147483649.0.asFloat(); // float TODO check me
+    //message.body = (4294967296).asUnsignedInteger();
+    //message.body = (255).asUnsignedByte();
+
 
     //message.body = ['Rod', 'Jane', 'Freddy'];
     //message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
-
 
     tracker = messenger.put(message);
 
