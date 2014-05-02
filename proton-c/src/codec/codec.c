@@ -407,7 +407,7 @@ void pn_data_clear(pn_data_t *data)
 
 int pn_data_grow(pn_data_t *data)
 {
-  data->capacity = 2*(data->capacity ? data->capacity : 16);
+  data->capacity = 2*(data->capacity ? data->capacity : 2);
   data->nodes = (pni_node_t *) realloc(data->nodes, data->capacity * sizeof(pni_node_t));
   return 0;
 }

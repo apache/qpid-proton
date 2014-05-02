@@ -200,7 +200,7 @@ void pn_condition_init(pn_condition_t *condition)
 {
   condition->name = pn_string(NULL);
   condition->description = pn_string(NULL);
-  condition->info = pn_data(16);
+  condition->info = pn_data(0);
 }
 
 void pn_condition_tini(pn_condition_t *condition)
@@ -398,9 +398,9 @@ pn_connection_t *pn_connection()
   conn->tpwork_tail = NULL;
   conn->container = pn_string(NULL);
   conn->hostname = pn_string(NULL);
-  conn->offered_capabilities = pn_data(16);
-  conn->desired_capabilities = pn_data(16);
-  conn->properties = pn_data(16);
+  conn->offered_capabilities = pn_data(0);
+  conn->desired_capabilities = pn_data(0);
+  conn->properties = pn_data(0);
   conn->collector = NULL;
 
   return conn;
@@ -783,10 +783,10 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->timeout = 0;
   terminus->dynamic = false;
   terminus->distribution_mode = PN_DIST_MODE_UNSPECIFIED;
-  terminus->properties = pn_data(16);
-  terminus->capabilities = pn_data(16);
-  terminus->outcomes = pn_data(16);
-  terminus->filter = pn_data(16);
+  terminus->properties = pn_data(0);
+  terminus->capabilities = pn_data(0);
+  terminus->outcomes = pn_data(0);
+  terminus->filter = pn_data(0);
 }
 
 static void pn_link_finalize(void *object)
@@ -1062,8 +1062,8 @@ static void pn_delivery_finalize(void *object)
 
 static void pn_disposition_init(pn_disposition_t *ds)
 {
-  ds->data = pn_data(16);
-  ds->annotations = pn_data(16);
+  ds->data = pn_data(0);
+  ds->annotations = pn_data(0);
   pn_condition_init(&ds->condition);
 }
 

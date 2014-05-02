@@ -178,10 +178,10 @@ static void pn_transport_initialize(void *object)
   transport->remote_idle_timeout = 0;
   transport->keepalive_deadline = 0;
   transport->last_bytes_output = 0;
-  transport->remote_offered_capabilities = pn_data(16);
-  transport->remote_desired_capabilities = pn_data(16);
-  transport->remote_properties = pn_data(16);
-  transport->disp_data = pn_data(16);
+  transport->remote_offered_capabilities = pn_data(0);
+  transport->remote_desired_capabilities = pn_data(0);
+  transport->remote_properties = pn_data(0);
+  transport->disp_data = pn_data(0);
   transport->error = pn_error();
   pn_condition_init(&transport->remote_condition);
 
