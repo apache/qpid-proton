@@ -31,6 +31,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class FooterType extends AbstractDescribedType<Footer,Map> implements DescribedTypeConstructor<Footer>
@@ -58,9 +60,9 @@ public class FooterType extends AbstractDescribedType<Footer,Map> implements Des
         return val.getValue();
     }
 
-    public Footer newInstance(Object described)
+    public Footer newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        return new Footer( (Map) described );
+        return new Footer( (Map) constructor.readValue(buffer) );
     }
 
     public Class<Footer> getTypeClass()

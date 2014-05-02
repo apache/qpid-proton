@@ -18,25 +18,48 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.codec;
 
-abstract class LargeFloatingSizePrimitiveTypeEncoding<T> extends FloatingSizePrimitiveTypeEncoding<T>
+/**
+ * Integrates factory for Decode and Encoder.
+ */
+public class DecoderFactory
 {
 
-    LargeFloatingSizePrimitiveTypeEncoding(final EncoderImpl encoder, DecoderImpl decoder)
-    {
-        super(encoder, decoder);
+    static DecoderImpl decoder = new DecoderImpl();
+    static EncoderImpl encoder = new EncoderImpl(decoder);
+
+    public DecoderFactory() {
+       AMQPDefinedTypes.registerAllTypes(decoder, encoder);
     }
 
-    @Override
-    public int getSizeBytes()
-    {
-        return 4;
+    private static final DecoderFactory theInstance = new DecoderFactory();
+
+   /**
+    * gets a singleton shared pair of Decode and Encoder
+    * @return
+    */
+   public static DecoderFactory getSingleton() {
+        return theInstance;
     }
 
-    @Override
-    protected void writeSize(WritableBuffer buffer, final T val)
-    {
-        getEncoder().writeRaw(buffer, getEncodedValueSize(val));
+   /**
+    * Produces a new Decode Encoder pair to be customized.
+    * @return
+    */
+    public static DecoderFactory newFactory() {
+        return new DecoderFactory();
     }
+
+    public final DecoderImpl getDecoder()
+    {
+        return decoder;
+    }
+
+    public final EncoderImpl getEncoder()
+    {
+        return encoder;
+    }
+
 }

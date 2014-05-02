@@ -22,9 +22,12 @@ package org.apache.qpid.proton.codec;
 
 public interface TypeConstructor<V>
 {
-    V readValue();
+    V readValue(ReadableBuffer buffer);
 
     boolean encodesJavaPrimitive();
 
     Class<V> getTypeClass();
+
+    boolean isArray();
+
 }

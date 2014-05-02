@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class ReleasedType extends AbstractDescribedType<Released,List> implements DescribedTypeConstructor<Released>
@@ -60,8 +62,9 @@ public class ReleasedType extends AbstractDescribedType<Released,List> implement
     }
 
 
-    public Released newInstance(Object described)
+    public Released newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
+        constructor.readValue(buffer); // to skip the stream only.. not used
         return Released.getInstance();
     }
 

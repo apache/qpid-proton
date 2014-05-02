@@ -26,8 +26,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SymbolType extends AbstractPrimitiveType<Symbol>
 {
@@ -35,12 +35,12 @@ public class SymbolType extends AbstractPrimitiveType<Symbol>
     private final SymbolEncoding _symbolEncoding;
     private final SymbolEncoding _shortSymbolEncoding;
 
-    private final Map<ByteBuffer, Symbol> _symbolCache = new HashMap<ByteBuffer, Symbol>();
+    private final Map<ByteBuffer, Symbol> _symbolCache = new ConcurrentHashMap<ByteBuffer, Symbol>();
     private DecoderImpl.TypeDecoder<Symbol> _symbolCreator =
             new DecoderImpl.TypeDecoder<Symbol>()
             {
 
-                public Symbol decode(final ByteBuffer buf)
+                public Symbol decode(final ReadableBuffer buf)
                 {
 
                     Symbol symbol = _symbolCache.get(buf);
@@ -103,14 +103,14 @@ public class SymbolType extends AbstractPrimitiveType<Symbol>
         }
 
         @Override
-        protected void writeEncodedValue(final Symbol val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Symbol val)
         {
-            final int length = val.length();
             final EncoderImpl encoder = getEncoder();
 
+            final int length = val.length();
             for(int i = 0; i < length; i++)
             {
-                encoder.writeRaw((byte)val.charAt(i));
+                encoder.writeRaw(buffer, (byte)val.charAt(i));
             }
         }
 
@@ -137,11 +137,11 @@ public class SymbolType extends AbstractPrimitiveType<Symbol>
             return (getType() == encoding.getType());
         }
 
-        public Symbol readValue()
+        public Symbol readValue(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
-            return decoder.readRaw(_symbolCreator, size);
+            int size = decoder.readRawInt(buffer);
+            return decoder.readRaw(buffer, _symbolCreator, size);
         }
     }
     
@@ -156,15 +156,16 @@ public class SymbolType extends AbstractPrimitiveType<Symbol>
         }
 
         @Override
-        protected void writeEncodedValue(final Symbol val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Symbol val)
         {
 
-            final int length = val.length();
             final EncoderImpl encoder = getEncoder();
+
+            final int length = val.length();
 
             for(int i = 0; i < length; i++)
             {
-                encoder.writeRaw((byte)val.charAt(i));
+                encoder.writeRaw(buffer, (byte)val.charAt(i));
             }
         }
 
@@ -191,11 +192,11 @@ public class SymbolType extends AbstractPrimitiveType<Symbol>
             return encoder == this;
         }
 
-        public Symbol readValue()
+        public Symbol readValue(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = ((int)decoder.readRawByte()) & 0xff;
-            return decoder.readRaw(_symbolCreator, size);
+            int size = ((int)decoder.readRawByte(buffer)) & 0xff;
+            return decoder.readRaw(buffer, _symbolCreator, size);
         }
     }
 }

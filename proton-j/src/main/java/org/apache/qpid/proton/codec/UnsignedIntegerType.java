@@ -98,15 +98,15 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return UnsignedIntegerType.this;
         }
 
-        public void writeValue(final UnsignedInteger val)
+        public void writeValue(WritableBuffer buffer, final UnsignedInteger val)
         {
-            getEncoder().writeRaw(val.intValue());
+            getEncoder().writeRaw(buffer,val.intValue());
         }
         
-        public void write(final int i)
+        public void write(WritableBuffer buffer, final int i)
         {
-            writeConstructor();
-            getEncoder().writeRaw(i);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, i);
             
         }
 
@@ -115,9 +115,9 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return (getType() == encoding.getType());
         }
 
-        public UnsignedInteger readValue()
+        public UnsignedInteger readValue(ReadableBuffer buffer)
         {
-            return UnsignedInteger.valueOf(getDecoder().readRawInt());
+            return UnsignedInteger.valueOf(getDecoder().readRawInt(buffer));
         }
     }
 
@@ -148,9 +148,9 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return UnsignedIntegerType.this;
         }
 
-        public void writeValue(final UnsignedInteger val)
+        public void writeValue(WritableBuffer buffer, final UnsignedInteger val)
         {
-            getEncoder().writeRaw((byte)val.intValue());
+            getEncoder().writeRaw(buffer, (byte)val.intValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<UnsignedInteger> encoder)
@@ -158,9 +158,9 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return encoder == this  || encoder instanceof ZeroUnsignedIntegerEncoding;
         }
 
-        public UnsignedInteger readValue()
+        public UnsignedInteger readValue(ReadableBuffer buffer)
         {
-            return UnsignedInteger.valueOf(((int)getDecoder().readRawByte()) & 0xff);
+            return UnsignedInteger.valueOf(((int)getDecoder().readRawByte(buffer)) & 0xff);
         }
     }
 
@@ -192,7 +192,7 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return UnsignedIntegerType.this;
         }
 
-        public void writeValue(final UnsignedInteger val)
+        public void writeValue(WritableBuffer buffer, final UnsignedInteger val)
         {
         }
 
@@ -201,7 +201,7 @@ public class UnsignedIntegerType extends AbstractPrimitiveType<UnsignedInteger>
             return encoder == this;
         }
 
-        public UnsignedInteger readValue()
+        public UnsignedInteger readValue(ReadableBuffer buffer)
         {
             return UnsignedInteger.ZERO;
         }

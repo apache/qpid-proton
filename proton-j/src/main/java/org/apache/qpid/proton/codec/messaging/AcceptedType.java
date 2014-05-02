@@ -29,6 +29,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 public final class AcceptedType extends AbstractDescribedType<Accepted,List> implements DescribedTypeConstructor<Accepted>
 {
@@ -64,8 +66,9 @@ public final class AcceptedType extends AbstractDescribedType<Accepted,List> imp
         return Accepted.class;
     }
 
-    public Accepted newInstance(Object described)
+    public Accepted newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
+        constructor.readValue(buffer); // just to skip the bytes... ignoring result
         return Accepted.getInstance();
     }
 

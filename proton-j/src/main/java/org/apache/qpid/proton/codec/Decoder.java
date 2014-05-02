@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public interface Decoder
+public interface Decoder<B>
 {
     public static interface ListProcessor<T>
     {
@@ -43,105 +43,105 @@ public interface Decoder
     }
 
 
-    Boolean readBoolean();
-    Boolean readBoolean(Boolean defaultVal);
-    boolean readBoolean(boolean defaultVal);
+    Boolean readBoolean(B buffer);
+    Boolean readBoolean(B buffer, Boolean defaultVal);
+    boolean readBoolean(B buffer, boolean defaultVal);
 
-    Byte readByte();
-    Byte readByte(Byte defaultVal);
-    byte readByte(byte defaultVal);
+    Byte readByte(B buffer);
+    Byte readByte(B buffer, Byte defaultVal);
+    byte readByte(B buffer, byte defaultVal);
 
-    Short readShort();
-    Short readShort(Short defaultVal);
-    short readShort(short defaultVal);
+    Short readShort(B buffer);
+    Short readShort(B buffer, Short defaultVal);
+    short readShort(B buffer, short defaultVal);
 
-    Integer readInteger();
-    Integer readInteger(Integer defaultVal);
-    int readInteger(int defaultVal);
+    Integer readInteger(B buffer);
+    Integer readInteger(B buffer, Integer defaultVal);
+    int readInteger(B buffer, int defaultVal);
 
-    Long readLong();
-    Long readLong(Long defaultVal);
-    long readLong(long defaultVal);
+    Long readLong(B buffer);
+    Long readLong(B buffer, Long defaultVal);
+    long readLong(B buffer, long defaultVal);
 
-    UnsignedByte readUnsignedByte();
-    UnsignedByte readUnsignedByte(UnsignedByte defaultVal);
+    UnsignedByte readUnsignedByte(B buffer);
+    UnsignedByte readUnsignedByte(B buffer, UnsignedByte defaultVal);
 
-    UnsignedShort readUnsignedShort();
-    UnsignedShort readUnsignedShort(UnsignedShort defaultVal);
+    UnsignedShort readUnsignedShort(B buffer);
+    UnsignedShort readUnsignedShort(B buffer, UnsignedShort defaultVal);
 
-    UnsignedInteger readUnsignedInteger();
-    UnsignedInteger readUnsignedInteger(UnsignedInteger defaultVal);
+    UnsignedInteger readUnsignedInteger(B buffer);
+    UnsignedInteger readUnsignedInteger(B buffer, UnsignedInteger defaultVal);
 
-    UnsignedLong readUnsignedLong();
-    UnsignedLong readUnsignedLong(UnsignedLong defaultVal);
+    UnsignedLong readUnsignedLong(B buffer);
+    UnsignedLong readUnsignedLong(B buffer, UnsignedLong defaultVal);
 
-    Character readCharacter();
-    Character readCharacter(Character defaultVal);
-    char readCharacter(char defaultVal);
+    Character readCharacter(B buffer);
+    Character readCharacter(B buffer, Character defaultVal);
+    char readCharacter(B buffer, char defaultVal);
 
-    Float readFloat();
-    Float readFloat(Float defaultVal);
-    float readFloat(float defaultVal);
+    Float readFloat(B buffer);
+    Float readFloat(B buffer, Float defaultVal);
+    float readFloat(B buffer, float defaultVal);
 
-    Double readDouble();
-    Double readDouble(Double defaultVal);
-    double readDouble(double defaultVal);
+    Double readDouble(B buffer);
+    Double readDouble(B buffer, Double defaultVal);
+    double readDouble(B buffer, double defaultVal);
 
-    UUID readUUID();
-    UUID readUUID(UUID defaultValue);
+    UUID readUUID(B buffer);
+    UUID readUUID(B buffer, UUID defaultValue);
 
-    Decimal32 readDecimal32();
-    Decimal32 readDecimal32(Decimal32 defaultValue);
+    Decimal32 readDecimal32(B buffer);
+    Decimal32 readDecimal32(B buffer, Decimal32 defaultValue);
 
-    Decimal64 readDecimal64();
-    Decimal64 readDecimal64(Decimal64 defaultValue);
+    Decimal64 readDecimal64(B buffer);
+    Decimal64 readDecimal64(B buffer, Decimal64 defaultValue);
 
-    Decimal128 readDecimal128();
-    Decimal128 readDecimal128(Decimal128 defaultValue);
+    Decimal128 readDecimal128(B buffer);
+    Decimal128 readDecimal128(B buffer, Decimal128 defaultValue);
 
-    Date readTimestamp();
-    Date readTimestamp(Date defaultValue);
+    Date readTimestamp(B buffer);
+    Date readTimestamp(B buffer, Date defaultValue);
 
-    Binary readBinary();
-    Binary readBinary(Binary defaultValue);
+    Binary readBinary(B buffer);
+    Binary readBinary(B buffer, Binary defaultValue);
 
-    Symbol readSymbol();
-    Symbol readSymbol(Symbol defaultValue);
+    Symbol readSymbol(B buffer);
+    Symbol readSymbol(B buffer, Symbol defaultValue);
 
-    String readString();
-    String readString(String defaultValue);
+    String readString(B buffer);
+    String readString(B buffer, String defaultValue);
 
-    List readList();
-    <T> void readList(ListProcessor<T> processor);
+    List readList(B buffer);
+    <T> void readList(B buffer, ListProcessor<T> processor);
 
-    Map readMap();
+    Map readMap(B buffer);
 
-    <T> T[] readArray(Class<T> clazz);
+    <T> T[] readArray(B buffer, Class<T> clazz);
 
-    Object[] readArray();
+    Object[] readArray(B buffer);
 
-    boolean[] readBooleanArray();
-    byte[] readByteArray();
-    short[] readShortArray();
-    int[] readIntegerArray();
-    long[] readLongArray();
-    float[] readFloatArray();
-    double[] readDoubleArray();
-    char[] readCharacterArray();
+    boolean[] readBooleanArray(B buffer);
+    byte[] readByteArray(B buffer);
+    short[] readShortArray(B buffer);
+    int[] readIntegerArray(B buffer);
+    long[] readLongArray(B buffer);
+    float[] readFloatArray(B buffer);
+    double[] readDoubleArray(B buffer);
+    char[] readCharacterArray(B buffer);
 
-    <T> T[] readMultiple(Class<T> clazz);
+    <T> T[] readMultiple(B buffer, Class<T> clazz);
 
-    Object[] readMultiple();
-    byte[] readByteMultiple();
-    short[] readShortMultiple();
-    int[] readIntegerMultiple();
-    long[] readLongMultiple();
-    float[] readFloatMultiple();
-    double[] readDoubleMultiple();
-    char[] readCharacterMultiple();
+    Object[] readMultiple(B buffer);
+    byte[] readByteMultiple(B buffer);
+    short[] readShortMultiple(B buffer);
+    int[] readIntegerMultiple(B buffer);
+    long[] readLongMultiple(B buffer);
+    float[] readFloatMultiple(B buffer);
+    double[] readDoubleMultiple(B buffer);
+    char[] readCharacterMultiple(B buffer);
 
-    Object readObject();
-    Object readObject(Object defaultValue);
+    Object readObject(B buffer);
+    Object readObject(B buffer, Object defaultValue);
 
     void register(final Object descriptor, final DescribedTypeConstructor dtc);
 

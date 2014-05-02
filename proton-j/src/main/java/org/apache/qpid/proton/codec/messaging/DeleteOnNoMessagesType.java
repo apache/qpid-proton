@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DeleteOnNoMessagesType extends AbstractDescribedType<DeleteOnNoMessages,List> implements DescribedTypeConstructor<DeleteOnNoMessages>
@@ -60,8 +62,9 @@ public class DeleteOnNoMessagesType extends AbstractDescribedType<DeleteOnNoMess
     }
 
     @Override
-    public DeleteOnNoMessages newInstance(Object described)
+    public DeleteOnNoMessages newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
+        constructor.readValue(buffer); // just to skip
         return DeleteOnNoMessages.getInstance();
     }
 

@@ -35,6 +35,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public final class FlowType extends AbstractDescribedType<Flow,List> implements DescribedTypeConstructor<Flow>
@@ -127,9 +129,9 @@ public final class FlowType extends AbstractDescribedType<Flow,List> implements 
         }
     }
 
-    public Flow newInstance(Object described)
+    public Flow newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Flow o = new Flow();
 

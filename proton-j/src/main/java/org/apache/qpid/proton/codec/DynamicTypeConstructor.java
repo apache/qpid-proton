@@ -32,11 +32,16 @@ public class DynamicTypeConstructor implements TypeConstructor
         _underlyingEncoding = underlyingEncoding;
     }
 
-    public Object readValue()
+    public boolean isArray()
+    {
+        return false;
+    }
+
+    public Object readValue(ReadableBuffer buffer)
     {
         try
         {
-            return _describedTypeConstructor.newInstance(_underlyingEncoding.readValue());
+            return _describedTypeConstructor.newInstance(buffer, _underlyingEncoding);
         }
         catch (NullPointerException npe)
         {

@@ -81,10 +81,10 @@ public class UUIDType extends AbstractPrimitiveType<UUID>
             return UUIDType.this;
         }
 
-        public void writeValue(final UUID val)
+        public void writeValue(WritableBuffer buffer, final UUID val)
         {
-            getEncoder().writeRaw(val.getMostSignificantBits());
-            getEncoder().writeRaw(val.getLeastSignificantBits());
+            getEncoder().writeRaw(buffer, val.getMostSignificantBits());
+            getEncoder().writeRaw(buffer, val.getLeastSignificantBits());
         }
 
         public boolean encodesSuperset(final TypeEncoding<UUID> encoding)
@@ -92,10 +92,10 @@ public class UUIDType extends AbstractPrimitiveType<UUID>
             return (getType() == encoding.getType());
         }
 
-        public UUID readValue()
+        public UUID readValue(ReadableBuffer buffer)
         {
-            long msb = getDecoder().readRawLong();
-            long lsb = getDecoder().readRawLong();
+            long msb = getDecoder().readRawLong(buffer);
+            long lsb = getDecoder().readRawLong(buffer);
 
             return new UUID(msb, lsb);
         }

@@ -44,9 +44,9 @@ public class ShortType extends AbstractPrimitiveType<Short>
         return _shortEncoding;
     }
 
-    public void write(short s)
+    public void write(WritableBuffer buffer, short s)
     {
-        _shortEncoding.write(s);
+        _shortEncoding.write(buffer, s);
     }
 
     public ShortEncoding getCanonicalEncoding()
@@ -84,21 +84,21 @@ public class ShortType extends AbstractPrimitiveType<Short>
             return ShortType.this;
         }
 
-        public void writeValue(final Short val)
+        public void writeValue(WritableBuffer buffer, final Short val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
-        public void writeValue(final short val)
+        public void writeValue(WritableBuffer buffer, final short val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
 
-        public void write(final short s)
+        public void write(final WritableBuffer buffer, final short s)
         {
-            writeConstructor();
-            getEncoder().writeRaw(s);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, s);
         }
 
         public boolean encodesSuperset(final TypeEncoding<Short> encoding)
@@ -106,14 +106,14 @@ public class ShortType extends AbstractPrimitiveType<Short>
             return (getType() == encoding.getType());
         }
 
-        public Short readValue()
+        public Short readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public short readPrimitiveValue()
+        public short readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawShort();
+            return getDecoder().readRawShort(buffer);
         }
 
 

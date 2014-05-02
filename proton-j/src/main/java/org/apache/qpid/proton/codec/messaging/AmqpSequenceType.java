@@ -31,6 +31,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class AmqpSequenceType extends AbstractDescribedType<AmqpSequence,List> implements DescribedTypeConstructor<AmqpSequence>
@@ -58,9 +60,9 @@ public class AmqpSequenceType extends AbstractDescribedType<AmqpSequence,List> i
         return val.getValue();
     }
 
-    public AmqpSequence newInstance(Object described)
+    public AmqpSequence newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        return new AmqpSequence( (List) described );
+        return new AmqpSequence( (List) constructor.readValue(buffer) );
     }
 
     public Class<AmqpSequence> getTypeClass()

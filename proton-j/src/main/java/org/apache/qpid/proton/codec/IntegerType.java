@@ -28,9 +28,9 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
 
     public static interface IntegerEncoding extends PrimitiveTypeEncoding<Integer>
     {
-        void write(int i);
-        void writeValue(int i);
-        int readPrimitiveValue();
+        void write(WritableBuffer buffer, int i);
+        void writeValue(WritableBuffer buffer, int i);
+        int readPrimitiveValue(ReadableBuffer buffer);
     }
 
     private IntegerEncoding _integerEncoding;
@@ -71,15 +71,15 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
         return Arrays.asList(_integerEncoding, _smallIntegerEncoding);
     }
 
-    public void write(int i)
+    public void write(WritableBuffer buffer, int i)
     {
         if(i >= -128 && i <= 127)
         {
-            _smallIntegerEncoding.write(i);
+            _smallIntegerEncoding.write(buffer, i);
         }
         else
         {
-            _integerEncoding.write(i);
+            _integerEncoding.write(buffer, i);
         }
     }
     
@@ -108,26 +108,26 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
             return IntegerType.this;
         }
 
-        public void writeValue(final Integer val)
+        public void writeValue(WritableBuffer buffer, final Integer val)
         {
-            getEncoder().writeRaw(val.intValue());
+            getEncoder().writeRaw(buffer, val.intValue());
         }
         
-        public void write(final int i)
+        public void write(WritableBuffer buffer, final int i)
         {
-            writeConstructor();
-            getEncoder().writeRaw(i);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, i);
             
         }
 
-        public void writeValue(final int i)
+        public void writeValue(WritableBuffer buffer, final int i)
         {
-            getEncoder().writeRaw(i);
+            getEncoder().writeRaw(buffer, i);
         }
 
-        public int readPrimitiveValue()
+        public int readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawInt();
+            return getDecoder().readRawInt(buffer);
         }
 
         public boolean encodesSuperset(final TypeEncoding<Integer> encoding)
@@ -135,9 +135,9 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
             return (getType() == encoding.getType());
         }
 
-        public Integer readValue()
+        public Integer readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
 
@@ -167,20 +167,20 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
             return 1;
         }
 
-        public void write(final int i)
+        public void write(WritableBuffer buffer, final int i)
         {
-            writeConstructor();
-            getEncoder().writeRaw((byte)i);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, (byte)i);
         }
 
-        public void writeValue(final int i)
+        public void writeValue(WritableBuffer buffer, final int i)
         {
-            getEncoder().writeRaw((byte)i);
+            getEncoder().writeRaw(buffer, (byte)i);
         }
 
-        public int readPrimitiveValue()
+        public int readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawByte();
+            return getDecoder().readRawByte(buffer);
         }
 
         public IntegerType getType()
@@ -188,9 +188,9 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
             return IntegerType.this;
         }
 
-        public void writeValue(final Integer val)
+        public void writeValue(WritableBuffer buffer, final Integer val)
         {
-            getEncoder().writeRaw((byte)val.intValue());
+            getEncoder().writeRaw(buffer, (byte)val.intValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<Integer> encoder)
@@ -198,9 +198,9 @@ public class IntegerType extends AbstractPrimitiveType<Integer>
             return encoder == this;
         }
 
-        public Integer readValue()
+        public Integer readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
 

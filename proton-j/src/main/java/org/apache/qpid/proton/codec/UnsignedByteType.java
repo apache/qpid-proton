@@ -82,9 +82,9 @@ public class UnsignedByteType extends AbstractPrimitiveType<UnsignedByte>
             return UnsignedByteType.this;
         }
 
-        public void writeValue(final UnsignedByte val)
+        public void writeValue(WritableBuffer buffer, final UnsignedByte val)
         {
-            getEncoder().writeRaw(val.byteValue());
+            getEncoder().writeRaw(buffer, val.byteValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<UnsignedByte> encoding)
@@ -92,9 +92,9 @@ public class UnsignedByteType extends AbstractPrimitiveType<UnsignedByte>
             return (getType() == encoding.getType());
         }
 
-        public UnsignedByte readValue()
+        public UnsignedByte readValue(ReadableBuffer buffer)
         {
-            return UnsignedByte.valueOf(getDecoder().readRawByte());
+            return UnsignedByte.valueOf(getDecoder().readRawByte(buffer));
         }
     }
 }

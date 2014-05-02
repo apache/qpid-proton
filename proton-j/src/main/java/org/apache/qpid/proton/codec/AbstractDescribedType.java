@@ -22,15 +22,16 @@ package org.apache.qpid.proton.codec;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.qpid.proton.amqp.UnsignedLong;
 
 abstract public class AbstractDescribedType<T,M> implements AMQPType<T>
 {
 
     private final EncoderImpl _encoder;
-    private final Map<TypeEncoding<M>, TypeEncoding<T>> _encodings = new HashMap<TypeEncoding<M>, TypeEncoding<T>>();
+    private final Map<TypeEncoding<M>, TypeEncoding<T>> _encodings = new ConcurrentHashMap<TypeEncoding<M>, TypeEncoding<T>>();
 
     public AbstractDescribedType(EncoderImpl encoder)
     {
@@ -68,11 +69,11 @@ abstract public class AbstractDescribedType<T,M> implements AMQPType<T>
         return (Collection<TypeEncoding<T>>) unmodifiable;
     }
 
-    public void write(final T val)
+    public void write(WritableBuffer buffer, final T val)
     {
         TypeEncoding<T> encoding = getEncoding(val);
-        encoding.writeConstructor();
-        encoding.writeValue(val);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, val);
     }
 
     private class DynamicDescribedTypeEncoding implements TypeEncoding<T>
@@ -96,12 +97,12 @@ abstract public class AbstractDescribedType<T,M> implements AMQPType<T>
             return AbstractDescribedType.this;
         }
 
-        public void writeConstructor()
+        public void writeConstructor(WritableBuffer buffer)
         {
-            _encoder.writeRaw(EncodingCodes.DESCRIBED_TYPE_INDICATOR);
-            _descriptorType.writeConstructor();
-            _descriptorType.writeValue(getDescriptor());
-            _underlyingEncoding.writeConstructor();
+            _encoder.writeRaw(buffer, EncodingCodes.DESCRIBED_TYPE_INDICATOR);
+            _descriptorType.writeConstructor(buffer);
+            _descriptorType.writeValue(buffer, getDescriptor());
+            _underlyingEncoding.writeConstructor(buffer);
         }
 
         public int getConstructorSize()
@@ -109,9 +110,9 @@ abstract public class AbstractDescribedType<T,M> implements AMQPType<T>
             return _constructorSize;
         }
 
-        public void writeValue(final T val)
+        public void writeValue(WritableBuffer buffer, final T val)
         {
-            _underlyingEncoding.writeValue(wrap(val));
+            _underlyingEncoding.writeValue(buffer, wrap(val));
         }
 
         public int getValueSize(final T val)

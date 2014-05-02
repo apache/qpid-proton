@@ -116,11 +116,9 @@ public class StringTypeTest
         {
             bb.clear();
             final AmqpValue inputValue = new AmqpValue(input);
-            encoder.setByteBuffer(bb);
-            encoder.writeObject(inputValue);
+            encoder.writeObject(new WritableBuffer.ByteBufferWrapper(bb), inputValue);
             bb.clear();
-            decoder.setByteBuffer(bb);
-            final AmqpValue outputValue = (AmqpValue) decoder.readObject();
+            final AmqpValue outputValue = (AmqpValue) decoder.readObject(new ReadableBuffer.ByteBufferReader(bb));
             assertEquals("Failed to round trip String correctly: ", input, outputValue.getValue());
         }
     }

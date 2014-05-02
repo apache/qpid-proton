@@ -22,11 +22,11 @@ package org.apache.qpid.proton.codec;
 
 abstract class AbstractPrimitiveType<T> implements PrimitiveType<T>
 {
-    public final void write(T val)
+    public final void write(WritableBuffer buffer, T val)
     {
         final TypeEncoding<T> encoding = getEncoding(val);
-        encoding.writeConstructor();
-        encoding.writeValue(val);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, val);
     }
 
 }

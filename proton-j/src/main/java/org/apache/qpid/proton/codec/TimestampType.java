@@ -56,9 +56,9 @@ public class TimestampType extends AbstractPrimitiveType<Date>
         return Collections.singleton(_timestampEncoding);
     }
 
-    public void write(long l)
+    public void write(WritableBuffer buffer, long l)
     {
-        _timestampEncoding.write(l);
+        _timestampEncoding.write(buffer, l);
     }
     
     private class TimestampEncoding extends FixedSizePrimitiveTypeEncoding<Date>
@@ -86,15 +86,15 @@ public class TimestampType extends AbstractPrimitiveType<Date>
             return TimestampType.this;
         }
 
-        public void writeValue(final Date val)
+        public void writeValue(WritableBuffer buffer, final Date val)
         {
-            getEncoder().writeRaw(val.getTime());
+            getEncoder().writeRaw(buffer, val.getTime());
         }
         
-        public void write(final long l)
+        public void write(WritableBuffer buffer, final long l)
         {
-            writeConstructor();
-            getEncoder().writeRaw(l);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, l);
             
         }
 
@@ -103,9 +103,9 @@ public class TimestampType extends AbstractPrimitiveType<Date>
             return (getType() == encoding.getType());
         }
 
-        public Date readValue()
+        public Date readValue(ReadableBuffer buffer)
         {
-            return new Date(getDecoder().readRawLong());
+            return new Date(getDecoder().readRawLong(buffer));
         }
     }
 }

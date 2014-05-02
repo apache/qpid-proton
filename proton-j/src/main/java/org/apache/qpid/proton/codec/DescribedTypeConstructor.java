@@ -22,7 +22,7 @@ package org.apache.qpid.proton.codec;
 
 public interface DescribedTypeConstructor<V>
 {
-    V newInstance(Object described);
+    V newInstance(ReadableBuffer buffer, TypeConstructor typeConstructor);
 
     Class getTypeClass();
 }

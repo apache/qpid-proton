@@ -33,9 +33,11 @@ public class ListType extends AbstractPrimitiveType<List>
     private final ListEncoding _zeroListEncoding;
     private EncoderImpl _encoder;
 
-    private static interface ListEncoding extends PrimitiveTypeEncoding<List>
+    public static interface ListEncoding extends PrimitiveTypeEncoding<List>
     {
+        Object readElement(ReadableBuffer buffer, DecoderImpl decoder);
         void setValue(List value, int length);
+        int readCount(ReadableBuffer buffer, DecoderImpl decoder);
     }
 
     ListType(final EncoderImpl encoder, final DecoderImpl decoder)
@@ -102,18 +104,15 @@ public class ListType extends AbstractPrimitiveType<List>
             implements ListEncoding
     {
 
-        private List _value;
-        private int _length;
-
         public AllListEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
         }
 
         @Override
-        protected void writeEncodedValue(final List val)
+        protected void writeEncodedValue(WritableBuffer buffer, final List val)
         {
-            getEncoder().writeRaw(val.size());
+            getEncoder().writeRaw(buffer, val.size());
 
             final int count = val.size();
 
@@ -121,15 +120,16 @@ public class ListType extends AbstractPrimitiveType<List>
             {
                 Object element = val.get(i);
                 TypeEncoding elementEncoding = getEncoder().getType(element).getEncoding(element);
-                elementEncoding.writeConstructor();
-                elementEncoding.writeValue(element);
+                elementEncoding.writeConstructor(buffer);
+                elementEncoding.writeValue(buffer, element);
             }
         }
 
         @Override
         protected int getEncodedValueSize(final List val)
         {
-            return 4 + ((val == _value) ? _length : calculateSize(val, getEncoder()));
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            return 4 + ((val == cachedCalculation.getVal()) ? cachedCalculation.getSize() : calculateSize(val, getEncoder()));
         }
 
 
@@ -149,29 +149,42 @@ public class ListType extends AbstractPrimitiveType<List>
             return (getType() == encoding.getType());
         }
 
-        public List readValue()
+        public List readValue(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
+            int size = decoder.readRawInt(buffer);
             // todo - limit the decoder with size
-            int count = decoder.readRawInt();
+            int count = decoder.readRawInt(buffer);
             // Ensure we do not allocate an array of size greater then the available data, otherwise there is a risk for an OOM error
-            if (count > decoder.getByteBufferRemaining()) {
+            if (count > decoder.getByteBufferRemaining(buffer)) {
                 throw new IllegalArgumentException("List element count "+count+" is specified to be greater than the amount of data available ("+
-                                                   decoder.getByteBufferRemaining()+")");
+                                                   decoder.getByteBufferRemaining(buffer)+")");
             }
             List list = new ArrayList(count);
             for(int i = 0; i < count; i++)
             {
-                list.add(decoder.readObject());
+                list.add(readElement(buffer, decoder));
             }
             return list;
         }
 
         public void setValue(final List value, final int length)
         {
-            _value = value;
-            _length = length;
+            CachedCalculation.setCachedValue(value, length);
+        }
+
+        public Object readElement(ReadableBuffer buffer, DecoderImpl decoder)
+        {
+            return decoder.readObject(buffer);
+        }
+
+
+        public int readCount(ReadableBuffer buffer, DecoderImpl decoder)
+        {
+            int size = decoder.readRawInt(buffer);
+            // todo - limit the decoder with size
+            return decoder.readRawInt(buffer);
+
         }
     }
 
@@ -180,18 +193,15 @@ public class ListType extends AbstractPrimitiveType<List>
             implements ListEncoding
     {
 
-        private List _value;
-        private int _length;
-
         public ShortListEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
         }
 
         @Override
-        protected void writeEncodedValue(final List val)
+        protected void writeEncodedValue(WritableBuffer buffer, final List val)
         {
-            getEncoder().writeRaw((byte)val.size());
+            getEncoder().writeRaw(buffer, (byte)val.size());
 
             final int count = val.size();
 
@@ -199,15 +209,16 @@ public class ListType extends AbstractPrimitiveType<List>
             {
                 Object element = val.get(i);
                 TypeEncoding elementEncoding = getEncoder().getType(element).getEncoding(element);
-                elementEncoding.writeConstructor();
-                elementEncoding.writeValue(element);
+                elementEncoding.writeConstructor(buffer);
+                elementEncoding.writeValue(buffer, element);
             }
         }
 
         @Override
         protected int getEncodedValueSize(final List val)
         {
-            return 1 + ((val == _value) ? _length : calculateSize(val, getEncoder()));
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            return 1 + ((val == cachedCalculation.getVal()) ? cachedCalculation.getSize() : calculateSize(val, getEncoder()));
         }
 
 
@@ -227,26 +238,38 @@ public class ListType extends AbstractPrimitiveType<List>
             return encoder == this;
         }
 
-        public List readValue()
+
+        public void setValue(final List value, final int length)
+        {
+            CachedCalculation.setCachedValue(value, length);
+        }
+
+
+        public List readValue(ReadableBuffer buffer)
         {
 
             DecoderImpl decoder = getDecoder();
-            int size = ((int)decoder.readRawByte()) & 0xff;
-            // todo - limit the decoder with size
-            int count = ((int)decoder.readRawByte()) & 0xff;
+            int count = readCount(buffer, decoder);
             List list = new ArrayList(count);
             for(int i = 0; i < count; i++)
             {
-                list.add(decoder.readObject());
+                list.add(readElement(buffer, decoder));
             }
             return list;
         }
 
-        public void setValue(final List value, final int length)
+        public Object readElement(ReadableBuffer buffer, DecoderImpl decoder)
         {
-            _value = value;
-            _length = length;
+            return decoder.readObject(buffer);
         }
+
+        public int readCount(ReadableBuffer buffer, DecoderImpl decoder)
+        {
+            int size = ((int)decoder.readRawByte(buffer)) & 0xff;
+            // todo - limit the decoder with size
+            return ((int)decoder.readRawByte(buffer)) & 0xff;
+        }
+
     }
 
     
@@ -277,11 +300,23 @@ public class ListType extends AbstractPrimitiveType<List>
            return ListType.this;
         }
 
-        public void setValue(List value, int length)
+        public void writeValue(WritableBuffer buffer, final List val)
         {
         }
 
-        public void writeValue(final List val)
+        public Object readElement(ReadableBuffer buffer, DecoderImpl decoder)
+        {
+            return null;
+        }
+
+
+        public int readCount(ReadableBuffer buffer, DecoderImpl decoder)
+        {
+            return 0;
+        }
+
+
+        public void setValue(final List value, final int length)
         {
         }
 
@@ -290,7 +325,7 @@ public class ListType extends AbstractPrimitiveType<List>
             return encoder == this;
         }
 
-        public List readValue()
+        public List readValue(ReadableBuffer buffer)
         {
             return Collections.EMPTY_LIST;
         }

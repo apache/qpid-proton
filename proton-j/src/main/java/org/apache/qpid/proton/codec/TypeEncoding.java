@@ -24,11 +24,11 @@ public interface TypeEncoding<V>
 {
     AMQPType<V> getType();
 
-    void writeConstructor();
+    void writeConstructor(WritableBuffer buffer);
 
     int getConstructorSize();
 
-    void writeValue(V val);
+    void writeValue(WritableBuffer buffer, V val);
 
     int getValueSize(V val);
 

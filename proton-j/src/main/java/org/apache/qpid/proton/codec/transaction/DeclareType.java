@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DeclareType extends AbstractDescribedType<Declare,List> implements DescribedTypeConstructor<Declare>
@@ -61,9 +63,9 @@ public class DeclareType extends AbstractDescribedType<Declare,List> implements 
         return globalId == null ? Collections.EMPTY_LIST : Collections.singletonList(globalId);
     }
 
-    public Declare newInstance(Object described)
+    public Declare newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Declare o = new Declare();
 

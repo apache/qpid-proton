@@ -1,4 +1,3 @@
-
 /*
 *
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -35,14 +34,16 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
-public class PropertiesType  extends AbstractDescribedType<Properties,List> implements DescribedTypeConstructor<Properties>
+public class PropertiesType extends AbstractDescribedType<Properties, List> implements DescribedTypeConstructor<Properties>
 {
     private static final Object[] DESCRIPTORS =
-    {
-        UnsignedLong.valueOf(0x0000000000000073L), Symbol.valueOf("amqp:properties:list"),
-    };
+        {
+            UnsignedLong.valueOf(0x0000000000000073L), Symbol.valueOf("amqp:properties:list"),
+        };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000073L);
 
@@ -75,7 +76,7 @@ public class PropertiesType  extends AbstractDescribedType<Properties,List> impl
         public Object get(final int index)
         {
 
-            switch(index)
+            switch (index)
             {
                 case 0:
                     return _impl.getMessageId();
@@ -112,90 +113,91 @@ public class PropertiesType  extends AbstractDescribedType<Properties,List> impl
         public int size()
         {
             return _impl.getReplyToGroupId() != null
-                      ? 13
-                      : _impl.getGroupSequence() != null
-                      ? 12
-                      : _impl.getGroupId() != null
-                      ? 11
-                      : _impl.getCreationTime() != null
-                      ? 10
-                      : _impl.getAbsoluteExpiryTime() != null
-                      ? 9
-                      : _impl.getContentEncoding() != null
-                      ? 8
-                      : _impl.getContentType() != null
-                      ? 7
-                      : _impl.getCorrelationId() != null
-                      ? 6
-                      : _impl.getReplyTo() != null
-                      ? 5
-                      : _impl.getSubject() != null
-                      ? 4
-                      : _impl.getTo() != null
-                      ? 3
-                      : _impl.getUserId() != null
-                      ? 2
-                      : _impl.getMessageId() != null
-                      ? 1
-                      : 0;
+                ? 13
+                : _impl.getGroupSequence() != null
+                ? 12
+                : _impl.getGroupId() != null
+                ? 11
+                : _impl.getCreationTime() != null
+                ? 10
+                : _impl.getAbsoluteExpiryTime() != null
+                ? 9
+                : _impl.getContentEncoding() != null
+                ? 8
+                : _impl.getContentType() != null
+                ? 7
+                : _impl.getCorrelationId() != null
+                ? 6
+                : _impl.getReplyTo() != null
+                ? 5
+                : _impl.getSubject() != null
+                ? 4
+                : _impl.getTo() != null
+                ? 3
+                : _impl.getUserId() != null
+                ? 2
+                : _impl.getMessageId() != null
+                ? 1
+                : 0;
 
         }
 
     }
 
-        public Properties newInstance(Object described)
+
+
+    public Properties newInstance(ReadableBuffer buffer, TypeConstructor constructor)
+    {
+        List l = (List) constructor.readValue(buffer);
+
+        Properties o = new Properties();
+
+
+        switch (13 - l.size())
         {
-            List l = (List) described;
 
-            Properties o = new Properties();
-
-
-            switch(13 - l.size())
-            {
-
-                case 0:
-                    o.setReplyToGroupId( (String) l.get( 12 ) );
-                case 1:
-                    o.setGroupSequence( (UnsignedInteger) l.get( 11 ) );
-                case 2:
-                    o.setGroupId( (String) l.get( 10 ) );
-                case 3:
-                    o.setCreationTime( (Date) l.get( 9 ) );
-                case 4:
-                    o.setAbsoluteExpiryTime( (Date) l.get( 8 ) );
-                case 5:
-                    o.setContentEncoding( (Symbol) l.get( 7 ) );
-                case 6:
-                    o.setContentType( (Symbol) l.get( 6 ) );
-                case 7:
-                    o.setCorrelationId( (Object) l.get( 5 ) );
-                case 8:
-                    o.setReplyTo( (String) l.get( 4 ) );
-                case 9:
-                    o.setSubject( (String) l.get( 3 ) );
-                case 10:
-                    o.setTo( (String) l.get( 2 ) );
-                case 11:
-                    o.setUserId( (Binary) l.get( 1 ) );
-                case 12:
-                    o.setMessageId( (Object) l.get( 0 ) );
-            }
-
-
-            return o;
+            case 0:
+                o.setReplyToGroupId((String) l.get(12));
+            case 1:
+                o.setGroupSequence((UnsignedInteger) l.get(11));
+            case 2:
+                o.setGroupId((String) l.get(10));
+            case 3:
+                o.setCreationTime((Date) l.get(9));
+            case 4:
+                o.setAbsoluteExpiryTime((Date) l.get(8));
+            case 5:
+                o.setContentEncoding((Symbol) l.get(7));
+            case 6:
+                o.setContentType((Symbol) l.get(6));
+            case 7:
+                o.setCorrelationId((Object) l.get(5));
+            case 8:
+                o.setReplyTo((String) l.get(4));
+            case 9:
+                o.setSubject((String) l.get(3));
+            case 10:
+                o.setTo((String) l.get(2));
+            case 11:
+                o.setUserId((Binary) l.get(1));
+            case 12:
+                o.setMessageId((Object) l.get(0));
         }
 
-        public Class<Properties> getTypeClass()
-        {
-            return Properties.class;
-        }
 
+        return o;
+    }
+
+    public Class<Properties> getTypeClass()
+    {
+        return Properties.class;
+    }
 
 
     public static void register(Decoder decoder, EncoderImpl encoder)
     {
         PropertiesType type = new PropertiesType(encoder);
-        for(Object descriptor : DESCRIPTORS)
+        for (Object descriptor : DESCRIPTORS)
         {
             decoder.register(descriptor, type);
         }

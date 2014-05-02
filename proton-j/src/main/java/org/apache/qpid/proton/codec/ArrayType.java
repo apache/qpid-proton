@@ -26,6 +26,7 @@ import java.util.Collection;
 
 public class ArrayType implements PrimitiveType<Object[]>
 {
+
     private final EncoderImpl _encoder;
     private final BooleanType _booleanType;
     private final ByteType _byteType;
@@ -38,20 +39,20 @@ public class ArrayType implements PrimitiveType<Object[]>
 
     public static interface ArrayEncoding extends PrimitiveTypeEncoding<Object[]>
     {
-        void writeValue(boolean[] a);
-        void writeValue(byte[] a);
-        void writeValue(short[] a);
-        void writeValue(int[] a);
-        void writeValue(long[] a);
-        void writeValue(float[] a);
-        void writeValue(double[] a);
-        void writeValue(char[] a);
+        void writeValue(WritableBuffer buffer, boolean[] a);
+        void writeValue(WritableBuffer buffer, byte[] a);
+        void writeValue(WritableBuffer buffer, short[] a);
+        void writeValue(WritableBuffer buffer, int[] a);
+        void writeValue(WritableBuffer buffer, long[] a);
+        void writeValue(WritableBuffer buffer, float[] a);
+        void writeValue(WritableBuffer buffer, double[] a);
+        void writeValue(WritableBuffer buffer, char[] a);
 
         void setValue(Object[] val, TypeEncoding encoder, int size);
 
         int getSizeBytes();
 
-        Object readValueArray();
+        Object readValueArray(ReadableBuffer buffer);
     }
 
     private final ArrayEncoding _shortArrayEncoding;
@@ -293,18 +294,18 @@ public class ArrayType implements PrimitiveType<Object[]>
         return Arrays.asList(_shortArrayEncoding, _arrayEncoding);
     }
 
-    public void write(final Object[] val)
+    public void write(WritableBuffer buffer, final Object[] val)
     {
         ArrayEncoding encoding = getEncoding(val);
-        encoding.writeConstructor();
-        encoding.writeValue(val);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, val);
     }
 
-    public void write(boolean[] a)
+    public void write(WritableBuffer buffer, boolean[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final boolean[] a)
@@ -325,11 +326,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return true;
     }
 
-    public void write(byte[] a)
+    public void write(WritableBuffer buffer, byte[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final byte[] a)
@@ -337,11 +338,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return a.length < 254 ? _shortArrayEncoding : _arrayEncoding;
     }
 
-    public void write(short[] a)
+    public void write(WritableBuffer buffer, short[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final short[] a)
@@ -349,11 +350,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return a.length < 127 ? _shortArrayEncoding : _arrayEncoding;
     }
 
-    public void write(int[] a)
+    public void write(WritableBuffer buffer, int[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final int[] a)
@@ -373,11 +374,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return true;
     }
 
-    public void write(long[] a)
+    public void write(WritableBuffer buffer, long[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final long[] a)
@@ -397,11 +398,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return true;
     }
 
-    public void write(float[] a)
+    public void write(WritableBuffer buffer, float[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final float[] a)
@@ -409,11 +410,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return a.length < 63 ? _shortArrayEncoding : _arrayEncoding;
     }
 
-    public void write(double[] a)
+    public void write(WritableBuffer buffer, double[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final double[] a)
@@ -421,11 +422,11 @@ public class ArrayType implements PrimitiveType<Object[]>
         return a.length < 31 ? _shortArrayEncoding : _arrayEncoding;
     }
 
-    public void write(char[] a)
+    public void write(WritableBuffer buffer, char[] a)
     {
         ArrayEncoding encoding = getEncoding(a);
-        encoding.writeConstructor();
-        encoding.writeValue(a);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, a);
     }
 
     private ArrayEncoding getEncoding(final char[] a)
@@ -433,170 +434,164 @@ public class ArrayType implements PrimitiveType<Object[]>
         return a.length < 63 ? _shortArrayEncoding : _arrayEncoding;
     }
 
+
+
     private class AllArrayEncoding
             extends LargeFloatingSizePrimitiveTypeEncoding<Object[]>
             implements ArrayEncoding
     {
 
-        private Object[] _val;
-        private TypeEncoding _underlyingEncoder;
-        private int _size;
+
+
+        public boolean isArray()
+        {
+            return true;
+        }
 
         AllArrayEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
         }
 
-        public void writeValue(final boolean[] a)
+        public void writeValue(WritableBuffer buffer, final boolean[] a)
         {
             BooleanType.BooleanEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(boolean b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
 
         }
 
-        public void writeValue(final byte[] a)
+        public void writeValue(WritableBuffer buffer, final byte[] a)
         {
             ByteType.ByteEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(byte b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final short[] a)
+        public void writeValue(WritableBuffer buffer, final short[] a)
         {
             ShortType.ShortEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(short b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final int[] a)
+        public void writeValue(WritableBuffer buffer, final int[] a)
         {
 
             IntegerType.IntegerEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(int b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final long[] a)
+        public void writeValue(WritableBuffer buffer, final long[] a)
         {
 
             LongType.LongEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(long b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final float[] a)
+        public void writeValue(WritableBuffer buffer, final float[] a)
         {
 
             FloatType.FloatEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(float b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final double[] a)
+        public void writeValue(WritableBuffer buffer, final double[] a)
         {
 
             DoubleType.DoubleEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(double b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final char[] a)
+        public void writeValue(WritableBuffer buffer, final char[] a)
         {
 
             CharacterType.CharacterEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw(4 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, 4 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null));
-            getEncoder().writeRaw(a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(char b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
         public void setValue(final Object[] val, final TypeEncoding encoder, final int size)
         {
-            _val = val;
-            _underlyingEncoder = encoder;
-            _size = size;
+            CachedCalculation.setCachedValue(val, encoder, size);
         }
 
         @Override
-        protected void writeEncodedValue(final Object[] val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Object[] val)
         {
-            TypeEncoding underlyingEncoder;
+            TypeEncoding underlyingEncoder = calculateEncoder(val, getEncoder());
 
-            if(_val != val)
-            {
-                _val = val;
-                _underlyingEncoder = underlyingEncoder = calculateEncoder(val, getEncoder());
-                _size =  calculateSize(val, underlyingEncoder);
-            }
-            else
-            {
-                underlyingEncoder = _underlyingEncoder;
-            }
-            getEncoder().writeRaw(val.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, val.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(Object o : val)
             {
-                underlyingEncoder.writeValue(o);
+                underlyingEncoder.writeValue(buffer, o);
             }
         }
 
         @Override
         protected int getEncodedValueSize(final Object[] val)
         {
-            if(_val != val)
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            if(cachedCalculation.getVal() != val)
             {
-                _val = val;
-                _underlyingEncoder = calculateEncoder(val, getEncoder());
-                _size = calculateSize(val, _underlyingEncoder);
+                TypeEncoding underlyingEncoder = calculateEncoder(val, getEncoder());
+
+                cachedCalculation.setValue(val, underlyingEncoder, calculateSize(val, underlyingEncoder));
             }
-            return 4 + _size;
+            return 4 + cachedCalculation.getSize();
         }
 
         @Override
@@ -615,20 +610,20 @@ public class ArrayType implements PrimitiveType<Object[]>
             return getType() == encoding.getType();
         }
 
-        public Object[] readValue()
+        public Object[] readValue(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
-            int count = decoder.readRawInt();
-            return decodeArray(decoder, count);
+            int size = decoder.readRawInt(buffer);
+            int count = decoder.readRawInt(buffer);
+            return decodeArray(buffer, decoder, count);
         }
 
-        public Object readValueArray()
+        public Object readValueArray(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
-            int count = decoder.readRawInt();
-            return decodeArrayAsObject(decoder, count);
+            int size = decoder.readRawInt(buffer);
+            int count = decoder.readRawInt(buffer);
+            return decodeArrayAsObject(buffer, decoder, count);
         }
 
 
@@ -641,150 +636,150 @@ public class ArrayType implements PrimitiveType<Object[]>
             extends SmallFloatingSizePrimitiveTypeEncoding<Object[]>
             implements ArrayEncoding
     {
-
-        private Object[] _val;
-        private TypeEncoding _underlyingEncoder;
-        private int _size;
+        public boolean isArray()
+        {
+            return true;
+        }
 
         ShortArrayEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
         }
 
-        public void writeValue(final boolean[] a)
+        public void writeValue(WritableBuffer buffer, final boolean[] a)
         {
             BooleanType.BooleanEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(boolean b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
 
         }
 
-        public void writeValue(final byte[] a)
+        public void writeValue(WritableBuffer buffer, final byte[] a)
         {
             ByteType.ByteEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(byte b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final short[] a)
+        public void writeValue(WritableBuffer buffer, final short[] a)
         {
             ShortType.ShortEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(short b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final int[] a)
+        public void writeValue(WritableBuffer buffer, final int[] a)
         {
 
             IntegerType.IntegerEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(int b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final long[] a)
+        public void writeValue(WritableBuffer buffer, final long[] a)
         {
 
             LongType.LongEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(long b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final float[] a)
+        public void writeValue(WritableBuffer buffer, final float[] a)
         {
 
             FloatType.FloatEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(float b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final double[] a)
+        public void writeValue(WritableBuffer buffer, final double[] a)
         {
 
             DoubleType.DoubleEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(double b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
-        public void writeValue(final char[] a)
+        public void writeValue(WritableBuffer buffer, final char[] a)
         {
 
             CharacterType.CharacterEncoding underlyingEncoder = getUnderlyingEncoding(a);
-            getEncoder().writeRaw((byte)(1 + underlyingEncoder.getConstructorSize()
+            getEncoder().writeRaw(buffer, (byte)(1 + underlyingEncoder.getConstructorSize()
                                   + a.length*underlyingEncoder.getValueSize(null)));
-            getEncoder().writeRaw((byte)a.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)a.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(char b : a)
             {
-                underlyingEncoder.writeValue(b);
+                underlyingEncoder.writeValue(buffer, b);
             }
         }
 
         public void setValue(final Object[] val, final TypeEncoding encoder, final int size)
         {
-            _val = val;
-            _underlyingEncoder = encoder;
-            _size = size;
+            CachedCalculation.setCachedValue(val, encoder, size);
         }
 
         @Override
-        protected void writeEncodedValue(final Object[] val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Object[] val)
         {
             TypeEncoding underlyingEncoder;
 
-            if(_val != val)
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+
+
+            if(cachedCalculation.getVal() != val)
             {
-                _val = val;
-                _underlyingEncoder = underlyingEncoder = calculateEncoder(val, getEncoder());
-                _size =  calculateSize(val, underlyingEncoder);
+                underlyingEncoder = calculateEncoder(val, getEncoder());
+                cachedCalculation.setValue(val, underlyingEncoder, calculateSize(val, underlyingEncoder));
             }
             else
             {
-                underlyingEncoder = _underlyingEncoder;
+                underlyingEncoder = cachedCalculation.getUnderlyingEncoder();
             }
-            getEncoder().writeRaw((byte)val.length);
-            underlyingEncoder.writeConstructor();
+            getEncoder().writeRaw(buffer, (byte)val.length);
+            underlyingEncoder.writeConstructor(buffer);
             for(Object o : val)
             {
                 if(o.getClass().isArray() && o.getClass().getComponentType().isPrimitive())
@@ -797,42 +792,42 @@ public class ArrayType implements PrimitiveType<Object[]>
                     if(componentType == Boolean.TYPE)
                     {
                         boolean[] componentArray = (boolean[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Byte.TYPE)
                     {
                         byte[] componentArray = (byte[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Short.TYPE)
                     {
                         short[] componentArray = (short[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Integer.TYPE)
                     {
                         int[] componentArray = (int[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Long.TYPE)
                     {
                         long[] componentArray = (long[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Float.TYPE)
                     {
                         float[] componentArray = (float[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Double.TYPE)
                     {
                         double[] componentArray = (double[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else if(componentType == Character.TYPE)
                     {
                         char[] componentArray = (char[]) o;
-                        arrayEncoding.writeValue(componentArray);
+                        arrayEncoding.writeValue(buffer, componentArray);
                     }
                     else
                     {
@@ -842,7 +837,7 @@ public class ArrayType implements PrimitiveType<Object[]>
                 }
                 else
                 {
-                    underlyingEncoder.writeValue(o);
+                    underlyingEncoder.writeValue(buffer, o);
                 }
             }
         }
@@ -850,13 +845,14 @@ public class ArrayType implements PrimitiveType<Object[]>
         @Override
         protected int getEncodedValueSize(final Object[] val)
         {
-            if(_val != val)
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            if(cachedCalculation.getVal() != val)
             {
-                _val = val;
-                _underlyingEncoder = calculateEncoder(val, getEncoder());
-                _size = calculateSize(val, _underlyingEncoder);
+                TypeEncoding underlyingEncoder = calculateEncoder(val, getEncoder());
+
+                cachedCalculation.setValue(val, underlyingEncoder, calculateSize(val, underlyingEncoder));
             }
-            return 1 + _size;
+            return 1 + cachedCalculation.getSize();
         }
 
         @Override
@@ -875,20 +871,20 @@ public class ArrayType implements PrimitiveType<Object[]>
             return getType() == encoding.getType();
         }
 
-        public Object[] readValue()
+        public Object[] readValue(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = ((int)decoder.readRawByte()) & 0xFF;
-            int count = ((int)decoder.readRawByte()) & 0xFF;
-            return decodeArray(decoder, count);
+            int size = ((int)decoder.readRawByte(buffer)) & 0xFF;
+            int count = ((int)decoder.readRawByte(buffer)) & 0xFF;
+            return decodeArray(buffer, decoder, count);
         }
 
-        public Object readValueArray()
+        public Object readValueArray(ReadableBuffer buffer)
         {
             DecoderImpl decoder = getDecoder();
-            int size = ((int)decoder.readRawByte()) & 0xFF;
-            int count = ((int)decoder.readRawByte()) & 0xFF;
-            return decodeArrayAsObject(decoder, count);
+            int size = ((int)decoder.readRawByte(buffer)) & 0xFF;
+            int count = ((int)decoder.readRawByte(buffer)) & 0xFF;
+            return decodeArrayAsObject(buffer, decoder, count);
         }
 
     }
@@ -967,19 +963,19 @@ public class ArrayType implements PrimitiveType<Object[]>
         return _characterType.getCanonicalEncoding();
     }
 
-    private static Object[] decodeArray(final DecoderImpl decoder, final int count)
+//    private static Object[] decodeArray(final DecoderImpl decoder, final int count)
+    private static Object[] decodeArray(ReadableBuffer buffer, final DecoderImpl decoder, final int count)
     {
-        TypeConstructor constructor = decoder.readConstructor();
-        return decodeNonPrimitive(decoder, constructor, count);
+        TypeConstructor constructor = decoder.readConstructor(buffer);
+        return decodeNonPrimitive(decoder, buffer, constructor, count);
     }
 
-    private static Object[] decodeNonPrimitive(final DecoderImpl decoder,
-                                               final TypeConstructor constructor,
+    private static Object[] decodeNonPrimitive(final DecoderImpl decoder, ReadableBuffer buffer, final TypeConstructor constructor,
                                                final int count)
     {
-        if (count > decoder.getByteBufferRemaining()) {
+        if (count > decoder.getByteBufferRemaining(buffer)) {
             throw new IllegalArgumentException("Array element count "+count+" is specified to be greater than the amount of data available ("+
-                                               decoder.getByteBufferRemaining()+")");
+                                               decoder.getByteBufferRemaining(buffer)+")");
         }
 
         if(constructor instanceof ArrayEncoding)
@@ -989,7 +985,7 @@ public class ArrayType implements PrimitiveType<Object[]>
             Object[] array = new Object[count];
             for(int i = 0; i < count; i++)
             {
-                array[i] = arrayEncoding.readValueArray();
+                array[i] = arrayEncoding.readValueArray(buffer);
             }
 
             return array;
@@ -1000,50 +996,50 @@ public class ArrayType implements PrimitiveType<Object[]>
 
             for(int i = 0; i < count; i++)
             {
-                array[i] = constructor.readValue();
+                array[i] = constructor.readValue(buffer);
             }
 
             return array;
         }
     }
 
-    private static Object decodeArrayAsObject(final DecoderImpl decoder, final int count)
+    private static Object decodeArrayAsObject(ReadableBuffer buffer, final DecoderImpl decoder, final int count)
     {
-        TypeConstructor constructor = decoder.readConstructor();
+        TypeConstructor constructor = decoder.readConstructor(buffer);
         if(constructor.encodesJavaPrimitive())
         {
-            if (count > decoder.getByteBufferRemaining()) {
+            if (count > decoder.getByteBufferRemaining(buffer)) {
                 throw new IllegalArgumentException("Array element count "+count+" is specified to be greater than the amount of data available ("+
-                                                   decoder.getByteBufferRemaining()+")");
+                                                   decoder.getByteBufferRemaining(buffer)+")");
             }
 
             if(constructor instanceof BooleanType.BooleanEncoding)
             {
-                return decodeBooleanArray((BooleanType.BooleanEncoding) constructor, count);
+                return decodeBooleanArray(buffer, (BooleanType.BooleanEncoding) constructor, count);
             }
             else if(constructor instanceof ByteType.ByteEncoding)
             {
-                return decodeByteArray((ByteType.ByteEncoding)constructor, count);
+                return decodeByteArray(buffer, (ByteType.ByteEncoding)constructor, count);
             }
             else if(constructor instanceof ShortType.ShortEncoding)
             {
-                return decodeShortArray((ShortType.ShortEncoding)constructor, count);
+                return decodeShortArray(buffer, (ShortType.ShortEncoding)constructor, count);
             }
             else if(constructor instanceof IntegerType.IntegerEncoding)
             {
-                return decodeIntArray((IntegerType.IntegerEncoding)constructor, count);
+                return decodeIntArray(buffer, (IntegerType.IntegerEncoding)constructor, count);
             }
             else if(constructor instanceof LongType.LongEncoding)
             {
-                return decodeLongArray((LongType.LongEncoding) constructor, count);
+                return decodeLongArray(buffer, (LongType.LongEncoding) constructor, count);
             }
             else if(constructor instanceof FloatType.FloatEncoding)
             {
-                return decodeFloatArray((FloatType.FloatEncoding) constructor, count);
+                return decodeFloatArray(buffer, (FloatType.FloatEncoding) constructor, count);
             }
             else if(constructor instanceof DoubleType.DoubleEncoding)
             {
-                return decodeDoubleArray((DoubleType.DoubleEncoding)constructor, count);
+                return decodeDoubleArray(buffer, (DoubleType.DoubleEncoding)constructor, count);
             }
             else
             {
@@ -1053,91 +1049,91 @@ public class ArrayType implements PrimitiveType<Object[]>
         }
         else
         {
-            return decodeNonPrimitive(decoder, constructor, count);
+            return decodeNonPrimitive(decoder, buffer, constructor, count);
         }
 
     }
 
-    private static boolean[] decodeBooleanArray(BooleanType.BooleanEncoding constructor, final int count)
+    private static boolean[] decodeBooleanArray(ReadableBuffer buffer, BooleanType.BooleanEncoding constructor, final int count)
     {
         boolean[] array = new boolean[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
-    private static byte[] decodeByteArray(ByteType.ByteEncoding constructor , final int count)
+    private static byte[] decodeByteArray(ReadableBuffer buffer, ByteType.ByteEncoding constructor , final int count)
     {
         byte[] array = new byte[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
-    private static short[] decodeShortArray(ShortType.ShortEncoding constructor, final int count)
+    private static short[] decodeShortArray(ReadableBuffer buffer, ShortType.ShortEncoding constructor, final int count)
     {
         short[] array = new short[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
-    private static int[] decodeIntArray(IntegerType.IntegerEncoding constructor, final int count)
+    private static int[] decodeIntArray(ReadableBuffer buffer, IntegerType.IntegerEncoding constructor, final int count)
     {
         int[] array = new int[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
 
-    private static long[] decodeLongArray(LongType.LongEncoding constructor, final int count)
+    private static long[] decodeLongArray(ReadableBuffer buffer, LongType.LongEncoding constructor, final int count)
     {
         long[] array = new long[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
-    private static float[] decodeFloatArray(FloatType.FloatEncoding constructor, final int count)
+    private static float[] decodeFloatArray(ReadableBuffer buffer, FloatType.FloatEncoding constructor, final int count)
     {
         float[] array = new float[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;
     }
 
-    private static double[] decodeDoubleArray(DoubleType.DoubleEncoding constructor, final int count)
+    private static double[] decodeDoubleArray(ReadableBuffer buffer, DoubleType.DoubleEncoding constructor, final int count)
     {
         double[] array = new double[count];
 
         for(int i = 0; i < count; i++)
         {
-            array[i] = constructor.readPrimitiveValue();
+            array[i] = constructor.readPrimitiveValue(buffer);
         }
 
         return array;

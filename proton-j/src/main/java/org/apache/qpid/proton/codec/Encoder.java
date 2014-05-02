@@ -36,84 +36,84 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public interface Encoder
+public interface Encoder<B>
 {
-    void writeNull();
+    void writeNull(B buffer);
 
-    void writeBoolean(boolean bool);
+    void writeBoolean(B buffer,boolean bool);
 
-    void writeBoolean(Boolean bool);
+    void writeBoolean(B buffer,Boolean bool);
 
-    void writeUnsignedByte(UnsignedByte ubyte);
+    void writeUnsignedByte(B buffer,UnsignedByte ubyte);
 
-    void writeUnsignedShort(UnsignedShort ushort);
+    void writeUnsignedShort(B buffer,UnsignedShort ushort);
 
-    void writeUnsignedInteger(UnsignedInteger ushort);
+    void writeUnsignedInteger(B buffer,UnsignedInteger ushort);
 
-    void writeUnsignedLong(UnsignedLong ulong);
+    void writeUnsignedLong(B buffer,UnsignedLong ulong);
 
-    void writeByte(byte b);
+    void writeByte(B buffer,byte b);
 
-    void writeByte(Byte b);
+    void writeByte(B buffer,Byte b);
 
-    void writeShort(short s);
+    void writeShort(B buffer,short s);
 
-    void writeShort(Short s);
+    void writeShort(B buffer,Short s);
 
-    void writeInteger(int i);
+    void writeInteger(B buffer,int i);
 
-    void writeInteger(Integer i);
+    void writeInteger(B buffer,Integer i);
 
-    void writeLong(long l);
+    void writeLong(B buffer,long l);
 
-    void writeLong(Long l);
+    void writeLong(B buffer,Long l);
 
-    void writeFloat(float f);
+    void writeFloat(B buffer,float f);
 
-    void writeFloat(Float f);
+    void writeFloat(B buffer,Float f);
 
-    void writeDouble(double d);
+    void writeDouble(B buffer,double d);
 
-    void writeDouble(Double d);
+    void writeDouble(B buffer,Double d);
 
-    void writeDecimal32(Decimal32 d);
+    void writeDecimal32(B buffer,Decimal32 d);
 
-    void writeDecimal64(Decimal64 d);
+    void writeDecimal64(B buffer,Decimal64 d);
 
-    void writeDecimal128(Decimal128 d);
+    void writeDecimal128(B buffer,Decimal128 d);
 
-    void writeCharacter(char c);
+    void writeCharacter(B buffer,char c);
 
-    void writeCharacter(Character c);
+    void writeCharacter(B buffer,Character c);
 
-    void writeTimestamp(long d);
-    void writeTimestamp(Date d);
+    void writeTimestamp(B buffer,long d);
+    void writeTimestamp(B buffer,Date d);
 
-    void writeUUID(UUID uuid);
+    void writeUUID(B buffer,UUID uuid);
 
-    void writeBinary(Binary b);
+    void writeBinary(B buffer,Binary b);
 
-    void writeString(String s);
+    void writeString(B buffer,String s);
 
-    void writeSymbol(Symbol s);
+    void writeSymbol(B buffer,Symbol s);
 
-    void writeList(List l);
+    void writeList(B buffer,List l);
 
-    void writeMap(Map m);
+    void writeMap(B buffer,Map m);
 
-    void writeDescribedType(DescribedType d);
+    void writeDescribedType(B buffer,DescribedType d);
 
-    void writeArray(boolean[] a);
-    void writeArray(byte[] a);
-    void writeArray(short[] a);
-    void writeArray(int[] a);
-    void writeArray(long[] a);
-    void writeArray(float[] a);
-    void writeArray(double[] a);
-    void writeArray(char[] a);
-    void writeArray(Object[] a);
+    void writeArray(B buffer,boolean[] a);
+    void writeArray(B buffer,byte[] a);
+    void writeArray(B buffer,short[] a);
+    void writeArray(B buffer,int[] a);
+    void writeArray(B buffer,long[] a);
+    void writeArray(B buffer,float[] a);
+    void writeArray(B buffer,double[] a);
+    void writeArray(B buffer,char[] a);
+    void writeArray(B buffer,Object[] a);
 
-    void writeObject(Object o);
+    void writeObject(B buffer,Object o);
 
     <V> void register(AMQPType<V> type);
 

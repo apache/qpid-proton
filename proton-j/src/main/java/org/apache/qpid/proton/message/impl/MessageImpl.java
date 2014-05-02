@@ -40,20 +40,6 @@ public class MessageImpl implements ProtonJMessage
     private ApplicationProperties _applicationProperties;
     private Section _body;
     private Footer _footer;
-    
-    private static class EncoderDecoderPair {
-      DecoderImpl decoder = new DecoderImpl();
-      EncoderImpl encoder = new EncoderImpl(decoder);
-      {
-          AMQPDefinedTypes.registerAllTypes(decoder, encoder);
-      }
-    }
-
-    private static final ThreadLocal<EncoderDecoderPair> tlsCodec = new ThreadLocal<EncoderDecoderPair>() {
-          @Override protected EncoderDecoderPair initialValue() {
-            return new EncoderDecoderPair();
-          }
-      };
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -570,16 +556,8 @@ public class MessageImpl implements ProtonJMessage
     @Override
     public int decode(byte[] data, int offset, int length)
     {
-        final ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
-        decode(buffer);
-
-        return length-buffer.remaining();
-    }
-
-    public void decode(ByteBuffer buffer)
-    {
-        DecoderImpl decoder = tlsCodec.get().decoder;
-        decoder.setByteBuffer(buffer);
+        DecoderImpl decoder = DecoderFactory.getSingleton().getDecoder();
+        final ReadableBuffer buffer = new ReadableBuffer.ByteBufferReader(ByteBuffer.wrap(data, offset, length));
 
         _header = null;
         _deliveryAnnotations = null;
@@ -592,14 +570,14 @@ public class MessageImpl implements ProtonJMessage
 
         if(buffer.hasRemaining())
         {
-            section = (Section) decoder.readObject();
+            section = (Section) decoder.readObject(buffer);
         }
         if(section instanceof Header)
         {
             _header = (Header) section;
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -613,7 +591,7 @@ public class MessageImpl implements ProtonJMessage
 
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -627,7 +605,7 @@ public class MessageImpl implements ProtonJMessage
 
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -641,7 +619,7 @@ public class MessageImpl implements ProtonJMessage
 
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -655,7 +633,7 @@ public class MessageImpl implements ProtonJMessage
 
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -669,7 +647,7 @@ public class MessageImpl implements ProtonJMessage
 
             if(buffer.hasRemaining())
             {
-                section = (Section) decoder.readObject();
+                section = (Section) decoder.readObject(buffer);
             }
             else
             {
@@ -683,7 +661,8 @@ public class MessageImpl implements ProtonJMessage
 
         }
 
-        decoder.setByteBuffer(null);
+        return length-buffer.remaining();
+
     }
 
     @Override
@@ -709,38 +688,36 @@ public class MessageImpl implements ProtonJMessage
     public int encode(WritableBuffer buffer)
     {
         int length = buffer.remaining();
-        EncoderImpl encoder = tlsCodec.get().encoder;
-        encoder.setByteBuffer(buffer);
+        EncoderImpl encoder = DecoderFactory.getSingleton().getEncoder();
 
         if(getHeader() != null)
         {
-            encoder.writeObject(getHeader());
+            encoder.writeObject(buffer, getHeader());
         }
         if(getDeliveryAnnotations() != null)
         {
-            encoder.writeObject(getDeliveryAnnotations());
+            encoder.writeObject(buffer, getDeliveryAnnotations());
         }
         if(getMessageAnnotations() != null)
         {
-            encoder.writeObject(getMessageAnnotations());
+            encoder.writeObject(buffer, getMessageAnnotations());
         }
         if(getProperties() != null)
         {
-            encoder.writeObject(getProperties());
+            encoder.writeObject(buffer, getProperties());
         }
         if(getApplicationProperties() != null)
         {
-            encoder.writeObject(getApplicationProperties());
+            encoder.writeObject(buffer, getApplicationProperties());
         }
         if(getBody() != null)
         {
-            encoder.writeObject(getBody());
+            encoder.writeObject(buffer, getBody());
         }
         if(getFooter() != null)
         {
-            encoder.writeObject(getFooter());
+            encoder.writeObject(buffer, getFooter());
         }
-        encoder.setByteBuffer((WritableBuffer)null);
 
         return length - buffer.remaining();
     }
@@ -757,6 +734,7 @@ public class MessageImpl implements ProtonJMessage
         return MessageError.OK;
     }
 
+    @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder();

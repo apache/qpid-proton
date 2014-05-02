@@ -37,6 +37,8 @@ import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.amqp.messaging.TerminusDurability;
 import org.apache.qpid.proton.amqp.messaging.TerminusExpiryPolicy;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class SourceType extends AbstractDescribedType<Source,List> implements DescribedTypeConstructor<Source>
@@ -137,9 +139,10 @@ public class SourceType extends AbstractDescribedType<Source,List> implements De
 
     }
 
-    public Source newInstance(Object described)
+
+    public Source newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Source o = new Source();
 

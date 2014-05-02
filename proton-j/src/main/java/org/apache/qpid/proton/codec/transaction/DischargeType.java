@@ -34,6 +34,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DischargeType extends AbstractDescribedType<Discharge,List> implements DescribedTypeConstructor<Discharge>
@@ -97,9 +99,9 @@ public class DischargeType extends AbstractDescribedType<Discharge,List> impleme
 
     }
 
-    public Discharge newInstance(Object described)
+    public Discharge newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Discharge o = new Discharge();
 

@@ -82,10 +82,10 @@ public class Decimal128Type extends AbstractPrimitiveType<Decimal128>
             return Decimal128Type.this;
         }
 
-        public void writeValue(final Decimal128 val)
+        public void writeValue(WritableBuffer buffer, final Decimal128 val)
         {
-            getEncoder().writeRaw(val.getMostSignificantBits());
-            getEncoder().writeRaw(val.getLeastSignificantBits());
+            getEncoder().writeRaw(buffer, val.getMostSignificantBits());
+            getEncoder().writeRaw(buffer, val.getLeastSignificantBits());
         }
 
         public boolean encodesSuperset(final TypeEncoding<Decimal128> encoding)
@@ -93,10 +93,10 @@ public class Decimal128Type extends AbstractPrimitiveType<Decimal128>
             return (getType() == encoding.getType());
         }
 
-        public Decimal128 readValue()
+        public Decimal128 readValue(ReadableBuffer buffer)
         {
-            long msb = getDecoder().readRawLong();
-            long lsb = getDecoder().readRawLong();
+            long msb = getDecoder().readRawLong(buffer);
+            long lsb = getDecoder().readRawLong(buffer);
             return new Decimal128(msb, lsb);
         }
     }

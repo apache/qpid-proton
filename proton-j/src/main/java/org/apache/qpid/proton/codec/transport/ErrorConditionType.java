@@ -34,6 +34,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public final class ErrorConditionType extends AbstractDescribedType<ErrorCondition,List> implements DescribedTypeConstructor<ErrorCondition>
@@ -100,9 +102,9 @@ public final class ErrorConditionType extends AbstractDescribedType<ErrorConditi
 
     }
 
-    public ErrorCondition newInstance(Object described)
+    public ErrorCondition newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         ErrorCondition o = new ErrorCondition();
 

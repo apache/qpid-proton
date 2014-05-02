@@ -26,7 +26,7 @@ public interface PrimitiveTypeEncoding<T> extends TypeEncoding<T>, TypeConstruct
 
     byte getEncodingCode();
 
-    void writeConstructor();
+    void writeConstructor(WritableBuffer buffer);
 
     int getConstructorSize();
 }

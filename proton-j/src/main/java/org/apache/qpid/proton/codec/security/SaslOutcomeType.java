@@ -36,6 +36,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class SaslOutcomeType  extends AbstractDescribedType<SaslOutcome,List> implements DescribedTypeConstructor<SaslOutcome>
@@ -97,9 +99,9 @@ public class SaslOutcomeType  extends AbstractDescribedType<SaslOutcome,List> im
         }
     }
 
-    public SaslOutcome newInstance(Object described)
+    public SaslOutcome newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         SaslOutcome o = new SaslOutcome();
 

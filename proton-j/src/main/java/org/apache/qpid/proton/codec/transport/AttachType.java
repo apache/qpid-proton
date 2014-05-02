@@ -41,6 +41,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public final class AttachType extends AbstractDescribedType<Attach,List> implements DescribedTypeConstructor<Attach>
@@ -148,9 +150,9 @@ public final class AttachType extends AbstractDescribedType<Attach,List> impleme
 
     }
 
-    public Attach newInstance(Object described)
+    public Attach newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Attach o = new Attach();
 
