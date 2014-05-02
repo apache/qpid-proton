@@ -1529,7 +1529,16 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
 
   pn_session_t *ssn = pn_session(connection);
   pn_session_open(ssn);
-  link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
+  if (sender) {
+    link = pn_sender(ssn, "sender-xxx");
+  } else {
+    if (name) {
+      link = pn_receiver(ssn, name);
+    } else {
+      link = pn_receiver(ssn, "");
+    }
+  }
+
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
     // use explicit settlement via dispositions (not pre-settled)
