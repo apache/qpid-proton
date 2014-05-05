@@ -35,25 +35,48 @@ import java.util.Queue;
 public class CollectorImpl implements Collector
 {
 
-    private Queue<Event> events = new LinkedList<Event>();
+    private EventImpl head;
+    private EventImpl tail;
+    private EventImpl free;
 
     public CollectorImpl()
     {}
 
     public Event peek()
     {
-        return events.peek();
+        return head;
     }
 
     public void pop()
     {
-        events.poll();
+        if (head != null) {
+            EventImpl next = head.next;
+            head.next = free;
+            free = head;
+            head.clear();
+            head = next;
+        }
     }
 
     public EventImpl put(Event.Type type)
     {
-        EventImpl event = new EventImpl(type);
-        events.add(event);
+        EventImpl event;
+        if (free == null) {
+            event = new EventImpl(type);
+        } else {
+            event = free;
+            free = free.next;
+            event.next = null;
+            event.type = type;
+        }
+
+        if (head == null) {
+            head = event;
+            tail = event;
+        } else {
+            tail.next = event;
+            tail = event;
+        }
         return event;
     }
 

@@ -41,10 +41,21 @@ class EventImpl implements Event
     Link link;
     Delivery delivery;
     Transport transport;
+    EventImpl next;
 
     EventImpl(Type type)
     {
         this.type = type;
+    }
+
+    void clear()
+    {
+        type = null;
+        connection = null;
+        session = null;
+        link = null;
+        delivery = null;
+        transport = null;
     }
 
     public Category getCategory()
