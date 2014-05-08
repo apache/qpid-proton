@@ -99,7 +99,7 @@ public class TransportImpl extends EndpointImpl
     private Open _open;
     private SaslImpl _sasl;
     private SslImpl _ssl;
-    private ProtocolTracer _protocolTracer = null;
+    private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
 
     private ByteBuffer _lastInputBuffer;
 
@@ -1177,9 +1177,10 @@ public class TransportImpl extends EndpointImpl
 
         log(this, INCOMING, frame);
 
-        if( _protocolTracer != null )
+        ProtocolTracer tracer = _protocolTracer.get();
+        if( tracer != null )
         {
-            _protocolTracer.receivedFrame(frame);
+            tracer.receivedFrame(frame);
         }
 
         frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
@@ -1203,13 +1204,13 @@ public class TransportImpl extends EndpointImpl
     @Override
     public ProtocolTracer getProtocolTracer()
     {
-        return _protocolTracer;
+        return _protocolTracer.get();
     }
 
     @Override
     public void setProtocolTracer(ProtocolTracer protocolTracer)
     {
-        this._protocolTracer = protocolTracer;
+        this._protocolTracer.set(protocolTracer);
     }
 
     @Override

@@ -45,7 +45,7 @@ class FrameWriter
     private WritableBuffer _buffer;
     private int _maxFrameSize;
     private byte _frameType;
-    private ProtocolTracer _protocolTracer;
+    final private Ref<ProtocolTracer> _protocolTracer;
     private Object _logCtx;
 
     private int _frameStart = 0;
@@ -53,7 +53,7 @@ class FrameWriter
     private int _performativeSize;
 
     FrameWriter(EncoderImpl encoder, int maxFrameSize, byte frameType,
-                ProtocolTracer protocolTracer, Object logCtx)
+                Ref<ProtocolTracer> protocolTracer, Object logCtx)
     {
         _encoder = encoder;
         _bbuf = ByteBuffer.allocate(1024);
@@ -157,9 +157,10 @@ class FrameWriter
             TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload));
             TransportImpl.log(_logCtx, TransportImpl.OUTGOING, frame);
 
-            if( _protocolTracer!=null )
+            ProtocolTracer tracer = _protocolTracer.get();
+            if(tracer != null)
             {
-                _protocolTracer.sentFrame(frame);
+                tracer.sentFrame(frame);
             }
         }
 
