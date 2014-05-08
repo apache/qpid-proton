@@ -124,10 +124,13 @@ class MessengerTest(Test):
       self.server.put(msg)
       self.server.settle()
 
-  def testSendReceive(self, size=None):
+  def testSendReceive(self, size=None, address_size=None):
     self.start()
     msg = Message()
-    msg.address="amqp://0.0.0.0:12345"
+    if address_size:
+      msg.address="amqp://0.0.0.0:12345/%s" % ("x"*address_size)
+    else:
+      msg.address="amqp://0.0.0.0:12345"
     msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
@@ -165,6 +168,9 @@ class MessengerTest(Test):
 
   def testSendReceive1M(self):
     self.testSendReceive(1024*1024)
+
+  def testSendReceiveLargeAddress(self):
+    self.testSendReceive(address_size=2048)
 
   # PROTON-285 - prevent continually failing test
   def xtestSendBogus(self):
