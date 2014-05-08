@@ -100,6 +100,7 @@ struct pn_messenger_t {
   pn_tracker_t incoming_tracker;
   pn_string_t *original;
   pn_string_t *rewritten;
+  pn_string_t *domain;
   bool worked;
   int connection_error;
 };
@@ -635,6 +636,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->address.text = pn_string(NULL);
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
+    m->domain = pn_string(NULL);
     m->connection_error = 0;
   }
 
@@ -775,6 +777,7 @@ static void pni_reclaim(pn_messenger_t *messenger)
 void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
+    pn_free(messenger->domain);
     pn_free(messenger->rewritten);
     pn_free(messenger->original);
     pn_free(messenger->address.text);
@@ -1429,12 +1432,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 {
   assert(messenger);
   messenger->connection_error = 0;
-  char domain[1024];
-  if (address && sizeof(domain) < strlen(address) + 1) {
-    pn_error_format(messenger->error, PN_ERR,
-                    "address exceeded maximum length: %s", address);
-    return NULL;
-  }
+  pn_string_t *domain = messenger->domain;
 
   int err = pni_route(messenger, address);
   if (err) return NULL;
@@ -1459,16 +1457,14 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
     return NULL;
   }
 
-  domain[0] = '\0';
+  pn_string_set(domain, "");
 
   if (user) {
-    strcat(domain, user);
-    strcat(domain, "@");
+    pn_string_addf(domain, "%s@", user);
   }
-  strcat(domain, host);
+  pn_string_addf(domain, "%s", host);
   if (port) {
-    strcat(domain, ":");
-    strcat(domain, port);
+    pn_string_addf(domain, ":%s", port);
   }
 
   for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
@@ -1480,7 +1476,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
       return connection;
     }
     const char *container = pn_connection_remote_container(connection);
-    if (pn_streq(container, domain)) {
+    if (pn_streq(container, pn_string_get(domain))) {
       return connection;
     }
   }

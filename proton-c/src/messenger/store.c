@@ -46,7 +46,7 @@ struct pni_store_t {
 
 struct pni_stream_t {
   pni_store_t *store;
-  char address[1024]; // XXX
+  pn_string_t *address;
   pni_entry_t *stream_head;
   pni_entry_t *stream_tail;
   pni_stream_t *next;
@@ -104,13 +104,11 @@ pni_stream_t *pni_stream(pni_store_t *store, const char *address, bool create)
 {
   assert(store);
   assert(address);
-  // XXX
-  if (strlen(address) >= 1024) return NULL;
 
   pni_stream_t *prev = NULL;
   pni_stream_t *stream = store->streams;
   while (stream) {
-    if (!strcmp(stream->address, address)) {
+    if (!strcmp(pn_string_get(stream->address), address)) {
       return stream;
     }
     prev = stream;
@@ -120,7 +118,7 @@ pni_stream_t *pni_stream(pni_store_t *store, const char *address, bool create)
   if (create) {
     stream = (pni_stream_t *) malloc(sizeof(pni_stream_t));
     stream->store = store;
-    strcpy(stream->address, address);
+    stream->address = pn_string(address);
     stream->stream_head = NULL;
     stream->stream_tail = NULL;
     stream->next = NULL;
@@ -169,6 +167,8 @@ void pni_stream_free(pni_stream_t *stream)
   while ((entry = LL_HEAD(stream, stream))) {
     pni_entry_free(entry);
   }
+  pn_free(stream->address);
+  stream->address = NULL;
   free(stream);
 }
 
