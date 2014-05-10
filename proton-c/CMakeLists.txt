@@ -463,10 +463,10 @@ set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
 set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
 set (app_path "${pn_test_bin}/tools/apps/c${bld_suffix}")
 set (app_path "${app_path}:${pn_test_root}/tools/apps/python")
-set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}:${app_path}")
-set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bld}")
+set_path (py_path "${py_bin}:${py_bld}:${app_path}:$ENV{PATH}")
+set_path (py_pythonpath "${py_root}:${py_src}:${py_bin}:${py_bld}|$ENV{PYTHONPATH}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
+  set_path (py_pythonpath "${py_bin}${bld_suffix}:${py_pythonpath}")
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
          "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
