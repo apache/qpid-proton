@@ -1102,7 +1102,7 @@ int pn_data_resize(pn_data_t *data, size_t size)
 }
 
 
-pni_node_t *pn_data_node(pn_data_t *data, size_t nd)
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   if (nd) {
     return &data->nodes[nd - 1];
@@ -1348,7 +1348,7 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 
 void pn_data_dump(pn_data_t *data)
 {
-  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", data->current, data->parent);
+  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
@@ -1356,7 +1356,11 @@ void pn_data_dump(pn_data_t *data)
     pni_inspect_atom((pn_atom_t *) &node->atom, data->str);
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
            ", children=%" PN_ZI ", type=%s (%s)\n",
-           i + 1, node->prev, node->next, node->parent, node->down, node->children,
+           i + 1, (size_t) node->prev,
+           (size_t) node->next,
+           (size_t) node->parent,
+           (size_t) node->down,
+           (size_t) node->children,
            pn_type_name(node->atom.type), pn_string_get(data->str));
   }
 }

@@ -27,12 +27,14 @@
 #include "decoder.h"
 #include "encoder.h"
 
+typedef uint16_t pni_nid_t;
+
 typedef struct {
-  size_t next;
-  size_t prev;
-  size_t down;
-  size_t parent;
-  size_t children;
+  pni_nid_t next;
+  pni_nid_t prev;
+  pni_nid_t down;
+  pni_nid_t parent;
+  pni_nid_t children;
   pn_atom_t atom;
   // for arrays
   bool described;
@@ -45,21 +47,21 @@ typedef struct {
 } pni_node_t;
 
 struct pn_data_t {
-  size_t capacity;
-  size_t size;
+  pni_nid_t capacity;
+  pni_nid_t size;
   pni_node_t *nodes;
   pn_buffer_t *buf;
-  size_t parent;
-  size_t current;
-  size_t base_parent;
-  size_t base_current;
+  pni_nid_t parent;
+  pni_nid_t current;
+  pni_nid_t base_parent;
+  pni_nid_t base_current;
   pn_decoder_t *decoder;
   pn_encoder_t *encoder;
   pn_error_t *error;
   pn_string_t *str;
 };
 
-pni_node_t *pn_data_node(pn_data_t *data, size_t nd);
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd);
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
