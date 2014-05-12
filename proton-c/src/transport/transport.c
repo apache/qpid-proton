@@ -42,7 +42,7 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
-  db->deliveries = pn_hash(1024, 0.75, PN_REFCOUNT);
+  db->deliveries = pn_hash(0, 0.75, PN_REFCOUNT);
   db->next = next;
 }
 
