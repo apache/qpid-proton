@@ -286,7 +286,7 @@ class Message {
     if ($ann->next())
       $this->annotations = $ann->get_object();
     else
-      $self->annotations = null;
+      $this->annotations = null;
     if ($props->next())
       $this->properties = $props->get_object();
     else
