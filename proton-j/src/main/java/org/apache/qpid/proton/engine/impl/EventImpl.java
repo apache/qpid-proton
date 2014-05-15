@@ -122,4 +122,16 @@ class EventImpl implements Event
         init(delivery.getLink());
     }
 
+    @Override
+    public String toString()
+    {
+        return "EventImpl{" +
+            "type=" + type +
+            ", connection=" + connection +
+            ", session=" + session +
+            ", link=" + link +
+            ", delivery=" + delivery +
+            ", transport=" + transport +
+            '}';
+    }
 }
