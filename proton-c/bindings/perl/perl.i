@@ -10,13 +10,6 @@
 #include <proton/driver_extras.h>
 %}
 
-typedef unsigned int size_t;
-typedef signed int ssize_t;
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long int uint64_t;
-typedef int int32_t;
-
 %include <cstring.i>
 
 %typemap(in) pn_atom_t
