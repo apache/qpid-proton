@@ -48,33 +48,58 @@ for type in TYPES:
 print
 
 print """typedef struct {
-  const char *name;
-  const char *fields[32];
-} pn_fields_t;"""
+  const unsigned char name_index;
+  const unsigned char first_field_index;
+  const unsigned char field_count;
+} pn_fields_t;
 
-print
+extern const pn_fields_t FIELDS[256];
+extern const char * const FIELD_NAME[];
+extern const char * const FIELD_FIELDS[];
+"""
 
-print "#ifndef DEFINE_FIELDS"
-print "extern"
-print "#endif"
-
-print "pn_fields_t FIELDS[256]"
 print "#ifdef DEFINE_FIELDS"
-print " = {"
 
+print "const char * const FIELD_NAME[] = {"
+print "  NULL,"
+index = 1
+for i in range(256):
+  if i in fields:
+    name, fnames = fields[i]
+    print '  "%s", /* %d */' % (name, index)
+    index += 1
+print "};"
+
+print "const char * const FIELD_FIELDS[] = {"
+print "  NULL,"
+index = 1
 for i in range(256):
   if i in fields:
     name, fnames = fields[i]
     if fnames:
-      print '  {"%s", {%s}},' % (name, ", ".join(['"%s"' % f for f in fnames]))
-    else:
-      print '  {"%s", {NULL}},' % name
-  else:
-    print '  {NULL, {NULL}},'
+      for f in fnames:
+        print '  "%s", /* %d (%s) */' % (f, index, name)
+        index += 1
+print "};"
 
-print "}"
+print "const pn_fields_t FIELDS[256] = {"
+
+name_count = 1
+field_count = 1
+for i in range(256):
+  if i in fields:
+    name, fnames = fields[i]
+    if fnames:
+      print '  {%d, %d, %d}, /* %d (%s) */' % (name_count, field_count, len(fnames), i, name)
+      field_count += len(fnames)
+    else:
+      print '  {%d, 0, 0}, /* %d (%s) */' % (name_count, i, name)
+    name_count += 1
+  else:
+    print '  {0, 0, 0}, /* %d */' % i
+
+print "};"
 print "#endif"
-print ";"
 
 print
 print "#endif /* protocol.h */"

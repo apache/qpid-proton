@@ -92,7 +92,7 @@ static void pn_data_finalize(void *object)
   pn_free(data->encoder);
 }
 
-static pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
+static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
 {
   if (!node) return NULL;
   if (node->atom.type != PN_DESCRIBED) return NULL;
@@ -104,7 +104,8 @@ static pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
   }
 
   if (descriptor->atom.u.as_ulong < 256) {
-    return &FIELDS[descriptor->atom.u.as_ulong];
+    const pn_fields_t *f = &FIELDS[descriptor->atom.u.as_ulong];
+    return (f->name_index!=0) ? f : NULL;
   } else {
     return NULL;
   }
@@ -245,9 +246,9 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_atom_t *atom = (pn_atom_t *) &node->atom;
 
   pni_node_t *parent = pn_data_node(data, node->parent);
-  pn_fields_t *fields = pni_node_fields(data, parent);
+  const pn_fields_t *fields = pni_node_fields(data, parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
-  pn_fields_t *grandfields = pni_node_fields(data, grandparent);
+  const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
   int index = pni_node_index(data, node);
 
   int err;
@@ -256,7 +257,9 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     if (atom->type == PN_NULL) {
       return 0;
     }
-    const char *name = grandfields->fields[index];
+    const char *name = (index < grandfields->field_count)
+        ? FIELD_FIELDS[grandfields->first_field_index+index]
+        : NULL;
     if (name) {
       err = pn_string_addf(str, "%s=", name);
       if (err) return err;
@@ -275,7 +278,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_string_addf(str, "{");
   default:
     if (fields && index == 0) {
-      err = pn_string_addf(str, "%s", fields->name);
+      err = pn_string_addf(str, "%s", FIELD_NAME[fields->name_index]);
       if (err) return err;
       err = pn_string_addf(str, "(");
       if (err) return err;
@@ -305,7 +308,7 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_string_t *str = (pn_string_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
-  pn_fields_t *grandfields = pni_node_fields(data, grandparent);
+  const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
   pni_node_t *next = pn_data_node(data, node->next);
   int err;
 
