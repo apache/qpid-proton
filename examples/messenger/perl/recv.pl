@@ -18,8 +18,10 @@
 # under the License.
 #
 
-use strict;
 use warnings;
+
+use Scalar::Util qw(reftype);
+use Data::Dumper;
 
 use qpid_proton;
 
@@ -48,10 +50,24 @@ for(;;)
     while ($messenger->incoming() > 0)
     {
         $messenger->get($msg);
+
         print "Address: " . $msg->get_address() . "\n";
         print "Subject: " . $msg->get_subject() . "\n";
-        print "Content: " . $msg->get_content() . "\n";
-        print "Body:    " . $msg->get_body() . "\n";
+        print "Body:    ";
+
+        my $body = $msg->get_body();
+        my $body_type = reftype($body);
+
+        if (!defined($body_type)) {
+            print "$body\n";
+        } elsif ($body_type eq HASH) {
+            print "[HASH]\n";
+            print Dumper(\%{$body}) . "\n";
+        } elsif ($body_type eq ARRAY) {
+            print "[ARRAY]\n";
+            print Data::Dumper->Dump($body) . "\n";
+        }
+
         print "Properties:\n";
         my $props = $msg->get_properties();
         foreach (keys $props) {
