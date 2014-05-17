@@ -37,15 +37,16 @@
  * from minifying e.g. <pre>Module['Messenger'] = ...</pre>
  * Exported Objects can be used in client code using the appropriate namespace:
  * <pre>
- * proton = require("proton.js");
+ * proton = require('proton.js');
  * var messenger = new proton.Messenger();
  * var message = new proton.Message();
  * </pre>
  * @namespace proton
  */
+
 var Module = {
     // Prevent emscripten runtime exiting, we will be enabling network callbacks.
-    'noExitRuntime' : true
+    'noExitRuntime' : true,
 };
 
 /*****************************************************************************/
@@ -790,7 +791,7 @@ Module['Message'] = function() { // Message Constructor.
      * Application defined Message properties.
      * @type map
      */
-    this['properties'] = null;
+    this['properties'] = {};
 
     /**
      * Message body.
@@ -835,32 +836,35 @@ _Message_._check = function(code) {
  * Encode the Message prior to sending on the wire.
  */
 _Message_._preEncode = function() {
-    if (this.instructions) {
+    // A Message Object may be reused so we create new Data instances and clear
+    // the state for them each time put() gets called.
+    var inst = new Data(_pn_message_instructions(this._message));
+    var ann = new Data(_pn_message_annotations(this._message));
+    var props = new Data(_pn_message_properties(this._message));
+    var body = new Data(_pn_message_body(this._message));
+
+    inst.clear();
+    if (this['instructions']) {
 console.log("Encoding instructions");
-        var inst = new Data(_pn_message_instructions(this._message));
-        inst.clear();
-        inst.putObject(this.instructions);
+        inst['putObject'](this['instructions']);
     }
 
-    if (this.annotations) {
+    ann.clear();
+    if (this['annotations']) {
 console.log("Encoding annotations");
-        var ann = new Data(_pn_message_annotations(this._message));
-        ann.clear();
-        ann.putObject(this.annotations);
+        ann['putObject'](this['annotations']);
     }
 
-    if (this.properties) {
+    props.clear();
+    if (this['properties']) {
 console.log("Encoding properties");
-        var props = new Data(_pn_message_properties(this._message));
-        props.clear();
-        props.putObject(this.properties);
+        props['putObject'](this['properties']);
     }
 
-    if (this.body != null) {
+    body.clear();
+    if (this['body']) {
 console.log("Encoding body");
-        var body = new Data(_pn_message_body(this._message));
-        body.clear();
-        body.putObject(this.body);
+        body['putObject'](this['body']);
     }
 };
 
@@ -874,27 +878,27 @@ _Message_._postDecode = function() {
     var body = new Data(_pn_message_body(this._message));
 
     if (inst.next()) {
-        this.instructions = inst.getObject();
+        this['instructions'] = inst['getObject']();
     } else {
-        this.instructions = {};
+        this['instructions'] = {};
     }
 
     if (ann.next()) {
-        this.annotations = ann.getObject();
+        this['annotations'] = ann['getObject']();
     } else {
-        this.annotations = {};
+        this['annotations'] = {};
     }
 
     if (props.next()) {
-        this.properties = props.getObject();
+        this['properties'] = props['getObject']();
     } else {
-        this.properties = {};
+        this['properties'] = {};
     }
 
     if (body.next()) {
-        this.body = body.getObject();
+        this['body'] = body['getObject']();
     } else {
-        this.body = null;
+        this['body'] = null;
     }
 };
 
@@ -933,7 +937,7 @@ _Message_['getError'] = function() {
 /**
  * @method getAddress
  * @memberof! proton.Message#
- * @return {string} the address of the Message.
+ * @returns {string} the address of the Message.
  */
 _Message_['getAddress'] = function() {
     return Pointer_stringify(_pn_message_get_address(this._message));
@@ -1014,13 +1018,25 @@ _Message_['setSubject'] = function(subject) {
  * sibling then one will be added. The put* methods always set the added/modified
  * node to the current node. The get* methods read the value of the current node
  * and do not change which node is current.
- * @constructor proton.Data                                                                
+ * @constructor proton.Data
+ * @param {number} data an optional pointer to a pn_data_t instance. If supplied
+ *        the underlying data is "owned" by another object (for example a Message)
+ *        and that object is assumed to be responsible for freeing the data if
+ *        necessary. If no data is supplied then the Data is stand-alone and the
+ *        client application is responsible for freeing the underlying data via
+ *        a call to free().
  */
 Module['Data'] = function(data) { // Data Constructor.
-    this._data = data;
-
     if (!data) {
-        console.log("Warning Data created with null data");
+        this._data = _pn_data(16); // Default capacity is 16
+        this['free'] = function() {
+            _pn_data_free(this._data);
+            // Set free to a null function to prevent possibility of a "double free".
+            this['free'] = function() {};
+        };
+    } else {
+        this._data = data;
+        this['free'] = function() {};
     }
 };
 
@@ -1030,62 +1046,89 @@ var Data = Module['Data'];
 // Expose prototype as a variable to make method declarations less verbose.
 var _Data_ = Data.prototype;
 
+// ************************** Class properties ********************************
+
+Data['NULL']       = 1;
+Data['BOOL']       = 2;
+Data['UBYTE']      = 3;
+Data['BYTE']       = 4;
+Data['USHORT']     = 5;
+Data['SHORT']      = 6;
+Data['UINT']       = 7;
+Data['INT']        = 8;
+Data['CHAR']       = 9;
+Data['ULONG']      = 10;
+Data['LONG']       = 11;
+Data['TIMESTAMP']  = 12;
+Data['FLOAT']      = 13;
+Data['DOUBLE']     = 14;
+Data['DECIMAL32']  = 15;
+Data['DECIMAL64']  = 16;
+Data['DECIMAL128'] = 17;
+Data['UUID']       = 18;
+Data['BINARY']     = 19;
+Data['STRING']     = 20;
+Data['SYMBOL']     = 21;
+Data['DESCRIBED']  = 22;
+Data['ARRAY']      = 23;
+Data['LIST']       = 24;
+Data['MAP']        = 25;
+
 /**
  * Look-up table mapping proton-c types to the accessor method used to
  * deserialise the type. N.B. this is a simple Array and not a map because the
  * types that we get back from pn_data_type are integers from the pn_type_t enum.
- * @property {Array<String>} GetMappings
+ * @property {Array<String>} TypeNames
  * @memberof! proton.Data
  */
-Data.GetMappings = [
-    'getNull',            // 0
-    'getNull',            // PN_NULL = 1
-    'getBoolean',         // PN_BOOL = 2
-    'getUnsignedByte',    // PN_UBYTE = 3
-    'getByte',            // PN_BYTE = 4
-    'getUnsignedShort',   // PN_USHORT = 5
-    'getShort',           // PN_SHORT = 6
-    'getUnsignedInteger', // PN_UINT = 7
-    'getInteger',         // PN_INT = 8
-    'getChar',            // PN_CHAR = 9
-    'getUnsignedLong',    // PN_ULONG = 10
-    'getLong',            // PN_LONG = 11
-    'getTimestamp',       // PN_TIMESTAMP = 12
-    'getFloat',           // PN_FLOAT = 13
-    'getDouble',          // PN_DOUBLE = 14
-    'getDecimal32',       // PN_DECIMAL32 = 15
-    'getDecimal64',       // PN_DECIMAL64 = 16
-    'getDecimal128',      // PN_DECIMAL128 = 17
-    'getUUID',            // PN_UUID = 18
-    'getBinary',          // PN_BINARY = 19
-    'getString',          // PN_STRING = 20
-    'getSymbol',          // PN_SYMBOL = 21
-    'getDescribed',       // PN_DESCRIBED = 22
-    'getArray',           // PN_ARRAY = 23
-    'getJSArray',         // PN_LIST = 24
-    'getDictionary'       // PN_MAP = 25
+Data['TypeNames'] = [
+    'NULL',       // 0
+    'NULL',       // PN_NULL       = 1
+    'BOOL',       // PN_BOOL       = 2
+    'UBYTE',      // PN_UBYTE      = 3
+    'BYTE',       // PN_BYTE       = 4
+    'USHORT',     // PN_USHORT     = 5
+    'SHORT',      // PN_SHORT      = 6
+    'UINT',       // PN_UINT       = 7
+    'INT',        // PN_INT        = 8
+    'CHAR',       // PN_CHAR       = 9
+    'ULONG',      // PN_ULONG      = 10
+    'LONG',       // PN_LONG       = 11
+    'TIMESTAMP',  // PN_TIMESTAMP  = 12
+    'FLOAT',      // PN_FLOAT      = 13
+    'DOUBLE',     // PN_DOUBLE     = 14
+    'DECIMAL32',  // PN_DECIMAL32  = 15
+    'DECIMAL64',  // PN_DECIMAL64  = 16
+    'DECIMAL128', // PN_DECIMAL128 = 17
+    'UUID',       // PN_UUID       = 18
+    'BINARY',     // PN_BINARY     = 19
+    'STRING',     // PN_STRING     = 20
+    'SYMBOL',     // PN_SYMBOL     = 21
+    'DESCRIBED',  // PN_DESCRIBED  = 22
+    'ARRAY',      // PN_ARRAY      = 23
+    'LIST',       // PN_LIST       = 24
+    'MAP'         // PN_MAP        = 25
 ];
 
 // *************************** Class methods **********************************
 
 /**
- * Test if a given Object is an Array.
+ * Test if a given Object is a JavaScript Array.
  * @method isArray
  * @memberof! proton.Data
  * @param {object} o the Object that we wish to test.
- * @returns {boolean} true iff the Object is an Array.
+ * @returns {boolean} true iff the Object is a JavaScript Array.
  */
 Data.isArray = Array.isArray || function(o) {
-console.log("Data.isArray");
     return Object.prototype.toString.call(o) === '[object Array]';
 };
 
 /**
- * Test if a given Object is a Number.
+ * Test if a given Object is a JavaScript Number.
  * @method isNumber
  * @memberof! proton.Data
  * @param {object} o the Object that we wish to test.
- * @returns {boolean} true iff the Object is a Number.
+ * @returns {boolean} true iff the Object is a JavaScript Number.
  */
 Data.isNumber = function(o) {
     return typeof o === 'number' || 
@@ -1093,11 +1136,11 @@ Data.isNumber = function(o) {
 };
 
 /**
- * Test if a given Object is a String.
+ * Test if a given Object is a JavaScript String.
  * @method isString
  * @memberof! proton.Data
  * @param {object} o the Object that we wish to test.
- * @returns {boolean} true iff the Object is a String.
+ * @returns {boolean} true iff the Object is a JavaScript String.
  */
 Data.isString = function(o) {
     return typeof o === 'string' ||
@@ -1105,11 +1148,11 @@ Data.isString = function(o) {
 };
 
 /**
- * Test if a given Object is a Boolean.
+ * Test if a given Object is a JavaScript Boolean.
  * @method isBoolean
  * @memberof! proton.Data
  * @param {object} o the Object that we wish to test.
- * @returns {boolean} true iff the Object is a Boolean.
+ * @returns {boolean} true iff the Object is a JavaScript Boolean.
  */
 Data.isBoolean = function(o) {
     return typeof o === 'boolean' ||
@@ -1118,20 +1161,20 @@ Data.isBoolean = function(o) {
 
 // **************************** Inner Classes *********************************
 
-// --------------------------- proton.Data.UUID -------------------------------
+// --------------------------- proton.Data.Uuid -------------------------------
 /**
- * Create a proton.Data.UUID which is a type 4 UUID.
+ * Create a proton.Data.Uuid which is a type 4 UUID.
  * @classdesc
  * This class represents a type 4 UUID, wich may use crypto libraries to generate
  * the UUID if supported by the platform (e.g. node.js or a modern browser)
- * @constructor proton.Data.UUID
+ * @constructor proton.Data.Uuid
  * @param u a UUID. If null a type 4 UUID is generated wich may use crypto if
  *        supported by the platform. If u is an emscripten "pointer" we copy the
  *        data from that. If u is a JavaScript Array we use it as-is. If u is a
  *        String then we try to parse that as a UUID.
  * @property {Array} uuid is the compact array form of the UUID.
  */
-Data['UUID'] = function(u) { // Data.UUID Constructor.
+Data['Uuid'] = function(u) { // Data.Uuid Constructor.
     // Helper to copy from emscriptem allocated storage into JavaScript Array.
     function _p2a(p) {
         var uuid = new Array(16);
@@ -1167,13 +1210,14 @@ Data['UUID'] = function(u) { // Data.UUID Constructor.
 };
 
 /**
+ * Returns the string representation of the proton.Data.Uuid.
  * @method toString
- * @memberof! proton.Data.UUID#
+ * @memberof! proton.Data.Uuid#
  * @returns {string} the String
  *          /[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}/
- *          form of a {@link proton.Data.UUID}.
+ *          form of a {@link proton.Data.Uuid}.
  */
-Data['UUID'].prototype.toString = function() {
+Data['Uuid'].prototype.toString = Data['Uuid'].prototype.valueOf = function() {
     if (!this.string) { // Check if we've cached the string version.
         var i = 0;
         var uu = this['uuid'];
@@ -1189,16 +1233,15 @@ Data['UUID'].prototype.toString = function() {
 };
 
 /**
- * Compare two instances of proton.Data.UUID for equality.
+ * Compare two instances of proton.Data.Uuid for equality.
  * @method equals
- * @memberof! proton.Data.UUID#
- * @param {proton.Data.UUID} rhs the instance we wish to compare this instance with.
+ * @memberof! proton.Data.Uuid#
+ * @param {proton.Data.Uuid} rhs the instance we wish to compare this instance with.
  * @returns {boolean} true iff the two compared instances are equal.
  */
-Data['UUID'].prototype['equals'] = function(rhs) {
+Data['Uuid'].prototype['equals'] = function(rhs) {
     return this.toString() === rhs.toString();
 };
-
 
 // ---------------------------- proton.Data.Symbol ---------------------------- 
 /**
@@ -1212,7 +1255,6 @@ Data['UUID'].prototype['equals'] = function(rhs) {
  */
 Data['Symbol'] = function(s) { // Data.Symbol Constructor.
     this.value = s;
-    this.length = this.value.length;
 };
 
 /**
@@ -1235,54 +1277,178 @@ Data['Symbol'].prototype['equals'] = function(rhs) {
     return this.toString() === rhs.toString();
 };
 
+// ---------------------------- proton.Data.Described ---------------------------- 
+/**
+ * Create a proton.Data.Described.
+ * @classdesc
+ * This class represents an AMQP Described.
+ * @constructor proton.Data.Described
+ * @param {object} value the value of the described type.
+ * @param {string} descriptor an optional string describing the type.
+ * @property {object} value the actual value of the described type.
+ * @property {string} descriptor a string describing the type.
+ */
+Data['Described'] = function(value, descriptor) { // Data.Described Constructor.
+    this['value'] = value;
+    this['descriptor'] = descriptor;
+};
+
+/**
+ * @method toString
+ * @memberof! proton.Data.Described#
+ * @returns {string} the String form of a {@link proton.Data.Described}.
+ */
+Data['Described'].prototype.toString = function() {
+    return 'Described(' + this['value'] + ', ' + this['descriptor'] + ')';
+};
+
+/**
+ * @method valueOf
+ * @memberof! proton.Data.Described#
+ * @returns {object} the value of the {@link proton.Data.Described}.
+ */
+Data['Described'].prototype.valueOf = function() {
+    return this['value'];
+};
+
+/**
+ * Compare two instances of proton.Data.Described for equality.
+ * @method equals
+ * @memberof! proton.Data.Described#
+ * @param {proton.Data.Described} rhs the instance we wish to compare this instance with.
+ * @returns {boolean} true iff the two compared instances are equal.
+ */
+Data['Described'].prototype['equals'] = function(rhs) {
+    if (rhs instanceof Data['Described']) {
+        return ((this['descriptor'] === rhs['descriptor']) && (this['value'] === rhs['value']));
+    } else {
+        return false;
+    }
+};
+
+// ---------------------------- proton.Data.Array ---------------------------- 
+/**
+ * TODO make this behave more like a native JavaScript Array: http://www.bennadel.com/blog/2292-extending-javascript-arrays-while-keeping-native-bracket-notation-functionality.htm
+ * Create a proton.Data.Array.
+ * @classdesc
+ * This class represents an AMQP Array.
+ * @constructor proton.Data.Array
+ * @param {{string|number)} type the type of the Number either as a string or number.
+ *        Stored internally as a string corresponding to one of the TypeNames.       
+ * @param {Array|TypedArray} elements the Native JavaScript Array or TypedArray that we wish to serialise.
+ * @param {object} descriptor an optional object describing the type.
+ */
+Data['Array'] = function(type, elements, descriptor) { // Data.Array Constructor.
+    // This block caters for an empty Array or a Described empty Array.
+    if (arguments.length < 2) {
+        descriptor = type;
+        type = 'NULL';
+        elements = [];
+    }
+
+    this['type']  = (typeof type === 'number') ? Data['TypeNames'][type] : type;
+    this['elements'] = elements;
+    this['descriptor'] = descriptor;
+};
+
+/**
+ * @method toString
+ * @memberof! proton.Data.Array#
+ * @returns {string} the String form of a {@link proton.Data.Array}.
+ */
+Data['Array'].prototype.toString = function() {
+    var descriptor = (this['descriptor'] == null) ? '' : ':' + this['descriptor'];
+    return this['type'] + 'Array' + descriptor + '[' + this['elements'] + ']';
+};
+
+/**
+ * @method valueOf
+ * @memberof! proton.Data.Array#
+ * @returns {Array} the elements of the {@link proton.Data.Array}.
+ */
+Data['Array'].prototype.valueOf = function() {
+    return this['elements'];
+};
+
+/**
+ * Compare two instances of proton.Data.Array for equality. N.B. this method
+ * compares the value of every Array element so its performance is O(n).
+ * @method equals
+ * @memberof! proton.Data.Array#
+ * @param {proton.Data.Array} rhs the instance we wish to compare this instance with.
+ * @returns {boolean} true iff the two compared instances are equal.
+ */
+Data['Array'].prototype['equals'] = function(rhs) {
+    if (rhs instanceof Data['Array'] &&
+        // Check the string value of the descriptors.
+        (('' + this['descriptor']) === ('' + rhs['descriptor'])) &&
+        (this['type'] === rhs['type'])) {
+        var elements = this['elements'];
+        var relements = rhs['elements'];
+        var length = elements.length;
+        if (length === relements.length) {
+            for (var i = 0; i < length; i++) {
+                if (elements[i].valueOf() !== relements[i].valueOf()) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+};
+
 // ---------------------- JavaScript Number Extensions ------------------------ 
 
-Number.prototype['asUnsignedByte'] = function() {
-    return new Data.TypedNumber('UnsignedByte', this);
+Number.prototype['ubyte'] = function() {
+    return new Data.TypedNumber('UBYTE', this);
 };
 
-Number.prototype['asByte'] = function() {
-    return new Data.TypedNumber('Byte', this);
+Number.prototype['byte'] = function() {
+    return new Data.TypedNumber('BYTE', this);
 };
 
-Number.prototype['asUnsignedShort'] = function() {
-    return new Data.TypedNumber('UnsignedShort', this);
+Number.prototype['ushort'] = function() {
+    return new Data.TypedNumber('USHORT', this);
 };
 
-Number.prototype['asShort'] = function() {
-    return new Data.TypedNumber('Short', this);
+Number.prototype['short'] = function() {
+    return new Data.TypedNumber('SHORT', this);
 };
 
-Number.prototype['asUnsignedInteger'] = function() {
-    return new Data.TypedNumber('UnsignedInteger', this);
+Number.prototype['uint'] = function() {
+    return new Data.TypedNumber('UINT', this);
 };
 
-Number.prototype['asInteger'] = function() {
-    return new Data.TypedNumber('Integer', this);
+Number.prototype['int'] = function() {
+    return new Data.TypedNumber('INT', this);
 };
 
-Number.prototype['asUnsignedLong'] = function() {
-    return new Data.TypedNumber('UnsignedLong', this);
+Number.prototype['ulong'] = function() {
+    return new Data.TypedNumber('ULONG', this);
 };
 
-Number.prototype['asLong'] = function() {
-    return new Data.TypedNumber('Long', this);
+Number.prototype['long'] = function() {
+    return new Data.TypedNumber('LONG', this);
 };
 
-Number.prototype['asFloat'] = function() {
-    return new Data.TypedNumber('Float', this);
+Number.prototype['float'] = function() {
+    return new Data.TypedNumber('FLOAT', this);
 };
 
-Number.prototype['asDouble'] = function() {
-    return new Data.TypedNumber('Double', this);
+Number.prototype['double'] = function() {
+    return new Data.TypedNumber('DOUBLE', this);
 };
 
-Number.prototype['asChar'] = function() {
-    return new Data.TypedNumber('Char', this);
+Number.prototype['char'] = function() {
+    return new Data.TypedNumber('CHAR', this);
 };
 
-String.prototype['asChar'] = function() {
-    return new Data.TypedNumber('Char', this.charCodeAt(0));
+String.prototype['char'] = function() {
+    return new Data.TypedNumber('CHAR', this.charCodeAt(0));
 };
 
 // ------------------------- proton.Data.TypedNumber -------------------------- 
@@ -1292,19 +1458,28 @@ String.prototype['asChar'] = function() {
  * This class is a simple wrapper class that allows a "type" to be recorded for
  * a number. The idea is that the JavaScript Number class is extended with extra
  * methods to allow numbers to be "modified" to TypedNumbers, so for example
- * 1.0.asFloat() would modify 1.0 by returning a TypedNumber with type = Float
+ * 1.0.float() would modify 1.0 by returning a TypedNumber with type = FLOAT
  * and value = 1. The strings used for type correspond to the names of the Data
- * put* methods e.g. UnsignedByte, Byte, UnsignedShort, Short, UnsignedInteger,
- * Integer, UnsignedLong, Long, Float, Double, Char so that the correct method
- * to call can be easily derived from the TypedNumber's type.
+ * put* methods e.g. UBYTE, BYTE, USHORT, SHORT, UINT, INT, ULONG, LONG, FLOAT,
+ * DOUBLE, CHAR so that the correct method to call can be derived from the type.
  * @constructor proton.Data.TypedNumber
- * @param {string} type the type of the Number.
- * @param {number} value the most significant word.
+ * @param {(string|number)} type the type of the Number either as a string or number.
+ *        Stored internally as a string corresponding to one of the TypeNames.
+ * @param {number} value the value of the Number.
  */
 // Use dot notation as it is a "protected" inner class not exported from the closure.
 Data.TypedNumber = function(type, value) { // Data.TypedNumber Constructor.
-    this.type  = type;
+    this.type  = (typeof type === 'number') ? Data['TypeNames'][type] : type;
     this.value = value;
+};
+
+/**
+ * @method toString
+ * @memberof! proton.Data.TypedNumber#
+ * @returns {string} the String form of a {@link proton.Data.TypedNumber}.
+ */
+Data.TypedNumber.prototype.toString = Data.TypedNumber.prototype.valueOf = function() {
+    return +this.value;
 };
 
 // ----------------------------- proton.Data.Long ----------------------------- 
@@ -1345,7 +1520,7 @@ Data.Long.fromNumber = function(value) {
     if (isNaN(value) || !isFinite(value)) {
         return Data.Long.ZERO;
     } else if (value <= -Data.Long.TWO_PWR_63_DBL_) {
-        return Data.MIN_VALUE;
+        return Data.Long.MIN_VALUE;
     } else if (value + 1 >= Data.Long.TWO_PWR_63_DBL_) {
         return Data.Long.MAX_VALUE;
     } else if (value < 0) {
@@ -1470,71 +1645,93 @@ Data.Long.prototype.toNumber = function() {
  * @returns {string} the String form of a {@link proton.Data.Long}.
  */
 Data.Long.prototype.toString = function() {
-    return this.high + ":" + this.getLowBitsUnsigned();
+    return this.high + ':' + this.getLowBitsUnsigned();
 };
 
 // ---------------------------- proton.Data.Binary ----------------------------
 /**
- * Create a proton.Data.Binary. This constructor takes one or two parameters,
- * size specifies the size in bytes of the Binary buffer, start is a pointer
- * to the data in an internal data store. If start is not specified then size
- * bytes will be allocated in the internal data store and start will point to
- * the start of that block of data.
+ * Create a proton.Data.Binary. This constructor takes one or two parameters.
+ * The first parameter may serve different purposes depending on its type;
+ * If value is a number then it represents the size of the Binary data buffer,
+ * if it is a string then we copy the string to the buffer, if it is an Array
+ * or a TypedArray then we copy the data to the buffer. The optional second
+ * parameter is a pointer to the data in an internal data store. If start is
+ * not specified then the number of bytes specified in the first parameter
+ * will be allocated in the internal data store and start will point to the
+ * start of that block of data.
  * @classdesc
  * This class represents an AMQP Binary type. This class allows us to create and
  * use raw binary data and map it efficiently between JavaScript client code and
- * the underlying implementation, where all data is managed on a virtual heap.
+ * the underlying implementation, where all data is managed on a "virtual heap".
  * <p>
- * Client applications should not have to care about memory management. A client
- * should create a {@link proton.Data.Binary} specifying the required size then
- * call getBuffer to access the underlying Uint8Array. When {@link proton.Data.putBinary}
- * is called ownership of the bytes transfers from the Binary to the Data and
- * putBinary can then safely call free. Conversely when receiving data a Binary
- * may be created by {@link proton.Data.getBinary} in this case the Binary is
- * simply a "view" onto the bytes owned by the Data instance. A client application
- * can safely access the bytes from the view, but if it wishes to use the bytes
- * beyond the scope of the Data instance (for example after the next
- * {@link proton.Messenger.get} call then the client must explicitly *copy* the
- * bytes into a new buffer via copyBuffer().
+ * Client applications should generally not have to care about memory management
+ * as, for most common use cases, client applications would "transfer ownership"
+ * to a "container" which would then "own" the underlying data and free the data
+ * held by the {@link proton.Data.Binary}.
+ * <p>
+ * As an example one common use-case would be where client application creates a
+ * {@link proton.Data.Binary} specifying the required size. It would usually then
+ * call getBuffer() to access the underlying Uint8Array. At this point the client
+ * "owns" the data and so would have to call free() if it did nothing more with
+ * the Binary, however when {@link proton.Data.putBINARY} is called the ownership
+ * of the raw data on the virtual heap transfers from the Binary to the Data and
+ * the client no longer needs to call free() itself. In this case the putBINARY()
+ * call transfers ownership and can then safely call free() on the Binary.
+ * <p>
+ * Conversely a common use-case when receiving data is where a Binary may be
+ * created by {@link proton.Data.getBINARY}. In this case the Binary is simply a
+ * "view" onto the bytes owned by the Data instance. A client application can
+ * safely access the bytes from the view, but if it wishes to use the bytes beyond
+ * the scope of the Data instance (e.g. after the next {@link proton.Messenger.get}
+ * call then the client must explicitly *copy* the bytes into a new buffer, for
+ * example via copyBuffer().
+ * <p>
+ * Most of the {@link proton.Data} methods that take {@link proton.Data.Binary}
+ * as a parameter "consume" the underlying data and take responsibility for
+ * freeing it from the heap {@link proton.Data.putBINARY} {@link proton.Data.decode}.
+ * For the methods that return a {@link proton.Data.Binary} the call to
+ * {@link proton.Data.getBINARY}, which is the most common case, returns a Binary
+ * that has a "view" of the underlying data that is actually owned by the Data
+ * instance and thus doesn't need to be explicitly freed on the Binary. The call
+ * to {@link proton.Data.encode} however returns a Binary that represents a *copy*
+ * of the underlying data, in this case (like a client calling new proton.Data.Binary)
+ * the client takes responsibility for freeing the data, unless of course it is
+ * subsequently passed to a method that will consume the data (putBINARY/decode).
  * @constructor proton.Data.Binary
- * @param {object} data. If data is a number then it represents the size of the
- *        Binary data buffer, if it is a string then we copy the string to the
- *        buffer, if it is an Array or a TypedArray then we copy the data to
- *        the buffer. N.B. although convenient do bear in mind that every method
- *        other than constructing with a size followed by a call to getBuffer will
- *        result in some form of additional data copy.
- * @param {number} start an optional data pointer to the start of the Binary data buffer.
+ * @param {(number|string|Array|TypedArray)} value. If value is a number then it 
+ *        represents the size of the Binary data buffer, if it is a string then
+ *        we copy the string to the buffer, if it is an Array or a TypedArray
+ *        then we copy the data to the buffer. N.B. although convenient do bear
+ *        in mind that using a mechanism other than constructing with a simple
+ *        size will result in some form of additional data copy.
+ * @param {number} start an optional pointer to the start of the Binary data buffer.
  */
-Data['Binary'] = function(data, start) { // Data.Binary Constructor.
+Data['Binary'] = function(value, start) { // Data.Binary Constructor.
     /**
      * If the start pointer is specified then the underlying binary data is owned
      * by another object, so we set the call to free to be a null function. If
      * the start pointer is not passed then we allocate storage of the specified
      * size on the emscripten heap and set the call to free to free the data from
-     * the emscripten heap. We have made the call to free a protected method that
-     * is only visible within the scope of the binding closure, clients should
-     * not have to call free themselves as the data is either already "owned" by
-     * a Data object or is destined to be passed to a Data object, which will in
-     * turn take responsibility for calling free once it has taken ownership of
-     * the underlying binary data.
+     * the emscripten heap.
      */
-    var size = data;
+    var size = value;
     if (start) {
-        this.free = function() {};
-    } else { // Create Binary from Array, ArrayBuffer or TypedArray
-        if (Data.isArray(data) ||
-            (data instanceof ArrayBuffer) || 
-            (data.buffer && data.buffer instanceof ArrayBuffer)) {
-            data = new Uint8Array(data);
-            size = data.length;
+        this['free'] = function() {};
+    } else { // Create Binary from Array, ArrayBuffer or TypedArray.
+        var hasArrayBuffer = (typeof ArrayBuffer === 'function');
+        if (Data.isArray(value) ||
+            (hasArrayBuffer && value instanceof ArrayBuffer) || 
+            (value.buffer && hasArrayBuffer && value.buffer instanceof ArrayBuffer)) {
+            value = new Uint8Array(value);
+            size = value.length;
             start = _malloc(size); // Allocate storage from emscripten heap.
-            Module.HEAPU8.set(data, start);
-        } else if (Data.isString(data)) { // Create Binary from native string
-            data = unescape(encodeURIComponent(data)); // Create a C-like UTF representation.
-            size = data.length;
+            Module['HEAPU8'].set(value, start); // Copy the data to the emscripten heap.
+        } else if (Data.isString(value)) { // Create Binary from native string
+            value = unescape(encodeURIComponent(value)); // Create a C-like UTF representation.
+            size = value.length;
             start = _malloc(size); // Allocate storage from emscripten heap.
             for (var i = 0; i < size; i++) {
-                setValue(start + i, data.charCodeAt(i), 'i8', 1);
+                setValue(start + i, value.charCodeAt(i), 'i8', 1);
             }
         } else { // Create unpopulated Binary of specified size.
             // If the type is not a number by this point then an unrecognised data
@@ -1542,7 +1739,13 @@ Data['Binary'] = function(data, start) { // Data.Binary Constructor.
             size = Data.isNumber(size) ? size : 0;
             start = _malloc(size); // Allocate storage from emscripten heap.
         }
-        this.free = function() {_free(start);};
+        this['free'] = function() {
+            _free(this.start);
+            this.size = 0;
+            this.start = 0;
+            // Set free to a null function to prevent possibility of a "double free".
+            this['free'] = function() {};
+        };
     }
 
     this.size = size;
@@ -1562,16 +1765,28 @@ Data['Binary'].prototype['getBuffer'] = function() {
 };
 
 /**
- * Explicitly create a *copy* of the underlying binary data and present a Uint8Array
- * view of that copy. This method should be used if a client application wishes to
- * retain an interest in the binary data for longer than it wishes to retain an
- * interest in say a {@link proton.Message}, if that's not the case getBuffer
- * should be used as that avoids the need to copy the data.
- * @method copyBuffer
+ * Explicitly create a *copy* of the Binary copying the underlying binary data too.
+ * @method copy
+ * @param {number} offset an optional offset into the underlying buffer from
+ *        where we want to copy the data, default is zero.
+ * @param {number} n an optional number of bytes to copy, default is this.size - offset.
  * @memberof! proton.Data.Binary#
  */
-Data['Binary'].prototype['copyBuffer'] = function() {
-    return new Uint8Array(new Uint8Array(HEAPU8.buffer, this.start, this.size));
+Data['Binary'].prototype['copy'] = function(offset, n) {
+    offset = offset | 0;
+    n = n ? n : (this.size - offset);
+
+    if (offset >= this.size) {
+        offset = 0;
+        n = 0;
+    } else if ((offset + n) > this.size) {
+        n = this.size - offset; // Clamp length
+    }
+
+    var start = _malloc(n); // Allocate storage from emscripten heap.
+    _memcpy(start, this.start + offset, n); // Copy the raw data to new buffer.
+
+    return new Data['Binary'](n, start);
 };
 
 /**
@@ -1648,9 +1863,8 @@ _Data_['clear'] = function() {
 };
 
 /**
- * Clears current node and sets the parent to the root node.  Clearing the
- * current node sets it _before_ the first node, calling next() will advance
- * to the first node.
+ * Clears current node and sets the parent to the root node.  Clearing the current
+ * node sets it _before_ the first node, calling next() will advance to the first node.
  * @method rewind
  * @memberof! proton.Data#
  */
@@ -1659,9 +1873,8 @@ _Data_['rewind'] = function() {
 };
 
 /**
- * Advances the current node to its next sibling and returns its
- * type. If there is no next sibling the current node remains
- * unchanged and null is returned.
+ * Advances the current node to its next sibling and returns its type. If there
+ * is no next sibling the current node remains unchanged and null is returned.
  * @method next
  * @memberof! proton.Data#
  * @returns {number} the type of the next sibling or null.
@@ -1671,14 +1884,13 @@ _Data_['next'] = function() {
     if (found) {
         return this.type();
     } else {
-        return null;  
+        return null;
     }
 };
 
 /**
- * Advances the current node to its previous sibling and returns its
- * type. If there is no previous sibling the current node remains
- * unchanged and null is returned.
+ * Advances the current node to its previous sibling and returns its type. If there
+ * is no previous sibling the current node remains unchanged and null is returned.
  * @method prev
  * @memberof! proton.Data#
  * @returns {number} the type of the previous sibling or null.
@@ -1693,9 +1905,8 @@ _Data_['prev'] = function() {
 };
 
 /**
- * Sets the parent node to the current node and clears the current node.
- * Clearing the current node sets it _before_ the first child,
- * call next() advances to the first child.
+ * Sets the parent node to the current node and clears the current node. Clearing
+ * the current node sets it _before_ the first child, next() advances to the first child.
  * @method enter
  * @memberof! proton.Data#
  */
@@ -1704,8 +1915,7 @@ _Data_['enter'] = function() {
 };
 
 /**
- * Sets the current node to the parent node and the parent node to
- * its own parent.
+ * Sets the current node to the parent node and the parent node to its own parent.
  * @method exit
  * @memberof! proton.Data#
  */
@@ -1713,10 +1923,13 @@ _Data_['exit'] = function() {
     return (_pn_data_exit(this._data) > 0);
 };
 
-
 /**
+ * Look up a value by name. N.B. Need to use getObject() to retrieve the actual
+ * value after lookup suceeds.
  * @method lookup
  * @memberof! proton.Data#
+ * @param {string} name the name of the property to look up.
+ * @returns {boolean} true iff the lookup succeeded.
  */
 _Data_['lookup'] = function(name) {
     var sp = Runtime.stackSave();
@@ -1725,6 +1938,7 @@ _Data_['lookup'] = function(name) {
     return (lookup > 0);
 };
 
+// TODO document - not quite sure what these are for?
 _Data_['narrow'] = function() {
     _pn_data_narrow(this._data);
 };
@@ -1733,11 +1947,10 @@ _Data_['widen'] = function() {
     _pn_data_widen(this._data);
 };
 
-
 /**
  * @method type
  * @memberof! proton.Data#
- * @returns the type of the current node or null if the type is unknown.
+ * @returns {number} the type of the current node or null if the type is unknown.
  */
 _Data_['type'] = function() {
     var dtype = _pn_data_type(this._data);
@@ -1748,218 +1961,322 @@ _Data_['type'] = function() {
     }
 };
 
-// TODO encode and decode
+/**
+ * Return a Binary representation of the data encoded in AMQP format. N.B. the
+ * returned {@link proton.Data.Binary} "owns" the underlying raw data and is thus
+ * responsible for freeing it or passing it to a method that consumes a Binary
+ * such as {@link proton.Data.decode} or {@link proton.Data.putBINARY}.
+ * @method type
+ * @memberof! proton.Data#
+ * @returns {proton.Data.Binary} a representation of the data encoded in AMQP format.
+ */
+_Data_['encode'] = function() {
+    var size = 1024;
+    while (true) {
+        var bytes = _malloc(size); // Allocate storage from emscripten heap.
+        var cd = _pn_data_encode(this._data, bytes, size);
+
+        if (cd === Module['Error']['OVERFLOW']) {
+            _free(bytes);
+            size *= 2;
+        } else if (cd >= 0) {
+            return new Data['Binary'](cd, bytes);
+        } else {
+            _free(bytes);
+            this._check(cd);
+            return;
+        }
+    }
+};
 
 /**
- * Puts a list value. Elements may be filled by entering the list
+ * Decodes the first value from supplied Binary AMQP data and returns a new
+ * {@link proton.Data.Binary} containing the remainder of the data or null if
+ * all the supplied data has been consumed. N.B. this method "consumes" data
+ * from a {@link proton.Data.Binary} in other words it takes responsibility for
+ * the underlying data and frees the raw data from the Binary.
+ * @method decode
+ * @memberof! proton.Data#
+ * @param {proton.Data.Binary} encoded the AMQP encoded binary data.
+ * @returns {proton.Data.Binary} a Binary contianing the remaining bytes or null
+ *          if all the data has been consumed.
+ */
+_Data_['decode'] = function(encoded) {
+    var start = encoded.start;
+    var size = encoded.size;
+    var consumed = this._check(_pn_data_decode(this._data, start, size));
+
+    size = size - consumed;
+    start = _malloc(size); // Allocate storage from emscripten heap.
+    _memcpy(start, encoded.start + consumed, size);
+
+    encoded['free'](); // Free the original Binary.
+    return size > 0 ? new Data['Binary'](size, start) : null;
+};
+
+/**
+ * Puts a list node. Elements may be filled by entering the list
  * node and putting element values.
  * <pre>
- *  data = new Data();
- *  data.putList();
+ *  var data = new proton.Data();
+ *  data.putLISTNODE();
  *  data.enter();
- *  data.putInt(1);
- *  data.putInt(2);
- *  data.putInt(3);
+ *  data.putINT(1);
+ *  data.putINT(2);
+ *  data.putINT(3);
  *  data.exit();
  * </pre>
- * @method putList
+ * @method putLISTNODE
  * @memberof! proton.Data#
  */
-_Data_['putList'] = function() {
+_Data_['putLISTNODE'] = function() {
     this._check(_pn_data_put_list(this._data));
 };
 
 /**
- * Puts a map value. Elements may be filled by entering the map node
+ * Puts a map node. Elements may be filled by entering the map node
  * and putting alternating key value pairs.
  * <pre>
- *  data = new Data();
- *  data.putMap();
+ *  var data = new proton.Data();
+ *  data.putMAPNODE();
  *  data.enter();
- *  data.putString("key");
- *  data.putString("value");
+ *  data.putSTRING('key');
+ *  data.putSTRING('value');
  *  data.exit();
  * </pre>
- * @method putMap
+ * @method putMAPNODE
  * @memberof! proton.Data#
  */
-_Data_['putMap'] = function() {
+_Data_['putMAPNODE'] = function() {
     this._check(_pn_data_put_map(this._data));
 };
 
-// TODO putArray and putDescribed
+/**
+ * Puts an array node. Elements may be filled by entering the array node and
+ * putting the element values. The values must all be of the specified array
+ * element type. If an array is described then the first child value of the array
+ * is the descriptor and may be of any type.
+ * <pre>
+ *  var data = new proton.Data();
+ *  data.putARRAYNODE(false, proton.Data.INT);
+ *  data.enter();
+ *  data.putINT(1);
+ *  data.putINT(2);
+ *  data.putINT(3);
+ *  data.exit();
+ *
+ *  data.putARRAYNODE(true, proton.Data.DOUBLE);
+ *  data.enter();
+ *  data.putSYMBOL('array-descriptor');
+ *  data.putDOUBLE(1.1);
+ *  data.putDOUBLE(1.2);
+ *  data.putDOUBLE(1.3);
+ *  data.exit();
+ * </pre>
+ * @method putARRAYNODE
+ * @param {boolean} described specifies whether the array is described.
+ * @param {number} type the type of the array elements.
+ * @memberof! proton.Data#
+ */
+_Data_['putARRAYNODE'] = function(described, type) {
+    this._check(_pn_data_put_array(this._data, described, type));
+};
+
+/**
+ * Puts a described node. A described node has two children, the descriptor and
+ * value. These are specified by entering the node and putting the desired values.
+ * <pre>
+ *  var data = new proton.Data();
+ *  data.putDESCRIBEDNODE();
+ *  data.enter();
+ *  data.putSYMBOL('value-descriptor');
+ *  data.putSTRING('the value');
+ *  data.exit();
+ * </pre>
+ * @method putDESCRIBEDNODE
+ * @memberof! proton.Data#
+ */
+_Data_['putDESCRIBEDNODE'] = function() {
+    this._check(_pn_data_put_described(this._data));
+};
 
 /**
  * Puts a null value.
- * @method putNull
+ * @method putNULL
  * @memberof! proton.Data#
  */
-_Data_['putNull'] = function() {
+_Data_['putNULL'] = function() {
     this._check(_pn_data_put_null(this._data));
 };
 
 /**
  * Puts a boolean value.
- * @method putBoolean
+ * @method putBOOL
  * @memberof! proton.Data#
  * @param {boolean} b a boolean value.
  */
-_Data_['putBoolean'] = function(b) {
+_Data_['putBOOL'] = function(b) {
     this._check(_pn_data_put_bool(this._data, b));
 };
 
 /**
  * Puts a unsigned byte value.
- * @method putUnsignedByte
+ * @method putUBYTE
  * @memberof! proton.Data#
  * @param {number} ub an integral value.
  */
-_Data_['putUnsignedByte'] = function(ub) {
+_Data_['putUBYTE'] = function(ub) {
     this._check(_pn_data_put_ubyte(this._data, ub));
 };
 
 /**
  * Puts a signed byte value.
- * @method putByte
+ * @method putBYTE
  * @memberof! proton.Data#
  * @param {number} b an integral value.
  */
-_Data_['putByte'] = function(b) {
+_Data_['putBYTE'] = function(b) {
     this._check(_pn_data_put_byte(this._data, b));
 };
 
 /**
  * Puts a unsigned short value.
- * @method putUnsignedShort
+ * @method putUSHORT
  * @memberof! proton.Data#
  * @param {number} us an integral value.
  */
-_Data_['putUnsignedShort'] = function(us) {
+_Data_['putUSHORT'] = function(us) {
     this._check(_pn_data_put_ushort(this._data, us));
 };
 
 /**
  * Puts a signed short value.
- * @method putShort
+ * @method putSHORT
  * @memberof! proton.Data#
  * @param {number} s an integral value.
  */
-_Data_['putShort'] = function(s) {
+_Data_['putSHORT'] = function(s) {
     this._check(_pn_data_put_short(this._data, s));
 };
 
 /**
  * Puts a unsigned integer value.
- * @method putUnsignedInteger
+ * @method putUINT
  * @memberof! proton.Data#
  * @param {number} ui an integral value.
  */
-_Data_['putUnsignedInteger'] = function(ui) {
+_Data_['putUINT'] = function(ui) {
     this._check(_pn_data_put_uint(this._data, ui));
 };
 
 /**
  * Puts a signed integer value.
- * @method putInteger
+ * @method putINT
  * @memberof! proton.Data#
  * @param {number} i an integral value.
  */
-_Data_['putInteger'] = function(i) {
+_Data_['putINT'] = function(i) {
     this._check(_pn_data_put_int(this._data, i));
 };
 
 /**
  * Puts a signed char value.
- * @method putChar
+ * @method putCHAR
  * @memberof! proton.Data#
- * @param {number} c a single character.
+ * @param {(string|number)} c a single character expressed either as a string or a number.
  */
-_Data_['putChar'] = function(c) {
+_Data_['putCHAR'] = function(c) {
+    c = Data.isString(c) ? c.charCodeAt(0) : c;
     this._check(_pn_data_put_char(this._data, c));
 };
 
 /**
- * Puts a unsigned long value.
- * @method putUnsignedLong
+ * Puts a unsigned long value. N.B. large values can suffer from a loss of
+ * precision as JavaScript numbers are restricted to 64 bit double values.
+ * @method putULONG
  * @memberof! proton.Data#
  * @param {number} ul an integral value.
  */
-_Data_['putUnsignedLong'] = function(ul) {
-    this._check(_pn_data_put_ulong(this._data, ul));
+_Data_['putULONG'] = function(ul) {
+    // If the supplied number exceeds the range of Data.Long invert it before
+    // constructing the Data.Long.
+    ul = (ul >= Data.Long.TWO_PWR_63_DBL_) ? (ul = -(Data.Long.TWO_PWR_64_DBL_ - ul)) : ul;
+    var long = Data.Long.fromNumber(ul);
+    this._check(_pn_data_put_ulong(this._data, long.getLowBitsUnsigned(), long.getHighBits()));
 };
 
 /**
- * Puts a signed long value.
- * @method putLong
+ * Puts a signed long value. N.B. large values can suffer from a loss of
+ * precision as JavaScript numbers are restricted to 64 bit double values.
+ * @method putLONG
  * @memberof! proton.Data#
  * @param {number} i an integral value.
  */
-_Data_['putLong'] = function(l) {
-console.log("putLong " + l);
-
+_Data_['putLONG'] = function(l) {
     var long = Data.Long.fromNumber(l);
     this._check(_pn_data_put_long(this._data, long.getLowBitsUnsigned(), long.getHighBits()));
 };
 
 /**
  * Puts a timestamp.
- * @method putTimestamp
+ * @method putTIMESTAMP
  * @memberof! proton.Data#
- * @param {number} t an integral value.
+ * @param {Date} d a Date value.
  */
-_Data_['putTimestamp'] = function(t) {
-console.log("putTimestamp not properly implemented yet");
-    this._check(_pn_data_put_timestamp(this._data, t));
+_Data_['putTIMESTAMP'] = function(d) {
+    // Note that a timestamp is a 64 bit number so we have to use a proton.Data.Long.
+    var timestamp = Data.Long.fromNumber(d.valueOf());
+    this._check(_pn_data_put_timestamp(this._data, timestamp.getLowBitsUnsigned(), timestamp.getHighBits()));
 };
 
 /**
- * Puts a float value.
- * @method putFloat
+ * Puts a float value. N.B. converting between floats and doubles is imprecise
+ * so the resulting value might not quite be what you expect.
+ * @method putFLOAT
  * @memberof! proton.Data#
  * @param {number} f a floating point value.
  */
-_Data_['putFloat'] = function(f) {
-console.log("putFloat f = " + f);
+_Data_['putFLOAT'] = function(f) {
     this._check(_pn_data_put_float(this._data, f));
 };
 
 /**
  * Puts a double value.
- * @method putDouble
+ * @method putDOUBLE
  * @memberof! proton.Data#
  * @param {number} d a floating point value.
  */
-_Data_['putDouble'] = function(d) {
+_Data_['putDOUBLE'] = function(d) {
     this._check(_pn_data_put_double(this._data, d));
 };
 
 /**
  * Puts a decimal32 value.
- * @method putDecimal32
+ * @method putDECIMAL32
  * @memberof! proton.Data#
  * @param {number} d a decimal32 value.
  */
-_Data_['putDecimal32'] = function(d) {
+_Data_['putDECIMAL32'] = function(d) {
     this._check(_pn_data_put_decimal32(this._data, d));
 };
 
 /**
  * Puts a decimal64 value.
- * @method putDecimal64
+ * @method putDECIMAL64
  * @memberof! proton.Data#
  * @param {number} d a decimal64 value.
  */
-_Data_['putDecimal64'] = function(d) {
+_Data_['putDECIMAL64'] = function(d) {
     this._check(_pn_data_put_decimal64(this._data, d));
 };
 
 /**
  * Puts a decimal128 value.
- * @method putDecimal128
+ * @method putDECIMAL128
  * @memberof! proton.Data#
  * @param {number} d a decimal128 value.
  */
-_Data_['putDecimal128'] = function(d) {
+_Data_['putDECIMAL128'] = function(d) {
     this._check(_pn_data_put_decimal128(this._data, d));
 };
 
@@ -1967,7 +2284,7 @@ _Data_['putDecimal128'] = function(d) {
  * Puts a UUID value.
  * @method putUUID
  * @memberof! proton.Data#
- * @param {proton.Data.UUID} u a uuid value
+ * @param {proton.Data.Uuid} u a uuid value
  */
 _Data_['putUUID'] = function(u) {
     var sp = Runtime.stackSave();
@@ -1976,12 +2293,12 @@ _Data_['putUUID'] = function(u) {
 };
 
 /**
- * Puts a binary value.
- * @method putBinary
+ * Puts a binary value consuming the underlying raw data in the process.
+ * @method putBINARY
  * @memberof! proton.Data#
  * @param {proton.Data.Binary} b a binary value.
  */
-_Data_['putBinary'] = function(b) {
+_Data_['putBINARY'] = function(b) {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -1999,20 +2316,20 @@ _Data_['putBinary'] = function(b) {
     // The compiled pn_data_put_binary takes the pn_bytes_t by reference not value.
     this._check(_pn_data_put_binary(this._data, bytes));
 
-    // After calling _pn_data_put_binary the underlying data object "owns" the
+    // After calling _pn_data_put_binary the underlying Data object "owns" the
     // binary data, so we can call free on the proton.Data.Binary instance to
     // release any storage it has acquired back to the emscripten heap.
-    b.free();
+    b['free']();
     Runtime.stackRestore(sp);
 };
 
 /**
  * Puts a unicode string value.
- * @method putString
+ * @method putSTRING
  * @memberof! proton.Data#
  * @param {string} s a unicode string value.
  */
-_Data_['putString'] = function(s) {
+_Data_['putSTRING'] = function(s) {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2045,11 +2362,11 @@ _Data_['putString'] = function(s) {
  * open-ended, typically the both number and size of symbols in use for any
  * given application will be small, e.g. small enough that it is reasonable to
  * cache all the distinct values. Symbols are encoded as ASCII characters.
- * @method putSymbol
+ * @method putSYMBOL
  * @memberof! proton.Data#
- * @param {proton.Data.Symbol} s the symbol name.
+ * @param {proton.Data.Symbol|string} s the symbol name.
  */
-_Data_['putSymbol'] = function(s) {
+_Data_['putSYMBOL'] = function(s) {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2076,116 +2393,220 @@ _Data_['putSymbol'] = function(s) {
     Runtime.stackRestore(sp);
 };
 
-// TODO getArray and isDescribed
+/**
+ * If the current node is a list node, return the number of elements,
+ * otherwise return zero. List elements can be accessed by entering
+ * the list.
+ * <pre>
+ *  var count = data.getLISTNODE();
+ *  data.enter();
+ *  for (var i = 0; i < count; i++) {
+ *      var type = data.next();
+ *      if (type === proton.Data.STRING) {
+ *          console.log(data.getSTRING());
+ *      }
+ *  }
+ *  data.exit();
+ * </pre>
+ * @method getLISTNODE
+ * @memberof! proton.Data#
+ * @returns {number} the number of elements if the current node is a list,
+ *          zero otherwise.
+ */
+_Data_['getLISTNODE'] = function() {
+    return _pn_data_get_list(this._data);
+};
 
 /**
- * @method getNull
+ * If the current node is a map, return the number of child elements,
+ * otherwise return zero. Key value pairs can be accessed by entering
+ * the map.
+ * <pre>
+ *  var count = data.getMAPNODE();
+ *  data.enter();
+ *  for (var i = 0; i < count/2; i++) {
+ *      var type = data.next();
+ *      if (type === proton.Data.STRING) {
+ *          console.log(data.getSTRING());
+ *      }
+ *  }
+ *  data.exit();
+ * </pre>
+ * @method getMAPNODE
  * @memberof! proton.Data#
- * @return a null value.
+ * @returns {number} the number of elements if the current node is a list,
+ *          zero otherwise.
  */
-_Data_['getNull'] = function() {
+_Data_['getMAPNODE'] = function() {
+    return _pn_data_get_map(this._data);
+};
+
+/**
+ * If the current node is an array, return an object containing the tuple of the
+ * element count, a boolean indicating whether the array is described, and the
+ * type of each element, otherwise return {count: 0, described: false, type: null).
+ * Array data can be accessed by entering the array.
+ * <pre>
+ *  // Read an array of strings with a symbolic descriptor
+ *  var metadata = data.getARRAYNODE();
+ *  var count = metadata.count;
+ *  data.enter();
+ *  data.next();
+ *  console.log("Descriptor:" + data.getSYMBOL());
+ *  for (var i = 0; i < count; i++) {
+ *      var type = data.next();
+ *      console.log("Element:" + data.getSTRING());
+ *  }
+ *  data.exit();
+ * </pre>
+ * @method getARRAYNODE
+ * @memberof! proton.Data#
+ * @returns {object} the tuple of the element count, a boolean indicating whether
+ *          the array is described, and the type of each element.
+ */
+_Data_['getARRAYNODE'] = function() {
+    var count = _pn_data_get_array(this._data);
+    var described = (_pn_data_is_array_described(this._data) > 0);
+    var type = _pn_data_get_array_type(this._data);
+    type = (type == -1) ? null : type;
+    return {'count': count, 'described': described, 'type': type};
+};
+
+/**
+ * Checks if the current node is a described node. The descriptor and value may
+ * be accessed by entering the described node.
+ * <pre>
+ *  // read a symbolically described string
+ *  assert(data.isDESCRIBEDNODE()); // will error if the current node is not described
+ *  data.enter();
+ *  console.log(data.getSYMBOL());
+ *  console.log(data.getSTRING());
+ *  data.exit();
+ * </pre>
+ * @method isDESCRIBEDNODE
+ * @memberof! proton.Data#
+ * @returns {boolean} true iff the current node is a described, false otherwise.
+ */
+_Data_['isDESCRIBEDNODE'] = function() {
+    return _pn_data_is_described(this._data);
+};
+
+/**
+ * @method getNULL
+ * @memberof! proton.Data#
+ * @returns a null value.
+ */
+_Data_['getNULL'] = function() {
     return null;
 };
 
 /**
  * Checks if the current node is a null.
- * @method isNull
+ * @method isNULL
  * @memberof! proton.Data#
  * @returns {boolean} true iff the current node is null.
  */
-_Data_['isNull'] = function() {
+_Data_['isNULL'] = function() {
     return (_pn_data_is_null(this._data) > 0);
 };
 
 /**
- * @method getBoolean
+ * @method getBOOL
  * @memberof! proton.Data#
  * @returns {boolean} a boolean value if the current node is a boolean, returns
  *          false otherwise.
  */
-_Data_['getBoolean'] = function() {
+_Data_['getBOOL'] = function() {
     return (_pn_data_get_bool(this._data) > 0);
 };
 
 /**
- * @method getUnsignedByte
+ * @method getUBYTE
  * @memberof! proton.Data#
  * @returns {number} value if the current node is an unsigned byte, returns 0 otherwise.
  */
-_Data_['getUnsignedByte'] = function() {
+_Data_['getUBYTE'] = function() {
     return _pn_data_get_ubyte(this._data) & 0xFF; // & 0xFF converts to unsigned;
 };
 
 /**
- * @method getByte
+ * @method getBYTE
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a signed byte, returns 0 otherwise.
  */
-_Data_['getByte'] = function() {
+_Data_['getBYTE'] = function() {
     return _pn_data_get_byte(this._data);
 };
 
 /**
- * @return value if the current node is an unsigned short, returns 0 otherwise.
+ * @method getUSHORT
+ * @memberof! proton.Data#
+ * @returns {number} value if the current node is an unsigned short, returns 0 otherwise.
  */
-_Data_['getUnsignedShort'] = function() {
+_Data_['getUSHORT'] = function() {
     return _pn_data_get_ushort(this._data) & 0xFFFF; // & 0xFFFF converts to unsigned;
 };
 
 /**
- * @method getShort
+ * @method getSHORT
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a signed short, returns 0 otherwise.
  */
-_Data_['getShort'] = function() {
+_Data_['getSHORT'] = function() {
     return _pn_data_get_short(this._data);
 };
 
 /**
- * @method getUnsignedInteger
+ * @method getUINT
  * @memberof! proton.Data#
  * @returns {number} value if the current node is an unsigned int, returns 0 otherwise.
  */
-_Data_['getUnsignedInteger'] = function() {
+_Data_['getUINT'] = function() {
     var value = _pn_data_get_uint(this._data);
     return (value > 0) ? value : 4294967296 + value; // 4294967296 == 2^32
 };
 
 /**
- * @method getInteger
+ * @method getINT
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a signed int, returns 0 otherwise.
  */
-_Data_['getInteger'] = function() {
-    return _pn_data_put_int(this._data);
+_Data_['getINT'] = function() {
+    return _pn_data_get_int(this._data);
 };
 
 /**
- * @method getChar
+ * @method getCHAR
  * @memberof! proton.Data#
  * @returns {string} the character represented by the unicode value of the current node.
  */
-_Data_['getChar'] = function() {
+_Data_['getCHAR'] = function() {
     return String.fromCharCode(_pn_data_get_char(this._data));
 };
 
 /**
- * @method getUnsignedLong
+ * Retrieve an unsigned long value. N.B. large values can suffer from a loss of
+ * precision as JavaScript numbers are restricted to 64 bit double values.
+ * @method getULONG
  * @memberof! proton.Data#
- * @returns {number} value if the current node is an unsigned long, returns 0 otherwise.
+ * @returns {proton.Data.Long} value if the current node is an unsigned long, returns 0 otherwise.
  */
-_Data_['getUnsignedLong'] = function() {
-console.log("getUnsignedLong");
-    return _pn_data_get_ulong(this._data);
+_Data_['getULONG'] = function() {
+    var low = _pn_data_get_ulong(this._data);
+    var high = Runtime.getTempRet0();
+    var long = new Data.Long(low, high);
+    long = long.toNumber();
+    return (long > 0) ? long : Data.Long.TWO_PWR_64_DBL_ + long;
 };
 
 /**
- * @method getLong
+ * Retrieve a signed long value. N.B. large values can suffer from a loss of
+ * precision as JavaScript numbers are restricted to 64 bit double values.
+ * @method getLONG
  * @memberof! proton.Data#
- * @returns {number} value if the current node is a signed long, returns 0 otherwise.
+ * @returns {proton.Data.Long} value if the current node is a signed long, returns 0 otherwise.
  */
-_Data_['getLong'] = function() {
-console.log("getLong");
+_Data_['getLONG'] = function() {
     // Getting the long is a little tricky as it is a 64 bit number. The way
     // emscripten handles this is to return the low 32 bits directly and pass
     // the high 32 bits via the tempRet0 variable. We use Data.Long to hold
@@ -2195,75 +2616,81 @@ console.log("getLong");
     var high = Runtime.getTempRet0();
     var long = new Data.Long(low, high);
     long = long.toNumber();
-
-console.log("Data.getLong() long = " + long);
-
     return long;
 };
 
 /**
- * @method getTimestamp
+ * @method getTIMESTAMP
  * @memberof! proton.Data#
- * @returns {number} value if the current node is a timestamp, returns 0 otherwise.
+ * @returns {Date} a native JavaScript Date instance representing the timestamp.
  */
-_Data_['getTimestamp'] = function() {
-console.log("getTimestamp not properly implemented yet");
-return 123456;
-    //return _pn_data_get_timestamp(this._data);
+_Data_['getTIMESTAMP'] = function() {
+    // Getting the timestamp is a little tricky as it is a 64 bit number. The way
+    // emscripten handles this is to return the low 32 bits directly and pass
+    // the high 32 bits via the tempRet0 variable. We use Data.Long to hold
+    // the 64 bit number and Data.Long.toNumber() to convert it back into a
+    // JavaScript number.
+    var low =  _pn_data_get_timestamp(this._data);
+    var high = Runtime.getTempRet0();
+    var long = new Data.Long(low, high);
+    long = long.toNumber();
+    return new Date(long);
 };
 
 /**
- * @method getFloat
+ * Retrieves a  float value. N.B. converting between floats and doubles is imprecise
+ * so the resulting value might not quite be what you expect.
+ * @method getFLOAT
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a float, returns 0 otherwise.
  */
-_Data_['getFloat'] = function() {
+_Data_['getFLOAT'] = function() {
     return _pn_data_get_float(this._data);
 };
 
 /**
- * @method getDouble
+ * @method getDOUBLE
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a double, returns 0 otherwise.
  */
-_Data_['getDouble'] = function() {
+_Data_['getDOUBLE'] = function() {
     return _pn_data_get_double(this._data);
 };
 
 /**
- * @method getDecimal32
+ * @method getDECIMAL32
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a decimal32, returns 0 otherwise.
  */
-_Data_['getDecimal32'] = function() {
-console.log("getDecimal32 not properly implemented yet");
+_Data_['getDECIMAL32'] = function() {
+console.log("getDECIMAL32 not properly implemented yet");
     return _pn_data_get_decimal32(this._data);
 };
 
 /**
- * @method getDecimal64
+ * @method getDECIMAL64
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a decimal64, returns 0 otherwise.
  */
-_Data_['getDecimal64'] = function() {
-console.log("getDecimal64 not properly implemented yet");
+_Data_['getDECIMAL64'] = function() {
+console.log("getDECIMAL64 not properly implemented yet");
     return _pn_data_get_decimal64(this._data);
 };
 
 /**
- * @method getDecimal128
+ * @method getDECIMAL128
  * @memberof! proton.Data#
  * @returns {number} value if the current node is a decimal128, returns 0 otherwise.
  */
-_Data_['getDecimal128'] = function() {
-console.log("getDecimal128 not properly implemented yet");
+_Data_['getDECIMAL128'] = function() {
+console.log("getDECIMAL128 not properly implemented yet");
     return _pn_data_get_decimal128(this._data);
 };
 
 /**
  * @method getUUID
  * @memberof! proton.Data#
- * @return {proton.Data.UUID} value if the current node is a UUID, returns null otherwise.
+ * @returns {proton.Data.Uuid} value if the current node is a UUID, returns null otherwise.
  */
 _Data_['getUUID'] = function() {
     var sp = Runtime.stackSave();
@@ -2277,7 +2704,7 @@ _Data_['getUUID'] = function() {
     _pn_data_get_uuid(bytes, this._data);
 
     // Create a new UUID from the bytes
-    var uuid = new Data['UUID'](bytes);
+    var uuid = new Data['Uuid'](bytes);
 
     // Tidy up the memory that we allocated on emscripten's stack.
     Runtime.stackRestore(sp);
@@ -2286,11 +2713,11 @@ _Data_['getUUID'] = function() {
 };
 
 /**
- * @method getBinary
+ * @method getBINARY
  * @memberof! proton.Data#
  * @returns {proton.Data.Binary} value if the current node is a Binary, returns null otherwise.
  */
-_Data_['getBinary'] = function() {
+_Data_['getBINARY'] = function() {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2322,11 +2749,11 @@ _Data_['getBinary'] = function() {
 
 /**
  * Gets a unicode String value from the current node.
- * @method getString
+ * @method getSTRING
  * @memberof! proton.Data#
- * @return {string} value if the current node is a String, returns "" otherwise.
+ * @returns {string} value if the current node is a String, returns "" otherwise.
  */
-_Data_['getString'] = function() {
+_Data_['getSTRING'] = function() {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2362,11 +2789,11 @@ _Data_['getString'] = function() {
  * open-ended, typically the both number and size of symbols in use for any
  * given application will be small, e.g. small enough that it is reasonable to
  * cache all the distinct values. Symbols are encoded as ASCII characters.
- * @method getSymbol
+ * @method getSYMBOL
  * @memberof! proton.Data#
- * @return {proton.Data.Symbol} value if the current node is a Symbol, returns "" otherwise.
+ * @returns {proton.Data.Symbol} value if the current node is a Symbol, returns "" otherwise.
  */
-_Data_['getSymbol'] = function() {
+_Data_['getSYMBOL'] = function() {
     var sp = Runtime.stackSave();
     // The implementation here is a bit "quirky" due to some low-level details
     // of the interaction between emscripten and LLVM and the use of pn_bytes.
@@ -2396,18 +2823,65 @@ _Data_['getSymbol'] = function() {
     return new Data['Symbol'](string);
 };
 
+/**
+ * Performs a deep copy of the current {@link proton.Data} instance and returns it
+ * @method copy
+ * @memberof! proton.Data#
+ * @returns {proton.Data} a copy of the current {@link proton.Data} instance.
+ */
+_Data_['copy'] = function() {
+    var copy = new Data();
+    this._check(_pn_data_copy(copy._data, this._data));
+    return copy;
+};
 
-// TODO copy, format and dump
+/**
+ * Format the encoded AMQP Data into a string representation and return it.
+ * @method format
+ * @memberof! proton.Data#
+ * @returns {string} a formatted string representation of the encoded Data.
+ */
+_Data_['format'] = function() {
+    var size = 1024; // Pass by reference variable - need to use setValue to initialise it.
+    while (true) {
+        setValue(size, size, 'i32'); // Set pass by reference variable.
+        var bytes = _malloc(size);   // Allocate storage from emscripten heap.
+        var err = _pn_data_format(this._data, bytes, size);
+        var size = getValue(size, 'i32'); // Dereference the real size value;
 
+        if (err === Module['Error']['OVERFLOW']) {
+            _free(bytes);
+            size *= 2;
+        } else {
+            var string = Pointer_stringify(bytes);
+            _free(bytes);
+            this._check(err)
+            return string;
+        }
+    }
+};
+
+/**
+ * Print the internal state of the {@link proton.Data} in human readable form.
+ * TODO. This seems to "crash" if compound nodes such as DESCRIBED, MAP or LIST
+ * are present in the tree, this is most likely a problem with the underlying C
+ * implementation as all the other navigation and format methods work - need to
+ * check by testing with some native C code.
+ * @method dump
+ * @memberof! proton.Data#
+ */
+_Data_['dump'] = function() {
+    _pn_data_dump(this._data);
+};
 
 /**
  * Serialise a Native JavaScript Object into an AMQP Map.
- * @method putDictionary
+ * @method putMAP
  * @memberof! proton.Data#
  * @param {object} object the Native JavaScript Object that we wish to serialise.
  */
-_Data_['putDictionary'] = function(object) {
-    this['putMap']();
+_Data_['putMAP'] = function(object) {
+    this['putMAPNODE']();
     this['enter']();
     for (var key in object) {
         if (object.hasOwnProperty(key)) {
@@ -2420,18 +2894,18 @@ _Data_['putDictionary'] = function(object) {
 
 /**
  * Deserialise from an AMQP Map into a Native JavaScript Object.
- * @method getDictionary
+ * @method getMAP
  * @memberof! proton.Data#
  * @returns {object} the deserialised Native JavaScript Object.
  */
-_Data_['getDictionary'] = function() {
+_Data_['getMAP'] = function() {
     if (this['enter']()) {
         var result = {};
         while (this['next']()) {
             var key = this['getObject']();
             var value = null;
             if (this['next']()) {
-                value = this['getObject']()
+                value = this['getObject']();
             }
             result[key] = value;
         }
@@ -2442,26 +2916,26 @@ _Data_['getDictionary'] = function() {
 
 /**
  * Serialise a Native JavaScript Array into an AMQP List.
- * @method putJSArray
+ * @method putLIST
  * @memberof! proton.Data#
  * @param {Array} array the Native JavaScript Array that we wish to serialise.
  */
-_Data_['putJSArray'] = function(array) {
-    this['putList']();
+_Data_['putLIST'] = function(array) {
+    this['putLISTNODE']();
     this['enter']();
     for (var i = 0, len = array.length; i < len; i++) {
-        this['putObject'](array[i])
+        this['putObject'](array[i]);
     }
     this['exit']();
 };
 
 /**
  * Deserialise from an AMQP List into a Native JavaScript Array.
- * @method getJSArray
+ * @method getLIST
  * @memberof! proton.Data#
- * @returns {array} the deserialised Native JavaScript Array.
+ * @returns {Array} the deserialised Native JavaScript Array.
  */
-_Data_['getJSArray'] = function() {
+_Data_['getLIST'] = function() {
     if (this['enter']()) {
         var result = [];
         while (this['next']()) {
@@ -2469,6 +2943,150 @@ _Data_['getJSArray'] = function() {
         }
         this['exit']();
         return result;
+    }
+};
+
+/**
+ * Serialise a proton.Data.Described into an AMQP Described.
+ * @method putDESCRIBED
+ * @memberof! proton.Data#
+ * @param {proton.Data.Described} d the proton.Data.Described that we wish to serialise.
+ */
+_Data_['putDESCRIBED'] = function(d) {
+    this['putDESCRIBEDNODE']();
+    this['enter']();
+    this['putObject'](d['descriptor']);
+    this['putObject'](d['value']);
+    this['exit']();
+};
+
+/**
+ * Deserialise from an AMQP Described into a proton.Data.Described.
+ * @method getDESCRIBED
+ * @memberof! proton.Data#
+ * @returns {proton.Data.Described} the deserialised proton.Data.Described.
+ */
+_Data_['getDESCRIBED'] = function() {
+    if (this['enter']()) {
+        this['next']();
+        var descriptor = this['getObject']();
+        this['next']();
+        var value = this['getObject']();
+        this['exit']();
+        return new Data['Described'](value, descriptor);
+    }
+};
+
+/**
+ * Serialise a proton.Data.Array or JavaScript TypedArray into an AMQP Array.
+ * @method putARRAY
+ * @memberof! proton.Data#
+ * @param {object} a the proton.Data.Array or TypedArray that we wish to serialise.
+ */
+_Data_['putARRAY'] = function(a) {
+    var type = 1;
+    var descriptor = 'TypedArray';
+    var array = a;
+
+    if (a instanceof Data['Array']) { // Array is a proton.Data.Array
+        type = Data[a['type']]; // Find the integer type from its name string.
+        descriptor = a['descriptor'];
+        array = a['elements'];
+    } else { // Array is a Native JavaScript TypedArray so work out the right type.
+        if (a instanceof Int8Array) {
+            type = Data['BYTE'];
+        } else if (a instanceof Uint8Array || a instanceof Uint8ClampedArray) {
+            type = Data['UBYTE'];
+        } else if (a instanceof Int16Array) {
+            type = Data['SHORT'];
+        } else if (a instanceof Uint16Array) {
+            type = Data['USHORT'];
+        } else if (a instanceof Int32Array) {
+            type = Data['INT'];
+        } else if (a instanceof Uint32Array) {
+            type = Data['UINT'];
+        } else if (a instanceof Float32Array) {
+            type = Data['FLOAT'];
+        } else if (a instanceof Float64Array) {
+            type = Data['DOUBLE'];
+        }
+    }
+
+    var described = descriptor != null;
+
+    this['putARRAYNODE'](described, type);
+    this['enter']();
+    if (described) {
+        this['putObject'](descriptor);
+    }
+    var putter = 'put' + Data['TypeNames'][type];
+    for (var i = 0, len = array.length; i < len; i++) {
+        var value = array[i];
+        value = (value instanceof Data.TypedNumber) ? value.value : value;
+        this[putter](value);
+    }
+    this['exit']();
+};
+
+/**
+ * Deserialise from an AMQP Array into a proton.Data.Array.
+ * @method getARRAY
+ * @memberof! proton.Data#
+ * @returns {proton.Data.Array} the deserialised proton.Data.Array.
+ */
+_Data_['getARRAY'] = function() {
+    var metadata = this['getARRAYNODE']();
+    var count = metadata['count'];
+    var described = metadata['described'];
+    var type = metadata['type'];
+
+    if (type === null) {
+        return null;
+    }
+
+    var elements = null;
+    if (typeof ArrayBuffer === 'function') {
+        if (type === Data['BYTE']) {
+            elements = new Int8Array(count);
+        } else if (type === Data['UBYTE']) {
+            elements = new Uint8Array(count);
+        } else if (type === Data['SHORT']) {
+            elements = new Int16Array(count);
+        } else if (type === Data['USHORT']) {
+            elements = new Uint16Array(count);
+        } else if (type === Data['INT']) {
+            elements = new Int32Array(count);
+        } else if (type === Data['UINT']) {
+            elements = new Uint32Array(count);
+        } else if (type === Data['FLOAT']) {
+            elements = new Float32Array(count);
+        } else if (type === Data['DOUBLE']) {
+            elements = new Float64Array(count);
+        } else {
+            elements = new Array(count);
+        }
+    } else {
+        elements = new Array(count);
+    }
+
+    if (this['enter']()) {
+        var descriptor; // Deliberately initialised as undefined not null.
+        if (described) {
+            this['next']();
+            descriptor = this['getObject']();
+        }
+
+        for (var i = 0; i < count; i++) {
+            this['next']();
+            elements[i] = this['getObject']();
+        }
+
+        this['exit']();
+        if (descriptor === 'TypedArray') {
+            return elements;
+        } else {
+            return new Data['Array'](type, elements, descriptor);
+        }
     }
 };
 
@@ -2485,32 +3103,33 @@ _Data_['getJSArray'] = function() {
 _Data_['putObject'] = function(obj) {
 console.log("Data.putObject");
 
-
 console.log("obj = " + obj);
 //console.log("typeof obj = " + (typeof obj));
 //console.log("obj prototype = " + Object.prototype.toString.call(obj));
 
     if (obj == null) { // == Checks for null and undefined.
-console.log("obj is null");
-        this['putNull']();
+        this['putNULL']();
     } else if (Data.isString(obj)) {
-console.log("obj is String");
-
         var quoted = obj.match(/(['"])[^'"]*\1/);
-        if (quoted) {
-            quoted = quoted[0].slice(1, -1);
-console.log("obj is quoted String " + quoted);
-            this['putString'](quoted);
-        } else {
-            // TODO check for stringified numbers.
-            this['putString'](obj);
-        }   
-    } else if (obj instanceof Data['UUID']) {
+        if (quoted) { // If a quoted string extract the string inside the quotes.
+            obj = quoted[0].slice(1, -1);
+        }
+        this['putSTRING'](obj);
+    } else if (obj instanceof Date) {
+        this['putTIMESTAMP'](obj);
+    } else if (obj instanceof Data['Uuid']) {
         this['putUUID'](obj);
     } else if (obj instanceof Data['Binary']) {
-        this['putBinary'](obj);
+        this['putBINARY'](obj);
     } else if (obj instanceof Data['Symbol']) {
-        this['putSymbol'](obj);
+        this['putSYMBOL'](obj);
+    } else if (obj instanceof Data['Described']) {
+        this['putDESCRIBED'](obj);
+    } else if (obj instanceof Data['Array']) {
+        this['putARRAY'](obj);
+    } else if (obj.buffer && (typeof ArrayBuffer === 'function') && 
+               obj.buffer instanceof ArrayBuffer) {
+        this['putARRAY'](obj);
     } else if (obj instanceof Data.TypedNumber) { // Dot notation used for "protected" inner class.
         // Call the appropriate serialisation method based upon the numerical type.
         this['put' + obj.type](obj.value);
@@ -2519,42 +3138,37 @@ console.log("obj is quoted String " + quoted);
          * This block encodes standard JavaScript numbers by making some inferences.
          * Encoding JavaScript numbers is surprisingly complex and has several
          * gotchas. The code here tries to do what the author believes is the
-         * most intuitive encoding of the native JavaScript Number. It first
+         * most "intuitive" encoding of the native JavaScript Number. It first
          * tries to identify if the number is an integer or floating point type
          * by checking if the number modulo 1 is zero (i.e. if it has a remainder
          * then it's a floating point type, which is encoded here as a double).
          * If the number is an integer type a test is made to check if it is a
-         * 32 bit Int value. N.B. JavaScript automagically coerces floating
-         * point numbers with a zero Fractional Part into an exact integer so
+         * 32 bit Int value. N.B. gotcha - JavaScript automagically coerces floating
+         * point numbers with a zero Fractional Part into an *exact* integer so
          * numbers like 1.0, 100.0 etc. will be encoded as int or long here,
          * which is unlikely to be what is wanted. There's no easy "transparent"
          * way around this. The TypedNumber approach above allows applications
-         * to express more explicitly what is require, for example 1.0.asFloat()
-         * (1).asUnsignedByte(), (5).asLong() etc.
+         * to express more explicitly what is required, for example (1.0).float()
+         * (1).ubyte(), (5).long() etc.
          */
         if (obj % 1 === 0) {
-console.log(obj + " is Integer Type " + (obj|0));
             if (obj === (obj|0)) { // the |0 coerces to a 32 bit value.
-                // 32 bit integer - encode as an Integer.
-console.log(obj + " is Int ");
-                this['putInteger'](obj);
+                // 32 bit integer - encode as an INT.
+                this['putINT'](obj);
             } else { // Longer than 32 bit - encode as a Long.
-console.log(obj + " is Long");
-                this['putLong'](obj);
+                this['putLONG'](obj);
             }
         } else { // Floating point type - encode as a Double
-console.log(obj + " is Float Type");
-            this['putDouble'](obj);
+            this['putDOUBLE'](obj);
         }
     } else if (Data.isBoolean(obj)) {
-        this['putBoolean'](obj);
+        this['putBOOL'](obj);
     } else if (Data.isArray(obj)) { // Native JavaScript Array
-        this['putJSArray'](obj);
+        this['putLIST'](obj);
     } else {
-        this['putDictionary'](obj);
+        this['putMAP'](obj);
     }
 };
-_Data_.putObject = _Data_['putObject'];
 
 /**
  * @method getObject
@@ -2562,18 +3176,10 @@ _Data_.putObject = _Data_['putObject'];
  * @returns {object} the JavaScript Object or primitive being deserialised.
  */
 _Data_['getObject'] = function() {
-console.log("Data.getObject: not fully implemented yet");
-
-    var type = this.type();
-console.log("type = " + type);
-
-    var getter = Data.GetMappings[type];
-
-console.log("getter = " + getter);
-
+    var type = Data['TypeNames'][this.type()];
+    type = type ? type : 'NULL';
+    var getter = 'get' + type;
     return this[getter]();
 };
-_Data_.getObject = _Data_['getObject'];
-
 
 
