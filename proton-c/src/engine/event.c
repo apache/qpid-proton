@@ -72,7 +72,7 @@ static int pn_collector_inspect(void *obj, pn_string_t *dst)
 
 pn_collector_t *pn_collector(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_collector);
+  static const pn_class_t clazz = PN_CLASS(pn_collector);
   pn_collector_t *collector = (pn_collector_t *) pn_new(sizeof(pn_collector_t), &clazz);
   return collector;
 }
@@ -198,7 +198,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 
 pn_event_t *pn_event(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_event);
+  static const pn_class_t clazz = PN_CLASS(pn_event);
   pn_event_t *event = (pn_event_t *) pn_new(sizeof(pn_event_t), &clazz);
   return event;
 }

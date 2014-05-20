@@ -67,7 +67,7 @@ void pn_selector_finalize(void *obj)
 
 pn_selector_t *pn_selector(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_selector);
+  static const pn_class_t clazz = PN_CLASS(pn_selector);
   pn_selector_t *selector = (pn_selector_t *) pn_new(sizeof(pn_selector_t), &clazz);
   return selector;
 }

@@ -56,7 +56,7 @@ static void pn_encoder_finalize(void *obj) {
 
 pn_encoder_t *pn_encoder()
 {
-  static pn_class_t clazz = PN_CLASS(pn_encoder);
+  static const pn_class_t clazz = PN_CLASS(pn_encoder);
   return (pn_encoder_t *) pn_new(sizeof(pn_encoder_t), &clazz);
 }
 

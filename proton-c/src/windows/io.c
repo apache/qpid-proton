@@ -84,7 +84,7 @@ void pn_io_finalize(void *obj)
 
 pn_io_t *pn_io(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_io);
+  static const pn_class_t clazz = PN_CLASS(pn_io);
   pn_io_t *io = (pn_io_t *) pn_new(sizeof(pn_io_t), &clazz);
   return io;
 }

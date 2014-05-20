@@ -58,14 +58,14 @@ typedef struct {
     PREFIX ## _inspect                          \
 }
 
-PN_EXTERN void *pn_new(size_t size, pn_class_t *clazz);
-PN_EXTERN void pn_initialize(void *object, pn_class_t *clazz);
+PN_EXTERN void *pn_new(size_t size, const pn_class_t* clazz);
+PN_EXTERN void pn_initialize(void *object, const pn_class_t *clazz);
 PN_EXTERN void *pn_incref(void *object);
 PN_EXTERN void pn_decref(void *object);
 PN_EXTERN int pn_refcount(void *object);
 PN_EXTERN void pn_finalize(void *object);
 PN_EXTERN void pn_free(void *object);
-PN_EXTERN pn_class_t *pn_class(void *object);
+PN_EXTERN const pn_class_t *pn_class(void* object);
 PN_EXTERN uintptr_t pn_hashcode(void *object);
 PN_EXTERN intptr_t pn_compare(void *a, void *b);
 PN_EXTERN bool pn_equals(void *a, void *b);

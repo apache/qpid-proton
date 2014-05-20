@@ -359,7 +359,7 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 
 pn_data_t *pn_data(size_t capacity)
 {
-  static pn_class_t clazz = PN_CLASS(pn_data);
+  static const pn_class_t clazz = PN_CLASS(pn_data);
   pn_data_t *data = (pn_data_t *) pn_new(sizeof(pn_data_t), &clazz);
   data->capacity = capacity;
   data->size = 0;

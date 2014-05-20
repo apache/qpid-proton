@@ -29,14 +29,14 @@
 #include <ctype.h>
 
 typedef struct {
-  pn_class_t *clazz;
+  const pn_class_t *clazz;
   int refcount;
 } pni_head_t;
 
 #define pni_head(PTR) \
   (((pni_head_t *) (PTR)) - 1)
 
-void *pn_new(size_t size, pn_class_t *clazz)
+void *pn_new(size_t size, const pn_class_t *clazz)
 {
   pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
   void *object = head + 1;
@@ -44,7 +44,7 @@ void *pn_new(size_t size, pn_class_t *clazz)
   return object;
 }
 
-void pn_initialize(void *object, pn_class_t *clazz)
+void pn_initialize(void *object, const pn_class_t *clazz)
 {
   pni_head_t *head = pni_head(object);
   head->clazz = clazz;
@@ -101,7 +101,7 @@ void pn_free(void *object)
   }
 }
 
-pn_class_t *pn_class(void *object)
+const pn_class_t *pn_class(void *object)
 {
   assert(object);
   return pni_head(object)->clazz;
@@ -127,7 +127,7 @@ intptr_t pn_compare(void *a, void *b)
     pni_head_t *hb = pni_head(b);
 
     if (ha->clazz && hb->clazz && ha->clazz == hb->clazz) {
-      pn_class_t *clazz = ha->clazz;
+      const pn_class_t *clazz = ha->clazz;
       if (clazz->compare) {
         return clazz->compare(a, b);
       }
@@ -151,7 +151,7 @@ int pn_inspect(void *object, pn_string_t *dst)
   if (object) {
     pni_head_t *head = pni_head(object);
     if (head->clazz) {
-      pn_class_t *clazz = head->clazz;
+      const pn_class_t *clazz = head->clazz;
       if (clazz->inspect) {
         return clazz->inspect(object, dst);
       }
@@ -354,7 +354,7 @@ static int pn_list_inspect(void *obj, pn_string_t *dst)
 
 pn_list_t *pn_list(size_t capacity, int options)
 {
-  static pn_class_t clazz = PN_CLASS(pn_list);
+  static const pn_class_t clazz = PN_CLASS(pn_list);
 
   pn_list_t *list = (pn_list_t *) pn_new(sizeof(pn_list_t), &clazz);
   list->capacity = capacity ? capacity : 16;
@@ -463,7 +463,7 @@ static int pn_map_inspect(void *obj, pn_string_t *dst)
 
 pn_map_t *pn_map(size_t capacity, float load_factor, int options)
 {
-  static pn_class_t clazz = PN_CLASS(pn_map);
+  static const pn_class_t clazz = PN_CLASS(pn_map);
 
   pn_map_t *map = (pn_map_t *) pn_new(sizeof(pn_map_t), &clazz);
   map->capacity = capacity ? capacity : 16;
@@ -796,7 +796,7 @@ pn_string_t *pn_string(const char *bytes)
 
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
-  static pn_class_t clazz = PN_CLASS(pn_string);
+  static const pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_new(sizeof(pn_string_t), &clazz);
   string->capacity = n ? n * sizeof(char) : 16;
   string->bytes = (char *) malloc(string->capacity);
@@ -985,7 +985,7 @@ static void pn_iterator_finalize(void *object)
 
 pn_iterator_t *pn_iterator()
 {
-  static pn_class_t clazz = PN_CLASS(pn_iterator);
+  static const pn_class_t clazz = PN_CLASS(pn_iterator);
   pn_iterator_t *it = (pn_iterator_t *) pn_new(sizeof(pn_iterator_t), &clazz);
   return it;
 }

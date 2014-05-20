@@ -318,7 +318,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
 
 pn_message_t *pn_message()
 {
-  static pn_class_t clazz = PN_CLASS(pn_message);
+  static const pn_class_t clazz = PN_CLASS(pn_message);
   pn_message_t *msg = (pn_message_t *) pn_new(sizeof(pn_message_t), &clazz);
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;

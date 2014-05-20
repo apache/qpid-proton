@@ -90,7 +90,7 @@ pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
                                 void (*expired)(pn_selectable_t *),
                                 void (*finalize)(pn_selectable_t *))
 {
-  static pn_class_t clazz = PN_CLASS(pn_selectable);
+  static const pn_class_t clazz = PN_CLASS(pn_selectable);
   pn_selectable_t *selectable = (pn_selectable_t *) pn_new(sizeof(pn_selectable_t), &clazz);
   selectable->capacity = capacity;
   selectable->pending = pending;

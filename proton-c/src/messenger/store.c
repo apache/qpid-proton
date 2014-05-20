@@ -205,7 +205,7 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
 pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
 {
   assert(store);
-  static pn_class_t clazz = PN_CLASS(pni_entry);
+  static const pn_class_t clazz = PN_CLASS(pni_entry);
 
   if (!address) address = "";
   pni_stream_t *stream = pni_stream_put(store, address);

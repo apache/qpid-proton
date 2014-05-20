@@ -222,7 +222,7 @@ static void pn_transport_finalize(void *object);
 
 pn_transport_t *pn_transport()
 {
-  static pn_class_t clazz = PN_CLASS(pn_transport);
+  static const pn_class_t clazz = PN_CLASS(pn_transport);
   pn_transport_t *transport = (pn_transport_t *) pn_new(sizeof(pn_transport_t),
                                                         &clazz);
   if (!transport) return NULL;

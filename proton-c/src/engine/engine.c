@@ -380,7 +380,7 @@ static void pn_connection_finalize(void *object)
 
 pn_connection_t *pn_connection()
 {
-  static pn_class_t clazz = PN_CLASS(pn_connection);
+  static const pn_class_t clazz = PN_CLASS(pn_connection);
   pn_connection_t *conn = (pn_connection_t *) pn_new(sizeof(pn_connection_t), &clazz);
   if (!conn) return NULL;
 
@@ -712,7 +712,7 @@ static void pn_session_finalize(void *object)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
-  static pn_class_t clazz = PN_CLASS(pn_session);
+  static const pn_class_t clazz = PN_CLASS(pn_session);
   pn_session_t *ssn = (pn_session_t *) pn_new(sizeof(pn_session_t), &clazz);
   if (!ssn) return NULL;
 
@@ -813,7 +813,7 @@ static void pn_link_finalize(void *object)
 
 pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
 {
-  static pn_class_t clazz = PN_CLASS(pn_link);
+  static const pn_class_t clazz = PN_CLASS(pn_link);
   pn_link_t *link = (pn_link_t *) pn_new(sizeof(pn_link_t), &clazz);
 
   pn_endpoint_init(&link->endpoint, type, session->connection);
@@ -1091,7 +1091,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_delivery_t *delivery = link->settled_head;
   LL_POP(link, settled, pn_delivery_t);
   if (!delivery) {
-    static pn_class_t clazz = PN_CLASS(pn_delivery);
+    static const pn_class_t clazz = PN_CLASS(pn_delivery);
     delivery = (pn_delivery_t *) pn_new(sizeof(pn_delivery_t), &clazz);
     if (!delivery) return NULL;
     delivery->link = link;
