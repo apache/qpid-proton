@@ -234,9 +234,16 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
       if (quote) if ((err = pn_string_addf(str, "\""))) return err;
       return 0;
     }
+  case PN_LIST:
+    return pn_string_addf(str, "<list>");
+  case PN_MAP:
+    return pn_string_addf(str, "<map>");
+  case PN_ARRAY:
+    return pn_string_addf(str, "<array>");
+  case PN_DESCRIBED:
+    return pn_string_addf(str, "<described>");
   default:
-    assert(false);
-    return PN_ERR;
+    return pn_string_addf(str, "<undefined: %i>", atom->type);
   }
 }
 
