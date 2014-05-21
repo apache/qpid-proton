@@ -31,7 +31,6 @@
 #include "../engine/engine-internal.h"
 #include "../util.h"
 
-#define SCRATCH (1024)
 
 struct pn_sasl_t {
   pn_transport_t *transport;
@@ -49,7 +48,6 @@ struct pn_sasl_t {
   bool rcvd_init;
   bool sent_done;
   bool rcvd_done;
-  char scratch[SCRATCH];
 };
 
 static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *bytes, size_t available);
