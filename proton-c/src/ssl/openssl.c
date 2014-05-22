@@ -49,23 +49,25 @@ typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
 struct pn_ssl_domain_t {
-  int   ref_count;
 
   SSL_CTX       *ctx;
-  pn_ssl_mode_t mode;
 
-  bool has_ca_db;       // true when CA database configured
-  bool has_certificate; // true when certificate configured
   char *keyfile_pw;
 
   // settings used for all connections
   char *trusted_CAs;
-  pn_ssl_verify_mode_t verify_mode;
-  bool allow_unsecured;
 
   // session cache
   pn_ssl_session_t *ssn_cache_head;
   pn_ssl_session_t *ssn_cache_tail;
+
+  int   ref_count;
+  pn_ssl_mode_t mode;
+  pn_ssl_verify_mode_t verify_mode;
+
+  bool has_ca_db;       // true when CA database configured
+  bool has_certificate; // true when certificate configured
+  bool allow_unsecured;
 };
 
 
@@ -81,24 +83,25 @@ struct pn_ssl_t {
   BIO *bio_ssl;         // i/o from/to SSL socket layer
   BIO *bio_ssl_io;      // SSL "half" of network-facing BIO
   BIO *bio_net_io;      // socket-side "half" of network-facing BIO
-  bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
-  bool ssl_closed;      // shutdown complete, or SSL error
-  ssize_t app_input_closed;   // error code returned by upper layer process input
-  ssize_t app_output_closed;  // error code returned by upper layer process output
-
-  bool read_blocked;    // SSL blocked until more network data is read
-  bool write_blocked;   // SSL blocked until data is written to network
-
   // buffers for holding I/O from "applications" above SSL
 #define APP_BUF_SIZE    (4*1024)
   char *outbuf;
+  char *inbuf;
+
+  ssize_t app_input_closed;   // error code returned by upper layer process input
+  ssize_t app_output_closed;  // error code returned by upper layer process output
+
   size_t out_size;
   size_t out_count;
-  char *inbuf;
   size_t in_size;
   size_t in_count;
 
   pn_trace_t trace;
+
+  bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
+  bool ssl_closed;      // shutdown complete, or SSL error
+  bool read_blocked;    // SSL blocked until more network data is read
+  bool write_blocked;   // SSL blocked until data is written to network
 };
 
 struct pn_ssl_session_t {

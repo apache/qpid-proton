@@ -380,9 +380,9 @@ struct pn_map_t {
   size_t capacity;
   size_t addressable;
   size_t size;
-  float load_factor;
   uintptr_t (*hashcode)(void *key);
   bool (*equals)(void *a, void *b);
+  float load_factor;
   bool count_keys;
   bool count_values;
 };

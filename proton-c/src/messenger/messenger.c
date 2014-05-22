@@ -60,30 +60,20 @@ typedef  enum {
 } pn_link_credit_mode_t;
 
 struct pn_messenger_t {
+  pn_address_t address;
   char *name;
   char *certificate;
   char *private_key;
   char *password;
   char *trusted_certificates;
-  int timeout;
-  bool blocking;
-  bool passive;
   pn_io_t *io;
   pn_list_t *pending; // pending selectables
   pn_selectable_t *interruptor;
-  bool interrupted;
   pn_socket_t ctrl[2];
   pn_list_t *listeners;
   pn_list_t *connections;
   pn_selector_t *selector;
   pn_collector_t *collector;
-  int send_threshold;
-  pn_link_credit_mode_t credit_mode;
-  int credit_batch;  // when LINK_CREDIT_AUTO
-  int credit;        // available
-  int distributed;   // credit
-  int receivers;     // # receiver links
-  int draining;      // # links in drain state
   pn_list_t *credited;
   pn_list_t *blocked;
   pn_timestamp_t next_drain;
@@ -95,14 +85,24 @@ struct pn_messenger_t {
   pn_error_t *error;
   pn_transform_t *routes;
   pn_transform_t *rewrites;
-  pn_address_t address;
   pn_tracker_t outgoing_tracker;
   pn_tracker_t incoming_tracker;
   pn_string_t *original;
   pn_string_t *rewritten;
   pn_string_t *domain;
-  bool worked;
+  int timeout;
+  int send_threshold;
+  pn_link_credit_mode_t credit_mode;
+  int credit_batch;  // when LINK_CREDIT_AUTO
+  int credit;        // available
+  int distributed;   // credit
+  int receivers;     // # receiver links
+  int draining;      // # links in drain state
   int connection_error;
+  bool blocking;
+  bool passive;
+  bool interrupted;
+  bool worked;
 };
 
 #define CTX_HEAD                                \

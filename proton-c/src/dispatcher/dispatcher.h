@@ -38,12 +38,8 @@ typedef int (pn_action_t)(pn_dispatcher_t *disp);
 
 struct pn_dispatcher_t {
   pn_action_t *actions[256];
-  uint8_t frame_type;
-  pn_trace_t trace;
   pn_buffer_t *input;
   size_t fragment;
-  uint16_t channel;
-  uint8_t code;
   pn_data_t *args;
   const char *payload;
   size_t size;
@@ -56,11 +52,15 @@ struct pn_dispatcher_t {
   size_t available; /* number of raw bytes pending output */
   char *output;
   pn_transport_t *transport;
-  bool halt;
-  bool batch;
   uint64_t output_frames_ct;
   uint64_t input_frames_ct;
   pn_string_t *scratch;
+  pn_trace_t trace;
+  uint16_t channel;
+  uint8_t frame_type;
+  uint8_t code;
+  bool halt;
+  bool batch;
 };
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport);

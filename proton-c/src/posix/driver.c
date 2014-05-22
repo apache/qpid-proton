@@ -64,19 +64,19 @@ struct pn_driver_t {
   struct pollfd *fds;
   size_t nfds;
   int ctrl[2]; //pipe for updating selectable status
-  pn_trace_t trace;
   pn_timestamp_t wakeup;
+  pn_trace_t trace;
 };
 
 struct pn_listener_t {
   pn_driver_t *driver;
   pn_listener_t *listener_next;
   pn_listener_t *listener_prev;
-  int idx;
-  bool pending;
-  int fd;
-  bool closed;
   void *context;
+  int idx;
+  int fd;
+  bool pending;
+  bool closed;
 };
 
 #define PN_NAME_MAX (256)
@@ -86,22 +86,22 @@ struct pn_connector_t {
   pn_connector_t *connector_next;
   pn_connector_t *connector_prev;
   char name[PN_NAME_MAX];
-  int idx;
-  bool pending_tick;
-  bool pending_read;
-  bool pending_write;
-  int fd;
-  int status;
-  pn_trace_t trace;
-  bool closed;
   pn_timestamp_t wakeup;
   pn_connection_t *connection;
   pn_transport_t *transport;
   pn_sasl_t *sasl;
-  bool input_done;
-  bool output_done;
   pn_listener_t *listener;
   void *context;
+  int idx;
+  int fd;
+  int status;
+  pn_trace_t trace;
+  bool pending_tick;
+  bool pending_read;
+  bool pending_write;
+  bool closed;
+  bool input_done;
+  bool output_done;
 };
 
 /* Impls */

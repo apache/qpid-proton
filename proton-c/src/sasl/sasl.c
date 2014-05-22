@@ -35,15 +35,15 @@
 struct pn_sasl_t {
   pn_transport_t *transport;
   pn_io_layer_t *io_layer;
-  size_t header_count;
   pn_dispatcher_t *disp;
-  bool client;
-  bool configured;
   char *mechanisms;
   char *remote_mechanisms;
   pn_buffer_t *send_data;
   pn_buffer_t *recv_data;
+  size_t header_count;
   pn_sasl_outcome_t outcome;
+  bool client;
+  bool configured;
   bool sent_init;
   bool rcvd_init;
   bool sent_done;

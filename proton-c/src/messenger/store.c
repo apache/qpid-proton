@@ -34,14 +34,14 @@
 typedef struct pni_stream_t pni_stream_t;
 
 struct pni_store_t {
-  size_t size;
   pni_stream_t *streams;
   pni_entry_t *store_head;
   pni_entry_t *store_tail;
+  pn_hash_t *tracked;
+  size_t size;
   int window;
   pn_sequence_t lwm;
   pn_sequence_t hwm;
-  pn_hash_t *tracked;
 };
 
 struct pni_stream_t {
@@ -53,17 +53,17 @@ struct pni_stream_t {
 };
 
 struct pni_entry_t {
-  pn_sequence_t id;
   pni_stream_t *stream;
-  bool free;
   pni_entry_t *stream_next;
   pni_entry_t *stream_prev;
   pni_entry_t *store_next;
   pni_entry_t *store_prev;
-  pn_status_t status;
   pn_buffer_t *bytes;
   pn_delivery_t *delivery;
   void *context;
+  pn_status_t status;
+  pn_sequence_t id;
+  bool free;
 };
 
 void pni_entry_finalize(void *object)

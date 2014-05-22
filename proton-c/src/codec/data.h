@@ -30,35 +30,35 @@
 typedef uint16_t pni_nid_t;
 
 typedef struct {
+  char *start;
+  size_t data_offset;
+  size_t data_size;
+  pn_atom_t atom;
+  pn_type_t type;
   pni_nid_t next;
   pni_nid_t prev;
   pni_nid_t down;
   pni_nid_t parent;
   pni_nid_t children;
-  pn_atom_t atom;
   // for arrays
   bool described;
-  pn_type_t type;
   bool data;
-  size_t data_offset;
-  size_t data_size;
-  char *start;
   bool small;
 } pni_node_t;
 
 struct pn_data_t {
-  pni_nid_t capacity;
-  pni_nid_t size;
   pni_node_t *nodes;
   pn_buffer_t *buf;
-  pni_nid_t parent;
-  pni_nid_t current;
-  pni_nid_t base_parent;
-  pni_nid_t base_current;
   pn_decoder_t *decoder;
   pn_encoder_t *encoder;
   pn_error_t *error;
   pn_string_t *str;
+  pni_nid_t capacity;
+  pni_nid_t size;
+  pni_nid_t parent;
+  pni_nid_t current;
+  pni_nid_t base_parent;
+  pni_nid_t base_current;
 };
 
 pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd);

@@ -27,9 +27,9 @@
 #include "platform.h"
 
 struct pn_error_t {
-  int code;
   char *text;
   pn_error_t *root;
+  int code;
 };
 
 pn_error_t *pn_error()

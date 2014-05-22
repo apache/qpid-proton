@@ -9,13 +9,13 @@ struct pn_collector_t {
 };
 
 struct pn_event_t {
-  pn_event_type_t type;
   pn_connection_t *connection;
   pn_session_t *session;
   pn_link_t *link;
   pn_delivery_t *delivery;
   pn_transport_t *transport;
   pn_event_t *next;
+  pn_event_type_t type;
 };
 
 static void pn_collector_initialize(void *obj)
