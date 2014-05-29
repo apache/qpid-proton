@@ -422,7 +422,7 @@ int pn_data_grow(pn_data_t *data)
   return 0;
 }
 
-ssize_t pn_data_intern(pn_data_t *data, char *start, size_t size)
+ssize_t pn_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
@@ -464,7 +464,7 @@ int pn_data_intern_node(pn_data_t *data, pni_node_t *node)
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
-  pn_bytes_t buf = pn_buffer_bytes(data->buf);
+  pn_buffer_memory_t buf = pn_buffer_memory(data->buf);
   bytes->start = buf.start + offset;
 
   if (pn_buffer_capacity(data->buf) != oldcap) {

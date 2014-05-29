@@ -30,6 +30,10 @@ typedef long long int int64_t;
 /* Parse these interface header files to generate APIs for script languages */
 
 %include "proton/import_export.h"
+
+/* We cannot safely just wrap pn_bytes_t but each language binding must have a typemap for it - presumably to a string type */
+%ignore pn_bytes_t;
+
 %include "proton/types.h"
 %ignore pn_string_vformat;
 %ignore pn_string_vaddf;

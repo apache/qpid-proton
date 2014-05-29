@@ -236,7 +236,7 @@ void pn_sasl_free(pn_sasl_t *sasl)
 
 void pn_client_init(pn_sasl_t *sasl)
 {
-  pn_bytes_t bytes = pn_buffer_bytes(sasl->send_data);
+  pn_buffer_memory_t bytes = pn_buffer_memory(sasl->send_data);
   pn_post_frame(sasl->disp, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
                 bytes.size, bytes.start);
   pn_buffer_clear(sasl->send_data);
@@ -292,7 +292,7 @@ void pn_sasl_process(pn_sasl_t *sasl)
   }
 
   if (pn_buffer_size(sasl->send_data)) {
-    pn_bytes_t bytes = pn_buffer_bytes(sasl->send_data);
+    pn_buffer_memory_t bytes = pn_buffer_memory(sasl->send_data);
     pn_post_frame(sasl->disp, 0, "DL[z]", sasl->client ? SASL_RESPONSE : SASL_CHALLENGE,
                   bytes.size, bytes.start);
     pn_buffer_clear(sasl->send_data);

@@ -212,7 +212,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 
  encode_performatives:
   pn_buffer_clear( disp->frame );
-  pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+  pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
   buf.size = pn_buffer_available( disp->frame );
 
   ssize_t wr = pn_data_encode( disp->output_args, buf.start, buf.size );
@@ -290,7 +290,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
 
   encode_performatives:
     pn_buffer_clear( disp->frame );
-    pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+    pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
     buf.size = pn_buffer_available( disp->frame );
 
     ssize_t wr = pn_data_encode(disp->output_args, buf.start, buf.size);

@@ -974,7 +974,7 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   size_t pending = pn_delivery_pending(d);
   int err = pn_buffer_ensure(buf, pending + 1);
   if (err) return pn_error_format(messenger->error, err, "get: error growing buffer");
-  char *encoded = pn_buffer_bytes(buf).start;
+  char *encoded = pn_buffer_memory(buf).start;
   ssize_t n = pn_link_recv(receiver, encoded, pending);
   if (n != (ssize_t) pending) {
     return pn_error_format(messenger->error, n,
@@ -1667,7 +1667,7 @@ int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *send
 
   pn_buffer_t *buf = pni_entry_bytes(entry);
   pn_bytes_t bytes = pn_buffer_bytes(buf);
-  char *encoded = bytes.start;
+  const char *encoded = bytes.start;
   size_t size = bytes.size;
 
   // XXX: proper tag
@@ -1747,7 +1747,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
   pni_rewrite(messenger, msg);
   while (true) {
-    char *encoded = pn_buffer_bytes(buf).start;
+    char *encoded = pn_buffer_memory(buf).start;
     size_t size = pn_buffer_capacity(buf);
     int err = pn_message_encode(msg, encoded, &size);
     if (err == PN_OVERFLOW) {
