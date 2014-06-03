@@ -459,7 +459,6 @@ int pn_do_open(pn_dispatcher_t *disp)
     }
     disp->remote_max_frame = transport->remote_max_frame;
     pn_buffer_clear( disp->frame );
-    pn_buffer_ensure( disp->frame, disp->remote_max_frame );
   }
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
