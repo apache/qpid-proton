@@ -95,8 +95,6 @@ typedef struct {
   bool disp;
 } pn_session_state_t;
 
-#define SCRATCH (1024)
-
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 

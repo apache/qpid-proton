@@ -33,9 +33,6 @@ typedef struct pn_dispatcher_t pn_dispatcher_t;
 
 typedef int (pn_action_t)(pn_dispatcher_t *disp);
 
-#define SCRATCH (1024)
-#define CODEC_LIMIT (1024)
-
 struct pn_dispatcher_t {
   pn_action_t *actions[256];
   pn_buffer_t *input;
