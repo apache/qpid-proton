@@ -24,6 +24,7 @@
 #include <string.h>
 #include <proton/framing.h>
 #include "protocol.h"
+#include "dispatch_actions.h"
 
 #include <assert.h>
 #include <stdarg.h>
@@ -92,16 +93,6 @@ void pn_delivery_map_clear(pn_delivery_map_t *dm)
   }
 }
 
-int pn_do_open(pn_dispatcher_t *disp);
-int pn_do_begin(pn_dispatcher_t *disp);
-int pn_do_attach(pn_dispatcher_t *disp);
-int pn_do_transfer(pn_dispatcher_t *disp);
-int pn_do_flow(pn_dispatcher_t *disp);
-int pn_do_disposition(pn_dispatcher_t *disp);
-int pn_do_detach(pn_dispatcher_t *disp);
-int pn_do_end(pn_dispatcher_t *disp);
-int pn_do_close(pn_dispatcher_t *disp);
-
 static ssize_t pn_input_read_amqp_header(pn_io_layer_t *io_layer, const char *bytes, size_t available);
 static ssize_t pn_input_read_amqp(pn_io_layer_t *io_layer, const char *bytes, size_t available);
 static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes, size_t available);
@@ -149,16 +140,6 @@ static void pn_transport_initialize(void *object)
   amqp->buffered_output = NULL;
   amqp->buffered_input = NULL;
   amqp->next = NULL;
-
-  pn_dispatcher_action(transport->disp, OPEN, pn_do_open);
-  pn_dispatcher_action(transport->disp, BEGIN, pn_do_begin);
-  pn_dispatcher_action(transport->disp, ATTACH, pn_do_attach);
-  pn_dispatcher_action(transport->disp, TRANSFER, pn_do_transfer);
-  pn_dispatcher_action(transport->disp, FLOW, pn_do_flow);
-  pn_dispatcher_action(transport->disp, DISPOSITION, pn_do_disposition);
-  pn_dispatcher_action(transport->disp, DETACH, pn_do_detach);
-  pn_dispatcher_action(transport->disp, END, pn_do_end);
-  pn_dispatcher_action(transport->disp, CLOSE, pn_do_close);
 
   transport->open_sent = false;
   transport->open_rcvd = false;

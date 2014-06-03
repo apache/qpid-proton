@@ -34,7 +34,6 @@ typedef struct pn_dispatcher_t pn_dispatcher_t;
 typedef int (pn_action_t)(pn_dispatcher_t *disp);
 
 struct pn_dispatcher_t {
-  pn_action_t *actions[256];
   pn_buffer_t *input;
   size_t fragment;
   pn_data_t *args;
@@ -48,22 +47,19 @@ struct pn_dispatcher_t {
   size_t capacity;
   size_t available; /* number of raw bytes pending output */
   char *output;
-  pn_transport_t *transport;
+  pn_transport_t *transport; // TODO: We keep this to get access to logging - perhaps move logging
   uint64_t output_frames_ct;
   uint64_t input_frames_ct;
   pn_string_t *scratch;
   pn_trace_t trace;
   uint16_t channel;
-  uint8_t frame_type;
-  uint8_t code;
+  uint8_t frame_type; // Used when constructing outgoing frames
   bool halt;
   bool batch;
 };
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport);
 void pn_dispatcher_free(pn_dispatcher_t *disp);
-void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code,
-                          pn_action_t *action);
 int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...);
 void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size);
 int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...);

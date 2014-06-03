@@ -27,6 +27,7 @@
 #include <proton/engine.h> // XXX: just needed for PN_EOS
 #include <proton/sasl.h>
 #include "protocol.h"
+#include "dispatch_actions.h"
 #include "../dispatcher/dispatcher.h"
 #include "../engine/engine-internal.h"
 #include "../util.h"
@@ -55,24 +56,12 @@ static ssize_t pn_input_read_sasl(pn_io_layer_t *io_layer, const char *bytes, si
 static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes, size_t available);
 static ssize_t pn_output_write_sasl(pn_io_layer_t *io_layer, char *bytes, size_t available);
 
-int pn_do_init(pn_dispatcher_t *disp);
-int pn_do_mechanisms(pn_dispatcher_t *disp);
-int pn_do_challenge(pn_dispatcher_t *disp);
-int pn_do_response(pn_dispatcher_t *disp);
-int pn_do_outcome(pn_dispatcher_t *disp);
-
 pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
     pn_sasl_t *sasl = (pn_sasl_t *) malloc(sizeof(pn_sasl_t));
     sasl->disp = pn_dispatcher(1, transport);
     sasl->disp->batch = false;
-
-    pn_dispatcher_action(sasl->disp, SASL_INIT, pn_do_init);
-    pn_dispatcher_action(sasl->disp, SASL_MECHANISMS, pn_do_mechanisms);
-    pn_dispatcher_action(sasl->disp, SASL_CHALLENGE, pn_do_challenge);
-    pn_dispatcher_action(sasl->disp, SASL_RESPONSE, pn_do_response);
-    pn_dispatcher_action(sasl->disp, SASL_OUTCOME, pn_do_outcome);
 
     sasl->client = false;
     sasl->configured = false;
