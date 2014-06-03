@@ -22,11 +22,11 @@
 #if defined(_WIN32) && ! defined(__CYGWIN__)
 #define NOGDI
 #include <winsock2.h>
-#include "pncompat/misc_funcs.inc"
 #else
 #include <unistd.h>
-#include <libgen.h>
 #endif
+
+#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <string.h>
