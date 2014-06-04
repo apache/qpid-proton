@@ -39,7 +39,7 @@ int pni_bad_frame(pn_dispatcher_t* disp) {
 
 // We could use a table based approach here if we needed to dynamically
 // add new performatives
-inline int pni_dispatch_action(pn_dispatcher_t* disp, uint64_t lcode)
+static inline int pni_dispatch_action(pn_dispatcher_t* disp, uint64_t lcode)
 {
   pn_action_t *action;
   switch (lcode) {
