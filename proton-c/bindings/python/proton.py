@@ -464,6 +464,7 @@ first message.
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
       self._check(pn_error_code(pn_messenger_error(self._mng)))
+      raise MessengerException("Cannot subscribe to %s"%source)
     return Subscription(sub_impl)
 
   def put(self, message):
@@ -760,8 +761,7 @@ first message.
       return None
 
 class Message(object):
-  """
-  The L{Message} class is a mutable holder of message content.
+  """The L{Message} class is a mutable holder of message content.
 
   @ivar instructions: delivery instructions for the message
   @type instructions: dict
@@ -780,7 +780,10 @@ class Message(object):
 
   DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
 
-  def __init__(self):
+  def __init__(self, **kwargs):
+    """
+    @param kwargs: Message property name/value pairs to initialise the Message
+    """
     self._msg = pn_message()
     self._id = Data(pn_message_id(self._msg))
     self._correlation_id = Data(pn_message_correlation_id(self._msg))
@@ -788,6 +791,9 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = None
+    for k,v in kwargs.iteritems():
+      getattr(self, k)          # Raise exception if it's not a valid attribute.
+      setattr(self, k, v)
 
   def __del__(self):
     if hasattr(self, "_msg"):
@@ -860,7 +866,14 @@ class Message(object):
   def _set_inferred(self, value):
     self._check(pn_message_set_inferred(self._msg, bool(value)))
 
-  inferred = property(_is_inferred, _set_inferred)
+  inferred = property(_is_inferred, _set_inferred,"""
+The inferred flag for a message indicates how the message content
+is encoded into AMQP sections. If inferred is true then binary and
+list values in the body of the message will be encoded as AMQP DATA
+and AMQP SEQUENCE sections, respectively. If inferred is false,
+then all values in the body of the message will be encoded as AMQP
+VALUE sections regardless of their type.
+""")
 
   def _is_durable(self):
     return pn_message_is_durable(self._msg)
