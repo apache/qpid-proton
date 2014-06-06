@@ -152,3 +152,9 @@ if (JAVA_FOUND AND MAVEN_EXE)
 else (JAVA_FOUND AND MAVEN_EXE)
   message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
 endif (JAVA_FOUND AND MAVEN_EXE)
+
+# Generate test environment settings
+if (WIN32)
+    configure_file(${CMAKE_HOME_DIRECTORY}/config.bat.in
+                   ${CMAKE_BINARY_DIR}/config.bat @ONLY)
+endif (WIN32)

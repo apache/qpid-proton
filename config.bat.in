@@ -17,54 +17,50 @@ REM specific language governing permissions and limitations
 REM under the License.
 REM
 
-REM HACK ALERT: This script supports debug builds in $PROTON_HOME\build only.
+REM This is a generated file and will be overwritten the next
+REM time that cmake is run.
 
-set PROTON_HOME=%~dp0
-set PROTON_HOME=%PROTON_HOME:~0,-1%
+REM This build may be one of @CMAKE_CONFIGURATION_TYPES@
+REM Choose the configuration this script should reference:
+SET PROTON_BUILD_CONFIGURATION=relwithdebinfo
 
-if "%CPROTON_BUILD%"=="" (
-    if EXIST %PROTON_HOME%\build\proton-c (
-        set PROTON_BINDINGS=%PROTON_HOME%\build\proton-c\bindings
-    ) else (
-        set PROTON_BINDINGS=%PROTON_HOME%\proton-c\bindings
-    )
-    if EXIST %PROTON_HOME%\build\proton-j (
-        set PROTON_JARS=%PROTON_HOME%\build\proton-j\proton-j.jar
-    ) else (
-        set PROTON_JARS=%PROTON_HOME%\proton-j\proton-j.jar
-    )
-) else (
-    set PROTON_BINDINGS=%CPROTON_BUILD%\bindings
-)
-echo PROTON_BINDINGS = %PROTON_BINDINGS%
+REM PROTON_HOME  is the root of the proton checkout
+REM PROTON_BUILD is where cmake was run
+
+set PROTON_HOME=@CMAKE_HOME_DIRECTORY@
+set PROTON_BUILD=@CMAKE_BINARY_DIR@
+
+set PROTON_HOME=%PROTON_HOME:/=\%
+set PROTON_BUILD=%PROTON_BUILD:/=\%
+
+set PROTON_BINDINGS=%PROTON_BUILD%\proton-c\bindings
+set PROTON_JARS=%PROTON_BUILD%\proton-j\proton-j.jar
 
 REM Python & Jython
 set PYTHON_BINDINGS=%PROTON_BINDINGS%\python
-set COMMON_PYPATH=%PROTON_HOME%\tests\python:%PROTON_HOM%\proton-c\bindings\python
-set PYTHONPATH=%COMMON_PYPATH%:%PYTHON_BINDINGS%
-set JYTHONPATH=%COMMON_PYPATH%:%PROTON_HOM%\proton-j\src\main\resources:%PROTON_JARS%
+set COMMON_PYPATH=%PROTON_HOME%\tests\python;%PROTON_HOME%\proton-c\bindings\python
+set PYTHONPATH=%COMMON_PYPATH%;%PYTHON_BINDINGS%
+set JYTHONPATH=%COMMON_PYPATH%;%PROTON_HOME%\proton-j\src\main\resources;%PROTON_JARS%
 set CLASSPATH=%PROTON_JARS%
 
 REM PHP
 set PHP_BINDINGS=%PROTON_BINDINGS%\php
 if EXIST %PHP_BINDINGS% (
-    echo include_path="%PHP_BINDINGS%:%PROTON_HOME%\proton-c\bindings\php" >  %PHP_BINDINGS%\php.ini
+    echo include_path="%PHP_BINDINGS%;%PROTON_HOME%\proton-c\bindings\php" >  %PHP_BINDINGS%\php.ini
     echo extension="%PHP_BINDINGS%\cproton.so"                             >> %PHP_BINDINGS%\php.ini
     set PHPRC=%PHP_BINDINGS%\php.ini
 )
 
 REM Ruby
 set RUBY_BINDINGS=%PROTON_BINDINGS%\ruby
-set RUBYLIB=%RUBY_BINDINGS%:%PROTON_HOME%\proton-c\bindings\ruby\lib:%PROTON_HOME%\tests\ruby
+set RUBYLIB=%RUBY_BINDINGS%;%PROTON_HOME%\proton-c\bindings\ruby\lib;%PROTON_HOME%\tests\ruby
 
 REM Perl
 set PERL_BINDINGS=%PROTON_BINDINGS%\perl
-set PERL5LIB=%PERL5LIB%:%PERL_BINDINGS%:%PROTON_HOME%\proton-c\bindings\perl\lib
+set PERL5LIB=%PERL5LIB%;%PERL_BINDINGS%;%PROTON_HOME%\proton-c\bindings\perl\lib
 
 REM test applications
-if EXIST %PROTON_HOME%\build\tests\tools\apps\c set PATH=%PATH%;%PROTON_HOME%\build\tests\tools\apps\c
-
-if EXIST %PROTON_HOME%\tests\tools\apps\python set PATH=%PATH%;%PROTON_HOME%\tests\tools\apps\python
-
-REM test applications
-set PATH=%PATH%;%PROTON_HOME%\tests\python;%PROTON_HOME%\build\proton-c\debug
+set PATH=%PATH%;%PROTON_BUILD%\tests\tools\apps\c
+set PATH=%PATH%;%PROTON_HOME%\tests\tools\apps\python
+set PATH=%PATH%;%PROTON_HOME%\tests\python
+set PATH=%PATH%;%PROTON_BUILD%\proton-c\%PROTON_BUILD_CONFIGURATION%
