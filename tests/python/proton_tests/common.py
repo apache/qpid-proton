@@ -343,8 +343,9 @@ class MessengerApp(object):
             print("COMMAND='%s'" % str(cmd))
         #print("ENV='%s'" % str(os.environ.copy()))
         try:
-            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
+            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096, shell=os.name=="nt")
         except OSError, e:
+            print("ERROR: '%s'" % e)
             assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
         self._ready()  # wait for it to initialize
 
