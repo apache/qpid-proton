@@ -224,7 +224,13 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (MSVC)
-	set(CMAKE_DEBUG_POSTFIX "d")
+    set(CMAKE_DEBUG_POSTFIX "d")
+    add_definitions(
+        /wd4244
+        /wd4267
+        /wd4800
+        /wd4996
+    )
 endif (MSVC)
 
 macro (pn_absolute_install_dir NAME VALUE PREFIX)
