@@ -1196,7 +1196,7 @@ sub get_list_helper {
             if ($self->next) {
                 my $value = $self->get_type->get($self);
 
-                push($result, $value);
+                push(@{$result}, $value);
             }
         }
 
@@ -1213,7 +1213,7 @@ sub put_map_helper {
     $self->put_map;
     $self->enter;
 
-    foreach(keys $hash) {
+    foreach(keys %{$hash}) {
         my $key = $_;
         my $value = $hash->{$key};
 
