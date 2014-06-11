@@ -856,8 +856,6 @@ class NBMessengerTest(common.Test):
     client2.put(msg3)
     while client2.work(0):
         self.pump()
-    assert self.server.incoming == 1, self.server.incoming
-    assert self.server.receiving == 8, self.server.receiving
 
     # eventually, credit will rebalance and all links will
     # send a message
