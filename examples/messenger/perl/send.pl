@@ -34,11 +34,14 @@ sub HELP_MESSAGE() {
     print "Options:\n";
     print "\t-s        - the message subject\n";
     print "\t-C        - the message content\n";
-    print "\t<ADDRESS> - amqp://<domain>[/<name>]";
+    print "\t<ADDRESS> - amqp://<domain>[/<name>]\n";
+    print "\t-h        - this message\n";
+
+    exit;
 }
 
 my %options = ();
-getopts("a:C:s:", \%options) or usage();
+getopts("a:C:s:h:", \%options) or HELP_MESSAGE();
 
 my $address = $options{a} || "amqp://0.0.0.0";
 my $subject = $options{s} || localtime(time);
