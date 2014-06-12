@@ -21,7 +21,7 @@ from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
-import sys, os
+import sys, os, string
 from proton import Driver, Connection, Transport, SASL, Endpoint, Delivery, \
     SSLDomain, SSLUnavailable
 
@@ -335,6 +335,16 @@ class MessengerApp(object):
         self.password = None
         self._output = None
 
+    def findfile(self, filename, searchpath):
+        """Find filename in the searchpath
+            return absolute path to the file or None
+        """
+        paths = string.split(searchpath, os.pathsep)
+        for path in paths:
+            if os.path.exists(os.path.join(path, filename)):
+                return os.path.abspath(os.path.join(path, filename))
+        return None
+
     def start(self, verbose=False):
         """ Begin executing the test """
         cmd = self.cmdline()
@@ -343,7 +353,18 @@ class MessengerApp(object):
             print("COMMAND='%s'" % str(cmd))
         #print("ENV='%s'" % str(os.environ.copy()))
         try:
-            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096, shell=os.name=="nt")
+            if os.name=="nt":
+                # Windows handles python launch by replacing script 'filename' with
+                # 'python abspath-to-filename' in cmdline arg list.
+                if cmd[0].endswith('.py'):
+                    foundfile = self.findfile(cmd[0], os.environ['PATH'])
+                    if foundfile is None:
+                        foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
+                        assert foundfile is not None, "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                    del cmd[0:1]
+                    cmd.insert(0, foundfile)
+                    cmd.insert(0, sys.executable)
+            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
         except OSError, e:
             print("ERROR: '%s'" % e)
             assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
