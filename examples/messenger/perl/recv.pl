@@ -52,7 +52,7 @@ for(;;)
         $messenger->get($msg);
 
         print "Address: " . $msg->get_address() . "\n";
-        print "Subject: " . $msg->get_subject() . "\n";
+        print "Subject: " . $msg->get_subject() . "\n" unless !defined($msg->get_subject());
         print "Body:    ";
 
         my $body = $msg->get_body();
