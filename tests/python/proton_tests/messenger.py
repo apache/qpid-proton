@@ -695,26 +695,40 @@ class NBMessengerTest(common.Test):
 
   def setup(self):
     self.client = Messenger("client")
+    self.client2 = Messenger("client2")
     self.server = Messenger("server")
+    self.messengers = [self.client, self.client2, self.server]
     self.client.blocking = False
+    self.client2.blocking = False
     self.server.blocking = False
     self.server.start()
     self.client.start()
+    self.client2.start()
     self.address = "amqp://0.0.0.0:12345"
     self.server.subscribe("amqp://~0.0.0.0:12345")
 
+  def _pump(self, timeout):
+    for msgr in self.messengers:
+      if not msgr.stopped:
+        if msgr.work(timeout):
+          return True
+    return False
+
   def pump(self, timeout=0):
-    while self.client.work(0) or self.server.work(0): pass
-    self.client.work(timeout)
-    self.server.work(timeout)
-    while self.client.work(0) or self.server.work(0): pass
+    while self._pump(0): pass
+    for msgr in self.messengers:
+      if not msgr.stopped:
+        msgr.work(timeout)
+    while self._pump(0): pass
 
   def teardown(self):
     self.server.stop()
     self.client.stop()
+    self.client2.stop()
     self.pump()
     assert self.server.stopped
     assert self.client.stopped
+    assert self.client2.stopped
 
   def testSmoke(self, count=1):
     self.server.recv()
@@ -848,14 +862,10 @@ class NBMessengerTest(common.Test):
     assert self.server.receiving == 8, self.server.receiving
 
     # and none for this new client
-    client2 = Messenger("client2")
-    client2.blocking = False
-    client2.start()
     msg3 = Message()
     msg3.address = self.address + "/msg3"
-    client2.put(msg3)
-    while client2.work(0):
-        self.pump()
+    self.client2.put(msg3)
+    self.pump()
 
     # eventually, credit will rebalance and all links will
     # send a message
@@ -863,7 +873,6 @@ class NBMessengerTest(common.Test):
     while time() < deadline:
         sleep(.1)
         self.pump()
-        client2.work(0)
         if self.server.incoming == 3:
             break;
     assert self.server.incoming == 3, self.server.incoming
@@ -871,7 +880,7 @@ class NBMessengerTest(common.Test):
 
     # now tear down client two, this should cause its outstanding credit to be
     # made available to the other links
-    client2.stop()
+    self.client2.stop()
     self.pump()
 
     for i in range(4):
