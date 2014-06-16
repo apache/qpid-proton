@@ -21,43 +21,48 @@
 package org.apache.qpid.proton.messenger.impl;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.InterruptException;
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.TimeoutException;
-import org.apache.qpid.proton.driver.Connector;
-import org.apache.qpid.proton.driver.Driver;
-import org.apache.qpid.proton.driver.Listener;
+import org.apache.qpid.proton.amqp.messaging.Source;
+import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
+import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
+import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.Ssl;
+import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.messenger.Listener;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
+import org.apache.qpid.proton.messenger.Selectable;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
-import org.apache.qpid.proton.amqp.messaging.Source;
-import org.apache.qpid.proton.amqp.messaging.Target;
-import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
-import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
-
-import org.apache.qpid.proton.amqp.Binary;
 
 public class MessengerImpl implements Messenger
+
 {
     private enum LinkCreditMode
     {
@@ -76,7 +81,6 @@ public class MessengerImpl implements Messenger
     private long _timeout = -1;
     private boolean _blocking = true;
     private long _nextTag = 1;
-    private Driver _driver;
     private LinkCreditMode _credit_mode = LinkCreditMode.LINK_CREDIT_EXPLICIT;
     private final int _credit_batch = 1024;   // credit_mode == LINK_CREDIT_AUTO
     private int _credit;        // available
@@ -90,7 +94,6 @@ public class MessengerImpl implements Messenger
     private TrackerImpl _outgoingTracker;
     private Store _incomingStore = new Store();
     private Store _outgoingStore = new Store();
-    private List<Connector> _awaitingDestruction = new ArrayList<Connector>();
     private int _sendThreshold;
 
     private Transform _routes = new Transform();
@@ -101,7 +104,14 @@ public class MessengerImpl implements Messenger
     private String _password;
     private String _trustedDb;
 
-
+    private Collector _collector = Proton.collector();
+    private boolean _passive = false;
+    private final List<SelectableImpl> _selectables = new ArrayList<SelectableImpl>();
+    private final List<ListenerImpl> _listeners = new ArrayList<ListenerImpl>();
+    private Selector _selector;
+    private AtomicBoolean _closed = new AtomicBoolean(true);
+    private AtomicBoolean _interrupted = new AtomicBoolean(false);
+    
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link MessengerFactory} instead
@@ -118,6 +128,14 @@ public class MessengerImpl implements Messenger
     @Deprecated public MessengerImpl(String name)
     {
         _name = name;
+        try
+        {
+            _selector = Selector.open();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Unable to create selector",e);
+        }
     }
 
     public void setTimeout(long timeInMillis)
@@ -182,36 +200,56 @@ public class MessengerImpl implements Messenger
 
     public void start() throws IOException
     {
-        _driver = Proton.driver();
+        _closed.set(false); 
     }
 
     public void stop()
     {
-        if (_driver != null) {
-            if(_logger.isLoggable(Level.FINE))
-            {
-                _logger.fine(this + " about to stop");
-            }
-            //close all connections
-            for (Connector<?> c : _driver.connectors())
-            {
-                Connection connection = c.getConnection();
-                connection.close();
-            }
-            //stop listeners
-            for (Listener<?> l : _driver.listeners())
+        if (_closed.get())
+        {
+            return;
+        }
+
+        _closed.set(true);
+        if(_logger.isLoggable(Level.FINE))
+        {
+            _logger.fine(this + " about to stop");
+        }
+
+        //stop listeners
+        for (ListenerImpl l : _listeners)
+        {
+            l.close();
+            if (!_passive)
             {
                 try
                 {
-                    l.close();
+                    l.getSocketListener().close();
+                    l.markCompleted();
                 }
                 catch (IOException e)
                 {
-                    _logger.log(Level.WARNING, "Error while closing listener", e);
+                    _logger.log(Level.SEVERE, String.format("Error closing socket listener : %s", e), e);
                 }
             }
-            waitUntil(_allClosed);
+        }        
+
+        //close all connections.
+        for (SelectableImpl sel : _selectables)
+        {
+            SelectableImpl s = (SelectableImpl)sel;
+            Connection connection = s.getConnection();
+            connection.close();
+            if (!_passive && !s.getNetworkConnection().isClosed())
+            {
+                s.getNetworkConnection().registerForWriteEvents(true);
+            }
+            s.markClosed();
         }
+
+        waitUntil(_allClosed);
+        _listeners.clear();
+        _selectables.clear();
     }
 
     public boolean stopped()
@@ -221,15 +259,17 @@ public class MessengerImpl implements Messenger
 
     public boolean work(long timeout) throws TimeoutException
     {
-        if (_driver == null) { return false; }
+        if (_closed.get()) { return false; }
         _worked = false;
         return waitUntil(_workPred, timeout);
     }
 
     public void interrupt()
     {
-        if (_driver != null) {
-            _driver.wakeup();
+        _interrupted.set(true);
+        if (!_passive)
+        {
+            _selector.wakeup();
         }
     }
 
@@ -289,7 +329,7 @@ public class MessengerImpl implements Messenger
 
     public void put(Message m) throws MessengerException
     {
-        if (_driver == null) {
+        if (_closed.get()) {
             throw new IllegalStateException("cannot put while messenger is stopped");
         }
 
@@ -396,13 +436,13 @@ public class MessengerImpl implements Messenger
 
     public void send(int n) throws TimeoutException
     {
-        if (_driver == null) {
+        if (_closed.get()) {
             throw new IllegalStateException("cannot send while messenger is stopped");
         }
 
         if(_logger.isLoggable(Level.FINE))
         {
-            _logger.fine(this + " about to send");
+            _logger.fine(this + " about to send");            
         }
 
         if (n == -1)
@@ -419,7 +459,7 @@ public class MessengerImpl implements Messenger
 
     public void recv(int n) throws TimeoutException
     {
-        if (_driver == null) {
+        if (_closed.get()) {
             throw new IllegalStateException("cannot recv while messenger is stopped");
         }
 
@@ -527,7 +567,7 @@ public class MessengerImpl implements Messenger
 
     public void subscribe(String source) throws MessengerException
     {
-        if (_driver == null) {
+        if (_closed.get()) {
             throw new IllegalStateException("messenger is stopped");
         }
 
@@ -544,7 +584,22 @@ public class MessengerImpl implements Messenger
                 _logger.fine(this + " about to subscribe to source " + source + " using address " + hostName + ":" + port);
             }
             ListenerContext ctx = new ListenerContext(address);
-            _driver.createListener(hostName, port, ctx);
+            ListenerImpl listener = new ListenerImpl(hostName, port);
+            listener.setContext(ctx);
+            if (!_passive)
+            {
+                try
+                {
+                    SocketListener socket = new SocketListener(_selector, listener, hostName , port);
+                    listener.setSocketListener(socket);
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.SEVERE, String.format("Error subscribing to message source : %s", e), e);
+                    throw new MessengerException(String.format("Error subscribing to message source : %s", e),e);
+                }
+            }
+            _listeners.add(listener);
         }
         else
         {
@@ -644,13 +699,38 @@ public class MessengerImpl implements Messenger
         _rewrites.rule(pattern, address);
     }
 
+    @Override
+    public void setPassive(boolean b)
+    {
+        _passive = b;
+    }
+
+    @Override
+    public boolean isPassive()
+    {
+        return _passive;
+    }
+
+    @Override
+    public List<? extends Selectable> getSelectables()
+    {
+        return _selectables;
+    }
+
+    @Override
+    public List<? extends Listener> getListeners()
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
     private int queued(boolean outgoing)
     {
         int count = 0;
-        if (_driver != null) {
-            for (Connector<?> c : _driver.connectors())
+        if (!_closed.get()) {
+            for (SelectableImpl sel : _selectables)
             {
-                Connection connection = c.getConnection();
+                Connection connection = sel.getConnection();
                 for (Link link : new Links(connection, ACTIVE, ANY))
                 {
                     if (outgoing)
@@ -667,152 +747,99 @@ public class MessengerImpl implements Messenger
         return count;
     }
 
-    private void bringDestruction()
+    private void processEvents()
     {
-        for (Connector<?> c : _awaitingDestruction)
+        for (Event event = _collector.peek(); event != null; event = _collector.peek())
         {
-            c.destroy();
+            switch (event.getType())
+            {
+            case CONNECTION_REMOTE_STATE:
+            case CONNECTION_LOCAL_STATE:
+                processConnection(event.getConnection());
+                break;
+            case SESSION_REMOTE_STATE:
+            case SESSION_LOCAL_STATE:
+                processSession(event.getSession());
+                break;
+            case LINK_REMOTE_STATE:
+            case LINK_LOCAL_STATE:
+                processLink(event.getLink());
+                break;
+            case LINK_FLOW:
+                processFlow(event.getLink());
+                break;
+            case DELIVERY:
+                processDelivery(event.getDelivery());
+                break;
+            case TRANSPORT:
+                distributeCredit();
+                break;
+            }
+            _collector.pop();
         }
-        _awaitingDestruction.clear();
     }
 
-    private void processAllConnectors()
+    private void processConnection(Connection connection)
     {
-        distributeCredit();
-        for (Connector<?> c : _driver.connectors())
+        if ( connection.getRemoteState() == EndpointState.ACTIVE)
         {
-            processEndpoints(c);
-            try
+            if (connection.getLocalState() == EndpointState.UNINITIALIZED)
             {
-                if (c.process()) {
-                    _worked = true;
-                }
-            }
-            catch (IOException e)
-            {
-                _logger.log(Level.SEVERE, "Error processing connection", e);
+                connection.open();                
             }
         }
-        bringDestruction();
-        distributeCredit();
+        if (connection.getRemoteState() == EndpointState.CLOSED)
+        {
+            if (connection.getLocalState() == EndpointState.ACTIVE)
+            {
+                connection.close();
+            }
+        }
+        ConnectionContext ctx = (ConnectionContext)connection.getContext();
+        if (!_passive)
+        {
+            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
+        }
     }
 
-    private void processActive()
+    private void processSession(Session session)
     {
-        //process active listeners
-        for (Listener<?> l = _driver.listener(); l != null; l = _driver.listener())
+        if (session.getRemoteState() == EndpointState.ACTIVE)
         {
-            _worked = true;
-            Connector<?> c = l.accept();
-            Connection connection = Proton.connection();
-            connection.setContainer(_name);
-            ListenerContext ctx = (ListenerContext) l.getContext();
-            connection.setContext(new ConnectionContext(ctx.getAddress(), c));
-            c.setConnection(connection);
-            Transport transport = c.getTransport();
-            //TODO: full SASL
-            Sasl sasl = c.sasl();
-            if (sasl != null)
+            if (session.getLocalState() == EndpointState.UNINITIALIZED)
             {
-                sasl.server();
-                sasl.setMechanisms(new String[]{"ANONYMOUS"});
-                sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
-            }
-            transport.ssl(ctx.getDomain());
-            connection.open();
-        }
-        // process connectors, reclaiming credit on closed connectors
-        for (Connector<?> c = _driver.connector(); c != null; c = _driver.connector())
-        {
-            _worked = true;
-            if (c.isClosed())
-            {
-                _awaitingDestruction.add(c);
-                reclaimCredit(c.getConnection());
-            }
-            else
-            {
-                _logger.log(Level.FINE, "Processing active connector " + c);
-                try
-                {
-                    c.process();
-                    processEndpoints(c);
-                    c.process();
-                }
-                catch (IOException e)
-                {
-                    _logger.log(Level.SEVERE, "Error processing connection", e);
-                }
+                session.open();
+                _logger.log(Level.FINE, "Opened session " + session);
             }
         }
-        bringDestruction();
-        distributeCredit();
+        if (session.getRemoteState() == EndpointState.CLOSED)
+        {
+            if (session.getLocalState() == EndpointState.ACTIVE)
+            {
+                session.close();
+            }
+        }
+        ConnectionContext ctx = (ConnectionContext)session.getConnection().getContext();
+        if (!_passive)
+        {
+            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
+        }
     }
 
-    private void processEndpoints(Connector c)
+    private void processLink(Link link)
     {
-        Connection connection = c.getConnection();
-
-        if (connection.getLocalState() == EndpointState.UNINITIALIZED)
+        if (link.getRemoteState() == EndpointState.ACTIVE)
         {
-            connection.open();
-        }
-
-        Delivery delivery = connection.getWorkHead();
-        while (delivery != null)
-        {
-            Link link = delivery.getLink();
-            if (delivery.isUpdated())
+            if (link.getLocalState() == EndpointState.UNINITIALIZED)
             {
-                if (link instanceof Sender)
-                {
-                    delivery.disposition(delivery.getRemoteState());
-                }
-                StoreEntry e = (StoreEntry) delivery.getContext();
-                if (e != null) e.updated();
-            }
-
-            if (delivery.isReadable())
-            {
-                pumpIn( link.getSource().getAddress(), (Receiver)link );
-            }
-
-            Delivery next = delivery.getWorkNext();
-            delivery.clear();
-            delivery = next;
-        }
-
-        for (Session session : new Sessions(connection, UNINIT, ANY))
-        {
-            session.open();
-            _logger.log(Level.FINE, "Opened session " + session);
-        }
-        for (Link link : new Links(connection, UNINIT, ANY))
-        {
-            //TODO: the following is not correct; should only copy those properties that we understand
-            link.setSource(link.getRemoteSource());
-            link.setTarget(link.getRemoteTarget());
-            linkAdded(link);
-            link.open();
-            _logger.log(Level.FINE, "Opened link " + link);
-        }
-
-        distributeCredit();
-
-        for (Link link : new Links(connection, ACTIVE, ACTIVE))
-        {
-            if (link instanceof Sender)
-            {
-                pumpOut(link.getTarget().getAddress(), (Sender)link);
+                link.setSource(link.getRemoteSource());
+                link.setTarget(link.getRemoteTarget());
+                linkAdded(link);
+                link.open();
+                _logger.log(Level.FINE, "Opened link " + link);
             }
         }
-
-        for (Session session : new Sessions(connection, ACTIVE, CLOSED))
-        {
-            session.close();
-        }
-
-        for (Link link : new Links(connection, ANY, CLOSED))
+        if (link.getRemoteState() == EndpointState.CLOSED)
         {
             if (link.getLocalState() == EndpointState.ACTIVE)
             {
@@ -823,13 +850,49 @@ public class MessengerImpl implements Messenger
                 reclaimLink(link);
             }
         }
-
-        if (connection.getRemoteState() == EndpointState.CLOSED)
+        ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
+        if (!_passive)
         {
-            if (connection.getLocalState() == EndpointState.ACTIVE)
+            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
+        }
+    }
+
+    private void processFlow(Link link)
+    {
+        if (link instanceof Sender)
+        {
+            pumpOut(link.getTarget().getAddress(), (Sender)link);
+        }
+        ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
+        if (!_passive)
+        {
+            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
+        }
+    }
+
+    private void processDelivery(Delivery delivery)
+    {
+        Link link = delivery.getLink();
+        if (delivery.isUpdated())
+        {
+            if (link instanceof Sender)
             {
-                connection.close();
+                delivery.disposition(delivery.getRemoteState());
             }
+            StoreEntry e = (StoreEntry) delivery.getContext();
+            if (e != null) e.updated();
+        }
+
+        if (delivery.isReadable())
+        {
+            pumpIn( link.getSource().getAddress(), (Receiver)link );
+        }
+
+        delivery.clear();
+        ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
+        if (!_passive)
+        {
+            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
         }
     }
 
@@ -851,11 +914,12 @@ public class MessengerImpl implements Messenger
 
     private boolean waitUntil(Predicate condition, long timeout)
     {
-        if (_driver == null) {
-            throw new IllegalStateException("cannot wait while messenger is stopped");
-        }
+        processEvents();
 
-        processAllConnectors();
+        if (_passive)
+        {
+            return condition.test();
+        }
 
         // wait until timeout expires or until test is true
         long now = System.currentTimeMillis();
@@ -865,7 +929,8 @@ public class MessengerImpl implements Messenger
         while (true)
         {
             done = condition.test();
-            if (done) break;
+            if (done)
+                break;
 
             long remaining;
             if (timeout < 0)
@@ -884,30 +949,98 @@ public class MessengerImpl implements Messenger
                 long wakeup = (_next_drain > now) ? _next_drain - now : 0;
                 remaining = (remaining == -1) ? wakeup : Math.min(remaining, wakeup);
             }
-
-            boolean woken;
-            woken = _driver.doWait(remaining);
-            processActive();
-            if (woken) {
+            processPendingSelectables(remaining);
+            processEvents();
+            if (_interrupted.get())
+            {
+                _interrupted.set(false);
                 throw new InterruptException();
             }
-            now = System.currentTimeMillis();
+            now = System.currentTimeMillis();            
         }
 
         return done;
     }
 
+    // Used when passive mode is false.
+    private void processPendingSelectables(long timeout)
+    {
+        try
+        {
+            if (timeout == 0)
+            {
+                _selector.selectNow();
+            }
+            else if (timeout < 0)
+            {
+                _selector.select();
+            }
+            else
+            {
+                _selector.select(timeout);
+            }
+        }
+        catch (IOException e)
+        {
+            _logger.log(Level.SEVERE, "Exception when waiting for IO Event", e);
+            throw new RuntimeException("Exception when waiting for IO Event", e);
+        }
+
+        for (SelectionKey key : _selector.selectedKeys())
+        {
+            if (key.isValid() && key.isAcceptable())
+            {
+                ListenerImpl listener = (ListenerImpl) key.attachment();
+                try
+                {
+                    inboundConnection(listener, listener.getSocketListener().accept());
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.SEVERE, "Exception when accepting connection", e);
+                    throw new RuntimeException("Exception when accepting connection", e);
+                }
+            }
+            else if (key.isValid() && key.isReadable())
+            {
+                connectionReadable((SelectableImpl) key.attachment());
+            }
+            else if (key.isValid() && key.isWritable())
+            {
+                connectionWritable((SelectableImpl) key.attachment());
+            }
+        }
+        _selector.selectedKeys().clear();
+
+        if (_closed.get() && !_passive)
+        {
+            for(SelectableImpl sel : _selectables)
+            {
+                try
+                {
+                    sel.getNetworkConnection().close();
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.WARNING, "Error while closing connection", e);
+                }
+                sel.markCompleted();
+            }
+        }
+    }
+
     private Connection lookup(Address address)
     {
-        for (Connector<?> c : _driver.connectors())
+        for (SelectableImpl sel : _selectables)
         {
-            Connection connection = c.getConnection();
+            Connection connection = sel.getConnection();
             ConnectionContext ctx = (ConnectionContext) connection.getContext();
             if (ctx.matches(address))
             {
                 return connection;
             }
         }
+
         return null;
     }
 
@@ -973,11 +1106,9 @@ public class MessengerImpl implements Messenger
 
             // flow changed, must process it
             ConnectionContext ctx = (ConnectionContext) link.getSession().getConnection().getContext();
-            try
+            if (!_passive)
             {
-                ctx.getConnector().process();
-            } catch (IOException e) {
-                _logger.log(Level.SEVERE, "Error processing connection", e);
+                ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
             }
         }
 
@@ -1009,11 +1140,9 @@ public class MessengerImpl implements Messenger
                             _draining++;
                             // drain requested on link, must process it
                             ConnectionContext ctx = (ConnectionContext) link.getSession().getConnection().getContext();
-                            try
+                            if (!_passive)
                             {
-                                ctx.getConnector().process();
-                            } catch (IOException e) {
-                                _logger.log(Level.SEVERE, "Error processing connection", e);
+                                ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
                             }
                             if (needed <= 0) break;
                         }
@@ -1035,7 +1164,7 @@ public class MessengerImpl implements Messenger
             //are all sent messages settled?
             int total = _outgoingStore.size();
 
-            for (Connector<?> c : _driver.connectors())
+            for (SelectableImpl sel : _selectables)
             {
                 // TBD
                 // check if transport is done generating output
@@ -1046,8 +1175,7 @@ public class MessengerImpl implements Messenger
                 //        return false;
                 //    }
                 // }
-
-                Connection connection = c.getConnection();
+                Connection connection = sel.getConnection();
                 for (Link link : new Links(connection, ACTIVE, ANY))
                 {
                     if (link instanceof Sender)
@@ -1086,9 +1214,9 @@ public class MessengerImpl implements Messenger
         {
             //do we have at least one pending message?
             if (_incomingStore.size() > 0) return true;
-            for (Connector<?> c : _driver.connectors())
+            for (SelectableImpl sel : _selectables)
             {
-                Connection connection = c.getConnection();
+                Connection connection = sel.getConnection();
                 Delivery delivery = connection.getWorkHead();
                 while (delivery != null)
                 {
@@ -1103,7 +1231,7 @@ public class MessengerImpl implements Messenger
                 }
             }
             // if no connections, or not listening, exit as there won't ever be a message
-            if (!_driver.listeners().iterator().hasNext() && !_driver.connectors().iterator().hasNext())
+            if (_closed.get() ||( _selectables.size() == 0 && _listeners.size() == 0))
                 return true;
 
             return false;
@@ -1114,19 +1242,20 @@ public class MessengerImpl implements Messenger
     {
         public boolean test()
         {
-            if (_driver == null) {
-                return true;
-            }
-
-            for (Connector<?> c : _driver.connectors()) {
-                if (!c.isClosed()) {
+            for (Listener l : _listeners)
+            {
+                if (!l.isCompleted())
+                {
                     return false;
                 }
             }
-
-            _driver.destroy();
-            _driver = null;
-
+            for (Selectable sel : _selectables)
+            {
+                if (!sel.isCompleted())
+                {
+                    return false;
+                }
+            }
             return true;
         }
     }
@@ -1241,21 +1370,36 @@ public class MessengerImpl implements Messenger
         {
             String host = address.getHost();
             int port = Integer.valueOf(address.getImpliedPort());
-            Connector<?> connector = _driver.createConnector(host, port, null);
-            _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
+            SelectableImpl sel = new SelectableImpl(host, port);
+
             connection = Proton.connection();
+            connection.collect(_collector);
             connection.setContainer(_name);
             connection.setHostname(host);
-            connection.setContext(new ConnectionContext(address, connector));
-            connector.setConnection(connection);
-            Sasl sasl = connector.sasl();
+            connection.setContext(new ConnectionContext(address, sel));
+            Transport transport = Proton.transport();
+
+            if (!_passive)
+            {
+                IoConnection networkConnection = new IoConnection(_selector, host, port);
+                _logger.log(Level.FINE, "Connecting to " + host + ":" + port);
+                networkConnection.setSelectable(sel);
+                sel.setNetworkConnection(networkConnection);
+                sel.markConnected();
+                networkConnection.registerForReadEvents(true);
+                networkConnection.registerForWriteEvents(true);
+            }
+            sel.setTransport(transport);
+            sel.setConnection(connection);
+            _selectables.add(sel);
+            transport.bind(connection);
+            Sasl sasl = transport.sasl();
             if (sasl != null)
             {
                 sasl.client();
                 sasl.setMechanisms(new String[]{"ANONYMOUS"});
             }
             if ("amqps".equalsIgnoreCase(address.getScheme())) {
-                Transport transport = connector.getTransport();
                 SslDomain domain = makeDomain(address, SslDomain.Mode.CLIENT);
                 if (_trustedDb != null) {
                     domain.setPeerAuthentication(SslDomain.VerifyMode.VERIFY_PEER);
@@ -1267,6 +1411,7 @@ public class MessengerImpl implements Messenger
                 //ssl.setPeerHostname(host);
             }
             connection.open();
+            
         }
 
         for (Link link : new Links(connection, ACTIVE, ANY))
@@ -1473,12 +1618,12 @@ public class MessengerImpl implements Messenger
     private class ConnectionContext
     {
         private Address _address;
-        private Connector _connector;
+        private SelectableImpl _selectable;
 
-        public ConnectionContext(Address address, Connector connector)
+        public ConnectionContext(Address address, SelectableImpl selectable)
         {
             _address = address;
-            _connector = connector;
+            _selectable = selectable;
         }
 
         public Address getAddress()
@@ -1490,14 +1635,13 @@ public class MessengerImpl implements Messenger
         {
             String host = address.getHost();
             String port = address.getImpliedPort();
-            Connection conn = _connector.getConnection();
-            return host.equals(conn.getRemoteContainer()) ||
+            return host.equals(_selectable.getConnection().getRemoteContainer()) ||
                 (_address.getHost().equals(host) && _address.getImpliedPort().equals(port));
         }
 
-        public Connector getConnector()
+        public SelectableImpl getSelectable()
         {
-            return _connector;
+            return _selectable;
         }
     }
 
@@ -1543,5 +1687,155 @@ public class MessengerImpl implements Messenger
             return _address;
         }
 
+    }
+
+    /* ----------------------------------------
+     * IO events for non passive mode
+     * ----------------------------------------
+     */
+    void inboundConnection(Listener listener, IoConnection networkConnection)
+    {
+        //System.out.println("inboundConnection ............................................"+ _name);
+
+        _worked = true;
+        Connection connection = Proton.connection();
+        connection.collect(_collector);
+        connection.setContainer(_name);
+        
+        Transport transport = Proton.transport();
+        transport.bind(connection);
+        SelectableImpl selectable = new SelectableImpl();
+        selectable.markConnected();
+        selectable.setTransport(transport);
+        selectable.setConnection(connection);
+        selectable.setNetworkConnection(networkConnection);
+        _selectables.add(selectable);
+        
+        ListenerContext ctx = (ListenerContext) ((ListenerImpl)listener).getContext();
+        connection.setContext(new ConnectionContext(ctx.getAddress(), selectable));
+        networkConnection.setSelectable(selectable);
+        
+        //TODO: full SASL
+        Sasl sasl = transport.sasl();
+        if (sasl != null)
+        {
+            sasl.server();
+            sasl.setMechanisms(new String[]{"ANONYMOUS"});
+            sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
+        }
+        transport.ssl(ctx.getDomain());
+        connection.open();
+        networkConnection.registerForReadEvents(true);
+        networkConnection.registerForWriteEvents(true);
+    }
+    
+    void connectionReadable(SelectableImpl selectable)
+    {
+        //System.out.println("connectionReadable ............................................" + _name);
+        
+        _worked = true;
+        IoConnection networkConnection = selectable.getNetworkConnection();
+        SelectableImpl sel = (SelectableImpl) selectable;
+        Transport transport = sel.getTransport();
+        ByteBuffer tail = transport.tail();
+        try
+        {
+            int read = networkConnection.read(tail);
+            if (read < 0)
+            {
+                connectionClosed(sel);
+                return;
+            }
+        }
+        catch (IOException e)
+        {
+            _logger.log(Level.SEVERE, this + " error reading from file descriptor", e);
+            // Need to throw the exception as well.
+        }
+        try
+        {
+            transport.process();
+        }
+        catch (TransportException e)
+        {
+            _logger.log(Level.SEVERE, this + " error processing input", e);
+        }
+        networkConnection.registerForReadEvents(transport.capacity() > 0);
+        networkConnection.registerForWriteEvents(true);
+    }
+
+   void connectionWritable(SelectableImpl selectable)
+    {
+       //System.out.println("connectionWritable ............................................" + _name);
+       
+        _worked = true;
+        IoConnection networkConnection = selectable.getNetworkConnection();
+        SelectableImpl sel = (SelectableImpl) selectable;
+        Transport transport = sel.getTransport();
+        boolean writeBlocked = false;
+        try
+        {
+            while (transport.pending() > 0 && !writeBlocked)
+            {
+                ByteBuffer head = transport.head();
+                int wrote = 0;
+                try
+                {
+                    wrote = networkConnection.write(head);
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.SEVERE, this + " error writing to the file descriptor", e);
+                    // Need to throw the exception as well.
+                }
+                if (wrote > 0)
+                {
+                    transport.pop(wrote);
+                }
+                else
+                {
+                    writeBlocked = true;                    
+                }
+            }
+            networkConnection.registerForWriteEvents(transport.pending() > 0);
+
+            if (selectable.isClosed() && !_passive)
+            {
+                try
+                {
+                    selectable.getNetworkConnection().close();
+                }
+                catch (IOException e)
+                {
+                    _logger.log(Level.SEVERE, String.format("Error closing connection : %s", e), e);
+                }
+                selectable.markCompleted();
+            }
+            
+        }
+        catch (TransportException e)
+        {
+            _logger.log(Level.SEVERE, this + " error", e);
+            networkConnection.registerForWriteEvents(false);
+        }
+    }
+
+    void connectionClosed(SelectableImpl sel)
+    {
+        reclaimCredit(sel.getConnection());
+        sel.markClosed();
+        if (!_passive)
+        {
+            try
+            {
+                sel.getNetworkConnection().close();
+            }
+            catch (IOException e)
+            {
+                _logger.log(Level.SEVERE, String.format("Error closing connection : %s", e), e);
+            }
+        }
+        sel.markCompleted();
+        _selectables.remove(sel);
     }
 }
