@@ -707,19 +707,16 @@ class NBMessengerTest(common.Test):
     self.address = "amqp://0.0.0.0:12345"
     self.server.subscribe("amqp://~0.0.0.0:12345")
 
-  def _pump(self, timeout):
+  def _pump(self, timeout, work_triggers_exit):
     for msgr in self.messengers:
-      if not msgr.stopped:
-        if msgr.work(timeout):
-          return True
+      if msgr.work(timeout) and work_triggers_exit:
+        return True
     return False
 
   def pump(self, timeout=0):
-    while self._pump(0): pass
-    for msgr in self.messengers:
-      if not msgr.stopped:
-        msgr.work(timeout)
-    while self._pump(0): pass
+    while self._pump(0, True): pass
+    self._pump(timeout, False)
+    while self._pump(0, True): pass
 
   def teardown(self):
     self.server.stop()
