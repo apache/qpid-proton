@@ -87,7 +87,6 @@ void pn_finalize(void *object)
     if (head->clazz && head->clazz->finalize) {
       head->clazz->finalize(object);
     }
-    head->refcount = 0;
   }
 }
 
