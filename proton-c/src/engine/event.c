@@ -111,7 +111,9 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
 
   event->type = type;
   event->context = context;
-  pn_incref(event->context);
+  pn_incref2(event->context, collector);
+
+  //printf("event %s on %p\n", pn_event_type_name(event->type), event->context);
 
   return event;
 }
@@ -136,7 +138,7 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   // decref before adding to the free list
   if (event->context) {
-    pn_decref(event->context);
+    pn_decref2(event->context, collector);
     event->context = NULL;
   }
 

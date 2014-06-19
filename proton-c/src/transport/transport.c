@@ -262,7 +262,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   if (connection->transport) return PN_STATE_ERR;
   transport->connection = connection;
   connection->transport = transport;
-  pn_incref(connection);
+  pn_incref2(connection, transport);
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(connection->collector, PN_CONNECTION_REMOTE_STATE, connection);
@@ -274,6 +274,25 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   return 0;
 }
 
+void pni_transport_unbind_handles(pn_hash_t *handles)
+{
+  for (pn_handle_t h = pn_hash_head(handles); h; h = pn_hash_next(handles, h)) {
+    uintptr_t key = pn_hash_key(handles, h);
+    pn_hash_del(handles, key);
+  }
+}
+
+void pni_transport_unbind_channels(pn_hash_t *channels)
+{
+  for (pn_handle_t h = pn_hash_head(channels); h; h = pn_hash_next(channels, h)) {
+    uintptr_t key = pn_hash_key(channels, h);
+    pn_session_t *ssn = (pn_session_t *) pn_hash_value(channels, h);
+    pni_transport_unbind_handles(ssn->state.local_handles);
+    pni_transport_unbind_handles(ssn->state.remote_handles);
+    pn_hash_del(channels, key);
+  }
+}
+
 int pn_transport_unbind(pn_transport_t *transport)
 {
   assert(transport);
@@ -282,6 +301,7 @@ int pn_transport_unbind(pn_transport_t *transport)
   pn_connection_t *conn = transport->connection;
   transport->connection = NULL;
 
+  // XXX: what happens if the endpoints are freed before we get here?
   pn_session_t *ssn = pn_session_head(conn, 0);
   while (ssn) {
     pn_delivery_map_clear(&ssn->state.incoming);
@@ -296,8 +316,11 @@ int pn_transport_unbind(pn_transport_t *transport)
     endpoint = endpoint->endpoint_next;
   }
 
+  pni_transport_unbind_channels(transport->local_channels);
+  pni_transport_unbind_channels(transport->remote_channels);
+
   pn_connection_unbound(conn);
-  pn_decref(conn);
+  pn_decref2(conn, transport);
   return 0;
 }
 
