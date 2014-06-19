@@ -70,7 +70,11 @@ void pn_decref(void *object)
     head->refcount--;
     if (!head->refcount) {
       pn_finalize(object);
-      free(head);
+      // Check the refcount again in case finalize created a new
+      // reference.
+      if (!head->refcount) {
+        free(head);
+      }
     }
   }
 }
