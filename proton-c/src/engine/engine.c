@@ -59,30 +59,6 @@ static const pn_event_type_t endpoint_event_map[] = {
   PN_LINK_LOCAL_STATE,        /* SENDER */
   PN_LINK_LOCAL_STATE};       /* RECEIVER */
 
-/* setup the event given the endpoint that generated the event */
-static void endpoint_init_event(pn_event_t *event,
-                                pn_endpoint_t *endpoint)
-{
-  switch (endpoint->type) {
-  case CONNECTION: {
-      pn_connection_t *conn = (pn_connection_t *) endpoint;
-      pn_event_init(event, conn);
-    }
-    break;
-  case SESSION: {
-      pn_session_t *ssn = (pn_session_t *) endpoint;
-      pn_event_init(event, ssn);
-    }
-    break;
-  case SENDER:
-  case RECEIVER: {
-      pn_link_t *link = (pn_link_t*) endpoint;
-      pn_event_init(event, link);
-    }
-    break;
-  }
-}
-
 static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
@@ -91,7 +67,7 @@ static void pn_endpoint_open(pn_endpoint_t *endpoint)
   pn_event_t *event = pn_collector_put(conn->collector,
                                        endpoint_event_map[endpoint->type]);
   if (event) {
-    endpoint_init_event(event, endpoint);
+    pn_event_init(event, endpoint);
   }
   pn_modified(conn, endpoint, true);
 }
@@ -104,7 +80,7 @@ static void pn_endpoint_close(pn_endpoint_t *endpoint)
   pn_event_t *event = pn_collector_put(conn->collector,
                                        endpoint_event_map[endpoint->type]);
   if (event) {
-    endpoint_init_event(event, endpoint);
+    pn_event_init(event, endpoint);
   }
   pn_modified(conn, endpoint, true);
 }
