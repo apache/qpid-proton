@@ -95,7 +95,7 @@ static intptr_t delta(void *a, void *b) { return (uintptr_t) b - (uintptr_t) a; 
 
 static pn_class_t null_class = {0};
 
-static pn_class_t noop_class = {noop, noop, zero, delta};
+static pn_class_t noop_class = {NULL, noop, noop, zero, delta};
 
 static void test_new(size_t size, pn_class_t *clazz)
 {
@@ -119,7 +119,7 @@ static void finalizer(void *object)
 
 static void test_finalize(void)
 {
-  static pn_class_t clazz = {NULL, finalizer};
+  static pn_class_t clazz = {NULL, NULL, finalizer};
 
   int **obj = (int **) pn_new(sizeof(int **), &clazz);
   assert(obj);
@@ -141,7 +141,7 @@ static uintptr_t hashcode(void *obj) { return (uintptr_t) obj; }
 
 static void test_hashcode(void)
 {
-  static pn_class_t clazz = {NULL, NULL, hashcode};
+  static pn_class_t clazz = {NULL, NULL, NULL, hashcode};
   void *obj = pn_new(0, &clazz);
   assert(obj);
   assert(pn_hashcode(obj) == (uintptr_t) obj);
@@ -151,7 +151,7 @@ static void test_hashcode(void)
 
 static void test_compare(void)
 {
-  static pn_class_t clazz = {NULL, NULL, NULL, delta};
+  static pn_class_t clazz = {NULL, NULL, NULL, NULL, delta};
 
   void *a = pn_new(0, &clazz);
   assert(a);

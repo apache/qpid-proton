@@ -43,6 +43,7 @@ typedef void *(*pn_iterator_next_t)(void *state);
 typedef struct pn_iterator_t pn_iterator_t;
 
 typedef struct {
+  const char *name;
   void (*initialize)(void *);
   void (*finalize)(void *);
   uintptr_t (*hashcode)(void *);
@@ -51,6 +52,7 @@ typedef struct {
 } pn_class_t;
 
 #define PN_CLASS(PREFIX) {                      \
+    #PREFIX,                                    \
     PREFIX ## _initialize,                      \
     PREFIX ## _finalize,                        \
     PREFIX ## _hashcode,                        \
@@ -59,9 +61,12 @@ typedef struct {
 }
 
 PN_EXTERN void *pn_new(size_t size, const pn_class_t* clazz);
+PN_EXTERN void *pn_new2(size_t size, const pn_class_t* clazz, void *from);
 PN_EXTERN void pn_initialize(void *object, const pn_class_t *clazz);
 PN_EXTERN void *pn_incref(void *object);
+PN_EXTERN void *pn_incref2(void *object, void *from);
 PN_EXTERN void pn_decref(void *object);
+PN_EXTERN void pn_decref2(void *object, void *from);
 PN_EXTERN int pn_refcount(void *object);
 PN_EXTERN void pn_finalize(void *object);
 PN_EXTERN void pn_free(void *object);
