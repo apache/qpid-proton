@@ -9,11 +9,7 @@ struct pn_collector_t {
 };
 
 struct pn_event_t {
-  pn_connection_t *connection;
-  pn_session_t *session;
-  pn_link_t *link;
-  pn_delivery_t *delivery;
-  pn_transport_t *transport;
+  void *context;    // depends on type
   pn_event_t *next;
   pn_event_type_t type;
 };
@@ -84,6 +80,7 @@ void pn_collector_free(pn_collector_t *collector)
 
 pn_event_t *pn_event(void);
 static void pn_event_initialize(void *obj);
+static bool pn_event_is_valid(pn_event_t *event);
 
 pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
 {
@@ -120,15 +117,7 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   // discard any events for objects that no longer exist
   pn_event_t *event = collector->head;
-  while (event && ((event->delivery && event->delivery->local.settled)
-                   ||
-                   (event->link && event->link->endpoint.freed)
-                   ||
-                   (event->session && event->session->endpoint.freed)
-                   ||
-                   (event->connection && event->connection->endpoint.freed)
-                   ||
-                   (event->transport && event->transport->freed))) {
+  while (event && !pn_event_is_valid(event)) {
     pn_collector_pop(collector);
     event = collector->head;
   }
@@ -151,11 +140,10 @@ bool pn_collector_pop(pn_collector_t *collector)
   event->next = collector->free_head;
   collector->free_head = event;
 
-  if (event->connection) pn_decref(event->connection);
-  if (event->session) pn_decref(event->session);
-  if (event->link) pn_decref(event->link);
-  if (event->delivery) pn_decref(event->delivery);
-  if (event->transport) pn_decref(event->transport);
+  if (event->context) {
+    pn_decref(event->context);
+    event->context = NULL;
+  }
 
   return true;
 }
@@ -164,11 +152,7 @@ static void pn_event_initialize(void *obj)
 {
   pn_event_t *event = (pn_event_t *) obj;
   event->type = PN_EVENT_NONE;
-  event->connection = NULL;
-  event->session = NULL;
-  event->link = NULL;
-  event->delivery = NULL;
-  event->transport = NULL;
+  event->context = NULL;
   event->next = NULL;
 }
 
@@ -178,16 +162,12 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 {
   assert(obj);
   pn_event_t *event = (pn_event_t *) obj;
-  int err = pn_string_addf(dst, "(%d", event->type);
-  void *objects[] = {event->connection, event->session, event->link,
-                     event->delivery, event->transport};
-  for (int i = 0; i < 5; i++) {
-    if (objects[i]) {
-      err = pn_string_addf(dst, ", ");
-      if (err) return err;
-      err = pn_inspect(objects[i], dst);
-      if (err) return err;
-    }
+  int err = pn_string_addf(dst, "(0x%X", (unsigned int)event->type);
+  if (event->context) {
+    err = pn_string_addf(dst, ", ");
+    if (err) return err;
+    err = pn_inspect(event->context, dst);
+    if (err) return err;
   }
 
   return pn_string_addf(dst, ")");
@@ -203,38 +183,36 @@ pn_event_t *pn_event(void)
   return event;
 }
 
+void pn_event_init_context(pn_event_t *event, void *object)
+{
+    event->context = object;
+    if (event->context)
+        pn_incref(event->context);
+}
+
 void pn_event_init_transport(pn_event_t *event, pn_transport_t *transport)
 {
-  event->transport = transport;
-  pn_incref(event->transport);
+  pn_event_init_context(event, transport);
 }
 
 void pn_event_init_connection(pn_event_t *event, pn_connection_t *connection)
 {
-  event->connection = connection;
-  pn_event_init_transport(event, event->connection->transport);
-  pn_incref(event->connection);
+  pn_event_init_context(event, connection);
 }
 
 void pn_event_init_session(pn_event_t *event, pn_session_t *session)
 {
-  event->session = session;
-  pn_event_init_connection(event, pn_session_connection(event->session));
-  pn_incref(event->session);
+  pn_event_init_context(event, session);
 }
 
 void pn_event_init_link(pn_event_t *event, pn_link_t *link)
 {
-  event->link = link;
-  pn_event_init_session(event, pn_link_session(event->link));
-  pn_incref(event->link);
+  pn_event_init_context(event, link);
 }
 
 void pn_event_init_delivery(pn_event_t *event, pn_delivery_t *delivery)
 {
-  event->delivery = delivery;
-  pn_event_init_link(event, pn_delivery_link(delivery));
-  pn_incref(event->delivery);
+  pn_event_init_context(event, delivery);
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
@@ -249,27 +227,72 @@ pn_event_category_t pn_event_category(pn_event_t *event)
 
 pn_connection_t *pn_event_connection(pn_event_t *event)
 {
-  return event->connection;
+  pn_session_t *ssn;
+  pn_transport_t *transport;
+
+  switch (pn_event_type(event)) {
+  case PN_CONNECTION_REMOTE_STATE:
+  case PN_CONNECTION_LOCAL_STATE:
+    return (pn_connection_t *)event->context;
+  case PN_TRANSPORT:
+    transport = pn_event_transport(event);
+    if (transport)
+      return transport->connection;
+    return NULL;
+  default:
+    ssn = pn_event_session(event);
+    if (ssn)
+     return pn_session_connection(ssn);
+  }
+  return NULL;
 }
 
 pn_session_t *pn_event_session(pn_event_t *event)
 {
-  return event->session;
+  pn_link_t *link;
+  switch (pn_event_type(event)) {
+  case PN_SESSION_REMOTE_STATE:
+  case PN_SESSION_LOCAL_STATE:
+    return (pn_session_t *)event->context;
+  default:
+    link = pn_event_link(event);
+    if (link)
+      return pn_link_session(link);
+  }
+  return NULL;
 }
 
 pn_link_t *pn_event_link(pn_event_t *event)
 {
-  return event->link;
+  pn_delivery_t *dlv;
+  switch (pn_event_type(event)) {
+  case PN_LINK_REMOTE_STATE:
+  case PN_LINK_LOCAL_STATE:
+  case PN_LINK_FLOW:
+    return (pn_link_t *)event->context;
+  default:
+    dlv = pn_event_delivery(event);
+    if (dlv)
+      return pn_delivery_link(dlv);
+  }
+  return NULL;
 }
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  return event->delivery;
+  if (pn_event_type(event) == PN_DELIVERY)
+    return (pn_delivery_t *)event->context;
+  return NULL;
 }
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  return event->transport;
+  if (pn_event_type(event) == PN_TRANSPORT)
+    return (pn_transport_t *)event->context;
+  pn_connection_t *conn = pn_event_connection(event);
+  if (conn)
+    return pn_connection_transport(conn);
+  return NULL;
 }
 
 const char *pn_event_type_name(pn_event_type_t type)
@@ -298,4 +321,19 @@ const char *pn_event_type_name(pn_event_type_t type)
   }
 
   return "<unrecognized>";
+}
+
+static bool pn_event_is_valid(pn_event_t *event)
+{
+  pn_delivery_t *d;
+  pn_link_t *l;
+  pn_session_t *s;
+  pn_connection_t *c;
+  pn_transport_t *t;
+  return (event &&
+          (!(d = pn_event_delivery(event)) || !d->local.settled) &&
+          (!(l = pn_event_link(event)) || !l->endpoint.freed) &&
+          (!(s = pn_event_session(event)) || !s->endpoint.freed) &&
+          (!(c = pn_event_connection(event)) || !c->endpoint.freed) &&
+          (!(t = pn_event_transport(event)) || !t->freed));
 }

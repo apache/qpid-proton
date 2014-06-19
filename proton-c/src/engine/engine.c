@@ -596,7 +596,7 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
   if (emit) {
     pn_event_t *event = pn_collector_put(connection->collector, PN_TRANSPORT);
     if (event) {
-      pn_event_init_connection(event, connection);
+      pn_event_init_transport(event, connection->transport);
     }
   }
 }
