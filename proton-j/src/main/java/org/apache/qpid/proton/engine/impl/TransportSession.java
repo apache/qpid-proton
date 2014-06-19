@@ -308,10 +308,7 @@ class TransportSession
             delivery.getLink().modified(false);
         }
 
-        EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
-        if (ev != null) {
-            ev.init(delivery);
-        }
+        getSession().getConnection().put(Event.Type.DELIVERY, delivery);
     }
 
     public void freeLocalChannel()
@@ -394,10 +391,7 @@ class TransportSession
                 }
                 delivery.updateWork();
 
-                EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
-                if (ev != null) {
-                    ev.init(delivery);
-                }
+                getSession().getConnection().put(Event.Type.DELIVERY, delivery);
             }
             id = id.add(UnsignedInteger.ONE);
         }

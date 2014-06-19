@@ -122,10 +122,7 @@ class TransportLink<T extends LinkImpl>
         _remoteLinkCredit = flow.getLinkCredit();
 
 
-        EventImpl ev = _link.getConnectionImpl().put(Event.Type.LINK_FLOW);
-        if (ev != null) {
-            ev.init(_link);
-        }
+        _link.getConnectionImpl().put(Event.Type.LINK_FLOW, _link);
     }
 
     void setLinkCredit(UnsignedInteger linkCredit)

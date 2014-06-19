@@ -377,9 +377,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     @Override
     protected void localStateChanged()
     {
-        EventImpl ev = getConnectionImpl().put(Event.Type.LINK_LOCAL_STATE);
-        if (ev != null) {
-            ev.init(this);
-        }
+        getConnectionImpl().put(Event.Type.LINK_LOCAL_STATE, this);
     }
 }

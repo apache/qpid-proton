@@ -974,10 +974,7 @@ public class TransportImpl extends EndpointImpl
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
             _remoteSessions.put(channel, transportSession);
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(session);
-            }
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE, session);
         }
 
     }
@@ -1033,10 +1030,7 @@ public class TransportImpl extends EndpointImpl
 
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(link);
-            }
+            _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE, link);
         }
     }
 
@@ -1107,10 +1101,7 @@ public class TransportImpl extends EndpointImpl
                     link.getRemoteCondition().copyFrom(detach.getError());
                 }
 
-                EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
-                if (ev != null) {
-                    ev.init(link);
-                }
+                _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE, link);
             }
             else
             {
@@ -1139,10 +1130,7 @@ public class TransportImpl extends EndpointImpl
                 session.getRemoteCondition().copyFrom(errorCondition);
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(session);
-            }
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE, session);
         }
     }
 
@@ -1159,10 +1147,7 @@ public class TransportImpl extends EndpointImpl
                 _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(_connectionEndpoint);
-            }
+            _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_STATE, _connectionEndpoint);
         }
 
     }

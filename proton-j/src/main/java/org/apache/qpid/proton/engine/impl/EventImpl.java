@@ -39,9 +39,15 @@ class EventImpl implements Event
     Object context;
     EventImpl next;
 
-    EventImpl(Type type)
+    EventImpl()
+    {
+        this.type = null;
+    }
+
+    void init(Event.Type type, Object context)
     {
         this.type = type;
+        this.context = context;
     }
 
     void clear()
@@ -135,11 +141,6 @@ class EventImpl implements Event
         default:
             return null;
         }
-    }
-
-    void init(Object context)
-    {
-        this.context = context;
     }
 
     @Override

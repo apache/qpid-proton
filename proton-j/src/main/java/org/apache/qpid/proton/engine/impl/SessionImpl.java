@@ -186,9 +186,6 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     @Override
     protected void localStateChanged()
     {
-        EventImpl ev = getConnectionImpl().put(Event.Type.SESSION_LOCAL_STATE);
-        if (ev != null) {
-            ev.init(this);
-        }
+        getConnectionImpl().put(Event.Type.SESSION_LOCAL_STATE, this);
     }
 }

@@ -58,17 +58,18 @@ public class CollectorImpl implements Collector
         }
     }
 
-    public EventImpl put(Event.Type type)
+    public EventImpl put(Event.Type type, Object context)
     {
         EventImpl event;
         if (free == null) {
-            event = new EventImpl(type);
+            event = new EventImpl();
         } else {
             event = free;
             free = free.next;
             event.next = null;
-            event.type = type;
         }
+
+        event.init(type, context);
 
         if (head == null) {
             head = event;
@@ -77,6 +78,7 @@ public class CollectorImpl implements Collector
             tail.next = event;
             tail = event;
         }
+
         return event;
     }
 
