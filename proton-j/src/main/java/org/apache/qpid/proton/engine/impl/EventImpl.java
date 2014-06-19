@@ -36,11 +36,7 @@ class EventImpl implements Event
 {
 
     Type type;
-    Connection connection;
-    Session session;
-    Link link;
-    Delivery delivery;
-    Transport transport;
+    Object context;
     EventImpl next;
 
     EventImpl(Type type)
@@ -51,11 +47,7 @@ class EventImpl implements Event
     void clear()
     {
         type = null;
-        connection = null;
-        session = null;
-        link = null;
-        delivery = null;
-        transport = null;
+        context = null;
     }
 
     public Category getCategory()
@@ -68,70 +60,91 @@ class EventImpl implements Event
         return type;
     }
 
+    public Object getContext()
+    {
+        return context;
+    }
+
     public Connection getConnection()
     {
-        return connection;
+        switch (type) {
+        case CONNECTION_REMOTE_STATE:
+        case CONNECTION_LOCAL_STATE:
+            return (Connection) context;
+        case TRANSPORT:
+            Transport transport = getTransport();
+            if (transport == null) {
+                return null;
+            }
+            return ((TransportImpl) transport).getConnectionImpl();
+        default:
+            Session ssn = getSession();
+            if (ssn == null) {
+                return null;
+            }
+            return ssn.getConnection();
+        }
     }
 
     public Session getSession()
     {
-        return session;
+        switch (type) {
+        case SESSION_REMOTE_STATE:
+        case SESSION_LOCAL_STATE:
+            return (Session) context;
+        default:
+            Link link = getLink();
+            if (link == null) {
+                return null;
+            }
+            return link.getSession();
+        }
     }
 
     public Link getLink()
     {
-        return link;
+        switch (type) {
+        case LINK_REMOTE_STATE:
+        case LINK_LOCAL_STATE:
+        case LINK_FLOW:
+            return (Link) context;
+        default:
+            Delivery dlv = getDelivery();
+            if (dlv == null) {
+                return null;
+            }
+            return dlv.getLink();
+        }
     }
 
     public Delivery getDelivery()
     {
-        return delivery;
+        switch (type) {
+        case DELIVERY:
+            return (Delivery) context;
+        default:
+            return null;
+        }
     }
 
     public Transport getTransport()
     {
-        return transport;
+        switch (type) {
+        case TRANSPORT:
+            return (Transport) context;
+        default:
+            return null;
+        }
     }
 
-    void init(Transport transport)
+    void init(Object context)
     {
-        this.transport = transport;
-    }
-
-    void init(Connection connection)
-    {
-        this.connection = connection;
-        init(((ConnectionImpl) connection).getTransport());
-    }
-
-    void init(Session session)
-    {
-        this.session = session;
-        init(session.getConnection());
-    }
-
-    void init(Link link)
-    {
-        this.link = link;
-        init(link.getSession());
-    }
-
-    void init(Delivery delivery)
-    {
-        this.delivery = delivery;
-        init(delivery.getLink());
+        this.context = context;
     }
 
     @Override
     public String toString()
     {
-        return "EventImpl{" +
-            "type=" + type +
-            ", connection=" + connection +
-            ", session=" + session +
-            ", link=" + link +
-            ", delivery=" + delivery +
-            ", transport=" + transport +
-            '}';
+        return "EventImpl{" + "type=" + type + ", context=" + context + '}';
     }
 }

@@ -129,9 +129,12 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
         if (emit) {
             ConnectionImpl conn = getConnectionImpl();
-            EventImpl ev = conn.put(Event.Type.TRANSPORT);
-            if (ev != null) {
-                ev.init(conn);
+            TransportImpl trans = conn.getTransport();
+            if (trans != null) {
+                EventImpl ev = conn.put(Event.Type.TRANSPORT);
+                if (ev != null) {
+                    ev.init(trans);
+                }
             }
         }
     }
