@@ -53,12 +53,13 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private ReceiverSettleMode _remoteReceiverSettleMode;
 
 
-    private final LinkNode<LinkImpl> _node;
+    private LinkNode<LinkImpl> _node;
     private boolean _drain;
 
     LinkImpl(SessionImpl session, String name)
     {
         _session = session;
+        _session.incref();
         _name = name;
         ConnectionImpl conn = session.getConnectionImpl();
         _node = conn.addLinkEndpoint(this);
@@ -105,11 +106,21 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         }
     }
 
-    public void free()
+    @Override
+    void postFinal() {
+        _session.getConnectionImpl().put(Event.Type.LINK_FINAL, this);
+        _session.decref();
+    }
+
+    @Override
+    void doFree()
     {
-        super.free();
         _session.getConnectionImpl().removeLinkEndpoint(_node);
-        //TODO.
+        _node = null;
+    }
+
+    void modifyEndpoints() {
+        modified();
     }
 
     public void remove(DeliveryImpl delivery)

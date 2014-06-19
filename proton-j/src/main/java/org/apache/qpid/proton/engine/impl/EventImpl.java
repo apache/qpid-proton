@@ -76,6 +76,8 @@ class EventImpl implements Event
         switch (type) {
         case CONNECTION_REMOTE_STATE:
         case CONNECTION_LOCAL_STATE:
+        case CONNECTION_INIT:
+        case CONNECTION_FINAL:
             return (Connection) context;
         case TRANSPORT:
             Transport transport = getTransport();
@@ -97,6 +99,8 @@ class EventImpl implements Event
         switch (type) {
         case SESSION_REMOTE_STATE:
         case SESSION_LOCAL_STATE:
+        case SESSION_INIT:
+        case SESSION_FINAL:
             return (Session) context;
         default:
             Link link = getLink();
@@ -112,6 +116,8 @@ class EventImpl implements Event
         switch (type) {
         case LINK_REMOTE_STATE:
         case LINK_LOCAL_STATE:
+        case LINK_INIT:
+        case LINK_FINAL:
         case LINK_FLOW:
             return (Link) context;
         default:

@@ -182,14 +182,28 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return this;
     }
 
-    public void free()
-    {
-        super.free();
-        for(Session session : _sessions)
-        {
+    @Override
+    void postFinal() {
+        put(Event.Type.CONNECTION_FINAL, this);
+    }
+
+    @Override
+    void doFree() {
+        for(Session session : _sessions) {
             session.free();
         }
         _sessions = null;
+    }
+
+    void modifyEndpoints() {
+        if (_sessions != null) {
+            for (SessionImpl ssn: _sessions) {
+                ssn.modifyEndpoints();
+            }
+        }
+        if (!freed) {
+            modified();
+        }
     }
 
     void handleOpen(Open open)

@@ -63,11 +63,11 @@ public class SenderImpl  extends LinkImpl implements Sender
         //TODO.
     }
 
-    public void free()
+    @Override
+    void doFree()
     {
         getSession().freeSender(this);
-        super.free();
-
+        super.doFree();
     }
 
     @Override

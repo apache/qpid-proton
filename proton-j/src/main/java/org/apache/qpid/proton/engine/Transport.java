@@ -81,6 +81,7 @@ public interface Transport extends Endpoint
     public int END_OF_STREAM = -1;
 
     public void bind(Connection connection);
+    public void unbind();
 
     public int capacity();
     public ByteBuffer tail();

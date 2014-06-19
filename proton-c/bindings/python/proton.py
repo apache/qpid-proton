@@ -2178,6 +2178,16 @@ class Endpoint(object):
 
   def __init__(self):
     self.condition = None
+    self._release_invoked = False
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if not self._release_invoked:
+      for c in self._children:
+        c._release()
+      self._free_resource()
+      self.connection._releasing(self)
+      self._release_invoked = True
 
   def _update_cond(self):
     obj2cond(self.condition, self._get_cond_impl())
@@ -2269,13 +2279,31 @@ class Connection(Endpoint):
 
   def __del__(self):
     if hasattr(self, "_conn") and self._conn:
-      # pn_connection_free will release all child sessions in the C Engine, so
-      # free all child python Sessions to avoid dangling references
-      if hasattr(self, "_sessions") and self._sessions:
-        for s in self._sessions:
-          s._release()
-      pn_connection_set_context(self._conn, None)
-      pn_connection_free(self._conn)
+      self._release()
+
+  def free(self):
+    self._release()
+
+  @property
+  def _children(self):
+    return self._sessions
+
+  @property
+  def connection(self):
+    return self
+
+  def _free_resource(self):
+    pn_connection_free(self._conn)
+
+  def _released(self):
+    self._conn = None
+
+  def _releasing(self, child):
+    coll = getattr(self, "_collector", None)
+    if coll:
+      coll._contexts.add(child)
+    else:
+      child._released()
 
   def _check(self, err):
     if err < 0:
@@ -2389,16 +2417,15 @@ class Session(Endpoint):
     self._links = set()
     self.connection._sessions.add(self)
 
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if self._ssn:
-      # pn_session_free will release all child links in the C Engine, so free
-      # all child python Links to avoid dangling references
-      for l in self._links:
-        l._release()
-      pn_session_set_context(self._ssn, None)
-      pn_session_free(self._ssn)
-      self._ssn = None
+  @property
+  def _children(self):
+    return self._links
+
+  def _free_resource(self):
+    pn_session_free(self._ssn)
+
+  def _released(self):
+    self._ssn = None
 
   def free(self):
     """Release the Session, freeing its resources.
@@ -2490,16 +2517,15 @@ class Link(Endpoint):
     self._deliveries = set()
     self.session._links.add(self)
 
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if self._link:
-      # pn_link_free will settle all child deliveries in the C Engine, so free
-      # all child python deliveries to avoid dangling references
-      for d in self._deliveries:
-        d._release()
-      pn_link_set_context(self._link, None)
-      pn_link_free(self._link)
-      self._link = None
+  @property
+  def _children(self):
+    return self._deliveries
+
+  def _free_resource(self):
+    pn_link_free(self._link)
+
+  def _released(self):
+    self._link = None
 
   def free(self):
     """Release the Link, freeing its resources"""
@@ -2548,6 +2574,10 @@ class Link(Endpoint):
   @property
   def session(self):
     return Session._wrap_session(pn_link_session(self._link))
+
+  @property
+  def connection(self):
+    return self.session.connection
 
   def delivery(self, tag):
     return Delivery._wrap_delivery(pn_delivery(self._link, tag))
@@ -3278,6 +3308,7 @@ class Collector:
 
   def __init__(self):
     self._impl = pn_collector()
+    self._contexts = set()
 
   def peek(self):
     event = pn_collector_peek(self._impl)
@@ -3298,6 +3329,9 @@ class Collector:
                  transport=tp)
 
   def pop(self):
+    ev = self.peek()
+    if ev is not None:
+      ev._popped(self)
     pn_collector_pop(self._impl)
 
   def __del__(self):
@@ -3332,6 +3366,19 @@ class Event:
     self.link = link
     self.delivery = delivery
     self.transport = transport
+
+  def _popped(self, collector):
+    if self.type == Event.LINK_FINAL:
+      ctx = self.link
+    elif self.type == Event.SESSION_FINAL:
+      ctx = self.session
+    elif self.type == Event.CONNECTION_FINAL:
+      ctx = self.connection
+    else:
+      return
+
+    collector._contexts.remove(ctx)
+    ctx._released()
 
   def __repr__(self):
     objects = [self.connection, self.session, self.link, self.delivery,

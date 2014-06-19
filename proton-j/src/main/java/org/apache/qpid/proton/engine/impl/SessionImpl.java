@@ -45,6 +45,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     SessionImpl(ConnectionImpl connection)
     {
         _connection = connection;
+        _connection.incref();
         _node = _connection.addSessionEndpoint(this);
         _connection.put(Event.Type.SESSION_INIT, this);
     }
@@ -91,23 +92,36 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return getConnectionImpl();
     }
 
-    public void free()
-    {
-        super.free();
+    @Override
+    void postFinal() {
+        _connection.put(Event.Type.SESSION_FINAL, this);
+        _connection.decref();
+    }
 
+    @Override
+    void doFree() {
         _connection.removeSessionEndpoint(_node);
         _node = null;
 
-        for(SenderImpl sender : _senders.values())
-        {
+        for(SenderImpl sender : _senders.values()) {
             sender.free();
         }
         _senders.clear();
-        for(ReceiverImpl receiver : _receivers.values())
-        {
+        for(ReceiverImpl receiver : _receivers.values()) {
             receiver.free();
         }
         _receivers.clear();
+    }
+
+    void modifyEndpoints() {
+        for (SenderImpl snd : _senders.values()) {
+            snd.modifyEndpoints();
+        }
+
+        for (ReceiverImpl rcv : _receivers.values()) {
+            rcv.modifyEndpoints();
+        }
+        modified();
     }
 
     TransportSession getTransportSession()

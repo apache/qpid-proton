@@ -244,6 +244,9 @@ def pn_connection_close(conn):
   conn.on_close()
   conn.impl.close()
 
+def pn_connection_free(conn):
+  conn.impl.free()
+
 class pn_session_wrapper(endpoint_wrapper):
   pass
 
@@ -325,7 +328,7 @@ def pn_receiver(ssn, name):
   return wrap(ssn.impl.receiver(name), pn_link_wrapper)
 
 def pn_session_free(ssn):
-  ssn.impl = None
+  ssn.impl.free()
 
 TERMINUS_TYPES_J2P = {
   Source: PN_SOURCE,
@@ -652,7 +655,7 @@ def pn_link_current(link):
   return wrap(link.impl.current(), pn_delivery_wrapper)
 
 def pn_link_free(link):
-  link.impl = None
+  link.impl.free()
 
 def pn_work_head(conn):
   return wrap(conn.impl.getWorkHead(), pn_delivery_wrapper)
@@ -875,6 +878,10 @@ def pn_transport_remote_channel_max(trans):
 
 def pn_transport_bind(trans, conn):
   trans.impl.bind(conn.impl)
+  return 0
+
+def pn_transport_unbind(trans):
+  trans.impl.unbind()
   return 0
 
 def pn_transport_trace(trans, n):

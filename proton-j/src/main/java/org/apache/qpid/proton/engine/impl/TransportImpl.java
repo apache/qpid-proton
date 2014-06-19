@@ -193,9 +193,10 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void bind(Connection conn)
     {
-        // TODO - check if already bound
-        ((ConnectionImpl) conn).setTransport(this);
         _connectionEndpoint = (ConnectionImpl) conn;
+        // TODO - check if already bound
+        _connectionEndpoint.setTransport(this);
+        _connectionEndpoint.incref();
 
         if(getRemoteState() != EndpointState.UNINITIALIZED)
         {
@@ -206,6 +207,23 @@ public class TransportImpl extends EndpointImpl
             }
 
             _frameParser.flush();
+        }
+    }
+
+    @Override
+    public void unbind()
+    {
+        _connectionEndpoint.modifyEndpoints();
+
+        _connectionEndpoint.setTransport(null);
+        _connectionEndpoint.decref();
+
+        for (TransportSession ts: _transportSessionState.values()) {
+            ts.unbind();
+        }
+
+        for (TransportLink tl: _transportLinkState.values()) {
+            tl.unbind();
         }
     }
 
@@ -911,10 +929,10 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void free()
-    {
-        super.free();
-    }
+    void postFinal() {}
+
+    @Override
+    void doFree() { }
 
     //==================================================================================================================
     // handle incoming amqp data
@@ -1095,6 +1113,7 @@ public class TransportImpl extends EndpointImpl
                 LinkImpl link = transportLink.getLink();
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
+                transportLink.clearRemoteHandle();
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
                 {
