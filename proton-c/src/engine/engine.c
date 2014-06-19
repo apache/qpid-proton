@@ -593,7 +593,7 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
     pn_incref(endpoint);
   }
 
-  if (emit) {
+  if (emit && connection->transport) {
     pn_event_t *event = pn_collector_put(connection->collector, PN_TRANSPORT);
     if (event) {
       pn_event_init(event, connection->transport);

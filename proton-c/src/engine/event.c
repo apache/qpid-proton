@@ -130,13 +130,14 @@ bool pn_collector_pop(pn_collector_t *collector)
     collector->tail = NULL;
   }
 
-  event->next = collector->free_head;
-  collector->free_head = event;
-
+  // decref before adding to the free list
   if (event->context) {
     pn_decref(event->context);
     event->context = NULL;
   }
+
+  event->next = collector->free_head;
+  collector->free_head = event;
 
   return true;
 }
@@ -178,9 +179,9 @@ pn_event_t *pn_event(void)
 
 void pn_event_init(pn_event_t *event, void *context)
 {
+  assert(context);
   event->context = context;
-  if (event->context)
-    pn_incref(event->context);
+  pn_incref(event->context);
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
