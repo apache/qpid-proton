@@ -46,6 +46,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     {
         _connection = connection;
         _node = _connection.addSessionEndpoint(this);
+        _connection.put(Event.Type.SESSION_INIT, this);
     }
 
     public SenderImpl sender(String name)

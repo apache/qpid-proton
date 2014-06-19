@@ -41,7 +41,13 @@ public interface Event
         LINK_LOCAL_STATE(Category.PROTOCOL, 6),
         LINK_FLOW(Category.PROTOCOL, 7),
         DELIVERY(Category.PROTOCOL, 8),
-        TRANSPORT(Category.PROTOCOL, 9);
+        TRANSPORT(Category.PROTOCOL, 9),
+        CONNECTION_FINAL(Category.PROTOCOL, 10),
+        SESSION_FINAL(Category.PROTOCOL, 11),
+        LINK_FINAL(Category.PROTOCOL, 12),
+        CONNECTION_INIT(Category.PROTOCOL, 13),
+        SESSION_INIT(Category.PROTOCOL, 14),
+        LINK_INIT(Category.PROTOCOL, 15);
 
         private int _opcode;
         private Category _category;

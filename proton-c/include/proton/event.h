@@ -153,7 +153,25 @@ typedef enum {
    * completed. This is the final event that will ever be issued for a
    * link.
    */
-  PN_LINK_FINAL = PN_EVENT_CATEGORY_PROTOCOL+12
+  PN_LINK_FINAL = PN_EVENT_CATEGORY_PROTOCOL+12,
+
+  /**
+   * The connection has been created. This is the first event that
+   * will ever be issued for a connection.
+   */
+  PN_CONNECTION_INIT = PN_EVENT_CATEGORY_PROTOCOL+13,
+
+  /**
+   * The session has been created. This is the first event that will
+   * ever be issued for a session.
+   */
+  PN_SESSION_INIT = PN_EVENT_CATEGORY_PROTOCOL+14,
+
+  /**
+   * The link has been created. This is the first event that will ever
+   * be issued for a link.
+   */
+  PN_LINK_INIT = PN_EVENT_CATEGORY_PROTOCOL+15
 
 } pn_event_type_t;
 

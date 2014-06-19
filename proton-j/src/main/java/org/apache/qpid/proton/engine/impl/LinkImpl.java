@@ -60,7 +60,9 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         _session = session;
         _name = name;
-        _node = session.getConnectionImpl().addLinkEndpoint(this);
+        ConnectionImpl conn = session.getConnectionImpl();
+        _node = conn.addLinkEndpoint(this);
+        conn.put(Event.Type.LINK_INIT, this);
     }
 
 

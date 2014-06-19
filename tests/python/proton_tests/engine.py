@@ -2097,7 +2097,7 @@ class EventTest(Test):
     c1, c2 = self.connection()
     coll = Collector()
     c1.collect(coll)
-    self.expect(coll)
+    self.expect(coll, Event.CONNECTION_INIT)
     self.pump()
     self.expect(coll)
     c2.open()
@@ -2113,7 +2113,8 @@ class EventTest(Test):
 
     self.expect(coll)
     self.pump()
-    self.expect(coll, Event.SESSION_REMOTE_STATE, Event.LINK_REMOTE_STATE)
+    self.expect(coll, Event.SESSION_INIT, Event.SESSION_REMOTE_STATE,
+                Event.LINK_INIT, Event.LINK_REMOTE_STATE)
 
     c1.open()
     ssn2 = c1.session()
@@ -2124,8 +2125,10 @@ class EventTest(Test):
     self.expect(coll,
                 Event.CONNECTION_LOCAL_STATE,
                 Event.TRANSPORT,
+                Event.SESSION_INIT,
                 Event.SESSION_LOCAL_STATE,
                 Event.TRANSPORT,
+                Event.LINK_INIT,
                 Event.LINK_LOCAL_STATE,
                 Event.TRANSPORT)
 
@@ -2136,7 +2139,8 @@ class EventTest(Test):
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_REMOTE_STATE, Event.LINK_FLOW)
+    self.expect(coll, Event.CONNECTION_INIT, Event.SESSION_INIT,
+                Event.LINK_INIT, Event.LINK_REMOTE_STATE, Event.LINK_FLOW)
     rcv.flow(10)
     self.pump()
     self.expect(coll, Event.LINK_FLOW)
@@ -2149,7 +2153,9 @@ class EventTest(Test):
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_LOCAL_STATE, Event.TRANSPORT, Event.TRANSPORT)
+    self.expect(coll, Event.CONNECTION_INIT, Event.SESSION_INIT,
+                Event.LINK_INIT, Event.LINK_LOCAL_STATE, Event.TRANSPORT,
+                Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()

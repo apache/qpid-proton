@@ -395,9 +395,20 @@ pn_connection_t *pn_connection()
   return conn;
 }
 
+static const pn_event_type_t endpoint_init_event_map[] = {
+  PN_CONNECTION_INIT,  /* CONNECTION */
+  PN_SESSION_INIT,     /* SESSION */
+  PN_LINK_INIT,        /* SENDER */
+  PN_LINK_INIT};       /* RECEIVER */
+
 void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector)
 {
   connection->collector = collector;
+  pn_endpoint_t *endpoint = connection->endpoint_head;
+  while (endpoint) {
+    pn_collector_put(connection->collector, endpoint_init_event_map[endpoint->type], endpoint);
+    endpoint = endpoint->endpoint_next;
+  }
 }
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
@@ -728,6 +739,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->state.remote_handles = pn_hash(0, 0.75, PN_REFCOUNT);
   // end transport state
 
+  pn_collector_put(conn->collector, PN_SESSION_INIT, ssn);
   return ssn;
 }
 
@@ -841,8 +853,9 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->state.remote_handle = -1;
   link->state.delivery_count = 0;
   link->state.link_credit = 0;
-  // end transport stat
+  // end transport state
 
+  pn_collector_put(session->connection->collector, PN_LINK_INIT, link);
   return link;
 }
 

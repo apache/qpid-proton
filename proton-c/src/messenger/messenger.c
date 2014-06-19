@@ -1224,6 +1224,15 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
   while ((event = pn_collector_peek(messenger->collector))) {
     processed++;
     switch (pn_event_type(event)) {
+    case PN_CONNECTION_INIT:
+      //printf("connection created: %p\n", (void *) pn_event_connection(event));
+      break;
+    case PN_SESSION_INIT:
+      //printf("session created: %p\n", (void *) pn_event_session(event));
+      break;
+    case PN_LINK_INIT:
+      //printf("link created: %p\n", (void *) pn_event_link(event));
+      break;
     case PN_CONNECTION_REMOTE_STATE:
     case PN_CONNECTION_LOCAL_STATE:
       pn_messenger_process_connection(messenger, event);

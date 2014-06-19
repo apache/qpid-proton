@@ -568,6 +568,20 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     public void collect(Collector collector)
     {
         _collector = (CollectorImpl) collector;
+
+        put(Event.Type.CONNECTION_INIT, this);
+
+        LinkNode<SessionImpl> ssn = _sessionHead;
+        while (ssn != null) {
+            put(Event.Type.SESSION_INIT, ssn.getValue());
+            ssn = ssn.getNext();
+        }
+
+        LinkNode<LinkImpl> lnk = _linkHead;
+        while (lnk != null) {
+            put(Event.Type.LINK_INIT, lnk.getValue());
+            lnk = lnk.getNext();
+        }
     }
 
     EventImpl put(Event.Type type, Object context)
