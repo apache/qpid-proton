@@ -80,7 +80,6 @@ void pn_collector_free(pn_collector_t *collector)
 
 pn_event_t *pn_event(void);
 static void pn_event_initialize(void *obj);
-static bool pn_event_is_valid(pn_event_t *event);
 
 pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
 {
@@ -115,12 +114,6 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
 
 pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
-  // discard any events for objects that no longer exist
-  pn_event_t *event = collector->head;
-  while (event && !pn_event_is_valid(event)) {
-    pn_collector_pop(collector);
-    event = collector->head;
-  }
   return collector->head;
 }
 
@@ -321,19 +314,4 @@ const char *pn_event_type_name(pn_event_type_t type)
   }
 
   return "<unrecognized>";
-}
-
-static bool pn_event_is_valid(pn_event_t *event)
-{
-  pn_delivery_t *d;
-  pn_link_t *l;
-  pn_session_t *s;
-  pn_connection_t *c;
-  pn_transport_t *t;
-  return (event &&
-          (!(d = pn_event_delivery(event)) || !d->local.settled) &&
-          (!(l = pn_event_link(event)) || !l->endpoint.freed) &&
-          (!(s = pn_event_session(event)) || !s->endpoint.freed) &&
-          (!(c = pn_event_connection(event)) || !c->endpoint.freed) &&
-          (!(t = pn_event_transport(event)) || !t->freed));
 }
