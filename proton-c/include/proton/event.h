@@ -132,7 +132,29 @@ typedef enum {
    * type point to the relevant transport as well as its associated
    * connection.
    */
-  PN_TRANSPORT = PN_EVENT_CATEGORY_PROTOCOL+9
+  PN_TRANSPORT = PN_EVENT_CATEGORY_PROTOCOL+9,
+
+  /**
+   * The connection has been freed and any outstanding processing has
+   * been completed. This is the final event that will ever be issued
+   * for a connection.
+   */
+  PN_CONNECTION_FINAL = PN_EVENT_CATEGORY_PROTOCOL+10,
+
+  /**
+   * The session has been freed and any outstanding processing has
+   * been completed. This is the final event that will ever be issued
+   * for a session.
+   */
+  PN_SESSION_FINAL = PN_EVENT_CATEGORY_PROTOCOL+11,
+
+  /**
+   * The link has been freed and any outstanding processing has been
+   * completed. This is the final event that will ever be issued for a
+   * link.
+   */
+  PN_LINK_FINAL = PN_EVENT_CATEGORY_PROTOCOL+12
+
 } pn_event_type_t;
 
 /**

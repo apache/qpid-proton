@@ -1247,6 +1247,12 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_EVENT_NONE:
       break;
+    case PN_CONNECTION_FINAL:
+      break;
+    case PN_SESSION_FINAL:
+      break;
+    case PN_LINK_FINAL:
+      break;
     }
     pn_collector_pop(messenger->collector);
   }

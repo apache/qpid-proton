@@ -348,6 +348,7 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
   endpoint->transport_prev = NULL;
   endpoint->modified = false;
   endpoint->freed = false;
+  endpoint->posted_final = false;
 
   LL_ADD(conn, endpoint, endpoint);
 }
@@ -359,24 +360,45 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint)
   pn_condition_tini(&endpoint->condition);
 }
 
+#include "event.h"
+
+static bool pni_post_final(pn_endpoint_t *endpoint, pn_event_type_t type)
+{
+  pn_connection_t *conn = pn_ep_get_connection(endpoint);
+  if (!endpoint->posted_final) {
+    endpoint->posted_final = true;
+    pn_event_t *event = pn_collector_put(conn->collector, type);
+    if (event) {
+      pn_event_init(event, endpoint);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 static void pn_connection_finalize(void *object)
 {
   pn_connection_t *conn = (pn_connection_t *) object;
+
+  pn_endpoint_t *endpoint = &conn->endpoint;
+  if (pni_post_final(endpoint, PN_CONNECTION_FINAL)) {
+    return;
+  }
+
   pn_free(conn->sessions);
   pn_free(conn->container);
   pn_free(conn->hostname);
   pn_free(conn->offered_capabilities);
   pn_free(conn->desired_capabilities);
   pn_free(conn->properties);
-  pn_endpoint_tini(&conn->endpoint);
+  pn_endpoint_tini(endpoint);
 }
 
 #define pn_connection_initialize NULL
 #define pn_connection_hashcode NULL
 #define pn_connection_compare NULL
 #define pn_connection_inspect NULL
-
-#include "event.h"
 
 pn_connection_t *pn_connection()
 {
@@ -687,6 +709,7 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
 static void pn_session_finalize(void *object)
 {
   pn_session_t *session = (pn_session_t *) object;
+  pn_endpoint_t *endpoint = &session->endpoint;
   //pn_transport_t *transport = session->connection->transport;
   //if (transport) {
   /*   if ((int16_t)session->state.local_channel >= 0)  // END not sent */
@@ -695,8 +718,12 @@ static void pn_session_finalize(void *object)
   /*     pn_unmap_channel(transport, session); */
   /* } */
 
+  if (pni_post_final(endpoint, PN_SESSION_FINAL)) {
+    return;
+  }
+
   pn_free(session->links);
-  pn_endpoint_tini(&session->endpoint);
+  pn_endpoint_tini(endpoint);
   pn_delivery_map_free(&session->state.incoming);
   pn_delivery_map_free(&session->state.outgoing);
   pn_free(session->state.local_handles);
@@ -792,17 +819,22 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
 static void pn_link_finalize(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
+  pn_endpoint_t *endpoint = &link->endpoint;
 
   // assumptions: all deliveries freed
   assert(link->settled_head == NULL);
   assert(link->unsettled_head == NULL);
+
+  if (pni_post_final(endpoint, PN_LINK_FINAL)) {
+    return;
+  }
 
   pn_terminus_free(&link->source);
   pn_terminus_free(&link->target);
   pn_terminus_free(&link->remote_source);
   pn_terminus_free(&link->remote_target);
   pn_free(link->name);
-  pn_endpoint_tini(&link->endpoint);
+  pn_endpoint_tini(endpoint);
   pn_decref(link->session);
 }
 

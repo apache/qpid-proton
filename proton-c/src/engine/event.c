@@ -202,6 +202,7 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
   switch (pn_event_type(event)) {
   case PN_CONNECTION_REMOTE_STATE:
   case PN_CONNECTION_LOCAL_STATE:
+  case PN_CONNECTION_FINAL:
     return (pn_connection_t *)event->context;
   case PN_TRANSPORT:
     transport = pn_event_transport(event);
@@ -222,6 +223,7 @@ pn_session_t *pn_event_session(pn_event_t *event)
   switch (pn_event_type(event)) {
   case PN_SESSION_REMOTE_STATE:
   case PN_SESSION_LOCAL_STATE:
+  case PN_SESSION_FINAL:
     return (pn_session_t *)event->context;
   default:
     link = pn_event_link(event);
@@ -238,6 +240,7 @@ pn_link_t *pn_event_link(pn_event_t *event)
   case PN_LINK_REMOTE_STATE:
   case PN_LINK_LOCAL_STATE:
   case PN_LINK_FLOW:
+  case PN_LINK_FINAL:
     return (pn_link_t *)event->context;
   default:
     dlv = pn_event_delivery(event);
@@ -273,16 +276,22 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_CONNECTION_REMOTE_STATE";
   case PN_CONNECTION_LOCAL_STATE:
     return "PN_CONNECTION_LOCAL_STATE";
+  case PN_CONNECTION_FINAL:
+    return "PN_CONNECTION_FINAL";
   case PN_SESSION_REMOTE_STATE:
     return "PN_SESSION_REMOTE_STATE";
   case PN_SESSION_LOCAL_STATE:
     return "PN_SESSION_LOCAL_STATE";
+  case PN_SESSION_FINAL:
+    return "PN_SESSION_FINAL";
   case PN_LINK_REMOTE_STATE:
     return "PN_LINK_REMOTE_STATE";
   case PN_LINK_LOCAL_STATE:
     return "PN_LINK_LOCAL_STATE";
   case PN_LINK_FLOW:
     return "PN_LINK_FLOW";
+  case PN_LINK_FINAL:
+    return "PN_LINK_FINAL";
   case PN_DELIVERY:
     return "PN_DELIVERY";
   case PN_TRANSPORT:
