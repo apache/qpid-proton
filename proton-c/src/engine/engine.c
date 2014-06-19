@@ -66,18 +66,18 @@ static void endpoint_init_event(pn_event_t *event,
   switch (endpoint->type) {
   case CONNECTION: {
       pn_connection_t *conn = (pn_connection_t *) endpoint;
-      pn_event_init_connection(event, conn);
+      pn_event_init(event, conn);
     }
     break;
   case SESSION: {
       pn_session_t *ssn = (pn_session_t *) endpoint;
-      pn_event_init_session(event, ssn);
+      pn_event_init(event, ssn);
     }
     break;
   case SENDER:
   case RECEIVER: {
       pn_link_t *link = (pn_link_t*) endpoint;
-      pn_event_init_link(event, link);
+      pn_event_init(event, link);
     }
     break;
   }
@@ -596,7 +596,7 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
   if (emit) {
     pn_event_t *event = pn_collector_put(connection->collector, PN_TRANSPORT);
     if (event) {
-      pn_event_init_transport(event, connection->transport);
+      pn_event_init(event, connection->transport);
     }
   }
 }

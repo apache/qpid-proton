@@ -176,36 +176,11 @@ pn_event_t *pn_event(void)
   return event;
 }
 
-void pn_event_init_context(pn_event_t *event, void *object)
+void pn_event_init(pn_event_t *event, void *context)
 {
-    event->context = object;
-    if (event->context)
-        pn_incref(event->context);
-}
-
-void pn_event_init_transport(pn_event_t *event, pn_transport_t *transport)
-{
-  pn_event_init_context(event, transport);
-}
-
-void pn_event_init_connection(pn_event_t *event, pn_connection_t *connection)
-{
-  pn_event_init_context(event, connection);
-}
-
-void pn_event_init_session(pn_event_t *event, pn_session_t *session)
-{
-  pn_event_init_context(event, session);
-}
-
-void pn_event_init_link(pn_event_t *event, pn_link_t *link)
-{
-  pn_event_init_context(event, link);
-}
-
-void pn_event_init_delivery(pn_event_t *event, pn_delivery_t *delivery)
-{
-  pn_event_init_context(event, delivery);
+  event->context = context;
+  if (event->context)
+    pn_incref(event->context);
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
