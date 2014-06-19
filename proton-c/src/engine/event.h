@@ -22,8 +22,7 @@
  *
  */
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type);
-
-void pn_event_init(pn_event_t *event, void *context);
+pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type,
+                             void *context);
 
 #endif /* event.h */

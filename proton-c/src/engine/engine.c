@@ -64,11 +64,8 @@ static void pn_endpoint_open(pn_endpoint_t *endpoint)
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_event_t *event = pn_collector_put(conn->collector,
-                                       endpoint_event_map[endpoint->type]);
-  if (event) {
-    pn_event_init(event, endpoint);
-  }
+  pn_collector_put(conn->collector, endpoint_event_map[endpoint->type],
+                   endpoint);
   pn_modified(conn, endpoint, true);
 }
 
@@ -77,11 +74,8 @@ static void pn_endpoint_close(pn_endpoint_t *endpoint)
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_event_t *event = pn_collector_put(conn->collector,
-                                       endpoint_event_map[endpoint->type]);
-  if (event) {
-    pn_event_init(event, endpoint);
-  }
+  pn_collector_put(conn->collector, endpoint_event_map[endpoint->type],
+                   endpoint);
   pn_modified(conn, endpoint, true);
 }
 
@@ -343,11 +337,8 @@ static bool pni_post_final(pn_endpoint_t *endpoint, pn_event_type_t type)
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
   if (!endpoint->posted_final) {
     endpoint->posted_final = true;
-    pn_event_t *event = pn_collector_put(conn->collector, type);
-    if (event) {
-      pn_event_init(event, endpoint);
-      return true;
-    }
+    pn_event_t *event = pn_collector_put(conn->collector, type, endpoint);
+    if (event) { return true; }
   }
 
   return false;
@@ -592,10 +583,8 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
   }
 
   if (emit && connection->transport) {
-    pn_event_t *event = pn_collector_put(connection->collector, PN_TRANSPORT);
-    if (event) {
-      pn_event_init(event, connection->transport);
-    }
+    pn_collector_put(connection->collector, PN_TRANSPORT,
+                     connection->transport);
   }
 }
 

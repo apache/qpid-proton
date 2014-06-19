@@ -81,11 +81,13 @@ void pn_collector_free(pn_collector_t *collector)
 pn_event_t *pn_event(void);
 static void pn_event_initialize(void *obj);
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
+pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, void *context)
 {
   if (!collector) {
     return NULL;
   }
+
+  assert(context);
 
   pn_event_t *event;
 
@@ -108,6 +110,8 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type)
   }
 
   event->type = type;
+  event->context = context;
+  pn_incref(event->context);
 
   return event;
 }
@@ -177,13 +181,6 @@ pn_event_t *pn_event(void)
   return event;
 }
 
-void pn_event_init(pn_event_t *event, void *context)
-{
-  assert(context);
-  event->context = context;
-  pn_incref(event->context);
-}
-
 pn_event_type_t pn_event_type(pn_event_t *event)
 {
   return event->type;
@@ -192,6 +189,12 @@ pn_event_type_t pn_event_type(pn_event_t *event)
 pn_event_category_t pn_event_category(pn_event_t *event)
 {
   return (pn_event_category_t)(event->type & 0xFFFF0000);
+}
+
+void *pn_event_context(pn_event_t *event)
+{
+  assert(event);
+  return event->context;
 }
 
 pn_connection_t *pn_event_connection(pn_event_t *event)

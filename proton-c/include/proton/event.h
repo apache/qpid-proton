@@ -220,6 +220,11 @@ PN_EXTERN pn_event_type_t pn_event_type(pn_event_t *event);
 PN_EXTERN pn_event_category_t pn_event_category(pn_event_t *event);
 
 /**
+ * Get the context associated with an event.
+ */
+PN_EXTERN void *pn_event_context(pn_event_t *event);
+
+/**
  * Get the connection associated with an event.
  *
  * @param[in] event an event object
