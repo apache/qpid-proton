@@ -85,7 +85,9 @@ int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 #endif
 
 #if defined _MSC_VER || defined _OPENVMS
+#if !defined(va_copy)
 #define va_copy(d,s) ((d) = (s))
+#endif
 #endif
 
 #ifdef __cplusplus
