@@ -6,7 +6,7 @@
 
 HERE=$(cd $(dirname $0); pwd)
 TOP=$(cd $(dirname $0); cd  ../../..; pwd)
-LIBS=$HERE/target/classes:$TOP/proton-j/proton-api/target/classes:$TOP/proton-j/proton/target/classes
+LIBS=$HERE/target/classes:$TOP/proton-j/target/classes
 JFLAGS="-Djava.util.logging.config.file=$HERE/recv.trace.props -cp $LIBS"
 java -cp $LIBS org.apache.qpid.proton.example.Recv "$@"
 
