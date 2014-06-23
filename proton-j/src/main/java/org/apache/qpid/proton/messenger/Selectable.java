@@ -30,6 +30,10 @@ public interface Selectable
 
     Transport getTransport();
 
+    void setContext(Object ctx);
+
+    Object getContext();
+
     boolean isConnected();
 
     void markConnected();

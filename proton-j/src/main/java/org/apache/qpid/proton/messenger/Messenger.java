@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.qpid.proton.TimeoutException;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.message.Message;
 
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
@@ -284,4 +285,6 @@ public interface Messenger
     List<? extends Selectable> getSelectables();
     
     List<? extends Listener> getListeners();
+
+    Selectable createConnection(Transport transport);
 }

@@ -56,12 +56,14 @@ public class SelectableImpl implements Selectable
     {
     }
 
-    Object getContext()
+    @Override
+    public Object getContext()
     {
         return _ctx;
     }
 
-    void setContext(Object ctx)
+    @Override
+    public void setContext(Object ctx)
     {
         _ctx = ctx;
     }
@@ -135,7 +137,6 @@ public class SelectableImpl implements Selectable
     }
 
     // Used in non passive mode.
-
     void setNetworkConnection(IoConnection con)
     {
         _networkConnection = con;

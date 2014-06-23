@@ -719,8 +719,7 @@ public class MessengerImpl implements Messenger
     @Override
     public List<? extends Listener> getListeners()
     {
-        // TODO Auto-generated method stub
-        return null;
+        return _listeners;
     }
 
     private int queued(boolean outgoing)
@@ -1686,29 +1685,13 @@ public class MessengerImpl implements Messenger
 
     }
 
-    /* ----------------------------------------
-     * IO events for non passive mode
-     * ----------------------------------------
-     */
-    void inboundConnection(Listener listener, IoConnection networkConnection)
+    public Selectable createConnection(Transport transport)
     {
-        _worked = true;
         Connection connection = Proton.connection();
         connection.collect(_collector);
         connection.setContainer(_name);
         
-        Transport transport = Proton.transport();
         transport.bind(connection);
-        SelectableImpl selectable = new SelectableImpl();
-        selectable.markConnected();
-        selectable.setTransport(transport);
-        selectable.setConnection(connection);
-        selectable.setNetworkConnection(networkConnection);
-        _selectables.add(selectable);
-        
-        ListenerContext ctx = (ListenerContext) ((ListenerImpl)listener).getContext();
-        connection.setContext(new ConnectionContext(ctx.getAddress(), selectable));
-        networkConnection.setSelectable(selectable);
         
         //TODO: full SASL
         Sasl sasl = transport.sasl();
@@ -1718,8 +1701,34 @@ public class MessengerImpl implements Messenger
             sasl.setMechanisms(new String[]{"ANONYMOUS"});
             sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
         }
-        transport.ssl(ctx.getDomain());
+        //transport.ssl(ctx.getDomain());
         connection.open();
+
+        SelectableImpl selectable = new SelectableImpl();
+        selectable.markConnected();
+        selectable.setTransport(transport);
+        selectable.setConnection(connection);
+        _selectables.add(selectable);
+        return selectable;
+    }
+    
+    /* ----------------------------------------
+     * IO events for non passive mode
+     * ----------------------------------------
+     */
+    void inboundConnection(Listener listener, IoConnection networkConnection)
+    {
+        _worked = true;
+        Transport transport = Proton.transport();
+        
+        ListenerContext ctx = (ListenerContext) ((ListenerImpl)listener).getContext();
+        transport.ssl(ctx.getDomain());
+        
+        SelectableImpl selectable = (SelectableImpl)createConnection(transport);
+        selectable.setNetworkConnection(networkConnection);
+        selectable.getConnection().setContext(new ConnectionContext(ctx.getAddress(), selectable));
+        
+        networkConnection.setSelectable(selectable);
         networkConnection.registerForReadEvents(true);
         networkConnection.registerForWriteEvents(true);
     }
