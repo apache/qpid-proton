@@ -237,14 +237,13 @@ public class MessengerImpl implements Messenger
         //close all connections.
         for (SelectableImpl sel : _selectables)
         {
-            SelectableImpl s = (SelectableImpl)sel;
-            Connection connection = s.getConnection();
+            Connection connection = sel.getConnection();
             connection.close();
-            if (!_passive && !s.getNetworkConnection().isClosed())
+            if (!_passive && !sel.getNetworkConnection().isClosed())
             {
-                s.getNetworkConnection().registerForWriteEvents(true);
+                sel.getNetworkConnection().registerForWriteEvents(true);
             }
-            s.markClosed();
+            sel.markClosed();
         }
 
         waitUntil(_allClosed);
@@ -796,10 +795,6 @@ public class MessengerImpl implements Messenger
             }
         }
         ConnectionContext ctx = (ConnectionContext)connection.getContext();
-        if (!_passive)
-        {
-            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
-        }
     }
 
     private void processSession(Session session)
@@ -820,10 +815,6 @@ public class MessengerImpl implements Messenger
             }
         }
         ConnectionContext ctx = (ConnectionContext)session.getConnection().getContext();
-        if (!_passive)
-        {
-            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
-        }
     }
 
     private void processLink(Link link)
@@ -851,10 +842,6 @@ public class MessengerImpl implements Messenger
             }
         }
         ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
-        if (!_passive)
-        {
-            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
-        }
     }
 
     private void processFlow(Link link)
@@ -862,11 +849,6 @@ public class MessengerImpl implements Messenger
         if (link instanceof Sender)
         {
             pumpOut(link.getTarget().getAddress(), (Sender)link);
-        }
-        ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
-        if (!_passive)
-        {
-            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
         }
     }
 
@@ -889,11 +871,6 @@ public class MessengerImpl implements Messenger
         }
 
         delivery.clear();
-        ConnectionContext ctx = (ConnectionContext)link.getSession().getConnection().getContext();
-        if (!_passive)
-        {
-            ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
-        }
     }
 
     private boolean waitUntil(Predicate condition) throws TimeoutException
@@ -913,14 +890,18 @@ public class MessengerImpl implements Messenger
     }
 
     private boolean waitUntil(Predicate condition, long timeout)
-    {
+    {        
+        if (!_passive)
+        {
+            processEvents();            
+            processPendingSelectables();
+        }
         processEvents();
 
         if (_passive)
         {
             return condition.test();
         }
-
         // wait until timeout expires or until test is true
         long now = System.currentTimeMillis();
         final long deadline = timeout < 0 ? Long.MAX_VALUE : now + timeout;
@@ -949,7 +930,7 @@ public class MessengerImpl implements Messenger
                 long wakeup = (_next_drain > now) ? _next_drain - now : 0;
                 remaining = (remaining == -1) ? wakeup : Math.min(remaining, wakeup);
             }
-            processPendingSelectables(remaining);
+            waitOnIOEvents(remaining);
             processEvents();
             if (_interrupted.get())
             {
@@ -963,7 +944,28 @@ public class MessengerImpl implements Messenger
     }
 
     // Used when passive mode is false.
-    private void processPendingSelectables(long timeout)
+    private void processPendingSelectables()
+    {
+        //Iterate through the Selectables and read/write if required.
+        Iterator<SelectableImpl> it = _selectables.iterator();
+        while (it.hasNext())
+        {
+            SelectableImpl sel = it.next();
+            if (sel.isCompleted())
+            {
+                it.remove();
+                continue;
+            }
+            connectionWritable(sel);
+            connectionReadable(sel);
+            if (sel.isCompleted())
+            {
+                it.remove();
+            }
+        }
+    }
+
+    private void waitOnIOEvents(long timeout)
     {
         try
         {
@@ -1105,11 +1107,6 @@ public class MessengerImpl implements Messenger
             _credited.add(link);
 
             // flow changed, must process it
-            ConnectionContext ctx = (ConnectionContext) link.getSession().getConnection().getContext();
-            if (!_passive)
-            {
-                ((SelectableImpl)ctx.getSelectable()).getNetworkConnection().registerForWriteEvents(true);
-            }
         }
 
         if (_blocked.isEmpty())
@@ -1695,8 +1692,6 @@ public class MessengerImpl implements Messenger
      */
     void inboundConnection(Listener listener, IoConnection networkConnection)
     {
-        //System.out.println("inboundConnection ............................................"+ _name);
-
         _worked = true;
         Connection connection = Proton.connection();
         connection.collect(_collector);
@@ -1731,13 +1726,23 @@ public class MessengerImpl implements Messenger
     
     void connectionReadable(SelectableImpl selectable)
     {
-        //System.out.println("connectionReadable ............................................" + _name);
-        
-        _worked = true;
+        if (selectable.isCompleted())
+        {
+            return;
+        }
         IoConnection networkConnection = selectable.getNetworkConnection();
         SelectableImpl sel = (SelectableImpl) selectable;
         Transport transport = sel.getTransport();
-        ByteBuffer tail = transport.tail();
+        ByteBuffer tail = null;
+        try
+        {
+            tail = transport.tail();
+        }
+        catch (Exception e1)
+        {
+            connectionClosed(sel);
+            return;
+        }
         try
         {
             int read = networkConnection.read(tail);
@@ -1745,6 +1750,10 @@ public class MessengerImpl implements Messenger
             {
                 connectionClosed(sel);
                 return;
+            }
+            if (read > 0)
+            {
+                _worked = true;
             }
         }
         catch (IOException e)
@@ -1760,15 +1769,13 @@ public class MessengerImpl implements Messenger
         {
             _logger.log(Level.SEVERE, this + " error processing input", e);
         }
-        networkConnection.registerForReadEvents(transport.capacity() > 0);
+        //Currently it doesn't work without the following. But this is best handled elsewhere.
+        //Need to investigate and find the best way of handling it/
         networkConnection.registerForWriteEvents(true);
     }
 
    void connectionWritable(SelectableImpl selectable)
     {
-       //System.out.println("connectionWritable ............................................" + _name);
-       
-        _worked = true;
         IoConnection networkConnection = selectable.getNetworkConnection();
         SelectableImpl sel = (SelectableImpl) selectable;
         Transport transport = sel.getTransport();
@@ -1785,11 +1792,14 @@ public class MessengerImpl implements Messenger
                 }
                 catch (IOException e)
                 {
-                    _logger.log(Level.SEVERE, this + " error writing to the file descriptor", e);
+                    _logger.log(Level.SEVERE, this + " error writing to network connection : " + e.getMessage(), e);
+                    networkConnection.registerForWriteEvents(false);
+                    return;
                     // Need to throw the exception as well.
                 }
                 if (wrote > 0)
                 {
+                    _worked = true;
                     transport.pop(wrote);
                 }
                 else
@@ -1799,7 +1809,7 @@ public class MessengerImpl implements Messenger
             }
             networkConnection.registerForWriteEvents(transport.pending() > 0);
 
-            if (selectable.isClosed() && !_passive)
+            if (selectable.isClosed())
             {
                 try
                 {
@@ -1836,6 +1846,5 @@ public class MessengerImpl implements Messenger
             }
         }
         sel.markCompleted();
-        _selectables.remove(sel);
     }
 }
