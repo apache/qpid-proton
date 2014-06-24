@@ -34,6 +34,9 @@ typedef long long int int64_t;
 /* We cannot safely just wrap pn_bytes_t but each language binding must have a typemap for it - presumably to a string type */
 %ignore pn_bytes_t;
 
+/* There is no need to wrap pn_class_t aa it is an internal implementation detail and cannot be used outside the library */
+%ignore pn_class_t;
+
 %include "proton/types.h"
 %ignore pn_string_vformat;
 %ignore pn_string_vaddf;
