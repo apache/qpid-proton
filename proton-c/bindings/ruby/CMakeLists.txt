@@ -20,7 +20,9 @@
 if (NOT DEFAULT_RUBY_TESTING)
   message(FATAL_ERROR "Ruby bindings cannot be tested while missing dependencies")
 endif (NOT DEFAULT_RUBY_TESTING)
-
+list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+)
 include_directories (${RUBY_INCLUDE_PATH})
 swig_add_module(cproton-ruby ruby ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})

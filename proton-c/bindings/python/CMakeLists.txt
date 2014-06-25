@@ -16,15 +16,24 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
+# NB For python the SWIG module name must have the same name as the input .i file for CMake to generate the
+# correct dependencies
+
 set(CMAKE_SWIG_FLAGS "-threads")
 
 include_directories (${PYTHON_INCLUDE_PATH})
 if (BUILD_WITH_CXX)
-   SET_SOURCE_FILES_PROPERTIES(python.i PROPERTIES CPLUSPLUS ON)
+   SET_SOURCE_FILES_PROPERTIES(cproton.i PROPERTIES CPLUSPLUS ON)
 endif (BUILD_WITH_CXX)
-swig_add_module(cproton python python.i)
+
+list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+)
+
+swig_add_module(cproton python cproton.i)
 swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES})
-set_target_properties(_cproton
+set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
     PROPERTIES
     LINK_FLAGS "${CATCH_UNDEFINED}")
 
@@ -74,6 +83,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
               ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
-install(TARGETS _cproton
+install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)

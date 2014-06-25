@@ -30,6 +30,9 @@ execute_process(COMMAND ${PHP_CONFIG_EXE} --includes
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/php.i PROPERTIES SWIG_FLAGS "-I${PROJECT_SOURCE_DIR}/include")
+list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+)
 swig_add_module(cproton php ${CMAKE_CURRENT_SOURCE_DIR}/php.i)
 set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_FLAGS "${PHP_INCLUDES}")
 swig_link_libraries(cproton ${BINDING_DEPS})
