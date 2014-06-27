@@ -30,7 +30,6 @@ class TransportOutputAdaptor implements TransportOutput
 
     private final TransportOutputWriter _transportOutputWriter;
     private final int _maxFrameSize;
-    private final ByteBuffer _scratchBuffer;
 
     private ByteBuffer _outputBuffer = null;
     private ByteBuffer _head = null;
@@ -41,7 +40,6 @@ class TransportOutputAdaptor implements TransportOutput
     {
         _transportOutputWriter = transportOutputWriter;
         _maxFrameSize = maxFrameSize > 0 ? maxFrameSize : 4*1024;
-        _scratchBuffer = newWriteableBuffer(Math.min(512, _maxFrameSize));
     }
 
     @Override
@@ -51,9 +49,16 @@ class TransportOutputAdaptor implements TransportOutput
             return Transport.END_OF_STREAM;
         }
 
-        try_fill_buffer();
+        if(_outputBuffer == null)
+        {
+            init_buffers();
+        }
 
-        if (_outputBuffer != null && _outputBuffer.position() == 0) {
+        _output_done = _transportOutputWriter.writeInto(_outputBuffer);
+        _head.limit(_outputBuffer.position());
+
+        if (_outputBuffer.position() == 0)
+        {
             release_buffers();
         }
 
@@ -107,33 +112,5 @@ class TransportOutputAdaptor implements TransportOutput
     private void release_buffers() {
         _head = null;
         _outputBuffer = null;
-    }
-
-    private void try_fill_buffer() {
-        boolean done = false;
-        while (!done) {
-            reset_scratch_buffer();
-            _output_done |= _transportOutputWriter.writeInto(_scratchBuffer);
-            done = _scratchBuffer.position() < _scratchBuffer.capacity();
-            if (_scratchBuffer.position() > 0) {
-                copy_scratch_to_output();
-            }
-        }
-    }
-
-    private void reset_scratch_buffer() {
-        _scratchBuffer.clear();
-        if (_outputBuffer != null) {
-            _scratchBuffer.limit(Math.min(_scratchBuffer.capacity(), _outputBuffer.capacity() - _outputBuffer.position()));
-        }
-    }
-
-    private void copy_scratch_to_output() {
-        if (_outputBuffer == null) {
-            init_buffers();
-        }
-        _scratchBuffer.flip();
-        _outputBuffer.put(_scratchBuffer);
-        _head.limit(_outputBuffer.position());
     }
 }
