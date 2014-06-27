@@ -26,23 +26,22 @@ import org.apache.qpid.proton.engine.Transport;
 
 class TransportOutputAdaptor implements TransportOutput
 {
-    private TransportOutputWriter _transportOutputWriter;
+    private static final ByteBuffer _emptyHead = newReadableBuffer(0).asReadOnlyBuffer();
 
-    private final ByteBuffer _outputBuffer;
-    private final ByteBuffer _head;
+    private final TransportOutputWriter _transportOutputWriter;
+    private final int _maxFrameSize;
+    private final ByteBuffer _scratchBuffer;
+
+    private ByteBuffer _outputBuffer = null;
+    private ByteBuffer _head = null;
     private boolean _output_done = false;
     private boolean _head_closed = false;
 
     TransportOutputAdaptor(TransportOutputWriter transportOutputWriter, int maxFrameSize)
     {
         _transportOutputWriter = transportOutputWriter;
-        if (maxFrameSize > 0) {
-            _outputBuffer = newWriteableBuffer(maxFrameSize);
-        } else {
-            _outputBuffer = newWriteableBuffer(4*1024);
-        }
-        _head = _outputBuffer.asReadOnlyBuffer();
-        _head.limit(0);
+        _maxFrameSize = maxFrameSize > 0 ? maxFrameSize : 4*1024;
+        _scratchBuffer = newWriteableBuffer(Math.min(512, _maxFrameSize));
     }
 
     @Override
@@ -52,11 +51,18 @@ class TransportOutputAdaptor implements TransportOutput
             return Transport.END_OF_STREAM;
         }
 
-        _output_done = _transportOutputWriter.writeInto(_outputBuffer);
-        _head.limit(_outputBuffer.position());
+        try_fill_buffer();
 
-        if (_output_done && _outputBuffer.position() == 0) {
-            return Transport.END_OF_STREAM;
+        if (_outputBuffer != null && _outputBuffer.position() == 0) {
+            release_buffers();
+        }
+
+        if (_outputBuffer == null) {
+            if (_output_done) {
+                return Transport.END_OF_STREAM;
+            } else {
+                return 0;
+            }
         } else {
             return _outputBuffer.position();
         }
@@ -66,17 +72,22 @@ class TransportOutputAdaptor implements TransportOutput
     public ByteBuffer head()
     {
         pending();
-        return _head;
+        return _head != null ? _head : _emptyHead;
     }
 
     @Override
     public void pop(int bytes)
     {
-        _outputBuffer.flip();
-        _outputBuffer.position(bytes);
-        _outputBuffer.compact();
-        _head.position(0);
-        _head.limit(_outputBuffer.position());
+        if (_outputBuffer != null) {
+            _outputBuffer.flip();
+            _outputBuffer.position(bytes);
+            _outputBuffer.compact();
+            _head.position(0);
+            _head.limit(_outputBuffer.position());
+            if (_outputBuffer.position() == 0) {
+                release_buffers();
+            }
+        }
     }
 
     @Override
@@ -84,6 +95,45 @@ class TransportOutputAdaptor implements TransportOutput
     {
         _head_closed = true;
         _transportOutputWriter.closed();
+        release_buffers();
     }
 
+    private void init_buffers() {
+        _outputBuffer = newWriteableBuffer(_maxFrameSize);
+        _head = _outputBuffer.asReadOnlyBuffer();
+        _head.limit(0);
+    }
+
+    private void release_buffers() {
+        _head = null;
+        _outputBuffer = null;
+    }
+
+    private void try_fill_buffer() {
+        boolean done = false;
+        while (!done) {
+            reset_scratch_buffer();
+            _output_done |= _transportOutputWriter.writeInto(_scratchBuffer);
+            done = _scratchBuffer.position() < _scratchBuffer.capacity();
+            if (_scratchBuffer.position() > 0) {
+                copy_scratch_to_output();
+            }
+        }
+    }
+
+    private void reset_scratch_buffer() {
+        _scratchBuffer.clear();
+        if (_outputBuffer != null) {
+            _scratchBuffer.limit(Math.min(_scratchBuffer.capacity(), _outputBuffer.capacity() - _outputBuffer.position()));
+        }
+    }
+
+    private void copy_scratch_to_output() {
+        if (_outputBuffer == null) {
+            init_buffers();
+        }
+        _scratchBuffer.flip();
+        _outputBuffer.put(_scratchBuffer);
+        _head.limit(_outputBuffer.position());
+    }
 }

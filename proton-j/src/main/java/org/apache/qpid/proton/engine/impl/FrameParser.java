@@ -40,6 +40,8 @@ class FrameParser implements TransportInput
 {
     private static final Logger TRACE_LOGGER = Logger.getLogger("proton.trace");
 
+    private static final ByteBuffer _emptyInputBuffer = newWriteableBuffer(0);
+
     private enum State
     {
         HEADER0,
@@ -62,8 +64,9 @@ class FrameParser implements TransportInput
 
     private final FrameHandler _frameHandler;
     private final ByteBufferDecoder _decoder;
+    private final int _maxFrameSize;
 
-    private final ByteBuffer _inputBuffer;
+    private ByteBuffer _inputBuffer = null;
     private boolean _tail_closed = false;
 
     private State _state = State.HEADER0;
@@ -87,11 +90,7 @@ class FrameParser implements TransportInput
     {
         _frameHandler = frameHandler;
         _decoder = decoder;
-        if (maxFrameSize > 0) {
-            _inputBuffer = newWriteableBuffer(maxFrameSize);
-        } else {
-            _inputBuffer = newWriteableBuffer(4*1024);
-        }
+        _maxFrameSize = maxFrameSize > 0 ? maxFrameSize : 4*1024;
     }
 
     private void input(ByteBuffer in) throws TransportException
@@ -372,6 +371,7 @@ class FrameParser implements TransportInput
 
                             _decoder.setByteBuffer(in);
                             Object val = _decoder.readObject();
+                            _decoder.setByteBuffer(null);
 
                             Binary payload;
 
@@ -475,7 +475,11 @@ class FrameParser implements TransportInput
         if (_tail_closed) {
             return Transport.END_OF_STREAM;
         } else {
-            return _inputBuffer.remaining();
+            if (_inputBuffer != null) {
+                return _inputBuffer.remaining();
+            } else {
+                return _maxFrameSize;
+            }
         }
     }
 
@@ -489,21 +493,37 @@ class FrameParser implements TransportInput
                 throw new TransportException("tail closed");
             }
         }
+
+        if (_inputBuffer == null) {
+            _inputBuffer = newWriteableBuffer(_maxFrameSize);
+        }
+
         return _inputBuffer;
     }
 
     @Override
     public void process() throws TransportException
     {
-        _inputBuffer.flip();
+        if (_inputBuffer != null)
+        {
+            _inputBuffer.flip();
 
-        try
-        {
-            input(_inputBuffer);
+            try
+            {
+                input(_inputBuffer);
+            }
+            finally
+            {
+                if (_inputBuffer.hasRemaining()) {
+                    _inputBuffer.compact();
+                } else {
+                    _inputBuffer = null;
+                }
+            }
         }
-        finally
+        else
         {
-            _inputBuffer.compact();
+            input(_emptyInputBuffer);
         }
     }
 

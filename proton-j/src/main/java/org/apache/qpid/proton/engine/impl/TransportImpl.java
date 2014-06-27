@@ -101,8 +101,6 @@ public class TransportImpl extends EndpointImpl
     private SslImpl _ssl;
     private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
 
-    private ByteBuffer _lastInputBuffer;
-
     private TransportResult _lastTransportResult = TransportResultFactory.ok();
 
     private boolean _init;
