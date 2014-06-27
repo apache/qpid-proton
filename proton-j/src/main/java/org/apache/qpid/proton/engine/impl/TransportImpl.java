@@ -17,8 +17,6 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
@@ -44,7 +42,6 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
@@ -65,7 +62,7 @@ public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
         FrameHandler, TransportOutputWriter
 {
-    private static final byte AMQP_FRAME_TYPE = 0;
+    static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 4*1024);
 
     private FrameParser _frameParser;
 

@@ -516,8 +516,10 @@ class FrameParser implements TransportInput
             {
                 if (_inputBuffer.hasRemaining()) {
                     _inputBuffer.compact();
-                } else {
+                } else if (_inputBuffer.capacity() > TransportImpl.BUFFER_RELEASE_THRESHOLD) {
                     _inputBuffer = null;
+                } else {
+                    _inputBuffer.clear();
                 }
             }
         }

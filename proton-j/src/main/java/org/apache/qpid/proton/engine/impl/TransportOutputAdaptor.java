@@ -57,19 +57,18 @@ class TransportOutputAdaptor implements TransportOutput
         _output_done = _transportOutputWriter.writeInto(_outputBuffer);
         _head.limit(_outputBuffer.position());
 
-        if (_outputBuffer.position() == 0)
+        if (_outputBuffer.position() == 0 && _outputBuffer.capacity() > TransportImpl.BUFFER_RELEASE_THRESHOLD)
         {
             release_buffers();
         }
 
-        if (_outputBuffer == null) {
-            if (_output_done) {
-                return Transport.END_OF_STREAM;
-            } else {
-                return 0;
-            }
-        } else {
-            return _outputBuffer.position();
+        if (_output_done && (_outputBuffer == null || _outputBuffer.position() == 0))
+        {
+            return Transport.END_OF_STREAM;
+        }
+        else
+        {
+            return _outputBuffer == null ? 0 : _outputBuffer.position();
         }
     }
 
@@ -89,7 +88,7 @@ class TransportOutputAdaptor implements TransportOutput
             _outputBuffer.compact();
             _head.position(0);
             _head.limit(_outputBuffer.position());
-            if (_outputBuffer.position() == 0) {
+            if (_outputBuffer.position() == 0 && _outputBuffer.capacity() > TransportImpl.BUFFER_RELEASE_THRESHOLD) {
                 release_buffers();
             }
         }
