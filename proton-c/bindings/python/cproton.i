@@ -37,6 +37,12 @@
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 %cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
+// These are not used/needed in the python binding
+%ignore pn_message_get_id;
+%ignore pn_message_set_id;
+%ignore pn_message_get_correlation_id;
+%ignore pn_message_set_correlation_id;
+
 %typemap(in) pn_bytes_t {
   if ($input == Py_None) {
     $1.start = NULL;
@@ -54,21 +60,29 @@
   $result = PyString_FromStringAndSize($1.start, $1.size);
 }
 
-%typemap(in) pn_decimal128_t {
-  memmove($1.bytes, PyString_AsString($input), 16);
-}
-
-%typemap(out) pn_decimal128_t {
-  $result = PyString_FromStringAndSize($1.bytes, 16);
+%typemap(out) pn_delivery_tag_t {
+  $result = PyString_FromStringAndSize($1.bytes, $1.size);
 }
 
 %typemap(in) pn_uuid_t {
-  memmove($1.bytes, PyString_AsString($input), 16);
+  memset($1.bytes, 0, 16);
+  if ($input == Py_None) {
+    ; // Already zeroed out
+  } else {
+    const char* b = PyString_AsString($input);
+    if (b) {
+        memmove($1.bytes, b, (PyString_Size($input) < 16 ? PyString_Size($input) : 16));
+    } else {
+        return NULL;
+    }
+  }
 }
 
 %typemap(out) pn_uuid_t {
   $result = PyString_FromStringAndSize($1.bytes, 16);
 }
+
+%apply pn_uuid_t { pn_decimal128_t };
 
 int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
 %ignore pn_message_load;
@@ -156,8 +170,6 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %}
 %ignore pn_delivery;
 
-// Suppress "Warning(451): Setting a const char * variable may leak memory." on pn_delivery_tag_t
-%warnfilter(451) pn_delivery_tag_t;
 %rename(pn_delivery_tag) wrap_pn_delivery_tag;
 %inline %{
   void wrap_pn_delivery_tag(pn_delivery_t *delivery, char **ALLOC_OUTPUT, size_t *ALLOC_SIZE) {

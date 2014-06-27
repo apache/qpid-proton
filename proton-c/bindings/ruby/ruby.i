@@ -344,25 +344,4 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
-%rename(pn_decimal128_t) Pn_decimal128_t;
-%ignore pn_decimal128_t;
-
-%rename(pn_uuid_t) Pn_uuid_t;
-%ignore pn_uuid_t;
-
-%rename(pn_bytes_t) Pn_bytes_t;
-%ignore pn_bytes_t;
-
-%rename(pn_class_t) Pn_class_t;
-%ignore pn_class_t;
-
-%rename(pn_atom_t) Pn_atom_t;
-%ignore pn_atom_t;
-
-%rename(pn_atom_t_u) Pn_atom_t_u;
-%ignore pn_atom_t_u;
-
-%rename(pn_delivery_tag_t) Pn_delivery_tag_t;
-%ignore pn_delivery_tag_t;
-
 %include "proton/cproton.i"

@@ -37,6 +37,16 @@ typedef long long int int64_t;
 /* There is no need to wrap pn_class_t aa it is an internal implementation detail and cannot be used outside the library */
 %ignore pn_class_t;
 
+/* Ignore C APIs related to pn_atom_t - they can all be achieved with pn_data_t */
+%ignore pn_atom_t;
+%ignore pn_atom_t_u; /* Seem to need this even though its nested in pn_atom_t */
+%ignore pn_data_get_atom;
+%ignore pn_data_put_atom;
+
+%ignore pn_delivery_tag_t;
+%ignore pn_decimal128_t;
+%ignore pn_uuid_t;
+
 %include "proton/types.h"
 %ignore pn_string_vformat;
 %ignore pn_string_vaddf;
