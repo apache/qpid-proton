@@ -154,7 +154,7 @@ else (JAVA_FOUND AND MAVEN_EXE)
 endif (JAVA_FOUND AND MAVEN_EXE)
 
 # Generate test environment settings
-if (WIN32)
-    configure_file(${CMAKE_HOME_DIRECTORY}/config.bat.in
-                   ${CMAKE_BINARY_DIR}/config.bat @ONLY)
-endif (WIN32)
+configure_file(${CMAKE_SOURCE_DIR}/config.sh.in
+               ${CMAKE_BINARY_DIR}/config.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config.bat.in
+               ${CMAKE_BINARY_DIR}/config.bat @ONLY)

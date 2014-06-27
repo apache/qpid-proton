@@ -18,34 +18,24 @@
 # under the License.
 #
 
-cd $(dirname ${BASH_SOURCE[0]}) > /dev/null
-export PROTON_HOME=$(pwd)
-cd - > /dev/null
+PROTON_HOME=@CMAKE_SOURCE_DIR@
+PROTON_BUILD=@CMAKE_BINARY_DIR@
 
-if [ -z "$CPROTON_BUILD" ]; then
-    if [ -d $PROTON_HOME/build/proton-c ]; then
-        PROTON_BINDINGS=$PROTON_HOME/build/proton-c/bindings
-    else
-        PROTON_BINDINGS=$PROTON_HOME/proton-c/bindings
-    fi
-    if [ -d $PROTON_HOME/build/proton-j ]; then
-        PROTON_JARS=$PROTON_HOME/build/proton-j/proton-j.jar
-    else
-        PROTON_JARS=$PROTON_HOME/proton-j/proton-j.jar
-    fi
-else
-    PROTON_BINDINGS=$CPROTON_BUILD/bindings
-fi
+PROTON_BINDINGS=$PROTON_BUILD/proton-c/bindings
+PROTON_JARS=$PROTON_BUILD/proton-j/proton-j.jar
+
+PYTHON_BINDINGS=$PROTON_BINDINGS/python
+PHP_BINDINGS=$PROTON_BINDINGS/php
+RUBY_BINDINGS=$PROTON_BINDINGS/ruby
+PERL_BINDINGS=$PROTON_BINDINGS/perl
 
 # Python & Jython
-export PYTHON_BINDINGS=$PROTON_BINDINGS/python
-export COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python
+COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/resources:$PROTON_JARS
 export CLASSPATH=$PROTON_JARS
 
 # PHP
-export PHP_BINDINGS=$PROTON_BINDINGS/php
 if [ -d $PHP_BINDINGS ]; then
     cat <<EOF > $PHP_BINDINGS/php.ini
 include_path="$PHP_BINDINGS:$PROTON_HOME/proton-c/bindings/php"
@@ -55,22 +45,14 @@ EOF
 fi
 
 # Ruby
-export RUBY_BINDINGS=$PROTON_BINDINGS/ruby
 export RUBYLIB=$RUBY_BINDINGS:$PROTON_HOME/proton-c/bindings/ruby/lib:$PROTON_HOME/tests/ruby
 
 # Perl
-export PERL_BINDINGS=$PROTON_BINDINGS/perl
 export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
 
 # test applications
-if [ -d $PROTON_HOME/build/tests/tools/apps/c ]; then
-    export PATH="$PATH:$PROTON_HOME/build/tests/tools/apps/c"
-fi
-if [ -d $PROTON_HOME/tests/tools/apps/python ]; then
-    export PATH="$PATH:$PROTON_HOME/tests/tools/apps/python"
-fi
-
-# test applications
+export PATH="$PATH:$PROTON_BUILD/tests/tools/apps/c"
+export PATH="$PATH:$PROTON_HOME/tests/tools/apps/python"
 export PATH="$PATH:$PROTON_HOME/tests/python"
 
 # can the test harness use valgrind?
