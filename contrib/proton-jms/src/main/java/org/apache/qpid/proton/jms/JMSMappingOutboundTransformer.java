@@ -85,7 +85,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
 
         Header header = new Header();
         Properties props=new Properties();
-        HashMap daMap = null;
+        HashMap<Symbol, Object> daMap = null;
         HashMap<Symbol, Object> maMap = null;
         HashMap apMap = null;
         Section body=null;
@@ -174,11 +174,11 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
                 if( apMap==null ) apMap = new HashMap();
                 apMap.put(key, value);
             } else if( key.startsWith(prefixDeliveryAnnotationsKey) ) {
-                if( daMap == null ) daMap = new HashMap();
+                if( daMap == null ) daMap = new HashMap<Symbol, Object>();
                 String name = key.substring(prefixDeliveryAnnotationsKey.length());
-                daMap.put(name, msg.getObjectProperty(key));
+                daMap.put(Symbol.valueOf(name), msg.getObjectProperty(key));
             } else if( key.startsWith(prefixMessageAnnotationsKey) ) {
-                if( maMap==null ) maMap = new HashMap();
+                if( maMap==null ) maMap = new HashMap<Symbol, Object>();
                 String name = key.substring(prefixMessageAnnotationsKey.length());
                 maMap.put(Symbol.valueOf(name), msg.getObjectProperty(key));
             } else if( key.equals(subjectKey) ) {

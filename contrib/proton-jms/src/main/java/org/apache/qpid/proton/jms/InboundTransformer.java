@@ -129,7 +129,7 @@ public abstract class InboundTransformer {
 
         final DeliveryAnnotations da = amqp.getDeliveryAnnotations();
         if( da!=null ) {
-            for (Map.Entry entry : (Set<Map.Entry>)da.getValue().entrySet()) {
+            for (Map.Entry<?,?> entry : da.getValue().entrySet()) {
                 String key = entry.getKey().toString();
                 setProperty(jms, prefixVendor + prefixDeliveryAnnotations + key, entry.getValue());
             }
@@ -140,7 +140,7 @@ public abstract class InboundTransformer {
 
         final MessageAnnotations ma = amqp.getMessageAnnotations();
         if( ma!=null ) {
-            for (Map.Entry entry : (Set<Map.Entry<Symbol,Object>>)ma.getValue().entrySet()) {
+            for (Map.Entry<?,?> entry : ma.getValue().entrySet()) {
                 String key = entry.getKey().toString();
                 if( "x-opt-jms-type".equals(key.toString()) ) {
                     jms.setJMSType(entry.getValue().toString());
