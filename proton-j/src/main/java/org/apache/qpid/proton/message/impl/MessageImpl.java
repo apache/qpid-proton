@@ -573,8 +573,15 @@ public class MessageImpl implements ProtonJMessage
     @Override
     public int decode(byte[] data, int offset, int length)
     {
-        DecoderImpl decoder = tlsCodec.get().decoder;
         final ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
+        decode(buffer);
+
+        return length-buffer.remaining();
+    }
+
+    public void decode(ByteBuffer buffer)
+    {
+        DecoderImpl decoder = tlsCodec.get().decoder;
         decoder.setByteBuffer(buffer);
 
         _header = null;
@@ -680,9 +687,6 @@ public class MessageImpl implements ProtonJMessage
         }
 
         decoder.setByteBuffer(null);
-        
-        return length-buffer.remaining();
-
     }
 
     @Override
