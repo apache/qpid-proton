@@ -631,17 +631,24 @@ void pn_map_del(pn_map_t *map, void *key)
   pni_entry_t *prev = NULL;
   pni_entry_t *entry = pni_map_entry(map, key, &prev, false);
   if (entry) {
+    void *dref_key = (map->count_keys) ? entry->key : NULL;
+    void *dref_value = (map->count_values) ? entry->value : NULL;
     if (prev) {
       prev->next = entry->next;
       prev->state = entry->state;
+    } else if (entry->next) {
+      assert(entry->state == PNI_ENTRY_LINK);
+      pni_entry_t *next = &map->entries[entry->next];
+      *entry = *next;
+      entry = next;
     }
     entry->state = PNI_ENTRY_FREE;
     entry->next = 0;
-    if (map->count_keys) pn_decref2(entry->key, map);
     entry->key = NULL;
-    if (map->count_values) pn_decref2(entry->value, map);
     entry->value = NULL;
     map->size--;
+    if (dref_key) pn_decref2(dref_key, map);
+    if (dref_value) pn_decref2(dref_value, map);
   }
 }
 

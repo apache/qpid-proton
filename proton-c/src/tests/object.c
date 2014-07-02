@@ -499,6 +499,50 @@ static void test_hash(void)
   pn_decref(three);
 }
 
+
+// collider class: all objects have same hash, no two objects compare equal
+static intptr_t collider_compare(void *a, void *b)
+{
+  if (a == b) return 0;
+  return (a > b) ? 1 : -1;
+}
+
+static uintptr_t collider_hashcode(void *obj)
+{
+  return 23;
+}
+
+#define collider_initialize NULL
+#define collider_finalize NULL
+#define collider_inspect NULL
+
+static void test_map_links(void)
+{
+  const pn_class_t collider_clazz = PN_CLASS(collider);
+  void *keys[3];
+  for (int i = 0; i < 3; i++)
+    keys[i] = pn_new(0, &collider_clazz);
+
+  // test deleting a head, middle link, tail
+
+  for (int delete_idx=0; delete_idx < 3; delete_idx++) {
+    pn_map_t *map = pn_map(0, 0.75, 0);
+    // create a chain of entries that have same head (from identical key hashcode)
+    for (int i = 0; i < 3; i++) {
+      pn_map_put(map, keys[i], keys[i]);
+    }
+    pn_map_del(map, keys[delete_idx]);
+    for (int i = 0; i < 3; i++) {
+      void *value = (i == delete_idx) ? NULL : keys[i];
+      assert (pn_map_get(map, keys[i]) == value);
+    }
+    pn_free(map);
+  }
+  for (int i = 0; i < 3; i++)
+    pn_free(keys[i]);
+}
+
+
 static bool equals(const char *a, const char *b)
 {
   if (a == NULL && b == NULL) {
@@ -792,6 +836,7 @@ int main(int argc, char **argv)
   test_list_index();
 
   test_map();
+  test_map_links();
 
   test_hash();
 
