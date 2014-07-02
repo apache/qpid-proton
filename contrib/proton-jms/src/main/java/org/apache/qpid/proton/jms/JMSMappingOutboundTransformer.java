@@ -86,7 +86,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         Header header = new Header();
         Properties props=new Properties();
         HashMap daMap = null;
-        HashMap maMap = null;
+        HashMap<Symbol, Object> maMap = null;
         HashMap apMap = null;
         Section body=null;
         HashMap footerMap = null;
@@ -125,8 +125,8 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             header.setTtl(new UnsignedInteger((int) msg.getJMSExpiration()));
         }
         if( msg.getJMSType()!=null ) {
-            if( maMap==null ) maMap = new HashMap();
-            maMap.put("x-opt-jms-type", msg.getJMSType());
+            if( maMap==null ) maMap = new HashMap<Symbol, Object>();
+            maMap.put(Symbol.valueOf("x-opt-jms-type"), msg.getJMSType());
         }
         if( msg.getJMSMessageID()!=null ) {
             props.setMessageId(msg.getJMSMessageID());
@@ -134,12 +134,12 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         if( msg.getJMSDestination()!=null ) {
             props.setTo(vendor.toAddress(msg.getJMSDestination()));
             if( maMap==null ) maMap = new HashMap();
-            maMap.put("x-opt-to-type", destinationAttributes(msg.getJMSDestination()));
+            maMap.put(Symbol.valueOf("x-opt-to-type"), destinationAttributes(msg.getJMSDestination()));
         }
         if( msg.getJMSReplyTo()!=null ) {
             props.setReplyTo(vendor.toAddress(msg.getJMSReplyTo()));
             if( maMap==null ) maMap = new HashMap();
-            maMap.put("x-opt-reply-type", destinationAttributes(msg.getJMSReplyTo()));
+            maMap.put(Symbol.valueOf("x-opt-reply-type"), destinationAttributes(msg.getJMSReplyTo()));
         }
         if( msg.getJMSCorrelationID()!=null ) {
             props.setCorrelationId(msg.getJMSCorrelationID());
@@ -180,7 +180,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             } else if( key.startsWith(prefixMessageAnnotationsKey) ) {
                 if( maMap==null ) maMap = new HashMap();
                 String name = key.substring(prefixMessageAnnotationsKey.length());
-                maMap.put(name, msg.getObjectProperty(key));
+                maMap.put(Symbol.valueOf(name), msg.getObjectProperty(key));
             } else if( key.equals(subjectKey) ) {
                 props.setSubject(msg.getStringProperty(key));
             } else if( key.equals(contentTypeKey) ) {

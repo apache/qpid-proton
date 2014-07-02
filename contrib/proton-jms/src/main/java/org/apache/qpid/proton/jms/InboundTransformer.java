@@ -140,13 +140,13 @@ public abstract class InboundTransformer {
 
         final MessageAnnotations ma = amqp.getMessageAnnotations();
         if( ma!=null ) {
-            for (Map.Entry entry : (Set<Map.Entry>)ma.getValue().entrySet()) {
+            for (Map.Entry entry : (Set<Map.Entry<Symbol,Object>>)ma.getValue().entrySet()) {
                 String key = entry.getKey().toString();
-                if( "x-opt-jms-type".equals(key) ) {
+                if( "x-opt-jms-type".equals(key.toString()) ) {
                     jms.setJMSType(entry.getValue().toString());
-                } else if( "x-opt-to-type".equals(key) ) {
+                } else if( "x-opt-to-type".equals(key.toString()) ) {
                     toAttributes = toClassFromAttributes(entry.getValue().toString());
-                } else if( "x-opt-reply-type".equals(key) ) {
+                } else if( "x-opt-reply-type".equals(key.toString()) ) {
                     replyToAttributes = toClassFromAttributes(entry.getValue().toString());
                 } else {
                     setProperty(jms, prefixVendor + prefixMessageAnnotations + key, entry.getValue());
