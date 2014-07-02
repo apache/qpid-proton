@@ -121,9 +121,6 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
 
         header.setDurable(msg.getJMSDeliveryMode() == DeliveryMode.PERSISTENT ? true : false);
         header.setPriority(new UnsignedByte((byte) msg.getJMSPriority()));
-        if( msg.getJMSExpiration() != 0 ) {
-            header.setTtl(new UnsignedInteger((int) msg.getJMSExpiration()));
-        }
         if( msg.getJMSType()!=null ) {
             if( maMap==null ) maMap = new HashMap<Symbol, Object>();
             maMap.put(Symbol.valueOf("x-opt-jms-type"), msg.getJMSType());
@@ -145,6 +142,12 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             props.setCorrelationId(msg.getJMSCorrelationID());
         }
         if( msg.getJMSExpiration() != 0 ) {
+            long ttl = msg.getJMSExpiration() - System.currentTimeMillis();
+            if (ttl < 0) {
+                ttl = 1;
+            }
+            header.setTtl(new UnsignedInteger((int)ttl));
+
             props.setAbsoluteExpiryTime(new Date(msg.getJMSExpiration()));
         }
         if( msg.getJMSTimestamp()!= 0 ) {

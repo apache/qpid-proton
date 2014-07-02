@@ -115,11 +115,6 @@ public abstract class InboundTransformer {
         } else {
             jms.setJMSPriority(defaultPriority);
         }
-        if( header.getTtl()!=null ) {
-            jms.setJMSExpiration(header.getTtl().longValue());
-        } else {
-            jms.setJMSExpiration(defaultTtl);
-        }
         if( header.getFirstAcquirer() !=null ) {
             jms.setBooleanProperty(prefixVendor + "FirstAcquirer", header.getFirstAcquirer());
         }
@@ -208,6 +203,23 @@ public abstract class InboundTransformer {
             }
             if( properties.getReplyToGroupId()!=null ) {
                 jms.setStringProperty(prefixVendor + "ReplyToGroupID", properties.getReplyToGroupId());
+            }
+            if( properties.getAbsoluteExpiryTime()!=null ) {
+                jms.setJMSExpiration(properties.getAbsoluteExpiryTime().getTime());
+            }
+        }
+
+        // If the jms expiration has not yet been set...
+        if( jms.getJMSExpiration()==0 ) {
+            // Then lets try to set it based on the message ttl.
+            long ttl = defaultTtl;
+            if( header.getTtl()!=null ) {
+                ttl = header.getTtl().longValue();
+            }
+            if( ttl == 0 ) {
+              jms.setJMSExpiration(0);
+            } else {
+                jms.setJMSExpiration(System.currentTimeMillis()+ttl);
             }
         }
 
