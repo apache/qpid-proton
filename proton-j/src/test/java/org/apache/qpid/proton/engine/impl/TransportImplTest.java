@@ -207,4 +207,19 @@ public class TransportImplTest
         assertTrue("Expecting second buffer to have bytes", buf.remaining() > 0);
         assertTrue("Expecting second buffer to not be full", buf.remaining() < Transport.MIN_MAX_FRAME_SIZE);
     }
+
+    @Test
+    public void testAttemptToInitiateSaslAfterProcessingBeginsCausesIllegalStateException()
+    {
+        _transport.process();
+
+        try
+        {
+            _transport.sasl();
+        }
+        catch(IllegalStateException ise)
+        {
+            //expected, sasl must be initiated before processing begins
+        }
+    }
 }

@@ -101,6 +101,7 @@ public class TransportImpl extends EndpointImpl
     private TransportResult _lastTransportResult = TransportResultFactory.ok();
 
     private boolean _init;
+    private boolean _processingStarted;
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
@@ -290,6 +291,11 @@ public class TransportImpl extends EndpointImpl
     {
         if(_sasl == null)
         {
+            if(_processingStarted)
+            {
+                throw new IllegalStateException("Sasl can't be initiated after transport has started processing");
+            }
+
             init();
             _sasl = new SaslImpl(_remoteMaxFrameSize);
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
@@ -1259,6 +1265,8 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void process() throws TransportException
     {
+        _processingStarted = true;
+
         try {
             init();
             _inputProcessor.process();

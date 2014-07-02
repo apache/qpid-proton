@@ -167,7 +167,15 @@ public interface Transport extends Endpoint
      */
     void outputConsumed();
 
-    Sasl sasl();
+    /**
+     * Signal the transport to expect SASL frames used to establish a SASL layer prior to
+     * performing the AMQP protocol version negotiation. This must first be performed before
+     * the transport is used for processing. Subsequent invocations will return the same
+     * {@link Sasl} object.
+     *
+     * @throws IllegalStateException if transport processing has already begun prior to initial invocation
+     */
+    Sasl sasl() throws IllegalStateException;
 
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.
