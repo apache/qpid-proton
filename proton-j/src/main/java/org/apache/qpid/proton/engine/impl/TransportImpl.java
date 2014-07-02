@@ -62,7 +62,7 @@ public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
         FrameHandler, TransportOutputWriter
 {
-    static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 4*1024);
+    static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
 
     private FrameParser _frameParser;
 
