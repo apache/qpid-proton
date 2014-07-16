@@ -94,6 +94,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             BytesMessage m = (BytesMessage)msg;
             byte data[] = new byte[(int) m.getBodyLength()];
             m.readBytes(data);
+            m.reset(); //Need to reset after readBytes or future readBytes calls (ex: redeliveries) will fail and return -1
             body = new Data(new Binary(data));
         } if( msg instanceof TextMessage ) {
             body = new AmqpValue(((TextMessage) msg).getText());
