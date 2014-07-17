@@ -52,6 +52,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private TransportImpl _transport;
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
+    private int _transportWorkSize = 0;
     private String _localContainerId = "";
     private String _localHostname = "";
     private String _remoteContainer;
@@ -500,6 +501,10 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return _transportWorkHead;
     }
 
+    int getTransportWorkSize() {
+        return _transportWorkSize;
+    }
+
     public void removeTransportWork(DeliveryImpl delivery)
     {
         if (!delivery._transportWork) return;
@@ -528,6 +533,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
 
         delivery._transportWork = false;
+        _transportWorkSize--;
     }
 
     void addTransportWork(DeliveryImpl delivery)
@@ -549,6 +555,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
 
         delivery._transportWork = true;
+        _transportWorkSize++;
     }
 
     void workUpdate(DeliveryImpl delivery)
