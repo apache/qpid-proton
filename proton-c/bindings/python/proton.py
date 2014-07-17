@@ -2891,12 +2891,13 @@ class Delivery(object):
     self.remote = Disposition(pn_delivery_remote(self._dlv), False)
     self.link._deliveries.add(self)
 
+  def __del__(self):
+    pn_delivery_set_context(self._dlv, None)
+
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._dlv:
-      pn_delivery_set_context(self._dlv, None)
       pn_delivery_settle(self._dlv)
-      self._dlv = None
 
   @property
   def tag(self):
