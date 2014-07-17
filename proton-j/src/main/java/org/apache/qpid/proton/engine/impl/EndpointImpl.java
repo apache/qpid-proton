@@ -221,6 +221,6 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     @Override
     public String toString()
     {
-        return "EndpointImpl(" + System.identityHashCode(this) + ") [_localState=" + _localState + ", _remoteState=" + _remoteState + ", _localError=" + _localError + ", _remoteError=" + _remoteError + "]";
+        return super.toString() + "[_localState=" + _localState + ", _remoteState=" + _remoteState + ", _localError=" + _localError + ", _remoteError=" + _remoteError + "]";
     }
 }
