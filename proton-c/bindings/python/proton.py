@@ -2761,13 +2761,38 @@ class Receiver(Link):
   def draining(self):
     return pn_link_draining(self._link)
 
+class NamedInt(int):
+
+  values = {}
+
+  def __new__(cls, i, name):
+    ni = super(NamedInt, cls).__new__(cls, i)
+    cls.values[i] = ni
+    return ni
+
+  def __init__(self, i, name):
+    self.name = name
+
+  def __repr__(self):
+    return self.name
+
+  def __str__(self):
+    return self.name
+
+  @classmethod
+  def get(cls, i):
+    return cls.values.get(i, i)
+
+class DispositionType(NamedInt):
+  values = {}
+
 class Disposition(object):
 
-  RECEIVED = PN_RECEIVED
-  ACCEPTED = PN_ACCEPTED
-  REJECTED = PN_REJECTED
-  RELEASED = PN_RELEASED
-  MODIFIED = PN_MODIFIED
+  RECEIVED = DispositionType(PN_RECEIVED, "RECEIVED")
+  ACCEPTED = DispositionType(PN_ACCEPTED, "ACCEPTED")
+  REJECTED = DispositionType(PN_REJECTED, "REJECTED")
+  RELEASED = DispositionType(PN_RELEASED, "RELEASED")
+  MODIFIED = DispositionType(PN_MODIFIED, "MODIFIED")
 
   def __init__(self, impl, local):
     self._impl = impl
@@ -2778,7 +2803,7 @@ class Disposition(object):
 
   @property
   def type(self):
-    return pn_disposition_type(self._impl)
+    return DispositionType.get(pn_disposition_type(self._impl))
 
   def _get_section_number(self):
     return pn_disposition_get_section_number(self._impl)
@@ -2905,11 +2930,11 @@ class Delivery(object):
 
   @property
   def local_state(self):
-    return pn_delivery_local_state(self._dlv)
+    return DispositionType.get(pn_delivery_local_state(self._dlv))
 
   @property
   def remote_state(self):
-    return pn_delivery_remote_state(self._dlv)
+    return DispositionType.get(pn_delivery_remote_state(self._dlv))
 
   @property
   def settled(self):
