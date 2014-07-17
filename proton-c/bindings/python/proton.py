@@ -3051,6 +3051,10 @@ class Transport(object):
   def close_head(self):
     self._check(pn_transport_close_head(self._trans))
 
+  @property
+  def closed(self):
+    return pn_transport_closed(self._trans)
+
   # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):
     return pn_transport_get_max_frame(self._trans)

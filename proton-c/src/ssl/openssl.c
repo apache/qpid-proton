@@ -187,7 +187,7 @@ static int ssl_failed(pn_ssl_t *ssl)
 {
     SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   ssl->ssl_closed = true;
-  ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
+  ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   // fake a shutdown so the i/o processing code will close properly
   SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   // try to grab the first SSL error to add to the failure log
@@ -198,7 +198,8 @@ static int ssl_failed(pn_ssl_t *ssl)
   }
   _log_ssl_error(NULL);    // spit out any remaining errors to the log file
   ssl->transport->tail_closed = true;
-  return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
+  pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
+  return PN_EOS;
 }
 
 /* match the DNS name pattern from the peer certificate against our configured peer
@@ -810,7 +811,7 @@ static int setup_ssl_connection( pn_ssl_t *ssl )
 static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_data, size_t available)
 {
   pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_ERR;
+  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
 
   _log( ssl, "process_input_ssl( data size=%d )\n",available );
 
@@ -954,8 +955,8 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
 static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t max_len)
 {
   pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (!ssl) return PN_ERR;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_ERR;
+  if (!ssl) return PN_EOS;
+  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
 
   ssize_t written = 0;
   bool work_pending;

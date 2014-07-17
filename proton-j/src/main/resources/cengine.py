@@ -863,7 +863,6 @@ class pn_transport_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
-    self.error = pn_error(0, None)
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
@@ -902,10 +901,7 @@ def pn_transport_trace(trans, n):
   pass
 
 def pn_transport_pending(trans):
-  try:
-    return trans.impl.pending()
-  except TransportException, e:
-    return trans.error.set(PN_ERR, str(e))
+  return trans.impl.pending()
 
 def pn_transport_peek(trans, size):
   size = min(trans.impl.pending(), size)
@@ -931,31 +927,19 @@ def pn_transport_push(trans, input):
 
   bb = trans.impl.tail()
   bb.put(array(input, 'b'))
-  try:
-    trans.impl.process()
-    return len(input)
-  except TransportException, e:
-    trans.error = pn_error(PN_ERR, str(e))
-    return PN_ERR
+  trans.impl.process()
+  return len(input)
 
 def pn_transport_close_head(trans):
-  try:
-    trans.impl.close_head()
-    return 0
-  except TransportException, e:
-    trans.error = pn_error(PN_ERR, str(e))
-    return PN_ERR
+  trans.impl.close_head()
+  return 0
 
 def pn_transport_close_tail(trans):
-  try:
-    trans.impl.close_tail()
-    return 0
-  except TransportException, e:
-    trans.error = pn_error(PN_ERR, str(e))
-    return PN_ERR
+  trans.impl.close_tail()
+  return 0
 
-def pn_transport_error(trans):
-  return trans.error
+def pn_transport_closed(trans):
+  return trans.impl.isClosed()
 
 from org.apache.qpid.proton.engine import Event
 

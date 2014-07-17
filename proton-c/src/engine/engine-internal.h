@@ -144,7 +144,6 @@ struct pn_transport_t {
   pn_timestamp_t keepalive_deadline;
   uint64_t last_bytes_output;
 
-  pn_error_t *error;
   pn_hash_t *local_channels;
   pn_hash_t *remote_channels;
   pn_string_t *scratch;
@@ -174,6 +173,7 @@ struct pn_transport_t {
   bool close_rcvd;
   bool tail_closed;      // input stream closed by driver
   bool head_closed;
+  bool done_processing; // if true, don't call pn_process again
 };
 
 struct pn_connection_t {
@@ -310,5 +310,6 @@ void pn_clear_tpwork(pn_delivery_t *delivery);
 void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_unbound(pn_connection_t *conn);
+int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
 
 #endif /* engine-internal.h */

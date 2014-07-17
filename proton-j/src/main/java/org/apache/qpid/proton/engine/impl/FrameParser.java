@@ -487,11 +487,7 @@ class FrameParser implements TransportInput
     public ByteBuffer tail()
     {
         if (_tail_closed) {
-            if (_parsingError != null) {
-                throw new TransportException(_parsingError.getMessage());
-            } else {
-                throw new TransportException("tail closed");
-            }
+            throw new TransportException("tail closed");
         }
 
         if (_inputBuffer == null) {

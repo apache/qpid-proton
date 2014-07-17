@@ -163,7 +163,6 @@ static void pn_transport_initialize(void *object)
   transport->remote_desired_capabilities = pn_data(0);
   transport->remote_properties = pn_data(0);
   transport->disp_data = pn_data(0);
-  transport->error = pn_error();
   pn_condition_init(&transport->remote_condition);
 
   transport->local_channels = pn_hash(0, 0.75, PN_REFCOUNT);
@@ -174,6 +173,8 @@ static void pn_transport_initialize(void *object)
 
   transport->input_pending = 0;
   transport->output_pending = 0;
+
+  transport->done_processing = false;
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -246,7 +247,6 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->remote_desired_capabilities);
   pn_free(transport->remote_properties);
   pn_free(transport->disp_data);
-  pn_error_free(transport->error);
   pn_condition_tini(&transport->remote_condition);
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
@@ -266,10 +266,8 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(connection->collector, PN_CONNECTION_REMOTE_OPEN, connection);
-    if (!pn_error_code(transport->error)) {
-      transport->disp->halt = false;
-      transport_consume(transport);        // blech - testBindAfterOpen
-    }
+    transport->disp->halt = false;
+    transport_consume(transport);        // blech - testBindAfterOpen
   }
   return 0;
 }
@@ -326,7 +324,7 @@ int pn_transport_unbind(pn_transport_t *transport)
 
 pn_error_t *pn_transport_error(pn_transport_t *transport)
 {
-  return transport->error;
+  return NULL;
 }
 
 static void pn_map_handle(pn_session_t *ssn, uint32_t handle, pn_link_t *link)
@@ -392,13 +390,12 @@ void pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data)
   }
 }
 
-int pn_post_close(pn_transport_t *transport, const char *condition)
+int pn_post_close(pn_transport_t *transport, const char *condition, const char *description)
 {
   pn_condition_t *cond = NULL;
   if (transport->connection) {
     cond = pn_connection_condition(transport->connection);
   }
-  const char *description = NULL;
   pn_data_t *info = NULL;
   if (!condition && pn_condition_is_set(cond)) {
     condition = pn_condition_get_name(cond);
@@ -418,13 +415,16 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   // XXX: result
   vsnprintf(buf, 1024, fmt, ap);
   va_end(ap);
-  pn_error_set(transport->error, PN_ERR, buf);
   if (!transport->close_sent) {
-    pn_post_close(transport, condition);
+    if (!transport->open_sent) {
+      pn_post_frame(transport->disp, 0, "DL[S]", OPEN, "");
+    }
+
+    pn_post_close(transport, condition, buf);
     transport->close_sent = true;
   }
   transport->disp->halt = true;
-  pn_transport_logf(transport, "ERROR %s %s", condition, pn_error_text(transport->error));
+  pn_transport_logf(transport, "ERROR %s %s", condition, buf);
   return PN_ERR;
 }
 
@@ -1004,11 +1004,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
     } else if (n == 0) {
       break;
     } else {
-      if (n != PN_EOS) {
-        pn_transport_logf(transport, "ERROR[%i] %s\n",
-                          pn_error_code(transport->error),
-                          pn_error_text(transport->error));
-      }
+      assert(n == PN_EOS);
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
         pn_transport_log(transport, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
@@ -1032,9 +1028,10 @@ static ssize_t pn_input_read_header(pn_transport_t *transport, const char *bytes
   if (!available || memcmp(bytes, point, delta)) {
     char quoted[1024];
     pn_quote_data(quoted, 1024, bytes, available);
-    return pn_error_format(transport->error, PN_ERR,
-                           "%s header mismatch: '%s'%s", protocol, quoted,
-                           available ? "" : " (connection aborted)");
+    pn_do_error(transport, "amqp:connection:framing-error",
+                "%s header mismatch: '%s'%s", protocol, quoted,
+                available ? "" : " (connection aborted)");
+    return PN_EOS;
   } else {
     transport->header_count += delta;
     if (transport->header_count == size) {
@@ -1063,21 +1060,20 @@ static ssize_t pn_input_read_amqp(pn_io_layer_t *io_layer, const char *bytes, si
   if (transport->close_rcvd) {
     if (available > 0) {
       pn_do_error(transport, "amqp:connection:framing-error", "data after close");
-      return PN_ERR;
-    } else {
       return PN_EOS;
     }
   }
 
   if (!available) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
-    return PN_ERR;
+    return PN_EOS;
   }
 
 
   ssize_t n = pn_dispatcher_input(transport->disp, bytes, available);
   if (n < 0) {
-    return pn_error_set(transport->error, n, "dispatch error");
+    //return pn_error_set(transport->error, n, "dispatch error");
+    return PN_EOS;
   } else if (transport->close_rcvd) {
     return PN_EOS;
   } else {
@@ -1636,7 +1632,7 @@ int pn_process_conn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
   {
     if (endpoint->state & PN_LOCAL_CLOSED && !transport->close_sent) {
       if (pn_pointful_buffering(transport, NULL)) return 0;
-      int err = pn_post_close(transport, NULL);
+      int err = pn_post_close(transport, NULL, NULL);
       if (err) return err;
       transport->close_sent = true;
     }
@@ -1696,13 +1692,10 @@ static ssize_t pn_output_write_header(pn_transport_t *transport,
 {
   if (transport->disp->trace & PN_TRACE_FRM)
     pn_transport_logf(transport, "  -> %s", protocol);
-  if (size >= hdrsize) {
-    memmove(bytes, header, hdrsize);
-    transport->io_layers[PN_IO_AMQP].process_output = next;
-    return hdrsize;
-  } else {
-    return pn_error_format(transport->error, PN_UNDERFLOW, "underflow writing %s header", protocol);
-  }
+  assert(size >= hdrsize);
+  memmove(bytes, header, hdrsize);
+  transport->io_layers[PN_IO_AMQP].process_output = next;
+  return hdrsize;
 }
 
 static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes, size_t size)
@@ -1715,22 +1708,19 @@ static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes,
 static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t size)
 {
   pn_transport_t *transport = (pn_transport_t *)io_layer->context;
-  if (!transport->connection) {
-    return 0;
+  if (transport->connection && !transport->done_processing) {
+    int err = pn_process(transport);
+    if (err) {
+      pn_transport_logf(transport, "process error %i", err);
+      transport->done_processing = true;
+    }
   }
 
-  if (!pn_error_code(transport->error)) {
-    pn_error_set(transport->error, pn_process(transport), "process error");
-  }
-
-  // write out any buffered data _before_ returning an error code,
-  // else we could truncate an outgoing Close frame containing a
-  // useful error status
-  if (!transport->disp->available && (transport->close_sent || pn_error_code(transport->error))) {
-    if (pn_error_code(transport->error))
-      return pn_error_code(transport->error);
-    else
-      return PN_EOS;
+  // write out any buffered data _before_ returning PN_EOS, else we
+  // could truncate an outgoing Close frame containing a useful error
+  // status
+  if (!transport->disp->available && transport->close_sent) {
+    return PN_EOS;
   }
 
   return pn_dispatcher_output(transport->disp, bytes, size);
@@ -1774,11 +1764,12 @@ static ssize_t transport_produce(pn_transport_t *transport)
       if (transport->output_pending)
         break;   // return what is available
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
-        if (n == PN_EOS)
+        if (n < 0) {
           pn_transport_log(transport, "  -> EOS");
-        else
+        }
+        /*else
           pn_transport_logf(transport, "  -> EOS (%" PN_ZI ") %s", n,
-                            pn_error_text(transport->error));
+          pn_error_text(transport->error));*/
       }
       return n;
     }
@@ -2030,8 +2021,7 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
 int pn_transport_close_tail(pn_transport_t *transport)
 {
   transport->tail_closed = true;
-  ssize_t x = transport_consume( transport );
-  if (x < 0) return (int) x;
+  transport_consume( transport );
   return 0;
   // XXX: what if not all input processed at this point?  do we care???
 }
@@ -2088,11 +2078,7 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 int pn_transport_close_head(pn_transport_t *transport)
 {
   transport->head_closed = true;
-  if (transport->close_sent && transport->output_pending == 0) {
-    return 0;
-  } else {
-    return pn_error_set(transport->error, PN_ERR, "connection aborted");
-  }
+  return 0;
 }
 
 // true if the transport will not generate further output

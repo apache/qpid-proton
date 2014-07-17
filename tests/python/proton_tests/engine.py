@@ -1081,11 +1081,9 @@ class IdleTimeoutTest(Test):
     # now expire sndr
     clock = 1.499
     t_snd.tick(clock)
-    try:
-      self.pump()
-      assert False, "Expected connection timeout did not happen!"
-    except TransportException:
-      pass
+    self.pump()
+    assert self.c2.state & Endpoint.REMOTE_CLOSED
+    assert self.c2.remote_condition.name == "amqp:resource-limit-exceeded"
 
 class CreditTest(Test):
 

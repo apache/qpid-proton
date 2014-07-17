@@ -80,7 +80,7 @@ public class ConnectionTest
 
 
     /** Container id is a mandatory field so this should cause an error */
-    @Test(expected=TransportException.class)
+    @Test
     public void testReceiptOfOpenWithoutContainerId_causesTODO()
     {
         _pumper.pumpAll();
@@ -90,6 +90,7 @@ public class ConnectionTest
 
         int serverConsumed = _serverTransport.input(openFrameBuffer, 0, openFrameBuffer.length);
         assertEquals(openFrameBuffer.length, serverConsumed);
+        assertEquals(_serverTransport.capacity(), Transport.END_OF_STREAM);
     }
 
     /**

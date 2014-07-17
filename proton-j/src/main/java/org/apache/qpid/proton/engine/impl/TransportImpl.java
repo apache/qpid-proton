@@ -1339,6 +1339,12 @@ public class TransportImpl extends EndpointImpl
         _outputProcessor.close_head();
     }
 
+    public boolean isClosed() {
+        int p = pending();
+        int c = capacity();
+        return  p == END_OF_STREAM && c == END_OF_STREAM;
+    }
+
     @Override
     public String toString()
     {

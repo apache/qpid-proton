@@ -94,6 +94,8 @@ public interface Transport extends Endpoint
     public void pop(int bytes);
     public void close_head();
 
+    public boolean isClosed();
+
     /**
      * Processes the provided input.
      *

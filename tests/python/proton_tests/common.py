@@ -50,20 +50,21 @@ def pump_uni(src, dst, buffer_size=1024):
   p = src.pending()
   c = dst.capacity()
 
-  if p < 0 and c < 0:
-    return False
+  if c < 0:
+    if p < 0:
+      return False
+    else:
+      src.close_head()
+      return True
 
   if p < 0:
     dst.close_tail()
   elif p == 0 or c == 0:
     return False
   else:
-    if c < 0:
-      src.close_head()
-    else:
-      bytes = src.peek(min(c, buffer_size))
-      dst.push(bytes)
-      src.pop(len(bytes))
+    bytes = src.peek(min(c, buffer_size))
+    dst.push(bytes)
+    src.pop(len(bytes))
 
   return True
 

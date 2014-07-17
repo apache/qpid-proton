@@ -19,6 +19,7 @@
  *
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -405,8 +406,9 @@ static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *by
   if (!available || memcmp(bytes, point, delta)) {
     char quoted[1024];
     pn_quote_data(quoted, 1024, bytes, available);
-    return pn_error_format(sasl->transport->error, PN_ERR,
-                           "%s header mismatch: '%s'", "SASL", quoted);
+    pn_do_error(sasl->transport, "amqp:connection:framing-error",
+                "%s header mismatch: '%s'", "SASL", quoted);
+    return PN_EOS;
   } else {
     sasl->header_count += delta;
     if (sasl->header_count == SASL_HEADER_LEN) {
@@ -435,13 +437,10 @@ static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes,
   pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
   if (sasl->disp->trace & PN_TRACE_FRM)
     pn_transport_logf(sasl->transport, "  -> %s", "SASL");
-  if (size >= SASL_HEADER_LEN) {
-    memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
-    sasl->io_layer->process_output = pn_output_write_sasl;
-    return SASL_HEADER_LEN;
-  } else {
-    return pn_error_format(sasl->transport->error, PN_UNDERFLOW, "underflow writing %s header", "SASL");
-  }
+  assert(size >= SASL_HEADER_LEN);
+  memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
+  sasl->io_layer->process_output = pn_output_write_sasl;
+  return SASL_HEADER_LEN;
 }
 
 static ssize_t pn_output_write_sasl(pn_io_layer_t *io_layer, char *bytes, size_t size)
