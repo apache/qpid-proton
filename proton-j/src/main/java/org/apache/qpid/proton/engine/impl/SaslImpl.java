@@ -565,6 +565,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             _tail_closed = true;
             if (isInputInSaslMode()) {
                 _head_closed = true;
+                _underlyingInput.close_tail();
+            } else {
+                _underlyingInput.close_tail();
             }
         }
 

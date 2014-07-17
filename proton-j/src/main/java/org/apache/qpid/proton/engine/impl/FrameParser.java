@@ -447,7 +447,7 @@ class FrameParser implements TransportInput
                 state = State.ERROR;
                 frameParsingError = new TransportException("connection aborted");
             } else {
-                _frameHandler.closed();
+                _frameHandler.closed(null);
             }
         }
 
@@ -460,7 +460,7 @@ class FrameParser implements TransportInput
             if(frameParsingError != null)
             {
                 _parsingError = frameParsingError;
-                throw frameParsingError;
+                _frameHandler.closed(frameParsingError);
             }
             else
             {

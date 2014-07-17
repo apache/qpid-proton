@@ -98,7 +98,7 @@ class TransportOutputAdaptor implements TransportOutput
     public void close_head()
     {
         _head_closed = true;
-        _transportOutputWriter.closed();
+        _transportOutputWriter.closed(null);
         release_buffers();
     }
 

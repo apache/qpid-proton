@@ -22,7 +22,9 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArr
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
@@ -30,6 +32,7 @@ import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
+import org.apache.qpid.proton.amqp.transport.ConnectionError;
 import org.apache.qpid.proton.amqp.transport.Detach;
 import org.apache.qpid.proton.amqp.transport.Disposition;
 import org.apache.qpid.proton.amqp.transport.End;
@@ -1189,10 +1192,15 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void closed()
+    public void closed(TransportException error)
     {
-        if (!_closeReceived) {
-            throw new TransportException("connection aborted");
+        if (!_closeReceived || error != null) {
+            Close close = new Close();
+            String msg = error == null ? "connection aborted" : error.toString();
+            close.setError(new ErrorCondition(ConnectionError.FRAMING_ERROR, msg));
+            _isCloseSent = true;
+            writeFrame(0, close, null, null);
+            _head_closed = true;
         }
     }
 
