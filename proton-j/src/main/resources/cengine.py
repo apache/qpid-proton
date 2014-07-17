@@ -222,6 +222,9 @@ def pn_connection_set_container(conn, name):
 def pn_connection_remote_container(conn):
   return conn.impl.getRemoteContainer()
 
+def pn_connection_get_hostname(conn):
+  return conn.impl.getHostname()
+
 def pn_connection_set_hostname(conn, name):
   conn.impl.setHostname(name)
 
@@ -590,6 +593,9 @@ def pn_link_remote_rcv_settle_mode(link):
 def pn_link_is_sender(link):
   return isinstance(link.impl, Sender)
 
+def pn_link_is_receiver(link):
+  return isinstance(link.impl, Receiver)
+
 def pn_link_head(conn, mask):
   local, remote = mask2set(mask)
   return wrap(conn.impl.linkHead(local, remote), pn_link_wrapper)
@@ -804,6 +810,9 @@ def pn_delivery_get_context(dlv):
 
 def pn_delivery_set_context(dlv, ctx):
   dlv.context = ctx
+
+def pn_delivery_partial(dlv):
+  return dlv.impl.isPartial()
 
 def pn_delivery_pending(dlv):
   return dlv.impl.pending()
