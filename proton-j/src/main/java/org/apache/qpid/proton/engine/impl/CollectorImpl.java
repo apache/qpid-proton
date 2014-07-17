@@ -60,6 +60,11 @@ public class CollectorImpl implements Collector
 
     public EventImpl put(Event.Type type, Object context)
     {
+        if (tail != null && tail.getType() == type &&
+            tail.getContext() == context) {
+            return null;
+        }
+
         EventImpl event;
         if (free == null) {
             event = new EventImpl();
