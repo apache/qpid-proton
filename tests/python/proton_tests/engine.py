@@ -2076,7 +2076,6 @@ class EventTest(Test):
 
   def teardown(self):
     self.cleanup()
-    self.drain()
 
   def drain(self):
     result = []

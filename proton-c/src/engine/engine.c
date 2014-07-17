@@ -361,6 +361,7 @@ static void pn_connection_finalize(void *object)
     return;
   }
 
+  pn_decref2(conn->collector, conn);
   pn_free(conn->sessions);
   pn_free(conn->container);
   pn_free(conn->hostname);
@@ -411,7 +412,9 @@ static const pn_event_type_t endpoint_init_event_map[] = {
 
 void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector)
 {
+  pn_decref2(connection->collector, connection);
   connection->collector = collector;
+  pn_incref2(connection->collector, connection);
   pn_endpoint_t *endpoint = connection->endpoint_head;
   while (endpoint) {
     pn_collector_put(connection->collector, endpoint_init_event_map[endpoint->type], endpoint);

@@ -6,6 +6,7 @@ struct pn_collector_t {
   pn_event_t *head;
   pn_event_t *tail;
   pn_event_t *free_head;
+  bool freed;
 };
 
 struct pn_event_t {
@@ -20,25 +21,36 @@ static void pn_collector_initialize(void *obj)
   collector->head = NULL;
   collector->tail = NULL;
   collector->free_head = NULL;
+  collector->freed = false;
 }
 
-static void pn_collector_finalize(void *obj)
+static void pn_collector_drain(pn_collector_t *collector)
 {
-  pn_collector_t *collector = (pn_collector_t *) obj;
-
   while (pn_collector_peek(collector)) {
     pn_collector_pop(collector);
   }
 
   assert(!collector->head);
   assert(!collector->tail);
+}
 
+static void pn_collector_shrink(pn_collector_t *collector)
+{
   pn_event_t *event = collector->free_head;
   while (event) {
     pn_event_t *next = event->next;
     pn_free(event);
     event = next;
   }
+
+  collector->free_head = NULL;
+}
+
+static void pn_collector_finalize(void *obj)
+{
+  pn_collector_t *collector = (pn_collector_t *) obj;
+  pn_collector_drain(collector);
+  pn_collector_shrink(collector);
 }
 
 static int pn_collector_inspect(void *obj, pn_string_t *dst)
@@ -75,7 +87,10 @@ pn_collector_t *pn_collector(void)
 
 void pn_collector_free(pn_collector_t *collector)
 {
-  pn_free(collector);
+  collector->freed = true;
+  pn_collector_drain(collector);
+  pn_collector_shrink(collector);
+  pn_decref(collector);
 }
 
 pn_event_t *pn_event(void);
@@ -88,6 +103,10 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
   }
 
   assert(context);
+
+  if (collector->freed) {
+    return NULL;
+  }
 
   pn_event_t *event;
 

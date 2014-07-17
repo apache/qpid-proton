@@ -2300,6 +2300,7 @@ class Connection(Endpoint):
 
   def _releasing(self, child):
     coll = getattr(self, "_collector", None)
+    if coll: coll = coll()
     if coll:
       coll._contexts.add(child)
     else:
@@ -2323,9 +2324,7 @@ class Connection(Endpoint):
       pn_connection_collect(self._conn, None)
     else:
       pn_connection_collect(self._conn, collector._impl)
-    # XXX: we can't let coll go out of scope or the connection will be
-    # pointing to garbage
-    self._collector = collector
+    self._collector = weakref.ref(collector)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
