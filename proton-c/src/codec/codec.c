@@ -103,8 +103,8 @@ static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
     return NULL;
   }
 
-  if (descriptor->atom.u.as_ulong < 256) {
-    const pn_fields_t *f = &FIELDS[descriptor->atom.u.as_ulong];
+  if (descriptor->atom.u.as_ulong >= FIELD_MIN && descriptor->atom.u.as_ulong <= FIELD_MAX) {
+    const pn_fields_t *f = &FIELDS[descriptor->atom.u.as_ulong-FIELD_MIN];
     return (f->name_index!=0) ? f : NULL;
   } else {
     return NULL;
@@ -265,7 +265,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
       return 0;
     }
     const char *name = (index < grandfields->field_count)
-        ? FIELD_FIELDS[grandfields->first_field_index+index]
+        ? FIELD_STRINGPOOL+FIELD_FIELDS[grandfields->first_field_index+index]
         : NULL;
     if (name) {
       err = pn_string_addf(str, "%s=", name);
@@ -285,7 +285,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_string_addf(str, "{");
   default:
     if (fields && index == 0) {
-      err = pn_string_addf(str, "%s", FIELD_NAME[fields->name_index]);
+      err = pn_string_addf(str, "%s", FIELD_STRINGPOOL+FIELD_NAME[fields->name_index]);
       if (err) return err;
       err = pn_string_addf(str, "(");
       if (err) return err;
