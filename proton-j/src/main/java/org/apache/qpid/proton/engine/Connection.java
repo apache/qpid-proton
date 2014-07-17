@@ -90,6 +90,8 @@ public interface Connection extends Endpoint
 
     public void setHostname(String hostname);
 
+    public String getHostname();
+
     public String getRemoteContainer();
 
     public String getRemoteHostname();
