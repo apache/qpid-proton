@@ -192,6 +192,11 @@ class FrameWriter
         writeFrame(0, frameBody, null, null);
     }
 
+    boolean isFull() {
+        // XXX: this should probably be tunable
+        return _bbuf.position() > 64*1024;
+    }
+
     int readBytes(ByteBuffer dst)
     {
         ByteBuffer src = _bbuf.duplicate();

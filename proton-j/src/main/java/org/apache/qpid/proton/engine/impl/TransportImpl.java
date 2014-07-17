@@ -492,7 +492,7 @@ public class TransportImpl extends EndpointImpl
         if(!delivery.isDone() &&
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
            tpSession.hasOutgoingCredit() && tpLink.hasCredit() &&
-           tpLink.getLocalHandle() != null)
+           tpLink.getLocalHandle() != null && !_frameWriter.isFull())
         {
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
             TransportDelivery tpDelivery = new TransportDelivery(deliveryId, delivery, tpLink);
@@ -551,6 +551,8 @@ public class TransportImpl extends EndpointImpl
                 delivery.setDataLength(payload.remaining());
                 session.incrementOutgoingBytes(-delta);
             }
+
+            getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
         }
 
         if(wasDone && delivery.getLocalState() != null)
