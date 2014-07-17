@@ -328,16 +328,17 @@ PN_EXTERN char *pn_transport_tail(pn_transport_t *transport);
  *
  * This is equivalent to copying @c size bytes afther the tail pointer
  * and then calling ::pn_transport_process with an argument of @c
- * size. It is an error to call this with a @c size larger than the
- * capacity reported by ::pn_transport_capacity.
+ * size. Only some of the bytes will be copied if there is
+ * insufficienty capacity available. Use ::pn_transport_capacity to
+ * determine how much capacity the transport has.
  *
  * @param[in] transport the transport
  * @param[in] src the start of the data to push into the transport
  * @param[in] size the amount of data to push into the transport
  *
- * @return 0 on success, or error code if < 0
+ * @return the number of bytes pushed on success, or error code if < 0
  */
-PN_EXTERN int pn_transport_push(pn_transport_t *transport, const char *src, size_t size);
+PN_EXTERN ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size);
 
 /**
  * Process input data following the tail pointer.
@@ -404,9 +405,9 @@ PN_EXTERN const char *pn_transport_head(pn_transport_t *transport);
  * @param[in] transport the transport
  * @param[out] dst the destination buffer
  * @param[in] size the capacity of the destination buffer
- * @return 0 on success, or error code if < 0
+ * @return number of bytes copied on success, or error code if < 0
  */
-PN_EXTERN int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size);
+PN_EXTERN ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size);
 
 /**
  * Removes @c size bytes of output from the pending output queue

@@ -46,42 +46,36 @@ def free_tcp_ports(count=1):
     s.close()
   return ports
 
+def pump_uni(src, dst, buffer_size=1024):
+  p = src.pending()
+  c = dst.capacity()
+
+  if p < 0 and c < 0:
+    return False
+
+  if p < 0:
+    dst.close_tail()
+  elif p == 0 or c == 0:
+    return False
+  else:
+    if c < 0:
+      src.close_head()
+    else:
+      bytes = src.peek(min(c, buffer_size))
+      dst.push(bytes)
+      src.pop(len(bytes))
+
+  return True
 
 def pump(transport1, transport2, buffer_size=1024):
   """ Transfer all pending bytes between two Proton engines
-      by repeatedly calling input and output.
+      by repeatedly calling peek/pop and push.
       Asserts that each engine accepts some bytes every time
       (unless it's already closed).
   """
-
-  out1_leftover_by_t2 = ""
-  out2_leftover_by_t1 = ""
-  i = 0
-
-  while True:
-    out1 = out1_leftover_by_t2 + (transport1.output(buffer_size) or "")
-    out2 = out2_leftover_by_t1 + (transport2.output(buffer_size) or "")
-
-    if out1:
-      number_t2_consumed = transport2.input(out1)
-      if number_t2_consumed is None:
-        # special None return value means input is closed so discard the leftovers
-        out1_leftover_by_t2 = ""
-      else:
-        assert number_t2_consumed > 0, (number_t2_consumed, len(out1), out1[:100])
-        out1_leftover_by_t2 = out1[number_t2_consumed:]
-
-    if out2:
-      number_t1_consumed = transport1.input(out2)
-      if number_t1_consumed is None:
-        # special None return value means input is closed so discard the leftovers
-        out2_leftover_by_t1 = ""
-      else:
-        assert number_t1_consumed > 0, (number_t1_consumed, len(out1), out1[:100])
-        out2_leftover_by_t1 = out2[number_t1_consumed:]
-
-    if not out1 and not out2: break
-    i = i + 1
+  while (pump_uni(transport1, transport2, buffer_size) or
+         pump_uni(transport2, transport1, buffer_size)):
+    pass
 
 def isSSLPresent():
     """ True if a suitable SSL library is available.

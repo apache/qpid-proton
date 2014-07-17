@@ -3023,7 +3023,9 @@ class Transport(object):
       return self._check(c)
 
   def push(self, bytes):
-    self._check(pn_transport_push(self._trans, bytes))
+    n = self._check(pn_transport_push(self._trans, bytes))
+    if n != len(bytes):
+      raise OverflowError("unable to process all bytes")
 
   def close_tail(self):
     self._check(pn_transport_close_tail(self._trans))
@@ -3048,27 +3050,6 @@ class Transport(object):
 
   def close_head(self):
     self._check(pn_transport_close_head(self._trans))
-
-  def output(self, size):
-    p = self.pending()
-    if p < 0:
-      return None
-    else:
-      out = self.peek(min(size, p))
-      self.pop(len(out))
-      return out
-
-  def input(self, bytes):
-    if not bytes:
-      self.close_tail()
-      return None
-    else:
-      c = self.capacity()
-      if (c < 0):
-        return None
-      trimmed = bytes[:c]
-      self.push(trimmed)
-      return len(trimmed)
 
   # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):

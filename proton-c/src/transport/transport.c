@@ -1425,6 +1425,8 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
         link->queued--;
         link->session->outgoing_deliveries--;
       }
+
+      pn_collector_put(transport->connection->collector, PN_LINK_FLOW, link);
     }
   }
 
@@ -1985,7 +1987,7 @@ char *pn_transport_tail(pn_transport_t *transport)
   return NULL;
 }
 
-int pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
+ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
 {
   assert(transport);
 
@@ -1993,14 +1995,19 @@ int pn_transport_push(pn_transport_t *transport, const char *src, size_t size)
   if (capacity < 0) {
     return capacity;
   } else if (size > (size_t) capacity) {
-    return PN_OVERFLOW;
+    size = capacity;
   }
 
   char *dst = pn_transport_tail(transport);
   assert(dst);
   memmove(dst, src, size);
 
-  return pn_transport_process(transport, size);
+  int n = pn_transport_process(transport, size);
+  if (n < 0) {
+    return n;
+  } else {
+    return size;
+  }
 }
 
 int pn_transport_process(pn_transport_t *transport, size_t size)
@@ -2045,7 +2052,7 @@ const char *pn_transport_head(pn_transport_t *transport)
   return NULL;
 }
 
-int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
+ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 {
   assert(transport);
 
@@ -2053,7 +2060,7 @@ int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
   if (pending < 0) {
     return pending;
   } else if (size > (size_t) pending) {
-    return PN_UNDERFLOW;
+    size = pending;
   }
 
   if (pending > 0) {
@@ -2062,7 +2069,7 @@ int pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
     memmove(dst, src, size);
   }
 
-  return 0;
+  return size;
 }
 
 void pn_transport_pop(pn_transport_t *transport, size_t size)

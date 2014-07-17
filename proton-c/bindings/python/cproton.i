@@ -134,24 +134,13 @@ ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_link_recv;
 
-int pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH);
+ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_transport_push;
 
 %rename(pn_transport_peek) wrap_pn_transport_peek;
 %inline %{
   int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    return pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
-  }
-%}
-%ignore pn_transport_peek;
-
-ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
-%ignore pn_transport_input;
-
-%rename(pn_transport_output) wrap_pn_transport_output;
-%inline %{
-  int wrap_pn_transport_output(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_transport_output(transport, OUTPUT, *OUTPUT_SIZE);
+    ssize_t sz = pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
     if (sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
@@ -160,7 +149,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
     return sz;
   }
 %}
-%ignore pn_transport_output;
+%ignore pn_transport_peek;
 
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{

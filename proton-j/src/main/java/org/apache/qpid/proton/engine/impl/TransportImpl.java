@@ -108,6 +108,7 @@ public class TransportImpl extends EndpointImpl
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
+    private TransportException _tail_error = null;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -728,15 +729,22 @@ public class TransportImpl extends EndpointImpl
 
     private void processOpen()
     {
-        if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
-        {
+        if ((_tail_error != null ||
+             (_connectionEndpoint != null &&
+              _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
+            !_isOpenSent) {
             Open open = new Open();
-            String cid = _connectionEndpoint.getLocalContainerId();
-            open.setContainerId(cid == null ? "" : cid);
-            open.setHostname(_connectionEndpoint.getHostname());
-            open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
-            open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
-            open.setProperties(_connectionEndpoint.getProperties());
+            if (_connectionEndpoint != null) {
+                String cid = _connectionEndpoint.getLocalContainerId();
+                open.setContainerId(cid == null ? "" : cid);
+                open.setHostname(_connectionEndpoint.getHostname());
+                open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
+                open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
+                open.setProperties(_connectionEndpoint.getProperties());
+            } else {
+                open.setContainerId("");
+            }
+
             if (_maxFrameSize > 0) {
                 open.setMaxFrameSize(UnsignedInteger.valueOf(_maxFrameSize));
             }
@@ -747,7 +755,6 @@ public class TransportImpl extends EndpointImpl
             _isOpenSent = true;
 
             writeFrame(0, open, null, null);
-
         }
     }
 
@@ -872,6 +879,9 @@ public class TransportImpl extends EndpointImpl
 
     private boolean hasSendableMessages(SessionImpl session)
     {
+        if (_connectionEndpoint == null) {
+            return false;
+        }
 
         if(!_closeReceived && (session == null || !session.getTransportSession().endReceived()))
         {
@@ -896,14 +906,24 @@ public class TransportImpl extends EndpointImpl
 
     private void processClose()
     {
-        if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() == EndpointState.CLOSED && !_isCloseSent)
-        {
+        if ((_tail_error != null ||
+             (_connectionEndpoint != null &&
+              _connectionEndpoint.getLocalState() == EndpointState.CLOSED)) &&
+            !_isCloseSent) {
             if(!hasSendableMessages(null))
             {
                 Close close = new Close();
 
-                ErrorCondition localError = _connectionEndpoint.getCondition();
-                if( localError.getCondition() !=null )
+                ErrorCondition localError;
+
+                if (_connectionEndpoint == null) {
+                    localError = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                    _tail_error.toString());
+                } else {
+                    localError =  _connectionEndpoint.getCondition();
+                }
+
+                if(localError.getCondition() != null)
                 {
                     close.setError(localError);
                 }
@@ -911,7 +931,10 @@ public class TransportImpl extends EndpointImpl
                 _isCloseSent = true;
 
                 writeFrame(0, close, null, null);
-                _connectionEndpoint.clearModified();
+
+                if (_connectionEndpoint != null) {
+                    _connectionEndpoint.clearModified();
+                }
             }
         }
     }
@@ -1197,11 +1220,11 @@ public class TransportImpl extends EndpointImpl
     public void closed(TransportException error)
     {
         if (!_closeReceived || error != null) {
-            Close close = new Close();
-            String msg = error == null ? "connection aborted" : error.toString();
-            close.setError(new ErrorCondition(ConnectionError.FRAMING_ERROR, msg));
-            _isCloseSent = true;
-            writeFrame(0, close, null, null);
+            if (error == null) {
+                _tail_error = new TransportException("connection aborted");
+            } else {
+                _tail_error = error;
+            }
             _head_closed = true;
         }
     }

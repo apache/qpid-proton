@@ -108,6 +108,11 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
     return NULL;
   }
 
+  pn_event_t *tail = collector->tail;
+  if (tail && tail->type == type && tail->context == context) {
+    return NULL;
+  }
+
   pn_event_t *event;
 
   if (collector->free_head) {
@@ -117,8 +122,6 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
   } else {
     event = pn_event();
   }
-
-  pn_event_t *tail = collector->tail;
 
   if (tail) {
     tail->next = event;

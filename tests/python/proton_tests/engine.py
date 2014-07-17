@@ -2206,8 +2206,7 @@ class EventTest(Test):
     rcv.flow(10)
     self.pump()
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT,
-                Event.TRANSPORT)
+                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()
@@ -2218,11 +2217,11 @@ class EventTest(Test):
     self.expect(Event.LINK_REMOTE_OPEN, Event.DELIVERY)
     rcv.session.connection._transport.unbind()
     rcv.session.connection.free()
-    self.expect_oneof((Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_CLOSE,
-                       Event.SESSION_CLOSE, Event.CONNECTION_CLOSE, Event.LINK_FINAL,
+    self.expect_oneof((Event.TRANSPORT, Event.LINK_CLOSE, Event.SESSION_CLOSE,
+                       Event.CONNECTION_CLOSE, Event.LINK_FINAL,
                        Event.SESSION_FINAL, Event.CONNECTION_FINAL),
-                      (Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_CLOSE,
-                       Event.LINK_FINAL, Event.SESSION_CLOSE, Event.SESSION_FINAL,
+                      (Event.TRANSPORT, Event.LINK_CLOSE, Event.LINK_FINAL,
+                       Event.SESSION_CLOSE, Event.SESSION_FINAL,
                        Event.CONNECTION_CLOSE, Event.CONNECTION_FINAL))
 
   def testDeliveryEventsDisp(self):
@@ -2231,12 +2230,9 @@ class EventTest(Test):
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(Event.LINK_OPEN,
-                Event.TRANSPORT,
-                Event.TRANSPORT,
-                Event.TRANSPORT)
+    self.expect(Event.LINK_OPEN, Event.TRANSPORT)
     self.pump()
-    self.expect()
+    self.expect(Event.LINK_FLOW)
     rdlv = rcv.current
     assert rdlv != None
     assert rdlv.tag == "delivery"

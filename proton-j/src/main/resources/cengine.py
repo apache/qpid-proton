@@ -98,7 +98,11 @@ class pn_condition:
       self.description = None
       self.info.clear()
     else:
-      self.name = impl.getCondition().toString()
+      cond = impl.getCondition()
+      if cond is None:
+        self.name = None
+      else:
+        self.name = cond.toString()
       self.description = impl.getDescription()
       obj2dat(impl.getInfo(), self.info)
 
@@ -909,6 +913,7 @@ def pn_transport_peek(trans, size):
   if size:
     bb = trans.impl.head()
     bb.get(ba)
+    bb.position(0)
   return 0, ba.tostring()
 
 def pn_transport_pop(trans, size):
@@ -922,16 +927,16 @@ def pn_transport_push(trans, input):
   if cap < 0:
     return cap
   elif len(input) > cap:
-    return PN_OVERFLOW
-  else:
-    bb = trans.impl.tail()
-    bb.put(array(input, 'b'))
-    try:
-      trans.impl.process()
-      return 0
-    except TransportException, e:
-      trans.error = pn_error(PN_ERR, str(e))
-      return PN_ERR
+    input = input[:cap]
+
+  bb = trans.impl.tail()
+  bb.put(array(input, 'b'))
+  try:
+    trans.impl.process()
+    return len(input)
+  except TransportException, e:
+    trans.error = pn_error(PN_ERR, str(e))
+    return PN_ERR
 
 def pn_transport_close_head(trans):
   try:
