@@ -1233,16 +1233,22 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
     case PN_LINK_INIT:
       //printf("link created: %p\n", (void *) pn_event_link(event));
       break;
-    case PN_CONNECTION_REMOTE_STATE:
-    case PN_CONNECTION_LOCAL_STATE:
+    case PN_CONNECTION_REMOTE_OPEN:
+    case PN_CONNECTION_REMOTE_CLOSE:
+    case PN_CONNECTION_OPEN:
+    case PN_CONNECTION_CLOSE:
       pn_messenger_process_connection(messenger, event);
       break;
-    case PN_SESSION_REMOTE_STATE:
-    case PN_SESSION_LOCAL_STATE:
+    case PN_SESSION_REMOTE_OPEN:
+    case PN_SESSION_REMOTE_CLOSE:
+    case PN_SESSION_OPEN:
+    case PN_SESSION_CLOSE:
       pn_messenger_process_session(messenger, event);
       break;
-    case PN_LINK_REMOTE_STATE:
-    case PN_LINK_LOCAL_STATE:
+    case PN_LINK_REMOTE_OPEN:
+    case PN_LINK_REMOTE_CLOSE:
+    case PN_LINK_OPEN:
+    case PN_LINK_CLOSE:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:

@@ -55,7 +55,9 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
     abstract void postFinal();
 
-    protected abstract void localStateChanged();
+    abstract void localOpen();
+
+    abstract void localClose();
 
     public void open()
     {
@@ -67,7 +69,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case UNINITIALIZED:
                 _localState = EndpointState.ACTIVE;
-                localStateChanged();
+                localOpen();
         }
         modified();
     }
@@ -83,7 +85,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case ACTIVE:
                 _localState = EndpointState.CLOSED;
-                localStateChanged();
+                localClose();
         }
         modified();
     }

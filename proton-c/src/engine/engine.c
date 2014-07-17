@@ -52,19 +52,27 @@ pn_connection_t *pn_ep_get_connection(pn_endpoint_t *endpoint)
   return NULL;
 }
 
-/* map the endpoint type to its local event type */
-static const pn_event_type_t endpoint_event_map[] = {
-  PN_CONNECTION_LOCAL_STATE,  /* CONNECTION */
-  PN_SESSION_LOCAL_STATE,     /* SESSION */
-  PN_LINK_LOCAL_STATE,        /* SENDER */
-  PN_LINK_LOCAL_STATE};       /* RECEIVER */
+static pn_event_type_t endpoint_event(pn_endpoint_type_t type, bool open) {
+  switch (type) {
+  case CONNECTION:
+    return open ? PN_CONNECTION_OPEN : PN_CONNECTION_CLOSE;
+  case SESSION:
+    return open ? PN_SESSION_OPEN : PN_SESSION_CLOSE;
+  case SENDER:
+  case RECEIVER:
+    return open ? PN_LINK_OPEN : PN_LINK_CLOSE;
+  default:
+    assert(false);
+    return PN_EVENT_NONE;
+  }
+}
 
 static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, endpoint_event_map[endpoint->type],
+  pn_collector_put(conn->collector, endpoint_event(endpoint->type, true),
                    endpoint);
   pn_modified(conn, endpoint, true);
 }
@@ -74,7 +82,7 @@ static void pn_endpoint_close(pn_endpoint_t *endpoint)
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, endpoint_event_map[endpoint->type],
+  pn_collector_put(conn->collector, endpoint_event(endpoint->type, false),
                    endpoint);
   pn_modified(conn, endpoint, true);
 }
@@ -783,7 +791,7 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->type = type;
   terminus->address = pn_string(NULL);
   terminus->durability = PN_NONDURABLE;
-  terminus->expiry_policy = PN_SESSION_CLOSE;
+  terminus->expiry_policy = PN_EXPIRE_WITH_SESSION;
   terminus->timeout = 0;
   terminus->dynamic = false;
   terminus->distribution_mode = PN_DIST_MODE_UNSPECIFIED;

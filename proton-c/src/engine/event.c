@@ -204,13 +204,10 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
   pn_session_t *ssn;
   pn_transport_t *transport;
 
-  switch (pn_event_type(event)) {
-  case PN_CONNECTION_REMOTE_STATE:
-  case PN_CONNECTION_LOCAL_STATE:
-  case PN_CONNECTION_FINAL:
-  case PN_CONNECTION_INIT:
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_CONNECTION:
     return (pn_connection_t *)event->context;
-  case PN_TRANSPORT:
+  case PN_EVENT_CATEGORY_TRANSPORT:
     transport = pn_event_transport(event);
     if (transport)
       return transport->connection;
@@ -226,11 +223,8 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 pn_session_t *pn_event_session(pn_event_t *event)
 {
   pn_link_t *link;
-  switch (pn_event_type(event)) {
-  case PN_SESSION_REMOTE_STATE:
-  case PN_SESSION_LOCAL_STATE:
-  case PN_SESSION_FINAL:
-  case PN_SESSION_INIT:
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_SESSION:
     return (pn_session_t *)event->context;
   default:
     link = pn_event_link(event);
@@ -243,12 +237,8 @@ pn_session_t *pn_event_session(pn_event_t *event)
 pn_link_t *pn_event_link(pn_event_t *event)
 {
   pn_delivery_t *dlv;
-  switch (pn_event_type(event)) {
-  case PN_LINK_REMOTE_STATE:
-  case PN_LINK_LOCAL_STATE:
-  case PN_LINK_FLOW:
-  case PN_LINK_FINAL:
-  case PN_LINK_INIT:
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_LINK:
     return (pn_link_t *)event->context;
   default:
     dlv = pn_event_delivery(event);
@@ -260,19 +250,27 @@ pn_link_t *pn_event_link(pn_event_t *event)
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  if (pn_event_type(event) == PN_DELIVERY)
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_DELIVERY:
     return (pn_delivery_t *)event->context;
-  return NULL;
+  default:
+    return NULL;
+  }
 }
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  if (pn_event_type(event) == PN_TRANSPORT)
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_TRANSPORT:
     return (pn_transport_t *)event->context;
-  pn_connection_t *conn = pn_event_connection(event);
-  if (conn)
-    return pn_connection_transport(conn);
-  return NULL;
+  default:
+    {
+      pn_connection_t *conn = pn_event_connection(event);
+      if (conn)
+        return pn_connection_transport(conn);
+      return NULL;
+    }
+  }
 }
 
 const char *pn_event_type_name(pn_event_type_t type)
@@ -282,26 +280,38 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_EVENT_NONE";
   case PN_CONNECTION_INIT:
     return "PN_CONNECTION_INIT";
-  case PN_CONNECTION_REMOTE_STATE:
-    return "PN_CONNECTION_REMOTE_STATE";
-  case PN_CONNECTION_LOCAL_STATE:
-    return "PN_CONNECTION_LOCAL_STATE";
+  case PN_CONNECTION_REMOTE_OPEN:
+    return "PN_CONNECTION_REMOTE_OPEN";
+  case PN_CONNECTION_OPEN:
+    return "PN_CONNECTION_OPEN";
+  case PN_CONNECTION_REMOTE_CLOSE:
+    return "PN_CONNECTION_REMOTE_CLOSE";
+  case PN_CONNECTION_CLOSE:
+    return "PN_CONNECTION_CLOSE";
   case PN_CONNECTION_FINAL:
     return "PN_CONNECTION_FINAL";
   case PN_SESSION_INIT:
     return "PN_SESSION_INIT";
-  case PN_SESSION_REMOTE_STATE:
-    return "PN_SESSION_REMOTE_STATE";
-  case PN_SESSION_LOCAL_STATE:
-    return "PN_SESSION_LOCAL_STATE";
+  case PN_SESSION_REMOTE_OPEN:
+    return "PN_SESSION_REMOTE_OPEN";
+  case PN_SESSION_OPEN:
+    return "PN_SESSION_OPEN";
+  case PN_SESSION_REMOTE_CLOSE:
+    return "PN_SESSION_REMOTE_CLOSE";
+  case PN_SESSION_CLOSE:
+    return "PN_SESSION_CLOSE";
   case PN_SESSION_FINAL:
     return "PN_SESSION_FINAL";
   case PN_LINK_INIT:
     return "PN_LINK_INIT";
-  case PN_LINK_REMOTE_STATE:
-    return "PN_LINK_REMOTE_STATE";
-  case PN_LINK_LOCAL_STATE:
-    return "PN_LINK_LOCAL_STATE";
+  case PN_LINK_REMOTE_OPEN:
+    return "PN_LINK_REMOTE_OPEN";
+  case PN_LINK_OPEN:
+    return "PN_LINK_OPEN";
+  case PN_LINK_REMOTE_CLOSE:
+    return "PN_LINK_REMOTE_CLOSE";
+  case PN_LINK_CLOSE:
+    return "PN_LINK_CLOSE";
   case PN_LINK_FLOW:
     return "PN_LINK_FLOW";
   case PN_LINK_FINAL:

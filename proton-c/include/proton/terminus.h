@@ -90,10 +90,10 @@ typedef enum {
  * counting down.
  */
 typedef enum {
-  PN_LINK_CLOSE, /**< the terminus is orphaned when the parent link is closed */
-  PN_SESSION_CLOSE, /**< the terminus is orphaned when the parent session is closed */
-  PN_CONNECTION_CLOSE, /**< the terminus is orphaned when the parent connection is closed */
-  PN_NEVER /**< the terminus is never considered orphaned */
+  PN_EXPIRE_WITH_LINK, /**< the terminus is orphaned when the parent link is closed */
+  PN_EXPIRE_WITH_SESSION, /**< the terminus is orphaned when the parent session is closed */
+  PN_EXPIRE_WITH_CONNECTION, /**< the terminus is orphaned when the parent connection is closed */
+  PN_EXPIRE_NEVER /**< the terminus is never considered orphaned */
 } pn_expiry_policy_t;
 
 /**

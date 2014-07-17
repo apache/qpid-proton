@@ -265,7 +265,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   pn_incref2(connection, transport);
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(connection->collector, PN_CONNECTION_REMOTE_STATE, connection);
+    pn_collector_put(connection->collector, PN_CONNECTION_REMOTE_OPEN, connection);
     if (!pn_error_code(transport->error)) {
       transport->disp->halt = false;
       transport_consume(transport);        // blech - testBindAfterOpen
@@ -473,7 +473,7 @@ int pn_do_open(pn_dispatcher_t *disp)
 
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(conn->collector, PN_CONNECTION_REMOTE_STATE, conn);
+    pn_collector_put(conn->collector, PN_CONNECTION_REMOTE_OPEN, conn);
   } else {
     transport->disp->halt = true;
   }
@@ -502,7 +502,7 @@ int pn_do_begin(pn_dispatcher_t *disp)
   ssn->state.incoming_transfer_count = next;
   pn_map_channel(transport, disp->channel, ssn);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_ACTIVE);
-  pn_collector_put(transport->connection->collector, PN_SESSION_REMOTE_STATE, ssn);
+  pn_collector_put(transport->connection->collector, PN_SESSION_REMOTE_OPEN, ssn);
   return 0;
 }
 
@@ -525,18 +525,18 @@ pn_link_t *pn_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
 static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
 {
   if (!symbol.start)
-    return PN_SESSION_CLOSE;
+    return PN_EXPIRE_WITH_SESSION;
 
   if (!strncmp(symbol.start, "link-detach", symbol.size))
-    return PN_LINK_CLOSE;
+    return PN_EXPIRE_WITH_LINK;
   if (!strncmp(symbol.start, "session-end", symbol.size))
-    return PN_SESSION_CLOSE;
+    return PN_EXPIRE_WITH_SESSION;
   if (!strncmp(symbol.start, "connection-close", symbol.size))
-    return PN_CONNECTION_CLOSE;
+    return PN_EXPIRE_WITH_CONNECTION;
   if (!strncmp(symbol.start, "never", symbol.size))
-    return PN_NEVER;
+    return PN_EXPIRE_NEVER;
 
-  return PN_SESSION_CLOSE;
+  return PN_EXPIRE_WITH_SESSION;
 }
 
 static pn_distribution_mode_t symbol2dist_mode(const pn_bytes_t symbol)
@@ -672,7 +672,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
     link->state.delivery_count = idc;
   }
 
-  pn_collector_put(transport->connection->collector, PN_LINK_REMOTE_STATE, link);
+  pn_collector_put(transport->connection->collector, PN_LINK_REMOTE_OPEN, link);
   return 0;
 }
 
@@ -928,7 +928,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
   if (closed)
   {
     PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_CLOSED);
-    pn_collector_put(transport->connection->collector, PN_LINK_REMOTE_STATE, link);
+    pn_collector_put(transport->connection->collector, PN_LINK_REMOTE_CLOSE, link);
   } else {
     // TODO: implement
   }
@@ -944,7 +944,7 @@ int pn_do_end(pn_dispatcher_t *disp)
   int err = pn_scan_error(disp->args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
-  pn_collector_put(transport->connection->collector, PN_SESSION_REMOTE_STATE, ssn);
+  pn_collector_put(transport->connection->collector, PN_SESSION_REMOTE_CLOSE, ssn);
   pn_unmap_channel(transport, ssn);
   return 0;
 }
@@ -957,7 +957,7 @@ int pn_do_close(pn_dispatcher_t *disp)
   if (err) return err;
   transport->close_rcvd = true;
   PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
-  pn_collector_put(transport->connection->collector, PN_CONNECTION_REMOTE_STATE, conn);
+  pn_collector_put(transport->connection->collector, PN_CONNECTION_REMOTE_CLOSE, conn);
   return 0;
 }
 
@@ -1219,13 +1219,13 @@ static const char *expiry_symbol(pn_expiry_policy_t policy)
 {
   switch (policy)
   {
-  case PN_LINK_CLOSE:
+  case PN_EXPIRE_WITH_LINK:
     return "link-detach";
-  case PN_SESSION_CLOSE:
+  case PN_EXPIRE_WITH_SESSION:
     return NULL;
-  case PN_CONNECTION_CLOSE:
+  case PN_EXPIRE_WITH_CONNECTION:
     return "connection-close";
-  case PN_NEVER:
+  case PN_EXPIRE_NEVER:
     return "never";
   }
   return NULL;

@@ -2115,7 +2115,7 @@ class EventTest(Test):
     self.expect()
     c2.open()
     self.pump()
-    self.expect(Event.CONNECTION_REMOTE_STATE)
+    self.expect(Event.CONNECTION_REMOTE_OPEN)
     self.pump()
     self.expect()
 
@@ -2126,8 +2126,8 @@ class EventTest(Test):
 
     self.expect()
     self.pump()
-    self.expect(Event.SESSION_INIT, Event.SESSION_REMOTE_STATE,
-                Event.LINK_INIT, Event.LINK_REMOTE_STATE)
+    self.expect(Event.SESSION_INIT, Event.SESSION_REMOTE_OPEN,
+                Event.LINK_INIT, Event.LINK_REMOTE_OPEN)
 
     c1.open()
     ssn2 = c1.session()
@@ -2135,25 +2135,25 @@ class EventTest(Test):
     rcv = ssn2.receiver("receiver")
     rcv.open()
     self.pump()
-    self.expect(Event.CONNECTION_LOCAL_STATE, Event.TRANSPORT,
-                Event.SESSION_INIT, Event.SESSION_LOCAL_STATE,
-                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_LOCAL_STATE,
+    self.expect(Event.CONNECTION_OPEN, Event.TRANSPORT,
+                Event.SESSION_INIT, Event.SESSION_OPEN,
+                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_OPEN,
                 Event.TRANSPORT)
 
     rcv.close()
-    self.expect(Event.LINK_LOCAL_STATE, Event.TRANSPORT)
+    self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
     self.pump()
     rcv.free()
     del rcv
     self.expect(Event.LINK_FINAL)
     ssn2.free()
     del ssn2
-    self.expect(Event.SESSION_LOCAL_STATE, Event.TRANSPORT)
+    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
     self.pump()
     self.expect(Event.SESSION_FINAL)
     c1.free()
     c1._transport.unbind()
-    self.expect(Event.CONNECTION_LOCAL_STATE, Event.TRANSPORT,
+    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT,
                 Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_FINAL)
 
   def testConnectionINIT_FINAL(self):
@@ -2194,7 +2194,7 @@ class EventTest(Test):
     rcv.flow(10)
     self.pump()
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                Event.LINK_INIT, Event.LINK_REMOTE_STATE, Event.LINK_FLOW)
+                Event.LINK_INIT, Event.LINK_REMOTE_OPEN, Event.LINK_FLOW)
     rcv.flow(10)
     self.pump()
     self.expect(Event.LINK_FLOW)
@@ -2207,7 +2207,7 @@ class EventTest(Test):
     rcv.flow(10)
     self.pump()
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                Event.LINK_INIT, Event.LINK_LOCAL_STATE, Event.TRANSPORT,
+                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT,
                 Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
@@ -2216,15 +2216,15 @@ class EventTest(Test):
     self.expect()
     snd.open()
     self.pump()
-    self.expect(Event.LINK_REMOTE_STATE, Event.DELIVERY)
+    self.expect(Event.LINK_REMOTE_OPEN, Event.DELIVERY)
     rcv.session.connection._transport.unbind()
     rcv.session.connection.free()
-    self.expect_oneof((Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_LOCAL_STATE,
-                       Event.SESSION_LOCAL_STATE, Event.CONNECTION_LOCAL_STATE, Event.LINK_FINAL,
+    self.expect_oneof((Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_CLOSE,
+                       Event.SESSION_CLOSE, Event.CONNECTION_CLOSE, Event.LINK_FINAL,
                        Event.SESSION_FINAL, Event.CONNECTION_FINAL),
-                      (Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_LOCAL_STATE,
-                       Event.LINK_FINAL, Event.SESSION_LOCAL_STATE, Event.SESSION_FINAL,
-                       Event.CONNECTION_LOCAL_STATE, Event.CONNECTION_FINAL))
+                      (Event.TRANSPORT, Event.TRANSPORT, Event.TRANSPORT, Event.LINK_CLOSE,
+                       Event.LINK_FINAL, Event.SESSION_CLOSE, Event.SESSION_FINAL,
+                       Event.CONNECTION_CLOSE, Event.CONNECTION_FINAL))
 
   def testDeliveryEventsDisp(self):
     snd, rcv = self.testFlowEvents()
@@ -2232,7 +2232,7 @@ class EventTest(Test):
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(Event.LINK_LOCAL_STATE,
+    self.expect(Event.LINK_OPEN,
                 Event.TRANSPORT,
                 Event.TRANSPORT,
                 Event.TRANSPORT)

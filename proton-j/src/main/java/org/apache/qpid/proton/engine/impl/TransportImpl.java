@@ -993,7 +993,7 @@ public class TransportImpl extends EndpointImpl
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
             _remoteSessions.put(channel, transportSession);
 
-            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE, session);
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_OPEN, session);
         }
 
     }
@@ -1049,7 +1049,7 @@ public class TransportImpl extends EndpointImpl
 
             }
 
-            _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE, link);
+            _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);
         }
     }
 
@@ -1121,7 +1121,7 @@ public class TransportImpl extends EndpointImpl
                     link.getRemoteCondition().copyFrom(detach.getError());
                 }
 
-                _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE, link);
+                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
             }
             else
             {
@@ -1150,7 +1150,7 @@ public class TransportImpl extends EndpointImpl
                 session.getRemoteCondition().copyFrom(errorCondition);
             }
 
-            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE, session);
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_CLOSE, session);
         }
     }
 
@@ -1167,7 +1167,7 @@ public class TransportImpl extends EndpointImpl
                 _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
             }
 
-            _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_STATE, _connectionEndpoint);
+            _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_CLOSE, _connectionEndpoint);
         }
 
     }
@@ -1373,7 +1373,8 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    protected void localStateChanged()
-    {
-    }
+    void localOpen() {}
+
+    @Override
+    void localClose() {}
 }

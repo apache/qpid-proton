@@ -73,11 +73,8 @@ class EventImpl implements Event
 
     public Connection getConnection()
     {
-        switch (type) {
-        case CONNECTION_REMOTE_STATE:
-        case CONNECTION_LOCAL_STATE:
-        case CONNECTION_INIT:
-        case CONNECTION_FINAL:
+        switch (type.getCategory()) {
+        case CONNECTION:
             return (Connection) context;
         case TRANSPORT:
             Transport transport = getTransport();
@@ -96,11 +93,8 @@ class EventImpl implements Event
 
     public Session getSession()
     {
-        switch (type) {
-        case SESSION_REMOTE_STATE:
-        case SESSION_LOCAL_STATE:
-        case SESSION_INIT:
-        case SESSION_FINAL:
+        switch (type.getCategory()) {
+        case SESSION:
             return (Session) context;
         default:
             Link link = getLink();
@@ -113,12 +107,8 @@ class EventImpl implements Event
 
     public Link getLink()
     {
-        switch (type) {
-        case LINK_REMOTE_STATE:
-        case LINK_LOCAL_STATE:
-        case LINK_INIT:
-        case LINK_FINAL:
-        case LINK_FLOW:
+        switch (type.getCategory()) {
+        case LINK:
             return (Link) context;
         default:
             Delivery dlv = getDelivery();
@@ -131,7 +121,7 @@ class EventImpl implements Event
 
     public Delivery getDelivery()
     {
-        switch (type) {
+        switch (type.getCategory()) {
         case DELIVERY:
             return (Delivery) context;
         default:
@@ -141,7 +131,7 @@ class EventImpl implements Event
 
     public Transport getTransport()
     {
-        switch (type) {
+        switch (type.getCategory()) {
         case TRANSPORT:
             return (Transport) context;
         default:
