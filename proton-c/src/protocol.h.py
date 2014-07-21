@@ -24,6 +24,7 @@ print "/* generated */"
 print "#ifndef _PROTON_PROTOCOL_H"
 print "#define _PROTON_PROTOCOL_H 1"
 print
+print "#include \"proton/type_compat.h\""
 
 fields = {}
 
