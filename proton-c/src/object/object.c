@@ -520,7 +520,7 @@ static float pni_map_load(pn_map_t *map)
 static bool pni_map_ensure(pn_map_t *map, size_t capacity)
 {
   float load = pni_map_load(map);
-  if (capacity <= map->capacity && load < map->load_factor) {
+  if (capacity <= map->capacity && load <= map->load_factor) {
     return false;
   }
 
