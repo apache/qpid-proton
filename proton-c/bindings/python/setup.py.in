@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+from distutils.core import setup, Extension
+import logging
+import os
+import sys
+
+_c_module = '@SWIG_MODULE_cproton_REAL_NAME@'
+_src_file = '@PN_SWIG_PYTHON_C_WRAPPER@'
+_version =  '@PN_VERSION@'
+_release = 0
+
+if "--proton-install-prefix" in sys.argv:
+    # special option used only if the python headers and library have been
+    # installed to a non-standard directory.  This can be done during 'make
+    # install' from the proton build tree by using the cmake option
+    # -DCMAKE_INSTALL_PREFIX.  The location of the headers and library must be
+    # specified so we can build the binding's C extension.
+    i = sys.argv.index("--proton-install-prefix") + 1
+    if i >= len(sys.argv):
+        raise ValueError("--proton-install-prefix requires a path parameter.")
+    _prefix = sys.argv[i]
+    # remove the proton arguments to they don't conflict with setup.py's other
+    # command arguments:
+    del sys.argv[i]
+    sys.argv.remove("--proton-install-prefix")
+    _destdir = os.environ.get("DESTDIR", "")
+    if _destdir and os.path.isabs(_prefix):
+        # DESTDIR may be used on unix systems to put the entire install tree
+        # under a particular directory.  However, if _prefix is an absolute
+        # path, os.path.join will discard DESTDIR, so strip off the leading
+        # separator
+        _prefix = _prefix.lstrip(os.path.sep)
+
+    _inc_dir = os.path.join(_destdir,
+                            _prefix,
+                            '@INCLUDE_INSTALL_DIR@')
+    _lib_dir = os.path.join(_destdir,
+                            _prefix,
+                            '@LIB_INSTALL_DIR@')
+
+    swig_ext = Extension(_c_module, [_src_file],
+                         libraries=['qpid-proton'],
+                         include_dirs=[_inc_dir],
+                         library_dirs=[_lib_dir])
+else:
+    swig_ext = Extension(_c_module, [_src_file],
+                         libraries=['qpid-proton'])
+
+_help_description = """Before you can build or install these bindings, you must
+first install version @PN_VERSION@ of the Proton development library
+(libqpid-proton) and its C header files. These files must be available in order
+to build this packages' C-based extension.
+
+Packages for the Proton development library may be provided by your system's
+distribution. For example, the qpid-proton-c-devel RPM is available for
+Centos/RHEL via EPEL.  A libqpid-proton2-dev deb file is available for Ubuntu
+via the Apache Qpid PPA (ppa:qpid/released).
+
+If your distribution does not make these packages available, you can download
+the Proton sources directly from the Apache Qpid project:
+
+ http://qpid.apache.org
+
+This package is compatible with the @PN_VERSION@ release of the Proton
+development library.
+
+If you need additional help, see http://qpid.apache.org/discussion.html
+"""
+
+_long_description = """This package contains the Python bindings for the Apache
+QPID Proton library.\n%s""" % _help_description
+
+try:
+    setup(name="python-qpid-proton",
+          version="%s-%d" % (_version, _release),
+          author="Apache Qpid",
+          author_email="dev@qpid.apache.org",
+          py_modules=["proton", "cproton"],
+          url="http://qpid.apache.org/",
+          description="Python bindings for the Proton library",
+          long_description=_long_description,
+          license="Apache Software License",
+          classifiers=["License :: OSI Approved :: Apache Software License",
+                       "Intended Audience :: Developers",
+                       "Programming Language :: Python"],
+          ext_modules=[swig_ext])
+except:
+    logging.error("setup failed!\n%s", _help_description)
+    raise
