@@ -601,6 +601,10 @@ int pn_do_attach(pn_dispatcher_t *disp)
   strname[name.size] = '\0';
 
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  if (!ssn) {
+      pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
+      return PN_EOS;
+  }
   pn_link_t *link = pn_find_link(ssn, name, is_sender);
   if (!link) {
     if (is_sender) {
