@@ -132,3 +132,32 @@ class TransportTest(Test):
       assert "aborted" in str(e), str(e)
     n = self.transport.capacity()
     assert n < 0, n
+
+  def testUnpairedPop(self):
+    conn = Connection()
+    self.transport.bind(conn)
+
+    conn.hostname = "hostname"
+    conn.open()
+
+    dat1 = self.transport.peek(1024)
+
+    ssn = conn.session()
+    ssn.open()
+
+    dat2 = self.transport.peek(1024)
+
+    assert dat2[:len(dat1)] == dat1
+
+    snd = ssn.sender("sender")
+    snd.open()
+
+    self.transport.pop(len(dat1))
+    self.transport.pop(len(dat2) - len(dat1))
+    dat3 = self.transport.peek(1024)
+    self.transport.pop(len(dat3))
+    assert self.transport.peek(1024) == ""
+
+    self.peer.push(dat1)
+    self.peer.push(dat2[len(dat1):])
+    self.peer.push(dat3)
