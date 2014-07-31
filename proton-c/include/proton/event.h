@@ -227,7 +227,7 @@ typedef enum {
    * The transport has new data to read and/or write. Events of this
    * type point to the relevant transport.
    */
-  PN_TRANSPORT = PN_EVENT_CATEGORY_TRANSPORT + 1,
+  PN_TRANSPORT = PN_EVENT_CATEGORY_TRANSPORT + 1
 
 } pn_event_type_t;
 
