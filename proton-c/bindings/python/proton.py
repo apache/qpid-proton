@@ -3131,6 +3131,7 @@ class SASL(object):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
+  SKIPPED = PN_SASL_SKIPPED
 
   def __new__(cls, transport):
     """Enforce a singleton SASL object per Transport"""
@@ -3155,6 +3156,9 @@ class SASL(object):
 
   def server(self):
     pn_sasl_server(self._sasl)
+
+  def allow_skip(self, allow):
+    pn_sasl_allow_skip(self._sasl, allow)
 
   def plain(self, user, password):
     pn_sasl_plain(self._sasl, user, password)

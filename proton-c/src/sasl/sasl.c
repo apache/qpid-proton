@@ -42,10 +42,10 @@ struct pn_sasl_t {
   char *remote_mechanisms;
   pn_buffer_t *send_data;
   pn_buffer_t *recv_data;
-  size_t header_count;
   pn_sasl_outcome_t outcome;
   bool client;
   bool configured;
+  bool allow_skip;
   bool sent_init;
   bool rcvd_init;
   bool sent_done;
@@ -71,6 +71,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->send_data = pn_buffer(16);
     sasl->recv_data = pn_buffer(16);
     sasl->outcome = PN_SASL_NONE;
+    sasl->allow_skip = false;
     sasl->sent_init = false;
     sasl->rcvd_init = false;
     sasl->sent_done = false;
@@ -83,8 +84,6 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->io_layer->process_input = pn_input_read_sasl_header;
     sasl->io_layer->process_output = pn_output_write_sasl_header;
     sasl->io_layer->process_tick = pn_io_layer_tick_passthru;
-
-    sasl->header_count = 0;
   }
 
   return transport->sasl;
@@ -171,6 +170,12 @@ void pn_sasl_server(pn_sasl_t *sasl)
     sasl->client = false;
     sasl->configured = true;
   }
+}
+
+void pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow)
+{
+  if (sasl)
+    sasl->allow_skip = allow;
 }
 
 void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password)
@@ -396,28 +401,44 @@ int pn_do_outcome(pn_dispatcher_t *disp)
 }
 
 #define SASL_HEADER ("AMQP\x03\x01\x00\x00")
+#define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
 #define SASL_HEADER_LEN 8
 
 static ssize_t pn_input_read_sasl_header(pn_io_layer_t *io_layer, const char *bytes, size_t available)
 {
   pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
-  const char *point = SASL_HEADER + sasl->header_count;
-  int delta = pn_min(available, SASL_HEADER_LEN - sasl->header_count);
-  if (!available || memcmp(bytes, point, delta)) {
-    char quoted[1024];
-    pn_quote_data(quoted, 1024, bytes, available);
-    pn_do_error(sasl->transport, "amqp:connection:framing-error",
-                "%s header mismatch: '%s'", "SASL", quoted);
-    return PN_EOS;
-  } else {
-    sasl->header_count += delta;
-    if (sasl->header_count == SASL_HEADER_LEN) {
-      sasl->io_layer->process_input = pn_input_read_sasl;
-      if (sasl->disp->trace & PN_TRACE_FRM)
-        pn_transport_logf(sasl->transport, "  <- %s", "SASL");
+  if (available > 0) {
+    if (available < SASL_HEADER_LEN) {
+      if (memcmp(bytes, SASL_HEADER, available) == 0 ||
+          memcmp(bytes, AMQP_HEADER, available) == 0)
+        return 0;
+    } else {
+      if (memcmp(bytes, SASL_HEADER, SASL_HEADER_LEN) == 0) {
+        sasl->io_layer->process_input = pn_input_read_sasl;
+        if (sasl->disp->trace & PN_TRACE_FRM)
+          pn_transport_logf(sasl->transport, "  <- %s", "SASL");
+        return SASL_HEADER_LEN;
+      }
+      if (memcmp(bytes, AMQP_HEADER, SASL_HEADER_LEN) == 0) {
+        if (sasl->allow_skip) {
+          sasl->outcome = PN_SASL_SKIPPED;
+          sasl->io_layer->process_input = pn_io_layer_input_passthru;
+          sasl->io_layer->process_output = pn_io_layer_output_passthru;
+          pn_io_layer_t *io_next = sasl->io_layer->next;
+          return io_next->process_input( io_next, bytes, available );
+        } else {
+            pn_do_error(sasl->transport, "amqp:connection:policy-error",
+                        "Client skipped SASL exchange - forbidden");
+            return PN_EOS;
+        }
+      }
     }
-    return delta;
   }
+  char quoted[1024];
+  pn_quote_data(quoted, 1024, bytes, available);
+  pn_do_error(sasl->transport, "amqp:connection:framing-error",
+              "%s header mismatch: '%s'", "SASL", quoted);
+  return PN_EOS;
 }
 
 static ssize_t pn_input_read_sasl(pn_io_layer_t *io_layer, const char *bytes, size_t available)

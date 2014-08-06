@@ -77,7 +77,7 @@ typedef long long int int64_t;
 
 %aggregate_check(int, check_sasl_outcome,
                  PN_SASL_NONE, PN_SASL_OK, PN_SASL_AUTH,
-                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP);
+                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP, PN_SASL_SKIPPED);
 
 %aggregate_check(int, check_sasl_state,
                  PN_SASL_CONF, PN_SASL_IDLE, PN_SASL_STEP,
@@ -994,6 +994,12 @@ typedef long long int int64_t;
 }
 
 %contract pn_sasl_server(pn_sasl_t *sasl)
+{
+ require:
+  sasl != NULL;
+}
+
+%contract pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow)
 {
  require:
   sasl != NULL;

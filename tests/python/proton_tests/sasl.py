@@ -191,3 +191,13 @@ class SaslTest(Test):
       sasl1 = transport.sasl()
       sasl2 = SASL(transport)
       assert sasl1 is sasl2
+
+  def testSaslSkipped(self):
+    """Verify that the server (with SASL) correctly handles a client without SASL"""
+    self.t1 = Transport()
+    self.s2.mechanisms("ANONYMOUS")
+    self.s2.server()
+    self.s2.allow_skip(True)
+    self.pump()
+    assert self.s2.outcome == SASL.SKIPPED
+
