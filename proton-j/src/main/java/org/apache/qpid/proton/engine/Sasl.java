@@ -49,7 +49,8 @@ public interface Sasl
         PN_SASL_SYS((byte)2),
         /** failed due to unrecoverable error */
         PN_SASL_PERM((byte)3),
-        PN_SASL_TEMP((byte)4);
+        PN_SASL_TEMP((byte)4),
+        PN_SASL_SKIPPED((byte)5);
 
         private final byte _code;
 
@@ -72,6 +73,7 @@ public interface Sasl
     public static SaslOutcome PN_SASL_SYS = SaslOutcome.PN_SASL_SYS;
     public static SaslOutcome PN_SASL_PERM = SaslOutcome.PN_SASL_PERM;
     public static SaslOutcome PN_SASL_TEMP = SaslOutcome.PN_SASL_TEMP;
+    public static SaslOutcome PN_SASL_SKIPPED = SaslOutcome.PN_SASL_SKIPPED;
 
     /**
      * Access the current state of the layer.
@@ -156,4 +158,10 @@ public interface Sasl
 
     void client();
     void server();
+
+    /**
+     * Set whether servers may accept incoming connections
+     * that skip the SASL layer negotiation.
+     */
+    void allowSkip(boolean allowSkip);
 }

@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.security.SaslChallenge;
@@ -458,6 +459,13 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     public void server()
     {
         _role = Role.SERVER;
+    }
+
+    @Override
+    public void allowSkip(boolean allowSkip)
+    {
+        //TODO: implement
+        throw new ProtonUnsupportedOperationException();
     }
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
