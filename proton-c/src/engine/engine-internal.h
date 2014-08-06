@@ -100,18 +100,16 @@ typedef struct {
 #include <proton/ssl.h>
 
 typedef struct pn_io_layer_t {
-  void *context;
-  struct pn_io_layer_t *next;
-  ssize_t (*process_input)(struct pn_io_layer_t *io_layer, const char *, size_t);
-  ssize_t (*process_output)(struct pn_io_layer_t *io_layer, char *, size_t);
-  pn_timestamp_t (*process_tick)(struct pn_io_layer_t *io_layer, pn_timestamp_t);
-  size_t (*buffered_output)(struct pn_io_layer_t *);  // how much output is held
-  size_t (*buffered_input)(struct pn_io_layer_t *);   // how much input is held
+  ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
+  ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
+  pn_timestamp_t (*process_tick)(struct pn_transport_t *transport, unsigned int layer, pn_timestamp_t);
+  size_t (*buffered_output)(struct pn_transport_t *);  // how much output is held
 } pn_io_layer_t;
+
+extern const pn_io_layer_t pni_passthru_layer;
 
 struct pn_transport_t {
   pn_tracer_t tracer;
-  size_t header_count;
   pn_sasl_t *sasl;
   pn_ssl_t *ssl;
   pn_connection_t *connection;  // reference counted
@@ -134,7 +132,7 @@ struct pn_transport_t {
 #define PN_IO_SASL 1
 #define PN_IO_AMQP 2
 #define PN_IO_LAYER_CT (PN_IO_AMQP+1)
-  pn_io_layer_t io_layers[PN_IO_LAYER_CT];
+  const pn_io_layer_t *io_layers[PN_IO_LAYER_CT];
 
   /* dead remote detection */
   pn_millis_t local_idle_timeout;
@@ -302,9 +300,7 @@ void pn_link_dump(pn_link_t *link);
 void pn_dump(pn_connection_t *conn);
 void pn_transport_sasl_init(pn_transport_t *transport);
 
-ssize_t pn_io_layer_input_passthru(pn_io_layer_t *, const char *, size_t );
-ssize_t pn_io_layer_output_passthru(pn_io_layer_t *, char *, size_t );
-pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *, pn_timestamp_t);
+pn_timestamp_t pn_io_layer_tick_passthru(pn_transport_t *, unsigned int, pn_timestamp_t);
 
 void pn_condition_init(pn_condition_t *condition);
 void pn_condition_tini(pn_condition_t *condition);
