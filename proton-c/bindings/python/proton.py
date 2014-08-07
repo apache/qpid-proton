@@ -2959,6 +2959,7 @@ class TransportException(ProtonException):
 
 class Transport(object):
 
+  TRACE_OFF = PN_TRACE_OFF
   TRACE_DRV = PN_TRACE_DRV
   TRACE_FRM = PN_TRACE_FRM
   TRACE_RAW = PN_TRACE_RAW
