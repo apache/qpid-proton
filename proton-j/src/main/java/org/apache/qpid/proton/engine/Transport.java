@@ -73,12 +73,19 @@ public interface Transport extends Endpoint
         }
     }
 
+    public static final int TRACE_OFF = 0;
+    public static final int TRACE_RAW = 1;
+    public static final int TRACE_FRM = 2;
+    public static final int TRACE_DRV = 4;
+
     public static final int DEFAULT_MAX_FRAME_SIZE = -1;
 
     /** the lower bound for the agreed maximum frame size (in bytes). */
     public int MIN_MAX_FRAME_SIZE = 512;
     public int SESSION_WINDOW = 16*1024;
     public int END_OF_STREAM = -1;
+
+    public void trace(int levels);
 
     public void bind(Connection connection);
     public void unbind();

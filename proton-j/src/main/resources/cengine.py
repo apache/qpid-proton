@@ -25,7 +25,7 @@ from org.apache.qpid.proton.amqp.transaction import Coordinator
 from org.apache.qpid.proton.amqp.transport import ErrorCondition, \
   SenderSettleMode, ReceiverSettleMode
 from org.apache.qpid.proton.engine import EndpointState, Sender, \
-  Receiver, TransportException
+  Receiver, Transport, TransportException
 
 from java.util import EnumSet
 from jarray import array, zeros
@@ -72,10 +72,10 @@ PN_REJECTED = (0x0000000000000025)
 PN_RELEASED = (0x0000000000000026)
 PN_MODIFIED = (0x0000000000000027)
 
-PN_TRACE_OFF = (0)
-PN_TRACE_RAW = (1)
-PN_TRACE_FRM = (2)
-PN_TRACE_DRV = (4)
+PN_TRACE_OFF = Transport.TRACE_OFF
+PN_TRACE_RAW = Transport.TRACE_RAW
+PN_TRACE_FRM = Transport.TRACE_FRM
+PN_TRACE_DRV = Transport.TRACE_DRV
 
 def wrap(obj, wrapper):
   if obj:
@@ -897,8 +897,7 @@ def pn_transport_unbind(trans):
   return 0
 
 def pn_transport_trace(trans, n):
-  # XXX
-  pass
+  trans.impl.trace(n)
 
 def pn_transport_pending(trans):
   return trans.impl.pending()
