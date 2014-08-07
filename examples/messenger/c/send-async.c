@@ -18,6 +18,8 @@
  *
  */
 
+// This is a re-implementation of send.c using non-blocking/asynchronous calls.
+
 #include "proton/message.h"
 #include "proton/messenger.h"
 #include "proton/driver.h"
@@ -30,8 +32,12 @@
 
 #if EMSCRIPTEN
 #include <emscripten.h>
-void emscripten_set_network_callback(void (*func)());
 #endif
+
+pn_message_t * message;
+pn_messenger_t * messenger;
+pn_tracker_t tracker;
+int running = 1;
 
 #define check(messenger)                                                     \
   {                                                                          \
@@ -41,152 +47,121 @@ void emscripten_set_network_callback(void (*func)());
     }                                                                        \
   }                                                                          \
 
-// FA Temporarily make global
-  pn_message_t * message;
-  pn_messenger_t * messenger;
-
-pn_tracker_t tracker;
-int tracked = 1;
-
-int running = 1;
-
-
 void die(const char *file, int line, const char *message)
 {
-  fprintf(stderr, "%s:%i: %s\n", file, line, message);
-  exit(1);
+    fprintf(stderr, "%s:%i: %s\n", file, line, message);
+    exit(1);
 }
 
 void usage(void)
 {
-  printf("Usage: send [-a addr] [message]\n");
-  printf("-a     \tThe target address [amqp[s]://domain[/name]]\n");
-  printf("message\tA text string to send.\n");
-  exit(0);
+    printf("Usage: send [-a addr] [message]\n");
+    printf("-a     \tThe target address [amqp[s]://domain[/name]]\n");
+    printf("message\tA text string to send.\n");
+    exit(0);
 }
 
 void process(void) {
-//printf("                          *** process ***\n");
-
-    // Process outgoing messages
-
     pn_status_t status = pn_messenger_status(messenger, tracker);
-//printf("status = %d\n", status);
-
     if (status != PN_STATUS_PENDING) {
-printf("status = %d\n", status);
-
-        //pn_messenger_settle(messenger, tracker, 0);
-        //tracked--;
-
         if (running) {
-printf("stopping\n");
             pn_messenger_stop(messenger);
             running = 0;
         } 
     }
 
     if (pn_messenger_stopped(messenger)) {
-printf("exiting\n");
         pn_message_free(message);
         pn_messenger_free(messenger);
-        exit(0);
     }
 }
 
-
-
-// Callback used by emscripten to ensure pn_messenger_work gets called.
-void work(void) {
-//printf("                          *** work ***\n");
-
-    int err = pn_messenger_work(messenger, 0);
-printf("err = %d\n", err);
-
-    if (err >= 0) {
-        process();
-    }
-
-    err = pn_messenger_work(messenger, 0);
-printf("err = %d\n", err);
-
-    if (err >= 0) {
+#if EMSCRIPTEN // For emscripten C/C++ to JavaScript compiler.
+void pump(int fd, void* userData) {
+    while (pn_messenger_work(messenger, 0) >= 0) {
         process();
     }
 }
+
+void onclose(int fd, void* userData) {
+    process();
+}
+
+void onerror(int fd, int errno, const char* msg, void* userData) {
+    printf("error callback fd = %d, errno = %d, msg = %s\n", fd, errno, msg);
+}
+#endif
 
 int main(int argc, char** argv)
 {
-  int c;
-  opterr = 0;
-  char * address = (char *) "amqp://0.0.0.0";
-  char * msgtext = (char *) "Hello World!";
+    int c;
+    opterr = 0;
+    char * address = (char *) "amqp://0.0.0.0";
+    char * msgtext = (char *) "Hello World!";
 
-  while((c = getopt(argc, argv, "ha:b:c:")) != -1)
-  {
-    switch(c)
+    while((c = getopt(argc, argv, "ha:b:c:")) != -1)
     {
-    case 'a': address = optarg; break;
-    case 'h': usage(); break;
+        switch(c)
+        {
+            case 'a': address = optarg; break;
+            case 'h': usage(); break;
 
-    case '?':
-      if(optopt == 'a')
-      {
-        fprintf(stderr, "Option -%c requires an argument.\n", optopt);
-      }
-      else if(isprint(optopt))
-      {
-        fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-      }
-      else
-      {
-        fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
-      }
-      return 1;
-    default:
-      abort();
+            case '?':
+                if(optopt == 'a')
+                {
+                    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+                }
+                else if(isprint(optopt))
+                {
+                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+                }
+                else
+                {
+                    fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+                }
+                return 1;
+            default:
+                abort();
+        }
     }
-  }
 
-  if (optind < argc) msgtext = argv[optind];
+    if (optind < argc) msgtext = argv[optind];
 
-//  pn_message_t * message;
-//  pn_messenger_t * messenger;
+    message = pn_message();
+    messenger = pn_messenger(NULL);
+    pn_messenger_set_blocking(messenger, false); // Needs to be set non-blocking to behave asynchronously.
+    pn_messenger_set_outgoing_window(messenger, 1024); 
 
-  message = pn_message();
-  messenger = pn_messenger(NULL);
-  pn_messenger_set_blocking(messenger, false); // Put messenger into non-blocking mode.
+    pn_messenger_start(messenger);
 
+    pn_message_set_address(message, address);
+    pn_data_t* body = pn_message_body(message);
+    pn_data_put_string(body, pn_bytes(strlen(msgtext), msgtext));
 
-  pn_messenger_set_outgoing_window(messenger, 1024); // FA Addition.
+    pn_messenger_put(messenger, message);
+    check(messenger);
 
+    tracker = pn_messenger_outgoing_tracker(messenger);
 
+#if EMSCRIPTEN // For emscripten C/C++ to JavaScript compiler.
+    emscripten_set_socket_error_callback(NULL, onerror);
 
+    emscripten_set_socket_open_callback(NULL, pump);
+    emscripten_set_socket_connection_callback(NULL, pump);
+    emscripten_set_socket_message_callback(NULL, pump);
+    emscripten_set_socket_close_callback(NULL, onclose);
+#else // For native compiler.
+    while (running) {
+        pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
+        process();
+    }
 
-  pn_messenger_start(messenger);
-
-  pn_message_set_address(message, address);
-  pn_data_t *body = pn_message_body(message);
-  pn_data_put_string(body, pn_bytes(strlen(msgtext), msgtext));
-
-  pn_messenger_put(messenger, message);
-  check(messenger);
-
-  tracker = pn_messenger_outgoing_tracker(messenger);
-//printf("tracker = %lld\n", (long long int)tracker);
-
-
-#if EMSCRIPTEN
-  //emscripten_set_main_loop(work, 0, 0);
-
-  emscripten_set_network_callback(work);
-#else
-  while (1) {
-    pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
-    process();
-  }
+    while (!pn_messenger_stopped(messenger)) {
+        pn_messenger_work(messenger, 0);
+        process();
+    }
 #endif
 
-  return 0;
+    return 0;
 }
 

@@ -24,45 +24,69 @@ if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-console.log("drain not implemented yet");
-process.exit(0);
+var address = "amqp://0.0.0.0";
+var subject = "UK.WEATHER";
+var msgtext = "Hello World!";
+var tracker = null;
+var running = true;
 
-var address = "amqp://~0.0.0.0";
 var message = new proton.Message();
 var messenger = new proton.Messenger();
 
 var pumpData = function() {
-    while (messenger.incoming()) {
-        var t = messenger.get(message);
+    var status = messenger.status(tracker);
+    if (status != proton.Status.PENDING) {
+        if (running) {
+            messenger.stop();
+            running = false;
+        } 
+    }
 
-        console.log("Address: " + message.getAddress());
-        console.log("Subject: " + message.getSubject());
-
-        // body is the body as a native JavaScript Object, useful for most real cases.
-        //console.log("Content: " + message.body);
-
-        // data is the body as a proton.Data Object, used in this case because
-        // format() returns exactly the same representation as recv.c
-        console.log("Content: " + message.data.format());
-
-        messenger.accept(t);
+    if (messenger.isStopped()) {
+        message.free();
+        messenger.free();
     }
 };
 
 var args = process.argv.slice(2);
 if (args.length > 0) {
     if (args[0] === '-h' || args[0] === '--help') {
-        console.log("Usage: recv <addr> (default " + address + ").");
+        console.log("Usage: node send.js [options] [message]");
+        console.log("Options:");
+        console.log("  -a <addr> The target address [amqp[s]://domain[/name]] (default " + address + ")");
+        console.log("  -s <subject> The message subject (default " + subject + ")");
+        console.log("message A text string to send.");
         process.exit(0);
     }
 
-    address = args[0];
+    for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        if (arg.charAt(0) === '-') {
+            i++;
+            var val = args[i];
+            if (arg === '-a') {
+                address = val;
+            } else if (arg === '-s') {
+                subject = val;
+            }
+        } else {
+            msgtext = arg;
+        }
+    }
 }
+
+console.log("Address: " + address);
+console.log("Subject: " + subject);
+console.log("Content: " + msgtext);
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);
+messenger.setOutgoingWindow(1024);
 messenger.start();
 
-messenger.subscribe(address);
-messenger.recv(); // Receive as many messages as messenger can buffer.
+message.setAddress(address);
+message.setSubject(subject);
+message.body = msgtext;
+
+tracker = messenger.put(message);
 

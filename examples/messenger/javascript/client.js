@@ -19,15 +19,20 @@
  *
  */
 
+// Simple client for use with server.js illustrating request/response
+
 // Check if the environment is Node.js and if so import the required library.
 if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-console.log("drain not implemented yet");
-process.exit(0);
+var address = "amqp://0.0.0.0";
+var subject = "UK.WEATHER";
+var replyTo = "~/replies";
+var msgtext = "Hello World!";
+var tracker = null;
+var running = true;
 
-var address = "amqp://~0.0.0.0";
 var message = new proton.Message();
 var messenger = new proton.Messenger();
 
@@ -35,6 +40,7 @@ var pumpData = function() {
     while (messenger.incoming()) {
         var t = messenger.get(message);
 
+        console.log("Reply");
         console.log("Address: " + message.getAddress());
         console.log("Subject: " + message.getSubject());
 
@@ -46,23 +52,51 @@ var pumpData = function() {
         console.log("Content: " + message.data.format());
 
         messenger.accept(t);
+        messenger.stop();
+    }
+
+    if (messenger.isStopped()) {
+        message.free();
+        messenger.free();
     }
 };
 
 var args = process.argv.slice(2);
 if (args.length > 0) {
     if (args[0] === '-h' || args[0] === '--help') {
-        console.log("Usage: recv <addr> (default " + address + ").");
+        console.log("Usage: node client.js [-r replyTo] [-s subject] <addr> (default " + address + ")");
+        console.log("Options:");
+        console.log("  -r <reply to> The message replyTo (default " + replyTo + ")");
+        console.log("  -s <subject> The message subject (default " + subject + ")");
         process.exit(0);
     }
 
-    address = args[0];
+    for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        if (arg.charAt(0) === '-') {
+            i++;
+            var val = args[i];
+            if (arg === '-r') {
+                replyTo = val;
+            } else if (arg === '-s') {
+                subject = val;
+            }
+        } else {
+            address = arg;
+        }
+    }
 }
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);
+messenger.setOutgoingWindow(1024);
 messenger.start();
 
-messenger.subscribe(address);
+message.setAddress(address);
+message.setSubject(subject);
+message.setReplyTo(replyTo);
+message.body = msgtext;
+
+tracker = messenger.put(message);
 messenger.recv(); // Receive as many messages as messenger can buffer.
 

@@ -1,31 +1,11 @@
 Qpid Proton JavaScript Language Bindings TODO List
 ==================================================
 
-This is still largely a Proof of Concept, but it builds cleanly from an unmodified proton-c 
-code base, so for the most part it feels like a really neat way to generate JavaScript bindings.
-
-The main TODO is to actually create JavaScript bindings :-)
-
-At the moment the send-async.js and recv-async.js are actually compiled to JavaScript from
-send-async.c and recv-async.c so "real" JavaScript bindings usable from other JavaScript code
-haven't been exported yet. I suspect that one of the most important things to check when that is
-done would be interoperability across different types. This is all easy in the C code because
-the emscripten runtime heap is backed by typed Arrays, but there might be shenanigans to be had
-mapping stuff across the binding - it's definitely do-able just don't know how fiddly.
-
-Other TODO the code base contains some tweaked emscripten library code, this is ultimately going
+The code base contains some tweaked emscripten library code, this is ultimately going
 to get done properly, commited back to emscripten and removed from here.
 
 
-The example send-async and recv-async are both pretty hacky at the moment and *not really asynchronous*!!
-This will be addressed ASAP, I hate the timed loop and although the code is non-blocking it's not
-asynchronous. I'm pretty sure that I know how to get emscripten to call back when data is available
-on a WebSocket so hopefully this should be straightforward.
-
-There's probably a slightly more contentious discussion to be had about a proper asynchronous interface
-in proton-c proper. I suspect that it could do with one in the brave new multicore world pushing out
-data down non-blocking queues to consumer threads tends to scale better than a model of threads locking
-a resource, which is the behaviour I suspect the current API likely steers clients towards.
+The example send-async.c and recv-async.c are both pretty hacky at the moment.
 
 proton-j seems to use hawt-dispatch, which is modelled after Grand Central Dispatch so I need to
 work out what it's using it do do and whether there are parallels in proton-c

@@ -24,9 +24,6 @@ if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-console.log("drain not implemented yet");
-process.exit(0);
-
 var address = "amqp://~0.0.0.0";
 var message = new proton.Message();
 var messenger = new proton.Messenger();
@@ -52,12 +49,14 @@ var pumpData = function() {
 var args = process.argv.slice(2);
 if (args.length > 0) {
     if (args[0] === '-h' || args[0] === '--help') {
-        console.log("Usage: recv <addr> (default " + address + ").");
+        console.log("Usage: node recv.js <addr> (default " + address + ")");
         process.exit(0);
     }
 
     address = args[0];
 }
+
+messenger.setIncomingWindow(1024);
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);

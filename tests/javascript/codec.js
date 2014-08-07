@@ -30,7 +30,7 @@ if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-// We extend TestCase by creating an instance and adding test methods as properties.
+// Extend TestCase by creating a prototype instance and adding test methods as properties.
 var DataTest = new unittest.TestCase();
 
 DataTest.setUp = function() {

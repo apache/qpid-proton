@@ -27,11 +27,52 @@ mergeInto(LibraryManager.library, {
 // Hacks below
 // -----------------------------------------------------------------------------------------------------------------
 
-
   $SOCKFS__postset: '__ATINIT__.push({ func: function() { SOCKFS.root = FS.mount(SOCKFS, {}, null); } });',
   $SOCKFS__deps: ['$FS'],
   $SOCKFS: {
     mount: function(mount) {
+      // If Module['websocket'] has already been defined (e.g. for configuring
+      // subprotocol/url) use that, if not initialise it to a new object.
+      Module['websocket'] = (Module['websocket'] && 
+                             ('object' === typeof Module['websocket'])) ? Module['websocket'] : {};
+
+      // Add Event registration mechanism to the exported websocket configuration
+      // object so we can register network callbacks from native JavaScript too.
+      Module['websocket']._callbacks = {};
+      Module['websocket'].on = function(event, callback) {
+	    if ('function' === typeof callback) {
+		  this._callbacks[event] = callback;
+        }
+	    return this;
+      };
+
+      Module['websocket'].emit = function(event, param) {
+	    if ('function' === typeof this._callbacks[event]) {
+		  this._callbacks[event].call(this, param);
+        }
+      };
+
+      // Register default null callbacks for each Event
+      Module['websocket'].on("error", function(error) {
+console.log("Websocket error " + error);
+	  });
+
+      Module['websocket'].on("open", function(fd) {
+console.log("Websocket open fd = " + fd);
+	  });
+
+      Module['websocket'].on("connection", function(fd) {
+console.log("Websocket connection fd = " + fd);
+	  });
+
+      Module['websocket'].on("message", function(fd) {
+console.log("Websocket message fd = " + fd);
+	  });
+
+      Module['websocket'].on("close", function(fd) {
+console.log("Websocket close fd = " + fd);
+	  });
+
       return FS.createNode(null, '/', {{{ cDefine('S_IFDIR') }}} | 0777, 0);
     },
     createSocket: function(family, type, protocol) {
@@ -279,7 +320,7 @@ console.log("handleOpen triggering networkCallback");
             Module['networkCallback']();
           }
 
-
+          Module['websocket'].emit('open', 10);
 
         };
 
@@ -317,6 +358,8 @@ console.log("handleMessage triggering networkCallback");
             Module['networkCallback']();
           }
 
+          Module['websocket'].emit('message', 10);
+
 
         };
 
@@ -328,14 +371,23 @@ console.log("handleMessage triggering networkCallback");
             }
             handleMessage((new Uint8Array(data)).buffer);  // copy from node Buffer -> ArrayBuffer
           });
+          peer.socket.on('close', function() {
+            Module['websocket'].emit('close', 10);
+          });
           peer.socket.on('error', function(error) {
-console.log('error ' + error);
+            Module['websocket'].emit('error', error);
             // don't throw
           });
         } else {
           peer.socket.onopen = handleOpen;
+          peer.socket.onclose = function() {
+            Module['websocket'].emit('close', 10);
+          };
           peer.socket.onmessage = function peer_socket_onmessage(event) {
             handleMessage(event.data);
+          };
+          peer.socket.onerror = function(error) {
+            Module['websocket'].emit('error', error);
           };
         }
       },
@@ -504,26 +556,24 @@ console.log('close');
             SOCKFS.websocket_sock_ops.createPeer(sock, ws);
           }
 
-
-
-
-
-
           if (Module['networkCallback']) {
 console.log("On connection triggering networkCallback");
 
             Module['networkCallback']();
           }
 
+          Module['websocket'].emit('connection', 10);
 
 
         });
         sock.server.on('closed', function() {
 console.log('sock.server closed');
+          Module['websocket'].emit('close', 10);
           sock.server = null;
         });
-        sock.server.on('error', function() {
+        sock.server.on('error', function(error) {
 console.log('sock.server error');
+          Module['websocket'].emit('error', error);
           // don't throw
         });
       },

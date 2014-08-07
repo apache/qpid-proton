@@ -19,31 +19,40 @@
  *
  */
 
+// Simple server for use with client.js illustrating request/response
+
 // Check if the environment is Node.js and if so import the required library.
 if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-console.log("drain not implemented yet");
-process.exit(0);
-
 var address = "amqp://~0.0.0.0";
 var message = new proton.Message();
+var reply   = new proton.Message();
 var messenger = new proton.Messenger();
+
+var dispatch = function(request, response) {
+    var subject = request.getSubject();
+    if (subject) {
+        response.setSubject('Re: ' + subject);
+    }
+    response.properties = request.properties
+    console.log("Dispatched " + subject + " " + JSON.stringify(request.properties));
+};
 
 var pumpData = function() {
     while (messenger.incoming()) {
         var t = messenger.get(message);
 
-        console.log("Address: " + message.getAddress());
-        console.log("Subject: " + message.getSubject());
-
-        // body is the body as a native JavaScript Object, useful for most real cases.
-        //console.log("Content: " + message.body);
-
-        // data is the body as a proton.Data Object, used in this case because
-        // format() returns exactly the same representation as recv.c
-        console.log("Content: " + message.data.format());
+        var replyTo = message.getReplyTo();
+        if (replyTo) {
+            console.log(replyTo);
+            reply.setAddress(replyTo);
+            reply.setCorrelationID(message.getCorrelationID());
+            reply.body = message.body;
+            dispatch(message, reply);
+            messenger.put(reply);
+        }
 
         messenger.accept(t);
     }
@@ -52,12 +61,14 @@ var pumpData = function() {
 var args = process.argv.slice(2);
 if (args.length > 0) {
     if (args[0] === '-h' || args[0] === '--help') {
-        console.log("Usage: recv <addr> (default " + address + ").");
+        console.log("Usage: node server.js <addr> (default " + address + ")");
         process.exit(0);
     }
 
     address = args[0];
 }
+
+messenger.setIncomingWindow(1024);
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);
