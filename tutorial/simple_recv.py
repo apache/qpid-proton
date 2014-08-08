@@ -18,28 +18,36 @@
 # under the License.
 #
 
-from proton_utils import ReceiverHandler, Runtime
+from proton_utils import Container, IncomingMessageHandler
 
-class Recv(ReceiverHandler):
-    def __init__(self, host, address):
-        self.conn = Runtime.DEFAULT.connect(host)
-        self.link = self.conn.receiver(address, handler=self)
+class Recv(IncomingMessageHandler):
+    def __init__(self, container, host, address):
+        self.container = container
+        self.conn = container.connect(host, handler=self)
+        self.address = address
 
-    def received(self, receiver, handle, msg):
-        print msg.body
+    def on_message(self, event):
+        print event.message.body
 
-    def closed(self, endpoint, error):
-        if error: print "Closed due to %s" % error
+    def on_connection_remote_open(self, event):
+        self.conn.receiver(self.address)
+
+    def on_link_remote_close(self, event):
+        self.closed(event.link.remote_condition)
+
+    def on_connection_remote_close(self, event):
+        self.closed(event.connection.remote_condition)
+
+    def closed(self, error=None):
+        if error:
+            print "Closed due to %s" % error
         self.conn.close()
 
     def run(self):
-        Runtime.DEFAULT.run()
-
-HOST  = "localhost:5672"
-ADDRESS  = "examples"
+        self.container.run()
 
 try:
-    Recv(HOST, ADDRESS).run()
+    Recv(Container.DEFAULT, "localhost:5672", "examples").run()
 except KeyboardInterrupt: pass
 
 

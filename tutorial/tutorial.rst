@@ -2,66 +2,71 @@
 Hello World!
 ============
 
-Let's start, in time honoured tradition, with hello world!:
+Tradition dictates that we start with hello world! However rather than
+simply striving for the shortest program possible, we'll aim for a
+more illustrative example while still restricting the functionality to
+simply sending and receiving a single message.
 
 .. literalinclude:: helloworld.py
    :lines: 21-
    :linenos:
 
-You can see the import of ``Runtime`` from ``proton_utils`` on the
+You can see the import of ``Container`` from ``proton_utils`` on the
 second line. This is a helper class that makes programming with proton
-a little easier for the common cases.
+a little easier for the common cases. It includes within it an event
+loop, and programs written using this utility are generally structured
+to react to various events. This reactive style is particularly suited
+to messaging applications.
 
-We use the ``Runtime`` on line 12. Specifically we use a special
-default instance of it. We'll see some examples using other instances
-later. Line 12 uses the runtime to make a connection to the desired
-host and port via the ``connect()`` call. This call returns a
-``MessagingContext`` object through which we can create objects for
-sending and receiving messages to the process it is connected to.
+To be notified of a particular event, you define a class with the
+appropriately name method on it. That method is then called by the
+container when the event occurs.
 
-On line 13 we create a receiver through which to receiver messages
-from the specified address. We specify a ``handler`` parameter, with
-an instance of our ``HelloWorld`` class as it's value. The ``handler``
-parameter provides a way of being notified of important events related
-to the receiver being created. The event we care about most is the
-receiving of a message. To be notified of that we define a
-``received`` method on our handler which will be called whenever a
-message for that receiver arrives.  As well as the received message,
-this method also gets passed the receiver over which the message
-arrived and a ``delivery`` handle associated with it, which we can
-ignore for now.  In our example we simply print the body of the
-message, then close the connection of the receiver it arrived on.
+The first class we define, ``HelloWorldReceiver``, handles the event
+where a message is received and so implements a ``on_message()``
+method. Within that we simply print the body of the message (line 6)
+and then close the connection (line 7).
 
-Now we are all ready to receive and print our message. All we need to
-do is send one! To do so we use the ``MessagingContext`` object to
-create a sender for the same address we used when creating the
-receiver, and then we send a message over it.
+The second class, ``HelloWorldSender``, handles the event where the
+flow of messages is enabled over our sending link by implementing a
+``on_link_flow()`` method and sending the message within that. Doing
+this ensures that we only send when the recipient is ready and able to
+receive the message. This is particularly important when the volume of
+messages might be large. In our case we are just going to send one
+message, which we do on line 11, so we can then just close the sending
+link on line 12.
 
-Finally we allow the runtime to process these instructions and handle
-all the necessary IO by calling ``run()`` on it in line 15.
+The ``HelloWorld`` class ties everything together. It's constructor
+takes the instance of the container to use, a url to connect to, and
+an address through which the message will be sent. To run the example
+you will need to have a broker (or similar) accepting connections on
+that url either with a queue (or topic) matching the given address or
+else configured to create such a queue (or topic) dynamically.
 
-To run this example as it is, you need to have an AMQP broker running
-locally on port 5672, with a queue (or topic) named ``examples``, or
-configured to create that dynamically. The broker must also allow
-unauthenticated connections.
+On line 17 we request that a connection be made to the process this
+url refers to by calling ``connect()`` on the ``Container``. This call
+returns a ``MessagingContext`` object through which we can create
+objects for sending and receiving messages to the process it is
+connected to. However we will delay doing that until our connection is
+fully established, i.e. until the remote peer 'opens' the connection
+(the open here is the 'handshake' for establishing an operational AMQP
+connection).
 
-In fact, if your broker doesn't have the requisite queue, the example
-just hangs. Let's modify the example to handle that a little more
-gracefully.
+To be notified of this we pass a reference to self as the handler in
+``connect()`` and define an ``on_connection_remote_open()`` method
+within which we can create our receiver and sender using the
+connection context we obtained from the earlier ``connect()`` call,
+and passing the handler implementations defined by
+``HelloWorldReceiver`` and ``HelloWorldSender`` respectively.
 
-.. literalinclude:: helloworld_2.py
-   :lines: 21-
-   :emphasize-lines: 12-15
-   :linenos:
+We'll add definitions to ``HelloWorld`` of ``on_link_remote_close()``
+and ``on_connection_remote_close()`` also, so that we can be notified
+if the broker we are connected to closes either link or the connection
+for any reason.
 
-All we have added is a new method to our receiver's handler. This
-method is called ``closed()`` and it is called whenever the remote
-process closes our receiver. We'll print any error if specified and
-then close the connection. If you now run it against a broker that
-doesn't have (and will not automatically create) a queue named
-``examples`` then it should exit with a more informative error
-message. This demonstrates a key concept in using proton, namely that
-you often structure your logic to react to particular events.
+Finally we actually enter the event loop the container to handle all
+the necessary IO and make all the necessary event callbacks, by
+calling ``run()`` on it.
 
 ====================
 Hello World, Direct!
@@ -73,52 +78,36 @@ directly if desired.
 
 Let's modify our example to demonstrate this.
 
-.. literalinclude:: helloworld_3.py
+.. literalinclude:: helloworld_direct.py
    :lines: 21-
-   :emphasize-lines: 12-14
+   :emphasize-lines: 17,33,38
    :linenos:
 
-The first difference, on line 12, is that we create our own
-``Runtime`` instance rather than just using the default instance. We
-pass in some handler objects. The first of these is our ``HelloWorld``
-handler as used in the original example. We pass it to the runtime,
-because we aren't going to directly create the receiver here
-ourselves. Rather we will accept an incoming connection on which the
-message will be received. As well as our own handler, we specify a
-couple of useful handlers from the ``proton_utils`` toolkit. The
-``Handshaker`` handler will ensure our server follows the basic
-handshaking rules laid down by the protocol. The ``FlowController``
-will issue credit for incoming messages. We won't worry about them in
-more detail than that for now.
+The first difference, on line 17, is that rather than creating a
+receiver on the same connection as our sender, we listen for incoming
+connections by invoking the ``listen() method on the ``Container``
+instance.
 
-On line 13 we then invoke ``listen()`` on our runtime. This starts a
-server socket listening for incoming connections on the specified
-interface and port. Then on line 14 we use ``connect`` as before on
-our runtime instance to establish an outgoing connection back to
-ourselves. As before we create a sender on this connection and send
-our message over it. So now we have our example working without a
-broker involved!
+Another difference is that the ``Container`` instance we use is not
+the default instance as was used in the original example, but one we
+construct ourselves on line 38, passing in some event handlers. The
+first of these is ``HelloWorldReceiver``, as used in the original
+example. We pass it to the container, because we aren't going to
+directly create the receiver here ourselves. Rather we will accept an
+incoming connection on which the message will be received. This
+handler would then be notified of any incoming message event on any of
+the connections the container controls. As well as our own handler, we
+specify a couple of useful handlers from the ``proton_utils``
+toolkit. The ``Handshaker`` handler will ensure our server follows the
+basic handshaking rules laid down by the protocol. The
+``FlowController`` will issue credit for incoming messages. We won't
+worry about them in more detail than that for now.
 
-However, the example doesn't exit after the message is printed. This
-is because we are still listenting for incoming connections; the
-runtime is still running. Let's now change it to shutdown cleanly when
-done.
+The last difference is that we close the ``acceptor`` returned from
+the ``listen()`` call as part of the handling of the connection close
+event (line 33).
 
-.. literalinclude:: helloworld_4.py
-   :lines: 21-
-   :emphasize-lines: 12-17,20,21
-   :linenos:
-
-On line 21 we pass a handler to the ``connect()`` call on our
-runtime. This is similar to what we did when creating a receiver in
-the original example. Here however the handler is scoped to the
-connection. We are interested in reacting to the closing of the
-connection by the remote peer by closing the server socket we have
-listening for incoming connections. The call to ``listen()`` returns
-an object we can ``close()`` to accomplish this, so we modify line 20
-to create an object to use as our connection scoped handler, passing
-in this reference to the incoming socket acceptor. Now the ``run()``
-call returns when we are finished and the example exits cleanly.
+So now we have our example working without a broker involved!
 
 ==========
 The Basics

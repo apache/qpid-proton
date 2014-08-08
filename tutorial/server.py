@@ -19,33 +19,31 @@
 #
 
 from proton import Message
-from proton_utils import ReceiverHandler, Runtime
+from proton_utils import Container, IncomingMessageHandler
 
-class Server(ReceiverHandler):
-    def __init__(self, host, address):
-        self.conn = Runtime.DEFAULT.connect(host)
+class Server(IncomingMessageHandler):
+    def __init__(self, container, host, address):
+        self.container = container
+        self.conn = container.connect(host)
         self.receiver = self.conn.receiver(address, handler=self)
         self.senders = {}
 
-    def received(self, receiver, handle, msg):
-        sender = self.senders.get(msg.reply_to)
+    def on_message(self, event):
+        sender = self.senders.get(event.message.reply_to)
         if not sender:
-            sender = self.conn.sender(msg.reply_to)
-            self.senders[msg.reply_to] = sender
-        sender.send_msg(Message(body=msg.body.upper()))
+            sender = self.conn.sender(event.message.reply_to)
+            self.senders[event.message.reply_to] = sender
+        sender.send_msg(Message(body=event.message.body.upper()))
 
-    def closed(self, endpoint, error):
+    def on_connection_remote_close(self, endpoint, error):
         if error: print "Closed due to %s" % error
         self.conn.close()
 
     def run(self):
-        Runtime.DEFAULT.run()
-
-HOST  = "localhost:5672"
-ADDRESS  = "examples"
+        self.container.run()
 
 try:
-    Server(HOST, ADDRESS).run()
+    Server(Container.DEFAULT, "localhost:5672", "examples").run()
 except KeyboardInterrupt: pass
 
 

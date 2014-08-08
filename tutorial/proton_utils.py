@@ -24,30 +24,30 @@ from select import select
 class EventDispatcher(object):
 
     methods = {
-        Event.CONNECTION_INIT: "connection_init",
-        Event.CONNECTION_OPEN: "connection_open",
-        Event.CONNECTION_REMOTE_OPEN: "connection_remote_open",
-        Event.CONNECTION_CLOSE: "connection_close",
-        Event.CONNECTION_REMOTE_CLOSE: "connection_remote_close",
-        Event.CONNECTION_FINAL: "connection_final",
+        Event.CONNECTION_INIT: "on_connection_init",
+        Event.CONNECTION_OPEN: "on_connection_open",
+        Event.CONNECTION_REMOTE_OPEN: "on_connection_remote_open",
+        Event.CONNECTION_CLOSE: "on_connection_close",
+        Event.CONNECTION_REMOTE_CLOSE: "on_connection_remote_close",
+        Event.CONNECTION_FINAL: "on_connection_final",
 
-        Event.SESSION_INIT: "session_init",
-        Event.SESSION_OPEN: "session_open",
-        Event.SESSION_REMOTE_OPEN: "session_remote_open",
-        Event.SESSION_CLOSE: "session_close",
-        Event.SESSION_REMOTE_CLOSE: "session_remote_close",
-        Event.SESSION_FINAL: "session_final",
+        Event.SESSION_INIT: "on_session_init",
+        Event.SESSION_OPEN: "on_session_open",
+        Event.SESSION_REMOTE_OPEN: "on_session_remote_open",
+        Event.SESSION_CLOSE: "on_session_close",
+        Event.SESSION_REMOTE_CLOSE: "on_session_remote_close",
+        Event.SESSION_FINAL: "on_session_final",
 
-        Event.LINK_INIT: "link_init",
-        Event.LINK_OPEN: "link_open",
-        Event.LINK_REMOTE_OPEN: "link_remote_open",
-        Event.LINK_CLOSE: "link_close",
-        Event.LINK_REMOTE_CLOSE: "link_remote_close",
-        Event.LINK_FLOW: "link_flow",
-        Event.LINK_FINAL: "link_final",
+        Event.LINK_INIT: "on_link_init",
+        Event.LINK_OPEN: "on_link_open",
+        Event.LINK_REMOTE_OPEN: "on_link_remote_open",
+        Event.LINK_CLOSE: "on_link_close",
+        Event.LINK_REMOTE_CLOSE: "on_link_remote_close",
+        Event.LINK_FLOW: "on_link_flow",
+        Event.LINK_FINAL: "on_link_final",
 
-        Event.TRANSPORT: "transport",
-        Event.DELIVERY: "delivery"
+        Event.TRANSPORT: "on_transport",
+        Event.DELIVERY: "on_delivery"
     }
 
     def dispatch(self, event):
@@ -69,6 +69,7 @@ class Selectable(object):
         self.read_done = False
 
     def accept(self):
+        #TODO: use SASL if requested by peer
         #sasl = self.transport.sasl()
         #sasl.mechanisms("ANONYMOUS")
         #sasl.server()
@@ -159,8 +160,8 @@ class Selectable(object):
         if not self._closed_cleanly(): self.disconnected()
 
     def disconnected(self):
-        if hasattr(self.conn, "context") and hasattr(self.conn.context, "disconnected"):
-            self.conn.context.disconnected(self.conn)
+        if hasattr(self.conn, "context") and hasattr(self.conn.context, "on_disconnected"):
+            self.conn.context.on_disconnected(self.conn)
         else:
             print "connection %s disconnected" % self.conn
 
@@ -198,7 +199,6 @@ class Acceptor:
 
     def readable(self):
         sock, addr = self.socket.accept()
-        print "Incoming Connection:", addr
         if sock:
             self.selectables.append(Selectable(self.events.connection(), sock).accept())
 
@@ -270,34 +270,34 @@ class SelectLoop(object):
 
 class Handshaker(EventDispatcher):
 
-    def connection_remote_open(self, event):
+    def on_connection_remote_open(self, event):
         conn = event.connection
         if conn.state & Endpoint.LOCAL_UNINIT:
             conn.open()
 
-    def session_remote_open(self, event):
+    def on_session_remote_open(self, event):
         ssn = event.session
         if ssn.state & Endpoint.LOCAL_UNINIT:
             ssn.open()
 
-    def link_remote_open(self, event):
+    def on_link_remote_open(self, event):
         link = event.link
         if link.state & Endpoint.LOCAL_UNINIT:
             link.source.copy(link.remote_source)
             link.target.copy(link.remote_target)
             link.open()
 
-    def connection_remote_close(self, event):
+    def on_connection_remote_close(self, event):
         conn = event.connection
         if not (conn.state & Endpoint.LOCAL_CLOSED):
             conn.close()
 
-    def session_remote_close(self, event):
+    def on_session_remote_close(self, event):
         ssn = event.session
         if not (ssn.state & Endpoint.LOCAL_CLOSED):
             ssn.close()
 
-    def link_remote_close(self, event):
+    def on_link_remote_close(self, event):
         link = event.link
         if not (link.state & Endpoint.LOCAL_CLOSED):
             link.close()
@@ -311,29 +311,29 @@ class FlowController(EventDispatcher):
         delta = self.window - link.credit
         link.flow(delta)
 
-    def link_open(self, event):
+    def on_link_open(self, event):
         if event.link.is_receiver:
             self.top_up(event.link)
 
-    def link_remote_open(self, event):
+    def on_link_remote_open(self, event):
         if event.link.is_receiver:
             self.top_up(event.link)
 
-    def link_flow(self, event):
+    def on_link_flow(self, event):
         if event.link.is_receiver:
             self.top_up(event.link)
 
-    def delivery(self, event):
+    def on_delivery(self, event):
         if event.delivery.link.is_receiver:
             self.top_up(event.delivery.link)
 
 class ScopedDispatcher(EventDispatcher):
 
-    targets = {
-        Event.CATEGORY_CONNECTION: "connection_context",
-        Event.CATEGORY_SESSION: "session_context",
-        Event.CATEGORY_LINK: "link_context",
-        Event.CATEGORY_DELIVERY: "delivery_context"
+    scopes = {
+        Event.CATEGORY_CONNECTION: ["connection"],
+        Event.CATEGORY_SESSION: ["session", "connection"],
+        Event.CATEGORY_LINK: ["link", "session", "connection"],
+        Event.CATEGORY_DELIVERY: ["delivery", "link", "session", "connection"]
     }
 
     def connection_context(self, event):
@@ -371,56 +371,36 @@ class ScopedDispatcher(EventDispatcher):
             return None
 
     def dispatch(self, event):
-        target = self.target_context(event)
-        if target:
-            getattr(target, self.methods[event.type], self.unhandled)(event)
+        method = self.methods[event.type]
+        objects = [getattr(event, attr) for attr in self.scopes.get(event.category, [])]
+        targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
+        handlers = [getattr(t, method) for t in targets if hasattr(t, method)]
+        for h in handlers:
+            h(event)
 
-class ConnectionHandler(EventDispatcher):
-    def __init__(self):
-        super(ConnectionHandler, self).__init__()
-
-    def connection_remote_open(self, event):
-        self.opened(event.connection)
-
-    def connection_remote_close(self, event):
-        self.closed(event.connection, event.connection.remote_condition)
-
-    def opened(self, conn): pass
-    def closed(self, conn, condition): pass
-    def disconnected(self, conn): pass
-
-class SenderHandler(EventDispatcher):
-    def link_remote_open(self, event):
-        self.opened(event.link)
-
-    def link_remote_close(self, event):
-        self.closed(event.link, event.link.remote_condition)
-
-    def delivery(self, event):
+class OutgoingMessageHandler(EventDispatcher):
+    def on_delivery(self, event):
         dlv = event.delivery
         link = dlv.link
         if dlv.updated:
             if dlv.remote_state == Delivery.ACCEPTED:
-                self.accepted(dlv.link, dlv)
+                self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
-                self.accepted(dlv.link, dlv)
+                self.on_rejected(event)
             elif dlv.remote_state == Delivery.RELEASED:
-                self.accepted(dlv.link, dlv)
+                self.on_released(event)
             elif dlv.remote_state == Delivery.MODIFIED:
-                self.accepted(dlv.link, dlv)
+                self.on_modified(event)
             if dlv.settled:
-                self.settled(dlv.link, dlv)
-            if self.auto_settle():
+                self.on_settled(event)
+            if self.auto_settle() and not dlv.settled:
                 dlv.settle()
 
-    def opened(self, sender): pass
-    def closed(self, sender, condition): pass
-    def link_flow(self, event): pass
-    def accepted(self, sender, delivery): pass
-    def rejected(self, sender, delivery): pass
-    def released(self, sender, delivery): pass
-    def modified(self, sender, delivery): pass
-    def settled(self, sender, delivery): pass
+    def on_accepted(self, event): pass
+    def on_rejected(self, event): pass
+    def on_released(self, event): pass
+    def on_modified(self, event): pass
+    def on_settled(self, event): pass
     def auto_settle(self): return True
 
 def recv_msg(delivery):
@@ -435,24 +415,14 @@ class Reject(ProtonException):
   """
   pass
 
-class ReceiverHandler(EventDispatcher):
-    def link_remote_open(self, event):
-        self.opened(event.link)
-
-    def link_remote_close(self, event):
-        self.closed(event.link, event.link.remote_condition)
-
-    def link_flow(self, event):
-        if event.link.is_receiver and not event.link.draining():
-            self.drained(event.link)
-
-    def delivery(self, event):
+class IncomingMessageHandler(EventDispatcher):
+    def on_delivery(self, event):
         dlv = event.delivery
         link = dlv.link
         if dlv.readable and not dlv.partial:
-            msg = recv_msg(dlv)
+            event.message = recv_msg(dlv)
             try:
-                self.received(dlv.link, dlv, msg)
+                self.on_message(event)
                 if self.auto_accept():
                     dlv.update(Delivery.ACCEPTED)
                     dlv.settle()
@@ -460,7 +430,7 @@ class ReceiverHandler(EventDispatcher):
                 dlv.update(Delivery.REJECTED)
                 dlv.settle()
         elif dlv.updated and dlv.settled:
-            self.settled(dlv.link, dlv)
+            self.on_settled(event)
 
     def accept(self, delivery):
         self.settle(delivery, Delivery.ACCEPTED)
@@ -468,7 +438,7 @@ class ReceiverHandler(EventDispatcher):
     def reject(self, delivery):
         self.settle(delivery, Delivery.REJECTED)
 
-    def release(self, delivery, delivered=False):
+    def release(self, delivery, delivered=True):
         if delivered:
             self.settle(delivery, Delivery.MODIFIED)
         else:
@@ -479,11 +449,8 @@ class ReceiverHandler(EventDispatcher):
             delivery.update(state)
         delivery.settle()
 
-    def opened(self, receiver): pass
-    def closed(self, receiver, condition): pass
-    def drained(self, receiver): pass
-    def received(self, receiver, delivery, message): pass
-    def settled(self, receiver, delivery): pass
+    def on_message(self, event): pass
+    def on_settled(self, event): pass
     def auto_accept(self): return True
 
 def delivery_tags():
@@ -556,12 +523,12 @@ class MessagingContext(object):
         ssn.open()
         return ssn
 
-    def session_remote_close(self, event):
+    def on_session_remote_close(self, event):
         if self.conn:
             self.conn.close()
 
 
-class Runtime(object):
+class Container(object):
     def __init__(self, *handlers):
         self.loop = SelectLoop(Events(ScopedDispatcher(), *handlers))
 
@@ -583,5 +550,5 @@ class Runtime(object):
     def run(self):
         self.loop.run()
 
-Runtime.DEFAULT = Runtime(FlowController(10))
+Container.DEFAULT = Container(FlowController(10))
 

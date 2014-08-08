@@ -19,11 +19,12 @@
 #
 
 from proton import Message
-from proton_utils import ReceiverHandler, Runtime
+from proton_utils import Container, IncomingMessageHandler
 
-class Client(ReceiverHandler):
-    def __init__(self, host, address, requests):
-        self.conn = Runtime.DEFAULT.connect(host)
+class Client(IncomingMessageHandler):
+    def __init__(self, container, host, address, requests):
+        self.container = container
+        self.conn = container.connect(host)
         self.sender = self.conn.sender(address)
         self.receiver = self.conn.receiver(None, dynamic=True, handler=self)
         self.requests = requests
@@ -32,25 +33,23 @@ class Client(ReceiverHandler):
         req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
         self.sender.send_msg(req)
 
-    def opened(self, receiver):
+    def on_link_remote_open(self, event):
         self.next_request()
 
-    def received(self, receiver, handle, msg):
-        print "%s => %s" % (self.requests.pop(0), msg.body)
+    def on_message(self, event):
+        print "%s => %s" % (self.requests.pop(0), event.message.body)
         if self.requests:
             self.next_request()
         else:
             self.conn.close()
 
     def run(self):
-        Runtime.DEFAULT.run()
+        self.container.run()
 
-HOST  = "localhost:5672"
-ADDRESS  = "examples"
 REQUESTS= ["Twas brillig, and the slithy toves",
            "Did gire and gymble in the wabe.",
            "All mimsy were the borogroves,",
            "And the mome raths outgrabe."]
 
-Client(HOST, ADDRESS, REQUESTS).run()
+Client(Container.DEFAULT, "localhost:5672", "examples", REQUESTS).run()
 

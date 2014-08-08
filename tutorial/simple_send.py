@@ -19,18 +19,18 @@
 #
 
 from proton import Message
-from proton_utils import SenderHandler, Runtime
+from proton_utils import OutgoingMessageHandler, Container
 
-class Send(ConnectionHandler, SenderHandler):
-    def __init__(self, host, address, messages):
-        self.conn = Runtime.DEFAULT.connect(host)
-        self.sender = self.conn.sender(address, handler=self)
+class Send(OutgoingMessageHandler):
+    def __init__(self, container, host, address, messages):
+        self.container = container
+        self.conn = container.connect(host, handler=self)
         self.sent = 0
         self.confirmed = 0
         self.total = messages
-        self.sender.offered(messages)
+        self.address = address
 
-    def link_flow(self, event):
+    def on_link_flow(self, event):
         for i in range(self.sender.credit):
             if self.sent == self.total:
                 self.sender.drained()
@@ -39,7 +39,7 @@ class Send(ConnectionHandler, SenderHandler):
             self.sender.send_msg(msg, handler=self)
             self.sent += 1
 
-    def accepted(self, sender, delivery):
+    def on_accepted(self, event):
         """
         Stop the application once all of the messages are sent and acknowledged,
         """
@@ -48,17 +48,23 @@ class Send(ConnectionHandler, SenderHandler):
             self.sender.close()
             self.conn.close()
 
-    def closed(self, endpoint, error):
+    def on_connection_remote_open(self, event):
+        self.sender = self.conn.sender(self.address)
+        self.sender.offered(self.total)
+
+    def on_link_remote_close(self, event):
+        self.closed(event.link.remote_condition)
+
+    def on_connection_remote_close(self, event):
+        self.closed(event.connection.remote_condition)
+
+    def closed(self, error=None):
         if error:
             print "Closed due to %s" % error
         self.conn.close()
 
     def run(self):
-        Runtime.DEFAULT.run()
+        self.container.run()
 
-HOST  = "localhost:5672"
-ADDRESS  = "examples"
-COUNT = 1000
-
-Send(HOST, ADDRESS, COUNT).run()
+Send(Container.DEFAULT, "localhost:5672", "examples", 1000).run()
 

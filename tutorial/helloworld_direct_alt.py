@@ -18,23 +18,27 @@
 # under the License.
 #
 
-from proton_utils import IncomingMessageHandler, Container
+from proton import Message
+from proton_utils import Container, FlowController, Handshaker, IncomingMessageHandler
 
-class Recv(IncomingMessageHandler):
-    def __init__(self, container, host, address):
-        self.container = container
-        self.host = host
-        self.address = address
-        self.connect()
-
-    def connect(self):
-        self.conn = self.container.connect(self.host, handler=self)
-
+class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
         print event.message.body
+        event.connection.close()
+
+class HelloWorld(object):
+    def __init__(self, container, url, address):
+        self.container = container
+        self.acceptor = container.listen(url)
+        self.conn = container.connect(url, handler=self)
+        self.address = address
 
     def on_connection_remote_open(self, event):
-        self.conn.receiver(self.address)
+        self.conn.sender(self.address)
+
+    def on_link_flow(self, event):
+        event.link.send_msg(Message(body=u"Hello World!"))
+        event.link.close()
 
     def on_link_remote_close(self, event):
         self.closed(event.link.remote_condition)
@@ -46,17 +50,10 @@ class Recv(IncomingMessageHandler):
         if error:
             print "Closed due to %s" % error
         self.conn.close()
-
-    def on_disconnected(self, conn):
-        print "Disconnected, reconnecting..."
-        self.connect()
+        self.acceptor.close()
 
     def run(self):
         self.container.run()
 
-try:
-    Recv(Container.DEFAULT, "localhost:5672", "examples").run()
-except KeyboardInterrupt: pass
-
-
-
+container = Container(HelloWorldReceiver(), Handshaker(), FlowController(1))
+HelloWorld(container, "localhost:8888", "examples").run()
