@@ -75,9 +75,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 
-  disp->input = pn_buffer(1024);
-  disp->fragment = 0;
-
   disp->channel = 0;
   disp->args = pn_data(16);
   disp->payload = NULL;
@@ -101,7 +98,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 void pn_dispatcher_free(pn_dispatcher_t *disp)
 {
   if (disp) {
-    pn_buffer_free(disp->input);
     pn_data_free(disp->args);
     pn_data_free(disp->output_args);
     pn_buffer_free(disp->frame);
