@@ -1736,20 +1736,18 @@ static ssize_t transport_produce(pn_transport_t *transport)
   pn_io_layer_t *io_layer = transport->io_layers;
   ssize_t space = transport->output_size - transport->output_pending;
 
-  if (space == 0) {     // can we expand the buffer?
+  if (space <= 0) {     // can we expand the buffer?
     int more = 0;
     if (!transport->remote_max_frame)   // no limit, so double it
       more = transport->output_size;
     else if (transport->remote_max_frame > transport->output_size)
-      more = transport->remote_max_frame - transport->output_size;
+      more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
     if (more) {
-      char *newbuf = (char *)malloc( transport->output_size + more );
+      char *newbuf = (char *)realloc( transport->output_buf, transport->output_size + more );
       if (newbuf) {
-        memmove( newbuf, transport->output_buf, transport->output_pending );
-        free( transport->output_buf );
         transport->output_buf = newbuf;
         transport->output_size += more;
-        space = more;
+        space += more;
       }
     }
   }
@@ -1951,22 +1949,20 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
 
   ssize_t capacity = transport->input_size - transport->input_pending;
-  if (!capacity) {
+  if ( capacity<=0 ) {
     // can we expand the size of the input buffer?
     int more = 0;
     if (!transport->local_max_frame) {  // no limit (ha!)
       more = transport->input_size;
     } else if (transport->local_max_frame > transport->input_size) {
-      more = transport->local_max_frame - transport->input_size;
+      more = pn_min(transport->input_size, transport->local_max_frame - transport->input_size);
     }
     if (more) {
-      char *newbuf = (char *) malloc( transport->input_size + more );
+      char *newbuf = (char *) realloc( transport->input_buf, transport->input_size + more );
       if (newbuf) {
-        memmove( newbuf, transport->input_buf, transport->input_pending );
-        free( transport->input_buf );
         transport->input_buf = newbuf;
         transport->input_size += more;
-        capacity = more;
+        capacity += more;
       }
     }
   }
