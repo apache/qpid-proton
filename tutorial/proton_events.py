@@ -16,9 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import os, random, types
-from proton import *
-import socket
+import os, socket, types
+from proton import Collector, Connection, Delivery, Endpoint, Event
+from proton import Message, ProtonException, Transport, TransportException
 from select import select
 
 class EventDispatcher(object):
@@ -528,9 +528,12 @@ class MessagingContext(object):
             self.conn.close()
 
 
-class Container(object):
+class EventLoop(object):
     def __init__(self, *handlers):
-        self.loop = SelectLoop(Events(ScopedDispatcher(), *handlers))
+        l = [ScopedDispatcher()]
+        if handlers: l += handlers
+        else: l.append(FlowController(10))
+        self.loop = SelectLoop(Events(*l))
 
     def connect(self, url, name=None, handler=None):
         identifier = name or url
@@ -549,6 +552,4 @@ class Container(object):
 
     def run(self):
         self.loop.run()
-
-Container.DEFAULT = Container(FlowController(10))
 

@@ -19,12 +19,12 @@
 #
 
 from proton import Message
-from proton_utils import Container, IncomingMessageHandler
+from proton_events import EventLoop, IncomingMessageHandler
 
 class Client(IncomingMessageHandler):
-    def __init__(self, container, host, address, requests):
-        self.container = container
-        self.conn = container.connect(host)
+    def __init__(self, eventloop, host, address, requests):
+        self.eventloop = eventloop
+        self.conn = eventloop.connect(host)
         self.sender = self.conn.sender(address)
         self.receiver = self.conn.receiver(None, dynamic=True, handler=self)
         self.requests = requests
@@ -44,12 +44,12 @@ class Client(IncomingMessageHandler):
             self.conn.close()
 
     def run(self):
-        self.container.run()
+        self.eventloop.run()
 
 REQUESTS= ["Twas brillig, and the slithy toves",
            "Did gire and gymble in the wabe.",
            "All mimsy were the borogroves,",
            "And the mome raths outgrabe."]
 
-Client(Container.DEFAULT, "localhost:5672", "examples", REQUESTS).run()
+Client(EventLoop(), "localhost:5672", "examples", REQUESTS).run()
 

@@ -19,12 +19,12 @@
 #
 
 from proton import Message
-from proton_utils import OutgoingMessageHandler, Container
+from proton_events import OutgoingMessageHandler, EventLoop
 
 class Send(OutgoingMessageHandler):
-    def __init__(self, container, host, address, messages):
-        self.container = container
-        self.conn = container.connect(host, handler=self)
+    def __init__(self, eventloop, host, address, messages):
+        self.eventloop = eventloop
+        self.conn = eventloop.connect(host, handler=self)
         self.sent = 0
         self.confirmed = 0
         self.total = messages
@@ -64,7 +64,7 @@ class Send(OutgoingMessageHandler):
         self.conn.close()
 
     def run(self):
-        self.container.run()
+        self.eventloop.run()
 
-Send(Container.DEFAULT, "localhost:5672", "examples", 1000).run()
+Send(EventLoop(), "localhost:5672", "examples", 1000).run()
 

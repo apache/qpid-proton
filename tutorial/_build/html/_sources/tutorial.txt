@@ -5,13 +5,13 @@ Hello World!
 Tradition dictates that we start with hello world! However rather than
 simply striving for the shortest program possible, we'll aim for a
 more illustrative example while still restricting the functionality to
-simply sending and receiving a single message.
+sending and receiving a single message.
 
 .. literalinclude:: helloworld.py
    :lines: 21-
    :linenos:
 
-You can see the import of ``Container`` from ``proton_utils`` on the
+You can see the import of ``EventLoop`` from ``proton_events`` on the
 second line. This is a helper class that makes programming with proton
 a little easier for the common cases. It includes within it an event
 loop, and programs written using this utility are generally structured
@@ -20,7 +20,7 @@ to messaging applications.
 
 To be notified of a particular event, you define a class with the
 appropriately name method on it. That method is then called by the
-container when the event occurs.
+event loop when the event occurs.
 
 The first class we define, ``HelloWorldReceiver``, handles the event
 where a message is received and so implements a ``on_message()``
@@ -37,14 +37,14 @@ message, which we do on line 11, so we can then just close the sending
 link on line 12.
 
 The ``HelloWorld`` class ties everything together. It's constructor
-takes the instance of the container to use, a url to connect to, and
+takes the instance of the event loop to use, a url to connect to, and
 an address through which the message will be sent. To run the example
 you will need to have a broker (or similar) accepting connections on
 that url either with a queue (or topic) matching the given address or
 else configured to create such a queue (or topic) dynamically.
 
 On line 17 we request that a connection be made to the process this
-url refers to by calling ``connect()`` on the ``Container``. This call
+url refers to by calling ``connect()`` on the ``EventLoop``. This call
 returns a ``MessagingContext`` object through which we can create
 objects for sending and receiving messages to the process it is
 connected to. However we will delay doing that until our connection is
@@ -64,9 +64,9 @@ and ``on_connection_remote_close()`` also, so that we can be notified
 if the broker we are connected to closes either link or the connection
 for any reason.
 
-Finally we actually enter the event loop the container to handle all
-the necessary IO and make all the necessary event callbacks, by
-calling ``run()`` on it.
+Finally we actually enter the event loop, to handle all the necessary
+IO and make all the necessary event callbacks, by calling ``run()`` on
+it.
 
 ====================
 Hello World, Direct!
@@ -85,19 +85,19 @@ Let's modify our example to demonstrate this.
 
 The first difference, on line 17, is that rather than creating a
 receiver on the same connection as our sender, we listen for incoming
-connections by invoking the ``listen() method on the ``Container``
+connections by invoking the ``listen() method on the ``EventLoop``
 instance.
 
-Another difference is that the ``Container`` instance we use is not
+Another difference is that the ``EventLoop`` instance we use is not
 the default instance as was used in the original example, but one we
 construct ourselves on line 38, passing in some event handlers. The
 first of these is ``HelloWorldReceiver``, as used in the original
-example. We pass it to the container, because we aren't going to
+example. We pass it to the event loop, because we aren't going to
 directly create the receiver here ourselves. Rather we will accept an
 incoming connection on which the message will be received. This
 handler would then be notified of any incoming message event on any of
-the connections the container controls. As well as our own handler, we
-specify a couple of useful handlers from the ``proton_utils``
+the connections the event loop controls. As well as our own handler, we
+specify a couple of useful handlers from the ``proton_events``
 toolkit. The ``Handshaker`` handler will ensure our server follows the
 basic handshaking rules laid down by the protocol. The
 ``FlowController`` will issue credit for incoming messages. We won't
@@ -124,14 +124,14 @@ requirements mentioned for the first hello world example).
 
 Often we want to be notified whether the messages we send arrive at
 their intended destination. We can do that by specifying a handler for
-the sender we create with an ``accepted()`` method defined on it. This
+the sender we create with an ``on_message()`` method defined on it. This
 will be called whenever a message sent by the sender is accepted by
 the remote peer.
 
 When sending a large number of messages, we need to consider whether
 the remote peer is able to handle them all. AMQP has a powerful flow
 control mechanism through which processes can limit the incoming flow
-of messages. If we implement a ``link_flow()`` method on our sender's
+of messages. If we implement a ``on_link_flow()`` method on our sender's
 handler, this will be called whenever the sender is allowed to send
 and will prevent messages building up due to the receivers inability
 to process them.
@@ -192,8 +192,8 @@ receive our responses.
 
 We need to use the address allocated by the broker as the reply_to
 address of our requests. To be notified when the broker has sent us
-back the address to use, we add an ``opened()`` method to our
-receiver's handler, and use that as the trigger to send our first
+back the address to use, we add an ``on_link_remote_open()`` method to
+our receiver's handler, and use that as the trigger to send our first
 request.
 
 

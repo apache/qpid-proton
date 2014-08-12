@@ -19,12 +19,12 @@
 #
 
 from proton import Message
-from proton_utils import Container, IncomingMessageHandler
+from proton_events import EventLoop, IncomingMessageHandler
 
 class Server(IncomingMessageHandler):
-    def __init__(self, container, host, address):
-        self.container = container
-        self.conn = container.connect(host)
+    def __init__(self, eventloop, host, address):
+        self.eventloop = eventloop
+        self.conn = eventloop.connect(host)
         self.receiver = self.conn.receiver(address, handler=self)
         self.senders = {}
 
@@ -40,10 +40,10 @@ class Server(IncomingMessageHandler):
         self.conn.close()
 
     def run(self):
-        self.container.run()
+        self.eventloop.run()
 
 try:
-    Server(Container.DEFAULT, "localhost:5672", "examples").run()
+    Server(EventLoop(), "localhost:5672", "examples").run()
 except KeyboardInterrupt: pass
 
 

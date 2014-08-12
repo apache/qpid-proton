@@ -52,7 +52,7 @@
 <p>Tradition dictates that we start with hello world! However rather than
 simply striving for the shortest program possible, we&#8217;ll aim for a
 more illustrative example while still restricting the functionality to
-simply sending and receiving a single message.</p>
+sending and receiving a single message.</p>
 <div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
  2
  3
@@ -91,7 +91,7 @@ simply sending and receiving a single message.</p>
 36
 37
 38</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">HelloWorldReceiver</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -104,9 +104,9 @@ simply sending and receiving a single message.</p>
         <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
 <span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
 
     <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -125,12 +125,12 @@ simply sending and receiving a single message.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-<span class="n">HelloWorld</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">HelloWorld</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </td></tr></table></div>
-<p>You can see the import of <tt class="docutils literal"><span class="pre">Container</span></tt> from <tt class="docutils literal"><span class="pre">proton_utils</span></tt> on the
+<p>You can see the import of <tt class="docutils literal"><span class="pre">EventLoop</span></tt> from <tt class="docutils literal"><span class="pre">proton_events</span></tt> on the
 second line. This is a helper class that makes programming with proton
 a little easier for the common cases. It includes within it an event
 loop, and programs written using this utility are generally structured
@@ -138,7 +138,7 @@ to react to various events. This reactive style is particularly suited
 to messaging applications.</p>
 <p>To be notified of a particular event, you define a class with the
 appropriately name method on it. That method is then called by the
-container when the event occurs.</p>
+event loop when the event occurs.</p>
 <p>The first class we define, <tt class="docutils literal"><span class="pre">HelloWorldReceiver</span></tt>, handles the event
 where a message is received and so implements a <tt class="docutils literal"><span class="pre">on_message()</span></tt>
 method. Within that we simply print the body of the message (line 6)
@@ -152,13 +152,13 @@ messages might be large. In our case we are just going to send one
 message, which we do on line 11, so we can then just close the sending
 link on line 12.</p>
 <p>The <tt class="docutils literal"><span class="pre">HelloWorld</span></tt> class ties everything together. It&#8217;s constructor
-takes the instance of the container to use, a url to connect to, and
+takes the instance of the event loop to use, a url to connect to, and
 an address through which the message will be sent. To run the example
 you will need to have a broker (or similar) accepting connections on
 that url either with a queue (or topic) matching the given address or
 else configured to create such a queue (or topic) dynamically.</p>
 <p>On line 17 we request that a connection be made to the process this
-url refers to by calling <tt class="docutils literal"><span class="pre">connect()</span></tt> on the <tt class="docutils literal"><span class="pre">Container</span></tt>. This call
+url refers to by calling <tt class="docutils literal"><span class="pre">connect()</span></tt> on the <tt class="docutils literal"><span class="pre">EventLoop</span></tt>. This call
 returns a <tt class="docutils literal"><span class="pre">MessagingContext</span></tt> object through which we can create
 objects for sending and receiving messages to the process it is
 connected to. However we will delay doing that until our connection is
@@ -175,9 +175,9 @@ and passing the handler implementations defined by
 and <tt class="docutils literal"><span class="pre">on_connection_remote_close()</span></tt> also, so that we can be notified
 if the broker we are connected to closes either link or the connection
 for any reason.</p>
-<p>Finally we actually enter the event loop the container to handle all
-the necessary IO and make all the necessary event callbacks, by
-calling <tt class="docutils literal"><span class="pre">run()</span></tt> on it.</p>
+<p>Finally we actually enter the event loop, to handle all the necessary
+IO and make all the necessary event callbacks, by calling <tt class="docutils literal"><span class="pre">run()</span></tt> on
+it.</p>
 </div>
 <div class="section" id="hello-world-direct">
 <h1>Hello World, Direct!<a class="headerlink" href="#hello-world-direct" title="Permalink to this headline">¶</a></h1>
@@ -225,7 +225,7 @@ directly if desired.</p>
 38
 39
 40</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">FlowController</span><span class="p">,</span> <span class="n">Handshaker</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">FlowController</span><span class="p">,</span> <span class="n">Handshaker</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">HelloWorldReceiver</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -238,10 +238,10 @@ directly if desired.</p>
         <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
 <span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-<span class="hll">        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+<span class="hll">        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
 
     <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -260,26 +260,26 @@ directly if desired.</p>
 </span>        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 <span class="hll">
-</span><span class="n">container</span> <span class="o">=</span> <span class="n">Container</span><span class="p">(</span><span class="n">HelloWorldReceiver</span><span class="p">(),</span> <span class="n">Handshaker</span><span class="p">(),</span> <span class="n">FlowController</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-<span class="n">HelloWorld</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="s">&quot;localhost:8888&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">EventLoop</span><span class="p">(</span><span class="n">HelloWorldReceiver</span><span class="p">(),</span> <span class="n">Handshaker</span><span class="p">(),</span> <span class="n">FlowController</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">HelloWorld</span><span class="p">(</span><span class="n">eventloop</span><span class="p">,</span> <span class="s">&quot;localhost:8888&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </td></tr></table></div>
 <p>The first difference, on line 17, is that rather than creating a
 receiver on the same connection as our sender, we listen for incoming
-connections by invoking the <tt class="docutils literal"><span class="pre">listen()</span> <span class="pre">method</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">``Container</span></tt>
+connections by invoking the <tt class="docutils literal"><span class="pre">listen()</span> <span class="pre">method</span> <span class="pre">on</span> <span class="pre">the</span> <span class="pre">``EventLoop</span></tt>
 instance.</p>
-<p>Another difference is that the <tt class="docutils literal"><span class="pre">Container</span></tt> instance we use is not
+<p>Another difference is that the <tt class="docutils literal"><span class="pre">EventLoop</span></tt> instance we use is not
 the default instance as was used in the original example, but one we
 construct ourselves on line 38, passing in some event handlers. The
 first of these is <tt class="docutils literal"><span class="pre">HelloWorldReceiver</span></tt>, as used in the original
-example. We pass it to the container, because we aren&#8217;t going to
+example. We pass it to the event loop, because we aren&#8217;t going to
 directly create the receiver here ourselves. Rather we will accept an
 incoming connection on which the message will be received. This
 handler would then be notified of any incoming message event on any of
-the connections the container controls. As well as our own handler, we
-specify a couple of useful handlers from the <tt class="docutils literal"><span class="pre">proton_utils</span></tt>
+the connections the event loop controls. As well as our own handler, we
+specify a couple of useful handlers from the <tt class="docutils literal"><span class="pre">proton_events</span></tt>
 toolkit. The <tt class="docutils literal"><span class="pre">Handshaker</span></tt> handler will ensure our server follows the
 basic handshaking rules laid down by the protocol. The
 <tt class="docutils literal"><span class="pre">FlowController</span></tt> will issue credit for incoming messages. We won&#8217;t
@@ -325,12 +325,12 @@ requirements mentioned for the first hello world example).</p>
 28
 29
 30
-31</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+31</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">Recv</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
 
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -351,22 +351,22 @@ requirements mentioned for the first hello world example).</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">Recv</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">Recv</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span> <span class="k">pass</span>
 </pre></div>
 </td></tr></table></div>
 <p>Often we want to be notified whether the messages we send arrive at
 their intended destination. We can do that by specifying a handler for
-the sender we create with an <tt class="docutils literal"><span class="pre">accepted()</span></tt> method defined on it. This
+the sender we create with an <tt class="docutils literal"><span class="pre">on_message()</span></tt> method defined on it. This
 will be called whenever a message sent by the sender is accepted by
 the remote peer.</p>
 <p>When sending a large number of messages, we need to consider whether
 the remote peer is able to handle them all. AMQP has a powerful flow
 control mechanism through which processes can limit the incoming flow
-of messages. If we implement a <tt class="docutils literal"><span class="pre">link_flow()</span></tt> method on our sender&#8217;s
+of messages. If we implement a <tt class="docutils literal"><span class="pre">on_link_flow()</span></tt> method on our sender&#8217;s
 handler, this will be called whenever the sender is allowed to send
 and will prevent messages building up due to the receivers inability
 to process them.</p>
@@ -422,12 +422,12 @@ we get:</p>
 47
 48
 49</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">OutgoingMessageHandler</span><span class="p">,</span> <span class="n">Container</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">OutgoingMessageHandler</span><span class="p">,</span> <span class="n">EventLoop</span>
 
 <span class="k">class</span> <span class="nc">Send</span><span class="p">(</span><span class="n">OutgoingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">messages</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">messages</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">confirmed</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="n">messages</span>
@@ -467,9 +467,9 @@ we get:</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-<span class="n">Send</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">Send</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -516,17 +516,17 @@ loop.</p>
 36
 37
 38
-39</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">IncomingMessageHandler</span><span class="p">,</span> <span class="n">Container</span>
+39</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">IncomingMessageHandler</span><span class="p">,</span> <span class="n">EventLoop</span>
 
 <span class="k">class</span> <span class="nc">Recv</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="k">print</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span>
@@ -550,10 +550,10 @@ loop.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">Recv</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">Recv</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span> <span class="k">pass</span>
 </pre></div>
 </td></tr></table></div>
@@ -594,12 +594,12 @@ the body of the request converted to uppercase.</p>
 25
 26
 27</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">Server</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">senders</span> <span class="o">=</span> <span class="p">{}</span>
 
@@ -615,10 +615,10 @@ the body of the request converted to uppercase.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">Server</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">Server</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span> <span class="k">pass</span>
 </pre></div>
 </td></tr></table></div>
@@ -661,12 +661,12 @@ the senders incase we get further requests wit the same reply-to.</p>
 32
 33
 34</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_utils</span> <span class="kn">import</span> <span class="n">Container</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">requests</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">container</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">requests</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">dynamic</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">requests</span> <span class="o">=</span> <span class="n">requests</span>
@@ -686,14 +686,14 @@ the senders incase we get further requests wit the same reply-to.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
 <span class="n">REQUESTS</span><span class="o">=</span> <span class="p">[</span><span class="s">&quot;Twas brillig, and the slithy toves&quot;</span><span class="p">,</span>
            <span class="s">&quot;Did gire and gymble in the wabe.&quot;</span><span class="p">,</span>
            <span class="s">&quot;All mimsy were the borogroves,&quot;</span><span class="p">,</span>
            <span class="s">&quot;And the mome raths outgrabe.&quot;</span><span class="p">]</span>
 
-<span class="n">Client</span><span class="p">(</span><span class="n">Container</span><span class="o">.</span><span class="n">DEFAULT</span><span class="p">,</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="n">REQUESTS</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">Client</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="n">REQUESTS</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </td></tr></table></div>
 <p>As well as sending requests, we need to be able to get back the
@@ -703,8 +703,8 @@ we are connected to to create a temporary address over which we can
 receive our responses.</p>
 <p>We need to use the address allocated by the broker as the reply_to
 address of our requests. To be notified when the broker has sent us
-back the address to use, we add an <tt class="docutils literal"><span class="pre">opened()</span></tt> method to our
-receiver&#8217;s handler, and use that as the trigger to send our first
+back the address to use, we add an <tt class="docutils literal"><span class="pre">on_link_remote_open()</span></tt> method to
+our receiver&#8217;s handler, and use that as the trigger to send our first
 request.</p>
 </div>
 

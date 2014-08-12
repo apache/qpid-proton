@@ -19,12 +19,12 @@
 #
 
 from proton import Message
-from proton_utils import Container, IncomingMessageHandler
+from proton_events import EventLoop, IncomingMessageHandler
 
 class HelloWorld(IncomingMessageHandler):
-    def __init__(self, container, url, address):
-        self.container = container
-        self.conn = container.connect(url, handler=self)
+    def __init__(self, eventloop, url, address):
+        self.eventloop = eventloop
+        self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
     def on_connection_remote_open(self, event):
@@ -51,7 +51,7 @@ class HelloWorld(IncomingMessageHandler):
         self.conn.close()
 
     def run(self):
-        self.container.run()
+        self.eventloop.run()
 
-HelloWorld(Container.DEFAULT, "localhost:5672", "examples").run()
+HelloWorld(EventLoop(), "localhost:5672", "examples").run()
 

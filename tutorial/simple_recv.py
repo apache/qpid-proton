@@ -18,12 +18,12 @@
 # under the License.
 #
 
-from proton_utils import Container, IncomingMessageHandler
+from proton_events import EventLoop, IncomingMessageHandler
 
 class Recv(IncomingMessageHandler):
-    def __init__(self, container, host, address):
-        self.container = container
-        self.conn = container.connect(host, handler=self)
+    def __init__(self, eventloop, host, address):
+        self.eventloop = eventloop
+        self.conn = eventloop.connect(host, handler=self)
         self.address = address
 
     def on_message(self, event):
@@ -44,10 +44,10 @@ class Recv(IncomingMessageHandler):
         self.conn.close()
 
     def run(self):
-        self.container.run()
+        self.eventloop.run()
 
 try:
-    Recv(Container.DEFAULT, "localhost:5672", "examples").run()
+    Recv(EventLoop(), "localhost:5672", "examples").run()
 except KeyboardInterrupt: pass
 
 
