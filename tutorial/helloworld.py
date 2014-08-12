@@ -39,7 +39,10 @@ class HelloWorld(object):
 
     def on_connection_remote_open(self, event):
         self.conn.receiver(self.address, handler=HelloWorldReceiver())
-        self.conn.sender(self.address, handler=HelloWorldSender())
+
+    def on_link_remote_open(self, event):
+        if event.link.is_receiver:
+            self.conn.sender(self.address, handler=HelloWorldSender())
 
     def on_link_remote_close(self, event):
         self.closed(event.link.remote_condition)

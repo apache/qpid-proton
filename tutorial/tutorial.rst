@@ -54,10 +54,14 @@ connection).
 
 To be notified of this we pass a reference to self as the handler in
 ``connect()`` and define an ``on_connection_remote_open()`` method
-within which we can create our receiver and sender using the
-connection context we obtained from the earlier ``connect()`` call,
-and passing the handler implementations defined by
-``HelloWorldReceiver`` and ``HelloWorldSender`` respectively.
+within which we can create our receiver using the connection context
+we obtained from the earlier ``connect()`` call, and passing the
+handler implementation defined by ``HelloWorldReceiver``. When the
+remote peer confirms the establishment of that receiver we get a
+callback on ``on_link_remote_open()`` and that is where we then create
+our sender, passing it the ``HelloWorldSender`` handler. Delaying the
+creation of the sender until the receiver is established avoids losing
+messages even when these are not queued up by the remote peer.
 
 We'll add definitions to ``HelloWorld`` of ``on_link_remote_close()``
 and ``on_connection_remote_close()`` also, so that we can be notified
