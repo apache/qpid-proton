@@ -18,18 +18,25 @@
 # under the License.
 #
 
-from proton_events import EventLoop, IncomingMessageHandler
+import time
+from proton_events import IncomingMessageHandler, EventLoop
 
 class Recv(IncomingMessageHandler):
     def __init__(self, eventloop, host, address):
         self.eventloop = eventloop
-        self.conn = eventloop.connect(host, handler=self)
+        self.host = host
         self.address = address
+        self.delay = 0
+        self.connect()
+
+    def connect(self):
+        self.conn = self.eventloop.connect(self.host, handler=self)
 
     def on_message(self, event):
         print event.message.body
 
     def on_connection_remote_open(self, event):
+        self.delay = 0
         self.conn.receiver(self.address)
 
     def on_link_remote_close(self, event):
@@ -42,6 +49,20 @@ class Recv(IncomingMessageHandler):
         if error:
             print "Closed due to %s" % error
         self.conn.close()
+
+    def on_disconnected(self, conn):
+        if self.delay == 0:
+            self.delay = 0.1
+            print "Disconnected, reconnecting..."
+            self.connect()
+        else:
+            print "Disconnected will try to reconnect after %d seconds" % self.delay
+            self.eventloop.schedule(time.time() + self.delay, connection=conn)
+            self.delay = min(10, 2*self.delay)
+
+    def on_timer(self, event):
+        print "Reconnecting..."
+        self.connect()
 
     def run(self):
         self.eventloop.run()

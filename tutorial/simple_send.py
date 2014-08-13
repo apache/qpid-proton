@@ -18,17 +18,23 @@
 # under the License.
 #
 
+import time
 from proton import Message
 from proton_events import OutgoingMessageHandler, EventLoop
 
 class Send(OutgoingMessageHandler):
     def __init__(self, eventloop, host, address, messages):
         self.eventloop = eventloop
-        self.conn = eventloop.connect(host, handler=self)
         self.sent = 0
         self.confirmed = 0
         self.total = messages
         self.address = address
+        self.host = host
+        self.delay = 0
+        self.connect()
+
+    def connect(self):
+        self.conn = self.eventloop.connect(self.host, handler=self)
 
     def on_link_flow(self, event):
         for i in range(self.sender.credit):
@@ -49,8 +55,10 @@ class Send(OutgoingMessageHandler):
             self.conn.close()
 
     def on_connection_remote_open(self, event):
+        self.sent = self.confirmed
         self.sender = self.conn.sender(self.address)
         self.sender.offered(self.total)
+        self.delay = 0
 
     def on_link_remote_close(self, event):
         self.closed(event.link.remote_condition)
@@ -63,8 +71,22 @@ class Send(OutgoingMessageHandler):
             print "Closed due to %s" % error
         self.conn.close()
 
+    def on_disconnected(self, conn):
+        if self.delay == 0:
+            self.delay = 0.1
+            print "Disconnected, reconnecting..."
+            self.connect()
+        else:
+            print "Disconnected will try to reconnect after %d seconds" % self.delay
+            self.eventloop.schedule(time.time() + self.delay, connection=conn)
+            self.delay = min(10, 2*self.delay)
+
+    def on_timer(self, event):
+        print "Reconnecting..."
+        self.connect()
+
     def run(self):
         self.eventloop.run()
 
-Send(EventLoop(), "localhost:5672", "examples", 1000).run()
+Send(EventLoop(), "localhost:5672", "examples", 10000).run()
 

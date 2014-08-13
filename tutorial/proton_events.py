@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import os, socket, types
+import os, heapq, socket, time, types
 from proton import Collector, Connection, Delivery, Endpoint, Event
 from proton import Message, ProtonException, Transport, TransportException
 from select import select
@@ -51,7 +51,7 @@ class EventDispatcher(object):
     }
 
     def dispatch(self, event):
-        getattr(self, self.methods[event.type], self.unhandled)(event)
+        getattr(self, self.methods.get(event.type, str(event.type)), self.unhandled)(event)
 
     def unhandled(self, event):
         pass
@@ -103,6 +103,7 @@ class Selectable(object):
             return True
         elif c < 0:
             self.read_done = True
+        return False
 
     def writing(self):
         if self.write_done: return False
@@ -137,6 +138,7 @@ class Selectable(object):
             except socket.error, e:
                 print "Error on recv: %s" % e
                 self.read_done = True
+                self.write_done = True
         elif c < 0:
             self.read_done = True
 
@@ -205,7 +207,6 @@ class Acceptor:
     def removed(self): pass
 
 class Events(object):
-
     def __init__(self, *dispatchers):
         self.collector = Collector()
         self.dispatchers = dispatchers
@@ -219,11 +220,83 @@ class Events(object):
         while True:
             ev = self.collector.peek()
             if ev:
-                for d in self.dispatchers:
-                    d.dispatch(ev)
+                self.dispatch(ev)
                 self.collector.pop()
             else:
                 return
+
+    def dispatch(self, event):
+        for d in self.dispatchers:
+            d.dispatch(event)
+
+    @property
+    def next_interval(self):
+        return None
+
+    @property
+    def empty(self):
+        return self.collector.peek() == None
+
+class TimerEvent(Event):
+    def __init__(self, connection=None, session=None, link=None, delivery=None):
+        self.type = "on_timer"
+        self.transport = None
+        if delivery:
+            self.delivery = delivery
+            self.link = delivery.link
+            self.session = link.session
+            self.connection = session.connection
+            self.category = Event.CATEGORY_DELIVERY
+        elif link:
+            self.delivery = None
+            self.link = link
+            self.session = link.session
+            self.connection = session.connection
+            self.category = Event.CATEGORY_LINK
+        elif session:
+            self.delivery = None
+            self.link = None
+            self.session = session
+            self.connection = session.connection
+            category = Event.CATEGORY_SESSION
+        else:
+            self.delivery = None
+            self.link = None
+            self.session = None
+            self.connection = connection
+            self.category = Event.CATEGORY_CONNECTION
+
+    def __repr__(self):
+        objects = [self.connection, self.session, self.link, self.delivery]
+        return "%s(%s)" % (self.type,
+                           ", ".join([str(o) for o in objects if o is not None]))
+
+
+class ScheduledEvents(Events):
+    def __init__(self, *dispatchers):
+        super(ScheduledEvents, self).__init__(*dispatchers)
+        self._events = []
+
+    def schedule(self, deadline, event):
+        heapq.heappush(self._events, (deadline, event))
+
+    def process(self):
+        super(ScheduledEvents, self).process()
+        while self._events and self._events[0][0] <= time.time():
+            self.dispatch(heapq.heappop(self._events)[1])
+
+    @property
+    def next_interval(self):
+        if len(self._events):
+            deadline = self._events[0][0]
+            now = time.time()
+            return deadline - now if deadline > now else 0
+        else:
+            return None
+
+    @property
+    def empty(self):
+        return super(ScheduledEvents, self).empty and len(self._events) == 0
 
 class SelectLoop(object):
 
@@ -246,22 +319,28 @@ class SelectLoop(object):
             self.events.process()
             if self._abort: return
 
-            reading = []
-            writing = []
-            closed = []
+            stable = False
+            while not stable:
+                reading = []
+                writing = []
+                closed = []
+                for s in self.selectables:
+                    if s.reading(): reading.append(s)
+                    if s.writing(): writing.append(s)
+                    if s.closed(): closed.append(s)
 
-            for s in self.selectables:
-                if s.reading(): reading.append(s)
-                if s.writing(): writing.append(s)
-                if s.closed(): closed.append(s)
+                for s in closed:
+                    self.selectables.remove(s)
+                    s.removed()
+                stable = len(closed) == 0
 
-            for s in closed:
-                self.selectables.remove(s)
-                s.removed()
+            if self.events.empty and not self.selectables:
+                return
 
-            if not self.selectables: return
-
-            readable, writable, _ = select(reading, writing, [], 3)
+            timeout = 3
+            if self.events.next_interval and self.events.next_interval < timeout:
+                timeout = self.events.next_interval
+            readable, writable, _ = select(reading, writing, [], timeout)
 
             for s in readable:
                 s.readable()
@@ -371,7 +450,7 @@ class ScopedDispatcher(EventDispatcher):
             return None
 
     def dispatch(self, event):
-        method = self.methods[event.type]
+        method = self.methods.get(event.type, str(event.type))
         objects = [getattr(event, attr) for attr in self.scopes.get(event.category, [])]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
         handlers = [getattr(t, method) for t in targets if hasattr(t, method)]
@@ -382,7 +461,7 @@ class OutgoingMessageHandler(EventDispatcher):
     def on_delivery(self, event):
         dlv = event.delivery
         link = dlv.link
-        if dlv.updated:
+        if dlv.updated and not hasattr(dlv, "_been_settled"):
             if dlv.remote_state == Delivery.ACCEPTED:
                 self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
@@ -393,7 +472,8 @@ class OutgoingMessageHandler(EventDispatcher):
                 self.on_modified(event)
             if dlv.settled:
                 self.on_settled(event)
-            if self.auto_settle() and not dlv.settled:
+            if self.auto_settle():
+                dlv._been_settled = True
                 dlv.settle()
 
     def on_accepted(self, event): pass
@@ -533,7 +613,8 @@ class EventLoop(object):
         l = [ScopedDispatcher()]
         if handlers: l += handlers
         else: l.append(FlowController(10))
-        self.loop = SelectLoop(Events(*l))
+        self.events = ScheduledEvents(*l)
+        self.loop = SelectLoop(self.events)
 
     def connect(self, url, name=None, handler=None):
         identifier = name or url
@@ -549,6 +630,9 @@ class EventLoop(object):
         host, port = url.split(":")
         if port: port = int(port)
         return Acceptor(self.loop.events, self.loop.selectables, host, port)
+
+    def schedule(self, deadline, connection=None, session=None, link=None, delivery=None):
+        self.events.schedule(deadline, TimerEvent(connection, session, link, delivery))
 
     def run(self):
         self.loop.run()
