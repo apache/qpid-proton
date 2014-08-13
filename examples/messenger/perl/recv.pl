@@ -51,21 +51,28 @@ for(;;)
     {
         $messenger->get($msg);
 
+        print "\n";
         print "Address: " . $msg->get_address() . "\n";
         print "Subject: " . $msg->get_subject() . "\n" unless !defined($msg->get_subject());
         print "Body:    ";
 
         my $body = $msg->get_body();
-        my $body_type = reftype($body);
+        my $body_type = $msg->get_body_type();
 
         if (!defined($body_type)) {
-            print "$body\n";
-        } elsif ($body_type eq HASH) {
+            print "The body type wasn't defined!\n";
+        } elsif ($body_type == qpid::proton::MAP) {
             print "[HASH]\n";
             print Dumper(\%{$body}) . "\n";
-        } elsif ($body_type eq ARRAY) {
+        } elsif ($body_type == qpid::proton::ARRAY) {
             print "[ARRAY]\n";
             print Data::Dumper->Dump($body) . "\n";
+        } elsif ($body_type == qpid::proton::LIST) {
+            print "[LIST]\n";
+            print Data::Dumper->Dump($body) . "\n";
+        } else {
+            print "[$body_type]\n";
+            print "$body\n";
         }
 
         print "Properties:\n";

@@ -443,7 +443,29 @@ B<qpid::proton::STRING>.
 sub set_body {
     my ($self) = @_;
     my $body = $_[1];
-    my $body_type = $_[2] || qpid::proton::STRING;
+    my $body_type = $_[2] || undef;
+
+    # if no body type was defined, then attempt to infer what it should
+    # be, which is going to be a best guess
+    if (!defined($body_type)) {
+        if (qpid::proton::is_num($body)) {
+            if (qpid::proton::is_float($body)) {
+                $body_type = qpid::proton::FLOAT;
+            } else {
+                $body_type = qpid::proton::INT;
+            }
+        } elsif (!defined($body)) {
+            $body_type =  qpid::proton::NULL;
+        } elsif ($body eq '') {
+            $body_type =  qpid::proton::STRING;
+        } elsif (ref($body) eq 'HASH') {
+            $body_type =  qpid::proton::MAP;
+        } elsif (ref($body) eq 'ARRAY') {
+            $body_type =  qpid::proton::LIST;
+        } else {
+            $body_type =  qpid::proton::STRING;
+        }
+    }
 
     $self->{_body} = $body;
     $self->{_body_type} = $body_type;

@@ -1166,16 +1166,23 @@ sub put_list_helper {
     $self->put_list;
     $self->enter;
 
-    foreach(@{$array}) {
-        my $value = $_;
-        my $valtype = ::reftype($value);
-
-        if ($valtype eq ARRAY) {
-            $self->put_list_helper($value);
-        } elsif ($valtype eq HASH) {
+    for my $value (@{$array}) {
+        if (qpid::proton::is_num($value)) {
+            if (qpid::proton::is_float($value)) {
+                $self->put_float($value);
+            } else {
+                $self->put_int($value);
+            }
+        } elsif (!defined($value)) {
+            $self->put_null;
+        } elsif ($value eq '') {
+            $self->put_string($value);
+        } elsif (ref($value) eq 'HASH') {
             $self->put_map_helper($value);
+        } elsif (ref($value) eq 'ARRAY') {
+            $self->put_list_helper($value);
         } else {
-            $self->put_string("$value");
+            $self->put_string($value);
         }
     }
 
@@ -1194,7 +1201,8 @@ sub get_list_helper {
 
         for(my $count = 0; $count < $size; $count++) {
             if ($self->next) {
-                my $value = $self->get_type->get($self);
+                my $value_type = $self->get_type;
+                my $value = $value_type->get($self);
 
                 push(@{$result}, $value);
             }
