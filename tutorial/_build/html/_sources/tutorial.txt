@@ -54,10 +54,14 @@ connection).
 
 To be notified of this we pass a reference to self as the handler in
 ``connect()`` and define an ``on_connection_remote_open()`` method
-within which we can create our receiver and sender using the
-connection context we obtained from the earlier ``connect()`` call,
-and passing the handler implementations defined by
-``HelloWorldReceiver`` and ``HelloWorldSender`` respectively.
+within which we can create our receiver using the connection context
+we obtained from the earlier ``connect()`` call, and passing the
+handler implementation defined by ``HelloWorldReceiver``. When the
+remote peer confirms the establishment of that receiver we get a
+callback on ``on_link_remote_open()`` and that is where we then create
+our sender, passing it the ``HelloWorldSender`` handler. Delaying the
+creation of the sender until the receiver is established avoids losing
+messages even when these are not queued up by the remote peer.
 
 We'll add definitions to ``HelloWorld`` of ``on_link_remote_close()``
 and ``on_connection_remote_close()`` also, so that we can be notified
@@ -113,46 +117,16 @@ So now we have our example working without a broker involved!
 The Basics
 ==========
 
-So much for hello world! Let's explore a little more. Separating out
-the receiving logic and receiving messages until the program is
-stopped, we get the following example (which has the same broker
-requirements mentioned for the first hello world example).
+TODO: These examples show reliable (at-least-once) send and receive
+with reconnect ability. Need to write some explanation. Could also do
+with some further cleanup.
+
 
 .. literalinclude:: simple_recv.py
    :lines: 21-
    :linenos:
 
-Often we want to be notified whether the messages we send arrive at
-their intended destination. We can do that by specifying a handler for
-the sender we create with an ``on_message()`` method defined on it. This
-will be called whenever a message sent by the sender is accepted by
-the remote peer.
-
-When sending a large number of messages, we need to consider whether
-the remote peer is able to handle them all. AMQP has a powerful flow
-control mechanism through which processes can limit the incoming flow
-of messages. If we implement a ``on_link_flow()`` method on our sender's
-handler, this will be called whenever the sender is allowed to send
-and will prevent messages building up due to the receivers inability
-to process them.
-
-Separating out the sending logic, extending it to send a given number
-of messages and incorporating the two handler methods just described
-we get:
-
 .. literalinclude:: simple_send.py
-   :lines: 21-
-   :linenos:
-
-============
-Reconnecting
-============
-
-TODO: This shows a basic reconnect for the receiver. Need some backoff
-logic which requires some sort of support for timers in the event
-loop.
-
-.. literalinclude:: simple_recv_2.py
    :lines: 21-
    :linenos:
 
