@@ -61,6 +61,9 @@ for(;;)
 
         if (!defined($body_type)) {
             print "The body type wasn't defined!\n";
+        } elsif ($body_type == qpid::proton::BOOL) {
+            print "[BOOL]\n";
+            print "" . ($body ? "TRUE" : "FALSE") . "\n";
         } elsif ($body_type == qpid::proton::MAP) {
             print "[HASH]\n";
             print Dumper(\%{$body}) . "\n";

@@ -487,12 +487,12 @@ sub get_body_type {
 sub preencode() {
     my ($self) = @_;
     my $impl = $self->{_impl};
-
     my $my_body = $self->{_body};
     my $body_type = $self->{_body_type};
     my $body = new qpid::proton::Data(cproton_perl::pn_message_body($impl));
+
     $body->clear();
-    $body_type->put($body, $my_body) if($my_body && $body_type);
+    $body_type->put($body, $my_body) if(defined($my_body) && $body_type);
 
     my $my_props = $self->{_properties};
     my $props = new qpid::proton::Data(cproton_perl::pn_message_properties($impl));
