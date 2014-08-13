@@ -138,6 +138,12 @@ class EventImpl implements Event
             return null;
         }
     }
+    public Event copy()
+    {
+       EventImpl newEvent = new EventImpl();
+       newEvent.init(type, context);
+       return newEvent;
+    }
 
     @Override
     public String toString()
