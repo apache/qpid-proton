@@ -80,8 +80,7 @@ struct pn_ssl_domain_t {
 typedef enum { CREATED, CLIENT_HELLO, NEGOTIATING,
                RUNNING, SHUTTING_DOWN, SSL_CLOSED } ssl_state_t;
 
-struct pn_ssl_t {
-  pn_transport_t   *transport;
+struct pni_ssl_t {
   pn_ssl_domain_t  *domain;
   const char    *session_id;
   const char *peer_hostname;
@@ -127,6 +126,18 @@ struct pn_ssl_t {
   SecPkgContext_StreamSizes sc_sizes;
 };
 
+static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
+{
+  // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+  return ((pn_transport_t *)ssl);
+}
+
+static inline pni_ssl_t *get_ssl_internal(pn_ssl_t *ssl)
+{
+  // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+  return ssl ? ((pn_transport_t *)ssl)->ssl : NULL;
+}
+
 struct pn_ssl_session_t {
   const char       *id;
 // TODO
@@ -145,9 +156,9 @@ static connection_mode_t check_for_ssl_connection( const char *data, size_t len 
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
-static void start_ssl_shutdown(pn_ssl_t *ssl);
-static void rewind_sc_inbuf(pn_ssl_t *ssl);
-static bool grow_inbuf2(pn_ssl_t *ssl, size_t minimum_size);
+static void start_ssl_shutdown(pn_transport_t *transport);
+static void rewind_sc_inbuf(pni_ssl_t *ssl);
+static bool grow_inbuf2(pn_transport_t *ssl, size_t minimum_size);
 
 
 // @todo: used to avoid littering the code with calls to printf...
@@ -161,7 +172,7 @@ static void ssl_log_error(const char *fmt, ...)
 }
 
 // @todo: used to avoid littering the code with calls to printf...
-static void ssl_log(pn_ssl_t *ssl, const char *fmt, ...)
+static void ssl_log(pni_ssl_t *ssl, const char *fmt, ...)
 {
   if (PN_TRACE_DRV & ssl->trace) {
     va_list ap;
@@ -192,7 +203,7 @@ static void ssl_log_error_status(HRESULT status, const char *fmt, ...)
   fflush(stderr);
 }
 
-static void ssl_log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
+static void ssl_log_clear_data(pni_ssl_t *ssl, const char *data, size_t len)
 {
   if (PN_TRACE_RAW & ssl->trace) {
     fprintf(stderr, "SSL decrypted data: \"");
@@ -207,7 +218,7 @@ static size_t _pni_min(size_t a, size_t b)
 }
 
 // unrecoverable SSL failure occured, notify transport and generate error code.
-static int ssl_failed(pn_ssl_t *ssl, const char *reason)
+static int ssl_failed(pn_transport_t *transport, const char *reason)
 {
   char buf[512] = "Unknown error.";
   if (!reason) {
@@ -217,10 +228,11 @@ static int ssl_failed(pn_ssl_t *ssl, const char *reason)
                   0, status, 0, buf, sizeof(buf), 0);
     reason = buf;
   }
+  pni_ssl_t *ssl = transport->ssl;
   ssl->ssl_closed = true;
   ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   ssl->state = SSL_CLOSED;
-  pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", reason);
+  pn_do_error(transport, "amqp:connection:framing-error", "SSL Failure: %s", reason);
   return PN_EOS;
 }
 
@@ -383,18 +395,20 @@ const pn_io_layer_t ssl_closed_layer = {
     buffered_output
 };
 
-int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_domain_t *domain, const char *session_id)
+int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 {
+  pn_transport_t *transport = get_transport_internal(ssl0);
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl || !domain || ssl->domain) return -1;
   if (ssl->state != CREATED) return -1;
 
   ssl->domain = domain;
   domain->ref_count++;
   if (domain->allow_unsecured) {
-    ssl->transport->io_layers[PN_IO_SSL] = &unknown_layer;
+    transport->io_layers[PN_IO_SSL] = &unknown_layer;
   }
   else {
-    ssl->transport->io_layers[PN_IO_SSL] = &ssl_layer;
+    transport->io_layers[PN_IO_SSL] = &ssl_layer;
   }
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
@@ -440,8 +454,9 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
 }
 
 
-void pn_ssl_free( pn_ssl_t *ssl)
+void pn_ssl_free( pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return;
   ssl_log( ssl, "SSL socket freed.\n" );
   // clean up Windows per TLS session data before releasing the domain count
@@ -462,9 +477,9 @@ void pn_ssl_free( pn_ssl_t *ssl)
 pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
   if (!transport) return NULL;
-  if (transport->ssl) return transport->ssl;
+  if (transport->ssl) return (pn_ssl_t *)transport;
 
-  pn_ssl_t *ssl = (pn_ssl_t *) calloc(1, sizeof(pn_ssl_t));
+  pni_ssl_t *ssl = (pni_ssl_t *) calloc(1, sizeof(pni_ssl_t));
   if (!ssl) return NULL;
   ssl->sc_out_size = ssl->sc_in_size = SSL_BUF_SIZE;
 
@@ -488,10 +503,7 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
     return NULL;
   }
 
-  ssl->transport = transport;
   transport->ssl = ssl;
-
-  transport->io_layers[PN_IO_SSL] = &pni_passthru_layer;
 
   ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
   SecInvalidateHandle(&ssl->cred_handle);
@@ -499,12 +511,12 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   ssl->state = CREATED;
   ssl->decrypting = true;
 
-  return ssl;
+  return (pn_ssl_t *)transport;
 }
 
-void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
+void pn_ssl_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  ssl->trace = trace;
+  transport->ssl->trace = trace;
 }
 
 
@@ -515,8 +527,9 @@ pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
 }
 
 
-int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
+int pn_ssl_set_peer_hostname( pn_ssl_t *ssl0, const char *hostname )
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl) return -1;
 
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
@@ -528,8 +541,9 @@ int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
   return 0;
 }
 
-int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+int pn_ssl_get_peer_hostname( pn_ssl_t *ssl0, char *hostname, size_t *bufsize )
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl) return -1;
   if (!ssl->peer_hostname) {
     *bufsize = 0;
@@ -548,7 +562,7 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
 
 /** SChannel specific: */
 
-const char *tls_version_check(pn_ssl_t *ssl)
+const char *tls_version_check(pni_ssl_t *ssl)
 {
   SecPkgContext_ConnectionInfo info;
   QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info);
@@ -558,7 +572,7 @@ const char *tls_version_check(pn_ssl_t *ssl)
     "peer does not support TLS 1.0 security" : NULL;
 }
 
-static void ssl_encrypt(pn_ssl_t *ssl, char *app_data, size_t count)
+static void ssl_encrypt(pni_ssl_t *ssl, char *app_data, size_t count)
 {
   // Get SChannel to encrypt exactly one Record.
   SecBuffer buffs[4];
@@ -591,8 +605,9 @@ static void ssl_encrypt(pn_ssl_t *ssl, char *app_data, size_t count)
 }
 
 // Returns true if decryption succeeded (even for empty content)
-static bool ssl_decrypt(pn_ssl_t *ssl)
+static bool ssl_decrypt(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   // Get SChannel to decrypt input.  May have an incomplete Record,
   // exactly one, or more than one.  Check also for session ending,
   // session renegotiation.
@@ -630,7 +645,7 @@ static bool ssl_decrypt(pn_ssl_t *ssl)
     case SEC_I_RENEGOTIATE:
       // TODO.  Fall through for now.
     default:
-      ssl_failed(ssl, 0);
+      ssl_failed(transport, 0);
       return false;
     }
   }
@@ -657,8 +672,9 @@ static bool ssl_decrypt(pn_ssl_t *ssl)
   return true;
 }
 
-static void client_handshake_init(pn_ssl_t *ssl)
+static void client_handshake_init(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   // Tell SChannel to create the first handshake token (ClientHello)
   // and place it in sc_outbuf
   SEC_CHAR *host = const_cast<SEC_CHAR *>(ssl->peer_hostname);
@@ -689,11 +705,12 @@ static void client_handshake_init(pn_ssl_t *ssl)
     ssl_log(ssl, "Sending client hello %d bytes\n", ssl->network_out_pending);
   } else {
     ssl_log_error_status(status, "InitializeSecurityContext failed");
-    ssl_failed(ssl, 0);
+    ssl_failed(transport, 0);
   }
 }
 
-static void client_handshake( pn_ssl_t* ssl) {
+static void client_handshake( pn_transport_t* transport) {
+  pni_ssl_t *ssl = transport->ssl;
   // Feed SChannel ongoing responses from the server until the handshake is complete.
   SEC_CHAR *host = const_cast<SEC_CHAR *>(ssl->peer_hostname);
   ULONG ctxt_requested = ISC_REQ_STREAM | ISC_REQ_USE_SUPPLIED_CREDS;
@@ -766,11 +783,11 @@ static void client_handshake( pn_ssl_t* ssl) {
       return;
     }
     if (send_buffs[0].cbBuffer != 0) {
-      ssl_failed(ssl, "unexpected final server token");
+      ssl_failed(transport, "unexpected final server token");
       break;
     }
     if (const char *err = tls_version_check(ssl)) {
-      ssl_failed(ssl, err);
+      ssl_failed(transport, err);
       break;
     }
     if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0) {
@@ -787,8 +804,8 @@ static void client_handshake( pn_ssl_t* ssl) {
       ssl_log_error("Buffer size mismatch have %d, need %d\n", (int) ssl->sc_out_size, (int) max);
       ssl->state = SHUTTING_DOWN;
       ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
-      start_ssl_shutdown(ssl);
-      pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: buffer size");
+      start_ssl_shutdown(transport);
+      pn_do_error(transport, "amqp:connection:framing-error", "SSL Failure: buffer size");
       break;
     }
 
@@ -801,7 +818,7 @@ static void client_handshake( pn_ssl_t* ssl) {
     // ended before we got going
   default:
     ssl_log(ssl, "client handshake failed %d\n", (int) status);
-    ssl_failed(ssl, 0);
+    ssl_failed(transport, 0);
     break;
   }
   ssl->decrypting = false;
@@ -809,28 +826,29 @@ static void client_handshake( pn_ssl_t* ssl) {
 }
 
 
-static void ssl_handshake(pn_ssl_t* ssl) {
-  if (ssl->domain->mode == PN_SSL_MODE_CLIENT)
-    client_handshake(ssl);
+static void ssl_handshake(pn_transport_t* transport) {
+  if (transport->ssl->domain->mode == PN_SSL_MODE_CLIENT)
+    client_handshake(transport);
   else {
-    ssl_log( ssl, "TODO: server handshake.\n" );
-    ssl_failed(ssl, "internal runtime error, not yet implemented");
+    ssl_log(transport->ssl, "TODO: server handshake.\n" );
+    ssl_failed(transport, "internal runtime error, not yet implemented");
   }
 }
 
-static bool grow_inbuf2(pn_ssl_t *ssl, size_t minimum_size) {
+static bool grow_inbuf2(pn_transport_t *transport, size_t minimum_size) {
+  pni_ssl_t *ssl = transport->ssl;
   size_t old_capacity = pn_buffer_capacity(ssl->inbuf2);
   size_t new_capacity = old_capacity ? old_capacity * 2 : 1024;
 
   while (new_capacity < minimum_size)
     new_capacity *= 2;
 
-  uint32_t max_frame = pn_transport_get_max_frame(ssl->transport);
+  uint32_t max_frame = pn_transport_get_max_frame(transport);
   if (max_frame != 0) {
     if (old_capacity >= max_frame) {
       //  already big enough
-      ssl_log(ssl, "Application expecting %d bytes (> negotiated maximum frame)\n", new_capacity);
-      ssl_failed(ssl, "TLS: transport maximimum frame size error");
+      ssl_log(transport->ssl, "Application expecting %d bytes (> negotiated maximum frame)\n", new_capacity);
+      ssl_failed(transport, "TLS: transport maximimum frame size error");
       return false;
     }
   }
@@ -839,7 +857,7 @@ static bool grow_inbuf2(pn_ssl_t *ssl, size_t minimum_size) {
   int err = pn_buffer_ensure(ssl->inbuf2, extra_bytes);
   if (err) {
     ssl_log(ssl, "TLS memory allocation failed for %d bytes\n", max_frame);
-    ssl_failed(ssl, "TLS memory allocation failed");
+    ssl_failed(transport, "TLS memory allocation failed");
     return false;
   }
   return true;
@@ -851,8 +869,9 @@ static bool grow_inbuf2(pn_ssl_t *ssl, size_t minimum_size) {
 // for the peer shutdown alert). Stop processing input immediately, and stop processing
 // output once this is sent.
 
-static void start_ssl_shutdown(pn_ssl_t *ssl)
+static void start_ssl_shutdown(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   assert(ssl->network_out_pending == 0);
   if (ssl->queued_shutdown)
     return;
@@ -871,7 +890,7 @@ static void start_ssl_shutdown(pn_ssl_t *ssl)
   ::ApplyControlToken(&ssl->ctxt_handle, &desc);
 
   // Next handshake will generate the shudown alert token
-  ssl_handshake(ssl);
+  ssl_handshake(transport);
 }
 
 static int setup_ssl_connection(pn_transport_t *transport, unsigned int layer)
@@ -880,7 +899,7 @@ static int setup_ssl_connection(pn_transport_t *transport, unsigned int layer)
   return 0;
 }
 
-static void rewind_sc_inbuf(pn_ssl_t *ssl)
+static void rewind_sc_inbuf(pni_ssl_t *ssl)
 {
   // Decrypted bytes have been drained or double buffered.  Prepare for the next SSL Record.
   assert(ssl->in_data_count == 0);
@@ -898,8 +917,9 @@ static void rewind_sc_inbuf(pn_ssl_t *ssl)
   }
 }
 
-static void app_inbytes_add(pn_ssl_t *ssl)
+static void app_inbytes_add(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl->app_inbytes.start) {
     ssl->app_inbytes.start = ssl->in_data;
     ssl->app_inbytes.size = ssl->in_data_count;
@@ -908,7 +928,7 @@ static void app_inbytes_add(pn_ssl_t *ssl)
 
   if (ssl->double_buffered) {
     if (pn_buffer_available(ssl->inbuf2) == 0) {
-      if (!grow_inbuf2(ssl, 1024))
+      if (!grow_inbuf2(transport, 1024))
         // could not add room
         return;
     }
@@ -925,8 +945,9 @@ static void app_inbytes_add(pn_ssl_t *ssl)
 }
 
 
-static void app_inbytes_progress(pn_ssl_t *ssl, size_t minimum)
+static void app_inbytes_progress(pn_transport_t *transport, size_t minimum)
 {
+  pni_ssl_t *ssl = transport->ssl;
   // Make more decrypted data available, if possible.  Otherwise, move
   // unread bytes to front of inbuf2 to make room for next bulk decryption.
   // SSL may have chopped up data that app layer expects to be
@@ -947,7 +968,7 @@ static void app_inbytes_progress(pn_ssl_t *ssl, size_t minimum)
         pn_buffer_trim(ssl->inbuf2, 0, consumed);
       }
       if (!pn_buffer_available(ssl->inbuf2)) {
-        if (!grow_inbuf2(ssl, minimum))
+        if (!grow_inbuf2(transport, minimum))
           // could not add room
           return;
       }
@@ -963,7 +984,7 @@ static void app_inbytes_progress(pn_ssl_t *ssl, size_t minimum)
       ssl->double_buffered = true;
       pn_buffer_clear(ssl->inbuf2);
       if (!pn_buffer_available(ssl->inbuf2)) {
-        if (!grow_inbuf2(ssl, minimum))
+        if (!grow_inbuf2(transport, minimum))
           // could not add room
           return;
       }
@@ -981,11 +1002,12 @@ static void app_inbytes_progress(pn_ssl_t *ssl, size_t minimum)
 }
 
 
-static void app_inbytes_advance(pn_ssl_t *ssl, size_t consumed)
+static void app_inbytes_advance(pn_transport_t *transport, size_t consumed)
 {
+  pni_ssl_t *ssl = transport->ssl;
   if (consumed == 0) {
     // more contiguous bytes required
-    app_inbytes_progress(ssl, ssl->app_inbytes.size + 1);
+    app_inbytes_progress(transport, ssl->app_inbytes.size + 1);
     return;
   }
   assert(consumed <= ssl->app_inbytes.size);
@@ -996,12 +1018,12 @@ static void app_inbytes_advance(pn_ssl_t *ssl, size_t consumed)
     ssl->in_data_count -= consumed;
   }
   if (ssl->app_inbytes.size == 0)
-    app_inbytes_progress(ssl, 0);
+    app_inbytes_progress(transport, 0);
 }
 
 static void read_closed(pn_transport_t *transport, unsigned int layer, ssize_t error)
 {
-  pn_ssl_t *ssl = transport->ssl;
+  pni_ssl_t *ssl = transport->ssl;
   if (ssl->app_input_closed)
     return;
   if (ssl->state == RUNNING && !error) {
@@ -1015,7 +1037,7 @@ static void read_closed(pn_transport_t *transport, unsigned int layer, ssize_t e
     // both sides of app closed, and no more app output pending:
     ssl->state = SHUTTING_DOWN;
     if (ssl->network_out_pending == 0 && !ssl->queued_shutdown) {
-      start_ssl_shutdown(ssl);
+      start_ssl_shutdown(transport);
     }
   }
 }
@@ -1025,7 +1047,7 @@ static void read_closed(pn_transport_t *transport, unsigned int layer, ssize_t e
 
 static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t available)
 {
-  pn_ssl_t *ssl = transport->ssl;
+  pni_ssl_t *ssl = transport->ssl;
   ssl_log( ssl, "process_input_ssl( data size=%d )\n",available );
   ssize_t consumed = 0;
   ssize_t forwarded = 0;
@@ -1091,13 +1113,13 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
 
     if (ssl->sc_in_count > 0 && ssl->state <= SHUTTING_DOWN) {
       if (ssl->state == NEGOTIATING) {
-        ssl_handshake(ssl);
+        ssl_handshake(transport);
       } else {
-        if (ssl_decrypt(ssl)) {
+        if (ssl_decrypt(transport)) {
           // Ignore TLS Record with 0 length data (does not mean EOS)
           if (ssl->in_data_size > 0) {
             new_app_input = true;
-            app_inbytes_add(ssl);
+            app_inbytes_add(transport);
           } else {
             assert(ssl->decrypting == false);
             rewind_sc_inbuf(ssl);
@@ -1109,7 +1131,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
 
     if (ssl->state == SHUTTING_DOWN) {
       if (ssl->network_out_pending == 0 && !ssl->queued_shutdown) {
-        start_ssl_shutdown(ssl);
+        start_ssl_shutdown(transport);
       }
     } else if (ssl->state == SSL_CLOSED) {
       return consumed ? consumed : -1;
@@ -1124,11 +1146,11 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
           if (count > 0) {
             forwarded += count;
             // advance() can increase app_inbytes.size if double buffered
-            app_inbytes_advance(ssl, count);
+            app_inbytes_advance(transport, count);
             ssl_log(ssl, "Application consumed %d bytes from peer\n", (int) count);
           } else if (count == 0) {
             size_t old_size = ssl->app_inbytes.size;
-            app_inbytes_advance(ssl, 0);
+            app_inbytes_advance(transport, 0);
             if (ssl->app_inbytes.size == old_size) {
               break;  // no additional contiguous decrypted data available, get more network data
             }
@@ -1136,13 +1158,13 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
             // count < 0
             ssl_log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)\n",
                  (int) count, (int)ssl->app_inbytes.size);
-            app_inbytes_advance(ssl, ssl->app_inbytes.size);    // discard
+            app_inbytes_advance(transport, ssl->app_inbytes.size);    // discard
             read_closed(transport, layer, count);
           }
         } else {
           ssl_log(ssl, "Input closed discard %d bytes\n",
                (int)ssl->app_inbytes.size);
-          app_inbytes_advance(ssl, ssl->app_inbytes.size);      // discard
+          app_inbytes_advance(transport, ssl->app_inbytes.size);      // discard
         }
       }
     }
@@ -1162,7 +1184,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
 
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *buffer, size_t max_len)
 {
-  pn_ssl_t *ssl = transport->ssl;
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return PN_EOS;
   ssl_log( ssl, "process_output_ssl( max_len=%d )\n",max_len );
 
@@ -1172,7 +1194,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 
   if (ssl->state == CLIENT_HELLO) {
     // output buffers eclusively for internal handshake use until negotiation complete
-    client_handshake_init(ssl);
+    client_handshake_init(transport);
     if (ssl->state == SSL_CLOSED)
       return PN_EOS;
     ssl->state = NEGOTIATING;
@@ -1227,7 +1249,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 
     if (ssl->network_out_pending == 0 && ssl->state == SHUTTING_DOWN) {
       if (!ssl->queued_shutdown) {
-        start_ssl_shutdown(ssl);
+        start_ssl_shutdown(transport);
         work_pending = true;
       } else {
         ssl->state = SSL_CLOSED;
@@ -1348,7 +1370,7 @@ static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer
 static size_t buffered_output(pn_transport_t *transport)
 {
   size_t count = 0;
-  pn_ssl_t *ssl = transport->ssl;
+  pni_ssl_t *ssl = transport->ssl;
   if (ssl) {
     count += ssl->network_out_pending;
     if (count == 0 && ssl->state == SHUTTING_DOWN && ssl->queued_shutdown)

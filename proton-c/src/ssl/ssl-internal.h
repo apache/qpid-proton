@@ -29,8 +29,8 @@
  */
 
 // release the SSL context
-void pn_ssl_free( pn_ssl_t *ssl);
+void pn_ssl_free(pn_transport_t *transport);
 
-void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace);
+void pn_ssl_trace(pn_transport_t *transport, pn_trace_t trace);
 
 #endif /* ssl-internal.h */

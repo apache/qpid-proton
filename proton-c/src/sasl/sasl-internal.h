@@ -48,13 +48,13 @@ ssize_t pn_sasl_input(pn_sasl_t *sasl, const char *bytes, size_t available);
  */
 ssize_t pn_sasl_output(pn_sasl_t *sasl, char *bytes, size_t size);
 
-void pn_sasl_trace(pn_sasl_t *sasl, pn_trace_t trace);
+void pn_sasl_trace(pn_transport_t *transport, pn_trace_t trace);
 
 /** Destructor for the given SASL layer.
  *
  * @param[in] sasl the SASL object to free. No longer valid on
  *                 return.
  */
-void pn_sasl_free(pn_sasl_t *sasl);
+void pn_sasl_free(pn_transport_t *transport);
 
 #endif /* sasl-internal.h */

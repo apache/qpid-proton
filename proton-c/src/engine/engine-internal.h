@@ -108,10 +108,13 @@ typedef struct pn_io_layer_t {
 
 extern const pn_io_layer_t pni_passthru_layer;
 
+typedef struct pni_sasl_t pni_sasl_t;
+typedef struct pni_ssl_t pni_ssl_t;
+
 struct pn_transport_t {
   pn_tracer_t tracer;
-  pn_sasl_t *sasl;
-  pn_ssl_t *ssl;
+  pni_sasl_t *sasl;
+  pni_ssl_t *ssl;
   pn_connection_t *connection;  // reference counted
   pn_dispatcher_t *disp;
   char *remote_container;

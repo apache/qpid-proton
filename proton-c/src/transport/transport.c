@@ -268,8 +268,8 @@ static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
 
-  pn_ssl_free(transport->ssl);
-  pn_sasl_free(transport->sasl);
+  pn_ssl_free(transport);
+  pn_sasl_free(transport);
   pn_dispatcher_free(transport->disp);
   free(transport->remote_container);
   free(transport->remote_hostname);
@@ -1945,8 +1945,8 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
 
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
-  if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
+  if (transport->sasl) pn_sasl_trace(transport, trace);
+  if (transport->ssl) pn_ssl_trace(transport, trace);
   transport->disp->trace = trace;
 }
 
