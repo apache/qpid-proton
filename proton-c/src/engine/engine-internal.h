@@ -178,6 +178,7 @@ struct pn_transport_t {
   bool head_closed;
   bool done_processing; // if true, don't call pn_process again
   bool posted_idle_timeout;
+  bool server;
 };
 
 struct pn_connection_t {

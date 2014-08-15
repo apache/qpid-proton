@@ -60,7 +60,6 @@ typedef enum {
 
 /** The state of the SASL negotiation process */
 typedef enum {
-  PN_SASL_CONF,    /** Pending configuration by application */
   PN_SASL_IDLE,    /** Pending SASL Init */
   PN_SASL_STEP,    /** negotiation in progress */
   PN_SASL_PASS,    /** negotiation completed successfully */
@@ -96,24 +95,6 @@ PN_EXTERN void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
  */
 PN_EXTERN const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
 
-/** Configure the SASL layer to act as a SASL client.
- *
- * The role of client is similar to a TCP client - the peer requesting
- * the connection.
- *
- * @param[in] sasl the SASL layer to configure as a client
- */
-PN_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
-
-/** Configure the SASL layer to act as a server.
- *
- * The role of server is similar to a TCP server - the peer accepting
- * the connection.
- *
- * @param[in] sasl the SASL layer to configure as a server
- */
-PN_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
-
 /** Configure a SASL server layer to permit the client to skip the SASL exchange.
  *
  * If the peer client skips the SASL exchange (i.e. goes right to the AMQP header)
@@ -124,7 +105,7 @@ PN_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
  * @param[in] sasl the SASL layer to configure
  * @param[in] allow true -> allow skip; false -> forbid skip
  */
-    PN_EXTERN void pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow);
+PN_EXTERN void pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow);
 
 /** Configure the SASL layer to use the "PLAIN" mechanism.
  *

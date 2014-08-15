@@ -178,7 +178,6 @@ class TestServer(object):
     """
     sasl = cxtr.sasl()
     sasl.mechanisms("ANONYMOUS")
-    sasl.server()
     cxtr.connection = Connection()
     if "idle_timeout" in self.args:
       cxtr.transport.idle_timeout = self.args["idle_timeout"]

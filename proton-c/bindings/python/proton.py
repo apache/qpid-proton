@@ -2984,12 +2984,28 @@ class Transport(object):
   TRACE_FRM = PN_TRACE_FRM
   TRACE_RAW = PN_TRACE_RAW
 
-  def __init__(self, _trans=None):
-    if not _trans:
+  CLIENT = 1
+  SERVER = 2
+
+  @staticmethod
+  def _wrap_transport(c_trans):
+    if not c_trans: return None
+    wrapper = Transport(_trans=c_trans)
+    return wrapper
+
+  def __init__(self, mode=None, _trans=None):
+    if not mode and not _trans:
       self._trans = pn_transport()
-    else:
+    elif not mode:
       self._shared_trans = True
       self._trans = _trans
+    elif mode==Transport.CLIENT:
+      self._trans = pn_transport()
+    elif mode==Transport.SERVER:
+      self._trans = pn_transport()
+      pn_transport_set_server(self._trans)
+    else:
+      raise TransportException("Cannot initialise Transport from mode: %s" % str(mode))
     self._sasl = None
     self._ssl = None
 
@@ -3177,12 +3193,6 @@ class SASL(object):
   def mechanisms(self, mechs):
     pn_sasl_mechanisms(self._sasl, mechs)
 
-  def client(self):
-    pn_sasl_client(self._sasl)
-
-  def server(self):
-    pn_sasl_server(self._sasl)
-
   def allow_skip(self, allow):
     pn_sasl_allow_skip(self._sasl, allow)
 
@@ -3216,7 +3226,6 @@ class SASL(object):
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
-  STATE_CONF = PN_SASL_CONF
   STATE_IDLE = PN_SASL_IDLE
   STATE_STEP = PN_SASL_STEP
   STATE_PASS = PN_SASL_PASS
@@ -3355,7 +3364,7 @@ wrappers = {
   "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
   "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
   "pn_delivery": lambda x: Delivery._wrap_delivery(pn_cast_pn_delivery(x)),
-  "pn_transport": lambda x: Transport(pn_cast_pn_transport(x))
+  "pn_transport": lambda x: Transport._wrap_transport(pn_cast_pn_transport(x))
 }
 
 class Collector:
@@ -3590,9 +3599,7 @@ class Connector(object):
   @property
   def transport(self):
     trans = pn_connector_transport(self._cxtr)
-    if trans:
-      return Transport(trans)
-    return None
+    return Transport._wrap_transport(trans)
 
   def close(self):
     return pn_connector_close(self._cxtr)

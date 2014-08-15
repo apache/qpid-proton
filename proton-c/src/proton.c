@@ -132,11 +132,8 @@ void server_callback(pn_connector_t *ctor)
   while (pn_sasl_state(sasl) != PN_SASL_PASS) {
     switch (pn_sasl_state(sasl)) {
     case PN_SASL_IDLE:
-      return;
-    case PN_SASL_CONF:
       pn_sasl_mechanisms(sasl, "PLAIN ANONYMOUS");
-      pn_sasl_server(sasl);
-      break;
+      return;
     case PN_SASL_STEP:
       {
         size_t n = pn_sasl_pending(sasl);
@@ -283,15 +280,12 @@ void client_callback(pn_connector_t *ctor)
     pn_sasl_state_t st = pn_sasl_state(sasl);
     switch (st) {
     case PN_SASL_IDLE:
-      return;
-    case PN_SASL_CONF:
       if (ctx->mechanism && !strcmp(ctx->mechanism, "PLAIN")) {
         pn_sasl_plain(sasl, ctx->username, ctx->password);
       } else {
         pn_sasl_mechanisms(sasl, ctx->mechanism);
-        pn_sasl_client(sasl);
       }
-      break;
+      return;
     case PN_SASL_STEP:
       if (pn_sasl_pending(sasl)) {
         fprintf(stderr, "challenge failed\n");
