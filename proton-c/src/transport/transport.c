@@ -199,6 +199,8 @@ static void pn_transport_initialize(void *object)
   transport->done_processing = false;
 
   transport->posted_idle_timeout = false;
+
+  transport->server = false;
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -232,7 +234,7 @@ static void pn_transport_finalize(void *object);
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL
 
-pn_transport_t *pn_transport()
+static pn_transport_t *pni_transport(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_transport);
   pn_transport_t *transport =
@@ -251,6 +253,18 @@ pn_transport_t *pn_transport()
     return NULL;
   }
   return transport;
+}
+
+pn_transport_t *pn_transport_server()
+{
+  pn_transport_t *t = pni_transport();
+  t->server = true;
+  return t;
+}
+
+pn_transport_t *pn_transport_client()
+{
+  return pni_transport();
 }
 
 void pn_transport_free(pn_transport_t *transport)

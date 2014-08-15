@@ -42,7 +42,6 @@ struct pni_sasl_t {
   pn_buffer_t *recv_data;
   pn_sasl_outcome_t outcome;
   bool client;
-  bool configured;
   bool allow_skip;
   bool sent_init;
   bool rcvd_init;
@@ -104,8 +103,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->disp = pn_dispatcher(1, transport);
     sasl->disp->batch = false;
 
-    sasl->client = false;
-    sasl->configured = false;
+    sasl->client = !transport->server;
     sasl->mechanisms = NULL;
     sasl->remote_mechanisms = NULL;
     sasl->send_data = pn_buffer(16);
@@ -131,7 +129,6 @@ pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl0)
 {
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
   if (sasl) {
-    if (!sasl->configured) return PN_SASL_CONF;
     if (sasl->outcome == PN_SASL_NONE) {
       return sasl->rcvd_init ? PN_SASL_STEP : PN_SASL_IDLE;
     } else {
@@ -200,24 +197,6 @@ ssize_t pn_sasl_recv(pn_sasl_t *sasl0, char *bytes, size_t size)
   }
 }
 
-void pn_sasl_client(pn_sasl_t *sasl0)
-{
-  pni_sasl_t *sasl = get_sasl_internal(sasl0);
-  if (sasl) {
-    sasl->client = true;
-    sasl->configured = true;
-  }
-}
-
-void pn_sasl_server(pn_sasl_t *sasl0)
-{
-  pni_sasl_t *sasl = get_sasl_internal(sasl0);
-  if (sasl) {
-    sasl->client = false;
-    sasl->configured = true;
-  }
-}
-
 void pn_sasl_allow_skip(pn_sasl_t *sasl0, bool allow)
 {
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
@@ -244,7 +223,6 @@ void pn_sasl_plain(pn_sasl_t *sasl0, const char *username, const char *password)
 
   pn_sasl_mechanisms(sasl0, "PLAIN");
   pn_sasl_send(sasl0, iresp, size);
-  pn_sasl_client(sasl0);
   free(iresp);
 }
 
@@ -253,6 +231,13 @@ void pn_sasl_done(pn_sasl_t *sasl0, pn_sasl_outcome_t outcome)
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
   if (sasl) {
     sasl->outcome = outcome;
+    // If we do this on the client it is a hack to tell us that
+    // no actual negatiation is going to happen and we can go
+    // straight to the AMQP layer
+    if (sasl->client) {
+      sasl->rcvd_done = true;
+      sasl->sent_done = true;
+    }
   }
 }
 
@@ -330,8 +315,6 @@ void pn_server_done(pn_sasl_t *sasl0)
 void pn_sasl_process(pn_transport_t *transport)
 {
   pni_sasl_t *sasl = transport->sasl;
-  if (!sasl->configured) return;
-
   if (!sasl->sent_init) {
     if (sasl->client) {
       pn_client_init(sasl);

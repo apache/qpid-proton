@@ -124,11 +124,11 @@ int test_free_connection(int argc, char **argv)
 {
     fprintf(stdout, "test_free_connection\n");
     pn_connection_t *c1 = pn_connection();
-    pn_transport_t  *t1 = pn_transport();
+    pn_transport_t  *t1 = pn_transport_client();
     pn_transport_bind(t1, c1);
 
     pn_connection_t *c2 = pn_connection();
-    pn_transport_t  *t2 = pn_transport();
+    pn_transport_t  *t2 = pn_transport_server();
     pn_transport_bind(t2, c2);
 
     //pn_transport_trace(t1, PN_TRACE_FRM);
@@ -176,11 +176,11 @@ int test_free_session(int argc, char **argv)
 {
     fprintf(stdout, "test_free_session\n");
     pn_connection_t *c1 = pn_connection();
-    pn_transport_t  *t1 = pn_transport();
+    pn_transport_t  *t1 = pn_transport_client();
     pn_transport_bind(t1, c1);
 
     pn_connection_t *c2 = pn_connection();
-    pn_transport_t  *t2 = pn_transport();
+    pn_transport_t  *t2 = pn_transport_server();
     pn_transport_bind(t2, c2);
 
     //pn_transport_trace(t1, PN_TRACE_FRM);
@@ -238,11 +238,11 @@ int test_free_link(int argc, char **argv)
 {
     fprintf(stdout, "test_free_link\n");
     pn_connection_t *c1 = pn_connection();
-    pn_transport_t  *t1 = pn_transport();
+    pn_transport_t  *t1 = pn_transport_client();
     pn_transport_bind(t1, c1);
 
     pn_connection_t *c2 = pn_connection();
-    pn_transport_t  *t2 = pn_transport();
+    pn_transport_t  *t2 = pn_transport_server();
     pn_transport_bind(t2, c2);
 
     //pn_transport_trace(t1, PN_TRACE_FRM);

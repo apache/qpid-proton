@@ -340,7 +340,12 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     @Override
     public void done(SaslOutcome outcome)
     {
-        checkRole(Role.SERVER);
+        // Support current hack in C code to allow producing sasl frames for
+        // ANONYMOUS in a single chunk
+        if(_role == Role.CLIENT)
+        {
+            return;
+        }
         _outcome = outcome;
         _done = true;
         _state = classifyStateFromOutcome(outcome);

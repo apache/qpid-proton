@@ -864,14 +864,23 @@ def pn_delivery_link(dlv):
 def pn_delivery_settle(dlv):
   dlv.impl.settle()
 
-class pn_transport_wrapper:
-
+class pn_transport_client_wrapper:
   def __init__(self, impl):
     self.impl = impl
+    self.server = False
     self.condition = pn_condition()
 
-def pn_transport():
-  return wrap(Proton.transport(), pn_transport_wrapper)
+class pn_transport_server_wrapper:
+  def __init__(self, impl):
+    self.impl = impl
+    self.server = True
+    self.condition = pn_condition()
+
+def pn_transport_client():
+  return wrap(Proton.transport(), pn_transport_client_wrapper)
+
+def pn_transport_server():
+  return wrap(Proton.transport(), pn_transport_server_wrapper)
 
 def pn_transport_get_max_frame(trans):
   return trans.impl.getMaxFrameSize()
@@ -1029,7 +1038,7 @@ wrappers = {
   "pn_session": lambda x: wrap(x, pn_session_wrapper),
   "pn_link": lambda x: wrap(x, pn_link_wrapper),
   "pn_delivery": lambda x: wrap(x, pn_delivery_wrapper),
-  "pn_transport": lambda x: wrap(x, pn_transport_wrapper),
+  "pn_transport": lambda x: wrap(x, pn_transport_client_wrapper),
   "pn_void": lambda x: x
 }
 
