@@ -24,16 +24,23 @@ from proton_events import EventLoop, IncomingMessageHandler
 class Server(IncomingMessageHandler):
     def __init__(self, eventloop, host, address):
         self.eventloop = eventloop
-        self.conn = eventloop.connect(host)
+        self.conn = eventloop.connect(host, handler=self)
         self.receiver = self.conn.receiver(address, handler=self)
         self.senders = {}
+        self.relay = None
 
     def on_message(self, event):
-        sender = self.senders.get(event.message.reply_to)
+        sender = self.relay
+        if not sender:
+            sender = self.senders.get(event.message.reply_to)
         if not sender:
             sender = self.conn.sender(event.message.reply_to)
             self.senders[event.message.reply_to] = sender
-        sender.send_msg(Message(body=event.message.body.upper()))
+        sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
+
+    def on_connection_remote_open(self, event):
+        if 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+            self.relay = self.conn.sender(None)
 
     def on_connection_remote_close(self, endpoint, error):
         if error: print "Closed due to %s" % error
