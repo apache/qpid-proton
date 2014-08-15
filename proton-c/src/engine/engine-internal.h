@@ -300,8 +300,6 @@ void pn_link_dump(pn_link_t *link);
 void pn_dump(pn_connection_t *conn);
 void pn_transport_sasl_init(pn_transport_t *transport);
 
-pn_timestamp_t pn_io_layer_tick_passthru(pn_transport_t *, unsigned int, pn_timestamp_t);
-
 void pn_condition_init(pn_condition_t *condition);
 void pn_condition_tini(pn_condition_t *condition);
 void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit);

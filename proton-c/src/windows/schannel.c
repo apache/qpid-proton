@@ -351,35 +351,35 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 const pn_io_layer_t unknown_layer = {
     process_input_unknown,
     process_output_unknown,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 
 const pn_io_layer_t ssl_layer = {
     process_input_ssl,
     process_output_ssl,
-    pn_io_layer_tick_passthru,
+    NULL,
     buffered_output
 };
 
 const pn_io_layer_t ssl_input_closed_layer = {
     process_input_done,
     process_output_ssl,
-    pn_io_layer_tick_passthru,
+    NULL,
     buffered_output
 };
 
 const pn_io_layer_t ssl_output_closed_layer = {
     process_input_ssl,
     process_output_done,
-    pn_io_layer_tick_passthru,
+    NULL,
     buffered_output
 };
 
 const pn_io_layer_t ssl_closed_layer = {
     process_input_done,
     process_output_done,
-    pn_io_layer_tick_passthru,
+    NULL,
     buffered_output
 };
 

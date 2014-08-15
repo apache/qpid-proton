@@ -61,28 +61,28 @@ static ssize_t pn_output_write_sasl(pn_transport_t *transport, unsigned int laye
 const pn_io_layer_t sasl_headers_layer = {
     pn_input_read_sasl_header,
     pn_output_write_sasl_header,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 
 const pn_io_layer_t sasl_write_header_layer = {
     pn_input_read_sasl,
     pn_output_write_sasl_header,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 
 const pn_io_layer_t sasl_read_header_layer = {
     pn_input_read_sasl_header,
     pn_output_write_sasl,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 
 const pn_io_layer_t sasl_layer = {
     pn_input_read_sasl,
     pn_output_write_sasl,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 

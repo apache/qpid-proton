@@ -109,7 +109,7 @@ static void pni_default_tracer(pn_transport_t *transport, const char *message)
 const pn_io_layer_t pni_passthru_layer = {
     pn_io_layer_input_passthru,
     pn_io_layer_output_passthru,
-    pn_io_layer_tick_passthru,
+    NULL,
     NULL
 };
 
@@ -1095,8 +1095,8 @@ static ssize_t transport_consume(pn_transport_t *transport)
 
   while (transport->input_pending || transport->tail_closed) {
     ssize_t n;
-    n = transport->io_layers[PN_IO_SSL]->
-      process_input( transport, PN_IO_SSL,
+    n = transport->io_layers[0]->
+      process_input( transport, 0,
                      transport->input_buf + consumed,
                      transport->input_pending );
     if (n > 0) {
@@ -1904,8 +1904,8 @@ static ssize_t transport_produce(pn_transport_t *transport)
 
   while (space > 0) {
     ssize_t n;
-    n = transport->io_layers[PN_IO_SSL]->
-      process_output( transport, PN_IO_SSL,
+    n = transport->io_layers[0]->
+      process_output( transport, 0,
                       &transport->output_buf[transport->output_pending],
                       space );
     if (n > 0) {
@@ -2052,7 +2052,12 @@ pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
 
 pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now)
 {
-  return transport->io_layers[PN_IO_SSL]->process_tick(transport, PN_IO_SSL, now);
+  pn_timestamp_t r = 0;
+  for (int i = 0; i<PN_IO_LAYER_CT; ++i) {
+    if (transport->io_layers[i]->process_tick)
+      r = pn_timestamp_min(r, transport->io_layers[i]->process_tick(transport, i, now));
+  }
+  return r;
 }
 
 uint64_t pn_transport_get_frames_output(const pn_transport_t *transport)
@@ -2084,15 +2089,6 @@ ssize_t pn_io_layer_output_passthru(pn_transport_t *transport, unsigned int laye
       return transport->io_layers[layer+1]->process_output(transport, layer+1, data, available);
   return PN_EOS;
 }
-
-/** Pass through tick handler */
-pn_timestamp_t pn_io_layer_tick_passthru(pn_transport_t *transport, unsigned int layer, pn_timestamp_t now)
-{
-  if (layer+1<PN_IO_LAYER_CT)
-      return transport->io_layers[layer+1]->process_tick(transport, layer+1, now);
-  return 0;
-}
-
 
 ///
 
