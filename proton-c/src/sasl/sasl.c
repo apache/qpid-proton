@@ -32,6 +32,7 @@
 #include "engine/engine-internal.h"
 #include "dispatcher/dispatcher.h"
 #include "util.h"
+#include "transport/autodetect.h"
 
 
 struct pni_sasl_t {
@@ -68,7 +69,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t *transport, unsigned int layer,
 static ssize_t pn_output_write_sasl_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t size);
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 
-const pn_io_layer_t sasl_headers_layer = {
+const pn_io_layer_t sasl_header_layer = {
     pn_input_read_sasl_header,
     pn_output_write_sasl_header,
     NULL,
@@ -118,7 +119,6 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->output_bypass = false;
 
     transport->sasl = sasl;
-    transport->io_layers[PN_IO_SASL] = &sasl_headers_layer;
   }
 
   // The actual external pn_sasl_t pointer is a pointer to its enclosing pn_transport_t
@@ -202,6 +202,11 @@ void pn_sasl_allow_skip(pn_sasl_t *sasl0, bool allow)
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
   if (sasl)
     sasl->allow_skip = allow;
+}
+
+bool pn_sasl_skipping_allowed(pn_transport_t *transport)
+{
+  return transport && transport->sasl && transport->sasl->allow_skip;
 }
 
 void pn_sasl_plain(pn_sasl_t *sasl0, const char *username, const char *password)
@@ -441,45 +446,33 @@ int pn_do_outcome(pn_dispatcher_t *disp)
 }
 
 #define SASL_HEADER ("AMQP\x03\x01\x00\x00")
-#define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
 #define SASL_HEADER_LEN 8
 
 static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
-  pni_sasl_t *sasl = transport->sasl;
-  if (available > 0) {
-    if (available < SASL_HEADER_LEN) {
-      if (memcmp(bytes, SASL_HEADER, available) == 0 ||
-          memcmp(bytes, AMQP_HEADER, available) == 0)
-        return 0;
+  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
+  switch (protocol) {
+  case PNI_PROTOCOL_AMQP_SASL:
+    if (transport->io_layers[layer] == &sasl_read_header_layer) {
+        transport->io_layers[layer] = &sasl_layer;
     } else {
-      if (memcmp(bytes, SASL_HEADER, SASL_HEADER_LEN) == 0) {
-        if (transport->io_layers[layer] == &sasl_read_header_layer) {
-          transport->io_layers[layer] = &sasl_layer;
-        } else {
-          transport->io_layers[layer] = &sasl_write_header_layer;
-        }
-        if (sasl->disp->trace & PN_TRACE_FRM)
-          pn_transport_logf(transport, "  <- %s", "SASL");
-        return SASL_HEADER_LEN;
-      }
-      if (memcmp(bytes, AMQP_HEADER, SASL_HEADER_LEN) == 0) {
-        if (sasl->allow_skip) {
-          sasl->outcome = PN_SASL_SKIPPED;
-          transport->io_layers[layer] = &pni_passthru_layer;
-          return pni_passthru_layer.process_input(transport, layer, bytes, available);
-        } else {
-            pn_do_error(transport, "amqp:connection:policy-error",
-                        "Client skipped SASL exchange - forbidden");
-            return PN_EOS;
-        }
-      }
+        transport->io_layers[layer] = &sasl_write_header_layer;
     }
+    if (transport->sasl->disp->trace & PN_TRACE_FRM)
+        pn_transport_logf(transport, "  <- %s", "SASL");
+    return SASL_HEADER_LEN;
+  case PNI_PROTOCOL_INSUFFICIENT:
+    if (!eos) return 0;
+    /* Fallthru */
+  default:
+    break;
   }
   char quoted[1024];
   pn_quote_data(quoted, 1024, bytes, available);
   pn_do_error(transport, "amqp:connection:framing-error",
-              "%s header mismatch: '%s'", "SASL", quoted);
+              "%s header mismatch: %s ['%s']%s", "SASL", pni_protocol_name(protocol), quoted,
+              !eos ? "" : " (connection aborted)");
   return PN_EOS;
 }
 

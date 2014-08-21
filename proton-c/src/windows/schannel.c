@@ -148,11 +148,8 @@ struct pn_ssl_session_t {
 
 static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
-static ssize_t process_input_unknown( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
-static ssize_t process_output_unknown( pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
 static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
-static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
@@ -360,13 +357,6 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   return 0;
 }
 
-const pn_io_layer_t unknown_layer = {
-    process_input_unknown,
-    process_output_unknown,
-    NULL,
-    NULL
-};
-
 const pn_io_layer_t ssl_layer = {
     process_input_ssl,
     process_output_ssl,
@@ -404,12 +394,6 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 
   ssl->domain = domain;
   domain->ref_count++;
-  if (domain->allow_unsecured) {
-    transport->io_layers[PN_IO_SSL] = &unknown_layer;
-  }
-  else {
-    transport->io_layers[PN_IO_SSL] = &ssl_layer;
-  }
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
@@ -438,6 +422,11 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
   return 0;
 }
 
+
+bool pn_ssl_allow_unsecured(pn_transport_t *transport)
+{
+  return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
+}
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
 {
@@ -893,12 +882,6 @@ static void start_ssl_shutdown(pn_transport_t *transport)
   ssl_handshake(transport);
 }
 
-static int setup_ssl_connection(pn_transport_t *transport, unsigned int layer)
-{
-  transport->io_layers[layer] = &ssl_layer;
-  return 0;
-}
-
 static void rewind_sc_inbuf(pni_ssl_t *ssl)
 {
   // Decrypted bytes have been drained or double buffered.  Prepare for the next SSL Record.
@@ -1269,92 +1252,6 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
   return written;
 }
 
-
-static int setup_cleartext_connection(pn_transport_t *transport, unsigned int layer)
-{
-  transport->io_layers[layer] = &pni_passthru_layer;
-  return 0;
-}
-
-
-// until we determine if the client is using SSL or not:
-
-static ssize_t process_input_unknown(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)
-{
-  pn_ssl_t *ssl = transport->ssl;
-  switch (check_for_ssl_connection( input_data, len )) {
-  case SSL_CONNECTION:
-	ssl_log(ssl, "SSL connection detected.\n");
-    setup_ssl_connection(transport, layer);
-	break;
-  case CLEAR_CONNECTION:
-	ssl_log(ssl, "Cleartext connection detected.\n");
-    setup_cleartext_connection(transport, layer);
-	break;
-  default:
-    return 0;
-  }
-  return transport->io_layers[layer]->process_input(transport, layer, input_data, len);
-}
-
-static ssize_t process_output_unknown(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len)
-{
-  // do not do output until we know if SSL is used or not
-  return 0;
-}
-
-static connection_mode_t check_for_ssl_connection( const char *data, size_t len )
-{
-  if (len >= 5) {
-    const unsigned char *buf = (unsigned char *)data;
-    /*
-     * SSLv2 Client Hello format
-     * http://www.mozilla.org/projects/security/pki/nss/ssl/draft02.html
-     *
-     * Bytes 0-1: RECORD-LENGTH
-     * Byte    2: MSG-CLIENT-HELLO (1)
-     * Byte    3: CLIENT-VERSION-MSB
-     * Byte    4: CLIENT-VERSION-LSB
-     *
-     * Allowed versions:
-     * 2.0 - SSLv2
-     * 3.0 - SSLv3
-     * 3.1 - TLS 1.0
-     * 3.2 - TLS 1.1
-     * 3.3 - TLS 1.2
-     *
-     * The version sent in the Client-Hello is the latest version supported by
-     * the client. NSS may send version 3.x in an SSLv2 header for
-     * maximum compatibility.
-     */
-    int isSSL2Handshake = buf[2] == 1 &&   // MSG-CLIENT-HELLO
-      ((buf[3] == 3 && buf[4] <= 3) ||    // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-       (buf[3] == 2 && buf[4] == 0));     // SSL 2
-
-    /*
-     * SSLv3/TLS Client Hello format
-     * RFC 2246
-     *
-     * Byte    0: ContentType (handshake - 22)
-     * Bytes 1-2: ProtocolVersion {major, minor}
-     *
-     * Allowed versions:
-     * 3.0 - SSLv3
-     * 3.1 - TLS 1.0
-     * 3.2 - TLS 1.1
-     * 3.3 - TLS 1.2
-     */
-    int isSSL3Handshake = buf[0] == 22 &&  // handshake
-      (buf[1] == 3 && buf[2] <= 3);       // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-
-    if (isSSL2Handshake || isSSL3Handshake) {
-      return SSL_CONNECTION;
-    } else {
-      return CLEAR_CONNECTION;
-    }
-  }
-  return UNKNOWN_CONNECTION;
-}
 
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)
 {

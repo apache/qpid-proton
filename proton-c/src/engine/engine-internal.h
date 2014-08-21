@@ -107,6 +107,9 @@ typedef struct pn_io_layer_t {
 } pn_io_layer_t;
 
 extern const pn_io_layer_t pni_passthru_layer;
+extern const pn_io_layer_t ssl_layer;
+extern const pn_io_layer_t sasl_header_layer;
+extern const pn_io_layer_t sasl_write_header_layer;
 
 typedef struct pni_sasl_t pni_sasl_t;
 typedef struct pni_ssl_t pni_ssl_t;
@@ -131,10 +134,7 @@ struct pn_transport_t {
   pn_condition_t condition;
   pn_error_t *error;
 
-#define PN_IO_SSL  0
-#define PN_IO_SASL 1
-#define PN_IO_AMQP 2
-#define PN_IO_LAYER_CT (PN_IO_AMQP+1)
+#define PN_IO_LAYER_CT 3
   const pn_io_layer_t *io_layers[PN_IO_LAYER_CT];
 
   /* dead remote detection */
