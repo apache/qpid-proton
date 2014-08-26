@@ -190,11 +190,6 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         freed = true;
 
         doFree();
-
-        if (_localState == EndpointState.ACTIVE) {
-            close();
-        }
-
         decref();
     }
 

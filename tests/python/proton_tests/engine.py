@@ -2067,13 +2067,10 @@ class DeliveryTest(Test):
   def testCustom(self):
     self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
 
-class EventTest(Test):
+class CollectorTest(Test):
 
   def setup(self):
     self.collector = Collector()
-
-  def teardown(self):
-    self.cleanup()
 
   def drain(self):
     result = []
@@ -2103,6 +2100,11 @@ class EventTest(Test):
           return
 
     assert False, "actual events %s did not match any of the expected sequences: %s" % (events, sequences)
+
+class EventTest(CollectorTest):
+
+  def teardown(self):
+    self.cleanup()
 
   def testEndpointEvents(self):
     c1, c2 = self.connection()
@@ -2145,13 +2147,11 @@ class EventTest(Test):
     self.expect(Event.LINK_FINAL)
     ssn2.free()
     del ssn2
-    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
     self.pump()
-    self.expect(Event.SESSION_FINAL)
     c1.free()
     c1._transport.unbind()
-    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT,
-                Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_FINAL)
+    self.expect(Event.SESSION_FINAL, Event.LINK_FINAL, Event.SESSION_FINAL,
+                Event.CONNECTION_FINAL)
 
   def testConnectionINIT_FINAL(self):
     c = Connection()
@@ -2215,12 +2215,8 @@ class EventTest(Test):
     self.expect(Event.LINK_REMOTE_OPEN, Event.DELIVERY)
     rcv.session.connection._transport.unbind()
     rcv.session.connection.free()
-    self.expect_oneof((Event.TRANSPORT, Event.LINK_CLOSE, Event.SESSION_CLOSE,
-                       Event.CONNECTION_CLOSE, Event.LINK_FINAL,
-                       Event.SESSION_FINAL, Event.CONNECTION_FINAL),
-                      (Event.TRANSPORT, Event.LINK_CLOSE, Event.LINK_FINAL,
-                       Event.SESSION_CLOSE, Event.SESSION_FINAL,
-                       Event.CONNECTION_CLOSE, Event.CONNECTION_FINAL))
+    self.expect(Event.TRANSPORT, Event.LINK_FINAL, Event.SESSION_FINAL,
+                Event.CONNECTION_FINAL)
 
   def testDeliveryEventsDisp(self):
     snd, rcv = self.testFlowEvents()
@@ -2238,3 +2234,88 @@ class EventTest(Test):
     self.pump()
     event = self.expect(Event.DELIVERY)
     assert event.delivery == dlv
+
+class PeerTest(CollectorTest):
+
+  def setup(self):
+    CollectorTest.setup(self)
+    self.connection = Connection()
+    self.connection.collect(self.collector)
+    self.transport = Transport()
+    self.transport.bind(self.connection)
+    self.peer = Connection()
+    self.peer_transport = Transport()
+    self.peer_transport.bind(self.peer)
+    self.peer_transport.trace(Transport.TRACE_OFF)
+
+  def pump(self):
+    pump(self.transport, self.peer_transport)
+
+class TeardownLeakTest(PeerTest):
+
+  def doLeak(self, local, remote):
+    self.connection.open()
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_OPEN, Event.TRANSPORT)
+
+    ssn = self.connection.session()
+    ssn.open()
+    self.expect(Event.SESSION_INIT, Event.SESSION_OPEN, Event.TRANSPORT)
+
+    snd = ssn.sender("sender")
+    snd.open()
+    self.expect(Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+
+
+    self.pump()
+
+    self.peer.open()
+    self.peer.session_head(0).open()
+    self.peer.link_head(0).open()
+
+    self.pump()
+    self.expect_oneof((Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
+                       Event.LINK_REMOTE_OPEN, Event.LINK_FLOW),
+                      (Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
+                       Event.LINK_REMOTE_OPEN))
+
+    if local:
+      snd.close() # ha!!
+      self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+    ssn.close()
+    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
+    self.connection.close()
+    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT)
+
+    if remote:
+      self.peer.link_head(0).close() # ha!!
+    self.peer.session_head(0).close()
+    self.peer.close()
+
+    self.pump()
+
+    if remote:
+      self.expect_oneof((Event.LINK_REMOTE_CLOSE, Event.SESSION_REMOTE_CLOSE,
+                         Event.CONNECTION_REMOTE_CLOSE),
+                        (Event.LINK_REMOTE_CLOSE, Event.LINK_FINAL,
+                         Event.SESSION_REMOTE_CLOSE,
+                         Event.CONNECTION_REMOTE_CLOSE))
+    else:
+      self.expect(Event.SESSION_REMOTE_CLOSE, Event.CONNECTION_REMOTE_CLOSE)
+
+    self.connection.free()
+    self.transport.unbind()
+
+    self.expect_oneof((Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_FINAL),
+                      (Event.SESSION_FINAL, Event.CONNECTION_FINAL))
+
+  def testLocalRemoteLeak(self):
+    self.doLeak(True, True)
+
+  def testLocalLeak(self):
+    self.doLeak(True, False)
+
+  def testRemoteLeak(self):
+    self.doLeak(False, True)
+
+  def testLeak(self):
+    self.doLeak(False, False)

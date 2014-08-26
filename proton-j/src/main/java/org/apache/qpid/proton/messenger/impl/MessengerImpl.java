@@ -1444,14 +1444,16 @@ public class MessengerImpl implements Messenger
         {
             _receivers++;
             _blocked.add((Receiver)link);
+            link.setContext(Boolean.TRUE);
         }
     }
 
     // a link is being removed, account for it.
     private void linkRemoved(Link _link)
     {
-        if (_link instanceof Receiver)
+        if (_link instanceof Receiver && (Boolean) _link.getContext())
         {
+            _link.setContext(Boolean.FALSE);
             Receiver link = (Receiver)_link;
             assert _receivers > 0;
             _receivers--;
