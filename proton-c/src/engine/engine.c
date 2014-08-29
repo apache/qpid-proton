@@ -1457,6 +1457,7 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
 {
   pn_delivery_t *current = pn_link_current(sender);
   if (!current) return PN_EOS;
+  if (!bytes || !n) return 0;
   pn_buffer_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
   pn_add_tpwork(current);
