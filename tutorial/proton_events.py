@@ -314,38 +314,44 @@ class SelectLoop(object):
     def remove(self, selectable):
         self.selectables.remove(selectable)
 
+    @property
+    def redundant(self):
+        return self.events.empty and not self.selectables
+
     def run(self):
-        while True:
-            self.events.process()
-            if self._abort: return
+        while not (self._abort or self.redundant):
+            self.do_work()
 
-            stable = False
-            while not stable:
-                reading = []
-                writing = []
-                closed = []
-                for s in self.selectables:
-                    if s.reading(): reading.append(s)
-                    if s.writing(): writing.append(s)
-                    if s.closed(): closed.append(s)
+    def do_work(self, timeout = 3):
+        self.events.process()
+        if self._abort: return
 
-                for s in closed:
-                    self.selectables.remove(s)
-                    s.removed()
-                stable = len(closed) == 0
+        stable = False
+        while not stable:
+            reading = []
+            writing = []
+            closed = []
+            for s in self.selectables:
+                if s.reading(): reading.append(s)
+                if s.writing(): writing.append(s)
+                if s.closed(): closed.append(s)
 
-            if self.events.empty and not self.selectables:
-                return
+            for s in closed:
+                self.selectables.remove(s)
+                s.removed()
+            stable = len(closed) == 0
 
-            timeout = 3
-            if self.events.next_interval and self.events.next_interval < timeout:
-                timeout = self.events.next_interval
-            readable, writable, _ = select(reading, writing, [], timeout)
+        if self.redundant:
+            return
 
-            for s in readable:
-                s.readable()
-            for s in writable:
-                s.writable()
+        if self.events.next_interval and self.events.next_interval < timeout:
+            timeout = self.events.next_interval
+        readable, writable, _ = select(reading, writing, [], timeout)
+
+        for s in readable:
+            s.readable()
+        for s in writable:
+            s.writable()
 
 class Handshaker(EventDispatcher):
 
@@ -414,40 +420,6 @@ class ScopedDispatcher(EventDispatcher):
         Event.CATEGORY_LINK: ["link", "session", "connection"],
         Event.CATEGORY_DELIVERY: ["delivery", "link", "session", "connection"]
     }
-
-    def connection_context(self, event):
-        conn = event.connection
-        if conn and hasattr(conn, "context"):
-            return conn.context
-        else:
-            return None
-
-    def session_context(self, event):
-        ssn = event.session
-        if ssn and hasattr(ssn, "context"):
-            return ssn.context
-        else:
-            return self.connection_context(event)
-
-    def link_context(self, event):
-        link = event.link
-        if link and hasattr(link, "context"):
-            return link.context
-        else:
-            return self.session_context(event)
-
-    def delivery_context(self, event):
-        dlv = event.delivery
-        if dlv and hasattr(dlv, "context"):
-            return dlv.context
-        return self.link_context(event)
-
-    def target_context(self, event):
-        f = getattr(self, self.targets.get(event.category, ""), None)
-        if f:
-            return f(event)
-        else:
-            return None
 
     def dispatch(self, event):
         method = self.methods.get(event.type, str(event.type))
@@ -539,13 +511,16 @@ def delivery_tags():
         yield str(count)
         count += 1
 
-def send_msg(self, msg, tag=None, handler=None):
-    dlv = self.delivery(tag or next(self.tags))
+def send_msg(sender, msg, tag=None, handler=None):
+    dlv = sender.delivery(tag or next(sender.tags))
     if handler:
         dlv.context = handler
-    self.send(msg.encode())
-    self.advance()
+    sender.send(msg.encode())
+    sender.advance()
     return dlv
+
+def _send_msg(self, msg, tag=None, handler=None):
+    return send_msg(self, msg, tag, handler)
 
 class MessagingContext(object):
     def __init__(self, conn, handler=None, ssn=None):
@@ -562,7 +537,7 @@ class MessagingContext(object):
         if handler:
             snd.context = handler
         snd.tags = tags or delivery_tags()
-        snd.send_msg = types.MethodType(send_msg, snd)
+        snd.send_msg = types.MethodType(_send_msg, snd)
         snd.open()
         return snd
 
@@ -637,3 +612,73 @@ class EventLoop(object):
     def run(self):
         self.loop.run()
 
+
+
+class BlockingLink(object):
+    def __init__(self, connection, link):
+        self.connection = connection
+        self.link = link
+        while self.link.state & Endpoint.REMOTE_UNINIT:
+            self.connection.loop.do_work()
+
+    def close(self):
+        while self.link.state & Endpoint.REMOTE_ACTIVE:
+            self.connection.loop.do_work()
+
+class BlockingSender(BlockingLink):
+    def __init__(self, connection, sender):
+        super(BlockingSender, self).__init__(connection, sender)
+
+    def send_msg(self, msg):
+        delivery = send_msg(self.link, msg)
+        while not delivery.settled:
+            self.connection.loop.do_work()
+
+class BlockingReceiver(BlockingLink):
+    def __init__(self, connection, receiver):
+        super(BlockingReceiver, self).__init__(connection, receiver)
+        receiver.flow(1)
+
+class BlockingConnection(EventDispatcher):
+    def __init__(self, url):
+        self.events = Events(ScopedDispatcher())
+        self.loop = SelectLoop(self.events)
+        self.context = MessagingContext(self.loop.events.connection(), handler=self)
+        host, port = url.split(":")
+        if port: port = int(port)
+        self.loop.add(Selectable(self.context.conn, socket.socket()).connect(host, port))
+        self.context.conn.open()
+        while self.context.conn.state & Endpoint.REMOTE_UNINIT:
+            self.loop.do_work()
+
+    def sender(self, address, handler=None):
+        return BlockingSender(self, self.context.sender(address, handler=handler))
+
+    def receiver(self, address, handler=None):
+        return BlockingReceiver(self, self.context.receiver(address, handler=handler))
+
+    def close(self):
+        self.context.conn.close()
+        while self.context.conn.state & Endpoint.REMOTE_ACTIVE:
+            self.loop.do_work()
+
+    def run(self):
+        self.loop.run()
+
+    def on_link_remote_close(self, event):
+        if event.link.state & Endpoint.LOCAL_ACTIVE:
+            self.closed(event.link.remote_condition)
+
+    def on_connection_remote_close(self, event):
+        if event.connection.state & Endpoint.LOCAL_ACTIVE:
+            self.closed(event.connection.remote_condition)
+
+    def on_disconnected(self, connection):
+        raise Exception("Disconnected");
+
+    def closed(self, error=None):
+        if error:
+            txt = "Closed due to %s" % error
+        else:
+            txt = "Closed by peer"
+        raise Exception(txt)
