@@ -477,6 +477,14 @@ _Messenger_['setIncomingWindow'] = function(window) {
  */
 _Messenger_['start'] = function() {
     this._check(_pn_messenger_start(this._messenger));
+
+    // This call ensures that the emscripten network callback functions are set
+    // up even if a client hasn't explicity added a work function via a call to
+    // messenger.on('work', <work function>);
+    // Doing this means that pn_messenger_work() will still get called when any
+    // WebSocket events occur, which keeps things more reliable when things like
+    // reconnections occur.
+    Module.EventDispatch.addListener(this);
 };
 
 /**
@@ -541,8 +549,7 @@ _Messenger_['subscribe'] = function(source) {
  * Places the content contained in the message onto the outgoing queue
  * of the Messenger. This method will never block, however it will send any
  * unblocked Messages in the outgoing queue immediately and leave any blocked
- * Messages remaining in the outgoing queue. The send call may be used to
- * block until the outgoing queue is empty. The outgoing property may be
+ * Messages remaining in the outgoing queue. The outgoing property may be
  * used to check the depth of the outgoing queue.
  * <p>
  * When the content in a given Message object is copied to the outgoing
@@ -554,12 +561,22 @@ _Messenger_['subscribe'] = function(source) {
  * @method put
  * @memberof! proton.Messenger#
  * @param {proton.Message} message a Message to send.
+ * @param {boolean} flush if this is set true or is undefined then messages are
+ *        flushed (this is the default). If explicitly set to false then messages
+ *        may not be sent immediately and might require an explicit call to work().
+ *        This may be used to "batch up" messages and *may* be more efficient.
  * @returns {proton.Data.Long} a tracker.
  */
-_Messenger_['put'] = function(message) {
+_Messenger_['put'] = function(message, flush) {
+    flush = flush === false ? false : true;
     message._preEncode();
     this._checkErrors = true;
     this._check(_pn_messenger_put(this._messenger, message._message));
+
+    // If flush is set invoke pn_messenger_work.
+    if (flush) {
+        _pn_messenger_work(this._messenger, 0);
+    }
 
     // Getting the tracker is a little tricky as it is a 64 bit number. The way
     // emscripten handles this is to return the low 32 bits directly and pass
@@ -578,6 +595,12 @@ _Messenger_['put'] = function(message) {
  * @returns {proton.Status} one of None, PENDING, REJECTED, or ACCEPTED.
  */
 _Messenger_['status'] = function(tracker) {
+    if (tracker == null) {
+        var low = _pn_messenger_outgoing_tracker(this._messenger);
+        var high = Runtime.getTempRet0();
+        tracker = new Data.Long(low, high);
+    }
+
     return _pn_messenger_status(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits());
 };
 
@@ -589,6 +612,12 @@ _Messenger_['status'] = function(tracker) {
  * @returns {boolean} true if delivery is still buffered.
  */
 _Messenger_['isBuffered'] = function(tracker) {
+    if (tracker == null) {
+        var low = _pn_messenger_outgoing_tracker(this._messenger);
+        var high = Runtime.getTempRet0();
+        tracker = new Data.Long(low, high);
+    }
+
     return (_pn_messenger_buffered(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits()) > 0);
 };
 
@@ -982,7 +1011,9 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
             };
         }
 
-        _messengers[name].callbacks.push(callback);
+        if (callback) {
+            _messengers[name].callbacks.push(callback);
+        }
     };
 
     /**

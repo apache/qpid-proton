@@ -41,7 +41,11 @@ if (typeof exports !== "undefined" && exports !== null) {
     proton = require("qpid-proton");
 }
 
-var address = 'amqp://0.0.0.0:5673/qmf.default.direct';
+var addr = 'guest:guest@localhost:5673';
+//var addr = 'localhost:5673';
+var address = 'amqp://' + addr + '/qmf.default.direct';
+console.log(address);
+
 var replyTo = '';
 var subscription;
 var subscribed = false;
@@ -52,13 +56,14 @@ var messenger = new proton.Messenger();
 /**
  * The correlator object is a mechanism used to correlate requests with their
  * aynchronous responses. It might possible be better to make use of Promises
- * to implement part of this behaviour but a mechanism would still be meeded to
+ * to implement part of this behaviour but a mechanism would still be needed to
  * correlate a request with its response callback in order to wrap things up in
  * a Promise, so much of the behaviour of this object would still be required.
  * In addition it seemed to make sense to make this QMF2 implementation fairly
  * free of dependencies and using Promises would require external libraries.
- * Instead the correlator implements Promise-like semantics, you might call it
+ * Instead the correlator implements "Promise-like" semantics, you might call it
  * a broken Promise :-)
+ * <p>
  * in particular the request method behaves a *bit* like Promise.all() though it
  * is mostly fake and takes an array of functions that call the add() method
  * which is really the method used to associate response objects by correlationID.
@@ -155,6 +160,7 @@ var getObjects = function(packageName, className) {
     message.setReplyTo(replyTo);
     message.setCorrelationID(className);
     message.properties = {
+        "routing-key": "broker", // Added for Java Broker
         "x-amqp-0-10.app-id": "qmf2",
         "method": "request",
         "qmf.opcode": "_query_request",
@@ -178,6 +184,7 @@ var invokeMethod = function(object, method, arguments) {
     message.setReplyTo(replyTo);
     message.setCorrelationID(correlationID);
     message.properties = {
+        "routing-key": "broker", // Added for Java Broker
         "x-amqp-0-10.app-id": "qmf2",
         "method": "request",
         "qmf.opcode": "_method_request",
@@ -197,7 +204,7 @@ messenger.on('work', pumpData);
 messenger.setOutgoingWindow(1024);
 messenger.start();
 
-subscription = messenger.subscribe('amqp://0.0.0.0:5673/#');
+subscription = messenger.subscribe('amqp://' + addr + '/#');
 messenger.recv(); // Receive as many messages as messenger can buffer.
 
 
@@ -358,11 +365,24 @@ var _options =
 '                        output\n';
 
 var REPLICATE_LEVELS = {"none" : true, "configuration": true, "all": true};
-var DEFAULT_PROPERTIES = {"exchange":["name", "type", "durable"], "queue":["name", "durable", "autoDelete"]};
+var DEFAULT_PROPERTIES = {"exchange": {"name": true, "type": true, "durable": true},
+                             "queue": {"name": true, "durable": true, "autoDelete": true}};
+
+var getValue = function(r) {
+    var value = null;
+    if (r.length === 2) {
+        value = r[1];
+        if (!isNaN(value)) {
+            value = parseInt(value);
+        }
+    }
+
+    return value;
+};
 
 var config = {
     _recursive      : false,
-    _host           : 'localhost',
+    _host           : 'localhost:5673', // Note 5673 not 5672 as we use WebSocket transport.
     _connTimeout    : 10,
     _ignoreDefault  : false,
     _altern_ex      : null,
@@ -389,17 +409,13 @@ var config = {
     _extra_arguments: [],
     _start_replica  : null,
     _returnCode     : 0,
-    _list_properties: [],
+    _list_properties: null,
 
     getOptions: function() {
         var options = {};
         for (var a = 0; a < this._extra_arguments.length; a++) {
             var r = this._extra_arguments[a].split('=');
-            var value = null;
-            if (r.length === 2) {
-                value = r[1]; 
-            }
-            options[r[0]] = value;
+            options[r[0]] = getValue(r);
         }
         return options;
     }
@@ -471,7 +487,7 @@ var idMap = function(list) {
     return map;
 };
 
-var renderArguments = function(obj, list) {
+var renderObject = function(obj, list) {
     if (!obj) {
         return '';
     }
@@ -493,7 +509,7 @@ var renderArguments = function(obj, list) {
     }
 
     if (addComma) {
-        return ' {' + string + '}';
+        return '{' + string + '}';
     } else {
         if (list) {
             return string;
@@ -645,7 +661,7 @@ var exchangeListRecurse = function(filter) {
                         var queue = queues[oid(bind.queueRef)];
                         var queueName = queue ? queue._values.name : "<unknown>";
                         console.log("    bind [" + bind.bindingKey + "] => " + queueName + 
-                                    renderArguments(bind.arguments));
+                                    " " + renderObject(bind.arguments));
                     }   
                 }
             }
@@ -743,7 +759,7 @@ var queueList = function(filter) {
                 if (args[SHARED_MSG_GROUP] === 1) {
                     string += ' --shared-groups';
                 }
-                string += renderArguments(args, true);
+                string += ' ' + renderObject(args, true);
                 console.log(string);
             }
         }
@@ -785,7 +801,7 @@ var queueListRecurse = function(filter) {
                         }
 
                         console.log("    bind [" + bind.bindingKey + "] => " + exchangeName + 
-                                    renderArguments(bind.arguments));
+                                    " " + renderObject(bind.arguments));
                     }   
                 }
             }
@@ -824,10 +840,10 @@ console.log("Method result");
     if (response._arguments) {
         //console.log(response._arguments);
     } if (response._values) {
-        console.error("Exception from Agent: " + renderArguments(response._values));
+        console.error("Exception from Agent: " + renderObject(response._values));
     }
     // Mostly we want to stop the Messenger Event loop and exit when a QMF method
-    // call returns, but sometimes we don't.
+    // returns, but sometimes we don't, the dontStop flag prevents this behaviour.
     if (!dontStop) {
         messenger.stop();
     }
@@ -846,11 +862,7 @@ var addExchange = function(args) {
 
     for (var a = 0; a < config._extra_arguments.length; a++) {
         var r = config._extra_arguments[a].split('=');
-        var value = null;
-        if (r.length === 2) {
-            value = r[1]; 
-        }
-        declArgs[r[0]] = value;
+        declArgs[r[0]] = getValue(r);
     }
 
     if (config._msgSequence) {
@@ -918,11 +930,7 @@ var addQueue = function(args) {
 
     for (var a = 0; a < config._extra_arguments.length; a++) {
         var r = config._extra_arguments[a].split('=');
-        var value = null;
-        if (r.length === 2) {
-            value = r[1]; 
-        }
-        declArgs[r[0]] = value;
+        declArgs[r[0]] = getValue(r);
     }
 
     if (config._durable) {
@@ -1201,21 +1209,141 @@ console.log(args);
  * The following methods are "generic" create and delete methods to for arbitrary
  * Management Objects e.g. Incoming, Outgoing, Domain, Topic, QueuePolicy,
  * TopicPolicy etc. use --argument k1=v1 --argument k2=v2 --argument k3=v3 to
- * pass arbitrary arguments as key/value pairs to the Object being created/deleted.
+ * pass arbitrary arguments as key/value pairs to the Object being created/deleted,
+ * for example to add a topic object that uses the fanout exchange:
+ * ./qpid-config.js add topic fanout --argument exchange=amq.fanout \
+ * --argument qpid.max_size=1000000 --argument qpid.policy_type=ring
  */
 
 var createObject = function(type, name, args) {
-console.log("createObject");
-console.log(type);
-console.log(name);
-console.log(args);
-
+    correlator.request(
+        // We invoke the CRUD methods on the broker object.
+        getObjects('org.apache.qpid.broker', 'broker')
+    ).then(function(objects) {
+        var broker = objects.broker[0];
+        correlator.request(
+            // Create an object of the specified type.
+            invokeMethod(broker, 'create', {
+                "type":       type,
+                "name":       name,
+                "properties": args,
+                "strict":     true})
+        ).then(handleMethodResponse);
+    });
 };
 
-var deleteObject = function(args) {
-console.log("deleteObject");
-console.log(args);
+var deleteObject = function(type, name, args) {
+    correlator.request(
+        // We invoke the CRUD methods on the broker object.
+        getObjects('org.apache.qpid.broker', 'broker')
+    ).then(function(objects) {
+        var broker = objects.broker[0];
+        correlator.request(
+            // Create an object of the specified type and name.
+            invokeMethod(broker, 'delete', {
+                "type":    type,
+                "name":    name,
+                "options": args})
+        ).then(handleMethodResponse);
+    });
+};
 
+/**
+ * This is a "generic" mechanism for listing arbitrary Management Objects.
+ */
+var listObjects = function(type) {
+    correlator.request(
+        getObjects('org.apache.qpid.broker', type)
+    ).then(function(objects) {
+        // The correlator passes an object containing responses for all of the
+        // supplied requests so we index it by the supplied type to get our response.
+        objects = objects[type];
+
+        // Collect available attributes, stringify the values and compute the max
+        // length of the value of each attribute so that we can later create a table.
+        var attributes = {};
+        var lengths = {};
+        for (var i = 0; i < objects.length; i++) {
+            var object = objects[i];
+            object = object._values;
+            for (var prop in object) {
+                if (typeof object[prop] === 'object') { // Stringify Object properties.
+                    // Check if property is an ObjectID (reference property),
+                    // if so replace with the "name" part of the OID.
+                    if (object[prop]['_object_name']) {
+                        var parts = object[prop]['_object_name'].split(':');
+                        object[prop] = parts[parts.length - 1];
+                    } else {
+                        // Stringify general Object properties.
+                        object[prop] = renderObject(object[prop]);
+                    }
+                } else {
+                    object[prop] = object[prop].toString(); // Stringify other property types.
+                }
+
+                if (!lengths[prop] || object[prop].length > lengths[prop]) { // Compute lengths.
+                    lengths[prop] = object[prop].length > prop.length ? object[prop].length : prop.length;
+                }
+
+                if (!config._list_properties || config._list_properties[prop]) { // Do we want this property?
+                    attributes[prop] = true;
+                }
+            }
+        }
+
+        if (!config._list_properties && DEFAULT_PROPERTIES[type]) {
+            attributes = DEFAULT_PROPERTIES[type];
+        }
+
+        // Using the information we've previously prepared now render a table
+        // showing the required property values.
+        var desired = [];
+        var header = ''; // Table header showing the property names.
+        if (attributes['name']) {
+            desired.push('name');
+            delete attributes['name'];
+            header += 'name' + Array(lengths['name'] + 2 - 4).join(' ');
+        }
+
+        for (var prop in attributes) {
+            desired.push(prop);
+            header += prop + Array(lengths[prop] + 2 - prop.length).join(' ');
+        }
+
+        console.log("Objects of type '" + type + "'");
+        console.log(header);
+        console.log(Array(header.length).join('='));
+        for (var i = 0; i < objects.length; i++) {
+            var object = objects[i];
+            object = object._values;
+            var string = '';
+            for (var j = 0; j < desired.length; j++) {
+                var key = desired[j];
+                string += object[key] + Array(lengths[key] + 2 - object[key].length).join(' ');
+            }
+
+            console.log(string);
+        }
+
+        messenger.stop();
+    });
+};
+
+var reloadAcl = function() {
+    correlator.request(
+        getObjects('org.apache.qpid.acl', 'acl')
+    ).then(function(objects) {
+        if (objects.acl.length > 0) {
+            var acl = objects.acl[0];
+            correlator.request(
+                // Create an object of the specified type.
+                invokeMethod(acl, 'reloadACLFile', {})
+            ).then(handleMethodResponse);
+        } else {
+            console.log("Failed: No ACL Loaded in Broker");
+            messenger.stop();
+        }
+    });
 };
 
 
@@ -1263,10 +1391,9 @@ if (args.length > 0) {
                 if (config._connTimeout === 0) {
                     config._connTimeout = null;
                 }
-            } else if (arg === '-b' || arg === '--broker' || arg === '-b' || arg === '--broker-addr') {
-                config._host = val;
-                if (config._host == null) {
-                    config._host = 'localhost:5672';
+            } else if (arg === '-b' || arg === '--broker' || arg === '-a' || arg === '--broker-addr') {
+                if (val != null) {
+                    config._host = val;
                 }
             } else if (arg === '--alternate-exchange') {
                 config._altern_ex = val;
@@ -1306,7 +1433,10 @@ if (args.length > 0) {
             } else if (arg === '--f' || arg === '--file') { // TODO Won't work in node.js
                 config._file = val;
             } else if (arg === '--show-property') {
-                config._list_properties = val;
+                if (config._list_properties === null) {
+                    config._list_properties = {};
+                }
+                config._list_properties[val] = true;
             }
         } else {
             params.push(arg);
@@ -1315,9 +1445,6 @@ if (args.length > 0) {
 }
 
 config._extra_arguments = extra_arguments;
-
-console.log("params");
-console.log(params);
 
 // The command only *actually* gets called when the QMF connection has actually
 // been established so we wrap up the function we want to get called in a lambda.
@@ -1365,11 +1492,19 @@ if (params.length > 0) {
         command = function() {bind(Array.prototype.slice.apply(params, [1]));};
     } else if (cmd === 'unbind') {
         command = function() {unbind(Array.prototype.slice.apply(params, [1]));};
+    } else if (cmd === 'reload-acl') {
+        command = function() {reloadAcl();};
+    } else if (cmd === 'list' && params.length > 1) {
+        command = function() {listObjects(modifier);};
+    } else {
+        usage();
     }
 }
+
+//console.log(config._host);
+
 
 var onSubscription = function() {
     command();
 };
-
 

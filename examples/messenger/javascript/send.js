@@ -33,6 +33,10 @@ var running = true;
 var message = new proton.Message();
 var messenger = new proton.Messenger();
 
+// Because this is an asynchronous send we can't simply call messenger.put(message)
+// then exit. The following callback function (and messenger.setOutgoingWindow())
+// gives us a means to wait until the consumer has received the message before
+// exiting. The recv.js example explicitly accepts messages it receives.
 var pumpData = function() {
     var status = messenger.status(tracker);
     if (status != proton.Status.PENDING) {
@@ -81,7 +85,7 @@ console.log("Content: " + msgtext);
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);
-messenger.setOutgoingWindow(1024);
+messenger.setOutgoingWindow(1024); // So we can track status of send message.
 messenger.start();
 
 message.setAddress(address);
