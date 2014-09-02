@@ -127,11 +127,10 @@ class Selectable(object):
                 data = self.socket.recv(c)
                 if data:
                     self.transport.push(data)
-                elif self._closed_cleanly():
-                    self.transport.close_tail()
                 else:
-                    self.read_done = True
-                    self.write_done = True
+                    if not self._closed_cleanly():
+                        self.read_done = True
+                        self.write_done = True
                     self.transport.close_tail()
             except TransportException, e:
                 print "Error on read: %s" % e
