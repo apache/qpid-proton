@@ -132,6 +132,7 @@ class Selectable(object):
                 else:
                     self.read_done = True
                     self.write_done = True
+                    self.transport.close_tail()
             except TransportException, e:
                 print "Error on read: %s" % e
                 self.read_done = True
