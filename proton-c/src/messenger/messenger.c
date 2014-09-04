@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 #include "../util.h"
 #include "../platform.h"
 #include "../platform_fmt.h"
@@ -1275,8 +1276,37 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
   return processed;
 }
 
+/**
+ * Function to invoke AMQP related timer events, such as a heartbeat to prevent
+ * remote_idle timeout events
+ */
+static void pni_messenger_tick(pn_messenger_t *messenger)
+{
+  for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
+    pn_connection_t *connection =
+        (pn_connection_t *)pn_list_get(messenger->connections, i);
+    pn_transport_t *transport = pn_connection_transport(connection);
+    if (transport) {
+      pn_transport_tick(transport, pn_i_now());
+
+      // if there is pending data, such as an empty heartbeat frame, call
+      // process events. This should kick off the chain of selectables for
+      // reading/writing.
+      ssize_t pending = pn_transport_pending(transport);
+      if (pending > 0) {
+        pn_connection_ctx_t *cctx =
+            (pn_connection_ctx_t *)pn_connection_get_context(connection);
+        pn_messenger_process_events(messenger);
+        pn_messenger_flow(messenger);
+        pni_conn_modified(pni_context(cctx->selectable));
+      }
+    }
+  }
+}
+
 int pn_messenger_process(pn_messenger_t *messenger)
 {
+  bool doMessengerTick = true;
   pn_selectable_t *sel;
   int events;
   while ((sel = pn_selector_next(messenger->selector, &events))) {
@@ -1285,12 +1315,17 @@ int pn_messenger_process(pn_messenger_t *messenger)
     }
     if (events & PN_WRITABLE) {
       pn_selectable_writable(sel);
+      doMessengerTick = false;
     }
     if (events & PN_EXPIRED) {
       pn_selectable_expired(sel);
     }
   }
-
+  // ensure timer events are processed. Cannot call this inside the while loop
+  // as the timer events are not seen by the selector
+  if (doMessengerTick) {
+    pni_messenger_tick(messenger);
+  }
   if (messenger->interrupted) {
     messenger->interrupted = false;
     return PN_INTR;
