@@ -93,6 +93,7 @@ endif(PN_WINAPI)
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/openssl.c)
+  include_directories ("${OPENSSL_INCLUDE_DIR}")
   set (SSL_LIB ${OPENSSL_LIBRARIES})
 else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
