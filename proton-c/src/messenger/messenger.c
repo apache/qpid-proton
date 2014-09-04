@@ -612,7 +612,7 @@ pn_messenger_t *pn_messenger(const char *name)
     pni_selectable_set_context(m->interruptor, m);
     m->listeners = pn_list(0, 0);
     m->connections = pn_list(0, 0);
-    m->selector = pn_selector();
+    m->selector = pn_io_selector(m->io);
     m->collector = pn_collector();
     m->credit_mode = LINK_CREDIT_EXPLICIT;
     m->credit_batch = 1024;

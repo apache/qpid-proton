@@ -44,6 +44,7 @@ typedef int pn_socket_t;
 #endif
 
 typedef struct pn_io_t pn_io_t;
+typedef struct pn_selector_t pn_selector_t;
 
 PN_EXTERN pn_io_t *pn_io(void);
 PN_EXTERN void pn_io_free(pn_io_t *io);
@@ -58,6 +59,7 @@ PN_EXTERN int pn_pipe(pn_io_t *io, pn_socket_t *dest);
 PN_EXTERN ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size);
 PN_EXTERN ssize_t pn_write(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size);
 PN_EXTERN bool pn_wouldblock(pn_io_t *io);
+PN_EXTERN pn_selector_t *pn_io_selector(pn_io_t *io);
 
 #ifdef __cplusplus
 }
