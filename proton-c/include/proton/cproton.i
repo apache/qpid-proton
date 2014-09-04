@@ -31,6 +31,9 @@ typedef long long int int64_t;
 
 %include "proton/import_export.h"
 
+%ignore _PROTON_VERSION_H;
+%include "proton/version.h"
+
 /* We cannot safely just wrap pn_bytes_t but each language binding must have a typemap for it - presumably to a string type */
 %ignore pn_bytes_t;
 
