@@ -141,7 +141,7 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
   case PN_INT:
     return pn_string_addf(str, "%" PRIi32, atom->u.as_int);
   case PN_CHAR:
-    return pn_string_addf(str, "%lc",  atom->u.as_char);
+    return pn_string_addf(str, "%c",  atom->u.as_char);
   case PN_ULONG:
     return pn_string_addf(str, "%" PRIu64, atom->u.as_ulong);
   case PN_LONG:
