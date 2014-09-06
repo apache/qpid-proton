@@ -18,8 +18,10 @@
 # under the License.
 #
 
-use strict;
 use warnings;
+
+use Scalar::Util qw(reftype);
+use Data::Dumper;
 
 use qpid_proton;
 
@@ -48,10 +50,34 @@ for(;;)
     while ($messenger->incoming() > 0)
     {
         $messenger->get($msg);
+
+        print "\n";
         print "Address: " . $msg->get_address() . "\n";
-        print "Subject: " . $msg->get_subject() . "\n";
-        print "Content: " . $msg->get_content() . "\n";
-        print "Body:    " . $msg->get_body() . "\n";
+        print "Subject: " . $msg->get_subject() . "\n" unless !defined($msg->get_subject());
+        print "Body:    ";
+
+        my $body = $msg->get_body();
+        my $body_type = $msg->get_body_type();
+
+        if (!defined($body_type)) {
+            print "The body type wasn't defined!\n";
+        } elsif ($body_type == qpid::proton::BOOL) {
+            print "[BOOL]\n";
+            print "" . ($body ? "TRUE" : "FALSE") . "\n";
+        } elsif ($body_type == qpid::proton::MAP) {
+            print "[HASH]\n";
+            print Dumper(\%{$body}) . "\n";
+        } elsif ($body_type == qpid::proton::ARRAY) {
+            print "[ARRAY]\n";
+            print Data::Dumper->Dump($body) . "\n";
+        } elsif ($body_type == qpid::proton::LIST) {
+            print "[LIST]\n";
+            print Data::Dumper->Dump($body) . "\n";
+        } else {
+            print "[$body_type]\n";
+            print "$body\n";
+        }
+
         print "Properties:\n";
         my $props = $msg->get_properties();
         foreach (keys $props) {

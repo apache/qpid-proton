@@ -92,7 +92,7 @@ static void pn_data_finalize(void *object)
   pn_free(data->encoder);
 }
 
-static pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
+static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
 {
   if (!node) return NULL;
   if (node->atom.type != PN_DESCRIBED) return NULL;
@@ -103,8 +103,9 @@ static pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
     return NULL;
   }
 
-  if (descriptor->atom.u.as_ulong < 256) {
-    return &FIELDS[descriptor->atom.u.as_ulong];
+  if (descriptor->atom.u.as_ulong >= FIELD_MIN && descriptor->atom.u.as_ulong <= FIELD_MAX) {
+    const pn_fields_t *f = &FIELDS[descriptor->atom.u.as_ulong-FIELD_MIN];
+    return (f->name_index!=0) ? f : NULL;
   } else {
     return NULL;
   }
@@ -233,9 +234,16 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
       if (quote) if ((err = pn_string_addf(str, "\""))) return err;
       return 0;
     }
+  case PN_LIST:
+    return pn_string_addf(str, "<list>");
+  case PN_MAP:
+    return pn_string_addf(str, "<map>");
+  case PN_ARRAY:
+    return pn_string_addf(str, "<array>");
+  case PN_DESCRIBED:
+    return pn_string_addf(str, "<described>");
   default:
-    assert(false);
-    return PN_ERR;
+    return pn_string_addf(str, "<undefined: %i>", atom->type);
   }
 }
 
@@ -245,9 +253,9 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_atom_t *atom = (pn_atom_t *) &node->atom;
 
   pni_node_t *parent = pn_data_node(data, node->parent);
-  pn_fields_t *fields = pni_node_fields(data, parent);
+  const pn_fields_t *fields = pni_node_fields(data, parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
-  pn_fields_t *grandfields = pni_node_fields(data, grandparent);
+  const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
   int index = pni_node_index(data, node);
 
   int err;
@@ -256,7 +264,9 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     if (atom->type == PN_NULL) {
       return 0;
     }
-    const char *name = grandfields->fields[index];
+    const char *name = (index < grandfields->field_count)
+        ? FIELD_STRINGPOOL+FIELD_FIELDS[grandfields->first_field_index+index]
+        : NULL;
     if (name) {
       err = pn_string_addf(str, "%s=", name);
       if (err) return err;
@@ -275,7 +285,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_string_addf(str, "{");
   default:
     if (fields && index == 0) {
-      err = pn_string_addf(str, "%s", fields->name);
+      err = pn_string_addf(str, "%s", FIELD_STRINGPOOL+FIELD_NAME[fields->name_index]);
       if (err) return err;
       err = pn_string_addf(str, "(");
       if (err) return err;
@@ -305,7 +315,7 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_string_t *str = (pn_string_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
-  pn_fields_t *grandfields = pni_node_fields(data, grandparent);
+  const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
   pni_node_t *next = pn_data_node(data, node->next);
   int err;
 
@@ -356,7 +366,7 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 
 pn_data_t *pn_data(size_t capacity)
 {
-  static pn_class_t clazz = PN_CLASS(pn_data);
+  static const pn_class_t clazz = PN_CLASS(pn_data);
   pn_data_t *data = (pn_data_t *) pn_new(sizeof(pn_data_t), &clazz);
   data->capacity = capacity;
   data->size = 0;
@@ -407,12 +417,12 @@ void pn_data_clear(pn_data_t *data)
 
 int pn_data_grow(pn_data_t *data)
 {
-  data->capacity = 2*(data->capacity ? data->capacity : 16);
+  data->capacity = 2*(data->capacity ? data->capacity : 2);
   data->nodes = (pni_node_t *) realloc(data->nodes, data->capacity * sizeof(pni_node_t));
   return 0;
 }
 
-ssize_t pn_data_intern(pn_data_t *data, char *start, size_t size)
+ssize_t pn_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
@@ -454,7 +464,7 @@ int pn_data_intern_node(pn_data_t *data, pni_node_t *node)
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
-  pn_bytes_t buf = pn_buffer_bytes(data->buf);
+  pn_buffer_memory_t buf = pn_buffer_memory(data->buf);
   bytes->start = buf.start + offset;
 
   if (pn_buffer_capacity(data->buf) != oldcap) {
@@ -1102,7 +1112,7 @@ int pn_data_resize(pn_data_t *data, size_t size)
 }
 
 
-pni_node_t *pn_data_node(pn_data_t *data, size_t nd)
+pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   if (nd) {
     return &data->nodes[nd - 1];
@@ -1348,7 +1358,7 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 
 void pn_data_dump(pn_data_t *data)
 {
-  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", data->current, data->parent);
+  printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
@@ -1356,7 +1366,11 @@ void pn_data_dump(pn_data_t *data)
     pni_inspect_atom((pn_atom_t *) &node->atom, data->str);
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
            ", children=%" PN_ZI ", type=%s (%s)\n",
-           i + 1, node->prev, node->next, node->parent, node->down, node->children,
+           i + 1, (size_t) node->prev,
+           (size_t) node->next,
+           (size_t) node->parent,
+           (size_t) node->down,
+           (size_t) node->children,
            pn_type_name(node->atom.type), pn_string_get(data->str));
   }
 }

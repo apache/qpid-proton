@@ -49,11 +49,8 @@ ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t siz
 // message
 
 struct pn_message_t {
-  bool durable;
-  uint8_t priority;
-  pn_millis_t ttl;
-  bool first_acquirer;
-  uint32_t delivery_count;
+  pn_timestamp_t expiry_time;
+  pn_timestamp_t creation_time;
   pn_data_t *id;
   pn_string_t *user_id;
   pn_string_t *address;
@@ -62,22 +59,28 @@ struct pn_message_t {
   pn_data_t *correlation_id;
   pn_string_t *content_type;
   pn_string_t *content_encoding;
-  pn_timestamp_t expiry_time;
-  pn_timestamp_t creation_time;
   pn_string_t *group_id;
-  pn_sequence_t group_sequence;
   pn_string_t *reply_to_group_id;
 
-  bool inferred;
   pn_data_t *data;
   pn_data_t *instructions;
   pn_data_t *annotations;
   pn_data_t *properties;
   pn_data_t *body;
 
-  pn_format_t format;
   pn_parser_t *parser;
   pn_error_t *error;
+
+  pn_format_t format;
+  pn_sequence_t group_sequence;
+  pn_millis_t ttl;
+  uint32_t delivery_count;
+
+  uint8_t priority;
+
+  bool durable;
+  bool first_acquirer;
+  bool inferred;
 };
 
 void pn_message_finalize(void *obj)
@@ -318,7 +321,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
 
 pn_message_t *pn_message()
 {
-  static pn_class_t clazz = PN_CLASS(pn_message);
+  static const pn_class_t clazz = PN_CLASS(pn_message);
   pn_message_t *msg = (pn_message_t *) pn_new(sizeof(pn_message_t), &clazz);
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;

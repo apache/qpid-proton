@@ -29,17 +29,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.qpid.proton.Proton;
-import org.apache.qpid.proton.ProtonFactoryLoader;
 import org.apache.qpid.proton.InterruptException;
 import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
-import org.apache.qpid.proton.driver.DriverFactory;
 import org.apache.qpid.proton.driver.Listener;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sasl;
@@ -49,10 +46,8 @@ import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.message.MessageFactory;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
-import org.apache.qpid.proton.messenger.MessengerFactory;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
 import org.apache.qpid.proton.amqp.messaging.Source;
@@ -1449,14 +1444,16 @@ public class MessengerImpl implements Messenger
         {
             _receivers++;
             _blocked.add((Receiver)link);
+            link.setContext(Boolean.TRUE);
         }
     }
 
     // a link is being removed, account for it.
     private void linkRemoved(Link _link)
     {
-        if (_link instanceof Receiver)
+        if (_link instanceof Receiver && (Boolean) _link.getContext())
         {
+            _link.setContext(Boolean.FALSE);
             Receiver link = (Receiver)_link;
             assert _receivers > 0;
             _receivers--;

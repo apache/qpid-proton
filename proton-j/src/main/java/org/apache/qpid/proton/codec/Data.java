@@ -37,8 +37,18 @@ import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 
+import org.apache.qpid.proton.codec.impl.DataImpl;
+
 public interface Data
 {
+
+    public static final class Factory {
+
+        public static Data create() {
+            return new DataImpl();
+        }
+
+    }
 
 
     enum DataType

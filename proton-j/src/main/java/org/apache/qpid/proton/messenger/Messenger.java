@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.message.Message;
 
+import org.apache.qpid.proton.messenger.impl.MessengerImpl;
+
 /**
  *
  *  Messenger defines a high level interface for sending and receiving
@@ -69,6 +71,18 @@ import org.apache.qpid.proton.message.Message;
 */
 public interface Messenger
 {
+
+    public static final class Factory
+    {
+        public static Messenger create() {
+            return new MessengerImpl();
+        }
+
+        public static Messenger create(String name) {
+            return new MessengerImpl(name);
+        }
+    }
+
     /**
      * Flag for use with reject(), accept() and settle() methods.
      */

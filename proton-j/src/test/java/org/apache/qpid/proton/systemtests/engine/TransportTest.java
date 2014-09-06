@@ -22,7 +22,7 @@ package org.apache.qpid.proton.systemtests.engine;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-import org.apache.qpid.proton.engine.EngineFactory;
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.junit.Ignore;
@@ -34,9 +34,7 @@ import org.junit.Test;
  */
 public class TransportTest
 {
-    private final ProtonFactoryTestFixture _protonFactoryTestFixture = new ProtonFactoryTestFixture();
-    private final EngineFactory _factory = _protonFactoryTestFixture.getFactory1();
-    private final Transport _transport = _factory.createTransport();
+    private final Transport _transport = Proton.transport();
 
     /**
      * Note that Proton does not yet give the application explicit control over protocol version negotiation

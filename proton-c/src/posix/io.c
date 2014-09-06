@@ -21,6 +21,7 @@
 
 #include <proton/io.h>
 #include <proton/object.h>
+#include <proton/selector.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -43,6 +44,7 @@ struct pn_io_t {
   char host[MAX_HOST];
   char serv[MAX_SERV];
   pn_error_t *error;
+  pn_selector_t *selector;
   bool wouldblock;
 };
 
@@ -51,6 +53,7 @@ void pn_io_initialize(void *obj)
   pn_io_t *io = (pn_io_t *) obj;
   io->error = pn_error();
   io->wouldblock = false;
+  io->selector = NULL;
 }
 
 void pn_io_finalize(void *obj)
@@ -65,7 +68,7 @@ void pn_io_finalize(void *obj)
 
 pn_io_t *pn_io(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_io);
+  static const pn_class_t clazz = PN_CLASS(pn_io);
   pn_io_t *io = (pn_io_t *) pn_new(sizeof(pn_io_t), &clazz);
   return io;
 }
@@ -274,4 +277,11 @@ void pn_close(pn_io_t *io, pn_socket_t socket)
 bool pn_wouldblock(pn_io_t *io)
 {
   return io->wouldblock;
+}
+
+pn_selector_t *pn_io_selector(pn_io_t *io)
+{
+  if (io->selector == NULL)
+    io->selector = pni_selector();
+  return io->selector;
 }

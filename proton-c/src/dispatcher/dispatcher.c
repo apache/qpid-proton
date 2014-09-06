@@ -30,6 +30,41 @@
 #include "../util.h"
 #include "../platform_fmt.h"
 
+#include "dispatch_actions.h"
+
+int pni_bad_frame(pn_dispatcher_t* disp) {
+  pn_transport_log(disp->transport, "Error dispatching frame: Unknown performative");
+  return PN_ERR;
+}
+
+// We could use a table based approach here if we needed to dynamically
+// add new performatives
+static inline int pni_dispatch_action(pn_dispatcher_t* disp, uint64_t lcode)
+{
+  pn_action_t *action;
+  switch (lcode) {
+  /* Regular AMQP fames */
+  case OPEN:            action = pn_do_open; break;
+  case BEGIN:           action = pn_do_begin; break;
+  case ATTACH:          action = pn_do_attach; break;
+  case FLOW:            action = pn_do_flow; break;
+  case TRANSFER:        action = pn_do_transfer; break;
+  case DISPOSITION:     action = pn_do_disposition; break;
+  case DETACH:          action = pn_do_detach; break;
+  case END:             action = pn_do_end; break;
+  case CLOSE:           action = pn_do_close; break;
+
+  /* SASL frames */
+  case SASL_MECHANISMS: action = pn_do_mechanisms; break;
+  case SASL_INIT:       action = pn_do_init; break;
+  case SASL_CHALLENGE:  action = pn_do_challenge; break;
+  case SASL_RESPONSE:   action = pn_do_response; break;
+  case SASL_OUTCOME:    action = pn_do_outcome; break;
+  default:              action = pni_bad_frame; break;
+  };
+  return action(disp);
+}
+
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 {
   pn_dispatcher_t *disp = (pn_dispatcher_t *) calloc(sizeof(pn_dispatcher_t), 1);
@@ -40,11 +75,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 
-  disp->input = pn_buffer(1024);
-  disp->fragment = 0;
-
   disp->channel = 0;
-  disp->code = 0;
   disp->args = pn_data(16);
   disp->payload = NULL;
   disp->size = 0;
@@ -67,7 +98,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 void pn_dispatcher_free(pn_dispatcher_t *disp)
 {
   if (disp) {
-    pn_buffer_free(disp->input);
     pn_data_free(disp->args);
     pn_data_free(disp->output_args);
     pn_buffer_free(disp->frame);
@@ -75,12 +105,6 @@ void pn_dispatcher_free(pn_dispatcher_t *disp)
     pn_free(disp->scratch);
     free(disp);
   }
-}
-
-void pn_dispatcher_action(pn_dispatcher_t *disp, uint8_t code,
-                          pn_action_t *action)
-{
-  disp->actions[code] = action;
 }
 
 typedef enum {IN, OUT} pn_dir_t;
@@ -91,6 +115,10 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
   if (disp->trace & PN_TRACE_FRM) {
     pn_string_format(disp->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
     pn_inspect(args, disp->scratch);
+
+    if (pn_data_size(args)==0) {
+        pn_string_addf(disp->scratch, "(EMPTY FRAME)");
+    }
 
     if (size) {
       char buf[1024];
@@ -122,7 +150,8 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
   }
 
   disp->channel = frame.channel;
-  // XXX: assuming numeric
+  // XXX: assuming numeric -
+  // if we get a symbol we should map it to the numeric value and dispatch on that
   uint64_t lcode;
   bool scanned;
   int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
@@ -134,19 +163,15 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
     pn_transport_log(disp->transport, "Error dispatching frame");
     return PN_ERR;
   }
-  uint8_t code = lcode;
-  disp->code = code;
   disp->size = frame.size - dsize;
   if (disp->size)
     disp->payload = frame.payload + dsize;
 
   pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
 
-  pn_action_t *action = disp->actions[code];
-  int err = action(disp);
+  int err = pni_dispatch_action(disp, lcode);
 
   disp->channel = 0;
-  disp->code = 0;
   pn_data_clear(disp->args);
   disp->size = 0;
   disp->payload = NULL;
@@ -212,7 +237,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
 
  encode_performatives:
   pn_buffer_clear( disp->frame );
-  pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+  pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
   buf.size = pn_buffer_available( disp->frame );
 
   ssize_t wr = pn_data_encode( disp->output_args, buf.start, buf.size );
@@ -290,7 +315,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
 
   encode_performatives:
     pn_buffer_clear( disp->frame );
-    pn_bytes_t buf = pn_buffer_bytes( disp->frame );
+    pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
     buf.size = pn_buffer_available( disp->frame );
 
     ssize_t wr = pn_data_encode(disp->output_args, buf.start, buf.size);

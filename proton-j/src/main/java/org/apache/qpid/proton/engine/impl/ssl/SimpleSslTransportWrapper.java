@@ -338,22 +338,13 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
 
         _inputBuffer.flip();
 
-        try
-        {
-            try {
-                unwrapInput();
-            } catch (SSLException e) {
-                throw new TransportException(e);
-            }
-        }
-        catch (TransportException e)
-        {
+        try {
+            unwrapInput();
+        } catch (SSLException e) {
+            _logger.log(Level.WARNING, e.getMessage());
             _inputBuffer.position(_inputBuffer.limit());
             _tail_closed = true;
-            throw e;
-        }
-        finally
-        {
+        } finally {
             _inputBuffer.compact();
         }
     }
@@ -374,17 +365,17 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
         try {
             wrapOutput();
         } catch (SSLException e) {
-            throw new TransportException(e);
+            _logger.log(Level.WARNING, e.getMessage());
+            _head_closed = true;
         }
 
         _head.limit(_outputBuffer.position());
 
-        if (_head_closed && _outputBuffer.position() == 0)
-        {
+        if (_head_closed && _outputBuffer.position() == 0) {
             return Transport.END_OF_STREAM;
-        } else {
-            return _outputBuffer.position();
         }
+
+        return _outputBuffer.position();
     }
 
     @Override
@@ -408,6 +399,10 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     public void close_head()
     {
         _underlyingOutput.close_head();
+        int p = pending();
+        if (p > 0) {
+            pop(p);
+        }
     }
 
 

@@ -34,9 +34,7 @@ extern "C" {
 #define PN_WRITABLE (2)
 #define PN_EXPIRED (4)
 
-typedef struct pn_selector_t pn_selector_t;
-
-PN_EXTERN pn_selector_t *pn_selector(void);
+pn_selector_t *pni_selector(void);
 PN_EXTERN void pn_selector_free(pn_selector_t *selector);
 PN_EXTERN void pn_selector_add(pn_selector_t *selector, pn_selectable_t *selectable);
 PN_EXTERN void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable);

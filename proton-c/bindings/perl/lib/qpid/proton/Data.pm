@@ -17,7 +17,7 @@
 # under the License.
 #
 
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(reftype looks_like_number);
 
 =pod
 
@@ -321,9 +321,7 @@ Handles a boolean (B<true>/B<false>) node.
 sub put_bool {
     my ($self) = @_;
     my $impl = $self->{_impl};
-    my $value = $_[1];
-
-    die "bool must be defined" if !defined($value);
+    my $value = $_[1] || 0;
 
     cproton_perl::pn_data_put_bool($impl, $value);
 }
@@ -1159,16 +1157,90 @@ sub get_map {
     cproton_perl::pn_data_get_map($impl);
 }
 
+sub put_list_helper {
+    my ($self) = @_;
+    my ($array) = $_[1];
+
+    $self->put_list;
+    $self->enter;
+
+    for my $value (@{$array}) {
+        if (qpid::proton::is_num($value)) {
+            if (qpid::proton::is_float($value)) {
+                $self->put_float($value);
+            } else {
+                $self->put_int($value);
+            }
+        } elsif (!defined($value)) {
+            $self->put_null;
+        } elsif ($value eq '') {
+            $self->put_string($value);
+        } elsif (ref($value) eq 'HASH') {
+            $self->put_map_helper($value);
+        } elsif (ref($value) eq 'ARRAY') {
+            $self->put_list_helper($value);
+        } else {
+            $self->put_string($value);
+        }
+    }
+
+    $self->exit;
+}
+
+sub get_list_helper {
+    my ($self) = @_;
+    my $result = [];
+    my $type = $self->get_type;
+
+    if ($cproton_perl::PN_LIST == $type->get_type_value) {
+        my $size = $self->get_list;
+
+        $self->enter;
+
+        for(my $count = 0; $count < $size; $count++) {
+            if ($self->next) {
+                my $value_type = $self->get_type;
+                my $value = $value_type->get($self);
+
+                push(@{$result}, $value);
+            }
+        }
+
+        $self->exit;
+    }
+
+    return $result;
+}
+
 sub put_map_helper {
     my ($self) = @_;
-    my ($hash) = $_[1];
+    my $hash = $_[1];
 
     $self->put_map;
     $self->enter;
 
-    foreach(keys $hash) {
-        $self->put_string("$_");
-        $self->put_string("$hash->{$_}");
+    foreach(keys %{$hash}) {
+        my $key = $_;
+        my $value = $hash->{$key};
+
+        my $keytype = ::reftype($key);
+        my $valtype = ::reftype($value);
+
+        if ($keytype eq ARRAY) {
+            $self->put_list_helper($key);
+        } elsif ($keytype eq "HASH") {
+            $self->put_map_helper($key);
+        } else {
+            $self->put_string("$key");
+        }
+
+        if (::reftype($value) eq HASH) {
+            $self->put_map_helper($value);
+        } elsif (::reftype($value) eq ARRAY) {
+            $self->put_list_helper($value);
+        } else {
+            $self->put_string("$value");
+        }
     }
 
     $self->exit;
@@ -1193,9 +1265,10 @@ sub get_map_helper {
                 }
             }
         }
-    }
 
-    $self->exit;
+        $self->exit;
+
+    }
 
     return $result;
 }

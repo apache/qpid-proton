@@ -51,6 +51,12 @@ class TransportLink<T extends LinkImpl>
                        : new TransportSender((SenderImpl)link));
     }
 
+    void unbind()
+    {
+        clearLocalHandle();
+        clearRemoteHandle();
+    }
+
     public UnsignedInteger getLocalHandle()
     {
         return _localHandle;
@@ -58,6 +64,9 @@ class TransportLink<T extends LinkImpl>
 
     public void setLocalHandle(UnsignedInteger localHandle)
     {
+        if (_localHandle == null) {
+            _link.incref();
+        }
         _localHandle = localHandle;
     }
 
@@ -78,6 +87,9 @@ class TransportLink<T extends LinkImpl>
 
     public void clearLocalHandle()
     {
+        if (_localHandle != null) {
+            _link.decref();
+        }
         _localHandle = null;
     }
 
@@ -88,7 +100,18 @@ class TransportLink<T extends LinkImpl>
 
     public void setRemoteHandle(UnsignedInteger remoteHandle)
     {
+        if (_remoteHandle == null) {
+            _link.incref();
+        }
         _remoteHandle = remoteHandle;
+    }
+
+    public void clearRemoteHandle()
+    {
+        if (_remoteHandle != null) {
+            _link.decref();
+        }
+        _remoteHandle = null;
     }
 
     public UnsignedInteger getDeliveryCount()
@@ -122,10 +145,7 @@ class TransportLink<T extends LinkImpl>
         _remoteLinkCredit = flow.getLinkCredit();
 
 
-        EventImpl ev = _link.getConnectionImpl().put(Event.Type.LINK_FLOW);
-        if (ev != null) {
-            ev.init(_link);
-        }
+        _link.getConnectionImpl().put(Event.Type.LINK_FLOW, _link);
     }
 
     void setLinkCredit(UnsignedInteger linkCredit)

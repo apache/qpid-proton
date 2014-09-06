@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 #include "../util.h"
 #include "../platform.h"
 #include "../platform_fmt.h"
@@ -60,30 +61,20 @@ typedef  enum {
 } pn_link_credit_mode_t;
 
 struct pn_messenger_t {
+  pn_address_t address;
   char *name;
   char *certificate;
   char *private_key;
   char *password;
   char *trusted_certificates;
-  int timeout;
-  bool blocking;
-  bool passive;
   pn_io_t *io;
   pn_list_t *pending; // pending selectables
   pn_selectable_t *interruptor;
-  bool interrupted;
   pn_socket_t ctrl[2];
   pn_list_t *listeners;
   pn_list_t *connections;
   pn_selector_t *selector;
   pn_collector_t *collector;
-  int send_threshold;
-  pn_link_credit_mode_t credit_mode;
-  int credit_batch;  // when LINK_CREDIT_AUTO
-  int credit;        // available
-  int distributed;   // credit
-  int receivers;     // # receiver links
-  int draining;      // # links in drain state
   pn_list_t *credited;
   pn_list_t *blocked;
   pn_timestamp_t next_drain;
@@ -95,13 +86,24 @@ struct pn_messenger_t {
   pn_error_t *error;
   pn_transform_t *routes;
   pn_transform_t *rewrites;
-  pn_address_t address;
   pn_tracker_t outgoing_tracker;
   pn_tracker_t incoming_tracker;
   pn_string_t *original;
   pn_string_t *rewritten;
-  bool worked;
+  pn_string_t *domain;
+  int timeout;
+  int send_threshold;
+  pn_link_credit_mode_t credit_mode;
+  int credit_batch;  // when LINK_CREDIT_AUTO
+  int credit;        // available
+  int distributed;   // credit
+  int receivers;     // # receiver links
+  int draining;      // # links in drain state
   int connection_error;
+  bool blocking;
+  bool passive;
+  bool interrupted;
+  bool worked;
 };
 
 #define CTX_HEAD                                \
@@ -611,7 +613,7 @@ pn_messenger_t *pn_messenger(const char *name)
     pni_selectable_set_context(m->interruptor, m);
     m->listeners = pn_list(0, 0);
     m->connections = pn_list(0, 0);
-    m->selector = pn_selector();
+    m->selector = pn_io_selector(m->io);
     m->collector = pn_collector();
     m->credit_mode = LINK_CREDIT_EXPLICIT;
     m->credit_batch = 1024;
@@ -635,6 +637,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->address.text = pn_string(NULL);
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
+    m->domain = pn_string(NULL);
     m->connection_error = 0;
   }
 
@@ -775,6 +778,7 @@ static void pni_reclaim(pn_messenger_t *messenger)
 void pn_messenger_free(pn_messenger_t *messenger)
 {
   if (messenger) {
+    pn_free(messenger->domain);
     pn_free(messenger->rewritten);
     pn_free(messenger->original);
     pn_free(messenger->address.text);
@@ -971,7 +975,7 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   size_t pending = pn_delivery_pending(d);
   int err = pn_buffer_ensure(buf, pending + 1);
   if (err) return pn_error_format(messenger->error, err, "get: error growing buffer");
-  char *encoded = pn_buffer_bytes(buf).start;
+  char *encoded = pn_buffer_memory(buf).start;
   ssize_t n = pn_link_recv(receiver, encoded, pending);
   if (n != (ssize_t) pending) {
     return pn_error_format(messenger->error, n,
@@ -1221,16 +1225,31 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
   while ((event = pn_collector_peek(messenger->collector))) {
     processed++;
     switch (pn_event_type(event)) {
-    case PN_CONNECTION_REMOTE_STATE:
-    case PN_CONNECTION_LOCAL_STATE:
+    case PN_CONNECTION_INIT:
+      //printf("connection created: %p\n", (void *) pn_event_connection(event));
+      break;
+    case PN_SESSION_INIT:
+      //printf("session created: %p\n", (void *) pn_event_session(event));
+      break;
+    case PN_LINK_INIT:
+      //printf("link created: %p\n", (void *) pn_event_link(event));
+      break;
+    case PN_CONNECTION_REMOTE_OPEN:
+    case PN_CONNECTION_REMOTE_CLOSE:
+    case PN_CONNECTION_OPEN:
+    case PN_CONNECTION_CLOSE:
       pn_messenger_process_connection(messenger, event);
       break;
-    case PN_SESSION_REMOTE_STATE:
-    case PN_SESSION_LOCAL_STATE:
+    case PN_SESSION_REMOTE_OPEN:
+    case PN_SESSION_REMOTE_CLOSE:
+    case PN_SESSION_OPEN:
+    case PN_SESSION_CLOSE:
       pn_messenger_process_session(messenger, event);
       break;
-    case PN_LINK_REMOTE_STATE:
-    case PN_LINK_LOCAL_STATE:
+    case PN_LINK_REMOTE_OPEN:
+    case PN_LINK_REMOTE_CLOSE:
+    case PN_LINK_OPEN:
+    case PN_LINK_CLOSE:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:
@@ -1244,6 +1263,12 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_EVENT_NONE:
       break;
+    case PN_CONNECTION_FINAL:
+      break;
+    case PN_SESSION_FINAL:
+      break;
+    case PN_LINK_FINAL:
+      break;
     }
     pn_collector_pop(messenger->collector);
   }
@@ -1251,8 +1276,37 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
   return processed;
 }
 
+/**
+ * Function to invoke AMQP related timer events, such as a heartbeat to prevent
+ * remote_idle timeout events
+ */
+static void pni_messenger_tick(pn_messenger_t *messenger)
+{
+  for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
+    pn_connection_t *connection =
+        (pn_connection_t *)pn_list_get(messenger->connections, i);
+    pn_transport_t *transport = pn_connection_transport(connection);
+    if (transport) {
+      pn_transport_tick(transport, pn_i_now());
+
+      // if there is pending data, such as an empty heartbeat frame, call
+      // process events. This should kick off the chain of selectables for
+      // reading/writing.
+      ssize_t pending = pn_transport_pending(transport);
+      if (pending > 0) {
+        pn_connection_ctx_t *cctx =
+            (pn_connection_ctx_t *)pn_connection_get_context(connection);
+        pn_messenger_process_events(messenger);
+        pn_messenger_flow(messenger);
+        pni_conn_modified(pni_context(cctx->selectable));
+      }
+    }
+  }
+}
+
 int pn_messenger_process(pn_messenger_t *messenger)
 {
+  bool doMessengerTick = true;
   pn_selectable_t *sel;
   int events;
   while ((sel = pn_selector_next(messenger->selector, &events))) {
@@ -1261,12 +1315,17 @@ int pn_messenger_process(pn_messenger_t *messenger)
     }
     if (events & PN_WRITABLE) {
       pn_selectable_writable(sel);
+      doMessengerTick = false;
     }
     if (events & PN_EXPIRED) {
       pn_selectable_expired(sel);
     }
   }
-
+  // ensure timer events are processed. Cannot call this inside the while loop
+  // as the timer events are not seen by the selector
+  if (doMessengerTick) {
+    pni_messenger_tick(messenger);
+  }
   if (messenger->interrupted) {
     messenger->interrupted = false;
     return PN_INTR;
@@ -1429,12 +1488,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 {
   assert(messenger);
   messenger->connection_error = 0;
-  char domain[1024];
-  if (address && sizeof(domain) < strlen(address) + 1) {
-    pn_error_format(messenger->error, PN_ERR,
-                    "address exceeded maximum length: %s", address);
-    return NULL;
-  }
+  pn_string_t *domain = messenger->domain;
 
   int err = pni_route(messenger, address);
   if (err) return NULL;
@@ -1459,16 +1513,14 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
     return NULL;
   }
 
-  domain[0] = '\0';
+  pn_string_set(domain, "");
 
   if (user) {
-    strcat(domain, user);
-    strcat(domain, "@");
+    pn_string_addf(domain, "%s@", user);
   }
-  strcat(domain, host);
+  pn_string_addf(domain, "%s", host);
   if (port) {
-    strcat(domain, ":");
-    strcat(domain, port);
+    pn_string_addf(domain, ":%s", port);
   }
 
   for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
@@ -1480,7 +1532,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
       return connection;
     }
     const char *container = pn_connection_remote_container(connection);
-    if (pn_streq(container, domain)) {
+    if (pn_streq(container, pn_string_get(domain))) {
       return connection;
     }
   }
@@ -1529,7 +1581,16 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
 
   pn_session_t *ssn = pn_session(connection);
   pn_session_open(ssn);
-  link = sender ? pn_sender(ssn, "sender-xxx") : pn_receiver(ssn, "receiver-xxx");
+  if (sender) {
+    link = pn_sender(ssn, "sender-xxx");
+  } else {
+    if (name) {
+      link = pn_receiver(ssn, name);
+    } else {
+      link = pn_receiver(ssn, "");
+    }
+  }
+
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
     // use explicit settlement via dispositions (not pre-settled)
@@ -1662,7 +1723,7 @@ int pni_pump_out(pn_messenger_t *messenger, const char *address, pn_link_t *send
 
   pn_buffer_t *buf = pni_entry_bytes(entry);
   pn_bytes_t bytes = pn_buffer_bytes(buf);
-  char *encoded = bytes.start;
+  const char *encoded = bytes.start;
   size_t size = bytes.size;
 
   // XXX: proper tag
@@ -1742,7 +1803,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
 
   pni_rewrite(messenger, msg);
   while (true) {
-    char *encoded = pn_buffer_bytes(buf).start;
+    char *encoded = pn_buffer_memory(buf).start;
     size_t size = pn_buffer_capacity(buf);
     int err = pn_message_encode(msg, encoded, &size);
     if (err == PN_OVERFLOW) {

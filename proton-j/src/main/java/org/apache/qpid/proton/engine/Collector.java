@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.engine.impl.CollectorImpl;
 
 /**
  * Collector
@@ -28,6 +29,13 @@ package org.apache.qpid.proton.engine;
 
 public interface Collector
 {
+
+    public static final class Factory
+    {
+        public static Collector create() {
+            return new CollectorImpl();
+        }
+    }
 
     Event peek();
 

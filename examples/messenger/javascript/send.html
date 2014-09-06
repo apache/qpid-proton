@@ -58,7 +58,17 @@ console.log("body = " + body);
     messenger.put(message);
 };
 
-messenger.on('error', function(error) {console.log("Received error " + error);});
+messenger.on('error', function(error) {
+    console.log("Received error " + error);
+
+message.free();
+messenger.free();
+message = new proton.Message();
+messenger = new proton.Messenger();
+messenger.start();
+console.log("Restarted");
+});
+
 messenger.start();
 
 </script>

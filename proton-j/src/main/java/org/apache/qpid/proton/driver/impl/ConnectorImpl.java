@@ -32,7 +32,6 @@ import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.impl.TransportFactory;
 
 class ConnectorImpl<C> implements Connector<C>
 {

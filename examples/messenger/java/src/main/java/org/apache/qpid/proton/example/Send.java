@@ -40,9 +40,9 @@ import java.util.logging.Logger;
 public class Send {
 
     private static Logger tracer = Logger.getLogger("proton.example");
-    private String address = "amqp://0.0.0.0/test";
+    private String address = "amqp://0.0.0.0";
     private String subject;
-    private String[] bodies;
+    private String[] bodies = new String[]{"Hello World!"};
 
     private static void usage() {
         System.err.println("Usage: send [-a ADDRESS] [-s SUBJECT] MSG+");
@@ -67,7 +67,11 @@ public class Send {
                 break;
             }
         }
-        bodies = Arrays.copyOfRange(args, i, args.length);
+
+        if(i != args.length)
+        {
+            bodies = Arrays.copyOfRange(args, i, args.length);
+        }
     }
 
     private void run() {

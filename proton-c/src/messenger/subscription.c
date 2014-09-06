@@ -64,7 +64,7 @@ pn_subscription_t *pn_subscription(pn_messenger_t *messenger,
                                    const char *host,
                                    const char *port)
 {
-  static pn_class_t clazz = PN_CLASS(pn_subscription);
+  static const pn_class_t clazz = PN_CLASS(pn_subscription);
   pn_subscription_t *sub = (pn_subscription_t *) pn_new(sizeof(pn_subscription_t), &clazz);
   sub->messenger = messenger;
   pn_string_set(sub->scheme, scheme);

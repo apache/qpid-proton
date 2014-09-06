@@ -18,6 +18,8 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.engine.impl.ssl.SslPeerDetailsImpl;
+
 /**
  * The details of the remote peer involved in an SSL session.
  *
@@ -28,6 +30,14 @@ package org.apache.qpid.proton.engine;
  */
 public interface SslPeerDetails
 {
+
+    public static final class Factory
+    {
+        public static SslPeerDetails create(String hostname, int port) {
+            return new SslPeerDetailsImpl(hostname, port);
+        }
+    }
+
     String getHostname();
     int getPort();
 }

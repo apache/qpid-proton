@@ -43,10 +43,14 @@ set(CMAKE_C_COMPILER "${EMCC}")
 include(CMakeForceCompiler)
 CMAKE_FORCE_C_COMPILER("${CMAKE_C_COMPILER}" Clang)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    message(STATUS "DEBUG JavaScript build")
+# The Proton default build type is RelWithDebInfo, but for JavaScript the C debug
+# mechanism is irrelevant. If Debug is explicitly set we turn off optimisations
+# and don't run the closure compiler so any error/profiling messages are readable.
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "JavaScript build type is \"Debug\"")
 else()
-    message(STATUS "RELEASE JavaScript build")
+    set (CMAKE_BUILD_TYPE Release)
+    message(STATUS "JavaScript build type is \"Release\"")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
     set(EMSCRIPTEN_LINK_OPTIMISATIONS "-O2 --closure 1")
 endif()

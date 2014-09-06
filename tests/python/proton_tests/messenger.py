@@ -124,10 +124,13 @@ class MessengerTest(Test):
       self.server.put(msg)
       self.server.settle()
 
-  def testSendReceive(self, size=None):
+  def testSendReceive(self, size=None, address_size=None):
     self.start()
     msg = Message()
-    msg.address="amqp://0.0.0.0:12345"
+    if address_size:
+      msg.address="amqp://0.0.0.0:12345/%s" % ("x"*address_size)
+    else:
+      msg.address="amqp://0.0.0.0:12345"
     msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
@@ -165,6 +168,9 @@ class MessengerTest(Test):
 
   def testSendReceive1M(self):
     self.testSendReceive(1024*1024)
+
+  def testSendReceiveLargeAddress(self):
+    self.testSendReceive(address_size=2048)
 
   # PROTON-285 - prevent continually failing test
   def xtestSendBogus(self):
@@ -689,26 +695,37 @@ class NBMessengerTest(common.Test):
 
   def setup(self):
     self.client = Messenger("client")
+    self.client2 = Messenger("client2")
     self.server = Messenger("server")
+    self.messengers = [self.client, self.client2, self.server]
     self.client.blocking = False
+    self.client2.blocking = False
     self.server.blocking = False
     self.server.start()
     self.client.start()
+    self.client2.start()
     self.address = "amqp://0.0.0.0:12345"
     self.server.subscribe("amqp://~0.0.0.0:12345")
 
+  def _pump(self, timeout, work_triggers_exit):
+    for msgr in self.messengers:
+      if msgr.work(timeout) and work_triggers_exit:
+        return True
+    return False
+
   def pump(self, timeout=0):
-    while self.client.work(0) or self.server.work(0): pass
-    self.client.work(timeout)
-    self.server.work(timeout)
-    while self.client.work(0) or self.server.work(0): pass
+    while self._pump(0, True): pass
+    self._pump(timeout, False)
+    while self._pump(0, True): pass
 
   def teardown(self):
     self.server.stop()
     self.client.stop()
+    self.client2.stop()
     self.pump()
     assert self.server.stopped
     assert self.client.stopped
+    assert self.client2.stopped
 
   def testSmoke(self, count=1):
     self.server.recv()
@@ -842,16 +859,10 @@ class NBMessengerTest(common.Test):
     assert self.server.receiving == 8, self.server.receiving
 
     # and none for this new client
-    client2 = Messenger("client2")
-    client2.blocking = False
-    client2.start()
     msg3 = Message()
     msg3.address = self.address + "/msg3"
-    client2.put(msg3)
-    while client2.work(0):
-        self.pump()
-    assert self.server.incoming == 1, self.server.incoming
-    assert self.server.receiving == 8, self.server.receiving
+    self.client2.put(msg3)
+    self.pump()
 
     # eventually, credit will rebalance and all links will
     # send a message
@@ -859,7 +870,6 @@ class NBMessengerTest(common.Test):
     while time() < deadline:
         sleep(.1)
         self.pump()
-        client2.work(0)
         if self.server.incoming == 3:
             break;
     assert self.server.incoming == 3, self.server.incoming
@@ -867,7 +877,7 @@ class NBMessengerTest(common.Test):
 
     # now tear down client two, this should cause its outstanding credit to be
     # made available to the other links
-    client2.stop()
+    self.client2.stop()
     self.pump()
 
     for i in range(4):
@@ -1017,3 +1027,59 @@ class SelectableMessengerTest(common.Test):
 
   def testSelectable4096(self):
     self.testSelectable(count=4096)
+
+
+class IdleTimeoutTest(common.Test):
+
+  def testIdleTimeout(self):
+    """
+    Verify that a Messenger connection is kept alive using empty idle frames
+    when a idle_timeout is advertised by the remote peer.
+    """
+    if "java" in sys.platform:
+      raise Skipped()
+    idle_timeout_secs = self.delay
+
+    try:
+      idle_server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
+      idle_server.timeout = self.timeout
+      idle_server.start()
+
+      idle_client = Messenger("idle_client")
+      idle_client.timeout = self.timeout
+      idle_client.start()
+
+      idle_client.subscribe("amqp://%s:%s/foo" %
+                            (idle_server.host, idle_server.port))
+      idle_client.work(idle_timeout_secs/10)
+
+      # wait up to 3x the idle timeout and hence verify that everything stays
+      # connected during that time by virtue of no Exception being raised
+      duration = 3 * idle_timeout_secs
+      deadline = time() + duration
+      while time() <= deadline:
+        idle_client.work(idle_timeout_secs/10)
+        continue
+
+      # confirm link is still active
+      cxtr = idle_server.driver.head_connector()
+      assert not cxtr.closed, "Connector has unexpectedly been closed"
+      conn = cxtr.connection
+      assert conn.state == (Endpoint.LOCAL_ACTIVE
+                            | Endpoint.REMOTE_ACTIVE
+                            ), "Connection has unexpectedly terminated"
+      link = conn.link_head(0)
+      while link:
+        assert link.state != (Endpoint.REMOTE_CLOSED
+                              ), "Link unexpectedly closed"
+        link = link.next(0)
+
+    finally:
+      try:
+        idle_client.stop()
+      except:
+        pass
+      try:
+        idle_server.stop()
+      except:
+        pass

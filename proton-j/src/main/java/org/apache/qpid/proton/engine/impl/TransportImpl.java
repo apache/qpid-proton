@@ -17,14 +17,14 @@
 
 package org.apache.qpid.proton.engine.impl;
 
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
@@ -32,6 +32,7 @@ import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
+import org.apache.qpid.proton.amqp.transport.ConnectionError;
 import org.apache.qpid.proton.amqp.transport.Detach;
 import org.apache.qpid.proton.amqp.transport.Disposition;
 import org.apache.qpid.proton.amqp.transport.End;
@@ -44,10 +45,8 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
@@ -66,7 +65,20 @@ public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
         FrameHandler, TransportOutputWriter
 {
-    private static final byte AMQP_FRAME_TYPE = 0;
+    static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
+
+    private static final boolean getBooleanEnv(String name)
+    {
+        String value = System.getenv(name);
+        return "true".equalsIgnoreCase(value) ||
+            "1".equals(value) ||
+            "yes".equalsIgnoreCase(value);
+    }
+
+    private static final boolean FRM_ENABLED = getBooleanEnv("PN_TRACE_FRM");
+
+    // trace levels
+    private int _levels = (FRM_ENABLED ? this.TRACE_FRM : 0);
 
     private FrameParser _frameParser;
 
@@ -100,16 +112,16 @@ public class TransportImpl extends EndpointImpl
     private Open _open;
     private SaslImpl _sasl;
     private SslImpl _ssl;
-    private ProtocolTracer _protocolTracer = null;
-
-    private ByteBuffer _lastInputBuffer;
+    private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
 
     private TransportResult _lastTransportResult = TransportResultFactory.ok();
 
     private boolean _init;
+    private boolean _processingStarted;
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
+    private TransportException _tail_error = null;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -134,7 +146,6 @@ public class TransportImpl extends EndpointImpl
                                        FrameWriter.AMQP_FRAME_TYPE,
                                        _protocolTracer,
                                        this);
-
     }
 
     private void init()
@@ -146,6 +157,11 @@ public class TransportImpl extends EndpointImpl
             _inputProcessor = _frameParser;
             _outputProcessor = new TransportOutputAdaptor(this, _maxFrameSize);
         }
+    }
+
+    @Override
+    public void trace(int levels) {
+        _levels = levels;
     }
 
     @Override
@@ -194,9 +210,10 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void bind(Connection conn)
     {
-        // TODO - check if already bound
-        ((ConnectionImpl) conn).setTransport(this);
         _connectionEndpoint = (ConnectionImpl) conn;
+        // TODO - check if already bound
+        _connectionEndpoint.setTransport(this);
+        _connectionEndpoint.incref();
 
         if(getRemoteState() != EndpointState.UNINITIALIZED)
         {
@@ -207,6 +224,23 @@ public class TransportImpl extends EndpointImpl
             }
 
             _frameParser.flush();
+        }
+    }
+
+    @Override
+    public void unbind()
+    {
+        _connectionEndpoint.modifyEndpoints();
+
+        _connectionEndpoint.setTransport(null);
+        _connectionEndpoint.decref();
+
+        for (TransportSession ts: _transportSessionState.values()) {
+            ts.unbind();
+        }
+
+        for (TransportLink tl: _transportLinkState.values()) {
+            tl.unbind();
         }
     }
 
@@ -278,8 +312,13 @@ public class TransportImpl extends EndpointImpl
     {
         if(_sasl == null)
         {
+            if(_processingStarted)
+            {
+                throw new IllegalStateException("Sasl can't be initiated after transport has started processing");
+            }
+
             init();
-            _sasl = new SaslImpl(_remoteMaxFrameSize);
+            _sasl = new SaslImpl(this, _remoteMaxFrameSize);
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
@@ -334,37 +373,36 @@ public class TransportImpl extends EndpointImpl
                        && transportLink.isLocalHandleSet()
                        && !_isCloseSent)
                     {
-                        if(!(link instanceof SenderImpl)
-                           || link.getQueued() == 0
-                           || transportLink.detachReceived()
-                           || transportSession.endReceived()
-                           || _closeReceived)
-                        {
-                            UnsignedInteger localHandle = transportLink.getLocalHandle();
-                            transportLink.clearLocalHandle();
-                            transportSession.freeLocalHandle(localHandle);
-
-
-                            Detach detach = new Detach();
-                            detach.setHandle(localHandle);
-                            // TODO - need an API for detaching rather than closing the link
-                            detach.setClosed(true);
-
-                            ErrorCondition localError = link.getCondition();
-                            if( localError.getCondition() !=null )
-                            {
-                                detach.setError(localError);
-                            }
-
-
-                            writeFrame(transportSession.getLocalChannel(), detach, null, null);
-                            endpoint.clearModified();
-
-                            // TODO - temporary hack for PROTON-154, this line should be removed and replaced
-                            //        with proper handling for closed links
-                            link.free();
+                        if((link instanceof SenderImpl)
+                           && link.getQueued() > 0
+                           && !transportLink.detachReceived()
+                           && !transportSession.endReceived()
+                           && !_closeReceived) {
+                            endpoint = endpoint.transportNext();
+                            continue;
                         }
+
+                        UnsignedInteger localHandle = transportLink.getLocalHandle();
+                        transportLink.clearLocalHandle();
+                        transportSession.freeLocalHandle(localHandle);
+
+
+                        Detach detach = new Detach();
+                        detach.setHandle(localHandle);
+                        // TODO - need an API for detaching rather than closing the link
+                        detach.setClosed(true);
+
+                        ErrorCondition localError = link.getCondition();
+                        if( localError.getCondition() !=null )
+                        {
+                            detach.setError(localError);
+                        }
+
+
+                        writeFrame(transportSession.getLocalChannel(), detach, null, null);
                     }
+
+                    endpoint.clearModified();
 
                 }
                 endpoint = endpoint.transportNext();
@@ -411,8 +449,6 @@ public class TransportImpl extends EndpointImpl
                         sender.setDrained(0);
 
                         writeFlow(transportSession, transportLink);
-
-                        endpoint.clearModified();
                     }
 
                 }
@@ -470,7 +506,7 @@ public class TransportImpl extends EndpointImpl
         if(!delivery.isDone() &&
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
            tpSession.hasOutgoingCredit() && tpLink.hasCredit() &&
-           tpLink.getLocalHandle() != null)
+           tpLink.getLocalHandle() != null && !_frameWriter.isFull())
         {
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
             TransportDelivery tpDelivery = new TransportDelivery(deliveryId, delivery, tpLink);
@@ -529,6 +565,8 @@ public class TransportImpl extends EndpointImpl
                 delivery.setDataLength(payload.remaining());
                 session.incrementOutgoingBytes(-delta);
             }
+
+            getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
         }
 
         if(wasDone && delivery.getLocalState() != null)
@@ -596,10 +634,6 @@ public class TransportImpl extends EndpointImpl
                         {
                             transportLink.addCredit(credits);
                             writeFlow(transportSession, transportLink);
-                            if(receiver.getLocalState() == EndpointState.ACTIVE)
-                            {
-                                endpoint.clearModified();
-                            }
                         }
                     }
                 }
@@ -689,10 +723,6 @@ public class TransportImpl extends EndpointImpl
 
                             writeFrame(transportSession.getLocalChannel(), attach, null, null);
                             transportLink.sentAttach();
-                            if(link.getLocalState() == EndpointState.ACTIVE && (link instanceof SenderImpl || !link.hasCredit()))
-                            {
-                                endpoint.clearModified();
-                            }
                         }
                     }
                 }
@@ -712,15 +742,22 @@ public class TransportImpl extends EndpointImpl
 
     private void processOpen()
     {
-        if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED && !_isOpenSent)
-        {
+        if ((_tail_error != null ||
+             (_connectionEndpoint != null &&
+              _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
+            !_isOpenSent) {
             Open open = new Open();
-            String cid = _connectionEndpoint.getLocalContainerId();
-            open.setContainerId(cid == null ? "" : cid);
-            open.setHostname(_connectionEndpoint.getHostname());
-            open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
-            open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
-            open.setProperties(_connectionEndpoint.getProperties());
+            if (_connectionEndpoint != null) {
+                String cid = _connectionEndpoint.getLocalContainerId();
+                open.setContainerId(cid == null ? "" : cid);
+                open.setHostname(_connectionEndpoint.getHostname());
+                open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
+                open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
+                open.setProperties(_connectionEndpoint.getProperties());
+            } else {
+                open.setContainerId("");
+            }
+
             if (_maxFrameSize > 0) {
                 open.setMaxFrameSize(UnsignedInteger.valueOf(_maxFrameSize));
             }
@@ -731,7 +768,6 @@ public class TransportImpl extends EndpointImpl
             _isOpenSent = true;
 
             writeFrame(0, open, null, null);
-
         }
     }
 
@@ -762,10 +798,6 @@ public class TransportImpl extends EndpointImpl
 
                         writeFrame(channelId, begin, null, null);
                         transportSession.sentBegin();
-                        if(session.getLocalState() == EndpointState.ACTIVE)
-                        {
-                            endpoint.clearModified();
-                        }
                     }
                 }
                 endpoint = endpoint.transportNext();
@@ -829,21 +861,27 @@ public class TransportImpl extends EndpointImpl
                 SessionImpl session;
                 TransportSession transportSession;
 
-                if((endpoint instanceof SessionImpl)
-                   && (session = (SessionImpl)endpoint).getLocalState() == EndpointState.CLOSED
-                   && (transportSession = session.getTransportSession()).isLocalChannelSet()
-                   && !hasSendableMessages(session)
-                   && !_isCloseSent)
-                {
-                    int channel = freeLocalChannel(transportSession);
-                    End end = new End();
-                    ErrorCondition localError = endpoint.getCondition();
-                    if( localError.getCondition() !=null )
+                if((endpoint instanceof SessionImpl)) {
+                    if ((session = (SessionImpl)endpoint).getLocalState() == EndpointState.CLOSED
+                        && (transportSession = session.getTransportSession()).isLocalChannelSet()
+                        && !_isCloseSent)
                     {
-                        end.setError(localError);
+                        if (hasSendableMessages(session)) {
+                            endpoint = endpoint.transportNext();
+                            continue;
+                        }
+
+                        int channel = freeLocalChannel(transportSession);
+                        End end = new End();
+                        ErrorCondition localError = endpoint.getCondition();
+                        if( localError.getCondition() !=null )
+                        {
+                            end.setError(localError);
+                        }
+
+                        writeFrame(channel, end, null, null);
                     }
 
-                    writeFrame(channel, end, null, null);
                     endpoint.clearModified();
                 }
 
@@ -854,6 +892,9 @@ public class TransportImpl extends EndpointImpl
 
     private boolean hasSendableMessages(SessionImpl session)
     {
+        if (_connectionEndpoint == null) {
+            return false;
+        }
 
         if(!_closeReceived && (session == null || !session.getTransportSession().endReceived()))
         {
@@ -878,14 +919,24 @@ public class TransportImpl extends EndpointImpl
 
     private void processClose()
     {
-        if(_connectionEndpoint != null && _connectionEndpoint.getLocalState() == EndpointState.CLOSED && !_isCloseSent)
-        {
+        if ((_tail_error != null ||
+             (_connectionEndpoint != null &&
+              _connectionEndpoint.getLocalState() == EndpointState.CLOSED)) &&
+            !_isCloseSent) {
             if(!hasSendableMessages(null))
             {
                 Close close = new Close();
 
-                ErrorCondition localError = _connectionEndpoint.getCondition();
-                if( localError.getCondition() !=null )
+                ErrorCondition localError;
+
+                if (_connectionEndpoint == null) {
+                    localError = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                    _tail_error.toString());
+                } else {
+                    localError =  _connectionEndpoint.getCondition();
+                }
+
+                if(localError.getCondition() != null)
                 {
                     close.setError(localError);
                 }
@@ -893,6 +944,10 @@ public class TransportImpl extends EndpointImpl
                 _isCloseSent = true;
 
                 writeFrame(0, close, null, null);
+
+                if (_connectionEndpoint != null) {
+                    _connectionEndpoint.clearModified();
+                }
             }
         }
     }
@@ -912,10 +967,10 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void free()
-    {
-        super.free();
-    }
+    void postFinal() {}
+
+    @Override
+    void doFree() { }
 
     //==================================================================================================================
     // handle incoming amqp data
@@ -967,6 +1022,9 @@ public class TransportImpl extends EndpointImpl
             {
                 // TODO check null
                 transportSession = _localSessions.get(begin.getRemoteChannel().intValue());
+                if (transportSession == null) {
+                    throw new NullPointerException("uncorrelated channel: " + begin.getRemoteChannel());
+                }
                 session = transportSession.getSession();
 
             }
@@ -975,10 +1033,7 @@ public class TransportImpl extends EndpointImpl
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
             _remoteSessions.put(channel, transportSession);
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(session);
-            }
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_OPEN, session);
         }
 
     }
@@ -1034,10 +1089,7 @@ public class TransportImpl extends EndpointImpl
 
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(link);
-            }
+            _connectionEndpoint.put(Event.Type.LINK_REMOTE_OPEN, link);
         }
     }
 
@@ -1102,15 +1154,12 @@ public class TransportImpl extends EndpointImpl
                 LinkImpl link = transportLink.getLink();
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
+                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
+                transportLink.clearRemoteHandle();
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
                 {
                     link.getRemoteCondition().copyFrom(detach.getError());
-                }
-
-                EventImpl ev = _connectionEndpoint.put(Event.Type.LINK_REMOTE_STATE);
-                if (ev != null) {
-                    ev.init(link);
                 }
             }
             else
@@ -1140,10 +1189,7 @@ public class TransportImpl extends EndpointImpl
                 session.getRemoteCondition().copyFrom(errorCondition);
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.SESSION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(session);
-            }
+            _connectionEndpoint.put(Event.Type.SESSION_REMOTE_CLOSE, session);
         }
     }
 
@@ -1160,10 +1206,7 @@ public class TransportImpl extends EndpointImpl
                 _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
             }
 
-            EventImpl ev = _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_STATE);
-            if (ev != null) {
-                ev.init(_connectionEndpoint);
-            }
+            _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_CLOSE, _connectionEndpoint);
         }
 
     }
@@ -1176,11 +1219,12 @@ public class TransportImpl extends EndpointImpl
             throw new IllegalStateException("Transport cannot accept frame: " + frame);
         }
 
-        log(this, INCOMING, frame);
+        log(INCOMING, frame);
 
-        if( _protocolTracer != null )
+        ProtocolTracer tracer = _protocolTracer.get();
+        if( tracer != null )
         {
-            _protocolTracer.receivedFrame(frame);
+            tracer.receivedFrame(frame);
         }
 
         frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
@@ -1188,10 +1232,15 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void closed()
+    public void closed(TransportException error)
     {
-        if (!_closeReceived) {
-            throw new TransportException("connection aborted");
+        if (!_closeReceived || error != null) {
+            if (error == null) {
+                _tail_error = new TransportException("connection aborted");
+            } else {
+                _tail_error = error;
+            }
+            _head_closed = true;
         }
     }
 
@@ -1204,13 +1253,13 @@ public class TransportImpl extends EndpointImpl
     @Override
     public ProtocolTracer getProtocolTracer()
     {
-        return _protocolTracer;
+        return _protocolTracer.get();
     }
 
     @Override
     public void setProtocolTracer(ProtocolTracer protocolTracer)
     {
-        this._protocolTracer = protocolTracer;
+        this._protocolTracer.set(protocolTracer);
     }
 
     @Override
@@ -1260,6 +1309,8 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void process() throws TransportException
     {
+        _processingStarted = true;
+
         try {
             init();
             _inputProcessor.process();
@@ -1303,6 +1354,12 @@ public class TransportImpl extends EndpointImpl
         _outputProcessor.close_head();
     }
 
+    public boolean isClosed() {
+        int p = pending();
+        int c = capacity();
+        return  p == END_OF_STREAM && c == END_OF_STREAM;
+    }
+
     @Override
     public String toString()
     {
@@ -1337,21 +1394,11 @@ public class TransportImpl extends EndpointImpl
     static String INCOMING = "<-";
     static String OUTGOING = "->";
 
-    private static final boolean getBooleanEnv(String name)
+    void log(String event, TransportFrame frame)
     {
-        String value = System.getenv(name);
-        return "true".equalsIgnoreCase(value) ||
-            "1".equals(value) ||
-            "yes".equalsIgnoreCase(value);
-    }
-
-    private static final boolean ENABLED = getBooleanEnv("PN_TRACE_FRM");
-
-    static void log(Object ctx, String event, TransportFrame frame)
-    {
-        if (ENABLED) {
+        if ((_levels & TRACE_FRM) != 0) {
             StringBuilder msg = new StringBuilder();
-            msg.append("[").append(System.identityHashCode(ctx)).append(":")
+            msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
             msg.append(" ").append(event).append(" ").append(frame.getBody());
             if (frame.getPayload() != null) {
@@ -1366,7 +1413,8 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    protected void localStateChanged()
-    {
-    }
+    void localOpen() {}
+
+    @Override
+    void localClose() {}
 }

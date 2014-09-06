@@ -25,17 +25,18 @@ package org.apache.qpid.proton.amqp.messaging;
 
 import java.util.Map;
 
-public final class DeliveryAnnotations
-      implements Section
-{
-    private final Map _value;
+import org.apache.qpid.proton.amqp.Symbol;
 
-    public DeliveryAnnotations(Map value)
+public final class DeliveryAnnotations implements Section
+{
+    private final Map<Symbol, Object> _value;
+
+    public DeliveryAnnotations(Map<Symbol, Object> value)
     {
         _value = value;
     }
 
-    public Map getValue()
+    public Map<Symbol, Object> getValue()
     {
         return _value;
     }

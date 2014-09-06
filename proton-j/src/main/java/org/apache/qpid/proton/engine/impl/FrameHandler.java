@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.framing.TransportFrame;
 
 public interface FrameHandler
@@ -31,7 +32,7 @@ public interface FrameHandler
      */
     boolean handleFrame(TransportFrame frame);
 
-    void closed();
+    void closed(TransportException error);
 
     /**
      * Returns whether I am currently able to handle frames.

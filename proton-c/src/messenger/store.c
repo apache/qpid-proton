@@ -34,36 +34,36 @@
 typedef struct pni_stream_t pni_stream_t;
 
 struct pni_store_t {
-  size_t size;
   pni_stream_t *streams;
   pni_entry_t *store_head;
   pni_entry_t *store_tail;
+  pn_hash_t *tracked;
+  size_t size;
   int window;
   pn_sequence_t lwm;
   pn_sequence_t hwm;
-  pn_hash_t *tracked;
 };
 
 struct pni_stream_t {
   pni_store_t *store;
-  char address[1024]; // XXX
+  pn_string_t *address;
   pni_entry_t *stream_head;
   pni_entry_t *stream_tail;
   pni_stream_t *next;
 };
 
 struct pni_entry_t {
-  pn_sequence_t id;
   pni_stream_t *stream;
-  bool free;
   pni_entry_t *stream_next;
   pni_entry_t *stream_prev;
   pni_entry_t *store_next;
   pni_entry_t *store_prev;
-  pn_status_t status;
   pn_buffer_t *bytes;
   pn_delivery_t *delivery;
   void *context;
+  pn_status_t status;
+  pn_sequence_t id;
+  bool free;
 };
 
 void pni_entry_finalize(void *object)
@@ -104,13 +104,11 @@ pni_stream_t *pni_stream(pni_store_t *store, const char *address, bool create)
 {
   assert(store);
   assert(address);
-  // XXX
-  if (strlen(address) >= 1024) return NULL;
 
   pni_stream_t *prev = NULL;
   pni_stream_t *stream = store->streams;
   while (stream) {
-    if (!strcmp(stream->address, address)) {
+    if (!strcmp(pn_string_get(stream->address), address)) {
       return stream;
     }
     prev = stream;
@@ -120,7 +118,7 @@ pni_stream_t *pni_stream(pni_store_t *store, const char *address, bool create)
   if (create) {
     stream = (pni_stream_t *) malloc(sizeof(pni_stream_t));
     stream->store = store;
-    strcpy(stream->address, address);
+    stream->address = pn_string(address);
     stream->stream_head = NULL;
     stream->stream_tail = NULL;
     stream->next = NULL;
@@ -169,6 +167,8 @@ void pni_stream_free(pni_stream_t *stream)
   while ((entry = LL_HEAD(stream, stream))) {
     pni_entry_free(entry);
   }
+  pn_free(stream->address);
+  stream->address = NULL;
   free(stream);
 }
 
@@ -205,7 +205,7 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
 pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
 {
   assert(store);
-  static pn_class_t clazz = PN_CLASS(pni_entry);
+  static const pn_class_t clazz = PN_CLASS(pni_entry);
 
   if (!address) address = "";
   pni_stream_t *stream = pni_stream_put(store, address);

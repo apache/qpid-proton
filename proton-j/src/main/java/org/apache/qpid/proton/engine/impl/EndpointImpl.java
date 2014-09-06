@@ -37,7 +37,27 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     private EndpointImpl _transportPrev;
     private Object _context;
 
-    protected abstract void localStateChanged();
+    private int refcount = 1;
+    boolean freed = false;
+
+    void incref() {
+        refcount++;
+    }
+
+    void decref() {
+        refcount--;
+        if (refcount == 0) {
+            postFinal();
+        } else if (refcount < 0) {
+            throw new IllegalStateException();
+        }
+    }
+
+    abstract void postFinal();
+
+    abstract void localOpen();
+
+    abstract void localClose();
 
     public void open()
     {
@@ -49,7 +69,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case UNINITIALIZED:
                 _localState = EndpointState.ACTIVE;
-                localStateChanged();
+                localOpen();
         }
         modified();
     }
@@ -65,7 +85,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
                 // TODO
             case ACTIVE:
                 _localState = EndpointState.CLOSED;
-                localStateChanged();
+                localClose();
         }
         modified();
     }
@@ -129,9 +149,9 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
         if (emit) {
             ConnectionImpl conn = getConnectionImpl();
-            EventImpl ev = conn.put(Event.Type.TRANSPORT);
-            if (ev != null) {
-                ev.init(conn);
+            TransportImpl trans = conn.getTransport();
+            if (trans != null) {
+                conn.put(Event.Type.TRANSPORT, trans);
             }
         }
     }
@@ -162,16 +182,15 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         return _transportPrev;
     }
 
-    public void free()
+    abstract void doFree();
+
+    final public void free()
     {
-        if(_transportNext != null)
-        {
-            _transportNext.setTransportPrev(_transportPrev);
-        }
-        if(_transportPrev != null)
-        {
-            _transportPrev.setTransportNext(_transportNext);
-        }
+        if (freed) return;
+        freed = true;
+
+        doFree();
+        decref();
     }
 
     void setTransportNext(EndpointImpl transportNext)
@@ -194,9 +213,4 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         _context = context;
     }
 
-    @Override
-    public String toString()
-    {
-        return "EndpointImpl(" + System.identityHashCode(this) + ") [_localState=" + _localState + ", _remoteState=" + _remoteState + ", _localError=" + _localError + ", _remoteError=" + _remoteError + "]";
-    }
 }

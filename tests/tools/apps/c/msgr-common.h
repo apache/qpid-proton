@@ -28,8 +28,12 @@
 #endif
 
 #ifdef _MSC_VER
+#if !defined(PRIu64)
 #define PRIu64 "I64u"
+#endif
+#if !defined(SCNu64)
 #define SCNu64 "I64u"
+#endif
 #endif
 
 /* If still not defined, best guess */

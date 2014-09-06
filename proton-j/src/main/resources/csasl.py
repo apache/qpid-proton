@@ -29,6 +29,7 @@ PN_SASL_AUTH=1
 PN_SASL_SYS=2
 PN_SASL_PERM=3
 PN_SASL_TEMP=4
+PN_SASL_SKIPPED=5
 
 PN_SASL_CONF = 0
 PN_SASL_IDLE = 1
@@ -53,7 +54,8 @@ SASL_OUTCOMES_P2J = {
   PN_SASL_AUTH: Sasl.PN_SASL_AUTH,
   PN_SASL_SYS: Sasl.PN_SASL_SYS,
   PN_SASL_PERM: Sasl.PN_SASL_PERM,
-  PN_SASL_TEMP: Sasl.PN_SASL_TEMP
+  PN_SASL_TEMP: Sasl.PN_SASL_TEMP,
+  PN_SASL_SKIPPED: Sasl.PN_SASL_SKIPPED
 }
 
 SASL_OUTCOMES_J2P = {
@@ -62,7 +64,8 @@ SASL_OUTCOMES_J2P = {
   Sasl.PN_SASL_AUTH: PN_SASL_AUTH,
   Sasl.PN_SASL_SYS: PN_SASL_SYS,
   Sasl.PN_SASL_PERM: PN_SASL_PERM,
-  Sasl.PN_SASL_TEMP: PN_SASL_TEMP
+  Sasl.PN_SASL_TEMP: PN_SASL_TEMP,
+  Sasl.PN_SASL_SKIPPED: PN_SASL_SKIPPED
 }
 
 def pn_sasl_state(sasl):
@@ -76,6 +79,9 @@ def pn_sasl_client(sasl):
 
 def pn_sasl_server(sasl):
   sasl.server()
+
+def pn_sasl_allow_skip(sasl, allow):
+  sasl.allowSkip(allow)
 
 def pn_sasl_done(sasl, outcome):
   sasl.done(SASL_OUTCOMES_P2J[outcome])

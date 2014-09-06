@@ -69,6 +69,12 @@ class TransportSession
         _session = session;
     }
 
+    void unbind()
+    {
+        unsetLocalChannel();
+        unsetRemoteChannel();
+    }
+
     public SessionImpl getSession()
     {
         return _session;
@@ -81,6 +87,9 @@ class TransportSession
 
     public void setLocalChannel(int localChannel)
     {
+        if (!isLocalChannelSet()) {
+            _session.incref();
+        }
         _localChannel = localChannel;
     }
 
@@ -91,6 +100,9 @@ class TransportSession
 
     public void setRemoteChannel(int remoteChannel)
     {
+        if (!isRemoteChannelSet()) {
+            _session.incref();
+        }
         _remoteChannel = remoteChannel;
     }
 
@@ -116,11 +128,17 @@ class TransportSession
 
     public void unsetLocalChannel()
     {
+        if (isLocalChannelSet()) {
+            _session.decref();
+        }
         _localChannel = -1;
     }
 
     public void unsetRemoteChannel()
     {
+        if (isRemoteChannelSet()) {
+            _session.decref();
+        }
         _remoteChannel = -1;
     }
 
@@ -262,7 +280,7 @@ class TransportSession
             _unsettledIncomingDeliveriesById.put(_incomingDeliveryId, delivery);
             getSession().incrementIncomingDeliveries(1);
         }
-        if( transfer.getState()!=null ) 
+        if( transfer.getState()!=null )
         {
             delivery.setRemoteDeliveryState(transfer.getState());
         }
@@ -308,15 +326,12 @@ class TransportSession
             delivery.getLink().modified(false);
         }
 
-        EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
-        if (ev != null) {
-            ev.init(delivery);
-        }
+        getSession().getConnection().put(Event.Type.DELIVERY, delivery);
     }
 
     public void freeLocalChannel()
     {
-        _localChannel = -1;
+        unsetLocalChannel();
     }
 
     private void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
@@ -394,10 +409,7 @@ class TransportSession
                 }
                 delivery.updateWork();
 
-                EventImpl ev = getSession().getConnection().put(Event.Type.DELIVERY);
-                if (ev != null) {
-                    ev.init(delivery);
-                }
+                getSession().getConnection().put(Event.Type.DELIVERY, delivery);
             }
             id = id.add(UnsignedInteger.ONE);
         }

@@ -20,6 +20,8 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.engine.TransportException;
+
 interface TransportOutputWriter
 {
     /**
@@ -28,6 +30,6 @@ interface TransportOutputWriter
      */
     boolean writeInto(ByteBuffer outputBuffer);
 
-    void closed();
+    void closed(TransportException error);
 
 }

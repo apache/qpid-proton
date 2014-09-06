@@ -464,6 +464,7 @@ first message.
     sub_impl = pn_messenger_subscribe(self._mng, source)
     if not sub_impl:
       self._check(pn_error_code(pn_messenger_error(self._mng)))
+      raise MessengerException("Cannot subscribe to %s"%source)
     return Subscription(sub_impl)
 
   def put(self, message):
@@ -760,8 +761,7 @@ first message.
       return None
 
 class Message(object):
-  """
-  The L{Message} class is a mutable holder of message content.
+  """The L{Message} class is a mutable holder of message content.
 
   @ivar instructions: delivery instructions for the message
   @type instructions: dict
@@ -780,7 +780,10 @@ class Message(object):
 
   DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
 
-  def __init__(self):
+  def __init__(self, **kwargs):
+    """
+    @param kwargs: Message property name/value pairs to initialise the Message
+    """
     self._msg = pn_message()
     self._id = Data(pn_message_id(self._msg))
     self._correlation_id = Data(pn_message_correlation_id(self._msg))
@@ -788,6 +791,9 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = None
+    for k,v in kwargs.iteritems():
+      getattr(self, k)          # Raise exception if it's not a valid attribute.
+      setattr(self, k, v)
 
   def __del__(self):
     if hasattr(self, "_msg"):
@@ -860,7 +866,14 @@ class Message(object):
   def _set_inferred(self, value):
     self._check(pn_message_set_inferred(self._msg, bool(value)))
 
-  inferred = property(_is_inferred, _set_inferred)
+  inferred = property(_is_inferred, _set_inferred,"""
+The inferred flag for a message indicates how the message content
+is encoded into AMQP sections. If inferred is true then binary and
+list values in the body of the message will be encoded as AMQP DATA
+and AMQP SEQUENCE sections, respectively. If inferred is false,
+then all values in the body of the message will be encoded as AMQP
+VALUE sections regardless of their type.
+""")
 
   def _is_durable(self):
     return pn_message_is_durable(self._msg)
@@ -2165,6 +2178,16 @@ class Endpoint(object):
 
   def __init__(self):
     self.condition = None
+    self._release_invoked = False
+
+  def _release(self):
+    """Release the underlying C Engine resource."""
+    if not self._release_invoked:
+      for c in self._children:
+        c._release()
+      self._free_resource()
+      self.connection._releasing(self)
+      self._release_invoked = True
 
   def _update_cond(self):
     obj2cond(self.condition, self._get_cond_impl())
@@ -2256,13 +2279,32 @@ class Connection(Endpoint):
 
   def __del__(self):
     if hasattr(self, "_conn") and self._conn:
-      # pn_connection_free will release all child sessions in the C Engine, so
-      # free all child python Sessions to avoid dangling references
-      if hasattr(self, "_sessions") and self._sessions:
-        for s in self._sessions:
-          s._release()
-      pn_connection_set_context(self._conn, None)
-      pn_connection_free(self._conn)
+      self._release()
+
+  def free(self):
+    self._release()
+
+  @property
+  def _children(self):
+    return self._sessions
+
+  @property
+  def connection(self):
+    return self
+
+  def _free_resource(self):
+    pn_connection_free(self._conn)
+
+  def _released(self):
+    self._conn = None
+
+  def _releasing(self, child):
+    coll = getattr(self, "_collector", None)
+    if coll: coll = coll()
+    if coll:
+      coll._contexts.add(child)
+    else:
+      child._released()
 
   def _check(self, err):
     if err < 0:
@@ -2282,9 +2324,7 @@ class Connection(Endpoint):
       pn_connection_collect(self._conn, None)
     else:
       pn_connection_collect(self._conn, collector._impl)
-    # XXX: we can't let coll go out of scope or the connection will be
-    # pointing to garbage
-    self._collector = collector
+    self._collector = weakref.ref(collector)
 
   def _get_container(self):
     return pn_connection_get_container(self._conn)
@@ -2376,16 +2416,15 @@ class Session(Endpoint):
     self._links = set()
     self.connection._sessions.add(self)
 
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if self._ssn:
-      # pn_session_free will release all child links in the C Engine, so free
-      # all child python Links to avoid dangling references
-      for l in self._links:
-        l._release()
-      pn_session_set_context(self._ssn, None)
-      pn_session_free(self._ssn)
-      self._ssn = None
+  @property
+  def _children(self):
+    return self._links
+
+  def _free_resource(self):
+    pn_session_free(self._ssn)
+
+  def _released(self):
+    self._ssn = None
 
   def free(self):
     """Release the Session, freeing its resources.
@@ -2477,16 +2516,15 @@ class Link(Endpoint):
     self._deliveries = set()
     self.session._links.add(self)
 
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if self._link:
-      # pn_link_free will settle all child deliveries in the C Engine, so free
-      # all child python deliveries to avoid dangling references
-      for d in self._deliveries:
-        d._release()
-      pn_link_set_context(self._link, None)
-      pn_link_free(self._link)
-      self._link = None
+  @property
+  def _children(self):
+    return self._deliveries
+
+  def _free_resource(self):
+    pn_link_free(self._link)
+
+  def _released(self):
+    self._link = None
 
   def free(self):
     """Release the Link, freeing its resources"""
@@ -2535,6 +2573,10 @@ class Link(Endpoint):
   @property
   def session(self):
     return Session._wrap_session(pn_link_session(self._link))
+
+  @property
+  def connection(self):
+    return self.session.connection
 
   def delivery(self, tag):
     return Delivery._wrap_delivery(pn_delivery(self._link, tag))
@@ -2719,13 +2761,38 @@ class Receiver(Link):
   def draining(self):
     return pn_link_draining(self._link)
 
+class NamedInt(int):
+
+  values = {}
+
+  def __new__(cls, i, name):
+    ni = super(NamedInt, cls).__new__(cls, i)
+    cls.values[i] = ni
+    return ni
+
+  def __init__(self, i, name):
+    self.name = name
+
+  def __repr__(self):
+    return self.name
+
+  def __str__(self):
+    return self.name
+
+  @classmethod
+  def get(cls, i):
+    return cls.values.get(i, i)
+
+class DispositionType(NamedInt):
+  values = {}
+
 class Disposition(object):
 
-  RECEIVED = PN_RECEIVED
-  ACCEPTED = PN_ACCEPTED
-  REJECTED = PN_REJECTED
-  RELEASED = PN_RELEASED
-  MODIFIED = PN_MODIFIED
+  RECEIVED = DispositionType(PN_RECEIVED, "RECEIVED")
+  ACCEPTED = DispositionType(PN_ACCEPTED, "ACCEPTED")
+  REJECTED = DispositionType(PN_REJECTED, "REJECTED")
+  RELEASED = DispositionType(PN_RELEASED, "RELEASED")
+  MODIFIED = DispositionType(PN_MODIFIED, "MODIFIED")
 
   def __init__(self, impl, local):
     self._impl = impl
@@ -2736,7 +2803,7 @@ class Disposition(object):
 
   @property
   def type(self):
-    return pn_disposition_type(self._impl)
+    return DispositionType.get(pn_disposition_type(self._impl))
 
   def _get_section_number(self):
     return pn_disposition_get_section_number(self._impl)
@@ -2824,12 +2891,13 @@ class Delivery(object):
     self.remote = Disposition(pn_delivery_remote(self._dlv), False)
     self.link._deliveries.add(self)
 
+  def __del__(self):
+    pn_delivery_set_context(self._dlv, None)
+
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._dlv:
-      pn_delivery_set_context(self._dlv, None)
       pn_delivery_settle(self._dlv)
-      self._dlv = None
 
   @property
   def tag(self):
@@ -2863,11 +2931,11 @@ class Delivery(object):
 
   @property
   def local_state(self):
-    return pn_delivery_local_state(self._dlv)
+    return DispositionType.get(pn_delivery_local_state(self._dlv))
 
   @property
   def remote_state(self):
-    return pn_delivery_remote_state(self._dlv)
+    return DispositionType.get(pn_delivery_remote_state(self._dlv))
 
   @property
   def settled(self):
@@ -2891,6 +2959,7 @@ class TransportException(ProtonException):
 
 class Transport(object):
 
+  TRACE_OFF = PN_TRACE_OFF
   TRACE_DRV = PN_TRACE_DRV
   TRACE_FRM = PN_TRACE_FRM
   TRACE_RAW = PN_TRACE_RAW
@@ -2955,7 +3024,9 @@ class Transport(object):
       return self._check(c)
 
   def push(self, bytes):
-    self._check(pn_transport_push(self._trans, bytes))
+    n = self._check(pn_transport_push(self._trans, bytes))
+    if n != len(bytes):
+      raise OverflowError("unable to process all bytes")
 
   def close_tail(self):
     self._check(pn_transport_close_tail(self._trans))
@@ -2981,26 +3052,9 @@ class Transport(object):
   def close_head(self):
     self._check(pn_transport_close_head(self._trans))
 
-  def output(self, size):
-    p = self.pending()
-    if p < 0:
-      return None
-    else:
-      out = self.peek(min(size, p))
-      self.pop(len(out))
-      return out
-
-  def input(self, bytes):
-    if not bytes:
-      self.close_tail()
-      return None
-    else:
-      c = self.capacity()
-      if (c < 0):
-        return None
-      trimmed = bytes[:c]
-      self.push(trimmed)
-      return len(trimmed)
+  @property
+  def closed(self):
+    return pn_transport_closed(self._trans)
 
   # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):
@@ -3078,6 +3132,7 @@ class SASL(object):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
+  SKIPPED = PN_SASL_SKIPPED
 
   def __new__(cls, transport):
     """Enforce a singleton SASL object per Transport"""
@@ -3102,6 +3157,9 @@ class SASL(object):
 
   def server(self):
     pn_sasl_server(self._sasl)
+
+  def allow_skip(self, allow):
+    pn_sasl_allow_skip(self._sasl, allow)
 
   def plain(self, user, password):
     pn_sasl_plain(self._sasl, user, password)
@@ -3265,6 +3323,7 @@ class Collector:
 
   def __init__(self):
     self._impl = pn_collector()
+    self._contexts = set()
 
   def peek(self):
     event = pn_collector_peek(self._impl)
@@ -3285,6 +3344,9 @@ class Collector:
                  transport=tp)
 
   def pop(self):
+    ev = self.peek()
+    if ev is not None:
+      ev._popped(self)
     pn_collector_pop(self._impl)
 
   def __del__(self):
@@ -3292,15 +3354,34 @@ class Collector:
 
 class Event:
 
-  CATEGORY_PROTOCOL = PN_EVENT_CATEGORY_PROTOCOL
+  CATEGORY_CONNECTION = PN_EVENT_CATEGORY_CONNECTION
+  CATEGORY_SESSION = PN_EVENT_CATEGORY_SESSION
+  CATEGORY_LINK = PN_EVENT_CATEGORY_LINK
+  CATEGORY_DELIVERY = PN_EVENT_CATEGORY_DELIVERY
+  CATEGORY_TRANSPORT = PN_EVENT_CATEGORY_TRANSPORT
 
-  CONNECTION_LOCAL_STATE = PN_CONNECTION_LOCAL_STATE
-  CONNECTION_REMOTE_STATE = PN_CONNECTION_REMOTE_STATE
-  SESSION_LOCAL_STATE = PN_SESSION_LOCAL_STATE
-  SESSION_REMOTE_STATE = PN_SESSION_REMOTE_STATE
-  LINK_LOCAL_STATE = PN_LINK_LOCAL_STATE
-  LINK_REMOTE_STATE = PN_LINK_REMOTE_STATE
+  CONNECTION_INIT = PN_CONNECTION_INIT
+  CONNECTION_OPEN = PN_CONNECTION_OPEN
+  CONNECTION_CLOSE = PN_CONNECTION_CLOSE
+  CONNECTION_REMOTE_OPEN = PN_CONNECTION_REMOTE_OPEN
+  CONNECTION_REMOTE_CLOSE = PN_CONNECTION_REMOTE_CLOSE
+  CONNECTION_FINAL = PN_CONNECTION_FINAL
+
+  SESSION_INIT = PN_SESSION_INIT
+  SESSION_OPEN = PN_SESSION_OPEN
+  SESSION_CLOSE = PN_SESSION_CLOSE
+  SESSION_REMOTE_OPEN = PN_SESSION_REMOTE_OPEN
+  SESSION_REMOTE_CLOSE = PN_SESSION_REMOTE_CLOSE
+  SESSION_FINAL = PN_SESSION_FINAL
+
+  LINK_INIT = PN_LINK_INIT
+  LINK_OPEN = PN_LINK_OPEN
+  LINK_CLOSE = PN_LINK_CLOSE
+  LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
+  LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
   LINK_FLOW = PN_LINK_FLOW
+  LINK_FINAL = PN_LINK_FINAL
+
   DELIVERY = PN_DELIVERY
   TRANSPORT = PN_TRANSPORT
 
@@ -3313,6 +3394,19 @@ class Event:
     self.link = link
     self.delivery = delivery
     self.transport = transport
+
+  def _popped(self, collector):
+    if self.type == Event.LINK_FINAL:
+      ctx = self.link
+    elif self.type == Event.SESSION_FINAL:
+      ctx = self.session
+    elif self.type == Event.CONNECTION_FINAL:
+      ctx = self.connection
+    else:
+      return
+
+    collector._contexts.remove(ctx)
+    ctx._released()
 
   def __repr__(self):
     objects = [self.connection, self.session, self.link, self.delivery,
@@ -3544,6 +3638,8 @@ __all__ = [
            "Messenger",
            "MessengerException",
            "ProtonException",
+           "PN_VERSION_MAJOR",
+           "PN_VERSION_MINOR",
            "Receiver",
            "SASL",
            "Sender",

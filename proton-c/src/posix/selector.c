@@ -65,9 +65,9 @@ void pn_selector_finalize(void *obj)
 #define pn_selector_compare NULL
 #define pn_selector_inspect NULL
 
-pn_selector_t *pn_selector(void)
+pn_selector_t *pni_selector(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_selector);
+  static const pn_class_t clazz = PN_CLASS(pn_selector);
   pn_selector_t *selector = (pn_selector_t *) pn_new(sizeof(pn_selector_t), &clazz);
   return selector;
 }

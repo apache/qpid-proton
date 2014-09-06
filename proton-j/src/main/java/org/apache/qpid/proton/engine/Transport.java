@@ -22,6 +22,8 @@ package org.apache.qpid.proton.engine;
 
 import java.nio.ByteBuffer;
 
+import org.apache.qpid.proton.engine.impl.TransportImpl;
+
 
 /**
  * <p>
@@ -63,6 +65,19 @@ import java.nio.ByteBuffer;
  */
 public interface Transport extends Endpoint
 {
+
+    public static final class Factory
+    {
+        public static Transport create() {
+            return new TransportImpl();
+        }
+    }
+
+    public static final int TRACE_OFF = 0;
+    public static final int TRACE_RAW = 1;
+    public static final int TRACE_FRM = 2;
+    public static final int TRACE_DRV = 4;
+
     public static final int DEFAULT_MAX_FRAME_SIZE = -1;
 
     /** the lower bound for the agreed maximum frame size (in bytes). */
@@ -70,7 +85,10 @@ public interface Transport extends Endpoint
     public int SESSION_WINDOW = 16*1024;
     public int END_OF_STREAM = -1;
 
+    public void trace(int levels);
+
     public void bind(Connection connection);
+    public void unbind();
 
     public int capacity();
     public ByteBuffer tail();
@@ -82,6 +100,8 @@ public interface Transport extends Endpoint
     public ByteBuffer head();
     public void pop(int bytes);
     public void close_head();
+
+    public boolean isClosed();
 
     /**
      * Processes the provided input.
@@ -156,7 +176,15 @@ public interface Transport extends Endpoint
      */
     void outputConsumed();
 
-    Sasl sasl();
+    /**
+     * Signal the transport to expect SASL frames used to establish a SASL layer prior to
+     * performing the AMQP protocol version negotiation. This must first be performed before
+     * the transport is used for processing. Subsequent invocations will return the same
+     * {@link Sasl} object.
+     *
+     * @throws IllegalStateException if transport processing has already begun prior to initial invocation
+     */
+    Sasl sasl() throws IllegalStateException;
 
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.

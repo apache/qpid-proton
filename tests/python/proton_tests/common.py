@@ -21,7 +21,7 @@ from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
-import sys, os
+import sys, os, string
 from proton import Driver, Connection, Transport, SASL, Endpoint, Delivery, \
     SSLDomain, SSLUnavailable
 
@@ -46,42 +46,37 @@ def free_tcp_ports(count=1):
     s.close()
   return ports
 
+def pump_uni(src, dst, buffer_size=1024):
+  p = src.pending()
+  c = dst.capacity()
+
+  if c < 0:
+    if p < 0:
+      return False
+    else:
+      src.close_head()
+      return True
+
+  if p < 0:
+    dst.close_tail()
+  elif p == 0 or c == 0:
+    return False
+  else:
+    bytes = src.peek(min(c, buffer_size))
+    dst.push(bytes)
+    src.pop(len(bytes))
+
+  return True
 
 def pump(transport1, transport2, buffer_size=1024):
   """ Transfer all pending bytes between two Proton engines
-      by repeatedly calling input and output.
+      by repeatedly calling peek/pop and push.
       Asserts that each engine accepts some bytes every time
       (unless it's already closed).
   """
-
-  out1_leftover_by_t2 = ""
-  out2_leftover_by_t1 = ""
-  i = 0
-
-  while True:
-    out1 = out1_leftover_by_t2 + (transport1.output(buffer_size) or "")
-    out2 = out2_leftover_by_t1 + (transport2.output(buffer_size) or "")
-
-    if out1:
-      number_t2_consumed = transport2.input(out1)
-      if number_t2_consumed is None:
-        # special None return value means input is closed so discard the leftovers
-        out1_leftover_by_t2 = ""
-      else:
-        assert number_t2_consumed > 0, (number_t2_consumed, len(out1), out1[:100])
-        out1_leftover_by_t2 = out1[number_t2_consumed:]
-
-    if out2:
-      number_t1_consumed = transport1.input(out2)
-      if number_t1_consumed is None:
-        # special None return value means input is closed so discard the leftovers
-        out2_leftover_by_t1 = ""
-      else:
-        assert number_t1_consumed > 0, (number_t1_consumed, len(out1), out1[:100])
-        out2_leftover_by_t1 = out2[number_t1_consumed:]
-
-    if not out1 and not out2: break
-    i = i + 1
+  while (pump_uni(transport1, transport2, buffer_size) or
+         pump_uni(transport2, transport1, buffer_size)):
+    pass
 
 def isSSLPresent():
     """ True if a suitable SSL library is available.
@@ -335,6 +330,16 @@ class MessengerApp(object):
         self.password = None
         self._output = None
 
+    def findfile(self, filename, searchpath):
+        """Find filename in the searchpath
+            return absolute path to the file or None
+        """
+        paths = string.split(searchpath, os.pathsep)
+        for path in paths:
+            if os.path.exists(os.path.join(path, filename)):
+                return os.path.abspath(os.path.join(path, filename))
+        return None
+
     def start(self, verbose=False):
         """ Begin executing the test """
         cmd = self.cmdline()
@@ -343,8 +348,20 @@ class MessengerApp(object):
             print("COMMAND='%s'" % str(cmd))
         #print("ENV='%s'" % str(os.environ.copy()))
         try:
+            if os.name=="nt":
+                # Windows handles python launch by replacing script 'filename' with
+                # 'python abspath-to-filename' in cmdline arg list.
+                if cmd[0].endswith('.py'):
+                    foundfile = self.findfile(cmd[0], os.environ['PATH'])
+                    if foundfile is None:
+                        foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
+                        assert foundfile is not None, "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                    del cmd[0:1]
+                    cmd.insert(0, foundfile)
+                    cmd.insert(0, sys.executable)
             self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
         except OSError, e:
+            print("ERROR: '%s'" % e)
             assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
         self._ready()  # wait for it to initialize
 
@@ -514,7 +531,7 @@ class MessengerReceiver(MessengerApp):
     def _ready(self):
         """ wait for subscriptions to complete setup. """
         r = self._process.stdout.readline()
-        assert r == "READY\n", "Unexpected input while waiting for receiver to initialize: %s" % r
+        assert r == "READY" + os.linesep, "Unexpected input while waiting for receiver to initialize: %s" % r
 
 class MessengerSenderC(MessengerSender):
     def __init__(self):

@@ -58,26 +58,30 @@ configure_file (
   "${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h"
   )
 
-include_directories ("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories ("${CMAKE_CURRENT_BINARY_DIR}/src")
 include_directories ("${CMAKE_CURRENT_BINARY_DIR}/include")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/../examples/include")
+
+# TODO: This is only needed because the proton executable can use getopt on windows
+# if/when this executable gets sorted out remove
+include_directories ("${CMAKE_SOURCE_DIR}/examples/include")
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
 # Select driver
 if(PN_WINAPI)
-  set (pn_io_impl src/windows/io.c)
+  set (pn_io_impl src/windows/io.c src/windows/iocp.c src/windows/write_pipeline.c)
   set (pn_selector_impl src/windows/selector.c)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
@@ -89,6 +93,7 @@ endif(PN_WINAPI)
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/openssl.c)
+  include_directories ("${OPENSSL_INCLUDE_DIR}")
   set (SSL_LIB ${OPENSSL_LIBRARIES})
 else (SSL_IMPL STREQUAL openssl)
   set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
@@ -220,7 +225,13 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (MSVC)
-	set(CMAKE_DEBUG_POSTFIX "d")
+    set(CMAKE_DEBUG_POSTFIX "d")
+    add_definitions(
+        /wd4244
+        /wd4267
+        /wd4800
+        /wd4996
+    )
 endif (MSVC)
 
 macro (pn_absolute_install_dir NAME VALUE PREFIX)
@@ -293,8 +304,8 @@ set (qpid-proton-core
   src/messenger/transform.c
   src/selectable.c
 
-  ${CMAKE_CURRENT_BINARY_DIR}/encodings.h
-  ${CMAKE_CURRENT_BINARY_DIR}/protocol.h
+  ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
 
 set_source_files_properties (
@@ -367,6 +378,18 @@ install (TARGETS qpid-proton
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+
+# Install windows qpid-proton pdb files
+if (MSVC)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
+    DESTINATION bin 
+    CONFIGURATIONS Debug
+    OPTIONAL)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
+    DESTINATION bin 
+    CONFIGURATIONS RelWithDebInfo
+    OPTIONAL)
+endif (MSVC)
 
 # Install header files
 file(GLOB headers "include/proton/*.[hi]")
@@ -464,10 +487,10 @@ set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
 set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
 set (app_path "${pn_test_bin}/tools/apps/c${bld_suffix}")
 set (app_path "${app_path}:${pn_test_root}/tools/apps/python")
-set_path (py_path "$ENV{PATH}:${py_bin}:${py_bld}:${app_path}")
-set_path (py_pythonpath "$ENV{PYTHONPATH}:${py_root}:${py_src}:${py_bin}:${py_bld}")
+set_path (py_path "${py_bin}:${py_bld}:${app_path}:$ENV{PATH}")
+set_path (py_pythonpath "${py_root}:${py_src}:${py_bin}:${py_bld}|$ENV{PYTHONPATH}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set_path (py_pythonpath "${py_pythonpath}:${py_bin}${bld_suffix}")
+  set_path (py_pythonpath "${py_bin}${bld_suffix}:${py_pythonpath}")
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
          "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}

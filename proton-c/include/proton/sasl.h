@@ -54,7 +54,8 @@ typedef enum {
   PN_SASL_AUTH=1,   /** failed due to bad credentials */
   PN_SASL_SYS=2,    /** failed due to a system error */
   PN_SASL_PERM=3,   /** failed due to unrecoverable error */
-  PN_SASL_TEMP=4    /** failed due to transient error */
+  PN_SASL_TEMP=4,   /** failed due to transient error */
+  PN_SASL_SKIPPED=5 /** the peer didn't perform the sasl exchange */
 } pn_sasl_outcome_t;
 
 /** The state of the SASL negotiation process */
@@ -112,6 +113,18 @@ PN_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
  * @param[in] sasl the SASL layer to configure as a server
  */
 PN_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
+
+/** Configure a SASL server layer to permit the client to skip the SASL exchange.
+ *
+ * If the peer client skips the SASL exchange (i.e. goes right to the AMQP header)
+ * this server layer will succeed and result in the outcome of PN_SASL_SKIPPED.
+ * The default behavior is to fail and close the connection if the client skips
+ * SASL.
+ *
+ * @param[in] sasl the SASL layer to configure
+ * @param[in] allow true -> allow skip; false -> forbid skip
+ */
+    PN_EXTERN void pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow);
 
 /** Configure the SASL layer to use the "PLAIN" mechanism.
  *

@@ -27,37 +27,53 @@ class TransportTest(Test):
 
   def setup(self):
     self.transport = Transport()
+    self.peer = Transport()
+    self.conn = Connection()
+    self.peer.bind(self.conn)
 
   def teardown(self):
     self.transport = None
+    self.peer = None
+    self.conn = None
+
+  def drain(self):
+    while True:
+      p = self.transport.pending()
+      if p < 0:
+        return
+      elif p > 0:
+        bytes = self.transport.peek(p)
+        self.peer.push(bytes)
+        self.transport.pop(len(bytes))
+      else:
+        assert False
+
+  def assert_error(self, name):
+    assert self.conn.remote_container is None, self.conn.remote_container
+    self.drain()
+    # verify that we received an open frame
+    assert self.conn.remote_container is not None, self.conn.remote_container
+    # verify that we received a close frame
+    assert self.conn.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_CLOSED, self.conn.state
+    # verify that a framing error was reported
+    assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
   def testEOS(self):
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException:
-      pass
+    self.transport.push("") # should be a noop
+    self.transport.close_tail() # should result in framing error
+    self.assert_error(u'amqp:connection:framing-error')
 
   def testPartial(self):
-    n = self.transport.input("AMQ")
-    assert n == 3, n
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException:
-      pass
+    self.transport.push("AMQ") # partial header
+    self.transport.close_tail() # should result in framing error
+    self.assert_error(u'amqp:connection:framing-error')
 
   def testGarbage(self, garbage="GARBAGE_"):
-    try:
-      n = self.transport.input(garbage)
-      assert False, n
-    except TransportException, e:
-      assert "AMQP header mismatch" in str(e), str(e)
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException, e:
-      pass
+    self.transport.push(garbage)
+    self.assert_error(u'amqp:connection:framing-error')
+    assert self.transport.pending() < 0
+    self.transport.close_tail()
+    assert self.transport.pending() < 0
 
   def testSmallGarbage(self):
     self.testGarbage("XXX")
@@ -66,16 +82,12 @@ class TransportTest(Test):
     self.testGarbage("GARBAGE_XXX")
 
   def testHeader(self):
-    n = self.transport.input("AMQP\x00\x01\x00\x00")
-    assert n == 8, n
-    try:
-      n = self.transport.input("")
-      assert False, n
-    except TransportException, e:
-      assert "connection aborted" in str(e)
+    self.transport.push("AMQP\x00\x01\x00\x00")
+    self.transport.close_tail()
+    self.assert_error(u'amqp:connection:framing-error')
 
-  def testOutput(self):
-    out = self.transport.output(1024)
+  def testPeek(self):
+    out = self.transport.peek(1024)
     assert out is not None
 
   def testBindAfterOpen(self):
@@ -87,16 +99,10 @@ class TransportTest(Test):
     conn.hostname = "test-hostname"
     trn = Transport()
     trn.bind(conn)
-    out = trn.output(1024)
+    out = trn.peek(1024)
     assert "test-container" in out, repr(out)
     assert "test-hostname" in out, repr(out)
-    n = self.transport.input(out)
-    assert n > 0, n
-    out = out[n:]
-
-    if out:
-      n = self.transport.input(out)
-      assert n == 0
+    self.transport.push(out)
 
     c = Connection()
     assert c.remote_container == None
@@ -105,10 +111,6 @@ class TransportTest(Test):
     self.transport.bind(c)
     assert c.remote_container == "test-container"
     assert c.remote_hostname == "test-hostname"
-    if out:
-      assert c.session_head(0) == None
-      n = self.transport.input(out)
-      assert n == len(out), (n, out)
     assert c.session_head(0) != None
 
   def testCloseHead(self):
@@ -130,3 +132,32 @@ class TransportTest(Test):
       assert "aborted" in str(e), str(e)
     n = self.transport.capacity()
     assert n < 0, n
+
+  def testUnpairedPop(self):
+    conn = Connection()
+    self.transport.bind(conn)
+
+    conn.hostname = "hostname"
+    conn.open()
+
+    dat1 = self.transport.peek(1024)
+
+    ssn = conn.session()
+    ssn.open()
+
+    dat2 = self.transport.peek(1024)
+
+    assert dat2[:len(dat1)] == dat1
+
+    snd = ssn.sender("sender")
+    snd.open()
+
+    self.transport.pop(len(dat1))
+    self.transport.pop(len(dat2) - len(dat1))
+    dat3 = self.transport.peek(1024)
+    self.transport.pop(len(dat3))
+    assert self.transport.peek(1024) == ""
+
+    self.peer.push(dat1)
+    self.peer.push(dat2[len(dat1):])
+    self.peer.push(dat3)

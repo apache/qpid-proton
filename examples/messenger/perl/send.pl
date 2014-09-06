@@ -34,11 +34,14 @@ sub HELP_MESSAGE() {
     print "Options:\n";
     print "\t-s        - the message subject\n";
     print "\t-C        - the message content\n";
-    print "\t<ADDRESS> - amqp://<domain>[/<name>]";
+    print "\t<ADDRESS> - amqp://<domain>[/<name>]\n";
+    print "\t-h        - this message\n";
+
+    exit;
 }
 
 my %options = ();
-getopts("a:C:s:", \%options) or usage();
+getopts("a:C:s:h:", \%options) or HELP_MESSAGE();
 
 my $address = $options{a} || "amqp://0.0.0.0";
 my $subject = $options{s} || localtime(time);
@@ -58,7 +61,7 @@ foreach (@messages)
     $msg->set_subject($subject);
     $msg->set_content($content);
     # try a few different body types
-    my $body_type = int(rand(4));
+    my $body_type = int(rand(6));
     $msg->set_property("sent", "" . localtime(time));
     $msg->get_instructions->{"fold"} = "yes";
     $msg->get_instructions->{"spindle"} = "no";
@@ -68,12 +71,15 @@ foreach (@messages)
 
   SWITCH: {
       $body_type == 0 && do { $msg->set_body("It is now " . localtime(time));};
-      $body_type == 1 && do { $msg->set_body(rand(65536), qpid::proton::FLOAT); };
+      $body_type == 1 && do { $msg->set_body(rand(65536)); };
       $body_type == 2 && do { $msg->set_body(int(rand(2)), qpid::proton::BOOL); };
-      $body_type == 3 && do { $msg->set_body({"foo" => "bar"}, qpid::proton::MAP); };
+      $body_type == 3 && do { $msg->set_body({"foo" => "bar"}); };
+      $body_type == 4 && do { $msg->set_body([4, [1, 2, 3.1, 3.4E-5], 8, 15, 16, 23, 42]); };
+      $body_type == 5 && do { $msg->set_body(int(rand(65535))); }
     }
 
     $messenger->put($msg);
+    print "Sent: " . $msg->get_body . " [CONTENT TYPE: " . $msg->get_body_type . "]\n";
 }
 
 $messenger->send();

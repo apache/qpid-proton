@@ -73,6 +73,8 @@ class SslTest(common.Test):
         client.connection.open()
         server.connection.open()
         self._pump(client, server)
+        if client.transport.closed:
+            return
         assert client.ssl.protocol_name() is not None
         client.connection.close()
         server.connection.close()
@@ -214,11 +216,11 @@ class SslTest(common.Test):
 
         client.connection.open()
         server.connection.open()
-        try:
-            self._pump( client, server )
-            assert False, "Server failed to reject bad certificate."
-        except TransportException, e:
-            pass
+        self._pump( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
 
     def test_client_authentication_fail_no_cert(self):
         """ Ensure that the server will fail a client that does not provide a
@@ -239,11 +241,11 @@ class SslTest(common.Test):
 
         client.connection.open()
         server.connection.open()
-        try:
-            self._pump( client, server )
-            assert False, "Server failed to reject bad certificate."
-        except TransportException, e:
-            pass
+        self._pump( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
 
     def test_client_server_authentication(self):
         """ Require both client and server to mutually identify themselves.
@@ -314,11 +316,11 @@ class SslTest(common.Test):
 
         client.connection.open()
         server.connection.open()
-        try:
-            self._pump( client, server )
-            assert False, "Client failed to reject bad certificate."
-        except TransportException, e:
-            pass
+        self._pump( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
 
         del server
         del client
@@ -409,11 +411,11 @@ class SslTest(common.Test):
 
         client.connection.open()
         server.connection.open()
-        try:
-            self._pump( client, server )
-            assert False, "Server did not reject client as expected."
-        except TransportException:
-            pass
+        self._pump( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
 
     def test_session_resume(self):
         """ Test resume of client session.
@@ -563,11 +565,11 @@ class SslTest(common.Test):
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "A1.Good.Server.domain.comX"
-        try:
-            self._do_handshake( client, server )
-            assert False, "Expected connection to fail due to hostname mismatch"
-        except TransportException:
-            pass
+        self._do_handshake( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
         del server
         del client
         self.teardown()
@@ -659,11 +661,11 @@ class SslTest(common.Test):
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "FOO.PREfi.domain.com"
-        try:
-            self._do_handshake( client, server )
-            assert False, "Expected connection to fail due to hostname mismatch"
-        except TransportException:
-            pass
+        self._do_handshake( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
         del server
         del client
         self.teardown()
@@ -680,11 +682,11 @@ class SslTest(common.Test):
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "PREfix.domain.COM"
-        try:
-            self._do_handshake( client, server )
-            assert False, "Expected connection to fail due to hostname mismatch"
-        except TransportException:
-            pass
+        self._do_handshake( client, server )
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
         self.teardown()
 
 

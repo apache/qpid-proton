@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.security.SaslChallenge;
@@ -52,6 +53,8 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
     private final DecoderImpl _decoder = new DecoderImpl();
     private final EncoderImpl _encoder = new EncoderImpl(_decoder);
+
+    private final TransportImpl _transport;
 
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
@@ -86,14 +89,15 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
      * returned by {@link SaslTransportWrapper#getInputBuffer()} and
      * {@link SaslTransportWrapper#getOutputBuffer()}.
      */
-    SaslImpl(int maxFrameSize)
+    SaslImpl(TransportImpl transport, int maxFrameSize)
     {
+        _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
 
         AMQPDefinedTypes.registerAllTypes(_decoder,_encoder);
         _frameParser = new SaslFrameParser(this, _decoder);
-        _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null, this);
+        _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null, _transport);
     }
 
     @Override
@@ -460,6 +464,13 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         _role = Role.SERVER;
     }
 
+    @Override
+    public void allowSkip(boolean allowSkip)
+    {
+        //TODO: implement
+        throw new ProtonUnsupportedOperationException();
+    }
+
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
         return new SaslTransportWrapper(input, output);
@@ -565,6 +576,9 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             _tail_closed = true;
             if (isInputInSaslMode()) {
                 _head_closed = true;
+                _underlyingInput.close_tail();
+            } else {
+                _underlyingInput.close_tail();
             }
         }
 

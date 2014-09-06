@@ -23,8 +23,6 @@ import static java.util.EnumSet.of;
 import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.CLOSED;
 import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
-import static org.apache.qpid.proton.systemtests.engine.ProtonFactoryTestFixture.isProtonC;
-import static org.apache.qpid.proton.systemtests.engine.ProtonFactoryTestFixture.isProtonJ;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -34,6 +32,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.Close;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -41,7 +40,6 @@ import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.EngineFactory;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
@@ -59,18 +57,13 @@ public class ConnectionTest
     private static final String SERVER_CONTAINER = "serverContainer";
     private static final String CLIENT_CONTAINER = "clientContainer";
 
-    private final ProtonFactoryTestFixture _protonFactoryTestFixture = new ProtonFactoryTestFixture();
-
-    private EngineFactory _clientFactory = _protonFactoryTestFixture.getFactory1();
-    private EngineFactory _serverFactory = _protonFactoryTestFixture.getFactory2();
-
-    private final Transport _clientTransport = _clientFactory.createTransport();
-    private final Transport _serverTransport = _serverFactory.createTransport();
+    private final Transport _clientTransport = Proton.transport();
+    private final Transport _serverTransport = Proton.transport();
 
     private final TransportPumper _pumper = new TransportPumper(_clientTransport, _serverTransport);
 
-    private final Connection _clientConnection = _clientFactory.createConnection();
-    private final Connection _serverConnection = _serverFactory.createConnection();
+    private final Connection _clientConnection = Proton.connection();
+    private final Connection _serverConnection = Proton.connection();
 
     private final AmqpFramer _framer = new AmqpFramer();
 
@@ -87,7 +80,7 @@ public class ConnectionTest
 
 
     /** Container id is a mandatory field so this should cause an error */
-    @Test(expected=TransportException.class)
+    @Test
     public void testReceiptOfOpenWithoutContainerId_causesTODO()
     {
         _pumper.pumpAll();
@@ -97,7 +90,7 @@ public class ConnectionTest
 
         int serverConsumed = _serverTransport.input(openFrameBuffer, 0, openFrameBuffer.length);
         assertEquals(openFrameBuffer.length, serverConsumed);
-        assumeTrue(isProtonJ(_serverFactory));
+        assertEquals(_serverTransport.capacity(), Transport.END_OF_STREAM);
     }
 
     /**
@@ -268,10 +261,7 @@ public class ConnectionTest
         _pumper.pumpOnceFromClientToServer();
 
         assertEnpointState(_clientConnection, CLOSED, UNINITIALIZED);
-        if (!isProtonC(_serverFactory))
-        {
-            assertEnpointState(_serverConnection, UNINITIALIZED, CLOSED);
-        }
+        assertEnpointState(_serverConnection, UNINITIALIZED, CLOSED);
     }
 
     /**
@@ -341,9 +331,6 @@ public class ConnectionTest
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void testCloseConnectionWithErrorCode_causesCloseFrameContainingErrorCodeToBeSent()
     {
-        // TODO Proton-c fails if no remote condition is set
-        assumeTrue(isProtonJ(_clientFactory) && isProtonJ(_serverFactory));
-
         bindAndOpenConnections();
 
         /*
@@ -411,8 +398,6 @@ public class ConnectionTest
         Close surprisingClose = new Close();
 
         byte[] buf = _framer.generateFrame(0, surprisingClose);
-        assumeTrue(isProtonJ(_serverFactory));
-        // TODO Proton-C: function pn_do_close causes a SEGV fault if you try and close an unopened connection
         _serverTransport.input(buf, 0, buf.length);
 
         // TODO server should indicate error

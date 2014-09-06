@@ -26,23 +26,20 @@ import org.apache.qpid.proton.engine.Transport;
 
 class TransportOutputAdaptor implements TransportOutput
 {
-    private TransportOutputWriter _transportOutputWriter;
+    private static final ByteBuffer _emptyHead = newReadableBuffer(0).asReadOnlyBuffer();
 
-    private final ByteBuffer _outputBuffer;
-    private final ByteBuffer _head;
+    private final TransportOutputWriter _transportOutputWriter;
+    private final int _maxFrameSize;
+
+    private ByteBuffer _outputBuffer = null;
+    private ByteBuffer _head = null;
     private boolean _output_done = false;
     private boolean _head_closed = false;
 
     TransportOutputAdaptor(TransportOutputWriter transportOutputWriter, int maxFrameSize)
     {
         _transportOutputWriter = transportOutputWriter;
-        if (maxFrameSize > 0) {
-            _outputBuffer = newWriteableBuffer(maxFrameSize);
-        } else {
-            _outputBuffer = newWriteableBuffer(4*1024);
-        }
-        _head = _outputBuffer.asReadOnlyBuffer();
-        _head.limit(0);
+        _maxFrameSize = maxFrameSize > 0 ? maxFrameSize : 4*1024;
     }
 
     @Override
@@ -52,13 +49,26 @@ class TransportOutputAdaptor implements TransportOutput
             return Transport.END_OF_STREAM;
         }
 
+        if(_outputBuffer == null)
+        {
+            init_buffers();
+        }
+
         _output_done = _transportOutputWriter.writeInto(_outputBuffer);
         _head.limit(_outputBuffer.position());
 
-        if (_output_done && _outputBuffer.position() == 0) {
+        if (_outputBuffer.position() == 0 && _outputBuffer.capacity() > TransportImpl.BUFFER_RELEASE_THRESHOLD)
+        {
+            release_buffers();
+        }
+
+        if (_output_done && (_outputBuffer == null || _outputBuffer.position() == 0))
+        {
             return Transport.END_OF_STREAM;
-        } else {
-            return _outputBuffer.position();
+        }
+        else
+        {
+            return _outputBuffer == null ? 0 : _outputBuffer.position();
         }
     }
 
@@ -66,24 +76,40 @@ class TransportOutputAdaptor implements TransportOutput
     public ByteBuffer head()
     {
         pending();
-        return _head;
+        return _head != null ? _head : _emptyHead;
     }
 
     @Override
     public void pop(int bytes)
     {
-        _outputBuffer.flip();
-        _outputBuffer.position(bytes);
-        _outputBuffer.compact();
-        _head.position(0);
-        _head.limit(_outputBuffer.position());
+        if (_outputBuffer != null) {
+            _outputBuffer.flip();
+            _outputBuffer.position(bytes);
+            _outputBuffer.compact();
+            _head.position(0);
+            _head.limit(_outputBuffer.position());
+            if (_outputBuffer.position() == 0 && _outputBuffer.capacity() > TransportImpl.BUFFER_RELEASE_THRESHOLD) {
+                release_buffers();
+            }
+        }
     }
 
     @Override
     public void close_head()
     {
         _head_closed = true;
-        _transportOutputWriter.closed();
+        _transportOutputWriter.closed(null);
+        release_buffers();
     }
 
+    private void init_buffers() {
+        _outputBuffer = newWriteableBuffer(_maxFrameSize);
+        _head = _outputBuffer.asReadOnlyBuffer();
+        _head.limit(0);
+    }
+
+    private void release_buffers() {
+        _head = null;
+        _outputBuffer = null;
+    }
 }

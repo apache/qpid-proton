@@ -52,6 +52,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private TransportImpl _transport;
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
+    private int _transportWorkSize = 0;
     private String _localContainerId = "";
     private String _localHostname = "";
     private String _remoteContainer;
@@ -182,14 +183,28 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return this;
     }
 
-    public void free()
-    {
-        super.free();
-        for(Session session : _sessions)
-        {
+    @Override
+    void postFinal() {
+        put(Event.Type.CONNECTION_FINAL, this);
+    }
+
+    @Override
+    void doFree() {
+        for(Session session : _sessions) {
             session.free();
         }
         _sessions = null;
+    }
+
+    void modifyEndpoints() {
+        if (_sessions != null) {
+            for (SessionImpl ssn: _sessions) {
+                ssn.modifyEndpoints();
+            }
+        }
+        if (!freed) {
+            modified();
+        }
     }
 
     void handleOpen(Open open)
@@ -201,10 +216,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         setRemoteDesiredCapabilities(open.getDesiredCapabilities());
         setRemoteOfferedCapabilities(open.getOfferedCapabilities());
         setRemoteProperties(open.getProperties());
-        EventImpl ev = put(Event.Type.CONNECTION_REMOTE_STATE);
-        if (ev != null) {
-            ev.init(this);
-        }
+        put(Event.Type.CONNECTION_REMOTE_OPEN, this);
     }
 
 
@@ -489,6 +501,10 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return _transportWorkHead;
     }
 
+    int getTransportWorkSize() {
+        return _transportWorkSize;
+    }
+
     public void removeTransportWork(DeliveryImpl delivery)
     {
         if (!delivery._transportWork) return;
@@ -517,6 +533,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
 
         delivery._transportWork = false;
+        _transportWorkSize--;
     }
 
     void addTransportWork(DeliveryImpl delivery)
@@ -538,6 +555,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         }
 
         delivery._transportWork = true;
+        _transportWorkSize++;
     }
 
     void workUpdate(DeliveryImpl delivery)
@@ -571,23 +589,40 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     public void collect(Collector collector)
     {
         _collector = (CollectorImpl) collector;
+
+        put(Event.Type.CONNECTION_INIT, this);
+
+        LinkNode<SessionImpl> ssn = _sessionHead;
+        while (ssn != null) {
+            put(Event.Type.SESSION_INIT, ssn.getValue());
+            ssn = ssn.getNext();
+        }
+
+        LinkNode<LinkImpl> lnk = _linkHead;
+        while (lnk != null) {
+            put(Event.Type.LINK_INIT, lnk.getValue());
+            lnk = lnk.getNext();
+        }
     }
 
-    EventImpl put(Event.Type type)
+    EventImpl put(Event.Type type, Object context)
     {
         if (_collector != null) {
-            return _collector.put(type);
+            return _collector.put(type, context);
         } else {
             return null;
         }
     }
 
     @Override
-    protected void localStateChanged()
+    void localOpen()
     {
-        EventImpl ev = put(Event.Type.CONNECTION_LOCAL_STATE);
-        if (ev != null) {
-            ev.init(this);
-        }
+        put(Event.Type.CONNECTION_OPEN, this);
+    }
+
+    @Override
+    void localClose()
+    {
+        put(Event.Type.CONNECTION_CLOSE, this);
     }
 }

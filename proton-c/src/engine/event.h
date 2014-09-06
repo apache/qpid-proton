@@ -22,12 +22,7 @@
  *
  */
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type);
-
-void pn_event_init_transport(pn_event_t *event, pn_transport_t *transport);
-void pn_event_init_connection(pn_event_t *event, pn_connection_t *connection);
-void pn_event_init_session(pn_event_t *event, pn_session_t *session);
-void pn_event_init_link(pn_event_t *event, pn_link_t *link);
-void pn_event_init_delivery(pn_event_t *event, pn_delivery_t *delivery);
+pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type,
+                             void *context);
 
 #endif /* event.h */

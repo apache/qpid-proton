@@ -21,8 +21,10 @@
 
 package org.apache.qpid.proton.driver;
 
+import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
+import org.apache.qpid.proton.driver.impl.DriverImpl;
 
 /**
  * A driver for the proton engine.
@@ -40,6 +42,14 @@ import java.nio.channels.ServerSocketChannel;
  */
 public interface Driver
 {
+
+    public static final class Factory
+    {
+        public static Driver create() throws IOException {
+            return new DriverImpl();
+        }
+    }
+
     /**
      * Force {@link #doWait(long)} to return.
      *

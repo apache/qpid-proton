@@ -25,6 +25,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.apache.qpid.proton.engine.TransportException;
+
 import java.nio.ByteBuffer;
 
 import org.junit.Test;
@@ -143,7 +145,7 @@ public class TransportOutputAdaptorTest
             _cannedOutput = cannedOutput;
         }
 
-        public void closed()
+        public void closed(TransportException error)
         {
             // do nothing
         }

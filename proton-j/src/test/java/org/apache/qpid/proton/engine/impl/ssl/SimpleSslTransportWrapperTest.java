@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLException;
 
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -132,16 +133,8 @@ public class SimpleSslTransportWrapperTest
         _dummySslEngine.rejectNextEncodedPacket(sslException);
 
         _sslWrapper.tail().put("<-A->".getBytes());
-        try {
-            _sslWrapper.process();
-            fail("no exception");
-        } catch (TransportException e) {
-            assertSame(sslException, e.getCause());
-            assertEquals("", _underlyingInput.getAcceptedInput());
-        }
-
-        _expectedException.expect(TransportException.class);
-        _sslWrapper.tail();
+        _sslWrapper.process();
+        assertEquals(_sslWrapper.capacity(), Transport.END_OF_STREAM);
     }
 
     @Test

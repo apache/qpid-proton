@@ -8,6 +8,7 @@ system "swig -ruby -I../../include -o ext/cproton/cproton.c ruby.i"
 Gem::Specification.new do |s|
   s.name        = "qpid_proton"
   s.version     = "0.3"
+  s.licenses    = ['Apache-2.0']
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Darryl L. Pierce"]
   s.email       = ["proton@qpid.apache.org"]

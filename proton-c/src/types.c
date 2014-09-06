@@ -23,20 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-pn_bytes_t pn_bytes(size_t size, char *start)
+pn_bytes_t pn_bytes(size_t size, const char *start)
 {
   pn_bytes_t bytes = {size, start};
   return bytes;
-}
-
-pn_bytes_t pn_bytes_dup(size_t size, const char *start)
-{
-  if (size && start)
-  {
-    char *dup = (char *) malloc(size);
-    memmove(dup, start, size);
-    return pn_bytes(size, dup);
-  } else {
-    return pn_bytes(0, NULL);
-  }
 }

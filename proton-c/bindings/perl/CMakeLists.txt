@@ -43,7 +43,9 @@ if (NOT PERL_VENDORARCH_DIR)
 endif()
 
 set (CMAKE_C_FLAGS ${PERLCFLAGS})
-
+list(APPEND SWIG_MODULE_cproton_perl_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+)
 swig_add_module(cproton_perl perl perl.i)
 swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 

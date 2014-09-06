@@ -19,6 +19,8 @@
 
 include(CheckIncludeFiles)
 
+include_directories(${CMAKE_SOURCE_DIR}/examples/include)
+
 CHECK_INCLUDE_FILES("inttypes.h" INTTYPES_AVAILABLE)
 if (INTTYPES_AVAILABLE)
   list(APPEND PLATFORM_DEFINITIONS "USE_INTTYPES")

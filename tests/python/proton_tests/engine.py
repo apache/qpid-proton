@@ -389,7 +389,7 @@ class LinkTest(Test):
   def teardown(self):
     self.cleanup()
     gc.collect()
-    assert not gc.garbage
+    assert not gc.garbage, gc.garbage
 
   def test_open_close(self):
     assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
@@ -1081,11 +1081,9 @@ class IdleTimeoutTest(Test):
     # now expire sndr
     clock = 1.499
     t_snd.tick(clock)
-    try:
-      self.pump()
-      assert False, "Expected connection timeout did not happen!"
-    except TransportException:
-      pass
+    self.pump()
+    assert self.c2.state & Endpoint.REMOTE_CLOSED
+    assert self.c2.remote_condition.name == "amqp:resource-limit-exceeded"
 
 class CreditTest(Test):
 
@@ -2069,51 +2067,66 @@ class DeliveryTest(Test):
   def testCustom(self):
     self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
 
-class EventTest(Test):
+class CollectorTest(Test):
 
-  def teardown(self):
-    self.cleanup()
+  def setup(self):
+    self.collector = Collector()
 
-  def list(self, collector):
+  def drain(self):
     result = []
     while True:
-      e = collector.peek()
+      e = self.collector.peek()
       if e:
         result.append(e)
-        collector.pop()
+        self.collector.pop()
       else:
         break
     return result
 
-  def expect(self, collector, *types):
-    events = self.list(collector)
-    assert types == tuple([e.type for e in events]), (types, events)
-    if len(events) == 1:
-      return events[0]
-    elif len(events) > 1:
-      return events
+  def expect(self, *types):
+    return self.expect_oneof(types)
+
+  def expect_oneof(self, *sequences):
+    events = self.drain()
+    types = tuple([e.type for e in events])
+
+    for alternative in sequences:
+      if types == alternative:
+        if len(events) == 1:
+          return events[0]
+        elif len(events) > 1:
+          return events
+        else:
+          return
+
+    assert False, "actual events %s did not match any of the expected sequences: %s" % (events, sequences)
+
+class EventTest(CollectorTest):
+
+  def teardown(self):
+    self.cleanup()
 
   def testEndpointEvents(self):
     c1, c2 = self.connection()
-    coll = Collector()
-    c1.collect(coll)
-    self.expect(coll)
+    c1.collect(self.collector)
+    self.expect(Event.CONNECTION_INIT)
     self.pump()
-    self.expect(coll)
+    self.expect()
     c2.open()
     self.pump()
-    self.expect(coll, Event.CONNECTION_REMOTE_STATE)
+    self.expect(Event.CONNECTION_REMOTE_OPEN)
     self.pump()
-    self.expect(coll)
+    self.expect()
 
     ssn = c2.session()
     snd = ssn.sender("sender")
     ssn.open()
     snd.open()
 
-    self.expect(coll)
+    self.expect()
     self.pump()
-    self.expect(coll, Event.SESSION_REMOTE_STATE, Event.LINK_REMOTE_STATE)
+    self.expect(Event.SESSION_INIT, Event.SESSION_REMOTE_OPEN,
+                Event.LINK_INIT, Event.LINK_REMOTE_OPEN)
 
     c1.open()
     ssn2 = c1.session()
@@ -2121,61 +2134,188 @@ class EventTest(Test):
     rcv = ssn2.receiver("receiver")
     rcv.open()
     self.pump()
-    self.expect(coll,
-                Event.CONNECTION_LOCAL_STATE,
-                Event.TRANSPORT,
-                Event.SESSION_LOCAL_STATE,
-                Event.TRANSPORT,
-                Event.LINK_LOCAL_STATE,
+    self.expect(Event.CONNECTION_OPEN, Event.TRANSPORT,
+                Event.SESSION_INIT, Event.SESSION_OPEN,
+                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_OPEN,
                 Event.TRANSPORT)
+
+    rcv.close()
+    self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+    self.pump()
+    rcv.free()
+    del rcv
+    self.expect(Event.LINK_FINAL)
+    ssn2.free()
+    del ssn2
+    self.pump()
+    c1.free()
+    c1._transport.unbind()
+    self.expect(Event.SESSION_FINAL, Event.LINK_FINAL, Event.SESSION_FINAL,
+                Event.CONNECTION_FINAL)
+
+  def testConnectionINIT_FINAL(self):
+    c = Connection()
+    c.collect(self.collector)
+    self.expect(Event.CONNECTION_INIT)
+    c.free()
+    self.expect(Event.CONNECTION_FINAL)
+
+  def testSessionINIT_FINAL(self):
+    c = Connection()
+    c.collect(self.collector)
+    self.expect(Event.CONNECTION_INIT)
+    s = c.session()
+    self.expect(Event.SESSION_INIT)
+    s.free()
+    self.expect(Event.SESSION_FINAL)
+    c.free()
+    self.expect(Event.CONNECTION_FINAL)
+
+  def testLinkINIT_FINAL(self):
+    c = Connection()
+    c.collect(self.collector)
+    self.expect(Event.CONNECTION_INIT)
+    s = c.session()
+    self.expect(Event.SESSION_INIT)
+    r = s.receiver("asdf")
+    self.expect(Event.LINK_INIT)
+    r.free()
+    self.expect(Event.LINK_FINAL)
+    c.free()
+    self.expect(Event.SESSION_FINAL, Event.CONNECTION_FINAL)
 
   def testFlowEvents(self):
     snd, rcv = self.link("test-link")
-    coll = Collector()
-    snd.session.connection.collect(coll)
+    snd.session.connection.collect(self.collector)
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_REMOTE_STATE, Event.LINK_FLOW)
+    self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
+                Event.LINK_INIT, Event.LINK_REMOTE_OPEN, Event.LINK_FLOW)
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_FLOW)
-    return snd, rcv, coll
+    self.expect(Event.LINK_FLOW)
+    return snd, rcv
 
   def testDeliveryEvents(self):
     snd, rcv = self.link("test-link")
-    coll = Collector()
-    rcv.session.connection.collect(coll)
+    rcv.session.connection.collect(self.collector)
     rcv.open()
     rcv.flow(10)
     self.pump()
-    self.expect(coll, Event.LINK_LOCAL_STATE, Event.TRANSPORT, Event.TRANSPORT)
+    self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
+                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()
     self.pump()
-    self.expect(coll)
+    self.expect()
     snd.open()
     self.pump()
-    self.expect(coll, Event.LINK_REMOTE_STATE, Event.DELIVERY)
+    self.expect(Event.LINK_REMOTE_OPEN, Event.DELIVERY)
+    rcv.session.connection._transport.unbind()
+    rcv.session.connection.free()
+    self.expect(Event.TRANSPORT, Event.LINK_FINAL, Event.SESSION_FINAL,
+                Event.CONNECTION_FINAL)
 
   def testDeliveryEventsDisp(self):
-    snd, rcv, coll = self.testFlowEvents()
+    snd, rcv = self.testFlowEvents()
     snd.open()
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(coll,
-                Event.LINK_LOCAL_STATE,
-                Event.TRANSPORT,
-                Event.TRANSPORT,
-                Event.TRANSPORT)
+    self.expect(Event.LINK_OPEN, Event.TRANSPORT)
     self.pump()
-    self.expect(coll)
+    self.expect(Event.LINK_FLOW)
     rdlv = rcv.current
     assert rdlv != None
     assert rdlv.tag == "delivery"
     rdlv.update(Delivery.ACCEPTED)
     self.pump()
-    event = self.expect(coll, Event.DELIVERY)
+    event = self.expect(Event.DELIVERY)
     assert event.delivery == dlv
+
+class PeerTest(CollectorTest):
+
+  def setup(self):
+    CollectorTest.setup(self)
+    self.connection = Connection()
+    self.connection.collect(self.collector)
+    self.transport = Transport()
+    self.transport.bind(self.connection)
+    self.peer = Connection()
+    self.peer_transport = Transport()
+    self.peer_transport.bind(self.peer)
+    self.peer_transport.trace(Transport.TRACE_OFF)
+
+  def pump(self):
+    pump(self.transport, self.peer_transport)
+
+class TeardownLeakTest(PeerTest):
+
+  def doLeak(self, local, remote):
+    self.connection.open()
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_OPEN, Event.TRANSPORT)
+
+    ssn = self.connection.session()
+    ssn.open()
+    self.expect(Event.SESSION_INIT, Event.SESSION_OPEN, Event.TRANSPORT)
+
+    snd = ssn.sender("sender")
+    snd.open()
+    self.expect(Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+
+
+    self.pump()
+
+    self.peer.open()
+    self.peer.session_head(0).open()
+    self.peer.link_head(0).open()
+
+    self.pump()
+    self.expect_oneof((Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
+                       Event.LINK_REMOTE_OPEN, Event.LINK_FLOW),
+                      (Event.CONNECTION_REMOTE_OPEN, Event.SESSION_REMOTE_OPEN,
+                       Event.LINK_REMOTE_OPEN))
+
+    if local:
+      snd.close() # ha!!
+      self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+    ssn.close()
+    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
+    self.connection.close()
+    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT)
+
+    if remote:
+      self.peer.link_head(0).close() # ha!!
+    self.peer.session_head(0).close()
+    self.peer.close()
+
+    self.pump()
+
+    if remote:
+      self.expect_oneof((Event.LINK_REMOTE_CLOSE, Event.SESSION_REMOTE_CLOSE,
+                         Event.CONNECTION_REMOTE_CLOSE),
+                        (Event.LINK_REMOTE_CLOSE, Event.LINK_FINAL,
+                         Event.SESSION_REMOTE_CLOSE,
+                         Event.CONNECTION_REMOTE_CLOSE))
+    else:
+      self.expect(Event.SESSION_REMOTE_CLOSE, Event.CONNECTION_REMOTE_CLOSE)
+
+    self.connection.free()
+    self.transport.unbind()
+
+    self.expect_oneof((Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_FINAL),
+                      (Event.SESSION_FINAL, Event.CONNECTION_FINAL))
+
+  def testLocalRemoteLeak(self):
+    self.doLeak(True, True)
+
+  def testLocalLeak(self):
+    self.doLeak(True, False)
+
+  def testRemoteLeak(self):
+    self.doLeak(False, True)
+
+  def testLeak(self):
+    self.doLeak(False, False)

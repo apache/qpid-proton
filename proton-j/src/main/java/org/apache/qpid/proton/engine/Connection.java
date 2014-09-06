@@ -24,6 +24,8 @@ import java.util.EnumSet;
 import java.util.Map;
 import org.apache.qpid.proton.amqp.Symbol;
 
+import org.apache.qpid.proton.engine.impl.ConnectionImpl;
+
 
 /**
  * Maintains lists of sessions, links and deliveries in a state
@@ -35,6 +37,13 @@ import org.apache.qpid.proton.amqp.Symbol;
  */
 public interface Connection extends Endpoint
 {
+
+    public static final class Factory
+    {
+        public static Connection create() {
+            return new ConnectionImpl();
+        }
+    }
 
     /**
      * Returns a newly created session
@@ -80,6 +89,8 @@ public interface Connection extends Endpoint
     public void setContainer(String container);
 
     public void setHostname(String hostname);
+
+    public String getHostname();
 
     public String getRemoteContainer();
 

@@ -17,6 +17,6 @@
 # under the License.
 #
 
-INSTALL (FILES proton.1
+INSTALL (FILES proton.1 proton-dump.1
          DESTINATION ${MAN_INSTALL_DIR}/man1)
 

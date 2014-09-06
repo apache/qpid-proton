@@ -23,6 +23,7 @@
  */
 
 #include <proton/import_export.h>
+#include <stddef.h>
 #include <sys/types.h>
 #include <proton/type_compat.h>
 
@@ -58,11 +59,10 @@ typedef struct {
 
 typedef struct {
   size_t size;
-  char *start;
+  const char *start;
 } pn_bytes_t;
 
-PN_EXTERN pn_bytes_t pn_bytes(size_t size, char *start);
-PN_EXTERN pn_bytes_t pn_bytes_dup(size_t size, const char *start);
+PN_EXTERN pn_bytes_t pn_bytes(size_t size, const char *start);
 
 /** @}
  */

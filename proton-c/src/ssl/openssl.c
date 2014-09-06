@@ -49,23 +49,25 @@ typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
 struct pn_ssl_domain_t {
-  int   ref_count;
 
   SSL_CTX       *ctx;
-  pn_ssl_mode_t mode;
 
-  bool has_ca_db;       // true when CA database configured
-  bool has_certificate; // true when certificate configured
   char *keyfile_pw;
 
   // settings used for all connections
   char *trusted_CAs;
-  pn_ssl_verify_mode_t verify_mode;
-  bool allow_unsecured;
 
   // session cache
   pn_ssl_session_t *ssn_cache_head;
   pn_ssl_session_t *ssn_cache_tail;
+
+  int   ref_count;
+  pn_ssl_mode_t mode;
+  pn_ssl_verify_mode_t verify_mode;
+
+  bool has_ca_db;       // true when CA database configured
+  bool has_certificate; // true when certificate configured
+  bool allow_unsecured;
 };
 
 
@@ -81,24 +83,25 @@ struct pn_ssl_t {
   BIO *bio_ssl;         // i/o from/to SSL socket layer
   BIO *bio_ssl_io;      // SSL "half" of network-facing BIO
   BIO *bio_net_io;      // socket-side "half" of network-facing BIO
-  bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
-  bool ssl_closed;      // shutdown complete, or SSL error
-  ssize_t app_input_closed;   // error code returned by upper layer process input
-  ssize_t app_output_closed;  // error code returned by upper layer process output
-
-  bool read_blocked;    // SSL blocked until more network data is read
-  bool write_blocked;   // SSL blocked until data is written to network
-
   // buffers for holding I/O from "applications" above SSL
 #define APP_BUF_SIZE    (4*1024)
   char *outbuf;
+  char *inbuf;
+
+  ssize_t app_input_closed;   // error code returned by upper layer process input
+  ssize_t app_output_closed;  // error code returned by upper layer process output
+
   size_t out_size;
   size_t out_count;
-  char *inbuf;
   size_t in_size;
   size_t in_count;
 
   pn_trace_t trace;
+
+  bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
+  bool ssl_closed;      // shutdown complete, or SSL error
+  bool read_blocked;    // SSL blocked until more network data is read
+  bool write_blocked;   // SSL blocked until data is written to network
 };
 
 struct pn_ssl_session_t {
@@ -184,7 +187,7 @@ static int ssl_failed(pn_ssl_t *ssl)
 {
     SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   ssl->ssl_closed = true;
-  ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
+  ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   // fake a shutdown so the i/o processing code will close properly
   SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   // try to grab the first SSL error to add to the failure log
@@ -195,7 +198,8 @@ static int ssl_failed(pn_ssl_t *ssl)
   }
   _log_ssl_error(NULL);    // spit out any remaining errors to the log file
   ssl->transport->tail_closed = true;
-  return pn_error_format( ssl->transport->error, PN_ERR, "SSL Failure: %s", buf );
+  pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
+  return PN_EOS;
 }
 
 /* match the DNS name pattern from the peer certificate against our configured peer
@@ -343,7 +347,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 // "openssl dhparam -C -2 2048"
 static DH *get_dh2048(void)
 {
-  static unsigned char dh2048_p[]={
+  static const unsigned char dh2048_p[]={
     0xAE,0xF7,0xE9,0x66,0x26,0x7A,0xAC,0x0A,0x6F,0x1E,0xCD,0x81,
     0xBD,0x0A,0x10,0x7E,0xFA,0x2C,0xF5,0x2D,0x98,0xD4,0xE7,0xD9,
     0xE4,0x04,0x8B,0x06,0x85,0xF2,0x0B,0xA3,0x90,0x15,0x56,0x0C,
@@ -367,7 +371,7 @@ static DH *get_dh2048(void)
     0xA4,0xED,0xFD,0x49,0x0B,0xE3,0x4A,0xF6,0x28,0xB3,0x98,0xB0,
     0x23,0x1C,0x09,0x33,
   };
-  static unsigned char dh2048_g[]={
+  static const unsigned char dh2048_g[]={
     0x02,
   };
   DH *dh;
@@ -807,7 +811,7 @@ static int setup_ssl_connection( pn_ssl_t *ssl )
 static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_data, size_t available)
 {
   pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_ERR;
+  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
 
   _log( ssl, "process_input_ssl( data size=%d )\n",available );
 
@@ -904,14 +908,13 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
             if (!max_frame) max_frame = ssl->in_size * 2;  // no limit
             if (ssl->in_size < max_frame) {
               // no max frame limit - grow it.
-              char *newbuf = (char *)malloc( max_frame );
+              size_t newsize = pn_min(max_frame, ssl->in_size * 2);
+              char *newbuf = (char *)realloc( ssl->inbuf, newsize );
               if (newbuf) {
-                ssl->in_size = max_frame;
-                memmove( newbuf, ssl->inbuf, ssl->in_count );
-                free( ssl->inbuf );
+                ssl->in_size = newsize;
                 ssl->inbuf = newbuf;
+                work_pending = true;  // can we get more input?
               }
-              work_pending = true;  // can we get more input?
             } else {
               // can't gather any more input, but app needs more?
               // This is a bug - since SSL can buffer up to max-frame,
@@ -951,8 +954,8 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
 static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t max_len)
 {
   pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (!ssl) return PN_ERR;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_ERR;
+  if (!ssl) return PN_EOS;
+  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
 
   ssize_t written = 0;
   bool work_pending;

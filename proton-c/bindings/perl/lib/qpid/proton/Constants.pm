@@ -20,6 +20,9 @@
 package qpid::proton;
 
 use constant {
+    VERSION_MAJOR => $cproton_perl::PN_VERSION_MAJOR,
+    VERSION_MINOR => $cproton_perl::PN_VERSION_MINOR,
+
     NULL       => $cproton_perl::PN_NULL,
     BOOL       => qpid::proton::Mapping->new(
         "bool",
@@ -129,8 +132,8 @@ use constant {
     LIST      => qpid::proton::Mapping->new(
         "list",
         $cproton_perl::PN_LIST,
-        "put_list",
-        "get_list"),
+        "put_list_helper",
+        "get_list_helper"),
     MAP      => qpid::proton::Mapping->new(
         "map",
         $cproton_perl::PN_MAP,

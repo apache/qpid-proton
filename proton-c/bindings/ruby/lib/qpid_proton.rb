@@ -20,6 +20,7 @@
 require "cproton"
 require "date"
 
+require "qpid_proton/version"
 require "qpid_proton/described"
 require "qpid_proton/mapping"
 require "qpid_proton/array"

@@ -96,12 +96,11 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return consumed;
     }
 
-    public void free()
+    @Override
+    void doFree()
     {
         getSession().freeReceiver(this);
-
-        super.free();
-        //TODO.
+        super.doFree();
     }
 
     boolean hasIncoming()

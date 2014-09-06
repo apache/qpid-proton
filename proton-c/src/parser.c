@@ -29,10 +29,10 @@
 
 struct pn_parser_t {
   pn_scanner_t *scanner;
-  int error_code;
   char *atoms;
   size_t size;
   size_t capacity;
+  int error_code;
 };
 
 pn_parser_t *pn_parser()

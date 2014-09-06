@@ -29,19 +29,38 @@ package org.apache.qpid.proton.engine;
 public interface Event
 {
     public enum Category {
-        PROTOCOL;
+        CONNECTION,
+        SESSION,
+        LINK,
+        DELIVERY,
+        TRANSPORT;
     }
 
     public enum Type {
-        CONNECTION_REMOTE_STATE(Category.PROTOCOL, 1),
-        CONNECTION_LOCAL_STATE(Category.PROTOCOL, 2),
-        SESSION_REMOTE_STATE(Category.PROTOCOL, 3),
-        SESSION_LOCAL_STATE(Category.PROTOCOL, 4),
-        LINK_REMOTE_STATE(Category.PROTOCOL, 5),
-        LINK_LOCAL_STATE(Category.PROTOCOL, 6),
-        LINK_FLOW(Category.PROTOCOL, 7),
-        DELIVERY(Category.PROTOCOL, 8),
-        TRANSPORT(Category.PROTOCOL, 9);
+        CONNECTION_INIT(Category.CONNECTION, 1),
+        CONNECTION_OPEN(Category.CONNECTION, 2),
+        CONNECTION_REMOTE_OPEN(Category.CONNECTION, 3),
+        CONNECTION_CLOSE(Category.CONNECTION, 4),
+        CONNECTION_REMOTE_CLOSE(Category.CONNECTION, 5),
+        CONNECTION_FINAL(Category.CONNECTION, 6),
+
+        SESSION_INIT(Category.SESSION, 1),
+        SESSION_OPEN(Category.SESSION, 2),
+        SESSION_REMOTE_OPEN(Category.SESSION, 3),
+        SESSION_CLOSE(Category.SESSION, 4),
+        SESSION_REMOTE_CLOSE(Category.SESSION, 5),
+        SESSION_FINAL(Category.SESSION, 6),
+
+        LINK_INIT(Category.LINK, 1),
+        LINK_OPEN(Category.LINK, 2),
+        LINK_REMOTE_OPEN(Category.LINK, 3),
+        LINK_CLOSE(Category.LINK, 4),
+        LINK_REMOTE_CLOSE(Category.LINK, 5),
+        LINK_FLOW(Category.LINK, 6),
+        LINK_FINAL(Category.LINK, 7),
+
+        DELIVERY(Category.DELIVERY, 1),
+        TRANSPORT(Category.TRANSPORT, 1);
 
         private int _opcode;
         private Category _category;
@@ -71,5 +90,7 @@ public interface Event
     Delivery getDelivery();
 
     Transport getTransport();
+
+    Event copy();
 
 }

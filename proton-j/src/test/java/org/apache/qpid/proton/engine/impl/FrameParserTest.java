@@ -41,6 +41,7 @@ import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResult.Status;
@@ -63,9 +64,6 @@ public class FrameParserTest
 
     private final AmqpFramer _amqpFramer = new AmqpFramer();
 
-    @Rule
-    public ExpectedException _expectedException = ExpectedException.none();
-
     @Before
     public void setUp()
     {
@@ -80,16 +78,8 @@ public class FrameParserTest
         String headerMismatchMessage = "AMQP header mismatch";
         ByteBuffer buffer = _frameParser.tail();
         buffer.put("hello".getBytes());
-        try {
-            _frameParser.process();
-            fail("expected exception");
-        } catch (TransportException e) {
-            assertThat(e.getMessage(), containsString(headerMismatchMessage));
-        }
-
-        _expectedException.expect(TransportException.class);
-        _expectedException.expectMessage(headerMismatchMessage);
-        _frameParser.tail();
+        _frameParser.process();
+        assertEquals(_frameParser.capacity(), Transport.END_OF_STREAM);
     }
 
     @Test

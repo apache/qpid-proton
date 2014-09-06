@@ -58,8 +58,10 @@ sub dispatch {
 
     $reply->set_properties($request->get_properties);
     print "Dispatched " . $request->get_subject . "\n";
-    foreach (keys $request->get_properties) {
-        print "\t$_:" . $request->get_properties->{$_} . "\n";
+    my $properties = $request->get_properties;
+    foreach (keys %{$properties}) {
+        my $value = $properties->{%_};
+        print "\t$_: $value\n";
     }
 }
 

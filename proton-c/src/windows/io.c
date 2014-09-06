@@ -27,32 +27,47 @@
 #error "Proton requires Windows API support for XP or later."
 #endif
 #include <winsock2.h>
+#include <mswsock.h>
 #include <Ws2tcpip.h>
 #define PN_WINAPI
 
-#include "../platform.h"
+#include "platform.h"
 #include <proton/io.h>
 #include <proton/object.h>
+#include <proton/selector.h>
+#include "iocp.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
 
-static int pni_error_from_wsaerr(pn_error_t *error, const char *msg) {
-  errno = WSAGetLastError();
-  return pn_i_error_from_errno(error, msg);
+int pni_win32_error(pn_error_t *error, const char *msg, HRESULT code)
+{
+  // Error code can be from GetLastError or WSAGetLastError,
+  char err[1024] = {0};
+  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
+                FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, code, 0, (LPSTR)&err, sizeof(err), NULL);
+  return pn_error_format(error, PN_ERR, "%s: %s", msg, err);
 }
 
-
-#define MAX_HOST (1024)
-#define MAX_SERV (64)
+static void io_log(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  fflush(stderr);
+}
 
 struct pn_io_t {
-  char host[MAX_HOST];
-  char serv[MAX_SERV];
+  char host[NI_MAXHOST];
+  char serv[NI_MAXSERV];
   pn_error_t *error;
+  bool trace;
   bool wouldblock;
+  iocp_t *iocp;
 };
 
 void pn_io_initialize(void *obj)
@@ -60,21 +75,24 @@ void pn_io_initialize(void *obj)
   pn_io_t *io = (pn_io_t *) obj;
   io->error = pn_error();
   io->wouldblock = false;
+  io->trace = pn_env_bool("PN_TRACE_DRV");
 
   /* Request WinSock 2.2 */
   WORD wsa_ver = MAKEWORD(2, 2);
   WSADATA unused;
   int err = WSAStartup(wsa_ver, &unused);
   if (err) {
-    pni_error_from_wsaerr(io->error, "pipe");
-    fprintf(stderr, "Can't load WinSock: %d\n", err);
+    pni_win32_error(io->error, "WSAStartup", WSAGetLastError());
+    fprintf(stderr, "Can't load WinSock: %d\n", pn_error_text(io->error));
   }
+  io->iocp = pni_iocp();
 }
 
 void pn_io_finalize(void *obj)
 {
   pn_io_t *io = (pn_io_t *) obj;
   pn_error_free(io->error);
+  pn_free(io->iocp);
   WSACleanup();
 }
 
@@ -84,7 +102,7 @@ void pn_io_finalize(void *obj)
 
 pn_io_t *pn_io(void)
 {
-  static pn_class_t clazz = PN_CLASS(pn_io);
+  static const pn_class_t clazz = PN_CLASS(pn_io);
   pn_io_t *io = (pn_io_t *) pn_new(sizeof(pn_io_t), &clazz);
   return io;
 }
@@ -100,20 +118,40 @@ pn_error_t *pn_io_error(pn_io_t *io)
   return io->error;
 }
 
+static void ensure_unique(pn_io_t *io, pn_socket_t new_socket)
+{
+  // A brand new socket can have the same HANDLE value as a previous
+  // one after a socketclose.  If the application closes one itself
+  // (i.e. not using pn_close), we don't find out about it until here.
+  iocpdesc_t *iocpd = pni_iocpdesc_map_get(io->iocp, new_socket);
+  if (iocpd) {
+    if (io->trace)
+      io_log("Stale external socket reference discarded\n");
+    // Re-use means former socket instance was closed
+    assert(iocpd->ops_in_progress == 0);
+    assert(iocpd->external);
+    // Clean up the straggler as best we can
+    pn_socket_t sock = iocpd->socket;
+    iocpd->socket = INVALID_SOCKET;
+    pni_iocpdesc_map_del(io->iocp, sock);  // may free the iocpdesc_t depending on refcount
+  }
+}
+
+
 /*
- * Windows pipes don't work with select(), so a socket based pipe
- * workaround is provided.  They do work with completion ports, so the
- * workaround can be disposed with in future.
+ * This heavyweight surrogate pipe could be replaced with a normal Windows pipe
+ * now that select() is no longer used.  If interrupt semantics are all that is
+ * needed, a simple user space counter and reserved completion status would
+ * probably suffice.
  */
-static int pni_socket_pair(SOCKET sv[2]);
+static int pni_socket_pair(pn_io_t *io, SOCKET sv[2]);
 
 int pn_pipe(pn_io_t *io, pn_socket_t *dest)
 {
-  int n = pni_socket_pair(dest);
+  int n = pni_socket_pair(io, dest);
   if (n) {
-    pni_error_from_wsaerr(io->error, "pipe");
+    pni_win32_error(io->error, "pipe", WSAGetLastError());
   }
-
   return n;
 }
 
@@ -125,9 +163,14 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
   if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0) {
     perror("setsockopt");
   }
+
+  u_long nonblock = 1;
+  if (ioctlsocket(sock, FIONBIO, &nonblock)) {
+    perror("ioctlsocket");
+  }
 }
 
-static inline pn_socket_t pn_create_socket(void);
+static inline pn_socket_t pni_create_socket();
 
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
@@ -138,34 +181,43 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket();
+  pn_socket_t sock = pni_create_socket();
   if (sock == INVALID_SOCKET) {
-    pni_error_from_wsaerr(io->error, "pn_create_socket");
+    pni_win32_error(io->error, "pni_create_socket", WSAGetLastError());
     return INVALID_SOCKET;
   }
+  ensure_unique(io, sock);
 
-  BOOL optval = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &optval, sizeof(optval)) == -1) {
-    pni_error_from_wsaerr(io->error, "setsockopt");
+  bool optval = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *) &optval,
+                 sizeof(optval)) == -1) {
+    pni_win32_error(io->error, "setsockopt", WSAGetLastError());
     closesocket(sock);
     return INVALID_SOCKET;
   }
 
   if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
-    pni_error_from_wsaerr(io->error, "bind");
+    pni_win32_error(io->error, "bind", WSAGetLastError());
     freeaddrinfo(addr);
     closesocket(sock);
     return INVALID_SOCKET;
   }
-
   freeaddrinfo(addr);
 
   if (listen(sock, 50) == -1) {
-    pni_error_from_wsaerr(io->error, "listen");
+    pni_win32_error(io->error, "listen", WSAGetLastError());
     closesocket(sock);
     return INVALID_SOCKET;
   }
 
+  iocpdesc_t *iocpd = pni_iocpdesc_create(io->iocp, sock, false);
+  if (!iocpd) {
+    pn_i_error_from_errno(io->error, "register");
+    closesocket(sock);
+    return INVALID_SOCKET;
+  }
+
+  pni_iocpdesc_start(iocpd);
   return sock;
 }
 
@@ -181,66 +233,83 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket();
+  pn_socket_t sock = pni_create_socket();
   if (sock == INVALID_SOCKET) {
-    pni_error_from_wsaerr(io->error, "pn_create_socket");
+    pni_win32_error(io->error, "proton pni_create_socket", WSAGetLastError());
+    freeaddrinfo(addr);
     return INVALID_SOCKET;
   }
 
+  ensure_unique(io, sock);
   pn_configure_sock(io, sock);
-
-  if (connect(sock, addr->ai_addr, addr->ai_addrlen) != 0) {
-    if (WSAGetLastError() != WSAEWOULDBLOCK) {
-      pni_error_from_wsaerr(io->error, "connect");
-      freeaddrinfo(addr);
-      closesocket(sock);
-      return INVALID_SOCKET;
-    }
-  }
-
-  freeaddrinfo(addr);
-
-  return sock;
+  return pni_iocp_begin_connect(io->iocp, sock, addr, io->error);
 }
 
-pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
+pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t size)
 {
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
   socklen_t addrlen = sizeof(addr);
-  pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
-  if (sock == INVALID_SOCKET) {
-    pni_error_from_wsaerr(io->error, "accept");
-    return sock;
+  iocpdesc_t *listend = pni_iocpdesc_map_get(io->iocp, listen_sock);
+  pn_socket_t accept_sock;
+
+  if (listend)
+    accept_sock = pni_iocp_end_accept(listend, (struct sockaddr *) &addr, &addrlen, &io->wouldblock, io->error);
+  else {
+    // User supplied socket
+    accept_sock = accept(listen_sock, (struct sockaddr *) &addr, &addrlen);
+    if (accept_sock == INVALID_SOCKET)
+      pni_win32_error(io->error, "sync accept", WSAGetLastError());
+  }
+
+  if (accept_sock == INVALID_SOCKET)
+    return accept_sock;
+
+  int code = getnameinfo((struct sockaddr *) &addr, addrlen, io->host, NI_MAXHOST,
+                         io->serv, NI_MAXSERV, 0);
+  if (code)
+    code = getnameinfo((struct sockaddr *) &addr, addrlen, io->host, NI_MAXHOST,
+                       io->serv, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV);
+  if (code) {
+    pn_error_format(io->error, PN_ERR, "getnameinfo: %s\n", gai_strerror(code));
+    pn_close(io, accept_sock);
+    return INVALID_SOCKET;
   } else {
-    int code;
-    if ((code = getnameinfo((struct sockaddr *) &addr, addrlen, io->host, MAX_HOST, io->serv, MAX_SERV, 0))) {
-      pn_error_format(io->error, PN_ERR, "getnameinfo: %s\n", gai_strerror(code));
-      if (closesocket(sock) == -1)
-        pni_error_from_wsaerr(io->error, "closesocket");
-      return INVALID_SOCKET;
-    } else {
-      pn_configure_sock(io, sock);
-      snprintf(name, size, "%s:%s", io->host, io->serv);
-      return sock;
+    pn_configure_sock(io, accept_sock);
+    snprintf(name, size, "%s:%s", io->host, io->serv);
+    if (listend) {
+      pni_iocpdesc_start(pni_iocpdesc_map_get(io->iocp, accept_sock));
     }
+    return accept_sock;
   }
 }
 
-static inline pn_socket_t pn_create_socket(void) {
+static inline pn_socket_t pni_create_socket() {
   return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
 }
 
 ssize_t pn_send(pn_io_t *io, pn_socket_t sockfd, const void *buf, size_t len) {
-  ssize_t count = send(sockfd, (const char *) buf, len, 0);
-  io->wouldblock = count < 0 && WSAGetLastError() == WSAEWOULDBLOCK;
+  ssize_t count;
+  iocpdesc_t *iocpd = pni_iocpdesc_map_get(io->iocp, sockfd);
+  if (iocpd) {
+    count = pni_iocp_begin_write(iocpd, buf, len, &io->wouldblock, io->error);
+  } else {
+    count = send(sockfd, (const char *) buf, len, 0);
+    io->wouldblock = count < 0 && WSAGetLastError() == WSAEWOULDBLOCK;
+  }
   return count;
 }
 
 ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 {
-  ssize_t count = recv(socket, (char *) buf, size, 0);
-  io->wouldblock = count < 0 && WSAGetLastError() == WSAEWOULDBLOCK;
+  ssize_t count;
+  iocpdesc_t *iocpd = pni_iocpdesc_map_get(io->iocp, socket);
+  if (iocpd) {
+    count = pni_iocp_recv(iocpd, buf, size, &io->wouldblock, io->error);
+  } else {
+    count = recv(socket, (char *) buf, size, 0);
+    io->wouldblock = count < 0 && WSAGetLastError() == WSAEWOULDBLOCK;
+  }
   return count;
 }
 
@@ -257,7 +326,12 @@ ssize_t pn_read(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 
 void pn_close(pn_io_t *io, pn_socket_t socket)
 {
-  closesocket(socket);
+  iocpdesc_t *iocpd = pni_iocpdesc_map_get(io->iocp, socket);
+  if (iocpd)
+    pni_iocp_begin_close(iocpd);
+  else {
+    closesocket(socket);
+  }
 }
 
 bool pn_wouldblock(pn_io_t *io)
@@ -265,8 +339,24 @@ bool pn_wouldblock(pn_io_t *io)
   return io->wouldblock;
 }
 
+pn_selector_t *pn_io_selector(pn_io_t *io)
+{
+  if (io->iocp->selector == NULL)
+    io->iocp->selector = pni_selector_create(io->iocp);
+  return io->iocp->selector;
+}
 
-static int pni_socket_pair (SOCKET sv[2]) {
+static void configure_pipe_socket(pn_io_t *io, pn_socket_t sock)
+{
+  u_long v = 1;
+  ioctlsocket (sock, FIONBIO, &v);
+  ensure_unique(io, sock);
+  iocpdesc_t *iocpd = pni_iocpdesc_create(io->iocp, sock, false);
+  pni_iocpdesc_start(iocpd);
+}
+
+
+static int pni_socket_pair (pn_io_t *io, SOCKET sv[2]) {
   // no socketpair on windows.  provide pipe() semantics using sockets
 
   SOCKET sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
@@ -330,9 +420,9 @@ static int pni_socket_pair (SOCKET sv[2]) {
     }
   }
 
-  u_long v = 1;
-  ioctlsocket (sv[0], FIONBIO, &v);
-  ioctlsocket (sv[1], FIONBIO, &v);
+  configure_pipe_socket(io, sv[0]);
+  configure_pipe_socket(io, sv[1]);
   closesocket(sock);
   return 0;
 }
+

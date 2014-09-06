@@ -18,11 +18,21 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.engine.impl.ssl.SslDomainImpl;
+
 /**
  * I store the details used to create SSL sessions.
  */
 public interface SslDomain
 {
+
+    public static final class Factory
+    {
+        public static SslDomain create() {
+            return new SslDomainImpl();
+        }
+    }
+
     /**
      * Determines whether the endpoint acts as a client or server.
      */
