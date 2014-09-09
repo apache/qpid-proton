@@ -517,6 +517,11 @@ public class TransportImpl extends EndpointImpl
             transfer.setDeliveryTag(new Binary(delivery.getTag()));
             transfer.setHandle(tpLink.getLocalHandle());
 
+            if(delivery.getLocalState() != null)
+            {
+                transfer.setState(delivery.getLocalState());
+            }
+
             if(delivery.isSettled())
             {
                 transfer.setSettled(Boolean.TRUE);
