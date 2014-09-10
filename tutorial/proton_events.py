@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import os, heapq, socket, time, types
+import heapq, os, Queue, socket, time, types
 from proton import Collector, Connection, Delivery, Endpoint, Event
 from proton import Message, ProtonException, Transport, TransportException
 from select import select
@@ -51,7 +51,7 @@ class EventDispatcher(object):
     }
 
     def dispatch(self, event):
-        getattr(self, self.methods.get(event.type, str(event.type)), self.unhandled)(event)
+        getattr(self, self.methods.get(event.type, "on_%s" % str(event.type)), self.unhandled)(event)
 
     def unhandled(self, event):
         pass
@@ -206,6 +206,40 @@ class Acceptor:
 
     def removed(self): pass
 
+class EventInjector(object):
+    def __init__(self, events):
+        self.events = events
+        self.queue = Queue.Queue()
+        self.pipe = os.pipe()
+        self._closed = False
+
+    def trigger(self, event):
+        self.queue.put(event)
+        os.write(self.pipe[1], "!")
+
+    def closed(self):
+        return self._closed and self.queue.empty()
+
+    def close(self):
+        self._closed = True
+
+    def fileno(self):
+        return self.pipe[0]
+
+    def reading(self):
+        return True
+
+    def writing(self):
+        return False
+
+    def readable(self):
+        os.read(self.pipe[0], 512)
+        while not self.queue.empty():
+            self.events.dispatch(self.queue.get())
+
+    def removed(self): pass
+
+
 class Events(object):
     def __init__(self, *dispatchers):
         self.collector = Collector()
@@ -237,40 +271,48 @@ class Events(object):
     def empty(self):
         return self.collector.peek() == None
 
-class TimerEvent(Event):
-    def __init__(self, connection=None, session=None, link=None, delivery=None):
-        self.type = "on_timer"
+class ApplicationEvent(Event):
+    CATEGORY_GENERAL = "general"
+
+    def __init__(self, type, connection=None, session=None, link=None, delivery=None, subject=None):
+        self.type = type
         self.transport = None
+        self.subject = subject
         if delivery:
             self.delivery = delivery
             self.link = delivery.link
-            self.session = link.session
-            self.connection = session.connection
+            self.session = self.link.session
+            self.connection = self.session.connection
             self.category = Event.CATEGORY_DELIVERY
         elif link:
             self.delivery = None
             self.link = link
-            self.session = link.session
-            self.connection = session.connection
+            self.session = self.link.session
+            self.connection = self.session.connection
             self.category = Event.CATEGORY_LINK
         elif session:
             self.delivery = None
             self.link = None
             self.session = session
-            self.connection = session.connection
+            self.connection = self.session.connection
             category = Event.CATEGORY_SESSION
-        else:
+        elif connection:
             self.delivery = None
             self.link = None
             self.session = None
             self.connection = connection
             self.category = Event.CATEGORY_CONNECTION
+        else:
+            self.delivery = None
+            self.link = None
+            self.session = None
+            self.connection = None
+            self.category = ApplicationEvent.CATEGORY_GENERAL
 
     def __repr__(self):
-        objects = [self.connection, self.session, self.link, self.delivery]
+        objects = [self.connection, self.session, self.link, self.delivery, self.subject]
         return "%s(%s)" % (self.type,
                            ", ".join([str(o) for o in objects if o is not None]))
-
 
 class ScheduledEvents(Events):
     def __init__(self, *dispatchers):
@@ -422,7 +464,7 @@ class ScopedDispatcher(EventDispatcher):
     }
 
     def dispatch(self, event):
-        method = self.methods.get(event.type, str(event.type))
+        method = self.methods.get(event.type, "on_%s" % str(event.type))
         objects = [getattr(event, attr) for attr in self.scopes.get(event.category, [])]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
         handlers = [getattr(t, method) for t in targets if hasattr(t, method)]
@@ -590,6 +632,7 @@ class EventLoop(object):
         else: l.append(FlowController(10))
         self.events = ScheduledEvents(*l)
         self.loop = SelectLoop(self.events)
+        self.trigger = None
 
     def connect(self, url, name=None, handler=None):
         identifier = name or url
@@ -606,12 +649,17 @@ class EventLoop(object):
         if port: port = int(port)
         return Acceptor(self.loop.events, self.loop.selectables, host, port)
 
-    def schedule(self, deadline, connection=None, session=None, link=None, delivery=None):
-        self.events.schedule(deadline, TimerEvent(connection, session, link, delivery))
+    def schedule(self, deadline, connection=None, session=None, link=None, delivery=None, subject=None):
+        self.events.schedule(deadline, ApplicationEvent("timer", connection, session, link, delivery, subject))
+
+    def get_event_trigger(self):
+        if not self.trigger or self.trigger.closed():
+            self.trigger = EventInjector(self.events)
+            self.loop.selectables.append(self.trigger)
+        return self.trigger
 
     def run(self):
         self.loop.run()
-
 
 
 class BlockingLink(object):
