@@ -28,6 +28,7 @@ class Db(object):
         self.events = events
         self.tasks = Queue.Queue()
         self.position = None
+        self.pending_events = []
         self.thread = threading.Thread(target=self._process)
         self.thread.daemon=True
         self.thread.start()
@@ -67,15 +68,13 @@ class Db(object):
             conn.execute("INSERT INTO records(id, description) VALUES (?, ?)", (id, data))
         else:
             conn.execute("INSERT INTO records(description) VALUES (?)", (data,))
-        conn.commit()
         if event:
-            self.events.trigger(event)
+            self.pending_events.append(event)
 
     def _delete(self, conn, id, event):
         conn.execute("DELETE FROM records WHERE id=?", (id,))
-        conn.commit()
         if event:
-            self.events.trigger(event)
+            self.pending_events.append(event)
 
     def _process(self):
         conn = sqlite3.connect(self.db)
@@ -83,4 +82,12 @@ class Db(object):
         with conn:
             while True:
                 f = self.tasks.get(True)
-                f(conn)
+                try:
+                    while True:
+                        f(conn)
+                        f = self.tasks.get(False)
+                except Queue.Empty: pass
+                conn.commit()
+                for event in self.pending_events:
+                    self.events.trigger(event)
+                self.pending_events = []
