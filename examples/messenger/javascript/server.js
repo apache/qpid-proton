@@ -21,10 +21,13 @@
 
 // Simple server for use with client.js illustrating request/response
 
-// Check if the environment is Node.js and if so import the required library.
-if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("server.js should be run in Node.js");
+    return;
 }
+
+var proton = require("qpid-proton");
 
 var address = "amqp://~0.0.0.0";
 var message = new proton.Message();

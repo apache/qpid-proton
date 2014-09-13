@@ -35,6 +35,12 @@
  * @file
  */
 
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("proxy.js should be run in Node.js");
+    return;
+}
+
 var proxy = require('./ws2tcp.js');
 
 var lport = 5673;

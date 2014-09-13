@@ -214,9 +214,17 @@ Module['Messenger'] = function(name) { // Messenger Constructor.
      */
     _pn_messenger_set_blocking(this._messenger, false);
 
+    // Subscriptions that haven't yet completed, used for managing subscribe events.
+    this._pendingSubscriptions = [];
+
     // Used in the Event registration mechanism (in the 'on' and 'emit' methods).
     this._callbacks = {};
 
+    // This call ensures that the emscripten network callback functions are initialised.
+    Module.EventDispatch.registerMessenger(this);
+
+
+    // TODO improve error handling mechanism.
     /*
      * The emscripten websocket error event could get triggered by any Messenger
      * and it's hard to determine which one without knowing which file descriptors
@@ -233,10 +241,13 @@ Module['Messenger'] = function(name) { // Messenger Constructor.
      */
     var that = this;
     Module['websocket']['on']('error', function(error) {
+
+console.log("Module['websocket']['on'] caller is " + arguments.callee.caller.toString());
+
 console.log("that._checkErrors = " + that._checkErrors);
 console.log("error = " + error);
         if (that._checkErrors) {
-            that.emit('error', new Module['MessengerError'](error[2]));
+            that._emit('error', new Module['MessengerError'](error[2]));
         }
     });
 };
@@ -269,7 +280,7 @@ _Messenger_._check = function(code) {
         var message = errno ? this['getError']() : Pointer_stringify(_pn_code(code));
 
         if (this._callbacks['error']) {
-            this.emit('error', new Module['MessengerError'](message));
+            this._emit('error', new Module['MessengerError'](message));
         } else {
             throw new Module['MessengerError'](message);
         }
@@ -279,17 +290,47 @@ _Messenger_._check = function(code) {
 };
 
 /**
- * Invokes a callback registered for a specified event.
- * @method emit
+ * Invokes the callbacks registered for a specified event.
+ * @method _emit
  * @memberof! proton.Messenger#
  * @param event the event we want to emit.
  * @param param the parameter we'd like to pass to the event callback.
  */
-_Messenger_.emit = function(event, param) {
-    if ('function' === typeof this._callbacks[event]) {
-        this._callbacks[event].call(this, param);
+_Messenger_._emit = function(event, param) {
+    var callbacks = this._callbacks[event];
+    if (callbacks) {
+        for (var i = 0; i < callbacks.length; i++) {
+            var callback = callbacks[i];
+            if ('function' === typeof callback) {
+                callback.call(this, param);
+            }
+        }
     }
 };
+
+/**
+ * Checks any pending subscriptions and when a source address becomes available
+ * emit a subscription event passing the Subscription that triggered the event.
+ * Note that this doesn't seem to work for listen/bind style subscriptions,
+ * that is to say subscriptions of the form amqp://~0.0.0.0 don't know why?
+ */
+_Messenger_._checkSubscriptions = function() {
+    // Check for completed subscriptions, and emit subscribe event.
+    var subscriptions = this._pendingSubscriptions;
+    if (subscriptions.length) {
+        var pending = []; // Array of any subscriptions that remain pending.
+        for (var j = 0; j < subscriptions.length; j++) {
+            subscription = subscriptions[j];
+            if (subscription['getAddress']()) {
+                this._emit('subscription', subscription);
+            } else {
+                pending.push(subscription);
+            }
+        }
+        this._pendingSubscriptions = pending;
+    }
+};
+
 
 // *************************** Public methods *****************************
 
@@ -327,11 +368,11 @@ _Messenger_.emit = function(event, param) {
  */
 _Messenger_['on'] = function(event, callback) {
     if ('function' === typeof callback) {
-        if (event === 'work') {
-            Module.EventDispatch.addListener(this, callback);
-        } else {
-	        this._callbacks[event] = callback;
+        if (!this._callbacks[event]) {
+            this._callbacks[event] = [];
         }
+
+        this._callbacks[event].push(callback);
     }
 };
 
@@ -340,15 +381,25 @@ _Messenger_['on'] = function(event, callback) {
  * @method removeListener
  * @memberof! proton.Messenger#
  * @param event the event we want to detach from.
- * @param callback the callback function to be remove for the specified event.
+ * @param callback the callback function to be removed for the specified event.
+ *        if no callback is specified all callbacks are removed for the event.
  */
 _Messenger_['removeListener'] = function(event, callback) {
-    if ('function' === typeof callback) {
-        if (event === 'work') {
-            Module.EventDispatch.removeListener(this, callback);
-        } else {
-	        this._callbacks[event] = null;//callback;
+    if (callback) {
+        var callbacks = this._callbacks[event];
+        if ('function' === typeof callback && callbacks) {
+            // Search for the specified callback.
+            for (var i = 0; i < callbacks.length; i++) {
+                if (callback === callbacks[i]) {
+                    // If we find the specified callback delete it and return.
+                    callbacks.splice(i, 1);
+                    return;
+                }
+            }
         }
+    } else {
+        // If we call remove with no callback we remove all callbacks.
+        delete this._callbacks[event];
     }
 };
 
@@ -392,6 +443,8 @@ _Messenger_['isBlocking'] = function() {
  * @memberof! proton.Messenger#
  */
 _Messenger_['free'] = function() {
+    // This call ensures that the emscripten network callback functions are removed.
+    Module.EventDispatch.unregisterMessenger(this);
     _pn_messenger_free(this._messenger);
 };
 
@@ -477,14 +530,6 @@ _Messenger_['setIncomingWindow'] = function(window) {
  */
 _Messenger_['start'] = function() {
     this._check(_pn_messenger_start(this._messenger));
-
-    // This call ensures that the emscripten network callback functions are set
-    // up even if a client hasn't explicity added a work function via a call to
-    // messenger.on('work', <work function>);
-    // Doing this means that pn_messenger_work() will still get called when any
-    // WebSocket events occur, which keeps things more reliable when things like
-    // reconnections occur.
-    Module.EventDispatch.addListener(this);
 };
 
 /**
@@ -534,7 +579,7 @@ _Messenger_['subscribe'] = function(source) {
         this._check(Module['Error']['ARG_ERR']);
     }
     var sp = Runtime.stackSave();
-    this._checkErrors = true;
+    this._checkErrors = true; // TODO improve error handling mechanism.
     var subscription = _pn_messenger_subscribe(this._messenger,
                                                allocate(intArrayFromString(source), 'i8', ALLOC_STACK));
     Runtime.stackRestore(sp);
@@ -542,7 +587,10 @@ _Messenger_['subscribe'] = function(source) {
     if (!subscription) {
         this._check(Module['Error']['ERR']);
     }
-    return new Subscription(subscription);
+
+    subscription = new Subscription(subscription)
+    this._pendingSubscriptions.push(subscription);
+    return subscription;
 };
 
 /**
@@ -570,7 +618,7 @@ _Messenger_['subscribe'] = function(source) {
 _Messenger_['put'] = function(message, flush) {
     flush = flush === false ? false : true;
     message._preEncode();
-    this._checkErrors = true;
+    this._checkErrors = true; // TODO improve error handling mechanism.
     this._check(_pn_messenger_put(this._messenger, message._message));
 
     // If flush is set invoke pn_messenger_work.
@@ -660,7 +708,7 @@ _Messenger_['work'] = function() {
 console.log("work = false");
         return false;
     } else {
-        this._checkErrors = false;
+        this._checkErrors = false; // TODO improve error handling mechanism.
         this._check(err);
 console.log("work = true");
         return true;
@@ -931,7 +979,7 @@ _Messenger_['rewrite'] = function(pattern, address) {
  * @memberof proton
  */
 Module.EventDispatch = new function() { // Note the use of new to create a Singleton.
-    var _firstCall = true; // Flag used to check the first time addListener is called.
+    var _firstCall = true; // Flag used to check the first time registerMessenger is called.
     var _messengers = {};
 
     /**
@@ -950,15 +998,15 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
     var _pump = function(fd, closing) {
         for (var i in _messengers) {
             if (_messengers.hasOwnProperty(i)) {
-                var current = _messengers[i];
+                var messenger = _messengers[i];
 
                 if (closing) {
-                    current.invokeCallbacks();
+                    messenger._emit('work');
                 } else {
-                    var messenger = current.messenger;
                     while (_pn_messenger_work(messenger._messenger, 0) >= 0) {
-                        messenger._checkErrors = false;
-                        current.invokeCallbacks();
+                        messenger._checkSubscriptions();
+                        messenger._checkErrors = false; // TODO improve error handling mechanism.
+                        messenger._emit('work');
                     }
                 }
             }
@@ -974,64 +1022,33 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
     };
 
     /**
-     * Initialises the emscripten network callback functions. This needs to be
-     * done the first time we call addListener rather that when we create the
-     * Singleton because emscripten's socket filesystem has to be mounted before
-     * we can register listeners for any of these events.
+     * Register the specified Messenger as being interested in network events.
      */
-    var _init = function() {
-        Module['websocket']['on']('open', _pump);
-        Module['websocket']['on']('connection', _pump);
-        Module['websocket']['on']('message', _pump);
-        Module['websocket']['on']('close', _close);
-    };
-
-    /**
-     * Add a listener callback for the specified Messenger. Multiple listeners
-     * are permitted for each Messenger and listeners can be registered for
-     * multiple Messenger instances. The first time this method is called we
-     * initialise the emscripten network callback functions.
-     */
-    this.addListener = function(messenger, callback) {
+    this.registerMessenger = function(messenger) {
         if (_firstCall) {
-            _init();
+            /**
+             * Initialises the emscripten network callback functions. This needs
+             * to be done the first time we call registerMessenger rather than
+             * when we create the Singleton because emscripten's socket filesystem
+             * has to be mounted before can listen for any of these events.
+             */
+            Module['websocket']['on']('open', _pump);
+            Module['websocket']['on']('connection', _pump);
+            Module['websocket']['on']('message', _pump);
+            Module['websocket']['on']('close', _close);
             _firstCall = false;
         }
 
         var name = messenger.getName();
-        if (!_messengers[name]) {
-            _messengers[name] = {
-                messenger: messenger,
-                callbacks: [],
-                invokeCallbacks: function() {
-                    for (var j = 0; j < this.callbacks.length; j++) {
-                        this.callbacks[j]();
-                    }
-                }
-            };
-        }
-
-        if (callback) {
-            _messengers[name].callbacks.push(callback);
-        }
+        _messengers[name] = messenger; 
     };
 
     /**
-     * Remove the specified listener callback from the specified Messenger.
+     * Unregister the specified Messenger from interest in network events.
      */
-    this.removeListener = function(messenger, callback) {
+    this.unregisterMessenger = function(messenger) {
         var name = messenger.getName();
-        if (_messengers[name]) {
-            // If we find the registered Messenger search for the specified callback.
-            var callbacks = _messengers[name].callbacks;
-            for (var j = 0; j < callbacks.length; j++) {
-                if (callback === callbacks[j]) {
-                    // If we find the specified callback delete it and return.
-                    callbacks.splice(j, 1);
-                    return;
-                }
-            }
-        }
+        delete _messengers[name];
     };
 };
 

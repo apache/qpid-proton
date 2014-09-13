@@ -20,7 +20,7 @@
  */
 
 /**
- * Port of qpid-config to JavaScript for node.js, mainly intended as a demo to
+ * Port of qpid-config to JavaScript for Node.js, mainly intended as a demo to
  * illustrate using QMF2 in JavaScript using the proton.Messenger JS binding.
  * It illustrates a few things including how to use Messenger completely
  * asynchronously including using an async request/response pattern with
@@ -36,179 +36,187 @@
  * for complication best illustrated by the need for the correlator object.
  */
 
-// Check if the environment is Node.js and if so import the required library.
-if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("qpid-config.js should be run in Node.js");
+    return;
 }
 
-var addr = 'guest:guest@localhost:5673';
-//var addr = 'localhost:5673';
-var address = 'amqp://' + addr + '/qmf.default.direct';
-console.log(address);
+var qmf = {}; // Create qmf namespace object.
+qmf.Console = function() { // qmf.Console Constructor.
+    var proton = require("qpid-proton");
+    var message = new proton.Message();
+    var messenger = new proton.Messenger();
 
-var replyTo = '';
-var subscription;
-var subscribed = false;
+    var brokerAddress = '';
+    var replyTo = '';
 
-var message = new proton.Message();
-var messenger = new proton.Messenger();
-
-/**
- * The correlator object is a mechanism used to correlate requests with their
- * aynchronous responses. It might possible be better to make use of Promises
- * to implement part of this behaviour but a mechanism would still be needed to
- * correlate a request with its response callback in order to wrap things up in
- * a Promise, so much of the behaviour of this object would still be required.
- * In addition it seemed to make sense to make this QMF2 implementation fairly
- * free of dependencies and using Promises would require external libraries.
- * Instead the correlator implements "Promise-like" semantics, you might call it
- * a broken Promise :-)
- * <p>
- * in particular the request method behaves a *bit* like Promise.all() though it
- * is mostly fake and takes an array of functions that call the add() method
- * which is really the method used to associate response objects by correlationID.
- * The then method is used to register a listener that will be called when all
- * the requests that have been registered have received responses.
- * TODO error/timeout handling.
- */
-var correlator = {
-    _resolve: null,
-    _objects: {},
-    add: function(id) {
-        this._objects[id] = {complete: false, list: null};
-    },
-    request: function() {
-        this._resolve = function() {console.log("Warning: No resolver has been set")};
-        return this;
-    },
-    then: function(resolver) {
-        this._resolve = resolver ? resolver : this._resolve;
-    },
-    resolve: function() {
-        var opcode = message.properties['qmf.opcode'];
-        var correlationID = message.getCorrelationID();
-        var resp = this._objects[correlationID];
-        if (opcode === '_query_response') {
-            if (resp.list) {
-                Array.prototype.push.apply(resp.list, message.body); // This is faster than concat.
-            } else {
+    /**
+     * The correlator object is a mechanism used to correlate requests with their
+     * aynchronous responses. It might possible be better to make use of Promises
+     * to implement part of this behaviour but a mechanism would still be needed to
+     * correlate a request with its response callback in order to wrap things up in
+     * a Promise, so much of the behaviour of this object would still be required.
+     * In addition it seemed to make sense to make this QMF2 implementation fairly
+     * free of dependencies and using Promises would require external libraries.
+     * Instead the correlator implements "Promise-like" semantics, you might call it
+     * a broken Promise :-)
+     * <p>
+     * in particular the request method behaves a *bit* like Promise.all() though it
+     * is mostly fake and takes an array of functions that call the add() method
+     * which is really the method used to associate response objects by correlationID.
+     * The then method is used to register a listener that will be called when all
+     * the requests that have been registered have received responses.
+     * TODO error/timeout handling.
+     */
+    var correlator = {
+        _resolve: null,
+        _objects: {},
+        add: function(id) {
+            this._objects[id] = {complete: false, list: null};
+        },
+        request: function() {
+            this._resolve = function() {console.log("Warning: No resolver has been set")};
+            return this;
+        },
+        then: function(resolver) {
+            this._resolve = resolver ? resolver : this._resolve;
+        },
+        resolve: function() {
+            var opcode = message.properties['qmf.opcode'];
+            var correlationID = message.getCorrelationID();
+            var resp = this._objects[correlationID];
+            if (opcode === '_query_response') {
+                if (resp.list) {
+                    Array.prototype.push.apply(resp.list, message.body); // This is faster than concat.
+                } else {
+                    resp.list = message.body;
+                }
+    
+                var partial = message.properties['partial'];
+                if (!partial) {
+                    resp.complete = true;
+                }
+    
+                this._objects[correlationID] = resp;
+                this._checkComplete();
+            } else if (opcode === '_method_response' || opcode === '_exception') {
                 resp.list = message.body;
-            }
-
-            var partial = message.properties['partial'];
-            if (!partial) {
                 resp.complete = true;
-            }
-
-            this._objects[correlationID] = resp;
-            this._checkComplete();
-        } else if (opcode === '_method_response' || opcode === '_exception') {
-            resp.list = message.body;
-            resp.complete = true;
-            this._objects[correlationID] = resp;
-            this._checkComplete();
-        } else {
-            console.error("Bad Message response, qmf.opcode = " + opcode);
-        }
-    },
-    _checkComplete: function() {
-        var response = {};
-        for (var id in this._objects) {
-            var object = this._objects[id];
-            if (object.complete) {
-                response[id] = object.list;
+                this._objects[correlationID] = resp;
+                this._checkComplete();
             } else {
-                return;
+                console.error("Bad Message response, qmf.opcode = " + opcode);
             }
+        },
+        _checkComplete: function() {
+            var response = {};
+            for (var id in this._objects) {
+                var object = this._objects[id];
+                if (object.complete) {
+                    response[id] = object.list;
+                } else {
+                    return;
+                }
+            }
+    
+            this._objects = {}; // Clear state ready for next call.
+            this._resolve(response.method ? response.method : response);
+        }
+    };  
+
+    var pumpData = function() {
+        while (messenger.incoming()) {
+            // The second parameter forces Binary payloads to be decoded as strings
+            // this is useful because the broker QMF Agent encodes strings as AMQP
+            // binary, which is a right pain from an interoperability perspective.
+            var t = messenger.get(message, true);
+            correlator.resolve();
+            messenger.accept(t);
         }
 
-        this._objects = {}; // Clear state ready for next call.
-        this._resolve(response.method ? response.method : response);
-    }
-};
+        if (messenger.isStopped()) {
+            message.free();
+            messenger.free();
+        }
+    };
 
-var pumpData = function() {
-    if (!subscribed) {
-        var subscriptionAddress = subscription.getAddress();
-        if (subscriptionAddress) {
-            subscribed = true;
+    this.getObjects = function(packageName, className) {
+        message.setAddress(brokerAddress);
+        message.setSubject('broker');
+        message.setReplyTo(replyTo);
+        message.setCorrelationID(className);
+        message.properties = {
+            "routing-key": "broker", // Added for Java Broker
+            "x-amqp-0-10.app-id": "qmf2",
+            "method": "request",
+            "qmf.opcode": "_query_request",
+        };
+        message.body = {
+            "_what": "OBJECT",
+            "_schema_id": {
+                "_package_name": packageName,
+                "_class_name": className
+            }
+        };
+
+        correlator.add(className);
+        messenger.put(message);
+    };
+
+    this.invokeMethod = function(object, method, arguments) {
+        var correlationID = 'method';
+        message.setAddress(brokerAddress);
+        message.setSubject('broker');
+        message.setReplyTo(replyTo);
+        message.setCorrelationID(correlationID);
+        message.properties = {
+            "routing-key": "broker", // Added for Java Broker
+            "x-amqp-0-10.app-id": "qmf2",
+            "method": "request",
+            "qmf.opcode": "_method_request",
+        };
+        message.body = {
+            "_object_id": object._object_id,
+            "_method_name" : method,
+            "_arguments"   : arguments
+        };
+
+        correlator.add(correlationID);
+        messenger.put(message);
+    };
+
+    this.addConnection = function(addr, callback) {
+        brokerAddress = addr + '/qmf.default.direct';
+        var replyAddress = addr + '/#';
+
+        messenger.on('subscription', function(subscription) {
+            var subscriptionAddress = subscription.getAddress();
             var splitAddress = subscriptionAddress.split('/');
             replyTo = splitAddress[splitAddress.length - 1];
+            callback();
+        });
 
-            onSubscription();
-        }
+        messenger.subscribe(replyAddress);
     }
 
-    while (messenger.incoming()) {
-        // The second parameter forces Binary payloads to be decoded as strings
-        // this is useful because the broker QMF Agent encodes strings as AMQP
-        // binary, which is a right pain from an interoperability perspective.
-        var t = messenger.get(message, true);
-        correlator.resolve();
-        messenger.accept(t);
+    this.destroy = function() {
+        messenger.stop(); 
     }
 
-    if (messenger.isStopped()) {
-        message.free();
-        messenger.free();
-    }
+    this.request = function() {return correlator.request();}
+
+    messenger.on('error', function(error) {console.log(error);});
+    messenger.on('work', pumpData);
+    messenger.setOutgoingWindow(1024);
+    messenger.recv(); // Receive as many messages as messenger can buffer.
+    messenger.start();
 };
-
-var getObjects = function(packageName, className) {
-    message.setAddress(address);
-    message.setSubject('broker');
-    message.setReplyTo(replyTo);
-    message.setCorrelationID(className);
-    message.properties = {
-        "routing-key": "broker", // Added for Java Broker
-        "x-amqp-0-10.app-id": "qmf2",
-        "method": "request",
-        "qmf.opcode": "_query_request",
-    };
-    message.body = {
-        "_what": "OBJECT",
-        "_schema_id": {
-            "_package_name": packageName,
-            "_class_name": className
-        }
-    };
-
-    correlator.add(className);
-    messenger.put(message);
-};
-
-var invokeMethod = function(object, method, arguments) {
-    var correlationID = 'method';
-    message.setAddress(address);
-    message.setSubject('broker');
-    message.setReplyTo(replyTo);
-    message.setCorrelationID(correlationID);
-    message.properties = {
-        "routing-key": "broker", // Added for Java Broker
-        "x-amqp-0-10.app-id": "qmf2",
-        "method": "request",
-        "qmf.opcode": "_method_request",
-    };
-    message.body = {
-        "_object_id": object._object_id,
-        "_method_name" : method,
-        "_arguments"   : arguments
-    };
-
-    correlator.add(correlationID);
-    messenger.put(message);
-};
-
-messenger.on('error', function(error) {console.log(error);});
-messenger.on('work', pumpData);
-messenger.setOutgoingWindow(1024);
-messenger.start();
-
-subscription = messenger.subscribe('amqp://' + addr + '/#');
-messenger.recv(); // Receive as many messages as messenger can buffer.
 
 
 /************************* qpid-config business logic ************************/
+
+var brokerAgent = new qmf.Console();
 
 var _usage =
 'Usage:  qpid-config [OPTIONS]\n' +
@@ -382,7 +390,7 @@ var getValue = function(r) {
 
 var config = {
     _recursive      : false,
-    _host           : 'localhost:5673', // Note 5673 not 5672 as we use WebSocket transport.
+    _host           : 'guest:guest@localhost:5673', // Note 5673 not 5672 as we use WebSocket transport.
     _connTimeout    : 10,
     _ignoreDefault  : false,
     _altern_ex      : null,
@@ -539,10 +547,10 @@ var renderObject = function(obj, list) {
  */
 
 var overview = function() {
-    correlator.request(
+    brokerAgent.request(
         // Send the QMF query requests for the specified classes.
-        getObjects('org.apache.qpid.broker', 'queue'),
-        getObjects('org.apache.qpid.broker', 'exchange')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'queue'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange')
     ).then(function(objects) {
         var exchanges = objects.exchange;
         var queues = objects.queue;
@@ -571,14 +579,14 @@ var overview = function() {
         }
         console.log("        durable: " + durable);
         console.log("    non-durable: " + (queues.length - durable));
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
 var exchangeList = function(filter) {
-    correlator.request(
+    brokerAgent.request(
         // Send the QMF query requests for the specified classes.
-        getObjects('org.apache.qpid.broker', 'exchange')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange')
     ).then(function(objects) {
         var exchanges = objects.exchange;
         var exMap = idMap(exchanges);
@@ -630,16 +638,16 @@ var exchangeList = function(filter) {
                 console.log(string);
             }
         }
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
 var exchangeListRecurse = function(filter) {
-    correlator.request(
+    brokerAgent.request(
         // Send the QMF query requests for the specified classes.
-        getObjects('org.apache.qpid.broker', 'queue'),
-        getObjects('org.apache.qpid.broker', 'exchange'),
-        getObjects('org.apache.qpid.broker', 'binding')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'queue'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'binding')
     ).then(function(objects) {
         var exchanges = objects.exchange;
         var bindings = objects.binding;
@@ -666,15 +674,15 @@ var exchangeListRecurse = function(filter) {
                 }
             }
         }
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
 var queueList = function(filter) {
-    correlator.request(
+    brokerAgent.request(
         // Send the QMF query requests for the specified classes.
-        getObjects('org.apache.qpid.broker', 'queue'),
-        getObjects('org.apache.qpid.broker', 'exchange')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'queue'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange')
     ).then(function(objects) {
         var queues = objects.queue;
         var exMap = idMap(objects.exchange);
@@ -763,16 +771,16 @@ var queueList = function(filter) {
                 console.log(string);
             }
         }
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
 var queueListRecurse = function(filter) {
-    correlator.request(
+    brokerAgent.request(
         // Send the QMF query requests for the specified classes.
-        getObjects('org.apache.qpid.broker', 'queue'),
-        getObjects('org.apache.qpid.broker', 'exchange'),
-        getObjects('org.apache.qpid.broker', 'binding')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'queue'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'binding')
     ).then(function(objects) {
         var queues = objects.queue;
         var bindings = objects.binding;
@@ -806,7 +814,7 @@ var queueListRecurse = function(filter) {
                 }
             }
         }
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
@@ -836,7 +844,6 @@ var queueListRecurse = function(filter) {
  */
 
 var handleMethodResponse = function(response, dontStop) {
-console.log("Method result");
     if (response._arguments) {
         //console.log(response._arguments);
     } if (response._values) {
@@ -845,7 +852,7 @@ console.log("Method result");
     // Mostly we want to stop the Messenger Event loop and exit when a QMF method
     // returns, but sometimes we don't, the dontStop flag prevents this behaviour.
     if (!dontStop) {
-        messenger.stop();
+        brokerAgent.destroy();
     }
 }
 
@@ -885,13 +892,13 @@ var addExchange = function(args) {
         declArgs[REPLICATE] = config._replicate;
     }
 
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'create', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'create', {
                 "type":      "exchange",
                 "name":       ename,
                 "properties": declArgs,
@@ -907,13 +914,13 @@ var delExchange = function(args) {
 
     var ename = args[0];
 
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'delete', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'delete', {
                 "type":   "exchange",
                 "name":    ename})
         ).then(handleMethodResponse);
@@ -1009,13 +1016,13 @@ var addQueue = function(args) {
     // correlator object isn't as good as a real Promise and doesn't support
     // chaining of "then" calls, so where we have complex dependencies we still
     // get somewhat into "callback hell". TODO improve the correlator.
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'create', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'create', {
                 "type":      "queue",
                 "name":       qname,
                 "properties": declArgs,
@@ -1024,18 +1031,18 @@ var addQueue = function(args) {
             if (config._start_replica) {
                 handleMethodResponse(response, true); // The second parameter prevents exiting.
                 // TODO test this stuff!
-                correlator.request(
-                    getObjects('org.apache.qpid.ha', 'habroker') // Not sure if this is correct
+                brokerAgent.request(
+                    brokerAgent.getObjects('org.apache.qpid.ha', 'habroker') // Not sure if this is correct
                 ).then(function(objects) {
                     if (objects.habroker.length > 0) {
                         var habroker = objects.habroker[0];
-                        correlator.request(
-                            invokeMethod(habroker, 'replicate', {
+                        brokerAgent.request(
+                            brokerAgent.invokeMethod(habroker, 'replicate', {
                                 "broker": config._start_replica,
                                 "queue":  qname})
                         ).then(handleMethodResponse);
                     } else {
-                        messenger.stop();
+                        brokerAgent.destroy();
                     }
                 });
             } else {
@@ -1052,13 +1059,13 @@ var delQueue = function(args) {
 
     var qname = args[0];
 
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'delete', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'delete', {
                 "type":   "queue",
                 "name":    qname,
                 "options": {"if_empty":  config._if_empty,
@@ -1092,9 +1099,6 @@ var snarf_header_args = function(args) {
 };
 
 var bind = function(args) {
-console.log("bind");
-console.log(args);
-
     if (args.length < 2) {
         usage();
     }
@@ -1107,10 +1111,10 @@ console.log(args);
         key = args[2];
     }
 
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker'),
-        getObjects('org.apache.qpid.broker', 'exchange') // Get exchanges to look up exchange type.
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker'),
+        brokerAgent.getObjects('org.apache.qpid.broker', 'exchange') // Get exchanges to look up exchange type.
     ).then(function(objects) {
         var exchanges = objects.exchange;
 
@@ -1136,15 +1140,15 @@ console.log(args);
         } else if (etype === 'headers') {
             declArgs = snarf_header_args(Array.prototype.slice.apply(args, [3]));
         }
-console.log(declArgs);
+//console.log(declArgs);
 
         if (typeof declArgs !== 'object') {
             process.exit(1);
         }
 
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'create', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'create', {
                 "type":   "binding",
                 "name":    ename + '/' + qname + '/' + key,
                 "properties": declArgs,
@@ -1177,9 +1181,6 @@ console.log(declArgs);
 };
 
 var unbind = function(args) {
-console.log("unbind");
-console.log(args);
-
     if (args.length < 2) {
         usage();
     }
@@ -1192,13 +1193,13 @@ console.log(args);
         key = args[2];
     }
 
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
-            invokeMethod(broker, 'delete', {
+        brokerAgent.request(
+            brokerAgent.invokeMethod(broker, 'delete', {
                 "type":   "binding",
                 "name":    ename + '/' + qname + '/' + key})
         ).then(handleMethodResponse);
@@ -1216,14 +1217,14 @@ console.log(args);
  */
 
 var createObject = function(type, name, args) {
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
+        brokerAgent.request(
             // Create an object of the specified type.
-            invokeMethod(broker, 'create', {
+            brokerAgent.invokeMethod(broker, 'create', {
                 "type":       type,
                 "name":       name,
                 "properties": args,
@@ -1233,14 +1234,14 @@ var createObject = function(type, name, args) {
 };
 
 var deleteObject = function(type, name, args) {
-    correlator.request(
+    brokerAgent.request(
         // We invoke the CRUD methods on the broker object.
-        getObjects('org.apache.qpid.broker', 'broker')
+        brokerAgent.getObjects('org.apache.qpid.broker', 'broker')
     ).then(function(objects) {
         var broker = objects.broker[0];
-        correlator.request(
+        brokerAgent.request(
             // Create an object of the specified type and name.
-            invokeMethod(broker, 'delete', {
+            brokerAgent.invokeMethod(broker, 'delete', {
                 "type":    type,
                 "name":    name,
                 "options": args})
@@ -1252,8 +1253,8 @@ var deleteObject = function(type, name, args) {
  * This is a "generic" mechanism for listing arbitrary Management Objects.
  */
 var listObjects = function(type) {
-    correlator.request(
-        getObjects('org.apache.qpid.broker', type)
+    brokerAgent.request(
+        brokerAgent.getObjects('org.apache.qpid.broker', type)
     ).then(function(objects) {
         // The correlator passes an object containing responses for all of the
         // supplied requests so we index it by the supplied type to get our response.
@@ -1325,23 +1326,23 @@ var listObjects = function(type) {
             console.log(string);
         }
 
-        messenger.stop();
+        brokerAgent.destroy();
     });
 };
 
 var reloadAcl = function() {
-    correlator.request(
-        getObjects('org.apache.qpid.acl', 'acl')
+    brokerAgent.request(
+        brokerAgent.getObjects('org.apache.qpid.acl', 'acl')
     ).then(function(objects) {
         if (objects.acl.length > 0) {
             var acl = objects.acl[0];
-            correlator.request(
+            brokerAgent.request(
                 // Create an object of the specified type.
-                invokeMethod(acl, 'reloadACLFile', {})
+                brokerAgent.invokeMethod(acl, 'reloadACLFile', {})
             ).then(handleMethodResponse);
         } else {
             console.log("Failed: No ACL Loaded in Broker");
-            messenger.stop();
+            brokerAgent.destroy();
         }
     });
 };
@@ -1502,9 +1503,6 @@ if (params.length > 0) {
 }
 
 //console.log(config._host);
+brokerAgent.addConnection(config._host, command);
 
-
-var onSubscription = function() {
-    command();
-};
 

@@ -19,10 +19,13 @@
  *
  */
 
-// Check if the environment is Node.js and if so import the required library.
-if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("spout.js should be run in Node.js");
+    return;
 }
+
+var proton = require("qpid-proton");
 
 console.log("spout not implemented yet");
 process.exit(0);

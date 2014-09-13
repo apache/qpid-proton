@@ -23,12 +23,15 @@
  * proton.Data wrapper class.
  */
 
-// Check if the environment is Node.js and if so import the required libraries.
-if (typeof exports !== "undefined" && exports !== null) {
-    unittest = require("./unittest.js");
-    assert = require("assert");
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("codec.js should be run in Node.js");
+    return;
 }
+
+var unittest = require("./unittest.js");
+var assert = require("assert");
+var proton = require("qpid-proton");
 
 // Extend TestCase by creating a prototype instance and adding test methods as properties.
 var DataTest = new unittest.TestCase();

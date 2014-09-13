@@ -19,10 +19,13 @@
  *
  */
 
-// Check if the environment is Node.js and if so import the required library.
-if (typeof exports !== "undefined" && exports !== null) {
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("soak.js should be run in Node.js");
+    return;
 }
+
+var proton = require("qpid-proton");
 
 var addr = 'guest:guest@localhost:5673';
 //var addr = 'localhost:5673';
@@ -30,8 +33,6 @@ var address = 'amqp://' + addr;
 console.log(address);
 
 var subscriptionQueue = '';
-var subscription;
-var subscribed = false;
 var count = 0;
 var start = 0; // Start Time.
 
@@ -39,16 +40,6 @@ var message = new proton.Message();
 var messenger = new proton.Messenger();
 
 var pumpData = function() {
-    if (!subscribed) {
-        var subscriptionAddress = subscription.getAddress();
-        if (subscriptionAddress) {
-            subscribed = true;
-            var splitAddress = subscriptionAddress.split('/');
-            subscriptionQueue = splitAddress[splitAddress.length - 1];
-            onSubscription();
-        }
-    }
-
     while (messenger.incoming()) {
         // The second parameter forces Binary payloads to be decoded as strings
         // this is useful because the broker QMF Agent encodes strings as AMQP
@@ -84,16 +75,21 @@ var sendMessage = function() {
 
 messenger.on('error', function(error) {console.log(error);});
 messenger.on('work', pumpData);
-//messenger.setOutgoingWindow(1024);
-messenger.setIncomingWindow(1024); // The Java Broker seems to need this.
-messenger.start();
+messenger.on('subscription', function(subscription) {
+    var subscriptionAddress = subscription.getAddress();
+    var splitAddress = subscriptionAddress.split('/');
+    subscriptionQueue = splitAddress[splitAddress.length - 1];
 
-subscription = messenger.subscribe('amqp://' + addr + '/#');
-messenger.recv(); // Receive as many messages as messenger can buffer.
-
-var onSubscription = function() {
     console.log("Subscription Queue: " + subscriptionQueue);
     start = +new Date();
     sendMessage();
-};
+});
+
+//messenger.setOutgoingWindow(1024);
+messenger.setIncomingWindow(1024); // The Java Broker seems to need this.
+messenger.recv(); // Receive as many messages as messenger can buffer.
+messenger.start();
+
+messenger.subscribe('amqp://' + addr + '/#');
+
 

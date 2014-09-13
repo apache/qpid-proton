@@ -23,12 +23,15 @@
  * proton.Message wrapper class.
  */
 
-// Check if the environment is Node.js and if so import the required libraries.
-if (typeof exports !== "undefined" && exports !== null) {
-    unittest = require("./unittest.js");
-    assert = require("assert");
-    proton = require("qpid-proton");
+// Check if the environment is Node.js and if not log an error and exit.
+if (!exports) {
+    console.error("message.js should be run in Node.js");
+    return;
 }
+
+var unittest = require("./unittest.js");
+var assert = require("assert");
+var proton = require("qpid-proton");
 
 /**
  * JavaScript Implementation of Python's range() function taken from:
