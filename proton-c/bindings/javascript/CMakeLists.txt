@@ -254,7 +254,9 @@ add_custom_target(
 # If the docs target is specified and the jsdoc3 package for node.js has been
 # installed then build the JavaScript API documentation.
 if (NODE_JSDOC_FOUND)
-    message(STATUS "Documentation Enabled")
+    set(JSDOC_EXE ${PROJECT_SOURCE_DIR}/node_modules/.bin/jsdoc)
+
+    message(STATUS "Documentation Enabled. Using ${JSDOC_EXE} to build JavaScript docs")
     add_custom_target(docs-js COMMAND ${JSDOC_EXE}
                       -d ${CMAKE_CURRENT_BINARY_DIR}/html
                       ${CMAKE_CURRENT_SOURCE_DIR}/binding.js)

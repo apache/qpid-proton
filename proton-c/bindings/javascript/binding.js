@@ -35,7 +35,7 @@
  * be publicly visible from this package/module. We will use the associative
  * array form for declaring exported properties to prevent the Closure compiler
  * from minifying e.g. <pre>Module['Messenger'] = ...</pre>
- * Exported Objects can be used in client code using the appropriate namespace:
+ * Exported Objects can be used in client code using a more convenient namespace, e.g.:
  * <pre>
  * proton = require('qpid-proton');
  * var messenger = new proton.Messenger();
@@ -110,7 +110,7 @@ Module['Error'] = {
  * Constructs a proton.MessengerError instance.
  * @classdesc This class is a subclass of Error.
  * @constructor proton.MessengerError
- * @param the error message.
+ * @param {string} message the error message.
  */
 Module['MessengerError'] = function(message) { // MessengerError constructor.
     this.name = "MessengerError";
@@ -135,7 +135,7 @@ Module['MessengerError'].prototype.toString = function() {
  * Constructs a proton.MessageError instance.
  * @classdesc This class is a subclass of Error.
  * @constructor proton.MessageError
- * @param the error message.
+ * @param {string} message the error message.
  */
 Module['MessageError'] = function(message) { // MessageError constructor.
     this.name = "MessageError";
@@ -160,7 +160,7 @@ Module['MessageError'].prototype.toString = function() {
  * Constructs a proton.DataError instance.
  * @classdesc This class is a subclass of Error.
  * @constructor proton.DataError
- * @param the error message.
+ * @param {string} message the error message.
  */
 Module['DataError'] = function(message) { // DataError constructor.
     this.name = "DataError";
@@ -962,17 +962,16 @@ _Messenger_['rewrite'] = function(pattern, address) {
 /*****************************************************************************/
 
 /**
- * EventDispatch is a Singleton class that allows callbacks to be registered that
+ * EventDispatch is a Singleton class that allows callbacks to be registered which
  * will get triggered by the emscripten WebSocket network callbacks. Clients of
  * Messenger will register callbacks by calling:
  * <pre>
- * messenger.on('work', <callback function>);
+ * messenger.on('work', &lt;callback function&gt;);
  * </pre>
- * EventDispatch supports callback registration from multiple Messenger instances
- * and supports multiple callbacks being registered for each instance. The client
- * callbacks will actually be called when a given messenger has work available
- * or a WebSocket close has been occurred (in which case all registered callbacks
- * will be called).
+ * EventDispatch supports callback registration from multiple Messenger instances.
+ * The client callbacks will actually be called when a given messenger has work
+ * available or a WebSocket close has been occurred (in which case all registered
+ * callbacks will be called).
  * <p>
  * The approach implemented here allows the registered callbacks to follow a
  * similar pattern to _process_incoming and _process_outgoing in async.py
@@ -1557,7 +1556,7 @@ _Message_['getUserID'] = function() {
  * even if a string or {@link proton.Data.Uuid} has been passed to setUserID.
  * @method setUserID
  * @memberof! proton.Message#
- * @param {(string||proton.Data.Uuid)} id the new user id for the message.
+ * @param {(string|proton.Data.Uuid)} id the new user id for the message.
  */
 _Message_['setUserID'] = function(id) {
     // If the id parameter is a proton.Data.Binary use it otherwise create a Binary
