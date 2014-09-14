@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +21,10 @@
 
 /**
  * This is a fairly literal JavaScript port of codec.py used to unit test the
- * proton.Data wrapper class.
+ * proton.Data wrapper class. This suite of tests is actually testing the low
+ * level implementation methods used to access the AMQP type system and in
+ * practice most normal users wouldn't need to call these directly, rather users
+ * should simply use the putObject() and getObject() methods.
  */
 
 // Check if the environment is Node.js and if not log an error and exit.
@@ -357,7 +361,7 @@ DataTest.testString = function() {
 
 DataTest.testBigString = function() {
     // Try a 2MB string, this is about as big as we can cope with using the default
-    // emscripten heap size.
+    // emscripten heap size. TODO add run-time mechanism to increase heap size.
     console.log("testBigString");
     var data = "";
     for (var i = 0; i < 2000000; i++) {
@@ -387,7 +391,7 @@ DataTest.testBinary = function() {
     console.log("testBinary");
     this._test("binary", new proton.Data.Binary(["t".char(), "h".char(), "i".char(), "s".char()]),
                new proton.Data.Binary("is"), new proton.Data.Binary("a"), new proton.Data.Binary("test"),
-               new proton.Data.Binary("of"), new proton.Data.Binary("ВИНАРЫ"));
+               new proton.Data.Binary("of"), new proton.Data.Binary("двоичные данные"));
     console.log("OK\n");
 };
 

@@ -1199,7 +1199,22 @@ _Message_._preEncode = function() {
 
     body.clear();
     if (this['body']) {
-        body['putObject'](this['body']);
+        var contentType = this['getContentType']();
+        if (contentType) {
+            var value = this['body'];
+            if (contentType === 'application/json' && JSON) { // Optionally encode body as JSON.
+                var json = JSON.stringify(value);
+                value = new Data['Binary'](json);
+            } else if (!(value instanceof Data['Binary'])) { // Construct a Binary from the body
+                value = new Data['Binary'](value);
+            }
+            // As content-type is set we send as an opaque AMQP data section.
+            this['setInferred'](true);
+            body['putBINARY'](value);
+        } else { // By default encode body using the native AMQP type system.
+            this['setInferred'](false);
+            body['putObject'](this['body']);
+        }
     }
 };
 
@@ -1240,6 +1255,15 @@ _Message_._postDecode = function(decodeBinaryAsString) {
     if (body.next()) {
         this['data'] = body;
         this['body'] = body['getObject']();
+        var contentType = this['getContentType']();
+        if (contentType) {
+            if (contentType === 'application/json' && JSON) {
+                var json = this['body'].toString(); // Convert Binary to String.
+                this['body'] = JSON.parse(json);
+            } else if (contentType.indexOf('text/') === 0) { // It's a text/* MIME type
+                this['body'] = this['body'].toString(); // Convert Binary to String.
+            }
+        }
     } else {
         this['data'] = null;
         this['body'] = null;
@@ -1528,7 +1552,7 @@ _Message_['getUserID'] = function() {
 /**
  * Set the user id for a message. This method takes a {@link proton.Data.Binary}
  * consuming the underlying raw data in the process. For convenience this method
- * also accepts a {@link proton.Data.Uuid} or a string, converting them to a
+ * also accepts a {@link proton.Data.Uuid}, number or string, converting them to a
  * Binary internally. N.B. getUserID always returns a {@link proton.Data.Binary}
  * even if a string or {@link proton.Data.Uuid} has been passed to setUserID.
  * @method setUserID
