@@ -33,7 +33,6 @@
 #include "../platform.h"
 #include "../platform_fmt.h"
 #include "../transport/transport.h"
-#include "../engine/event.h"
 
 // endpoints
 
@@ -331,8 +330,6 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint)
   pn_condition_tini(&endpoint->remote_condition);
   pn_condition_tini(&endpoint->condition);
 }
-
-#include "event.h"
 
 static bool pni_post_final(pn_endpoint_t *endpoint, pn_event_type_t type)
 {
@@ -1733,4 +1730,78 @@ int pn_condition_redirect_port(pn_condition_t *condition)
   int port = pn_data_get_int(data);
   pn_data_rewind(data);
   return port;
+}
+
+pn_connection_t *pn_event_connection(pn_event_t *event)
+{
+  pn_session_t *ssn;
+  pn_transport_t *transport;
+
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_CONNECTION:
+    return (pn_connection_t *) pn_event_context(event);
+  case PN_EVENT_CATEGORY_TRANSPORT:
+    transport = pn_event_transport(event);
+    if (transport)
+      return transport->connection;
+    return NULL;
+  default:
+    ssn = pn_event_session(event);
+    if (ssn)
+     return pn_session_connection(ssn);
+  }
+  return NULL;
+}
+
+pn_session_t *pn_event_session(pn_event_t *event)
+{
+  pn_link_t *link;
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_SESSION:
+    return (pn_session_t *) pn_event_context(event);
+  default:
+    link = pn_event_link(event);
+    if (link)
+      return pn_link_session(link);
+  }
+  return NULL;
+}
+
+pn_link_t *pn_event_link(pn_event_t *event)
+{
+  pn_delivery_t *dlv;
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_LINK:
+    return (pn_link_t *) pn_event_context(event);
+  default:
+    dlv = pn_event_delivery(event);
+    if (dlv)
+      return pn_delivery_link(dlv);
+  }
+  return NULL;
+}
+
+pn_delivery_t *pn_event_delivery(pn_event_t *event)
+{
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_DELIVERY:
+    return (pn_delivery_t *) pn_event_context(event);
+  default:
+    return NULL;
+  }
+}
+
+pn_transport_t *pn_event_transport(pn_event_t *event)
+{
+  switch (pn_event_category(event)) {
+  case PN_EVENT_CATEGORY_TRANSPORT:
+    return (pn_transport_t *) pn_event_context(event);
+  default:
+    {
+      pn_connection_t *conn = pn_event_connection(event);
+      if (conn)
+        return pn_connection_transport(conn);
+      return NULL;
+    }
+  }
 }

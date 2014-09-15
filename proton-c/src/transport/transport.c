@@ -30,8 +30,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "../engine/event.h"
-
 #include "../sasl/sasl-internal.h"
 #include "../ssl/ssl-internal.h"
 #include "../platform.h"

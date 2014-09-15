@@ -257,6 +257,25 @@ PN_EXTERN pn_collector_t *pn_collector(void);
 PN_EXTERN void pn_collector_free(pn_collector_t *collector);
 
 /**
+ * Place a new event on a collector.
+ *
+ * This operation will create a new event of the given type and
+ * context and return a pointer to the newly created event. In some
+ * cases an event of the given type and context can be elided. When
+ * this happens, this operation will return a NULL pointer.
+ *
+ * @param[in] collector a collector object
+ * @param[in] type the event type
+ * @param[in] context the event context
+ *
+ * @return a pointer to the newly created event or NULL if the event
+ *         was elided
+ */
+
+pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type,
+                             void *context);
+
+/**
  * Access the head event contained by a collector.
  *
  * This operation will continue to return the same event until it is
