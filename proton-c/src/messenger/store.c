@@ -89,7 +89,7 @@ pni_store_t *pni_store()
   store->window = 0;
   store->lwm = 0;
   store->hwm = 0;
-  store->tracked = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
+  store->tracked = pn_hash(PN_OBJECT, 0, 0.75);
 
   return store;
 }

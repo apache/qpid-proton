@@ -44,20 +44,16 @@ struct pn_map_t {
   uintptr_t (*hashcode)(void *key);
   bool (*equals)(void *a, void *b);
   float load_factor;
-  bool count_keys;
-  bool count_values;
 };
 
 static void pn_map_finalize(void *object)
 {
   pn_map_t *map = (pn_map_t *) object;
 
-  if (map->count_keys || map->count_values) {
-    for (size_t i = 0; i < map->capacity; i++) {
-      if (map->entries[i].state != PNI_ENTRY_FREE) {
-        if (map->count_keys) pn_class_decref(map->key, map->entries[i].key);
-        if (map->count_values) pn_class_decref(map->value, map->entries[i].value);
-      }
+  for (size_t i = 0; i < map->capacity; i++) {
+    if (map->entries[i].state != PNI_ENTRY_FREE) {
+      pn_class_decref(map->key, map->entries[i].key);
+      pn_class_decref(map->value, map->entries[i].value);
     }
   }
 
@@ -123,7 +119,7 @@ static int pn_map_inspect(void *obj, pn_string_t *dst)
 #define pn_map_compare NULL
 
 pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
-                 size_t capacity, float load_factor, int options)
+                 size_t capacity, float load_factor)
 {
   static const pn_class_t clazz = PN_CLASS(pn_map);
 
@@ -136,8 +132,6 @@ pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
   map->load_factor = load_factor;
   map->hashcode = pn_hashcode;
   map->equals = pn_equals;
-  map->count_keys = (options & PN_REFCOUNT) || (options & PN_REFCOUNT_KEY);
-  map->count_values = (options & PN_REFCOUNT) || (options & PN_REFCOUNT_VALUE);
   pni_map_allocate(map);
   return map;
 }
@@ -175,8 +169,8 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
       void *key = entries[i].key;
       void *value = entries[i].value;
       pn_map_put(map, key, value);
-      if (map->count_keys) pn_class_decref(map->key, key);
-      if (map->count_values) pn_class_decref(map->value, value);
+      pn_class_decref(map->key, key);
+      pn_class_decref(map->value, value);
     }
   }
 
@@ -195,7 +189,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     if (create) {
       entry->state = PNI_ENTRY_TAIL;
       entry->key = key;
-      if (map->count_keys) pn_class_incref(map->key, key);
+      pn_class_incref(map->key, key);
       map->size++;
       return entry;
     } else {
@@ -235,7 +229,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     entry->state = PNI_ENTRY_LINK;
     map->entries[empty].state = PNI_ENTRY_TAIL;
     map->entries[empty].key = key;
-    if (map->count_keys) pn_class_incref(map->key, key);
+    pn_class_incref(map->key, key);
     if (pprev) *pprev = entry;
     map->size++;
     return &map->entries[empty];
@@ -248,9 +242,9 @@ int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
-  if (map->count_values) pn_class_decref(map->value, entry->value);
+  pn_class_decref(map->value, entry->value);
   entry->value = value;
-  if (map->count_values) pn_class_incref(map->value, value);
+  pn_class_incref(map->value, value);
   return 0;
 }
 
@@ -267,8 +261,8 @@ void pn_map_del(pn_map_t *map, void *key)
   pni_entry_t *prev = NULL;
   pni_entry_t *entry = pni_map_entry(map, key, &prev, false);
   if (entry) {
-    void *dref_key = (map->count_keys) ? entry->key : NULL;
-    void *dref_value = (map->count_values) ? entry->value : NULL;
+    void *dref_key = entry->key;
+    void *dref_value = entry->value;
     if (prev) {
       prev->next = entry->next;
       prev->state = entry->state;
@@ -283,8 +277,8 @@ void pn_map_del(pn_map_t *map, void *key)
     entry->key = NULL;
     entry->value = NULL;
     map->size--;
-    if (dref_key) pn_class_decref(map->key, dref_key);
-    if (dref_value) pn_class_decref(map->value, dref_value);
+    pn_class_decref(map->key, dref_key);
+    pn_class_decref(map->value, dref_value);
   }
 }
 
@@ -342,16 +336,13 @@ static bool pni_identity_equals(void *a, void *b)
 
 extern const pn_class_t *PN_UINTPTR;
 
-static const pn_class_t *pni_uintptr_reify(void *object) {
-  return PN_UINTPTR;
-}
-
+static const pn_class_t *pni_uintptr_reify(void *object) { return PN_UINTPTR; }
 #define pni_uintptr_new NULL
 #define pni_uintptr_free NULL
 #define pni_uintptr_initialize NULL
-#define pni_uintptr_incref NULL
-#define pni_uintptr_decref NULL
-#define pni_uintptr_refcount NULL
+static void pni_uintptr_incref(void *object) {}
+static void pni_uintptr_decref(void *object) {}
+static int pni_uintptr_refcount(void *object) { return -1; }
 #define pni_uintptr_finalize NULL
 #define pni_uintptr_hashcode NULL
 #define pni_uintptr_compare NULL
@@ -360,13 +351,11 @@ static const pn_class_t *pni_uintptr_reify(void *object) {
 const pn_class_t PNI_UINTPTR = PN_METACLASS(pni_uintptr);
 const pn_class_t *PN_UINTPTR = &PNI_UINTPTR;
 
-pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor, int options)
+pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
 {
-  pn_hash_t *hash = (pn_hash_t *) pn_map(PN_UINTPTR, clazz, capacity, load_factor, 0);
+  pn_hash_t *hash = (pn_hash_t *) pn_map(PN_UINTPTR, clazz, capacity, load_factor);
   hash->map.hashcode = pni_identity_hashcode;
   hash->map.equals = pni_identity_equals;
-  hash->map.count_keys = false;
-  hash->map.count_values = options & PN_REFCOUNT;
   return hash;
 }
 

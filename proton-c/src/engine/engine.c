@@ -379,7 +379,7 @@ pn_connection_t *pn_connection()
   pn_endpoint_init(&conn->endpoint, CONNECTION, conn);
   conn->transport_head = NULL;
   conn->transport_tail = NULL;
-  conn->sessions = pn_list(PN_OBJECT, 0, 0);
+  conn->sessions = pn_list(PN_WEAKREF, 0);
   conn->transport = NULL;
   conn->work_head = NULL;
   conn->work_tail = NULL;
@@ -723,7 +723,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
 
   pn_endpoint_init(&ssn->endpoint, SESSION, conn);
   pn_add_session(conn, ssn);
-  ssn->links = pn_list(PN_OBJECT, 0, 0);
+  ssn->links = pn_list(PN_WEAKREF, 0);
   ssn->context = 0;
   ssn->incoming_capacity = 1024*1024;
   ssn->incoming_bytes = 0;
@@ -737,8 +737,8 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->state.remote_channel = (uint16_t)-1;
   pn_delivery_map_init(&ssn->state.incoming, 0);
   pn_delivery_map_init(&ssn->state.outgoing, 0);
-  ssn->state.local_handles = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
-  ssn->state.remote_handles = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
+  ssn->state.local_handles = pn_hash(PN_OBJECT, 0, 0.75);
+  ssn->state.remote_handles = pn_hash(PN_OBJECT, 0, 0.75);
   // end transport state
 
   pn_collector_put(conn->collector, PN_SESSION_INIT, ssn);

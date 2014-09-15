@@ -28,7 +28,6 @@ struct pn_list_t {
   size_t capacity;
   size_t size;
   void **elements;
-  int options;
 };
 
 size_t pn_list_size(pn_list_t *list)
@@ -47,9 +46,9 @@ void pn_list_set(pn_list_t *list, int index, void *value)
 {
   assert(list); assert(list->size);
   void *old = list->elements[index % list->size];
-  if (list->options & PN_REFCOUNT) pn_class_decref(list->clazz, old);
+  pn_class_decref(list->clazz, old);
   list->elements[index % list->size] = value;
-  if (list->options & PN_REFCOUNT) pn_class_incref(list->clazz, value);
+  pn_class_incref(list->clazz, value);
 }
 
 void pn_list_ensure(pn_list_t *list, size_t capacity)
@@ -69,7 +68,7 @@ int pn_list_add(pn_list_t *list, void *value)
   assert(list);
   pn_list_ensure(list, list->size + 1);
   list->elements[list->size++] = value;
-  if (list->options & PN_REFCOUNT) pn_class_incref(list->clazz, value);
+  pn_class_incref(list->clazz, value);
   return 0;
 }
 
@@ -102,10 +101,8 @@ void pn_list_del(pn_list_t *list, int index, int n)
   assert(list);
   index %= list->size;
 
-  if (list->options & PN_REFCOUNT) {
-    for (int i = 0; i < n; i++) {
-      pn_class_decref(list->clazz, list->elements[index + i]);
-    }
+  for (int i = 0; i < n; i++) {
+    pn_class_decref(list->clazz, list->elements[index + i]);
   }
 
   size_t slide = list->size - (index + n);
@@ -156,7 +153,7 @@ static void pn_list_finalize(void *object)
   assert(object);
   pn_list_t *list = (pn_list_t *) object;
   for (size_t i = 0; i < list->size; i++) {
-    if (list->options & PN_REFCOUNT) pn_class_decref(list->clazz, pn_list_get(list, i));
+    pn_class_decref(list->clazz, pn_list_get(list, i));
   }
   free(list->elements);
 }
@@ -214,7 +211,7 @@ static int pn_list_inspect(void *obj, pn_string_t *dst)
 
 #define pn_list_initialize NULL
 
-pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity, int options)
+pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity)
 {
   static const pn_class_t list_clazz = PN_CLASS(pn_list);
 
@@ -223,7 +220,6 @@ pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity, int options)
   list->capacity = capacity ? capacity : 16;
   list->elements = (void **) malloc(list->capacity * sizeof(void *));
   list->size = 0;
-  list->options = options;
   return list;
 }
 

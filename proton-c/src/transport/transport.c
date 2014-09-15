@@ -41,7 +41,7 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
-  db->deliveries = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
+  db->deliveries = pn_hash(PN_OBJECT, 0, 0.75);
   db->next = next;
 }
 
@@ -163,8 +163,8 @@ static void pn_transport_initialize(void *object)
   transport->disp_data = pn_data(0);
   pn_condition_init(&transport->remote_condition);
 
-  transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
-  transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
+  transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75);
+  transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75);
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
