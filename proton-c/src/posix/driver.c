@@ -342,12 +342,12 @@ void pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connecti
 {
   if (!ctor) return;
   if (ctor->connection) {
-    pn_decref(ctor->connection);
+    pn_class_decref(PN_OBJECT, ctor->connection);
     pn_transport_unbind(ctor->transport);
   }
   ctor->connection = connection;
   if (ctor->connection) {
-    pn_incref(ctor->connection);
+    pn_class_incref(PN_OBJECT, ctor->connection);
     pn_transport_bind(ctor->transport, connection);
   }
   if (ctor->transport) pn_transport_trace(ctor->transport, ctor->trace);
@@ -404,7 +404,7 @@ void pn_connector_free(pn_connector_t *ctor)
   if (ctor->driver) pn_driver_remove_connector(ctor->driver, ctor);
   pn_transport_free(ctor->transport);
   ctor->transport = NULL;
-  if (ctor->connection) pn_decref(ctor->connection);
+  if (ctor->connection) pn_class_decref(PN_OBJECT, ctor->connection);
   ctor->connection = NULL;
   free(ctor);
 }

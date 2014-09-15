@@ -81,7 +81,7 @@ static int pn_collector_inspect(void *obj, pn_string_t *dst)
 pn_collector_t *pn_collector(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_collector);
-  pn_collector_t *collector = (pn_collector_t *) pn_new(sizeof(pn_collector_t), &clazz);
+  pn_collector_t *collector = (pn_collector_t *) pn_class_new(&clazz, sizeof(pn_collector_t));
   return collector;
 }
 
@@ -90,7 +90,7 @@ void pn_collector_free(pn_collector_t *collector)
   collector->freed = true;
   pn_collector_drain(collector);
   pn_collector_shrink(collector);
-  pn_decref(collector);
+  pn_class_decref(PN_OBJECT, collector);
 }
 
 pn_event_t *pn_event(void);
@@ -133,7 +133,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
 
   event->type = type;
   event->context = context;
-  pn_incref2(event->context, collector);
+  pn_class_incref(PN_OBJECT, event->context);
 
   //printf("event %s on %p\n", pn_event_type_name(event->type), event->context);
 
@@ -160,7 +160,7 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   // decref before adding to the free list
   if (event->context) {
-    pn_decref2(event->context, collector);
+    pn_class_decref(PN_OBJECT, event->context);
     event->context = NULL;
   }
 
@@ -201,7 +201,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 pn_event_t *pn_event(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_event);
-  pn_event_t *event = (pn_event_t *) pn_new(sizeof(pn_event_t), &clazz);
+  pn_event_t *event = (pn_event_t *) pn_class_new(&clazz, sizeof(pn_event_t));
   return event;
 }
 

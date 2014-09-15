@@ -45,7 +45,7 @@ void pn_selector_initialize(void *obj)
   selector->fds = NULL;
   selector->deadlines = NULL;
   selector->capacity = 0;
-  selector->selectables = pn_list(0, 0);
+  selector->selectables = pn_list(PN_OBJECT, 0, 0);
   selector->deadline = 0;
   selector->current = 0;
   selector->awoken = 0;
@@ -68,7 +68,7 @@ void pn_selector_finalize(void *obj)
 pn_selector_t *pni_selector(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_selector);
-  pn_selector_t *selector = (pn_selector_t *) pn_new(sizeof(pn_selector_t), &clazz);
+  pn_selector_t *selector = (pn_selector_t *) pn_class_new(&clazz, sizeof(pn_selector_t));
   return selector;
 }
 

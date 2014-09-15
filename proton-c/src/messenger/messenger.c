@@ -375,7 +375,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
     return NULL;
   }
 
-  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_new(sizeof(pn_listener_ctx_t), PN_OBJECT);
+  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_OBJECT, sizeof(pn_listener_ctx_t));
   ctx->messenger = messenger;
   ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   if (messenger->certificate) {
@@ -596,7 +596,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->blocking = true;
     m->passive = false;
     m->io = pn_io();
-    m->pending = pn_list(0, 0);
+    m->pending = pn_list(PN_OBJECT, 0, 0);
     m->interruptor = pni_selectable
       (pni_interruptor_capacity, pni_interruptor_pending,
        pni_interruptor_deadline, pni_interruptor_readable,
@@ -611,8 +611,8 @@ pn_messenger_t *pn_messenger(const char *name)
     pn_pipe(m->io, m->ctrl);
     pni_selectable_set_fd(m->interruptor, m->ctrl[0]);
     pni_selectable_set_context(m->interruptor, m);
-    m->listeners = pn_list(0, 0);
-    m->connections = pn_list(0, 0);
+    m->listeners = pn_list(PN_OBJECT, 0, 0);
+    m->connections = pn_list(PN_OBJECT, 0, 0);
     m->selector = pn_io_selector(m->io);
     m->collector = pn_collector();
     m->credit_mode = LINK_CREDIT_EXPLICIT;
@@ -621,13 +621,13 @@ pn_messenger_t *pn_messenger(const char *name)
     m->distributed = 0;
     m->receivers = 0;
     m->draining = 0;
-    m->credited = pn_list(0, 0);
-    m->blocked = pn_list(0, 0);
+    m->credited = pn_list(PN_OBJECT, 0, 0);
+    m->blocked = pn_list(PN_OBJECT, 0, 0);
     m->next_drain = 0;
     m->next_tag = 0;
     m->outgoing = pni_store();
     m->incoming = pni_store();
-    m->subscriptions = pn_list(0, PN_REFCOUNT);
+    m->subscriptions = pn_list(PN_OBJECT, 0, PN_REFCOUNT);
     m->incoming_subscription = NULL;
     m->error = pn_error();
     m->routes = pn_transform();

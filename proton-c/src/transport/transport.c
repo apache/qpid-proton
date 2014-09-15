@@ -41,7 +41,7 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
-  db->deliveries = pn_hash(0, 0.75, PN_REFCOUNT);
+  db->deliveries = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
   db->next = next;
 }
 
@@ -163,8 +163,8 @@ static void pn_transport_initialize(void *object)
   transport->disp_data = pn_data(0);
   pn_condition_init(&transport->remote_condition);
 
-  transport->local_channels = pn_hash(0, 0.75, PN_REFCOUNT);
-  transport->remote_channels = pn_hash(0, 0.75, PN_REFCOUNT);
+  transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
+  transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75, PN_REFCOUNT);
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
@@ -209,8 +209,8 @@ static void pn_transport_finalize(void *object);
 pn_transport_t *pn_transport()
 {
   static const pn_class_t clazz = PN_CLASS(pn_transport);
-  pn_transport_t *transport = (pn_transport_t *) pn_new(sizeof(pn_transport_t),
-                                                        &clazz);
+  pn_transport_t *transport =
+    (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
 
   transport->output_buf = (char *) malloc(transport->output_size);
@@ -266,7 +266,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   if (connection->transport) return PN_STATE_ERR;
   transport->connection = connection;
   connection->transport = transport;
-  pn_incref2(connection, transport);
+  pn_incref(connection);
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(connection->collector, PN_CONNECTION_REMOTE_OPEN, connection);
@@ -322,7 +322,7 @@ int pn_transport_unbind(pn_transport_t *transport)
   pni_transport_unbind_channels(transport->remote_channels);
 
   pn_connection_unbound(conn);
-  pn_decref2(conn, transport);
+  pn_decref(conn);
   return 0;
 }
 

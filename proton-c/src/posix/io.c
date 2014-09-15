@@ -69,7 +69,7 @@ void pn_io_finalize(void *obj)
 pn_io_t *pn_io(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_io);
-  pn_io_t *io = (pn_io_t *) pn_new(sizeof(pn_io_t), &clazz);
+  pn_io_t *io = (pn_io_t *) pn_class_new(&clazz, sizeof(pn_io_t));
   return io;
 }
 
