@@ -23,6 +23,7 @@ target
 .settings
 .cproject
 eclipse-classes
+.pydevproject
 # End of Eclipse IDE files
 
 # The usual location for proton-c build files
