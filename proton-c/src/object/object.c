@@ -47,6 +47,11 @@ static int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_ad
 const pn_class_t PNI_VOID = PN_METACLASS(pn_void);
 const pn_class_t *PN_VOID = &PNI_VOID;
 
+const char *pn_class_name(const pn_class_t *clazz)
+{
+  return clazz->name;
+}
+
 void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);

@@ -92,6 +92,7 @@ extern const pn_class_t *PN_WEAKREF;
     PREFIX ## _inspect                          \
 }
 
+PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
 PN_EXTERN void *pn_class_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void *pn_class_incref(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_refcount(const pn_class_t *clazz, void *object);

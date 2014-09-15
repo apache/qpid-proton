@@ -3321,29 +3321,32 @@ class SSLSessionDetails(object):
     return self._session_id
 
 
+wrappers = {
+  "pn_void": lambda x: pn_void2py(x),
+  "pn_connection": lambda x: Connection._wrap_connection(pn_cast_pn_connection(x)),
+  "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
+  "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
+  "pn_delivery": lambda x: Delivery._wrap_delivery(pn_cast_pn_delivery(x)),
+  "pn_transport": lambda x: Transport(pn_cast_pn_transport(x))
+}
+
 class Collector:
 
   def __init__(self):
     self._impl = pn_collector()
     self._contexts = set()
 
+  def put(self, obj, etype):
+    pn_collector_put(self._impl, PN_VOID, pn_py2void(obj), etype)
+
   def peek(self):
     event = pn_collector_peek(self._impl)
     if event is None:
       return None
 
-    tpi = pn_event_transport(event)
-    if tpi:
-      tp = Transport(tpi)
-    else:
-      tp = None
-    return Event(type=pn_event_type(event),
-                 category=pn_event_category(event),
-                 connection=Connection._wrap_connection(pn_event_connection(event)),
-                 session=Session._wrap_session(pn_event_session(event)),
-                 link=Link._wrap_link(pn_event_link(event)),
-                 delivery=Delivery._wrap_delivery(pn_event_delivery(event)),
-                 transport=tp)
+    clazz = pn_class_name(pn_event_class(event))
+    context = wrappers[clazz](pn_event_context(event))
+    return Event(clazz, context, pn_event_type(event))
 
   def pop(self):
     ev = self.peek()
@@ -3387,34 +3390,19 @@ class Event:
   DELIVERY = PN_DELIVERY
   TRANSPORT = PN_TRANSPORT
 
-  def __init__(self, type, category,
-               connection, session, link, delivery, transport):
+  def __init__(self, clazz, context, type):
+    self.clazz = clazz
+    self.context = context
     self.type = type
-    self.category = category
-    self.connection = connection
-    self.session = session
-    self.link = link
-    self.delivery = delivery
-    self.transport = transport
 
   def _popped(self, collector):
-    if self.type == Event.LINK_FINAL:
-      ctx = self.link
-    elif self.type == Event.SESSION_FINAL:
-      ctx = self.session
-    elif self.type == Event.CONNECTION_FINAL:
-      ctx = self.connection
-    else:
-      return
-
-    collector._contexts.remove(ctx)
-    ctx._released()
+    if self.type in (Event.LINK_FINAL, Event.SESSION_FINAL,
+                     Event.CONNECTION_FINAL):
+      collector._contexts.remove(self.context)
+      self.context._released()
 
   def __repr__(self):
-    objects = [self.connection, self.session, self.link, self.delivery,
-               self.transport]
-    return "%s(%s)" % (pn_event_type_name(self.type),
-                       ", ".join([str(o) for o in objects if o is not None]))
+    return "%s(%s)" % (pn_event_type_name(self.type), self.context)
 
 ###
 # Driver

@@ -26,6 +26,7 @@ typedef unsigned long int uint32_t;
 typedef long int int32_t;
 typedef unsigned long long int uint64_t;
 typedef long long int int64_t;
+typedef unsigned long int uintptr_t;
 
 /* Parse these interface header files to generate APIs for script languages */
 
@@ -1385,3 +1386,11 @@ typedef long long int int64_t;
 %ignore pn_data_vscan;
 
 %include "proton/codec.h"
+
+%inline %{
+  pn_connection_t *pn_cast_pn_connection(void *x) { return (pn_connection_t *) x; }
+  pn_session_t *pn_cast_pn_session(void *x) { return (pn_session_t *) x; }
+  pn_link_t *pn_cast_pn_link(void *x) { return (pn_link_t *) x; }
+  pn_delivery_t *pn_cast_pn_delivery(void *x) { return (pn_delivery_t *) x; }
+  pn_transport_t *pn_cast_pn_transport(void *x) { return (pn_transport_t *) x; }
+%}

@@ -272,8 +272,9 @@ PN_EXTERN void pn_collector_free(pn_collector_t *collector);
  *         was elided
  */
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type,
-                             void *context);
+pn_event_t *pn_collector_put(pn_collector_t *collector,
+                             const pn_class_t *clazz, void *context,
+                             pn_event_type_t type);
 
 /**
  * Access the head event contained by a collector.
@@ -311,6 +312,14 @@ PN_EXTERN pn_event_type_t pn_event_type(pn_event_t *event);
  * @return the category the event belongs to
  */
 PN_EXTERN pn_event_category_t pn_event_category(pn_event_t *event);
+
+/**
+ * Get the class associated with the event context.
+ *
+ * @param[in] event an event object
+ * @return the class associated with the event context
+ */
+PN_EXTERN const pn_class_t *pn_event_class(pn_event_t *event);
 
 /**
  * Get the context associated with an event.

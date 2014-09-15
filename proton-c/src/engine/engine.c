@@ -71,8 +71,8 @@ static void pn_endpoint_open(pn_endpoint_t *endpoint)
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, endpoint_event(endpoint->type, true),
-                   endpoint);
+  pn_collector_put(conn->collector, PN_OBJECT, endpoint,
+                   endpoint_event(endpoint->type, true));
   pn_modified(conn, endpoint, true);
 }
 
@@ -81,8 +81,8 @@ static void pn_endpoint_close(pn_endpoint_t *endpoint)
   // TODO: do we care about the current state?
   PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, endpoint_event(endpoint->type, false),
-                   endpoint);
+  pn_collector_put(conn->collector, PN_OBJECT, endpoint,
+                   endpoint_event(endpoint->type, false));
   pn_modified(conn, endpoint, true);
 }
 
@@ -336,7 +336,8 @@ static bool pni_post_final(pn_endpoint_t *endpoint, pn_event_type_t type)
   pn_connection_t *conn = pn_ep_get_connection(endpoint);
   if (!endpoint->posted_final) {
     endpoint->posted_final = true;
-    pn_event_t *event = pn_collector_put(conn->collector, type, endpoint);
+    pn_event_t *event = pn_collector_put(conn->collector, PN_OBJECT, endpoint,
+                                         type);
     if (event) { return true; }
   }
 
@@ -408,7 +409,7 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
   pn_incref(connection->collector);
   pn_endpoint_t *endpoint = connection->endpoint_head;
   while (endpoint) {
-    pn_collector_put(connection->collector, endpoint_init_event_map[endpoint->type], endpoint);
+    pn_collector_put(connection->collector, PN_OBJECT, endpoint, endpoint_init_event_map[endpoint->type]);
     endpoint = endpoint->endpoint_next;
   }
 }
@@ -596,8 +597,8 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
   }
 
   if (emit && connection->transport) {
-    pn_collector_put(connection->collector, PN_TRANSPORT,
-                     connection->transport);
+    pn_collector_put(connection->collector, PN_OBJECT, connection->transport,
+                     PN_TRANSPORT);
   }
 }
 
@@ -741,7 +742,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->state.remote_handles = pn_hash(PN_OBJECT, 0, 0.75);
   // end transport state
 
-  pn_collector_put(conn->collector, PN_SESSION_INIT, ssn);
+  pn_collector_put(conn->collector, PN_OBJECT, ssn, PN_SESSION_INIT);
   return ssn;
 }
 
@@ -857,7 +858,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->state.link_credit = 0;
   // end transport state
 
-  pn_collector_put(session->connection->collector, PN_LINK_INIT, link);
+  pn_collector_put(session->connection->collector, PN_OBJECT, link, PN_LINK_INIT);
   return link;
 }
 

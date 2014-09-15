@@ -81,6 +81,8 @@ public interface Event
 
     Type getType();
 
+    Object getContext();
+
     Connection getConnection();
 
     Session getSession();
