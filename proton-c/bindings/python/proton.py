@@ -2262,7 +2262,7 @@ class Connection(Endpoint):
     reference to the python instance in the context field of the C object.
     """
     if not c_conn: return None
-    py_conn = pn_connection_get_context(c_conn)
+    py_conn = pn_void2py(pn_connection_get_context(c_conn))
     if py_conn: return py_conn
     wrapper = Connection(_conn=c_conn)
     return wrapper
@@ -2273,7 +2273,7 @@ class Connection(Endpoint):
       self._conn = _conn
     else:
       self._conn = pn_connection()
-    pn_connection_set_context(self._conn, self)
+    pn_connection_set_context(self._conn, pn_py2void(self))
     self.offered_capabilities = None
     self.desired_capabilities = None
     self.properties = None
@@ -2406,7 +2406,7 @@ class Session(Endpoint):
     exists in the C Engine.
     """
     if c_ssn is None: return None
-    py_ssn = pn_session_get_context(c_ssn)
+    py_ssn = pn_void2py(pn_session_get_context(c_ssn))
     if py_ssn: return py_ssn
     wrapper = Session(c_ssn)
     return wrapper
@@ -2414,7 +2414,7 @@ class Session(Endpoint):
   def __init__(self, ssn):
     Endpoint.__init__(self)
     self._ssn = ssn
-    pn_session_set_context(self._ssn, self)
+    pn_session_set_context(self._ssn, pn_py2void(self))
     self._links = set()
     self.connection._sessions.add(self)
 
@@ -2503,7 +2503,7 @@ class Link(Endpoint):
     exists in the C Engine.
     """
     if c_link is None: return None
-    py_link = pn_link_get_context(c_link)
+    py_link = pn_void2py(pn_link_get_context(c_link))
     if py_link: return py_link
     if pn_link_is_sender(c_link):
       wrapper = Sender(c_link)
@@ -2514,7 +2514,7 @@ class Link(Endpoint):
   def __init__(self, c_link):
     Endpoint.__init__(self)
     self._link = c_link
-    pn_link_set_context(self._link, self)
+    pn_link_set_context(self._link, pn_py2void(self))
     self._deliveries = set()
     self.session._links.add(self)
 
@@ -2881,20 +2881,20 @@ class Delivery(object):
     exists in the C Engine.
     """
     if not c_dlv: return None
-    py_dlv = pn_delivery_get_context(c_dlv)
+    py_dlv = pn_void2py(pn_delivery_get_context(c_dlv))
     if py_dlv: return py_dlv
     wrapper = Delivery(c_dlv)
     return wrapper
 
   def __init__(self, dlv):
     self._dlv = dlv
-    pn_delivery_set_context(self._dlv, self)
+    pn_delivery_set_context(self._dlv, pn_py2void(self))
     self.local = Disposition(pn_delivery_local(self._dlv), True)
     self.remote = Disposition(pn_delivery_remote(self._dlv), False)
     self.link._deliveries.add(self)
 
   def __del__(self):
-    pn_delivery_set_context(self._dlv, None)
+    pn_delivery_set_context(self._dlv, pn_py2void(None))
 
   def _release(self):
     """Release the underlying C Engine resource."""
@@ -3422,7 +3422,7 @@ class Connector(object):
     exists in the C Driver.
     """
     if not c_cxtr: return None
-    py_cxtr = pn_connector_context(c_cxtr)
+    py_cxtr = pn_void2py(pn_connector_context(c_cxtr))
     if py_cxtr: return py_cxtr
     wrapper = Connector(_cxtr=c_cxtr, _py_driver=py_driver)
     return wrapper
@@ -3431,14 +3431,14 @@ class Connector(object):
     self._cxtr = _cxtr
     assert(_py_driver)
     self._driver = weakref.ref(_py_driver)
-    pn_connector_set_context(self._cxtr, self)
+    pn_connector_set_context(self._cxtr, pn_py2void(self))
     self._connection = None
     self._driver()._connectors.add(self)
 
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._cxtr:
-      pn_connector_set_context(self._cxtr, None)
+      pn_connector_set_context(self._cxtr, pn_py2void(None))
       pn_connector_free(self._cxtr)
       self._cxtr = None
 
@@ -3509,7 +3509,7 @@ class Listener(object):
     exists in the C Driver.
     """
     if not c_lsnr: return None
-    py_lsnr = pn_listener_context(c_lsnr)
+    py_lsnr = pn_void2py(pn_listener_context(c_lsnr))
     if py_lsnr: return py_lsnr
     wrapper = Listener(_lsnr=c_lsnr, _py_driver=py_driver)
     return wrapper
@@ -3518,13 +3518,13 @@ class Listener(object):
     self._lsnr = _lsnr
     assert(_py_driver)
     self._driver = weakref.ref(_py_driver)
-    pn_listener_set_context(self._lsnr, self)
+    pn_listener_set_context(self._lsnr, pn_py2void(self))
     self._driver()._listeners.add(self)
 
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._lsnr:
-      pn_listener_set_context(self._lsnr, None);
+      pn_listener_set_context(self._lsnr, pn_py2void(None));
       pn_listener_free(self._lsnr)
       self._lsnr = None
 
