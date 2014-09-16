@@ -272,9 +272,9 @@ PN_EXTERN void pn_collector_free(pn_collector_t *collector);
  *         was elided
  */
 
-pn_event_t *pn_collector_put(pn_collector_t *collector,
-                             const pn_class_t *clazz, void *context,
-                             pn_event_type_t type);
+PN_EXTERN pn_event_t *pn_collector_put(pn_collector_t *collector,
+                                       const pn_class_t *clazz, void *context,
+                                       pn_event_type_t type);
 
 /**
  * Access the head event contained by a collector.

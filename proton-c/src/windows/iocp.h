@@ -47,7 +47,7 @@ struct iocp_t {
   char *shared_pool_memory;
   write_result_t **shared_results;
   write_result_t **available_results;
-  int shared_available_count;
+  size_t shared_available_count;
   size_t writer_count;
   int loopback_bufsize;
   bool iocp_trace;

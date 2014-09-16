@@ -58,9 +58,9 @@ struct pn_class_t {
   int (*inspect)(void *, pn_string_t *);
 };
 
-extern const pn_class_t *PN_OBJECT;
-extern const pn_class_t *PN_VOID;
-extern const pn_class_t *PN_WEAKREF;
+PN_EXTERN extern const pn_class_t *PN_OBJECT;
+PN_EXTERN extern const pn_class_t *PN_VOID;
+PN_EXTERN extern const pn_class_t *PN_WEAKREF;
 
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
