@@ -40,9 +40,9 @@ static int pn_void_refcount(void *object) { return -1; }
 #define pn_void_finalize NULL
 static void pn_void_free(void *object) { free(object); }
 static const pn_class_t *pn_void_reify(void *object) { return PN_VOID; }
-static uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
-static intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
-static int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
+uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
+intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
+int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
 
 const pn_class_t PNI_VOID = PN_METACLASS(pn_void);
 const pn_class_t *PN_VOID = &PNI_VOID;

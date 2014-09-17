@@ -3323,6 +3323,7 @@ class SSLSessionDetails(object):
 
 wrappers = {
   "pn_void": lambda x: pn_void2py(x),
+  "pn_pyref": lambda x: pn_void2py(x),
   "pn_connection": lambda x: Connection._wrap_connection(pn_cast_pn_connection(x)),
   "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
   "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
@@ -3337,7 +3338,7 @@ class Collector:
     self._contexts = set()
 
   def put(self, obj, etype):
-    pn_collector_put(self._impl, PN_VOID, pn_py2void(obj), etype)
+    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype)
 
   def peek(self):
     event = pn_collector_peek(self._impl)
