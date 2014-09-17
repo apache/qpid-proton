@@ -91,130 +91,148 @@ typedef enum {
    * will ever be issued for a connection. Events of this type point
    * to the relevant connection.
    */
-  PN_CONNECTION_INIT = 1,
+  PN_CONNECTION_INIT,
+
+  /**
+   * The connection has been bound to a transport.
+   */
+  PN_CONNECTION_BOUND,
+
+  /**
+   * The connection has been unbound from its transport.
+   */
+  PN_CONNECTION_UNBOUND,
 
   /**
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_OPEN = 2,
+  PN_CONNECTION_OPEN,
 
   /**
    * The remote endpoint has opened the connection. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_REMOTE_OPEN = 3,
+  PN_CONNECTION_REMOTE_OPEN,
 
   /**
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_CLOSE = 4,
+  PN_CONNECTION_CLOSE,
 
   /**
    *  The remote endpoint has closed the connection. Events of this
    *  type point to the relevant connection.
    */
-  PN_CONNECTION_REMOTE_CLOSE = 5,
+  PN_CONNECTION_REMOTE_CLOSE,
 
   /**
    * The connection has been freed and any outstanding processing has
    * been completed. This is the final event that will ever be issued
    * for a connection.
    */
-  PN_CONNECTION_FINAL = 6,
+  PN_CONNECTION_FINAL,
 
   /**
    * The session has been created. This is the first event that will
    * ever be issued for a session.
    */
-  PN_SESSION_INIT = 11,
+  PN_SESSION_INIT,
 
   /**
    * The local session endpoint has been opened. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_OPEN = 12,
+  PN_SESSION_OPEN,
 
   /**
    * The remote endpoint has opened the session. Events of this type
    * point to the relevant session.
    */
-  PN_SESSION_REMOTE_OPEN = 13,
+  PN_SESSION_REMOTE_OPEN,
 
   /**
    * The local session endpoint has been closed. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_CLOSE = 14,
+  PN_SESSION_CLOSE,
 
   /**
    * The remote endpoint has closed the session. Events of this type
    * point to the relevant session.
    */
-  PN_SESSION_REMOTE_CLOSE = 15,
+  PN_SESSION_REMOTE_CLOSE,
 
   /**
    * The session has been freed and any outstanding processing has
    * been completed. This is the final event that will ever be issued
    * for a session.
    */
-  PN_SESSION_FINAL = 16,
+  PN_SESSION_FINAL,
 
   /**
    * The link has been created. This is the first event that will ever
    * be issued for a link.
    */
-  PN_LINK_INIT = 21,
+  PN_LINK_INIT,
 
   /**
    * The local link endpoint has been opened. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_OPEN = 22,
+  PN_LINK_OPEN,
 
   /**
    * The remote endpoint has opened the link. Events of this type
    * point to the relevant link.
    */
-  PN_LINK_REMOTE_OPEN = 23,
+  PN_LINK_REMOTE_OPEN,
 
   /**
    * The local link endpoint has been closed. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_CLOSE = 24,
+  PN_LINK_CLOSE,
 
   /**
    * The remote endpoint has closed the link. Events of this type
    * point to the relevant link.
    */
-  PN_LINK_REMOTE_CLOSE = 25,
+  PN_LINK_REMOTE_CLOSE,
 
   /**
    * The flow control state for a link has changed. Events of this
    * type point to the relevant link.
    */
-  PN_LINK_FLOW = 26,
+  PN_LINK_FLOW,
 
   /**
    * The link has been freed and any outstanding processing has been
    * completed. This is the final event that will ever be issued for a
    * link. Events of this type point to the relevant link.
    */
-  PN_LINK_FINAL = 27,
+  PN_LINK_FINAL,
 
   /**
    * A delivery has been created or updated. Events of this type point
    * to the relevant delivery.
    */
-  PN_DELIVERY = 31,
+  PN_DELIVERY,
 
   /**
    * The transport has new data to read and/or write. Events of this
    * type point to the relevant transport.
    */
-  PN_TRANSPORT = 41
+  PN_TRANSPORT,
+
+  PN_TRANSPORT_ERROR,
+
+  PN_TRANSPORT_HEAD_CLOSED,
+
+  PN_TRANSPORT_TAIL_CLOSED,
+
+  PN_TRANSPORT_CLOSED
 
 } pn_event_type_t;
 

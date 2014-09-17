@@ -1259,9 +1259,17 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       pn_messenger_process_delivery(messenger, event);
       break;
     case PN_TRANSPORT:
+    case PN_TRANSPORT_ERROR:
+    case PN_TRANSPORT_HEAD_CLOSED:
+    case PN_TRANSPORT_TAIL_CLOSED:
+    case PN_TRANSPORT_CLOSED:
       pn_messenger_process_transport(messenger, event);
       break;
     case PN_EVENT_NONE:
+      break;
+    case PN_CONNECTION_BOUND:
+      break;
+    case PN_CONNECTION_UNBOUND:
       break;
     case PN_CONNECTION_FINAL:
       break;

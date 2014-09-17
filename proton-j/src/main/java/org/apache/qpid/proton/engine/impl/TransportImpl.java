@@ -123,6 +123,9 @@ public class TransportImpl extends EndpointImpl
     private boolean _head_closed = false;
     private TransportException _tail_error = null;
 
+    private boolean postedHeadClosed = false;
+    private boolean postedTailClosed = false;
+
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link EngineFactory} instead
@@ -210,8 +213,10 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void bind(Connection conn)
     {
-        _connectionEndpoint = (ConnectionImpl) conn;
         // TODO - check if already bound
+
+        _connectionEndpoint = (ConnectionImpl) conn;
+        put(Event.Type.CONNECTION_BOUND, conn);
         _connectionEndpoint.setTransport(this);
         _connectionEndpoint.incref();
 
@@ -230,6 +235,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void unbind()
     {
+        put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
         _connectionEndpoint.modifyEndpoints();
 
         _connectionEndpoint.setTransport(null);
@@ -1236,6 +1242,19 @@ public class TransportImpl extends EndpointImpl
         return _closeReceived;
     }
 
+    void put(Event.Type type, Object context) {
+        if (_connectionEndpoint != null) {
+            _connectionEndpoint.put(type, context);
+        }
+    }
+
+    private void maybePostClosed()
+    {
+        if (postedHeadClosed && postedTailClosed) {
+            put(Event.Type.TRANSPORT_CLOSED, this);
+        }
+    }
+
     @Override
     public void closed(TransportException error)
     {
@@ -1246,6 +1265,14 @@ public class TransportImpl extends EndpointImpl
                 _tail_error = error;
             }
             _head_closed = true;
+        }
+        if (_tail_error != null) {
+            put(Event.Type.TRANSPORT_ERROR, this);
+        }
+        if (!postedTailClosed) {
+            put(Event.Type.TRANSPORT_TAIL_CLOSED, this);
+            postedTailClosed = true;
+            maybePostClosed();
         }
     }
 
@@ -1351,6 +1378,13 @@ public class TransportImpl extends EndpointImpl
     {
         init();
         _outputProcessor.pop(bytes);
+
+        int p = pending();
+        if (p < 0 && !postedHeadClosed) {
+            put(Event.Type.TRANSPORT_HEAD_CLOSED, this);
+            postedHeadClosed = true;
+            maybePostClosed();
+        }
     }
 
     @Override

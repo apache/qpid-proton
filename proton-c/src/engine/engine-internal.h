@@ -174,6 +174,8 @@ struct pn_transport_t {
   bool tail_closed;      // input stream closed by driver
   bool head_closed;
   bool done_processing; // if true, don't call pn_process again
+  bool posted_head_closed;
+  bool posted_tail_closed;
 };
 
 struct pn_connection_t {
@@ -311,5 +313,8 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
+
+void pni_close_tail(pn_transport_t *transport);
+
 
 #endif /* engine-internal.h */
