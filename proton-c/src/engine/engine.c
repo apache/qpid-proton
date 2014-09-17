@@ -754,6 +754,17 @@ pn_session_t *pn_session(pn_connection_t *conn)
   return ssn;
 }
 
+void pn_session_unbound(pn_session_t* ssn)
+{
+  assert(ssn);
+  ssn->state.local_channel = (uint16_t)-1;
+  ssn->state.remote_channel = (uint16_t)-1;
+  ssn->incoming_bytes = 0;
+  ssn->outgoing_bytes = 0;
+  ssn->incoming_deliveries = 0;
+  ssn->outgoing_deliveries = 0;
+}
+
 size_t pn_session_get_incoming_capacity(pn_session_t *ssn)
 {
   assert(ssn);
@@ -868,6 +879,15 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
 
   pn_collector_put(session->connection->collector, PN_LINK_INIT, link);
   return link;
+}
+
+void pn_link_unbound(pn_link_t* link)
+{
+  assert(link);
+  link->state.local_handle = -1;
+  link->state.remote_handle = -1;
+  link->state.delivery_count = 0;
+  link->state.link_credit = 0;
 }
 
 pn_terminus_t *pn_link_source(pn_link_t *link)

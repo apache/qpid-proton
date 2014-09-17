@@ -91,6 +91,7 @@ void pn_delivery_map_clear(pn_delivery_map_t *dm)
     pn_delivery_t *dlv = (pn_delivery_t *) pn_hash_value(hash, entry);
     pn_delivery_map_del(dm, dlv);
   }
+  dm->next = 0;
 }
 
 static ssize_t pn_input_read_amqp_header(pn_io_layer_t *io_layer, const char *bytes, size_t available);
@@ -276,6 +277,8 @@ void pni_transport_unbind_handles(pn_hash_t *handles)
 {
   for (pn_handle_t h = pn_hash_head(handles); h; h = pn_hash_next(handles, h)) {
     uintptr_t key = pn_hash_key(handles, h);
+    pn_link_t *link = (pn_link_t *) pn_hash_value(handles, h);
+    pn_link_unbound(link);
     pn_hash_del(handles, key);
   }
 }
@@ -287,6 +290,7 @@ void pni_transport_unbind_channels(pn_hash_t *channels)
     pn_session_t *ssn = (pn_session_t *) pn_hash_value(channels, h);
     pni_transport_unbind_handles(ssn->state.local_handles);
     pni_transport_unbind_handles(ssn->state.remote_handles);
+    pn_session_unbound(ssn);
     pn_hash_del(channels, key);
   }
 }

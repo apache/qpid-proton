@@ -311,5 +311,7 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
+void pn_session_unbound(pn_session_t* ssn);
+void pn_link_unbound(pn_link_t* link);
 
 #endif /* engine-internal.h */
