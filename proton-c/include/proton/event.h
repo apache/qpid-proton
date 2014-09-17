@@ -77,19 +77,6 @@ extern "C" {
 typedef struct pn_event_t pn_event_t;
 
 /**
- * Related events are grouped into categories
- */
-typedef enum {
-    PN_EVENT_CATEGORY_NONE   = 0,
-    PN_EVENT_CATEGORY_CONNECTION = 0x00010000,
-    PN_EVENT_CATEGORY_SESSION = 0x00020000,
-    PN_EVENT_CATEGORY_LINK = 0x00030000,
-    PN_EVENT_CATEGORY_DELIVERY = 0x00040000,
-    PN_EVENT_CATEGORY_TRANSPORT = 0x00050000,
-    PN_EVENT_CATEGORY_COUNT = 6
-} pn_event_category_t;
-
-/**
  * An event type.
  */
 typedef enum {
@@ -104,130 +91,130 @@ typedef enum {
    * will ever be issued for a connection. Events of this type point
    * to the relevant connection.
    */
-  PN_CONNECTION_INIT = PN_EVENT_CATEGORY_CONNECTION + 1,
+  PN_CONNECTION_INIT = 1,
 
   /**
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_OPEN = PN_EVENT_CATEGORY_CONNECTION + 2,
+  PN_CONNECTION_OPEN = 2,
 
   /**
    * The remote endpoint has opened the connection. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_REMOTE_OPEN = PN_EVENT_CATEGORY_CONNECTION + 3,
+  PN_CONNECTION_REMOTE_OPEN = 3,
 
   /**
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_CLOSE = PN_EVENT_CATEGORY_CONNECTION + 4,
+  PN_CONNECTION_CLOSE = 4,
 
   /**
    *  The remote endpoint has closed the connection. Events of this
    *  type point to the relevant connection.
    */
-  PN_CONNECTION_REMOTE_CLOSE = PN_EVENT_CATEGORY_CONNECTION + 5,
+  PN_CONNECTION_REMOTE_CLOSE = 5,
 
   /**
    * The connection has been freed and any outstanding processing has
    * been completed. This is the final event that will ever be issued
    * for a connection.
    */
-  PN_CONNECTION_FINAL = PN_EVENT_CATEGORY_CONNECTION + 6,
+  PN_CONNECTION_FINAL = 6,
 
   /**
    * The session has been created. This is the first event that will
    * ever be issued for a session.
    */
-  PN_SESSION_INIT = PN_EVENT_CATEGORY_SESSION + 1,
+  PN_SESSION_INIT = 11,
 
   /**
    * The local session endpoint has been opened. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_OPEN = PN_EVENT_CATEGORY_SESSION + 2,
+  PN_SESSION_OPEN = 12,
 
   /**
    * The remote endpoint has opened the session. Events of this type
    * point to the relevant session.
    */
-  PN_SESSION_REMOTE_OPEN = PN_EVENT_CATEGORY_SESSION + 3,
+  PN_SESSION_REMOTE_OPEN = 13,
 
   /**
    * The local session endpoint has been closed. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_CLOSE = PN_EVENT_CATEGORY_SESSION + 4,
+  PN_SESSION_CLOSE = 14,
 
   /**
    * The remote endpoint has closed the session. Events of this type
    * point to the relevant session.
    */
-  PN_SESSION_REMOTE_CLOSE = PN_EVENT_CATEGORY_SESSION + 5,
+  PN_SESSION_REMOTE_CLOSE = 15,
 
   /**
    * The session has been freed and any outstanding processing has
    * been completed. This is the final event that will ever be issued
    * for a session.
    */
-  PN_SESSION_FINAL = PN_EVENT_CATEGORY_SESSION + 6,
+  PN_SESSION_FINAL = 16,
 
   /**
    * The link has been created. This is the first event that will ever
    * be issued for a link.
    */
-  PN_LINK_INIT = PN_EVENT_CATEGORY_LINK + 1,
+  PN_LINK_INIT = 21,
 
   /**
    * The local link endpoint has been opened. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_OPEN = PN_EVENT_CATEGORY_LINK + 2,
+  PN_LINK_OPEN = 22,
 
   /**
    * The remote endpoint has opened the link. Events of this type
    * point to the relevant link.
    */
-  PN_LINK_REMOTE_OPEN = PN_EVENT_CATEGORY_LINK + 3,
+  PN_LINK_REMOTE_OPEN = 23,
 
   /**
    * The local link endpoint has been closed. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_CLOSE = PN_EVENT_CATEGORY_LINK + 4,
+  PN_LINK_CLOSE = 24,
 
   /**
    * The remote endpoint has closed the link. Events of this type
    * point to the relevant link.
    */
-  PN_LINK_REMOTE_CLOSE = PN_EVENT_CATEGORY_LINK + 5,
+  PN_LINK_REMOTE_CLOSE = 25,
 
   /**
    * The flow control state for a link has changed. Events of this
    * type point to the relevant link.
    */
-  PN_LINK_FLOW = PN_EVENT_CATEGORY_LINK + 6,
+  PN_LINK_FLOW = 26,
 
   /**
    * The link has been freed and any outstanding processing has been
    * completed. This is the final event that will ever be issued for a
    * link. Events of this type point to the relevant link.
    */
-  PN_LINK_FINAL = PN_EVENT_CATEGORY_LINK + 7,
+  PN_LINK_FINAL = 27,
 
   /**
    * A delivery has been created or updated. Events of this type point
    * to the relevant delivery.
    */
-  PN_DELIVERY = PN_EVENT_CATEGORY_DELIVERY + 1,
+  PN_DELIVERY = 31,
 
   /**
    * The transport has new data to read and/or write. Events of this
    * type point to the relevant transport.
    */
-  PN_TRANSPORT = PN_EVENT_CATEGORY_TRANSPORT + 1
+  PN_TRANSPORT = 41
 
 } pn_event_type_t;
 
@@ -304,14 +291,6 @@ PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
  * @return the type of the event
  */
 PN_EXTERN pn_event_type_t pn_event_type(pn_event_t *event);
-
-/**
- * Get the category an event belongs to.
- *
- * @param[in] event an event object
- * @return the category the event belongs to
- */
-PN_EXTERN pn_event_category_t pn_event_category(pn_event_t *event);
 
 /**
  * Get the class associated with the event context.

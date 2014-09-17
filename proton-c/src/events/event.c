@@ -217,11 +217,6 @@ pn_event_type_t pn_event_type(pn_event_t *event)
   return event->type;
 }
 
-pn_event_category_t pn_event_category(pn_event_t *event)
-{
-  return (pn_event_category_t)(event->type & 0xFFFF0000);
-}
-
 const pn_class_t *pn_event_class(pn_event_t *event)
 {
   assert(event);
