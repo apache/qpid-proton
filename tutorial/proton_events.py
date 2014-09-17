@@ -647,10 +647,11 @@ class Connector(EventDispatcher):
                 self._connect(event.connection)
             else:
                 print "Disconnected will try to reconnect after %s seconds" % delay
-                self.loop.schedule(time.time() + delay, connection=event.connection)
+                self.loop.schedule(time.time() + delay, connection=event.connection, subject=self)
 
     def on_timer(self, event):
-        self._connect(event.connection)
+        if event.subject == self and event.connection:
+            self._connect(event.connection)
 
 class Backoff(object):
     def __init__(self):
