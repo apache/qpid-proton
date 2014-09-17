@@ -783,6 +783,9 @@ class EventLoop(object):
     def run(self):
         self.loop.run()
 
+    def stop(self):
+        self.loop.abort()
+
 
 class BlockingLink(object):
     def __init__(self, connection, link):
