@@ -89,6 +89,7 @@ static void noop(void *o) {}
 static uintptr_t zero(void *o) { return 0; }
 static intptr_t delta(void *a, void *b) { return (uintptr_t) b - (uintptr_t) a; }
 
+#define CID_noop CID_pn_object
 #define noop_initialize noop
 #define noop_finalize noop
 #define noop_hashcode zero
@@ -148,6 +149,7 @@ static void finalizer(void *object)
   (**called)++;
 }
 
+#define CID_finalizer CID_pn_object
 #define finalizer_initialize NULL
 #define finalizer_finalize finalizer
 #define finalizer_hashcode NULL
@@ -176,6 +178,7 @@ static void test_free(void)
 
 static uintptr_t hashcode(void *obj) { return (uintptr_t) obj; }
 
+#define CID_hashcode CID_pn_object
 #define hashcode_initialize NULL
 #define hashcode_finalize NULL
 #define hashcode_compare NULL
@@ -192,6 +195,7 @@ static void test_hashcode(void)
   pn_free(obj);
 }
 
+#define CID_compare CID_pn_object
 #define compare_initialize NULL
 #define compare_finalize NULL
 #define compare_compare delta
@@ -561,6 +565,7 @@ static uintptr_t collider_hashcode(void *obj)
   return 23;
 }
 
+#define CID_collider CID_pn_object
 #define collider_initialize NULL
 #define collider_finalize NULL
 #define collider_inspect NULL

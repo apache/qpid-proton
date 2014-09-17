@@ -55,6 +55,7 @@ static void pn_rule_finalize(void *object)
   pn_free(rule->substitution);
 }
 
+#define CID_pn_rule CID_pn_object
 #define pn_rule_initialize NULL
 #define pn_rule_hashcode NULL
 #define pn_rule_compare NULL
@@ -75,6 +76,7 @@ static void pn_transform_finalize(void *object)
   pn_free(transform->rules);
 }
 
+#define CID_pn_transform CID_pn_object
 #define pn_transform_initialize NULL
 #define pn_transform_hashcode NULL
 #define pn_transform_compare NULL

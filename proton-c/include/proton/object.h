@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/cid.h>
 #include <proton/types.h>
 #include <stdarg.h>
 #include <proton/type_compat.h>
@@ -45,6 +46,7 @@ typedef struct pn_iterator_t pn_iterator_t;
 
 struct pn_class_t {
   const char *name;
+  const pn_cid_t cid;
   void *(*newinst)(const pn_class_t *, size_t);
   void (*initialize)(void *);
   void (*incref)(void *);
@@ -64,6 +66,7 @@ PN_EXTERN extern const pn_class_t *PN_WEAKREF;
 
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
+    CID_ ## PREFIX,                             \
     pn_object_new,                              \
     PREFIX ## _initialize,                      \
     pn_object_incref,                           \
@@ -79,6 +82,7 @@ PN_EXTERN extern const pn_class_t *PN_WEAKREF;
 
 #define PN_METACLASS(PREFIX) {                  \
     #PREFIX,                                    \
+    CID_ ## PREFIX,                             \
     PREFIX ## _new,                             \
     PREFIX ## _initialize,                      \
     PREFIX ## _incref,                          \
@@ -92,6 +96,7 @@ PN_EXTERN extern const pn_class_t *PN_WEAKREF;
     PREFIX ## _inspect                          \
 }
 
+PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
 PN_EXTERN void *pn_class_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void *pn_class_incref(const pn_class_t *clazz, void *object);
