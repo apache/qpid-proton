@@ -65,8 +65,8 @@ void pn_selector_initialize(void *obj)
   selector->iocp = NULL;
   selector->deadlines = NULL;
   selector->capacity = 0;
-  selector->selectables = pn_list(0, 0);
-  selector->iocp_descriptors = pn_list(0, PN_REFCOUNT);
+  selector->selectables = pn_list(PN_WEAKREF, 0);
+  selector->iocp_descriptors = pn_list(PN_OBJECT, 0);
   selector->deadline = 0;
   selector->current = 0;
   selector->current_triggered = NULL;
