@@ -31,7 +31,7 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
-import weakref
+import weakref, re, socket
 try:
   import uuid
 except ImportError:
@@ -2214,6 +2214,9 @@ class Condition:
     return "Condition(%s)" % ", ".join([repr(x) for x in
                                         (self.name, self.description, self.info)
                                         if x])
+
+  def __str__(self):
+    return ": ".join(filter(None, [self.name, self.description, self.info]))
 
   def __eq__(self, o):
     if not isinstance(o, Condition): return False

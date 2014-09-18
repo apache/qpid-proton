@@ -17,8 +17,8 @@
 # under the License.
 #
 import heapq, os, Queue, re, socket, time, types
-from proton import Collector, Connection, Delivery, Endpoint, Event
-from proton import Message, ProtonException, Transport, TransportException
+from proton import Collector, Connection, Delivery, Endpoint, Event, Timeout
+from proton import Message, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 
 class EventDispatcher(object):
@@ -81,7 +81,10 @@ class Selectable(object):
         if username and password:
             sasl = self.transport.sasl()
             sasl.plain(username, password)
-        self.socket.connect_ex((host, port or 5672))
+        try:
+            self.socket.connect_ex((host, port or 5672))
+        except socket.gaierror, e:
+            raise ConnectionException("Cannot resolve '%s': %s" % (host, e))
         return self
 
     def _closed_cleanly(self):
@@ -358,11 +361,16 @@ class SelectLoop(object):
     def redundant(self):
         return self.events.empty and not self.selectables
 
+    @property
+    def aborted(self):
+        return self._abort
+
     def run(self):
         while not (self._abort or self.redundant):
             self.do_work()
 
-    def do_work(self, timeout = 3):
+    def do_work(self, timeout=None):
+        """@return True if some work was done, False if time-out expired"""
         self.events.process()
         if self._abort: return
 
@@ -384,7 +392,9 @@ class SelectLoop(object):
         if self.redundant:
             return
 
-        if self.events.next_interval and self.events.next_interval < timeout:
+        if timeout and timeout < 0:
+            timeout = 0
+        if self.events.next_interval and (timeout is None or self.events.next_interval < timeout):
             timeout = self.events.next_interval
         readable, writable, _ = select(reading, writing, [], timeout)
 
@@ -392,6 +402,9 @@ class SelectLoop(object):
             s.readable()
         for s in writable:
             s.writable()
+
+        return bool(readable or writable)
+
 
 class Handshaker(EventDispatcher):
 
@@ -678,7 +691,7 @@ class Url(object):
     AMQP = "amqp"
 
     def __init__(self, value):
-        match = Url.RE.match(value)
+        match = Url.RE.match(str(value))
         if match is None:
             raise ValueError(value)
         self.scheme, self.user, self.password, host4, host6, port = match.groups()
@@ -787,17 +800,23 @@ class EventLoop(object):
     def stop(self):
         self.loop.abort()
 
+    def do_work(self, timeout=None):
+        return self.loop.do_work(timeout)
+
 
 class BlockingLink(object):
     def __init__(self, connection, link):
         self.connection = connection
         self.link = link
-        while self.link.state & Endpoint.REMOTE_UNINIT:
-            self.connection.loop.do_work()
+        self.connection.wait(lambda: not (self.link.state & Endpoint.REMOTE_UNINIT),
+                             msg="Opening link %s" % link.name)
 
     def close(self):
-        while self.link.state & Endpoint.REMOTE_ACTIVE:
-            self.connection.loop.do_work()
+        self.connection.wait(not (self.link.state & Endpoint.REMOTE_ACTIVE),
+                             msg="Closing link %s" % link.name)
+
+    # Access to other link attributes.
+    def __getattr__(self, name): return getattr(self.link, name)
 
 class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
@@ -805,39 +824,52 @@ class BlockingSender(BlockingLink):
 
     def send_msg(self, msg):
         delivery = send_msg(self.link, msg)
-        while not delivery.settled:
-            self.connection.loop.do_work()
+        self.connection.wait(lambda: delivery.settled, msg="Sending on sender %s" % self.link.name)
 
 class BlockingReceiver(BlockingLink):
-    def __init__(self, connection, receiver):
+    def __init__(self, connection, receiver, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
-        receiver.flow(1)
+        if credit: receiver.flow(credit)
 
 class BlockingConnection(EventDispatcher):
-    def __init__(self, url):
+    def __init__(self, url, timeout=None):
+        self.timeout = timeout
         self.events = Events(ScopedDispatcher())
         self.loop = SelectLoop(self.events)
         self.context = MessagingContext(self.loop.events.connection(), handler=self)
-        host, port = url.split(":")
-        if port: port = int(port)
-        self.loop.add(Selectable(self.context.conn, socket.socket(), self.events).connect(host, port))
+        self.url = url
+        self.loop.add(
+            Selectable(self.context.conn, socket.socket(), self.events).connect(self.url.host, self.url.port))
         self.context.conn.open()
-        while self.context.conn.state & Endpoint.REMOTE_UNINIT:
-            self.loop.do_work()
+        self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_UNINIT),
+                  msg="Opening connection")
 
     def sender(self, address, handler=None):
         return BlockingSender(self, self.context.sender(address, handler=handler))
 
-    def receiver(self, address, handler=None):
-        return BlockingReceiver(self, self.context.receiver(address, handler=handler))
+    def receiver(self, address, credit=1, dynamic=False, handler=None):
+        return BlockingReceiver(
+            self, self.context.receiver(address, dynamic=dynamic, handler=handler), credit=credit)
 
     def close(self):
         self.context.conn.close()
-        while self.context.conn.state & Endpoint.REMOTE_ACTIVE:
-            self.loop.do_work()
+        self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_ACTIVE),
+                  msg="Closing connection")
 
-    def run(self):
-        self.loop.run()
+    def wait(self, condition, timeout=False, msg=None):
+        """Call do_work until condition() is true"""
+        if timeout is False:
+            timeout = self.timeout
+        if timeout is None:
+            while not condition():
+                self.loop.do_work()
+        else:
+            deadline = time.time() + timeout
+            while not condition():
+                if not self.loop.do_work(deadline - time.time()):
+                    txt = "Connection %s timed out" % self.url
+                    if msg: txt += ": " + msg
+                    raise Timeout(txt)
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
@@ -848,11 +880,12 @@ class BlockingConnection(EventDispatcher):
             self.closed(event.connection.remote_condition)
 
     def on_disconnected(self, event):
-        raise Exception("Disconnected");
+        raise ConnectionException("Connection %s disconnected" % self.url);
 
     def closed(self, error=None):
+        txt = "Connection %s closed" % self.url
         if error:
-            txt = "Closed due to %s" % error
+            txt += " due to: %s" % error
         else:
-            txt = "Closed by peer"
-        raise Exception(txt)
+            txt += " by peer"
+        raise ConnectionException(txt)
