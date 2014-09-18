@@ -2194,3 +2194,9 @@ bool pn_transport_closed(pn_transport_t *transport)
   ssize_t pending = pn_transport_pending(transport);
   return capacity < 0 && pending < 0;
 }
+
+pn_connection_t *pn_transport_connection(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->connection;
+}

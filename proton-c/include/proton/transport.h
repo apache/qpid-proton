@@ -485,6 +485,14 @@ PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transpor
  */
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
 
+/** Access the AMQP Connection associated with the transport.
+ *
+ * @param[in] transport a transport object
+ * @return the connection context for the transport, or NULL if
+ *         none
+ */
+PN_EXTERN pn_connection_t *pn_transport_connection(pn_transport_t *transport);
+
 #ifdef __cplusplus
 }
 #endif

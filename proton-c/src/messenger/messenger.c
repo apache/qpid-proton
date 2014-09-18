@@ -103,6 +103,7 @@ struct pn_messenger_t {
   int flags;
   pn_snd_settle_mode_t snd_settle_mode;
   pn_rcv_settle_mode_t rcv_settle_mode;
+  pn_tracer_t tracer;
   bool blocking;
   bool passive;
   bool interrupted;
@@ -649,6 +650,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->flags = 0;
     m->snd_settle_mode = PN_SND_SETTLED;
     m->rcv_settle_mode = PN_RCV_FIRST;
+    m->tracer = NULL;
   }
 
   return m;
@@ -906,6 +908,8 @@ static int pn_transport_config(pn_messenger_t *messenger,
 {
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_transport_t *transport = pn_connection_transport(connection);
+  if (messenger->tracer)
+    pn_transport_set_tracer(transport, messenger->tracer);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
     pn_ssl_domain_t *d = pn_ssl_domain(PN_SSL_MODE_CLIENT);
     if (messenger->certificate && messenger->private_key) {
@@ -2284,4 +2288,12 @@ int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
     return PN_ARG_ERR;
   messenger->rcv_settle_mode = mode;
   return 0;
+}
+
+void pn_messenger_set_tracer(pn_messenger_t *messenger, pn_tracer_t tracer)
+{
+  assert(messenger);
+  assert(tracer);
+
+  messenger->tracer = tracer;
 }

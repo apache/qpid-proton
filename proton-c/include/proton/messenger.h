@@ -28,6 +28,7 @@
 #include <proton/condition.h>
 #include <proton/terminus.h>
 #include <proton/link.h>
+#include <proton/transport.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -952,6 +953,15 @@ PN_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
  */
 PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
                                                const pn_rcv_settle_mode_t mode);
+
+/**
+ * Set the tracer associated with a messenger.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] tracer the tracer callback
+ */
+PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
+                                       pn_tracer_t tracer);
 
 #ifdef __cplusplus
 }
