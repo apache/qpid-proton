@@ -752,6 +752,16 @@ PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracke
 PN_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
+ * Get  link for the message referenced by the given tracker.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] tracker a tracker object
+ * @return a pn_link_t or NULL if the link could not be determined.
+ */
+PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker);
+
+/**
  * Get the number of messages in the outgoing message queue of a
  * messenger.
  *
