@@ -101,6 +101,8 @@ struct pn_messenger_t {
   int draining;      // # links in drain state
   int connection_error;
   int flags;
+  pn_snd_settle_mode_t snd_settle_mode;
+  pn_rcv_settle_mode_t rcv_settle_mode;
   bool blocking;
   bool passive;
   bool interrupted;
@@ -645,6 +647,8 @@ pn_messenger_t *pn_messenger(const char *name)
     m->domain = pn_string(NULL);
     m->connection_error = 0;
     m->flags = 0;
+    m->snd_settle_mode = PN_SND_SETTLED;
+    m->rcv_settle_mode = PN_RCV_FIRST;
   }
 
   return m;
@@ -1681,9 +1685,9 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
 
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
-    // use explicit settlement via dispositions (not pre-settled)
-    pn_link_set_snd_settle_mode( link, PN_SND_UNSETTLED );
-    pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
+    // use required settlement (defaults to sending pre-settled messages)
+    pn_link_set_snd_settle_mode(link, messenger->snd_settle_mode);
+    pn_link_set_rcv_settle_mode(link, messenger->rcv_settle_mode);
   }
   // XXX
   if (pn_streq(name, "#")) {
@@ -2262,4 +2266,22 @@ PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger, const int flags)
 PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger)
 {
   return messenger ? messenger->flags : 0;
+}
+
+int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+                                     const pn_snd_settle_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->snd_settle_mode = mode;
+  return 0;
+}
+
+int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+                                     const pn_rcv_settle_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->rcv_settle_mode = mode;
+  return 0;
 }

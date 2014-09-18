@@ -25,6 +25,9 @@
 #include <proton/import_export.h>
 #include <proton/message.h>
 #include <proton/selectable.h>
+#include <proton/condition.h>
+#include <proton/terminus.h>
+#include <proton/link.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -931,6 +934,24 @@ PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
  * @return The flags set for the messenger
  */
 PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
+
+/**
+ * Set the local sender settle mode for the underlying link.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] mode the sender settle mode
+ */
+PN_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+                                               const pn_snd_settle_mode_t mode);
+
+/**
+ * Set the local receiver settle mode for the underlying link.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] mode the receiver settle mode
+ */
+PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+                                               const pn_rcv_settle_mode_t mode);
 
 #ifdef __cplusplus
 }
