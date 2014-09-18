@@ -229,7 +229,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
 %immutable PN_PYREF;
 %inline %{
-  PN_EXTERN extern const pn_class_t *PN_PYREF;
+  extern const pn_class_t *PN_PYREF;
 
   #define CID_pn_pyref CID_pn_void
   #define pn_pyref_new NULL
@@ -256,8 +256,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     return PN_PYREF;
   }
 
-  PN_EXTERN const pn_class_t PNI_PYREF = PN_METACLASS(pn_pyref);
-  PN_EXTERN const pn_class_t *PN_PYREF = &PNI_PYREF;
+  const pn_class_t PNI_PYREF = PN_METACLASS(pn_pyref);
+  const pn_class_t *PN_PYREF = &PNI_PYREF;
 
   void *pn_py2void(PyObject *object) {
     return object;

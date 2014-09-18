@@ -30,7 +30,7 @@
 #include <Ws2tcpip.h>
 #define PN_WINAPI
 
-#include "../platform.h"
+#include "platform.h"
 #include <proton/object.h>
 #include <proton/io.h>
 #include <proton/selector.h>
@@ -205,6 +205,7 @@ static void pni_acceptor_finalize(void *object)
 
 static pni_acceptor_t *pni_acceptor(iocpdesc_t *iocpd)
 {
+  static const pn_cid_t CID_pni_acceptor = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(pni_acceptor);
   pni_acceptor_t *acceptor = (pni_acceptor_t *) pn_class_new(&clazz, sizeof(pni_acceptor_t));
   acceptor->listen_sock = iocpd;
@@ -363,6 +364,7 @@ static void connect_result_finalize(void *object)
 }
 
 static connect_result_t *connect_result(iocpdesc_t *iocpd, struct addrinfo *addr) {
+  static const pn_cid_t CID_connect_result = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(connect_result);
   connect_result_t *result = (connect_result_t *) pn_class_new(&clazz, sizeof(connect_result_t));
   if (result) {
@@ -729,6 +731,7 @@ static uintptr_t pni_iocpdesc_hashcode(void *object)
 // Reference counted in the iocpdesc map, zombie_list, selector.
 static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
+  static const pn_cid_t CID_pni_iocpdesc = CID_pn_void;
   static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
   assert (s != INVALID_SOCKET);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
@@ -1131,6 +1134,7 @@ void pni_iocp_finalize(void *obj)
 
 iocp_t *pni_iocp()
 {
+  static const pn_cid_t CID_pni_iocp = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(pni_iocp);
   iocp_t *iocp = (iocp_t *) pn_class_new(&clazz, sizeof(iocp_t));
   return iocp;
