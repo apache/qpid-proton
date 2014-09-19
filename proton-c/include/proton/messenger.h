@@ -472,6 +472,20 @@ PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
 /**
+ * Subscribes a messenger to messages from the specified source with the given
+ * timeout for the subscription's lifetime.
+ *
+ * @param[in] messenger the messenger to subscribe
+ * @param[in] source
+ * @param[in] timeout the maximum time to keep the subscription alive once the
+ *            link is closed.
+ * @return a subscription
+ */
+PN_EXTERN pn_subscription_t *
+pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
+                           pn_seconds_t timeout);
+
+/**
  * Get a subscription's application context.
  *
  * See ::pn_subscription_set_context().

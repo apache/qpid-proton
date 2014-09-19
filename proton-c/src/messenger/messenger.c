@@ -1656,7 +1656,8 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   return connection;
 }
 
-pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
+pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
+                             bool sender, pn_seconds_t timeout)
 {
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
@@ -1705,6 +1706,14 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
     pn_terminus_set_address(pn_link_source(link), name);
   }
   link_ctx_setup( messenger, connection, link );
+
+  if (timeout > 0) {
+    pn_terminus_set_expiry_policy(pn_link_target(link), PN_EXPIRE_WITH_LINK);
+    pn_terminus_set_expiry_policy(pn_link_source(link), PN_EXPIRE_WITH_LINK);
+    pn_terminus_set_timeout(pn_link_target(link), timeout);
+    pn_terminus_set_timeout(pn_link_source(link), timeout);
+  }
+
   if (!sender) {
     pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
     assert( ctx );
@@ -1715,17 +1724,26 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   return link;
 }
 
-pn_link_t *pn_messenger_source(pn_messenger_t *messenger, const char *source)
+pn_link_t *pn_messenger_source(pn_messenger_t *messenger, const char *source,
+                               pn_seconds_t timeout)
 {
-  return pn_messenger_link(messenger, source, false);
+  return pn_messenger_link(messenger, source, false, timeout);
 }
 
-pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
+pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target,
+                               pn_seconds_t timeout)
 {
-  return pn_messenger_link(messenger, target, true);
+  return pn_messenger_link(messenger, target, true, timeout);
 }
 
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
+{
+  return pn_messenger_subscribe_ttl(messenger, source, 0);
+}
+
+pn_subscription_t *pn_messenger_subscribe_ttl(pn_messenger_t *messenger,
+                                              const char *source,
+                                              pn_seconds_t timeout)
 {
   pni_route(messenger, source);
   if (pn_error_code(messenger->error)) return NULL;
@@ -1743,7 +1761,7 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
       return NULL;
     }
   } else {
-    pn_link_t *src = pn_messenger_source(messenger, source);
+    pn_link_t *src = pn_messenger_source(messenger, source, timeout);
     if (!src) return NULL;
     pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( src );
     return ctx ? ctx->subscription : NULL;
@@ -1916,7 +1934,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
     } else {
       pni_restore(messenger, msg);
       pn_buffer_append(buf, encoded, size); // XXX
-      pn_link_t *sender = pn_messenger_target(messenger, address);
+      pn_link_t *sender = pn_messenger_target(messenger, address, 0);
       if (!sender) {
         int err = pn_error_code(messenger->error);
         if (err) {
