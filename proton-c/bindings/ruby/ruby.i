@@ -26,8 +26,8 @@
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 #include <proton/driver_extras.h>
-
 #include <proton/types.h>
+#include <proton/url.h>
 
 #include <uuid/uuid.h>
 %}

@@ -8,6 +8,7 @@
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 #include <proton/driver_extras.h>
+#include <proton/url.h>
 %}
 
 %include <cstring.i>

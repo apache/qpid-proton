@@ -29,6 +29,7 @@
 %header %{
 /* Include the headers needed by the code in this wrapper file */
 #include <proton/types.h>
+#include <proton/url.h>
 #include <proton/message.h>
 #include <proton/driver.h>
 #include <proton/driver_extras.h>

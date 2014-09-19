@@ -1394,3 +1394,6 @@ typedef unsigned long int uintptr_t;
   pn_delivery_t *pn_cast_pn_delivery(void *x) { return (pn_delivery_t *) x; }
   pn_transport_t *pn_cast_pn_transport(void *x) { return (pn_transport_t *) x; }
 %}
+
+%include "proton/url.h"
+
