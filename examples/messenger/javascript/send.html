@@ -26,18 +26,24 @@
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 
 <!--
-  Import JavaScript Messenger Binding proton.js. Note that this simple example pulls
-  it from the node_modules/qpid-proton/lib which is created by the build process
+  Import the Messenger Binding proton.js. Note that this simple example pulls
+  it from the node_modules/qpid-proton/lib, which is created by the build process
   so that the node.js based examples "just work", in a real Web App you would need
-  to copy the proton.js to your own server. 
+  to copy the proton.js to your own server.
+
   In actual fact the CMake build actually builds proton.js into the directory:
   <build>/proton-c/bindings/javascript
   where <build> is the build directory created to run cmake from.
+
+  In this example we also set the global variable PROTON_HEAP_SIZE in order to
+  increase the virtual heap available to the emscripten compiled C runtime. It
+  is not really necessary to do this for this application as the default value
+  of 16777216 is fine, it is simply done here to illustrate how to do it.
 -->
+<script type="text/javascript">PROTON_HEAP_SIZE = 50000000;</script>
 <script type="text/javascript" src="../../../node_modules/qpid-proton/lib/proton.js"></script>
 
 <script type="text/javascript">
-
 var message = new proton.Message();
 var messenger = new proton.Messenger();
 

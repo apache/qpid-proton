@@ -4,6 +4,115 @@ Qpid Proton JavaScript Language Bindings
 The code contained herein provides JavaScript language bindings for working
 with the Qpid Proton AMQP 1.0 protocol engine and messenger library.
 
+Important Note - Modern Browser Needed
+======================================
+
+The JavaScript binding requires ArrayBuffer/TypeArray and WebSocket support.
+Both of these are available in most "modern" browser versions. The author has
+only tried running on FireFox and Chrome, though recent Safari, Opera and IE10+
+*should* work too - YMMV. It might be possible to polyfill for older browsers
+but the author hasn't tried this.
+
+Important Note - WebSocket Transport!!!
+=======================================
+
+Before going any further it is really important to realise that the JavaScript
+bindings to Proton are somewhat different to the bindings for other languages
+because of the restrictions of the execution environment. In particular it is
+very important to note that the JavaScript bindings by default use a WebSocket
+transport and not a TCP transport, so whilst it's possible to create Server style
+applications that clients can connect to (e.g. recv.js and send.js) it is very
+important to note that:
+
+JavaScript clients cannot *directly* talk to "normal" AMQP applications such as
+qpidd or the Java Broker because they use the traditional TCP transport.
+
+This is a slightly irksome issue, but there's no getting away from it because
+it's a security restriction imposed by the browser environment.
+
+
+At the moment even for Node.js we are limited to using a WebSocket transport, but
+it is on the author's "TODO" list to look at providing a means to use either a
+WebSocket transport or a native TCP transport (via node's net library). It should
+also be possible to use native TCP for Chrome "packaged apps", but again this is
+only on the TODO list so if you want to talk to a "normal" AMQP application you
+must live with the WebSocket constraints.
+
+Option 1. proxy from WebSockets to TCP sockets
+<proton>/examples/messenger/javascript/proxy.js
+is a simple Node.js WebSocket<->TCP Socket proxy, simple doing:
+
+node proxy.js
+
+will stand up a proxy listening by default on WebSocket port 5673 and forwarding
+to TCP port 5672 (this is configurable for options do: node proxy.js -h)
+
+Rather than using a stand-alone proxy it is possible to have applications stand
+up their own proxy (where lport = listen port, thost = target host and
+tport = target port):
+
+var proxy = require('./ws2tcp.js');
+proxy.ws2tcp(lport, thost, tport);
+
+For talking to the C++ broker unfortunately proxying is currently the only option
+as qpidd does not have a WebSocket transport.
+
+Option 2. The Java Broker's WebSocket transport.
+Recent releases of the Qpid Java Broker provide a native WebSocket transport which
+means that the JavaScript binding can talk to it with no additional requirements.
+It is necessary to configure the Java Broker as the WebSocket transport is not
+enabled by default. In <qpid-work>/config.json in the "ports" array you need to add:
+
+{
+    "authenticationProvider" : "passwordFile",
+    "name" : "AMQP-WS",
+    "port" : "5673",
+    "transports" : [ "WS" ]
+}
+
+This sets the JavaBroker to listen on WebSocket port 5673 similar to the proxy.
+
+
+One gotcha that still bites the author *** DO NOT FORGET *** that you will be
+using ports that you are not used to!! If you are not connecting check that the
+proxy is running and that you are specifying the right ports. I still mess up :-(
+
+WebRTC Transport
+================
+
+A WebRTC Transport is supported by emscripten, though the author has not tried it.
+If you wan to play with this you are very much on your own at the moment YMMV.
+
+This is configured by adding to the LINK_FLAGS in CMakeLists.txt
+-s \"SOCKET_WEBRTC=1\"
+
+  /* WebRTC sockets supports several options on the Module object.
+
+     * Module['host']: true if this peer is hosting, false otherwise
+     * Module['webrtc']['broker']: hostname for the p2p broker that this peer should use
+     * Module['webrtc']['session']: p2p session for that this peer will join, or undefined if this peer is hosting
+     * Module['webrtc']['hostOptions']: options to pass into p2p library if this peer is hosting
+     * Module['webrtc']['onpeer']: function(peer, route), invoked when this peer is ready to connect
+     * Module['webrtc']['onconnect']: function(peer), invoked when a new peer connection is ready
+     * Module['webrtc']['ondisconnect']: function(peer), invoked when an existing connection is closed
+     * Module['webrtc']['onerror']: function(error), invoked when an error occurs
+   */
+
+If you wanted to play with these you'd likely have to tweak the module.js code in
+<proton>/proton-c/bindings/javascript
+
+The emscripten documentation is a bit light on the WebRTC Transport too, though
+
+emscripten/tests/test_sockets.py
+emscripten/tests/sockets/webrtc_host.c
+emscripten/tests/sockets/webrtc_peer.c
+emscripten/tests/sockets/p2p/broker/p2p-broker.js
+emscripten/tests/sockets/p2p/client/p2p-client.js
+
+Look like they provide a starting point.
+Very much TODO......
+
+
 Creating The Bindings
 =====================
 
@@ -11,26 +120,35 @@ To generate the JavaScript bindings we actually cross-compile from proton-c
 
 You will need to have emscripten (https://github.com/kripken/emscripten) installed
 to do the cross-compilation and in addition you will require a few things that
-emscripten itself depends upon. https://github.com/kripken/emscripten/wiki/Emscripten-SDK
+emscripten itself depends upon.
+
+http://kripken.github.io/emscripten-site/docs/building_from_source/index.html#installing-from-source
+http://kripken.github.io/emscripten-site/docs/building_from_source/toolchain_what_is_needed.html
+provides instructions for installing emscripten and the "fastcomp" LLVM backend.
+This approach lets users use the "bleeding edge" version of emscripten on the
+"incoming" branch (pretty much analogous to building qpid/proton off svn trunk).
+This is the approach that the author of the JavaScript Bindings tends to use.
+
+
+http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html
 provides some fairly easy to follow instructions for getting started on several
 platforms the main dependencies are as follows (on Windows the SDK includes these):
 
-* The Emscripten code, from github (git clone git://github.com/kripken/emscripten.git.
-  The documentation suggests master branch but in the short term incoming is
-  probably better as a few updates to emscripten have been added to help get
-  proton working and these may take a little while to get merged back to master.
+* The Emscripten code, from github (git clone git://github.com/kripken/emscripten.git).
 * LLVM with Clang. Emscripten uses LLVM and Clang, but at the moment the JavaScript
   back-end for LLVM is off on a branch so you can't use a stock LLVM/Clang.
-  https://github.com/kripken/emscripten/wiki/LLVM-Backend has lots of explanation
-  and some easy to follow instructions for downloading and building fast-comp
+  http://kripken.github.io/emscripten-site/docs/building_from_source/LLVM-Backend.html
+  http://kripken.github.io/emscripten-site/docs/building_from_source/building_fastcomp_manually_from_source.html#building-fastcomp-from-source
+  has lots of explanation and some easy to follow instructions for downloading
+  and building fastcomp
 * Node.js (0.8 or above; 0.10.17 or above to run websocket-using servers in node)
 * Python 2.7.3
 * Java is required in order to use the Closure Compiler to minify the code.
   
 
 If you haven't run Emscripten before it's a good idea to have a play with the
-tutorial https://github.com/kripken/emscripten/wiki/Tutorial
-
+tutorial here:
+http://kripken.github.io/emscripten-site/docs/getting_started/Tutorial.html
 
 
 
@@ -44,7 +162,8 @@ the root directory) it's:
   cmake ..
   make
 
-and you should be all set, to test it's all working do:
+and you should be all set, to test it's all working do (from the build directory):
+  cd proton-c/bindings/javascript/examples
 
   node recv-async.js
 
@@ -52,14 +171,243 @@ in one window and
 
   node send-async.js
 
-in another
+in another.
+
+These examples are actually JavaScript applications that have been directly
+compiled from recv-async.c and send-async.c in <proton>/examples/messenger/c
+if you'd prefer to write applications in C and compile them to JavaScript that
+is a perfectly valid approach and these examples provide a reasonable starting
+point for doing so.
+
+Documentation
+=============
+
+When you've successfully got a successful build do:
+
+  make docs
+
+Which will make all of the proton documentation including the JavaScript docs.
+If successful the JSDoc generated documentation should be found here:
+
+<proton>/build/proton-c/bindings/javascript/html/index.html
 
 
-KNOWN ISSUES
-============
+Using "native" JavaScript
+=========================
 
-send-async and recv-async are both pretty hacky at the moment.
+The examples in <proton>/examples/messenger/javascript are the best starting point.
 
+In practice the examples follow a fairly similar pattern to the Python bindings
+the most important thing to bear in mind though is that JavaScript is completely
+asynchronous/non-blocking, which can catch the unwary.
+
+An application follows the following (rough) steps:
+
+1. (optional) Set the heap size.
+It's important to realise that most of the library code is compiled C code and
+the runtime uses a "virtual heap" to support the underlying malloc/free. This is
+implemented internally as an ArrayBuffer with a default size of 16777216.
+
+To allocate a larger heap an application must set the PROTON_HEAP_SIZE global.
+In Node.js this would look like (see send.js):
+PROTON_HEAP_SIZE = 50000000; // Note no var - it needs to be global.
+
+In a browser it would look like (see send.html):
+<script type="text/javascript">PROTON_HEAP_SIZE = 50000000;</script>
+
+2. Load the library and create a message and messenger.
+In Node.js this would look like (see send.js):
+var proton = require("qpid-proton");
+var message = new proton.Message();
+var messenger = new proton.Messenger();
+
+In a browser it would look like (see send.html):
+<script type="text/javascript" src="../../../node_modules/qpid-proton/lib/proton.js"></script>
+
+<script type="text/javascript">
+var message = new proton.Message();
+var messenger = new proton.Messenger();
+....
+
+3. Set up event handlers as necessary.
+
+messenger.on('error', <error callback>);
+messenger.on('work', <work callback>);
+messenger.on('subscription', <subscription callback>);
+
+The work callback is triggered on WebSocket events, so in general you would use
+this to send and receive messages, for example in recv.js we have:
+
+var pumpData = function() {
+    while (messenger.incoming()) {
+        var t = messenger.get(message);
+
+        console.log("Address: " + message.getAddress());
+        console.log("Subject: " + message.getSubject());
+
+        // body is the body as a native JavaScript Object, useful for most real cases.
+        //console.log("Content: " + message.body);
+
+        // data is the body as a proton.Data Object, used in this case because
+        // format() returns exactly the same representation as recv.c
+        console.log("Content: " + message.data.format());
+
+        messenger.accept(t);
+    }
+};
+
+messenger.on('work', pumpData);
+
+
+The subscription callback is triggered when the address provided in a call to
+messenger.subscribe(<address>);
+
+Gets resolved. An example of its usage can be found in qpid-config.js which is
+a fully functioning and complete port of the python qpid-config tool. It also
+illustrates how to do asynchronous request/response based applications.
+
+Aside from the asynchronous aspects the rest of the API is essentially the same
+as the Python binding aside from minor things such as camel casing method names etc.
+
+Serialisation/Deserialisation, Types etc.
+=========================================
+
+The JavaScript binding tries to be as simple, intuitive and natural as possible
+so when sending a message all native JavaScript types including Object literals
+and Arrays are transparently supported, for example.
+
+var message = new proton.Message();
+message.setAddress('amqp://localhost');
+message.setSubject('UK.NEWS');
+message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
+
+
+The main things to bear in mind is that (particularly for sending messages) we
+may need to use "adapters" to make sure values are correctly interpreted and
+encoded to the correct type in the AMQP type system. This is especially important
+when interoperating with a peer written in a strongly typed language (C/C++/Java).
+
+Some examples of available types follow:
+
+// UUID
+message.body = new proton.Data.Uuid();
+
+// AMQP Symbol
+message.body = new proton.Data.Symbol("My Symbol");
+
+// Binary data (created from a String in this case).
+message.body = new proton.Data.Binary("Monkey Bathпогромзхцвбнм");
+
+// Binary data (Get a Uint8Array view of the data and directly access that).
+message.body = new proton.Data.Binary(4);
+var buffer = message.body.getBuffer();
+buffer[0] = 65;
+buffer[1] = 77;
+buffer[2] = 81;
+buffer[3] = 80;
+
+// Binary Data (Created from an Array, you can use an ArrayBuffer/TypedArray too).
+message.body = new proton.Data.Binary([65, 77, 81, 80]);
+
+
+Note that the implementation of proton.Data.Binary tries to minimise copying so
+it accesses the internal emscripten heap *directly* this requires memory management
+which is mostly handled transparently, but users need to be aware that the
+underlying memory is "owned" by the Message Object so if Binary data needs to
+be maintained after the next call to messenger.get(message); it must be
+*explicitly* copied. For more detail do "make docs" and see:
+<proton>/build/proton-c/bindings/javascript/html/proton.Data.Binary.html
+
+
+// AMQP Described (value, descriptor)
+message.body = new proton.Data.Described('persian, 'com.cheezburger.icanhas');
+
+// AMQP Timestamp maps to native JavaScript Date.
+message.body = new Date();
+
+// Various AMQP Array examples.
+message.body = new proton.Data.Array('INT', [1, 3, 5, 7], "odd numbers");
+message.body = new proton.Data.Array('UINT', [1, 3, 5, 7], "odd");
+message.body = new proton.Data.Array('ULONG', [1, 3, 5, 7], "odd");
+message.body = new proton.Data.Array('FLOAT', [1, 3, 5, 7], "odd");
+message.body = new proton.Data.Array('STRING', ["1", "3", "5", "7"], "odd");
+
+// A JavaScript TypedArray will map directly to and from an AMQP Array of the
+// appropriate type (Internally sets a descriptor of 'TypedArray').
+message.body = new Uint8Array([1, 3, 5, 7]);
+
+// UUID Array
+message.body = new proton.Data.Array('UUID', [new proton.Data.Uuid(), new proton.Data.Uuid(), new proton.Data.Uuid(), new proton.Data.Uuid()], "unique");
+
+// Null
+message.body = null;
+
+// Boolean
+message.body = true;
+
+// Native JavaScript Array maps to an AMQP List
+message.body = ['Rod', 'Jane', 'Freddy'];
+
+// Native JavaScript Object maps to an AMQP Map
+message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
+
+// JavaScript only has a "number" type so the binding provides "decorator"
+// methods added to the JavaScript Number class. To access this from number
+// primitives it is necessary to either use braces or use a "double dot" so that
+// the interpreter can disambiguate from a simple decimal point. The binding will
+// attempt to use the correct type such that message.body = 2147483647; would be
+// sent as an AMQP integer but because of the way JavaScript coerces integers
+// message.body = 2147483647.0; would also be sent as an AMQP integer because
+// 2147483647.0 gets transparently conveted to 2147483647 by the interpreter so
+// to explicitly send this as an AMQP float we'd need to do:
+// message.body = 2147483647.0.float();
+
+// Some more number examples:
+message.body = 66..char();  // char
+message.body = 2147483647;  // int
+message.body = -2147483649; // long
+message.body = 12147483649; // long
+message.body = (12147483649).long(); // long
+message.body = (17223372036854778000).ulong(); // ulong
+message.body = (121474.836490).float(); // float
+message.body = 12147483649.0.float(); // float
+message.body = (4294967296).uint(); // uint
+message.body = (255).ubyte(); // ubyte
+
+Note too that floats are subject to a loss of precision
+
+
+Fortunately most of these quirks only affect serialisation.when the binding
+receives a message it will attempt to decode it into the most "natural" native
+JavaScript type.
+
+
+One additional decoding "quirk" can be caused by C++ qpid::messaging clients. It
+is unfortunately quite common for C++ clients to incorrectly encode Strings as
+AMQP Binary by neglecting to provide an encoding. The QMF Management Agent is one
+such culprit. This is a bit of a pain, especially because of proton.Data.Binary
+memory management quirks and having to remember to explicitly copy the data
+on each call to messenger.get(message); In order to cater for this an overloaded
+messenger.get(message, true); has been provided. Setting the second parameter to
+true forces any received Binary payloads to be decoded as Strings. If you know
+that producers might behave in this way and you are not expecting any "real"
+Binary data from the producer this convenience mechanism results in nice clean
+JavaScript Objects being received and is extremely useful for things like QMF.
+
+JSON
+====
+
+As well as allowing native JavaScript Objects and Arrays to be transparently
+serialised and deserialised via the AMQP type system it is also possible to
+serialise/deserialise as JSON.
+
+message.setAddress('amqp://localhost');
+message.setContentType('application/json');
+message.body = {array: [1, 2, 3, 4], object: {name: "John Smith", age: 65}};
+
+On the wire the above will be encoded as an opaque binary in an AMQP data section
+but will be deserialised into a JavaScript Object in exactly the same was as the
+previous examples that use the AMQP type system.
 
 SUPPORT
 =======
@@ -69,5 +417,10 @@ a tracker request:
 
     https://issues.apache.org/jira/browse/PROTON
 
+The main support channel is the qpid-users mailing list, see:
+
+    http://qpid.apache.org/discussion.html#mailing-lists
+
 You can also directly interact with the development team and other users
 in the #qpid channel on irc.freenode.net.
+

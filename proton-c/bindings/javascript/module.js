@@ -19,9 +19,13 @@
  */
 
 /**
- * This file provides a JavaScript wrapper around the Proton Messenger API.
- * It will be used to wrap the emscripten compiled proton-c code and be minified by
- * the Closure compiler, so all comments will be stripped from the actual library.
+ * This file defines the Module Object which provides a namespace around the Proton
+ * Messenger API. The Module object is used extensively by the emscripten runtime,
+ * however for convenience it is exported with the name "proton" and not "Module".
+ * <p>
+ * The emscripten compiled proton-c code and the JavaScript binding code will be 
+ * minified by the Closure compiler, so all comments will be stripped from the
+ * actual library.
  * <p>
  * This JavaScript wrapper provides a somewhat more idiomatic object oriented
  * interface which abstracts the low-level emscripten based implementation details
@@ -32,25 +36,50 @@
 /**
  * The Module Object is exported by emscripten for all execution platforms, we
  * use it as a namespace to allow us to selectively export only what we wish to
- * be publicly visible from this package/module.
+ * be publicly visible from this package/module, which is wrapped in a closure.
  * <p>
  * Internally the binding code uses the associative array form for declaring
  * exported properties to prevent the Closure compiler from minifying e.g.
  * <pre>Module['Messenger'] = ...</pre>
- * Exported Objects can be used in client code using a more convenient namespace, e.g.:
+ * Exported Objects can however be used in client code using a more convenient
+ * and obvious proton namespace, e.g.:
  * <pre>
- * proton = require('qpid-proton');
+ * var proton = require('qpid-proton');
  * var messenger = new proton.Messenger();
  * var message = new proton.Message();
+ * ...
+ * </pre>
+ * The core part of this library is actually proton-c compiled into JavaScript.
+ * In order to provide C style memory management (malloc/free) emscripten uses
+ * a "virtual heap", which is actually a pre-allocated ArrayBuffer. The size of
+ * this virtual heap is set as part of the runtime initialisation and cannot be
+ * changed subsequently (the default size is 16*1024*1024 = 16777216).
+ * <p>
+ * Applications can specify the size of virtual heap that they require via the
+ * global variable PROTON_HEAP_SIZE, this must be set <b>before</b> the library is
+ * loaded e.g. in Node.js an application would do:
+ * <pre>
+ * PROTON_HEAP_SIZE = 50000000; // Note no var - it needs to be global.
+ * var proton = require('qpid-proton');
+ * ...
+ * </pre>
+ * A browser based application would do:
+ * <pre>
+ * &lt;script type="text/javascript"&gt;PROTON_HEAP_SIZE = 50000000;&lt;/script&gt;
+ * &lt;script type="text/javascript" src="proton.js">&lt;/script&gt;
  * </pre>
  * @namespace proton
  */
+var Module = {};
 
-var Module = {
-    // Prevent emscripten runtime exiting, we will be enabling network callbacks.
-    'noExitRuntime' : true,
-};
-
+// If the global variable PROTON_HEAP_SIZE has been set by the application this
+// will result in the emscripten heap getting set to the next multiple of
+// 16777216 above PROTON_HEAP_SIZE.
+if (typeof process === 'object' && typeof require === 'function' && global['PROTON_HEAP_SIZE']) {
+    Module['TOTAL_MEMORY'] = global['PROTON_HEAP_SIZE'];
+} else if (typeof window === 'object' && window['PROTON_HEAP_SIZE']) {
+    Module['TOTAL_MEMORY'] = window['PROTON_HEAP_SIZE'];
+}
 
 /*****************************************************************************/
 /*                                                                           */

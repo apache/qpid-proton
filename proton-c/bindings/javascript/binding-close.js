@@ -18,10 +18,16 @@
  *
  */
 
-// These values are essentially constants sitting in the proton namespace.
-// We have to set them after pn_get_version_major/pn_get_version_minor have been
-// defined so we must do it here in binding-close.js as it's a --post-js block.
+/**
+ * These values are essentially constants sitting in the proton namespace
+ * that is to say they will be exported via:
+ * proton.VERSION_MAJOR
+ * proton.VERSION_MINOR
+ * We have to set them after pn_get_version_major/pn_get_version_minor have been
+ * defined so we must do it here in binding-close.js as it's a --post-js block.
+ */
 Module['VERSION_MAJOR'] = _pn_get_version_major();
 Module['VERSION_MINOR'] = _pn_get_version_minor();
 
 })(); // End of self calling lambda used to wrap library.
+

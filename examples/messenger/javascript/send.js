@@ -20,11 +20,12 @@
  */
 
 // Check if the environment is Node.js and if not log an error and exit.
-if (!exports) {
+if (typeof process !== 'object' || typeof require !== 'function') {
     console.error("send.js should be run in Node.js");
     return;
 }
 
+PROTON_HEAP_SIZE = 50000000;
 var proton = require("qpid-proton");
 
 var address = "amqp://0.0.0.0";

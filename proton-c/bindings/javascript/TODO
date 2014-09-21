@@ -1,11 +1,49 @@
 Qpid Proton JavaScript Language Bindings TODO List
 ==================================================
 
-The code base contains some tweaked emscripten library code, this is ultimately going
-to get done properly, commited back to emscripten and removed from here.
+Network code is currently limited to a WebSocket transport, including for Node.js
+It would be good to allow a configurable transport so that Node.js and Chrome
+packaged apps could use native TCP sockets.
+
+The JavaScript binding is pure JavaScript, that has been  trans-compiled from C
+to JavaScript using emscripten. This allows the same code to be used in a browser
+and Node.js, but it potentially has a performance penalty in Node.js. An alternative
+for Node.js might be to build a SWIG binding (recent versions of SWIG support
+JavaScript). This should be viewed as a complementary not competing approach as
+it would only work for environments like Node.js and definitely *not* browser
+environments which clearly require pure JavaScript.
+
+Optimisation are enabled for compiling and linking but there hasn't been any
+profiling done yet. The binding code *shouldn't* be the bottleneck but it's
+always possible that I messed up.
+
+Error handling is nowhere near as good as it should be, though this is mostly
+because Messenger itself is a bit lacking on the error handling/recovery front.
+
+Although described as "Proton" this is currently a JavaScript binding for Messenger
+and associated Message & Data classes. There has been some talk on the user list
+of an alternative reactive API based on proton Engine. This might ultimately be
+a better fit for JavaScript but it is very much in its infancy and I haven't
+really looked at it yet.
+
+proton-j seems to use hawt-dispatch, which is modelled after Grand Central
+Dispatch so I need to work out what it's using it do do and whether there are
+parallels in proton-c
+
+Although the WebSocket transport uses the sub-protocol 'AMQPWSB10' as specified
+in http://docs.oasis-open.org/amqp-bindmap/amqp-wsb/v1.0/amqp-wsb-v1.0.html
+section 2.1 is is not technically compliant with the spec. as the AMQP data is
+created by the proton-c code, which produces a data-stream for the TCP transport
+whereas the WebSocket spec. seems to want to make use of the fact that WebSocket
+is a frame based transport (whereas TCP is not). This is quite hard to resolve
+as the binding simply sends the contents of the octet buffer created by proton
+over the transport and thus to make this binding compliant with the spec. would
+require a change to the underlying proton-c code! It is possible that this may be
+done in future as any SCTP would require the ability to push AMQP frames too.
+In the mean time fortunately the Java Broker WebSocket transport is actually
+tolerant of this off-spec. behaviour. My personal view is that both approaches
+should be valid and in particular using the standard TCP framing means that it
+is straightforward to create WebSocket<->TCP proxies, which is useful given that
+only the Java Broker currently has a native WebSocket transport.
 
 
-The example send-async.c and recv-async.c are both pretty hacky at the moment.
-
-proton-j seems to use hawt-dispatch, which is modelled after Grand Central Dispatch so I need to
-work out what it's using it do do and whether there are parallels in proton-c
