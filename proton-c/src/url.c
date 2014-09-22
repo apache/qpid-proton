@@ -19,8 +19,10 @@
  *
  */
 
-#include <proton/url.h>
-#include <proton/util.h>
+#include "proton/url.h"
+#include "proton/util.h"
+#include "platform.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
