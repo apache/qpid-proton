@@ -24,8 +24,11 @@ import javax.jms.Message;
 */
 public class AutoOutboundTransformer extends JMSMappingOutboundTransformer {
 
+    private final JMSMappingOutboundTransformer transformer;
+
     public AutoOutboundTransformer(JMSVendor vendor) {
         super(vendor);
+        transformer = new JMSMappingOutboundTransformer(vendor);
     }
 
     @Override
@@ -39,7 +42,7 @@ public class AutoOutboundTransformer extends JMSMappingOutboundTransformer {
                 return null;
             }
         } else {
-            return JMSMappingOutboundTransformer.transform(this, msg);
+            return transformer.transform(msg);
         }
     }
 
