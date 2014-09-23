@@ -968,7 +968,7 @@ int pn_do_detach(pn_dispatcher_t *disp)
     PN_SET_REMOTE(link->endpoint.state, PN_REMOTE_CLOSED);
     pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_REMOTE_CLOSE);
   } else {
-    // TODO: implement
+    pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_REMOTE_DETACH);
   }
 
   pni_unmap_remote_handle(link);
@@ -1613,7 +1613,7 @@ int pn_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
     pn_session_t *session = link->session;
     pn_session_state_t *ssn_state = &session->state;
     pn_link_state_t *state = &link->state;
-    if (endpoint->state & PN_LOCAL_CLOSED && (int32_t) state->local_handle >= 0 &&
+    if (((endpoint->state & PN_LOCAL_CLOSED) || link->detached) && (int32_t) state->local_handle >= 0 &&
         (int16_t) ssn_state->local_channel >= 0 && !transport->close_sent) {
       if (pn_link_is_sender(link) && pn_link_queued(link) &&
           (int32_t) state->remote_handle != -2 &&
@@ -1630,8 +1630,10 @@ int pn_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
         info = pn_condition_info(&endpoint->condition);
       }
 
-      int err = pn_post_frame(transport->disp, ssn_state->local_channel, "DL[Io?DL[sSC]]", DETACH,
-                              state->local_handle, true, (bool) name, ERROR, name, description, info);
+      int err =
+          pn_post_frame(transport->disp, ssn_state->local_channel,
+                        "DL[Io?DL[sSC]]", DETACH, state->local_handle, !link->detached,
+                        (bool)name, ERROR, name, description, info);
       if (err) return err;
       pni_unmap_local_handle(link);
     }

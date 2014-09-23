@@ -55,6 +55,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
 
     private LinkNode<LinkImpl> _node;
     private boolean _drain;
+    private boolean _detached;
 
     LinkImpl(SessionImpl session, String name)
     {
@@ -398,4 +399,17 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     {
         getConnectionImpl().put(Event.Type.LINK_CLOSE, this);
     }
+
+    public void detach()
+    {
+        _detached = true;
+        getConnectionImpl().put(Event.Type.LINK_DETACH, this);
+        modified();
+    }
+
+    boolean detached()
+    {
+        return _detached;
+    }
+
 }

@@ -51,6 +51,8 @@ public interface Event
         LINK_REMOTE_OPEN,
         LINK_CLOSE,
         LINK_REMOTE_CLOSE,
+        LINK_DETACH,
+        LINK_REMOTE_DETACH,
         LINK_FLOW,
         LINK_FINAL,
 
