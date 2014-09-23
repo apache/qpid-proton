@@ -487,6 +487,18 @@ pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
                            pn_seconds_t timeout);
 
 /**
+ * Get a link based on link name and whether the link is a sender or receiver
+ *
+ * @param[in] messenger the messenger to get the link from
+ * @param[in] address the link address that identifies the link to receive
+ * @param[in] sender true if the link is a sender, false if the link is a
+ *            receiver
+ * @return a link, or NULL if no link matches the address / sender parameters
+ */
+PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
+                                           const char *address, bool sender);
+
+/**
  * Get a subscription's application context.
  *
  * See ::pn_subscription_set_context().
@@ -536,6 +548,20 @@ PN_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  * @return a status code for the delivery
  */
 PN_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+
+/**
+ * Get delivery information about a delivery.
+ *
+ * Returns the delivery information associated with the supplied tracker.
+ * This may return NULL if the tracker has fallen outside the
+ * incoming/outgoing tracking windows of the messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] tracker the tracker identifying the delivery
+ * @return a pn_delivery_t representing the delivery.
+ */
+PN_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker);
 
 /**
  * Check if the delivery associated with a given tracker is still

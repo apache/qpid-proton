@@ -1669,13 +1669,12 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   return connection;
 }
 
-pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
-                             bool sender, pn_seconds_t timeout)
+PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
+                                           const char *address, bool sender)
 {
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
   if (!connection) return NULL;
-  pn_connection_ctx_t *cctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
@@ -1688,6 +1687,22 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
     }
     link = pn_link_next(link, PN_LOCAL_ACTIVE);
   }
+  return NULL;
+}
+
+pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
+                             bool sender, pn_seconds_t timeout)
+{
+  char *name = NULL;
+  pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
+  if (!connection)
+    return NULL;
+  pn_connection_ctx_t *cctx =
+      (pn_connection_ctx_t *)pn_connection_get_context(connection);
+
+  pn_link_t *link = pn_messenger_get_link(messenger, address, sender);
+  if (link)
+    return link;
 
   pn_session_t *ssn = pn_session(connection);
   pn_session_open(ssn);
@@ -1989,6 +2004,18 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
     return pni_entry_get_status(e);
   } else {
     return PN_STATUS_UNKNOWN;
+  }
+}
+
+pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
+                                     pn_tracker_t tracker)
+{
+  pni_store_t *store = pn_tracker_store(messenger, tracker);
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
+  if (e) {
+    return pni_entry_get_delivery(e);
+  } else {
+    return NULL;
   }
 }
 
