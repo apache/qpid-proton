@@ -20,6 +20,7 @@
  */
 
 #include "proton/url.h"
+#include "proton/object.h"
 #include "proton/util.h"
 #include "platform.h"
 
@@ -29,7 +30,7 @@
 
 static char* copy(const char* str) {
     if (str ==  NULL) return NULL;
-    char *str2 = (char*)malloc(strlen(str));
+    char *str2 = (char*)malloc(strlen(str)+1);
     if (str2) strcpy(str2, str);
     return str2;
 }
@@ -41,12 +42,13 @@ struct pn_url_t {
     char *host;
     char *port;
     char *path;
-    char *str;
+    pn_string_t *str;
 };
 
 PN_EXTERN pn_url_t *pn_url() {
     pn_url_t *url = (pn_url_t*)malloc(sizeof(pn_url_t));
-    memset(url, 0, sizeof(*url));
+    if (url) memset(url, 0, sizeof(*url));
+    url->str = pn_string("");
     return url;
 }
 
@@ -59,7 +61,7 @@ PN_EXTERN pn_url_t *pn_url_parse(const char *str) {
         return NULL;
 
     pn_url_t *url = pn_url();
-    char *str2 = copy(str);         /* FIXME aconway 2014-09-19: clean up */
+    char *str2 = copy(str);
     pni_parse_url(str2, &url->scheme, &url->username, &url->password, &url->host, &url->port, &url->path);
     url->scheme = copy(url->scheme);
     url->username = copy(url->username);
@@ -67,56 +69,53 @@ PN_EXTERN pn_url_t *pn_url_parse(const char *str) {
     url->host = (url->host && !*url->host) ? NULL : copy(url->host);
     url->port = copy(url->port);
     url->path = copy(url->path);
+
+    free(str2);
     return url;
 }
 
 /** Free a URL */
 PN_EXTERN void pn_url_free(pn_url_t *url) {
     pn_url_clear(url);
+    pn_free(url->str);
     free(url);
 }
 
 /** Clear the contents of the URL. */
 PN_EXTERN void pn_url_clear(pn_url_t *url) {
+    pn_url_set_scheme(url, NULL);
     pn_url_set_username(url, NULL);
     pn_url_set_password(url, NULL);
     pn_url_set_host(url, NULL);
     pn_url_set_port(url, NULL);
     pn_url_set_path(url, NULL);
-    free(url->str); url->str = NULL;
+    pn_string_clear(url->str);
 }
 
 static inline int len(const char *str) { return str ? strlen(str) : 0; }
 
 /** Return the string form of a URL. */
 PN_EXTERN const char *pn_url_str(pn_url_t *url) {
-    int size = len(url->scheme) + len(url->username) + len(url->password)
-        + len(url->host) + len(url->port) + len(url->path)
-        + len("s://u:p@[h]:p/p");
-    free(url->str);
-    url->str = (char*)malloc(size);
-    if (!url->str) return NULL;
-
-    int i = 0;
-    if (url->scheme) i += snprintf(url->str+i, size-i, "%s://", url->scheme);
-    if (url->username) i += snprintf(url->str+i, size-i, "%s", url->username);
-    if (url->password) i += snprintf(url->str+i, size-i, ":%s", url->password);
-    if (url->username || url->password) i += snprintf(url->str+i, size-i, "@");
+    pn_string_set(url->str, "");
+    if (url->scheme) pn_string_addf(url->str, "%s://", url->scheme);
+    if (url->username) pn_string_addf(url->str, "%s", url->username);
+    if (url->password) pn_string_addf(url->str, ":%s", url->password);
+    if (url->username || url->password) pn_string_addf(url->str, "@");
     if (url->host) {
-        if (strchr(url->host, ':')) i += snprintf(url->str+i, size-i, "[%s]", url->host);
-        else i += snprintf(url->str+i, size-i, "%s", url->host);
+        if (strchr(url->host, ':')) pn_string_addf(url->str, "[%s]", url->host);
+        else pn_string_addf(url->str, "%s", url->host);
     }
-    if (url->port) i += snprintf(url->str+i, size-i, ":%s", url->port);
-    if (url->path) i += snprintf(url->str+i, size-i, "/%s", url->path);
-    return url->str;
+    if (url->port) pn_string_addf(url->str, ":%s", url->port);
+    if (url->path) pn_string_addf(url->str, "/%s", url->path);
+    return pn_string_get(url->str);
 }
 
-PN_EXTERN const char *pn_url_scheme(pn_url_t *url) { return url->scheme; }
-PN_EXTERN const char *pn_url_username(pn_url_t *url) { return url->username; }
-PN_EXTERN const char *pn_url_password(pn_url_t *url) { return url->password; }
-PN_EXTERN const char *pn_url_host(pn_url_t *url) { return url->host; }
-PN_EXTERN const char *pn_url_port(pn_url_t *url) { return url->port; }
-PN_EXTERN const char *pn_url_path(pn_url_t *url) { return url->path; }
+PN_EXTERN const char *pn_url_get_scheme(pn_url_t *url) { return url->scheme; }
+PN_EXTERN const char *pn_url_get_username(pn_url_t *url) { return url->username; }
+PN_EXTERN const char *pn_url_get_password(pn_url_t *url) { return url->password; }
+PN_EXTERN const char *pn_url_get_host(pn_url_t *url) { return url->host; }
+PN_EXTERN const char *pn_url_get_port(pn_url_t *url) { return url->port; }
+PN_EXTERN const char *pn_url_get_path(pn_url_t *url) { return url->path; }
 
 #define SET(part) free(url->part); url->part = copy(part)
 PN_EXTERN void pn_url_set_scheme(pn_url_t *url, const char *scheme) { SET(scheme); }

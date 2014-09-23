@@ -46,7 +46,12 @@ PN_EXTERN void pn_url_free(pn_url_t *url);
 /** Clear the contents of the URL. */
 PN_EXTERN void pn_url_clear(pn_url_t *url);
 
-/** Return the string form of a URL. Owned by the pn_url_t.*/
+/**
+ * Return the string form of a URL.
+ *
+ *  The returned string is owned by the pn_url_t and will become invalid if it
+ *  is modified.
+ */
 PN_EXTERN const char *pn_url_str(pn_url_t *url);
 
 /**
@@ -56,12 +61,12 @@ PN_EXTERN const char *pn_url_str(pn_url_t *url);
  *
  *@{
  */
-PN_EXTERN const char *pn_url_scheme(pn_url_t *url);
-PN_EXTERN const char *pn_url_username(pn_url_t *url);
-PN_EXTERN const char *pn_url_password(pn_url_t *url);
-PN_EXTERN const char *pn_url_host(pn_url_t *url);
-PN_EXTERN const char *pn_url_port(pn_url_t *url);
-PN_EXTERN const char *pn_url_path(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_scheme(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_username(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_password(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_host(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_port(pn_url_t *url);
+PN_EXTERN const char *pn_url_get_path(pn_url_t *url);
 ///@}
 
 /**
