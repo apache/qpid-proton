@@ -104,6 +104,7 @@ struct pn_messenger_t {
   pn_snd_settle_mode_t snd_settle_mode;
   pn_rcv_settle_mode_t rcv_settle_mode;
   pn_tracer_t tracer;
+  pn_ssl_verify_mode_t ssl_peer_authentication_mode;
   bool blocking;
   bool passive;
   bool interrupted;
@@ -651,6 +652,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->snd_settle_mode = PN_SND_SETTLED;
     m->rcv_settle_mode = PN_RCV_FIRST;
     m->tracer = NULL;
+    m->ssl_peer_authentication_mode = PN_SSL_VERIFY_PEER_NAME;
   }
 
   return m;
@@ -927,7 +929,8 @@ static int pn_transport_config(pn_messenger_t *messenger,
         pn_error_report("CONNECTION", "invalid certificate db");
         return err;
       }
-      err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_VERIFY_PEER_NAME, NULL);
+      err = pn_ssl_domain_set_peer_authentication(
+          d, messenger->ssl_peer_authentication_mode, NULL);
       if (err) {
         pn_error_report("CONNECTION", "error configuring ssl to verify peer");
       }
@@ -2341,4 +2344,14 @@ pn_millis_t pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
     }
   }
   return timeout;
+}
+
+int
+pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
+                                              const pn_ssl_verify_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->ssl_peer_authentication_mode = mode;
+  return 0;
 }

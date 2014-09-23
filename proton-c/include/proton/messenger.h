@@ -29,6 +29,7 @@
 #include <proton/terminus.h>
 #include <proton/link.h>
 #include <proton/transport.h>
+#include <proton/ssl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -987,6 +988,19 @@ PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
 PN_EXTERN pn_millis_t
     pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
                                          const char *address);
+
+/**
+ * Sets the SSL peer authentiacation mode required when a trust
+ * certificate is used.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] mode the mode required (see pn_ssl_verify_mode_t
+ *             enum for valid values)
+ * @return 0 if successful or -1 if an error occurs
+ */
+PN_EXTERN int
+pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
+                                              const pn_ssl_verify_mode_t mode);
 
 #ifdef __cplusplus
 }
