@@ -20,10 +20,13 @@
  */
 
 #include <proton/messenger.h>
-#include <proton/sasl.h>
-#include <proton/ssl.h>
-#include <proton/util.h>
+
+#include <proton/connection.h>
+#include <proton/delivery.h>
+#include <proton/event.h>
 #include <proton/object.h>
+#include <proton/sasl.h>
+#include <proton/session.h>
 #include <proton/selector.h>
 
 #include <assert.h>
@@ -32,13 +35,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "../util.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
+#include "util.h"
+#include "platform.h"
+#include "platform_fmt.h"
 #include "store.h"
 #include "transform.h"
 #include "subscription.h"
-#include "../selectable.h"
+#include "selectable.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 

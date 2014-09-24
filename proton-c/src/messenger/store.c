@@ -28,7 +28,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
-#include "../util.h"
+#include "util.h"
 #include "store.h"
 
 typedef struct pni_stream_t pni_stream_t;

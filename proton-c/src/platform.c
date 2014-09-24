@@ -21,7 +21,6 @@
 
 #include "platform.h"
 #include "util.h"
-#include "proton/util.h" // for pn_fatal() ?should pn_fatal() be public?
 
 /* Allow for systems that do not implement clock_gettime()*/
 #ifdef USE_CLOCK_GETTIME
@@ -29,7 +28,7 @@
 pn_timestamp_t pn_i_now(void)
 {
   struct timespec now;
-  if (clock_gettime(CLOCK_REALTIME, &now)) pn_fatal("clock_gettime() failed\n");
+  if (clock_gettime(CLOCK_REALTIME, &now)) pni_fatal("clock_gettime() failed\n");
   return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
 #elif defined(USE_WIN_FILETIME)
@@ -49,7 +48,7 @@ pn_timestamp_t pn_i_now(void)
 pn_timestamp_t pn_i_now(void)
 {
   struct timeval now;
-  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+  if (gettimeofday(&now, NULL)) pni_fatal("gettimeofday failed\n");
   return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
 #endif
@@ -93,12 +92,12 @@ char* pn_i_genuuid(void) {
 #ifdef USE_STRERROR_R
 #include <string.h>
 static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
-  if (strerror_r(errnum, buf, buflen) != 0) pn_fatal("strerror_r() failed\n");
+  if (strerror_r(errnum, buf, buflen) != 0) pni_fatal("strerror_r() failed\n");
 }
 #elif USE_STRERROR_S
 #include <string.h>
 static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
-  if (strerror_s(buf, buflen, errnum) != 0) pn_fatal("strerror_s() failed\n");
+  if (strerror_s(buf, buflen, errnum) != 0) pni_fatal("strerror_s() failed\n");
 }
 #elif USE_OLD_STRERROR
 // This is thread safe on some platforms, and the only option on others

@@ -27,7 +27,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <proton/error.h>
-#include <proton/util.h>
 #include <proton/types.h>
 #include "util.h"
 
@@ -200,17 +199,17 @@ void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **ho
   if (*pass) pni_urldecode(*pass, *pass);
 }
 
-void pn_vfatal(const char *fmt, va_list ap)
+void pni_vfatal(const char *fmt, va_list ap)
 {
   vfprintf(stderr, fmt, ap);
   abort();
 }
 
-void pn_fatal(const char *fmt, ...)
+void pni_fatal(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  pn_vfatal(fmt, ap);
+  pni_vfatal(fmt, ap);
   va_end(ap);
 }
 

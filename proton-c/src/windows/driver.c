@@ -31,14 +31,12 @@
 #include <proton/io.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
-#include <proton/util.h>
 #include <proton/object.h>
 #include <proton/selector.h>
 #include <proton/types.h>
-#include "../selectable.h"
-#include "../util.h"
-#include "../platform.h"
-#include "../ssl/ssl-internal.h"
+#include "selectable.h"
+#include "util.h"
+#include "platform.h"
 
 /*
  * This driver provides limited thread safety for some operations on pn_connector_t objects.

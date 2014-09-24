@@ -28,11 +28,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "../sasl/sasl-internal.h"
-#include "../ssl/ssl-internal.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
-#include "../transport/transport.h"
+#include "platform.h"
+#include "platform_fmt.h"
+#include "transport/transport.h"
 
 // endpoints
 

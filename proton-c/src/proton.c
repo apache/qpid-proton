@@ -29,16 +29,18 @@
 #include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <proton/driver.h>
-#include <proton/message.h>
-#include <proton/util.h>
+
+#include "proton/buffer.h"
+#include "proton/codec.h"
+#include "proton/driver.h"
+#include "proton/engine.h"
+#include "proton/message.h"
+#include "proton/version.h"
 #include "util.h"
-#include <proton/version.h>
-#include <proton/codec.h>
-#include <proton/buffer.h>
-#include <proton/parser.h>
 #include "platform_fmt.h"
+
 #include "protocol.h"
 
 void error_exit(const char* fmt, ...)

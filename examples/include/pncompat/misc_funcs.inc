@@ -55,13 +55,14 @@ pn_timestamp_t time_now(void)
   return t.QuadPart / 10000 - 11644473600000;
 }
 #else
-#include <proton/util.h>
 #include <sys/time.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 pn_timestamp_t time_now(void)
 {
   struct timeval now;
-  if (gettimeofday(&now, NULL)) pn_fatal("gettimeofday failed\n");
+  if (gettimeofday(&now, NULL)) {fprintf(stderr, "gettimeofday failed\n"); abort();}
   return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
 #endif

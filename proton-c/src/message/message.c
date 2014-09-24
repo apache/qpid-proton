@@ -29,8 +29,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include "protocol.h"
-#include "../util.h"
-#include "../platform_fmt.h"
+#include "util.h"
+#include "platform_fmt.h"
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {

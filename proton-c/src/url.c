@@ -21,7 +21,7 @@
 
 #include "proton/url.h"
 #include "proton/object.h"
-#include "proton/util.h"
+#include "util.h"
 #include "platform.h"
 
 #include <stdlib.h>

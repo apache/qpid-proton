@@ -19,7 +19,7 @@
  *
  */
 
-#include "../engine/engine-internal.h"
+#include "engine/engine-internal.h"
 #include <stdlib.h>
 #include <string.h>
 #include <proton/framing.h>
@@ -30,10 +30,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "../sasl/sasl-internal.h"
-#include "../ssl/ssl-internal.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
+#include "sasl/sasl-internal.h"
+#include "ssl/ssl-internal.h"
+#include "platform.h"
+#include "platform_fmt.h"
 
 static ssize_t transport_consume(pn_transport_t *transport);
 

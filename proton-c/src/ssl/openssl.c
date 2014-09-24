@@ -20,11 +20,10 @@
  */
 
 #include <proton/ssl.h>
-#include "./ssl-internal.h"
 #include <proton/engine.h>
-#include "../engine/engine-internal.h"
-#include "../platform.h"
-#include "../util.h"
+#include "engine/engine-internal.h"
+#include "platform.h"
+#include "util.h"
 
 #include <openssl/ssl.h>
 #include <openssl/dh.h>

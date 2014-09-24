@@ -26,8 +26,8 @@
 #include <proton/buffer.h>
 #include <proton/engine.h>
 #include <proton/types.h>
-#include "../dispatcher/dispatcher.h"
-#include "../util.h"
+#include "dispatcher/dispatcher.h"
+#include "util.h"
 
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
 

@@ -33,6 +33,9 @@
 #include <proton/types.h>
 #include <proton/object.h>
 
+PN_EXTERN void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
+void pni_fatal(const char *fmt, ...);
+void pni_vfatal(const char *fmt, va_list ap);
 PN_EXTERN ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
 int pn_quote(pn_string_t *dst, const char *src, size_t size);
 PN_EXTERN void pn_fprint_data(FILE *stream, const char *bytes, size_t size);

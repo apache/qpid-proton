@@ -20,7 +20,6 @@
  */
 
 #include <stdarg.h>
-#include <proton/type_compat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,8 +28,9 @@
 #undef NDEBUG
 #include <assert.h>
 
-#include <proton/error.h>
-#include <proton/util.h>
+#include "proton/type_compat.h"
+#include "proton/error.h"
+#include "util.h"
 
 static inline bool equalStrP(const char* s1, const char* s2)
 {
