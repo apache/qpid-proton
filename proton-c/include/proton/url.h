@@ -21,6 +21,11 @@
 
 #include <proton/import_export.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /** @file
  * URL API for parsing URLs.
  *
@@ -85,4 +90,9 @@ PN_EXTERN void pn_url_set_path(pn_url_t *url, const char *path);
 ///@}
 
 ///@}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
