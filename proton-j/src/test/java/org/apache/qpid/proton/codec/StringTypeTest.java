@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.lang.Character.UnicodeBlock;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,6 +37,8 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
  */
 public class StringTypeTest
 {
+    private static final Charset CHARSET_UTF8 = Charset.forName("UTF-8");
+
     /**
      * Loop over all the chars in a given {@link UnicodeBlock} and return a
      * {@link Set <String>} containing all the possible values as their
@@ -62,8 +64,12 @@ public class StringTypeTest
                 }
                 else if (charCount == 2)
                 {
-                    sb.append(Character.highSurrogate(codePoint));
-                    sb.append(Character.lowSurrogate(codePoint));
+                    //TODO: use Character.highSurrogate(codePoint) and Character.lowSurrogate(codePoint) when Java 7 is baseline
+                    char highSurrogate = (char) ((codePoint >>> 10) + ('\uD800' - (0x010000 >>> 10)));
+                    char lowSurrogate =  (char) ((codePoint & 0x3ff) + '\uDC00');
+
+                    sb.append(highSurrogate);
+                    sb.append(lowSurrogate);
                 }
                 else
                 {
@@ -86,7 +92,7 @@ public class StringTypeTest
     {
         for (final String input : generateTestData())
         {
-            assertEquals("Incorrect string length calculated for string '"+input+"'",input.getBytes(StandardCharsets.UTF_8).length, StringType.calculateUTF8Length(input));
+            assertEquals("Incorrect string length calculated for string '"+input+"'",input.getBytes(CHARSET_UTF8).length, StringType.calculateUTF8Length(input));
         }
     }
 
@@ -128,10 +134,12 @@ public class StringTypeTest
                     addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.GREEK));
                     addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.LETTERLIKE_SYMBOLS));
                     // blocks with surrogate pairs
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS));
+                    //TODO: restore when Java 7 is baseline
+                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS));
                     addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.MUSICAL_SYMBOLS));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.EMOTICONS));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.PLAYING_CARDS));
+                    //TODO: restore when Java 7 is baseline
+                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.EMOTICONS));
+                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.PLAYING_CARDS));
                     addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_A));
                     addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_B));
                 }
