@@ -121,7 +121,7 @@ public class TransportImpl extends EndpointImpl
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
-    private TransportException _tail_error = null;
+    private ErrorCondition _condition = null;
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
@@ -208,6 +208,12 @@ public class TransportImpl extends EndpointImpl
     public int getRemoteChannelMax()
     {
         return _remoteChannelMax;
+    }
+
+    @Override
+    public ErrorCondition getCondition()
+    {
+        return _condition;
     }
 
     @Override
@@ -752,7 +758,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processOpen()
     {
-        if ((_tail_error != null ||
+        if ((_condition != null ||
              (_connectionEndpoint != null &&
               _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
             !_isOpenSent) {
@@ -929,7 +935,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processClose()
     {
-        if ((_tail_error != null ||
+        if ((_condition != null ||
              (_connectionEndpoint != null &&
               _connectionEndpoint.getLocalState() == EndpointState.CLOSED)) &&
             !_isCloseSent) {
@@ -940,8 +946,7 @@ public class TransportImpl extends EndpointImpl
                 ErrorCondition localError;
 
                 if (_connectionEndpoint == null) {
-                    localError = new ErrorCondition(ConnectionError.FRAMING_ERROR,
-                                                    _tail_error.toString());
+                    localError = _condition;
                 } else {
                     localError =  _connectionEndpoint.getCondition();
                 }
@@ -1263,13 +1268,15 @@ public class TransportImpl extends EndpointImpl
     {
         if (!_closeReceived || error != null) {
             if (error == null) {
-                _tail_error = new TransportException("connection aborted");
+                _condition = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                               "connection aborted");
             } else {
-                _tail_error = error;
+                _condition = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                error.toString());
             }
             _head_closed = true;
         }
-        if (_tail_error != null) {
+        if (_condition != null) {
             put(Event.Type.TRANSPORT_ERROR, this);
         }
         if (!postedTailClosed) {

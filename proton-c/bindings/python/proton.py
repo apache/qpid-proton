@@ -3136,6 +3136,10 @@ The idle timeout of the connection (float, in seconds).
       self._ssl = SSL(self, domain, session_details)
     return self._ssl
 
+  @property
+  def condition(self):
+    return cond2obj(pn_transport_condition(self._trans))
+
 class SASLException(TransportException):
   pass
 

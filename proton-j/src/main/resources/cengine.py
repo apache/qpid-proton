@@ -867,6 +867,7 @@ class pn_transport_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
+    self.condition = pn_condition()
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
@@ -943,6 +944,10 @@ def pn_transport_close_tail(trans):
 
 def pn_transport_closed(trans):
   return trans.impl.isClosed()
+
+def pn_transport_condition(trans):
+  trans.condition.decode(trans.impl.getCondition())
+  return trans.condition
 
 from org.apache.qpid.proton.engine import Event
 

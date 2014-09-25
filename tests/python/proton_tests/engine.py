@@ -2257,12 +2257,14 @@ class EventTest(CollectorTest):
     t = Transport()
     t.bind(c)
     self.expect(Event.CONNECTION_BOUND)
+    assert t.condition is None
     t.push("asdf")
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
+    assert t.condition is not None
+    assert t.condition.name == "amqp:connection:framing-error"
+    assert "AMQP header mismatch" in t.condition.description
     p = t.pending()
     assert p > 0
-    # XXX: can't include this because java behaviour is different
-    #assert "AMQP header mismatch" in t.peek(p), repr(t.peek(p))
     t.pop(p)
     self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
