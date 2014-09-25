@@ -50,6 +50,7 @@ public final class Binary
         return ByteBuffer.wrap(_data, _offset, _length);
     }
 
+    @Override
     public final int hashCode()
     {
         int hc = _hashCode;
@@ -64,13 +65,20 @@ public final class Binary
         return hc;
     }
 
+    @Override
     public final boolean equals(Object o)
     {
-        Binary buf = (Binary) o;
-        if(o == null)
+        if (this == o)
+        {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass())
         {
             return false;
         }
+
+        Binary buf = (Binary) o;
         final int size = _length;
         if (size != buf._length)
         {
