@@ -61,7 +61,11 @@ struct pn_data_t {
   pni_nid_t base_current;
 };
 
-pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd);
+inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
+{
+  return nd ? (data->nodes + nd - 1) : NULL;
+}
+
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
