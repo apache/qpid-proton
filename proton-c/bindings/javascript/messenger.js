@@ -431,8 +431,15 @@ _Messenger_['subscribe'] = function(source) {
         this._check(Module['Error']['ERR']);
     }
 
-    subscription = new Subscription(subscription)
-    this._pendingSubscriptions.push(subscription);
+    // For peer subscriptions to this Messenger emit a subscription event
+    // immediately otherwise defer until the address is resolved remotely.
+    if (source.indexOf('~') !== -1) {
+        subscription = new Subscription(subscription, source);
+        this._emit('subscription', subscription);
+    } else {
+        subscription = new Subscription(subscription)
+        this._pendingSubscriptions.push(subscription);
+    }
     return subscription;
 };
 

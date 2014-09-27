@@ -20,76 +20,74 @@
  */
 
 // Check if the environment is Node.js and if not log an error and exit.
-if (!exports) {
-    console.error("soak.js should be run in Node.js");
-    return;
-}
+if (typeof process === 'object' && typeof require === 'function') {
+    var proton = require("qpid-proton");
 
-var proton = require("qpid-proton");
+    var addr = 'guest:guest@localhost:5673';
+    //var addr = 'localhost:5673';
+    var address = 'amqp://' + addr;
+    console.log(address);
 
-var addr = 'guest:guest@localhost:5673';
-//var addr = 'localhost:5673';
-var address = 'amqp://' + addr;
-console.log(address);
+    var subscriptionQueue = '';
+    var count = 0;
+    var start = 0; // Start Time.
 
-var subscriptionQueue = '';
-var count = 0;
-var start = 0; // Start Time.
+    var message = new proton.Message();
+    var messenger = new proton.Messenger();
 
-var message = new proton.Message();
-var messenger = new proton.Messenger();
+    var pumpData = function() {
+        while (messenger.incoming()) {
+            // The second parameter forces Binary payloads to be decoded as strings
+            // this is useful because the broker QMF Agent encodes strings as AMQP
+            // binary, which is a right pain from an interoperability perspective.
+            var t = messenger.get(message, true);
+            //console.log("Address: " + message.getAddress());
+            //console.log("Content: " + message.body);
+            messenger.accept(t);
+    
+            if (count % 1000 === 0) {
+                var time = +new Date();
+                console.log("count = " + count + ", duration = " + (time - start) + ", rate = " + ((count*1000)/(time - start)));
+            }
 
-var pumpData = function() {
-    while (messenger.incoming()) {
-        // The second parameter forces Binary payloads to be decoded as strings
-        // this is useful because the broker QMF Agent encodes strings as AMQP
-        // binary, which is a right pain from an interoperability perspective.
-        var t = messenger.get(message, true);
-        //console.log("Address: " + message.getAddress());
-        //console.log("Content: " + message.body);
-        messenger.accept(t);
-
-        if (count % 1000 === 0) {
-            var time = +new Date();
-            console.log("count = " + count + ", duration = " + (time - start) + ", rate = " + ((count*1000)/(time - start)));
+            sendMessage();
         }
 
+        if (messenger.isStopped()) {
+            message.free();
+            messenger.free();
+        }
+    };
+
+    var sendMessage = function() {
+        var msgtext = "Message Number " + count;
+        count++;
+
+        message.setAddress(address + '/' + subscriptionQueue);
+        message.body = msgtext;
+        messenger.put(message);
+        //messenger.settle();
+    };
+
+    messenger.on('error', function(error) {console.log(error);});
+    messenger.on('work', pumpData);
+    messenger.on('subscription', function(subscription) {
+        var subscriptionAddress = subscription.getAddress();
+        var splitAddress = subscriptionAddress.split('/');
+        subscriptionQueue = splitAddress[splitAddress.length - 1];
+
+        console.log("Subscription Queue: " + subscriptionQueue);
+        start = +new Date();
         sendMessage();
-    }
+    });
 
-    if (messenger.isStopped()) {
-        message.free();
-        messenger.free();
-    }
-};
+    //messenger.setOutgoingWindow(1024);
+    messenger.setIncomingWindow(1024); // The Java Broker seems to need this.
+    messenger.recv(); // Receive as many messages as messenger can buffer.
+    messenger.start();
 
-var sendMessage = function() {
-    var msgtext = "Message Number " + count;
-    count++;
-
-    message.setAddress(address + '/' + subscriptionQueue);
-    message.body = msgtext;
-    messenger.put(message);
-//messenger.settle();
-};
-
-messenger.on('error', function(error) {console.log(error);});
-messenger.on('work', pumpData);
-messenger.on('subscription', function(subscription) {
-    var subscriptionAddress = subscription.getAddress();
-    var splitAddress = subscriptionAddress.split('/');
-    subscriptionQueue = splitAddress[splitAddress.length - 1];
-
-    console.log("Subscription Queue: " + subscriptionQueue);
-    start = +new Date();
-    sendMessage();
-});
-
-//messenger.setOutgoingWindow(1024);
-messenger.setIncomingWindow(1024); // The Java Broker seems to need this.
-messenger.recv(); // Receive as many messages as messenger can buffer.
-messenger.start();
-
-messenger.subscribe('amqp://' + addr + '/#');
-
+    messenger.subscribe('amqp://' + addr + '/#');
+} else {
+    console.error("soak.js should be run in Node.js");
+}
 

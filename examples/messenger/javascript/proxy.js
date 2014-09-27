@@ -36,71 +36,70 @@
  */
 
 // Check if the environment is Node.js and if not log an error and exit.
-if (!exports) {
-    console.error("proxy.js should be run in Node.js");
-    return;
-}
+if (typeof process === 'object' && typeof require === 'function') {
+    var proxy = require('./ws2tcp.js');
 
-var proxy = require('./ws2tcp.js');
+    var lport = 5673;
+    var tport = lport - 1;
+    var thost = '0.0.0.0';
+    var method = 'ws2tcp';
 
-var lport = 5673;
-var tport = lport - 1;
-var thost = '0.0.0.0';
-var method = 'ws2tcp';
+    var args = process.argv.slice(2);
+    if (args.length > 0) {
+        if (args[0] === '-h' || args[0] === '--help') {
+            console.log("Usage: node proxy.js [options]");
+            console.log("Options:");
+            console.log("  -p <listen port>, --port  <listen port> (default " + lport + " for ws2tcp");
+            console.log("                                                   " + tport + " for tcp2ws)");
+            console.log("  -t <target port>, --tport <target port> (default listen port - 1 for ws2tcp");
+            console.log("                                                   listen port + 1 for tcp2ws)");
+            console.log("  -h <target host>, --thost <target host> (default " + thost + ")");
+            console.log("  -m <ws2tcp or tcp2ws>, --method <ws2tcp or tcp2ws> (default " + method + ")");
+            process.exit(0);
+        }
 
-var args = process.argv.slice(2);
-if (args.length > 0) {
-    if (args[0] === '-h' || args[0] === '--help') {
-        console.log("Usage: node proxy.js [options]");
-        console.log("Options:");
-        console.log("  -p <listen port>, --port  <listen port> (default " + lport + " for ws2tcp");
-        console.log("                                                   " + tport + " for tcp2ws)");
-        console.log("  -t <target port>, --tport <target port> (default listen port - 1 for ws2tcp");
-        console.log("                                                   listen port + 1 for tcp2ws)");
-        console.log("  -h <target host>, --thost <target host> (default " + thost + ")");
-        console.log("  -m <ws2tcp or tcp2ws>, --method <ws2tcp or tcp2ws> (default " + method + ")");
-        process.exit(0);
-    }
-
-    var lportSet = false;
-    var tportSet = false;
-    for (var i = 0; i < args.length; i++) {
-        var arg = args[i];
-        if (arg.charAt(0) === '-') {
-            i++;
-            var val = args[i];
-            if (arg === '-p' || arg === '--port') {
-                lport = val;
-                lportSet = true;
-            } else if (arg === '-t' || arg === '--tport') {
-                tport = val;
-                tportSet = true;
-            } else if (arg === '-h' || arg === '--thost') {
-                thost = val;
-            } else if (arg === '-m' || arg === '--method') {
-                method = val;
+        var lportSet = false;
+        var tportSet = false;
+        for (var i = 0; i < args.length; i++) {
+            var arg = args[i];
+            if (arg.charAt(0) === '-') {
+                i++;
+                var val = args[i];
+                if (arg === '-p' || arg === '--port') {
+                    lport = val;
+                    lportSet = true;
+                } else if (arg === '-t' || arg === '--tport') {
+                    tport = val;
+                    tportSet = true;
+                } else if (arg === '-h' || arg === '--thost') {
+                    thost = val;
+                } else if (arg === '-m' || arg === '--method') {
+                    method = val;
+                }
             }
+        }
+
+        if (method === 'tcp2ws' && !lportSet) {
+            lport--;
+        }
+
+        if (!tportSet) {
+            tport = (method === 'ws2tcp') ? lport - 1 : +lport + 1;
         }
     }
 
-    if (method === 'tcp2ws' && !lportSet) {
-        lport--;
+    if (method === 'tcp2ws') {
+        console.log("Proxying tcp -> ws");
+        console.log("Forwarding port " + lport + " to " + thost + ":" + tport);
+        proxy.tcp2ws(lport, thost, tport, 'AMQPWSB10');
+    } else if (method === 'ws2tcp') {
+        console.log("Proxying ws -> tcp");
+        console.log("Forwarding port " + lport + " to " + thost + ":" + tport);
+        proxy.ws2tcp(lport, thost, tport);
+    } else {
+        console.error("Method must be either ws2tcp or tcp2ws.");
     }
-
-    if (!tportSet) {
-        tport = (method === 'ws2tcp') ? lport - 1 : +lport + 1;
-    }
-}
-
-if (method === 'tcp2ws') {
-    console.log("Proxying tcp -> ws");
-    console.log("Forwarding port " + lport + " to " + thost + ":" + tport);
-    proxy.tcp2ws(lport, thost, tport, 'AMQPWSB10');
-} else if (method === 'ws2tcp') {
-    console.log("Proxying ws -> tcp");
-    console.log("Forwarding port " + lport + " to " + thost + ":" + tport);
-    proxy.ws2tcp(lport, thost, tport);
 } else {
-    console.error("Method must be either ws2tcp or tcp2ws.");
+    console.error("proxy.js should be run in Node.js");
 }
 

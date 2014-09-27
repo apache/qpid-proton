@@ -30,10 +30,13 @@
  * Subscriptions should never be *directly* instantiated by client code only via
  * Messenger.subscribe() or Messenger.incomingSubscription(), so we declare the
  * constructor in the scope of the package and don't export it via Module.
- * @constructor Subscription                                                              
+ * @constructor Subscription
+ * @param {number} subscription a pointer to the underlying subscription object.
+ * @param {string} address if the address is already known it can be (optionally) specified.
  */
-var Subscription = function(subscription) { // Subscription Constructor.
+var Subscription = function(subscription, address) { // Subscription Constructor.
     this._subscription = subscription;
+    this._address = address;
 };
 
 /**
@@ -62,6 +65,9 @@ Subscription.prototype['setContext'] = function(context) {
  * @returns the Subscription's Address.
  */
 Subscription.prototype['getAddress'] = function() {
+    if (this._address) {
+        return this._address;
+    }
     return Pointer_stringify(_pn_subscription_address(this._subscription));
 };
 

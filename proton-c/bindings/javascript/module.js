@@ -56,29 +56,43 @@
  * changed subsequently (the default size is 16*1024*1024 = 16777216).
  * <p>
  * Applications can specify the size of virtual heap that they require via the
- * global variable PROTON_HEAP_SIZE, this must be set <b>before</b> the library is
+ * global variable PROTON_TOTAL_MEMORY, this must be set <b>before</b> the library is
  * loaded e.g. in Node.js an application would do:
  * <pre>
- * PROTON_HEAP_SIZE = 50000000; // Note no var - it needs to be global.
+ * PROTON_TOTAL_MEMORY = 50000000; // Note no var - it needs to be global.
  * var proton = require('qpid-proton');
  * ...
  * </pre>
  * A browser based application would do:
  * <pre>
- * &lt;script type="text/javascript"&gt;PROTON_HEAP_SIZE = 50000000;&lt;/script&gt;
+ * &lt;script type="text/javascript"&gt;PROTON_TOTAL_MEMORY = 50000000;&lt;/script&gt;
  * &lt;script type="text/javascript" src="proton.js">&lt;/script&gt;
  * </pre>
+ * The global variable PROTON_TOTAL_STACK may be used in a similar way to increase
+ * the stack size from its default of 5*1024*1024 = 5242880. It is worth noting
+ * that Strings are allocated on the stack, so you may need this if you end up
+ * wanting to send very large strings.
  * @namespace proton
  */
 var Module = {};
 
-// If the global variable PROTON_HEAP_SIZE has been set by the application this
+// If the global variable PROTON_TOTAL_MEMORY has been set by the application this
 // will result in the emscripten heap getting set to the next multiple of
-// 16777216 above PROTON_HEAP_SIZE.
-if (typeof process === 'object' && typeof require === 'function' && global['PROTON_HEAP_SIZE']) {
-    Module['TOTAL_MEMORY'] = global['PROTON_HEAP_SIZE'];
-} else if (typeof window === 'object' && window['PROTON_HEAP_SIZE']) {
-    Module['TOTAL_MEMORY'] = window['PROTON_HEAP_SIZE'];
+// 16777216 above PROTON_TOTAL_MEMORY.
+if (typeof process === 'object' && typeof require === 'function') {
+    if (global['PROTON_TOTAL_MEMORY']) {
+        Module['TOTAL_MEMORY'] = global['PROTON_TOTAL_MEMORY'];
+    }
+    if (global['PROTON_TOTAL_STACK']) {
+        Module['TOTAL_STACK'] = global['PROTON_TOTAL_STACK'];
+    }
+} else if (typeof window === 'object') {
+    if (window['PROTON_TOTAL_MEMORY']) {
+        Module['TOTAL_MEMORY'] = window['PROTON_TOTAL_MEMORY'];
+    }
+    if (window['PROTON_TOTAL_STACK']) {
+        Module['TOTAL_STACK'] = window['PROTON_TOTAL_STACK'];
+    }
 }
 
 /*****************************************************************************/

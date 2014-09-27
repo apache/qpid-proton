@@ -7,7 +7,7 @@ with the Qpid Proton AMQP 1.0 protocol engine and messenger library.
 Important Note - Modern Browser Needed
 ======================================
 
-The JavaScript binding requires ArrayBuffer/TypeArray and WebSocket support.
+The JavaScript binding requires ArrayBuffer/TypedArray and WebSocket support.
 Both of these are available in most "modern" browser versions. The author has
 only tried running on FireFox and Chrome, though recent Safari, Opera and IE10+
 *should* work too - YMMV. It might be possible to polyfill for older browsers
@@ -21,11 +21,10 @@ bindings to Proton are somewhat different to the bindings for other languages
 because of the restrictions of the execution environment. In particular it is
 very important to note that the JavaScript bindings by default use a WebSocket
 transport and not a TCP transport, so whilst it's possible to create Server style
-applications that clients can connect to (e.g. recv.js and send.js) it is very
-important to note that:
+applications that clients can connect to (e.g. recv.js and send.js) note that:
 
 JavaScript clients cannot *directly* talk to "normal" AMQP applications such as
-qpidd or the Java Broker because they use the traditional TCP transport.
+qpidd or (by default) the Java Broker because they use a standard TCP transport.
 
 This is a slightly irksome issue, but there's no getting away from it because
 it's a security restriction imposed by the browser environment.
@@ -38,14 +37,14 @@ also be possible to use native TCP for Chrome "packaged apps", but again this is
 only on the TODO list so if you want to talk to a "normal" AMQP application you
 must live with the WebSocket constraints.
 
-Option 1. proxy from WebSockets to TCP sockets
+Option 1. proxy from WebSockets to TCP sockets. The application
 <proton>/examples/messenger/javascript/proxy.js
-is a simple Node.js WebSocket<->TCP Socket proxy, simple doing:
+is a simple Node.js WebSocket<->TCP Socket proxy, simply doing:
 
 node proxy.js
 
 will stand up a proxy listening by default on WebSocket port 5673 and forwarding
-to TCP port 5672 (this is configurable for options do: node proxy.js -h)
+to TCP port 5672 (this is configurable, for options do: node proxy.js -h)
 
 Rather than using a stand-alone proxy it is possible to have applications stand
 up their own proxy (where lport = listen port, thost = target host and
@@ -124,7 +123,7 @@ emscripten itself depends upon.
 
 http://kripken.github.io/emscripten-site/docs/building_from_source/index.html#installing-from-source
 http://kripken.github.io/emscripten-site/docs/building_from_source/toolchain_what_is_needed.html
-provides instructions for installing emscripten and the "fastcomp" LLVM backend.
+provide instructions for installing emscripten and the "fastcomp" LLVM backend.
 This approach lets users use the "bleeding edge" version of emscripten on the
 "incoming" branch (pretty much analogous to building qpid/proton off svn trunk).
 This is the approach that the author of the JavaScript Bindings tends to use.
@@ -182,7 +181,7 @@ point for doing so.
 Documentation
 =============
 
-When you've successfully got a successful build do:
+When you've successfully got a working build do:
 
   make docs
 
@@ -208,12 +207,12 @@ It's important to realise that most of the library code is compiled C code and
 the runtime uses a "virtual heap" to support the underlying malloc/free. This is
 implemented internally as an ArrayBuffer with a default size of 16777216.
 
-To allocate a larger heap an application must set the PROTON_HEAP_SIZE global.
+To allocate a larger heap an application must set the PROTON_TOTAL_MEMORY global.
 In Node.js this would look like (see send.js):
-PROTON_HEAP_SIZE = 50000000; // Note no var - it needs to be global.
+PROTON_TOTAL_MEMORY = 50000000; // Note no var - it needs to be global.
 
 In a browser it would look like (see send.html):
-<script type="text/javascript">PROTON_HEAP_SIZE = 50000000;</script>
+<script type="text/javascript">PROTON_TOTAL_MEMORY = 50000000;</script>
 
 2. Load the library and create a message and messenger.
 In Node.js this would look like (see send.js):
@@ -234,6 +233,7 @@ var messenger = new proton.Messenger();
 messenger.on('error', <error callback>);
 messenger.on('work', <work callback>);
 messenger.on('subscription', <subscription callback>);
+
 
 The work callback is triggered on WebSocket events, so in general you would use
 this to send and receive messages, for example in recv.js we have:
@@ -282,7 +282,7 @@ message.setSubject('UK.NEWS');
 message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
 
 
-The main things to bear in mind is that (particularly for sending messages) we
+The main thing to bear in mind is that (particularly for sending messages) we
 may need to use "adapters" to make sure values are correctly interpreted and
 encoded to the correct type in the AMQP type system. This is especially important
 when interoperating with a peer written in a strongly typed language (C/C++/Java).
@@ -295,7 +295,7 @@ message.body = new proton.Data.Uuid();
 // AMQP Symbol
 message.body = new proton.Data.Symbol("My Symbol");
 
-// Binary data (created from a String in this case).
+// Binary data (created from a gibberish String in this case).
 message.body = new proton.Data.Binary("Monkey Bathпогромзхцвбнм");
 
 // Binary data (Get a Uint8Array view of the data and directly access that).
@@ -313,7 +313,7 @@ message.body = new proton.Data.Binary([65, 77, 81, 80]);
 Note that the implementation of proton.Data.Binary tries to minimise copying so
 it accesses the internal emscripten heap *directly* this requires memory management
 which is mostly handled transparently, but users need to be aware that the
-underlying memory is "owned" by the Message Object so if Binary data needs to
+underlying memory is "owned" by the Message Object, so if Binary data needs to
 be maintained after the next call to messenger.get(message); it must be
 *explicitly* copied. For more detail do "make docs" and see:
 <proton>/build/proton-c/bindings/javascript/html/proton.Data.Binary.html
@@ -356,14 +356,14 @@ message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
 // primitives it is necessary to either use braces or use a "double dot" so that
 // the interpreter can disambiguate from a simple decimal point. The binding will
 // attempt to use the correct type such that message.body = 2147483647; would be
-// sent as an AMQP integer but because of the way JavaScript coerces integers
+// sent as an AMQP integer, but because of the way JavaScript coerces integers
 // message.body = 2147483647.0; would also be sent as an AMQP integer because
-// 2147483647.0 gets transparently conveted to 2147483647 by the interpreter so
+// 2147483647.0 gets transparently conveted to 2147483647 by the interpreter, so
 // to explicitly send this as an AMQP float we'd need to do:
 // message.body = 2147483647.0.float();
 
 // Some more number examples:
-message.body = 66..char();  // char
+message.body = 66..char();  // char - note double dot. (66).char(); works too.
 message.body = 2147483647;  // int
 message.body = -2147483649; // long
 message.body = 12147483649; // long
