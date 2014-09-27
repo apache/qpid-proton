@@ -117,8 +117,13 @@ set(qpid-proton-platform
 
 set(qpid-proton-core
   ${PN_PATH}/src/object/object.c
+  ${PN_PATH}/src/object/list.c
+  ${PN_PATH}/src/object/map.c
+  ${PN_PATH}/src/object/string.c
+  ${PN_PATH}/src/object/iterator.c
 
   ${PN_PATH}/src/util.c
+  ${PN_PATH}/src/url.c
   ${PN_PATH}/src/error.c
   ${PN_PATH}/src/buffer.c
   ${PN_PATH}/src/parser.c
@@ -133,7 +138,7 @@ set(qpid-proton-core
 
   ${PN_PATH}/src/dispatcher/dispatcher.c
   ${PN_PATH}/src/engine/engine.c
-  ${PN_PATH}/src/engine/event.c
+  ${PN_PATH}/src/events/event.c
   ${PN_PATH}/src/transport/transport.c
   ${PN_PATH}/src/message/message.c
   ${PN_PATH}/src/sasl/sasl.c

@@ -19,7 +19,6 @@
  *
  */
 
-#include <proton/object.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -55,6 +54,7 @@ static void pn_rule_finalize(void *object)
   pn_free(rule->substitution);
 }
 
+#define CID_pn_rule CID_pn_object
 #define pn_rule_initialize NULL
 #define pn_rule_hashcode NULL
 #define pn_rule_compare NULL
@@ -63,7 +63,7 @@ static void pn_rule_finalize(void *object)
 pn_rule_t *pn_rule(const char *pattern, const char *substitution)
 {
   static const pn_class_t clazz = PN_CLASS(pn_rule);
-  pn_rule_t *rule = (pn_rule_t *) pn_new(sizeof(pn_rule_t), &clazz);
+  pn_rule_t *rule = (pn_rule_t *) pn_class_new(&clazz, sizeof(pn_rule_t));
   rule->pattern = pn_string(pattern);
   rule->substitution = pn_string(substitution);
   return rule;
@@ -75,6 +75,7 @@ static void pn_transform_finalize(void *object)
   pn_free(transform->rules);
 }
 
+#define CID_pn_transform CID_pn_object
 #define pn_transform_initialize NULL
 #define pn_transform_hashcode NULL
 #define pn_transform_compare NULL
@@ -83,8 +84,8 @@ static void pn_transform_finalize(void *object)
 pn_transform_t *pn_transform()
 {
   static const pn_class_t clazz = PN_CLASS(pn_transform);
-  pn_transform_t *transform = (pn_transform_t *) pn_new(sizeof(pn_transform_t), &clazz);
-  transform->rules = pn_list(0, PN_REFCOUNT);
+  pn_transform_t *transform = (pn_transform_t *) pn_class_new(&clazz, sizeof(pn_transform_t));
+  transform->rules = pn_list(PN_OBJECT, 0);
   transform->matched = false;
   return transform;
 }
@@ -238,4 +239,16 @@ int pn_transform_apply(pn_transform_t *transform, const char *src,
 bool pn_transform_matched(pn_transform_t *transform)
 {
   return transform->matched;
+}
+
+int pn_transform_get_substitutions(pn_transform_t *transform,
+                                   pn_list_t *substitutions)
+{
+  int size = pn_list_size(transform->rules);
+  for (size_t i = 0; i < (size_t)size; i++) {
+    pn_rule_t *rule = (pn_rule_t *)pn_list_get(transform->rules, i);
+    pn_list_add(substitutions, rule->substitution);
+  }
+
+  return size;
 }

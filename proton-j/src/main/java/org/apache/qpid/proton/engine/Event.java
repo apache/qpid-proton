@@ -28,58 +28,46 @@ package org.apache.qpid.proton.engine;
 
 public interface Event
 {
-    public enum Category {
-        CONNECTION,
-        SESSION,
-        LINK,
-        DELIVERY,
-        TRANSPORT;
-    }
 
     public enum Type {
-        CONNECTION_INIT(Category.CONNECTION, 1),
-        CONNECTION_OPEN(Category.CONNECTION, 2),
-        CONNECTION_REMOTE_OPEN(Category.CONNECTION, 3),
-        CONNECTION_CLOSE(Category.CONNECTION, 4),
-        CONNECTION_REMOTE_CLOSE(Category.CONNECTION, 5),
-        CONNECTION_FINAL(Category.CONNECTION, 6),
+        CONNECTION_INIT,
+        CONNECTION_BOUND,
+        CONNECTION_UNBOUND,
+        CONNECTION_OPEN,
+        CONNECTION_REMOTE_OPEN,
+        CONNECTION_CLOSE,
+        CONNECTION_REMOTE_CLOSE,
+        CONNECTION_FINAL,
 
-        SESSION_INIT(Category.SESSION, 1),
-        SESSION_OPEN(Category.SESSION, 2),
-        SESSION_REMOTE_OPEN(Category.SESSION, 3),
-        SESSION_CLOSE(Category.SESSION, 4),
-        SESSION_REMOTE_CLOSE(Category.SESSION, 5),
-        SESSION_FINAL(Category.SESSION, 6),
+        SESSION_INIT,
+        SESSION_OPEN,
+        SESSION_REMOTE_OPEN,
+        SESSION_CLOSE,
+        SESSION_REMOTE_CLOSE,
+        SESSION_FINAL,
 
-        LINK_INIT(Category.LINK, 1),
-        LINK_OPEN(Category.LINK, 2),
-        LINK_REMOTE_OPEN(Category.LINK, 3),
-        LINK_CLOSE(Category.LINK, 4),
-        LINK_REMOTE_CLOSE(Category.LINK, 5),
-        LINK_FLOW(Category.LINK, 6),
-        LINK_FINAL(Category.LINK, 7),
+        LINK_INIT,
+        LINK_OPEN,
+        LINK_REMOTE_OPEN,
+        LINK_CLOSE,
+        LINK_REMOTE_CLOSE,
+        LINK_DETACH,
+        LINK_REMOTE_DETACH,
+        LINK_FLOW,
+        LINK_FINAL,
 
-        DELIVERY(Category.DELIVERY, 1),
-        TRANSPORT(Category.TRANSPORT, 1);
+        DELIVERY,
 
-        private int _opcode;
-        private Category _category;
-
-        private Type(Category c, int o)
-        {
-            this._category = c;
-            this._opcode = o;
-        }
-
-        public Category getCategory()
-        {
-            return this._category;
-        }
+        TRANSPORT,
+        TRANSPORT_ERROR,
+        TRANSPORT_HEAD_CLOSED,
+        TRANSPORT_TAIL_CLOSED,
+        TRANSPORT_CLOSED
     }
 
-    Category getCategory();
-
     Type getType();
+
+    Object getContext();
 
     Connection getConnection();
 

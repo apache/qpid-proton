@@ -22,7 +22,6 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <proton/util.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,9 +31,9 @@
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
-#include "../util.h"
+#include "platform.h"
+#include "platform_fmt.h"
+#include "util.h"
 #include "decoder.h"
 #include "encoder.h"
 #include "data.h"
@@ -367,7 +366,7 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 pn_data_t *pn_data(size_t capacity)
 {
   static const pn_class_t clazz = PN_CLASS(pn_data);
-  pn_data_t *data = (pn_data_t *) pn_new(sizeof(pn_data_t), &clazz);
+  pn_data_t *data = (pn_data_t *) pn_class_new(&clazz, sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) malloc(capacity * sizeof(pni_node_t)) : NULL;
@@ -1111,15 +1110,6 @@ int pn_data_resize(pn_data_t *data, size_t size)
   return 0;
 }
 
-
-pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd)
-{
-  if (nd) {
-    return &data->nodes[nd - 1];
-  } else {
-    return NULL;
-  }
-}
 
 size_t pn_data_id(pn_data_t *data, pni_node_t *node)
 {

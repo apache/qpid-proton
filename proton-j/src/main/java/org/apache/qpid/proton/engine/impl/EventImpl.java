@@ -56,11 +56,6 @@ class EventImpl implements Event
         context = null;
     }
 
-    public Category getCategory()
-    {
-        return type.getCategory();
-    }
-
     public Type getType()
     {
         return type;
@@ -73,16 +68,15 @@ class EventImpl implements Event
 
     public Connection getConnection()
     {
-        switch (type.getCategory()) {
-        case CONNECTION:
+        if (context instanceof Connection) {
             return (Connection) context;
-        case TRANSPORT:
+        } else if (context instanceof Transport) {
             Transport transport = getTransport();
             if (transport == null) {
                 return null;
             }
             return ((TransportImpl) transport).getConnectionImpl();
-        default:
+        } else {
             Session ssn = getSession();
             if (ssn == null) {
                 return null;
@@ -93,10 +87,9 @@ class EventImpl implements Event
 
     public Session getSession()
     {
-        switch (type.getCategory()) {
-        case SESSION:
+        if (context instanceof Session) {
             return (Session) context;
-        default:
+        } else {
             Link link = getLink();
             if (link == null) {
                 return null;
@@ -107,10 +100,9 @@ class EventImpl implements Event
 
     public Link getLink()
     {
-        switch (type.getCategory()) {
-        case LINK:
+        if (context instanceof Link) {
             return (Link) context;
-        default:
+        } else {
             Delivery dlv = getDelivery();
             if (dlv == null) {
                 return null;
@@ -121,20 +113,18 @@ class EventImpl implements Event
 
     public Delivery getDelivery()
     {
-        switch (type.getCategory()) {
-        case DELIVERY:
+        if (context instanceof Delivery) {
             return (Delivery) context;
-        default:
+        } else {
             return null;
         }
     }
 
     public Transport getTransport()
     {
-        switch (type.getCategory()) {
-        case TRANSPORT:
+        if (context instanceof Transport) {
             return (Transport) context;
-        default:
+        } else {
             return null;
         }
     }
@@ -150,4 +140,5 @@ class EventImpl implements Event
     {
         return "EventImpl{" + "type=" + type + ", context=" + context + '}';
     }
+
 }

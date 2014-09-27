@@ -21,7 +21,11 @@
 package org.apache.qpid.proton.codec;
 
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Decimal128;
@@ -770,29 +774,43 @@ public final class EncoderImpl implements ByteBufferEncoder
     void writeRaw(String string)
     {
         final int length = string.length();
-        char c;
+        int c;
 
         for (int i = 0; i < length; i++)
         {
             c = string.charAt(i);
-            if ((c >= 0x0001) && (c <= 0x007F))
+            if ((c & 0xFF80) == 0)          /* U+0000..U+007F */
             {
                 _buffer.put((byte) c);
-
             }
-            else if (c > 0x07FF)
+            else if ((c & 0xF800) == 0)     /* U+0080..U+07FF */
             {
-                _buffer.put((byte) (0xE0 | ((c >> 12) & 0x0F)));
-                _buffer.put((byte) (0x80 | ((c >>  6) & 0x3F)));
-                _buffer.put((byte) (0x80 | (c & 0x3F)));
+                _buffer.put((byte)(0xC0 | ((c >> 6) & 0x1F)));
+                _buffer.put((byte)(0x80 | (c & 0x3F)));
+            }
+            else if ((c & 0xD800) != 0xD800)     /* U+0800..U+FFFF - excluding surrogate pairs */
+            {
+                _buffer.put((byte)(0xE0 | ((c >> 12) & 0x0F)));
+                _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
+                _buffer.put((byte)(0x80 | (c & 0x3F)));
             }
             else
             {
-                _buffer.put((byte) (0xC0 | ((c >>  6) & 0x1F)));
-                _buffer.put((byte) (0x80 | (c & 0x3F)));
+                int low;
+
+                if(((c & 0xDC00) == 0xDC00) || (++i == length) || ((low = string.charAt(i)) & 0xDC00) != 0xDC00)
+                {
+                    throw new IllegalArgumentException("String contains invalid Unicode code points");
+                }
+
+                c = 0x010000 + ((c & 0x03FF) << 10) + (low & 0x03FF);
+
+                _buffer.put((byte)(0xF0 | ((c >> 18) & 0x07)));
+                _buffer.put((byte)(0x80 | ((c >> 12) & 0x3F)));
+                _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
+                _buffer.put((byte)(0x80 | (c & 0x3F)));
             }
         }
-
     }
 
 

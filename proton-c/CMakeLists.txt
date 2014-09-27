@@ -46,11 +46,17 @@ find_package(OpenSSL)
 
 find_package (PythonInterp REQUIRED)
 
-set(ssl_impl, none)
+if(PN_WINAPI)
+  set(ssl_impl schannel)
+  set(ssl_providers "'none','schannel','openssl'")
+else(PN_WINAPI)
+  set(ssl_impl, none)
+  set(ssl_providers "'none','openssl'")
+endif(PN_WINAPI)
 if (OPENSSL_FOUND)
   set(ssl_impl openssl)
-endif(OPENSSL_FOUND)
-set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: 'none','openssl'")
+endif (OPENSSL_FOUND)
+set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${ssl_providers}")
 mark_as_advanced (SSL_IMPL)
 
 configure_file (
@@ -96,7 +102,12 @@ if (SSL_IMPL STREQUAL openssl)
   include_directories ("${OPENSSL_INCLUDE_DIR}")
   set (SSL_LIB ${OPENSSL_LIBRARIES})
 else (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
+  if (SSL_IMPL STREQUAL schannel)
+    set (pn_driver_ssl_impl src/windows/schannel.c)
+    set (SSL_LIB Crypt32.lib Secur32.lib)
+  else (SSL_IMPL STREQUAL schannel)
+    set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
+  endif (SSL_IMPL STREQUAL schannel)
 endif (SSL_IMPL STREQUAL openssl)
 
 # First check whether we get clock_gettime without any special library linked
@@ -277,8 +288,13 @@ set (qpid-proton-platform
 
 set (qpid-proton-core
   src/object/object.c
+  src/object/list.c
+  src/object/map.c
+  src/object/string.c
+  src/object/iterator.c
 
   src/util.c
+  src/url.c
   src/error.c
   src/buffer.c
   src/parser.c
@@ -293,7 +309,7 @@ set (qpid-proton-core
 
   src/dispatcher/dispatcher.c
   src/engine/engine.c
-  src/engine/event.c
+  src/events/event.c
   src/transport/transport.c
   src/message/message.c
   src/sasl/sasl.c

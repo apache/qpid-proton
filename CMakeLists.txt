@@ -85,12 +85,7 @@ mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_
 # system specified locations.
 set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
 
-set (SYSINSTALL_BINDINGS "*UNSPECIFIED*" CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
-
-if (SYSINSTALL_BINDINGS STREQUAL "*UNSPECIFIED*")
-  message(WARNING "SYSINSTALL_BINDINGS is unspecified, defaulting it to OFF. Please note that the default install behaviour of proton has changed. Proton bindings by default will now be installed under ${BINDINGS_DIR} and will no longer be found by system interpreters. This means that every user will be required to manually configure their interpreters to locate the proton bindings. If you wish proton bindings to be installed into the interpreter specified locations as was the default in prior releases, please specify -DSYSINSTALL_BINDINGS=ON")
-  set (SYSINSTALL_BINDINGS OFF)
-endif ()
+set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
 
 set (BINDING_LANGS PERL PHP PYTHON RUBY)
 
@@ -145,12 +140,14 @@ install (FILES examples/messenger/c/CMakeLists.txt
                examples/messenger/c/recv.c
          DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger)
 
+install (FILES examples/include/pncompat/misc_defs.h
+               examples/include/pncompat/misc_funcs.inc
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
+
 install (FILES examples/include/pncompat/internal/LICENSE
                examples/include/pncompat/internal/getopt.c
                examples/include/pncompat/internal/getopt.h
-               examples/include/pncompat/misc_defs.h
-               examples/include/pncompat/misc_funcs.inc
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat/internal)
 
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")

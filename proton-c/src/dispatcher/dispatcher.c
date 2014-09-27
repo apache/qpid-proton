@@ -27,8 +27,8 @@
 #include <proton/buffer.h>
 #include "dispatcher.h"
 #include "protocol.h"
-#include "../util.h"
-#include "../platform_fmt.h"
+#include "util.h"
+#include "platform_fmt.h"
 
 #include "dispatch_actions.h"
 

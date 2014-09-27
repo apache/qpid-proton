@@ -26,7 +26,7 @@ package org.apache.qpid.proton.messenger.impl;
  *
  */
 
-class Address
+public class Address
 {
 
     private String _address;
@@ -38,13 +38,7 @@ class Address
     private String _port;
     private String _name;
 
-    public Address(String address)
-    {
-        _address = address;
-        parse();
-    }
-
-    private void parse()
+    public void clear()
     {
         _passive = false;
         _scheme = null;
@@ -53,21 +47,30 @@ class Address
         _host = null;
         _port = null;
         _name = null;
+    }
 
+    public Address()
+    {
+        clear();
+    }
+
+    public Address(String address)
+    {
+        clear();
         int start = 0;
-        int schemeEnd = _address.indexOf("://", start);
+        int schemeEnd = address.indexOf("://", start);
         if (schemeEnd >= 0) {
-            _scheme = _address.substring(start, schemeEnd);
+            _scheme = address.substring(start, schemeEnd);
             start = schemeEnd + 3;
         }
 
         String uphp;
-        int slash = _address.indexOf("/", start);
-        if (slash > 0) {
-            uphp = _address.substring(start, slash);
-            _name = _address.substring(slash + 1);
+        int slash = address.indexOf("/", start);
+        if (slash >= 0) {
+            uphp = address.substring(start, slash);
+            _name = address.substring(slash + 1);
         } else {
-            uphp = _address.substring(start);
+            uphp = address.substring(start);
         }
 
         String hp;
@@ -115,7 +118,18 @@ class Address
 
     public String toString()
     {
-        return _address;
+        String  str = new String();
+        if (_scheme != null) str += _scheme + "://";
+        if (_user != null) str += _user;
+        if (_pass != null) str += ":" + _pass;
+        if (_user != null || _pass != null) str += "@";
+        if (_host != null) {
+            if (_host.contains(":")) str += "[" + _host + "]";
+            else str += _host;
+        }
+        if (_port != null) str += ":" + _port;
+        if (_name != null) str += "/" + _name;
+        return str;
     }
 
     public boolean isPassive()
@@ -168,4 +182,33 @@ class Address
         return _name;
     }
 
+    public void setScheme(String scheme)
+    {
+        _scheme= scheme;
+    }
+
+    public void setUser(String user)
+    {
+        _user= user;
+    }
+
+    public void setPass(String pass)
+    {
+        _pass= pass;
+    }
+
+    public void setHost(String host)
+    {
+        _host= host;
+    }
+
+    public void setPort(String port)
+    {
+        _port= port;
+    }
+
+    public void setName(String name)
+    {
+        _name= name;
+    }
 }

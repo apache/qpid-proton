@@ -121,7 +121,10 @@ public class TransportImpl extends EndpointImpl
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
-    private TransportException _tail_error = null;
+    private ErrorCondition _condition = null;
+
+    private boolean postedHeadClosed = false;
+    private boolean postedTailClosed = false;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -208,10 +211,18 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
+    public ErrorCondition getCondition()
+    {
+        return _condition;
+    }
+
+    @Override
     public void bind(Connection conn)
     {
-        _connectionEndpoint = (ConnectionImpl) conn;
         // TODO - check if already bound
+
+        _connectionEndpoint = (ConnectionImpl) conn;
+        put(Event.Type.CONNECTION_BOUND, conn);
         _connectionEndpoint.setTransport(this);
         _connectionEndpoint.incref();
 
@@ -230,6 +241,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void unbind()
     {
+        put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
         _connectionEndpoint.modifyEndpoints();
 
         _connectionEndpoint.setTransport(null);
@@ -369,7 +381,7 @@ public class TransportImpl extends EndpointImpl
                     SessionImpl session = link.getSession();
                     TransportSession transportSession = getTransportState(session);
 
-                    if(link.getLocalState() == EndpointState.CLOSED
+                    if(((link.getLocalState() == EndpointState.CLOSED) || link.detached())
                        && transportLink.isLocalHandleSet()
                        && !_isCloseSent)
                     {
@@ -389,8 +401,7 @@ public class TransportImpl extends EndpointImpl
 
                         Detach detach = new Detach();
                         detach.setHandle(localHandle);
-                        // TODO - need an API for detaching rather than closing the link
-                        detach.setClosed(true);
+                        detach.setClosed(!link.detached());
 
                         ErrorCondition localError = link.getCondition();
                         if( localError.getCondition() !=null )
@@ -516,6 +527,11 @@ public class TransportImpl extends EndpointImpl
             transfer.setDeliveryId(deliveryId);
             transfer.setDeliveryTag(new Binary(delivery.getTag()));
             transfer.setHandle(tpLink.getLocalHandle());
+
+            if(delivery.getLocalState() != null)
+            {
+                transfer.setState(delivery.getLocalState());
+            }
 
             if(delivery.isSettled())
             {
@@ -742,7 +758,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processOpen()
     {
-        if ((_tail_error != null ||
+        if ((_condition != null ||
              (_connectionEndpoint != null &&
               _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
             !_isOpenSent) {
@@ -919,7 +935,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processClose()
     {
-        if ((_tail_error != null ||
+        if ((_condition != null ||
              (_connectionEndpoint != null &&
               _connectionEndpoint.getLocalState() == EndpointState.CLOSED)) &&
             !_isCloseSent) {
@@ -930,8 +946,7 @@ public class TransportImpl extends EndpointImpl
                 ErrorCondition localError;
 
                 if (_connectionEndpoint == null) {
-                    localError = new ErrorCondition(ConnectionError.FRAMING_ERROR,
-                                                    _tail_error.toString());
+                    localError = _condition;
                 } else {
                     localError =  _connectionEndpoint.getCondition();
                 }
@@ -1154,7 +1169,11 @@ public class TransportImpl extends EndpointImpl
                 LinkImpl link = transportLink.getLink();
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
-                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
+                if (detach.getClosed()) {
+                    _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
+                } else {
+                    _connectionEndpoint.put(Event.Type.LINK_REMOTE_DETACH, link);
+                }
                 transportLink.clearRemoteHandle();
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
@@ -1231,16 +1250,39 @@ public class TransportImpl extends EndpointImpl
         return _closeReceived;
     }
 
+    void put(Event.Type type, Object context) {
+        if (_connectionEndpoint != null) {
+            _connectionEndpoint.put(type, context);
+        }
+    }
+
+    private void maybePostClosed()
+    {
+        if (postedHeadClosed && postedTailClosed) {
+            put(Event.Type.TRANSPORT_CLOSED, this);
+        }
+    }
+
     @Override
     public void closed(TransportException error)
     {
         if (!_closeReceived || error != null) {
             if (error == null) {
-                _tail_error = new TransportException("connection aborted");
+                _condition = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                               "connection aborted");
             } else {
-                _tail_error = error;
+                _condition = new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                error.toString());
             }
             _head_closed = true;
+        }
+        if (_condition != null) {
+            put(Event.Type.TRANSPORT_ERROR, this);
+        }
+        if (!postedTailClosed) {
+            put(Event.Type.TRANSPORT_TAIL_CLOSED, this);
+            postedTailClosed = true;
+            maybePostClosed();
         }
     }
 
@@ -1346,6 +1388,13 @@ public class TransportImpl extends EndpointImpl
     {
         init();
         _outputProcessor.pop(bytes);
+
+        int p = pending();
+        if (p < 0 && !postedHeadClosed) {
+            put(Event.Type.TRANSPORT_HEAD_CLOSED, this);
+            postedHeadClosed = true;
+            maybePostClosed();
+        }
     }
 
     @Override

@@ -20,10 +20,13 @@
  */
 
 #include <proton/messenger.h>
-#include <proton/sasl.h>
-#include <proton/ssl.h>
-#include <proton/util.h>
+
+#include <proton/connection.h>
+#include <proton/delivery.h>
+#include <proton/event.h>
 #include <proton/object.h>
+#include <proton/sasl.h>
+#include <proton/session.h>
 #include <proton/selector.h>
 
 #include <assert.h>
@@ -32,13 +35,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "../util.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
+#include "util.h"
+#include "platform.h"
+#include "platform_fmt.h"
 #include "store.h"
 #include "transform.h"
 #include "subscription.h"
-#include "../selectable.h"
+#include "selectable.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 
@@ -54,10 +57,11 @@ typedef struct {
 } pn_address_t;
 
 // algorithm for granting credit to receivers
-typedef  enum {
+typedef enum {
   // pn_messenger_recv( X ), where:
-  LINK_CREDIT_EXPLICIT,  // X > 0
-  LINK_CREDIT_AUTO   // X == -1
+  LINK_CREDIT_EXPLICIT, // X > 0
+  LINK_CREDIT_AUTO,     // X == -1
+  LINK_CREDIT_MANUAL    // X == -2
 } pn_link_credit_mode_t;
 
 struct pn_messenger_t {
@@ -100,6 +104,11 @@ struct pn_messenger_t {
   int receivers;     // # receiver links
   int draining;      // # links in drain state
   int connection_error;
+  int flags;
+  pn_snd_settle_mode_t snd_settle_mode;
+  pn_rcv_settle_mode_t rcv_settle_mode;
+  pn_tracer_t tracer;
+  pn_ssl_verify_mode_t ssl_peer_authentication_mode;
   bool blocking;
   bool passive;
   bool interrupted;
@@ -372,10 +381,14 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
   pn_socket_t socket = pn_listen(messenger->io, host, port ? port : default_port(scheme));
   if (socket == PN_INVALID_SOCKET) {
     pn_error_copy(messenger->error, pn_io_error(messenger->io));
+    pn_error_format(messenger->error, PN_ERR, "CONNECTION ERROR (%s:%s): %s\n",
+                    messenger->address.host, messenger->address.port,
+                    pn_error_text(messenger->error));
+
     return NULL;
   }
 
-  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_new(sizeof(pn_listener_ctx_t), NULL);
+  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_OBJECT, sizeof(pn_listener_ctx_t));
   ctx->messenger = messenger;
   ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   if (messenger->certificate) {
@@ -596,7 +609,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->blocking = true;
     m->passive = false;
     m->io = pn_io();
-    m->pending = pn_list(0, 0);
+    m->pending = pn_list(PN_WEAKREF, 0);
     m->interruptor = pni_selectable
       (pni_interruptor_capacity, pni_interruptor_pending,
        pni_interruptor_deadline, pni_interruptor_readable,
@@ -611,8 +624,8 @@ pn_messenger_t *pn_messenger(const char *name)
     pn_pipe(m->io, m->ctrl);
     pni_selectable_set_fd(m->interruptor, m->ctrl[0]);
     pni_selectable_set_context(m->interruptor, m);
-    m->listeners = pn_list(0, 0);
-    m->connections = pn_list(0, 0);
+    m->listeners = pn_list(PN_WEAKREF, 0);
+    m->connections = pn_list(PN_WEAKREF, 0);
     m->selector = pn_io_selector(m->io);
     m->collector = pn_collector();
     m->credit_mode = LINK_CREDIT_EXPLICIT;
@@ -621,13 +634,13 @@ pn_messenger_t *pn_messenger(const char *name)
     m->distributed = 0;
     m->receivers = 0;
     m->draining = 0;
-    m->credited = pn_list(0, 0);
-    m->blocked = pn_list(0, 0);
+    m->credited = pn_list(PN_WEAKREF, 0);
+    m->blocked = pn_list(PN_WEAKREF, 0);
     m->next_drain = 0;
     m->next_tag = 0;
     m->outgoing = pni_store();
     m->incoming = pni_store();
-    m->subscriptions = pn_list(0, PN_REFCOUNT);
+    m->subscriptions = pn_list(PN_OBJECT, 0);
     m->incoming_subscription = NULL;
     m->error = pn_error();
     m->routes = pn_transform();
@@ -639,6 +652,11 @@ pn_messenger_t *pn_messenger(const char *name)
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
     m->connection_error = 0;
+    m->flags = 0;
+    m->snd_settle_mode = PN_SND_SETTLED;
+    m->rcv_settle_mode = PN_RCV_FIRST;
+    m->tracer = NULL;
+    m->ssl_peer_authentication_mode = PN_SSL_VERIFY_PEER_NAME;
   }
 
   return m;
@@ -840,6 +858,8 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
     const int used = messenger->distributed + pn_messenger_incoming(messenger);
     if (max > used)
       messenger->credit = max - used;
+  } else if (messenger->credit_mode == LINK_CREDIT_MANUAL) {
+    return false;
   }
 
   const int batch = per_link_credit(messenger);
@@ -896,6 +916,8 @@ static int pn_transport_config(pn_messenger_t *messenger,
 {
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_transport_t *transport = pn_connection_transport(connection);
+  if (messenger->tracer)
+    pn_transport_set_tracer(transport, messenger->tracer);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
     pn_ssl_domain_t *d = pn_ssl_domain(PN_SSL_MODE_CLIENT);
     if (messenger->certificate && messenger->private_key) {
@@ -913,7 +935,8 @@ static int pn_transport_config(pn_messenger_t *messenger,
         pn_error_report("CONNECTION", "invalid certificate db");
         return err;
       }
-      err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_VERIFY_PEER_NAME, NULL);
+      err = pn_ssl_domain_set_peer_authentication(
+          d, messenger->ssl_peer_authentication_mode, NULL);
       if (err) {
         pn_error_report("CONNECTION", "error configuring ssl to verify peer");
       }
@@ -985,33 +1008,38 @@ int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *recei
   n = pn_link_recv(receiver, encoded + pending, 1);
   pn_link_advance(receiver);
 
-  // account for the used credit
-  assert( ctx );
-  assert( messenger->distributed );
-  messenger->distributed--;
-
   pn_link_t *link = receiver;
 
-  // replenish if low (< 20% maximum batch) and credit available
-  if (!pn_link_get_drain(link) && pn_list_size(messenger->blocked) == 0 && messenger->credit > 0) {
-    const int max = per_link_credit(messenger);
-    const int lo_thresh = (int)(max * 0.2 + 0.5);
-    if (pn_link_remote_credit(link) < lo_thresh) {
-      const int more = pn_min(messenger->credit, max - pn_link_remote_credit(link));
-      messenger->credit -= more;
-      messenger->distributed += more;
-      pn_link_flow(link, more);
+  if (messenger->credit_mode != LINK_CREDIT_MANUAL) {
+    // account for the used credit
+    assert(ctx);
+    assert(messenger->distributed);
+    messenger->distributed--;
+
+    // replenish if low (< 20% maximum batch) and credit available
+    if (!pn_link_get_drain(link) && pn_list_size(messenger->blocked) == 0 &&
+        messenger->credit > 0) {
+      const int max = per_link_credit(messenger);
+      const int lo_thresh = (int)(max * 0.2 + 0.5);
+      if (pn_link_remote_credit(link) < lo_thresh) {
+        const int more =
+            pn_min(messenger->credit, max - pn_link_remote_credit(link));
+        messenger->credit -= more;
+        messenger->distributed += more;
+        pn_link_flow(link, more);
+      }
     }
-  }
-  // check if blocked
-  if (pn_list_index(messenger->blocked, link) < 0 && pn_link_remote_credit(link) == 0) {
-    pn_list_remove(messenger->credited, link);
-    if (pn_link_get_drain(link)) {
-      pn_link_set_drain(link, false);
-      assert( messenger->draining > 0 );
-      messenger->draining--;
+    // check if blocked
+    if (pn_list_index(messenger->blocked, link) < 0 &&
+        pn_link_remote_credit(link) == 0) {
+      pn_list_remove(messenger->credited, link);
+      if (pn_link_get_drain(link)) {
+        pn_link_set_drain(link, false);
+        assert(messenger->draining > 0);
+        messenger->draining--;
+      }
+      pn_list_add(messenger->blocked, link);
     }
-    pn_list_add(messenger->blocked, link);
   }
 
   if (n != PN_EOS) {
@@ -1248,8 +1276,10 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_LINK_REMOTE_OPEN:
     case PN_LINK_REMOTE_CLOSE:
+    case PN_LINK_REMOTE_DETACH:
     case PN_LINK_OPEN:
     case PN_LINK_CLOSE:
+    case PN_LINK_DETACH:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:
@@ -1259,9 +1289,17 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       pn_messenger_process_delivery(messenger, event);
       break;
     case PN_TRANSPORT:
+    case PN_TRANSPORT_ERROR:
+    case PN_TRANSPORT_HEAD_CLOSED:
+    case PN_TRANSPORT_TAIL_CLOSED:
+    case PN_TRANSPORT_CLOSED:
       pn_messenger_process_transport(messenger, event);
       break;
     case PN_EVENT_NONE:
+      break;
+    case PN_CONNECTION_BOUND:
+      break;
+    case PN_CONNECTION_UNBOUND:
       break;
     case PN_CONNECTION_FINAL:
       break;
@@ -1422,11 +1460,85 @@ int pn_messenger_sync(pn_messenger_t *messenger, bool (*predicate)(pn_messenger_
   }
 }
 
+static void pni_parse(pn_address_t *address);
+pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger,
+                                      const char *address, char **name);
+int pn_messenger_work(pn_messenger_t *messenger, int timeout);
+
 int pn_messenger_start(pn_messenger_t *messenger)
 {
   if (!messenger) return PN_ARG_ERR;
-  // right now this is a noop
-  return 0;
+
+  int error = 0;
+
+  // When checking of routes is required we attempt to resolve each route
+  // with a substitution that has a defined scheme, address and port. If
+  // any of theses routes is invalid an appropriate error code will be
+  // returned. Currently no attempt is made to check the name part of the
+  // address, as the intent here is to fail fast if the addressed host
+  // is invalid or unavailable.
+  if (messenger->flags | PN_FLAGS_CHECK_ROUTES) {
+    pn_list_t *substitutions = pn_list(PN_WEAKREF, 0);
+    pn_transform_get_substitutions(messenger->routes, substitutions);
+    for (size_t i = 0; i < pn_list_size(substitutions) && error == 0; i++) {
+      pn_string_t *substitution = (pn_string_t *)pn_list_get(substitutions, i);
+      if (substitution) {
+        pn_address_t addr;
+        addr.text = pn_string(NULL);
+        error = pn_string_copy(addr.text, substitution);
+        if (!error) {
+          pni_parse(&addr);
+          if (addr.scheme && strlen(addr.scheme) > 0 &&
+              !strstr(addr.scheme, "$") && addr.host && strlen(addr.host) > 0 &&
+              !strstr(addr.host, "$") && addr.port && strlen(addr.port) > 0 &&
+              !strstr(addr.port, "$")) {
+            pn_string_t *check_addr = pn_string(NULL);
+            // ipv6 hosts need to be wrapped in [] within a URI
+            if (strstr(addr.host, ":")) {
+              pn_string_format(check_addr, "%s://[%s]:%s/", addr.scheme,
+                               addr.host, addr.port);
+            } else {
+              pn_string_format(check_addr, "%s://%s:%s/", addr.scheme,
+                               addr.host, addr.port);
+            }
+            char *name = NULL;
+            pn_connection_t *connection = pn_messenger_resolve(
+                messenger, pn_string_get(check_addr), &name);
+            pn_free(check_addr);
+            if (!connection) {
+              if (pn_error_code(messenger->error) == 0)
+                pn_error_copy(messenger->error, pn_io_error(messenger->io));
+              pn_error_format(messenger->error, PN_ERR,
+                              "CONNECTION ERROR (%s:%s): %s\n",
+                              messenger->address.host, messenger->address.port,
+                              pn_error_text(messenger->error));
+              error = pn_error_code(messenger->error);
+            } else {
+              // Send and receive outstanding messages until connection
+              // completes or an error occurs
+              int work = pn_messenger_work(messenger, -1);
+              pn_connection_ctx_t *cctx =
+                  (pn_connection_ctx_t *)pn_connection_get_context(connection);
+              while ((work > 0 ||
+                      (pn_connection_state(connection) & PN_REMOTE_UNINIT) ||
+                      pni_connection_pending(cctx->selectable) != (ssize_t)0) &&
+                     pn_error_code(messenger->error) == 0)
+                work = pn_messenger_work(messenger, 0);
+              if (work < 0 && work != PN_TIMEOUT) {
+                error = work;
+              } else {
+                error = pn_error_code(messenger->error);
+              }
+            }
+          }
+          pn_free(addr.text);
+        }
+      }
+    }
+    pn_free(substitutions);
+  }
+
+  return error;
 }
 
 bool pn_messenger_stopped(pn_messenger_t *messenger)
@@ -1560,12 +1672,12 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   return connection;
 }
 
-pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, bool sender)
+PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
+                                           const char *address, bool sender)
 {
   char *name = NULL;
   pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
   if (!connection) return NULL;
-  pn_connection_ctx_t *cctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
 
   pn_link_t *link = pn_link_head(connection, PN_LOCAL_ACTIVE);
   while (link) {
@@ -1578,6 +1690,22 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
     }
     link = pn_link_next(link, PN_LOCAL_ACTIVE);
   }
+  return NULL;
+}
+
+pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
+                             bool sender, pn_seconds_t timeout)
+{
+  char *name = NULL;
+  pn_connection_t *connection = pn_messenger_resolve(messenger, address, &name);
+  if (!connection)
+    return NULL;
+  pn_connection_ctx_t *cctx =
+      (pn_connection_ctx_t *)pn_connection_get_context(connection);
+
+  pn_link_t *link = pn_messenger_get_link(messenger, address, sender);
+  if (link)
+    return link;
 
   pn_session_t *ssn = pn_session(connection);
   pn_session_open(ssn);
@@ -1593,9 +1721,9 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
 
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
-    // use explicit settlement via dispositions (not pre-settled)
-    pn_link_set_snd_settle_mode( link, PN_SND_UNSETTLED );
-    pn_link_set_rcv_settle_mode( link, PN_RCV_SECOND );
+    // use required settlement (defaults to sending pre-settled messages)
+    pn_link_set_snd_settle_mode(link, messenger->snd_settle_mode);
+    pn_link_set_rcv_settle_mode(link, messenger->rcv_settle_mode);
   }
   // XXX
   if (pn_streq(name, "#")) {
@@ -1609,6 +1737,14 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
     pn_terminus_set_address(pn_link_source(link), name);
   }
   link_ctx_setup( messenger, connection, link );
+
+  if (timeout > 0) {
+    pn_terminus_set_expiry_policy(pn_link_target(link), PN_EXPIRE_WITH_LINK);
+    pn_terminus_set_expiry_policy(pn_link_source(link), PN_EXPIRE_WITH_LINK);
+    pn_terminus_set_timeout(pn_link_target(link), timeout);
+    pn_terminus_set_timeout(pn_link_source(link), timeout);
+  }
+
   if (!sender) {
     pn_link_ctx_t *ctx = (pn_link_ctx_t *)pn_link_get_context(link);
     assert( ctx );
@@ -1619,17 +1755,26 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address, boo
   return link;
 }
 
-pn_link_t *pn_messenger_source(pn_messenger_t *messenger, const char *source)
+pn_link_t *pn_messenger_source(pn_messenger_t *messenger, const char *source,
+                               pn_seconds_t timeout)
 {
-  return pn_messenger_link(messenger, source, false);
+  return pn_messenger_link(messenger, source, false, timeout);
 }
 
-pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target)
+pn_link_t *pn_messenger_target(pn_messenger_t *messenger, const char *target,
+                               pn_seconds_t timeout)
 {
-  return pn_messenger_link(messenger, target, true);
+  return pn_messenger_link(messenger, target, true, timeout);
 }
 
 pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
+{
+  return pn_messenger_subscribe_ttl(messenger, source, 0);
+}
+
+pn_subscription_t *pn_messenger_subscribe_ttl(pn_messenger_t *messenger,
+                                              const char *source,
+                                              pn_seconds_t timeout)
 {
   pni_route(messenger, source);
   if (pn_error_code(messenger->error)) return NULL;
@@ -1647,7 +1792,7 @@ pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char 
       return NULL;
     }
   } else {
-    pn_link_t *src = pn_messenger_source(messenger, source);
+    pn_link_t *src = pn_messenger_source(messenger, source, timeout);
     if (!src) return NULL;
     pn_link_ctx_t *ctx = (pn_link_ctx_t *) pn_link_get_context( src );
     return ctx ? ctx->subscription : NULL;
@@ -1820,7 +1965,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
     } else {
       pni_restore(messenger, msg);
       pn_buffer_append(buf, encoded, size); // XXX
-      pn_link_t *sender = pn_messenger_target(messenger, address);
+      pn_link_t *sender = pn_messenger_target(messenger, address, 0);
       if (!sender) {
         int err = pn_error_code(messenger->error);
         if (err) {
@@ -1862,6 +2007,18 @@ pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker)
     return pni_entry_get_status(e);
   } else {
     return PN_STATUS_UNKNOWN;
+  }
+}
+
+pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
+                                     pn_tracker_t tracker)
+{
+  pni_store_t *store = pn_tracker_store(messenger, tracker);
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
+  if (e) {
+    return pni_entry_get_delivery(e);
+  } else {
+    return NULL;
   }
 }
 
@@ -2007,7 +2164,9 @@ int pn_messenger_recv(pn_messenger_t *messenger, int n)
     return pn_error_format(messenger->error, PN_STATE_ERR, "no valid sources");
 
   // re-compute credit, and update credit scheduler
-  if (n == -1) {
+  if (n == -2) {
+    messenger->credit_mode = LINK_CREDIT_MANUAL;
+  } else if (n == -1) {
     messenger->credit_mode = LINK_CREDIT_AUTO;
   } else {
     messenger->credit_mode = LINK_CREDIT_EXPLICIT;
@@ -2100,6 +2259,20 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
                           PN_STATUS_REJECTED, flags, false, false);
 }
 
+PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker)
+{
+  pni_store_t *store = pn_tracker_store(messenger, tracker);
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
+  if (e) {
+    pn_delivery_t *d = pni_entry_get_delivery(e);
+    if (d) {
+      return pn_delivery_link(d);
+    }
+  }
+  return NULL;
+}
+
 int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
 {
   if (!messenger) return 0;
@@ -2144,5 +2317,83 @@ int pn_messenger_route(pn_messenger_t *messenger, const char *pattern, const cha
 int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern, const char *address)
 {
   pn_transform_rule(messenger->rewrites, pattern, address);
+  return 0;
+}
+
+PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger, const int flags)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  if (flags != 0 && (flags ^ PN_FLAGS_CHECK_ROUTES) != 0)
+    return PN_ARG_ERR;
+  messenger->flags = flags;
+  return 0;
+}
+
+PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger)
+{
+  return messenger ? messenger->flags : 0;
+}
+
+int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+                                     const pn_snd_settle_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->snd_settle_mode = mode;
+  return 0;
+}
+
+int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+                                     const pn_rcv_settle_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->rcv_settle_mode = mode;
+  return 0;
+}
+
+void pn_messenger_set_tracer(pn_messenger_t *messenger, pn_tracer_t tracer)
+{
+  assert(messenger);
+  assert(tracer);
+
+  messenger->tracer = tracer;
+}
+
+pn_millis_t pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
+                                                 const char *address)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+
+  pn_address_t addr;
+  addr.text = pn_string(address);
+  pni_parse(&addr);
+
+  pn_millis_t timeout = -1;
+  for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
+    pn_connection_t *connection =
+        (pn_connection_t *)pn_list_get(messenger->connections, i);
+    pn_connection_ctx_t *ctx =
+        (pn_connection_ctx_t *)pn_connection_get_context(connection);
+    if (pn_streq(addr.scheme, ctx->scheme) && pn_streq(addr.host, ctx->host) &&
+        pn_streq(addr.port, ctx->port)) {
+      pn_transport_t *transport = pn_connection_transport(connection);
+      if (transport)
+        timeout = pn_transport_get_remote_idle_timeout(transport);
+      break;
+    }
+  }
+  return timeout;
+}
+
+int
+pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
+                                              const pn_ssl_verify_mode_t mode)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+  messenger->ssl_peer_authentication_mode = mode;
   return 0;
 }

@@ -1,6 +1,6 @@
-#include <proton/engine.h>
+#include <proton/object.h>
+#include <proton/event.h>
 #include <assert.h>
-#include "engine-internal.h"
 
 struct pn_collector_t {
   pn_event_t *head;
@@ -10,6 +10,7 @@ struct pn_collector_t {
 };
 
 struct pn_event_t {
+  const pn_class_t *clazz;
   void *context;    // depends on type
   pn_event_t *next;
   pn_event_type_t type;
@@ -81,7 +82,7 @@ static int pn_collector_inspect(void *obj, pn_string_t *dst)
 pn_collector_t *pn_collector(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_collector);
-  pn_collector_t *collector = (pn_collector_t *) pn_new(sizeof(pn_collector_t), &clazz);
+  pn_collector_t *collector = (pn_collector_t *) pn_class_new(&clazz, sizeof(pn_collector_t));
   return collector;
 }
 
@@ -90,13 +91,15 @@ void pn_collector_free(pn_collector_t *collector)
   collector->freed = true;
   pn_collector_drain(collector);
   pn_collector_shrink(collector);
-  pn_decref(collector);
+  pn_class_decref(PN_OBJECT, collector);
 }
 
 pn_event_t *pn_event(void);
 static void pn_event_initialize(void *obj);
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, void *context)
+pn_event_t *pn_collector_put(pn_collector_t *collector,
+                             const pn_class_t *clazz, void *context,
+                             pn_event_type_t type)
 {
   if (!collector) {
     return NULL;
@@ -112,6 +115,8 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
   if (tail && tail->type == type && tail->context == context) {
     return NULL;
   }
+
+  clazz = clazz->reify(context);
 
   pn_event_t *event;
 
@@ -131,9 +136,10 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
     collector->head = event;
   }
 
-  event->type = type;
+  event->clazz = clazz;
   event->context = context;
-  pn_incref2(event->context, collector);
+  event->type = type;
+  pn_class_incref(clazz, event->context);
 
   //printf("event %s on %p\n", pn_event_type_name(event->type), event->context);
 
@@ -160,7 +166,7 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   // decref before adding to the free list
   if (event->context) {
-    pn_decref2(event->context, collector);
+    pn_class_decref(event->clazz, event->context);
     event->context = NULL;
   }
 
@@ -174,6 +180,7 @@ static void pn_event_initialize(void *obj)
 {
   pn_event_t *event = (pn_event_t *) obj;
   event->type = PN_EVENT_NONE;
+  event->clazz = NULL;
   event->context = NULL;
   event->next = NULL;
 }
@@ -188,7 +195,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
   if (event->context) {
     err = pn_string_addf(dst, ", ");
     if (err) return err;
-    err = pn_inspect(event->context, dst);
+    err = pn_class_inspect(event->clazz, event->context, dst);
     if (err) return err;
   }
 
@@ -201,7 +208,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 pn_event_t *pn_event(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_event);
-  pn_event_t *event = (pn_event_t *) pn_new(sizeof(pn_event_t), &clazz);
+  pn_event_t *event = (pn_event_t *) pn_class_new(&clazz, sizeof(pn_event_t));
   return event;
 }
 
@@ -210,89 +217,16 @@ pn_event_type_t pn_event_type(pn_event_t *event)
   return event->type;
 }
 
-pn_event_category_t pn_event_category(pn_event_t *event)
+const pn_class_t *pn_event_class(pn_event_t *event)
 {
-  return (pn_event_category_t)(event->type & 0xFFFF0000);
+  assert(event);
+  return event->clazz;
 }
 
 void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
-}
-
-pn_connection_t *pn_event_connection(pn_event_t *event)
-{
-  pn_session_t *ssn;
-  pn_transport_t *transport;
-
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_CONNECTION:
-    return (pn_connection_t *)event->context;
-  case PN_EVENT_CATEGORY_TRANSPORT:
-    transport = pn_event_transport(event);
-    if (transport)
-      return transport->connection;
-    return NULL;
-  default:
-    ssn = pn_event_session(event);
-    if (ssn)
-     return pn_session_connection(ssn);
-  }
-  return NULL;
-}
-
-pn_session_t *pn_event_session(pn_event_t *event)
-{
-  pn_link_t *link;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_SESSION:
-    return (pn_session_t *)event->context;
-  default:
-    link = pn_event_link(event);
-    if (link)
-      return pn_link_session(link);
-  }
-  return NULL;
-}
-
-pn_link_t *pn_event_link(pn_event_t *event)
-{
-  pn_delivery_t *dlv;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_LINK:
-    return (pn_link_t *)event->context;
-  default:
-    dlv = pn_event_delivery(event);
-    if (dlv)
-      return pn_delivery_link(dlv);
-  }
-  return NULL;
-}
-
-pn_delivery_t *pn_event_delivery(pn_event_t *event)
-{
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_DELIVERY:
-    return (pn_delivery_t *)event->context;
-  default:
-    return NULL;
-  }
-}
-
-pn_transport_t *pn_event_transport(pn_event_t *event)
-{
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_TRANSPORT:
-    return (pn_transport_t *)event->context;
-  default:
-    {
-      pn_connection_t *conn = pn_event_connection(event);
-      if (conn)
-        return pn_connection_transport(conn);
-      return NULL;
-    }
-  }
 }
 
 const char *pn_event_type_name(pn_event_type_t type)
@@ -302,6 +236,10 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_EVENT_NONE";
   case PN_CONNECTION_INIT:
     return "PN_CONNECTION_INIT";
+  case PN_CONNECTION_BOUND:
+    return "PN_CONNECTION_BOUND";
+  case PN_CONNECTION_UNBOUND:
+    return "PN_CONNECTION_UNBOUND";
   case PN_CONNECTION_REMOTE_OPEN:
     return "PN_CONNECTION_REMOTE_OPEN";
   case PN_CONNECTION_OPEN:
@@ -332,6 +270,10 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_LINK_OPEN";
   case PN_LINK_REMOTE_CLOSE:
     return "PN_LINK_REMOTE_CLOSE";
+  case PN_LINK_DETACH:
+    return "PN_LINK_DETACH";
+  case PN_LINK_REMOTE_DETACH:
+    return "PN_LINK_REMOTE_DETACH";
   case PN_LINK_CLOSE:
     return "PN_LINK_CLOSE";
   case PN_LINK_FLOW:
@@ -342,6 +284,14 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_DELIVERY";
   case PN_TRANSPORT:
     return "PN_TRANSPORT";
+  case PN_TRANSPORT_ERROR:
+    return "PN_TRANSPORT_ERROR";
+  case PN_TRANSPORT_HEAD_CLOSED:
+    return "PN_TRANSPORT_HEAD_CLOSED";
+  case PN_TRANSPORT_TAIL_CLOSED:
+    return "PN_TRANSPORT_TAIL_CLOSED";
+  case PN_TRANSPORT_CLOSED:
+    return "PN_TRANSPORT_CLOSED";
   }
 
   return "<unrecognized>";

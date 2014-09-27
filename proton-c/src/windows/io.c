@@ -103,7 +103,7 @@ void pn_io_finalize(void *obj)
 pn_io_t *pn_io(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_io);
-  pn_io_t *io = (pn_io_t *) pn_new(sizeof(pn_io_t), &clazz);
+  pn_io_t *io = (pn_io_t *) pn_class_new(&clazz, sizeof(pn_io_t));
   return io;
 }
 
@@ -210,14 +210,16 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return INVALID_SOCKET;
   }
 
-  iocpdesc_t *iocpd = pni_iocpdesc_create(io->iocp, sock, false);
-  if (!iocpd) {
-    pn_i_error_from_errno(io->error, "register");
-    closesocket(sock);
-    return INVALID_SOCKET;
+  if (io->iocp->selector) {
+    iocpdesc_t *iocpd = pni_iocpdesc_create(io->iocp, sock, false);
+    if (!iocpd) {
+      pn_i_error_from_errno(io->error, "register");
+      closesocket(sock);
+      return INVALID_SOCKET;
+    }
+    pni_iocpdesc_start(iocpd);
   }
 
-  pni_iocpdesc_start(iocpd);
   return sock;
 }
 
@@ -242,7 +244,22 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
 
   ensure_unique(io, sock);
   pn_configure_sock(io, sock);
-  return pni_iocp_begin_connect(io->iocp, sock, addr, io->error);
+
+  if (io->iocp->selector) {
+    return pni_iocp_begin_connect(io->iocp, sock, addr, io->error);
+  } else {
+    if (connect(sock, addr->ai_addr, addr->ai_addrlen) != 0) {
+      if (WSAGetLastError() != WSAEWOULDBLOCK) {
+	pni_win32_error(io->error, "connect", WSAGetLastError());
+	freeaddrinfo(addr);
+	closesocket(sock);
+	return INVALID_SOCKET;
+      }
+    }
+
+    freeaddrinfo(addr);
+    return sock;
+  }
 }
 
 pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t size)

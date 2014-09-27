@@ -28,7 +28,7 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
-#include "../util.h"
+#include "util.h"
 #include "store.h"
 
 typedef struct pni_stream_t pni_stream_t;
@@ -89,7 +89,7 @@ pni_store_t *pni_store()
   store->window = 0;
   store->lwm = 0;
   store->hwm = 0;
-  store->tracked = pn_hash(0, 0.75, PN_REFCOUNT);
+  store->tracked = pn_hash(PN_OBJECT, 0, 0.75);
 
   return store;
 }
@@ -197,6 +197,7 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
   return pni_stream(store, address, false);
 }
 
+#define CID_pni_entry CID_pn_object
 #define pni_entry_initialize NULL
 #define pni_entry_hashcode NULL
 #define pni_entry_compare NULL
@@ -210,7 +211,7 @@ pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
   if (!address) address = "";
   pni_stream_t *stream = pni_stream_put(store, address);
   if (!stream) return NULL;
-  pni_entry_t *entry = (pni_entry_t *) pn_new(sizeof(pni_entry_t), &clazz);
+  pni_entry_t *entry = (pni_entry_t *) pn_class_new(&clazz, sizeof(pni_entry_t));
   if (!entry) return NULL;
   entry->stream = stream;
   entry->free = false;

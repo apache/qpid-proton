@@ -29,7 +29,69 @@
  * is supplied that will be used as the name of the Messenger, otherwise a UUID
  * will be used. The Messenger is initialised to non-blocking mode as it makes
  * little sense to have blocking behaviour in a JavaScript implementation.
- * @classdesc This class is
+ * @classdesc The {@link proton.Messenger} class defines a high level interface for sending
+ * and receiving {@link proton.Message}. Every {@link proton.Messenger} contains a
+ * single logical queue of incoming messages and a single logical queue
+ * of outgoing messages. These messages in these queues may be destined
+ * for, or originate from, a variety of addresses.
+ * <p>
+ * The messenger interface is single-threaded.
+ * <pre>
+ * Address Syntax
+ * ==============
+ * </pre>
+ * An address has the following form:
+ * <pre>
+ *   [ amqp[s]:// ] [user[:password]@] domain [/[name]]
+ * </pre>
+ * Where domain can be one of:
+ * <pre>
+ *   host | host:port | ip | ip:port | name
+ * </pre>
+ * The following are valid examples of addresses:
+ * <pre>
+ *  - example.org
+ *  - example.org:1234
+ *  - amqp://example.org
+ *  - amqps://example.org
+ *  - example.org/incoming
+ *  - amqps://example.org/outgoing
+ *  - amqps://fred:trustno1@example.org
+ *  - 127.0.0.1:1234
+ *  - amqps://127.0.0.1:1234
+ *
+ * Sending & Receiving Messages
+ * ============================
+ * </pre>
+ * The {@link proton.Messenger} class works in conjuction with the {@link proton.Message} class.
+ * The {@link proton.Message} class is a mutable holder of message content.
+ * <p>
+ * The put method copies its Message to the outgoing queue, and may
+ * send queued messages if it can do so without blocking.  
+ * <pre>
+ *   var message = new proton.Message();
+ *   for (var i = 0; i < 3; i++) {
+ *      message.setAddress("amqp://host/queue");
+ *      message.setSubject = ("Hello World " + i);
+ *      messenger.put(message);
+ *   }
+ * </pre>
+ * Similarly, the recv method receives messages into the incoming
+ * queue. It may receive fewer than the requested number. The get method pops the
+ * eldest Message off the incoming queue and copies it into the Message
+ * object that you supply.
+ * <pre>
+ *   var message = new proton.Message();
+ *   messenger.recv(10);
+ *   while (messenger.incoming() > 0) {
+ *      messenger.get(message);
+ *      console.log(message.getSubject());
+ *   }
+ *   Hello World 0
+ *   Hello World 1
+ *   Hello World 2
+ * </pre>
+ *
  * @constructor proton.Messenger
  * @param {string} name the name of this Messenger instance.
  */
@@ -111,7 +173,7 @@ var _Messenger_ = Module['Messenger'].prototype;
  * exception and throws the exception. This method will try to use the message
  * populated in pn_messenger_error(), if present, but if not it will fall
  * back to using the basic error code rendering from pn_code().
- * @param code the error code to check.
+ * @param {number} code the error code to check.
  */
 _Messenger_._check = function(code) {
     if (code < 0) {
@@ -155,7 +217,9 @@ _Messenger_._emit = function(event, param) {
  * Checks any pending subscriptions and when a source address becomes available
  * emit a subscription event passing the Subscription that triggered the event.
  * Note that this doesn't seem to work for listen/bind style subscriptions,
- * that is to say subscriptions of the form amqp://~0.0.0.0 don't know why?
+ * that is to say subscriptions of the form amqp://~0.0.0.0, don't know why?
+ * As a workaround the subscribe call emits a subscription event immediately for
+ * peer subscriptions to the local Messenger, this *should* be OK.
  */
 _Messenger_._checkSubscriptions = function() {
     // Check for completed subscriptions, and emit subscribe event.
@@ -466,7 +530,7 @@ _Messenger_['subscribe'] = function(source) {
  * @returns {proton.Data.Long} a tracker.
  */
 _Messenger_['put'] = function(message, flush) {
-    flush = flush === false ? false : true;
+    flush = flush === false ? false : true; // Defaults to true if not explicitly specified.
     message._preEncode();
     this._checkErrors = true; // TODO improve error handling mechanism.
     this._check(_pn_messenger_put(this._messenger, message._message));
@@ -493,7 +557,7 @@ _Messenger_['put'] = function(message, flush) {
  * @returns {proton.Status} one of None, PENDING, REJECTED, or ACCEPTED.
  */
 _Messenger_['status'] = function(tracker) {
-    if (tracker == null) {
+    if (tracker == null) { // Use == not === to check for both null and undefined.
         var low = _pn_messenger_outgoing_tracker(this._messenger);
         var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
@@ -510,7 +574,7 @@ _Messenger_['status'] = function(tracker) {
  * @returns {boolean} true if delivery is still buffered.
  */
 _Messenger_['isBuffered'] = function(tracker) {
-    if (tracker == null) {
+    if (tracker == null) { // Use == not === to check for both null and undefined.
         var low = _pn_messenger_outgoing_tracker(this._messenger);
         var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
@@ -533,7 +597,7 @@ _Messenger_['settle'] = function(tracker) {
     // the high 32 bits via the tempRet0 variable. We use Data.Long to pass the
     // low/high pair around to methods that require a tracker.
     var flags = 0;
-    if (tracker == null) {
+    if (tracker == null) { // Use == not === to check for both null and undefined.
         var low = _pn_messenger_outgoing_tracker(this._messenger);
         var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
@@ -625,7 +689,6 @@ _Messenger_['get'] = function(message, decodeBinaryAsString) {
     // low/high pair around to methods that require a tracker.
     var low = _pn_messenger_incoming_tracker(this._messenger);
     var high = Runtime.getTempRet0();
-
     return new Data.Long(low, high);
 };
 
@@ -661,7 +724,7 @@ _Messenger_['accept'] = function(tracker) {
     // the high 32 bits via the tempRet0 variable. We use Data.Long to pass the
     // low/high pair around to methods that require a tracker.
     var flags = 0;
-    if (tracker == null) {
+    if (tracker == null) { // Use == not === to check for both null and undefined.
         var low = _pn_messenger_incoming_tracker(this._messenger);
         var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);
@@ -685,7 +748,7 @@ _Messenger_['reject'] = function(tracker) {
     // the high 32 bits via the tempRet0 variable. We use Data.Long to pass the
     // low/high pair around to methods that require a tracker.
     var flags = 0;
-    if (tracker == null) {
+    if (tracker == null) { // Use == not === to check for both null and undefined.
         var low = _pn_messenger_incoming_tracker(this._messenger);
         var high = Runtime.getTempRet0();
         tracker = new Data.Long(low, high);

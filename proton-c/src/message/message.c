@@ -29,8 +29,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include "protocol.h"
-#include "../util.h"
-#include "../platform_fmt.h"
+#include "util.h"
+#include "platform_fmt.h"
 
 ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
 {
@@ -322,7 +322,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
 pn_message_t *pn_message()
 {
   static const pn_class_t clazz = PN_CLASS(pn_message);
-  pn_message_t *msg = (pn_message_t *) pn_new(sizeof(pn_message_t), &clazz);
+  pn_message_t *msg = (pn_message_t *) pn_class_new(&clazz, sizeof(pn_message_t));
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;
   msg->ttl = 0;
@@ -975,6 +975,7 @@ int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
                                   pn_data_error(msg->body));
   if (scanned) {
     if (bytes.size > *size) {
+      *size = bytes.size;
       return PN_OVERFLOW;
     } else {
       memcpy(data, bytes.start, bytes.size);
@@ -997,6 +998,7 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
       {
         pn_bytes_t str = pn_data_get_bytes(msg->body);
         if (str.size >= *size) {
+          *size = str.size;
           return PN_OVERFLOW;
         } else {
           memcpy(data, str.start, str.size);

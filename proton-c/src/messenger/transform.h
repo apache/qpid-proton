@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/object.h>
 #include <proton/buffer.h>
 
 typedef struct pn_transform_t pn_transform_t;
@@ -32,6 +33,7 @@ void pn_transform_rule(pn_transform_t *transform, const char *pattern,
 int pn_transform_apply(pn_transform_t *transform, const char *src,
                        pn_string_t *dest);
 bool pn_transform_matched(pn_transform_t *transform);
-
+int pn_transform_get_substitutions(pn_transform_t *transform,
+                                   pn_list_t *substitutions);
 
 #endif /* transform.h */

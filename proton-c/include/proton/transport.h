@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/condition.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -103,20 +104,18 @@ PN_EXTERN pn_transport_t *pn_transport(void);
 PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 
 /**
- * Get additional error information associated with the transport.
+ * Get additional information about the condition of the transport.
  *
- * Whenever a transport operation fails (i.e. returns an error code),
- * additional error details can be obtained using this function. The
- * error object that is returned may also be used to clear the error
- * condition.
+ * When a PN_TRANSPORT_ERROR event occurs, this operation can be used
+ * to access the details of the error condtion.
  *
  * The pointer returned by this operation is valid until the
  * transport object is freed.
  *
  * @param[in] transport the transport object
- * @return the transport's error object
+ * @return the transport's condition object
  */
-PN_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
+PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
 
 /**
  * Binds the transport to an AMQP connection.
@@ -484,6 +483,14 @@ PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transpor
  * @return the number of frames input by the transport
  */
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
+
+/** Access the AMQP Connection associated with the transport.
+ *
+ * @param[in] transport a transport object
+ * @return the connection context for the transport, or NULL if
+ *         none
+ */
+PN_EXTERN pn_connection_t *pn_transport_connection(pn_transport_t *transport);
 
 #ifdef __cplusplus
 }

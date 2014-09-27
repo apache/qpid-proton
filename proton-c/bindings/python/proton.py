@@ -31,7 +31,8 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
-import weakref
+
+import weakref, re, socket
 try:
   import uuid
 except ImportError:
@@ -89,6 +90,8 @@ try:
 except NameError:
   bytes = str
 
+VERSION_MAJOR = PN_VERSION_MAJOR
+VERSION_MINOR = PN_VERSION_MINOR
 API_LANGUAGE = "C"
 IMPLEMENTATION_LANGUAGE = "C"
 
@@ -866,7 +869,7 @@ class Message(object):
   def _set_inferred(self, value):
     self._check(pn_message_set_inferred(self._msg, bool(value)))
 
-  inferred = property(_is_inferred, _set_inferred,"""
+  inferred = property(_is_inferred, _set_inferred, doc="""
 The inferred flag for a message indicates how the message content
 is encoded into AMQP sections. If inferred is true then binary and
 list values in the body of the message will be encoded as AMQP DATA
@@ -2215,6 +2218,9 @@ class Condition:
                                         (self.name, self.description, self.info)
                                         if x])
 
+  def __str__(self):
+    return ": ".join(filter(None, [self.name, self.description, self.info]))
+
   def __eq__(self, o):
     if not isinstance(o, Condition): return False
     return self.name == o.name and \
@@ -2260,7 +2266,7 @@ class Connection(Endpoint):
     reference to the python instance in the context field of the C object.
     """
     if not c_conn: return None
-    py_conn = pn_connection_get_context(c_conn)
+    py_conn = pn_void2py(pn_connection_get_context(c_conn))
     if py_conn: return py_conn
     wrapper = Connection(_conn=c_conn)
     return wrapper
@@ -2271,7 +2277,7 @@ class Connection(Endpoint):
       self._conn = _conn
     else:
       self._conn = pn_connection()
-    pn_connection_set_context(self._conn, self)
+    pn_connection_set_context(self._conn, pn_py2void(self))
     self.offered_capabilities = None
     self.desired_capabilities = None
     self.properties = None
@@ -2404,7 +2410,7 @@ class Session(Endpoint):
     exists in the C Engine.
     """
     if c_ssn is None: return None
-    py_ssn = pn_session_get_context(c_ssn)
+    py_ssn = pn_void2py(pn_session_get_context(c_ssn))
     if py_ssn: return py_ssn
     wrapper = Session(c_ssn)
     return wrapper
@@ -2412,7 +2418,7 @@ class Session(Endpoint):
   def __init__(self, ssn):
     Endpoint.__init__(self)
     self._ssn = ssn
-    pn_session_set_context(self._ssn, self)
+    pn_session_set_context(self._ssn, pn_py2void(self))
     self._links = set()
     self.connection._sessions.add(self)
 
@@ -2501,7 +2507,7 @@ class Link(Endpoint):
     exists in the C Engine.
     """
     if c_link is None: return None
-    py_link = pn_link_get_context(c_link)
+    py_link = pn_void2py(pn_link_get_context(c_link))
     if py_link: return py_link
     if pn_link_is_sender(c_link):
       wrapper = Sender(c_link)
@@ -2512,7 +2518,7 @@ class Link(Endpoint):
   def __init__(self, c_link):
     Endpoint.__init__(self)
     self._link = c_link
-    pn_link_set_context(self._link, self)
+    pn_link_set_context(self._link, pn_py2void(self))
     self._deliveries = set()
     self.session._links.add(self)
 
@@ -2641,6 +2647,9 @@ class Link(Endpoint):
 
   def drained(self):
     return pn_link_drained(self._link)
+
+  def detach(self):
+    return pn_link_detach(self._link)
 
 class Terminus(object):
 
@@ -2879,25 +2888,27 @@ class Delivery(object):
     exists in the C Engine.
     """
     if not c_dlv: return None
-    py_dlv = pn_delivery_get_context(c_dlv)
+    py_dlv = pn_void2py(pn_delivery_get_context(c_dlv))
     if py_dlv: return py_dlv
     wrapper = Delivery(c_dlv)
     return wrapper
 
   def __init__(self, dlv):
     self._dlv = dlv
-    pn_delivery_set_context(self._dlv, self)
+    pn_delivery_set_context(self._dlv, pn_py2void(self))
     self.local = Disposition(pn_delivery_local(self._dlv), True)
     self.remote = Disposition(pn_delivery_remote(self._dlv), False)
     self.link._deliveries.add(self)
 
   def __del__(self):
-    pn_delivery_set_context(self._dlv, None)
+    self._release()
 
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._dlv:
+      pn_delivery_set_context(self._dlv, pn_py2void(None))
       pn_delivery_settle(self._dlv)
+      self._dlv = None
 
   @property
   def tag(self):
@@ -3125,6 +3136,10 @@ The idle timeout of the connection (float, in seconds).
       self._ssl = SSL(self, domain, session_details)
     return self._ssl
 
+  @property
+  def condition(self):
+    return cond2obj(pn_transport_condition(self._trans))
+
 class SASLException(TransportException):
   pass
 
@@ -3319,29 +3334,33 @@ class SSLSessionDetails(object):
     return self._session_id
 
 
+wrappers = {
+  "pn_void": lambda x: pn_void2py(x),
+  "pn_pyref": lambda x: pn_void2py(x),
+  "pn_connection": lambda x: Connection._wrap_connection(pn_cast_pn_connection(x)),
+  "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
+  "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
+  "pn_delivery": lambda x: Delivery._wrap_delivery(pn_cast_pn_delivery(x)),
+  "pn_transport": lambda x: Transport(pn_cast_pn_transport(x))
+}
+
 class Collector:
 
   def __init__(self):
     self._impl = pn_collector()
     self._contexts = set()
 
+  def put(self, obj, etype):
+    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype)
+
   def peek(self):
     event = pn_collector_peek(self._impl)
     if event is None:
       return None
 
-    tpi = pn_event_transport(event)
-    if tpi:
-      tp = Transport(tpi)
-    else:
-      tp = None
-    return Event(type=pn_event_type(event),
-                 category=pn_event_category(event),
-                 connection=Connection._wrap_connection(pn_event_connection(event)),
-                 session=Session._wrap_session(pn_event_session(event)),
-                 link=Link._wrap_link(pn_event_link(event)),
-                 delivery=Delivery._wrap_delivery(pn_event_delivery(event)),
-                 transport=tp)
+    clazz = pn_class_name(pn_event_class(event))
+    context = wrappers[clazz](pn_event_context(event))
+    return Event(clazz, context, pn_event_type(event))
 
   def pop(self):
     ev = self.peek()
@@ -3354,13 +3373,9 @@ class Collector:
 
 class Event:
 
-  CATEGORY_CONNECTION = PN_EVENT_CATEGORY_CONNECTION
-  CATEGORY_SESSION = PN_EVENT_CATEGORY_SESSION
-  CATEGORY_LINK = PN_EVENT_CATEGORY_LINK
-  CATEGORY_DELIVERY = PN_EVENT_CATEGORY_DELIVERY
-  CATEGORY_TRANSPORT = PN_EVENT_CATEGORY_TRANSPORT
-
   CONNECTION_INIT = PN_CONNECTION_INIT
+  CONNECTION_BOUND = PN_CONNECTION_BOUND
+  CONNECTION_UNBOUND = PN_CONNECTION_UNBOUND
   CONNECTION_OPEN = PN_CONNECTION_OPEN
   CONNECTION_CLOSE = PN_CONNECTION_CLOSE
   CONNECTION_REMOTE_OPEN = PN_CONNECTION_REMOTE_OPEN
@@ -3377,42 +3392,34 @@ class Event:
   LINK_INIT = PN_LINK_INIT
   LINK_OPEN = PN_LINK_OPEN
   LINK_CLOSE = PN_LINK_CLOSE
+  LINK_DETACH = PN_LINK_DETACH
   LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
   LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
+  LINK_REMOTE_DETACH = PN_LINK_REMOTE_DETACH
   LINK_FLOW = PN_LINK_FLOW
   LINK_FINAL = PN_LINK_FINAL
 
   DELIVERY = PN_DELIVERY
-  TRANSPORT = PN_TRANSPORT
 
-  def __init__(self, type, category,
-               connection, session, link, delivery, transport):
+  TRANSPORT = PN_TRANSPORT
+  TRANSPORT_ERROR = PN_TRANSPORT_ERROR
+  TRANSPORT_HEAD_CLOSED = PN_TRANSPORT_HEAD_CLOSED
+  TRANSPORT_TAIL_CLOSED = PN_TRANSPORT_TAIL_CLOSED
+  TRANSPORT_CLOSED = PN_TRANSPORT_CLOSED
+
+  def __init__(self, clazz, context, type):
+    self.clazz = clazz
+    self.context = context
     self.type = type
-    self.category = category
-    self.connection = connection
-    self.session = session
-    self.link = link
-    self.delivery = delivery
-    self.transport = transport
 
   def _popped(self, collector):
-    if self.type == Event.LINK_FINAL:
-      ctx = self.link
-    elif self.type == Event.SESSION_FINAL:
-      ctx = self.session
-    elif self.type == Event.CONNECTION_FINAL:
-      ctx = self.connection
-    else:
-      return
-
-    collector._contexts.remove(ctx)
-    ctx._released()
+    if self.type in (Event.LINK_FINAL, Event.SESSION_FINAL,
+                     Event.CONNECTION_FINAL):
+      collector._contexts.remove(self.context)
+      self.context._released()
 
   def __repr__(self):
-    objects = [self.connection, self.session, self.link, self.delivery,
-               self.transport]
-    return "%s(%s)" % (pn_event_type_name(self.type),
-                       ", ".join([str(o) for o in objects if o is not None]))
+    return "%s(%s)" % (pn_event_type_name(self.type), self.context)
 
 ###
 # Driver
@@ -3432,7 +3439,7 @@ class Connector(object):
     exists in the C Driver.
     """
     if not c_cxtr: return None
-    py_cxtr = pn_connector_context(c_cxtr)
+    py_cxtr = pn_void2py(pn_connector_context(c_cxtr))
     if py_cxtr: return py_cxtr
     wrapper = Connector(_cxtr=c_cxtr, _py_driver=py_driver)
     return wrapper
@@ -3441,14 +3448,14 @@ class Connector(object):
     self._cxtr = _cxtr
     assert(_py_driver)
     self._driver = weakref.ref(_py_driver)
-    pn_connector_set_context(self._cxtr, self)
+    pn_connector_set_context(self._cxtr, pn_py2void(self))
     self._connection = None
     self._driver()._connectors.add(self)
 
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._cxtr:
-      pn_connector_set_context(self._cxtr, None)
+      pn_connector_set_context(self._cxtr, pn_py2void(None))
       pn_connector_free(self._cxtr)
       self._cxtr = None
 
@@ -3519,7 +3526,7 @@ class Listener(object):
     exists in the C Driver.
     """
     if not c_lsnr: return None
-    py_lsnr = pn_listener_context(c_lsnr)
+    py_lsnr = pn_void2py(pn_listener_context(c_lsnr))
     if py_lsnr: return py_lsnr
     wrapper = Listener(_lsnr=c_lsnr, _py_driver=py_driver)
     return wrapper
@@ -3528,13 +3535,13 @@ class Listener(object):
     self._lsnr = _lsnr
     assert(_py_driver)
     self._driver = weakref.ref(_py_driver)
-    pn_listener_set_context(self._lsnr, self)
+    pn_listener_set_context(self._lsnr, pn_py2void(self))
     self._driver()._listeners.add(self)
 
   def _release(self):
     """Release the underlying C Engine resource."""
     if self._lsnr:
-      pn_listener_set_context(self._lsnr, None);
+      pn_listener_set_context(self._lsnr, pn_py2void(None));
       pn_listener_free(self._lsnr)
       self._lsnr = None
 
@@ -3638,8 +3645,8 @@ __all__ = [
            "Messenger",
            "MessengerException",
            "ProtonException",
-           "PN_VERSION_MAJOR",
-           "PN_VERSION_MINOR",
+           "VERSION_MAJOR",
+           "VERSION_MINOR",
            "Receiver",
            "SASL",
            "Sender",
@@ -3659,3 +3666,106 @@ __all__ = [
            "timestamp",
            "ulong"
            ]
+
+
+class Url(object):
+  """
+  Simple URL parser/constructor, handles URLs of the form:
+
+    <scheme>://<user>:<password>@<host>:<port>/<path>
+
+  All components can be None if not specifeid in the URL string.
+
+  The port can be specified as a service name, e.g. 'amqp' in the
+  URL string but Url.port always gives the integer value.
+
+  @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
+  @ivar user: Username
+  @ivar password: Password
+  @ivar host: Host name, ipv6 literal or ipv4 dotted quad.
+  @ivar port: Integer port.
+  @ivar host_port: Returns host:port
+  """
+
+  AMQPS = "amqps"
+  AMQP = "amqp"
+
+  class Port(int):
+    """An integer port number that can be constructed from a service name string"""
+
+    def __new__(cls, value):
+      """@param value: integer port number or string service name."""
+      port = super(Url.Port, cls).__new__(cls, cls._port_int(value))
+      setattr(port, 'name', str(value))
+      return port
+
+    def __eq__(self, x): return str(self) == x or int(self) == x
+    def __ne__(self, x): return not self == x
+    def __str__(self): return str(self.name)
+
+    @staticmethod
+    def _port_int(value):
+      """Convert service, an integer or a service name, into an integer port number."""
+      try:
+        return int(value)
+      except ValueError:
+        try:
+          return socket.getservbyname(value)
+        except socket.error:
+          raise ValueError("Not a valid port number or service name: '%s'" % value)
+
+  def __init__(self, url=None, **kwargs):
+    """
+    @param url: URL string to parse.
+    @param kwargs: scheme, user, password, host, port, path.
+      If specified, replaces corresponding part in url string.
+    """
+    if url:
+      self._url = pn_url_parse(str(url))
+      if not self._url: raise ValueError("Invalid URL '%s'" % url)
+    else:
+      self._url = pn_url()
+    for k in kwargs:            # Let kwargs override values parsed from url
+      getattr(self, k)          # Check for invalid kwargs
+      setattr(self, k, kwargs[k])
+
+  class PartDescriptor(object):
+    def __init__(self, part):
+      self.getter = globals()["pn_url_get_%s" % part]
+      self.setter = globals()["pn_url_set_%s" % part]
+    def __get__(self, obj, type=None): return self.getter(obj._url)
+    def __set__(self, obj, value): return self.setter(obj._url, str(value))
+
+  scheme = PartDescriptor('scheme')
+  username = PartDescriptor('username')
+  password = PartDescriptor('password')
+  host = PartDescriptor('host')
+  path = PartDescriptor('path')
+
+  def _get_port(self):
+    portstr = pn_url_get_port(self._url)
+    return portstr and Url.Port(portstr)
+
+  def _set_port(self, value):
+    if value is None: pn_url_set_port(self._url, None)
+    else: pn_url_set_port(self._url, str(Url.Port(value)))
+
+  port = property(_get_port, _set_port)
+
+  def __str__(self): return pn_url_str(self._url)
+
+  def __repr__(self): return "Url(%r)" % str(self)
+
+  def __del__(self):
+    pn_url_free(self._url);
+    self._url = None
+
+  def defaults(self):
+    """
+    Fill in missing values (scheme, host or port) with defaults
+    @return: self
+    """
+    self.scheme = self.scheme or self.AMQP
+    self.host = self.host or '0.0.0.0'
+    self.port = self.port or self.Port(self.scheme)
+    return self

@@ -168,8 +168,9 @@ static void write_pipeline_finalize(void *object)
 
 write_pipeline_t *pni_write_pipeline(iocpdesc_t *iocpd)
 {
+  static const pn_cid_t CID_write_pipeline = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(write_pipeline);
-  write_pipeline_t *pipeline = (write_pipeline_t *) pn_new(sizeof(write_pipeline_t), &clazz);
+  write_pipeline_t *pipeline = (write_pipeline_t *) pn_class_new(&clazz, sizeof(write_pipeline_t));
   pipeline->iocpd = iocpd;
   pipeline->primary->base.iocpd = iocpd;
   return pipeline;
@@ -243,15 +244,15 @@ size_t pni_write_pipeline_reserve(write_pipeline_t *pl, size_t count)
 
   iocp_t *iocp = pl->iocpd->iocp;
   confirm_as_writer(pl);
-  int wanted = (count / IOCP_WBUFSIZE);
+  size_t wanted = (count / IOCP_WBUFSIZE);
   if (count % IOCP_WBUFSIZE)
     wanted++;
   size_t pending = pl->pending_count;
   assert(pending < pl->depth);
-  int bufs = pn_min(wanted, pl->depth - pending);
+  size_t bufs = pn_min(wanted, pl->depth - pending);
   // Can draw from shared pool or the primary... but share with others.
   size_t writers = iocp->writer_count;
-  int shared_count = (iocp->shared_available_count + writers - 1) / writers;
+  size_t shared_count = (iocp->shared_available_count + writers - 1) / writers;
   bufs = pn_min(bufs, shared_count + 1);
   pl->reserved_count = pending + bufs;
 

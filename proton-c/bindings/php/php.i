@@ -29,11 +29,16 @@
 %header %{
 /* Include the headers needed by the code in this wrapper file */
 #include <proton/types.h>
-#include <proton/message.h>
+#include <proton/connection.h>
+#include <proton/condition.h>
+#include <proton/delivery.h>
 #include <proton/driver.h>
 #include <proton/driver_extras.h>
+#include <proton/event.h>
+#include <proton/message.h>
 #include <proton/messenger.h>
-#include <proton/ssl.h>
+#include <proton/session.h>
+#include <proton/url.h>
 
 #define zend_error_noreturn zend_error
 %}

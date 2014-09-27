@@ -23,6 +23,7 @@
 #include <winsock2.h>
 #endif
 #include <proton/engine.h>
+#include <proton/url.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
 #include <proton/driver.h>
@@ -184,154 +185,6 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
 %}
 %ignore pn_message_data;
 
-%rename(pn_listener_set_context) wrap_pn_listener_set_context;
-%inline {
-  void wrap_pn_listener_set_context(pn_listener_t *l, PyObject *context) {
-    // don't incref context: we 'borrow' the reference - prevents
-    // reference loops.  Should be safe as the Python object must
-    // outlive the C object.
-    pn_listener_set_context(l, context);
-  }
-}
-%ignore pn_listener_set_context;
-
-%rename(pn_listener_context) wrap_pn_listener_context;
-%inline {
-  PyObject *wrap_pn_listener_context(pn_listener_t *l) {
-    PyObject *result = (PyObject *) pn_listener_context(l);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_listener_context;
-
-%rename(pn_connector_set_context) wrap_pn_connector_set_context;
-%inline {
-  void wrap_pn_connector_set_context(pn_connector_t *c, PyObject *context) {
-    // don't incref context: we 'borrow' the reference - prevents
-    // reference loops.  Should be safe as the Python object must
-    // outlive the C object.
-    pn_connector_set_context(c, context);
-  }
-}
-%ignore pn_connector_set_context;
-
-%rename(pn_connector_context) wrap_pn_connector_context;
-%inline {
-  PyObject *wrap_pn_connector_context(pn_connector_t *c) {
-    PyObject *result = (PyObject *) pn_connector_context(c);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_connector_context;
-
-%rename(pn_connection_get_context) wrap_pn_connection_get_context;
-%inline {
-  PyObject *wrap_pn_connection_get_context(pn_connection_t *c) {
-    PyObject *result = (PyObject *) pn_connection_get_context(c);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_connection_get_context;
-
-%rename(pn_connection_set_context) wrap_pn_connection_set_context;
-%inline {
-  void wrap_pn_connection_set_context(pn_connection_t *c, PyObject *context) {
-    // don't incref context: we 'borrow' the reference
-    pn_connection_set_context(c, context);
-  }
-}
-%ignore pn_connection_set_context;
-
-%rename(pn_session_get_context) wrap_pn_session_get_context;
-%inline {
-  PyObject *wrap_pn_session_get_context(pn_session_t *s) {
-    PyObject *result = (PyObject *) pn_session_get_context(s);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_session_get_context;
-
-%rename(pn_session_set_context) wrap_pn_session_set_context;
-%inline {
-  void wrap_pn_session_set_context(pn_session_t *s, PyObject *context) {
-    // don't incref context: we 'borrow' the reference
-    pn_session_set_context(s, context);
-  }
-}
-%ignore pn_session_set_context;
-
-%rename(pn_link_get_context) wrap_pn_link_get_context;
-%inline {
-  PyObject *wrap_pn_link_get_context(pn_link_t *l) {
-    PyObject *result = (PyObject *) pn_link_get_context(l);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_link_get_context;
-
-%rename(pn_link_set_context) wrap_pn_link_set_context;
-%inline {
-  void wrap_pn_link_set_context(pn_link_t *l, PyObject *context) {
-    // don't incref context: we 'borrow' the reference
-    pn_link_set_context(l, context);
-  }
-}
-%ignore pn_link_set_context;
-
-%rename(pn_delivery_get_context) wrap_pn_delivery_get_context;
-%inline {
-  PyObject *wrap_pn_delivery_get_context(pn_delivery_t *d) {
-    PyObject *result = (PyObject *) pn_delivery_get_context(d);
-    // incref the returned context, as the caller expects this
-    if (result) {
-      Py_INCREF(result);
-      return result;
-    } else {
-      Py_RETURN_NONE;
-    }
-  }
-}
-%ignore pn_delivery_get_context;
-
-%rename(pn_delivery_set_context) wrap_pn_delivery_set_context;
-%inline {
-  void wrap_pn_delivery_set_context(pn_delivery_t *d, PyObject *context) {
-    // don't incref context: we 'borrow' the reference
-    pn_delivery_set_context(d, context);
-  }
-}
-%ignore pn_delivery_set_context;
-
 ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %ignore pn_data_decode;
 
@@ -375,5 +228,57 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
+%immutable PN_PYREF;
+%inline %{
+  extern const pn_class_t *PN_PYREF;
+
+  #define CID_pn_pyref CID_pn_void
+  #define pn_pyref_new NULL
+  #define pn_pyref_initialize NULL
+  #define pn_pyref_finalize NULL
+  #define pn_pyref_free NULL
+  #define pn_pyref_hashcode pn_void_hashcode
+  #define pn_pyref_compare pn_void_compare
+  #define pn_pyref_inspect pn_void_inspect
+
+  static void pn_pyref_incref(void *object) {
+    PyObject* p = (PyObject*) object;
+    Py_XINCREF(p);
+  }
+
+  static void pn_pyref_decref(void *object) {
+    PyObject* p = (PyObject*) object;
+    Py_XDECREF(p);
+  }
+
+  static int pn_pyref_refcount(void *object) {
+    return 1;
+  }
+
+  static const pn_class_t *pn_pyref_reify(void *object) {
+    return PN_PYREF;
+  }
+
+  const pn_class_t PNI_PYREF = PN_METACLASS(pn_pyref);
+  const pn_class_t *PN_PYREF = &PNI_PYREF;
+
+  void *pn_py2void(PyObject *object) {
+    return object;
+  }
+
+  PyObject *pn_void2py(void *object) {
+    if (object) {
+      PyObject* p = (PyObject*) object;
+      Py_INCREF(p);
+      return p;
+    } else {
+      Py_RETURN_NONE;
+    }
+  }
+
+  PyObject *pn_cast_pn_void(void *object) {
+    return pn_void2py(object);
+  }
+%}
 
 %include "proton/cproton.i"

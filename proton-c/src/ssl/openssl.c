@@ -20,11 +20,10 @@
  */
 
 #include <proton/ssl.h>
-#include "./ssl-internal.h"
 #include <proton/engine.h>
-#include "../engine/engine-internal.h"
-#include "../platform.h"
-#include "../util.h"
+#include "engine/engine-internal.h"
+#include "platform.h"
+#include "util.h"
 
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
@@ -197,7 +196,7 @@ static int ssl_failed(pn_ssl_t *ssl)
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
   }
   _log_ssl_error(NULL);    // spit out any remaining errors to the log file
-  ssl->transport->tail_closed = true;
+  pni_close_tail(ssl->transport);
   pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
   return PN_EOS;
 }

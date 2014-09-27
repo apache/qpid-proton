@@ -625,6 +625,10 @@ def pn_link_close(link):
   link.on_close()
   link.impl.close()
 
+def pn_link_detach(link):
+  link.on_close()
+  link.impl.detach()
+
 def pn_link_flow(link, n):
   link.impl.flow(n)
 
@@ -863,6 +867,7 @@ class pn_transport_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
+    self.condition = pn_condition()
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
@@ -940,15 +945,15 @@ def pn_transport_close_tail(trans):
 def pn_transport_closed(trans):
   return trans.impl.isClosed()
 
+def pn_transport_condition(trans):
+  trans.condition.decode(trans.impl.getCondition())
+  return trans.condition
+
 from org.apache.qpid.proton.engine import Event
 
-PN_EVENT_CATEGORY_CONNECTION = Event.Category.CONNECTION
-PN_EVENT_CATEGORY_SESSION = Event.Category.SESSION
-PN_EVENT_CATEGORY_LINK = Event.Category.LINK
-PN_EVENT_CATEGORY_DELIVERY = Event.Category.DELIVERY
-PN_EVENT_CATEGORY_TRANSPORT = Event.Category.TRANSPORT
-
 PN_CONNECTION_INIT = Event.Type.CONNECTION_INIT
+PN_CONNECTION_BOUND = Event.Type.CONNECTION_BOUND
+PN_CONNECTION_UNBOUND = Event.Type.CONNECTION_UNBOUND
 PN_CONNECTION_OPEN = Event.Type.CONNECTION_OPEN
 PN_CONNECTION_REMOTE_OPEN = Event.Type.CONNECTION_REMOTE_OPEN
 PN_CONNECTION_CLOSE = Event.Type.CONNECTION_CLOSE
@@ -965,10 +970,16 @@ PN_LINK_OPEN = Event.Type.LINK_OPEN
 PN_LINK_REMOTE_OPEN = Event.Type.LINK_REMOTE_OPEN
 PN_LINK_CLOSE = Event.Type.LINK_CLOSE
 PN_LINK_REMOTE_CLOSE = Event.Type.LINK_REMOTE_CLOSE
+PN_LINK_DETACH = Event.Type.LINK_DETACH
+PN_LINK_REMOTE_DETACH = Event.Type.LINK_REMOTE_DETACH
 PN_LINK_FLOW = Event.Type.LINK_FLOW
 PN_LINK_FINAL = Event.Type.LINK_FINAL
 PN_DELIVERY = Event.Type.DELIVERY
 PN_TRANSPORT = Event.Type.TRANSPORT
+PN_TRANSPORT_ERROR = Event.Type.TRANSPORT_ERROR
+PN_TRANSPORT_HEAD_CLOSED = Event.Type.TRANSPORT_HEAD_CLOSED
+PN_TRANSPORT_TAIL_CLOSED = Event.Type.TRANSPORT_TAIL_CLOSED
+PN_TRANSPORT_CLOSED = Event.Type.TRANSPORT_CLOSED
 
 def pn_collector():
   return Proton.collector()
@@ -1000,8 +1011,33 @@ def pn_event_delivery(event):
 def pn_event_transport(event):
   return wrap(event.getTransport(), pn_transport_wrapper)
 
+from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
+  SenderImpl, ReceiverImpl, DeliveryImpl, TransportImpl
+
+J2C = {
+  ConnectionImpl: "pn_connection",
+  SessionImpl: "pn_session",
+  SenderImpl: "pn_link",
+  ReceiverImpl: "pn_link",
+  DeliveryImpl: "pn_delivery",
+  TransportImpl: "pn_transport"
+}
+
+wrappers = {
+  "pn_connection": lambda x: wrap(x, pn_connection_wrapper),
+  "pn_session": lambda x: wrap(x, pn_session_wrapper),
+  "pn_link": lambda x: wrap(x, pn_link_wrapper),
+  "pn_delivery": lambda x: wrap(x, pn_delivery_wrapper),
+  "pn_transport": lambda x: wrap(x, pn_transport_wrapper),
+  "pn_void": lambda x: x
+}
+
 def pn_event_class(event):
-  return event.getClass()
+  ctx = event.getContext()
+  return J2C.get(ctx.getClass(), "pn_void")
+
+def pn_event_context(event):
+  return wrappers[pn_event_class(event)](event.getContext())
 
 def pn_event_type(event):
   return event.getType()

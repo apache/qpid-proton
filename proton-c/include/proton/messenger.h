@@ -25,6 +25,11 @@
 #include <proton/import_export.h>
 #include <proton/message.h>
 #include <proton/selectable.h>
+#include <proton/condition.h>
+#include <proton/terminus.h>
+#include <proton/link.h>
+#include <proton/transport.h>
+#include <proton/ssl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -468,6 +473,32 @@ PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
 /**
+ * Subscribes a messenger to messages from the specified source with the given
+ * timeout for the subscription's lifetime.
+ *
+ * @param[in] messenger the messenger to subscribe
+ * @param[in] source
+ * @param[in] timeout the maximum time to keep the subscription alive once the
+ *            link is closed.
+ * @return a subscription
+ */
+PN_EXTERN pn_subscription_t *
+pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
+                           pn_seconds_t timeout);
+
+/**
+ * Get a link based on link name and whether the link is a sender or receiver
+ *
+ * @param[in] messenger the messenger to get the link from
+ * @param[in] address the link address that identifies the link to receive
+ * @param[in] sender true if the link is a sender, false if the link is a
+ *            receiver
+ * @return a link, or NULL if no link matches the address / sender parameters
+ */
+PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
+                                           const char *address, bool sender);
+
+/**
  * Get a subscription's application context.
  *
  * See ::pn_subscription_set_context().
@@ -517,6 +548,20 @@ PN_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  * @return a status code for the delivery
  */
 PN_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+
+/**
+ * Get delivery information about a delivery.
+ *
+ * Returns the delivery information associated with the supplied tracker.
+ * This may return NULL if the tracker has fallen outside the
+ * incoming/outgoing tracking windows of the messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] tracker the tracker identifying the delivery
+ * @return a pn_delivery_t representing the delivery.
+ */
+PN_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker);
 
 /**
  * Check if the delivery associated with a given tracker is still
@@ -752,6 +797,16 @@ PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracke
 PN_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
+ * Get  link for the message referenced by the given tracker.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] tracker a tracker object
+ * @return a pn_link_t or NULL if the link could not be determined.
+ */
+PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker);
+
+/**
  * Get the number of messages in the outgoing message queue of a
  * messenger.
  *
@@ -899,6 +954,79 @@ PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 /**
  * @}
  */
+
+#define PN_FLAGS_CHECK_ROUTES                                                  \
+  (0x1) /** Messenger flag to indicate that a call                             \
+            to pn_messenger_start should check that                            \
+            any defined routes are valid */
+
+/** Sets control flags to enable additional function for the Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] flags 0 or PN_FLAGS_CHECK_ROUTES
+ *
+ * @return an error code of zero if there is no error
+ */
+PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
+                                     const int flags);
+
+/** Gets the flags for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return The flags set for the messenger
+ */
+PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
+
+/**
+ * Set the local sender settle mode for the underlying link.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] mode the sender settle mode
+ */
+PN_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+                                               const pn_snd_settle_mode_t mode);
+
+/**
+ * Set the local receiver settle mode for the underlying link.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] mode the receiver settle mode
+ */
+PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+                                               const pn_rcv_settle_mode_t mode);
+
+/**
+ * Set the tracer associated with a messenger.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] tracer the tracer callback
+ */
+PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
+                                       pn_tracer_t tracer);
+
+/**
+ * Gets the remote idle timeout for the specified remote service address
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] address of remote service whose idle timeout is required
+ * @return the timeout in milliseconds or -1 if an error occurs
+ */
+PN_EXTERN pn_millis_t
+    pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
+                                         const char *address);
+
+/**
+ * Sets the SSL peer authentiacation mode required when a trust
+ * certificate is used.
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] mode the mode required (see pn_ssl_verify_mode_t
+ *             enum for valid values)
+ * @return 0 if successful or -1 if an error occurs
+ */
+PN_EXTERN int
+pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
+                                              const pn_ssl_verify_mode_t mode);
 
 #ifdef __cplusplus
 }

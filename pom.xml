@@ -78,29 +78,28 @@
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>proton-j</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <modules>
-        <module>proton-j</module>
-        <module>tests</module>
-        <module>examples/messenger/java</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>proton-jni</id>
-      <modules>
-        <module>proton-j/proton-api</module>
-        <!--proton-j-impl is required so we can use its EncoderImpl and DecoderImpl to generate test data -->
-        <module>proton-j/proton</module>
-        <module>tests</module>
-        <module>examples/messenger/java</module>
-      </modules>
-    </profile>
-  </profiles>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit-version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <modules>
+    <module>proton-j</module>
+    <module>contrib/proton-jms</module>
+    <module>contrib/proton-hawtdispatch</module>
+    <module>tests</module>
+    <module>examples/messenger/java</module>
+  </modules>
 
   <url>http://qpid.apache.org/proton</url>
   <scm>
@@ -112,4 +111,27 @@
   <ciManagement>
     <url>https://builds.apache.org/view/M-R/view/Qpid/job/Qpid-proton-j/</url>
   </ciManagement>
+
+  <profiles>
+    <profile>
+      <id>sources</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.2.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

@@ -21,8 +21,8 @@ module Qpid
 
   module Proton
 
-    PN_VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
-    PN_VERSION_MINOR = Cproton::PN_VERSION_MINOR
+    VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
+    VERSION_MINOR = Cproton::PN_VERSION_MINOR
 
   end
 
