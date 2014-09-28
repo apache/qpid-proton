@@ -255,6 +255,8 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
+  if (mode == PN_SSL_MODE_SERVER)
+    return NULL;  // Temporary: not ready for ctest, hide from isSSLPresent()
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
 
@@ -284,8 +286,9 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 
 void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
-  if (--domain->ref_count == 0) {
+  if (!domain) return;
 
+  if (--domain->ref_count == 0) {
     if (domain->cert_context)
       CertFreeCertificateContext(domain->cert_context);
     if (domain->cert_store)
