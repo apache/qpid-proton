@@ -964,8 +964,15 @@ static void drain_zombie_completions(iocp_t *iocp)
     }
   }
 
+  unsigned shutdown_grace = 2000;
+  char *override = getenv("PN_SHUTDOWN_GRACE");
+  if (override) {
+    int grace = atoi(override);
+    if (grace > 0 && grace < 60000)
+      shutdown_grace = (unsigned) grace;
+  }
   pn_timestamp_t now = pn_i_now();
-  pn_timestamp_t deadline = now + 2000;
+  pn_timestamp_t deadline = now + shutdown_grace;
 
   while (pn_list_size(iocp->zombie_list)) {
     if (now >= deadline)
@@ -977,7 +984,7 @@ static void drain_zombie_completions(iocp_t *iocp)
     }
     now = pn_i_now();
   }
-  if (now >= deadline && pn_list_size(iocp->zombie_list))
+  if (now >= deadline && pn_list_size(iocp->zombie_list) && iocp->iocp_trace)
     // Should only happen if really slow TCP handshakes, i.e. total network failure
     iocp_log("network failure on Proton shutdown\n");
 }
