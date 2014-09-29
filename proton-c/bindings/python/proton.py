@@ -3140,6 +3140,10 @@ The idle timeout of the connection (float, in seconds).
   def condition(self):
     return cond2obj(pn_transport_condition(self._trans))
 
+  @property
+  def connection(self):
+    return Connection._wrap_connection(pn_transport_connection(self._trans))
+
 class SASLException(TransportException):
   pass
 
