@@ -3716,7 +3716,11 @@ class Url(object):
         try:
           return socket.getservbyname(value)
         except socket.error:
-          raise ValueError("Not a valid port number or service name: '%s'" % value)
+          # Not every system has amqp/amqps defined as a service
+          if value == Url.AMQPS:  return 5671
+          elif value == Url.AMQP: return 5672
+          else:
+            raise ValueError("Not a valid port number or service name: '%s'" % value)
 
   def __init__(self, url=None, **kwargs):
     """
