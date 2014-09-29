@@ -119,7 +119,16 @@ if (typeof process === 'object' && typeof require === 'function') {
  */
 Module.EventDispatch = new function() { // Note the use of new to create a Singleton.
     var _firstCall = true; // Flag used to check the first time registerMessenger is called.
+    /**
+     * We employ a cheat/hack to map file descriptors to the Messenger instance
+     * that owns them. In put/subscribe we set the current Messenger and then we
+     * intercept the library socket call with our own, which makes a call to
+     * the real library socket but also maps the file descriptor to _currentMessenger.
+     */
+    var _currentMessenger = null;
     var _messengers = {};
+
+    var _fd2Messenger = {};
 
     /**
      * Provides functionality roughly equivalent to the following C code:
@@ -135,21 +144,30 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
      * we bypass the _pn_messenger_work test as it will never succeed after closing.
      */
     var _pump = function(fd, closing) {
+//console.log("\t_pump entry " + fd + ", " + closing);
         for (var i in _messengers) {
             if (_messengers.hasOwnProperty(i)) {
                 var messenger = _messengers[i];
+                //var messenger = _fd2Messenger[fd];
 
                 if (closing) {
+//console.log("_pump closing");
                     messenger._emit('work');
                 } else {
-                    while (_pn_messenger_work(messenger._messenger, 0) >= 0) {
+//console.log("_pump while start");
+                    while (_pn_messenger_work(messenger._messenger, 0) > 0) {
+                    //while (messenger['work']()) {
+                    //while (messenger._check(_pn_messenger_work(messenger._messenger, 0)) > 0) {
+//console.log("A");
                         messenger._checkSubscriptions();
-                        messenger._checkErrors = false; // TODO improve error handling mechanism.
                         messenger._emit('work');
+//console.log("B");
                     }
+//console.log("_pump while finish");
                 }
             }
         }
+//console.log("\t_pump exit");
     };
 
     /**
@@ -157,8 +175,38 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
      * passing a flag to indicate that the socket is closing.
      */
     var _close = function(fd) {
+//console.log("calling close fd = " + fd);
         _pump(fd, true);
+        delete _fd2Messenger[fd];
     };
+
+    var _error = function(error) {
+        var fd = error[0];
+        var messenger = _fd2Messenger[fd];
+        messenger._emit('error', new Module['MessengerError'](error[2]));
+        delete _fd2Messenger[fd];
+    };
+
+    /**
+     * This code cheekily replaces the library socket call with our own one.
+     * The real socket call returns a file descriptor so we harvest that and use
+     * that as a key to map file descriptors to their owning Messenger.
+     */
+    var realsocket = _socket;
+    _socket = function(domain, type, protocol) {
+        var fd = realsocket(domain, type, protocol);
+//console.log("calling socket fd = " + fd);
+        if (_currentMessenger) {
+            _fd2Messenger[fd] = _currentMessenger;
+        } else {
+            console.error("Error: file descriptor " + fd + " cannot be mapped to a Messenger.");
+        }
+        return fd;
+    }
+
+    this.setCurrentMessenger = function(messenger) {
+        _currentMessenger = messenger;
+    }
 
     /**
      * Register the specified Messenger as being interested in network events.
@@ -175,11 +223,12 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
             Module['websocket']['on']('connection', _pump);
             Module['websocket']['on']('message', _pump);
             Module['websocket']['on']('close', _close);
+            Module['websocket']['on']('error', _error);
             _firstCall = false;
         }
 
         var name = messenger.getName();
-        _messengers[name] = messenger; 
+        _messengers[name] = messenger;
     };
 
     /**

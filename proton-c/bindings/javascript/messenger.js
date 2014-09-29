@@ -127,34 +127,6 @@ Module['Messenger'] = function(name) { // Messenger Constructor.
 
     // This call ensures that the emscripten network callback functions are initialised.
     Module.EventDispatch.registerMessenger(this);
-
-
-    // TODO improve error handling mechanism.
-    /*
-     * The emscripten websocket error event could get triggered by any Messenger
-     * and it's hard to determine which one without knowing which file descriptors
-     * are associated with which instance. As a workaround we set the _checkErrors
-     * flag when we call put or subscribe and reset it when work succeeds.
-     */
-    this._checkErrors = false;
-
-    /**
-     * TODO update to handle multiple Messenger instances
-     * Handle the emscripten websocket error and use it to trigger a MessengerError
-     * Note that the emscripten websocket error passes an array containing the
-     * file descriptor, the errno and the message, we just use the message here.
-     */
-    var that = this;
-    Module['websocket']['on']('error', function(error) {
-
-console.log("Module['websocket']['on'] caller is " + arguments.callee.caller.toString());
-
-console.log("that._checkErrors = " + that._checkErrors);
-console.log("error = " + error);
-        if (that._checkErrors) {
-            that._emit('error', new Module['MessengerError'](error[2]));
-        }
-    });
 };
 
 Module['Messenger'].PN_CUMULATIVE = 0x1; // Protected Class attribute.
@@ -176,22 +148,21 @@ var _Messenger_ = Module['Messenger'].prototype;
  * @param {number} code the error code to check.
  */
 _Messenger_._check = function(code) {
-    if (code < 0) {
-        if (code === Module['Error']['INPROGRESS']) {
-            return code;
-        }
-
+    if (code < 0 && code !== Module['Error']['INPROGRESS']) {
         var errno = this['getErrno']();
         var message = errno ? this['getError']() : Pointer_stringify(_pn_code(code));
-
-        if (this._callbacks['error']) {
-            this._emit('error', new Module['MessengerError'](message));
-        } else {
-            throw new Module['MessengerError'](message);
+        if (message !== 'PN_TIMEOUT') {
+            if (this._callbacks['error']) {
+console.log("emitting " + message);
+                this._emit('error', new Module['MessengerError'](message));
+            } else {
+console.log("throwing " + message);
+                throw new Module['MessengerError'](message);
+            }
         }
-    } else {
-        return code;
     }
+
+    return code;
 };
 
 /**
@@ -486,9 +457,10 @@ _Messenger_['subscribe'] = function(source) {
         this._check(Module['Error']['ARG_ERR']);
     }
     var sp = Runtime.stackSave();
-    this._checkErrors = true; // TODO improve error handling mechanism.
+    Module.EventDispatch.setCurrentMessenger(this);
     var subscription = _pn_messenger_subscribe(this._messenger,
                                                allocate(intArrayFromString(source), 'i8', ALLOC_STACK));
+    Module.EventDispatch.setCurrentMessenger(null);
     Runtime.stackRestore(sp);
 
     if (!subscription) {
@@ -532,12 +504,13 @@ _Messenger_['subscribe'] = function(source) {
 _Messenger_['put'] = function(message, flush) {
     flush = flush === false ? false : true; // Defaults to true if not explicitly specified.
     message._preEncode();
-    this._checkErrors = true; // TODO improve error handling mechanism.
+    Module.EventDispatch.setCurrentMessenger(this);
     this._check(_pn_messenger_put(this._messenger, message._message));
+    Module.EventDispatch.setCurrentMessenger(null);
 
     // If flush is set invoke pn_messenger_work.
     if (flush) {
-        _pn_messenger_work(this._messenger, 0);
+        this._check(_pn_messenger_work(this._messenger, 0));
     }
 
     // Getting the tracker is a little tricky as it is a 64 bit number. The way
@@ -617,16 +590,7 @@ _Messenger_['settle'] = function(tracker) {
  * @returns {boolean} true if there is work still to do, false otherwise.
  */
 _Messenger_['work'] = function() {
-    var err = _pn_messenger_work(this._messenger, 0);
-    if (err === Module['Error']['TIMEOUT']) {
-console.log("work = false");
-        return false;
-    } else {
-        this._checkErrors = false; // TODO improve error handling mechanism.
-        this._check(err);
-console.log("work = true");
-        return true;
-    }
+    return (this._check(_pn_messenger_work(this._messenger, 0)) > 0);
 };
 
 /**

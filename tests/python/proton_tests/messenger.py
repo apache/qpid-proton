@@ -984,6 +984,11 @@ class Pump:
 class SelectableMessengerTest(common.Test):
 
   def testSelectable(self, count = 1):
+    if os.name=="nt":
+      # Conflict between native OS select() in Pump and IOCP based pn_selector_t
+      # makes this fail on Windows (see PROTON-668).
+      raise Skipped("Invalid test on Windows with IOCP.")
+
     mrcv = Messenger()
     mrcv.passive = True
     mrcv.subscribe("amqp://~0.0.0.0:1234")
