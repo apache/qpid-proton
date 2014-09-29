@@ -118,6 +118,11 @@ PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ */
+PN_EXTERN  pn_error_t *pn_transport_error(pn_transport_t *transport);
+
+/**
  * Binds the transport to an AMQP connection.
  *
  * @return an error code, or 0 on success
