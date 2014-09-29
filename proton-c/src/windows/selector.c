@@ -162,6 +162,9 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
     if (pn_selectable_pending(selectable) > 0) {
       interests |= PN_WRITABLE;
     }
+    if (selector->deadlines[idx]) {
+      interests |= PN_EXPIRED;
+    }
     interests_update(iocpd, interests);
     deadlines_update(iocpd, selector->deadlines[idx]);
   }
@@ -245,13 +248,13 @@ int pn_selector_select(pn_selector_t *selector, int timeout)
 
   selector->current = 0;
   selector->awoken = now;
-  selector->current_triggered = selector->triggered_list_head;
   for (iocpdesc_t *iocpd = selector->deadlines_head; iocpd; iocpd = iocpd->deadlines_next) {
     if (iocpd->deadline <= now)
       pni_events_update(iocpd, iocpd->events | PN_EXPIRED);
     else
       break;
   }
+  selector->current_triggered = selector->triggered_list_head;
   return pn_error_code(selector->error);
 }
 
@@ -332,18 +335,17 @@ static void deadlines_update(iocpdesc_t *iocpd, pn_timestamp_t deadline)
 {
   if (deadline == iocpd->deadline)
     return;
+
   iocpd->deadline = deadline;
   pn_selector_t *selector = iocpd->selector;
   if (!deadline) {
     deadlines_remove(selector, iocpd);
     pni_events_update(iocpd, iocpd->events & ~PN_EXPIRED);
-    interests_update(iocpd, iocpd->interests & ~PN_EXPIRED);
   } else {
     if (iocpd->deadlines_prev || selector->deadlines_head == iocpd) {
       deadlines_remove(selector, iocpd);
       pni_events_update(iocpd, iocpd->events & ~PN_EXPIRED);
     }
-    interests_update(iocpd, iocpd->interests | PN_EXPIRED);
     iocpdesc_t *dl_iocpd = LL_HEAD(selector, deadlines);
     while (dl_iocpd && dl_iocpd->deadline <= deadline)
       dl_iocpd = dl_iocpd->deadlines_next;
