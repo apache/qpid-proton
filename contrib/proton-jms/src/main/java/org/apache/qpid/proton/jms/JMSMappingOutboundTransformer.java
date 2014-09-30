@@ -166,7 +166,12 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             } else if( key.equals(firstAcquirerKey) ) {
                 header.setFirstAcquirer(msg.getBooleanProperty(key));
             } else if( key.startsWith("JMSXDeliveryCount") ) {
-                header.setDeliveryCount(new UnsignedInteger(msg.getIntProperty(key)));
+                // The AMQP delivery-count field only includes prior failed delivery attempts,
+                // whereas JMSXDeliveryCount includes the first/current delivery attempt.
+                int amqpDeliveryCount = msg.getIntProperty(key) - 1;
+                if( amqpDeliveryCount > 0 ) {
+                    header.setDeliveryCount(new UnsignedInteger(amqpDeliveryCount));
+                }
             } else if( key.startsWith("JMSXUserID") ) {
                 String value = msg.getStringProperty(key);
                 props.setUserId(new Binary(value.getBytes("UTF-8")));
