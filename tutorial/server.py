@@ -39,7 +39,7 @@ class Server(IncomingMessageHandler):
         sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
     def on_connection_remote_open(self, event):
-        if 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
             self.relay = self.conn.sender(None)
 
     def on_connection_remote_close(self, endpoint, error):

@@ -56,7 +56,7 @@ class EventDispatcher(object):
     def unhandled(self, event):
         pass
 
-class Selectable(object):
+class AmqpConnection(object):
 
     def __init__(self, conn, sock, events):
         self.events = events
@@ -68,6 +68,7 @@ class Selectable(object):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.write_done = False
         self.read_done = False
+        self._closed = False
 
     def accept(self):
         #TODO: use SASL if requested by peer
@@ -91,11 +92,15 @@ class Selectable(object):
         return self.conn.state & Endpoint.LOCAL_CLOSED and self.conn.state & Endpoint.REMOTE_CLOSED
 
     def closed(self):
-        if self.write_done and self.read_done:
-            self.socket.close()
+        if not self._closed and self.write_done and self.read_done:
+            self.close()
             return True
         else:
             return False
+
+    def close(self):
+        self.socket.close()
+        self._closed = True
 
     def fileno(self):
         return self.socket.fileno()
@@ -170,15 +175,17 @@ class Selectable(object):
 
 class Acceptor:
 
-    def __init__(self, events, selectables, host, port):
+    def __init__(self, events, loop, host, port):
         self.events = events
-        self.selectables = selectables
+        #self.selectables = selectables
+        self.loop = loop
         self.socket = socket.socket()
         self.socket.setblocking(0)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((host, port))
         self.socket.listen(5)
-        self.selectables.append(self)
+        #self.selectables.append(self)
+        self.loop.add(self)
         self._closed = False
 
     def closed(self):
@@ -203,7 +210,8 @@ class Acceptor:
     def readable(self):
         sock, addr = self.socket.accept()
         if sock:
-            self.selectables.append(Selectable(self.events.connection(), sock, self.events).accept())
+            #self.selectables.append(AmqpConnection(self.events.connection(), sock, self.events).accept())
+            self.loop.add(AmqpConnection(self.events.connection(), sock, self.events).accept())
 
     def removed(self): pass
 
@@ -442,7 +450,7 @@ class Handshaker(EventDispatcher):
 
 class FlowController(EventDispatcher):
 
-    def __init__(self, window):
+    def __init__(self, window=1):
         self.window = window
 
     def top_up(self, link):
@@ -580,6 +588,7 @@ class MessagingContext(object):
         self.conn = conn
         if handler:
             self.conn.context = handler
+        self.conn._mc = self
         self.ssn = ssn
 
     def sender(self, target, source=None, name=None, handler=None, tags=None):
@@ -642,7 +651,7 @@ class Connector(EventDispatcher):
     def _connect(self, connection):
         host, port = connection.address.next()
         print "connecting to %s:%i" % (host, port)
-        self.loop.add(Selectable(connection, socket.socket(), self.loop.events).connect(host, port))
+        self.loop.add(AmqpConnection(connection, socket.socket(), self.loop.events).connect(host, port))
 
     def on_connection_open(self, event):
         if hasattr(event.connection, "address"):
@@ -765,7 +774,7 @@ class EventLoop(object):
         self.trigger = None
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None):
-        context = MessagingContext(self.loop.events.connection(), handler=handler)
+        context = MessagingContext(self.events.connection(), handler=handler)
         if url: context.conn.address = Url(url)
         elif urls: context.conn.address = Urls(urls)
         elif address: context.conn.address = address
@@ -777,7 +786,7 @@ class EventLoop(object):
 
     def listen(self, url):
         host, port = Url(url).next()
-        return Acceptor(self.loop.events, self.loop.selectables, host, port)
+        return Acceptor(self.events, self, host, port)
 
     def schedule(self, deadline, connection=None, session=None, link=None, delivery=None, subject=None):
         self.events.schedule(deadline, ApplicationEvent("timer", connection, session, link, delivery, subject))
@@ -785,7 +794,7 @@ class EventLoop(object):
     def get_event_trigger(self):
         if not self.trigger or self.trigger.closed():
             self.trigger = EventInjector(self.events)
-            self.loop.selectables.append(self.trigger)
+            self.add(self.trigger)
         return self.trigger
 
     def add(self, selectable):
@@ -802,7 +811,6 @@ class EventLoop(object):
 
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
-
 
 class BlockingLink(object):
     def __init__(self, connection, link):
@@ -837,9 +845,12 @@ class BlockingConnection(EventDispatcher):
         self.events = Events(ScopedDispatcher())
         self.loop = SelectLoop(self.events)
         self.context = MessagingContext(self.loop.events.connection(), handler=self)
-        self.url = url
+        if isinstance(url, basestring):
+            self.url = Url(url)
+        else:
+            self.url = url
         self.loop.add(
-            Selectable(self.context.conn, socket.socket(), self.events).connect(self.url.host, self.url.port))
+            AmqpConnection(self.context.conn, socket.socket(), self.events).connect(self.url.host, self.url.port))
         self.context.conn.open()
         self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
@@ -855,6 +866,10 @@ class BlockingConnection(EventDispatcher):
         self.context.conn.close()
         self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_ACTIVE),
                   msg="Closing connection")
+
+    def run(self):
+        """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
+        self.loop.run()
 
     def wait(self, condition, timeout=False, msg=None):
         """Call do_work until condition() is true"""
