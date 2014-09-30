@@ -24,7 +24,7 @@ set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
 if (CMAKE_BUILD_TYPE MATCHES "Deb")
   set (has_debug_symbols " (has debug symbols)")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb")
-message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
+message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
 option(BUILD_WITH_CXX "Compile Proton using C++" OFF)
 if ("${CMAKE_GENERATOR}" MATCHES "^Visual Studio")
