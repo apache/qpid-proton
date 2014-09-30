@@ -40,6 +40,8 @@ PN_EXTERN ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, siz
 int pn_quote(pn_string_t *dst, const char *src, size_t size);
 PN_EXTERN void pn_fprint_data(FILE *stream, const char *bytes, size_t size);
 PN_EXTERN void pn_print_data(const char *bytes, size_t size);
+bool pni_eq_nocase(const char *a, const char *b);
+bool pni_eq_n_nocase(const char *a, const char *b, int len);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
