@@ -19,14 +19,19 @@
 #
 
 from proton import Message
-from proton_events import BaseHandler, EventLoop, FlowController, Handshaker
+from proton_events import ErrorHandler, EventLoop, FlowController, Handshaker, IncomingMessageHandler, OutgoingMessageHandler
 
-class HelloWorldReceiver(BaseHandler):
+class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
         print event.message.body
         event.connection.close()
 
-class HelloWorld(BaseHandler):
+class HelloWorldSender(OutgoingMessageHandler):
+    def on_credit(self, event):
+        event.link.send_msg(Message(body=u"Hello World!"))
+        event.link.close()
+
+class HelloWorld(ErrorHandler):
     def __init__(self, eventloop, url, address):
         self.eventloop = eventloop
         self.acceptor = eventloop.listen(url)
@@ -34,11 +39,7 @@ class HelloWorld(BaseHandler):
         self.address = address
 
     def on_connection_remote_open(self, event):
-        self.conn.sender(self.address)
-
-    def on_link_flow(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
+        self.conn.sender(self.address, handler=HelloWorldSender())
 
     def on_connection_remote_close(self, event):
         self.conn.close()
@@ -49,3 +50,4 @@ class HelloWorld(BaseHandler):
 
 eventloop = EventLoop(HelloWorldReceiver(), Handshaker(), FlowController(1))
 HelloWorld(eventloop, "localhost:8888", "examples").run()
+

@@ -19,26 +19,30 @@
 #
 
 from proton import Message
-import proton_events
+from proton_events import ErrorHandler, EventLoop, IncomingMessageHandler, OutgoingMessageHandler
 
-class HelloWorld(proton_events.BaseHandler):
-    def __init__(self, conn, address):
-        self.conn = conn
-        self.address = address
-
-    def on_connection_remote_open(self, event):
-        self.conn.receiver(self.address)
-        self.conn.sender(self.address)
-
-    def on_credit(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
-
+class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
         print event.message.body
         event.connection.close()
 
-conn = proton_events.connect("localhost:5672")
-conn.handler=HelloWorld(conn, "examples")
-proton_events.run()
+class HelloWorldSender(OutgoingMessageHandler):
+    def on_credit(self, event):
+        event.link.send_msg(Message(body=u"Hello World!"))
+        event.link.close()
+
+class HelloWorld(ErrorHandler):
+    def __init__(self, url, address):
+        self.eventloop = EventLoop()
+        self.conn = self.eventloop.connect(url, handler=self)
+        self.address = address
+
+    def on_connection_remote_open(self, event):
+        self.conn.receiver(self.address, handler=HelloWorldReceiver())
+        self.conn.sender(self.address, handler=HelloWorldSender())
+
+    def run(self):
+        self.eventloop.run()
+
+HelloWorld("localhost:5672", "examples").run()
 
