@@ -19,39 +19,20 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, IncomingMessageHandler
+import proton_events
 
-class HelloWorldReceiver(IncomingMessageHandler):
+class HelloWorld(proton_events.BaseHandler):
+    def on_credit(self, event):
+        event.link.send_msg(Message(body=u"Hello World!"))
+        event.link.close()
+
     def on_message(self, event):
         print event.message.body
         event.connection.close()
 
-class HelloWorldSender(object):
-    def on_link_flow(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
+conn = proton_events.connect("localhost:5672", handler=HelloWorld())
+conn.receiver("examples")
+conn.sender("examples")
+proton_events.run()
 
-class HelloWorld(object):
-    def __init__(self, eventloop, url, address):
-        self.eventloop = eventloop
-        self.conn = eventloop.connect(url, handler=self)
-        self.address = address
-        self.conn.receiver(self.address, handler=HelloWorldReceiver())
-        self.conn.sender(self.address, handler=HelloWorldSender())
-
-    def on_link_remote_close(self, event):
-        self.closed(event.link.remote_condition)
-
-    def on_connection_remote_close(self, event):
-        self.closed(event.connection.remote_condition)
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
-        self.conn.close()
-
-    def run(self):
-        self.eventloop.run()
-
-HelloWorld(EventLoop(), "localhost:5672", "examples").run()
 

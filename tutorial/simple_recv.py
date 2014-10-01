@@ -18,34 +18,16 @@
 # under the License.
 #
 
-import time
-from proton_events import Backoff, EventLoop, IncomingMessageHandler
+import proton_events
 
-class Recv(IncomingMessageHandler):
-    def __init__(self, eventloop, host, address):
-        self.eventloop = eventloop
-        self.conn = self.eventloop.connect(host, handler=self, reconnect=Backoff())
-        self.conn.receiver(address)
-
+class Recv(proton_events.BaseHandler):
     def on_message(self, event):
         print event.message.body
 
-    def on_link_remote_close(self, event):
-        self.closed(event.link.remote_condition)
-
-    def on_connection_remote_close(self, event):
-        self.closed(event.connection.remote_condition)
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
-        self.conn.close()
-
-    def run(self):
-        self.eventloop.run()
-
 try:
-    Recv(EventLoop(), "localhost:5672", "examples").run()
+    conn = proton_events.connect("localhost:5672", handler=Recv())
+    conn.receiver("examples")
+    proton_events.run()
 except KeyboardInterrupt: pass
 
 

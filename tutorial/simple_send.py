@@ -18,54 +18,32 @@
 # under the License.
 #
 
-import time
 from proton import Message
-from proton_events import Backoff, EventLoop, OutgoingMessageHandler
+import proton_events
 
-class Send(OutgoingMessageHandler):
-    def __init__(self, eventloop, host, address, messages):
-        self.eventloop = eventloop
+class Send(proton_events.BaseHandler):
+    def __init__(self, messages):
         self.sent = 0
         self.confirmed = 0
         self.total = messages
-        self.conn = self.eventloop.connect(host, handler=self, reconnect=Backoff())
-        self.sender = self.conn.sender(address)
 
-    def on_link_flow(self, event):
-        for i in range(self.sender.credit):
-            if self.sent == self.total:
-                self.sender.drained()
-                break
-            msg = Message(body={'sequence':self.sent})
-            self.sender.send_msg(msg, handler=self)
+    def on_credit(self, event):
+        while event.link.credit and self.sent < self.total:
+            msg = Message(body={'sequence':(self.sent+1)})
+            event.link.send_msg(msg)
             self.sent += 1
 
     def on_accepted(self, event):
-        """
-        Stop the application once all of the messages are sent and acknowledged,
-        """
         self.confirmed += 1
         if self.confirmed == self.total:
-            self.sender.close()
-            self.conn.close()
+            print "all messages confirmed"
+            event.connection.close()
 
-    def on_connection_remote_open(self, event):
+    def on_disconnected(self, event):
         self.sent = self.confirmed
-        self.sender.offered(self.total - self.sent)
 
-    def on_link_remote_close(self, event):
-        self.closed(event.link.remote_condition)
-
-    def on_connection_remote_close(self, event):
-        self.closed(event.connection.remote_condition)
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
-        self.conn.close()
-
-    def run(self):
-        self.eventloop.run()
-
-Send(EventLoop(), "localhost:5672", "examples", 10000).run()
-
+try:
+    conn = proton_events.connect("localhost:5672", handler=Send(10000))
+    conn.sender("examples")
+    proton_events.run()
+except KeyboardInterrupt: pass

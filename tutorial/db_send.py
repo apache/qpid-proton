@@ -21,10 +21,10 @@
 import Queue
 import time
 from proton import Message
-from proton_events import ApplicationEvent, EventLoop, OutgoingMessageHandler
+from proton_events import ApplicationEvent, BaseHandler, EventLoop
 from db_common import Db
 
-class Send(OutgoingMessageHandler):
+class Send(BaseHandler):
     def __init__(self, host, address):
         self.eventloop = EventLoop()
         self.address = address
@@ -33,10 +33,8 @@ class Send(OutgoingMessageHandler):
         self.sent = 0
         self.records = Queue.Queue(maxsize=50)
         self.db = Db("src_db", self.eventloop.get_event_trigger())
-        self.connect()
-
-    def connect(self):
         self.conn = self.eventloop.connect(self.host, handler=self)
+        self.sender = self.conn.sender(self.address)
 
     def on_records_loaded(self, event):
         if self.records.empty() and event.subject == self.sent:
@@ -50,7 +48,7 @@ class Send(OutgoingMessageHandler):
         if not self.records.full():
             self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.sent))
 
-    def on_link_flow(self, event):
+    def on_credit(self, event):
         self.send()
 
     def send(self):
@@ -67,37 +65,11 @@ class Send(OutgoingMessageHandler):
         self.db.delete(id)
         print "settled message %s" % id
 
-    def on_connection_remote_open(self, event):
+    def on_disconnected(self, event):
         self.db.reset()
-        self.sender = self.conn.sender(self.address)
-        self.delay = 0
-
-    def on_link_remote_close(self, event):
-        self.closed(event.link.remote_condition)
-
-    def on_connection_remote_close(self, event):
-        self.closed(event.connection.remote_condition)
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
-        self.conn.close()
-
-    def on_disconnected(self, conn):
-        if self.delay == 0:
-            self.delay = 0.1
-            print "Disconnected, reconnecting..."
-            self.connect()
-        else:
-            print "Disconnected will try to reconnect after %d seconds" % self.delay
-            self.eventloop.schedule(time.time() + self.delay, connection=conn, subject="reconnect")
-            self.delay = min(10, 2*self.delay)
 
     def on_timer(self, event):
-        if event.subject == "reconnect":
-            print "Reconnecting..."
-            self.connect()
-        elif event.subject == "data":
+        if event.subject == "data":
             print "Rechecking for data..."
             self.request_records()
 

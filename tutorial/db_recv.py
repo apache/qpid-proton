@@ -18,23 +18,20 @@
 # under the License.
 #
 
-import time
-from proton_events import ApplicationEvent, IncomingMessageHandler, EventLoop, FlowController
+from proton_events import ApplicationEvent, BaseHandler, EventLoop
 from db_common import Db
 
-class Recv(IncomingMessageHandler):
+class Recv(BaseHandler):
     def __init__(self, host, address):
-        self.eventloop = EventLoop()#self, FlowController(10))
+        self.eventloop = EventLoop()
         self.host = host
         self.address = address
         self.delay = 0
         self.db = Db("dst_db", self.eventloop.get_event_trigger())
         # TODO: load last tag from db
         self.last_id = None
-        self.connect()
-
-    def connect(self):
         self.conn = self.eventloop.connect(self.host, handler=self)
+        self.conn.receiver(self.address)
 
     def auto_accept(self): return False
 
@@ -49,35 +46,6 @@ class Recv(IncomingMessageHandler):
             print "inserted message %s" % id
         else:
             self.accept(event.delivery)
-
-    def on_connection_remote_open(self, event):
-        self.delay = 0
-        self.conn.receiver(self.address)
-
-    def on_link_remote_close(self, event):
-        self.closed(event.link.remote_condition)
-
-    def on_connection_remote_close(self, event):
-        self.closed(event.connection.remote_condition)
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
-        self.conn.close()
-
-    def on_disconnected(self, conn):
-        if self.delay == 0:
-            self.delay = 0.1
-            print "Disconnected, reconnecting..."
-            self.connect()
-        else:
-            print "Disconnected will try to reconnect after %d seconds" % self.delay
-            self.eventloop.schedule(time.time() + self.delay, connection=conn)
-            self.delay = min(10, 2*self.delay)
-
-    def on_timer(self, event):
-        print "Reconnecting..."
-        self.connect()
 
     def run(self):
         self.eventloop.run()

@@ -404,14 +404,17 @@ class SelectLoop(object):
             timeout = 0
         if self.events.next_interval and (timeout is None or self.events.next_interval < timeout):
             timeout = self.events.next_interval
-        readable, writable, _ = select(reading, writing, [], timeout)
+        if reading or writing or timeout:
+            readable, writable, _ = select(reading, writing, [], timeout)
 
-        for s in readable:
-            s.readable()
-        for s in writable:
-            s.writable()
+            for s in readable:
+                s.readable()
+            for s in writable:
+                s.writable()
 
-        return bool(readable or writable)
+            return bool(readable or writable)
+        else:
+            return False
 
 
 class Handshaker(EventDispatcher):
@@ -490,11 +493,54 @@ class ScopedDispatcher(EventDispatcher):
         for h in handlers:
             h(event)
 
+class ErrorHandler(EventDispatcher):
+    def was_closed_by_peer(self, endpoint):
+        return endpoint.state & Endpoint.LOCAL_ACTIVE and endpoint.state & Endpoint.REMOTE_CLOSED
+
+    def treat_as_error(self, endpoint):
+        return endpoint.remote_condition or self.was_closed_by_peer(endpoint)
+
+    def print_error(self, endpoint, endpoint_type):
+        if endpoint.remote_condition:
+            print endpoint.remote_condition.description
+        elif self.was_closed_by_peer(endpoint):
+            print "%s closed by peer" % endpoint_type
+
+    def on_link_remote_close(self, event):
+        if self.treat_as_error(event.link):
+            self.on_link_error(event)
+
+    def on_session_remote_close(self, event):
+        if self.treat_as_error(event.session):
+            self.on_session_error(event)
+
+    def on_connection_remote_close(self, event):
+        if self.treat_as_error(event.connection):
+            self.on_connection_error(event)
+
+    def on_connection_error(self, event):
+        self.print_error(event.connection, "connection")
+        event.connection.close()
+
+    def on_session_error(self, event):
+        self.print_error(event.session, "session")
+        event.session.close()
+        event.connection.close()
+
+    def on_link_error(self, event):
+        self.print_error(event.link, "link")
+        event.link.close()
+        event.connection.close()
+
 class OutgoingMessageHandler(EventDispatcher):
+    def on_link_flow(self, event):
+        if event.link.is_sender and event.link.credit:
+            self.on_credit(event)
+
     def on_delivery(self, event):
         dlv = event.delivery
         link = dlv.link
-        if dlv.updated and not hasattr(dlv, "_been_settled"):
+        if link.is_sender and dlv.updated and not hasattr(dlv, "_been_settled"):
             if dlv.remote_state == Delivery.ACCEPTED:
                 self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
@@ -509,6 +555,7 @@ class OutgoingMessageHandler(EventDispatcher):
                 dlv._been_settled = True
                 dlv.settle()
 
+    def on_credit(self, event): pass
     def on_accepted(self, event): pass
     def on_rejected(self, event): pass
     def on_released(self, event): pass
@@ -566,6 +613,14 @@ class IncomingMessageHandler(EventDispatcher):
     def on_settled(self, event): pass
     def auto_accept(self): return True
 
+class BaseHandler(ErrorHandler, IncomingMessageHandler, OutgoingMessageHandler):
+    def __init__(self):
+        super(BaseHandler, self).__init__()
+
+    def on_delivery(self, event):
+        IncomingMessageHandler.on_delivery(self, event)
+        OutgoingMessageHandler.on_delivery(self, event)
+
 def delivery_tags():
     count = 1
     while True:
@@ -590,6 +645,14 @@ class MessagingContext(object):
             self.conn.context = handler
         self.conn._mc = self
         self.ssn = ssn
+
+    def _get_handler(self):
+        return self.conn.context
+
+    def _set_handler(self, value):
+        self.conn.context = value
+
+    handler = property(_get_handler, _set_handler)
 
     def sender(self, target, source=None, name=None, handler=None, tags=None):
         snd = self._get_ssn().sender(name or self._get_id(target, source))
@@ -670,6 +733,8 @@ class Connector(EventDispatcher):
             else:
                 print "Disconnected will try to reconnect after %s seconds" % delay
                 self.loop.schedule(time.time() + delay, connection=event.connection, subject=self)
+        else:
+            print "Disconnected"
 
     def on_timer(self, event):
         if event.subject == self and event.connection:
@@ -781,6 +846,8 @@ class EventLoop(object):
         else: raise ValueError("One of url, urls or address required")
         if reconnect:
             context.conn.reconnect = reconnect
+        elif reconnect is None:
+            context.conn.reconnect = Backoff()
         context.conn.open()
         return context
 
@@ -811,6 +878,18 @@ class EventLoop(object):
 
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
+
+EventLoop.DEFAULT = EventLoop()
+
+def connect(url=None, urls=None, address=None, handler=None, reconnect=None, eventloop=None):
+    if not eventloop:
+        eventloop = EventLoop.DEFAULT
+    return eventloop.connect(url=url, urls=urls, address=address, handler=handler, reconnect=reconnect)
+
+def run(eventloop=None):
+    if not eventloop:
+        eventloop = EventLoop.DEFAULT
+    eventloop.run()
 
 class BlockingLink(object):
     def __init__(self, connection, link):
