@@ -494,11 +494,14 @@ class ScopedDispatcher(EventDispatcher):
             h(event)
 
 class ErrorHandler(EventDispatcher):
-    def was_closed_by_peer(self, endpoint):
-        return endpoint.state & Endpoint.LOCAL_ACTIVE and endpoint.state & Endpoint.REMOTE_CLOSED
+    def was_closed_by_peer(self, endpoint, parent=None):
+        if parent:
+            return self.was_closed_by_peer(parent) and self.was_closed_by_peer(endpoint)
+        else:
+            return endpoint.state & Endpoint.LOCAL_ACTIVE and endpoint.state & Endpoint.REMOTE_CLOSED
 
-    def treat_as_error(self, endpoint):
-        return endpoint.remote_condition or self.was_closed_by_peer(endpoint)
+    def treat_as_error(self, endpoint, parent=None):
+        return endpoint.remote_condition or self.was_closed_by_peer(endpoint, parent)
 
     def print_error(self, endpoint, endpoint_type):
         if endpoint.remote_condition:
@@ -507,11 +510,11 @@ class ErrorHandler(EventDispatcher):
             print "%s closed by peer" % endpoint_type
 
     def on_link_remote_close(self, event):
-        if self.treat_as_error(event.link):
+        if self.treat_as_error(event.link, event.connection):
             self.on_link_error(event)
 
     def on_session_remote_close(self, event):
-        if self.treat_as_error(event.session):
+        if self.treat_as_error(event.session, event.connection):
             self.on_session_error(event)
 
     def on_connection_remote_close(self, event):
