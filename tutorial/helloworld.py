@@ -26,7 +26,7 @@ class HelloWorld(proton_events.BaseHandler):
         self.conn = conn
         self.address = address
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         self.conn.receiver(self.address)
         self.conn.sender(self.address)
 

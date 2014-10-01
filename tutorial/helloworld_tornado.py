@@ -38,17 +38,17 @@ class HelloWorld(object):
         self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         self.conn.receiver(self.address, handler=HelloWorldReceiver())
 
-    def on_link_remote_open(self, event):
+    def on_link_open(self, event):
         if event.link.is_receiver:
             self.conn.sender(self.address, handler=HelloWorldSender())
 
-    def on_link_remote_close(self, event):
+    def on_link_close(self, event):
         self.closed(event.link.remote_condition)
 
-    def on_connection_remote_close(self, event):
+    def on_connection_close(self, event):
         self.closed(event.connection.remote_condition)
         self.eventloop.stop()
 

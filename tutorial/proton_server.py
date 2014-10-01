@@ -31,11 +31,11 @@ class Server(IncomingMessageHandler):
     def on_message(self, event):
         self.on_request(event.message.body, event.message.reply_to)
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         if "ANONYMOUS-RELAY" in event.connection.remote_offered_capabilities:
             self.relay = self.conn.sender(None)
 
-    def on_connection_remote_close(self, endpoint, error):
+    def on_connection_close(self, endpoint, error):
         if error: print "Closed due to %s" % error
         self.conn.close()
 

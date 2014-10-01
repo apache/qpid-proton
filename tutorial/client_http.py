@@ -39,7 +39,7 @@ class ExampleHandler(tornado.web.RequestHandler, IncomingMessageHandler):
         self.sender = self.conn.sender("examples")
         self.conn.receiver(None, dynamic=True, handler=self)
 
-    def on_link_remote_open(self, event):
+    def on_link_open(self, event):
         req = Message(reply_to=event.link.remote_source.address, body=self.get_body_argument("message"))
         self.sender.send_msg(req)
 

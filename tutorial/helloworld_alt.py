@@ -37,7 +37,7 @@ class HelloWorld(ErrorHandler):
         self.conn = self.eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         self.conn.receiver(self.address, handler=HelloWorldReceiver())
         self.conn.sender(self.address, handler=HelloWorldSender())
 

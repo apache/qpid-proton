@@ -33,7 +33,7 @@ class Client(IncomingMessageHandler):
         req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
         self.sender.send_msg(req)
 
-    def on_link_remote_open(self, event):
+    def on_link_open(self, event):
         self.next_request()
 
     def on_message(self, event):

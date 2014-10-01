@@ -25,24 +25,24 @@ class EventDispatcher(object):
 
     methods = {
         Event.CONNECTION_INIT: "on_connection_init",
-        Event.CONNECTION_OPEN: "on_connection_open",
-        Event.CONNECTION_REMOTE_OPEN: "on_connection_remote_open",
-        Event.CONNECTION_CLOSE: "on_connection_close",
-        Event.CONNECTION_REMOTE_CLOSE: "on_connection_remote_close",
+        Event.CONNECTION_OPEN: "on_connection_local_open",
+        Event.CONNECTION_REMOTE_OPEN: "on_connection_open",
+        Event.CONNECTION_CLOSE: "on_connection_local_close",
+        Event.CONNECTION_REMOTE_CLOSE: "on_connection_close",
         Event.CONNECTION_FINAL: "on_connection_final",
 
         Event.SESSION_INIT: "on_session_init",
         Event.SESSION_OPEN: "on_session_open",
-        Event.SESSION_REMOTE_OPEN: "on_session_remote_open",
-        Event.SESSION_CLOSE: "on_session_close",
-        Event.SESSION_REMOTE_CLOSE: "on_session_remote_close",
+        Event.SESSION_REMOTE_OPEN: "on_session_open",
+        Event.SESSION_CLOSE: "on_session_local_close",
+        Event.SESSION_REMOTE_CLOSE: "on_session_close",
         Event.SESSION_FINAL: "on_session_final",
 
         Event.LINK_INIT: "on_link_init",
-        Event.LINK_OPEN: "on_link_open",
-        Event.LINK_REMOTE_OPEN: "on_link_remote_open",
-        Event.LINK_CLOSE: "on_link_close",
-        Event.LINK_REMOTE_CLOSE: "on_link_remote_close",
+        Event.LINK_OPEN: "on_link_local_open",
+        Event.LINK_REMOTE_OPEN: "on_link_open",
+        Event.LINK_CLOSE: "on_link_local_close",
+        Event.LINK_REMOTE_CLOSE: "on_link_close",
         Event.LINK_FLOW: "on_link_flow",
         Event.LINK_FINAL: "on_link_final",
 
@@ -419,34 +419,34 @@ class SelectLoop(object):
 
 class Handshaker(EventDispatcher):
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         conn = event.connection
         if conn.state & Endpoint.LOCAL_UNINIT:
             conn.open()
 
-    def on_session_remote_open(self, event):
+    def on_session_open(self, event):
         ssn = event.session
         if ssn.state & Endpoint.LOCAL_UNINIT:
             ssn.open()
 
-    def on_link_remote_open(self, event):
+    def on_link_open(self, event):
         link = event.link
         if link.state & Endpoint.LOCAL_UNINIT:
             link.source.copy(link.remote_source)
             link.target.copy(link.remote_target)
             link.open()
 
-    def on_connection_remote_close(self, event):
+    def on_connection_close(self, event):
         conn = event.connection
         if not (conn.state & Endpoint.LOCAL_CLOSED):
             conn.close()
 
-    def on_session_remote_close(self, event):
+    def on_session_close(self, event):
         ssn = event.session
         if not (ssn.state & Endpoint.LOCAL_CLOSED):
             ssn.close()
 
-    def on_link_remote_close(self, event):
+    def on_link_close(self, event):
         link = event.link
         if not (link.state & Endpoint.LOCAL_CLOSED):
             link.close()
@@ -460,11 +460,11 @@ class FlowController(EventDispatcher):
         delta = self.window - link.credit
         link.flow(delta)
 
-    def on_link_open(self, event):
+    def on_link_local_open(self, event):
         if event.link.is_receiver:
             self.top_up(event.link)
 
-    def on_link_remote_open(self, event):
+    def on_link_open(self, event):
         if event.link.is_receiver:
             self.top_up(event.link)
 
@@ -509,15 +509,15 @@ class ErrorHandler(EventDispatcher):
         elif self.was_closed_by_peer(endpoint):
             print "%s closed by peer" % endpoint_type
 
-    def on_link_remote_close(self, event):
+    def on_link_close(self, event):
         if self.treat_as_error(event.link, event.connection):
             self.on_link_error(event)
 
-    def on_session_remote_close(self, event):
+    def on_session_close(self, event):
         if self.treat_as_error(event.session, event.connection):
             self.on_session_error(event)
 
-    def on_connection_remote_close(self, event):
+    def on_connection_close(self, event):
         if self.treat_as_error(event.connection):
             self.on_connection_error(event)
 
@@ -706,7 +706,7 @@ class MessagingContext(object):
         ssn.open()
         return ssn
 
-    def on_session_remote_close(self, event):
+    def on_session_close(self, event):
         if self.conn:
             self.conn.close()
 
@@ -719,11 +719,11 @@ class Connector(EventDispatcher):
         print "connecting to %s:%i" % (host, port)
         self.loop.add(AmqpConnection(connection, socket.socket(), self.loop.events).connect(host, port))
 
-    def on_connection_open(self, event):
+    def on_connection_local_open(self, event):
         if hasattr(event.connection, "address"):
             self._connect(event.connection)
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         if hasattr(event.connection, "reconnect"):
             event.connection.reconnect.reset()
 
@@ -968,11 +968,11 @@ class BlockingConnection(EventDispatcher):
                     if msg: txt += ": " + msg
                     raise Timeout(txt)
 
-    def on_link_remote_close(self, event):
+    def on_link_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
             self.closed(event.link.remote_condition)
 
-    def on_connection_remote_close(self, event):
+    def on_connection_close(self, event):
         if event.connection.state & Endpoint.LOCAL_ACTIVE:
             self.closed(event.connection.remote_condition)
 

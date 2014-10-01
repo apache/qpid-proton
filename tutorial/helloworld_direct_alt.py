@@ -38,10 +38,10 @@ class HelloWorld(ErrorHandler):
         self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_remote_open(self, event):
+    def on_connection_open(self, event):
         self.conn.sender(self.address, handler=HelloWorldSender())
 
-    def on_connection_remote_close(self, event):
+    def on_connection_close(self, event):
         self.conn.close()
         self.acceptor.close()
 
