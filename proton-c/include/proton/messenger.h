@@ -900,6 +900,28 @@ PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
  * @}
  */
 
+#define PN_FLAGS_CHECK_ROUTES                                                  \
+  (0x1) /** Messenger flag to indicate that a call                             \
+            to pn_messenger_start should check that                            \
+            any defined routes are valid */
+
+/** Sets control flags to enable additional function for the Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @param[in] flags 0 or PN_FLAGS_CHECK_ROUTES
+ *
+ * @return an error code of zero if there is no error
+ */
+PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
+                                     const int flags);
+
+/** Gets the flags for a Messenger.
+ *
+ * @param[in] messenger the messenger
+ * @return The flags set for the messenger
+ */
+PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
+
 #ifdef __cplusplus
 }
 #endif

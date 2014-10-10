@@ -19,7 +19,6 @@
  *
  */
 
-#include <proton/object.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -240,4 +239,16 @@ int pn_transform_apply(pn_transform_t *transform, const char *src,
 bool pn_transform_matched(pn_transform_t *transform)
 {
   return transform->matched;
+}
+
+int pn_transform_get_substitutions(pn_transform_t *transform,
+                                   pn_list_t *substitutions)
+{
+  int size = pn_list_size(transform->rules);
+  for (size_t i = 0; i < (size_t)size; i++) {
+    pn_rule_t *rule = (pn_rule_t *)pn_list_get(transform->rules, i);
+    pn_list_add(substitutions, rule->substitution);
+  }
+
+  return size;
 }
