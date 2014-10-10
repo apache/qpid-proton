@@ -2297,3 +2297,30 @@ void pn_messenger_set_tracer(pn_messenger_t *messenger, pn_tracer_t tracer)
 
   messenger->tracer = tracer;
 }
+
+pn_millis_t pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
+                                                 const char *address)
+{
+  if (!messenger)
+    return PN_ARG_ERR;
+
+  pn_address_t addr;
+  addr.text = pn_string(address);
+  pni_parse(&addr);
+
+  pn_millis_t timeout = -1;
+  for (size_t i = 0; i < pn_list_size(messenger->connections); i++) {
+    pn_connection_t *connection =
+        (pn_connection_t *)pn_list_get(messenger->connections, i);
+    pn_connection_ctx_t *ctx =
+        (pn_connection_ctx_t *)pn_connection_get_context(connection);
+    if (pn_streq(addr.scheme, ctx->scheme) && pn_streq(addr.host, ctx->host) &&
+        pn_streq(addr.port, ctx->port)) {
+      pn_transport_t *transport = pn_connection_transport(connection);
+      if (transport)
+        timeout = pn_transport_get_remote_idle_timeout(transport);
+      break;
+    }
+  }
+  return timeout;
+}

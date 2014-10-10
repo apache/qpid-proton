@@ -963,6 +963,17 @@ PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
 PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
                                        pn_tracer_t tracer);
 
+/**
+ * Gets the remote idle timeout for the specified remote service address
+ *
+ * @param[in] messenger a messenger object
+ * @param[in] address of remote service whose idle timeout is required
+ * @return the timeout in milliseconds or -1 if an error occurs
+ */
+PN_EXTERN pn_millis_t
+    pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
+                                         const char *address);
+
 #ifdef __cplusplus
 }
 #endif
