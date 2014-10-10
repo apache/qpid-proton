@@ -29,6 +29,25 @@ if(NOT PERLLIBS_FOUND)
 
   # if either the library path is not found not set at all
   # then do our own search
+  if ( NOT PERL_LIBRARY )
+    EXECUTE_PROCESS( COMMAND ${PERL_EXECUTABLE} -V:libperl
+                     OUTPUT_VARIABLE PERL_LIBRARY_OUTPUT
+                     RESULT_VARIABLE PERL_LIBRARY_RESULT )
+
+    IF ( NOT PERL_LIBRARY_RESULT )
+      string(REGEX REPLACE "libperl='([^']+)'.*" "\\1" PERL_POSSIBLE_LIBRARIES ${PERL_LIBRARY_OUTPUT})
+    ENDIF ( NOT PERL_LIBRARY_RESULT )
+
+    MESSAGE ( STATUS  "Looking for ${PERL_POSSIBLE_LIBRARIES}" )
+
+    find_file(PERL_LIBRARY
+      NAMES ${PERL_POSSIBLE_LIBRARIES}
+      PATHS /usr/lib
+            ${PERL_ARCHLIB}/CORE
+      )
+
+  endif ( NOT PERL_LIBRARY )
+
   IF ( PERL_LIBRARY MATCHES .*-NOTFOUND OR NOT PERL_LIBRARY )
       EXECUTE_PROCESS ( COMMAND ${PERL_EXECUTABLE}
                         -MConfig -e "print \$Config{libperl}"
