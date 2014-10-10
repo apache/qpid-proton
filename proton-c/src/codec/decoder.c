@@ -395,7 +395,7 @@ int pn_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code
         int e = pn_decoder_decode_type(decoder, data, &acode);
         if (e) return e;
         pn_type_t type = pn_code2type(acode);
-        if (type < 0) return type;
+        if ((int)type < 0) return (int)type;
         for (size_t i = 0; i < count; i++)
         {
           e = pn_decoder_decode_value(decoder, data, acode);
