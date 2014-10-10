@@ -20,6 +20,9 @@
 package qpid::proton;
 
 use constant {
+    VERSION_MAJOR => $cproton_perl::PN_VERSION_MAJOR,
+    VERSION_MINOR => $cproton_perl::PN_VERSION_MINOR,
+
     NULL       => $cproton_perl::PN_NULL,
     BOOL       => qpid::proton::Mapping->new(
         "bool",
