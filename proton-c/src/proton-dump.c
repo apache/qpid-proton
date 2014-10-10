@@ -19,7 +19,9 @@
  *
  */
 
+#include <libgen.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <proton/buffer.h>
 #include <proton/codec.h>
 #include <proton/error.h>
@@ -98,8 +100,34 @@ int dump(const char *file)
   return 0;
 }
 
+void usage(char* prog) {
+  printf("Usage: %s [FILE1] [FILEn] ...\n", basename(prog));
+  printf("Displays the content of an AMQP dump file containing frame data.\n");
+  printf("\n  [FILEn]  Dump file to be displayed.\n\n");
+}
+
 int main(int argc, char **argv)
 {
+  if(argc == 1) {
+    usage(argv[0]);
+    return 0;
+  }
+
+  int c;
+
+  while ( (c = getopt(argc, argv, "h")) != -1 ) {
+    switch(c) {
+    case 'h':
+      usage(argv[0]);
+      return 0;
+      break;
+
+    case '?':
+      usage(argv[0]);
+      return 1;
+    }
+  }
+
   for (int i = 1; i < argc; i++) {
     int err = dump(argv[i]);
     if (err) return err;
