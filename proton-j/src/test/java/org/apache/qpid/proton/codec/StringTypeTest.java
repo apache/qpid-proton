@@ -25,11 +25,11 @@ import static org.junit.Assert.assertEquals;
 import java.lang.Character.UnicodeBlock;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Test;
-
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 
 /**
@@ -40,20 +40,21 @@ public class StringTypeTest
     private static final Charset CHARSET_UTF8 = Charset.forName("UTF-8");
 
     /**
-     * Loop over all the chars in a given {@link UnicodeBlock} and return a
+     * Loop over all the chars in given {@link UnicodeBlock}s and return a
      * {@link Set <String>} containing all the possible values as their
      * {@link String} values.
      *
-     * @param block the {@link UnicodeBlock} to loop over
+     * @param blocks the {@link UnicodeBlock}s to loop over
      * @return a {@link Set <String>} containing all the possible values as
      * {@link String} values
      */
-    private static Set<String> getAllStringsFromUnicodeBlock(final UnicodeBlock block)
+    private static Set<String> getAllStringsFromUnicodeBlocks(final UnicodeBlock... blocks)
     {
+        final Set<UnicodeBlock> blockSet = new HashSet<UnicodeBlock>(Arrays.asList(blocks));
         final Set<String> strings = new HashSet<String>();
         for (int codePoint = 0; codePoint <= Character.MAX_CODE_POINT; codePoint++)
         {
-            if (UnicodeBlock.of(codePoint) == block)
+            if (blockSet.contains(UnicodeBlock.of(codePoint)))
             {
                 final int charCount = Character.charCount(codePoint);
                 final StringBuilder sb = new StringBuilder(
@@ -129,19 +130,18 @@ public class StringTypeTest
 
                 {
                     // non-surrogate pair blocks
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.BASIC_LATIN));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.LATIN_1_SUPPLEMENT));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.GREEK));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.LETTERLIKE_SYMBOLS));
+                    addAll(getAllStringsFromUnicodeBlocks(UnicodeBlock.BASIC_LATIN,
+                                                         UnicodeBlock.LATIN_1_SUPPLEMENT,
+                                                         UnicodeBlock.GREEK,
+                                                         UnicodeBlock.LETTERLIKE_SYMBOLS));
                     // blocks with surrogate pairs
-                    //TODO: restore when Java 7 is baseline
-                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.MUSICAL_SYMBOLS));
-                    //TODO: restore when Java 7 is baseline
-                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.EMOTICONS));
-                    //addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.PLAYING_CARDS));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_A));
-                    addAll(getAllStringsFromUnicodeBlock(UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_B));
+                    //TODO: restore others when Java 7 is baseline
+                    addAll(getAllStringsFromUnicodeBlocks(/*UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS,*/
+                                                         UnicodeBlock.MUSICAL_SYMBOLS,
+                                                         /*UnicodeBlock.EMOTICONS,*/
+                                                         /*UnicodeBlock.PLAYING_CARDS,*/
+                                                         UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_A,
+                                                         UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_B));
                 }
             };
     }

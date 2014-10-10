@@ -805,29 +805,14 @@ public final class EncoderImpl implements ByteBufferEncoder
 
                 c = 0x010000 + ((c & 0x03FF) << 10) + (low & 0x03FF);
 
-
-                if (c <= 0x3FFFF)     /* U+10000..U+3FFFF */
-                {
-                    _buffer.put((byte) 0xF0);
-                    _buffer.put((byte)(0x90 | ((c >> 12) & 0x2F)));
-                    _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
-                    _buffer.put((byte)(0x80 | (c & 0x3F)));
-                }
-                else if (c <= 0xFFFFF)     /* U+40000..U+FFFFF */
-                {
-                    _buffer.put((byte)(0xF0 | ((c >> 18) & 0x03)));
-                    _buffer.put((byte)(0x80 | ((c >> 12) & 0x3F)));
-                    _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
-                    _buffer.put((byte)(0x80 | (c & 0x3F)));
-                }
-                else                      /* U+100000..U+10FFFF */
-                {
-                    _buffer.put((byte)(0xF4));
-                    _buffer.put((byte)(0x80 | ((c >> 12) & 0x3F)));
-                    _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
-                    _buffer.put((byte)(0x80 | (c & 0x3F)));
-                }
+                _buffer.put((byte)(0xF0 | ((c >> 18) & 0x07)));
+                _buffer.put((byte)(0x80 | ((c >> 12) & 0x3F)));
+                _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
+                _buffer.put((byte)(0x80 | (c & 0x3F)));
             }
         }
     }
+
+
+
 }
