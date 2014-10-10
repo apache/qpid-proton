@@ -1111,15 +1111,6 @@ int pn_data_resize(pn_data_t *data, size_t size)
 }
 
 
-pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd)
-{
-  if (nd) {
-    return &data->nodes[nd - 1];
-  } else {
-    return NULL;
-  }
-}
-
 size_t pn_data_id(pn_data_t *data, pni_node_t *node)
 {
   return node - data->nodes + 1;
