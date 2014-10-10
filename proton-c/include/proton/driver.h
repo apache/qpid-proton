@@ -24,10 +24,11 @@
 
 #include <proton/import_export.h>
 #include <proton/error.h>
-#include <proton/engine.h>
 #include <proton/sasl.h>
 #include <proton/selectable.h>
 #include <proton/ssl.h>
+#include <proton/transport.h>
+#include <proton/types.h>
 
 #ifdef __cplusplus
 extern "C" {

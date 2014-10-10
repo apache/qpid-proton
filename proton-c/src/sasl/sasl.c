@@ -25,13 +25,13 @@
 #include <string.h>
 #include <proton/buffer.h>
 #include <proton/framing.h>
-#include <proton/engine.h> // XXX: just needed for PN_EOS
+#include <proton/error.h>
 #include <proton/sasl.h>
 #include "protocol.h"
 #include "dispatch_actions.h"
-#include "../dispatcher/dispatcher.h"
-#include "../engine/engine-internal.h"
-#include "../util.h"
+#include "engine/engine-internal.h"
+#include "dispatcher/dispatcher.h"
+#include "util.h"
 
 
 struct pn_sasl_t {

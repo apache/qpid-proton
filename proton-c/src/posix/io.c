@@ -35,7 +35,7 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include "../platform.h"
+#include "platform.h"
 
 #define MAX_HOST (1024)
 #define MAX_SERV (64)

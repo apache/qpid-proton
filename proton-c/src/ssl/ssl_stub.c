@@ -20,6 +20,8 @@
  */
 
 #include <proton/ssl.h>
+#include <proton/error.h>
+#include <proton/transport.h>
 
 
 /** @file

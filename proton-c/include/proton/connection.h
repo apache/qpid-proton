@@ -23,7 +23,12 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/codec.h>
+#include <proton/condition.h>
+#include <proton/error.h>
 #include <proton/type_compat.h>
+#include <proton/types.h>
+
 #include <stddef.h>
 #include <sys/types.h>
 

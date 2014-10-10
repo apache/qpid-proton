@@ -22,7 +22,6 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <proton/util.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,9 +31,9 @@
 #include "encodings.h"
 #define DEFINE_FIELDS
 #include "protocol.h"
-#include "../platform.h"
-#include "../platform_fmt.h"
-#include "../util.h"
+#include "platform.h"
+#include "platform_fmt.h"
+#include "util.h"
 #include "decoder.h"
 #include "encoder.h"
 #include "data.h"
