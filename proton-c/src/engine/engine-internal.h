@@ -128,6 +128,7 @@ struct pn_transport_t {
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
   pn_condition_t condition;
+  pn_error_t *error;
 
 #define PN_IO_SSL  0
 #define PN_IO_SASL 1

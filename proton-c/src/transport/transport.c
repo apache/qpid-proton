@@ -164,6 +164,7 @@ static void pn_transport_initialize(void *object)
   transport->disp_data = pn_data(0);
   pn_condition_init(&transport->remote_condition);
   pn_condition_init(&transport->condition);
+  transport->error = pn_error();
 
   transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75);
   transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75);
@@ -258,6 +259,7 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->disp_data);
   pn_condition_tini(&transport->remote_condition);
   pn_condition_tini(&transport->condition);
+  pn_error_free(transport->error);
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
   if (transport->input_buf) free(transport->input_buf);
@@ -349,7 +351,15 @@ int pn_transport_unbind(pn_transport_t *transport)
 
 pn_error_t *pn_transport_error(pn_transport_t *transport)
 {
-  return NULL;
+  assert(transport);
+  if (pn_condition_is_set(&transport->condition)) {
+    pn_error_format(transport->error, PN_ERR, "%s: %s",
+                    pn_condition_get_name(&transport->condition),
+                    pn_condition_get_description(&transport->condition));
+  } else {
+    pn_error_clear(transport->error);
+  }
+  return transport->error;
 }
 
 pn_condition_t *pn_transport_condition(pn_transport_t *transport)
