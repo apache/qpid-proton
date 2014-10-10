@@ -103,11 +103,14 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _connection.removeSessionEndpoint(_node);
         _node = null;
 
-        for(SenderImpl sender : _senders.values()) {
+        List<SenderImpl> senders = new ArrayList<SenderImpl>(_senders.values());
+        for(SenderImpl sender : senders) {
             sender.free();
         }
         _senders.clear();
-        for(ReceiverImpl receiver : _receivers.values()) {
+
+        List<ReceiverImpl> receivers = new ArrayList<ReceiverImpl>(_receivers.values());
+        for(ReceiverImpl receiver : receivers) {
             receiver.free();
         }
         _receivers.clear();
