@@ -30,6 +30,9 @@
 
 #define pn_object_initialize NULL
 #define pn_object_finalize NULL
+#define pn_object_inspect NULL
+uintptr_t pn_object_hashcode(void *object) { return (uintptr_t) object; }
+intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
 
 const pn_class_t PNI_OBJECT = PN_CLASS(pn_object);
 const pn_class_t *PN_OBJECT = &PNI_OBJECT;
@@ -52,14 +55,20 @@ const pn_class_t *PN_VOID = &PNI_VOID;
 void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);
-  return clazz->newinst(clazz, size);
+  void *object = clazz->newinst(clazz, size);
+  if (clazz->initialize) {
+    clazz->initialize(object);
+  }
+  return object;
 }
 
 void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  clazz = clazz->reify(object);
-  clazz->incref(object);
+  if (object) {
+    clazz = clazz->reify(object);
+    clazz->incref(object);
+  }
   return object;
 }
 
@@ -70,18 +79,50 @@ int pn_class_refcount(const pn_class_t *clazz, void *object)
   return clazz->refcount(object);
 }
 
-void pn_class_decref(const pn_class_t *clazz, void *object)
+int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  clazz = clazz->reify(object);
-  clazz->decref(object);
+
+  if (object) {
+    clazz = clazz->reify(object);
+    clazz->decref(object);
+    int rc = clazz->refcount(object);
+    if (rc == 0) {
+      if (clazz->finalize) {
+        clazz->finalize(object);
+        // check the refcount again in case the finalizer created a
+        // new reference
+        rc = clazz->refcount(object);
+      }
+      if (rc == 0) {
+        clazz->free(object);
+        return 0;
+      }
+    } else {
+      return rc;
+    }
+  }
+
+  return 0;
 }
 
 void pn_class_free(const pn_class_t *clazz, void *object)
 {
   assert(clazz);
-  clazz = clazz->reify(object);
-  clazz->free(object);
+  if (object) {
+    clazz = clazz->reify(object);
+    int rc = clazz->refcount(object);
+    assert(rc == 1 || rc == -1);
+    if (rc == 1) {
+      rc = pn_class_decref(clazz, object);
+      assert(rc == 0);
+    } else {
+      if (clazz->finalize) {
+        clazz->finalize(object);
+      }
+      clazz->free(object);
+    }
+  }
 }
 
 const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
@@ -125,6 +166,31 @@ bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
   return pn_class_compare(clazz, a, b) == 0;
 }
 
+int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
+{
+  assert(clazz);
+
+  clazz = clazz->reify(object);
+
+  if (!pn_string_get(dst)) {
+    pn_string_set(dst, "");
+  }
+
+  const char *name;
+
+  if (object) {
+    if (clazz->inspect) {
+      return clazz->inspect(object, dst);
+    } else if (clazz->name) {
+      name = clazz->name;
+    } else {
+      name = "<anon>";
+    }
+  }
+
+  return pn_string_addf(dst, "%s<%p>", name, object);
+}
+
 typedef struct {
   const pn_class_t *clazz;
   int refcount;
@@ -135,7 +201,11 @@ typedef struct {
 
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
-  return pn_new(size, clazz);
+  pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
+  void *object = head + 1;
+  head->clazz = clazz;
+  head->refcount = 1;
+  return object;
 }
 
 const pn_class_t *pn_object_reify(void *object)
@@ -149,136 +219,58 @@ const pn_class_t *pn_object_reify(void *object)
 
 void pn_object_incref(void *object)
 {
-  pn_incref(object);
-}
-
-int pn_object_refcount(void *object)
-{
-  return pn_refcount(object);
-}
-
-void pn_object_decref(void *object)
-{
-  pn_decref(object);
-}
-
-void pn_object_free(void *object)
-{
-  pn_free(object);
-}
-
-uintptr_t pn_object_hashcode(void *object)
-{
-  return (uintptr_t) object;
-}
-
-intptr_t pn_object_compare(void *a, void *b)
-{
-  return (intptr_t) b - (intptr_t) a;
-}
-
-int pn_object_inspect(void *object, pn_string_t *dst)
-{
-  return pn_inspect(object, dst);
-}
-
-void *pn_new(size_t size, const pn_class_t *clazz)
-{
-  assert(clazz);
-  return pn_new2(size, clazz, NULL);
-}
-
-void *pn_new2(size_t size, const pn_class_t *clazz, void *from)
-{
-  pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
-  void *object = head + 1;
-  pn_initialize(object, clazz);
-  return object;
-}
-
-void pn_initialize(void *object, const pn_class_t *clazz)
-{
-  pni_head_t *head = pni_head(object);
-  head->clazz = clazz;
-  head->refcount = 1;
-  if (clazz && clazz->initialize) {
-    clazz->initialize(object);
-  }
-}
-
-void *pn_incref(void *object) {
-  return pn_incref2(object, NULL);
-}
-
-void *pn_incref2(void *object, void *from) {
   if (object) {
     pni_head(object)->refcount++;
   }
-  return object;
 }
 
-void pn_decref(void *object) {
-  pn_decref2(object, NULL);
-}
-
-void pn_decref2(void *object, void *from)
-{
-  if (object) {
-    pni_head_t *head = pni_head(object);
-    assert(head->refcount > 0);
-    head->refcount--;
-    if (!head->refcount) {
-      pn_finalize(object);
-      // Check the refcount again in case finalize created a new
-      // reference.
-      if (!head->refcount) {
-        free(head);
-      }
-    }
-  }
-}
-
-void pn_finalize(void *object)
-{
-  if (object) {
-    pni_head_t *head = pni_head(object);
-    assert(head->refcount == 0);
-    if (head->clazz && head->clazz->finalize) {
-      head->clazz->finalize(object);
-    }
-  }
-}
-
-int pn_refcount(void *object)
+int pn_object_refcount(void *object)
 {
   assert(object);
   return pni_head(object)->refcount;
 }
 
+void pn_object_decref(void *object)
+{
+  pni_head_t *head = pni_head(object);
+  assert(head->refcount > 0);
+  head->refcount--;
+}
+
+void pn_object_free(void *object)
+{
+  pni_head_t *head = pni_head(object);
+  free(head);
+}
+
+void *pn_incref(void *object)
+{
+  return pn_class_incref(PN_OBJECT, object);
+}
+
+int pn_decref(void *object)
+{
+  return pn_class_decref(PN_OBJECT, object);
+}
+
+int pn_refcount(void *object)
+{
+  return pn_class_refcount(PN_OBJECT, object);
+}
+
 void pn_free(void *object)
 {
-  if (object) {
-    assert(pn_refcount(object) == 1);
-    pn_decref(object);
-  }
+  pn_class_free(PN_OBJECT, object);
 }
 
 const pn_class_t *pn_class(void *object)
 {
-  assert(object);
-  return pni_head(object)->clazz;
+  return pn_class_reify(PN_OBJECT, object);
 }
 
 uintptr_t pn_hashcode(void *object)
 {
-  if (!object) return 0;
-
-  pni_head_t *head = pni_head(object);
-  if (head->clazz && head->clazz->hashcode) {
-    return head->clazz->hashcode(object);
-  } else {
-    return (uintptr_t) head;
-  }
+  return pn_class_hashcode(PN_OBJECT, object);
 }
 
 intptr_t pn_compare(void *a, void *b)
@@ -293,32 +285,11 @@ bool pn_equals(void *a, void *b)
 
 int pn_inspect(void *object, pn_string_t *dst)
 {
-  if (!pn_string_get(dst)) {
-    pn_string_set(dst, "");
-  }
-
-  if (object) {
-    pni_head_t *head = pni_head(object);
-    const char *name;
-    if (head->clazz) {
-      const pn_class_t *clazz = head->clazz;
-      if (clazz->inspect) {
-        return clazz->inspect(object, dst);
-      } else if (clazz->name) {
-        name = clazz->name;
-      } else {
-        name = "object";
-      }
-    } else {
-      name = "object";
-    }
-    return pn_string_addf(dst, "%s<%p>", name, object);
-  } else {
-    return pn_string_addf(dst, "(null)");
-  }
+  return pn_class_inspect(PN_OBJECT, object, dst);
 }
 
 struct pn_list_t {
+  const pn_class_t *clazz;
   size_t capacity;
   size_t size;
   void **elements;
@@ -341,9 +312,9 @@ void pn_list_set(pn_list_t *list, int index, void *value)
 {
   assert(list); assert(list->size);
   void *old = list->elements[index % list->size];
-  if (list->options & PN_REFCOUNT) pn_decref2(old, list);
+  if (list->options & PN_REFCOUNT) pn_class_decref(list->clazz, old);
   list->elements[index % list->size] = value;
-  if (list->options & PN_REFCOUNT) pn_incref2(value, list);
+  if (list->options & PN_REFCOUNT) pn_class_incref(list->clazz, value);
 }
 
 void pn_list_ensure(pn_list_t *list, size_t capacity)
@@ -363,7 +334,7 @@ int pn_list_add(pn_list_t *list, void *value)
   assert(list);
   pn_list_ensure(list, list->size + 1);
   list->elements[list->size++] = value;
-  if (list->options & PN_REFCOUNT) pn_incref2(value, list);
+  if (list->options & PN_REFCOUNT) pn_class_incref(list->clazz, value);
   return 0;
 }
 
@@ -398,7 +369,7 @@ void pn_list_del(pn_list_t *list, int index, int n)
 
   if (list->options & PN_REFCOUNT) {
     for (int i = 0; i < n; i++) {
-      pn_decref2(list->elements[index + i], list);
+      pn_class_decref(list->clazz, list->elements[index + i]);
     }
   }
 
@@ -450,7 +421,7 @@ static void pn_list_finalize(void *object)
   assert(object);
   pn_list_t *list = (pn_list_t *) object;
   for (size_t i = 0; i < list->size; i++) {
-    if (list->options & PN_REFCOUNT) pn_decref2(pn_list_get(list, i), list);
+    if (list->options & PN_REFCOUNT) pn_class_decref(list->clazz, pn_list_get(list, i));
   }
   free(list->elements);
 }
@@ -500,7 +471,7 @@ static int pn_list_inspect(void *obj, pn_string_t *dst)
       err = pn_string_addf(dst, ", ");
       if (err) return err;
     }
-    err = pn_inspect(pn_list_get(list, i), dst);
+    err = pn_class_inspect(list->clazz, pn_list_get(list, i), dst);
     if (err) return err;
   }
   return pn_string_addf(dst, "]");
@@ -508,11 +479,12 @@ static int pn_list_inspect(void *obj, pn_string_t *dst)
 
 #define pn_list_initialize NULL
 
-pn_list_t *pn_list(size_t capacity, int options)
+pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity, int options)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_list);
+  static const pn_class_t list_clazz = PN_CLASS(pn_list);
 
-  pn_list_t *list = (pn_list_t *) pn_new(sizeof(pn_list_t), &clazz);
+  pn_list_t *list = (pn_list_t *) pn_class_new(&list_clazz, sizeof(pn_list_t));
+  list->clazz = clazz;
   list->capacity = capacity ? capacity : 16;
   list->elements = (void **) malloc(list->capacity * sizeof(void *));
   list->size = 0;
@@ -532,6 +504,8 @@ typedef struct {
 } pni_entry_t;
 
 struct pn_map_t {
+  const pn_class_t *key;
+  const pn_class_t *value;
   pni_entry_t *entries;
   size_t capacity;
   size_t addressable;
@@ -541,7 +515,6 @@ struct pn_map_t {
   float load_factor;
   bool count_keys;
   bool count_values;
-  bool inspect_keys;
 };
 
 static void pn_map_finalize(void *object)
@@ -551,8 +524,8 @@ static void pn_map_finalize(void *object)
   if (map->count_keys || map->count_values) {
     for (size_t i = 0; i < map->capacity; i++) {
       if (map->entries[i].state != PNI_ENTRY_FREE) {
-        if (map->count_keys) pn_decref2(map->entries[i].key, map);
-        if (map->count_values) pn_decref2(map->entries[i].value, map);
+        if (map->count_keys) pn_class_decref(map->key, map->entries[i].key);
+        if (map->count_values) pn_class_decref(map->value, map->entries[i].value);
       }
     }
   }
@@ -604,15 +577,11 @@ static int pn_map_inspect(void *obj, pn_string_t *dst)
       err = pn_string_addf(dst, ", ");
       if (err) return err;
     }
-    if (map->inspect_keys) {
-      err = pn_inspect(pn_map_key(map, entry), dst);
-    } else {
-      err = pn_string_addf(dst, "%p", pn_map_key(map, entry));
-    }
+    err = pn_class_inspect(map->key, pn_map_key(map, entry), dst);
     if (err) return err;
     err = pn_string_addf(dst, ": ");
     if (err) return err;
-    err = pn_inspect(pn_map_value(map, entry), dst);
+    err = pn_class_inspect(map->value, pn_map_value(map, entry), dst);
     if (err) return err;
     entry = pn_map_next(map, entry);
   }
@@ -622,11 +591,14 @@ static int pn_map_inspect(void *obj, pn_string_t *dst)
 #define pn_map_initialize NULL
 #define pn_map_compare NULL
 
-pn_map_t *pn_map(size_t capacity, float load_factor, int options)
+pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
+                 size_t capacity, float load_factor, int options)
 {
   static const pn_class_t clazz = PN_CLASS(pn_map);
 
-  pn_map_t *map = (pn_map_t *) pn_new(sizeof(pn_map_t), &clazz);
+  pn_map_t *map = (pn_map_t *) pn_class_new(&clazz, sizeof(pn_map_t));
+  map->key = key;
+  map->value = value;
   map->capacity = capacity ? capacity : 16;
   map->addressable = (size_t) (map->capacity * 0.86);
   if (!map->addressable) map->addressable = map->capacity;
@@ -635,7 +607,6 @@ pn_map_t *pn_map(size_t capacity, float load_factor, int options)
   map->equals = pn_equals;
   map->count_keys = (options & PN_REFCOUNT) || (options & PN_REFCOUNT_KEY);
   map->count_values = (options & PN_REFCOUNT) || (options & PN_REFCOUNT_VALUE);
-  map->inspect_keys = true;
   pni_map_allocate(map);
   return map;
 }
@@ -673,8 +644,8 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
       void *key = entries[i].key;
       void *value = entries[i].value;
       pn_map_put(map, key, value);
-      if (map->count_keys) pn_decref2(key, map);
-      if (map->count_values) pn_decref2(value, map);
+      if (map->count_keys) pn_class_decref(map->key, key);
+      if (map->count_values) pn_class_decref(map->value, value);
     }
   }
 
@@ -693,7 +664,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     if (create) {
       entry->state = PNI_ENTRY_TAIL;
       entry->key = key;
-      if (map->count_keys) pn_incref2(key, map);
+      if (map->count_keys) pn_class_incref(map->key, key);
       map->size++;
       return entry;
     } else {
@@ -733,7 +704,7 @@ static pni_entry_t *pni_map_entry(pn_map_t *map, void *key, pni_entry_t **pprev,
     entry->state = PNI_ENTRY_LINK;
     map->entries[empty].state = PNI_ENTRY_TAIL;
     map->entries[empty].key = key;
-    if (map->count_keys) pn_incref2(key, map);
+    if (map->count_keys) pn_class_incref(map->key, key);
     if (pprev) *pprev = entry;
     map->size++;
     return &map->entries[empty];
@@ -746,9 +717,9 @@ int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
-  if (map->count_values) pn_decref2(entry->value, map);
+  if (map->count_values) pn_class_decref(map->value, entry->value);
   entry->value = value;
-  if (map->count_values) pn_incref2(value, map);
+  if (map->count_values) pn_class_incref(map->value, value);
   return 0;
 }
 
@@ -781,8 +752,8 @@ void pn_map_del(pn_map_t *map, void *key)
     entry->key = NULL;
     entry->value = NULL;
     map->size--;
-    if (dref_key) pn_decref2(dref_key, map);
-    if (dref_value) pn_decref2(dref_value, map);
+    if (dref_key) pn_class_decref(map->key, dref_key);
+    if (dref_value) pn_class_decref(map->value, dref_value);
   }
 }
 
@@ -838,14 +809,33 @@ static bool pni_identity_equals(void *a, void *b)
   return a == b;
 }
 
-pn_hash_t *pn_hash(size_t capacity, float load_factor, int options)
+extern const pn_class_t *PN_UINTPTR;
+
+static const pn_class_t *pni_uintptr_reify(void *object) {
+  return PN_UINTPTR;
+}
+
+#define pni_uintptr_new NULL
+#define pni_uintptr_free NULL
+#define pni_uintptr_initialize NULL
+#define pni_uintptr_incref NULL
+#define pni_uintptr_decref NULL
+#define pni_uintptr_refcount NULL
+#define pni_uintptr_finalize NULL
+#define pni_uintptr_hashcode NULL
+#define pni_uintptr_compare NULL
+#define pni_uintptr_inspect NULL
+
+const pn_class_t PNI_UINTPTR = PN_METACLASS(pni_uintptr);
+const pn_class_t *PN_UINTPTR = &PNI_UINTPTR;
+
+pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor, int options)
 {
-  pn_hash_t *hash = (pn_hash_t *) pn_map(capacity, load_factor, 0);
+  pn_hash_t *hash = (pn_hash_t *) pn_map(PN_UINTPTR, clazz, capacity, load_factor, 0);
   hash->map.hashcode = pni_identity_hashcode;
   hash->map.equals = pni_identity_equals;
   hash->map.count_keys = false;
   hash->map.count_values = options & PN_REFCOUNT;
-  hash->map.inspect_keys = false;
   return hash;
 }
 
@@ -967,7 +957,7 @@ pn_string_t *pn_string(const char *bytes)
 pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
   static const pn_class_t clazz = PN_CLASS(pn_string);
-  pn_string_t *string = (pn_string_t *) pn_new(sizeof(pn_string_t), &clazz);
+  pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
   string->capacity = n ? n * sizeof(char) : 16;
   string->bytes = (char *) malloc(string->capacity);
   pn_string_setn(string, bytes, n);
@@ -1156,7 +1146,7 @@ static void pn_iterator_finalize(void *object)
 pn_iterator_t *pn_iterator()
 {
   static const pn_class_t clazz = PN_CLASS(pn_iterator);
-  pn_iterator_t *it = (pn_iterator_t *) pn_new(sizeof(pn_iterator_t), &clazz);
+  pn_iterator_t *it = (pn_iterator_t *) pn_class_new(&clazz, sizeof(pn_iterator_t));
   return it;
 }
 

@@ -32,7 +32,7 @@ static void *END = &mem;
 
 static pn_list_t *build_list(size_t capacity, int options, ...)
 {
-  pn_list_t *result = pn_list(capacity, options);
+  pn_list_t *result = pn_list(PN_OBJECT, capacity, options);
   va_list ap;
 
   va_start(ap, options);
@@ -44,7 +44,7 @@ static pn_list_t *build_list(size_t capacity, int options, ...)
 
     pn_list_add(result, arg);
     if (PN_REFCOUNT & options) {
-      pn_decref(arg);
+      pn_class_decref(PN_OBJECT, arg);
     }
   }
   va_end(ap);
@@ -54,7 +54,7 @@ static pn_list_t *build_list(size_t capacity, int options, ...)
 
 static pn_map_t *build_map(size_t capacity, float load_factor, int options, ...)
 {
-  pn_map_t *result = pn_map(capacity, load_factor, options);
+  pn_map_t *result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor, options);
   va_list ap;
 
   void *prev = NULL;
@@ -71,8 +71,8 @@ static pn_map_t *build_map(size_t capacity, float load_factor, int options, ...)
     if (count % 2) {
       pn_map_put(result, prev, arg);
       if (PN_REFCOUNT & options) {
-        pn_decref(prev);
-        pn_decref(arg);
+        pn_class_decref(PN_OBJECT, prev);
+        pn_class_decref(PN_OBJECT, arg);
       }
     } else {
       prev = arg;
@@ -92,8 +92,6 @@ static pn_map_t *build_map(size_t capacity, float load_factor, int options, ...)
 static void noop(void *o) {}
 static uintptr_t zero(void *o) { return 0; }
 static intptr_t delta(void *a, void *b) { return (uintptr_t) b - (uintptr_t) a; }
-
-static pn_class_t null_class = {0};
 
 #define noop_initialize noop
 #define noop_finalize noop
@@ -136,9 +134,9 @@ static void test_class(const pn_class_t *clazz, size_t size)
 
 static void test_new(size_t size, const pn_class_t *clazz)
 {
-  void *obj = pn_new(size, clazz);
+  void *obj = pn_class_new(clazz, size);
   assert(obj);
-  assert(pn_refcount(obj) == 1);
+  assert(pn_class_refcount(PN_OBJECT, obj) == 1);
   assert(pn_class(obj) == clazz);
   char *bytes = (char *) obj;
   for (size_t i = 0; i < size; i++) {
@@ -164,7 +162,7 @@ static void test_finalize(void)
 {
   static pn_class_t clazz = PN_CLASS(finalizer);
 
-  int **obj = (int **) pn_new(sizeof(int **), &clazz);
+  int **obj = (int **) pn_class_new(&clazz, sizeof(int **));
   assert(obj);
 
   int called = 0;
@@ -191,7 +189,7 @@ static uintptr_t hashcode(void *obj) { return (uintptr_t) obj; }
 static void test_hashcode(void)
 {
   static pn_class_t clazz = PN_CLASS(hashcode);
-  void *obj = pn_new(0, &clazz);
+  void *obj = pn_class_new(&clazz, 0);
   assert(obj);
   assert(pn_hashcode(obj) == (uintptr_t) obj);
   assert(pn_hashcode(NULL) == 0);
@@ -208,9 +206,9 @@ static void test_compare(void)
 {
   static pn_class_t clazz = PN_CLASS(compare);
 
-  void *a = pn_new(0, &clazz);
+  void *a = pn_class_new(&clazz, 0);
   assert(a);
-  void *b = pn_new(0, &clazz);
+  void *b = pn_class_new(&clazz, 0);
   assert(b);
 
   assert(pn_compare(a, b));
@@ -236,7 +234,7 @@ static void test_compare(void)
 
 static void test_refcounting(int refs)
 {
-  void *obj = pn_new(0, PN_OBJECT);
+  void *obj = pn_class_new(PN_OBJECT, 0);
 
   assert(pn_refcount(obj) == 1);
 
@@ -259,7 +257,7 @@ static void test_refcounting(int refs)
 
 static void test_list(size_t capacity)
 {
-  pn_list_t *list = pn_list(0, 0);
+  pn_list_t *list = pn_list(PN_OBJECT, 0, 0);
   assert(pn_list_size(list) == 0);
   assert(!pn_list_add(list, (void *) 0));
   assert(!pn_list_add(list, (void *) 1));
@@ -279,12 +277,12 @@ static void test_list(size_t capacity)
 
 static void test_list_refcount(size_t capacity)
 {
-  void *one = pn_new(0, PN_OBJECT);
-  void *two = pn_new(0, PN_OBJECT);
-  void *three = pn_new(0, PN_OBJECT);
-  void *four = pn_new(0, PN_OBJECT);
+  void *one = pn_class_new(PN_OBJECT, 0);
+  void *two = pn_class_new(PN_OBJECT, 0);
+  void *three = pn_class_new(PN_OBJECT, 0);
+  void *four = pn_class_new(PN_OBJECT, 0);
 
-  pn_list_t *list = pn_list(0, PN_REFCOUNT);
+  pn_list_t *list = pn_list(PN_OBJECT, 0, PN_REFCOUNT);
   assert(!pn_list_add(list, one));
   assert(!pn_list_add(list, two));
   assert(!pn_list_add(list, three));
@@ -336,7 +334,7 @@ static void check_list_index(pn_list_t *list, void *value, ssize_t idx)
 
 static void test_list_index(void)
 {
-  pn_list_t *l = pn_list(0, 0);
+  pn_list_t *l = pn_list(PN_OBJECT, 0, 0);
   void *one = pn_string("one");
   void *two = pn_string("two");
   void *three = pn_string("three");
@@ -450,11 +448,11 @@ static void test_build_map_odd(void)
 
 static void test_map(void)
 {
-  void *one = pn_new(0, PN_OBJECT);
-  void *two = pn_new(0, PN_OBJECT);
-  void *three = pn_new(0, PN_OBJECT);
+  void *one = pn_class_new(PN_OBJECT, 0);
+  void *two = pn_class_new(PN_OBJECT, 0);
+  void *three = pn_class_new(PN_OBJECT, 0);
 
-  pn_map_t *map = pn_map(4, 0.75, PN_REFCOUNT);
+  pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 4, 0.75, PN_REFCOUNT);
   assert(pn_map_size(map) == 0);
 
   pn_string_t *key = pn_string("key");
@@ -513,11 +511,11 @@ static void test_map(void)
 
 static void test_hash(void)
 {
-  void *one = pn_new(0, PN_OBJECT);
-  void *two = pn_new(0, PN_OBJECT);
-  void *three = pn_new(0, PN_OBJECT);
+  void *one = pn_class_new(PN_OBJECT, 0);
+  void *two = pn_class_new(PN_OBJECT, 0);
+  void *three = pn_class_new(PN_OBJECT, 0);
 
-  pn_hash_t *hash = pn_hash(4, 0.75, PN_REFCOUNT);
+  pn_hash_t *hash = pn_hash(PN_OBJECT, 4, 0.75, PN_REFCOUNT);
   pn_hash_put(hash, 0, NULL);
   pn_hash_put(hash, 1, one);
   pn_hash_put(hash, 2, two);
@@ -576,12 +574,12 @@ static void test_map_links(void)
   const pn_class_t collider_clazz = PN_CLASS(collider);
   void *keys[3];
   for (int i = 0; i < 3; i++)
-    keys[i] = pn_new(0, &collider_clazz);
+    keys[i] = pn_class_new(&collider_clazz, 0);
 
   // test deleting a head, middle link, tail
 
   for (int delete_idx=0; delete_idx < 3; delete_idx++) {
-    pn_map_t *map = pn_map(0, 0.75, 0);
+    pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 0, 0.75, 0);
     // create a chain of entries that have same head (from identical key hashcode)
     for (int i = 0; i < 3; i++) {
       pn_map_put(map, keys[i], keys[i]);
@@ -692,17 +690,17 @@ static void test_string_addf(void)
 
 static void test_map_iteration(int n)
 {
-  pn_list_t *pairs = pn_list(2*n, PN_REFCOUNT);
+  pn_list_t *pairs = pn_list(PN_OBJECT, 2*n, PN_REFCOUNT);
   for (int i = 0; i < n; i++) {
-    void *key = pn_new(0, PN_OBJECT);
-    void *value = pn_new(0, PN_OBJECT);
+    void *key = pn_class_new(PN_OBJECT, 0);
+    void *value = pn_class_new(PN_OBJECT, 0);
     pn_list_add(pairs, key);
     pn_list_add(pairs, value);
     pn_decref(key);
     pn_decref(value);
   }
 
-  pn_map_t *map = pn_map(0, 0.75, PN_REFCOUNT);
+  pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 0, 0.75, PN_REFCOUNT);
 
   assert(pn_map_head(map) == 0);
 
@@ -796,14 +794,14 @@ void test_map_inspect(void)
 
 void test_list_compare(void)
 {
-  pn_list_t *a = pn_list(0, PN_REFCOUNT);
-  pn_list_t *b = pn_list(0, PN_REFCOUNT);
+  pn_list_t *a = pn_list(PN_OBJECT, 0, PN_REFCOUNT);
+  pn_list_t *b = pn_list(PN_OBJECT, 0, PN_REFCOUNT);
 
   assert(pn_equals(a, b));
 
-  void *one = pn_new(0, PN_OBJECT);
-  void *two = pn_new(0, PN_OBJECT);
-  void *three = pn_new(0, PN_OBJECT);
+  void *one = pn_class_new(PN_OBJECT, 0);
+  void *two = pn_class_new(PN_OBJECT, 0);
+  void *three = pn_class_new(PN_OBJECT, 0);
 
   pn_list_add(a, one);
   assert(!pn_equals(a, b));
@@ -873,7 +871,6 @@ int main(int argc, char **argv)
 
   for (size_t i = 0; i < 128; i++) {
     test_new(i, PN_OBJECT);
-    test_new(i, &null_class);
     test_new(i, &noop_class);
   }
 

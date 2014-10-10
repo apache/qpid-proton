@@ -55,7 +55,7 @@ static void pn_decoder_finalize(void *obj) {
 pn_decoder_t *pn_decoder()
 {
   static const pn_class_t clazz = PN_CLASS(pn_decoder);
-  return (pn_decoder_t *) pn_new(sizeof(pn_decoder_t), &clazz);
+  return (pn_decoder_t *) pn_class_new(&clazz, sizeof(pn_decoder_t));
 }
 
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)

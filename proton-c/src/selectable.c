@@ -91,7 +91,7 @@ pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
                                 void (*finalize)(pn_selectable_t *))
 {
   static const pn_class_t clazz = PN_CLASS(pn_selectable);
-  pn_selectable_t *selectable = (pn_selectable_t *) pn_new(sizeof(pn_selectable_t), &clazz);
+  pn_selectable_t *selectable = (pn_selectable_t *) pn_class_new(&clazz, sizeof(pn_selectable_t));
   selectable->capacity = capacity;
   selectable->pending = pending;
   selectable->readable = readable;
