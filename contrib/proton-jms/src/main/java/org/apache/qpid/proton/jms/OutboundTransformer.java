@@ -26,10 +26,28 @@ import javax.jms.Message;
 public abstract class OutboundTransformer {
 
     JMSVendor vendor;
-    String prefixVendor = "JMS_AMQP_";
+    String prefixVendor;
 
-    public OutboundTransformer(JMSVendor vendor) {
+    String prefixDeliveryAnnotations = "DA_";
+    String prefixMessageAnnotations= "MA_";
+    String prefixFooter = "FT_";
+
+    String messageFormatKey;
+    String nativeKey;
+    String firstAcquirerKey;
+    String prefixDeliveryAnnotationsKey;
+    String prefixMessageAnnotationsKey;
+    String subjectKey;
+    String contentTypeKey;
+    String contentEncodingKey;
+    String replyToGroupIDKey;
+    String prefixFooterKey;
+
+
+
+   public OutboundTransformer(JMSVendor vendor) {
         this.vendor = vendor;
+        this.setPrefixVendor("JMS_AMQP_");
     }
 
     public abstract EncodedMessage transform(Message jms) throws Exception;
@@ -40,6 +58,18 @@ public abstract class OutboundTransformer {
 
     public void setPrefixVendor(String prefixVendor) {
         this.prefixVendor = prefixVendor;
+
+        messageFormatKey = prefixVendor + "MESSAGE_FORMAT";
+        nativeKey = prefixVendor + "NATIVE";
+        firstAcquirerKey = prefixVendor + "FirstAcquirer";
+        prefixDeliveryAnnotationsKey = prefixVendor + prefixDeliveryAnnotations;
+        prefixMessageAnnotationsKey = prefixVendor + prefixMessageAnnotations;
+        subjectKey =  prefixVendor +"Subject";
+        contentTypeKey = prefixVendor +"ContentType";
+        contentEncodingKey = prefixVendor +"ContentEncoding";
+        replyToGroupIDKey = prefixVendor +"ReplyToGroupID";
+        prefixFooterKey = prefixVendor + prefixFooter;
+
     }
 
     public JMSVendor getVendor() {

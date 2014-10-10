@@ -36,13 +36,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 
 /**
-* @author <a href="http://hiramchirino.com">Hiram Chirino</a>
-*/
+ * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
+ */
 public class JMSMappingOutboundTransformer extends OutboundTransformer {
-
-    String prefixDeliveryAnnotations = "DA_";
-    String prefixMessageAnnotations= "MA_";
-    String prefixFooter = "FT_";
 
     public JMSMappingOutboundTransformer(JMSVendor vendor) {
         super(vendor);
@@ -59,30 +55,37 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         } catch (MessageFormatException e) {
             return null;
         }
-        return transform(this, msg);
-    }
-
-    static EncodedMessage transform(JMSMappingOutboundTransformer options, Message msg) throws JMSException, UnsupportedEncodingException {
-        final JMSVendor vendor = options.vendor;
-
-        final String messageFormatKey = options.prefixVendor + "MESSAGE_FORMAT";
-        final String nativeKey = options.prefixVendor + "NATIVE";
-        final String firstAcquirerKey = options.prefixVendor + "FirstAcquirer";
-        final String prefixDeliveryAnnotationsKey = options.prefixVendor + options.prefixDeliveryAnnotations;
-        final String prefixMessageAnnotationsKey = options.prefixVendor + options.prefixMessageAnnotations;
-        final String subjectKey =  options.prefixVendor +"Subject";
-        final String contentTypeKey = options.prefixVendor +"ContentType";
-        final String contentEncodingKey = options.prefixVendor +"ContentEncoding";
-        final String replyToGroupIDKey = options.prefixVendor +"ReplyToGroupID";
-        final String prefixFooterKey = options.prefixVendor + options.prefixFooter;
+        ProtonJMessage amqp = convert(msg);
 
         long messageFormat;
         try {
-            messageFormat = msg.getLongProperty(messageFormatKey);
+            messageFormat = msg.getLongProperty(this.messageFormatKey);
         } catch (MessageFormatException e) {
             return null;
         }
 
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[1024 * 4]);
+        final DroppingWritableBuffer overflow = new DroppingWritableBuffer();
+        int c = amqp.encode(new CompositeWritableBuffer(
+                new WritableBuffer.ByteBufferWrapper(buffer), overflow));
+        if( overflow.position() > 0 ) {
+            buffer = ByteBuffer.wrap(new byte[1024 * 4 + overflow.position()]);
+            c = amqp.encode(new WritableBuffer.ByteBufferWrapper(buffer));
+        }
+
+        return new EncodedMessage(messageFormat, buffer.array(), 0, c);
+    }
+
+    /**
+     * Perform the conversion between JMS Message and Proton Message without re-encoding it to array.
+     * This is needed because some frameworks may elect to do this on their own way (Netty for instance using Nettybuffers)
+     *
+     * @param msg
+     * @return
+     * @throws Exception
+     */
+    public ProtonJMessage convert(Message msg)
+            throws JMSException, UnsupportedEncodingException {
         Header header = new Header();
         Properties props=new Properties();
         HashMap<Symbol, Object> daMap = null;
@@ -213,17 +216,7 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         Footer footer=null;
         if( footerMap!=null ) footer = new Footer(footerMap);
 
-        ProtonJMessage amqp = (ProtonJMessage) org.apache.qpid.proton.message.Message.Factory.create(header, da, ma, props, ap, body, footer);
-
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[1024*4]);
-        final DroppingWritableBuffer overflow = new DroppingWritableBuffer();
-        int c = amqp.encode(new CompositeWritableBuffer(new WritableBuffer.ByteBufferWrapper(buffer), overflow));
-        if( overflow.position() > 0 ) {
-            buffer = ByteBuffer.wrap(new byte[1024*4+overflow.position()]);
-            c = amqp.encode(new WritableBuffer.ByteBufferWrapper(buffer));
-        }
-
-        return new EncodedMessage(messageFormat, buffer.array(), 0, c);
+        return (ProtonJMessage) org.apache.qpid.proton.message.Message.Factory.create(header, da, ma, props, ap, body, footer);
     }
 
     private static String destinationAttributes(Destination destination) {
