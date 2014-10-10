@@ -52,6 +52,11 @@ const char *pn_class_name(const pn_class_t *clazz)
   return clazz->name;
 }
 
+pn_cid_t pn_class_id(const pn_class_t *clazz)
+{
+  return clazz->cid;
+}
+
 void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);

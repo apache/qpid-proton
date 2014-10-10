@@ -197,6 +197,7 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
   return pni_stream(store, address, false);
 }
 
+#define CID_pni_entry CID_pn_object
 #define pni_entry_initialize NULL
 #define pni_entry_hashcode NULL
 #define pni_entry_compare NULL

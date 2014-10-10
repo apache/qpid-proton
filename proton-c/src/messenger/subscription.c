@@ -55,6 +55,7 @@ void pn_subscription_finalize(void *obj)
   pn_free(sub->address);
 }
 
+#define CID_pn_subscription CID_pn_object
 #define pn_subscription_hashcode NULL
 #define pn_subscription_compare NULL
 #define pn_subscription_inspect NULL

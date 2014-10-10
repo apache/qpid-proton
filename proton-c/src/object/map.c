@@ -336,6 +336,7 @@ static bool pni_identity_equals(void *a, void *b)
 
 extern const pn_class_t *PN_UINTPTR;
 
+#define CID_pni_uintptr CID_pn_void
 static const pn_class_t *pni_uintptr_reify(void *object) { return PN_UINTPTR; }
 #define pni_uintptr_new NULL
 #define pni_uintptr_free NULL

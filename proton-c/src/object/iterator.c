@@ -43,6 +43,7 @@ static void pn_iterator_finalize(void *object)
   free(it->state);
 }
 
+#define CID_pn_iterator CID_pn_object
 #define pn_iterator_hashcode NULL
 #define pn_iterator_compare NULL
 #define pn_iterator_inspect NULL
