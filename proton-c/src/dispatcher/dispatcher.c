@@ -116,6 +116,10 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
     pn_string_format(disp->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
     pn_inspect(args, disp->scratch);
 
+    if (pn_data_size(args)==0) {
+        pn_string_addf(disp->scratch, "(EMPTY FRAME)");
+    }
+
     if (size) {
       char buf[1024];
       int e = pn_quote_data(buf, 1024, payload, size);
