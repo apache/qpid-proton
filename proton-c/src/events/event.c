@@ -1,6 +1,6 @@
-#include <proton/engine.h>
+#include <proton/object.h>
+#include <proton/event.h>
 #include <assert.h>
-#include "engine-internal.h"
 
 struct pn_collector_t {
   pn_event_t *head;
@@ -219,80 +219,6 @@ void *pn_event_context(pn_event_t *event)
 {
   assert(event);
   return event->context;
-}
-
-pn_connection_t *pn_event_connection(pn_event_t *event)
-{
-  pn_session_t *ssn;
-  pn_transport_t *transport;
-
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_CONNECTION:
-    return (pn_connection_t *)event->context;
-  case PN_EVENT_CATEGORY_TRANSPORT:
-    transport = pn_event_transport(event);
-    if (transport)
-      return transport->connection;
-    return NULL;
-  default:
-    ssn = pn_event_session(event);
-    if (ssn)
-     return pn_session_connection(ssn);
-  }
-  return NULL;
-}
-
-pn_session_t *pn_event_session(pn_event_t *event)
-{
-  pn_link_t *link;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_SESSION:
-    return (pn_session_t *)event->context;
-  default:
-    link = pn_event_link(event);
-    if (link)
-      return pn_link_session(link);
-  }
-  return NULL;
-}
-
-pn_link_t *pn_event_link(pn_event_t *event)
-{
-  pn_delivery_t *dlv;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_LINK:
-    return (pn_link_t *)event->context;
-  default:
-    dlv = pn_event_delivery(event);
-    if (dlv)
-      return pn_delivery_link(dlv);
-  }
-  return NULL;
-}
-
-pn_delivery_t *pn_event_delivery(pn_event_t *event)
-{
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_DELIVERY:
-    return (pn_delivery_t *)event->context;
-  default:
-    return NULL;
-  }
-}
-
-pn_transport_t *pn_event_transport(pn_event_t *event)
-{
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_TRANSPORT:
-    return (pn_transport_t *)event->context;
-  default:
-    {
-      pn_connection_t *conn = pn_event_connection(event);
-      if (conn)
-        return pn_connection_transport(conn);
-      return NULL;
-    }
-  }
 }
 
 const char *pn_event_type_name(pn_event_type_t type)

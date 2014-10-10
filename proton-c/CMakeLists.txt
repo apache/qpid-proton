@@ -280,7 +280,7 @@ set (qpid-proton-core
 
   src/dispatcher/dispatcher.c
   src/engine/engine.c
-  src/engine/event.c
+  src/events/event.c
   src/transport/transport.c
   src/message/message.c
   src/sasl/sasl.c
