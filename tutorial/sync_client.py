@@ -40,10 +40,10 @@ class SyncRequestClient(IncomingMessageHandler):
             host:port is used to connect, path is used to identify the remote messaging endpoint.
         """
         self.connection = BlockingConnection(Url(url).defaults(), timeout=timeout)
-        self.sender = self.connection.sender(url.path)
+        self.sender = self.connection.create_sender(url.path)
         # dynamic=true generates a unique address dynamically for this receiver.
         # credit=1 because we want to receive 1 response message initially.
-        self.receiver = self.connection.receiver(None, dynamic=True, credit=1, handler=self)
+        self.receiver = self.connection.create_receiver(None, dynamic=True, credit=1, handler=self)
         self.response = None
 
     def invoke(self, request):

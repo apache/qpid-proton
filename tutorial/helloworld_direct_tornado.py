@@ -40,7 +40,7 @@ class HelloWorld(object):
         self.address = address
 
     def on_connection_open(self, event):
-        self.conn.sender(self.address, handler=HelloWorldSender())
+        self.conn.create_sender(self.address, handler=HelloWorldSender())
 
     def on_link_close(self, event):
         self.closed(event.link.remote_condition)

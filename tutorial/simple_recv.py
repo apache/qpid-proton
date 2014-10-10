@@ -26,7 +26,7 @@ class Recv(proton_events.BaseHandler):
 
 try:
     conn = proton_events.connect("localhost:5672", handler=Recv())
-    conn.receiver("examples")
+    conn.create_receiver("examples")
     proton_events.run()
 except KeyboardInterrupt: pass
 

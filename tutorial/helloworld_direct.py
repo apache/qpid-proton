@@ -34,7 +34,7 @@ class HelloWorld(BaseHandler):
         self.address = address
 
     def on_connection_open(self, event):
-        self.conn.sender(self.address)
+        self.conn.create_sender(self.address)
 
     def on_link_flow(self, event):
         event.link.send_msg(Message(body=u"Hello World!"))

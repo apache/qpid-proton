@@ -24,7 +24,7 @@ class Server(IncomingMessageHandler):
     def __init__(self, host, address):
         self.eventloop = EventLoop(self, FlowController(10))
         self.conn = self.eventloop.connect(host)
-        self.receiver = self.conn.receiver(address)
+        self.receiver = self.conn.create_receiver(address)
         self.senders = {}
         self.relay = None
 
@@ -33,7 +33,7 @@ class Server(IncomingMessageHandler):
 
     def on_connection_open(self, event):
         if "ANONYMOUS-RELAY" in event.connection.remote_offered_capabilities:
-            self.relay = self.conn.sender(None)
+            self.relay = self.conn.create_sender(None)
 
     def on_connection_close(self, endpoint, error):
         if error: print "Closed due to %s" % error
@@ -47,7 +47,7 @@ class Server(IncomingMessageHandler):
         if not sender:
             sender = self.senders.get(reply_to)
         if not sender:
-            sender = self.conn.sender(reply_to)
+            sender = self.conn.create_sender(reply_to)
             self.senders[reply_to] = sender
         msg = Message(body=response)
         if self.relay:

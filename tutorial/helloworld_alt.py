@@ -38,8 +38,8 @@ class HelloWorld(ErrorHandler):
         self.address = address
 
     def on_connection_open(self, event):
-        self.conn.receiver(self.address, handler=HelloWorldReceiver())
-        self.conn.sender(self.address, handler=HelloWorldSender())
+        self.conn.create_receiver(self.address, handler=HelloWorldReceiver())
+        self.conn.create_sender(self.address, handler=HelloWorldSender())
 
     def run(self):
         self.eventloop.run()

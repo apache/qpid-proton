@@ -27,8 +27,8 @@ class HelloWorld(proton_events.BaseHandler):
         self.address = address
 
     def on_connection_open(self, event):
-        self.conn.receiver(self.address)
-        self.conn.sender(self.address)
+        self.conn.create_receiver(self.address)
+        self.conn.create_sender(self.address)
 
     def on_credit(self, event):
         event.link.send_msg(Message(body=u"Hello World!"))

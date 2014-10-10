@@ -44,6 +44,6 @@ class Send(proton_events.BaseHandler):
 
 try:
     conn = proton_events.connect("localhost:5672", handler=Send(10000))
-    conn.sender("examples")
+    conn.create_sender("examples")
     proton_events.run()
 except KeyboardInterrupt: pass

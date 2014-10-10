@@ -36,8 +36,8 @@ class ExampleHandler(tornado.web.RequestHandler, IncomingMessageHandler):
     @tornado.web.asynchronous
     def post(self):
         self.conn = self.loop.connect("localhost:5672")
-        self.sender = self.conn.sender("examples")
-        self.conn.receiver(None, dynamic=True, handler=self)
+        self.sender = self.conn.create_sender("examples")
+        self.conn.create_receiver(None, dynamic=True, handler=self)
 
     def on_link_open(self, event):
         req = Message(reply_to=event.link.remote_source.address, body=self.get_body_argument("message"))

@@ -28,8 +28,8 @@ class HelloWorldReceiver(IncomingMessageHandler):
 
 eventloop = EventLoop()
 conn = eventloop.connect("localhost:5672")
-conn.receiver("examples", handler=HelloWorldReceiver())
-sender = conn.sender("examples")
+conn.create_receiver("examples", handler=HelloWorldReceiver())
+sender = conn.create_sender("examples")
 sender.send_msg(Message(body=u"Hello World!"));
 eventloop.run()
 

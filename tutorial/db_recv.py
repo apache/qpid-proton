@@ -31,7 +31,7 @@ class Recv(BaseHandler):
         # TODO: load last tag from db
         self.last_id = None
         self.conn = self.eventloop.connect(self.host, handler=self)
-        self.conn.receiver(self.address)
+        self.conn.create_receiver(self.address)
 
     def auto_accept(self): return False
 

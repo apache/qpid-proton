@@ -31,8 +31,8 @@ class HelloWorld(proton_events.BaseHandler):
         event.connection.close()
 
 conn = proton_events.connect("localhost:5672", handler=HelloWorld())
-conn.receiver("examples")
-conn.sender("examples")
+conn.create_receiver("examples")
+conn.create_sender("examples")
 proton_events.run()
 
 

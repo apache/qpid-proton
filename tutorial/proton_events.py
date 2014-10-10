@@ -657,7 +657,7 @@ class MessagingContext(object):
 
     handler = property(_get_handler, _set_handler)
 
-    def sender(self, target, source=None, name=None, handler=None, tags=None):
+    def create_sender(self, target, source=None, name=None, handler=None, tags=None):
         snd = self._get_ssn().sender(name or self._get_id(target, source))
         if source:
             snd.source.address = source
@@ -669,7 +669,7 @@ class MessagingContext(object):
         snd.open()
         return snd
 
-    def receiver(self, source, target=None, name=None, dynamic=False, handler=None):
+    def create_receiver(self, source, target=None, name=None, dynamic=False, handler=None):
         rcv = self._get_ssn().receiver(name or self._get_id(source, target))
         rcv.source.address = source
         if dynamic:
@@ -681,7 +681,7 @@ class MessagingContext(object):
         rcv.open()
         return rcv
 
-    def session(self):
+    def create_session(self):
         return MessageContext(conn=None, ssn=self._new_ssn())
 
     def close(self):
@@ -937,12 +937,12 @@ class BlockingConnection(EventDispatcher):
         self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
-    def sender(self, address, handler=None):
-        return BlockingSender(self, self.context.sender(address, handler=handler))
+    def create_sender(self, address, handler=None):
+        return BlockingSender(self, self.context.create_sender(address, handler=handler))
 
-    def receiver(self, address, credit=1, dynamic=False, handler=None):
+    def create_receiver(self, address, credit=1, dynamic=False, handler=None):
         return BlockingReceiver(
-            self, self.context.receiver(address, dynamic=dynamic, handler=handler), credit=credit)
+            self, self.context.create_receiver(address, dynamic=dynamic, handler=handler), credit=credit)
 
     def close(self):
         self.context.conn.close()

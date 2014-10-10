@@ -25,8 +25,8 @@ class Client(IncomingMessageHandler):
     def __init__(self, eventloop, host, address, requests):
         self.eventloop = eventloop
         self.conn = eventloop.connect(host)
-        self.sender = self.conn.sender(address)
-        self.receiver = self.conn.receiver(None, dynamic=True, handler=self)
+        self.sender = self.conn.create_sender(address)
+        self.receiver = self.conn.create_receiver(None, dynamic=True, handler=self)
         self.requests = requests
 
     def next_request(self):

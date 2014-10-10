@@ -34,7 +34,7 @@ class Send(BaseHandler):
         self.records = Queue.Queue(maxsize=50)
         self.db = Db("src_db", self.eventloop.get_event_trigger())
         self.conn = self.eventloop.connect(self.host, handler=self)
-        self.sender = self.conn.sender(self.address)
+        self.sender = self.conn.create_sender(self.address)
 
     def on_records_loaded(self, event):
         if self.records.empty() and event.subject == self.sent:

@@ -27,8 +27,8 @@ class HelloWorldReceiver(IncomingMessageHandler):
         event.connection.close()
 
 conn = BlockingConnection("localhost:5672")
-conn.receiver("examples", handler=HelloWorldReceiver())
-sender = conn.sender("examples")
+conn.create_receiver("examples", handler=HelloWorldReceiver())
+sender = conn.create_sender("examples")
 sender.send_msg(Message(body=u"Hello World!"));
 conn.run()
 
