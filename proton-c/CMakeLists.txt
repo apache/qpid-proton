@@ -81,7 +81,7 @@ add_custom_command (
 
 # Select driver
 if(PN_WINAPI)
-  set (pn_io_impl src/windows/io.c)
+  set (pn_io_impl src/windows/io.c src/windows/iocp.c src/windows/write_pipeline.c)
   set (pn_selector_impl src/windows/selector.c)
   set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
