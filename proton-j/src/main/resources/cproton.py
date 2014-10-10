@@ -23,6 +23,10 @@ exposed to python via swig. This allows tests defined in python to run
 against both the C and Java protocol implementations.
 """
 
+# @todo(kgiusti) dynamically set these via filters in the pom.xml file
+PN_VERSION_MAJOR = 0
+PN_VERSION_MINOR = 0
+
 from cerror import *
 from ccodec import *
 from cengine import *

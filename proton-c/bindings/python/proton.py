@@ -89,6 +89,8 @@ try:
 except NameError:
   bytes = str
 
+VERSION_MAJOR = PN_VERSION_MAJOR
+VERSION_MINOR = PN_VERSION_MINOR
 API_LANGUAGE = "C"
 IMPLEMENTATION_LANGUAGE = "C"
 
@@ -3641,8 +3643,8 @@ __all__ = [
            "Messenger",
            "MessengerException",
            "ProtonException",
-           "PN_VERSION_MAJOR",
-           "PN_VERSION_MINOR",
+           "VERSION_MAJOR",
+           "VERSION_MINOR",
            "Receiver",
            "SASL",
            "Sender",
