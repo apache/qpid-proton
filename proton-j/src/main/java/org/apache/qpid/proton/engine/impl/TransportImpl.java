@@ -67,6 +67,19 @@ public class TransportImpl extends EndpointImpl
 {
     static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
 
+    private static final boolean getBooleanEnv(String name)
+    {
+        String value = System.getenv(name);
+        return "true".equalsIgnoreCase(value) ||
+            "1".equals(value) ||
+            "yes".equalsIgnoreCase(value);
+    }
+
+    private static final boolean FRM_ENABLED = getBooleanEnv("PN_TRACE_FRM");
+
+    // trace levels
+    private int _levels = (FRM_ENABLED ? this.TRACE_FRM : 0);
+
     private FrameParser _frameParser;
 
     private ConnectionImpl _connectionEndpoint;
@@ -133,7 +146,6 @@ public class TransportImpl extends EndpointImpl
                                        FrameWriter.AMQP_FRAME_TYPE,
                                        _protocolTracer,
                                        this);
-
     }
 
     private void init()
@@ -145,6 +157,11 @@ public class TransportImpl extends EndpointImpl
             _inputProcessor = _frameParser;
             _outputProcessor = new TransportOutputAdaptor(this, _maxFrameSize);
         }
+    }
+
+    @Override
+    public void trace(int levels) {
+        _levels = levels;
     }
 
     @Override
@@ -301,7 +318,7 @@ public class TransportImpl extends EndpointImpl
             }
 
             init();
-            _sasl = new SaslImpl(_remoteMaxFrameSize);
+            _sasl = new SaslImpl(this, _remoteMaxFrameSize);
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
@@ -1009,6 +1026,9 @@ public class TransportImpl extends EndpointImpl
             {
                 // TODO check null
                 transportSession = _localSessions.get(begin.getRemoteChannel().intValue());
+                if (transportSession == null) {
+                    throw new NullPointerException("uncorrelated channel: " + begin.getRemoteChannel());
+                }
                 session = transportSession.getSession();
 
             }
@@ -1204,7 +1224,7 @@ public class TransportImpl extends EndpointImpl
             throw new IllegalStateException("Transport cannot accept frame: " + frame);
         }
 
-        log(this, INCOMING, frame);
+        log(INCOMING, frame);
 
         ProtocolTracer tracer = _protocolTracer.get();
         if( tracer != null )
@@ -1379,21 +1399,11 @@ public class TransportImpl extends EndpointImpl
     static String INCOMING = "<-";
     static String OUTGOING = "->";
 
-    private static final boolean getBooleanEnv(String name)
+    void log(String event, TransportFrame frame)
     {
-        String value = System.getenv(name);
-        return "true".equalsIgnoreCase(value) ||
-            "1".equals(value) ||
-            "yes".equalsIgnoreCase(value);
-    }
-
-    private static final boolean ENABLED = getBooleanEnv("PN_TRACE_FRM");
-
-    static void log(Object ctx, String event, TransportFrame frame)
-    {
-        if (ENABLED) {
+        if ((_levels & TRACE_FRM) != 0) {
             StringBuilder msg = new StringBuilder();
-            msg.append("[").append(System.identityHashCode(ctx)).append(":")
+            msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
             msg.append(" ").append(event).append(" ").append(frame.getBody());
             if (frame.getPayload() != null) {
