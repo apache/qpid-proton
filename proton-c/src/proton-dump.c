@@ -19,9 +19,9 @@
  *
  */
 
-#include <libgen.h>
+#include "pncompat/misc_funcs.inc"
+
 #include <stdio.h>
-#include <unistd.h>
 #include <proton/buffer.h>
 #include <proton/codec.h>
 #include <proton/error.h>
@@ -101,7 +101,7 @@ int dump(const char *file)
 }
 
 void usage(char* prog) {
-  printf("Usage: %s [FILE1] [FILEn] ...\n", basename(prog));
+  printf("Usage: %s [FILE1] [FILEn] ...\n", prog);
   printf("Displays the content of an AMQP dump file containing frame data.\n");
   printf("\n  [FILEn]  Dump file to be displayed.\n\n");
 }
