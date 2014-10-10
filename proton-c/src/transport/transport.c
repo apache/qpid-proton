@@ -163,6 +163,7 @@ static void pn_transport_initialize(void *object)
   transport->remote_properties = pn_data(0);
   transport->disp_data = pn_data(0);
   pn_condition_init(&transport->remote_condition);
+  pn_condition_init(&transport->condition);
 
   transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75);
   transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75);
@@ -256,6 +257,7 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->remote_properties);
   pn_free(transport->disp_data);
   pn_condition_tini(&transport->remote_condition);
+  pn_condition_tini(&transport->condition);
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
   if (transport->input_buf) free(transport->input_buf);
@@ -348,6 +350,12 @@ int pn_transport_unbind(pn_transport_t *transport)
 pn_error_t *pn_transport_error(pn_transport_t *transport)
 {
   return NULL;
+}
+
+pn_condition_t *pn_transport_condition(pn_transport_t *transport)
+{
+  assert(transport);
+  return &transport->condition;
 }
 
 static void pni_map_remote_handle(pn_link_t *link, uint32_t handle)
@@ -456,9 +464,11 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     transport->close_sent = true;
   }
   transport->disp->halt = true;
-  pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  pn_condition_set_name(&transport->condition, condition);
+  pn_condition_set_description(&transport->condition, buf);
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
+  pn_transport_logf(transport, "ERROR %s %s", condition, buf);
   return PN_ERR;
 }
 
