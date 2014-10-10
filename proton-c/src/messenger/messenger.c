@@ -2188,6 +2188,20 @@ int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int fla
                           PN_STATUS_REJECTED, flags, false, false);
 }
 
+PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
+                                               pn_tracker_t tracker)
+{
+  pni_store_t *store = pn_tracker_store(messenger, tracker);
+  pni_entry_t *e = pni_store_entry(store, pn_tracker_sequence(tracker));
+  if (e) {
+    pn_delivery_t *d = pni_entry_get_delivery(e);
+    if (d) {
+      return pn_delivery_link(d);
+    }
+  }
+  return NULL;
+}
+
 int pn_messenger_queued(pn_messenger_t *messenger, bool sender)
 {
   if (!messenger) return 0;
