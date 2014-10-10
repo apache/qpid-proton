@@ -241,11 +241,13 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
   #define pn_pyref_inspect pn_void_inspect
 
   static void pn_pyref_incref(void *object) {
-    Py_XINCREF(object);
+    PyObject* p = (PyObject*) object;
+    Py_XINCREF(p);
   }
 
   static void pn_pyref_decref(void *object) {
-    Py_XDECREF(object);
+    PyObject* p = (PyObject*) object;
+    Py_XDECREF(p);
   }
 
   static int pn_pyref_refcount(void *object) {
