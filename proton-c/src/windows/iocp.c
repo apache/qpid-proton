@@ -191,7 +191,7 @@ struct pni_acceptor_t {
 static void pni_acceptor_initialize(void *object)
 {
   pni_acceptor_t *acceptor = (pni_acceptor_t *) object;
-  acceptor->accepts = pn_list(PN_OBJECT, IOCP_MAX_ACCEPTS);
+  acceptor->accepts = pn_list(PN_VOID, IOCP_MAX_ACCEPTS);
 }
 
 static void pni_acceptor_finalize(void *object)
@@ -199,7 +199,7 @@ static void pni_acceptor_finalize(void *object)
   pni_acceptor_t *acceptor = (pni_acceptor_t *) object;
   size_t len = pn_list_size(acceptor->accepts);
   for (size_t i = 0; i < len; i++)
-    pn_free(pn_list_get(acceptor->accepts, i));
+    free(pn_list_get(acceptor->accepts, i));
   pn_free(acceptor->accepts);
 }
 
@@ -221,7 +221,7 @@ static void begin_accept(pni_acceptor_t *acceptor, accept_result_t *result)
 {
   if (acceptor->listen_sock->closing) {
     if (result) {
-      pn_free(result);
+      free(result);
       acceptor->accept_queue_size--;
     }
     if (acceptor->accept_queue_size == 0)
@@ -272,7 +272,7 @@ static void complete_accept(accept_result_t *result, HRESULT status)
   if (ld->read_closed) {
     if (!result->new_sock->closing)
       pni_iocp_begin_close(result->new_sock);
-    pn_free(result);    // discard
+    free(result);    // discard
     reap_check(ld);
   } else {
     result->base.status = status;
@@ -985,7 +985,7 @@ static void drain_zombie_completions(iocp_t *iocp)
 static pn_list_t *iocp_map_close_all(iocp_t *iocp)
 {
   // Zombify stragglers, i.e. no pn_close() from the application.
-  pn_list_t *externals = pn_list(0, PN_REFCOUNT);
+  pn_list_t *externals = pn_list(PN_OBJECT, 0);
   for (pn_handle_t entry = pn_hash_head(iocp->iocpdesc_map); entry;
        entry = pn_hash_next(iocp->iocpdesc_map, entry)) {
     iocpdesc_t *iocpd = (iocpdesc_t *) pn_hash_value(iocp->iocpdesc_map, entry);
@@ -1103,8 +1103,8 @@ void pni_iocp_initialize(void *obj)
   pni_shared_pool_create(iocp);
   iocp->completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   assert(iocp->completion_port != NULL);
-  iocp->iocpdesc_map = pn_hash(0, 0.75, PN_REFCOUNT);
-  iocp->zombie_list = pn_list(0, PN_REFCOUNT);
+  iocp->iocpdesc_map = pn_hash(PN_OBJECT, 0, 0.75);
+  iocp->zombie_list = pn_list(PN_OBJECT, 0);
   iocp->iocp_trace = pn_env_bool("PN_TRACE_DRV");
   iocp->selector = NULL;
 }
