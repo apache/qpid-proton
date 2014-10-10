@@ -3657,114 +3657,98 @@ __all__ = [
 
 
 class Url(object):
-    """
-    Simple URL parser/constructor, handles URLs of the form:
+  """
+  Simple URL parser/constructor, handles URLs of the form:
 
-      <scheme>://<user>:<password>@<host>:<port>/<path>
+    <scheme>://<user>:<password>@<host>:<port>/<path>
 
-    All components can be None if not specifeid in the URL string.
+  All components can be None if not specifeid in the URL string.
 
-    The port can be specified as a service name, e.g. 'amqp' in the
-    URL string but Url.port always gives the integer value.
+  The port can be specified as a service name, e.g. 'amqp' in the
+  URL string but Url.port always gives the integer value.
 
-    @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
-    @ivar user: Username
-    @ivar password: Password
-    @ivar host: Host name, ipv6 literal or ipv4 dotted quad.
-    @ivar port: Integer port.
-    @ivar host_port: Returns host:port
-    """
+  @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
+  @ivar user: Username
+  @ivar password: Password
+  @ivar host: Host name, ipv6 literal or ipv4 dotted quad.
+  @ivar port: Integer port.
+  @ivar host_port: Returns host:port
+  """
 
-    AMQPS = "amqps"
-    AMQP = "amqp"
+  AMQPS = "amqps"
+  AMQP = "amqp"
 
-    class Port(int):
-      """An integer port number that can also have an associated service name string"""
+  class Port(int):
+    """An integer port number that can be constructed from a service name string"""
 
-      def __new__(cls, value):
-        port = super(Url.Port, cls).__new__(cls, cls.port_int(value))
-        setattr(port, 'name', str(value))
-        return port
+    def __new__(cls, value):
+      port = super(Url.Port, cls).__new__(cls, cls.port_int(value))
+      setattr(port, 'name', str(value))
+      return port
 
-      def __eq__(self, x): return str(self) == x or int(self) == x
-      def __ne__(self, x): return not self == x
-      def __str__(self): return str(self.name)
+    def __eq__(self, x): return str(self) == x or int(self) == x
+    def __ne__(self, x): return not self == x
+    def __str__(self): return str(self.name)
 
-      @staticmethod
-      def port_int(value):
-        """Convert service, an integer or a service name, into an integer port number."""
+    @staticmethod
+    def port_int(value):
+      """Convert service, an integer or a service name, into an integer port number."""
+      try:
+        return int(value)
+      except ValueError:
         try:
-          return int(value)
-        except ValueError:
-          try:
-            return socket.getservbyname(value)
-          except socket.error:
-            raise ValueError("Not a valid port number or service name: '%s'" % value)
+          return socket.getservbyname(value)
+        except socket.error:
+          raise ValueError("Not a valid port number or service name: '%s'" % value)
 
-    def __init__(self, url=None, **kwargs):
-        """
-        @param url: String or Url instance to parse or copy.
-        @param kwargs: URL fields: scheme, user, password, host, port, path.
-            If specified, replaces corresponding component in url.
-        """
+  def __init__(self, url=None, **kwargs):
+    """
+    @param url: URL string to parse.
+    @param kwargs: scheme, user, password, host, port, path.
+      If specified, replaces corresponding part in url string.
+    """
+    if url:
+      self._url = pn_url_parse(str(url))
+      if not self._url: raise ValueError("Invalid URL '%s'" % url)
+    else:
+      self._url = pn_url()
+    for k in kwargs:            # Let kwargs override values parsed from url
+      getattr(self, k)          # Check for invalid kwargs
+      setattr(self, k, kwargs[k])
 
-        fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
+  class PartDescriptor(object):
+    def __init__(self, part):
+      self.getter = globals()["pn_url_%s" % part]
+      self.setter = globals()["pn_url_set_%s" % part]
+    def __get__(self, obj, type=None): return self.getter(obj._url)
+    def __set__(self, obj, value): return self.setter(obj._url, str(value))
 
-        for f in fields: setattr(self, f, None)
-        for k in kwargs: getattr(self, k) # Check for invalid kwargs
+  scheme = PartDescriptor('scheme')
+  username = PartDescriptor('username')
+  password = PartDescriptor('password')
+  host = PartDescriptor('host')
+  path = PartDescriptor('path')
 
-        if isinstance(url, Url): # Copy from another Url instance.
-            self.__dict__.update(url.__dict__)
-        elif url is not None:   # Parse from url
-            parts = pni_parse_url(str(url))
-            if not filter(None, parts): raise ValueError("Invalid AMQP URL: '%s'" % url)
-            self.scheme, self.user, self.password, self.host, port, self.path = parts
-            if not self.host: self.host = None
-            self.port = port and self.Port(port)
+  @property
+  def port(self):
+    portstr = pn_url_port(self._url)
+    return portstr and Url.Port(portstr)
 
-        # Let kwargs override values previously set from url
-        for field in fields:
-            setattr(self, field, kwargs.get(field, getattr(self, field)))
+  @port.setter
+  def port(self, value):
+    if value is None: pn_url_set_port(self._url, None)
+    else: pn_url_set_port(self._url, str(Url.Port(value)))
 
-    def __repr__(self):
-        return "Url(%r)" % str(self)
+  def __str__(self): return pn_url_str(self._url)
 
-    def __str__(self):
-        s = ""
-        if self.scheme:
-            s += "%s://" % self.scheme
-        if self.user:
-            s += self.user
-        if self.password:
-            s += ":%s" % self.password
-        if self.user or self.password:
-            s += '@'
-        if self.host and ':' in self.host:
-            s += "[%s]" % self.host
-        elif self.host:
-            s += self.host
-        if self.port:
-            s += ":%s" % self.port
-        if self.path:
-            s += "/%s" % self.path
-        return s
+  def __repr__(self): return "Url(%r)" % str(self)
 
-    def __eq__(self, url):
-        return \
-            self.scheme == url.scheme and \
-            self.user == url.user and self.password == url.password and \
-            self.host == url.host and self.port == url.port and \
-            self.path == url.path
-
-    def __ne__(self, url):
-        return not self.__eq__(url)
-
-    def defaults(self):
-        """
-        Fill in missing values with defaults
-        @return: self
-        """
-        self.scheme = self.scheme or self.AMQP
-        self.host = self.host or '0.0.0.0'
-        self.port = self.port or self.Port(self.scheme)
-        return self
+  def defaults(self):
+    """
+    Fill in missing values (scheme, host or port) with defaults
+    @return: self
+    """
+    self.scheme = self.scheme or self.AMQP
+    self.host = self.host or '0.0.0.0'
+    self.port = self.port or self.Port(self.scheme)
+    return self

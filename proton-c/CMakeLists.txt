@@ -270,6 +270,7 @@ set (qpid-proton-core
   src/object/iterator.c
 
   src/util.c
+  src/url.c
   src/error.c
   src/buffer.c
   src/parser.c

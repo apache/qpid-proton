@@ -28,9 +28,9 @@ class UrlTest(common.Test):
     def assertNotEqual(self, a, b):
         assert a != b, "%s == %s" % (a, b)
 
-    def assertUrl(self, u, scheme, user, password, host, port, path):
-        self.assertEqual((u.scheme, u.user, u.password, u.host, u.port, u.path),
-                         (scheme, user, password, host, port, path))
+    def assertUrl(self, u, scheme, username, password, host, port, path):
+        self.assertEqual((u.scheme, u.username, u.password, u.host, u.port, u.path),
+                         (scheme, username, password, host, port, path))
 
     def testUrl(self):
         url = Url('amqp://me:secret@myhost:1234/foobar')
@@ -40,7 +40,7 @@ class UrlTest(common.Test):
 
     def testDefaults(self):
         # Check that we allow None for scheme, port
-        url = Url(user='me', password='secret', host='myhost', path='foobar')
+        url = Url(username='me', password='secret', host='myhost', path='foobar')
         self.assertEqual(str(url), "me:secret@myhost/foobar")
         self.assertUrl(url, None, 'me', 'secret', 'myhost', None, 'foobar')
 
@@ -97,21 +97,19 @@ class UrlTest(common.Test):
     def testMissing(self):
         self.assertUrl(Url(), None, None, None, None, None, None)
         self.assertUrl(Url('amqp://'), 'amqp', None, None, None, None, None)
-        self.assertUrl(Url('user@'), None, 'user', None, None, None, None)
+        self.assertUrl(Url('username@'), None, 'username', None, None, None, None)
         self.assertUrl(Url(':pass@'), None, '', 'pass', None, None, None)
         self.assertUrl(Url('host'), None, None, None, 'host', None, None)
         self.assertUrl(Url(':1234'), None, None, None, None, 1234, None)
         self.assertUrl(Url('/path'), None, None, None, None, None, 'path')
 
-        for s in ['amqp://', 'user@', ':pass@', ':1234', '/path']:
+        for s in ['amqp://', 'username@', ':pass@', ':1234', '/path']:
             self.assertEqual(s, str(Url(s)))
 
         for s, full in [
                 ('amqp://', 'amqp://0.0.0.0:amqp'),
-                ('user@', 'amqp://user@0.0.0.0:amqp'),
+                ('username@', 'amqp://username@0.0.0.0:amqp'),
                 (':pass@', 'amqp://:pass@0.0.0.0:amqp'),
                 (':1234', 'amqp://0.0.0.0:1234'),
                 ('/path', 'amqp://0.0.0.0:amqp/path')]:
             self.assertEqual(str(Url(s).defaults()), full)
-
-        self.assertRaises(ValueError, Url, '')
