@@ -220,9 +220,9 @@ static int ssl_failed(pn_ssl_t *ssl, char *reason)
     reason = buf;
   }
   ssl->ssl_closed = true;
-  ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
-  ssl->transport->tail_closed = true;
+  ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   ssl->state = SSL_CLOSED;
+  pni_close_tail(ssl->transport);
   pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", reason);
   return PN_EOS;
 }
@@ -1118,7 +1118,7 @@ static ssize_t process_input_ssl(pn_io_layer_t *io_layer, const char *input_data
 static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t max_len)
 {
   pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (!ssl) return PN_ERR;
+  if (!ssl) return PN_EOS;
   ssl_log( ssl, "process_output_ssl( max_len=%d )\n",max_len );
 
   ssize_t written = 0;
@@ -1129,7 +1129,7 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
     // output buffers eclusively for internal handshake use until negotiation complete
     client_handshake_init(ssl);
     if (ssl->state == SSL_CLOSED)
-      return PN_ERR;
+      return PN_EOS;
     ssl->state = NEGOTIATING;
   }
 
