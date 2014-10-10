@@ -975,6 +975,7 @@ int pn_message_save_data(pn_message_t *msg, char *data, size_t *size)
                                   pn_data_error(msg->body));
   if (scanned) {
     if (bytes.size > *size) {
+      *size = bytes.size;
       return PN_OVERFLOW;
     } else {
       memcpy(data, bytes.start, bytes.size);
@@ -997,6 +998,7 @@ int pn_message_save_text(pn_message_t *msg, char *data, size_t *size)
       {
         pn_bytes_t str = pn_data_get_bytes(msg->body);
         if (str.size >= *size) {
+          *size = str.size;
           return PN_OVERFLOW;
         } else {
           memcpy(data, str.start, str.size);
