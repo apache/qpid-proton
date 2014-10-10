@@ -109,6 +109,10 @@ PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
 
+PN_EXTERN uintptr_t pn_void_hashcode(void *object);
+PN_EXTERN intptr_t pn_void_compare(void *a, void *b);
+PN_EXTERN int pn_void_inspect(void *object, pn_string_t *dst);
+
 PN_EXTERN void *pn_object_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN const pn_class_t *pn_object_reify(void *object);
 PN_EXTERN void pn_object_incref(void *object);

@@ -227,7 +227,38 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
+%immutable PN_PYREF;
 %inline %{
+  PN_EXTERN extern const pn_class_t *PN_PYREF;
+
+  #define CID_pn_pyref CID_pn_void
+  #define pn_pyref_new NULL
+  #define pn_pyref_initialize NULL
+  #define pn_pyref_finalize NULL
+  #define pn_pyref_free NULL
+  #define pn_pyref_hashcode pn_void_hashcode
+  #define pn_pyref_compare pn_void_compare
+  #define pn_pyref_inspect pn_void_inspect
+
+  static void pn_pyref_incref(void *object) {
+    Py_XINCREF(object);
+  }
+
+  static void pn_pyref_decref(void *object) {
+    Py_XDECREF(object);
+  }
+
+  static int pn_pyref_refcount(void *object) {
+    return 1;
+  }
+
+  static const pn_class_t *pn_pyref_reify(void *object) {
+    return PN_PYREF;
+  }
+
+  PN_EXTERN const pn_class_t PNI_PYREF = PN_METACLASS(pn_pyref);
+  PN_EXTERN const pn_class_t *PN_PYREF = &PNI_PYREF;
+
   void *pn_py2void(PyObject *object) {
     return object;
   }
