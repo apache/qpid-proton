@@ -2911,6 +2911,10 @@ class Delivery(object):
       self._dlv = None
 
   @property
+  def released(self):
+    return self._dlv is None
+
+  @property
   def tag(self):
     return pn_delivery_tag(self._dlv)
 
@@ -3421,6 +3425,62 @@ class Event:
                      Event.CONNECTION_FINAL):
       collector._contexts.remove(self.context)
       self.context._released()
+
+  @property
+  def connection(self):
+    if self.clazz == "pn_connection":
+      return self.context
+    elif self.clazz == "pn_session":
+      return self.context.connection
+    elif self.clazz == "pn_link":
+      return self.context.connection
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.connection
+    else:
+      return None
+
+  @property
+  def session(self):
+    if self.clazz == "pn_session":
+      return self.context
+    elif self.clazz == "pn_link":
+      return self.context.session
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.session
+    else:
+      return None
+
+  @property
+  def link(self):
+    if self.clazz == "pn_link":
+      return self.context
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link
+    else:
+      return None
+
+  @property
+  def sender(self):
+    l = self.link
+    if l and l.is_sender:
+      return l
+    else:
+      return None
+
+  @property
+  def receiver(self):
+    l = self.link
+    if l and l.is_receiver:
+      return l
+    else:
+      return None
+
+  @property
+  def delivery(self):
+    if self.clazz == "pn_delivery":
+      return self.context
+    else:
+      return None
 
   def __repr__(self):
     return "%s(%s)" % (pn_event_type_name(self.type), self.context)

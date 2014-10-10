@@ -281,45 +281,27 @@ class Events(object):
         return self.collector.peek() == None
 
 class ApplicationEvent(Event):
-    CATEGORY_GENERAL = "general"
-
     def __init__(self, type, connection=None, session=None, link=None, delivery=None, subject=None):
         self.type = type
-        self.transport = None
         self.subject = subject
         if delivery:
-            self.delivery = delivery
-            self.link = delivery.link
-            self.session = self.link.session
-            self.connection = self.session.connection
-            self.category = Event.CATEGORY_DELIVERY
+            self.context = delivery
+            self.clazz = "pn_delivery"
         elif link:
-            self.delivery = None
-            self.link = link
-            self.session = self.link.session
-            self.connection = self.session.connection
-            self.category = Event.CATEGORY_LINK
+            self.context = link
+            self.clazz = "pn_link"
         elif session:
-            self.delivery = None
-            self.link = None
-            self.session = session
-            self.connection = self.session.connection
-            category = Event.CATEGORY_SESSION
+            self.context = session
+            self.clazz = "pn_session"
         elif connection:
-            self.delivery = None
-            self.link = None
-            self.session = None
-            self.connection = connection
-            self.category = Event.CATEGORY_CONNECTION
+            self.context = connection
+            self.clazz = "pn_connection"
         else:
-            self.delivery = None
-            self.link = None
-            self.session = None
-            self.connection = None
-            self.category = ApplicationEvent.CATEGORY_GENERAL
+            self.context = None
+            self.clazz = "none"
 
     def __repr__(self):
-        objects = [self.connection, self.session, self.link, self.delivery, self.subject]
+        objects = [self.context, self.subject]
         return "%s(%s)" % (self.type,
                            ", ".join([str(o) for o in objects if o is not None]))
 
@@ -473,21 +455,23 @@ class FlowController(EventDispatcher):
             self.top_up(event.link)
 
     def on_delivery(self, event):
-        if event.delivery.link.is_receiver:
+        if not event.delivery.released and event.delivery.link.is_receiver:
             self.top_up(event.delivery.link)
 
 class ScopedDispatcher(EventDispatcher):
 
     scopes = {
-        Event.CATEGORY_CONNECTION: ["connection"],
-        Event.CATEGORY_SESSION: ["session", "connection"],
-        Event.CATEGORY_LINK: ["link", "session", "connection"],
-        Event.CATEGORY_DELIVERY: ["delivery", "link", "session", "connection"]
+        "pn_connection": ["connection"],
+        "pn_session": ["session", "connection"],
+        "pn_link": ["link", "session", "connection"],
+        "pn_delivery": ["delivery", "link", "session", "connection"]
     }
 
     def dispatch(self, event):
+        if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
+            return
         method = self.methods.get(event.type, "on_%s" % str(event.type))
-        objects = [getattr(event, attr) for attr in self.scopes.get(event.category, [])]
+        objects = [getattr(event, attr) for attr in self.scopes.get(event.clazz, [])]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
         handlers = [getattr(t, method) for t in targets if hasattr(t, method)]
         for h in handlers:
@@ -542,8 +526,8 @@ class OutgoingMessageHandler(EventDispatcher):
 
     def on_delivery(self, event):
         dlv = event.delivery
-        link = dlv.link
-        if link.is_sender and dlv.updated and not hasattr(dlv, "_been_settled"):
+        if dlv.released: return
+        if dlv.link.is_sender and dlv.updated:
             if dlv.remote_state == Delivery.ACCEPTED:
                 self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
@@ -555,7 +539,6 @@ class OutgoingMessageHandler(EventDispatcher):
             if dlv.settled:
                 self.on_settled(event)
             if self.auto_settle():
-                dlv._been_settled = True
                 dlv.settle()
 
     def on_credit(self, event): pass
@@ -581,7 +564,7 @@ class Reject(ProtonException):
 class IncomingMessageHandler(EventDispatcher):
     def on_delivery(self, event):
         dlv = event.delivery
-        link = dlv.link
+        if dlv.released or not dlv.link.is_receiver: return
         if dlv.readable and not dlv.partial:
             event.message = recv_msg(dlv)
             try:
