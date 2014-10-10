@@ -91,4 +91,6 @@ public interface Event
 
     Transport getTransport();
 
+    Event copy();
+
 }
