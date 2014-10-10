@@ -908,14 +908,13 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
             if (!max_frame) max_frame = ssl->in_size * 2;  // no limit
             if (ssl->in_size < max_frame) {
               // no max frame limit - grow it.
-              char *newbuf = (char *)malloc( max_frame );
+              size_t newsize = pn_min(max_frame, ssl->in_size * 2);
+              char *newbuf = (char *)realloc( ssl->inbuf, newsize );
               if (newbuf) {
-                ssl->in_size = max_frame;
-                memmove( newbuf, ssl->inbuf, ssl->in_count );
-                free( ssl->inbuf );
+                ssl->in_size = newsize;
                 ssl->inbuf = newbuf;
+                work_pending = true;  // can we get more input?
               }
-              work_pending = true;  // can we get more input?
             } else {
               // can't gather any more input, but app needs more?
               // This is a bug - since SSL can buffer up to max-frame,
