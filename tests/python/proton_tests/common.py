@@ -82,7 +82,7 @@ def isSSLPresent():
     """ True if a suitable SSL library is available.
     """
     try:
-        xxx = SSLDomain(SSLDomain.MODE_CLIENT)
+        xxx = SSLDomain(SSLDomain.MODE_SERVER)
         return True
     except SSLUnavailable, e:
         # SSL libraries not installed
