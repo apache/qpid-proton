@@ -31,7 +31,7 @@ macro (pn_add_c_test test file)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     get_target_property(QPID_PROTON_TARGET qpid-proton LOCATION_${bld_suffix})
     get_target_property(${test}_LOCATION ${test} LOCATION_${bld_suffix})
-    get_filename_component(QPID_PROTON_TARGET_DIR ${QPID_PROTON_TARGET} DIRECTORY)
+    get_filename_component(QPID_PROTON_TARGET_DIR ${QPID_PROTON_TARGET} PATH)
     add_test (${test} ${PYTHON_EXECUTABLE} ${env_py}
 	          "PATH=${QPID_PROTON_TARGET_DIR}"
 	          ${${test}_LOCATION})
