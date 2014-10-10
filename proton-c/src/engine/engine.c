@@ -1758,10 +1758,10 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
   pn_session_t *ssn;
   pn_transport_t *transport;
 
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_CONNECTION:
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_connection:
     return (pn_connection_t *) pn_event_context(event);
-  case PN_EVENT_CATEGORY_TRANSPORT:
+  case CID_pn_transport:
     transport = pn_event_transport(event);
     if (transport)
       return transport->connection;
@@ -1777,8 +1777,8 @@ pn_connection_t *pn_event_connection(pn_event_t *event)
 pn_session_t *pn_event_session(pn_event_t *event)
 {
   pn_link_t *link;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_SESSION:
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_session:
     return (pn_session_t *) pn_event_context(event);
   default:
     link = pn_event_link(event);
@@ -1791,8 +1791,8 @@ pn_session_t *pn_event_session(pn_event_t *event)
 pn_link_t *pn_event_link(pn_event_t *event)
 {
   pn_delivery_t *dlv;
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_LINK:
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_link:
     return (pn_link_t *) pn_event_context(event);
   default:
     dlv = pn_event_delivery(event);
@@ -1804,8 +1804,8 @@ pn_link_t *pn_event_link(pn_event_t *event)
 
 pn_delivery_t *pn_event_delivery(pn_event_t *event)
 {
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_DELIVERY:
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_delivery:
     return (pn_delivery_t *) pn_event_context(event);
   default:
     return NULL;
@@ -1814,8 +1814,8 @@ pn_delivery_t *pn_event_delivery(pn_event_t *event)
 
 pn_transport_t *pn_event_transport(pn_event_t *event)
 {
-  switch (pn_event_category(event)) {
-  case PN_EVENT_CATEGORY_TRANSPORT:
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_transport:
     return (pn_transport_t *) pn_event_context(event);
   default:
     {
