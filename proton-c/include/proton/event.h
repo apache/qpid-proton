@@ -238,12 +238,31 @@ typedef enum {
    */
   PN_TRANSPORT,
 
+  /**
+   * Indicates that a transport error has occurred. Use
+   * ::pn_transport_condition() to access the details of the error
+   * from the associated transport.
+   */
   PN_TRANSPORT_ERROR,
 
+  /**
+   * Indicates that the head of the transport has been closed. This
+   * means the transport will never produce more bytes for output to
+   * the network. Events of this type point to the relevant transport.
+   */
   PN_TRANSPORT_HEAD_CLOSED,
 
+  /**
+   * Indicates that the tail of the transport has been closed. This
+   * means the transport will never be able to process more bytes from
+   * the network. Events of this type point to the relevant transport.
+   */
   PN_TRANSPORT_TAIL_CLOSED,
 
+  /**
+   * Indicates that the both the head and tail of the transport are
+   * closed. Events of this type point to the relevant transport.
+   */
   PN_TRANSPORT_CLOSED
 
 } pn_event_type_t;
