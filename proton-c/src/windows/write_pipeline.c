@@ -168,6 +168,7 @@ static void write_pipeline_finalize(void *object)
 
 write_pipeline_t *pni_write_pipeline(iocpdesc_t *iocpd)
 {
+  static const pn_cid_t CID_write_pipeline = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(write_pipeline);
   write_pipeline_t *pipeline = (write_pipeline_t *) pn_class_new(&clazz, sizeof(write_pipeline_t));
   pipeline->iocpd = iocpd;
