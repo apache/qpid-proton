@@ -264,6 +264,10 @@ set (qpid-proton-platform
 
 set (qpid-proton-core
   src/object/object.c
+  src/object/list.c
+  src/object/map.c
+  src/object/string.c
+  src/object/iterator.c
 
   src/util.c
   src/error.c
