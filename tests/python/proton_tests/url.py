@@ -18,7 +18,7 @@
 #
 
 
-import common
+import common, socket
 from proton import Url
 
 class UrlTest(common.Test):
@@ -44,12 +44,6 @@ class UrlTest(common.Test):
         self.assertEqual(str(url), "me:secret@myhost/foobar")
         self.assertUrl(url, None, 'me', 'secret', 'myhost', None, 'foobar')
 
-        # Scheme defaults
-        self.assertEqual(str(Url("me:secret@myhost/foobar").defaults()),
-                         "amqp://me:secret@myhost:amqp/foobar")
-        # Correct port for amqps vs. amqps
-        self.assertEqual(str(Url("amqps://me:secret@myhost/foobar").defaults()),
-                         "amqps://me:secret@myhost:amqps/foobar")
         self.assertEqual(str(Url("amqp://me:secret@myhost/foobar").defaults()),
                          "amqp://me:secret@myhost:amqp/foobar")
 
@@ -64,7 +58,6 @@ class UrlTest(common.Test):
     def testPort(self):
         self.assertPort(Url.Port('amqp'), 5672, 'amqp')
         self.assertPort(Url.Port(5672), 5672, '5672')
-        self.assertPort(Url.Port('amqps'), 5671, 'amqps')
         self.assertPort(Url.Port(5671), 5671, '5671')
         self.assertEqual(Url.Port(5671)+1, 5672) # Treat as int
         self.assertEqual(str(Url.Port(5672)), '5672')
@@ -79,8 +72,6 @@ class UrlTest(common.Test):
 
         self.assertEqual(str(Url("host:amqp")), "host:amqp")
         self.assertEqual(Url("host:amqp").port, 5672)
-        self.assertEqual(str(Url("host:amqps")), "host:amqps")
-        self.assertEqual(Url("host:amqps").port, 5671)
 
     def testArgs(self):
         u = Url("amqp://u:p@host:amqp/path", scheme='foo', host='bar', port=1234, path='garden')
@@ -113,3 +104,21 @@ class UrlTest(common.Test):
                 (':1234', 'amqp://0.0.0.0:1234'),
                 ('/path', 'amqp://0.0.0.0:amqp/path')]:
             self.assertEqual(str(Url(s).defaults()), full)
+
+    def testAmqps(self):
+        """Some old platforms don't recognize the amqps service name, this test is a no-op
+        if that is the case otherwise verify we treat amqps correctly."""
+        try: socket.getservbyname('amqps') 
+        except:
+            print "skipping: service 'amqps' not recognized on this platform"
+            return
+        # Scheme defaults
+        self.assertEqual(str(Url("me:secret@myhost/foobar").defaults()),
+                         "amqp://me:secret@myhost:amqp/foobar")
+        # Correct port for amqps vs. amqps
+        self.assertEqual(str(Url("amqps://me:secret@myhost/foobar").defaults()),
+                         "amqps://me:secret@myhost:amqps/foobar")
+
+        self.assertPort(Url.Port('amqps'), 5671, 'amqps')
+        self.assertEqual(str(Url("host:amqps")), "host:amqps")
+        self.assertEqual(Url("host:amqps").port, 5671)
