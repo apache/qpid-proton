@@ -140,12 +140,14 @@ install (FILES examples/messenger/c/CMakeLists.txt
                examples/messenger/c/recv.c
          DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger)
 
+install (FILES examples/include/pncompat/misc_defs.h
+               examples/include/pncompat/misc_funcs.inc
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
+
 install (FILES examples/include/pncompat/internal/LICENSE
                examples/include/pncompat/internal/getopt.c
                examples/include/pncompat/internal/getopt.h
-               examples/include/pncompat/misc_defs.h
-               examples/include/pncompat/misc_funcs.inc
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
+         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat/internal)
 
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")
