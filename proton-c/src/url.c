@@ -45,10 +45,52 @@ struct pn_url_t {
     pn_string_t *str;
 };
 
+/** Internal use only, returns the pn_string_t. Public function is pn_url_str() */
+static pn_string_t *pn_url_string(pn_url_t* url)
+{
+    pn_url_str(url);               /* Make sure str is up to date */
+    return url->str;
+}
+
+static void pn_url_finalize(void *object)
+{
+    pn_url_t *url = (pn_url_t *) object;
+    pn_url_clear(url);
+    pn_free(url->str);
+}
+
+static uintptr_t pn_url_hashcode(void *object)
+{
+    pn_url_t *url = (pn_url_t *) object;
+    return pn_hashcode(pn_url_string(url));
+}
+
+static intptr_t pn_url_compare(void *oa, void *ob)
+{
+    pn_url_t *a = (pn_url_t *) oa;
+    pn_url_t *b = (pn_url_t *) ob;
+    return pn_compare(pn_url_string(a), pn_url_string(b));
+}
+
+
+static int pn_url_inspect(void *obj, pn_string_t *dst)
+{
+    pn_url_t *url = (pn_url_t *) obj;
+    int err = 0;
+    err = pn_string_addf(dst, "Url("); if (err) return err;
+    err = pn_inspect(pn_url_string(url), dst); if (err) return err;
+    return pn_string_addf(dst, ")");
+}
+
+#define pn_url_initialize NULL
+
+
 PN_EXTERN pn_url_t *pn_url() {
-    pn_url_t *url = (pn_url_t*)malloc(sizeof(pn_url_t));
-    if (url) memset(url, 0, sizeof(*url));
-    url->str = pn_string("");
+    static const pn_class_t clazz = PN_CLASS(pn_url);
+    pn_url_t *url = (pn_url_t*) pn_class_new(&clazz, sizeof(pn_url_t));
+    if (!url) return NULL;
+    memset(url, 0, sizeof(*url));
+    url->str = pn_string(NULL);
     return url;
 }
 
@@ -75,11 +117,7 @@ PN_EXTERN pn_url_t *pn_url_parse(const char *str) {
 }
 
 /** Free a URL */
-PN_EXTERN void pn_url_free(pn_url_t *url) {
-    pn_url_clear(url);
-    pn_free(url->str);
-    free(url);
-}
+PN_EXTERN void pn_url_free(pn_url_t *url) { pn_free(url); }
 
 /** Clear the contents of the URL. */
 PN_EXTERN void pn_url_clear(pn_url_t *url) {
@@ -96,17 +134,19 @@ static inline int len(const char *str) { return str ? strlen(str) : 0; }
 
 /** Return the string form of a URL. */
 PN_EXTERN const char *pn_url_str(pn_url_t *url) {
-    pn_string_set(url->str, "");
-    if (url->scheme) pn_string_addf(url->str, "%s://", url->scheme);
-    if (url->username) pn_string_addf(url->str, "%s", url->username);
-    if (url->password) pn_string_addf(url->str, ":%s", url->password);
-    if (url->username || url->password) pn_string_addf(url->str, "@");
-    if (url->host) {
-        if (strchr(url->host, ':')) pn_string_addf(url->str, "[%s]", url->host);
-        else pn_string_addf(url->str, "%s", url->host);
+    if (pn_string_get(url->str) == NULL) {
+        pn_string_set(url->str, "");
+        if (url->scheme) pn_string_addf(url->str, "%s://", url->scheme);
+        if (url->username) pn_string_addf(url->str, "%s", url->username);
+        if (url->password) pn_string_addf(url->str, ":%s", url->password);
+        if (url->username || url->password) pn_string_addf(url->str, "@");
+        if (url->host) {
+            if (strchr(url->host, ':')) pn_string_addf(url->str, "[%s]", url->host);
+            else pn_string_addf(url->str, "%s", url->host);
+        }
+        if (url->port) pn_string_addf(url->str, ":%s", url->port);
+        if (url->path) pn_string_addf(url->str, "/%s", url->path);
     }
-    if (url->port) pn_string_addf(url->str, ":%s", url->port);
-    if (url->path) pn_string_addf(url->str, "/%s", url->path);
     return pn_string_get(url->str);
 }
 
@@ -117,7 +157,7 @@ PN_EXTERN const char *pn_url_get_host(pn_url_t *url) { return url->host; }
 PN_EXTERN const char *pn_url_get_port(pn_url_t *url) { return url->port; }
 PN_EXTERN const char *pn_url_get_path(pn_url_t *url) { return url->path; }
 
-#define SET(part) free(url->part); url->part = copy(part)
+#define SET(part) free(url->part); url->part = copy(part); pn_string_clear(url->str)
 PN_EXTERN void pn_url_set_scheme(pn_url_t *url, const char *scheme) { SET(scheme); }
 PN_EXTERN void pn_url_set_username(pn_url_t *url, const char *username) { SET(username); }
 PN_EXTERN void pn_url_set_password(pn_url_t *url, const char *password) { SET(password); }
