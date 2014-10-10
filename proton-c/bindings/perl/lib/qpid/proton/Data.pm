@@ -321,9 +321,7 @@ Handles a boolean (B<true>/B<false>) node.
 sub put_bool {
     my ($self) = @_;
     my $impl = $self->{_impl};
-    my $value = $_[1];
-
-    die "bool must be defined" if !defined($value);
+    my $value = $_[1] || 0;
 
     cproton_perl::pn_data_put_bool($impl, $value);
 }
