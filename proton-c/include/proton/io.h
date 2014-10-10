@@ -31,6 +31,22 @@
 extern "C" {
 #endif
 
+/**
+ * A ::pn_socket_t provides an abstract handle to an IO stream.  The
+ * pipe version is uni-directional.  The network socket version is
+ * bi-directional.  Both are non-blocking.
+ *
+ * pn_socket_t handles from ::pn_pipe() may only be used with
+ * ::pn_read(), ::pn_write(), ::pn_close() and pn_selector_select().
+ *
+ * pn_socket_t handles from ::pn_listen(), ::pn_accept() and
+ * ::pn_connect() must perform further IO using Proton functions.
+ * Mixing Proton io.h functions with native IO functions on the same
+ * handles will result in undefined behavior.
+ *
+ * pn_socket_t handles may only be used with a single pn_io_t during
+ * their lifetime.
+ */
 #if defined(_WIN32) && ! defined(__CYGWIN__)
 #ifdef _WIN64
 typedef unsigned __int64 pn_socket_t;
@@ -43,7 +59,37 @@ typedef int pn_socket_t;
 #define PN_INVALID_SOCKET (-1)
 #endif
 
+/**
+ * A ::pn_io_t manages IO for a group of pn_socket_t handles.  A
+ * pn_io_t object may have zero or one pn_selector_t selectors
+ * associated with it (see ::pn_io_selector()).  If one is associated,
+ * all the pn_socket_t handles managed by a pn_io_t must use that
+ * pn_selector_t instance.
+ *
+ * The pn_io_t interface is single-threaded. All methods are intended
+ * to be used by one thread at a time, except that multiple threads
+ * may use:
+ *
+ *   ::pn_write()
+ *   ::pn_send()
+ *   ::pn_recv()
+ *   ::pn_close()
+ *   ::pn_selector_select()
+ *
+ * provided at most one thread is calling ::pn_selector_select() and
+ * the other threads are operating on separate pn_socket_t handles.
+ */
 typedef struct pn_io_t pn_io_t;
+
+/**
+ * A ::pn_selector_t provides a selection mechanism that allows
+ * efficient monitoring of a large number of Proton connections and
+ * listeners.
+ *
+ * External (non-Proton) sockets may also be monitored, either solely
+ * for event notification (read, write, and timer) or event
+ * notification and use with pn_io_t interfaces.
+ */
 typedef struct pn_selector_t pn_selector_t;
 
 PN_EXTERN pn_io_t *pn_io(void);
