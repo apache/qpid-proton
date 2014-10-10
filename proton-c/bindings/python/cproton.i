@@ -234,8 +234,9 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   PyObject *pn_void2py(void *object) {
     if (object) {
-      Py_INCREF(object);
-      return object;
+      PyObject* p = (PyObject*) object;
+      Py_INCREF(p);
+      return p;
     } else {
       Py_RETURN_NONE;
     }

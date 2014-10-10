@@ -162,8 +162,7 @@ typedef struct {
 } accept_result_t;
 
 static accept_result_t *accept_result(iocpdesc_t *listen_sock) {
-  accept_result_t *result = (accept_result_t *) pn_new(sizeof(accept_result_t), 0);
-  memset(result, 0, sizeof(accept_result_t));
+  accept_result_t *result = (accept_result_t *)calloc(1, sizeof(accept_result_t));
   if (result) {
     result->base.type = IOCP_ACCEPT;
     result->base.iocpd = listen_sock;
@@ -192,7 +191,7 @@ struct pni_acceptor_t {
 static void pni_acceptor_initialize(void *object)
 {
   pni_acceptor_t *acceptor = (pni_acceptor_t *) object;
-  acceptor->accepts = pn_list(IOCP_MAX_ACCEPTS, 0);
+  acceptor->accepts = pn_list(PN_OBJECT, IOCP_MAX_ACCEPTS);
 }
 
 static void pni_acceptor_finalize(void *object)
@@ -207,7 +206,7 @@ static void pni_acceptor_finalize(void *object)
 static pni_acceptor_t *pni_acceptor(iocpdesc_t *iocpd)
 {
   static const pn_class_t clazz = PN_CLASS(pni_acceptor);
-  pni_acceptor_t *acceptor = (pni_acceptor_t *) pn_new(sizeof(pni_acceptor_t), &clazz);
+  pni_acceptor_t *acceptor = (pni_acceptor_t *) pn_class_new(&clazz, sizeof(pni_acceptor_t));
   acceptor->listen_sock = iocpd;
   acceptor->accept_queue_size = 0;
   acceptor->signalled = false;
@@ -365,7 +364,7 @@ static void connect_result_finalize(void *object)
 
 static connect_result_t *connect_result(iocpdesc_t *iocpd, struct addrinfo *addr) {
   static const pn_class_t clazz = PN_CLASS(connect_result);
-  connect_result_t *result = (connect_result_t *) pn_new(sizeof(connect_result_t), &clazz);
+  connect_result_t *result = (connect_result_t *) pn_class_new(&clazz, sizeof(connect_result_t));
   if (result) {
     memset(result, 0, sizeof(connect_result_t));
     result->base.type = IOCP_CONNECT;
@@ -599,7 +598,7 @@ static void begin_zero_byte_read(iocpdesc_t *iocpd)
 }
 
 static void drain_until_closed(iocpdesc_t *iocpd) {
-  int max_drain = 16 * 1024;
+  size_t max_drain = 16 * 1024;
   char buf[512];
   read_result_t *result = iocpd->read_result;
   while (result->drain_count < max_drain) {
@@ -732,7 +731,7 @@ static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
   static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
   assert (s != INVALID_SOCKET);
-  iocpdesc_t *iocpd = (iocpdesc_t *) pn_new(sizeof(iocpdesc_t), &clazz);
+  iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
   assert(iocpd);
   iocpd->socket = s;
   return iocpd;
@@ -1133,6 +1132,6 @@ void pni_iocp_finalize(void *obj)
 iocp_t *pni_iocp()
 {
   static const pn_class_t clazz = PN_CLASS(pni_iocp);
-  iocp_t *iocp = (iocp_t *) pn_new(sizeof(iocp_t), &clazz);
+  iocp_t *iocp = (iocp_t *) pn_class_new(&clazz, sizeof(iocp_t));
   return iocp;
 }
