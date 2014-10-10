@@ -31,6 +31,7 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
+
 import weakref, re, socket
 try:
   import uuid
@@ -3718,7 +3719,7 @@ class Url(object):
 
   class PartDescriptor(object):
     def __init__(self, part):
-      self.getter = globals()["pn_url_%s" % part]
+      self.getter = globals()["pn_url_get_%s" % part]
       self.setter = globals()["pn_url_set_%s" % part]
     def __get__(self, obj, type=None): return self.getter(obj._url)
     def __set__(self, obj, value): return self.setter(obj._url, str(value))
@@ -3729,19 +3730,23 @@ class Url(object):
   host = PartDescriptor('host')
   path = PartDescriptor('path')
 
-  @property
-  def port(self):
-    portstr = pn_url_port(self._url)
+  def _get_port(self):
+    portstr = pn_url_get_port(self._url)
     return portstr and Url.Port(portstr)
 
-  @port.setter
-  def port(self, value):
+  def _set_port(self, value):
     if value is None: pn_url_set_port(self._url, None)
     else: pn_url_set_port(self._url, str(Url.Port(value)))
+
+  port = property(_get_port, _set_port)
 
   def __str__(self): return pn_url_str(self._url)
 
   def __repr__(self): return "Url(%r)" % str(self)
+
+  def __del__(self):
+    pn_url_free(self._url);
+    self._url = None
 
   def defaults(self):
     """
