@@ -106,13 +106,6 @@ class UrlTest(common.Test):
             self.assertEqual(str(Url(s).defaults()), full)
 
     def testAmqps(self):
-        """Some old platforms don't recognize the amqps service name, this test is a no-op
-        if that is the case otherwise verify we treat amqps correctly."""
-        try:
-            Url.Port('amqps')
-        except ValueError:
-            print "skipping: service 'amqps' not recognized on this platform"
-            return
         # Scheme defaults
         self.assertEqual(str(Url("me:secret@myhost/foobar").defaults()),
                          "amqp://me:secret@myhost:amqp/foobar")
