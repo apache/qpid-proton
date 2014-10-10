@@ -17,22 +17,23 @@
 # under the License.
 #
 
-"""
-The cproton module defines a java implementation of the C interface as
-exposed to python via swig. This allows tests defined in python to run
-against both the C and Java protocol implementations.
-"""
+def pn_class_name(cls):
+  return cls
 
-# @todo(kgiusti) dynamically set these via filters in the pom.xml file
-PN_VERSION_MAJOR = 0
-PN_VERSION_MINOR = 0
+def pn_void2py(obj):
+  return obj
 
-from cobject import *
-from cerror import *
-from ccodec import *
-from cengine import *
-from csasl import *
-from cssl import *
-from cdriver import *
-from cmessenger import *
-from cmessage import *
+def pn_cast_pn_connection(obj):
+    return obj
+
+def pn_cast_pn_session(obj):
+    return obj
+
+def pn_cast_pn_link(obj):
+    return obj
+
+def pn_cast_pn_delivery(obj):
+    return obj
+
+def pn_cast_pn_transport(obj):
+    return obj

@@ -2233,7 +2233,7 @@ class EventTest(CollectorTest):
     rdlv.update(Delivery.ACCEPTED)
     self.pump()
     event = self.expect(Event.DELIVERY)
-    assert event.delivery == dlv
+    assert event.context == dlv
 
 class PeerTest(CollectorTest):
 

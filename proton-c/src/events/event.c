@@ -10,6 +10,7 @@ struct pn_collector_t {
 };
 
 struct pn_event_t {
+  const pn_class_t *clazz;
   void *context;    // depends on type
   pn_event_t *next;
   pn_event_type_t type;
@@ -96,7 +97,9 @@ void pn_collector_free(pn_collector_t *collector)
 pn_event_t *pn_event(void);
 static void pn_event_initialize(void *obj);
 
-pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, void *context)
+pn_event_t *pn_collector_put(pn_collector_t *collector,
+                             const pn_class_t *clazz, void *context,
+                             pn_event_type_t type)
 {
   if (!collector) {
     return NULL;
@@ -112,6 +115,8 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
   if (tail && tail->type == type && tail->context == context) {
     return NULL;
   }
+
+  clazz = clazz->reify(context);
 
   pn_event_t *event;
 
@@ -131,9 +136,10 @@ pn_event_t *pn_collector_put(pn_collector_t *collector, pn_event_type_t type, vo
     collector->head = event;
   }
 
-  event->type = type;
+  event->clazz = clazz;
   event->context = context;
-  pn_class_incref(PN_OBJECT, event->context);
+  event->type = type;
+  pn_class_incref(clazz, event->context);
 
   //printf("event %s on %p\n", pn_event_type_name(event->type), event->context);
 
@@ -160,7 +166,7 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   // decref before adding to the free list
   if (event->context) {
-    pn_class_decref(PN_OBJECT, event->context);
+    pn_class_decref(event->clazz, event->context);
     event->context = NULL;
   }
 
@@ -174,6 +180,7 @@ static void pn_event_initialize(void *obj)
 {
   pn_event_t *event = (pn_event_t *) obj;
   event->type = PN_EVENT_NONE;
+  event->clazz = NULL;
   event->context = NULL;
   event->next = NULL;
 }
@@ -188,7 +195,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
   if (event->context) {
     err = pn_string_addf(dst, ", ");
     if (err) return err;
-    err = pn_inspect(event->context, dst);
+    err = pn_class_inspect(event->clazz, event->context, dst);
     if (err) return err;
   }
 
@@ -213,6 +220,12 @@ pn_event_type_t pn_event_type(pn_event_t *event)
 pn_event_category_t pn_event_category(pn_event_t *event)
 {
   return (pn_event_category_t)(event->type & 0xFFFF0000);
+}
+
+const pn_class_t *pn_event_class(pn_event_t *event)
+{
+  assert(event);
+  return event->clazz;
 }
 
 void *pn_event_context(pn_event_t *event)

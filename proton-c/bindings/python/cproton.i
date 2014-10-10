@@ -375,5 +375,23 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
+%inline %{
+  void *pn_py2void(PyObject *object) {
+    return object;
+  }
+
+  PyObject *pn_void2py(void *object) {
+    if (object) {
+      Py_INCREF(object);
+      return object;
+    } else {
+      Py_RETURN_NONE;
+    }
+  }
+
+  PyObject *pn_cast_pn_void(void *object) {
+    return pn_void2py(object);
+  }
+%}
 
 %include "proton/cproton.i"
