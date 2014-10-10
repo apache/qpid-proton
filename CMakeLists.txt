@@ -26,6 +26,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Deb")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb")
 message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
+project (Proton C)
 
 if (MSVC)
   # No C99 capability, use C++
@@ -35,8 +36,6 @@ option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 
 if (BUILD_WITH_CXX)
   project (Proton C CXX)
-else (BUILD_WITH_CXX)
-  project (Proton C)
 endif (BUILD_WITH_CXX)
 
 file(READ version.txt PN_VERSION_FILE)
