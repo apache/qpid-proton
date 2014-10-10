@@ -23,6 +23,9 @@ def pn_class_name(cls):
 def pn_void2py(obj):
   return obj
 
+def pn_py2void(obj):
+    return obj
+
 def pn_cast_pn_connection(obj):
     return obj
 
