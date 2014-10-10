@@ -28,7 +28,16 @@ macro (pn_add_c_test test file)
   add_executable (${test} ${file})
   target_link_libraries (${test} qpid-proton)
   pn_c_files (${file})
-  add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test})
+  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    get_target_property(QPID_PROTON_TARGET qpid-proton LOCATION_${bld_suffix})
+    get_target_property(${test}_LOCATION ${test} LOCATION_${bld_suffix})
+    get_filename_component(QPID_PROTON_TARGET_DIR ${QPID_PROTON_TARGET} DIRECTORY)
+    add_test (${test} ${PYTHON_EXECUTABLE} ${env_py}
+	          "PATH=${QPID_PROTON_TARGET_DIR}"
+	          ${${test}_LOCATION})
+  else ()
+    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test})
+  endif ()
 endmacro(pn_add_c_test)
 
 pn_add_c_test (c-object-tests object.c)
