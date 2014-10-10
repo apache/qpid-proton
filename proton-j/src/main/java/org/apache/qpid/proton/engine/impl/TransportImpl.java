@@ -400,10 +400,6 @@ public class TransportImpl extends EndpointImpl
 
 
                         writeFrame(transportSession.getLocalChannel(), detach, null, null);
-
-                        // TODO - temporary hack for PROTON-154, this line should be removed and replaced
-                        //        with proper handling for closed links
-                        link.free();
                     }
 
                     endpoint.clearModified();
@@ -1158,14 +1154,13 @@ public class TransportImpl extends EndpointImpl
                 LinkImpl link = transportLink.getLink();
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
+                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
                 transportLink.clearRemoteHandle();
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
                 {
                     link.getRemoteCondition().copyFrom(detach.getError());
                 }
-
-                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
             }
             else
             {

@@ -111,8 +111,6 @@ void pn_endpoint_tini(pn_endpoint_t *endpoint);
 void pn_connection_free(pn_connection_t *connection)
 {
   assert(!connection->endpoint.freed);
-  if (pn_connection_state(connection) & PN_LOCAL_ACTIVE)
-    pn_connection_close(connection);
   // free those endpoints that haven't been freed by the application
   LL_REMOVE(connection, endpoint, &connection->endpoint);
   while (connection->endpoint_head) {
@@ -226,8 +224,6 @@ void pn_session_free(pn_session_t *session)
     pn_link_t *link = (pn_link_t *)pn_list_get(session->links, 0);
     pn_link_free(link);
   }
-  if (pn_session_state(session) & PN_LOCAL_ACTIVE)
-    pn_session_close(session);
   pn_remove_session(session->connection, session);
   pn_endpoint_t *endpoint = (pn_endpoint_t *) session;
   LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
@@ -282,8 +278,6 @@ void pn_terminus_free(pn_terminus_t *terminus)
 void pn_link_free(pn_link_t *link)
 {
   assert(!link->endpoint.freed);
-  if (pn_link_state(link) & PN_LOCAL_ACTIVE)
-    pn_link_close(link);
   pn_remove_link(link->session, link);
   pn_endpoint_t *endpoint = (pn_endpoint_t *) link;
   LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
