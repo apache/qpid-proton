@@ -84,7 +84,7 @@ pn_transform_t *pn_transform()
 {
   static const pn_class_t clazz = PN_CLASS(pn_transform);
   pn_transform_t *transform = (pn_transform_t *) pn_class_new(&clazz, sizeof(pn_transform_t));
-  transform->rules = pn_list(PN_OBJECT, 0, PN_REFCOUNT);
+  transform->rules = pn_list(PN_OBJECT, 0);
   transform->matched = false;
   return transform;
 }

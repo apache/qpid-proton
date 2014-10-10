@@ -55,6 +55,7 @@ typedef long long int int64_t;
 %ignore pn_string_vaddf;
 %immutable PN_OBJECT;
 %immutable PN_VOID;
+%immutable PN_WEAKREF;
 %include "proton/object.h"
 
 %ignore pn_error_format;

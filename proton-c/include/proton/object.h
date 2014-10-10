@@ -43,9 +43,6 @@ typedef struct pn_hash_t pn_hash_t;
 typedef void *(*pn_iterator_next_t)(void *state);
 typedef struct pn_iterator_t pn_iterator_t;
 
-// XXX: if we factor refcounting stuff into a separate dimension then
-// we could have a weakref class instead of having the options stuff
-
 struct pn_class_t {
   const char *name;
   void *(*newinst)(const pn_class_t *, size_t);
@@ -63,6 +60,7 @@ struct pn_class_t {
 
 extern const pn_class_t *PN_OBJECT;
 extern const pn_class_t *PN_VOID;
+extern const pn_class_t *PN_WEAKREF;
 
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
@@ -124,7 +122,7 @@ PN_EXTERN int pn_inspect(void *object, pn_string_t *dst);
 
 #define PN_REFCOUNT (0x1)
 
-PN_EXTERN pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity, int options);
+PN_EXTERN pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity);
 PN_EXTERN size_t pn_list_size(pn_list_t *list);
 PN_EXTERN void *pn_list_get(pn_list_t *list, int index);
 PN_EXTERN void pn_list_set(pn_list_t *list, int index, void *value);
@@ -139,7 +137,7 @@ PN_EXTERN void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
 #define PN_REFCOUNT_VALUE (0x4)
 
 PN_EXTERN pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
-                           size_t capacity, float load_factor, int options);
+                           size_t capacity, float load_factor);
 PN_EXTERN size_t pn_map_size(pn_map_t *map);
 PN_EXTERN int pn_map_put(pn_map_t *map, void *key, void *value);
 PN_EXTERN void *pn_map_get(pn_map_t *map, void *key);
@@ -149,7 +147,7 @@ PN_EXTERN pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry);
 PN_EXTERN void *pn_map_key(pn_map_t *map, pn_handle_t entry);
 PN_EXTERN void *pn_map_value(pn_map_t *map, pn_handle_t entry);
 
-PN_EXTERN pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor, int options);
+PN_EXTERN pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor);
 PN_EXTERN size_t pn_hash_size(pn_hash_t *hash);
 PN_EXTERN int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value);
 PN_EXTERN void *pn_hash_get(pn_hash_t *hash, uintptr_t key);

@@ -171,17 +171,11 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
     pn_string_set(dst, "");
   }
 
-  const char *name;
-
-  if (object) {
-    if (clazz->inspect) {
-      return clazz->inspect(object, dst);
-    } else if (clazz->name) {
-      name = clazz->name;
-    } else {
-      name = "<anon>";
-    }
+  if (object && clazz->inspect) {
+    return clazz->inspect(object, dst);
   }
+
+  const char *name = clazz->name ? clazz->name : "<anon>";
 
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
@@ -282,3 +276,27 @@ int pn_inspect(void *object, pn_string_t *dst)
 {
   return pn_class_inspect(PN_OBJECT, object, dst);
 }
+
+#define pn_weakref_new NULL
+#define pn_weakref_initialize NULL
+#define pn_weakref_finalize NULL
+#define pn_weakref_free NULL
+
+static void pn_weakref_incref(void *object) {}
+static void pn_weakref_decref(void *object) {}
+static int pn_weakref_refcount(void *object) { return -1; }
+static const pn_class_t *pn_weakref_reify(void *object) {
+  return PN_WEAKREF;
+}
+static uintptr_t pn_weakref_hashcode(void *object) {
+  return pn_hashcode(object);
+}
+static intptr_t pn_weakref_compare(void *a, void *b) {
+  return pn_compare(a, b);
+}
+static int pn_weakref_inspect(void *object, pn_string_t *dst) {
+  return pn_inspect(object, dst);
+}
+
+const pn_class_t PNI_WEAKREF = PN_METACLASS(pn_weakref);
+const pn_class_t *PN_WEAKREF = &PNI_WEAKREF;
