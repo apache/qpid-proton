@@ -28,6 +28,103 @@
 #include <assert.h>
 #include <ctype.h>
 
+#define pn_object_initialize NULL
+#define pn_object_finalize NULL
+
+const pn_class_t PNI_OBJECT = PN_CLASS(pn_object);
+const pn_class_t *PN_OBJECT = &PNI_OBJECT;
+
+#define pn_void_initialize NULL
+static void *pn_void_new(const pn_class_t *clazz, size_t size) { return malloc(size); }
+static void pn_void_incref(void *object) {}
+static void pn_void_decref(void *object) {}
+static int pn_void_refcount(void *object) { return -1; }
+#define pn_void_finalize NULL
+static void pn_void_free(void *object) { free(object); }
+static const pn_class_t *pn_void_reify(void *object) { return PN_VOID; }
+static uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
+static intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
+static int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
+
+const pn_class_t PNI_VOID = PN_METACLASS(pn_void);
+const pn_class_t *PN_VOID = &PNI_VOID;
+
+void *pn_class_new(const pn_class_t *clazz, size_t size)
+{
+  assert(clazz);
+  return clazz->newinst(clazz, size);
+}
+
+void *pn_class_incref(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  clazz = clazz->reify(object);
+  clazz->incref(object);
+  return object;
+}
+
+int pn_class_refcount(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  clazz = clazz->reify(object);
+  return clazz->refcount(object);
+}
+
+void pn_class_decref(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  clazz = clazz->reify(object);
+  clazz->decref(object);
+}
+
+void pn_class_free(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  clazz = clazz->reify(object);
+  clazz->free(object);
+}
+
+const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+  return clazz->reify(object);
+}
+
+uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
+{
+  assert(clazz);
+
+  if (!object) return 0;
+
+  clazz = clazz->reify(object);
+
+  if (clazz->hashcode) {
+    return clazz->hashcode(object);
+  } else {
+    return (uintptr_t) object;
+  }
+}
+
+intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
+{
+  assert(clazz);
+
+  if (a == b) return 0;
+
+  clazz = clazz->reify(a);
+
+  if (a && b && clazz->compare) {
+    return clazz->compare(a, b);
+  } else {
+    return (intptr_t) b - (intptr_t) a;
+  }
+}
+
+bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
+{
+  return pn_class_compare(clazz, a, b) == 0;
+}
+
 typedef struct {
   const pn_class_t *clazz;
   int refcount;
@@ -36,8 +133,58 @@ typedef struct {
 #define pni_head(PTR) \
   (((pni_head_t *) (PTR)) - 1)
 
+void *pn_object_new(const pn_class_t *clazz, size_t size)
+{
+  return pn_new(size, clazz);
+}
+
+const pn_class_t *pn_object_reify(void *object)
+{
+  if (object) {
+    return pni_head(object)->clazz;
+  } else {
+    return PN_OBJECT;
+  }
+}
+
+void pn_object_incref(void *object)
+{
+  pn_incref(object);
+}
+
+int pn_object_refcount(void *object)
+{
+  return pn_refcount(object);
+}
+
+void pn_object_decref(void *object)
+{
+  pn_decref(object);
+}
+
+void pn_object_free(void *object)
+{
+  pn_free(object);
+}
+
+uintptr_t pn_object_hashcode(void *object)
+{
+  return (uintptr_t) object;
+}
+
+intptr_t pn_object_compare(void *a, void *b)
+{
+  return (intptr_t) b - (intptr_t) a;
+}
+
+int pn_object_inspect(void *object, pn_string_t *dst)
+{
+  return pn_inspect(object, dst);
+}
+
 void *pn_new(size_t size, const pn_class_t *clazz)
 {
+  assert(clazz);
   return pn_new2(size, clazz, NULL);
 }
 
@@ -136,20 +283,7 @@ uintptr_t pn_hashcode(void *object)
 
 intptr_t pn_compare(void *a, void *b)
 {
-  if (a == b) return 0;
-  if (a && b) {
-    pni_head_t *ha = pni_head(a);
-    pni_head_t *hb = pni_head(b);
-
-    if (ha->clazz && hb->clazz && ha->clazz == hb->clazz) {
-      const pn_class_t *clazz = ha->clazz;
-      if (clazz->compare) {
-        return clazz->compare(a, b);
-      }
-    }
-  }
-
-  return (intptr_t) b - (intptr_t) a;
+  return pn_class_compare(PN_OBJECT, a, b);
 }
 
 bool pn_equals(void *a, void *b)

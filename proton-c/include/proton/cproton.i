@@ -53,6 +53,8 @@ typedef long long int int64_t;
 %include "proton/types.h"
 %ignore pn_string_vformat;
 %ignore pn_string_vaddf;
+%immutable PN_OBJECT;
+%immutable PN_VOID;
 %include "proton/object.h"
 
 %ignore pn_error_format;
