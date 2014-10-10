@@ -21,6 +21,7 @@ use strict;
 use warnings;
 use cproton_perl;
 
+use qpid::proton::utils;
 use qpid::proton::ExceptionHandling;
 use qpid::proton::Data;
 use qpid::proton::Mapping;
