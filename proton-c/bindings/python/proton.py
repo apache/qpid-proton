@@ -866,7 +866,7 @@ class Message(object):
   def _set_inferred(self, value):
     self._check(pn_message_set_inferred(self._msg, bool(value)))
 
-  inferred = property(_is_inferred, _set_inferred,"""
+  inferred = property(_is_inferred, _set_inferred, doc="""
 The inferred flag for a message indicates how the message content
 is encoded into AMQP sections. If inferred is true then binary and
 list values in the body of the message will be encoded as AMQP DATA
