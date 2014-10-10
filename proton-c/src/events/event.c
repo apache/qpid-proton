@@ -270,6 +270,10 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_LINK_OPEN";
   case PN_LINK_REMOTE_CLOSE:
     return "PN_LINK_REMOTE_CLOSE";
+  case PN_LINK_DETACH:
+    return "PN_LINK_DETACH";
+  case PN_LINK_REMOTE_DETACH:
+    return "PN_LINK_REMOTE_DETACH";
   case PN_LINK_CLOSE:
     return "PN_LINK_CLOSE";
   case PN_LINK_FLOW:

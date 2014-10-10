@@ -265,6 +265,15 @@ void pn_link_close(pn_link_t *link)
   pn_endpoint_close(&link->endpoint);
 }
 
+void pn_link_detach(pn_link_t *link)
+{
+  assert(link);
+  link->detached = true;
+  pn_collector_put(link->session->connection->collector, PN_OBJECT, link, PN_LINK_DETACH);
+  pn_modified(link->session->connection, &link->endpoint, true);
+
+}
+
 void pn_terminus_free(pn_terminus_t *terminus)
 {
   pn_free(terminus->address);
@@ -861,6 +870,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->rcv_settle_mode = PN_RCV_FIRST;
   link->remote_snd_settle_mode = PN_SND_MIXED;
   link->remote_rcv_settle_mode = PN_RCV_FIRST;
+  link->detached = false;
 
   // begin transport state
   link->state.local_handle = -1;

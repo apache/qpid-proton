@@ -249,6 +249,13 @@ PN_EXTERN void pn_link_open(pn_link_t *link);
 PN_EXTERN void pn_link_close(pn_link_t *link);
 
 /**
+ * Detach a link.
+ *
+ * @param[in] link a link object
+ */
+PN_EXTERN void pn_link_detach(pn_link_t *link);
+
+/**
  * Access the locally defined source definition for a link.
  *
  * The pointer returned by this operation is valid until the link

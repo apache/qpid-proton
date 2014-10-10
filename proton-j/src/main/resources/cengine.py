@@ -625,6 +625,10 @@ def pn_link_close(link):
   link.on_close()
   link.impl.close()
 
+def pn_link_detach(link):
+  link.on_close()
+  link.impl.detach()
+
 def pn_link_flow(link, n):
   link.impl.flow(n)
 
@@ -961,6 +965,8 @@ PN_LINK_OPEN = Event.Type.LINK_OPEN
 PN_LINK_REMOTE_OPEN = Event.Type.LINK_REMOTE_OPEN
 PN_LINK_CLOSE = Event.Type.LINK_CLOSE
 PN_LINK_REMOTE_CLOSE = Event.Type.LINK_REMOTE_CLOSE
+PN_LINK_DETACH = Event.Type.LINK_DETACH
+PN_LINK_REMOTE_DETACH = Event.Type.LINK_REMOTE_DETACH
 PN_LINK_FLOW = Event.Type.LINK_FLOW
 PN_LINK_FINAL = Event.Type.LINK_FINAL
 PN_DELIVERY = Event.Type.DELIVERY

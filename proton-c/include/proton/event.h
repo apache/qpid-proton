@@ -202,6 +202,18 @@ typedef enum {
   PN_LINK_REMOTE_CLOSE,
 
   /**
+   * The local link endpoint has been detached. Events of this type
+   * point to the relevant link.
+   */
+  PN_LINK_DETACH,
+
+  /**
+   * The remote endpoint has detached the link. Events of this type
+   * point to the relevant link.
+   */
+  PN_LINK_REMOTE_DETACH,
+
+  /**
    * The flow control state for a link has changed. Events of this
    * type point to the relevant link.
    */

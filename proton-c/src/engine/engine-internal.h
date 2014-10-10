@@ -252,6 +252,7 @@ struct pn_link_t {
   uint8_t remote_rcv_settle_mode;
   bool drain_flag_mode; // receiver only
   bool drain;
+  bool detached;
 };
 
 struct pn_disposition_t {

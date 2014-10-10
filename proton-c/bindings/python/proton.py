@@ -2648,6 +2648,9 @@ class Link(Endpoint):
   def drained(self):
     return pn_link_drained(self._link)
 
+  def detach(self):
+    return pn_link_detach(self._link)
+
 class Terminus(object):
 
   UNSPECIFIED = PN_UNSPECIFIED
@@ -3385,8 +3388,10 @@ class Event:
   LINK_INIT = PN_LINK_INIT
   LINK_OPEN = PN_LINK_OPEN
   LINK_CLOSE = PN_LINK_CLOSE
+  LINK_DETACH = PN_LINK_DETACH
   LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
   LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
+  LINK_REMOTE_DETACH = PN_LINK_REMOTE_DETACH
   LINK_FLOW = PN_LINK_FLOW
   LINK_FINAL = PN_LINK_FINAL
 

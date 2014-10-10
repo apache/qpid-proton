@@ -1265,8 +1265,10 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_LINK_REMOTE_OPEN:
     case PN_LINK_REMOTE_CLOSE:
+    case PN_LINK_REMOTE_DETACH:
     case PN_LINK_OPEN:
     case PN_LINK_CLOSE:
+    case PN_LINK_DETACH:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:

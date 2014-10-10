@@ -2101,6 +2101,11 @@ class CollectorTest(Test):
 
     assert False, "actual events %s did not match any of the expected sequences: %s" % (events, sequences)
 
+  def expect_until(self, *types):
+    events = self.drain()
+    etypes = tuple([e.type for e in events[-len(types):]])
+    assert etypes == types, "actual events %s did not end in expect sequence: %s" % (events, types)
+
 class EventTest(CollectorTest):
 
   def teardown(self):
@@ -2288,6 +2293,28 @@ class EventTest(CollectorTest):
 
     self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT,
                 Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testLinkDetach(self):
+    c1 = Connection()
+    c1.collect(self.collector)
+    t1 = Transport()
+    t1.bind(c1)
+    c1.open()
+    s1 = c1.session()
+    s1.open()
+    l1 = s1.sender("asdf")
+    l1.open()
+    l1.detach()
+    self.expect_until(Event.LINK_DETACH, Event.TRANSPORT)
+
+    c2 = Connection()
+    c2.collect(self.collector)
+    t2 = Transport()
+    t2.bind(c2)
+
+    pump(t1, t2)
+
+    self.expect_until(Event.LINK_REMOTE_DETACH)
 
 class PeerTest(CollectorTest):
 

@@ -375,7 +375,7 @@ public class TransportImpl extends EndpointImpl
                     SessionImpl session = link.getSession();
                     TransportSession transportSession = getTransportState(session);
 
-                    if(link.getLocalState() == EndpointState.CLOSED
+                    if(((link.getLocalState() == EndpointState.CLOSED) || link.detached())
                        && transportLink.isLocalHandleSet()
                        && !_isCloseSent)
                     {
@@ -395,8 +395,7 @@ public class TransportImpl extends EndpointImpl
 
                         Detach detach = new Detach();
                         detach.setHandle(localHandle);
-                        // TODO - need an API for detaching rather than closing the link
-                        detach.setClosed(true);
+                        detach.setClosed(!link.detached());
 
                         ErrorCondition localError = link.getCondition();
                         if( localError.getCondition() !=null )
@@ -1165,7 +1164,11 @@ public class TransportImpl extends EndpointImpl
                 LinkImpl link = transportLink.getLink();
                 transportLink.receivedDetach();
                 transportSession.freeRemoteHandle(transportLink.getRemoteHandle());
-                _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
+                if (detach.getClosed()) {
+                    _connectionEndpoint.put(Event.Type.LINK_REMOTE_CLOSE, link);
+                } else {
+                    _connectionEndpoint.put(Event.Type.LINK_REMOTE_DETACH, link);
+                }
                 transportLink.clearRemoteHandle();
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
