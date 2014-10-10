@@ -18,7 +18,7 @@
 #
 
 
-import common, socket
+import common
 from proton import Url
 
 class UrlTest(common.Test):
@@ -108,8 +108,9 @@ class UrlTest(common.Test):
     def testAmqps(self):
         """Some old platforms don't recognize the amqps service name, this test is a no-op
         if that is the case otherwise verify we treat amqps correctly."""
-        try: socket.getservbyname('amqps') 
-        except:
+        try:
+            Url.Port('amqps')
+        except ValueError:
             print "skipping: service 'amqps' not recognized on this platform"
             return
         # Scheme defaults

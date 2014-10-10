@@ -3694,7 +3694,8 @@ class Url(object):
     """An integer port number that can be constructed from a service name string"""
 
     def __new__(cls, value):
-      port = super(Url.Port, cls).__new__(cls, cls.port_int(value))
+      """@param value: integer port number or string service name."""
+      port = super(Url.Port, cls).__new__(cls, cls._port_int(value))
       setattr(port, 'name', str(value))
       return port
 
@@ -3703,7 +3704,7 @@ class Url(object):
     def __str__(self): return str(self.name)
 
     @staticmethod
-    def port_int(value):
+    def _port_int(value):
       """Convert service, an integer or a service name, into an integer port number."""
       try:
         return int(value)
