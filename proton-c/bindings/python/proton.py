@@ -3641,6 +3641,8 @@ __all__ = [
            "Messenger",
            "MessengerException",
            "ProtonException",
+           "PN_VERSION_MAJOR",
+           "PN_VERSION_MINOR",
            "Receiver",
            "SASL",
            "Sender",

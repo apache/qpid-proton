@@ -17,22 +17,13 @@
 # under the License.
 #
 
-require "cproton"
-require "date"
+module Qpid
 
-require "qpid_proton/version"
-require "qpid_proton/described"
-require "qpid_proton/mapping"
-require "qpid_proton/array"
-require "qpid_proton/hash"
-require "qpid_proton/exceptions"
-require "qpid_proton/exception_handling"
-require "qpid_proton/filters"
-require "qpid_proton/message_format"
-require "qpid_proton/data"
-require "qpid_proton/message"
-require "qpid_proton/subscription"
-require "qpid_proton/tracker_status"
-require "qpid_proton/tracker"
-require "qpid_proton/selectable"
-require "qpid_proton/messenger"
+  module Proton
+
+    PN_VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
+    PN_VERSION_MINOR = Cproton::PN_VERSION_MINOR
+
+  end
+
+end
