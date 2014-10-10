@@ -236,6 +236,10 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_EVENT_NONE";
   case PN_CONNECTION_INIT:
     return "PN_CONNECTION_INIT";
+  case PN_CONNECTION_BOUND:
+    return "PN_CONNECTION_BOUND";
+  case PN_CONNECTION_UNBOUND:
+    return "PN_CONNECTION_UNBOUND";
   case PN_CONNECTION_REMOTE_OPEN:
     return "PN_CONNECTION_REMOTE_OPEN";
   case PN_CONNECTION_OPEN:
@@ -276,6 +280,14 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_DELIVERY";
   case PN_TRANSPORT:
     return "PN_TRANSPORT";
+  case PN_TRANSPORT_ERROR:
+    return "PN_TRANSPORT_ERROR";
+  case PN_TRANSPORT_HEAD_CLOSED:
+    return "PN_TRANSPORT_HEAD_CLOSED";
+  case PN_TRANSPORT_TAIL_CLOSED:
+    return "PN_TRANSPORT_TAIL_CLOSED";
+  case PN_TRANSPORT_CLOSED:
+    return "PN_TRANSPORT_CLOSED";
   }
 
   return "<unrecognized>";

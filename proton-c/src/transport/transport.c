@@ -174,6 +174,9 @@ static void pn_transport_initialize(void *object)
   transport->output_pending = 0;
 
   transport->done_processing = false;
+
+  transport->posted_head_closed = false;
+  transport->posted_tail_closed = false;
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -262,11 +265,17 @@ static void pn_transport_finalize(void *object)
 
 int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
 {
-  if (!transport) return PN_ARG_ERR;
+  assert(transport);
+  assert(connection);
+
   if (transport->connection) return PN_STATE_ERR;
   if (connection->transport) return PN_STATE_ERR;
+
   transport->connection = connection;
   connection->transport = transport;
+
+  pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_BOUND);
+
   pn_incref(connection);
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
@@ -274,6 +283,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
     transport->disp->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
   }
+
   return 0;
 }
 
@@ -304,8 +314,11 @@ int pn_transport_unbind(pn_transport_t *transport)
   assert(transport);
   if (!transport->connection) return 0;
 
+
   pn_connection_t *conn = transport->connection;
   transport->connection = NULL;
+
+  pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_UNBOUND);
 
   // XXX: what happens if the endpoints are freed before we get here?
   pn_session_t *ssn = pn_session_head(conn, 0);
@@ -415,6 +428,15 @@ int pn_post_close(pn_transport_t *transport, const char *condition, const char *
                        (bool) condition, ERROR, condition, description, info);
 }
 
+static pn_collector_t *pni_transport_collector(pn_transport_t *transport)
+{
+  if (transport->connection && transport->connection->collector) {
+    return transport->connection->collector;
+  } else {
+    return NULL;
+  }
+}
+
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...)
 {
   va_list ap;
@@ -433,6 +455,8 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   }
   transport->disp->halt = true;
   pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  pn_collector_t *collector = pni_transport_collector(transport);
+  pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
   return PN_ERR;
 }
 
@@ -999,6 +1023,14 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
   return original - available;
 }
 
+static void pni_maybe_post_closed(pn_transport_t *transport)
+{
+  pn_collector_t *collector = pni_transport_collector(transport);
+  if (transport->posted_head_closed && transport->posted_tail_closed) {
+    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_CLOSED);
+  }
+}
+
 // process pending input until none remaining or EOS
 static ssize_t transport_consume(pn_transport_t *transport)
 {
@@ -1020,6 +1052,12 @@ static ssize_t transport_consume(pn_transport_t *transport)
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
         pn_transport_log(transport, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
+      if (!transport->posted_tail_closed) {
+        pn_collector_t *collector = pni_transport_collector(transport);
+        pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_TAIL_CLOSED);
+        transport->posted_tail_closed = true;
+        pni_maybe_post_closed(transport);
+      }
       return n;
     }
   }
@@ -2041,6 +2079,13 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
   }
 }
 
+void pni_close_tail(pn_transport_t *transport)
+{
+  if (!transport->tail_closed) {
+    transport->tail_closed = true;
+  }
+}
+
 int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
@@ -2050,7 +2095,7 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
 
   ssize_t n = transport_consume( transport );
   if (n == PN_EOS) {
-    transport->tail_closed = true;
+    pni_close_tail(transport);
   }
 
   if (n < 0 && n != PN_EOS) return n;
@@ -2060,7 +2105,7 @@ int pn_transport_process(pn_transport_t *transport, size_t size)
 // input stream has closed
 int pn_transport_close_tail(pn_transport_t *transport)
 {
-  transport->tail_closed = true;
+  pni_close_tail(transport);
   transport_consume( transport );
   return 0;
   // XXX: what if not all input processed at this point?  do we care???
@@ -2111,6 +2156,14 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
     if (transport->output_pending) {
       memmove( transport->output_buf,  &transport->output_buf[size],
                transport->output_pending );
+    }
+
+    if (!transport->output_pending && pn_transport_pending(transport) < 0 &&
+        !transport->posted_head_closed) {
+      pn_collector_t *collector = pni_transport_collector(transport);
+      pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_HEAD_CLOSED);
+      transport->posted_head_closed = true;
+      pni_maybe_post_closed(transport);
     }
   }
 }
