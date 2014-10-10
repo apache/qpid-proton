@@ -26,4 +26,4 @@ import proton_tests.transport
 import proton_tests.ssl
 import proton_tests.interop
 import proton_tests.soak
-
+import proton_tests.url

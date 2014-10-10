@@ -280,4 +280,41 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
   }
 %}
 
+
+/**
+   pni_parse_url(char* url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
+   The following type maps convert this into a python function that taks a URL string argument
+   and returns a list of strings [scheme, user, pass, host, port, path]
+   This probably could be done more neatly.
+*/
+
+// Typemap to copy the url string as it will be modified by parse_url
+%typemap(in,noblock=1,fragment="SWIG_AsCharPtrAndSize") char *url (int res, char *t = 0, size_t n = 0, int alloc = 0) {
+  res = SWIG_AsCharPtrAndSize($input, &t, &n, &alloc);
+  if (!SWIG_IsOK(res)) {
+    %argument_fail(res, "char *url", $symname, $argnum);
+  }
+  $1 = %new_array(n, $*1_ltype);
+  memcpy($1,t,sizeof(char)*n);
+  if (alloc == SWIG_NEWOBJ) %delete_array(t);
+  $1[n-1] = 0;
+}
+%typemap(freearg,match="in") char *url "free($1);";
+%typemap(argout) char *url "";
+
+// Typemap for char** return strings. Don't free them.
+%typemap(in,numinputs=0) char **OUTSTR($*1_ltype temp = 0) "$1 = &temp;";
+%typemap(freearg,match="in") char **OUTSTR "";
+%typemap(argout,noblock=1,fragment="SWIG_FromCharPtr") char **OUTSTR {
+    %append_output(SWIG_FromCharPtr(*$1));
+}
+
+// Typemap to initialize result as empty list
+%typemap(out) void "$result = PyList_New(0);";
+
+
+%apply char** OUTSTR {char **scheme, char **user, char **pass, char **host, char **port, char **path};
+void pni_parse_url(char* url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
+%ignore pni_parse_url;
+
 %include "proton/cproton.i"
