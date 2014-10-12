@@ -269,14 +269,14 @@ _Messenger_['removeListener'] = function(event, callback) {
             // Search for the specified callback.
             for (var i = 0; i < callbacks.length; i++) {
                 if (callback === callbacks[i]) {
-                    // If we find the specified callback delete it and return.
+                    // If we find the specified callback, delete it and return.
                     callbacks.splice(i, 1);
                     return;
                 }
             }
         }
     } else {
-        // If we call remove with no callback we remove all callbacks.
+        // If we call remove with no callback specified we remove all callbacks.
         delete this._callbacks[event];
     }
 };
@@ -368,7 +368,7 @@ _Messenger_['getOutgoingWindow'] = function() {
  * @param {number} window the size of the tracking window in messages.
  */
 _Messenger_['setOutgoingWindow'] = function(window) {
-    this._check(_pn_messenger_set_outgoing_window(this._messenger, window));
+    _pn_messenger_set_outgoing_window(this._messenger, window);
 };
 
 /**
@@ -397,7 +397,7 @@ _Messenger_['getIncomingWindow'] = function() {
  * @param {number} window the size of the tracking window in messages.
  */
 _Messenger_['setIncomingWindow'] = function(window) {
-    this._check(_pn_messenger_set_incoming_window(this._messenger, window));
+    _pn_messenger_set_incoming_window(this._messenger, window);
 };
 
 /**
@@ -421,10 +421,9 @@ _Messenger_['start'] = function() {
  * to see if it has fully stopped.
  * @method stop
  * @memberof! proton.Messenger#
- * @returns {@link proton.Error.INPROGRESS} if still busy.
  */
 _Messenger_['stop'] = function() {
-    return this._check(_pn_messenger_stop(this._messenger));
+    _pn_messenger_stop(this._messenger);
 };
 
 /**
@@ -454,29 +453,10 @@ _Messenger_['isStopped'] = function() {
  */
 _Messenger_['subscribe'] = function(source) {
     if (!source) {
-        this._check(Module['Error']['ARG_ERR']);
-    }
-    var sp = Runtime.stackSave();
-    Module.EventDispatch.setCurrentMessenger(this);
-    var subscription = _pn_messenger_subscribe(this._messenger,
-                                               allocate(intArrayFromString(source), 'i8', ALLOC_STACK));
-    Module.EventDispatch.setCurrentMessenger(null);
-    Runtime.stackRestore(sp);
-
-    if (!subscription) {
-        this._check(Module['Error']['ERR']);
-    }
-
-    // For peer subscriptions to this Messenger emit a subscription event
-    // immediately otherwise defer until the address is resolved remotely.
-    if (source.indexOf('~') !== -1) {
-        subscription = new Subscription(subscription, source);
-        this._emit('subscription', subscription);
+        this._emit('error', new Module['SubscriptionError'](source, 'CONNECTION ERROR: Address not specified'));
     } else {
-        subscription = new Subscription(subscription)
-        this._pendingSubscriptions.push(subscription);
+        return Module.EventDispatch.subscribe(this, source);
     }
-    return subscription;
 };
 
 /**
@@ -504,13 +484,10 @@ _Messenger_['subscribe'] = function(source) {
 _Messenger_['put'] = function(message, flush) {
     flush = flush === false ? false : true; // Defaults to true if not explicitly specified.
     message._preEncode();
-    Module.EventDispatch.setCurrentMessenger(this);
     this._check(_pn_messenger_put(this._messenger, message._message));
-    Module.EventDispatch.setCurrentMessenger(null);
 
-    // If flush is set invoke pn_messenger_work.
     if (flush) {
-        this._check(_pn_messenger_work(this._messenger, 0));
+        Module.EventDispatch.flush();
     }
 
     // Getting the tracker is a little tricky as it is a 64 bit number. The way
@@ -577,7 +554,7 @@ _Messenger_['settle'] = function(tracker) {
         flags = Module['Messenger'].PN_CUMULATIVE;
     }
 
-    this._check(_pn_messenger_settle(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits(), flags));
+    _pn_messenger_settle(this._messenger, tracker.getLowBitsUnsigned(), tracker.getHighBits(), flags);
 };
 
 /**
@@ -602,7 +579,7 @@ _Messenger_['work'] = function() {
  *        as many messages as it can buffer internally.
  */
 _Messenger_['recv'] = function(limit) {
-    this._check(_pn_messenger_recv(this._messenger, (limit ? limit : -1)));
+    _pn_messenger_recv(this._messenger, (limit ? limit : -1));
 };
 
 /**
@@ -641,7 +618,7 @@ _Messenger_['get'] = function(message, decodeBinaryAsString) {
         impl = message._message;
     }
 
-    this._check(_pn_messenger_get(this._messenger, impl));
+    _pn_messenger_get(this._messenger, impl);
 
     if (message) {
         message._postDecode(decodeBinaryAsString);
@@ -798,9 +775,9 @@ _Messenger_['incoming'] = function() {
  */
 _Messenger_['route'] = function(pattern, address) {
     var sp = Runtime.stackSave();
-    this._check(_pn_messenger_route(this._messenger,
-                                    allocate(intArrayFromString(pattern), 'i8', ALLOC_STACK),
-                                    allocate(intArrayFromString(address), 'i8', ALLOC_STACK)));
+    _pn_messenger_route(this._messenger,
+                        allocate(intArrayFromString(pattern), 'i8', ALLOC_STACK),
+                        allocate(intArrayFromString(address), 'i8', ALLOC_STACK));
     Runtime.stackRestore(sp);
 };
 
@@ -825,9 +802,9 @@ _Messenger_['route'] = function(pattern, address) {
  */
 _Messenger_['rewrite'] = function(pattern, address) {
     var sp = Runtime.stackSave();
-    this._check(_pn_messenger_rewrite(this._messenger,
-                                      allocate(intArrayFromString(pattern), 'i8', ALLOC_STACK),
-                                      allocate(intArrayFromString(address), 'i8', ALLOC_STACK)));
+    _pn_messenger_rewrite(this._messenger,
+                          allocate(intArrayFromString(pattern), 'i8', ALLOC_STACK),
+                          allocate(intArrayFromString(address), 'i8', ALLOC_STACK));
     Runtime.stackRestore(sp);
 };
 

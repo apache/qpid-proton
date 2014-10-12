@@ -90,7 +90,34 @@ Module['MessengerError'].prototype = new Error();
 Module['MessengerError'].prototype.constructor = Module['MessengerError'];
 
 Module['MessengerError'].prototype.toString = function() {
-    return this.name + ': ' + this.message
+    return this.name + ': ' + this.message;
+};
+
+
+/*****************************************************************************/
+/*                                                                           */
+/*                              SubscriptionError                            */
+/*                                                                           */
+/*****************************************************************************/
+
+/**
+ * Constructs a proton.SubscriptionError instance.
+ * @classdesc This class is a subclass of MessengerError.
+ * @constructor proton.SubscriptionError
+ * @param {string} source the address that we want to subscribe to.
+ * @param {string} message the error message.
+ */
+Module['SubscriptionError'] = function(source, message) { // SubscriptionError constructor.
+    this.name = "SubscriptionError";
+    this.source = source;
+    this.message = (message || "");
+};
+
+Module['SubscriptionError'].prototype = new Module['MessengerError']();
+Module['SubscriptionError'].prototype.constructor = Module['SubscriptionError'];
+
+Module['SubscriptionError'].prototype.toString = function() {
+    return this.name + ': ' + this.source + ': ' + this.message;
 };
 
 
@@ -115,7 +142,7 @@ Module['MessageError'].prototype = new Error();
 Module['MessageError'].prototype.constructor = Module['MessageError'];
 
 Module['MessageError'].prototype.toString = function() {
-    return this.name + ': ' + this.message
+    return this.name + ': ' + this.message;
 };
 
 
@@ -140,6 +167,6 @@ Module['DataError'].prototype = new Error();
 Module['DataError'].prototype.constructor = Module['DataError'];
 
 Module['DataError'].prototype.toString = function() {
-    return this.name + ': ' + this.message
+    return this.name + ': ' + this.message;
 };
 

@@ -68,6 +68,10 @@
  * &lt;script type="text/javascript"&gt;PROTON_TOTAL_MEMORY = 50000000;&lt;/script&gt;
  * &lt;script type="text/javascript" src="proton.js">&lt;/script&gt;
  * </pre>
+ * If the global variable PROTON_TOTAL_MEMORY has been set by the application this
+ * will result in the emscripten heap getting set to the next multiple of
+ * 16777216 above PROTON_TOTAL_MEMORY.
+ * <p>
  * The global variable PROTON_TOTAL_STACK may be used in a similar way to increase
  * the stack size from its default of 5*1024*1024 = 5242880. It is worth noting
  * that Strings are allocated on the stack, so you may need this if you end up
@@ -76,17 +80,14 @@
  */
 var Module = {};
 
-// If the global variable PROTON_TOTAL_MEMORY has been set by the application this
-// will result in the emscripten heap getting set to the next multiple of
-// 16777216 above PROTON_TOTAL_MEMORY.
-if (typeof process === 'object' && typeof require === 'function') {
+if (typeof global === 'object') { // If Node.js
     if (global['PROTON_TOTAL_MEMORY']) {
         Module['TOTAL_MEMORY'] = global['PROTON_TOTAL_MEMORY'];
     }
     if (global['PROTON_TOTAL_STACK']) {
         Module['TOTAL_STACK'] = global['PROTON_TOTAL_STACK'];
     }
-} else if (typeof window === 'object') {
+} else if (typeof window === 'object') { // If browser
     if (window['PROTON_TOTAL_MEMORY']) {
         Module['TOTAL_MEMORY'] = window['PROTON_TOTAL_MEMORY'];
     }
@@ -102,140 +103,323 @@ if (typeof process === 'object' && typeof require === 'function') {
 /*****************************************************************************/
 
 /**
- * EventDispatch is a Singleton class that allows callbacks to be registered which
- * will get triggered by the emscripten WebSocket network callbacks. Clients of
- * Messenger will register callbacks by calling:
+ * EventDispatch is a Singleton class that allows callbacks to be registered,
+ * which will get triggered by the emscripten WebSocket network callbacks.
+ * Clients of Messenger will register callbacks by calling:
  * <pre>
+ * messenger.on('error', &lt;callback function&gt;);
  * messenger.on('work', &lt;callback function&gt;);
+ * messenger.on('subscription', &lt;callback function&gt;);
  * </pre>
  * EventDispatch supports callback registration from multiple Messenger instances.
  * The client callbacks will actually be called when a given messenger has work
- * available or a WebSocket close has been occurred (in which case all registered
- * callbacks will be called).
+ * available or a WebSocket close has been occurred.
  * <p>
  * The approach implemented here allows the registered callbacks to follow a
  * similar pattern to _process_incoming and _process_outgoing in async.py
- * @memberof proton
+ * @constructor proton.EventDispatch
  */
 Module.EventDispatch = new function() { // Note the use of new to create a Singleton.
-    var _firstCall = true; // Flag used to check the first time registerMessenger is called.
-    /**
-     * We employ a cheat/hack to map file descriptors to the Messenger instance
-     * that owns them. In put/subscribe we set the current Messenger and then we
-     * intercept the library socket call with our own, which makes a call to
-     * the real library socket but also maps the file descriptor to _currentMessenger.
-     */
-    var _currentMessenger = null;
-    var _messengers = {};
+    var POLLIN  = 0x001;
+    var POLLOUT = 0x004;
+    var _error = null;
+    var _messengers = {};  // Keyed by name.
+    var _selectables = {}; // Keyed by file descriptor.
 
-    var _fd2Messenger = {};
+    var _initialise = function() {
+        /**
+         * Initialises the emscripten network callback functions. This needs
+         * to be done the first time we call registerMessenger rather than
+         * when we create the Singleton because emscripten's socket filesystem
+         * has to be mounted before can listen for any of these events.
+         */
+        Module['websocket']['on']('open', _pump);
+        Module['websocket']['on']('connection', _pump);
+        Module['websocket']['on']('message', _pump);
+        Module['websocket']['on']('close', _closeHandler);
+        Module['websocket']['on']('error', _errorHandler);
 
-    /**
-     * Provides functionality roughly equivalent to the following C code:
-     * while (1) {
-     *     pn_messenger_work(messenger, -1); // Block indefinitely until there has been socket activity.
-     *     process();
-     * }
-     * The blocking call isn't viable in JavaScript as it is entirely asynchronous
-     * and we wouldn't want to replace the while(1) with a timed loop either!!
-     * This method gets triggered asynchronously by the emscripten socket events and
-     * we then perform an equivalent loop for each messenger, triggering every
-     * registered callback whilst there is work remaining. If triggered by close
-     * we bypass the _pn_messenger_work test as it will never succeed after closing.
-     */
-    var _pump = function(fd, closing) {
-//console.log("\t_pump entry " + fd + ", " + closing);
-        for (var i in _messengers) {
-            if (_messengers.hasOwnProperty(i)) {
-                var messenger = _messengers[i];
-                //var messenger = _fd2Messenger[fd];
-
-                if (closing) {
-//console.log("_pump closing");
-                    messenger._emit('work');
-                } else {
-//console.log("_pump while start");
-                    while (_pn_messenger_work(messenger._messenger, 0) > 0) {
-                    //while (messenger['work']()) {
-                    //while (messenger._check(_pn_messenger_work(messenger._messenger, 0)) > 0) {
-//console.log("A");
-                        messenger._checkSubscriptions();
-                        messenger._emit('work');
-//console.log("B");
+        /**
+         * For Node.js the network code uses the ws WebSocket library, see
+         * https://github.com/einaros/ws. The following is a "Monkey Patch"
+         * that fixes a problem with Receiver.js where it wasn't checking if
+         * an Object was null before accessing its properties, so it was
+         * possible to see errors like:
+         * TypeError: Cannot read property 'fragmentedOperation' of null
+         * at Receiver.endPacket (.....node_modules/ws/lib/Receiver.js:224:18)
+         * This problem is generally seen in Server code after messenger.stop()
+         * I *think* that the underlying issue is actually because ws calls
+         * cleanup directly rather than pushing it onto the event loop so the
+         * this.state stuff gets cleared before the endPacket method is called.
+         * This fix simply interposes a check to avoid calling endPacket if
+         * the state has been cleared (i.e. the WebSocket has been closed).
+         */
+        if (ENVIRONMENT_IS_NODE) {
+            try {
+                var ws = require('ws');
+                // Array notation to stop Closure compiler minifying properties we need.
+                ws['Receiver'].prototype['originalEndPacket'] = ws['Receiver'].prototype['endPacket'];
+                ws['Receiver'].prototype['endPacket'] = function() {
+                    if (this['state']) {
+                        this['originalEndPacket']();
                     }
-//console.log("_pump while finish");
+                };
+            } catch (e) {
+                console.error("Failed to apply Monkey Patch to ws WebSocket library");
+            }
+        }
+
+        _initialise = function() {}; // After first call replace with null function.
+    };
+
+    /**
+     * Messenger error handling can be a bit inconsistent and in several places
+     * rather than returning an error code or setting an error it simply writes
+     * to fprintf. This is something of a Monkey Patch that replaces the emscripten
+     * library fprintf call with one that checks the message and sets a variable
+     * if the message is an ERROR. TODO At some point hopefully Dominic Evans'
+     * patch on Jira PROTON-571 will render this code redundant.
+     */
+    _fprintf = function(stream, format, varargs) {
+        var array = __formatString(format, varargs);
+        array.pop(); // Remove the trailing \n
+        var string = intArrayToString(array); // Convert to native JavaScript string.
+        if (string.indexOf('ERROR') === -1) { // If not an ERROR just log the message.
+            console.log(string);
+        } else {
+            _error = string;
+        }
+    };
+
+    /**
+     * This method iterates through all registered Messengers and retrieves any
+     * pending selectables, which are stored in a _selectables map keyed by fd.
+     */
+    var _updateSelectables = function() {
+        var sel = 0;
+        var fd = -1;
+        for (var name in _messengers) {
+            var messenger = _messengers[name];
+            while ((sel = _pn_messenger_selectable(messenger._messenger))) {
+                fd = _pn_selectable_fd(sel);
+                // Only register valid selectables, otherwise free them.
+                if (fd === -1) {
+                    _pn_selectable_free(sel);
+                } else {
+                    _selectables[fd] = {messenger: messenger, selectable: sel};
                 }
             }
         }
-//console.log("\t_pump exit");
+        return fd; // Return the most recently added selector's file descriptor.
     };
 
     /**
-     * Listener for the emscripten socket close event. Delegates to _pump()
-     * passing a flag to indicate that the socket is closing.
+     * Continually pump data while there's still work to do.
      */
-    var _close = function(fd) {
-//console.log("calling close fd = " + fd);
-        _pump(fd, true);
-        delete _fd2Messenger[fd];
-    };
-
-    var _error = function(error) {
-        var fd = error[0];
-        var messenger = _fd2Messenger[fd];
-        messenger._emit('error', new Module['MessengerError'](error[2]));
-        delete _fd2Messenger[fd];
+    var _pump = function() {
+        while (_pumpOnce());
     };
 
     /**
-     * This code cheekily replaces the library socket call with our own one.
-     * The real socket call returns a file descriptor so we harvest that and use
-     * that as a key to map file descriptors to their owning Messenger.
+     * This method more or less follows the pattern of the pump_once method from
+     * class Pump in tests/python/proton_tests/messenger.py. It looks a little
+     * different because the select/poll implemented here uses some low-level
+     * emscripten internals (stream = FS.getStream(fd), sock = stream.node.sock,
+     * mask = sock.sock_ops.poll(sock)). We use the internals so we don't have
+     * to massage from file descriptors into the C style poll interface.
      */
-    var realsocket = _socket;
-    _socket = function(domain, type, protocol) {
-        var fd = realsocket(domain, type, protocol);
-//console.log("calling socket fd = " + fd);
-        if (_currentMessenger) {
-            _fd2Messenger[fd] = _currentMessenger;
-        } else {
-            console.error("Error: file descriptor " + fd + " cannot be mapped to a Messenger.");
+    var _pumpOnce = function() {
+        _updateSelectables();
+
+        var count = 0;
+        for (var fd in _selectables) {
+            var selectable = _selectables[fd];
+            var sel = selectable.selectable;
+            var terminal = _pn_selectable_is_terminal(sel);
+            if (terminal) {
+                _pn_selectable_free(sel);
+                delete _selectables[fd];
+            } else {
+                var stream = FS.getStream(fd);
+                if (stream) {
+                    var sock = stream.node.sock;
+                    if (sock.sock_ops.poll) {
+                        var mask = sock.sock_ops.poll(sock); // Low-level poll call.
+                        if (mask) {
+                            var messenger = selectable.messenger;
+                            var capacity = _pn_selectable_capacity(sel) > 0;
+                            var pending = _pn_selectable_pending(sel) > 0;
+
+                            if ((mask & POLLIN) && capacity) {
+//console.log("- readable fd = " + fd + ", capacity = " + _pn_selectable_capacity(sel));
+                                _error = null; // May get set by _pn_selectable_readable.
+                                _pn_selectable_readable(sel);
+                                count++; // Should this be inside the test for _error? Don't know.
+                                var errno = messenger['getErrno']();
+                                _error = errno ? messenger['getError']() : _error;
+                                if (_error) {
+                                    _errorHandler([fd, 0, _error]);
+                                } else {
+                                    // Don't send work event if it's a listen socket.
+                                    if (!sock.server) {
+                                        messenger._checkSubscriptions();
+                                        messenger._emit('work');
+                                    }
+                                }
+                            }
+                            if ((mask & POLLOUT) && pending) {
+//console.log("- writeable fd = " + fd + ", pending = " + _pn_selectable_pending(sel));
+                                _pn_selectable_writable(sel);
+                                //TODO looks like this block isn't needed. Need to
+                                //check with a test-case that writes data as fast as
+                                //it can. If not needed then delete.
+                                /*
+                                count++;
+                                // Check _selectables again in case the call to
+                                // _pn_selectable_writable caused a socket close.
+                                if (_selectables[fd]) {
+                                    messenger._checkSubscriptions();
+                                    messenger._emit('work');
+                                }
+                                */
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return fd;
-    }
 
-    this.setCurrentMessenger = function(messenger) {
-        _currentMessenger = messenger;
-    }
+        return count;
+    };
+
+    /**
+     * Handler for the emscripten socket close event.
+     */
+    var _closeHandler = function(fd) {
+        var selectable = _selectables[fd];
+        if (selectable) {
+            // Close and remove the selectable.
+            var sel = selectable.selectable;
+            _pn_selectable_free(sel); // This closes the underlying socket too.
+            delete _selectables[fd];
+
+            var messenger = selectable.messenger;
+            messenger._emit('work');
+        }
+    };
+
+    /**
+     * Handler for the emscripten socket error event.
+     */
+    var _errorHandler = function(error) {
+        var fd = error[0];
+        var message = error[2];
+
+        _updateSelectables();
+
+        var selectable = _selectables[fd];
+        if (selectable) {
+            // Close and remove the selectable.
+            var sel = selectable.selectable;
+            _pn_selectable_free(sel); // This closes the underlying socket too.
+            delete _selectables[fd];
+
+            var messenger = selectable.messenger;
+
+            // Remove any pending Subscriptions whose fd matches the error fd.
+            var subscriptions = messenger._pendingSubscriptions;
+            for (var i = 0; i < subscriptions.length; i++) {
+                subscription = subscriptions[i];
+                // Use == not === as we don't care if fd is a number or a string.
+                if (subscription.fd == fd) {
+                    messenger._pendingSubscriptions.splice(i, 1);
+                    if (message.indexOf('EHOSTUNREACH:') === 0) {
+                        message = 'CONNECTION ERROR (' + subscription.source + '): bind: Address already in use';
+                    }
+                    messenger._emit('error', new Module['SubscriptionError'](subscription.source, message));
+                    return;
+                }
+            }
+
+            messenger._emit('error', new Module['MessengerError'](message));
+        }
+    };
+
+    /**
+     * Flush any data that has been written by the Messenger put() method.
+     * @method flush
+     */
+    this.flush = function() {
+        _pump();
+    };
+
+    /**
+     * Subscribe to a specified source address.
+     * <p>
+     * This method is delegated to by the subscribe method of {@link proton.Messenger}.
+     * We delegate to EventDispatch because we create Subscription objects that
+     * contain some additional information (such as file descriptors) which are
+     * only available to EventDispatch and we don't really want to expose to the
+     * wider API. This low-level information is mainly used for error handling
+     * which is itself encapsulated in EventDispatch.
+     * @method subscribe
+     * @memberof! proton.EventDispatch#
+     * @param {proton.Messenger} messenger the Messenger instance that this
+     *        subscription relates to.
+     * @param {string} source the address that we'd like to subscribe to.
+     */
+    this.subscribe = function(messenger, source) {
+        // First update selectables before subscribing so we can work out the
+        // Subscription fd (which will be the listen file descriptor).
+        _updateSelectables();
+        var sp = Runtime.stackSave();
+        var subscription = _pn_messenger_subscribe(messenger._messenger,
+                                                   allocate(intArrayFromString(source), 'i8', ALLOC_STACK));
+        Runtime.stackRestore(sp);
+        var fd = _updateSelectables();
+
+        subscription = new Subscription(subscription, source, fd);
+        messenger._pendingSubscriptions.push(subscription);
+
+        // For passive subscriptions emit a subscription event (almost) immediately,
+        // otherwise defer until the address has been resolved remotely.
+        if (subscription.passive) {
+            // We briefly delay the call to checkSubscriptions because it is possible
+            // for passive subscriptions to fail if another process is bound to the
+            // port specified in the subscription.
+            var check = function() {messenger._checkSubscriptions();};
+            setTimeout(check, 10);
+        }
+
+        return subscription;
+    };
 
     /**
      * Register the specified Messenger as being interested in network events.
+     * @method registerMessenger
+     * @memberof! proton.EventDispatch#
+     * @param {proton.Messenger} messenger the Messenger instance we want to
+     *        register to receive network events.
      */
     this.registerMessenger = function(messenger) {
-        if (_firstCall) {
-            /**
-             * Initialises the emscripten network callback functions. This needs
-             * to be done the first time we call registerMessenger rather than
-             * when we create the Singleton because emscripten's socket filesystem
-             * has to be mounted before can listen for any of these events.
-             */
-            Module['websocket']['on']('open', _pump);
-            Module['websocket']['on']('connection', _pump);
-            Module['websocket']['on']('message', _pump);
-            Module['websocket']['on']('close', _close);
-            Module['websocket']['on']('error', _error);
-            _firstCall = false;
-        }
+        _initialise();
 
-        var name = messenger.getName();
+        var name = messenger['getName']();
         _messengers[name] = messenger;
+
+        // Set the Messenger "passive" as we are supplying our own event loop here.
+        _pn_messenger_set_passive(messenger._messenger, true);
     };
 
     /**
      * Unregister the specified Messenger from interest in network events.
+     * @method unregisterMessenger
+     * @memberof! proton.EventDispatch#
+     * @param {proton.Messenger} messenger the Messenger instance we want to
+     *        unregister from receiving network events.
      */
     this.unregisterMessenger = function(messenger) {
-        var name = messenger.getName();
+        var name = messenger['getName']();
         delete _messengers[name];
     };
 };

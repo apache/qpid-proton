@@ -32,11 +32,19 @@
  * constructor in the scope of the package and don't export it via Module.
  * @constructor Subscription
  * @param {number} subscription a pointer to the underlying subscription object.
- * @param {string} address if the address is already known it can be (optionally) specified.
+ * @param {string} source the address that we want to subscribe to.
+ * @param {number} fd the file descriptor associated with the subscription. This
+ *                 is used internally to tidy up during error handling.
  */
-var Subscription = function(subscription, address) { // Subscription Constructor.
+var Subscription = function(subscription, source, fd) { // Subscription Constructor.
     this._subscription = subscription;
-    this._address = address;
+    this.source = source;
+    this.fd = fd;
+    if (source.indexOf('~') !== -1) {
+        this.passive = true;
+    } else {
+        this.passive = false;
+    }
 };
 
 /**
@@ -65,8 +73,8 @@ Subscription.prototype['setContext'] = function(context) {
  * @returns the Subscription's Address.
  */
 Subscription.prototype['getAddress'] = function() {
-    if (this._address) {
-        return this._address;
+    if (this.passive) {
+        return this.source;
     }
     return Pointer_stringify(_pn_subscription_address(this._subscription));
 };

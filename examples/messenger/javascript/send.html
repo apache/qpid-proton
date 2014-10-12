@@ -67,15 +67,6 @@ console.log("body = " + body);
 
 var errorHandler = function(error) {
     console.log("Received error " + error);
-
-    // Error recovery seems to require a new Messenger instance.
-    messenger.stop();
-    messenger.free();
-    messenger = new proton.Messenger();
-
-    messenger.on('error', errorHandler);
-    messenger.start();
-    console.log("Restarted");
 };
 
 messenger.on('error', errorHandler);
