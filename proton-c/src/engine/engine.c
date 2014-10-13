@@ -52,12 +52,12 @@ pn_connection_t *pn_ep_get_connection(pn_endpoint_t *endpoint)
 static pn_event_type_t endpoint_event(pn_endpoint_type_t type, bool open) {
   switch (type) {
   case CONNECTION:
-    return open ? PN_CONNECTION_OPEN : PN_CONNECTION_CLOSE;
+    return open ? PN_CONNECTION_LOCAL_OPEN : PN_CONNECTION_LOCAL_CLOSE;
   case SESSION:
-    return open ? PN_SESSION_OPEN : PN_SESSION_CLOSE;
+    return open ? PN_SESSION_LOCAL_OPEN : PN_SESSION_LOCAL_CLOSE;
   case SENDER:
   case RECEIVER:
-    return open ? PN_LINK_OPEN : PN_LINK_CLOSE;
+    return open ? PN_LINK_LOCAL_OPEN : PN_LINK_LOCAL_CLOSE;
   default:
     assert(false);
     return PN_EVENT_NONE;
@@ -267,7 +267,7 @@ void pn_link_detach(pn_link_t *link)
 {
   assert(link);
   link->detached = true;
-  pn_collector_put(link->session->connection->collector, PN_OBJECT, link, PN_LINK_DETACH);
+  pn_collector_put(link->session->connection->collector, PN_OBJECT, link, PN_LINK_LOCAL_DETACH);
   pn_modified(link->session->connection, &link->endpoint, true);
 
 }

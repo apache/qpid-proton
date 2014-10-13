@@ -1266,22 +1266,22 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_CONNECTION_REMOTE_OPEN:
     case PN_CONNECTION_REMOTE_CLOSE:
-    case PN_CONNECTION_OPEN:
-    case PN_CONNECTION_CLOSE:
+    case PN_CONNECTION_LOCAL_OPEN:
+    case PN_CONNECTION_LOCAL_CLOSE:
       pn_messenger_process_connection(messenger, event);
       break;
     case PN_SESSION_REMOTE_OPEN:
     case PN_SESSION_REMOTE_CLOSE:
-    case PN_SESSION_OPEN:
-    case PN_SESSION_CLOSE:
+    case PN_SESSION_LOCAL_OPEN:
+    case PN_SESSION_LOCAL_CLOSE:
       pn_messenger_process_session(messenger, event);
       break;
     case PN_LINK_REMOTE_OPEN:
     case PN_LINK_REMOTE_CLOSE:
     case PN_LINK_REMOTE_DETACH:
-    case PN_LINK_OPEN:
-    case PN_LINK_CLOSE:
-    case PN_LINK_DETACH:
+    case PN_LINK_LOCAL_OPEN:
+    case PN_LINK_LOCAL_CLOSE:
+    case PN_LINK_LOCAL_DETACH:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:

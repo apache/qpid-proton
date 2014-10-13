@@ -617,12 +617,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     @Override
     void localOpen()
     {
-        put(Event.Type.CONNECTION_OPEN, this);
+        put(Event.Type.CONNECTION_LOCAL_OPEN, this);
     }
 
     @Override
     void localClose()
     {
-        put(Event.Type.CONNECTION_CLOSE, this);
+        put(Event.Type.CONNECTION_LOCAL_CLOSE, this);
     }
 }

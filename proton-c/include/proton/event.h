@@ -94,12 +94,14 @@ typedef enum {
   PN_CONNECTION_INIT,
 
   /**
-   * The connection has been bound to a transport.
+   * The connection has been bound to a transport. This event is
+   * issued when the ::pn_transport_bind() operation is invoked.
    */
   PN_CONNECTION_BOUND,
 
   /**
-   * The connection has been unbound from its transport.
+   * The connection has been unbound from its transport. This event is
+   * issued when the ::pn_transport_unbind() operation is invoked.
    */
   PN_CONNECTION_UNBOUND,
 
@@ -107,7 +109,7 @@ typedef enum {
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_OPEN,
+  PN_CONNECTION_LOCAL_OPEN,
 
   /**
    * The remote endpoint has opened the connection. Events of this
@@ -119,7 +121,7 @@ typedef enum {
    * The local connection endpoint has been closed. Events of this
    * type point to the relevant connection.
    */
-  PN_CONNECTION_CLOSE,
+  PN_CONNECTION_LOCAL_CLOSE,
 
   /**
    *  The remote endpoint has closed the connection. Events of this
@@ -144,7 +146,7 @@ typedef enum {
    * The local session endpoint has been opened. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_OPEN,
+  PN_SESSION_LOCAL_OPEN,
 
   /**
    * The remote endpoint has opened the session. Events of this type
@@ -156,7 +158,7 @@ typedef enum {
    * The local session endpoint has been closed. Events of this type
    * point ot the relevant session.
    */
-  PN_SESSION_CLOSE,
+  PN_SESSION_LOCAL_CLOSE,
 
   /**
    * The remote endpoint has closed the session. Events of this type
@@ -181,7 +183,7 @@ typedef enum {
    * The local link endpoint has been opened. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_OPEN,
+  PN_LINK_LOCAL_OPEN,
 
   /**
    * The remote endpoint has opened the link. Events of this type
@@ -193,7 +195,7 @@ typedef enum {
    * The local link endpoint has been closed. Events of this type
    * point ot the relevant link.
    */
-  PN_LINK_CLOSE,
+  PN_LINK_LOCAL_CLOSE,
 
   /**
    * The remote endpoint has closed the link. Events of this type
@@ -205,7 +207,7 @@ typedef enum {
    * The local link endpoint has been detached. Events of this type
    * point to the relevant link.
    */
-  PN_LINK_DETACH,
+  PN_LINK_LOCAL_DETACH,
 
   /**
    * The remote endpoint has detached the link. Events of this type
