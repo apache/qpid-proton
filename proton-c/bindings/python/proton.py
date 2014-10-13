@@ -2911,6 +2911,10 @@ class Delivery(object):
       self._dlv = None
 
   @property
+  def released(self):
+    return self._dlv is None
+
+  @property
   def tag(self):
     return pn_delivery_tag(self._dlv)
 
@@ -3364,7 +3368,7 @@ class Collector:
 
     clazz = pn_class_name(pn_event_class(event))
     context = wrappers[clazz](pn_event_context(event))
-    return Event(clazz, context, pn_event_type(event))
+    return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
 
   def pop(self):
     ev = self.peek()
@@ -3375,41 +3379,54 @@ class Collector:
   def __del__(self):
     pn_collector_free(self._impl)
 
+class EventType:
+
+  TYPES = {}
+
+  def __init__(self, number, method):
+    self.number = number
+    self.name = pn_event_type_name(self.number)
+    self.method = method
+    self.TYPES[number] = self
+
+  def __repr__(self):
+    return self.name
+
 class Event:
 
-  CONNECTION_INIT = PN_CONNECTION_INIT
-  CONNECTION_BOUND = PN_CONNECTION_BOUND
-  CONNECTION_UNBOUND = PN_CONNECTION_UNBOUND
-  CONNECTION_LOCAL_OPEN = PN_CONNECTION_LOCAL_OPEN
-  CONNECTION_LOCAL_CLOSE = PN_CONNECTION_LOCAL_CLOSE
-  CONNECTION_REMOTE_OPEN = PN_CONNECTION_REMOTE_OPEN
-  CONNECTION_REMOTE_CLOSE = PN_CONNECTION_REMOTE_CLOSE
-  CONNECTION_FINAL = PN_CONNECTION_FINAL
+  CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
+  CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
+  CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+  CONNECTION_LOCAL_OPEN = EventType(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+  CONNECTION_LOCAL_CLOSE = EventType(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+  CONNECTION_REMOTE_OPEN = EventType(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+  CONNECTION_REMOTE_CLOSE = EventType(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+  CONNECTION_FINAL = EventType(PN_CONNECTION_FINAL, "on_connection_final")
 
-  SESSION_INIT = PN_SESSION_INIT
-  SESSION_LOCAL_OPEN = PN_SESSION_LOCAL_OPEN
-  SESSION_LOCAL_CLOSE = PN_SESSION_LOCAL_CLOSE
-  SESSION_REMOTE_OPEN = PN_SESSION_REMOTE_OPEN
-  SESSION_REMOTE_CLOSE = PN_SESSION_REMOTE_CLOSE
-  SESSION_FINAL = PN_SESSION_FINAL
+  SESSION_INIT = EventType(PN_SESSION_INIT, "on_session_init")
+  SESSION_LOCAL_OPEN = EventType(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+  SESSION_LOCAL_CLOSE = EventType(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+  SESSION_REMOTE_OPEN = EventType(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+  SESSION_REMOTE_CLOSE = EventType(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+  SESSION_FINAL = EventType(PN_SESSION_FINAL, "on_session_final")
 
-  LINK_INIT = PN_LINK_INIT
-  LINK_LOCAL_OPEN = PN_LINK_LOCAL_OPEN
-  LINK_LOCAL_CLOSE = PN_LINK_LOCAL_CLOSE
-  LINK_LOCAL_DETACH = PN_LINK_LOCAL_DETACH
-  LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
-  LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
-  LINK_REMOTE_DETACH = PN_LINK_REMOTE_DETACH
-  LINK_FLOW = PN_LINK_FLOW
-  LINK_FINAL = PN_LINK_FINAL
+  LINK_INIT = EventType(PN_LINK_INIT, "on_link_init")
+  LINK_LOCAL_OPEN = EventType(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+  LINK_LOCAL_CLOSE = EventType(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+  LINK_LOCAL_DETACH = EventType(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+  LINK_REMOTE_OPEN = EventType(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+  LINK_REMOTE_CLOSE = EventType(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+  LINK_REMOTE_DETACH = EventType(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+  LINK_FLOW = EventType(PN_LINK_FLOW, "on_link_flow")
+  LINK_FINAL = EventType(PN_LINK_FINAL, "on_link_final")
 
-  DELIVERY = PN_DELIVERY
+  DELIVERY = EventType(PN_DELIVERY, "on_delivery")
 
-  TRANSPORT = PN_TRANSPORT
-  TRANSPORT_ERROR = PN_TRANSPORT_ERROR
-  TRANSPORT_HEAD_CLOSED = PN_TRANSPORT_HEAD_CLOSED
-  TRANSPORT_TAIL_CLOSED = PN_TRANSPORT_TAIL_CLOSED
-  TRANSPORT_CLOSED = PN_TRANSPORT_CLOSED
+  TRANSPORT = EventType(PN_TRANSPORT, "on_transport")
+  TRANSPORT_ERROR = EventType(PN_TRANSPORT_ERROR, "on_transport_error")
+  TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+  TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+  TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
   def __init__(self, clazz, context, type):
     self.clazz = clazz
@@ -3422,8 +3439,73 @@ class Event:
       collector._contexts.remove(self.context)
       self.context._released()
 
+  def dispatch(self, handler):
+    getattr(handler, self.type.method, handler.on_unhandled)(self)
+
+  @property
+  def connection(self):
+    if self.clazz == "pn_connection":
+      return self.context
+    elif self.clazz == "pn_session":
+      return self.context.connection
+    elif self.clazz == "pn_link":
+      return self.context.connection
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.connection
+    else:
+      return None
+
+  @property
+  def session(self):
+    if self.clazz == "pn_session":
+      return self.context
+    elif self.clazz == "pn_link":
+      return self.context.session
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.session
+    else:
+      return None
+
+  @property
+  def link(self):
+    if self.clazz == "pn_link":
+      return self.context
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link
+    else:
+      return None
+
+  @property
+  def sender(self):
+    l = self.link
+    if l and l.is_sender:
+      return l
+    else:
+      return None
+
+  @property
+  def receiver(self):
+    l = self.link
+    if l and l.is_receiver:
+      return l
+    else:
+      return None
+
+  @property
+  def delivery(self):
+    if self.clazz == "pn_delivery":
+      return self.context
+    else:
+      return None
+
   def __repr__(self):
-    return "%s(%s)" % (pn_event_type_name(self.type), self.context)
+    return "%s(%s)" % (self.type, self.context)
+
+class Handler:
+
+  def on_unhandled(self, event):
+    pass
+
 
 ###
 # Driver
@@ -3617,61 +3699,6 @@ class Driver(object):
   def pending_connector(self):
     return Connector._wrap_connector(pn_driver_connector(self._driver))
 
-__all__ = [
-           "API_LANGUAGE",
-           "IMPLEMENTATION_LANGUAGE",
-           "ABORTED",
-           "ACCEPTED",
-           "AUTOMATIC",
-           "PENDING",
-           "MANUAL",
-           "REJECTED",
-           "RELEASED",
-           "SETTLED",
-           "UNDESCRIBED",
-           "Array",
-           "Collector",
-           "Condition",
-           "Connection",
-           "Connector",
-           "Data",
-           "Delivery",
-           "Disposition",
-           "Described",
-           "Driver",
-           "DriverException",
-           "Endpoint",
-           "Event",
-           "Link",
-           "Listener",
-           "Message",
-           "MessageException",
-           "Messenger",
-           "MessengerException",
-           "ProtonException",
-           "VERSION_MAJOR",
-           "VERSION_MINOR",
-           "Receiver",
-           "SASL",
-           "Sender",
-           "Session",
-           "SSL",
-           "SSLDomain",
-           "SSLSessionDetails",
-           "SSLUnavailable",
-           "SSLException",
-           "Terminus",
-           "Timeout",
-           "Interrupt",
-           "Transport",
-           "TransportException",
-           "char",
-           "symbol",
-           "timestamp",
-           "ulong"
-           ]
-
-
 class Url(object):
   """
   Simple URL parser/constructor, handles URLs of the form:
@@ -3777,3 +3804,59 @@ class Url(object):
     self.host = self.host or '0.0.0.0'
     self.port = self.port or self.Port(self.scheme)
     return self
+
+__all__ = [
+           "API_LANGUAGE",
+           "IMPLEMENTATION_LANGUAGE",
+           "ABORTED",
+           "ACCEPTED",
+           "AUTOMATIC",
+           "PENDING",
+           "MANUAL",
+           "REJECTED",
+           "RELEASED",
+           "SETTLED",
+           "UNDESCRIBED",
+           "Array",
+           "Collector",
+           "Condition",
+           "Connection",
+           "Connector",
+           "Data",
+           "Delivery",
+           "Disposition",
+           "Described",
+           "Driver",
+           "DriverException",
+           "Endpoint",
+           "Event",
+           "Handler",
+           "Link",
+           "Listener",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "VERSION_MAJOR",
+           "VERSION_MINOR",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "SSLException",
+           "Terminus",
+           "Timeout",
+           "Interrupt",
+           "Transport",
+           "TransportException",
+           "Url",
+           "char",
+           "symbol",
+           "timestamp",
+           "ulong"
+           ]

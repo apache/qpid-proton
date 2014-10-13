@@ -69,6 +69,8 @@ public interface Event
 
     Object getContext();
 
+    void dispatch(Handler handler);
+
     Connection getConnection();
 
     Session getSession();
