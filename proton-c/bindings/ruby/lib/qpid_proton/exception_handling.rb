@@ -97,6 +97,9 @@ module Qpid # :nodoc:
         when Qpid::Proton::Error::ARGUMENT
           raise Qpid::Proton::ArgumentError.new(self.error)
 
+        when Qpid::Proton::Error::STATE
+          raise Qpid::Proton::StateError.new(self.error)
+
         when Qpid::Proton::Error::TIMEOUT
           raise Qpid::Proton::TimeoutError.new(self.error)
 

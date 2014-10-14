@@ -61,6 +61,12 @@ module Qpid # :nodoc:
     class ArgumentError < ProtonError
     end
 
+    # Represents that the client has got into an unexpected state during
+    # messaging.
+    #
+    class StateError < ProtonError
+    end
+
     # Represents a timeout during messaging.
     #
     class TimeoutError < ProtonError
