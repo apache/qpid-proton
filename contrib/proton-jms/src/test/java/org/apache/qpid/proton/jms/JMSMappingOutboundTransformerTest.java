@@ -54,13 +54,34 @@ public class JMSMappingOutboundTransformerTest
         assertEquals(contentString, ((AmqpValue) amqp.getBody()).getValue());
     }
 
+    @Test
+    public void testDefaultsTolStringDestinationTypeAnnotationValues()
+    {
+        JMSVendor mockVendor = createMockVendor();
+        JMSMappingOutboundTransformer transformer = new JMSMappingOutboundTransformer(mockVendor);
+
+        assertFalse("Expected the older string style annotation values to be used by default", transformer.isUseByteDestinationTypeAnnotations());
+    }
+
+    @Test
+    public void testSetGetIsUseByteDestinationTypeAnnotations()
+    {
+        JMSVendor mockVendor = createMockVendor();
+        JMSMappingOutboundTransformer transformer = new JMSMappingOutboundTransformer(mockVendor);
+
+        assertFalse(transformer.isUseByteDestinationTypeAnnotations());
+        transformer.setUseByteDestinationTypeAnnotations(true);
+        assertTrue(transformer.isUseByteDestinationTypeAnnotations());
+    }
+
     // ======= JMSDestination Handling =========
     // =========================================
 
+    // --- String type annotation ---
     @Test
     public void testConvertMessageWithJMSDestinationNull() throws Exception
     {
-        doTestConvertMessageWithJMSDestination(null, null);
+        doTestConvertMessageWithJMSDestination(null, null, false);
     }
 
     @Test
@@ -68,7 +89,7 @@ public class JMSMappingOutboundTransformerTest
     {
         Queue mockDest = Mockito.mock(Queue.class);
 
-        doTestConvertMessageWithJMSDestination(mockDest, "queue");
+        doTestConvertMessageWithJMSDestination(mockDest, "queue", false);
     }
 
     @Test
@@ -76,7 +97,7 @@ public class JMSMappingOutboundTransformerTest
     {
         TemporaryQueue mockDest = Mockito.mock(TemporaryQueue.class);
 
-        doTestConvertMessageWithJMSDestination(mockDest, "temporary,queue");
+        doTestConvertMessageWithJMSDestination(mockDest, "temporary,queue", false);
     }
 
     @Test
@@ -84,7 +105,7 @@ public class JMSMappingOutboundTransformerTest
     {
         Topic mockDest = Mockito.mock(Topic.class);
 
-        doTestConvertMessageWithJMSDestination(mockDest, "topic");
+        doTestConvertMessageWithJMSDestination(mockDest, "topic", false);
     }
 
     @Test
@@ -92,10 +113,58 @@ public class JMSMappingOutboundTransformerTest
     {
         TemporaryTopic mockDest = Mockito.mock(TemporaryTopic.class);
 
-        doTestConvertMessageWithJMSDestination(mockDest, "temporary,topic");
+        doTestConvertMessageWithJMSDestination(mockDest, "temporary,topic", false);
     }
 
-    private void doTestConvertMessageWithJMSDestination(Destination jmsDestination, Object expectedAnnotationValue) throws Exception
+    // --- byte type annotation ---
+
+    @Test
+    public void testConvertMessageWithJMSDestinationNullUsingByteAnnotation() throws Exception
+    {
+        doTestConvertMessageWithJMSDestination(null, null, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSDestinationQueueUsingByteAnnotation() throws Exception
+    {
+        Queue mockDest = Mockito.mock(Queue.class);
+
+        doTestConvertMessageWithJMSDestination(mockDest, JMSVendor.QUEUE_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSDestinationTemporaryQueueUsingByteAnnotation() throws Exception
+    {
+        TemporaryQueue mockDest = Mockito.mock(TemporaryQueue.class);
+
+        doTestConvertMessageWithJMSDestination(mockDest, JMSVendor.TEMP_QUEUE_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSDestinationTopicUsingByteAnnotation() throws Exception
+    {
+        Topic mockDest = Mockito.mock(Topic.class);
+
+        doTestConvertMessageWithJMSDestination(mockDest, JMSVendor.TOPIC_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSDestinationTemporaryTopicUsingByteAnnotation() throws Exception
+    {
+        TemporaryTopic mockDest = Mockito.mock(TemporaryTopic.class);
+
+        doTestConvertMessageWithJMSDestination(mockDest, JMSVendor.TEMP_TOPIC_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSDestinationUnkownUsingByteAnnotation() throws Exception
+    {
+        Destination mockDest = Mockito.mock(Destination.class);
+
+        doTestConvertMessageWithJMSDestination(mockDest, JMSVendor.QUEUE_TYPE, true);
+    }
+
+    private void doTestConvertMessageWithJMSDestination(Destination jmsDestination, Object expectedAnnotationValue, boolean byteType) throws Exception
     {
         TextMessage mockTextMessage = createMockTextMessage();
         Mockito.when(mockTextMessage.getText()).thenReturn("myTextMessageContent");
@@ -109,6 +178,10 @@ public class JMSMappingOutboundTransformerTest
         }
 
         JMSMappingOutboundTransformer transformer = new JMSMappingOutboundTransformer(mockVendor);
+        if(byteType)
+        {
+            transformer.setUseByteDestinationTypeAnnotations(true);
+        }
 
         Message amqp = transformer.convert(mockTextMessage);
 
@@ -133,10 +206,11 @@ public class JMSMappingOutboundTransformerTest
     // ======= JMSReplyTo Handling =========
     // =====================================
 
+    // --- String type annotation ---
     @Test
     public void testConvertMessageWithJMSReplyToNull() throws Exception
     {
-        doTestConvertMessageWithJMSReplyTo(null, null);
+        doTestConvertMessageWithJMSReplyTo(null, null, false);
     }
 
     @Test
@@ -144,7 +218,7 @@ public class JMSMappingOutboundTransformerTest
     {
         Queue mockDest = Mockito.mock(Queue.class);
 
-        doTestConvertMessageWithJMSReplyTo(mockDest, "queue");
+        doTestConvertMessageWithJMSReplyTo(mockDest, "queue", false);
     }
 
     @Test
@@ -152,7 +226,7 @@ public class JMSMappingOutboundTransformerTest
     {
         TemporaryQueue mockDest = Mockito.mock(TemporaryQueue.class);
 
-        doTestConvertMessageWithJMSReplyTo(mockDest, "temporary,queue");
+        doTestConvertMessageWithJMSReplyTo(mockDest, "temporary,queue", false);
     }
 
     @Test
@@ -160,7 +234,7 @@ public class JMSMappingOutboundTransformerTest
     {
         Topic mockDest = Mockito.mock(Topic.class);
 
-        doTestConvertMessageWithJMSReplyTo(mockDest, "topic");
+        doTestConvertMessageWithJMSReplyTo(mockDest, "topic", false);
     }
 
     @Test
@@ -168,10 +242,57 @@ public class JMSMappingOutboundTransformerTest
     {
         TemporaryTopic mockDest = Mockito.mock(TemporaryTopic.class);
 
-        doTestConvertMessageWithJMSReplyTo(mockDest, "temporary,topic");
+        doTestConvertMessageWithJMSReplyTo(mockDest, "temporary,topic", false);
     }
 
-    private void doTestConvertMessageWithJMSReplyTo(Destination jmsReplyTo, Object expectedAnnotationValue) throws Exception
+    // --- byte type annotation ---
+    @Test
+    public void testConvertMessageWithJMSReplyToNullUsingByteAnnotation() throws Exception
+    {
+        doTestConvertMessageWithJMSReplyTo(null, null, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSReplyToQueueUsingByteAnnotation() throws Exception
+    {
+        Queue mockDest = Mockito.mock(Queue.class);
+
+        doTestConvertMessageWithJMSReplyTo(mockDest, JMSVendor.QUEUE_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSReplyToTemporaryQueueUsingByteAnnotation() throws Exception
+    {
+        TemporaryQueue mockDest = Mockito.mock(TemporaryQueue.class);
+
+        doTestConvertMessageWithJMSReplyTo(mockDest, JMSVendor.TEMP_QUEUE_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSReplyToTopicUsingByteAnnotation() throws Exception
+    {
+        Topic mockDest = Mockito.mock(Topic.class);
+
+        doTestConvertMessageWithJMSReplyTo(mockDest, JMSVendor.TOPIC_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSReplyToTemporaryTopicUsingByteAnnotation() throws Exception
+    {
+        TemporaryTopic mockDest = Mockito.mock(TemporaryTopic.class);
+
+        doTestConvertMessageWithJMSReplyTo(mockDest, JMSVendor.TEMP_TOPIC_TYPE, true);
+    }
+
+    @Test
+    public void testConvertMessageWithJMSReplyToUnkownUsingByteAnnotation() throws Exception
+    {
+        Destination mockDest = Mockito.mock(Destination.class);
+
+        doTestConvertMessageWithJMSReplyTo(mockDest, JMSVendor.QUEUE_TYPE, true);
+    }
+
+    private void doTestConvertMessageWithJMSReplyTo(Destination jmsReplyTo, Object expectedAnnotationValue, boolean byteType) throws Exception
     {
         TextMessage mockTextMessage = createMockTextMessage();
         Mockito.when(mockTextMessage.getText()).thenReturn("myTextMessageContent");
@@ -185,6 +306,10 @@ public class JMSMappingOutboundTransformerTest
         }
 
         JMSMappingOutboundTransformer transformer = new JMSMappingOutboundTransformer(mockVendor);
+        if(byteType)
+        {
+            transformer.setUseByteDestinationTypeAnnotations(true);
+        }
 
         Message amqp = transformer.convert(mockTextMessage);
 
