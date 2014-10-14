@@ -19,9 +19,9 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, IncomingMessageHandler
+from proton_events import EventLoop, ClientHandler
 
-class Client(IncomingMessageHandler):
+class Client(ClientHandler):
     def __init__(self, eventloop, host, address, requests):
         self.eventloop = eventloop
         self.conn = eventloop.connect(host)
@@ -33,7 +33,7 @@ class Client(IncomingMessageHandler):
         req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
         self.sender.send_msg(req)
 
-    def on_link_open(self, event):
+    def on_link_opened(self, event):
         self.next_request()
 
     def on_message(self, event):

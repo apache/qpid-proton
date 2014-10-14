@@ -19,10 +19,10 @@
 #
 
 import time
-from proton_events import EventDispatcher
+from proton_events import Handler
 from proton_tornado import TornadoLoop
 
-class Recurring(EventDispatcher):
+class Recurring(Handler):
     def __init__(self, period):
         self.eventloop = TornadoLoop(self)
         self.period = period

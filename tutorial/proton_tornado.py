@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton_events import ApplicationEvent, Connector, EventLoop, Events, FlowController, MessagingContext, ScopedDispatcher, Url
+from proton_events import ApplicationEvent, EventLoop
 import tornado.ioloop
 
 class TornadoLoop(EventLoop):

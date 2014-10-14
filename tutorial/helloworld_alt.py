@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton_events import ErrorHandler, EventLoop, IncomingMessageHandler, OutgoingMessageHandler
+from proton_events import ClientEndpointHandler, EventLoop, IncomingMessageHandler, OutgoingMessageHandler
 
 class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
@@ -31,13 +31,13 @@ class HelloWorldSender(OutgoingMessageHandler):
         event.link.send_msg(Message(body=u"Hello World!"))
         event.link.close()
 
-class HelloWorld(ErrorHandler):
+class HelloWorld(ClientEndpointHandler):
     def __init__(self, url, address):
         self.eventloop = EventLoop()
         self.conn = self.eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         self.conn.create_receiver(self.address, handler=HelloWorldReceiver())
         self.conn.create_sender(self.address, handler=HelloWorldSender())
 

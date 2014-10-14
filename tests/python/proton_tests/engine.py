@@ -2139,13 +2139,13 @@ class EventTest(CollectorTest):
     rcv = ssn2.receiver("receiver")
     rcv.open()
     self.pump()
-    self.expect(Event.CONNECTION_OPEN, Event.TRANSPORT,
-                Event.SESSION_INIT, Event.SESSION_OPEN,
-                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_OPEN,
+    self.expect(Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.SESSION_INIT, Event.SESSION_LOCAL_OPEN,
+                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_LOCAL_OPEN,
                 Event.TRANSPORT)
 
     rcv.close()
-    self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+    self.expect(Event.LINK_LOCAL_CLOSE, Event.TRANSPORT)
     self.pump()
     rcv.free()
     del rcv
@@ -2209,7 +2209,7 @@ class EventTest(CollectorTest):
     rcv.flow(10)
     self.pump()
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+                Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()
@@ -2229,7 +2229,7 @@ class EventTest(CollectorTest):
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(Event.LINK_OPEN, Event.TRANSPORT)
+    self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     self.pump()
     self.expect(Event.LINK_FLOW)
     rdlv = rcv.current
@@ -2276,7 +2276,7 @@ class EventTest(CollectorTest):
     t.bind(c)
     c.open()
 
-    self.expect(Event.CONNECTION_BOUND, Event.CONNECTION_OPEN, Event.TRANSPORT)
+    self.expect(Event.CONNECTION_BOUND, Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT)
 
     c2 = Connection()
     t2 = Transport()
@@ -2293,7 +2293,7 @@ class EventTest(CollectorTest):
 
     pump(t, t2)
 
-    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT,
+    self.expect(Event.CONNECTION_LOCAL_CLOSE, Event.TRANSPORT,
                 Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
   def testLinkDetach(self):
@@ -2307,7 +2307,7 @@ class EventTest(CollectorTest):
     l1 = s1.sender("asdf")
     l1.open()
     l1.detach()
-    self.expect_until(Event.LINK_DETACH, Event.TRANSPORT)
+    self.expect_until(Event.LINK_LOCAL_DETACH, Event.TRANSPORT)
 
     c2 = Connection()
     c2.collect(self.collector)
@@ -2339,15 +2339,15 @@ class TeardownLeakTest(PeerTest):
   def doLeak(self, local, remote):
     self.connection.open()
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
-                Event.CONNECTION_OPEN, Event.TRANSPORT)
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT)
 
     ssn = self.connection.session()
     ssn.open()
-    self.expect(Event.SESSION_INIT, Event.SESSION_OPEN, Event.TRANSPORT)
+    self.expect(Event.SESSION_INIT, Event.SESSION_LOCAL_OPEN, Event.TRANSPORT)
 
     snd = ssn.sender("sender")
     snd.open()
-    self.expect(Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+    self.expect(Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
 
 
     self.pump()
@@ -2364,11 +2364,11 @@ class TeardownLeakTest(PeerTest):
 
     if local:
       snd.close() # ha!!
-      self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+      self.expect(Event.LINK_LOCAL_CLOSE, Event.TRANSPORT)
     ssn.close()
-    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
+    self.expect(Event.SESSION_LOCAL_CLOSE, Event.TRANSPORT)
     self.connection.close()
-    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT)
+    self.expect(Event.CONNECTION_LOCAL_CLOSE, Event.TRANSPORT)
 
     if remote:
       self.peer.link_head(0).close() # ha!!

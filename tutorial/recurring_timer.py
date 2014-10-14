@@ -19,9 +19,9 @@
 #
 
 import time
-from proton_events import EventLoop, EventDispatcher
+from proton_events import EventLoop, Handler
 
-class Recurring(EventDispatcher):
+class Recurring(Handler):
     def __init__(self, period):
         self.eventloop = EventLoop(self)
         self.period = period

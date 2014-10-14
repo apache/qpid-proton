@@ -391,19 +391,19 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     @Override
     void localOpen()
     {
-        getConnectionImpl().put(Event.Type.LINK_OPEN, this);
+        getConnectionImpl().put(Event.Type.LINK_LOCAL_OPEN, this);
     }
 
     @Override
     void localClose()
     {
-        getConnectionImpl().put(Event.Type.LINK_CLOSE, this);
+        getConnectionImpl().put(Event.Type.LINK_LOCAL_CLOSE, this);
     }
 
     public void detach()
     {
         _detached = true;
-        getConnectionImpl().put(Event.Type.LINK_DETACH, this);
+        getConnectionImpl().put(Event.Type.LINK_LOCAL_DETACH, this);
         modified();
     }
 

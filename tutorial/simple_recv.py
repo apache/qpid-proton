@@ -20,7 +20,7 @@
 
 import proton_events
 
-class Recv(proton_events.BaseHandler):
+class Recv(proton_events.ClientHandler):
     def on_message(self, event):
         print event.message.body
 

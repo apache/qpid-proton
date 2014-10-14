@@ -204,12 +204,12 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     @Override
     void localOpen()
     {
-        getConnectionImpl().put(Event.Type.SESSION_OPEN, this);
+        getConnectionImpl().put(Event.Type.SESSION_LOCAL_OPEN, this);
     }
 
     @Override
     void localClose()
     {
-        getConnectionImpl().put(Event.Type.SESSION_CLOSE, this);
+        getConnectionImpl().put(Event.Type.SESSION_LOCAL_CLOSE, this);
     }
 }

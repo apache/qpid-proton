@@ -19,29 +19,31 @@
 #
 
 from proton import Message
-from proton_events import BaseHandler, EventLoop, FlowController, Handshaker
+from proton_events import ClientHandler, EventLoop, FlowController, Handshaker, IncomingMessageHandler
 
-class HelloWorldReceiver(BaseHandler):
+class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
         print event.message.body
         event.connection.close()
 
-class HelloWorld(BaseHandler):
+class HelloWorld(ClientHandler):
     def __init__(self, eventloop, url, address):
         self.eventloop = eventloop
         self.acceptor = eventloop.listen(url)
         self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         self.conn.create_sender(self.address)
 
-    def on_link_flow(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
+    def on_credit(self, event):
+        event.sender.send_msg(Message(body=u"Hello World!"))
+        event.sender.close()
 
-    def on_connection_close(self, event):
+    def on_accepted(self, event):
         self.conn.close()
+
+    def on_connection_closed(self, event):
         self.acceptor.close()
 
     def run(self):

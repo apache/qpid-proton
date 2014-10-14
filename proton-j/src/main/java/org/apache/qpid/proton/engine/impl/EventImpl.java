@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.Event;
+import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Link;
@@ -64,6 +65,102 @@ class EventImpl implements Event
     public Object getContext()
     {
         return context;
+    }
+
+    public void dispatch(Handler handler)
+    {
+        switch (type) {
+        case CONNECTION_INIT:
+            handler.onConnectionInit(this);
+            break;
+        case CONNECTION_LOCAL_OPEN:
+            handler.onConnectionLocalOpen(this);
+            break;
+        case CONNECTION_REMOTE_OPEN:
+            handler.onConnectionRemoteOpen(this);
+            break;
+        case CONNECTION_LOCAL_CLOSE:
+            handler.onConnectionLocalClose(this);
+            break;
+        case CONNECTION_REMOTE_CLOSE:
+            handler.onConnectionRemoteClose(this);
+            break;
+        case CONNECTION_BOUND:
+            handler.onConnectionBound(this);
+            break;
+        case CONNECTION_UNBOUND:
+            handler.onConnectionUnbound(this);
+            break;
+        case CONNECTION_FINAL:
+            handler.onConnectionFinal(this);
+            break;
+        case SESSION_INIT:
+            handler.onSessionInit(this);
+            break;
+        case SESSION_LOCAL_OPEN:
+            handler.onSessionLocalOpen(this);
+            break;
+        case SESSION_REMOTE_OPEN:
+            handler.onSessionRemoteOpen(this);
+            break;
+        case SESSION_LOCAL_CLOSE:
+            handler.onSessionLocalClose(this);
+            break;
+        case SESSION_REMOTE_CLOSE:
+            handler.onSessionRemoteClose(this);
+            break;
+        case SESSION_FINAL:
+            handler.onSessionFinal(this);
+            break;
+        case LINK_INIT:
+            handler.onLinkInit(this);
+            break;
+        case LINK_LOCAL_OPEN:
+            handler.onLinkLocalOpen(this);
+            break;
+        case LINK_REMOTE_OPEN:
+            handler.onLinkRemoteOpen(this);
+            break;
+        case LINK_LOCAL_DETACH:
+            handler.onLinkLocalDetach(this);
+            break;
+        case LINK_REMOTE_DETACH:
+            handler.onLinkRemoteDetach(this);
+            break;
+        case LINK_LOCAL_CLOSE:
+            handler.onLinkLocalClose(this);
+            break;
+        case LINK_REMOTE_CLOSE:
+            handler.onLinkRemoteClose(this);
+            break;
+        case LINK_FLOW:
+            handler.onLinkFlow(this);
+            break;
+        case LINK_FINAL:
+            handler.onLinkFinal(this);
+            break;
+        case DELIVERY:
+            handler.onDelivery(this);
+            break;
+        case TRANSPORT:
+            handler.onTransport(this);
+            break;
+        case TRANSPORT_ERROR:
+            handler.onTransportError(this);
+            break;
+        case TRANSPORT_HEAD_CLOSED:
+            handler.onTransportHeadClosed(this);
+            break;
+        case TRANSPORT_TAIL_CLOSED:
+            handler.onTransportTailClosed(this);
+            break;
+        case TRANSPORT_CLOSED:
+            handler.onTransportClosed(this);
+            break;
+        default:
+            handler.onUnhandled(this);
+            break;
+        }
     }
 
     public Connection getConnection()

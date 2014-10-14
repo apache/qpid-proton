@@ -19,9 +19,9 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, IncomingMessageHandler
+from proton_events import EventLoop, ClientHandler
 
-class Server(IncomingMessageHandler):
+class Server(ClientHandler):
     def __init__(self, eventloop, host, address):
         self.eventloop = eventloop
         self.conn = eventloop.connect(host, handler=self)
@@ -38,13 +38,9 @@ class Server(IncomingMessageHandler):
             self.senders[event.message.reply_to] = sender
         sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
             self.relay = self.conn.create_sender(None)
-
-    def on_connection_close(self, endpoint, error):
-        if error: print "Closed due to %s" % error
-        self.conn.close()
 
     def run(self):
         self.eventloop.run()

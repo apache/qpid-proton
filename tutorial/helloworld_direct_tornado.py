@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton_events import FlowController, Handshaker, IncomingMessageHandler
+from proton_events import ClientHandler, FlowController, Handshaker, IncomingMessageHandler
 from proton_tornado import TornadoLoop
 
 class HelloWorldReceiver(IncomingMessageHandler):
@@ -27,33 +27,26 @@ class HelloWorldReceiver(IncomingMessageHandler):
         print event.message.body
         event.connection.close()
 
-class HelloWorldSender(object):
-    def on_link_flow(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
-
-class HelloWorld(object):
+class HelloWorld(ClientHandler):
     def __init__(self, eventloop, url, address):
         self.eventloop = eventloop
         self.acceptor = eventloop.listen(url)
         self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_open(self, event):
-        self.conn.create_sender(self.address, handler=HelloWorldSender())
+    def on_connection_opened(self, event):
+        self.conn.create_sender(self.address)
 
-    def on_link_close(self, event):
-        self.closed(event.link.remote_condition)
+    def on_credit(self, event):
+        event.sender.send_msg(Message(body=u"Hello World!"))
+        event.sender.close()
 
-    def on_connection_close(self, event):
-        self.closed(event.connection.remote_condition)
-        self.eventloop.stop()
-
-    def closed(self, error=None):
-        if error:
-            print "Closed due to %s" % error
+    def on_accepted(self, event):
         self.conn.close()
+
+    def on_connection_closed(self, event):
         self.acceptor.close()
+        self.eventloop.stop()
 
     def run(self):
         self.eventloop.run()

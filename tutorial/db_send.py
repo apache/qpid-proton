@@ -21,10 +21,10 @@
 import Queue
 import time
 from proton import Message
-from proton_events import ApplicationEvent, BaseHandler, EventLoop
+from proton_events import ApplicationEvent, ClientHandler, EventLoop
 from db_common import Db
 
-class Send(BaseHandler):
+class Send(ClientHandler):
     def __init__(self, host, address):
         self.eventloop = EventLoop()
         self.address = address

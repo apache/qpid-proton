@@ -3368,7 +3368,7 @@ class Collector:
 
     clazz = pn_class_name(pn_event_class(event))
     context = wrappers[clazz](pn_event_context(event))
-    return Event(clazz, context, pn_event_type(event))
+    return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
 
   def pop(self):
     ev = self.peek()
@@ -3379,41 +3379,54 @@ class Collector:
   def __del__(self):
     pn_collector_free(self._impl)
 
+class EventType:
+
+  TYPES = {}
+
+  def __init__(self, number, method):
+    self.number = number
+    self.name = pn_event_type_name(self.number)
+    self.method = method
+    self.TYPES[number] = self
+
+  def __repr__(self):
+    return self.name
+
 class Event:
 
-  CONNECTION_INIT = PN_CONNECTION_INIT
-  CONNECTION_BOUND = PN_CONNECTION_BOUND
-  CONNECTION_UNBOUND = PN_CONNECTION_UNBOUND
-  CONNECTION_OPEN = PN_CONNECTION_OPEN
-  CONNECTION_CLOSE = PN_CONNECTION_CLOSE
-  CONNECTION_REMOTE_OPEN = PN_CONNECTION_REMOTE_OPEN
-  CONNECTION_REMOTE_CLOSE = PN_CONNECTION_REMOTE_CLOSE
-  CONNECTION_FINAL = PN_CONNECTION_FINAL
+  CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
+  CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
+  CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+  CONNECTION_LOCAL_OPEN = EventType(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+  CONNECTION_LOCAL_CLOSE = EventType(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+  CONNECTION_REMOTE_OPEN = EventType(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+  CONNECTION_REMOTE_CLOSE = EventType(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+  CONNECTION_FINAL = EventType(PN_CONNECTION_FINAL, "on_connection_final")
 
-  SESSION_INIT = PN_SESSION_INIT
-  SESSION_OPEN = PN_SESSION_OPEN
-  SESSION_CLOSE = PN_SESSION_CLOSE
-  SESSION_REMOTE_OPEN = PN_SESSION_REMOTE_OPEN
-  SESSION_REMOTE_CLOSE = PN_SESSION_REMOTE_CLOSE
-  SESSION_FINAL = PN_SESSION_FINAL
+  SESSION_INIT = EventType(PN_SESSION_INIT, "on_session_init")
+  SESSION_LOCAL_OPEN = EventType(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+  SESSION_LOCAL_CLOSE = EventType(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+  SESSION_REMOTE_OPEN = EventType(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+  SESSION_REMOTE_CLOSE = EventType(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+  SESSION_FINAL = EventType(PN_SESSION_FINAL, "on_session_final")
 
-  LINK_INIT = PN_LINK_INIT
-  LINK_OPEN = PN_LINK_OPEN
-  LINK_CLOSE = PN_LINK_CLOSE
-  LINK_DETACH = PN_LINK_DETACH
-  LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
-  LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
-  LINK_REMOTE_DETACH = PN_LINK_REMOTE_DETACH
-  LINK_FLOW = PN_LINK_FLOW
-  LINK_FINAL = PN_LINK_FINAL
+  LINK_INIT = EventType(PN_LINK_INIT, "on_link_init")
+  LINK_LOCAL_OPEN = EventType(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+  LINK_LOCAL_CLOSE = EventType(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+  LINK_LOCAL_DETACH = EventType(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+  LINK_REMOTE_OPEN = EventType(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+  LINK_REMOTE_CLOSE = EventType(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+  LINK_REMOTE_DETACH = EventType(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+  LINK_FLOW = EventType(PN_LINK_FLOW, "on_link_flow")
+  LINK_FINAL = EventType(PN_LINK_FINAL, "on_link_final")
 
-  DELIVERY = PN_DELIVERY
+  DELIVERY = EventType(PN_DELIVERY, "on_delivery")
 
-  TRANSPORT = PN_TRANSPORT
-  TRANSPORT_ERROR = PN_TRANSPORT_ERROR
-  TRANSPORT_HEAD_CLOSED = PN_TRANSPORT_HEAD_CLOSED
-  TRANSPORT_TAIL_CLOSED = PN_TRANSPORT_TAIL_CLOSED
-  TRANSPORT_CLOSED = PN_TRANSPORT_CLOSED
+  TRANSPORT = EventType(PN_TRANSPORT, "on_transport")
+  TRANSPORT_ERROR = EventType(PN_TRANSPORT_ERROR, "on_transport_error")
+  TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+  TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+  TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
   def __init__(self, clazz, context, type):
     self.clazz = clazz
@@ -3425,6 +3438,9 @@ class Event:
                      Event.CONNECTION_FINAL):
       collector._contexts.remove(self.context)
       self.context._released()
+
+  def dispatch(self, handler):
+    getattr(handler, self.type.method, handler.on_unhandled)(self)
 
   @property
   def connection(self):
@@ -3483,7 +3499,13 @@ class Event:
       return None
 
   def __repr__(self):
-    return "%s(%s)" % (pn_event_type_name(self.type), self.context)
+    return "%s(%s)" % (self.type, self.context)
+
+class Handler(object):
+
+  def on_unhandled(self, event):
+    pass
+
 
 ###
 # Driver
@@ -3677,6 +3699,112 @@ class Driver(object):
   def pending_connector(self):
     return Connector._wrap_connector(pn_driver_connector(self._driver))
 
+class Url(object):
+  """
+  Simple URL parser/constructor, handles URLs of the form:
+
+    <scheme>://<user>:<password>@<host>:<port>/<path>
+
+  All components can be None if not specifeid in the URL string.
+
+  The port can be specified as a service name, e.g. 'amqp' in the
+  URL string but Url.port always gives the integer value.
+
+  @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
+  @ivar user: Username
+  @ivar password: Password
+  @ivar host: Host name, ipv6 literal or ipv4 dotted quad.
+  @ivar port: Integer port.
+  @ivar host_port: Returns host:port
+  """
+
+  AMQPS = "amqps"
+  AMQP = "amqp"
+
+  class Port(int):
+    """An integer port number that can be constructed from a service name string"""
+
+    def __new__(cls, value):
+      """@param value: integer port number or string service name."""
+      port = super(Url.Port, cls).__new__(cls, cls._port_int(value))
+      setattr(port, 'name', str(value))
+      return port
+
+    def __eq__(self, x): return str(self) == x or int(self) == x
+    def __ne__(self, x): return not self == x
+    def __str__(self): return str(self.name)
+
+    @staticmethod
+    def _port_int(value):
+      """Convert service, an integer or a service name, into an integer port number."""
+      try:
+        return int(value)
+      except ValueError:
+        try:
+          return socket.getservbyname(value)
+        except socket.error:
+          # Not every system has amqp/amqps defined as a service
+          if value == Url.AMQPS:  return 5671
+          elif value == Url.AMQP: return 5672
+          else:
+            raise ValueError("Not a valid port number or service name: '%s'" % value)
+
+  def __init__(self, url=None, **kwargs):
+    """
+    @param url: URL string to parse.
+    @param kwargs: scheme, user, password, host, port, path.
+      If specified, replaces corresponding part in url string.
+    """
+    if url:
+      self._url = pn_url_parse(str(url))
+      if not self._url: raise ValueError("Invalid URL '%s'" % url)
+    else:
+      self._url = pn_url()
+    for k in kwargs:            # Let kwargs override values parsed from url
+      getattr(self, k)          # Check for invalid kwargs
+      setattr(self, k, kwargs[k])
+
+  class PartDescriptor(object):
+    def __init__(self, part):
+      self.getter = globals()["pn_url_get_%s" % part]
+      self.setter = globals()["pn_url_set_%s" % part]
+    def __get__(self, obj, type=None): return self.getter(obj._url)
+    def __set__(self, obj, value): return self.setter(obj._url, str(value))
+
+  scheme = PartDescriptor('scheme')
+  username = PartDescriptor('username')
+  password = PartDescriptor('password')
+  host = PartDescriptor('host')
+  path = PartDescriptor('path')
+
+  def _get_port(self):
+    portstr = pn_url_get_port(self._url)
+    return portstr and Url.Port(portstr)
+
+  def _set_port(self, value):
+    if value is None: pn_url_set_port(self._url, None)
+    else: pn_url_set_port(self._url, str(Url.Port(value)))
+
+  port = property(_get_port, _set_port)
+
+  def __str__(self): return pn_url_str(self._url)
+
+  def __repr__(self): return "Url(%r)" % str(self)
+
+  def __del__(self):
+    pn_url_free(self._url);
+    self._url = None
+
+  def defaults(self):
+    """
+    Fill in missing values (scheme, host or port) with defaults
+    @return: self
+    """
+    self.scheme = self.scheme or self.AMQP
+    self.host = self.host or '0.0.0.0'
+    self.port = self.port or self.Port(self.scheme)
+    return self
+
 __all__ = [
            "API_LANGUAGE",
            "IMPLEMENTATION_LANGUAGE",
@@ -3702,6 +3830,7 @@ __all__ = [
            "DriverException",
            "Endpoint",
            "Event",
+           "Handler",
            "Link",
            "Listener",
            "Message",
@@ -3725,6 +3854,7 @@ __all__ = [
            "Interrupt",
            "Transport",
            "TransportException",
+           "Url",
            "char",
            "symbol",
            "timestamp",

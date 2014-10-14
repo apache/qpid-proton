@@ -242,40 +242,40 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_CONNECTION_UNBOUND";
   case PN_CONNECTION_REMOTE_OPEN:
     return "PN_CONNECTION_REMOTE_OPEN";
-  case PN_CONNECTION_OPEN:
-    return "PN_CONNECTION_OPEN";
+  case PN_CONNECTION_LOCAL_OPEN:
+    return "PN_CONNECTION_LOCAL_OPEN";
   case PN_CONNECTION_REMOTE_CLOSE:
     return "PN_CONNECTION_REMOTE_CLOSE";
-  case PN_CONNECTION_CLOSE:
-    return "PN_CONNECTION_CLOSE";
+  case PN_CONNECTION_LOCAL_CLOSE:
+    return "PN_CONNECTION_LOCAL_CLOSE";
   case PN_CONNECTION_FINAL:
     return "PN_CONNECTION_FINAL";
   case PN_SESSION_INIT:
     return "PN_SESSION_INIT";
   case PN_SESSION_REMOTE_OPEN:
     return "PN_SESSION_REMOTE_OPEN";
-  case PN_SESSION_OPEN:
-    return "PN_SESSION_OPEN";
+  case PN_SESSION_LOCAL_OPEN:
+    return "PN_SESSION_LOCAL_OPEN";
   case PN_SESSION_REMOTE_CLOSE:
     return "PN_SESSION_REMOTE_CLOSE";
-  case PN_SESSION_CLOSE:
-    return "PN_SESSION_CLOSE";
+  case PN_SESSION_LOCAL_CLOSE:
+    return "PN_SESSION_LOCAL_CLOSE";
   case PN_SESSION_FINAL:
     return "PN_SESSION_FINAL";
   case PN_LINK_INIT:
     return "PN_LINK_INIT";
   case PN_LINK_REMOTE_OPEN:
     return "PN_LINK_REMOTE_OPEN";
-  case PN_LINK_OPEN:
-    return "PN_LINK_OPEN";
+  case PN_LINK_LOCAL_OPEN:
+    return "PN_LINK_LOCAL_OPEN";
   case PN_LINK_REMOTE_CLOSE:
     return "PN_LINK_REMOTE_CLOSE";
-  case PN_LINK_DETACH:
-    return "PN_LINK_DETACH";
+  case PN_LINK_LOCAL_DETACH:
+    return "PN_LINK_LOCAL_DETACH";
   case PN_LINK_REMOTE_DETACH:
     return "PN_LINK_REMOTE_DETACH";
-  case PN_LINK_CLOSE:
-    return "PN_LINK_CLOSE";
+  case PN_LINK_LOCAL_CLOSE:
+    return "PN_LINK_LOCAL_CLOSE";
   case PN_LINK_FLOW:
     return "PN_LINK_FLOW";
   case PN_LINK_FINAL:

@@ -19,12 +19,12 @@
 #
 
 from proton import Message
-from proton_events import IncomingMessageHandler
+from proton_events import ClientHandler
 from proton_tornado import TornadoLoop
 from tornado.ioloop import IOLoop
 import tornado.web
 
-class ExampleHandler(tornado.web.RequestHandler, IncomingMessageHandler):
+class ExampleHandler(tornado.web.RequestHandler, ClientHandler):
     def initialize(self, loop):
         self.loop = loop
 
@@ -39,7 +39,7 @@ class ExampleHandler(tornado.web.RequestHandler, IncomingMessageHandler):
         self.sender = self.conn.create_sender("examples")
         self.conn.create_receiver(None, dynamic=True, handler=self)
 
-    def on_link_open(self, event):
+    def on_link_opened(self, event):
         req = Message(reply_to=event.link.remote_source.address, body=self.get_body_argument("message"))
         self.sender.send_msg(req)
 

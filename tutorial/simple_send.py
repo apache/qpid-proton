@@ -21,7 +21,7 @@
 from proton import Message
 import proton_events
 
-class Send(proton_events.BaseHandler):
+class Send(proton_events.ClientHandler):
     def __init__(self, messages):
         self.sent = 0
         self.confirmed = 0

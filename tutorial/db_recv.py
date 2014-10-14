@@ -18,10 +18,10 @@
 # under the License.
 #
 
-from proton_events import ApplicationEvent, BaseHandler, EventLoop
+from proton_events import ApplicationEvent, ClientHandler, EventLoop
 from db_common import Db
 
-class Recv(BaseHandler):
+class Recv(ClientHandler):
     def __init__(self, host, address):
         self.eventloop = EventLoop()
         self.host = host

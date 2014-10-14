@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton_events import ErrorHandler, EventLoop, FlowController, Handshaker, IncomingMessageHandler, OutgoingMessageHandler
+from proton_events import ClientEndpointHandler, EventLoop, FlowController, Handshaker, IncomingMessageHandler, OutgoingMessageHandler
 
 class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
@@ -28,21 +28,23 @@ class HelloWorldReceiver(IncomingMessageHandler):
 
 class HelloWorldSender(OutgoingMessageHandler):
     def on_credit(self, event):
-        event.link.send_msg(Message(body=u"Hello World!"))
-        event.link.close()
+        event.sender.send_msg(Message(body=u"Hello World!"))
+        event.sender.close()
 
-class HelloWorld(ErrorHandler):
+    def on_accepted(self, event):
+        event.connection.close()
+
+class HelloWorld(ClientEndpointHandler):
     def __init__(self, eventloop, url, address):
         self.eventloop = eventloop
         self.acceptor = eventloop.listen(url)
         self.conn = eventloop.connect(url, handler=self)
         self.address = address
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         self.conn.create_sender(self.address, handler=HelloWorldSender())
 
-    def on_connection_close(self, event):
-        self.conn.close()
+    def on_connection_closed(self, event):
         self.acceptor.close()
 
     def run(self):

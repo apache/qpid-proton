@@ -21,12 +21,12 @@
 from proton import Message
 import proton_events
 
-class HelloWorld(proton_events.BaseHandler):
+class HelloWorld(proton_events.ClientHandler):
     def __init__(self, conn, address):
         self.conn = conn
         self.address = address
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         self.conn.create_receiver(self.address)
         self.conn.create_sender(self.address)
 
