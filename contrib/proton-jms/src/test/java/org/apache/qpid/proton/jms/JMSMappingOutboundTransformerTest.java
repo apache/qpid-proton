@@ -337,7 +337,7 @@ public class JMSMappingOutboundTransformerTest
     private TextMessage createMockTextMessage() throws Exception
     {
         TextMessage mockTextMessage = Mockito.mock(TextMessage.class);
-        Mockito.when(mockTextMessage.getPropertyNames()).thenReturn(Collections.emptyEnumeration());
+        Mockito.when(mockTextMessage.getPropertyNames()).thenReturn(Collections.enumeration(Collections.emptySet()));
 
         return mockTextMessage;
     }
