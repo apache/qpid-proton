@@ -3501,7 +3501,7 @@ class Event:
   def __repr__(self):
     return "%s(%s)" % (self.type, self.context)
 
-class Handler:
+class Handler(object):
 
   def on_unhandled(self, event):
     pass
