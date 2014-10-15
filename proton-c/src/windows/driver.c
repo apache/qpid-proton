@@ -712,12 +712,14 @@ pn_driver_t *pn_driver()
 
 int pn_driver_errno(pn_driver_t *d)
 {
-  return d ? pn_error_code(d->error) : PN_ARG_ERR;
+  assert(d);
+  return pn_error_code(d->error);
 }
 
-const char *pn_driver_error(pn_driver_t *d)
+pn_error_t *pn_driver_error(pn_driver_t *d)
 {
-  return d ? pn_error_text(d->error) : NULL;
+  assert(d);
+  return d->error;
 }
 
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace)
