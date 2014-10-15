@@ -302,7 +302,11 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t s
 }
 
 static inline pn_socket_t pni_create_socket() {
-  return socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  struct protoent * pe_tcp = getprotobyname("tcp");
+  if (pe_tcp == NULL) {
+    return -1;
+  }
+  return socket(AF_INET, SOCK_STREAM, pe_tcp->p_proto);
 }
 
 ssize_t pn_send(pn_io_t *io, pn_socket_t sockfd, const void *buf, size_t len) {
@@ -375,8 +379,13 @@ static void configure_pipe_socket(pn_io_t *io, pn_socket_t sock)
 
 static int pni_socket_pair (pn_io_t *io, SOCKET sv[2]) {
   // no socketpair on windows.  provide pipe() semantics using sockets
+  struct protoent * pe_tcp = getprotobyname("tcp");
+  if (pe_tcp == NULL) {
+    perror("getprotobyname");
+    return -1;
+  }
 
-  SOCKET sock = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  SOCKET sock = socket(AF_INET, SOCK_STREAM, pe_tcp->p_proto);
   if (sock == INVALID_SOCKET) {
     perror("socket");
     return -1;
@@ -407,7 +416,7 @@ static int pni_socket_pair (pn_io_t *io, SOCKET sv[2]) {
     return -1;
   }
 
-  if ((sv[1] = socket(AF_INET, SOCK_STREAM, getprotobyname("tcp")->p_proto)) == INVALID_SOCKET) {
+  if ((sv[1] = socket(AF_INET, SOCK_STREAM, pe_tcp->p_proto)) == INVALID_SOCKET) {
     perror("sock1");
     closesocket(sock);
     return -1;
