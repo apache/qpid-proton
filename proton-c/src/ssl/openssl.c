@@ -451,9 +451,13 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 
   domain->ref_count = 1;
   domain->mode = mode;
+
+  // enable all supported protocol versions, then explicitly disable the
+  // known vulnerable ones.  This should allow us to use the latest version
+  // of the TLS standard that the installed library supports.
   switch(mode) {
   case PN_SSL_MODE_CLIENT:
-    domain->ctx = SSL_CTX_new(TLSv1_client_method());
+    domain->ctx = SSL_CTX_new(SSLv23_client_method()); // and TLSv1+
     if (!domain->ctx) {
       _log_ssl_error( "Unable to initialize OpenSSL context.\n");
       free(domain);
@@ -462,20 +466,21 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     break;
 
   case PN_SSL_MODE_SERVER:
-    domain->ctx = SSL_CTX_new(SSLv23_server_method());
+    domain->ctx = SSL_CTX_new(SSLv23_server_method()); // and TLSv1+
     if (!domain->ctx) {
       _log_ssl_error("Unable to initialize OpenSSL context.\n");
       free(domain);
       return NULL;
     }
-    SSL_CTX_set_options(domain->ctx, SSL_OP_NO_SSLv2);  // v2 is insecure
     break;
 
   default:
-    _log_error("Invalid valid for pn_ssl_mode_t: %d\n", mode);
+    _log_error("Invalid value for pn_ssl_mode_t: %d\n", mode);
     free(domain);
     return NULL;
   }
+  const long reject_insecure = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+  SSL_CTX_set_options(domain->ctx, reject_insecure);
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
   if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
