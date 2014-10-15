@@ -81,7 +81,9 @@ public class AMQPNativeOutboundTransformer extends OutboundTransformer {
                 }
 
                 // Update the DeliveryCount header...
-                amqp.getHeader().setDeliveryCount(new UnsignedInteger(count));
+                // The AMQP delivery-count field only includes prior failed delivery attempts,
+                // whereas JMSXDeliveryCount includes the first/current delivery attempt. Subtract 1.
+                amqp.getHeader().setDeliveryCount(new UnsignedInteger(count - 1));
 
                 // Re-encode...
                 ByteBuffer buffer = ByteBuffer.wrap(new byte[1024*4]);
