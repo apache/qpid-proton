@@ -481,6 +481,10 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   }
   const long reject_insecure = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
   SSL_CTX_set_options(domain->ctx, reject_insecure);
+#ifdef SSL_OP_NO_COMPRESSION
+  // Mitigate the CRIME vulnerability
+  SSL_CTX_set_options(domain->ctx, SSL_OP_NO_COMPRESSION);
+#endif
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
   if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
