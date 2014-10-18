@@ -3359,7 +3359,7 @@ class Collector:
     self._contexts = set()
 
   def put(self, obj, etype):
-    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype)
+    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
   def peek(self):
     event = pn_collector_peek(self._impl)
