@@ -209,7 +209,7 @@ static size_t _pni_min(size_t a, size_t b)
 }
 
 // unrecoverable SSL failure occured, notify transport and generate error code.
-static int ssl_failed(pn_ssl_t *ssl, char *reason)
+static int ssl_failed(pn_ssl_t *ssl, const char *reason)
 {
   char buf[512] = "Unknown error.";
   if (!reason) {
@@ -521,6 +521,16 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
 
 /** SChannel specific: */
 
+const char *tls_version_check(pn_ssl_t *ssl)
+{
+  SecPkgContext_ConnectionInfo info;
+  QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info);
+  // Ascending bit patterns denote newer SSL/TLS protocol versions.
+  // SP_PROT_TLS1_0_SERVER is not defined until VS2010.
+  return (info.dwProtocol < SP_PROT_TLS1_SERVER) ?
+    "peer does not support TLS 1.0 security" : NULL;
+}
+
 static void ssl_encrypt(pn_ssl_t *ssl, char *app_data, size_t count)
 {
   // Get SChannel to encrypt exactly one Record.
@@ -730,6 +740,10 @@ static void client_handshake( pn_ssl_t* ssl) {
     }
     if (send_buffs[0].cbBuffer != 0) {
       ssl_failed(ssl, "unexpected final server token");
+      break;
+    }
+    if (const char *err = tls_version_check(ssl)) {
+      ssl_failed(ssl, err);
       break;
     }
     if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0) {
