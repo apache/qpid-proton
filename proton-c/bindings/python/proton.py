@@ -806,7 +806,7 @@ class Message(object):
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, MessageException)
-      raise exc("[%s]: %s" % (err, pn_message_error(self._msg)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
     else:
       return err
 
