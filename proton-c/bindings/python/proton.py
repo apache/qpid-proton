@@ -3392,6 +3392,13 @@ class EventType:
   def __repr__(self):
     return self.name
 
+def dispatch(handler, method, *args):
+  m = getattr(handler, method, None)
+  if m:
+    return m(*args)
+  elif hasattr(handler, "on_unhandled"):
+    return handler.on_unhandled(method, args)
+
 class Event:
 
   CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
@@ -3440,7 +3447,7 @@ class Event:
       self.context._released()
 
   def dispatch(self, handler):
-    getattr(handler, self.type.method, handler.on_unhandled)(self)
+    return dispatch(handler, self.type.method, self)
 
   @property
   def connection(self):
@@ -3503,7 +3510,7 @@ class Event:
 
 class Handler(object):
 
-  def on_unhandled(self, event):
+  def on_unhandled(self, method, args):
     pass
 
 
@@ -3856,6 +3863,7 @@ __all__ = [
            "TransportException",
            "Url",
            "char",
+           "dispatch",
            "symbol",
            "timestamp",
            "ulong"
