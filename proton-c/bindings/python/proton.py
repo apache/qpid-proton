@@ -85,6 +85,9 @@ except ImportError:
   def uuid4():
     return uuid.UUID(bytes=random_uuid())
 
+def generate_uuid():
+  return uuid.uuid4()
+
 try:
   bytes()
 except NameError:
