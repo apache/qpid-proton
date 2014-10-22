@@ -741,7 +741,9 @@ int pn_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                 uint32_t message_format,
                                 bool settled,
                                 bool more,
-                                pn_sequence_t frame_limit)
+                                pn_sequence_t frame_limit,
+                                uint64_t code,
+                                pn_data_t* state)
 {
   bool more_flag = more;
   int framecount = 0;
@@ -751,10 +753,10 @@ int pn_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
  compute_performatives:
   pn_data_clear(transport->output_args);
-  int err = pn_data_fill(transport->output_args, "DL[IIzIoo]", TRANSFER,
+  int err = pn_data_fill(transport->output_args, "DL[IIzIoon?DLC]", TRANSFER,
                          handle, id, tag->size, tag->start,
                          message_format,
-                         settled, more_flag);
+                         settled, more_flag, (bool)code, code, state);
   if (err) {
     pn_transport_logf(transport,
                       "error posting transfer frame: %s: %s", pn_code(err),
@@ -1917,6 +1919,9 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       size_t full_size = bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+      pn_data_clear(transport->disp_data);
+      pni_disposition_encode(&delivery->local, transport->disp_data);
+
       int count = pn_post_amqp_transfer_frame(transport,
                                               ssn_state->local_channel,
                                               link_state->local_handle,
@@ -1924,7 +1929,8 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
                                               0, // message-format
                                               delivery->local.settled,
                                               !delivery->done,
-                                              ssn_state->remote_incoming_window);
+                                              ssn_state->remote_incoming_window,
+                                              delivery->local.type, transport->disp_data);
       if (count < 0) return count;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;
