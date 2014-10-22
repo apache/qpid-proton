@@ -1508,6 +1508,9 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       pn_set_payload(transport->disp, bytes.start, bytes.size);
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
+      pn_data_clear(transport->disp_data);
+      pni_disposition_encode(&delivery->local, transport->disp_data);
+
       int count = pn_post_transfer_frame(transport->disp,
                                          ssn_state->local_channel,
                                          link_state->local_handle,
@@ -1515,7 +1518,8 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
                                          0, // message-format
                                          delivery->local.settled,
                                          !delivery->done,
-                                         ssn_state->remote_incoming_window);
+                                         ssn_state->remote_incoming_window,
+                                         delivery->local.type, transport->disp_data);
       if (count < 0) return count;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;

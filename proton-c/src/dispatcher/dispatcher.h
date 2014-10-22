@@ -72,5 +72,6 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp,
                            uint32_t message_format,
                            bool settled,
                            bool more,
-                           pn_sequence_t frame_limit);
+                           pn_sequence_t frame_limit,
+                           uint64_t code, pn_data_t* state);
 #endif /* dispatcher.h */

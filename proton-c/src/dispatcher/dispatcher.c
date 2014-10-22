@@ -291,7 +291,8 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
                            uint32_t message_format,
                            bool settled,
                            bool more,
-                           pn_sequence_t frame_limit)
+                           pn_sequence_t frame_limit,
+                           uint64_t code, pn_data_t* state)
 {
   bool more_flag = more;
   int framecount = 0;
@@ -300,10 +301,10 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
 
  compute_performatives:
   pn_data_clear(disp->output_args);
-  int err = pn_data_fill(disp->output_args, "DL[IIzIoo]", TRANSFER,
+  int err = pn_data_fill(disp->output_args, "DL[IIzIoon?DLC]", TRANSFER,
                          handle, id, tag->size, tag->start,
                          message_format,
-                         settled, more_flag);
+                         settled, more_flag, (bool)code, code, state);
   if (err) {
     pn_transport_logf(disp->transport,
                       "error posting transfer frame: %s: %s", pn_code(err),
