@@ -83,7 +83,7 @@ void pn_io_initialize(void *obj)
   int err = WSAStartup(wsa_ver, &unused);
   if (err) {
     pni_win32_error(io->error, "WSAStartup", WSAGetLastError());
-    fprintf(stderr, "Can't load WinSock: %d\n", pn_error_text(io->error));
+    fprintf(stderr, "Can't load WinSock: %s\n", pn_error_text(io->error));
   }
   io->iocp = pni_iocp();
 }
