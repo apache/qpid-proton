@@ -2173,7 +2173,7 @@ ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 
 void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
-  if (transport && size) {
+  if (transport) {
     assert( transport->output_pending >= size );
     transport->output_pending -= size;
     transport->bytes_output += size;
@@ -2194,7 +2194,9 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 
 int pn_transport_close_head(pn_transport_t *transport)
 {
+  size_t pending = pn_transport_pending(transport);
   transport->head_closed = true;
+  pn_transport_pop(transport, pending);
   return 0;
 }
 
