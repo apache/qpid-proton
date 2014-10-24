@@ -779,12 +779,9 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
     pn_delivery_state_t *state = pn_delivery_map_push(incoming, delivery);
     if (id_present && id != state->id) {
-      int err = pn_do_error(transport, "amqp:session:invalid-field",
-                            "sequencing error, expected delivery-id %u, got %u",
-                            state->id, id);
-      // XXX: this will probably leave delivery buffer state messed up
-      pn_full_settle(incoming, delivery);
-      return err;
+      return pn_do_error(transport, "amqp:session:invalid-field",
+                         "sequencing error, expected delivery-id %u, got %u",
+                         state->id, id);
     }
 
     link->state.delivery_count++;
