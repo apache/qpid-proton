@@ -762,8 +762,11 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   pn_sequence_t id;
   bool settled;
   bool more;
-  int err = pn_scan_args(disp, "D.[I?Iz.oo]", &handle, &id_present, &id, &tag,
-                         &settled, &more);
+  bool has_type;
+  uint64_t type;
+  pn_data_clear(transport->disp_data);
+  int err = pn_scan_args(disp, "D.[I?Iz.oo.D?LC]", &handle, &id_present, &id, &tag,
+                         &settled, &more, &has_type, &type, transport->disp_data);
   if (err) return err;
   pn_session_t *ssn = pn_channel_state(transport, disp->channel);
 
@@ -794,6 +797,10 @@ int pn_do_transfer(pn_dispatcher_t *disp)
       pn_full_settle(incoming, delivery);
       return err;
     }
+    if (has_type) {
+      delivery->remote.type = type;
+      pn_data_copy(delivery->remote.data, transport->disp_data);
+  }
 
     link->state.delivery_count++;
     link->state.link_credit--;
