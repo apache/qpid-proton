@@ -695,7 +695,15 @@ int pn_do_attach(pn_dispatcher_t *disp)
     pn_terminus_set_timeout(rtgt, tgt_timeout);
     pn_terminus_set_dynamic(rtgt, tgt_dynamic);
   } else {
-    pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
+    uint64_t code = 0;
+    pn_data_clear(link->remote_target.capabilities);
+    err = pn_scan_args(disp, "D.[.....D..DL[C]...]", &code,
+                       link->remote_target.capabilities);
+    if (code == 0x30) {
+      pn_terminus_set_type(rtgt, PN_COORDINATOR);
+    } else {
+      pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
+    }
   }
 
   if (snd_settle)
