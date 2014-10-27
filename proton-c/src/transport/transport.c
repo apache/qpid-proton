@@ -1181,8 +1181,11 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   pn_sequence_t id;
   bool settled;
   bool more;
-  int err = pn_data_scan(args, "D.[I?Iz.oo]", &handle, &id_present, &id, &tag,
-                         &settled, &more);
+  bool has_type;
+  uint64_t type;
+  pn_data_clear(transport->disp_data);
+  int err = pn_data_scan(args, "D.[I?Iz.oo.D?LC]", &handle, &id_present, &id, &tag,
+                         &settled, &more, &has_type, &type, transport->disp_data);
   if (err) return err;
   pn_session_t *ssn = pn_channel_state(transport, channel);
 
@@ -1211,6 +1214,10 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       return pn_do_error(transport, "amqp:session:invalid-field",
                          "sequencing error, expected delivery-id %u, got %u",
                          state->id, id);
+    }
+    if (has_type) {
+      delivery->remote.type = type;
+      pn_data_copy(delivery->remote.data, transport->disp_data);
     }
 
     link->state.delivery_count++;
