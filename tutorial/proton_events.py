@@ -148,14 +148,12 @@ class Acceptor:
 
     def __init__(self, events, loop, host, port):
         self.events = events
-        #self.selectables = selectables
         self.loop = loop
         self.socket = socket.socket()
         self.socket.setblocking(0)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((host, port))
         self.socket.listen(5)
-        #self.selectables.append(self)
         self.loop.add(self)
         self._closed = False
 
@@ -650,7 +648,7 @@ def delivery_tags():
 def send_msg(sender, msg, tag=None, handler=None, transaction=None):
     dlv = sender.delivery(tag or next(sender.tags))
     if transaction:
-        dlv.local.data = Described(symbol(u'amqp:transactional-state:list'), [transaction.id])
+        dlv.local.data = [transaction.id]
         dlv.update(0x34)
     if handler:
         dlv.context = handler
@@ -678,7 +676,7 @@ class TxHandler(OutgoingMessageHandler):
 
     def settle(self, delivery, transaction, state=None):
         if state:
-            delivery.local.data = Described(symbol(u'amqp:transactional-state:list'), [transaction.id, state])
+            delivery.local.data = [transaction.id, state]
             delivery.update(0x34)
         delivery.settle()
 
