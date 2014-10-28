@@ -1435,6 +1435,7 @@ class Data:
     current node sets it _before_ the first node, calling next() will advance to
     the first node.
     """
+    assert self._data is not None
     pn_data_rewind(self._data)
 
   def next(self):
@@ -2242,12 +2243,13 @@ def cond2obj(cond):
     return None
 
 def dat2obj(dimpl):
-  d = Data(dimpl)
-  d.rewind()
-  d.next()
-  obj = d.get_object()
-  d.rewind()
-  return obj
+  if dimpl:
+    d = Data(dimpl)
+    d.rewind()
+    d.next()
+    obj = d.get_object()
+    d.rewind()
+    return obj
 
 def obj2dat(obj, dimpl):
   if obj is not None:
