@@ -419,21 +419,22 @@ class pn_terminus:
   def decode(self, impl):
     if impl is not None:
       self.type = TERMINUS_TYPES_J2P[impl.__class__]
-      self.address = impl.getAddress()
-      self.durability = DURABILITY_J2P[impl.getDurable()]
-      self.expiry_policy = EXPIRY_POLICY_J2P[impl.getExpiryPolicy()]
-      self.timeout = impl.getTimeout().longValue()
-      self.dynamic = impl.getDynamic()
-      obj2dat(impl.getDynamicNodeProperties(), self.properties)
-      array2dat(impl.getCapabilities(), PN_SYMBOL, self.capabilities)
-      if self.type == PN_SOURCE:
-        self.distribution_mode = DISTRIBUTION_MODE_J2P[impl.getDistributionMode()]
-        array2dat(impl.getOutcomes(), PN_SYMBOL, self.outcomes)
-        obj2dat(impl.getFilter(), self.filter)
+      if self.type in (PN_SOURCE, PN_TARGET):
+        self.address = impl.getAddress()
+        self.durability = DURABILITY_J2P[impl.getDurable()]
+        self.expiry_policy = EXPIRY_POLICY_J2P[impl.getExpiryPolicy()]
+        self.timeout = impl.getTimeout().longValue()
+        self.dynamic = impl.getDynamic()
+        obj2dat(impl.getDynamicNodeProperties(), self.properties)
+        array2dat(impl.getCapabilities(), PN_SYMBOL, self.capabilities)
+        if self.type == PN_SOURCE:
+          self.distribution_mode = DISTRIBUTION_MODE_J2P[impl.getDistributionMode()]
+          array2dat(impl.getOutcomes(), PN_SYMBOL, self.outcomes)
+          obj2dat(impl.getFilter(), self.filter)
 
   def encode(self):
     impl = TERMINUS_TYPES_P2J[self.type]()
-    if impl is not None:
+    if self.type in (PN_SOURCE, PN_TARGET):
       impl.setAddress(self.address)
       impl.setDurable(DURABILITY_P2J[self.durability])
       impl.setExpiryPolicy(EXPIRY_POLICY_P2J[self.expiry_policy])

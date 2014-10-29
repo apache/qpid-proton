@@ -547,6 +547,9 @@ class LinkTest(Test):
   def test_target(self):
     self._test_source_target(None, TerminusConfig(address="target"))
 
+  def test_coordinator(self):
+    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR))
+
   def test_source_target_full(self):
     self._test_source_target(TerminusConfig(address="source",
                                             timeout=3,
@@ -619,8 +622,8 @@ class LinkTest(Test):
 
 class TerminusConfig:
 
-  def __init__(self, address=None, timeout=None, durability=None, filter=None,
-               capabilities=None, dynamic=False, dist_mode=None):
+  def __init__(self, type=None, address=None, timeout=None, durability=None,
+               filter=None, capabilities=None, dynamic=False, dist_mode=None):
     self.address = address
     self.timeout = timeout
     self.durability = durability
@@ -628,8 +631,11 @@ class TerminusConfig:
     self.capabilities = capabilities
     self.dynamic = dynamic
     self.dist_mode = dist_mode
+    self.type = type
 
   def __call__(self, terminus):
+    if self.type is not None:
+      terminus.type = self.type
     if self.address is not None:
       terminus.address = self.address
     if self.timeout is not None:

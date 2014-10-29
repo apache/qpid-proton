@@ -695,15 +695,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
     pn_terminus_set_timeout(rtgt, tgt_timeout);
     pn_terminus_set_dynamic(rtgt, tgt_dynamic);
   } else {
-    uint64_t code = 0;
-    pn_data_clear(link->remote_target.capabilities);
-    err = pn_scan_args(disp, "D.[.....D..DL[C]...]", &code,
-                       link->remote_target.capabilities);
-    if (code == COORDINATOR) {
-      pn_terminus_set_type(rtgt, PN_COORDINATOR);
-    } else {
-      pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
-    }
+    pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
   }
 
   if (snd_settle)
@@ -1331,58 +1323,34 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
     {
       pni_map_local_handle(link);
       const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
-      if (link->target.type == PN_COORDINATOR) {
-        int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]", ATTACH,
-                                pn_string_get(link->name),
-                                state->local_handle,
-                                endpoint->type == RECEIVER,
-                                link->snd_settle_mode,
-                                link->rcv_settle_mode,
-                                (bool) link->source.type, SOURCE,
-                                pn_string_get(link->source.address),
-                                link->source.durability,
-                                expiry_symbol(link->source.expiry_policy),
-                                link->source.timeout,
-                                link->source.dynamic,
-                                link->source.properties,
-                                (dist_mode != PN_DIST_MODE_UNSPECIFIED), dist_mode2symbol(dist_mode),
-                                link->source.filter,
-                                link->source.outcomes,
-                                link->source.capabilities,
-                                COORDINATOR, link->target.capabilities,
-                                0);
-        if (err) return err;
-      } else {
-        int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
-                                pn_string_get(link->name),
-                                state->local_handle,
-                                endpoint->type == RECEIVER,
-                                link->snd_settle_mode,
-                                link->rcv_settle_mode,
-                                (bool) link->source.type, SOURCE,
-                                pn_string_get(link->source.address),
-                                link->source.durability,
-                                expiry_symbol(link->source.expiry_policy),
-                                link->source.timeout,
-                                link->source.dynamic,
-                                link->source.properties,
-                                (dist_mode != PN_DIST_MODE_UNSPECIFIED), dist_mode2symbol(dist_mode),
-                                link->source.filter,
-                                link->source.outcomes,
-                                link->source.capabilities,
-                                (bool) link->target.type, TARGET,
-                                pn_string_get(link->target.address),
-                                link->target.durability,
-                                expiry_symbol(link->target.expiry_policy),
-                                link->target.timeout,
-                                link->target.dynamic,
-                                link->target.properties,
-                                link->target.capabilities,
-                                0);
-        if (err) return err;
-      }
+      int err = pn_post_frame(transport->disp, ssn_state->local_channel,
+                              "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
+                              pn_string_get(link->name),
+                              state->local_handle,
+                              endpoint->type == RECEIVER,
+                              link->snd_settle_mode,
+                              link->rcv_settle_mode,
+                              (bool) link->source.type, SOURCE,
+                              pn_string_get(link->source.address),
+                              link->source.durability,
+                              expiry_symbol(link->source.expiry_policy),
+                              link->source.timeout,
+                              link->source.dynamic,
+                              link->source.properties,
+                              (dist_mode != PN_DIST_MODE_UNSPECIFIED), dist_mode2symbol(dist_mode),
+                              link->source.filter,
+                              link->source.outcomes,
+                              link->source.capabilities,
+                              (bool) link->target.type, TARGET,
+                              pn_string_get(link->target.address),
+                              link->target.durability,
+                              expiry_symbol(link->target.expiry_policy),
+                              link->target.timeout,
+                              link->target.dynamic,
+                              link->target.properties,
+                              link->target.capabilities,
+                              0);
+      if (err) return err;
     }
   }
 
