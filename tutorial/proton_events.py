@@ -17,7 +17,7 @@
 # under the License.
 #
 import heapq, os, Queue, re, socket, time, types
-from proton import generate_uuid, PN_ACCEPTED, SASL, symbol
+from proton import generate_uuid, PN_ACCEPTED, SASL, symbol, ulong
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
@@ -676,7 +676,7 @@ class TxHandler(OutgoingMessageHandler):
 
     def settle(self, delivery, transaction, state=None):
         if state:
-            delivery.local.data = [transaction.id, state]
+            delivery.local.data = [transaction.id, Described(ulong(state), [])]
             delivery.update(0x34)
         delivery.settle()
 
