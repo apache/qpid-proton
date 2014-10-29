@@ -639,6 +639,10 @@ class ClientHandler(ClientEndpointHandler, IncomingMessageHandler, OutgoingMessa
         IncomingMessageHandler.on_delivery(self, event)
         OutgoingMessageHandler.on_delivery(self, event)
 
+    def on_settled(self, event):
+        IncomingMessageHandler.on_settled(self, event)
+        OutgoingMessageHandler.on_settled(self, event)
+
 def delivery_tags():
     count = 1
     while True:
@@ -659,7 +663,7 @@ def send_msg(sender, msg, tag=None, handler=None, transaction=None):
 def _send_msg(self, msg, tag=None, handler=None, transaction=None):
     return send_msg(self, msg, tag, handler, transaction)
 
-class TxHandler(OutgoingMessageHandler):
+class TransactionHandler(OutgoingMessageHandler):
     def on_settled(self, event):
         if hasattr(event.delivery, "transaction"):
             event.transaction = event.delivery.transaction
@@ -680,6 +684,17 @@ class TxHandler(OutgoingMessageHandler):
             delivery.update(0x34)
         delivery.settle()
 
+class TransactionalClientHandler(ClientEndpointHandler, TransactionHandler, IncomingMessageHandler):
+    def __init__(self):
+        super(TransactionalClientHandler, self).__init__()
+
+    def on_delivery(self, event):
+        IncomingMessageHandler.on_delivery(self, event)
+        TransactionHandler.on_delivery(self, event)
+
+    def on_settled(self, event):
+        IncomingMessageHandler.on_settled(self, event)
+        TransactionHandler.on_settled(self, event)
 
 class Transaction(object):
     def __init__(self, txn_ctrl, handler):
