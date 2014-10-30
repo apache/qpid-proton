@@ -3270,6 +3270,10 @@ class SSLDomain(object):
 
 class SSL(object):
 
+  @staticmethod
+  def present():
+    return pn_ssl_present()
+
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, SSLException)

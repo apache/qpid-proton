@@ -31,6 +31,11 @@
  * used if there is no SSL/TLS support in the system's environment.
  */
 
+bool pn_ssl_present(void)
+{
+  return false;
+}
+
 pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
   return NULL;

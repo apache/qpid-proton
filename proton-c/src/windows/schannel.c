@@ -252,10 +252,13 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 /** Public API - visible to application code */
 
+bool pn_ssl_present(void)
+{
+  return false;
+}
+
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
-  if (mode == PN_SSL_MODE_SERVER)
-    return NULL;  // Temporary: not ready for ctest, hide from isSSLPresent()
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
 
