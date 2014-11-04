@@ -198,8 +198,7 @@ void pn_remove_session(pn_connection_t *conn, pn_session_t *ssn)
 pn_connection_t *pn_session_connection(pn_session_t *session)
 {
   if (!session) return NULL;
-  return session->connection->endpoint.freed
-    ? NULL : session->connection;
+  return session->connection;
 }
 
 void pn_session_open(pn_session_t *session)
@@ -1078,8 +1077,7 @@ bool pn_link_is_receiver(pn_link_t *link)
 pn_session_t *pn_link_session(pn_link_t *link)
 {
   assert(link);
-  return link->session->endpoint.freed
-      ? NULL : link->session;
+  return link->session;
 }
 
 static void pn_disposition_finalize(pn_disposition_t *ds)
@@ -1572,8 +1570,7 @@ bool pn_link_draining(pn_link_t *receiver)
 pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
   assert(delivery);
-  return delivery->link->endpoint.freed
-    ? NULL : delivery->link;
+  return delivery->link;
 }
 
 pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery)
