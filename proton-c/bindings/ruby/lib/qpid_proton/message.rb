@@ -405,6 +405,9 @@ module Qpid
 
       # Sets the message content.
       #
+      # *WARNING:* This method has been deprecated. Please use #body= instead to
+      # set the content of a message.
+      #
       # ==== Options
       #
       # * content - the content
@@ -415,8 +418,22 @@ module Qpid
 
       # Returns the message content.
       #
+      # *WARNING:* This method has been deprecated. Please use #body instead to
+      # retrieve the content of a message.
+      #
       def content
-        Cproton.pn_message_save(@impl, 1024)[1]
+        size = 16
+        loop do
+          result = Cproton.pn_message_save(@impl, size)
+          error = result[0]
+          data = result[1]
+          if error == Qpid::Proton::Error::OVERFLOW
+            size = size * 2
+          else
+            check(error)
+            return data
+          end
+        end
       end
 
       # Sets the content encoding type.
