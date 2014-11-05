@@ -343,13 +343,13 @@ will not be verified.
     if t == -1:
       return None
     else:
-      return float(t)/1000
+      return millis2secs(t)
 
   def _set_timeout(self, value):
     if value is None:
       t = -1
     else:
-      t = long(1000*value)
+      t = secs2millis(value)
     self._check(pn_messenger_set_timeout(self._mng, t))
 
   timeout = property(_get_timeout, _set_timeout,
@@ -565,7 +565,7 @@ first message.
     if timeout is None:
       t = -1
     else:
-      t = long(1000*timeout)
+      t = secs2millis(timeout)
     err = pn_messenger_work(self._mng, t)
     if (err == PN_TIMEOUT):
       return False
@@ -759,7 +759,7 @@ first message.
   def deadline(self):
     tstamp = pn_messenger_deadline(self._mng)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -902,15 +902,15 @@ The priority of the message.
 """)
 
   def _get_ttl(self):
-    return pn_message_get_ttl(self._msg)
+    return millis2secs(pn_message_get_ttl(self._msg))
 
   def _set_ttl(self, value):
-    self._check(pn_message_set_ttl(self._msg, value))
+    self._check(pn_message_set_ttl(self._msg, secs2millis(value)))
 
   ttl = property(_get_ttl, _set_ttl,
                  doc="""
-The time to live of the message measured in milliseconds. Expired
-messages may be dropped.
+The time to live of the message measured in seconds. Expired messages
+may be dropped.
 """)
 
   def _is_first_acquirer(self):
@@ -1028,10 +1028,10 @@ The content-encoding of the message.
 """)
 
   def _get_expiry_time(self):
-    return pn_message_get_expiry_time(self._msg)
+    return millis2secs(pn_message_get_expiry_time(self._msg))
 
   def _set_expiry_time(self, value):
-    self._check(pn_message_set_expiry_time(self._msg, value))
+    self._check(pn_message_set_expiry_time(self._msg, secs2millis(value)))
 
   expiry_time = property(_get_expiry_time, _set_expiry_time,
                          doc="""
@@ -1039,10 +1039,10 @@ The expiry time of the message.
 """)
 
   def _get_creation_time(self):
-    return pn_message_get_creation_time(self._msg)
+    return millis2secs(pn_message_get_creation_time(self._msg))
 
   def _set_creation_time(self, value):
-    self._check(pn_message_set_creation_time(self._msg, value))
+    self._check(pn_message_set_creation_time(self._msg, secs2millis(value)))
 
   creation_time = property(_get_creation_time, _set_creation_time,
                            doc="""
@@ -1177,7 +1177,7 @@ class Selectable(object):
     if not self._impl: raise ValueError("selectable freed")
     tstamp = pn_selectable_deadline(self._impl)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -2256,6 +2256,12 @@ def obj2dat(obj, dimpl):
     d = Data(dimpl)
     d.put_object(obj)
 
+def secs2millis(secs):
+  return long(secs*1000)
+
+def millis2secs(millis):
+  return float(millis)/1000.0
+
 class Connection(Endpoint):
 
   @staticmethod
@@ -3027,8 +3033,7 @@ class Transport(object):
     """Process any timed events (like heartbeat generation).
     now = seconds since epoch (float).
     """
-    next = pn_transport_tick(self._trans, long(now * 1000))
-    return float(next) / 1000.0
+    return millis2secs(pn_transport_tick(self._trans, secs2millis(now)))
 
   def capacity(self):
     c = pn_transport_capacity(self._trans)
@@ -3103,11 +3108,10 @@ Sets the maximum channel that may be used on the transport.
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    msec = pn_transport_get_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_idle_timeout(self._trans))
 
   def _set_idle_timeout(self, sec):
-    pn_transport_set_idle_timeout(self._trans, long(sec * 1000))
+    pn_transport_set_idle_timeout(self._trans, secs2millis(sec))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -3116,8 +3120,7 @@ The idle timeout of the connection (float, in seconds).
 
   @property
   def remote_idle_timeout(self):
-    msec = pn_transport_get_remote_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_remote_idle_timeout(self._trans))
 
   @property
   def frames_output(self):
@@ -3678,7 +3681,7 @@ class Driver(object):
     if timeout_sec is None or timeout_sec < 0.0:
       t = -1
     else:
-      t = long(1000*timeout_sec)
+      t = secs2millis(timeout_sec)
     return pn_driver_wait(self._driver, t)
 
   def wakeup(self):
