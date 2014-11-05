@@ -763,6 +763,47 @@ class Transaction(object):
                     self.handler.on_transaction_committed(event)
 
 
+class LinkOption(object):
+    def apply(self, link): pass
+    def test(self, link): return True
+
+class AtMostOnce(LinkOption):
+    def apply(self, link):
+        link.snd_settle_mode = Link.SND_SETTLED
+
+class AtLeastOnce(LinkOption):
+    def apply(self, link):
+        link.snd_settle_mode = Link.SND_UNSETTLED
+        link.rcv_settle_mode = Link.RCV_FIRST
+
+class SenderOption(LinkOption):
+    def apply(self, sender): pass
+    def test(self, link): return link.is_sender
+
+class ReceiverOption(LinkOption):
+    def apply(self, receiver): pass
+    def test(self, link): return link.is_receiver
+
+class Filter(ReceiverOption):
+    def __init__(self, filter_set={}):
+        self.filter_set = filter_set
+
+    def apply(self, receiver):
+        receiver.source.filter.put_dict(self.filter_set)
+
+class Selector(Filter):
+    def __init__(self, value, name='selector'):
+        super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
+
+def _apply_link_options(options, link):
+    if options:
+        if isinstance(options, list):
+            for o in options:
+                if o.test(link): o.apply(link)
+        else:
+            if options.test(link): options.apply(link)
+
+
 class MessagingContext(object):
     def __init__(self, conn, handler=None, ssn=None):
         self.conn = conn
@@ -780,9 +821,8 @@ class MessagingContext(object):
 
     handler = property(_get_handler, _set_handler)
 
-    def create_sender(self, target, source=None, name=None, handler=None, tags=None):
+    def create_sender(self, target, source=None, name=None, handler=None, tags=None, options=None):
         snd = self._get_ssn().sender(name or self._get_id(target, source))
-        snd.snd_settle_mode = Link.SND_SETTLED
         if source:
             snd.source.address = source
         if target:
@@ -791,10 +831,11 @@ class MessagingContext(object):
             snd.context = handler
         snd.tags = tags or delivery_tags()
         snd.send_msg = types.MethodType(_send_msg, snd)
+        _apply_link_options(options, snd)
         snd.open()
         return snd
 
-    def create_receiver(self, source, target=None, name=None, dynamic=False, handler=None):
+    def create_receiver(self, source, target=None, name=None, dynamic=False, handler=None, options=None):
         rcv = self._get_ssn().receiver(name or self._get_id(source, target))
         if source:
             rcv.source.address = source
@@ -804,6 +845,7 @@ class MessagingContext(object):
             rcv.target.address = target
         if handler:
             rcv.context = handler
+        _apply_link_options(options, rcv)
         rcv.open()
         return rcv
 
