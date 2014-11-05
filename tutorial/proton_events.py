@@ -1023,10 +1023,10 @@ class EventLoop(object):
 
 EventLoop.DEFAULT = EventLoop()
 
-def connect(url=None, urls=None, address=None, handler=None, reconnect=None, eventloop=None):
+def connect(url=None, urls=None, address=None, handler=None, reconnect=None, eventloop=None, heartbeat=None):
     if not eventloop:
         eventloop = EventLoop.DEFAULT
-    return eventloop.connect(url=url, urls=urls, address=address, handler=handler, reconnect=reconnect)
+    return eventloop.connect(url=url, urls=urls, address=address, handler=handler, reconnect=reconnect, heartbeat=heartbeat)
 
 def run(eventloop=None):
     if not eventloop:
