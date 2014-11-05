@@ -110,7 +110,27 @@ module Qpid # :nodoc:
 
     class << STRING
       def put(data, value)
-        data.string = value.to_s
+        # In Ruby 1.9+ we have encoding methods that can check the content of
+        # the string, so use them to see if what we have is unicode. If so,
+        # good! If not, then just treat is as binary.
+        #
+        # No such thing in Ruby 1.8. So there we need to use Iconv to try and
+        # convert it to unicode. If it works, good! But if it raises an
+        # exception then we'll treat it as binary.
+        if RUBY_VERSION >= "1.9"
+          if value.encoding == "UTF-8" || value.force_encoding("UTF-8").valid_encoding?
+            data.string = value.to_s
+          else
+            data.binary = value.to_s
+          end
+        else
+          begin
+            newval = Iconv.new("UTF8//TRANSLIT//IGNORE", "UTF8").iconv(value.to_s)
+            data.string = newval
+          rescue
+            data.binary = value
+          end
+        end
       end
     end
 
