@@ -2413,3 +2413,30 @@ class TeardownLeakTest(PeerTest):
 
   def testLeak(self):
     self.doLeak(False, False)
+
+class IdleTimeoutEventTest(PeerTest):
+
+  def half_pump(self):
+    p = self.transport.pending()
+    self.transport.pop(p)
+
+  def testTimeoutWithZombieServer(self):
+    self.transport.idle_timeout = self.delay
+    self.connection.open()
+    self.half_pump()
+    self.transport.tick(time())
+    sleep(self.delay*2)
+    self.transport.tick(time())
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
+    assert self.transport.capacity() < 0
+    assert self.transport.pending() > 0
+    self.half_pump()
+    self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+    assert self.transport.pending() < 0
+
+  def testTimeoutWithZombieServerAndSASL(self):
+    sasl = self.transport.sasl()
+    sasl.client()
+    self.testTimeoutWithZombieServer()

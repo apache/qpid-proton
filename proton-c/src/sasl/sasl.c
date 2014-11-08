@@ -467,7 +467,14 @@ static ssize_t pn_output_write_sasl_header(pn_io_layer_t *io_layer, char *bytes,
 static ssize_t pn_output_write_sasl(pn_io_layer_t *io_layer, char *bytes, size_t size)
 {
   pn_sasl_t *sasl = (pn_sasl_t *)io_layer->context;
-  ssize_t n = pn_sasl_output(sasl, bytes, size);
+  // this accounts for pn_do_error is invoked, e.g. by idle timeout
+  ssize_t n;
+  if (sasl->transport->close_sent) {
+    n = PN_EOS;
+  } else {
+    n = pn_sasl_output(sasl, bytes, size);
+  }
+
   if (n == PN_EOS) {
     sasl->io_layer->process_output = pn_io_layer_output_passthru;
     pn_io_layer_t *io_next = sasl->io_layer->next;

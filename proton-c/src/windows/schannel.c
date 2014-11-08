@@ -222,7 +222,6 @@ static int ssl_failed(pn_ssl_t *ssl, const char *reason)
   ssl->ssl_closed = true;
   ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   ssl->state = SSL_CLOSED;
-  pni_close_tail(ssl->transport);
   pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", reason);
   return PN_EOS;
 }
