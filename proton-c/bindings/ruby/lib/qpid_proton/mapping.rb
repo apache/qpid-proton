@@ -106,15 +106,32 @@ module Qpid # :nodoc:
     DECIMAL128 = Mapping.new(Cproton::PN_DECIMAL128, "decimal128")
     UUID       = Mapping.new(Cproton::PN_UUID, "uuid")
     BINARY     = Mapping.new(Cproton::PN_BINARY, "binary")
-    STRING     = Mapping.new(Cproton::PN_STRING, "string", [String, Symbol])
+    STRING     = Mapping.new(Cproton::PN_STRING, "string", [String, Symbol,
+                                                           UTFString,
+                                                           BinaryString])
 
     class << STRING
       def put(data, value)
-        if value.is_a?(Qpid::Proton::UTFString) || Qpid::Proton.is_valid_utf?(value)
-          data.string = value.to_s
+        isutf = false
+
+        if value.is_a?(Qpid::Proton::UTFString)
+          isutf = true
         else
-          data.binary = value.to_s
+          # For Ruby 1.8 we will just treat all strings as binary.
+          # For Ruby 1.9+ we can check the encoding first to see what it is
+          if RUBY_VERSION >= "1.9"
+            # If the string is ASCII-8BIT then treat is as binary. Otherwise,
+            # try to convert it to UTF-8 and, if successful, send as that.
+            if value.encoding != Encoding::ASCII_8BIT &&
+                value.encode(Encoding::UTF_8).valid_encoding?
+              isutf = true
+            end
+          end
         end
+
+        data.string = value if isutf
+        data.binary = value if !isutf
+
       end
     end
 
