@@ -458,7 +458,8 @@ class ScopedHandler(Handler):
         "pn_delivery": ["delivery", "link", "session", "connection"]
     }
 
-    def on_unhandled(self, event):
+    def on_unhandled(self, method, args):
+        event = args[0]
         if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
             return
         objects = [getattr(event, attr) for attr in self.scopes.get(event.clazz, [])]
