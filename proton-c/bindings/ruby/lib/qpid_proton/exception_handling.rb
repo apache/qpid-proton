@@ -25,6 +25,49 @@ module Qpid
     #
     module ExceptionHandling
 
+      def self.included(base)
+        base.extend(self)
+
+        unless defined? base.to_be_wrapped
+          class << base
+            @@to_be_wrapped = []
+          end
+        end
+
+        define_method :method_added do |name|
+          if (!@@to_be_wrapped.nil?) && (@@to_be_wrapped.include? name)
+            @@to_be_wrapped.delete name
+            create_exception_handler_wrapper(name)
+          end
+        end
+      end
+
+      def can_raise_exception(method_names)
+        # coerce the names to be an array
+        Array(method_names).each do |method_name|
+          # if the method doesn't already exist then queue this aliasing
+          unless self.method_defined? method_name
+            @@to_be_wrapped ||= []
+            @@to_be_wrapped << method_name
+          else
+            create_exception_handler_wrapper(method_name)
+          end
+        end
+      end
+
+      def create_exception_handler_wrapper(method_name)
+        original_method_name = method_name.to_s
+        wrapped_method_name = "_excwrap_#{original_method_name}"
+        alias_method wrapped_method_name, original_method_name
+        define_method original_method_name do |*args, &block|
+          # need to get a reference to the method object itself since
+          # calls to Class.send interfere with Messenger.send
+          method = self.method(wrapped_method_name.to_sym)
+          rc = method.call(*args, &block)
+          check_for_error(rc)
+        end
+      end
+
       # Raises an Proton-specific error if a return code is non-zero.
       #
       # Expects the class to provide an +error+ method.

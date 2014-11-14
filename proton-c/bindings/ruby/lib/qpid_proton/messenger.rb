@@ -59,6 +59,11 @@ module Qpid
 
       include Qpid::Proton::ExceptionHandling
 
+      can_raise_exception [:send, :receive, :password=, :start, :stop,
+                           :perform_put, :perform_get, :interrupt,
+                           :route, :rewrite, :accept, :reject,
+                           :incoming_window=, :outgoing_window=]
+
       # Creates a new +Messenger+.
       #
       # The +name+ parameter is optional. If one is not provided then
@@ -94,7 +99,7 @@ module Qpid
       # * password - the password
       #
       def password=(password)
-        check_for_error(Cproton.pn_messenger_set_password(@impl, password))
+        Cproton.pn_messenger_set_password(@impl, password)
       end
 
       # Returns the password property for the Messenger.private_key file.
@@ -193,14 +198,14 @@ module Qpid
       # before starting the +Messenger+.
       #
       def start
-        check_for_error(Cproton.pn_messenger_start(@impl))
+        Cproton.pn_messenger_start(@impl)
       end
 
       # Stops the +Messenger+, preventing it from sending or receiving
       # any more messages.
       #
       def stop
-        check_for_error(Cproton.pn_messenger_stop(@impl))
+        Cproton.pn_messenger_stop(@impl)
       end
 
       # Returns true iff a Messenger is in the stopped state.
@@ -313,9 +318,18 @@ module Qpid
         raise ArgumentError.new("invalid message type: #{message.class}") unless message.kind_of?(Message)
         # encode the message first
         message.pre_encode
-        check_for_error(Cproton.pn_messenger_put(@impl, message.impl))
+        perform_put(message)
         return outgoing_tracker
       end
+
+      private
+
+      def perform_put(message) # :nodoc:
+        Cproton.pn_messenger_put(@impl, message.impl)
+      end
+
+      public
+
 
       # This call will block until the indicated number of messages
       # have been sent, or until the operation times out.
@@ -324,7 +338,7 @@ module Qpid
       # it can without blocking.
       #
       def send(n = -1)
-        check_for_error(Cproton.pn_messenger_send(@impl, n))
+        Cproton.pn_messenger_send(@impl, n)
       end
 
       # Moves the message from the head of the incoming message queue into
@@ -348,10 +362,18 @@ module Qpid
         else
           msg_impl = msg.impl
         end
-        check_for_error(Cproton.pn_messenger_get(@impl, msg_impl))
+        perform_get(msg_impl)
         msg.post_decode unless msg.nil?
         return incoming_tracker
       end
+
+      private
+
+      def perform_get(msg) # :nodoc:
+        Cproton.pn_messenger_get(@impl, msg)
+      end
+
+      public
 
       # Receives up to limit messages into the incoming queue.  If no value
       # for limit is supplied, this call will receive as many messages as it
@@ -364,7 +386,7 @@ module Qpid
       # * limit - the maximum number of messages to receive
       #
       def receive(limit = -1)
-        check_for_error(Cproton.pn_messenger_recv(@impl, limit))
+        Cproton.pn_messenger_recv(@impl, limit)
       end
 
       def receiving
@@ -384,7 +406,7 @@ module Qpid
       # originated the interrupt.
       #
       def interrupt
-        check_for_error(Cproton.pn_messenger_interrupt(@impl))
+        Cproton.pn_messenger_interrupt(@impl)
       end
 
       # Sends or receives any outstanding messages queued for a Messenger.
@@ -472,7 +494,7 @@ module Qpid
       #   messenger.route("*", "amqp://user:password@broker/$1")
       #
       def route(pattern, address)
-        check_for_error(Cproton.pn_messenger_route(@impl, pattern, address))
+        Cproton.pn_messenger_route(@impl, pattern, address)
       end
 
       # Similar to #route, except that the destination of
@@ -494,7 +516,7 @@ module Qpid
       # * address - the target address
       #
       def rewrite(pattern, address)
-        check_for_error(Cproton.pn_messenger_rewrite(@impl, pattern, address))
+        Cproton.pn_messenger_rewrite(@impl, pattern, address)
       end
 
       def selectable
@@ -548,7 +570,7 @@ module Qpid
         else
           flag = 0
         end
-        check_for_error(Cproton.pn_messenger_accept(@impl, tracker.impl, flag))
+        Cproton.pn_messenger_accept(@impl, tracker.impl, flag)
       end
 
       # Rejects the incoming message identified by the tracker.
@@ -568,7 +590,7 @@ module Qpid
         else
           flag = 0
         end
-        check_for_error(Cproton.pn_messenger_reject(@impl, tracker.impl, flag))
+        Cproton.pn_messenger_reject(@impl, tracker.impl, flag)
       end
 
       # Gets the last known remote state of the delivery associated with
@@ -624,7 +646,7 @@ module Qpid
       #
       def incoming_window=(window)
         raise TypeError.new("invalid window: #{window}") unless valid_window?(window)
-        check_for_error(Cproton.pn_messenger_set_incoming_window(@impl, window))
+        Cproton.pn_messenger_set_incoming_window(@impl, window)
       end
 
       # Returns the incoming window.
@@ -648,7 +670,7 @@ module Qpid
       #
       def outgoing_window=(window)
         raise TypeError.new("invalid window: #{window}") unless valid_window?(window)
-        check_for_error(Cproton.pn_messenger_set_outgoing_window(@impl, window))
+        Cproton.pn_messenger_set_outgoing_window(@impl, window)
       end
 
       # Returns the outgoing window.
