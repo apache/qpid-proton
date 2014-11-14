@@ -32,7 +32,7 @@ module Qpid
 
         raise ::ArgumentError.new("Invalid error code: #{code}") if code.nil?
 
-	return code if code > 0
+        return code if code > 0
 
         case(code)
 

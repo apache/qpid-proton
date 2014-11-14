@@ -297,10 +297,10 @@ module Qpid
       # Places the content contained in the message onto the outgoing
       # queue of the Messenger.
       #
-      # This method will never block, however it will send any unblocked 
+      # This method will never block, however it will send any unblocked
       # Messages in the outgoing queue immediately and leave any blocked
       # Messages remaining in the outgoing queue.
-      # The send call may then be used to block until the outgoing queue 
+      # The send call may then be used to block until the outgoing queue
       # is empty.  The outgoing attribute may be used to check the depth
       # of the outgoing queue.
       #
@@ -319,8 +319,8 @@ module Qpid
 
       # This call will block until the indicated number of messages
       # have been sent, or until the operation times out.
-      # If n is -1 this call will block until all outgoing messages 
-      # have been sent. If n is 0 then this call will send whatever 
+      # If n is -1 this call will block until all outgoing messages
+      # have been sent. If n is 0 then this call will send whatever
       # it can without blocking.
       #
       def send(n = -1)
@@ -392,7 +392,7 @@ module Qpid
       # This will block for the indicated timeout.  This method may also do I/O
       # other than sending and receiving messages.  For example, closing
       # connections after stop() has been called.
-      # 
+      #
       def work(timeout=-1)
         err = Cproton.pn_messenger_work(@impl, timeout)
         if (err == Cproton::PN_TIMEOUT) then
@@ -572,9 +572,9 @@ module Qpid
       end
 
       # Gets the last known remote state of the delivery associated with
-      # the given tracker, as long as the Message is still within your 
-      # outgoing window. (Also works on incoming messages that are still 
-      # within your incoming queue. See TrackerStatus for details on the 
+      # the given tracker, as long as the Message is still within your
+      # outgoing window. (Also works on incoming messages that are still
+      # within your incoming queue. See TrackerStatus for details on the
       # values returned.
       #
       # ==== Options
@@ -609,13 +609,13 @@ module Qpid
 
       # Sets the incoming window.
       #
-      # The Messenger will track the remote status of this many incoming 
+      # The Messenger will track the remote status of this many incoming
       # deliveries after they have been accepted or rejected.
       #
       # Messages enter this window only when you take them into your application
       # using get().  If your incoming window size is n, and you get n+1 messages
       # without explicitly accepting or rejecting the oldest message, then the
-      # message that passes beyond the edge of the incoming window will be 
+      # message that passes beyond the edge of the incoming window will be
       # assigned the default disposition of its link.
       #
       # ==== Options
@@ -635,7 +635,7 @@ module Qpid
 
       # Sets the outgoing window.
       #
-      # The Messenger will track the remote status of this many outgoing 
+      # The Messenger will track the remote status of this many outgoing
       # deliveries after calling send.
       # A Message enters this window when you call the put() method with the
       # message.  If your outgoing window size is n, and you call put n+1
