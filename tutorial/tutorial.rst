@@ -11,66 +11,44 @@ sending and receiving a single message.
    :lines: 21-
    :linenos:
 
-You can see the import of ``EventLoop`` from ``proton_events`` on the
-second line. This is a helper class that makes programming with proton
-a little easier for the common cases. It includes within it an event
-loop, and programs written using this utility are generally structured
-to react to various events. This reactive style is particularly suited
-to messaging applications.
+This example uses proton in an event-driven or reactive manner. The
+flow of control is an 'event loop', where the events may be triggered
+by data arriving on a socket among other things and are then passed to
+relevant 'handlers'. Applications are then structured as a set of
+defined handlers for events of interest; to be notified of a
+particular event, you define a class with an appropriately name method
+on it, inform the event loop of that method which then calls it
+whenever the event occurs.
 
-To be notified of a particular event, you define a class with the
-appropriately name method on it. That method is then called by the
-event loop when the event occurs.
+The class we define in this example, ``HelloWorld``, has methods to
+handle three types of events.
 
-The first class we define, ``HelloWorldReceiver``, handles the event
-where a message is received and so implements a ``on_message()``
-method. Within that we simply print the body of the message (line 6)
-and then close the connection (line 7).
+The first, ``on_connection_opened()``, is called when the connection
+is opened, and when that occurs we create a receiver over which to
+receive our message and a sender over which to send it.
 
-The second class, ``HelloWorldSender``, handles the event where the
-flow of messages is enabled over our sending link by implementing a
-``on_link_flow()`` method and sending the message within that. Doing
-this ensures that we only send when the recipient is ready and able to
-receive the message. This is particularly important when the volume of
-messages might be large. In our case we are just going to send one
-message, which we do on line 11, so we can then just close the sending
-link on line 12.
+The second method, ``on_credit()``, is called when our sender has been
+issued by the peer with 'credit', allowing it to send messages. A
+credit based flow control mechanism like this ensures we only send
+messages when the recipient is ready and able to receive them. This is
+particularly important when the volume of messages might be large. In
+our case we are just going to send one message.
 
-The ``HelloWorld`` class ties everything together. It's constructor
-takes the instance of the event loop to use, a url to connect to, and
-an address through which the message will be sent. To run the example
-you will need to have a broker (or similar) accepting connections on
-that url either with a queue (or topic) matching the given address or
-else configured to create such a queue (or topic) dynamically.
+The third and final method, ``on_message()``, is called when a message
+arrives. Within that method we simply print the body of the message
+and then close the connection.
 
-On line 17 we request that a connection be made to the process this
-url refers to by calling ``connect()`` on the ``EventLoop``. This call
-returns a ``MessagingContext`` object through which we can create
-objects for sending and receiving messages to the process it is
-connected to. However we will delay doing that until our connection is
-fully established, i.e. until the remote peer 'opens' the connection
-(the open here is the 'handshake' for establishing an operational AMQP
-connection).
+This particular example assumes a broker (or similar service), which
+accepts connections and routes published messages to intended
+recipients. The constructor for the ``HelloWorld`` class takes the
+details of the broker to connect to, and the address through which the
+message is sent and received (for a broker this corresponds to a queue
+or topic name).
 
-To be notified of this we pass a reference to self as the handler in
-``connect()`` and define an ``on_connection_remote_open()`` method
-within which we can create our receiver using the connection context
-we obtained from the earlier ``connect()`` call, and passing the
-handler implementation defined by ``HelloWorldReceiver``. When the
-remote peer confirms the establishment of that receiver we get a
-callback on ``on_link_remote_open()`` and that is where we then create
-our sender, passing it the ``HelloWorldSender`` handler. Delaying the
-creation of the sender until the receiver is established avoids losing
-messages even when these are not queued up by the remote peer.
-
-We'll add definitions to ``HelloWorld`` of ``on_link_remote_close()``
-and ``on_connection_remote_close()`` also, so that we can be notified
-if the broker we are connected to closes either link or the connection
-for any reason.
-
-Finally we actually enter the event loop, to handle all the necessary
-IO and make all the necessary event callbacks, by calling ``run()`` on
-it.
+After an instance of ``HelloWorld`` is constructed, the event loop is
+entered by the call to the ``run()`` method on the last line. This
+call will return only when the loop determines there are no more
+events possible (at which point our example program will then exit).
 
 ====================
 Hello World, Direct!

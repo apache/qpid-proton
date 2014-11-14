@@ -8,16 +8,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Hello World! &mdash; Proton 0.8 documentation</title>
+    <title>Hello World! &mdash; Proton 0.9-alpha documentation</title>
     
-    <link rel="stylesheet" href="_static/haiku.css" type="text/css" />
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="_static/print.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.8',
+        VERSION:     '0.9-alpha',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -26,27 +25,27 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/theme_extras.js"></script>
-    <link rel="top" title="Proton 0.8 documentation" href="index.html" />
+    <link rel="top" title="Proton 0.9-alpha documentation" href="index.html" />
     <link rel="prev" title="Some Proton Examples" href="index.html" /> 
   </head>
   <body>
-      <div class="header"><h1 class="heading"><a href="index.html">
-          <span>Proton 0.8 documentation</span></a></h1>
-        <h2 class="heading"><span>Hello World!</span></h2>
-      </div>
-      <div class="topnav">
-      
-        <p>
-        «&#160;&#160;<a href="index.html">Some Proton Examples</a>
-        &#160;&#160;::&#160;&#160;
-        <a class="uplink" href="index.html">Contents</a>
-        </p>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="index.html" title="Some Proton Examples"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Proton 0.9-alpha documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
 
-      </div>
-      <div class="content">
-        
-        
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body">
+            
   <div class="section" id="hello-world">
 <h1>Hello World!<a class="headerlink" href="#hello-world" title="Permalink to this headline">¶</a></h1>
 <p>Tradition dictates that we start with hello world! However rather than
@@ -74,120 +73,62 @@ sending and receiving a single message.</p>
 19
 20
 21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+22</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
+<span class="kn">import</span> <span class="nn">proton_events</span>
 
-<span class="k">class</span> <span class="nc">HelloWorldReceiver</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="n">proton_events</span><span class="o">.</span><span class="n">ClientHandler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">proton_events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_connection_opened</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_receiver</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_credit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s">u&quot;Hello World!&quot;</span><span class="p">))</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="k">print</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span>
         <span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-<span class="k">class</span> <span class="nc">HelloWorldSender</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">on_link_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s">u&quot;Hello World!&quot;</span><span class="p">))</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
-
-    <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">HelloWorldReceiver</span><span class="p">())</span>
-
-    <span class="k">def</span> <span class="nf">on_link_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">is_receiver</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">HelloWorldSender</span><span class="p">())</span>
-
-    <span class="k">def</span> <span class="nf">on_link_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_connection_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Closed due to </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">error</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-
-<span class="n">HelloWorld</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">HelloWorld</span><span class="p">(</span><span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span>
+<span class="n">proton_events</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </td></tr></table></div>
-<p>You can see the import of <tt class="docutils literal"><span class="pre">EventLoop</span></tt> from <tt class="docutils literal"><span class="pre">proton_events</span></tt> on the
-second line. This is a helper class that makes programming with proton
-a little easier for the common cases. It includes within it an event
-loop, and programs written using this utility are generally structured
-to react to various events. This reactive style is particularly suited
-to messaging applications.</p>
-<p>To be notified of a particular event, you define a class with the
-appropriately name method on it. That method is then called by the
-event loop when the event occurs.</p>
-<p>The first class we define, <tt class="docutils literal"><span class="pre">HelloWorldReceiver</span></tt>, handles the event
-where a message is received and so implements a <tt class="docutils literal"><span class="pre">on_message()</span></tt>
-method. Within that we simply print the body of the message (line 6)
-and then close the connection (line 7).</p>
-<p>The second class, <tt class="docutils literal"><span class="pre">HelloWorldSender</span></tt>, handles the event where the
-flow of messages is enabled over our sending link by implementing a
-<tt class="docutils literal"><span class="pre">on_link_flow()</span></tt> method and sending the message within that. Doing
-this ensures that we only send when the recipient is ready and able to
-receive the message. This is particularly important when the volume of
-messages might be large. In our case we are just going to send one
-message, which we do on line 11, so we can then just close the sending
-link on line 12.</p>
-<p>The <tt class="docutils literal"><span class="pre">HelloWorld</span></tt> class ties everything together. It&#8217;s constructor
-takes the instance of the event loop to use, a url to connect to, and
-an address through which the message will be sent. To run the example
-you will need to have a broker (or similar) accepting connections on
-that url either with a queue (or topic) matching the given address or
-else configured to create such a queue (or topic) dynamically.</p>
-<p>On line 17 we request that a connection be made to the process this
-url refers to by calling <tt class="docutils literal"><span class="pre">connect()</span></tt> on the <tt class="docutils literal"><span class="pre">EventLoop</span></tt>. This call
-returns a <tt class="docutils literal"><span class="pre">MessagingContext</span></tt> object through which we can create
-objects for sending and receiving messages to the process it is
-connected to. However we will delay doing that until our connection is
-fully established, i.e. until the remote peer &#8216;opens&#8217; the connection
-(the open here is the &#8216;handshake&#8217; for establishing an operational AMQP
-connection).</p>
-<p>To be notified of this we pass a reference to self as the handler in
-<tt class="docutils literal"><span class="pre">connect()</span></tt> and define an <tt class="docutils literal"><span class="pre">on_connection_remote_open()</span></tt> method
-within which we can create our receiver using the connection context
-we obtained from the earlier <tt class="docutils literal"><span class="pre">connect()</span></tt> call, and passing the
-handler implementation defined by <tt class="docutils literal"><span class="pre">HelloWorldReceiver</span></tt>. When the
-remote peer confirms the establishment of that receiver we get a
-callback on <tt class="docutils literal"><span class="pre">on_link_remote_open()</span></tt> and that is where we then create
-our sender, passing it the <tt class="docutils literal"><span class="pre">HelloWorldSender</span></tt> handler. Delaying the
-creation of the sender until the receiver is established avoids losing
-messages even when these are not queued up by the remote peer.</p>
-<p>We&#8217;ll add definitions to <tt class="docutils literal"><span class="pre">HelloWorld</span></tt> of <tt class="docutils literal"><span class="pre">on_link_remote_close()</span></tt>
-and <tt class="docutils literal"><span class="pre">on_connection_remote_close()</span></tt> also, so that we can be notified
-if the broker we are connected to closes either link or the connection
-for any reason.</p>
-<p>Finally we actually enter the event loop, to handle all the necessary
-IO and make all the necessary event callbacks, by calling <tt class="docutils literal"><span class="pre">run()</span></tt> on
-it.</p>
+<p>This example uses proton in an event-driven or reactive manner. The
+flow of control is an &#8216;event loop&#8217;, where the events may be triggered
+by data arriving on a socket among other things and are then passed to
+relevant &#8216;handlers&#8217;. Applications are then structured as a set of
+defined handlers for events of interest; to be notified of a
+particular event, you define a class with an appropriately name method
+on it, inform the event loop of that method which then calls it
+whenever the event occurs.</p>
+<p>The class we define in this example, <tt class="docutils literal"><span class="pre">HelloWorld</span></tt>, has methods to
+handle three types of events.</p>
+<p>The first, <tt class="docutils literal"><span class="pre">on_connection_opened()</span></tt>, is called when the connection
+is opened, and when that occurs we create a receiver over which to
+receive our message and a sender over which to send it.</p>
+<p>The second method, <tt class="docutils literal"><span class="pre">on_credit()</span></tt>, is called when our sender has been
+issued by the peer with &#8216;credit&#8217;, allowing it to send messages. A
+credit based flow control mechanism like this ensures we only send
+messages when the recipient is ready and able to receive them. This is
+particularly important when the volume of messages might be large. In
+our case we are just going to send one message.</p>
+<p>The third and final method, <tt class="docutils literal"><span class="pre">on_message()</span></tt>, is called when a message
+arrives. Within that method we simply print the body of the message
+and then close the connection.</p>
+<p>This particular example assumes a broker (or similar service), which
+accepts connections and routes published messages to intended
+recipients. The constructor for the <tt class="docutils literal"><span class="pre">HelloWorld</span></tt> class takes the
+details of the broker to connect to, and the address through which the
+message is sent and received (for a broker this corresponds to a queue
+or topic name).</p>
+<p>After an instance of <tt class="docutils literal"><span class="pre">HelloWorld</span></tt> is constructed, the event loop is
+entered by the call to the <tt class="docutils literal"><span class="pre">run()</span></tt> method on the last line. This
+call will return only when the loop determines there are no more
+events possible (at which point our example program will then exit).</p>
 </div>
 <div class="section" id="hello-world-direct">
 <h1>Hello World, Direct!<a class="headerlink" href="#hello-world-direct" title="Permalink to this headline">¶</a></h1>
@@ -227,54 +168,40 @@ directly if desired.</p>
 30
 31
 32
-33
-34
-35
-36
-37
-38
-39
-40</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">FlowController</span><span class="p">,</span> <span class="n">Handshaker</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+33</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">ClientHandler</span><span class="p">,</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">FlowController</span><span class="p">,</span> <span class="n">Handshaker</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
 
 <span class="k">class</span> <span class="nc">HelloWorldReceiver</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="k">print</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span>
         <span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-<span class="k">class</span> <span class="nc">HelloWorldSender</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">on_link_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s">u&quot;Hello World!&quot;</span><span class="p">))</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">HelloWorld</span><span class="p">(</span><span class="n">ClientHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
-<span class="hll">        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
 
-    <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">HelloWorldSender</span><span class="p">())</span>
+    <span class="k">def</span> <span class="nf">on_connection_opened</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<span class="hll">        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
+</span>
+    <span class="k">def</span> <span class="nf">on_credit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s">u&quot;Hello World!&quot;</span><span class="p">))</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">on_link_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">on_accepted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">on_connection_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Closed due to </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">error</span>
-<span class="hll">        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">on_connection_closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceptor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-<span class="hll">
-</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">EventLoop</span><span class="p">(</span><span class="n">HelloWorldReceiver</span><span class="p">(),</span> <span class="n">Handshaker</span><span class="p">(),</span> <span class="n">FlowController</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-<span class="n">HelloWorld</span><span class="p">(</span><span class="n">eventloop</span><span class="p">,</span> <span class="s">&quot;localhost:8888&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-</pre></div>
+
+<span class="n">eventloop</span> <span class="o">=</span> <span class="n">EventLoop</span><span class="p">(</span><span class="n">HelloWorldReceiver</span><span class="p">(),</span> <span class="n">Handshaker</span><span class="p">(),</span> <span class="n">FlowController</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="hll"><span class="n">HelloWorld</span><span class="p">(</span><span class="n">eventloop</span><span class="p">,</span> <span class="s">&quot;localhost:8888&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></pre></div>
 </td></tr></table></div>
 <p>The first difference, on line 17, is that rather than creating a
 receiver on the same connection as our sender, we listen for incoming
@@ -314,98 +241,16 @@ with some further cleanup.</p>
  8
  9
 10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">IncomingMessageHandler</span><span class="p">,</span> <span class="n">EventLoop</span>
+11</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">proton_events</span>
 
-<span class="k">class</span> <span class="nc">Recv</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-
+<span class="k">class</span> <span class="nc">Recv</span><span class="p">(</span><span class="n">proton_events</span><span class="o">.</span><span class="n">ClientHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="k">print</span> <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span>
 
-    <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_link_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_connection_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Closed due to </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">error</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">on_disconnected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mf">0.1</span>
-            <span class="k">print</span> <span class="s">&quot;Disconnected, reconnecting...&quot;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Disconnected will try to reconnect after </span><span class="si">%d</span><span class="s"> seconds&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="n">conn</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">delay</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_timer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s">&quot;Reconnecting...&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">Recv</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">proton_events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">Recv</span><span class="p">())</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">create_receiver</span><span class="p">(</span><span class="s">&quot;examples&quot;</span><span class="p">)</span>
+    <span class="n">proton_events</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span> <span class="k">pass</span>
 </pre></div>
 </td></tr></table></div>
@@ -437,119 +282,35 @@ with some further cleanup.</p>
 26
 27
 28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">OutgoingMessageHandler</span><span class="p">,</span> <span class="n">EventLoop</span>
+29</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
+<span class="kn">import</span> <span class="nn">proton_events</span>
 
-<span class="k">class</span> <span class="nc">Send</span><span class="p">(</span><span class="n">OutgoingMessageHandler</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">messages</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
+<span class="k">class</span> <span class="nc">Send</span><span class="p">(</span><span class="n">proton_events</span><span class="o">.</span><span class="n">ClientHandler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">confirmed</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="n">messages</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_link_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">credit</span><span class="p">):</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">drained</span><span class="p">()</span>
-                <span class="k">break</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;sequence&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">sent</span><span class="p">})</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">on_credit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">while</span> <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">credit</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;sequence&#39;</span><span class="p">:(</span><span class="bp">self</span><span class="o">.</span><span class="n">sent</span><span class="o">+</span><span class="mi">1</span><span class="p">)})</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="k">def</span> <span class="nf">on_accepted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Stop the application once all of the messages are sent and acknowledged,</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">confirmed</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">confirmed</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">print</span> <span class="s">&quot;all messages confirmed&quot;</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">on_connection_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_disconnected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">confirmed</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">offered</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mi">0</span>
 
-    <span class="k">def</span> <span class="nf">on_link_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">link</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_connection_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">closed</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_condition</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Closed due to </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">error</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">on_disconnected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="mf">0.1</span>
-            <span class="k">print</span> <span class="s">&quot;Disconnected, reconnecting...&quot;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;Disconnected will try to reconnect after </span><span class="si">%d</span><span class="s"> seconds&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="n">conn</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">delay</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">delay</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">on_timer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s">&quot;Reconnecting...&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-
-<span class="n">Send</span><span class="p">(</span><span class="n">EventLoop</span><span class="p">(),</span> <span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">proton_events</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&quot;localhost:5672&quot;</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">Send</span><span class="p">(</span><span class="mi">10000</span><span class="p">))</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="s">&quot;examples&quot;</span><span class="p">)</span>
+    <span class="n">proton_events</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span> <span class="k">pass</span>
 </pre></div>
 </td></tr></table></div>
 </div>
@@ -588,26 +349,32 @@ the body of the request converted to uppercase.</p>
 24
 25
 26
-27</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+27
+28
+29
+30</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">ClientHandler</span>
 
-<span class="k">class</span> <span class="nc">Server</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">Server</span><span class="p">(</span><span class="n">ClientHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_receiver</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">senders</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relay</span> <span class="o">=</span> <span class="bp">None</span>
 
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-        <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">senders</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">)</span>
+        <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">relay</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">sender</span><span class="p">:</span>
-            <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">)</span>
+            <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">senders</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sender</span><span class="p">:</span>
+            <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">senders</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">]</span> <span class="o">=</span> <span class="n">sender</span>
-        <span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
+        <span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">address</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">reply_to</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
 
-    <span class="k">def</span> <span class="nf">on_connection_remote_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">error</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Closed due to </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">error</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">on_connection_opened</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_offered_capabilities</span> <span class="ow">and</span> <span class="s">&#39;ANONYMOUS-RELAY&#39;</span> <span class="ow">in</span> <span class="n">event</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">remote_offered_capabilities</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
@@ -656,21 +423,21 @@ the senders incase we get further requests wit the same reply-to.</p>
 32
 33
 34</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Message</span>
-<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">IncomingMessageHandler</span>
+<span class="kn">from</span> <span class="nn">proton_events</span> <span class="kn">import</span> <span class="n">EventLoop</span><span class="p">,</span> <span class="n">ClientHandler</span>
 
-<span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="n">IncomingMessageHandler</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="n">ClientHandler</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventloop</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">requests</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eventloop</span> <span class="o">=</span> <span class="n">eventloop</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">eventloop</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sender</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">receiver</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">dynamic</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_sender</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">receiver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">create_receiver</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">dynamic</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">requests</span> <span class="o">=</span> <span class="n">requests</span>
 
     <span class="k">def</span> <span class="nf">next_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">req</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">reply_to</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">receiver</span><span class="o">.</span><span class="n">remote_source</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">requests</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_msg</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">on_link_remote_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">on_link_opened</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">next_request</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -704,17 +471,22 @@ request.</p>
 </div>
 
 
+          </div>
       </div>
-      <div class="bottomnav">
-      
-        <p>
-        «&#160;&#160;<a href="index.html">Some Proton Examples</a>
-        &#160;&#160;::&#160;&#160;
-        <a class="uplink" href="index.html">Contents</a>
-        </p>
-
-      </div>
-
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="index.html" title="Some Proton Examples"
+             >previous</a> |</li>
+        <li><a href="index.html">Proton 0.9-alpha documentation</a> &raquo;</li> 
+      </ul>
+    </div>
     <div class="footer">
         &copy; Copyright 2014, Apache Qpid.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.

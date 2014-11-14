@@ -22,9 +22,9 @@ from proton import Message
 import proton_events
 
 class HelloWorld(proton_events.ClientHandler):
-    def __init__(self, conn, address):
-        self.conn = conn
+    def __init__(self, server, address):
         self.address = address
+        self.conn = proton_events.connect(server, handler=self)
 
     def on_connection_opened(self, event):
         self.conn.create_receiver(self.address)
@@ -38,7 +38,6 @@ class HelloWorld(proton_events.ClientHandler):
         print event.message.body
         event.connection.close()
 
-conn = proton_events.connect("localhost:5672")
-conn.handler=HelloWorld(conn, "examples")
+HelloWorld("localhost:5672", "examples")
 proton_events.run()
 
