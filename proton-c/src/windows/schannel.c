@@ -520,8 +520,6 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
 
 /** SChannel specific: */
 
-<<<<<<< HEAD
-=======
 const char *tls_version_check(pn_ssl_t *ssl)
 {
   SecPkgContext_ConnectionInfo info;
@@ -532,7 +530,6 @@ const char *tls_version_check(pn_ssl_t *ssl)
     "peer does not support TLS 1.0 security" : NULL;
 }
 
->>>>>>> master
 static void ssl_encrypt(pn_ssl_t *ssl, char *app_data, size_t count)
 {
   // Get SChannel to encrypt exactly one Record.
@@ -744,13 +741,10 @@ static void client_handshake( pn_ssl_t* ssl) {
       ssl_failed(ssl, "unexpected final server token");
       break;
     }
-<<<<<<< HEAD
-=======
     if (const char *err = tls_version_check(ssl)) {
       ssl_failed(ssl, err);
       break;
     }
->>>>>>> master
     if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0) {
       // This seems to work but not documented, plus logic differs from decrypt message
       // since the pvBuffer value is not set.  Grrr.
@@ -923,11 +917,7 @@ static void app_inbytes_progress(pn_ssl_t *ssl, size_t minimum)
       assert(ssl->app_inbytes.size <= ib2.size);
       size_t consumed = ib2.size - ssl->app_inbytes.size;
       if (consumed > 0) {
-<<<<<<< HEAD
-          memmove((void *)ib2.start, ib2.start + consumed, consumed);
-=======
         memmove((void *)ib2.start, ib2.start + consumed, ssl->app_inbytes.size);
->>>>>>> master
         pn_buffer_trim(ssl->inbuf2, 0, consumed);
       }
       if (!pn_buffer_available(ssl->inbuf2)) {

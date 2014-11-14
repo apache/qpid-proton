@@ -1076,14 +1076,6 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
   return original - available;
 }
 
-static void pni_maybe_post_closed(pn_transport_t *transport)
-{
-  pn_collector_t *collector = pni_transport_collector(transport);
-  if (transport->posted_head_closed && transport->posted_tail_closed) {
-    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_CLOSED);
-  }
-}
-
 // process pending input until none remaining or EOS
 static ssize_t transport_consume(pn_transport_t *transport)
 {
@@ -1105,12 +1097,6 @@ static ssize_t transport_consume(pn_transport_t *transport)
       if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
         pn_transport_log(transport, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
-      if (!transport->posted_tail_closed) {
-        pn_collector_t *collector = pni_transport_collector(transport);
-        pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_TAIL_CLOSED);
-        transport->posted_tail_closed = true;
-        pni_maybe_post_closed(transport);
-      }
       return n;
     }
   }
@@ -2182,13 +2168,6 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
     return n;
   } else {
     return size;
-  }
-}
-
-void pni_close_tail(pn_transport_t *transport)
-{
-  if (!transport->tail_closed) {
-    transport->tail_closed = true;
   }
 }
 
