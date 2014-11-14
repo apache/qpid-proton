@@ -112,6 +112,9 @@ module Qpid # :nodoc:
 
     class << STRING
       def put(data, value)
+        # if we have a symbol then convert it to a string
+        value = value.to_s if value.is_a?(Symbol)
+
         isutf = false
 
         if value.is_a?(Qpid::Proton::UTFString)
