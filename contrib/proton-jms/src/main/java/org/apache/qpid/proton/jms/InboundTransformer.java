@@ -53,11 +53,21 @@ public abstract class InboundTransformer {
     int defaultPriority = javax.jms.Message.DEFAULT_PRIORITY;
     long defaultTtl = javax.jms.Message.DEFAULT_TIME_TO_LIVE;
 
+    private boolean useByteDestinationTypeAnnotations = false;
+
     public InboundTransformer(JMSVendor vendor) {
         this.vendor = vendor;
     }
 
     abstract public Message transform(EncodedMessage amqpMessage) throws Exception;
+
+    public boolean isUseByteDestinationTypeAnnotations() {
+        return useByteDestinationTypeAnnotations;
+    }
+
+    public void setUseByteDestinationTypeAnnotations(boolean useByteDestinationTypeAnnotations) {
+        this.useByteDestinationTypeAnnotations = useByteDestinationTypeAnnotations;
+    }
 
     public int getDefaultDeliveryMode() {
         return defaultDeliveryMode;
@@ -130,8 +140,16 @@ public abstract class InboundTransformer {
             }
         }
 
-        Class<? extends Destination> toAttributes = Destination.class;
-        Class<? extends Destination> replyToAttributes = Destination.class;
+        Class<? extends Destination> toAttributes = null;
+        Class<? extends Destination> replyToAttributes = null;
+
+        if (isUseByteDestinationTypeAnnotations()){
+            toAttributes = Queue.class;
+            replyToAttributes = Queue.class;
+        } else {
+            toAttributes = Destination.class;
+            replyToAttributes = Destination.class;
+        }
 
         final MessageAnnotations ma = amqp.getMessageAnnotations();
         if( ma!=null ) {
@@ -140,9 +158,9 @@ public abstract class InboundTransformer {
                 if( "x-opt-jms-type".equals(key.toString()) && entry.getValue() != null ) {
                     jms.setJMSType(entry.getValue().toString());
                 } else if( "x-opt-to-type".equals(key.toString()) ) {
-                    toAttributes = toClassFromAttributes(entry.getValue().toString());
+                    toAttributes = toClassFromAttributes(entry.getValue());
                 } else if( "x-opt-reply-type".equals(key.toString()) ) {
-                    replyToAttributes = toClassFromAttributes(entry.getValue().toString());
+                    replyToAttributes = toClassFromAttributes(entry.getValue());
                 } else {
                     setProperty(jms, prefixVendor + prefixMessageAnnotations + key, entry.getValue());
                 }
@@ -246,29 +264,49 @@ public abstract class InboundTransformer {
         return Collections.unmodifiableSet(s);
     }
 
-    Class<? extends Destination> toClassFromAttributes(String value)
+    Class<? extends Destination> toClassFromAttributes(Object value)
     {
-        if( value ==null ) {
-            return null;
-        }
-        HashSet<String> attributes = new HashSet<String>();
-        for( String x: value.split("\\s*,\\s*") ) {
-            attributes.add(x);
-        }
+        if(isUseByteDestinationTypeAnnotations()) {
+            if(value instanceof Byte) {
+                switch ((Byte) value) {
+                    case JMSVendor.QUEUE_TYPE:
+                        return Queue.class;
+                    case JMSVendor.TOPIC_TYPE:
+                        return Topic.class;
+                    case JMSVendor.TEMP_QUEUE_TYPE:
+                        return TemporaryQueue.class;
+                    case JMSVendor.TEMP_TOPIC_TYPE:
+                        return TemporaryTopic.class;
+                    default:
+                        return Queue.class;
+                }
+            }
 
-        if( QUEUE_ATTRIBUTES.equals(attributes) ) {
             return Queue.class;
+        } else {
+            if( value == null ) {
+                return null;
+            }
+            String valueString = value.toString();
+            HashSet<String> attributes = new HashSet<String>();
+            for( String x: valueString.split("\\s*,\\s*") ) {
+                attributes.add(x);
+            }
+
+            if( QUEUE_ATTRIBUTES.equals(attributes) ) {
+                return Queue.class;
+            }
+            if( TOPIC_ATTRIBUTES.equals(attributes) ) {
+                return Topic.class;
+            }
+            if( TEMP_QUEUE_ATTRIBUTES.equals(attributes) ) {
+                return TemporaryQueue.class;
+            }
+            if( TEMP_TOPIC_ATTRIBUTES.equals(attributes) ) {
+                return TemporaryTopic.class;
+            }
+            return Destination.class;
         }
-        if( TOPIC_ATTRIBUTES.equals(attributes) ) {
-            return Topic.class;
-        }
-        if( TEMP_QUEUE_ATTRIBUTES.equals(attributes) ) {
-            return TemporaryQueue.class;
-        }
-        if( TEMP_TOPIC_ATTRIBUTES.equals(attributes) ) {
-            return TemporaryTopic.class;
-        }
-        return Destination.class;
     }
 
 

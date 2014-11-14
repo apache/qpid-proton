@@ -177,8 +177,7 @@ static void pn_transport_initialize(void *object)
 
   transport->done_processing = false;
 
-  transport->posted_head_closed = false;
-  transport->posted_tail_closed = false;
+  transport->posted_idle_timeout = false;
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -457,6 +456,24 @@ static pn_collector_t *pni_transport_collector(pn_transport_t *transport)
   }
 }
 
+static void pni_maybe_post_closed(pn_transport_t *transport)
+{
+  pn_collector_t *collector = pni_transport_collector(transport);
+  if (transport->head_closed && transport->tail_closed) {
+    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_CLOSED);
+  }
+}
+
+static void pni_close_tail(pn_transport_t *transport)
+{
+  if (!transport->tail_closed) {
+    transport->tail_closed = true;
+    pn_collector_t *collector = pni_transport_collector(transport);
+    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_TAIL_CLOSED);
+    pni_maybe_post_closed(transport);
+  }
+}
+
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...)
 {
   va_list ap;
@@ -479,6 +496,8 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
   pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  transport->done_processing = true;
+  pni_close_tail(transport);
   return PN_ERR;
 }
 
@@ -699,7 +718,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
     pn_data_clear(link->remote_target.capabilities);
     err = pn_scan_args(disp, "D.[.....D..DL[C]...]", &code,
                        link->remote_target.capabilities);
-    if (code == 0x30) {
+    if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
     } else {
       pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
@@ -790,12 +809,9 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
     pn_delivery_state_t *state = pn_delivery_map_push(incoming, delivery);
     if (id_present && id != state->id) {
-      int err = pn_do_error(transport, "amqp:session:invalid-field",
-                            "sequencing error, expected delivery-id %u, got %u",
-                            state->id, id);
-      // XXX: this will probably leave delivery buffer state messed up
-      pn_full_settle(incoming, delivery);
-      return err;
+      return pn_do_error(transport, "amqp:session:invalid-field",
+                         "sequencing error, expected delivery-id %u, got %u",
+                         state->id, id);
     }
     if (has_type) {
       delivery->remote.type = type;
@@ -1181,8 +1197,11 @@ static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now)
       transport->last_bytes_input = transport->bytes_input;
     } else if (transport->dead_remote_deadline <= now) {
       transport->dead_remote_deadline = now + transport->local_idle_timeout;
-      // Note: AMQP-1.0 really should define a generic "timeout" error, but does not.
-      pn_do_error(transport, "amqp:resource-limit-exceeded", "local-idle-timeout expired");
+      if (!transport->posted_idle_timeout) {
+        transport->posted_idle_timeout = true;
+        // Note: AMQP-1.0 really should define a generic "timeout" error, but does not.
+        pn_do_error(transport, "amqp:resource-limit-exceeded", "local-idle-timeout expired");
+      }
     }
     timeout = transport->dead_remote_deadline;
   }
@@ -1343,7 +1362,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
       if (link->target.type == PN_COORDINATOR) {
         int err = pn_post_frame(transport->disp, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[C]nnI]", ATTACH,
+                                "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
@@ -1360,8 +1379,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
                                 link->source.filter,
                                 link->source.outcomes,
                                 link->source.capabilities,
-                                true, ((uint64_t) 0x30),
-                                link->target.capabilities,
+                                COORDINATOR, link->target.capabilities,
                                 0);
         if (err) return err;
       } else {
@@ -1876,9 +1894,21 @@ static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t
   return pn_dispatcher_output(transport->disp, bytes, size);
 }
 
+static void pni_close_head(pn_transport_t *transport)
+{
+  if (!transport->head_closed) {
+    transport->head_closed = true;
+    pn_collector_t *collector = pni_transport_collector(transport);
+    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_HEAD_CLOSED);
+    pni_maybe_post_closed(transport);
+  }
+}
+
 // generate outbound data, return amount of pending output else error
 static ssize_t transport_produce(pn_transport_t *transport)
 {
+  if (transport->head_closed) return PN_EOS;
+
   pn_io_layer_t *io_layer = transport->io_layers;
   ssize_t space = transport->output_size - transport->output_pending;
 
@@ -1915,13 +1945,12 @@ static ssize_t transport_produce(pn_transport_t *transport)
         if (n < 0) {
           pn_transport_log(transport, "  -> EOS");
         }
-        /*else
-          pn_transport_logf(transport, "  -> EOS (%" PN_ZI ") %s", n,
-          pn_error_text(transport->error));*/
       }
+      pni_close_head(transport);
       return n;
     }
   }
+
   return transport->output_pending;
 }
 
@@ -1978,15 +2007,24 @@ void pn_transport_log(pn_transport_t *transport, const char *message)
   transport->tracer(transport, message);
 }
 
+void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
+{
+  if (transport) {
+    pn_string_vformat(transport->scratch, fmt, ap);
+    pn_transport_log(transport, pn_string_get(transport->scratch));
+  } else {
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+  }
+}
+
 void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
 {
   va_list ap;
 
   va_start(ap, fmt);
-  pn_string_vformat(transport->scratch, fmt, ap);
+  pn_transport_vlogf(transport, fmt, ap);
   va_end(ap);
-
-  pn_transport_log(transport, pn_string_get(transport->scratch));
 }
 
 uint16_t pn_transport_get_channel_max(pn_transport_t *transport)
@@ -2183,7 +2221,6 @@ int pn_transport_close_tail(pn_transport_t *transport)
 ssize_t pn_transport_pending(pn_transport_t *transport)      /* <0 == done */
 {
   assert(transport);
-  if (transport->head_closed) return PN_EOS;
   return transport_produce( transport );
 }
 
@@ -2217,7 +2254,7 @@ ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size)
 
 void pn_transport_pop(pn_transport_t *transport, size_t size)
 {
-  if (transport && size) {
+  if (transport) {
     assert( transport->output_pending >= size );
     transport->output_pending -= size;
     transport->bytes_output += size;
@@ -2226,19 +2263,17 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
                transport->output_pending );
     }
 
-    if (!transport->output_pending && pn_transport_pending(transport) < 0 &&
-        !transport->posted_head_closed) {
-      pn_collector_t *collector = pni_transport_collector(transport);
-      pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_HEAD_CLOSED);
-      transport->posted_head_closed = true;
-      pni_maybe_post_closed(transport);
+    if (!transport->output_pending && pn_transport_pending(transport) < 0) {
+      pni_close_head(transport);
     }
   }
 }
 
 int pn_transport_close_head(pn_transport_t *transport)
 {
-  transport->head_closed = true;
+  size_t pending = pn_transport_pending(transport);
+  pni_close_head(transport);
+  pn_transport_pop(transport, pending);
   return 0;
 }
 

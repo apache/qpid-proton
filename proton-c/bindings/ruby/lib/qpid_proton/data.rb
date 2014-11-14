@@ -725,7 +725,7 @@ module Qpid
       # If the current node is binary, returns its value. Otherwise, it returns
       # an empty string ("").
       def binary
-        Cproton.pn_data_get_binary(@data)
+        Qpid::Proton::BinaryString.new(Cproton.pn_data_get_binary(@data))
       end
 
       # Puts a unicode string value.
@@ -742,7 +742,7 @@ module Qpid
       # If the current node is a string, returns its value. Otherwise, it
       # returns an empty string ("").
       def string
-        Cproton.pn_data_get_string(@data)
+        Qpid::Proton::UTFString.new(Cproton.pn_data_get_string(@data))
       end
 
       # Puts a symbolic value.

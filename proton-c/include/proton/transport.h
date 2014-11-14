@@ -209,6 +209,19 @@ PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
  *
  * @param[in] transport a transport object
  * @param[in] fmt the printf formatted message to be logged
+ * @param[in] ap a vector containing the format arguments
+ */
+PN_EXTERN void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap);
+
+/**
+ * Log a printf formatted message using a transport's logging
+ * mechanism.
+ *
+ * This can be useful in a debugging context as the log message will
+ * be prefixed with the transport's identifier.
+ *
+ * @param[in] transport a transport object
+ * @param[in] fmt the printf formatted message to be logged
  */
 PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
 

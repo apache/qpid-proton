@@ -16,8 +16,6 @@
  */
 package org.apache.qpid.proton.jms;
 
-import org.apache.qpid.proton.engine.Delivery;
-
 import javax.jms.Message;
 
 /**
@@ -43,7 +41,7 @@ public abstract class OutboundTransformer {
     String replyToGroupIDKey;
     String prefixFooterKey;
 
-
+    private boolean useByteDestinationTypeAnnotations;
 
    public OutboundTransformer(JMSVendor vendor) {
         this.vendor = vendor;
@@ -51,6 +49,16 @@ public abstract class OutboundTransformer {
     }
 
     public abstract EncodedMessage transform(Message jms) throws Exception;
+
+    public boolean isUseByteDestinationTypeAnnotations()
+    {
+        return useByteDestinationTypeAnnotations;
+    }
+
+    public void setUseByteDestinationTypeAnnotations(boolean useByteDestinationTypeAnnotations)
+    {
+        this.useByteDestinationTypeAnnotations = useByteDestinationTypeAnnotations;
+    }
 
     public String getPrefixVendor() {
         return prefixVendor;

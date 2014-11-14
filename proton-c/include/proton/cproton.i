@@ -618,6 +618,7 @@ typedef unsigned long int uintptr_t;
 %include "proton/terminus.h"
 %include "proton/delivery.h"
 %include "proton/disposition.h"
+%ignore pn_transport_vlogf;
 %include "proton/transport.h"
 %include "proton/event.h"
 

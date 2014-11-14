@@ -207,13 +207,19 @@ module Qpid
       # domain portion of the address begins with the '~' character, the
       # Messenger will interpret the domain as host/port, bind to it,
       # and listen for incoming messages. For example "~0.0.0.0",
-      # "amqp://~0.0.0.0" will all bind to any local interface and 
-      # listen for incoming messages.  Ad address of # "amqps://~0.0.0.0" 
+      # "amqp://~0.0.0.0" will all bind to any local interface and
+      # listen for incoming messages.  An address of "amqps://~0.0.0.0"
       # will only permit incoming SSL connections.
       #
-      def subscribe(address)
+      # ==== Options
+      #
+      # * address - the source address to be subscribe
+      # * timeout - an optional time-to-live value, in seconds, for the
+      #             subscription
+      #
+      def subscribe(address, timeout=0)
         raise TypeError.new("invalid address: #{address}") if address.nil?
-        subscription = Cproton.pn_messenger_subscribe(@impl, address)
+        subscription = Cproton.pn_messenger_subscribe_ttl(@impl, address, timeout)
         raise Qpid::Proton::ProtonError.new("Subscribe failed") if subscription.nil?
         Qpid::Proton::Subscription.new(subscription)
       end

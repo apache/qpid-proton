@@ -23,7 +23,23 @@ module Qpid
 
     # A Message represents an addressable quantity of data.
     #
+    # ==== Message Body
+    #
+    # The message body can be set using the #body= method. The message will
+    # then attempt to determine how exactly to encode the content.
+    #
     # ==== Examples
+    #
+    # To create a message for sending:
+    #
+    #   # send a simple text message
+    #   msg = Qpid::Proton::Message.new
+    #   msg.body = "STATE: update"
+    #
+    #   # send a binary chunk of data
+    #   data = File.binread("/home/qpid/binfile.tar.gz")
+    #   msg = Qpid::Proton::Message.new
+    #   msg.body = Qpid::Proton::BinaryString.new(data)
     #
     class Message
 
@@ -372,6 +388,8 @@ module Qpid
       #
       # See MessageFormat for more details on formats.
       #
+      # *Warning:* This method has been deprecated.
+      #
       # ==== Options
       #
       # * format - the format
@@ -382,6 +400,12 @@ module Qpid
       end
 
       # Returns the message format
+      #
+      # *Warning:* This method has been deprecated.
+      #
+      # ==== Note
+      #
+      # This method is now deprecated.
       #
       def format
         Qpid::Proton::MessageFormat.by_value(Cproton.pn_message_get_format(@impl))
@@ -405,6 +429,9 @@ module Qpid
 
       # Sets the message content.
       #
+      # *WARNING:* This method has been deprecated. Please use #body= instead to
+      # set the content of a message.
+      #
       # ==== Options
       #
       # * content - the content
@@ -415,8 +442,22 @@ module Qpid
 
       # Returns the message content.
       #
+      # *WARNING:* This method has been deprecated. Please use #body instead to
+      # retrieve the content of a message.
+      #
       def content
-        Cproton.pn_message_save(@impl, 1024)[1]
+        size = 16
+        loop do
+          result = Cproton.pn_message_save(@impl, size)
+          error = result[0]
+          data = result[1]
+          if error == Qpid::Proton::Error::OVERFLOW
+            size = size * 2
+          else
+            check(error)
+            return data
+          end
+        end
       end
 
       # Sets the content encoding type.

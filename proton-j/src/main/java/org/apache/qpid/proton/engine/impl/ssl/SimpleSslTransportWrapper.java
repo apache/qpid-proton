@@ -125,7 +125,13 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
             } else {
                 ByteBuffer tail = _underlyingInput.tail();
                 _decodedInputBuffer.flip();
+                int limit = _decodedInputBuffer.limit();
+                int overflow = _decodedInputBuffer.remaining() - capacity;
+                if (overflow > 0) {
+                    _decodedInputBuffer.limit(limit - overflow);
+                }
                 tail.put(_decodedInputBuffer);
+                _decodedInputBuffer.limit(limit);
                 _decodedInputBuffer.compact();
                 _underlyingInput.process();
                 capacity = _underlyingInput.capacity();

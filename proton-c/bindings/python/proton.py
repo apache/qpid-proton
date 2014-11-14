@@ -346,13 +346,13 @@ will not be verified.
     if t == -1:
       return None
     else:
-      return float(t)/1000
+      return millis2secs(t)
 
   def _set_timeout(self, value):
     if value is None:
       t = -1
     else:
-      t = long(1000*value)
+      t = secs2millis(value)
     self._check(pn_messenger_set_timeout(self._mng, t))
 
   timeout = property(_get_timeout, _set_timeout,
@@ -568,7 +568,7 @@ first message.
     if timeout is None:
       t = -1
     else:
-      t = long(1000*timeout)
+      t = secs2millis(timeout)
     err = pn_messenger_work(self._mng, t)
     if (err == PN_TIMEOUT):
       return False
@@ -762,7 +762,7 @@ first message.
   def deadline(self):
     tstamp = pn_messenger_deadline(self._mng)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -809,7 +809,7 @@ class Message(object):
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, MessageException)
-      raise exc("[%s]: %s" % (err, pn_message_error(self._msg)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
     else:
       return err
 
@@ -905,15 +905,15 @@ The priority of the message.
 """)
 
   def _get_ttl(self):
-    return pn_message_get_ttl(self._msg)
+    return millis2secs(pn_message_get_ttl(self._msg))
 
   def _set_ttl(self, value):
-    self._check(pn_message_set_ttl(self._msg, value))
+    self._check(pn_message_set_ttl(self._msg, secs2millis(value)))
 
   ttl = property(_get_ttl, _set_ttl,
                  doc="""
-The time to live of the message measured in milliseconds. Expired
-messages may be dropped.
+The time to live of the message measured in seconds. Expired messages
+may be dropped.
 """)
 
   def _is_first_acquirer(self):
@@ -1031,10 +1031,10 @@ The content-encoding of the message.
 """)
 
   def _get_expiry_time(self):
-    return pn_message_get_expiry_time(self._msg)
+    return millis2secs(pn_message_get_expiry_time(self._msg))
 
   def _set_expiry_time(self, value):
-    self._check(pn_message_set_expiry_time(self._msg, value))
+    self._check(pn_message_set_expiry_time(self._msg, secs2millis(value)))
 
   expiry_time = property(_get_expiry_time, _set_expiry_time,
                          doc="""
@@ -1042,10 +1042,10 @@ The expiry time of the message.
 """)
 
   def _get_creation_time(self):
-    return pn_message_get_creation_time(self._msg)
+    return millis2secs(pn_message_get_creation_time(self._msg))
 
   def _set_creation_time(self, value):
-    self._check(pn_message_set_creation_time(self._msg, value))
+    self._check(pn_message_set_creation_time(self._msg, secs2millis(value)))
 
   creation_time = property(_get_creation_time, _set_creation_time,
                            doc="""
@@ -1180,7 +1180,7 @@ class Selectable(object):
     if not self._impl: raise ValueError("selectable freed")
     tstamp = pn_selectable_deadline(self._impl)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -1438,6 +1438,7 @@ class Data:
     current node sets it _before_ the first node, calling next() will advance to
     the first node.
     """
+    assert self._data is not None
     pn_data_rewind(self._data)
 
   def next(self):
@@ -2248,17 +2249,24 @@ def cond2obj(cond):
     return None
 
 def dat2obj(dimpl):
-  d = Data(dimpl)
-  d.rewind()
-  d.next()
-  obj = d.get_object()
-  d.rewind()
-  return obj
+  if dimpl:
+    d = Data(dimpl)
+    d.rewind()
+    d.next()
+    obj = d.get_object()
+    d.rewind()
+    return obj
 
 def obj2dat(obj, dimpl):
   if obj is not None:
     d = Data(dimpl)
     d.put_object(obj)
+
+def secs2millis(secs):
+  return long(secs*1000)
+
+def millis2secs(millis):
+  return float(millis)/1000.0
 
 class Connection(Endpoint):
 
@@ -3031,8 +3039,7 @@ class Transport(object):
     """Process any timed events (like heartbeat generation).
     now = seconds since epoch (float).
     """
-    next = pn_transport_tick(self._trans, long(now * 1000))
-    return float(next) / 1000.0
+    return millis2secs(pn_transport_tick(self._trans, secs2millis(now)))
 
   def capacity(self):
     c = pn_transport_capacity(self._trans)
@@ -3107,11 +3114,10 @@ Sets the maximum channel that may be used on the transport.
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    msec = pn_transport_get_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_idle_timeout(self._trans))
 
   def _set_idle_timeout(self, sec):
-    pn_transport_set_idle_timeout(self._trans, long(sec * 1000))
+    pn_transport_set_idle_timeout(self._trans, secs2millis(sec))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -3120,8 +3126,7 @@ The idle timeout of the connection (float, in seconds).
 
   @property
   def remote_idle_timeout(self):
-    msec = pn_transport_get_remote_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_remote_idle_timeout(self._trans))
 
   @property
   def frames_output(self):
@@ -3362,7 +3367,7 @@ class Collector:
     self._contexts = set()
 
   def put(self, obj, etype):
-    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype)
+    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
   def peek(self):
     event = pn_collector_peek(self._impl)
@@ -3394,6 +3399,13 @@ class EventType:
 
   def __repr__(self):
     return self.name
+
+def dispatch(handler, method, *args):
+  m = getattr(handler, method, None)
+  if m:
+    return m(*args)
+  elif hasattr(handler, "on_unhandled"):
+    return handler.on_unhandled(method, args)
 
 class Event:
 
@@ -3443,7 +3455,7 @@ class Event:
       self.context._released()
 
   def dispatch(self, handler):
-    getattr(handler, self.type.method, handler.on_unhandled)(self)
+    return dispatch(handler, self.type.method, self)
 
   @property
   def connection(self):
@@ -3506,7 +3518,7 @@ class Event:
 
 class Handler(object):
 
-  def on_unhandled(self, event):
+  def on_unhandled(self, method, args):
     pass
 
 
@@ -3675,7 +3687,7 @@ class Driver(object):
     if timeout_sec is None or timeout_sec < 0.0:
       t = -1
     else:
-      t = long(1000*timeout_sec)
+      t = secs2millis(timeout_sec)
     return pn_driver_wait(self._driver, t)
 
   def wakeup(self):
@@ -3859,6 +3871,7 @@ __all__ = [
            "TransportException",
            "Url",
            "char",
+           "dispatch",
            "symbol",
            "timestamp",
            "ulong"
