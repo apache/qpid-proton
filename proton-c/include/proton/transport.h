@@ -83,6 +83,20 @@ typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
 #define PN_TRACE_DRV (4)
 
 /**
+ * @deprecated
+ * Factory for creating a transport.
+ * A transport is used by a connection to interface with the network.
+ * There can only be one connection associated with a transport. See
+ * pn_transport_bind().
+ *
+ * This API is replaced by the specific client/server versions. If used
+ * this API will create a client transport.
+ *
+ * @return pointer to new transport
+ */
+PN_EXTERN pn_transport_t *pn_transport(void);
+
+/**
  * Create a new server transport
  *
  * A server transport accepts incoming connections. It can automatically

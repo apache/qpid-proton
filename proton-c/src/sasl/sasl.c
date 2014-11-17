@@ -197,6 +197,14 @@ ssize_t pn_sasl_recv(pn_sasl_t *sasl0, char *bytes, size_t size)
   }
 }
 
+void pn_sasl_client(pn_sasl_t *sasl)
+{
+}
+
+void pn_sasl_server(pn_sasl_t *sasl)
+{
+}
+
 void pn_sasl_allow_skip(pn_sasl_t *sasl0, bool allow)
 {
   pni_sasl_t *sasl = get_sasl_internal(sasl0);

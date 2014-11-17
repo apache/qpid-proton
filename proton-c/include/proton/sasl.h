@@ -95,6 +95,30 @@ PN_EXTERN void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
  */
 PN_EXTERN const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
 
+/**
+ * @deprecated
+ * Configure the SASL layer to act as a SASL client.
+ *
+ * This is now unnecessary, and performs no function. The server/clientness
+ * of the sasl layer is determined from the role of the transport that is used to create
+ * it. The API is retained here so as not to break existing code.
+ *
+ * @param[in] sasl the SASL layer to configure as a client
+ */
+PN_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
+
+/**
+ * @deprecated
+ * Configure the SASL layer to act as a server.
+ *
+ * This is now unnecessary, and performs no function. The server/clientness
+ * of the sasl layer is determined from the role of the transport that is used to create
+ * it. The API is retained here so as not to break existing code.
+ *
+ * @param[in] sasl the SASL layer to configure as a server
+ */
+PN_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
+
 /** Configure a SASL server layer to permit the client to skip the SASL exchange.
  *
  * If the peer client skips the SASL exchange (i.e. goes right to the AMQP header)

@@ -423,6 +423,11 @@ pn_transport_t *pn_transport_client()
   return pni_transport();
 }
 
+pn_transport_t *pn_transport()
+{
+    return pni_transport();
+}
+
 void pn_transport_free(pn_transport_t *transport)
 {
   if (!transport) return;
