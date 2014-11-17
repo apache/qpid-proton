@@ -3193,6 +3193,14 @@ class SASL(object):
   def mechanisms(self, mechs):
     pn_sasl_mechanisms(self._sasl, mechs)
 
+  # @deprecated
+  def client(self):
+    pn_sasl_client(self._sasl)
+
+  # @deprecated
+  def server(self):
+    pn_sasl_server(self._sasl)
+
   def allow_skip(self, allow):
     pn_sasl_allow_skip(self._sasl, allow)
 

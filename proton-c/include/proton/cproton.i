@@ -995,6 +995,18 @@ typedef unsigned long int uintptr_t;
   sasl != NULL;
 }
 
+%contract pn_sasl_client(pn_sasl_t *sasl)
+{
+ require:
+  sasl != NULL;
+}
+
+%contract pn_sasl_server(pn_sasl_t *sasl)
+{
+ require:
+  sasl != NULL;
+}
+
 %contract pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow)
 {
  require:
