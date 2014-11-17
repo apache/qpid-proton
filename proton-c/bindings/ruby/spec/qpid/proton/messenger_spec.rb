@@ -222,6 +222,22 @@ module Qpid
         @messenger.passive?.should_not be_true
       end
 
+      it "can clear non-existent errors with failing" do
+        expect {
+          @messenger.clear_error
+        }.to_not raise_error
+      end
+
+      it "can clear errors" do
+        begin
+          @messenger.accept # should cause an error
+        rescue; end
+
+        @messenger.error.should_not be_nil
+        @messenger.clear_error
+        @messenger.error.should be_nil
+      end
+
       describe "once started" do
 
         before (:each) do

@@ -179,6 +179,15 @@ module Qpid
         Cproton.pn_error_text(Cproton.pn_messenger_error(@impl))
       end
 
+      # Clears the current error state.
+      #
+      def clear_error
+        error = Cproton.pn_messenger_error(@impl)
+        unless error.nil?
+          Cproton.pn_error_clear(error)
+        end
+      end
+
       # Currently a no-op placeholder.
       # For future compatibility, do not send or recv messages
       # before starting the +Messenger+.
