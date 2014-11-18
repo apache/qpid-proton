@@ -201,8 +201,12 @@ void pn_sasl_client(pn_sasl_t *sasl)
 {
 }
 
-void pn_sasl_server(pn_sasl_t *sasl)
+void pn_sasl_server(pn_sasl_t *sasl0)
 {
+  pni_sasl_t *sasl = get_sasl_internal(sasl0);
+  if (sasl) {
+    sasl->client = false;
+  }
 }
 
 void pn_sasl_allow_skip(pn_sasl_t *sasl0, bool allow)

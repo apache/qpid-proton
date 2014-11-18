@@ -111,9 +111,8 @@ PN_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
  * @deprecated
  * Configure the SASL layer to act as a server.
  *
- * This is now unnecessary, and performs no function. The server/clientness
- * of the sasl layer is determined from the role of the transport that is used to create
- * it. The API is retained here so as not to break existing code.
+ * This is now only necessary for backwards compatibility if creating a server pn_sasl_t
+ * from a pn_transport_t which was created implicitly as a client by pn_transport().
  *
  * @param[in] sasl the SASL layer to configure as a server
  */
