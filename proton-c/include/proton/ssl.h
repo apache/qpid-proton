@@ -121,17 +121,18 @@ PN_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
  * previous setting.
  *
  * @param[in] domain the ssl domain that will use this certificate.
- * @param[in] certificate_file path to file/database containing the identifying
+ * @param[in] certificate_file_or_db path to file/database containing the identifying
  * certificate.
- * @param[in] private_key_file path to file/database containing the private key used to
- * sign the certificate
- * @param[in] password the password used to sign the key, else NULL if key is not
- * protected.
+ * @param[in] private_key_file_or_certname path to file/database containing the
+ * certificate's private key or the name of the certificate in the database, or NULL if
+ * the certificate database contains a single certificate including its private key
+ * @param[in] password the password used to access the certificate key information, else
+ * NULL if key is not protected.
  * @return 0 on success
  */
 PN_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
-                                             const char *certificate_file,
-                                             const char *private_key_file,
+                                             const char *certificate_file_or_db,
+                                             const char *private_key_file_or_certname,
                                              const char *password);
 
 /** Configure the set of trusted CA certificates used by this domain to verify peers.
