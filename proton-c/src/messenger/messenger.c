@@ -1612,6 +1612,10 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 
   pn_socket_t sock = pn_connect(messenger->io, host, port ? port : default_port(scheme));
   if (sock == PN_INVALID_SOCKET) {
+    pn_error_copy(messenger->error, pn_io_error(messenger->io));
+    pn_error_format(messenger->error, PN_ERR, "CONNECTION ERROR (%s:%s): %s\n",
+                    messenger->address.host, messenger->address.port,
+                    pn_error_text(messenger->error));
     return NULL;
   }
 
