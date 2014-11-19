@@ -54,6 +54,230 @@
  * This file contains an SChannel-based implemention of the SSL/TLS API for Windows platforms.
  */
 
+static void ssl_log_error(const char *fmt, ...);
+static void ssl_log(pn_ssl_t *ssl, const char *fmt, ...);
+static void ssl_log_error_status(HRESULT status, const char *fmt, ...);
+
+/*
+ * win_credential_t: SChannel context that must accompany TLS connections.
+ *
+ * SChannel attempts session resumption for shared CredHandle objects.
+ * To mimic openssl behavior, server CredHandle handles must be shared
+ * by derived connections, client CredHandle handles must be unique
+ * when app's session_id is null and tracked for reuse otherwise
+ * (TODO).
+ *
+ * Ref counted by parent ssl_domain_t and each derived connection.
+ */
+struct win_credential_t {
+  pn_ssl_mode_t mode;
+  PCCERT_CONTEXT cert_context;  // Particulars of the certificate (if any)
+  CredHandle cred_handle;       // Bound session parameters, certificate, CAs, verification_mode
+};
+
+#define win_credential_compare NULL
+#define win_credential_inspect NULL
+#define win_credential_hashcode NULL
+
+static void win_credential_initialize(void *object)
+{
+  win_credential_t *c = (win_credential_t *) object;
+  SecInvalidateHandle(&c->cred_handle);
+  c->cert_context = 0;
+}
+
+static void win_credential_finalize(void *object)
+{
+  win_credential_t *c = (win_credential_t *) object;
+  if (SecIsValidHandle(&c->cred_handle))
+    FreeCredentialsHandle(&c->cred_handle);
+  if (c->cert_context)
+    CertFreeCertificateContext(c->cert_context);
+}
+
+static win_credential_t *win_credential(pn_ssl_mode_t m)
+{
+  static const pn_cid_t CID_win_credential = CID_pn_void;
+  static const pn_class_t clazz = PN_CLASS(win_credential);
+  win_credential_t *c = (win_credential_t *) pn_class_new(&clazz, sizeof(win_credential_t));
+  c->mode = m;
+  return c;
+}
+
+static int win_credential_load_cert(win_credential_t *cred, const char *store_name, const char *cert_name, const char *passwd)
+{
+  if (!store_name)
+    return -2;
+
+  char *buf = NULL;
+  DWORD sys_store_type = 0;
+  HCERTSTORE cert_store = 0;
+
+  if (store_name) {
+    if (strncmp(store_name, "ss:", 3) == 0) {
+      store_name += 3;
+      sys_store_type = CERT_SYSTEM_STORE_CURRENT_USER;
+    }
+    else if (strncmp(store_name, "lmss:", 5) == 0) {
+      store_name += 5;
+      sys_store_type = CERT_SYSTEM_STORE_LOCAL_MACHINE;
+    }
+  }
+
+  if (sys_store_type) {
+    // Opening a system store, names are not case sensitive.
+    // Map confusing GUI name to actual registry store name.
+    if (pni_eq_nocase(store_name, "personal"))
+      store_name= "my";
+    cert_store = CertOpenStore(CERT_STORE_PROV_SYSTEM_A, 0, NULL,
+                                CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG |
+                                sys_store_type, store_name);
+    if (!cert_store) {
+      ssl_log_error_status(GetLastError(), "Failed to open system certificate store %s", store_name);
+      return -3;
+    }
+  } else {
+    // PKCS#12 file
+    HANDLE cert_file = CreateFile(store_name, GENERIC_READ, 0, NULL, OPEN_EXISTING,
+                                  FILE_ATTRIBUTE_NORMAL, NULL);
+    if (INVALID_HANDLE_VALUE == cert_file) {
+      HRESULT status = GetLastError();
+      ssl_log_error_status(status, "Failed to open the file holding the private key: %s", store_name);
+      return -4;
+    }
+    DWORD nread = 0L;
+    const DWORD file_size = GetFileSize(cert_file, NULL);
+    if (INVALID_FILE_SIZE != file_size)
+      buf = (char *) malloc(file_size);
+    if (!buf || !ReadFile(cert_file, buf, file_size, &nread, NULL)
+        || file_size != nread) {
+      HRESULT status = GetLastError();
+      CloseHandle(cert_file);
+      free(buf);
+      ssl_log_error_status(status, "Reading the private key from file failed %s", store_name);
+      return -5;
+    }
+    CloseHandle(cert_file);
+
+    CRYPT_DATA_BLOB blob;
+    blob.cbData = nread;
+    blob.pbData = (BYTE *) buf;
+
+    wchar_t *pwUCS2 = NULL;
+    int pwlen = 0;
+    if (passwd) {
+      // convert passwd to null terminated wchar_t (Windows UCS2)
+      pwlen = strlen(passwd);
+      pwUCS2 = (wchar_t *) calloc(pwlen + 1, sizeof(wchar_t));
+      int nwc = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, passwd, pwlen, &pwUCS2[0], pwlen);
+      if (!nwc) {
+        ssl_log_error_status(GetLastError(), "Error converting password from UTF8");
+        free(buf);
+        free(pwUCS2);
+        return -6;
+      }
+    }
+
+    cert_store = PFXImportCertStore(&blob, pwUCS2, 0);
+    if (pwUCS2) {
+      SecureZeroMemory(pwUCS2, pwlen * sizeof(wchar_t));
+      free(pwUCS2);
+    }
+    if (cert_store == NULL) {
+      ssl_log_error_status(GetLastError(), "Failed to import the file based certificate store");
+      free(buf);
+      return -7;
+    }
+  }
+
+  // find friendly name that matches cert_name, or sole certificate
+  PCCERT_CONTEXT tmpctx = NULL;
+  PCCERT_CONTEXT found_ctx = NULL;
+  int cert_count = 0;
+  int name_len = cert_name ? strlen(cert_name) : 0;
+  char *fn = name_len ? (char *) malloc(name_len + 1) : 0;
+  while (tmpctx = CertEnumCertificatesInStore(cert_store, tmpctx)) {
+    cert_count++;
+    if (cert_name) {
+      DWORD len = CertGetNameString(tmpctx, CERT_NAME_FRIENDLY_DISPLAY_TYPE,
+                                    0, NULL, NULL, 0);
+      if (len != name_len + 1)
+        continue;
+      CertGetNameString(tmpctx, CERT_NAME_FRIENDLY_DISPLAY_TYPE,
+                        0, NULL, fn, len);
+      if (!strcmp(cert_name, fn)) {
+        found_ctx = tmpctx;
+        tmpctx= NULL;
+        break;
+      }
+    } else {
+      // Test for single certificate
+      if (cert_count == 1) {
+        found_ctx = CertDuplicateCertificateContext(tmpctx);
+      } else {
+        ssl_log_error("Multiple certificates to choose from certificate store %s\n", store_name);
+        found_ctx = NULL;
+        break;
+      }
+    }
+  }
+
+  if (tmpctx) {
+    CertFreeCertificateContext(tmpctx);
+    tmpctx = false;
+  }
+  if (!found_ctx && cert_name && cert_count == 1)
+    ssl_log_error("Could not find certificate %s in store %s\n", cert_name, store_name);
+  cred->cert_context = found_ctx;
+
+  free(buf);
+  free(fn);
+  CertCloseStore(cert_store, 0);
+  return found_ctx ? 0 : -8;
+}
+
+
+static CredHandle win_credential_cred_handle(win_credential_t *cred, pn_ssl_verify_mode_t verify_mode,
+                                             const char *session_id, SECURITY_STATUS *status)
+{
+  if (cred->mode == PN_SSL_MODE_SERVER && SecIsValidHandle(&cred->cred_handle)) {
+    *status = SEC_E_OK;
+    return cred->cred_handle;  // Server always reuses cached value
+  }
+  // TODO: if (is_client && session_id != NULL) create or use cached value based on
+  // session_id+server_host_name (per domain? reclaimed after X hours?)
+
+  CredHandle tmp_handle;
+  SecInvalidateHandle(&tmp_handle);
+  TimeStamp expiry;  // Not used
+  SCHANNEL_CRED descriptor;
+  memset(&descriptor, 0, sizeof(descriptor));
+
+  descriptor.dwVersion = SCHANNEL_CRED_VERSION;
+  descriptor.dwFlags = SCH_CRED_NO_DEFAULT_CREDS;
+  if (cred->mode == PN_SSL_MODE_CLIENT && verify_mode == PN_SSL_ANONYMOUS_PEER)
+    descriptor.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
+  if (cred->cert_context != NULL) {
+    // assign the certificate into the credentials
+    descriptor.paCred = &cred->cert_context;
+    descriptor.cCreds = 1;
+  }
+
+  ULONG direction = (cred->mode == PN_SSL_MODE_SERVER) ? SECPKG_CRED_INBOUND : SECPKG_CRED_OUTBOUND;
+  *status = AcquireCredentialsHandle(NULL, UNISP_NAME, direction, NULL,
+                                               &descriptor, NULL, NULL, &tmp_handle, &expiry);
+  if (cred->mode == PN_SSL_MODE_SERVER && *status == SEC_E_OK)
+    cred->cred_handle = tmp_handle;
+
+  return tmp_handle;
+}
+
+static bool win_credential_has_certificate(win_credential_t *cred)
+{
+  if (!cred) return false;
+  return (cred->cert_context != NULL);
+}
+
 #define SSL_DATA_SIZE 16384
 #define SSL_BUF_SIZE (SSL_DATA_SIZE + 5 + 2048 + 32)
 
@@ -64,17 +288,9 @@ struct pn_ssl_domain_t {
   int ref_count;
   pn_ssl_mode_t mode;
   bool has_ca_db;       // true when CA database configured
-  bool has_certificate; // true when certificate configured
-  char *keyfile_pw;
-
-  // settings used for all connections
   pn_ssl_verify_mode_t verify_mode;
   bool allow_unsecured;
-
-  // SChannel
-  HCERTSTORE cert_store;
-  PCCERT_CONTEXT cert_context;
-  SCHANNEL_CRED credential;
+  win_credential_t *cred;
 };
 
 typedef enum { CREATED, CLIENT_HELLO, NEGOTIATING,
@@ -126,6 +342,7 @@ struct pn_ssl_t {
   CredHandle cred_handle;
   CtxtHandle ctxt_handle;
   SecPkgContext_StreamSizes sc_sizes;
+  win_credential_t *cred;
 };
 
 struct pn_ssl_session_t {
@@ -187,7 +404,7 @@ static void ssl_log_error_status(HRESULT status, const char *fmt, ...)
 
   if (FormatMessage(FORMAT_MESSAGE_MAX_WIDTH_MASK | FORMAT_MESSAGE_FROM_SYSTEM,
                     0, status, 0, buf, sizeof(buf), 0))
-    ssl_log_error("%s\n", buf);
+    ssl_log_error(" : %s\n", buf);
   else
     fprintf(stderr, "pn internal Windows error: %lu\n", GetLastError());
 
@@ -254,24 +471,14 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
-  if (mode == PN_SSL_MODE_SERVER)
-    return NULL;  // Temporary: not ready for ctest, hide from isSSLPresent()
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
-
-  memset(domain, 0, sizeof(domain));
-  domain->credential.dwVersion = SCHANNEL_CRED_VERSION;
-  domain->credential.dwFlags = SCH_CRED_NO_DEFAULT_CREDS;
 
   domain->ref_count = 1;
   domain->mode = mode;
   switch(mode) {
   case PN_SSL_MODE_CLIENT:
-    // TODO
-    break;
-
   case PN_SSL_MODE_SERVER:
-    // TODO
     break;
 
   default:
@@ -279,7 +486,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     free(domain);
     return NULL;
   }
-
+  domain->cred = win_credential(mode);
   return domain;
 }
 
@@ -288,12 +495,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
   if (!domain) return;
 
   if (--domain->ref_count == 0) {
-    if (domain->cert_context)
-      CertFreeCertificateContext(domain->cert_context);
-    if (domain->cert_store)
-      CertCloseStore(domain->cert_store, CERT_CLOSE_STORE_FORCE_FLAG);
-
-    if (domain->keyfile_pw) free(domain->keyfile_pw);
+    pn_decref(domain->cred);
     free(domain);
   }
 }
@@ -306,9 +508,14 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
 {
   if (!domain) return -1;
 
-  // TODO:
-
-  return 0;
+  if (win_credential_has_certificate(domain->cred)) {
+    // Need a new win_credential_t to hold new certificate
+    pn_decref(domain->cred);
+    domain->cred = win_credential(domain->mode);
+    if (!domain->cred)
+      return -1;
+  }
+  return win_credential_load_cert(domain->cred, certificate_file, private_key_file, password);
 }
 
 
@@ -316,8 +523,24 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                     const char *certificate_db)
 {
   if (!domain) return -1;
-  // TODO: support for alternate ca db? or just return -1
-  domain->has_ca_db = true;
+
+  if (certificate_db && !pni_eq_nocase(certificate_db, "ss:root") &&
+      !pni_eq_nocase(certificate_db, "lmss:root"))
+    // TODO: handle more than just the main system trust store
+    return -1;
+  if (!certificate_db && !domain->has_ca_db)
+    return 0;   // No change
+  if (certificate_db && domain->has_ca_db)
+    return 0;   // NO change
+
+  win_credential_t *new_cred = win_credential(domain->mode);
+  if (!new_cred)
+    return -1;
+  new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
+  pn_decref(domain->cred);
+  domain->cred = new_cred;
+
+  domain->has_ca_db = (certificate_db != NULL);
   return 0;
 }
 
@@ -330,20 +553,37 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
+    ssl_log_error("Error: optional peer name checking not yet implemented\n");  // But coming soon
+    return -1;
+
   case PN_SSL_VERIFY_PEER_NAME:
-    // TODO
+    if (!domain->has_ca_db) {
+      ssl_log_error("Error: cannot verify peer without a trusted CA configured.\n"
+                    "       Use pn_ssl_domain_set_trusted_ca_db()\n");
+      return -1;
+    }
+    if (domain->mode == PN_SSL_MODE_SERVER) {
+      ssl_log_error("Client certificates not yet supported.\n"); // But coming soon
+      return -1;
+    }
     break;
 
   case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
-    // TODO
     break;
 
   default:
-    ssl_log_error( "Invalid peer authentication mode given.\n" );
+    ssl_log_error("Invalid peer authentication mode given.\n");
     return -1;
   }
 
   domain->verify_mode = mode;
+  win_credential_t *new_cred = win_credential(domain->mode);
+  if (!new_cred)
+    return -1;
+  new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
+  pn_decref(domain->cred);
+  domain->cred = new_cred;
+
   return 0;
 }
 
@@ -365,12 +605,14 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_domain_t *domain, const char *session_id)
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
-  TimeStamp cred_expiry;
-  SECURITY_STATUS status = AcquireCredentialsHandle(NULL, UNISP_NAME, SECPKG_CRED_OUTBOUND,
-                               NULL, &domain->credential, NULL, NULL, &ssl->cred_handle,
-                               &cred_expiry);
+  ssl->cred = domain->cred;
+  pn_incref(domain->cred);
+
+  SECURITY_STATUS status = SEC_E_OK;
+  ssl->cred_handle = win_credential_cred_handle(ssl->cred, ssl->domain->verify_mode,
+                                                ssl->session_id, &status);
   if (status != SEC_E_OK) {
-    ssl_log_error_status(status, "AcquireCredentialsHandle");
+    ssl_log_error_status(status, "Credentials handle failure");
     return -1;
   }
 
@@ -413,8 +655,14 @@ void pn_ssl_free( pn_ssl_t *ssl)
   // clean up Windows per TLS session data before releasing the domain count
   if (SecIsValidHandle(&ssl->ctxt_handle))
     DeleteSecurityContext(&ssl->ctxt_handle);
-  if (SecIsValidHandle(&ssl->cred_handle))
-    FreeCredentialsHandle(&ssl->cred_handle);
+  if (ssl->cred) {
+    if (ssl->domain->mode == PN_SSL_MODE_CLIENT && ssl->session_id == NULL) {
+      // Responsible for unshared handle
+      if (SecIsValidHandle(&ssl->cred_handle))
+        FreeCredentialsHandle(&ssl->cred_handle);
+    }
+    pn_decref(ssl->cred);
+  }
 
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
   if (ssl->session_id) free((void *)ssl->session_id);
@@ -422,6 +670,7 @@ void pn_ssl_free( pn_ssl_t *ssl)
   if (ssl->sc_inbuf) free((void *)ssl->sc_inbuf);
   if (ssl->sc_outbuf) free((void *)ssl->sc_outbuf);
   if (ssl->inbuf2) pn_buffer_free(ssl->inbuf2);
+
   free(ssl);
 }
 
@@ -580,7 +829,7 @@ static bool ssl_decrypt(pn_ssl_t *ssl)
   buff_desc.ulVersion = SECBUFFER_VERSION;
   buff_desc.cBuffers = 4;
   buff_desc.pBuffers = recv_buffs;
-  SECURITY_STATUS status = ::DecryptMessage(&ssl->ctxt_handle, &buff_desc, 0, NULL);
+  SECURITY_STATUS status = DecryptMessage(&ssl->ctxt_handle, &buff_desc, 0, NULL);
 
   if (status == SEC_E_INCOMPLETE_MESSAGE) {
     // Less than a full Record, come back later with more network data
@@ -781,12 +1030,136 @@ static void client_handshake( pn_ssl_t* ssl) {
 }
 
 
-static void ssl_handshake(pn_ssl_t* ssl) {
+static void server_handshake(pn_ssl_t* ssl)
+{
+  // Feed SChannel ongoing handshake records from the client until the handshake is complete.
+  ULONG ctxt_requested = ASC_REQ_STREAM;
+  // TODO:  if server and verifying client certificate, ctxtRequested |= ASC_REQ_MUTUAL_AUTH;
+  ULONG ctxt_attrs;
+  size_t max = 0;
+
+  // token_buffs describe the buffer that's coming in. It should have
+  // a token from the SSL client except if shutting down or renegotiating.
+  bool shutdown = ssl->state == SHUTTING_DOWN;
+  SecBuffer token_buffs[2];
+  token_buffs[0].cbBuffer = shutdown ? 0 : ssl->sc_in_count;
+  token_buffs[0].BufferType = SECBUFFER_TOKEN;
+  token_buffs[0].pvBuffer = shutdown ? 0 : ssl->sc_inbuf;
+  token_buffs[1].cbBuffer = 0;
+  token_buffs[1].BufferType = SECBUFFER_EMPTY;
+  token_buffs[1].pvBuffer = 0;
+  SecBufferDesc token_buff_desc;
+  token_buff_desc.ulVersion = SECBUFFER_VERSION;
+  token_buff_desc.cBuffers = 2;
+  token_buff_desc.pBuffers = token_buffs;
+
+  // send_buffs will hold information to forward to the peer.
+  SecBuffer send_buffs[2];
+  send_buffs[0].cbBuffer = ssl->sc_out_size;
+  send_buffs[0].BufferType = SECBUFFER_TOKEN;
+  send_buffs[0].pvBuffer = ssl->sc_outbuf;
+  send_buffs[1].cbBuffer = 0;
+  send_buffs[1].BufferType = SECBUFFER_EMPTY;
+  send_buffs[1].pvBuffer = 0;
+  SecBufferDesc send_buff_desc;
+  send_buff_desc.ulVersion = SECBUFFER_VERSION;
+  send_buff_desc.cBuffers = 2;
+  send_buff_desc.pBuffers = send_buffs;
+  PCtxtHandle ctxt_handle_ptr = (SecIsValidHandle(&ssl->ctxt_handle)) ? &ssl->ctxt_handle : 0;
+
+  SECURITY_STATUS status = AcceptSecurityContext(&ssl->cred_handle, ctxt_handle_ptr,
+                               &token_buff_desc, ctxt_requested, 0, &ssl->ctxt_handle,
+                               &send_buff_desc, &ctxt_attrs, NULL);
+
+  bool outbound_token = false;
+  switch(status) {
+  case SEC_E_INCOMPLETE_MESSAGE:
+    // Not enough - get more data from the client then try again.
+    // Leave input buffers untouched.
+    ssl_log(ssl, "server handshake: incomplete record\n");
+    ssl->sc_in_incomplete = true;
+    return;
+
+  case SEC_I_CONTINUE_NEEDED:
+    outbound_token = true;
+    break;
+
+  case SEC_E_OK:
+    // Handshake complete.
+    if (shutdown) {
+      if (send_buffs[0].cbBuffer > 0) {
+        ssl->sc_out_count = send_buffs[0].cbBuffer;
+        // the token is the whole quantity to send
+        ssl->network_out_pending = ssl->sc_out_count;
+        ssl->network_outp = ssl->sc_outbuf;
+        ssl_log(ssl, "server shutdown token %d bytes\n", ssl->network_out_pending);
+      } else {
+        ssl->state = SSL_CLOSED;
+      }
+      // we didn't touch sc_inbuf, no need to reset
+      return;
+    }
+    if (const char *err = tls_version_check(ssl)) {
+      ssl_failed(ssl, err);
+      break;
+    }
+    // Handshake complete.
+    // TODO: manual check of certificate chain here, if bad: ssl_failed() + break;
+    QueryContextAttributes(&ssl->ctxt_handle,
+                             SECPKG_ATTR_STREAM_SIZES, &ssl->sc_sizes);
+    max = ssl->sc_sizes.cbMaximumMessage + ssl->sc_sizes.cbHeader + ssl->sc_sizes.cbTrailer;
+    if (max > ssl->sc_out_size) {
+      ssl_log_error("Buffer size mismatch have %d, need %d\n", (int) ssl->sc_out_size, (int) max);
+      ssl->state = SHUTTING_DOWN;
+      ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
+      start_ssl_shutdown(ssl);
+      pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: buffer size");
+      break;
+    }
+
+    if (send_buffs[0].cbBuffer != 0)
+      outbound_token = true;
+
+    ssl->state = RUNNING;
+    ssl->max_data_size = max - ssl->sc_sizes.cbHeader - ssl->sc_sizes.cbTrailer;
+    ssl_log(ssl, "server handshake successful %d max record size\n", max);
+    break;
+
+  case SEC_I_CONTEXT_EXPIRED:
+    // ended before we got going
+  default:
+    ssl_log(ssl, "server handshake failed %d\n", (int) status);
+    ssl_failed(ssl, 0);
+    break;
+  }
+
+  if (outbound_token) {
+    // Successful handshake step, requiring data to be sent to peer.
+    assert(ssl->network_out_pending == 0);
+    ssl->sc_out_count = send_buffs[0].cbBuffer;
+    // the token is the whole quantity to send
+    ssl->network_out_pending = ssl->sc_out_count;
+    ssl->network_outp = ssl->sc_outbuf;
+    ssl_log(ssl, "server handshake token %d bytes\n", ssl->network_out_pending);
+  }
+
+  if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0 &&
+      !ssl->ssl_closed) {
+    // remaining data after the consumed TLS record(s)
+    ssl->extra_count = token_buffs[1].cbBuffer;
+    ssl->inbuf_extra = ssl->sc_inbuf + (ssl->sc_in_count - ssl->extra_count);
+  }
+
+  ssl->decrypting = false;
+  rewind_sc_inbuf(ssl);
+}
+
+static void ssl_handshake(pn_ssl_t* ssl)
+{
   if (ssl->domain->mode == PN_SSL_MODE_CLIENT)
     client_handshake(ssl);
   else {
-    ssl_log( ssl, "TODO: server handshake.\n" );
-    ssl_failed(ssl, "internal runtime error, not yet implemented");
+    server_handshake(ssl);
   }
 }
 
@@ -840,7 +1213,7 @@ static void start_ssl_shutdown(pn_ssl_t *ssl)
   desc.ulVersion = SECBUFFER_VERSION;
   desc.cBuffers = 1;
   desc.pBuffers = &shutBuff;
-  ::ApplyControlToken(&ssl->ctxt_handle, &desc);
+  ApplyControlToken(&ssl->ctxt_handle, &desc);
 
   // Next handshake will generate the shudown alert token
   ssl_handshake(ssl);
