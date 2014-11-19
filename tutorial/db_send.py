@@ -21,20 +21,23 @@
 import Queue
 import time
 from proton import Message
-from proton_events import ApplicationEvent, ClientHandler, EventLoop
+from proton_events import ApplicationEvent, MessagingHandler, EventLoop
 from db_common import Db
 
-class Send(ClientHandler):
+class Send(MessagingHandler):
     def __init__(self, host, address):
-        self.eventloop = EventLoop()
-        self.address = address
+        super(Send, self).__init__()
         self.host = host
+        self.address = address
         self.delay = 0
         self.sent = 0
         self.records = Queue.Queue(maxsize=50)
-        self.db = Db("src_db", self.eventloop.get_event_trigger())
-        self.conn = self.eventloop.connect(self.host, handler=self)
-        self.sender = self.conn.create_sender(self.address)
+
+    def on_start(self, event):
+        self.eventloop = event.reactor
+        self.db = Db("src_db", event.reactor.get_event_trigger())
+        context = event.reactor.connect(self.host)
+        self.sender = context.create_sender(self.address)
 
     def on_records_loaded(self, event):
         if self.records.empty() and event.subject == self.sent:
@@ -73,10 +76,7 @@ class Send(ClientHandler):
             print "Rechecking for data..."
             self.request_records()
 
-    def run(self):
-        self.eventloop.run()
-
 try:
-    Send("localhost:5672", "examples").run()
+    EventLoop(Send("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 

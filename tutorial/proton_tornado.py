@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton_events import ApplicationEvent, EventLoop
+from proton_events import ApplicationEvent, EventLoop, StartEvent
 import tornado.ioloop
 
 class TornadoLoop(EventLoop):
@@ -41,6 +41,7 @@ class TornadoLoop(EventLoop):
         self.loop.remove_handler(conn)
 
     def run(self):
+        self.events.dispatch(StartEvent(self))
         self.loop.start()
 
     def stop(self):
@@ -50,8 +51,10 @@ class TornadoLoop(EventLoop):
         flags = 0
         if conn.reading():
             flags |= tornado.ioloop.IOLoop.READ
-        if conn.writing():
-            flags |= tornado.ioloop.IOLoop.WRITE
+        # FIXME: need way to update flags to avoid busy loop
+        #if conn.writing():
+        #    flags |= tornado.ioloop.IOLoop.WRITE
+        flags |= tornado.ioloop.IOLoop.WRITE
         return flags
 
     def _connection_ready(self, conn, events):
@@ -59,9 +62,9 @@ class TornadoLoop(EventLoop):
             conn.readable()
         if events & tornado.ioloop.IOLoop.WRITE:
             conn.writable()
-        if events & tornado.ioloop.IOLoop.ERROR or conn.closed():
-            conn.close()
+        if events & tornado.ioloop.IOLoop.ERROR:# or conn.closed():
             self.loop.remove_handler(conn)
+            conn.close()
             conn.removed()
         self.events.process()
         self.loop.update_handler(conn, self._get_event_flags(conn))

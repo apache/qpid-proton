@@ -23,8 +23,10 @@ import proton_events
 
 class TxSend(proton_events.TransactionalClientHandler):
     def __init__(self, messages, batch_size):
+        super(TxSend, self).__init__()
         self.current_batch = 0
         self.committed = 0
+        self.confirmed = 0
         self.total = messages
         self.batch_size = batch_size
         self.conn = proton_events.connect("localhost:5672", handler=self)
@@ -68,6 +70,5 @@ class TxSend(proton_events.TransactionalClientHandler):
         proton_events.run()
 
 try:
-    #TxSend(10000, 10).run()
-    TxSend(9, 3).run()
+    TxSend(10000, 10).run()
 except KeyboardInterrupt: pass

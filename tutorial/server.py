@@ -19,15 +19,23 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, ClientHandler
+from proton_events import EventLoop, MessagingHandler
 
-class Server(ClientHandler):
-    def __init__(self, eventloop, host, address):
-        self.eventloop = eventloop
-        self.conn = eventloop.connect(host, handler=self)
-        self.receiver = self.conn.create_receiver(address, handler=self)
+class Server(MessagingHandler):
+    def __init__(self, host, address):
+        super(Server, self).__init__()
+        self.host = host
+        self.address = address
+
+    def on_start(self, event):
+        self.conn = event.reactor.connect(self.host)
+        self.receiver = self.conn.create_receiver(self.address)
         self.senders = {}
         self.relay = None
+
+    def on_connection_opened(self, event):
+        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+            self.relay = self.conn.create_sender(None)
 
     def on_message(self, event):
         sender = self.relay
@@ -38,15 +46,8 @@ class Server(ClientHandler):
             self.senders[event.message.reply_to] = sender
         sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
-    def on_connection_opened(self, event):
-        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
-            self.relay = self.conn.create_sender(None)
-
-    def run(self):
-        self.eventloop.run()
-
 try:
-    Server(EventLoop(), "localhost:5672", "examples").run()
+    EventLoop(Server("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

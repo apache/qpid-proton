@@ -19,14 +19,56 @@
 #
 
 from proton import Message
-from proton_events import ClientHandler
+from proton_events import MessagingHandler
 from proton_tornado import TornadoLoop
 from tornado.ioloop import IOLoop
 import tornado.web
 
-class ExampleHandler(tornado.web.RequestHandler, ClientHandler):
-    def initialize(self, loop):
-        self.loop = loop
+class Client(MessagingHandler):
+    def __init__(self, host, address):
+        super(Client, self).__init__()
+        self.host = host
+        self.address = address
+        self.sent = []
+        self.pending = []
+        self.reply_address = None
+        self.sender = None
+        self.receiver = None
+
+    def on_start(self, event):
+        context = event.reactor.connect(self.host)
+        self.sender = context.create_sender(self.address)
+        self.receiver = context.create_receiver(None, dynamic=True)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.reply_address = event.link.remote_source.address
+            self.do_request()
+
+    def on_credit(self, event):
+        self.do_request()
+
+    def on_message(self, event):
+        if self.sent:
+            request, handler = self.sent.pop(0)
+            print "%s => %s" % (request, event.message.body)
+            handler(event.message.body)
+            self.do_request()
+
+    def do_request(self):
+        if self.pending and self.reply_address and self.sender.credit:
+            request, handler = self.pending.pop(0)
+            self.sent.append((request, handler))
+            req = Message(reply_to=self.reply_address, body=request)
+            self.sender.send_msg(req)
+
+    def request(self, body, handler):
+        self.pending.append((body, handler))
+        self.do_request()
+
+class ExampleHandler(tornado.web.RequestHandler):
+    def initialize(self, client):
+        self.client = client
 
     def get(self):
         self._write_open()
@@ -35,22 +77,15 @@ class ExampleHandler(tornado.web.RequestHandler, ClientHandler):
 
     @tornado.web.asynchronous
     def post(self):
-        self.conn = self.loop.connect("localhost:5672")
-        self.sender = self.conn.create_sender("examples")
-        self.conn.create_receiver(None, dynamic=True, handler=self)
+        client.request(self.get_body_argument("message"), lambda x: self.on_response(x))
 
-    def on_link_opened(self, event):
-        req = Message(reply_to=event.link.remote_source.address, body=self.get_body_argument("message"))
-        self.sender.send_msg(req)
-
-    def on_message(self, event):
+    def on_response(self, body):
         self.set_header("Content-Type", "text/html")
         self._write_open()
         self._write_form()
-        self.write("Response: " + event.message.body)
+        self.write("Response: " + body)
         self._write_close()
         self.finish()
-        self.conn.close()
 
     def _write_open(self):
         self.write('<html><body>')
@@ -65,8 +100,9 @@ class ExampleHandler(tornado.web.RequestHandler, ClientHandler):
                    '</form>')
 
 
-loop = TornadoLoop()
-app = tornado.web.Application([tornado.web.url(r"/client", ExampleHandler, dict(loop=loop))])
+client = Client("localhost:5672", "examples")
+loop = TornadoLoop(client)
+app = tornado.web.Application([tornado.web.url(r"/client", ExampleHandler, dict(client=client))])
 app.listen(8888)
 try:
     loop.run()

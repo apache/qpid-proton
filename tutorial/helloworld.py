@@ -19,16 +19,18 @@
 #
 
 from proton import Message
-import proton_events
+from proton_events import EventLoop, MessagingHandler
 
-class HelloWorld(proton_events.ClientHandler):
+class HelloWorld(MessagingHandler):
     def __init__(self, server, address):
+        super(HelloWorld, self).__init__()
+        self.server = server
         self.address = address
-        self.conn = proton_events.connect(server, handler=self)
 
-    def on_connection_opened(self, event):
-        self.conn.create_receiver(self.address)
-        self.conn.create_sender(self.address)
+    def on_start(self, event):
+        ctxt = event.reactor.connect(self.server)
+        ctxt.create_receiver(self.address)
+        ctxt.create_sender(self.address)
 
     def on_credit(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))
@@ -38,6 +40,5 @@ class HelloWorld(proton_events.ClientHandler):
         print event.message.body
         event.connection.close()
 
-HelloWorld("localhost:5672", "examples")
-proton_events.run()
+EventLoop(HelloWorld("localhost:5672", "examples")).run()
 

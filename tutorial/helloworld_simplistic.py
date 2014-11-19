@@ -19,14 +19,14 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, IncomingMessageHandler
+from proton_events import EventLoop, FlowController, IncomingMessageHandler
 
 class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):
         print event.message.body
         event.connection.close()
 
-eventloop = EventLoop()
+eventloop = EventLoop(FlowController(1))
 conn = eventloop.connect("localhost:5672")
 conn.create_receiver("examples", handler=HelloWorldReceiver())
 sender = conn.create_sender("examples")

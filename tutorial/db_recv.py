@@ -18,22 +18,22 @@
 # under the License.
 #
 
-from proton_events import ApplicationEvent, ClientHandler, EventLoop
+from proton_events import ApplicationEvent, MessagingHandler, EventLoop
 from db_common import Db
 
-class Recv(ClientHandler):
+class Recv(MessagingHandler):
     def __init__(self, host, address):
-        self.eventloop = EventLoop()
+        super(Recv, self).__init__(auto_accept=False)
         self.host = host
         self.address = address
         self.delay = 0
-        self.db = Db("dst_db", self.eventloop.get_event_trigger())
         # TODO: load last tag from db
         self.last_id = None
-        self.conn = self.eventloop.connect(self.host, handler=self)
-        self.conn.create_receiver(self.address)
 
-    def auto_accept(self): return False
+    def on_start(self, event):
+        self.db = Db("dst_db", event.reactor.get_event_trigger())
+        context = event.reactor.connect(self.host)
+        context.create_receiver(self.address)
 
     def on_record_inserted(self, event):
         self.accept(event.delivery)
@@ -47,11 +47,8 @@ class Recv(ClientHandler):
         else:
             self.accept(event.delivery)
 
-    def run(self):
-        self.eventloop.run()
-
 try:
-    Recv("localhost:5672", "examples").run()
+    EventLoop(Recv("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

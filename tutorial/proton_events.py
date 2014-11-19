@@ -17,7 +17,7 @@
 # under the License.
 #
 import heapq, os, Queue, re, socket, time, types
-from proton import generate_uuid, PN_ACCEPTED, SASL, symbol, ulong
+from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
@@ -224,11 +224,25 @@ class EventInjector(object):
     def removed(self): pass
     def tick(self): return None
 
+def nested_handlers(handlers):
+    # currently only allows for a single level of nesting
+    nested = []
+    for h in handlers:
+        nested.append(h)
+        if hasattr(h, 'handlers'):
+            nested.extend(getattr(h, 'handlers'))
+    return nested
+
+def add_nested_handler(handler, nested):
+    if hasattr(handler, 'handlers'):
+        getattr(handler, 'handlers').append(nested)
+    else:
+        handler.handlers = [nested]
 
 class Events(object):
-    def __init__(self, *dispatchers):
+    def __init__(self, *handlers):
         self.collector = Collector()
-        self.dispatchers = dispatchers
+        self.handlers = handlers
 
     def connection(self):
         conn = Connection()
@@ -245,8 +259,8 @@ class Events(object):
                 return
 
     def dispatch(self, event):
-        for d in self.dispatchers:
-            event.dispatch(d)
+        for h in self.handlers:
+            event.dispatch(h)
 
     @property
     def next_interval(self):
@@ -286,9 +300,14 @@ class ApplicationEvent(Event):
         return "%s(%s)" % (self.type.name,
                            ", ".join([str(o) for o in objects if o is not None]))
 
+class StartEvent(ApplicationEvent):
+    def __init__(self, reactor):
+        super(StartEvent, self).__init__("start")
+        self.reactor = reactor
+
 class ScheduledEvents(Events):
-    def __init__(self, *dispatchers):
-        super(ScheduledEvents, self).__init__(*dispatchers)
+    def __init__(self, *handlers):
+        super(ScheduledEvents, self).__init__(*handlers)
         self._events = []
 
     def schedule(self, deadline, event):
@@ -464,11 +483,14 @@ class ScopedHandler(Handler):
             return
         objects = [getattr(event, attr) for attr in self.scopes.get(event.clazz, [])]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
-        handlers = [getattr(t, event.type.method) for t in targets if hasattr(t, event.type.method)]
+        handlers = [getattr(t, event.type.method) for t in nested_handlers(targets) if hasattr(t, event.type.method)]
         for h in handlers:
             h(event)
 
 class OutgoingMessageHandler(Handler):
+    def __init__(self, auto_settle=True, delegate=None):
+        self.auto_settle = auto_settle
+        self.delegate = delegate
 
     def on_link_flow(self, event):
         if event.link.is_sender and event.link.credit:
@@ -488,16 +510,32 @@ class OutgoingMessageHandler(Handler):
                 self.on_modified(event)
             if dlv.settled:
                 self.on_settled(event)
-            if self.auto_settle():
+            if self.auto_settle:
                 dlv.settle()
 
-    def on_credit(self, event): pass
-    def on_accepted(self, event): pass
-    def on_rejected(self, event): pass
-    def on_released(self, event): pass
-    def on_modified(self, event): pass
-    def on_settled(self, event): pass
-    def auto_settle(self): return True
+    def on_credit(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_credit', event)
+
+    def on_accepted(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_accepted', event)
+
+    def on_rejected(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_rejected', event)
+
+    def on_released(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_released', event)
+
+    def on_modified(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_modified', event)
+
+    def on_settled(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_settled', event)
 
 def recv_msg(delivery):
     msg = Message()
@@ -511,23 +549,7 @@ class Reject(ProtonException):
   """
   pass
 
-class IncomingMessageHandler(Handler):
-    def on_delivery(self, event):
-        dlv = event.delivery
-        if dlv.released or not dlv.link.is_receiver: return
-        if dlv.readable and not dlv.partial:
-            event.message = recv_msg(dlv)
-            try:
-                self.on_message(event)
-                if self.auto_accept():
-                    dlv.update(Delivery.ACCEPTED)
-                    dlv.settle()
-            except Reject:
-                dlv.update(Delivery.REJECTED)
-                dlv.settle()
-        elif dlv.updated and dlv.settled:
-            self.on_settled(event)
-
+class Acking(object):
     def accept(self, delivery):
         self.settle(delivery, Delivery.ACCEPTED)
 
@@ -545,14 +567,48 @@ class IncomingMessageHandler(Handler):
             delivery.update(state)
         delivery.settle()
 
-    def on_message(self, event): pass
-    def on_settled(self, event): pass
-    def auto_accept(self): return True
+class IncomingMessageHandler(Handler, Acking):
+    def __init__(self, auto_accept=True, delegate=None):
+        self.delegate = delegate
+        self.auto_accept = auto_accept
 
-class ClientEndpointHandler(Handler):
+    def on_delivery(self, event):
+        dlv = event.delivery
+        if dlv.released or not dlv.link.is_receiver: return
+        if dlv.readable and not dlv.partial:
+            event.message = recv_msg(dlv)
+            try:
+                self.on_message(event)
+                if self.auto_accept:
+                    dlv.update(Delivery.ACCEPTED)
+                    dlv.settle()
+            except Reject:
+                dlv.update(Delivery.REJECTED)
+                dlv.settle()
+        elif dlv.updated and dlv.settled:
+            self.on_settled(event)
+
+    def on_message(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_message', event)
+
+    def on_settled(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_settled', event)
+
+class EndpointStateHandler(Handler):
+    def __init__(self, peer_close_is_error=False, delegate=None):
+        self.delegate = delegate
+        self.peer_close_is_error = peer_close_is_error
 
     def is_local_open(self, endpoint):
         return endpoint.state & Endpoint.LOCAL_ACTIVE
+
+    def is_local_uninitialised(self, endpoint):
+        return endpoint.state & Endpoint.LOCAL_UNINIT
+
+    def is_local_closed(self, endpoint):
+        return endpoint.state & Endpoint.LOCAL_CLOSED
 
     def is_remote_open(self, endpoint):
         return endpoint.state & Endpoint.REMOTE_ACTIVE
@@ -560,51 +616,37 @@ class ClientEndpointHandler(Handler):
     def is_remote_closed(self, endpoint):
         return endpoint.state & Endpoint.REMOTE_CLOSED
 
-    def was_closed_by_peer(self, endpoint, parent=None):
-        if parent:
-            return self.was_closed_by_peer(parent) and self.was_closed_by_peer(endpoint)
-        else:
-            return self.is_local_open(endpoint) and self.is_remote_closed(endpoint)
-
-    def treat_as_error(self, endpoint, parent=None):
-        return endpoint.remote_condition or self.was_closed_by_peer(endpoint, parent)
-
     def print_error(self, endpoint, endpoint_type):
         if endpoint.remote_condition:
             print endpoint.remote_condition.description
-        elif self.was_closed_by_peer(endpoint):
+        elif self.is_local_open(endpoint) and self.is_remote_closed(endpoint):
             print "%s closed by peer" % endpoint_type
 
     def on_link_remote_close(self, event):
-        if self.treat_as_error(event.link, event.connection):
+        if event.link.remote_condition:
             self.on_link_error(event)
-        else:
+        elif self.is_local_closed(event.link):
             self.on_link_closed(event)
+        else:
+            self.on_link_closing(event)
+        event.link.close()
 
     def on_session_remote_close(self, event):
-        if self.treat_as_error(event.session, event.connection):
+        if event.session.remote_condition:
             self.on_session_error(event)
-        else:
+        elif self.is_local_closed(event.session):
             self.on_session_closed(event)
+        else:
+            self.on_session_closing(event)
+        event.session.close()
 
     def on_connection_remote_close(self, event):
-        if self.treat_as_error(event.connection):
+        if event.connection.remote_condition:
             self.on_connection_error(event)
-        else:
+        elif self.is_local_closed(event.connection):
             self.on_connection_closed(event)
-
-    def on_connection_error(self, event):
-        self.print_error(event.connection, "connection")
-        event.connection.close()
-
-    def on_session_error(self, event):
-        self.print_error(event.session, "session")
-        event.session.close()
-        event.connection.close()
-
-    def on_link_error(self, event):
-        self.print_error(event.link, "link")
-        event.link.close()
+        else:
+            self.on_connection_closing(event)
         event.connection.close()
 
     def on_connection_local_open(self, event):
@@ -614,6 +656,9 @@ class ClientEndpointHandler(Handler):
     def on_connection_remote_open(self, event):
         if self.is_local_open(event.connection):
             self.on_connection_opened(event)
+        elif self.is_local_uninitialised(event.connection):
+            self.on_connection_opening(event)
+            event.connection.open()
 
     def on_session_local_open(self, event):
         if self.is_remote_open(event.session):
@@ -622,6 +667,9 @@ class ClientEndpointHandler(Handler):
     def on_session_remote_open(self, event):
         if self.is_local_open(event.session):
             self.on_session_opened(event)
+        elif self.is_local_uninitialised(event.session):
+            self.on_session_opening(event)
+            event.session.open()
 
     def on_link_local_open(self, event):
         if self.is_remote_open(event.link):
@@ -630,37 +678,95 @@ class ClientEndpointHandler(Handler):
     def on_link_remote_open(self, event):
         if self.is_local_open(event.link):
             self.on_link_opened(event)
+        elif self.is_local_uninitialised(event.link):
+            self.on_link_opening(event)
+            event.link.open()
 
     def on_connection_opened(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_connection_opened', event)
 
     def on_session_opened(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_session_opened', event)
 
     def on_link_opened(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_link_opened', event)
+
+    def on_connection_opening(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_connection_opening', event)
+
+    def on_session_opening(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_session_opening', event)
+
+    def on_link_opening(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_link_opening', event)
+
+    def on_connection_error(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_connection_error', event)
+        else:
+            self.print_error(event.connection, "connection")
+
+    def on_session_error(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_session_error', event)
+        else:
+            self.print_error(event.session, "session")
+            event.connection.close()
+
+    def on_link_error(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_link_error', event)
+        else:
+            self.print_error(event.link, "link")
+            event.connection.close()
 
     def on_connection_closed(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_connection_closed', event)
 
     def on_session_closed(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_session_closed', event)
 
     def on_link_closed(self, event):
-        pass
+        if self.delegate:
+            dispatch(self.delegate, 'on_link_closed', event)
 
-class ClientHandler(ClientEndpointHandler, IncomingMessageHandler, OutgoingMessageHandler):
+    def on_connection_closing(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_connection_closing', event)
+        elif self.peer_close_is_error:
+            self.on_connection_error(event)
 
-    def __init__(self):
-        super(ClientHandler, self).__init__()
+    def on_session_closing(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_session_closing', event)
+        elif self.peer_close_is_error:
+            self.on_session_error(event)
 
-    def on_delivery(self, event):
-        IncomingMessageHandler.on_delivery(self, event)
-        OutgoingMessageHandler.on_delivery(self, event)
+    def on_link_closing(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_link_closing', event)
+        elif self.peer_close_is_error:
+            self.on_link_error(event)
 
-    def on_settled(self, event):
-        IncomingMessageHandler.on_settled(self, event)
-        OutgoingMessageHandler.on_settled(self, event)
+class MessagingHandler(Handler, Acking):
+    def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
+        self.handlers = []
+        # FlowController if used needs to see event before
+        # IncomingMessageHandler, as the latter may involve the
+        # delivery being released
+        if prefetch:
+            self.handlers.append(FlowController(prefetch))
+        self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
+        self.handlers.append(IncomingMessageHandler(auto_accept, self))
+        self.handlers.append(OutgoingMessageHandler(auto_settle, self))
 
 def delivery_tags():
     count = 1
@@ -682,18 +788,7 @@ def send_msg(sender, msg, tag=None, handler=None, transaction=None):
 def _send_msg(self, msg, tag=None, handler=None, transaction=None):
     return send_msg(self, msg, tag, handler, transaction)
 
-class TransactionHandler(OutgoingMessageHandler):
-    def on_settled(self, event):
-        if hasattr(event.delivery, "transaction"):
-            event.transaction = event.delivery.transaction
-            event.delivery.transaction.handle_outcome(event)
-
-    def on_transaction_declared(self, event): pass
-    def on_transaction_committed(self, event): pass
-    def on_transaction_aborted(self, event): pass
-    def on_transaction_declare_failed(self, event): pass
-    def on_transaction_commit_failed(self, event): pass
-
+class TransactionalAcking(object):
     def accept(self, delivery, transaction):
         self.settle(delivery, transaction, PN_ACCEPTED)
 
@@ -703,17 +798,48 @@ class TransactionHandler(OutgoingMessageHandler):
             delivery.update(0x34)
         delivery.settle()
 
-class TransactionalClientHandler(ClientEndpointHandler, TransactionHandler, IncomingMessageHandler):
-    def __init__(self):
-        super(TransactionalClientHandler, self).__init__()
-
-    def on_delivery(self, event):
-        IncomingMessageHandler.on_delivery(self, event)
-        TransactionHandler.on_delivery(self, event)
+class TransactionHandler(OutgoingMessageHandler, TransactionalAcking):
+    def __init__(self, auto_settle=True, delegate=None):
+        super(TransactionHandler, self).__init__(auto_settle, delegate)
 
     def on_settled(self, event):
-        IncomingMessageHandler.on_settled(self, event)
-        TransactionHandler.on_settled(self, event)
+        if hasattr(event.delivery, "transaction"):
+            event.transaction = event.delivery.transaction
+            event.delivery.transaction.handle_outcome(event)
+
+    def on_transaction_declared(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_transaction_declared', event)
+
+    def on_transaction_committed(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_transaction_committed', event)
+
+    def on_transaction_aborted(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_transaction_aborted', event)
+
+    def on_transaction_declare_failed(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_transaction_declare_failed', event)
+
+    def on_transaction_commit_failed(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_transaction_commit_failed', event)
+
+class TransactionalClientHandler(Handler, TransactionalAcking):
+    def __init__(self, prefetch=10, auto_accept=False, auto_settle=True, peer_close_is_error=False):
+        super(TransactionalClientHandler, self).__init__()
+        self.handlers = []
+        # FlowController if used needs to see event before
+        # IncomingMessageHandler, as the latter may involve the
+        # delivery being released
+        if prefetch:
+            self.handlers.append(FlowController(prefetch))
+        self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
+        self.handlers.append(IncomingMessageHandler(auto_accept, self))
+        self.handlers.append(TransactionHandler(auto_settle, self))
+
 
 class Transaction(object):
     def __init__(self, txn_ctrl, handler):
@@ -1011,11 +1137,9 @@ class Urls(object):
 class EventLoop(object):
     def __init__(self, *handlers):
         self.connector = Connector()
-        if handlers:
-            l = handlers + (self.connector, ScopedHandler())
-        else:
-            l = [FlowController(10), self.connector, ScopedHandler()]
-        self.events = ScheduledEvents(*l)
+        h = [self.connector, ScopedHandler()]
+        h.extend(nested_handlers(handlers))
+        self.events = ScheduledEvents(*h)
         self.loop = SelectLoop(self.events)
         self.connector.attach_to(self)
         self.trigger = None
@@ -1056,6 +1180,7 @@ class EventLoop(object):
         self.loop.remove(selectable)
 
     def run(self):
+        self.events.dispatch(StartEvent(self))
         self.loop.run()
 
     def stop(self):

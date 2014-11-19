@@ -19,38 +19,34 @@
 #
 
 from proton import Message
-from proton_events import ClientHandler, FlowController, Handshaker, IncomingMessageHandler
+from proton_events import MessagingHandler
 from proton_tornado import TornadoLoop
 
-class HelloWorldReceiver(IncomingMessageHandler):
-    def on_message(self, event):
-        print event.message.body
-        event.connection.close()
-
-class HelloWorld(ClientHandler):
-    def __init__(self, eventloop, url, address):
-        self.eventloop = eventloop
-        self.acceptor = eventloop.listen(url)
-        self.conn = eventloop.connect(url, handler=self)
+class HelloWorld(MessagingHandler):
+    def __init__(self, server, address):
+        super(HelloWorld, self).__init__()
+        self.server = server
         self.address = address
 
-    def on_connection_opened(self, event):
-        self.conn.create_sender(self.address)
+    def on_start(self, event):
+        self.eventloop = event.reactor
+        self.acceptor = event.reactor.listen(self.server)
+        ctxt = event.reactor.connect(self.server)
+        ctxt.create_sender(self.address)
 
     def on_credit(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))
         event.sender.close()
 
+    def on_message(self, event):
+        print event.message.body
+
     def on_accepted(self, event):
-        self.conn.close()
+        event.connection.close()
 
     def on_connection_closed(self, event):
         self.acceptor.close()
         self.eventloop.stop()
 
-    def run(self):
-        self.eventloop.run()
-
-eventloop = TornadoLoop(HelloWorldReceiver(), Handshaker(), FlowController(1))
-HelloWorld(eventloop, "localhost:8888", "examples").run()
+TornadoLoop(HelloWorld("localhost:8888", "examples")).run()
 

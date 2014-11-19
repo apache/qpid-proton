@@ -18,16 +18,23 @@
 # under the License.
 #
 
-import proton_events
+from proton_events import EventLoop, MessagingHandler
 
-class Recv(proton_events.ClientHandler):
+class Recv(MessagingHandler):
+    def __init__(self, host, address):
+        super(Recv, self).__init__()
+        self.host = host
+        self.address = address
+
+    def on_start(self, event):
+        conn = event.reactor.connect(self.host)
+        conn.create_receiver(self.address)
+
     def on_message(self, event):
         print event.message.body
 
 try:
-    conn = proton_events.connect("localhost:5672", handler=Recv())
-    conn.create_receiver("examples")
-    proton_events.run()
+    EventLoop(Recv("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

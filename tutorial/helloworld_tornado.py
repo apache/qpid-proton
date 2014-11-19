@@ -19,18 +19,20 @@
 #
 
 from proton import Message
-from proton_events import ClientHandler
+from proton_events import MessagingHandler
 from proton_tornado import TornadoLoop
 
-class HelloWorld(ClientHandler):
-    def __init__(self, eventloop, url, address):
-        self.eventloop = eventloop
-        self.conn = eventloop.connect(url, handler=self)
+class HelloWorld(MessagingHandler):
+    def __init__(self, server, address):
+        super(HelloWorld, self).__init__()
+        self.server = server
         self.address = address
 
-    def on_connection_opened(self, event):
-        self.conn.create_receiver(self.address)
-        self.conn.create_sender(self.address)
+    def on_start(self, event):
+        self.eventloop = event.reactor
+        ctxt = event.reactor.connect(self.server)
+        ctxt.create_receiver(self.address)
+        ctxt.create_sender(self.address)
 
     def on_credit(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))
@@ -43,8 +45,5 @@ class HelloWorld(ClientHandler):
     def on_connection_closed(self, event):
         self.eventloop.stop()
 
-    def run(self):
-        self.eventloop.run()
-
-HelloWorld(TornadoLoop(), "localhost:5672", "examples").run()
+TornadoLoop(HelloWorld("localhost:5672", "examples")).run()
 

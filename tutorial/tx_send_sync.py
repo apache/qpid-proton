@@ -23,6 +23,7 @@ import proton_events
 
 class TxSend(proton_events.TransactionalClientHandler):
     def __init__(self, messages, batch_size):
+        super(TxSend, self).__init__()
         self.current_batch = 0
         self.confirmed = 0
         self.committed = 0

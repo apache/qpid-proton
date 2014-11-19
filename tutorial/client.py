@@ -19,22 +19,28 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, ClientHandler
+from proton_events import EventLoop, MessagingHandler
 
-class Client(ClientHandler):
-    def __init__(self, eventloop, host, address, requests):
-        self.eventloop = eventloop
-        self.conn = eventloop.connect(host)
-        self.sender = self.conn.create_sender(address)
-        self.receiver = self.conn.create_receiver(None, dynamic=True, handler=self)
+class Client(MessagingHandler):
+    def __init__(self, host, address, requests):
+        super(Client, self).__init__()
+        self.host = host
+        self.address = address
         self.requests = requests
 
+    def on_start(self, event):
+        self.conn = event.reactor.connect(self.host)
+        self.sender = self.conn.create_sender(self.address)
+        self.receiver = self.conn.create_receiver(None, dynamic=True)
+
     def next_request(self):
-        req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
-        self.sender.send_msg(req)
+        if self.receiver.remote_source.address:
+            req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
+            self.sender.send_msg(req)
 
     def on_link_opened(self, event):
-        self.next_request()
+        if event.receiver == self.receiver:
+            self.next_request()
 
     def on_message(self, event):
         print "%s => %s" % (self.requests.pop(0), event.message.body)
@@ -43,13 +49,10 @@ class Client(ClientHandler):
         else:
             self.conn.close()
 
-    def run(self):
-        self.eventloop.run()
-
 REQUESTS= ["Twas brillig, and the slithy toves",
            "Did gire and gymble in the wabe.",
            "All mimsy were the borogroves,",
            "And the mome raths outgrabe."]
 
-Client(EventLoop(), "localhost:5672", "examples", REQUESTS).run()
+EventLoop(Client("localhost:5672", "examples", REQUESTS)).run()
 

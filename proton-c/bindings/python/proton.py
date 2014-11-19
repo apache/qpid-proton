@@ -3404,7 +3404,7 @@ def dispatch(handler, method, *args):
   elif hasattr(handler, "on_unhandled"):
     return handler.on_unhandled(method, args)
 
-class Event:
+class Event(object):
 
   CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
   CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")

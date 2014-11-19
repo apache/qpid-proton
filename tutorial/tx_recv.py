@@ -22,6 +22,7 @@ import proton_events
 
 class TxRecv(proton_events.TransactionalClientHandler):
     def __init__(self, batch_size):
+        super(TxRecv, self).__init__(prefetch=0)
         self.current_batch = 0
         self.batch_size = batch_size
         self.event_loop = proton_events.EventLoop(self)
@@ -41,8 +42,6 @@ class TxRecv(proton_events.TransactionalClientHandler):
     def on_transaction_declared(self, event):
         self.receiver.flow(self.batch_size)
         self.transaction = event.transaction
-
-    def auto_accept(self): return False
 
     def on_transaction_committed(self, event):
         self.current_batch = 0

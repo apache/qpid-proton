@@ -21,7 +21,10 @@
 from proton import Message
 import proton_events
 
-class HelloWorld(proton_events.ClientHandler):
+class HelloWorld(proton_events.MessagingHandler):
+    def __init__(self):
+        super(HelloWorld, self).__init__()
+
     def on_credit(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))
         event.sender.close()
