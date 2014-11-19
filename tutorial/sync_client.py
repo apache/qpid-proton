@@ -25,7 +25,8 @@ Demonstrates the client side of the synchronous request-response pattern
 """
 
 from proton import Message, Url, ConnectionException, Timeout
-from proton_events import BlockingConnection, IncomingMessageHandler
+from proton_utils import BlockingConnection
+from proton_handlers import IncomingMessageHandler
 import sys
 
 class SyncRequestClient(IncomingMessageHandler):
@@ -39,6 +40,7 @@ class SyncRequestClient(IncomingMessageHandler):
         @param url: a proton.Url or a URL string of the form 'host:port/path'
             host:port is used to connect, path is used to identify the remote messaging endpoint.
         """
+        super(SyncRequestClient, self).__init__()
         self.connection = BlockingConnection(Url(url).defaults(), timeout=timeout)
         self.sender = self.connection.create_sender(url.path)
         # dynamic=true generates a unique address dynamically for this receiver.

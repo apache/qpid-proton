@@ -18,16 +18,20 @@
 # under the License.
 #
 
-import proton_events
+import proton_reactors
+from proton_handlers import MessagingHandler
 
-class Recv(proton_events.ClientHandler):
+class Recv(MessagingHandler):
+    def __init__(self):
+        super(Recv, self).__init__()
+
     def on_message(self, event):
         print event.message.body
 
 try:
-    conn = proton_events.connect("localhost:5672", handler=Recv())
-    conn.create_receiver("examples", options=proton_events.Selector(u"colour = 'green'"))
-    proton_events.run()
+    conn = proton_reactors.connect("localhost:5672", handler=Recv())
+    conn.create_receiver("examples", options=proton_reactors.Selector(u"colour = 'green'"))
+    proton_reactors.run()
 except KeyboardInterrupt: pass
 
 

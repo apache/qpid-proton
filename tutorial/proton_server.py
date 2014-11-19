@@ -18,10 +18,12 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, FlowController, IncomingMessageHandler
+from proton_reactors import EventLoop
+from proton_handlers import FlowController, IncomingMessageHandler
 
 class Server(IncomingMessageHandler):
     def __init__(self, host, address):
+        super(Server, self).__init__()
         self.eventloop = EventLoop(self, FlowController(10))
         self.conn = self.eventloop.connect(host)
         self.receiver = self.conn.create_receiver(address)

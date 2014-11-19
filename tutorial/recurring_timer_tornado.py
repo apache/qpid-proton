@@ -19,7 +19,7 @@
 #
 
 import time
-from proton_events import Handler
+from proton import Handler
 from proton_tornado import TornadoLoop
 
 class Recurring(Handler):

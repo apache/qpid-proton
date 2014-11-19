@@ -19,9 +19,10 @@
 #
 
 from proton import Message
-import proton_events
+from proton_reactors import EventLoop
+from proton_handlers import TransactionalClientHandler
 
-class TxSend(proton_events.TransactionalClientHandler):
+class TxSend(TransactionalClientHandler):
     def __init__(self, messages, batch_size):
         super(TxSend, self).__init__()
         self.current_batch = 0
@@ -29,7 +30,8 @@ class TxSend(proton_events.TransactionalClientHandler):
         self.confirmed = 0
         self.total = messages
         self.batch_size = batch_size
-        self.conn = proton_events.connect("localhost:5672", handler=self)
+        self.eventloop = EventLoop()
+        self.conn = self.eventloop.connect("localhost:5672", handler=self)
         self.sender = self.conn.create_sender("examples")
         self.conn.declare_transaction(handler=self)
         self.transaction = None
@@ -67,7 +69,7 @@ class TxSend(proton_events.TransactionalClientHandler):
         self.current_batch = 0
 
     def run(self):
-        proton_events.run()
+        self.eventloop.run()
 
 try:
     TxSend(10000, 10).run()

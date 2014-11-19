@@ -18,14 +18,15 @@
 # under the License.
 #
 
-import proton_events
+from proton_reactors import EventLoop
+from proton_handlers import TransactionalClientHandler
 
-class TxRecv(proton_events.TransactionalClientHandler):
+class TxRecv(TransactionalClientHandler):
     def __init__(self, batch_size):
         super(TxRecv, self).__init__(prefetch=0)
         self.current_batch = 0
         self.batch_size = batch_size
-        self.event_loop = proton_events.EventLoop(self)
+        self.event_loop = EventLoop(self)
         self.conn = self.event_loop.connect("localhost:5672")
         self.receiver = self.conn.create_receiver("examples")
         self.conn.declare_transaction(handler=self)

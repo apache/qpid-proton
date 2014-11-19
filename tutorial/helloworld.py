@@ -19,7 +19,8 @@
 #
 
 from proton import Message
-from proton_events import EventLoop, MessagingHandler
+from proton_handlers import MessagingHandler
+from proton_reactors import EventLoop
 
 class HelloWorld(MessagingHandler):
     def __init__(self, server, address):
