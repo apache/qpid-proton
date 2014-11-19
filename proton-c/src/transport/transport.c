@@ -19,21 +19,24 @@
  *
  */
 
+#include "proton/framing.h"
+
 #include "engine/engine-internal.h"
-#include <stdlib.h>
-#include <string.h>
-#include <proton/framing.h>
+#include "sasl/sasl-internal.h"
+#include "ssl/ssl-internal.h"
+
+#include "autodetect.h"
 #include "protocol.h"
 #include "dispatch_actions.h"
+#include "proton/event.h"
+#include "platform.h"
+#include "platform_fmt.h"
 
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-#include "sasl/sasl-internal.h"
-#include "ssl/ssl-internal.h"
-#include "platform.h"
-#include "platform_fmt.h"
 
 static ssize_t transport_consume(pn_transport_t *transport);
 
@@ -92,15 +95,204 @@ void pn_delivery_map_clear(pn_delivery_map_t *dm)
   dm->next = 0;
 }
 
-static ssize_t pn_input_read_amqp_header(pn_io_layer_t *io_layer, const char *bytes, size_t available);
-static ssize_t pn_input_read_amqp(pn_io_layer_t *io_layer, const char *bytes, size_t available);
-static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes, size_t available);
-static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t available);
-static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now);
-
 static void pni_default_tracer(pn_transport_t *transport, const char *message)
 {
   fprintf(stderr, "[%p]:%s\n", (void *) transport, message);
+}
+
+static ssize_t pn_io_layer_input_passthru(pn_transport_t *, unsigned int, const char *, size_t );
+static ssize_t pn_io_layer_output_passthru(pn_transport_t *, unsigned int, char *, size_t );
+
+static ssize_t pn_io_layer_input_setup(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
+static ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+
+static ssize_t pn_input_read_amqp_header(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
+static ssize_t pn_input_read_amqp(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
+static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+static ssize_t pn_output_write_amqp(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+static pn_timestamp_t pn_tick_amqp(pn_transport_t *transport, unsigned int layer, pn_timestamp_t now);
+
+static ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
+static ssize_t pn_io_layer_output_null(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+
+const pn_io_layer_t amqp_header_layer = {
+    pn_input_read_amqp_header,
+    pn_output_write_amqp_header,
+    pn_tick_amqp,
+    NULL
+};
+
+const pn_io_layer_t amqp_write_header_layer = {
+    pn_input_read_amqp,
+    pn_output_write_amqp_header,
+    pn_tick_amqp,
+    NULL
+};
+
+const pn_io_layer_t amqp_read_header_layer = {
+    pn_input_read_amqp_header,
+    pn_output_write_amqp,
+    pn_tick_amqp,
+    NULL
+};
+
+const pn_io_layer_t amqp_layer = {
+    pn_input_read_amqp,
+    pn_output_write_amqp,
+    pn_tick_amqp,
+    NULL
+};
+
+const pn_io_layer_t pni_setup_layer = {
+    pn_io_layer_input_setup,
+    pn_io_layer_output_setup,
+    NULL,
+    NULL
+};
+
+const pn_io_layer_t pni_autodetect_layer = {
+    pn_io_layer_input_autodetect,
+    pn_io_layer_output_null,
+    NULL,
+    NULL
+};
+
+const pn_io_layer_t pni_passthru_layer = {
+    pn_io_layer_input_passthru,
+    pn_io_layer_output_passthru,
+    NULL,
+    NULL
+};
+
+/* Set up the transport protocol layers depending on what is configured */
+static void pn_io_layer_setup(pn_transport_t *transport, unsigned int layer)
+{
+  assert(layer == 0);
+  // Figure out if we are server or not
+  if (transport->server)
+  {
+    // XXX: This is currently a large hack to work around the SSL
+    // code not handling a connection error before being set up fully
+    if (transport->ssl && pn_ssl_allow_unsecured(transport)) {
+      transport->io_layers[layer++] = &pni_autodetect_layer;
+      return;
+    }
+  }
+  if (transport->ssl) {
+    transport->io_layers[layer++] = &ssl_layer;
+  }
+  if (transport->server) {
+    transport->io_layers[layer++] = &pni_autodetect_layer;
+    return;
+  }
+  if (transport->sasl) {
+    transport->io_layers[layer++] = &sasl_header_layer;
+  }
+  transport->io_layers[layer++] = &amqp_header_layer;
+}
+
+ssize_t pn_io_layer_input_setup(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
+{
+  pn_io_layer_setup(transport, layer);
+  return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
+}
+
+ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available)
+{
+  pn_io_layer_setup(transport, layer);
+  return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
+}
+
+// Autodetect the layer by reading the protocol header
+ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
+{
+  const char* error;
+  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  if (eos && available==0) {
+    pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
+    return PN_EOS;
+  }
+  pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
+  pn_transport_logf(transport, "%s detected", pni_protocol_name(protocol));
+  switch (protocol) {
+  case PNI_PROTOCOL_SSL:
+    if (!transport->ssl) {
+      pn_ssl(transport);
+    }
+    transport->io_layers[layer] = &ssl_layer;
+    transport->io_layers[layer+1] = &pni_autodetect_layer;
+    return ssl_layer.process_input(transport, layer, bytes, available);
+  case PNI_PROTOCOL_AMQP_SSL:
+    if (!transport->ssl) {
+      pn_ssl(transport);
+    }
+    transport->io_layers[layer] = &ssl_layer;
+    transport->io_layers[layer+1] = &pni_autodetect_layer;
+    return 8;
+  case PNI_PROTOCOL_AMQP_SASL:
+    if (!transport->sasl) {
+      pn_sasl(transport);
+    }
+    transport->io_layers[layer] = &sasl_write_header_layer;
+    transport->io_layers[layer+1] = &pni_autodetect_layer;
+    if (transport->disp->trace & PN_TRACE_FRM)
+        pn_transport_logf(transport, "  <- %s", "SASL");
+    return 8;
+  case PNI_PROTOCOL_AMQP1:
+    if (transport->sasl && pn_sasl_state((pn_sasl_t *)transport)==PN_SASL_IDLE) {
+      pn_transport_log(transport, "AMQP detected without SASL before it");
+      if (pn_sasl_skipping_allowed(transport)) {
+        pn_sasl_done((pn_sasl_t *)transport, PN_SASL_SKIPPED);
+      } else {
+        pn_do_error(transport, "amqp:connection:policy-error",
+                    "Client skipped SASL exchange - forbidden");
+        return PN_EOS;
+      }
+    }
+    transport->io_layers[layer] = &amqp_write_header_layer;
+    if (transport->disp->trace & PN_TRACE_FRM)
+        pn_transport_logf(transport, "  <- %s", "AMQP");
+    return 8;
+  case PNI_PROTOCOL_INSUFFICIENT:
+    if (!eos) return 0;
+    error = "End of input stream before protocol detection";
+    break;
+  case PNI_PROTOCOL_AMQP_OTHER:
+    error = "Incompatible AMQP connection detected";
+    break;
+  case PNI_PROTOCOL_UNKNOWN:
+  default:
+    error = "Unknown protocol detected";
+    break;
+  }
+  char quoted[1024];
+  pn_quote_data(quoted, 1024, bytes, available);
+  pn_do_error(transport, "amqp:connection:framing-error",
+              "%s: '%s'%s", error, quoted,
+              !eos ? "" : " (connection aborted)");
+  return PN_EOS;
+}
+
+// We don't know what the output should be - do nothing
+ssize_t pn_io_layer_output_null(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available)
+{
+  return 0;
+}
+
+/** Pass through input handler */
+ssize_t pn_io_layer_input_passthru(pn_transport_t *transport, unsigned int layer, const char *data, size_t available)
+{
+    if (layer+1<PN_IO_LAYER_CT)
+        return transport->io_layers[layer+1]->process_input(transport, layer+1, data, available);
+    return PN_EOS;
+}
+
+/** Pass through output handler */
+ssize_t pn_io_layer_output_passthru(pn_transport_t *transport, unsigned int layer, char *data, size_t available)
+{
+    if (layer+1<PN_IO_LAYER_CT)
+        return transport->io_layers[layer+1]->process_output(transport, layer+1, data, available);
+    return PN_EOS;
 }
 
 static void pn_transport_initialize(void *object)
@@ -112,33 +304,18 @@ static void pn_transport_initialize(void *object)
   transport->input_buf = NULL;
   transport->input_size =  PN_DEFAULT_MAX_FRAME_SIZE ? PN_DEFAULT_MAX_FRAME_SIZE : 16 * 1024;
   transport->tracer = pni_default_tracer;
-  transport->header_count = 0;
   transport->sasl = NULL;
   transport->ssl = NULL;
   transport->scratch = pn_string(NULL);
   transport->disp = pn_dispatcher(0, transport);
   transport->connection = NULL;
 
-  pn_io_layer_t *io_layer = transport->io_layers;
-  while (io_layer != &transport->io_layers[PN_IO_AMQP]) {
-    io_layer->context = NULL;
-    io_layer->next = io_layer + 1;
-    io_layer->process_input = pn_io_layer_input_passthru;
-    io_layer->process_output = pn_io_layer_output_passthru;
-    io_layer->process_tick = pn_io_layer_tick_passthru;
-    io_layer->buffered_output = NULL;
-    io_layer->buffered_input = NULL;
-    ++io_layer;
+  for (int layer=0; layer<PN_IO_LAYER_CT; ++layer) {
+    transport->io_layers[layer] = NULL;
   }
 
-  pn_io_layer_t *amqp = &transport->io_layers[PN_IO_AMQP];
-  amqp->context = transport;
-  amqp->process_input = pn_input_read_amqp_header;
-  amqp->process_output = pn_output_write_amqp_header;
-  amqp->process_tick = pn_io_layer_tick_passthru;
-  amqp->buffered_output = NULL;
-  amqp->buffered_input = NULL;
-  amqp->next = NULL;
+  // Defer setting up the layers until the first data arrives or is sent
+  transport->io_layers[0] = &pni_setup_layer;
 
   transport->open_sent = false;
   transport->open_rcvd = false;
@@ -178,6 +355,8 @@ static void pn_transport_initialize(void *object)
   transport->done_processing = false;
 
   transport->posted_idle_timeout = false;
+
+  transport->server = false;
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -211,7 +390,7 @@ static void pn_transport_finalize(void *object);
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL
 
-pn_transport_t *pn_transport()
+static pn_transport_t *pni_transport(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_transport);
   pn_transport_t *transport =
@@ -232,6 +411,23 @@ pn_transport_t *pn_transport()
   return transport;
 }
 
+pn_transport_t *pn_transport_server()
+{
+  pn_transport_t *t = pni_transport();
+  t->server = true;
+  return t;
+}
+
+pn_transport_t *pn_transport_client()
+{
+  return pni_transport();
+}
+
+pn_transport_t *pn_transport()
+{
+    return pni_transport();
+}
+
 void pn_transport_free(pn_transport_t *transport)
 {
   if (!transport) return;
@@ -247,8 +443,8 @@ static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
 
-  pn_ssl_free(transport->ssl);
-  pn_sasl_free(transport->sasl);
+  pn_ssl_free(transport);
+  pn_sasl_free(transport);
   pn_dispatcher_free(transport->disp);
   free(transport->remote_container);
   free(transport->remote_hostname);
@@ -550,8 +746,6 @@ int pn_do_open(pn_dispatcher_t *disp)
   } else {
     transport->disp->halt = true;
   }
-  if (transport->remote_idle_timeout)
-    transport->io_layers[PN_IO_AMQP].process_tick = pn_tick_amqp;  // enable timeouts
   transport->open_rcvd = true;
   return 0;
 }
@@ -1072,14 +1266,14 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 // process pending input until none remaining or EOS
 static ssize_t transport_consume(pn_transport_t *transport)
 {
-  pn_io_layer_t *io_layer = transport->io_layers;
   size_t consumed = 0;
 
   while (transport->input_pending || transport->tail_closed) {
     ssize_t n;
-    n = io_layer->process_input( io_layer,
-                                 transport->input_buf + consumed,
-                                 transport->input_pending );
+    n = transport->io_layers[0]->
+      process_input( transport, 0,
+                     transport->input_buf + consumed,
+                     transport->input_pending );
     if (n > 0) {
       consumed += n;
       transport->input_pending -= n;
@@ -1101,44 +1295,36 @@ static ssize_t transport_consume(pn_transport_t *transport)
   return consumed;
 }
 
-static ssize_t pn_input_read_header(pn_transport_t *transport, const char *bytes, size_t available,
-                                    const char *header, size_t size, const char *protocol,
-                                    ssize_t (*next)(pn_io_layer_t *, const char *, size_t))
+static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
-  const char *point = header + transport->header_count;
-  int delta = pn_min(available, size - transport->header_count);
-  if (!available || memcmp(bytes, point, delta)) {
-    char quoted[1024];
-    pn_quote_data(quoted, 1024, bytes, available);
-    pn_do_error(transport, "amqp:connection:framing-error",
-                "%s header mismatch: '%s'%s", protocol, quoted,
-                available ? "" : " (connection aborted)");
-    return PN_EOS;
-  } else {
-    transport->header_count += delta;
-    if (transport->header_count == size) {
-      transport->header_count = 0;
-      transport->io_layers[PN_IO_AMQP].process_input = next;
-
-      if (transport->disp->trace & PN_TRACE_FRM)
-        pn_transport_logf(transport, "  <- %s", protocol);
+  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
+  switch (protocol) {
+  case PNI_PROTOCOL_AMQP1:
+    if (transport->io_layers[layer] == &amqp_read_header_layer) {
+      transport->io_layers[layer] = &amqp_layer;
+    } else {
+      transport->io_layers[layer] = &amqp_write_header_layer;
     }
-    return delta;
+    if (transport->disp->trace & PN_TRACE_FRM)
+      pn_transport_logf(transport, "  <- %s", "AMQP");
+    return 8;
+  case PNI_PROTOCOL_INSUFFICIENT:
+    if (!eos) return 0;
+    /* Fallthru */
+  default:
+    break;
   }
+  char quoted[1024];
+  pn_quote_data(quoted, 1024, bytes, available);
+  pn_do_error(transport, "amqp:connection:framing-error",
+              "%s header mismatch: %s ['%s']%s", "AMQP", pni_protocol_name(protocol), quoted,
+              !eos ? "" : " (connection aborted)");
+  return PN_EOS;
 }
 
-#define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
-
-static ssize_t pn_input_read_amqp_header(pn_io_layer_t *io_layer, const char *bytes, size_t available)
+static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
-  pn_transport_t *transport = (pn_transport_t *)io_layer->context;
-  return pn_input_read_header(transport, bytes, available, AMQP_HEADER, 8,
-                              "AMQP", pn_input_read_amqp);
-}
-
-static ssize_t pn_input_read_amqp(pn_io_layer_t *io_layer, const char *bytes, size_t available)
-{
-  pn_transport_t *transport = (pn_transport_t *)io_layer->context;
   if (transport->close_rcvd) {
     if (available > 0) {
       pn_do_error(transport, "amqp:connection:framing-error", "data after close");
@@ -1164,10 +1350,9 @@ static ssize_t pn_input_read_amqp(pn_io_layer_t *io_layer, const char *bytes, si
 }
 
 /* process AMQP related timer events */
-static pn_timestamp_t pn_tick_amqp(pn_io_layer_t *io_layer, pn_timestamp_t now)
+static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, pn_timestamp_t now)
 {
   pn_timestamp_t timeout = 0;
-  pn_transport_t *transport = (pn_transport_t *)io_layer->context;
 
   if (transport->local_idle_timeout) {
     if (transport->dead_remote_deadline == 0 ||
@@ -1827,30 +2012,24 @@ int pn_process(pn_transport_t *transport)
   return 0;
 }
 
-static ssize_t pn_output_write_header(pn_transport_t *transport,
-                                      char *bytes, size_t size,
-                                      const char *header, size_t hdrsize,
-                                      const char *protocol,
-                                      ssize_t (*next)(pn_io_layer_t *, char *, size_t))
+#define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
+
+static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
   if (transport->disp->trace & PN_TRACE_FRM)
-    pn_transport_logf(transport, "  -> %s", protocol);
-  assert(size >= hdrsize);
-  memmove(bytes, header, hdrsize);
-  transport->io_layers[PN_IO_AMQP].process_output = next;
-  return hdrsize;
+    pn_transport_logf(transport, "  -> %s", "AMQP");
+  assert(available >= 8);
+  memmove(bytes, AMQP_HEADER, 8);
+  if (transport->io_layers[layer] == &amqp_write_header_layer) {
+    transport->io_layers[layer] = &amqp_layer;
+  } else {
+    transport->io_layers[layer] = &amqp_read_header_layer;
+  }
+  return 8;
 }
 
-static ssize_t pn_output_write_amqp_header(pn_io_layer_t *io_layer, char *bytes, size_t size)
+static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  pn_transport_t *transport = (pn_transport_t *)io_layer->context;
-  return pn_output_write_header(transport, bytes, size, AMQP_HEADER, 8, "AMQP",
-                                pn_output_write_amqp);
-}
-
-static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t size)
-{
-  pn_transport_t *transport = (pn_transport_t *)io_layer->context;
   if (transport->connection && !transport->done_processing) {
     int err = pn_process(transport);
     if (err) {
@@ -1866,7 +2045,7 @@ static ssize_t pn_output_write_amqp(pn_io_layer_t *io_layer, char *bytes, size_t
     return PN_EOS;
   }
 
-  return pn_dispatcher_output(transport->disp, bytes, size);
+  return pn_dispatcher_output(transport->disp, bytes, available);
 }
 
 static void pni_close_head(pn_transport_t *transport)
@@ -1884,7 +2063,6 @@ static ssize_t transport_produce(pn_transport_t *transport)
 {
   if (transport->head_closed) return PN_EOS;
 
-  pn_io_layer_t *io_layer = transport->io_layers;
   ssize_t space = transport->output_size - transport->output_pending;
 
   if (space <= 0) {     // can we expand the buffer?
@@ -1905,9 +2083,10 @@ static ssize_t transport_produce(pn_transport_t *transport)
 
   while (space > 0) {
     ssize_t n;
-    n = io_layer->process_output( io_layer,
-                                  &transport->output_buf[transport->output_pending],
-                                  space );
+    n = transport->io_layers[0]->
+      process_output( transport, 0,
+                      &transport->output_buf[transport->output_pending],
+                      space );
     if (n > 0) {
       space -= n;
       transport->output_pending += n;
@@ -1945,8 +2124,8 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
 
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  if (transport->sasl) pn_sasl_trace(transport->sasl, trace);
-  if (transport->ssl) pn_ssl_trace(transport->ssl, trace);
+  if (transport->sasl) pn_sasl_trace(transport, trace);
+  if (transport->ssl) pn_ssl_trace(transport, trace);
   transport->disp->trace = trace;
 }
 
@@ -2043,7 +2222,6 @@ pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport)
 void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout)
 {
   transport->local_idle_timeout = timeout;
-  transport->io_layers[PN_IO_AMQP].process_tick = pn_tick_amqp;
 }
 
 pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
@@ -2053,8 +2231,12 @@ pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
 
 pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now)
 {
-  pn_io_layer_t *io_layer = transport->io_layers;
-  return io_layer->process_tick( io_layer, now );
+  pn_timestamp_t r = 0;
+  for (int i = 0; i<PN_IO_LAYER_CT; ++i) {
+    if (transport->io_layers[i] && transport->io_layers[i]->process_tick)
+      r = pn_timestamp_min(r, transport->io_layers[i]->process_tick(transport, i, now));
+  }
+  return r;
 }
 
 uint64_t pn_transport_get_frames_output(const pn_transport_t *transport)
@@ -2070,36 +2252,6 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
     return transport->disp->input_frames_ct;
   return 0;
 }
-
-/** Pass through input handler */
-ssize_t pn_io_layer_input_passthru(pn_io_layer_t *io_layer, const char *data, size_t available)
-{
-  pn_io_layer_t *next = io_layer->next;
-  if (next)
-    return next->process_input( next, data, available );
-  return PN_EOS;
-}
-
-/** Pass through output handler */
-ssize_t pn_io_layer_output_passthru(pn_io_layer_t *io_layer, char *bytes, size_t size)
-{
-  pn_io_layer_t *next = io_layer->next;
-  if (next)
-    return next->process_output( next, bytes, size );
-  return PN_EOS;
-}
-
-/** Pass through tick handler */
-pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *io_layer, pn_timestamp_t now)
-{
-  pn_io_layer_t *next = io_layer->next;
-  if (next)
-    return next->process_tick( next, now );
-  return 0;
-}
-
-
-///
 
 // input
 ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
@@ -2253,11 +2405,11 @@ bool pn_transport_quiesced(pn_transport_t *transport)
   if (pending < 0) return true; // output done
   else if (pending > 0) return false;
   // no pending at transport, but check if data is buffered in I/O layers
-  pn_io_layer_t *io_layer = transport->io_layers;
-  while (io_layer != &transport->io_layers[PN_IO_LAYER_CT]) {
-    if (io_layer->buffered_output && io_layer->buffered_output( io_layer ))
+  for (int layer = 0; layer<PN_IO_LAYER_CT; ++layer) {
+    if (transport->io_layers[layer] &&
+        transport->io_layers[layer]->buffered_output &&
+        transport->io_layers[layer]->buffered_output( transport ))
       return false;
-    ++io_layer;
   }
   return true;
 }

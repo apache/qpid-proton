@@ -1,5 +1,6 @@
-#ifndef PROTON_SSL_INTERNAL_H
-#define PROTON_SSL_INTERNAL_H 1
+#ifndef PROTON_AUTODETECT_H
+#define PROTON_AUTODETECT_H 1
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,18 +22,19 @@
  *
  */
 
-/** @file
- * Internal API for SSL/TLS support in the Driver Layer.
- *
- * Generic API to abstract the implementation of SSL/TLS from the Driver codebase.
- *
- */
+#include "proton/types.h"
 
-// release the SSL context
-void pn_ssl_free(pn_transport_t *transport);
+typedef enum {
+  PNI_PROTOCOL_INSUFFICIENT,
+  PNI_PROTOCOL_UNKNOWN,
+  PNI_PROTOCOL_SSL,
+  PNI_PROTOCOL_AMQP_SSL,
+  PNI_PROTOCOL_AMQP_SASL,
+  PNI_PROTOCOL_AMQP1,
+  PNI_PROTOCOL_AMQP_OTHER
+} pni_protocol_type_t;
 
-void pn_ssl_trace(pn_transport_t *transport, pn_trace_t trace);
+pni_protocol_type_t pni_sniff_header(const char *data, size_t len);
+const char* pni_protocol_name(pni_protocol_type_t p);
 
-bool pn_ssl_allow_unsecured(pn_transport_t *transport);
-
-#endif /* ssl-internal.h */
+#endif
