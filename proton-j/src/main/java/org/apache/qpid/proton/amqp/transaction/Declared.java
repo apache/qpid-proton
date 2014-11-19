@@ -24,6 +24,7 @@
 package org.apache.qpid.proton.amqp.transaction;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Outcome;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
@@ -31,6 +32,8 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 public final class Declared
       implements DeliveryState, Outcome
 {
+    public static final Symbol DESCRIPTOR_SYMBOL = Symbol.valueOf("amqp:declared:list");
+
     private Binary _txnId;
 
     public Binary getTxnId()

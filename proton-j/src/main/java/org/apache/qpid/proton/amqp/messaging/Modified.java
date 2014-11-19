@@ -22,11 +22,14 @@
 package org.apache.qpid.proton.amqp.messaging;
 
 import java.util.Map;
+
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 public final class Modified
       implements DeliveryState, Outcome
 {
+    public static final Symbol DESCRIPTOR_SYMBOL = Symbol.valueOf("amqp:modified:list");
 
     private Boolean _deliveryFailed;
     private Boolean _undeliverableHere;

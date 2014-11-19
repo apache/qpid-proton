@@ -23,12 +23,15 @@
 
 package org.apache.qpid.proton.amqp.messaging;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 
 public final class Released
       implements DeliveryState, Outcome
 {
+    public static final Symbol DESCRIPTOR_SYMBOL = Symbol.valueOf("amqp:released:list");
+
     private static final Released INSTANCE = new Released();
 
     @Override
