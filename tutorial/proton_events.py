@@ -17,7 +17,7 @@
 # under the License.
 #
 import heapq, os, Queue, re, socket, time, types
-from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong
+from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
@@ -1062,63 +1062,6 @@ class Backoff(object):
             self.delay = min(10, 2*current)
         return current
 
-class Url(object):
-    RE = re.compile(r"""
-        # [   <scheme>://  ] [    <user>   [   / <password>   ] @]    ( <host4>     | \[    <host6>    \] )  [   :<port>   ]
-        ^ (?: ([^:/@]+)://)? (?: ([^:/@]+) (?: / ([^:/@]+)   )? @)? (?: ([^@:/\[]+) | \[ ([a-f0-9:.]+) \] ) (?: :([0-9]+))?$
-""", re.X | re.I)
-
-    AMQPS = "amqps"
-    AMQP = "amqp"
-
-    def __init__(self, value):
-        match = Url.RE.match(str(value))
-        if match is None:
-            raise ValueError(value)
-        self.scheme, self.user, self.password, host4, host6, port = match.groups()
-        self.host = host4 or host6
-        if port is None:
-            self.port = None
-        else:
-            self.port = int(port)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        return (self.host, self.port)
-
-    def __repr__(self):
-        return "URL(%r)" % str(self)
-
-    def __str__(self):
-        s = ""
-        if self.scheme:
-            s += "%s://" % self.scheme
-        if self.user:
-            s += self.user
-            if self.password:
-                s += "/%s" % self.password
-                s += "@"
-        if ':' not in self.host:
-            s += self.host
-        else:
-            s += "[%s]" % self.host
-        if self.port:
-            s += ":%s" % self.port
-        return s
-
-    def __eq__(self, url):
-        if isinstance(url, basestring):
-            url = URL(url)
-        return \
-            self.scheme==url.scheme and \
-            self.user==url.user and self.password==url.password and \
-            self.host==url.host and self.port==url.port
-
-    def __ne__(self, url):
-        return not self.__eq__(url)
-
 class Urls(object):
     def __init__(self, values):
         self.values = [Url(v) for v in values]
@@ -1127,12 +1070,15 @@ class Urls(object):
     def __iter__(self):
         return self
 
+    def _as_pair(self, url):
+        return (url.host, url.port)
+
     def next(self):
         try:
-            return self.i.next()
+            return self._as_pair(self.i.next())
         except StopIteration:
             self.i = iter(self.values)
-            return self.i.next()
+            return self._as_pair(self.i.next())
 
 class EventLoop(object):
     def __init__(self, *handlers):
@@ -1149,7 +1095,7 @@ class EventLoop(object):
         context = MessagingContext(self.events.connection(), handler=handler)
         context.conn.container = self.container_id or str(generate_uuid())
         context.conn.heartbeat = heartbeat
-        if url: context.conn.address = Url(url)
+        if url: context.conn.address = Urls([url])
         elif urls: context.conn.address = Urls(urls)
         elif address: context.conn.address = address
         else: raise ValueError("One of url, urls or address required")
