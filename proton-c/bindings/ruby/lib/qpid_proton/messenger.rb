@@ -208,10 +208,10 @@ module Qpid
         Cproton.pn_messenger_stop(@impl)
       end
 
-      # Returns true iff a Messenger is in the stopped state.
+      # Returns true if a Messenger is in the stopped state.
       # This function does not block.
       #
-      def stopped
+      def stopped?
         Cproton.pn_messenger_stopped(@impl)
       end
 
@@ -389,7 +389,8 @@ module Qpid
         Cproton.pn_messenger_recv(@impl, limit)
       end
 
-      def receiving
+      # Returns true if the messenger is currently receiving data.
+      def receiving?
         Cproton.pn_messenger_receiving(@impl)
       end
 
