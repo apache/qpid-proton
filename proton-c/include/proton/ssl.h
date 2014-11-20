@@ -90,6 +90,12 @@ typedef enum {
   PN_SSL_RESUME_REUSED          /**< Session resumed from previous session. */
 } pn_ssl_resume_status_t;
 
+/** Tests for SSL implementation present
+ *
+ *  @return true if we support SSL, false if not
+ */
+PN_EXTERN bool pn_ssl_present( void );
+
 /** Create an SSL configuration domain
  *
  * This method allocates an SSL domain object.  This object is used to hold the SSL

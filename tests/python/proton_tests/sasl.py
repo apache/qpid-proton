@@ -29,7 +29,7 @@ class SaslTest(Test):
   def setup(self):
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
-    self.t2 = Transport()
+    self.t2 = Transport(Transport.SERVER)
     self.s2 = SASL(self.t2)
 
   def pump(self):
@@ -37,12 +37,10 @@ class SaslTest(Test):
 
   def testPipelined(self):
     self.s1.mechanisms("ANONYMOUS")
-    self.s1.client()
 
     assert self.s1.outcome is None
 
     self.s2.mechanisms("ANONYMOUS")
-    self.s2.server()
     self.s2.done(SASL.OK)
 
     out1 = self.t1.peek(1024)
@@ -60,13 +58,13 @@ class SaslTest(Test):
 
   def testSaslAndAmqpInSingleChunk(self):
     self.s1.mechanisms("ANONYMOUS")
-    self.s1.client()
+    self.s1.done(SASL.OK)
 
     self.s2.mechanisms("ANONYMOUS")
-    self.s2.server()
     self.s2.done(SASL.OK)
 
     # send the server's OK to the client
+    # This is still needed for the Java impl
     out2 = self.t2.peek(1024)
     self.t2.pop(len(out2))
     self.t1.push(out2)
@@ -106,9 +104,7 @@ class SaslTest(Test):
 
   def testChallengeResponse(self):
     self.s1.mechanisms("FAKE_MECH")
-    self.s1.client()
     self.s2.mechanisms("FAKE_MECH")
-    self.s2.server()
     self.pump()
     challenge = "Who goes there!"
     self.s2.send(challenge)
@@ -130,14 +126,12 @@ class SaslTest(Test):
 
   def testPipelined2(self):
     self.s1.mechanisms("ANONYMOUS")
-    self.s1.client()
 
     out1 = self.t1.peek(1024)
     self.t1.pop(len(out1))
     self.t2.push(out1)
 
     self.s2.mechanisms("ANONYMOUS")
-    self.s2.server()
     self.s2.done(SASL.OK)
     c2 = Connection()
     c2.open()
@@ -154,7 +148,6 @@ class SaslTest(Test):
     """ PROTON-235
     """
     self.s1.mechanisms("ANONYMOUS")
-    self.s1.client()
     assert self.s1.outcome is None
 
     # self.t1.trace(Transport.TRACE_FRM)
@@ -196,7 +189,6 @@ class SaslTest(Test):
     """Verify that the server (with SASL) correctly handles a client without SASL"""
     self.t1 = Transport()
     self.s2.mechanisms("ANONYMOUS")
-    self.s2.server()
     self.s2.allow_skip(True)
     self.pump()
     assert self.s2.outcome == SASL.SKIPPED

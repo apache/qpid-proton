@@ -84,14 +84,32 @@ typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
 
 /**
  * Factory for creating a transport.
- *
  * A transport is used by a connection to interface with the network.
  * There can only be one connection associated with a transport. See
  * pn_transport_bind().
  *
+ * Initially a transport is configured to be a client transport. Use pn_transport_set_server()
+ * to configure the transport as a server transport.
+ *
+ * A client transport initiates outgoing connections.
+ *
+ * A client transport must be configured with the protocol layers to use and cannot
+ * configure itself automatically.
+ *
+ * A server transport accepts incoming connections. It can automatically
+ * configure itself to include the various protocol layers depending on
+ * the incoming protocol headers.
+ *
  * @return pointer to new transport
  */
 PN_EXTERN pn_transport_t *pn_transport(void);
+
+/**
+ * Configure a transport as a server
+ *
+ * @param[in] transport a transport object
+ */
+PN_EXTERN void pn_transport_set_server(pn_transport_t *transport);
 
 /**
  * Free a transport object.

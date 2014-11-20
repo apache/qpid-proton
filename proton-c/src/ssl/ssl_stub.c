@@ -22,6 +22,7 @@
 #include <proton/ssl.h>
 #include <proton/error.h>
 #include <proton/transport.h>
+#include "engine/engine-internal.h"
 
 
 /** @file
@@ -30,6 +31,11 @@
  * This file contains stub implementations of the SSL/TLS API.  This implementation is
  * used if there is no SSL/TLS support in the system's environment.
  */
+
+bool pn_ssl_present(void)
+{
+  return false;
+}
 
 pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
@@ -50,15 +56,22 @@ void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
 {
 }
 
-ssize_t pn_ssl_input(pn_ssl_t *ssl, const char *bytes, size_t available)
+ssize_t pn_ssl_input(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
 {
   return PN_EOS;
 }
 
-ssize_t pn_ssl_output(pn_ssl_t *ssl, char *buffer, size_t max_size)
+ssize_t pn_ssl_output(pn_transport_t *transport, unsigned int layer, char *buffer, size_t max_size)
 {
   return PN_EOS;
 }
+
+const pn_io_layer_t ssl_layer = {
+    pn_ssl_input,
+    pn_ssl_output,
+    NULL,
+    NULL
+};
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size)
 {
@@ -103,6 +116,11 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 {
   return -1;
+}
+
+bool pn_ssl_allow_unsecured(pn_ssl_t *ssl)
+{
+  return true;
 }
 
 pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *s )
