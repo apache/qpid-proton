@@ -328,13 +328,13 @@ static void pni_listener_readable(pn_selectable_t *sel)
   pn_socket_t sock = pn_accept(ctx->messenger->io, pn_selectable_fd(sel), name, 1024);
 
   pn_transport_t *t = pn_transport();
+  pn_transport_set_server(t);
 
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
   pn_sasl_t *sasl = pn_sasl(t);
 
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_server(sasl);
   pn_sasl_done(sasl, PN_SASL_OK);
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
@@ -960,7 +960,6 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_sasl_plain(sasl, ctx->user, ctx->pass);
   } else {
     pn_sasl_mechanisms(sasl, "ANONYMOUS");
-    pn_sasl_client(sasl);
   }
 
   return 0;

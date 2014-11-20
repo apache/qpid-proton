@@ -865,13 +865,16 @@ def pn_delivery_settle(dlv):
   dlv.impl.settle()
 
 class pn_transport_wrapper:
-
   def __init__(self, impl):
     self.impl = impl
+    self.server = False
     self.condition = pn_condition()
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
+
+def pn_transport_set_server(trans):
+  trans.server = True;
 
 def pn_transport_get_max_frame(trans):
   return trans.impl.getMaxFrameSize()
