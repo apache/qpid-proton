@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
-require 'test/unit'
+require 'minitest/autorun'
 require 'qpid_proton'
 
-class SmokeTest < Test::Unit::TestCase
+class SmokeTest < Minitest::Test
 
   Messenger = Qpid::Proton::Messenger
   Message = Qpid::Proton::Message
@@ -29,8 +29,8 @@ class SmokeTest < Test::Unit::TestCase
 
     pump()
 
-    assert @client.stopped
-    assert @server.stopped
+    assert @client.stopped?
+    assert @server.stopped?
   end
 
   def testSmoke(count=10)
