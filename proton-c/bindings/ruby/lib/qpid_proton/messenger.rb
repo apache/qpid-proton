@@ -75,6 +75,7 @@ module Qpid # :nodoc:
       #
       def initialize(name = nil)
         @impl = Cproton.pn_messenger(name)
+        @interrupted = false
         @selectables = {}
         ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
       end
@@ -407,6 +408,7 @@ module Qpid # :nodoc:
       # originated the interrupt.
       #
       def interrupt
+        @interrupted = true
         Cproton.pn_messenger_interrupt(@impl)
       end
 
@@ -693,6 +695,132 @@ module Qpid # :nodoc:
 
       def valid_window?(window)
         !window.nil? && [Float, Fixnum].include?(window.class)
+      end
+
+      public
+
+
+      #--
+      # The following are class methods.
+      #++
+
+      # Receives messages from the provided instance of Messenger, and then
+      # calls the supplied block for each Message received. If no instance
+      # is provided then one is created using the provided list of options.
+      #
+      # This starts a new thread which will loop, waiting for and processing
+      # incoming messages.
+      #
+      # ==== Arguments
+      #
+      # * messenger - The instance of Messenger.
+      #
+      # ==== Options
+      #
+      # * :addresses - An array of addresses to which to subscribe. Addresses
+      #   are required if no Messenger was supplied.
+      #
+      # ==== Examples
+      #
+      #   # create a Messenger
+      #   messenger = Qpid::Proton::Messenger.new
+      #   # begin receiving messages
+      #   Qpid::Proton::Messenger.receive_and_call(messenger) do |message|
+      #      puts "Received: #{message.body}"
+      #   end
+      #
+      def self.receive_and_call(messenger, options = {}, &block)
+        # if the messenger wasn't created then create one
+        if messenger.nil?
+          # if no addresses were supplied then raise an exception
+          raise ArgumentError.new("no addresses") if options[:addresses].nil?
+          # if no block was supplied then raise an exception
+          raise ArgumentError.new("missing block") if block.nil?
+
+          messenger = Qpid::Proton::Messenger.new
+          Array(options[:addresses]).each do |address|
+            messenger.subscribe address
+          end
+        end
+
+        # set the messenger to passive mode
+        messenger.passive = true
+        messenger.start
+
+        Thread.new(messenger, block) do |messenger, &block|
+          read_array = []
+          write_array = []
+          selectables = {}
+
+          aborted = false
+
+          while !aborted do
+            # refresh the list of fds to be processed
+            sel = messenger.selectable
+            while !sel.nil?
+              if sel.terminal?
+                selectables.delete(sel.fileno)
+                read_array.delete(sel)
+                write_array.delete(sel)
+                sel.free
+              else
+                sel.capacity
+                sel.pending
+                if !sel.registered?
+                  read_array << sel
+                  write_array << sel
+                  selectables[sel.fileno] = sel
+                  sel.registered = true
+                end
+              end
+              sel = messenger.selectable
+            end
+
+            unless selectables.empty?
+              rarray = []; read_array.each {|fd| rarray << fd.to_io}
+              warray = []; write_array.each {|fd| warray << fd.to_io}
+
+              if messenger.deadline > 0.0
+                result = IO.select(rarray, warray, nil, messenger.deadline)
+              else
+                result = IO.select(rarray, warray)
+              end
+
+              unless result.nil? && result.empty?
+                result.flatten.each do |io|
+                  sel = selectables[io.fileno]
+
+                  sel.writable if sel.pending > 0
+                  sel.readable if sel.capacity > 0
+                end
+              end
+
+              messenger.receive(10)
+
+              # if this was interrupted then exit
+              messenger.instance_eval do
+                aborted = @interrupted
+                @interrupted = false
+              end
+
+              if !aborted
+                # process each message received
+                while messenger.incoming.nonzero?
+                  message = Qpid::Proton::Message.new
+                  messenger.get(message)
+                  yield message
+                end
+              end
+
+            end
+
+          end
+
+        end
+
+        # return the messenger
+        messenger
+
       end
 
     end
