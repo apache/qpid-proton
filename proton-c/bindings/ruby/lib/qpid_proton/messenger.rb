@@ -17,9 +17,9 @@
 # under the License.
 #
 
-module Qpid
+module Qpid # :nodoc:
 
-  module Proton
+  module Proton # :nodoc:
 
     # The +Messenger+ class defines a high level interface for
     # sending and receiving Messages. Every Messenger contains
