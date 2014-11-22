@@ -52,14 +52,23 @@ if (NOT PYTHON_SITEARCH_PACKAGES)
   set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
 endif()
 
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile cproton.py
-                              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile cproton.py
-                              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile proton.py
-                              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile proton.py
-                              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})")
+set (pysrc-generated cproton.py)
+set (pysrc proton.py)
+
+macro (py_compile directory files)
+  foreach (src_file ${files})
+    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile ${src_file}
+                                  WORKING_DIRECTORY ${directory})")
+    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile ${src_file}
+                                  WORKING_DIRECTORY ${directory})")
+    list(APPEND PYTHON_ARTIFACTS ${directory}/${src_file}
+      ${directory}/${src_file}c
+      ${directory}/${src_file}o)
+  endforeach (src_file)
+endmacro(py_compile)
+
+py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated})
+py_compile(${CMAKE_CURRENT_SOURCE_DIR} ${pysrc})
 
 find_program(EPYDOC_EXE epydoc)
 mark_as_advanced (EPYDOC_EXE)
@@ -75,12 +84,7 @@ if (EPYDOC_EXE)
            ${OPTIONAL_ARG})
 endif (EPYDOC_EXE)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton.py
-              ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyc
-              ${CMAKE_CURRENT_BINARY_DIR}/cproton.pyo
-              ${CMAKE_CURRENT_SOURCE_DIR}/proton.py
-              ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyc
-              ${CMAKE_CURRENT_SOURCE_DIR}/proton.pyo
+install(FILES ${PYTHON_ARTIFACTS}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
 install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
