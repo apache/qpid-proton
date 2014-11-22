@@ -279,6 +279,7 @@ set (qpid-proton-core
   src/object/map.c
   src/object/string.c
   src/object/iterator.c
+  src/object/record.c
 
   src/util.c
   src/url.c
