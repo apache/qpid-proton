@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'minitest/autorun'
+require 'test/unit'
 require 'proton_tests/interop.rb'
 require 'proton_tests/smoke.rb'

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'minitest/autorun'
+require 'test/unit'
 require 'qpid_proton'
 
 if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
@@ -12,7 +12,7 @@ if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
   end
 end
 
-class InteropTest < Minitest::Test
+class InteropTest < Test::Unit::TestCase
   Data = Qpid::Proton::Data
   Message = Qpid::Proton::Message
 
