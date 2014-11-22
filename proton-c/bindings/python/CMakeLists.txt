@@ -53,7 +53,7 @@ if (NOT PYTHON_SITEARCH_PACKAGES)
 endif()
 
 set (pysrc-generated cproton.py)
-set (pysrc proton.py)
+set (pysrc proton/__init__.py)
 
 macro (py_compile directory files)
   foreach (src_file ${files})
