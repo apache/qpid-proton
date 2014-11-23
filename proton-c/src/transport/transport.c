@@ -309,6 +309,7 @@ static void pn_transport_initialize(void *object)
   transport->scratch = pn_string(NULL);
   transport->disp = pn_dispatcher(0, transport);
   transport->connection = NULL;
+  transport->context = pn_record();
 
   for (int layer=0; layer<PN_IO_LAYER_CT; ++layer) {
     transport->io_layers[layer] = NULL;
@@ -431,6 +432,7 @@ static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
 
+  pn_free(transport->context);
   pn_ssl_free(transport);
   pn_sasl_free(transport);
   pn_dispatcher_free(transport->disp);
@@ -2134,10 +2136,16 @@ pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport)
 void pn_transport_set_context(pn_transport_t *transport, void *context)
 {
   assert(transport);
-  transport->context = context;
+  pn_record_set(transport->context, PN_LEGCTX, context);
 }
 
 void *pn_transport_get_context(pn_transport_t *transport)
+{
+  assert(transport);
+  return pn_record_get(transport->context, PN_LEGCTX);
+}
+
+pn_record_t *pn_transport_attachments(pn_transport_t *transport)
 {
   assert(transport);
   return transport->context;

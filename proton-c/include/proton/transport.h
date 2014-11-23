@@ -197,6 +197,7 @@ PN_EXTERN pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
 PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 
 /**
+ * @deprecated
  * Set a new application context for a transport object.
  *
  * The application context for a transport object may be retrieved using
@@ -206,6 +207,14 @@ PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
  * @param[in] context the application context
  */
 PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context);
+
+/**
+ * Get the attachments that are associated with a transport object.
+ *
+ * @param[in] transport the transport whose attachments are to be returned.
+ * @return the attachments for the transport object
+ */
+PN_EXTERN pn_record_t *pn_transport_attachments(pn_transport_t *transport);
 
 /**
  * Log a message using a transport's logging mechanism.

@@ -62,6 +62,7 @@ PN_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
 PN_EXTERN void pn_session_free(pn_session_t *session);
 
 /**
+ * @deprecated
  * Get the application context that is associated with a session
  * object.
  *
@@ -74,6 +75,7 @@ PN_EXTERN void pn_session_free(pn_session_t *session);
 PN_EXTERN void *pn_session_get_context(pn_session_t *session);
 
 /**
+ * @deprecated
  * Set a new application context for a session object.
  *
  * The application context for a session object may be retrieved
@@ -83,6 +85,14 @@ PN_EXTERN void *pn_session_get_context(pn_session_t *session);
  * @param[in] context the application context
  */
 PN_EXTERN void pn_session_set_context(pn_session_t *session, void *context);
+
+/**
+ * Get the attachments that are associated with a session object.
+ *
+ * @param[in] session the session whose attachments are to be returned.
+ * @return the attachments for the session object
+ */
+PN_EXTERN pn_record_t *pn_session_attachments(pn_session_t *session);
 
 /**
  * Get the endpoint state flags for a session.
