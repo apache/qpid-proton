@@ -1,5 +1,10 @@
 #!/usr/bin/env ruby
 
+if RUBY_VERSION < "1.9"
+require 'rubygems'
+end
+
+gem 'minitest', '= 4.7.0', '< 5.0'
 require 'test/unit'
 require 'proton_tests/interop.rb'
 require 'proton_tests/smoke.rb'
