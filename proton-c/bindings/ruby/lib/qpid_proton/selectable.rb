@@ -37,14 +37,6 @@ module Qpid # :nodoc:
         @impl = impl
         @io = nil
         @freed = false
-
-        ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
-      end
-
-      def self.finalize!(impl) # :nodoc:
-        proc {
-          impl.free
-        }
       end
 
       # Returns the underlying file descriptor.
@@ -56,11 +48,7 @@ module Qpid # :nodoc:
       end
 
       def to_io
-        if @io.nil?
-          fileno = self.fileno
-          @io = IO.new(fileno)
-        end
-        @io
+        @io ||= IO.new(fileno)
       end
 
       # The number of bytes the selectable is capable of consuming.
@@ -109,14 +97,15 @@ module Qpid # :nodoc:
       end
 
       def to_s
-        return super if @freed
-        "#{super} fileno=#{self.fileno} registered=#{self.registered?} terminal=#{self.terminal?}"
+        "fileno=#{self.fileno} registered=#{self.registered?} terminal=#{self.terminal?}"
       end
 
       def free
+        return if @freed
         @freed = true
         @messenger.unregister_selectable(fileno)
-        @messenger = nil
+        @io.close unless @io.nil?
+        Cproton.pn_selectable_free(@impl)
         @impl = nil
       end
 
