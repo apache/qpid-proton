@@ -908,7 +908,9 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   pn_condition_set_description(&transport->condition, buf);
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
-  pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  if (transport->trace & PN_TRACE_DRV) {
+    pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  }
   transport->done_processing = true;
   pni_close_tail(transport);
   return PN_ERR;
