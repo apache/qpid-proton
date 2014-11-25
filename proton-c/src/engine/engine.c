@@ -336,6 +336,7 @@ pn_record_t *pn_link_attachments(pn_link_t *link)
 void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
 {
   endpoint->type = (pn_endpoint_type_t) type;
+  endpoint->referenced = true;
   endpoint->state = PN_LOCAL_UNINIT | PN_REMOTE_UNINIT;
   endpoint->error = pn_error();
   pn_condition_init(&endpoint->condition);
@@ -371,6 +372,17 @@ static bool pni_post_final(pn_endpoint_t *endpoint, pn_event_type_t type)
   return false;
 }
 
+static void pni_free_children(pn_list_t *children)
+{
+  while (pn_list_size(children) > 0) {
+    pn_endpoint_t *endpoint = (pn_endpoint_t *) pn_list_get(children, 0);
+    assert(!endpoint->referenced);
+    pn_free(endpoint);
+  }
+
+  pn_free(children);
+}
+
 static void pn_connection_finalize(void *object)
 {
   pn_connection_t *conn = (pn_connection_t *) object;
@@ -380,9 +392,10 @@ static void pn_connection_finalize(void *object)
     return;
   }
 
+  pni_free_children(conn->sessions);
   pn_free(conn->context);
   pn_decref(conn->collector);
-  pn_free(conn->sessions);
+
   pn_free(conn->container);
   pn_free(conn->hostname);
   pn_free(conn->offered_capabilities);
@@ -713,6 +726,34 @@ pn_link_t *pn_link_next(pn_link_t *link, pn_state_t state)
   return NULL;
 }
 
+static void pn_session_incref(void *object)
+{
+  pn_session_t *session = (pn_session_t *) object;
+  if (!session->endpoint.referenced) {
+    session->endpoint.referenced = true;
+    pn_incref(session->connection);
+  } else {
+    pn_object_incref(object);
+  }
+}
+
+static bool pni_preserve_child(pn_endpoint_t *endpoint, pn_endpoint_t *parent)
+{
+  if (!endpoint->freed && endpoint->referenced) {
+    pn_object_incref(endpoint);
+    endpoint->referenced = false;
+    pn_decref(parent);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static bool pni_connection_live(pn_connection_t *conn)
+{
+  return pn_refcount(conn) > 1;
+}
+
 static void pn_session_finalize(void *object)
 {
   pn_session_t *session = (pn_session_t *) object;
@@ -729,16 +770,28 @@ static void pn_session_finalize(void *object)
     return;
   }
 
+  if (pni_connection_live(session->connection) &&
+      pni_preserve_child(endpoint, &session->connection->endpoint)) {
+    return;
+  }
+
   pn_free(session->context);
-  pn_free(session->links);
+  pni_free_children(session->links);
   pn_endpoint_tini(endpoint);
   pn_delivery_map_free(&session->state.incoming);
   pn_delivery_map_free(&session->state.outgoing);
   pn_free(session->state.local_handles);
   pn_free(session->state.remote_handles);
-  pn_decref(session->connection);
+  pn_remove_session(session->connection, session);
+  if (endpoint->referenced) {
+    pn_decref(session->connection);
+  }
 }
 
+#define pn_session_new pn_object_new
+#define pn_session_refcount pn_object_refcount
+#define pn_session_decref pn_object_decref
+#define pn_session_reify pn_object_reify
 #define pn_session_initialize NULL
 #define pn_session_hashcode NULL
 #define pn_session_compare NULL
@@ -747,7 +800,9 @@ static void pn_session_finalize(void *object)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
-  static const pn_class_t clazz = PN_CLASS(pn_session);
+#define pn_session_free pn_object_free
+  static const pn_class_t clazz = PN_METACLASS(pn_session);
+#undef pn_session_free
   pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
   if (!ssn) return NULL;
 
@@ -836,6 +891,22 @@ void pn_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->filter = pn_data(0);
 }
 
+static void pn_link_incref(void *object)
+{
+  pn_link_t *link = (pn_link_t *) object;
+  if (!link->endpoint.referenced) {
+    link->endpoint.referenced = true;
+    pn_incref(link->session);
+  } else {
+    pn_object_incref(object);
+  }
+}
+
+static bool pni_session_live(pn_session_t *ssn)
+{
+  return pni_connection_live(ssn->connection) || pn_refcount(ssn) > 1;
+}
+
 static void pn_link_finalize(void *object)
 {
   pn_link_t *link = (pn_link_t *) object;
@@ -849,6 +920,11 @@ static void pn_link_finalize(void *object)
     return;
   }
 
+  if (pni_session_live(link->session) &&
+      pni_preserve_child(endpoint, &link->session->endpoint)) {
+    return;
+  }
+
   pn_free(link->context);
   pn_terminus_free(&link->source);
   pn_terminus_free(&link->target);
@@ -856,9 +932,15 @@ static void pn_link_finalize(void *object)
   pn_terminus_free(&link->remote_target);
   pn_free(link->name);
   pn_endpoint_tini(endpoint);
-  pn_decref(link->session);
+  pn_remove_link(link->session, link);
+  if (endpoint->referenced) {
+    pn_decref(link->session);
+  }
 }
 
+#define pn_link_refcount pn_object_refcount
+#define pn_link_decref pn_object_decref
+#define pn_link_reify pn_object_reify
 #define pn_link_initialize NULL
 #define pn_link_hashcode NULL
 #define pn_link_compare NULL
@@ -866,7 +948,11 @@ static void pn_link_finalize(void *object)
 
 pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_link);
+#define pn_link_new pn_object_new
+#define pn_link_free pn_object_free
+  static const pn_class_t clazz = PN_METACLASS(pn_link);
+#undef pn_link_new
+#undef pn_link_free
   pn_link_t *link = (pn_link_t *) pn_class_new(&clazz, sizeof(pn_link_t));
 
   pn_endpoint_init(&link->endpoint, type, session->connection);

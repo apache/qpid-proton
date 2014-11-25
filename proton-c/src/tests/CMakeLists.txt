@@ -44,4 +44,4 @@ pn_add_c_test (c-object-tests object.c)
 pn_add_c_test (c-message-tests message.c)
 pn_add_c_test (c-engine-tests engine.c)
 pn_add_c_test (c-parse-url-tests parse-url.c)
-
+pn_add_c_test (c-refcount-tests refcount.c)

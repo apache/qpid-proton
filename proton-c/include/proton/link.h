@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/terminus.h>
 #include <stddef.h>
 #include <sys/types.h>
 

@@ -51,6 +51,7 @@ struct pn_endpoint_t {
   pn_endpoint_t *transport_prev;
   bool modified;
   bool freed;
+  bool referenced;
   bool posted_final;
 };
 
