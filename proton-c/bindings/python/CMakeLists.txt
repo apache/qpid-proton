@@ -55,20 +55,20 @@ endif()
 set (pysrc-generated cproton.py)
 set (pysrc proton/__init__.py)
 
-macro (py_compile directory files)
+macro (py_compile directory files artifacts)
   foreach (src_file ${files})
     install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile ${src_file}
                                   WORKING_DIRECTORY ${directory})")
     install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile ${src_file}
                                   WORKING_DIRECTORY ${directory})")
-    list(APPEND PYTHON_ARTIFACTS ${directory}/${src_file}
+    list(APPEND ${artifacts} ${directory}/${src_file}
       ${directory}/${src_file}c
       ${directory}/${src_file}o)
   endforeach (src_file)
 endmacro(py_compile)
 
-py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated})
-py_compile(${CMAKE_CURRENT_SOURCE_DIR} ${pysrc})
+py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
+py_compile(${CMAKE_CURRENT_SOURCE_DIR} ${pysrc} PROTON_ARTIFACTS)
 
 find_program(EPYDOC_EXE epydoc)
 mark_as_advanced (EPYDOC_EXE)
@@ -84,8 +84,11 @@ if (EPYDOC_EXE)
            ${OPTIONAL_ARG})
 endif (EPYDOC_EXE)
 
-install(FILES ${PYTHON_ARTIFACTS}
+install(FILES ${CPROTON_ARTIFACTS}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+        COMPONENT Python)
+install(FILES ${PROTON_ARTIFACTS}
+        DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
         COMPONENT Python)
 install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
