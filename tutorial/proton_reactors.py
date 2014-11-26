@@ -417,13 +417,15 @@ def _send_msg(self, msg, tag=None, handler=None, transaction=None):
 
 
 class Transaction(object):
-    def __init__(self, txn_ctrl, handler):
+    def __init__(self, txn_ctrl, handler, settle_before_discharge=False):
         self.txn_ctrl = txn_ctrl
         self.handler = handler
         self.id = None
         self._declare = None
         self._discharge = None
         self.failed = False
+        self._pending = []
+        self.settle_before_discharge = settle_before_discharge
         self.declare()
 
     def commit(self):
@@ -444,6 +446,27 @@ class Transaction(object):
         delivery.transaction = self
         return delivery
 
+    def accept(self, delivery):
+        self.update(delivery, PN_ACCEPTED)
+        if self.settle_before_discharge:
+            delivery.settle()
+        else:
+            self._pending.append(delivery)
+
+    def update(self, delivery, state=None):
+        if state:
+            delivery.local.data = [self.id, Described(ulong(state), [])]
+            delivery.update(0x34)
+
+    def _release_pending(self):
+        for d in self._pending:
+            d.update(Delivery.RELEASED)
+            d.settle()
+        self._clear_pending()
+
+    def _clear_pending(self):
+        self._pending = []
+
     def handle_outcome(self, event):
         if event.delivery == self._declare:
             if event.delivery.remote.data:
@@ -458,12 +481,14 @@ class Transaction(object):
             if event.delivery.remote_state == Delivery.REJECTED:
                 if not self.failed:
                     self.handler.on_transaction_commit_failed(event)
+                    self._release_pending() # make this optional?
             else:
                 if self.failed:
                     self.handler.on_transaction_aborted(event)
+                    self._release_pending()
                 else:
                     self.handler.on_transaction_committed(event)
-
+            self._clear_pending()
 
 class LinkOption(object):
     def apply(self, link): pass
@@ -554,12 +579,12 @@ class MessagingContext(object):
     def create_session(self):
         return MessageContext(conn=None, ssn=self._new_ssn())
 
-    def declare_transaction(self, handler=None):
+    def declare_transaction(self, handler=None, settle_before_discharge=False):
         if not self.txn_ctrl:
             self.txn_ctrl = self.create_sender(None, name="txn-ctrl")
             self.txn_ctrl.target.type = Terminus.COORDINATOR
             self.txn_ctrl.target.capabilities.put_object(symbol(u'amqp:local-transactions'))
-        return Transaction(self.txn_ctrl, handler)
+        return Transaction(self.txn_ctrl, handler, settle_before_discharge)
 
     def close(self):
         if self.ssn:
