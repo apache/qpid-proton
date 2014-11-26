@@ -24,6 +24,10 @@
 
 #include "dispatcher/dispatcher.h"
 
+#define AMQP_FRAME_TYPE (0)
+#define SASL_FRAME_TYPE (1)
+
+
 /* AMQP actions */
 int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload);
 int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload);
