@@ -363,8 +363,8 @@ class MessagingHandler(Handler, Acking):
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
 
 class TransactionalAcking(object):
-    def accept(self, delivery, transaction, settle=True):
-        transaction.accept(delivery, settle)
+    def accept(self, delivery, transaction):
+        transaction.accept(delivery)
 
 class TransactionHandler(OutgoingMessageHandler, TransactionalAcking):
     def __init__(self, auto_settle=True, delegate=None):

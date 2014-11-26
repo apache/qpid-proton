@@ -20,8 +20,8 @@
 
 import sys
 import threading
-from proton_reactors import ApplicationEvent, EventLoop
-from proton_handlers import TransactionalClientHandler
+from proton.reactors import ApplicationEvent, EventLoop
+from proton.handlers import TransactionalClientHandler
 
 class TxRecv(TransactionalClientHandler):
     def __init__(self):

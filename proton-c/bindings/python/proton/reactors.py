@@ -21,7 +21,7 @@ from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Ur
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
-from proton_handlers import nested_handlers, ScopedHandler
+from proton.handlers import nested_handlers, ScopedHandler
 
 
 class AmqpSocket(object):

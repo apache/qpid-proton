@@ -19,7 +19,7 @@
 #
 
 import time
-from proton_reactors import EventLoop, Handler
+from proton.reactors import EventLoop, Handler
 
 class Recurring(Handler):
     def __init__(self, period):

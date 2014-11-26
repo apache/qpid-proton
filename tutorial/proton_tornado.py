@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton_reactors import ApplicationEvent, EventLoop, StartEvent
+from proton.reactors import ApplicationEvent, EventLoop, StartEvent
 import tornado.ioloop
 
 class TornadoLoop(EventLoop):

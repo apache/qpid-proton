@@ -19,8 +19,8 @@
 #
 
 from proton import Message
-from proton_reactors import EventLoop
-from proton_handlers import MessagingHandler, TransactionHandler
+from proton.reactors import EventLoop
+from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRequest(TransactionHandler):
     def __init__(self, response, sender, request_delivery, context):

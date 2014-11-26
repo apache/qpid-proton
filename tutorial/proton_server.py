@@ -18,8 +18,8 @@
 #
 
 from proton import Message
-from proton_reactors import EventLoop
-from proton_handlers import FlowController, IncomingMessageHandler
+from proton.reactors import EventLoop
+from proton.handlers import FlowController, IncomingMessageHandler
 
 class Server(IncomingMessageHandler):
     def __init__(self, host, address):

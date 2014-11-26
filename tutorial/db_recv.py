@@ -18,7 +18,8 @@
 # under the License.
 #
 
-from proton_events import ApplicationEvent, MessagingHandler, EventLoop
+from proton.handlers import MessagingHandler
+from proton.reactors import ApplicationEvent, EventLoop
 from db_common import Db
 
 class Recv(MessagingHandler):

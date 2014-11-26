@@ -19,8 +19,8 @@
 #
 
 from proton import Message
-from proton_utils import BlockingConnection
-from proton_handlers import IncomingMessageHandler
+from proton.utils import BlockingConnection
+from proton.handlers import IncomingMessageHandler
 
 class HelloWorldReceiver(IncomingMessageHandler):
     def on_message(self, event):

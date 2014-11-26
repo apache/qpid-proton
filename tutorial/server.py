@@ -19,8 +19,8 @@
 #
 
 from proton import Message
-from proton_handlers import MessagingHandler
-from proton_reactors import EventLoop
+from proton.handlers import MessagingHandler
+from proton.reactors import EventLoop
 
 class Server(MessagingHandler):
     def __init__(self, host, address):

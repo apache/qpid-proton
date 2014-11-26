@@ -18,8 +18,8 @@
 #
 import Queue, socket, time
 from proton import ConnectionException, Endpoint, Handler, Message, Url
-from proton_reactors import AmqpSocket, Events, MessagingContext, SelectLoop, send_msg
-from proton_handlers import ScopedHandler
+from proton.reactors import AmqpSocket, Events, MessagingContext, SelectLoop, send_msg
+from proton.handlers import ScopedHandler
 
 class BlockingLink(object):
     def __init__(self, connection, link):

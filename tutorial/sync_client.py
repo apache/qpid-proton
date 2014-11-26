@@ -25,8 +25,8 @@ Demonstrates the client side of the synchronous request-response pattern
 """
 
 from proton import Message, Url, ConnectionException, Timeout
-from proton_utils import BlockingConnection
-from proton_handlers import IncomingMessageHandler
+from proton.utils import BlockingConnection
+from proton.handlers import IncomingMessageHandler
 import sys
 
 class SyncRequestClient(IncomingMessageHandler):

@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton_handlers import MessagingHandler
+from proton.handlers import MessagingHandler
 from proton_tornado import TornadoLoop
 
 class HelloWorld(MessagingHandler):

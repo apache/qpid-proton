@@ -19,8 +19,8 @@
 #
 
 from proton import Message
-from proton_reactors import EventLoop
-from proton_handlers import TransactionalClientHandler
+from proton.reactors import EventLoop
+from proton.handlers import TransactionalClientHandler
 
 class TxSend(TransactionalClientHandler):
     def __init__(self, messages, batch_size):

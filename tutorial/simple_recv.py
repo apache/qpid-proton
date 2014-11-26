@@ -18,8 +18,8 @@
 # under the License.
 #
 
-from proton_handlers import MessagingHandler
-from proton_reactors import EventLoop
+from proton.handlers import MessagingHandler
+from proton.reactors import EventLoop
 
 class Recv(MessagingHandler):
     def __init__(self, host, address):

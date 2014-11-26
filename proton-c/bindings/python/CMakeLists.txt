@@ -53,9 +53,14 @@ if (NOT PYTHON_SITEARCH_PACKAGES)
 endif()
 
 set (pysrc-generated cproton.py)
-set (pysrc proton/__init__.py)
+set (pysrc
+    proton/__init__.py
+    proton/handlers.py
+    proton/reactors.py
+    proton/utils.py
+    )
 
-macro (py_compile directory files artifacts)
+macro (py_compile artifacts directory files)
   foreach (src_file ${files})
     install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile ${src_file}
                                   WORKING_DIRECTORY ${directory})")
@@ -67,8 +72,13 @@ macro (py_compile directory files artifacts)
   endforeach (src_file)
 endmacro(py_compile)
 
-py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
-py_compile(${CMAKE_CURRENT_SOURCE_DIR} ${pysrc} PROTON_ARTIFACTS)
+py_compile(CPROTON_ARTIFACTS ${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated})
+#FIXME: can't get following to work; only appends artefacts for first in list
+#py_compile(PROTON_ARTIFACTS ${CMAKE_CURRENT_SOURCE_DIR} ${pysrc})
+py_compile(PROTON_ARTIFACTS ${CMAKE_CURRENT_SOURCE_DIR} proton/__init__.py)
+py_compile(PROTON_ARTIFACTS ${CMAKE_CURRENT_SOURCE_DIR} proton/handlers.py)
+py_compile(PROTON_ARTIFACTS ${CMAKE_CURRENT_SOURCE_DIR} proton/reactors.py)
+py_compile(PROTON_ARTIFACTS ${CMAKE_CURRENT_SOURCE_DIR} proton/utils.py)
 
 find_program(EPYDOC_EXE epydoc)
 mark_as_advanced (EPYDOC_EXE)
