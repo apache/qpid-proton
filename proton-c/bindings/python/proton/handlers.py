@@ -23,7 +23,10 @@ from proton import Message, Handler, ProtonException, Transport, TransportExcept
 from select import select
 
 class FlowController(Handler):
-
+    """
+    A handler that controls a configured credit window for associated
+    receivers.
+    """
     def __init__(self, window=1):
         self.window = window
 
@@ -63,7 +66,12 @@ def add_nested_handler(handler, nested):
         handler.handlers = [nested]
 
 class ScopedHandler(Handler):
-
+    """
+    An internal handler that checks for handlers scoped to the engine
+    objects an event relates to. E.g it allows delivery, link, session
+    or connection scoped handlers that will only be called with events
+    for the object to which they are scoped.
+    """
     scopes = {
         "pn_connection": ["connection"],
         "pn_session": ["session", "connection"],
@@ -82,6 +90,10 @@ class ScopedHandler(Handler):
             h(event)
 
 class OutgoingMessageHandler(Handler):
+    """
+    A utility for simpler and more intuitive handling of delivery
+    events related to outgoing i.e. sent messages.
+    """
     def __init__(self, auto_settle=True, delegate=None):
         self.auto_settle = auto_settle
         self.delegate = delegate
@@ -162,6 +174,11 @@ class Acking(object):
         delivery.settle()
 
 class IncomingMessageHandler(Handler, Acking):
+    """
+    A utility for simpler and more intuitive handling of delivery
+    events related to incoming i.e. received messages.
+    """
+
     def __init__(self, auto_accept=True, delegate=None):
         self.delegate = delegate
         self.auto_accept = auto_accept
@@ -191,6 +208,18 @@ class IncomingMessageHandler(Handler, Acking):
             dispatch(self.delegate, 'on_settled', event)
 
 class EndpointStateHandler(Handler):
+    """
+    A utility that exposes 'endpoint' events i.e. the open/close for
+    links, sessions and connections in a more intuitive manner. A
+    XXX_opened method will be called when both local and remote peers
+    have opened the link, session or connection. This can be used to
+    confirm a locally initiated action for example. A XXX_opening
+    method will be called when the remote peer has requested an open
+    that was not initiated locally. By default this will simply open
+    locally, which then triggers the XXX_opened call. The same applies
+    to close.
+    """
+
     def __init__(self, peer_close_is_error=False, delegate=None):
         self.delegate = delegate
         self.peer_close_is_error = peer_close_is_error
@@ -351,6 +380,11 @@ class EndpointStateHandler(Handler):
             self.on_link_error(event)
 
 class MessagingHandler(Handler, Acking):
+    """
+    A general purpose handler that makes the proton-c events somewhat
+    simpler to deal with and.or avoids repetitive tasks for common use
+    cases.
+    """
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
         # FlowController if used needs to see event before

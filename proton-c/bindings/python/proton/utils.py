@@ -49,6 +49,9 @@ class BlockingReceiver(BlockingLink):
         if credit: receiver.flow(credit)
 
 class BlockingConnection(Handler):
+    """
+    A synchronous style connection wrapper.
+    """
     def __init__(self, url, timeout=None):
         self.timeout = timeout
         self.events = Events(ScopedHandler())

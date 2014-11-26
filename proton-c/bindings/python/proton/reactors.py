@@ -23,8 +23,11 @@ from proton import Message, Handler, ProtonException, Transport, TransportExcept
 from select import select
 from proton.handlers import nested_handlers, ScopedHandler
 
-
 class AmqpSocket(object):
+    """
+    Associates a transport with a connection and a socket and can be
+    used in an io loop to track the io for an AMQP 1.0 connection.
+    """
 
     def __init__(self, conn, sock, events, heartbeat=None):
         self.events = events
@@ -152,7 +155,12 @@ class AmqpSocket(object):
         if t: return t - time.time()
         else: return None
 
-class Acceptor:
+class AmqpAcceptor:
+    """
+    Listens for incoming sockets, creates an AmqpSocket for them and
+    adds that to the list of tracked 'selectables'. The acceptor can
+    itself be added to an io loop.
+    """
 
     def __init__(self, events, loop, host, port):
         self.events = events
@@ -192,7 +200,13 @@ class Acceptor:
     def removed(self): pass
     def tick(self): return None
 
+
 class EventInjector(object):
+    """
+    Can be added to an io loop to allow events to be triggered by an
+    external thread but handled on the event thread associated with
+    the loop.
+    """
     def __init__(self, events):
         self.events = events
         self.queue = Queue.Queue()
@@ -258,11 +272,19 @@ class Events(object):
         return self.collector.peek() == None
 
 class ExtendedEventType(object):
+    """
+    Event type identifier for events defined outside the proton-c
+    library
+    """
     def __init__(self, name):
         self.name = name
         self.method = "on_%s" % name
 
 class ApplicationEvent(Event):
+    """
+    Application defined event, which can optionally be associated with
+    an engine object and or an arbitrary subject
+    """
     def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
         self.type = ExtendedEventType(typename)
         self.subject = subject
@@ -293,6 +315,9 @@ class StartEvent(ApplicationEvent):
         self.reactor = reactor
 
 class ScheduledEvents(Events):
+    """
+    Support for timed events
+    """
     def __init__(self, *handlers):
         super(ScheduledEvents, self).__init__(*handlers)
         self._events = []
@@ -324,7 +349,9 @@ def _min(a, b):
     else: return b
 
 class SelectLoop(object):
-
+    """
+    An io loop based on select()
+    """
     def __init__(self, events):
         self.events = events
         self.selectables = []
@@ -417,6 +444,9 @@ def _send_msg(self, msg, tag=None, handler=None, transaction=None):
 
 
 class Transaction(object):
+    """
+    Class to track state of an AMQP 1.0 transaction.
+    """
     def __init__(self, txn_ctrl, handler, settle_before_discharge=False):
         self.txn_ctrl = txn_ctrl
         self.handler = handler
@@ -491,8 +521,21 @@ class Transaction(object):
             self._clear_pending()
 
 class LinkOption(object):
-    def apply(self, link): pass
-    def test(self, link): return True
+    """
+    Abstract interface for link configuration options
+    """
+    def apply(self, link):
+        """
+        Subclasses will implement any configuration logic in this
+        method
+        """
+        pass
+    def test(self, link):
+        """
+        Subclasses can override this to selectively apply an option
+        e.g. based on some link criteria
+        """
+        return True
 
 class AtMostOnce(LinkOption):
     def apply(self, link):
@@ -519,6 +562,9 @@ class Filter(ReceiverOption):
         receiver.source.filter.put_dict(self.filter_set)
 
 class Selector(Filter):
+    """
+    Configures a link with a message selector filter
+    """
     def __init__(self, value, name='selector'):
         super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
 
@@ -532,6 +578,11 @@ def _apply_link_options(options, link):
 
 
 class MessagingContext(object):
+    """
+    A context for creating links. This allows the user to ignore
+    sessions unless they explicitly want to control them. Additionally
+    provides support for transactional messaging.
+    """
     def __init__(self, conn, handler=None, ssn=None):
         self.conn = conn
         if handler:
@@ -614,6 +665,10 @@ class MessagingContext(object):
             self.conn.close()
 
 class Connector(Handler):
+    """
+    Internal handler that triggers the necessary socket connect for an
+    opened connection.
+    """
     def attach_to(self, loop):
         self.loop = loop
 
@@ -648,6 +703,10 @@ class Connector(Handler):
             self._connect(event.connection)
 
 class Backoff(object):
+    """
+    A reconnect strategy involving an increasing delay between
+    retries, up to a maximum or 10 seconds.
+    """
     def __init__(self):
         self.delay = 0
 
@@ -708,7 +767,7 @@ class EventLoop(object):
 
     def listen(self, url):
         host, port = Urls([url]).next()
-        return Acceptor(self.events, self, host, port)
+        return AmqpAcceptor(self.events, self, host, port)
 
     def schedule(self, deadline, connection=None, session=None, link=None, delivery=None, subject=None):
         self.events.schedule(deadline, ApplicationEvent("timer", connection, session, link, delivery, subject))
