@@ -1,4 +1,4 @@
-#
+#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +15,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+#++
 
 module Qpid # :nodoc:
 
@@ -31,7 +31,7 @@ module Qpid # :nodoc:
       # exception then we'll treat it as binary.
       if RUBY_VERSION >= "1.9"
         return true if (value.encoding == "UTF-8" ||
-                        value.force_encoding("UTF-8").valid_encoding?)
+                        value.encode("UTF-8").valid_encoding?)
 
         return false
       else

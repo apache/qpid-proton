@@ -448,7 +448,7 @@ sub set_body {
     # if no body type was defined, then attempt to infer what it should
     # be, which is going to be a best guess
     if (!defined($body_type)) {
-        if (qpid::proton::is_num($body)) {
+        if (qpid::proton::utils::is_num($body)) {
             if (qpid::proton::is_float($body)) {
                 $body_type = qpid::proton::FLOAT;
             } else {

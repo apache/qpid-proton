@@ -1,4 +1,4 @@
-#
+#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +15,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+#++
 
 module Qpid # :nodoc:
 
@@ -110,8 +110,11 @@ module Qpid # :nodoc:
                                                            UTFString,
                                                            BinaryString])
 
-    class << STRING
+    class << STRING # :nodoc:
       def put(data, value)
+        # if we have a symbol then convert it to a string
+        value = value.to_s if value.is_a?(Symbol)
+
         isutf = false
 
         if value.is_a?(Qpid::Proton::UTFString)
@@ -141,7 +144,7 @@ module Qpid # :nodoc:
     LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array], "get_array")
     MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
 
-    class << MAP
+    class << MAP # :nodoc:
       def put(data, map)
         data.put_map
         data.enter

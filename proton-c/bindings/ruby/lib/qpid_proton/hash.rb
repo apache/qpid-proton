@@ -1,4 +1,4 @@
-#
+#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,14 +15,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+#++
 
 #--
 # Patch the Hash class to provide methods for adding its contents
 # to a Qpid::Proton::Data instance.
 #++
 
-class Hash
+class Hash # :nodoc:
 
   # Places the contents of the hash into the specified data object.
   #

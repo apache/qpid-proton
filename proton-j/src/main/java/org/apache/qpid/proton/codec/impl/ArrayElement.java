@@ -24,6 +24,7 @@ package org.apache.qpid.proton.codec.impl;
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.amqp.DescribedType;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.codec.Data;
 
 class ArrayElement extends AbstractElement<Object[]>
@@ -157,6 +158,18 @@ class ArrayElement extends AbstractElement<Object[]>
             {
                 rVal[i++] = new DescribedTypeImpl(descriptor, element.getValue());
                 element = element.next();
+            }
+            return rVal;
+        }
+        else if(_arrayType == Data.DataType.SYMBOL)
+        {
+            Symbol[] rVal = new Symbol[(int) count()];
+            SymbolElement element = (SymbolElement) _first;
+            int i = 0;
+            while (element!=null)
+            {
+                rVal[i++] = element.getValue();
+                element = (SymbolElement) element.next();
             }
             return rVal;
         }

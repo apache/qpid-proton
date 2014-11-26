@@ -23,6 +23,7 @@
 
 package org.apache.qpid.proton.amqp.messaging;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 
@@ -30,6 +31,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 public final class Rejected
       implements DeliveryState, Outcome
 {
+    public static final Symbol DESCRIPTOR_SYMBOL = Symbol.valueOf("amqp:rejected:list");
 
     private ErrorCondition _error;
 

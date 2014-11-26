@@ -60,7 +60,6 @@
 static int ssl_initialized;
 static int ssl_ex_data_index;
 
-typedef enum { UNKNOWN_CONNECTION, SSL_CONNECTION, CLEAR_CONNECTION } connection_mode_t;
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
 struct pn_ssl_domain_t {
@@ -86,10 +85,7 @@ struct pn_ssl_domain_t {
 };
 
 
-struct pn_ssl_t {
-
-  pn_transport_t   *transport;
-  pn_io_layer_t    *io_layer;
+struct pni_ssl_t {
   pn_ssl_domain_t  *domain;
   const char    *session_id;
   const char *peer_hostname;
@@ -119,6 +115,18 @@ struct pn_ssl_t {
   bool write_blocked;   // SSL blocked until data is written to network
 };
 
+static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
+{
+    // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+    return ((pn_transport_t *)ssl);
+}
+
+static inline pni_ssl_t *get_ssl_internal(pn_ssl_t *ssl)
+{
+    // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+    return ssl ? ((pn_transport_t *)ssl)->ssl : NULL;
+}
+
 struct pn_ssl_session_t {
   const char       *id;
   SSL_SESSION      *session;
@@ -134,61 +142,59 @@ struct pn_ssl_session_t {
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
-static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_data, size_t len);
-static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *input_data, size_t len);
-static ssize_t process_input_unknown( pn_io_layer_t *io_layer, const char *input_data, size_t len);
-static ssize_t process_output_unknown( pn_io_layer_t *io_layer, char *input_data, size_t len);
-static ssize_t process_input_done(pn_io_layer_t *io_layer, const char *input_data, size_t len);
-static ssize_t process_output_done(pn_io_layer_t *io_layer, char *input_data, size_t len);
-static connection_mode_t check_for_ssl_connection( const char *data, size_t len );
-static int init_ssl_socket( pn_ssl_t * );
-static void release_ssl_socket( pn_ssl_t * );
+static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
+static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
+static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
+static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
+static int init_ssl_socket(pn_transport_t *, pni_ssl_t *);
+static void release_ssl_socket( pni_ssl_t * );
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
-static size_t buffered_output( pn_io_layer_t *io_layer );
-static size_t buffered_input( pn_io_layer_t *io_layer );
+static size_t buffered_output( pn_transport_t *transport );
 
 // @todo: used to avoid littering the code with calls to printf...
-static void _log_error(pn_ssl_t *ssl, const char *fmt, ...)
+static void ssl_log(pn_transport_t *transport, const char *fmt, ...)
 {
-  va_list ap;
-  va_start(ap, fmt);
-  pn_transport_vlogf(ssl ? ssl->transport : NULL, fmt, ap);
-  va_end(ap);
-}
-
-// @todo: used to avoid littering the code with calls to printf...
-static void _log(pn_ssl_t *ssl, const char *fmt, ...)
-{
-  if (PN_TRACE_DRV & ssl->trace) {
+  if (PN_TRACE_DRV & transport->ssl->trace) {
     va_list ap;
     va_start(ap, fmt);
-    pn_transport_vlogf(ssl->transport, fmt, ap);
+    pn_transport_vlogf(transport, fmt, ap);
     va_end(ap);
   }
 }
 
-// log an error and dump the SSL error stack
-static void _log_ssl_error(pn_ssl_t *ssl, const char *fmt, ...)
+static void ssl_log_flush(pn_transport_t* transport)
 {
   char buf[128];        // see "man ERR_error_string_n()"
-  va_list ap;
-
-  if (fmt) {
-    va_start(ap, fmt);
-    pn_transport_vlogf(ssl ? ssl->transport : NULL, fmt, ap);
-    va_end(ap);
-  }
-
   unsigned long err = ERR_get_error();
   while (err) {
     ERR_error_string_n(err, buf, sizeof(buf));
-    _log_error(ssl, "%s", buf);
+    pn_transport_logf(transport, "%s", buf);
     err = ERR_get_error();
   }
 }
 
-static void _log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
+// log an error and dump the SSL error stack
+static void ssl_log_error(const char *fmt, ...)
+{
+  va_list ap;
+
+  if (fmt) {
+    va_start(ap, fmt);
+    pn_transport_vlogf(NULL, fmt, ap);
+    va_end(ap);
+  }
+
+  char buf[128];        // see "man ERR_error_string_n()"
+  unsigned long err = ERR_get_error();
+  while (err) {
+    ERR_error_string_n(err, buf, sizeof(buf));
+    pn_transport_logf(NULL, "%s", buf);
+    err = ERR_get_error();
+  }
+}
+
+static void ssl_log_clear_data(pni_ssl_t *ssl, const char *data, size_t len)
 {
   if (PN_TRACE_RAW & ssl->trace) {
     fprintf(stderr, "SSL decrypted data: \"");
@@ -198,9 +204,10 @@ static void _log_clear_data(pn_ssl_t *ssl, const char *data, size_t len)
 }
 
 // unrecoverable SSL failure occured, notify transport and generate error code.
-static int ssl_failed(pn_ssl_t *ssl)
+static int ssl_failed(pn_transport_t *transport)
 {
-    SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+  pni_ssl_t *ssl = transport->ssl;
+  SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   ssl->ssl_closed = true;
   ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   // fake a shutdown so the i/o processing code will close properly
@@ -211,8 +218,8 @@ static int ssl_failed(pn_ssl_t *ssl)
   if (ssl_err) {
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
   }
-  _log_ssl_error(ssl, NULL);    // spit out any remaining errors to the log file
-  pn_do_error(ssl->transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
+  ssl_log_flush(transport);    // spit out any remaining errors to the log file
+  pn_do_error(transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
   return PN_EOS;
 }
 
@@ -283,23 +290,24 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
   SSL *ssn = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
   if (!ssn) {
-    _log_error(NULL, "Error: unexpected error - SSL session info not available for peer verify!");
+    pn_transport_logf(NULL, "Error: unexpected error - SSL session info not available for peer verify!");
     return 0;  // fail connection
   }
 
-  pn_ssl_t *ssl = (pn_ssl_t *)SSL_get_ex_data(ssn, ssl_ex_data_index);
-  if (!ssl) {
-    _log_error(NULL, "Error: unexpected error - SSL context info not available for peer verify!");
+  pn_transport_t *transport = (pn_transport_t *)SSL_get_ex_data(ssn, ssl_ex_data_index);
+  if (!transport) {
+    pn_transport_logf(NULL, "Error: unexpected error - SSL context info not available for peer verify!");
     return 0;  // fail connection
   }
 
+  pni_ssl_t *ssl = transport->ssl;
   if (ssl->domain->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
   if (!ssl->peer_hostname) {
-    _log_error(ssl, "Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
+    pn_transport_logf(transport, "Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
     return 0;  // fail connection
   }
 
-  _log( ssl, "Checking identifying name in peer cert against '%s'", ssl->peer_hostname);
+  ssl_log(transport, "Checking identifying name in peer cert against '%s'", ssl->peer_hostname);
 
   bool matched = false;
 
@@ -316,7 +324,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
           unsigned char *str;
           int len = ASN1_STRING_to_UTF8( &str, asn1 );
           if (len >= 0) {
-            _log( ssl, "SubjectAltName (dns) from peer cert = '%.*s'", len, str );
+            ssl_log(transport, "SubjectAltName (dns) from peer cert = '%.*s'", len, str );
             matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
             OPENSSL_free( str );
           }
@@ -336,7 +344,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
       unsigned char *str;
       int len = ASN1_STRING_to_UTF8( &str, name_asn1);
       if (len >= 0) {
-        _log( ssl, "commonName from peer cert = '%.*s'", len, str );
+        ssl_log(transport, "commonName from peer cert = '%.*s'", len, str);
         matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
         OPENSSL_free(str);
       }
@@ -344,14 +352,14 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   }
 
   if (!matched) {
-    _log( ssl, "Error: no name matching %s found in peer cert - rejecting handshake.",
+    ssl_log(transport, "Error: no name matching %s found in peer cert - rejecting handshake.",
           ssl->peer_hostname);
     preverify_ok = 0;
 #ifdef X509_V_ERR_APPLICATION_VERIFICATION
     X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
 #endif
   } else {
-    _log( ssl, "Name from peer cert matched - peer is valid." );
+    ssl_log(transport, "Name from peer cert matched - peer is valid.");
   }
   return preverify_ok;
 }
@@ -434,6 +442,11 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 /** Public API - visible to application code */
 
+bool pn_ssl_present(void)
+{
+  return true;
+}
+
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
   if (!ssl_initialized) {
@@ -458,7 +471,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   case PN_SSL_MODE_CLIENT:
     domain->ctx = SSL_CTX_new(SSLv23_client_method()); // and TLSv1+
     if (!domain->ctx) {
-      _log_ssl_error(NULL, "Unable to initialize OpenSSL context.");
+      ssl_log_error("Unable to initialize OpenSSL context.");
       free(domain);
       return NULL;
     }
@@ -467,14 +480,14 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   case PN_SSL_MODE_SERVER:
     domain->ctx = SSL_CTX_new(SSLv23_server_method()); // and TLSv1+
     if (!domain->ctx) {
-      _log_ssl_error(NULL, "Unable to initialize OpenSSL context.");
+      ssl_log_error("Unable to initialize OpenSSL context.");
       free(domain);
       return NULL;
     }
     break;
 
   default:
-    _log_error(NULL, "Invalid value for pn_ssl_mode_t: %d", mode);
+    pn_transport_logf(NULL, "Invalid value for pn_ssl_mode_t: %d", mode);
     free(domain);
     return NULL;
   }
@@ -487,7 +500,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
   if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
-    _log_ssl_error(NULL, "Failed to set cipher list to %s", CIPHERS_ANONYMOUS);
+    ssl_log_error("Failed to set cipher list to %s", CIPHERS_ANONYMOUS);
     pn_ssl_domain_free(domain);
     return NULL;
   }
@@ -536,7 +549,7 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
   if (!domain || !domain->ctx) return -1;
 
   if (SSL_CTX_use_certificate_chain_file(domain->ctx, certificate_file) != 1) {
-    _log_ssl_error(NULL, "SSL_CTX_use_certificate_chain_file( %s ) failed", certificate_file);
+    ssl_log_error("SSL_CTX_use_certificate_chain_file( %s ) failed", certificate_file);
     return -3;
   }
 
@@ -547,12 +560,12 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
   }
 
   if (SSL_CTX_use_PrivateKey_file(domain->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
-    _log_ssl_error(NULL, "SSL_CTX_use_PrivateKey_file( %s ) failed", private_key_file);
+    ssl_log_error("SSL_CTX_use_PrivateKey_file( %s ) failed", private_key_file);
     return -4;
   }
 
   if (SSL_CTX_check_private_key(domain->ctx) != 1) {
-    _log_ssl_error(NULL, "The key file %s is not consistent with the certificate %s",
+    ssl_log_error("The key file %s is not consistent with the certificate %s",
                    private_key_file, certificate_file);
     return -5;
   }
@@ -563,7 +576,7 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
   // cipher was negotiated.  TLSv1 will reject such a request.  Hack: once a cert is
   // configured, allow only authenticated ciphers.
   if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_AUTHENTICATE )) {
-      _log_ssl_error(NULL, "Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
+      ssl_log_error("Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
       return -6;
   }
 
@@ -580,7 +593,7 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
   // to SSL_CTX_load_verify_locations()
   struct stat sbuf;
   if (stat( certificate_db, &sbuf ) != 0) {
-    _log_error(NULL, "stat(%s) failed: %s", certificate_db, strerror(errno));
+    pn_transport_logf(NULL, "stat(%s) failed: %s", certificate_db, strerror(errno));
     return -1;
   }
 
@@ -595,7 +608,7 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
   }
 
   if (SSL_CTX_load_verify_locations( domain->ctx, file, dir ) != 1) {
-    _log_ssl_error(NULL, "SSL_CTX_load_verify_locations( %s ) failed", certificate_db);
+    ssl_log_error("SSL_CTX_load_verify_locations( %s ) failed", certificate_db);
     return -1;
   }
 
@@ -616,7 +629,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   case PN_SSL_VERIFY_PEER_NAME:
 
     if (!domain->has_ca_db) {
-      _log_error(NULL, "Error: cannot verify peer without a trusted CA configured.\n"
+      pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured.\n"
                  "       Use pn_ssl_domain_set_trusted_ca_db()");
       return -1;
     }
@@ -625,11 +638,11 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       // openssl requires that server connections supply a list of trusted CAs which is
       // sent to the client
       if (!trusted_CAs) {
-        _log_error(NULL, "Error: a list of trusted CAs must be provided.");
+        pn_transport_logf(NULL, "Error: a list of trusted CAs must be provided.");
         return -1;
       }
       if (!domain->has_certificate) {
-        _log_error(NULL, "Error: Server cannot verify peer without configuring a certificate.\n"
+        pn_transport_logf(NULL, "Error: Server cannot verify peer without configuring a certificate.\n"
                    "       Use pn_ssl_domain_set_credentials()");
       }
 
@@ -640,7 +653,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       if (cert_names != NULL)
         SSL_CTX_set_client_CA_list(domain->ctx, cert_names);
       else {
-        _log_error(NULL, "Error: Unable to process file of trusted CAs: %s", trusted_CAs);
+        pn_transport_logf(NULL, "Error: Unable to process file of trusted CAs: %s", trusted_CAs);
         return -1;
       }
     }
@@ -657,7 +670,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     break;
 
   default:
-    _log_error(NULL, "Invalid peer authentication mode given." );
+    pn_transport_logf(NULL, "Invalid peer authentication mode given." );
     return -1;
   }
 
@@ -665,25 +678,46 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   return 0;
 }
 
+const pn_io_layer_t ssl_layer = {
+    process_input_ssl,
+    process_output_ssl,
+    NULL,
+    buffered_output
+};
 
-int pn_ssl_init( pn_ssl_t *ssl, pn_ssl_domain_t *domain, const char *session_id)
+const pn_io_layer_t ssl_input_closed_layer = {
+    process_input_done,
+    process_output_ssl,
+    NULL,
+    buffered_output
+};
+
+const pn_io_layer_t ssl_output_closed_layer = {
+    process_input_ssl,
+    process_output_done,
+    NULL,
+    buffered_output
+};
+
+const pn_io_layer_t ssl_closed_layer = {
+    process_input_done,
+    process_output_done,
+    NULL,
+    buffered_output
+};
+
+int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 {
+  pn_transport_t *transport = get_transport_internal(ssl0);
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl || !domain || ssl->domain) return -1;
 
   ssl->domain = domain;
   domain->ref_count++;
-  if (domain->allow_unsecured) {
-    ssl->io_layer->process_input = process_input_unknown;
-    ssl->io_layer->process_output = process_output_unknown;
-  } else {
-    ssl->io_layer->process_input = process_input_ssl;
-    ssl->io_layer->process_output = process_output_ssl;
-  }
-
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
-  return init_ssl_socket(ssl);
+  return init_ssl_socket(transport, ssl);
 }
 
 
@@ -691,18 +725,23 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 {
   if (!domain) return -1;
   if (domain->mode != PN_SSL_MODE_SERVER) {
-    _log_error(NULL, "Cannot permit unsecured clients - not a server.");
+    pn_transport_log(NULL, "Cannot permit unsecured clients - not a server.");
     return -1;
   }
   domain->allow_unsecured = true;
   return 0;
 }
 
+bool pn_ssl_allow_unsecured(pn_transport_t *transport)
+{
+  return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
+}
 
-bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
   const SSL_CIPHER *c;
 
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_name(c);
@@ -714,10 +753,11 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
   return false;
 }
 
-bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
   const SSL_CIPHER *c;
 
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_version(c);
@@ -730,10 +770,11 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
 }
 
 
-void pn_ssl_free( pn_ssl_t *ssl)
+void pn_ssl_free(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return;
-  _log( ssl, "SSL socket freed." );
+  ssl_log(transport, "SSL socket freed." );
   release_ssl_socket( ssl );
   if (ssl->domain) pn_ssl_domain_free(ssl->domain);
   if (ssl->session_id) free((void *)ssl->session_id);
@@ -746,9 +787,9 @@ void pn_ssl_free( pn_ssl_t *ssl)
 pn_ssl_t *pn_ssl(pn_transport_t *transport)
 {
   if (!transport) return NULL;
-  if (transport->ssl) return transport->ssl;
+  if (transport->ssl) return (pn_ssl_t *) transport;
 
-  pn_ssl_t *ssl = (pn_ssl_t *) calloc(1, sizeof(pn_ssl_t));
+  pni_ssl_t *ssl = (pni_ssl_t *) calloc(1, sizeof(pni_ssl_t));
   if (!ssl) return NULL;
   ssl->out_size = APP_BUF_SIZE;
   uint32_t max_frame = pn_transport_get_max_frame(transport);
@@ -765,20 +806,11 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
     return NULL;
   }
 
-  ssl->transport = transport;
   transport->ssl = ssl;
-
-  ssl->io_layer = &transport->io_layers[PN_IO_SSL];
-  ssl->io_layer->context = ssl;
-  ssl->io_layer->process_input = pn_io_layer_input_passthru;
-  ssl->io_layer->process_output = pn_io_layer_output_passthru;
-  ssl->io_layer->process_tick = pn_io_layer_tick_passthru;
-  ssl->io_layer->buffered_output = buffered_output;
-  ssl->io_layer->buffered_input = buffered_input;
 
   ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
 
-  return ssl;
+  return (pn_ssl_t *) transport;
 }
 
 
@@ -792,10 +824,11 @@ static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata)
 }
 
 
-static int start_ssl_shutdown( pn_ssl_t *ssl )
+static int start_ssl_shutdown(pn_transport_t *transport)
 {
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl->ssl_shutdown) {
-    _log(ssl, "Shutting down SSL connection...");
+    ssl_log(transport, "Shutting down SSL connection...");
     if (ssl->session_id) {
       // save the negotiated credentials before we close the connection
       pn_ssl_session_t *ssn = (pn_ssl_session_t *)calloc( 1, sizeof(pn_ssl_session_t));
@@ -803,7 +836,7 @@ static int start_ssl_shutdown( pn_ssl_t *ssl )
         ssn->id = pn_strdup( ssl->session_id );
         ssn->session = SSL_get1_session( ssl->ssl );
         if (ssn->session) {
-          _log( ssl, "Saving SSL session as %s", ssl->session_id );
+          ssl_log(transport, "Saving SSL session as %s", ssl->session_id );
           LL_ADD( ssl->domain, ssn_cache, ssn );
         } else {
           ssl_session_free( ssn );
@@ -817,26 +850,17 @@ static int start_ssl_shutdown( pn_ssl_t *ssl )
 }
 
 
-
-static int setup_ssl_connection( pn_ssl_t *ssl )
-{
-  _log( ssl, "SSL connection detected.");
-  ssl->io_layer->process_input = process_input_ssl;
-  ssl->io_layer->process_output = process_output_ssl;
-  return 0;
-}
-
 //////// SSL Connections
 
 
 // take data from the network, and pass it into SSL.  Attempt to read decrypted data from
 // SSL socket and pass it to the application.
-static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_data, size_t available)
+static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t available)
 {
-  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
+  pni_ssl_t *ssl = transport->ssl;
+  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl)) return PN_EOS;
 
-  _log( ssl, "process_input_ssl( data size=%d )",available );
+  ssl_log( transport, "process_input_ssl( data size=%d )",available );
 
   ssize_t consumed = 0;
   bool work_pending;
@@ -855,12 +879,12 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
         consumed += written;
         ssl->read_blocked = false;
         work_pending = (available > 0);
-        _log( ssl, "Wrote %d bytes to BIO Layer, %d left over", written, available );
+        ssl_log( transport, "Wrote %d bytes to BIO Layer, %d left over", written, available );
       }
     } else if (shutdown_input) {
       // lower layer (caller) has closed.  Close the WRITE side of the BIO.  This will cause
       // an EOF to be passed to SSL once all pending inbound data has been consumed.
-      _log( ssl, "Lower layer closed - shutting down BIO write side");
+      ssl_log( transport, "Lower layer closed - shutting down BIO write side");
       (void)BIO_shutdown_wr( ssl->bio_net_io );
       shutdown_input = false;
     }
@@ -870,8 +894,8 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
     if (!ssl->ssl_closed && ssl->in_count < ssl->in_size) {
       int read = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], ssl->in_size - ssl->in_count );
       if (read > 0) {
-        _log( ssl, "Read %d bytes from SSL socket for app", read );
-        _log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
+        ssl_log( transport, "Read %d bytes from SSL socket for app", read );
+        ssl_log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
         ssl->in_count += read;
         work_pending = true;
       } else {
@@ -880,22 +904,22 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
           switch (reason) {
           case SSL_ERROR_ZERO_RETURN:
             // SSL closed cleanly
-            _log(ssl, "SSL connection has closed");
-            start_ssl_shutdown(ssl);  // KAG: not sure - this may not be necessary
+            ssl_log(transport, "SSL connection has closed");
+            start_ssl_shutdown(transport);  // KAG: not sure - this may not be necessary
             ssl->ssl_closed = true;
             break;
           default:
             // unexpected error
-            return (ssize_t)ssl_failed(ssl);
+            return (ssize_t)ssl_failed(transport);
           }
         } else {
           if (BIO_should_write( ssl->bio_ssl )) {
             ssl->write_blocked = true;
-            _log(ssl, "Detected write-blocked");
+            ssl_log(transport, "Detected write-blocked");
           }
           if (BIO_should_read( ssl->bio_ssl )) {
             ssl->read_blocked = true;
-            _log(ssl, "Detected read-blocked");
+            ssl_log(transport, "Detected read-blocked");
           }
         }
       }
@@ -905,29 +929,28 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
 
     if (!ssl->app_input_closed) {
       if (ssl->in_count > 0 || ssl->ssl_closed) {  /* if ssl_closed, send 0 count */
-        pn_io_layer_t *io_next = ssl->io_layer->next;
-        ssize_t consumed = io_next->process_input( io_next, ssl->inbuf, ssl->in_count);
+        ssize_t consumed = transport->io_layers[layer+1]->process_input(transport, layer+1, ssl->inbuf, ssl->in_count);
         if (consumed > 0) {
           ssl->in_count -= consumed;
           if (ssl->in_count)
             memmove( ssl->inbuf, ssl->inbuf + consumed, ssl->in_count );
           work_pending = true;
-          _log( ssl, "Application consumed %d bytes from peer", (int) consumed );
+          ssl_log( transport, "Application consumed %d bytes from peer", (int) consumed );
         } else if (consumed < 0) {
-          _log(ssl, "Application layer closed its input, error=%d (discarding %d bytes)",
+          ssl_log(transport, "Application layer closed its input, error=%d (discarding %d bytes)",
                (int) consumed, (int)ssl->in_count);
           ssl->in_count = 0;    // discard any pending input
           ssl->app_input_closed = consumed;
           if (ssl->app_output_closed && ssl->out_count == 0) {
             // both sides of app closed, and no more app output pending:
-            start_ssl_shutdown(ssl);
+            start_ssl_shutdown(transport);
           }
         } else {
           // app did not consume any bytes, must be waiting for a full frame
           if (ssl->in_count == ssl->in_size) {
             // but the buffer is full, not enough room for a full frame.
             // can we grow the buffer?
-            uint32_t max_frame = pn_transport_get_max_frame(ssl->transport);
+            uint32_t max_frame = pn_transport_get_max_frame(transport);
             if (!max_frame) max_frame = ssl->in_size * 2;  // no limit
             if (ssl->in_size < max_frame) {
               // no max frame limit - grow it.
@@ -944,7 +967,7 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
               // the application _must_ have enough data to process.  If
               // this is an oversized frame, the app _must_ handle it
               // by returning an error code to SSL.
-              _log_error(ssl, "Error: application unable to consume input.");
+              pn_transport_log(transport, "Error: application unable to consume input.");
             }
           }
         }
@@ -968,17 +991,21 @@ static ssize_t process_input_ssl( pn_io_layer_t *io_layer, const char *input_dat
   //}
   if (ssl->app_input_closed && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) ) {
     consumed = ssl->app_input_closed;
-    ssl->io_layer->process_input = process_input_done;
+    if (transport->io_layers[layer]==&ssl_output_closed_layer) {
+      transport->io_layers[layer] = &ssl_closed_layer;
+    } else {
+      transport->io_layers[layer] = &ssl_input_closed_layer;
+    }
   }
-  _log(ssl, "process_input_ssl() returning %d", (int) consumed);
+  ssl_log(transport, "process_input_ssl() returning %d", (int) consumed);
   return consumed;
 }
 
-static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t max_len)
+static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *buffer, size_t max_len)
 {
-  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
+  pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return PN_EOS;
-  if (ssl->ssl == NULL && init_ssl_socket(ssl)) return PN_EOS;
+  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl)) return PN_EOS;
 
   ssize_t written = 0;
   bool work_pending;
@@ -988,15 +1015,14 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
     // first, get any pending application output, if possible
 
     if (!ssl->app_output_closed && ssl->out_count < ssl->out_size) {
-      pn_io_layer_t *io_next = ssl->io_layer->next;
-      ssize_t app_bytes = io_next->process_output( io_next, &ssl->outbuf[ssl->out_count], ssl->out_size - ssl->out_count);
+      ssize_t app_bytes = transport->io_layers[layer+1]->process_output(transport, layer+1, &ssl->outbuf[ssl->out_count], ssl->out_size - ssl->out_count);
       if (app_bytes > 0) {
         ssl->out_count += app_bytes;
         work_pending = true;
-        _log( ssl, "Gathered %d bytes from app to send to peer", app_bytes );
+        ssl_log(transport, "Gathered %d bytes from app to send to peer", app_bytes );
       } else {
         if (app_bytes < 0) {
-          _log(ssl, "Application layer closed its output, error=%d (%d bytes pending send)",
+          ssl_log(transport, "Application layer closed its output, error=%d (%d bytes pending send)",
                (int) app_bytes, (int) ssl->out_count);
           ssl->app_output_closed = app_bytes;
         }
@@ -1013,30 +1039,30 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
           data += wrote;
           ssl->out_count -= wrote;
           work_pending = true;
-          _log( ssl, "Wrote %d bytes from app to socket", wrote );
+          ssl_log( transport, "Wrote %d bytes from app to socket", wrote );
         } else {
           if (!BIO_should_retry(ssl->bio_ssl)) {
             int reason = SSL_get_error( ssl->ssl, wrote );
             switch (reason) {
             case SSL_ERROR_ZERO_RETURN:
               // SSL closed cleanly
-              _log(ssl, "SSL connection has closed");
-              start_ssl_shutdown(ssl); // KAG: not sure - this may not be necessary
+              ssl_log(transport, "SSL connection has closed");
+              start_ssl_shutdown(transport); // KAG: not sure - this may not be necessary
               ssl->out_count = 0;      // can no longer write to socket, so erase app output data
               ssl->ssl_closed = true;
               break;
             default:
               // unexpected error
-              return (ssize_t)ssl_failed(ssl);
+              return (ssize_t)ssl_failed(transport);
             }
           } else {
             if (BIO_should_read( ssl->bio_ssl )) {
               ssl->read_blocked = true;
-              _log(ssl, "Detected read-blocked");
+              ssl_log(transport, "Detected read-blocked");
             }
             if (BIO_should_write( ssl->bio_ssl )) {
               ssl->write_blocked = true;
-              _log(ssl, "Detected write-blocked");
+              ssl_log(transport, "Detected write-blocked");
             }
           }
         }
@@ -1046,7 +1072,7 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
         if (ssl->app_input_closed && ssl->app_output_closed) {
           // application is done sending/receiving data, and all buffered output data has
           // been written to the SSL socket
-          start_ssl_shutdown(ssl);
+          start_ssl_shutdown(transport);
         }
       } else if (data != ssl->outbuf) {
         memmove( ssl->outbuf, data, ssl->out_count );
@@ -1062,7 +1088,7 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
         written += available;
         ssl->write_blocked = false;
         work_pending = work_pending || max_len > 0;
-        _log( ssl, "Read %d bytes from BIO Layer", available );
+        ssl_log(transport, "Read %d bytes from BIO Layer", available );
       }
     }
 
@@ -1081,25 +1107,29 @@ static ssize_t process_output_ssl( pn_io_layer_t *io_layer, char *buffer, size_t
   //}
   if (written == 0 && (SSL_get_shutdown(ssl->ssl) & SSL_SENT_SHUTDOWN) && BIO_pending(ssl->bio_net_io) == 0) {
     written = ssl->app_output_closed ? ssl->app_output_closed : PN_EOS;
-    ssl->io_layer->process_output = process_output_done;
+    if (transport->io_layers[layer]==&ssl_input_closed_layer) {
+      transport->io_layers[layer] = &ssl_closed_layer;
+    } else {
+      transport->io_layers[layer] = &ssl_output_closed_layer;
+    }
   }
-  _log(ssl, "process_output_ssl() returning %d", (int) written);
+  ssl_log(transport, "process_output_ssl() returning %d", (int) written);
   return written;
 }
 
-static int init_ssl_socket( pn_ssl_t *ssl )
+static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
 {
   if (ssl->ssl) return 0;
   if (!ssl->domain) return -1;
 
   ssl->ssl = SSL_new(ssl->domain->ctx);
   if (!ssl->ssl) {
-    _log_error(ssl, "SSL socket setup failure." );
+    pn_transport_logf(transport, "SSL socket setup failure." );
     return -1;
   }
 
-  // store backpointer to pn_ssl_t in SSL object:
-  SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, ssl);
+  // store backpointer to pn_transport_t in SSL object:
+  SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, transport);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
   if (ssl->peer_hostname && ssl->domain->mode == PN_SSL_MODE_CLIENT) {
@@ -1111,10 +1141,10 @@ static int init_ssl_socket( pn_ssl_t *ssl )
   if (ssl->session_id) {
     pn_ssl_session_t *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
     if (ssn) {
-      _log( ssl, "Restoring previous session id=%s", ssn->id );
+      ssl_log( transport, "Restoring previous session id=%s", ssn->id );
       int rc = SSL_set_session( ssl->ssl, ssn->session );
       if (rc != 1) {
-        _log( ssl, "Session restore failed, id=%s", ssn->id );
+        ssl_log( transport, "Session restore failed, id=%s", ssn->id );
       }
       LL_REMOVE( ssl->domain, ssn_cache, ssn );
       ssl_session_free( ssn );
@@ -1124,14 +1154,14 @@ static int init_ssl_socket( pn_ssl_t *ssl )
   // now layer a BIO over the SSL socket
   ssl->bio_ssl = BIO_new(BIO_f_ssl());
   if (!ssl->bio_ssl) {
-    _log_error(ssl, "BIO setup failure." );
+    pn_transport_log(transport, "BIO setup failure." );
     return -1;
   }
   (void)BIO_set_ssl(ssl->bio_ssl, ssl->ssl, BIO_NOCLOSE);
 
   // create the "lower" BIO "pipe", and attach it below the SSL layer
   if (!BIO_new_bio_pair(&ssl->bio_ssl_io, 0, &ssl->bio_net_io, 0)) {
-    _log_error(ssl, "BIO setup failure." );
+    pn_transport_log(transport, "BIO setup failure." );
     return -1;
   }
   SSL_set_bio(ssl->ssl, ssl->bio_ssl_io, ssl->bio_ssl_io);
@@ -1139,16 +1169,16 @@ static int init_ssl_socket( pn_ssl_t *ssl )
   if (ssl->domain->mode == PN_SSL_MODE_SERVER) {
     SSL_set_accept_state(ssl->ssl);
     BIO_set_ssl_mode(ssl->bio_ssl, 0);  // server mode
-    _log( ssl, "Server SSL socket created." );
+    ssl_log( transport, "Server SSL socket created." );
   } else {      // client mode
     SSL_set_connect_state(ssl->ssl);
     BIO_set_ssl_mode(ssl->bio_ssl, 1);  // client mode
-    _log( ssl, "Client SSL socket created." );
+    ssl_log( transport, "Client SSL socket created." );
   }
   return 0;
 }
 
-static void release_ssl_socket( pn_ssl_t *ssl )
+static void release_ssl_socket(pni_ssl_t *ssl)
 {
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
   if (ssl->ssl) {
@@ -1164,99 +1194,15 @@ static void release_ssl_socket( pn_ssl_t *ssl )
 }
 
 
-static int setup_cleartext_connection( pn_ssl_t *ssl )
+void pn_ssl_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  _log( ssl, "Cleartext connection detected.");
-  ssl->io_layer->process_input = pn_io_layer_input_passthru;
-  ssl->io_layer->process_output = pn_io_layer_output_passthru;
-  return 0;
+  transport->ssl->trace = trace;
 }
 
 
-// until we determine if the client is using SSL or not:
-
-static ssize_t process_input_unknown(pn_io_layer_t *io_layer, const char *input_data, size_t len)
+pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl0)
 {
-  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  switch (check_for_ssl_connection( input_data, len )) {
-  case SSL_CONNECTION:
-    setup_ssl_connection( ssl );
-    return ssl->io_layer->process_input( ssl->io_layer, input_data, len );
-  case CLEAR_CONNECTION:
-    setup_cleartext_connection( ssl );
-    return ssl->io_layer->process_input( ssl->io_layer, input_data, len );
-  default:
-    return 0;
-  }
-}
-
-static ssize_t process_output_unknown(pn_io_layer_t *io_layer, char *input_data, size_t len)
-{
-  // do not do output until we know if SSL is used or not
-  return 0;
-}
-
-static connection_mode_t check_for_ssl_connection( const char *data, size_t len )
-{
-  if (len >= 5) {
-    const unsigned char *buf = (unsigned char *)data;
-    /*
-     * SSLv2 Client Hello format
-     * http://www.mozilla.org/projects/security/pki/nss/ssl/draft02.html
-     *
-     * Bytes 0-1: RECORD-LENGTH
-     * Byte    2: MSG-CLIENT-HELLO (1)
-     * Byte    3: CLIENT-VERSION-MSB
-     * Byte    4: CLIENT-VERSION-LSB
-     *
-     * Allowed versions:
-     * 2.0 - SSLv2
-     * 3.0 - SSLv3
-     * 3.1 - TLS 1.0
-     * 3.2 - TLS 1.1
-     * 3.3 - TLS 1.2
-     *
-     * The version sent in the Client-Hello is the latest version supported by
-     * the client. NSS may send version 3.x in an SSLv2 header for
-     * maximum compatibility.
-     */
-    int isSSL2Handshake = buf[2] == 1 &&   // MSG-CLIENT-HELLO
-      ((buf[3] == 3 && buf[4] <= 3) ||    // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-       (buf[3] == 2 && buf[4] == 0));     // SSL 2
-
-    /*
-     * SSLv3/TLS Client Hello format
-     * RFC 2246
-     *
-     * Byte    0: ContentType (handshake - 22)
-     * Bytes 1-2: ProtocolVersion {major, minor}
-     *
-     * Allowed versions:
-     * 3.0 - SSLv3
-     * 3.1 - TLS 1.0
-     * 3.2 - TLS 1.1
-     * 3.3 - TLS 1.2
-     */
-    int isSSL3Handshake = buf[0] == 22 &&  // handshake
-      (buf[1] == 3 && buf[2] <= 3);       // SSL 3.0 & TLS 1.0-1.2 (v3.1-3.3)
-
-    if (isSSL2Handshake || isSSL3Handshake) {
-      return SSL_CONNECTION;
-    } else {
-      return CLEAR_CONNECTION;
-    }
-  }
-  return UNKNOWN_CONNECTION;
-}
-
-void pn_ssl_trace(pn_ssl_t *ssl, pn_trace_t trace)
-{
-  ssl->trace = trace;
-}
-
-
-pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
-{
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl || !ssl->ssl) return PN_SSL_RESUME_UNKNOWN;
   switch (SSL_session_reused( ssl->ssl )) {
   case 0: return PN_SSL_RESUME_NEW;
@@ -1267,8 +1213,9 @@ pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl )
 }
 
 
-int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
+int pn_ssl_set_peer_hostname(pn_ssl_t *ssl0, const char *hostname)
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl) return -1;
 
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
@@ -1285,8 +1232,9 @@ int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname )
   return 0;
 }
 
-int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
+int pn_ssl_get_peer_hostname(pn_ssl_t *ssl0, char *hostname, size_t *bufsize)
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl) return -1;
   if (!ssl->peer_hostname) {
     *bufsize = 0;
@@ -1302,38 +1250,24 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
   return 0;
 }
 
-static ssize_t process_input_done(pn_io_layer_t *io_layer, const char *input_data, size_t len)
+static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)
 {
   return PN_EOS;
 }
-static ssize_t process_output_done(pn_io_layer_t *io_layer, char *input_data, size_t len)
+static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len)
 {
   return PN_EOS;
 }
 
 // return # output bytes sitting in this layer
-static size_t buffered_output(pn_io_layer_t *io_layer)
+static size_t buffered_output(pn_transport_t *transport)
 {
   size_t count = 0;
-  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
+  pni_ssl_t *ssl = transport->ssl;
   if (ssl) {
     count += ssl->out_count;
     if (ssl->bio_net_io) { // pick up any bytes waiting for network io
       count += BIO_ctrl_pending(ssl->bio_net_io);
-    }
-  }
-  return count;
-}
-
-// return # input bytes sitting in this layer
-static size_t buffered_input( pn_io_layer_t *io_layer )
-{
-  size_t count = 0;
-  pn_ssl_t *ssl = (pn_ssl_t *)io_layer->context;
-  if (ssl) {
-    count += ssl->in_count;
-    if (ssl->bio_ssl) { // pick up any bytes waiting to be read
-      count += BIO_ctrl_pending(ssl->bio_ssl);
     }
   }
   return count;

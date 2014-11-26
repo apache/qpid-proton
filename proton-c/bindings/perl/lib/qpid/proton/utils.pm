@@ -17,7 +17,7 @@
 # under the License.
 #
 
-package qpid::proton;
+package qpid::proton::utils;
 
 sub is_num {
     my $val = $_[0];

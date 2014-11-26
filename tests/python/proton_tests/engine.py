@@ -1823,7 +1823,6 @@ class ServerTest(Test):
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
     self.cxtr.transport.idle_timeout = idle_timeout_secs
     self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.cxtr.sasl().client()
     self.conn = Connection()
     self.cxtr.connection = self.conn
     self.conn.open()
@@ -1869,7 +1868,6 @@ class ServerTest(Test):
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
     self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.cxtr.sasl().client()
     self.conn = Connection()
     self.cxtr.connection = self.conn
     self.conn.open()
@@ -2438,5 +2436,4 @@ class IdleTimeoutEventTest(PeerTest):
 
   def testTimeoutWithZombieServerAndSASL(self):
     sasl = self.transport.sasl()
-    sasl.client()
     self.testTimeoutWithZombieServer()

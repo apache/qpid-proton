@@ -44,6 +44,9 @@ PN_SSL_MODE_P2J = {
   PN_SSL_MODE_SERVER: SslDomain.Mode.SERVER
 }
 
+def pn_ssl_present():
+  return True
+
 def pn_ssl_domain(mode):
   domain = Proton.sslDomain()
   domain.init(PN_SSL_MODE_P2J[mode])
