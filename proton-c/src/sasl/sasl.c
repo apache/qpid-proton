@@ -400,12 +400,12 @@ ssize_t pn_sasl_output(pn_transport_t *transport, char *bytes, size_t size)
   }
 }
 
-int pn_do_init(pn_dispatcher_t *disp)
+int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pni_sasl_t *sasl = disp->transport->sasl;
+  pni_sasl_t *sasl = transport->sasl;
   pn_bytes_t mech;
   pn_bytes_t recv;
-  int err = pn_scan_args(disp, "D.[sz]", &mech, &recv);
+  int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
   if (err) return err;
   sasl->remote_mechanisms = pn_strndup(mech.start, mech.size);
   pn_buffer_append(sasl->recv_data, recv.start, recv.size);
@@ -413,43 +413,43 @@ int pn_do_init(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_mechanisms(pn_dispatcher_t *disp)
+int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pni_sasl_t *sasl = disp->transport->sasl;
+  pni_sasl_t *sasl = transport->sasl;
   sasl->rcvd_init = true;
   return 0;
 }
 
-int pn_do_recv(pn_dispatcher_t *disp)
+int pn_do_recv(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pni_sasl_t *sasl = disp->transport->sasl;
+  pni_sasl_t *sasl = transport->sasl;
   pn_bytes_t recv;
-  int err = pn_scan_args(disp, "D.[z]", &recv);
+  int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
   pn_buffer_append(sasl->recv_data, recv.start, recv.size);
   return 0;
 }
 
-int pn_do_challenge(pn_dispatcher_t *disp)
+int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  return pn_do_recv(disp);
+  return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
-int pn_do_response(pn_dispatcher_t *disp)
+int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  return pn_do_recv(disp);
+  return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
-int pn_do_outcome(pn_dispatcher_t *disp)
+int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pni_sasl_t *sasl = disp->transport->sasl;
+  pni_sasl_t *sasl = transport->sasl;
   uint8_t outcome;
-  int err = pn_scan_args(disp, "D.[B]", &outcome);
+  int err = pn_data_scan(args, "D.[B]", &outcome);
   if (err) return err;
   sasl->outcome = (pn_sasl_outcome_t) outcome;
   sasl->rcvd_done = true;
   sasl->sent_done = true;
-  disp->halt = true;
+  sasl->disp->halt = true;
   return 0;
 }
 

@@ -28,14 +28,14 @@
 
 #include "dispatch_actions.h"
 
-int pni_bad_frame(pn_dispatcher_t* disp) {
-  pn_transport_log(disp->transport, "Error dispatching frame: Unknown performative");
+int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload) {
+  pn_transport_logf(transport, "Error dispatching frame: type: %d: Unknown performative", frame_type);
   return PN_ERR;
 }
 
 // We could use a table based approach here if we needed to dynamically
 // add new performatives
-static inline int pni_dispatch_action(pn_dispatcher_t* disp, uint64_t lcode)
+static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_action_t *action;
   switch (lcode) {
@@ -58,7 +58,7 @@ static inline int pni_dispatch_action(pn_dispatcher_t* disp, uint64_t lcode)
   case SASL_OUTCOME:    action = pn_do_outcome; break;
   default:              action = pni_bad_frame; break;
   };
-  return action(disp);
+  return action(transport, frame_type, channel, args, payload);
 }
 
 pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
@@ -68,10 +68,7 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
   disp->frame_type = frame_type;
   disp->transport = transport;
 
-  disp->channel = 0;
   disp->args = pn_data(16);
-  disp->payload = NULL;
-  disp->size = 0;
 
   disp->output_args = pn_data(16);
   disp->frame = pn_buffer( 4*1024 );
@@ -124,7 +121,7 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
   }
 }
 
-int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
+static int pni_dispatch_frame(pn_dispatcher_t *disp, pn_data_t *args, pn_frame_t frame)
 {
   if (frame.size == 0) { // ignore null frames
     if (disp->transport->trace & PN_TRACE_FRM)
@@ -132,22 +129,23 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
     return 0;
   }
 
-  ssize_t dsize = pn_data_decode(disp->args, frame.payload, frame.size);
+  ssize_t dsize = pn_data_decode(args, frame.payload, frame.size);
   if (dsize < 0) {
     pn_string_format(disp->scratch,
                      "Error decoding frame: %s %s\n", pn_code(dsize),
-                     pn_error_text(pn_data_error(disp->args)));
+                     pn_error_text(pn_data_error(args)));
     pn_quote(disp->scratch, frame.payload, frame.size);
     pn_transport_log(disp->transport, pn_string_get(disp->scratch));
     return dsize;
   }
 
-  disp->channel = frame.channel;
+  uint8_t frame_type = frame.type;
+  uint16_t channel = frame.channel;
   // XXX: assuming numeric -
   // if we get a symbol we should map it to the numeric value and dispatch on that
   uint64_t lcode;
   bool scanned;
-  int e = pn_data_scan(disp->args, "D?L.", &scanned, &lcode);
+  int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
   if (e) {
     pn_transport_log(disp->transport, "Scan error");
     return e;
@@ -156,18 +154,15 @@ int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
     pn_transport_log(disp->transport, "Error dispatching frame");
     return PN_ERR;
   }
-  disp->size = frame.size - dsize;
-  if (disp->size)
-    disp->payload = frame.payload + dsize;
+  size_t payload_size = frame.size - dsize;
+  const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
+  pn_bytes_t payload = {payload_size, payload_mem};
 
-  pn_do_trace(disp, disp->channel, IN, disp->args, disp->payload, disp->size);
+  pn_do_trace(disp, channel, IN, args, payload_mem, payload_size);
 
-  int err = pni_dispatch_action(disp, lcode);
+  int err = pni_dispatch_action(disp->transport, lcode, frame_type, channel, args, &payload);
 
-  disp->channel = 0;
-  pn_data_clear(disp->args);
-  disp->size = 0;
-  disp->payload = NULL;
+  pn_data_clear(args);
 
   return err;
 }
@@ -184,7 +179,7 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t ava
       read += n;
       available -= n;
       disp->input_frames_ct += 1;
-      int e = pn_dispatch_frame(disp, frame);
+      int e = pni_dispatch_frame(disp, disp->args, frame);
       if (e) return e;
     } else {
       break;
@@ -194,16 +189,6 @@ ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t ava
   }
 
   return read;
-}
-
-int pn_scan_args(pn_dispatcher_t *disp, const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  int err = pn_data_vscan(disp->args, fmt, ap);
-  va_end(ap);
-  if (err) printf("scan error: %s\n", fmt);
-  return err;
 }
 
 void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size)

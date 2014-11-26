@@ -699,16 +699,15 @@ static char *pn_bytes_strdup(pn_bytes_t str)
   return pn_strndup(str.start, str.size);
 }
 
-int pn_do_open(pn_dispatcher_t *disp)
+int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   pn_connection_t *conn = transport->connection;
   bool container_q, hostname_q;
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
-  int err = pn_scan_args(disp, "D.[?S?SIHI..CCC]", &container_q,
+  int err = pn_data_scan(args, "D.[?S?SIHI..CCC]", &container_q,
                          &remote_container, &hostname_q, &remote_hostname,
                          &transport->remote_max_frame,
                          &transport->remote_channel_max,
@@ -723,8 +722,8 @@ int pn_do_open(pn_dispatcher_t *disp)
                         transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
-    disp->remote_max_frame = transport->remote_max_frame;
-    pn_buffer_clear( disp->frame );
+    transport->disp->remote_max_frame = transport->remote_max_frame;
+    pn_buffer_clear( transport->disp->frame );
   }
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
@@ -747,13 +746,12 @@ int pn_do_open(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_begin(pn_dispatcher_t *disp)
+int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
-  int err = pn_scan_args(disp, "D.[?HI]", &reply, &remote_channel, &next);
+  int err = pn_data_scan(args, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
 
   pn_session_t *ssn;
@@ -764,7 +762,7 @@ int pn_do_begin(pn_dispatcher_t *disp)
     ssn = pn_session(transport->connection);
   }
   ssn->state.incoming_transfer_count = next;
-  pni_map_remote_channel(ssn, disp->channel);
+  pni_map_remote_channel(ssn, channel);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_ACTIVE);
   pn_collector_put(transport->connection->collector, PN_OBJECT, ssn, PN_SESSION_REMOTE_OPEN);
   return 0;
@@ -835,9 +833,8 @@ int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
   return pn_string_setn(terminus->address, address.start, address.size);
 }
 
-int pn_do_attach(pn_dispatcher_t *disp)
+int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   pn_bytes_t name;
   uint32_t handle;
   bool is_sender;
@@ -850,7 +847,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
   pn_bytes_t dist_mode;
   bool snd_settle, rcv_settle;
   uint8_t snd_settle_mode, rcv_settle_mode;
-  int err = pn_scan_args(disp, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
+  int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
                          &is_sender,
                          &snd_settle, &snd_settle_mode,
                          &rcv_settle, &rcv_settle_mode,
@@ -864,7 +861,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
   strncpy(strname, name.start, name.size);
   strname[name.size] = '\0';
 
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
   if (!ssn) {
       pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
       return PN_EOS;
@@ -907,7 +904,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
   } else {
     uint64_t code = 0;
     pn_data_clear(link->remote_target.capabilities);
-    err = pn_scan_args(disp, "D.[.....D..DL[C]...]", &code,
+    err = pn_data_scan(args, "D.[.....D..DL[C]...]", &code,
                        link->remote_target.capabilities);
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
@@ -928,7 +925,7 @@ int pn_do_attach(pn_dispatcher_t *disp)
   pn_data_clear(link->remote_target.properties);
   pn_data_clear(link->remote_target.capabilities);
 
-  err = pn_scan_args(disp, "D.[.....D.[.....C.C.CC]D.[.....CC]",
+  err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]D.[.....CC]",
                      link->remote_source.properties,
                      link->remote_source.filter,
                      link->remote_source.outcomes,
@@ -961,20 +958,19 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_clear_tpwork(delivery);
 }
 
-int pn_do_transfer(pn_dispatcher_t *disp)
+int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   // XXX: multi transfer
-  pn_transport_t *transport = disp->transport;
   uint32_t handle;
   pn_bytes_t tag;
   bool id_present;
   pn_sequence_t id;
   bool settled;
   bool more;
-  int err = pn_scan_args(disp, "D.[I?Iz.oo]", &handle, &id_present, &id, &tag,
+  int err = pn_data_scan(args, "D.[I?Iz.oo]", &handle, &id_present, &id, &tag,
                          &settled, &more);
   if (err) return err;
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
 
   if (!ssn->state.incoming_window) {
     return pn_do_error(transport, "amqp:session:window-violation", "incoming session window exceeded");
@@ -1013,8 +1009,8 @@ int pn_do_transfer(pn_dispatcher_t *disp)
     }
   }
 
-  pn_buffer_append(delivery->bytes, disp->payload, disp->size);
-  ssn->incoming_bytes += disp->size;
+  pn_buffer_append(delivery->bytes, payload->start, payload->size);
+  ssn->incoming_bytes += payload->size;
   delivery->done = !more;
 
   ssn->state.incoming_transfer_count++;
@@ -1029,19 +1025,18 @@ int pn_do_transfer(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_flow(pn_dispatcher_t *disp)
+int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   pn_sequence_t onext, inext, delivery_count;
   uint32_t iwin, owin, link_credit;
   uint32_t handle;
   bool inext_init, handle_init, dcount_init, drain;
-  int err = pn_scan_args(disp, "D.[?IIII?I?II.o]", &inext_init, &inext, &iwin,
+  int err = pn_data_scan(args, "D.[?IIII?I?II.o]", &inext_init, &inext, &iwin,
                          &onext, &owin, &handle_init, &handle, &dcount_init,
                          &delivery_count, &link_credit, &drain);
   if (err) return err;
 
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
 
   if (inext_init) {
     ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
@@ -1098,21 +1093,20 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   return 0;
 }
 
-int pn_do_disposition(pn_dispatcher_t *disp)
+int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   bool role;
   pn_sequence_t first, last;
   uint64_t type = 0;
   bool last_init, settled, type_init;
   pn_data_clear(transport->disp_data);
-  int err = pn_scan_args(disp, "D.[oI?IoD?LC]", &role, &first, &last_init,
+  int err = pn_data_scan(args, "D.[oI?IoD?LC]", &role, &first, &last_init,
                          &last, &settled, &type_init, &type,
                          transport->disp_data);
   if (err) return err;
   if (!last_init) last = first;
 
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
   pn_delivery_map_t *deliveries;
   if (role) {
     deliveries = &ssn->state.outgoing;
@@ -1177,24 +1171,23 @@ int pn_do_disposition(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_detach(pn_dispatcher_t *disp)
+int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   uint32_t handle;
   bool closed;
-  int err = pn_scan_args(disp, "D.[Io]", &handle, &closed);
+  int err = pn_data_scan(args, "D.[Io]", &handle, &closed);
   if (err) return err;
 
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
   if (!ssn) {
-    return pn_do_error(transport, "amqp:invalid-field", "no such channel: %u", disp->channel);
+    return pn_do_error(transport, "amqp:invalid-field", "no such channel: %u", channel);
   }
   pn_link_t *link = pn_handle_state(ssn, handle);
   if (!link) {
     return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
   }
 
-  err = pn_scan_error(disp->args, &link->endpoint.remote_condition, SCAN_ERROR_DETACH);
+  err = pn_scan_error(args, &link->endpoint.remote_condition, SCAN_ERROR_DETACH);
   if (err) return err;
 
   if (closed)
@@ -1209,11 +1202,10 @@ int pn_do_detach(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_end(pn_dispatcher_t *disp)
+int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
-  pn_session_t *ssn = pn_channel_state(transport, disp->channel);
-  int err = pn_scan_error(disp->args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
+  pn_session_t *ssn = pn_channel_state(transport, channel);
+  int err = pn_scan_error(args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
   pn_collector_put(transport->connection->collector, PN_OBJECT, ssn, PN_SESSION_REMOTE_CLOSE);
@@ -1221,11 +1213,10 @@ int pn_do_end(pn_dispatcher_t *disp)
   return 0;
 }
 
-int pn_do_close(pn_dispatcher_t *disp)
+int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
-  pn_transport_t *transport = disp->transport;
   pn_connection_t *conn = transport->connection;
-  int err = pn_scan_error(disp->args, &transport->remote_condition, SCAN_ERROR_DEFAULT);
+  int err = pn_scan_error(args, &transport->remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   transport->close_rcvd = true;
   PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_CLOSED);
