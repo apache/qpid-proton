@@ -51,6 +51,7 @@ struct pn_endpoint_t {
   pn_endpoint_t *transport_prev;
   bool modified;
   bool freed;
+  bool referenced;
   bool posted_final;
 };
 
@@ -100,20 +101,24 @@ typedef struct {
 #include <proton/ssl.h>
 
 typedef struct pn_io_layer_t {
-  void *context;
-  struct pn_io_layer_t *next;
-  ssize_t (*process_input)(struct pn_io_layer_t *io_layer, const char *, size_t);
-  ssize_t (*process_output)(struct pn_io_layer_t *io_layer, char *, size_t);
-  pn_timestamp_t (*process_tick)(struct pn_io_layer_t *io_layer, pn_timestamp_t);
-  size_t (*buffered_output)(struct pn_io_layer_t *);  // how much output is held
-  size_t (*buffered_input)(struct pn_io_layer_t *);   // how much input is held
+  ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
+  ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
+  pn_timestamp_t (*process_tick)(struct pn_transport_t *transport, unsigned int layer, pn_timestamp_t);
+  size_t (*buffered_output)(struct pn_transport_t *);  // how much output is held
 } pn_io_layer_t;
+
+extern const pn_io_layer_t pni_passthru_layer;
+extern const pn_io_layer_t ssl_layer;
+extern const pn_io_layer_t sasl_header_layer;
+extern const pn_io_layer_t sasl_write_header_layer;
+
+typedef struct pni_sasl_t pni_sasl_t;
+typedef struct pni_ssl_t pni_ssl_t;
 
 struct pn_transport_t {
   pn_tracer_t tracer;
-  size_t header_count;
-  pn_sasl_t *sasl;
-  pn_ssl_t *ssl;
+  pni_sasl_t *sasl;
+  pni_ssl_t *ssl;
   pn_connection_t *connection;  // reference counted
   pn_dispatcher_t *disp;
   char *remote_container;
@@ -128,12 +133,10 @@ struct pn_transport_t {
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
   pn_condition_t condition;
+  pn_error_t *error;
 
-#define PN_IO_SSL  0
-#define PN_IO_SASL 1
-#define PN_IO_AMQP 2
-#define PN_IO_LAYER_CT (PN_IO_AMQP+1)
-  pn_io_layer_t io_layers[PN_IO_LAYER_CT];
+#define PN_IO_LAYER_CT 3
+  const pn_io_layer_t *io_layers[PN_IO_LAYER_CT];
 
   /* dead remote detection */
   pn_millis_t local_idle_timeout;
@@ -158,7 +161,7 @@ struct pn_transport_t {
   size_t output_pending;
   char *output_buf;
 
-  void *context;
+  pn_record_t *context;
 
   /* input from peer */
   size_t input_size;
@@ -175,8 +178,8 @@ struct pn_transport_t {
   bool tail_closed;      // input stream closed by driver
   bool head_closed;
   bool done_processing; // if true, don't call pn_process again
-  bool posted_head_closed;
-  bool posted_tail_closed;
+  bool posted_idle_timeout;
+  bool server;
 };
 
 struct pn_connection_t {
@@ -196,15 +199,15 @@ struct pn_connection_t {
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;
   pn_data_t *properties;
-  void *context;
   pn_collector_t *collector;
+  pn_record_t *context;
 };
 
 struct pn_session_t {
   pn_endpoint_t endpoint;
   pn_connection_t *connection;  // reference counted
   pn_list_t *links;
-  void *context;
+  pn_record_t *context;
   size_t incoming_capacity;
   pn_sequence_t incoming_bytes;
   pn_sequence_t outgoing_bytes;
@@ -241,7 +244,7 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_delivery_t *settled_head;
   pn_delivery_t *settled_tail;
-  void *context;
+  pn_record_t *context;
   size_t unsettled_count;
   pn_sequence_t available;
   pn_sequence_t credit;
@@ -283,7 +286,7 @@ struct pn_delivery_t {
   pn_delivery_t *tpwork_prev;
   pn_delivery_state_t state;
   pn_buffer_t *bytes;
-  void *context;
+  pn_record_t *context;
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
   bool work;
@@ -302,10 +305,6 @@ void pn_link_dump(pn_link_t *link);
 void pn_dump(pn_connection_t *conn);
 void pn_transport_sasl_init(pn_transport_t *transport);
 
-ssize_t pn_io_layer_input_passthru(pn_io_layer_t *, const char *, size_t );
-ssize_t pn_io_layer_output_passthru(pn_io_layer_t *, char *, size_t );
-pn_timestamp_t pn_io_layer_tick_passthru(pn_io_layer_t *, pn_timestamp_t);
-
 void pn_condition_init(pn_condition_t *condition);
 void pn_condition_tini(pn_condition_t *condition);
 void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit);
@@ -317,8 +316,5 @@ void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
 void pn_session_unbound(pn_session_t* ssn);
 void pn_link_unbound(pn_link_t* link);
-
-void pni_close_tail(pn_transport_t *transport);
-
 
 #endif /* engine-internal.h */

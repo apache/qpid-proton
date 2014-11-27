@@ -82,8 +82,7 @@ endif (PHP_CONFIG_EXE)
 mark_as_advanced (PHP_CONFIG_EXE)
 
 # Prerequisites for Perl:
-include(FindPerl)
-include(FindPerlLibs)
+include(ProtonFindPerl)
 if (PERLLIBS_FOUND)
   set (DEFAULT_PERL ON)
 endif (PERLLIBS_FOUND)

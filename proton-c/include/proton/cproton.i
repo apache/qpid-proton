@@ -87,7 +87,7 @@ typedef unsigned long int uintptr_t;
                  PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP, PN_SASL_SKIPPED);
 
 %aggregate_check(int, check_sasl_state,
-                 PN_SASL_CONF, PN_SASL_IDLE, PN_SASL_STEP,
+                 PN_SASL_IDLE, PN_SASL_STEP,
                  PN_SASL_PASS, PN_SASL_FAIL);
 
 
@@ -618,6 +618,7 @@ typedef unsigned long int uintptr_t;
 %include "proton/terminus.h"
 %include "proton/delivery.h"
 %include "proton/disposition.h"
+%ignore pn_transport_vlogf;
 %include "proton/transport.h"
 %include "proton/event.h"
 

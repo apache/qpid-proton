@@ -1,4 +1,4 @@
-#
+#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,16 +15,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+#++
 
 #--
 # Patch the Array class to provide methods for adding its contents
 # to a Qpid::Proton::Data instance.
 #++
 
-module Qpid
+module Qpid # :nodoc:
 
-  module Proton
+  module Proton # :nodoc:
 
     # Holds the information for an AMQP Array compound type.
     #
@@ -54,7 +54,7 @@ module Qpid
 
 end
 
-class Array
+class Array # :nodoc:
 
   # Used to declare an array as an AMQP array.
   #

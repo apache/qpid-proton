@@ -84,14 +84,32 @@ typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
 
 /**
  * Factory for creating a transport.
- *
  * A transport is used by a connection to interface with the network.
  * There can only be one connection associated with a transport. See
  * pn_transport_bind().
  *
+ * Initially a transport is configured to be a client transport. Use pn_transport_set_server()
+ * to configure the transport as a server transport.
+ *
+ * A client transport initiates outgoing connections.
+ *
+ * A client transport must be configured with the protocol layers to use and cannot
+ * configure itself automatically.
+ *
+ * A server transport accepts incoming connections. It can automatically
+ * configure itself to include the various protocol layers depending on
+ * the incoming protocol headers.
+ *
  * @return pointer to new transport
  */
 PN_EXTERN pn_transport_t *pn_transport(void);
+
+/**
+ * Configure a transport as a server
+ *
+ * @param[in] transport a transport object
+ */
+PN_EXTERN void pn_transport_set_server(pn_transport_t *transport);
 
 /**
  * Free a transport object.
@@ -116,6 +134,11 @@ PN_EXTERN void pn_transport_free(pn_transport_t *transport);
  * @return the transport's condition object
  */
 PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
+
+/**
+ * @deprecated
+ */
+PN_EXTERN  pn_error_t *pn_transport_error(pn_transport_t *transport);
 
 /**
  * Binds the transport to an AMQP connection.
@@ -174,6 +197,7 @@ PN_EXTERN pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
 PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 
 /**
+ * @deprecated
  * Set a new application context for a transport object.
  *
  * The application context for a transport object may be retrieved using
@@ -185,6 +209,14 @@ PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context);
 
 /**
+ * Get the attachments that are associated with a transport object.
+ *
+ * @param[in] transport the transport whose attachments are to be returned.
+ * @return the attachments for the transport object
+ */
+PN_EXTERN pn_record_t *pn_transport_attachments(pn_transport_t *transport);
+
+/**
  * Log a message using a transport's logging mechanism.
  *
  * This can be useful in a debugging context as the log message will
@@ -194,6 +226,19 @@ PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context
  * @param[in] message the message to be logged
  */
 PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
+
+/**
+ * Log a printf formatted message using a transport's logging
+ * mechanism.
+ *
+ * This can be useful in a debugging context as the log message will
+ * be prefixed with the transport's identifier.
+ *
+ * @param[in] transport a transport object
+ * @param[in] fmt the printf formatted message to be logged
+ * @param[in] ap a vector containing the format arguments
+ */
+PN_EXTERN void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap);
 
 /**
  * Log a printf formatted message using a transport's logging

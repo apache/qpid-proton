@@ -228,7 +228,11 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len) {
 }
 
 static inline int pn_create_socket(int af) {
-  return socket(af, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  struct protoent * pe_tcp = getprotobyname("tcp");
+  if (pe_tcp == NULL) {
+    return -1;
+  }
+  return socket(af, SOCK_STREAM, pe_tcp->p_proto);
 }
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
@@ -238,7 +242,13 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
 }
 
 static inline int pn_create_socket(int af) {
-  int sock = socket(af, SOCK_STREAM, getprotobyname("tcp")->p_proto);
+  struct protoent * pe_tcp;
+  int sock;
+  pe_tcp = getprotobyname("tcp");
+  if (pe_tcp == NULL) {
+    return -1;
+  }
+  sock = socket(af, SOCK_STREAM, pe_tcp->p_proto);
   if (sock == -1) return sock;
 
   int optval = 1;

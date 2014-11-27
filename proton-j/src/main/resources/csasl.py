@@ -38,10 +38,14 @@ PN_SASL_PASS = 3
 PN_SASL_FAIL = 4
 
 def pn_sasl(tp):
-  return tp.impl.sasl()
+  sasl = tp.impl.sasl()
+  if tp.server:
+    sasl.server()
+  else:
+    sasl.client()
+  return sasl
 
 SASL_STATES = {
-  Sasl.SaslState.PN_SASL_CONF: PN_SASL_CONF,
   Sasl.SaslState.PN_SASL_IDLE: PN_SASL_IDLE,
   Sasl.SaslState.PN_SASL_STEP: PN_SASL_STEP,
   Sasl.SaslState.PN_SASL_PASS: PN_SASL_PASS,
@@ -73,12 +77,6 @@ def pn_sasl_state(sasl):
 
 def pn_sasl_mechanisms(sasl, mechs):
   sasl.setMechanisms(*mechs.split())
-
-def pn_sasl_client(sasl):
-  sasl.client()
-
-def pn_sasl_server(sasl):
-  sasl.server()
 
 def pn_sasl_allow_skip(sasl, allow):
   sasl.allowSkip(allow)

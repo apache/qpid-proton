@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/terminus.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -80,6 +81,7 @@ PN_EXTERN pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 PN_EXTERN void pn_link_free(pn_link_t *link);
 
 /**
+ * @deprecated
  * Get the application context that is associated with a link object.
  *
  * The application context for a link may be set using
@@ -91,6 +93,7 @@ PN_EXTERN void pn_link_free(pn_link_t *link);
 PN_EXTERN void *pn_link_get_context(pn_link_t *link);
 
 /**
+ * @deprecated
  * Set a new application context for a link object.
  *
  * The application context for a link object may be retrieved using
@@ -100,6 +103,14 @@ PN_EXTERN void *pn_link_get_context(pn_link_t *link);
  * @param[in] context the application context
  */
 PN_EXTERN void pn_link_set_context(pn_link_t *link, void *context);
+
+/**
+ * Get the attachments that are associated with a link object.
+ *
+ * @param[in] link the link whose attachments are to be returned.
+ * @return the attachments for the link object
+ */
+PN_EXTERN pn_record_t *pn_link_attachments(pn_link_t *link);
 
 /**
  * Get the name of a link.

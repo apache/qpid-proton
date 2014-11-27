@@ -239,7 +239,9 @@ static void pni_connection_readable(pn_selectable_t *sel)
         }
       }
     } else {
-      pn_transport_process(transport, (size_t) n);
+      int err = pn_transport_process(transport, (size_t)n);
+      if (err)
+        pn_error_copy(messenger->error, pn_transport_error(transport));
     }
   }
 
@@ -326,13 +328,13 @@ static void pni_listener_readable(pn_selectable_t *sel)
   pn_socket_t sock = pn_accept(ctx->messenger->io, pn_selectable_fd(sel), name, 1024);
 
   pn_transport_t *t = pn_transport();
+  pn_transport_set_server(t);
 
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
   pn_sasl_t *sasl = pn_sasl(t);
 
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_server(sasl);
   pn_sasl_done(sasl, PN_SASL_OK);
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
@@ -958,7 +960,6 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_sasl_plain(sasl, ctx->user, ctx->pass);
   } else {
     pn_sasl_mechanisms(sasl, "ANONYMOUS");
-    pn_sasl_client(sasl);
   }
 
   return 0;
@@ -1264,22 +1265,22 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_CONNECTION_REMOTE_OPEN:
     case PN_CONNECTION_REMOTE_CLOSE:
-    case PN_CONNECTION_OPEN:
-    case PN_CONNECTION_CLOSE:
+    case PN_CONNECTION_LOCAL_OPEN:
+    case PN_CONNECTION_LOCAL_CLOSE:
       pn_messenger_process_connection(messenger, event);
       break;
     case PN_SESSION_REMOTE_OPEN:
     case PN_SESSION_REMOTE_CLOSE:
-    case PN_SESSION_OPEN:
-    case PN_SESSION_CLOSE:
+    case PN_SESSION_LOCAL_OPEN:
+    case PN_SESSION_LOCAL_CLOSE:
       pn_messenger_process_session(messenger, event);
       break;
     case PN_LINK_REMOTE_OPEN:
     case PN_LINK_REMOTE_CLOSE:
     case PN_LINK_REMOTE_DETACH:
-    case PN_LINK_OPEN:
-    case PN_LINK_CLOSE:
-    case PN_LINK_DETACH:
+    case PN_LINK_LOCAL_OPEN:
+    case PN_LINK_LOCAL_CLOSE:
+    case PN_LINK_LOCAL_DETACH:
       pn_messenger_process_link(messenger, event);
       break;
     case PN_LINK_FLOW:

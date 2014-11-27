@@ -204,7 +204,22 @@ public class SslEngineFacadeFactory
         boolean useClientMode = mode == SslDomain.Mode.CLIENT ? true : false;
         sslEngine.setUseClientMode(useClientMode);
 
+        removeSSLv3Support(sslEngine);
+
         return sslEngine;
+    }
+
+    private static final String SSLV3_PROTOCOL = "SSLv3";
+
+    private static void removeSSLv3Support(final SSLEngine engine)
+    {
+        List<String> enabledProtocols = Arrays.asList(engine.getEnabledProtocols());
+        if(enabledProtocols.contains(SSLV3_PROTOCOL))
+        {
+            List<String> allowedProtocols = new ArrayList<String>(enabledProtocols);
+            allowedProtocols.remove(SSLV3_PROTOCOL);
+            engine.setEnabledProtocols(allowedProtocols.toArray(new String[allowedProtocols.size()]));
+        }
     }
 
     /**

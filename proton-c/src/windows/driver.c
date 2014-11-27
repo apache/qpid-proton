@@ -285,6 +285,9 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
     pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
     snprintf(c->name, PN_NAME_MAX, "%s", name);
     c->listener = l;
+    c->transport = pn_transport();
+    pn_transport_set_server(c->transport);
+    c->sasl = pn_sasl(c->transport);
     return c;
   }
 }
@@ -383,6 +386,8 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
 
   pn_socket_t sock = pn_connect(driver->io, host, port);
   pn_connector_t *c = pn_connector_fd(driver, sock, context);
+  c->transport = pn_transport();
+  c->sasl = pn_sasl(c->transport);
   snprintf(c->name, PN_NAME_MAX, "%s:%s", host, port);
   if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
     fprintf(stderr, "Connected to %s\n", c->name);
@@ -412,8 +417,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *conte
   c->wakeup = 0;
   c->posted_wakeup = 0;
   c->connection = NULL;
-  c->transport = pn_transport();
-  c->sasl = pn_sasl(c->transport);
+  c->transport = NULL;
   c->input_done = false;
   c->output_done = false;
   c->context = context;
@@ -712,12 +716,14 @@ pn_driver_t *pn_driver()
 
 int pn_driver_errno(pn_driver_t *d)
 {
-  return d ? pn_error_code(d->error) : PN_ARG_ERR;
+  assert(d);
+  return pn_error_code(d->error);
 }
 
-const char *pn_driver_error(pn_driver_t *d)
+pn_error_t *pn_driver_error(pn_driver_t *d)
 {
-  return d ? pn_error_text(d->error) : NULL;
+  assert(d);
+  return d->error;
 }
 
 void pn_driver_trace(pn_driver_t *d, pn_trace_t trace)

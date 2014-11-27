@@ -26,6 +26,6 @@
 
 set(obj_dir ${CMAKE_CURRENT_BINARY_DIR}/qpid-proton.dir/${CMAKE_CFG_INTDIR})
 
-add_custom_command(TARGET qpid-proton PRE_LINK COMMAND python
+add_custom_command(TARGET qpid-proton PRE_LINK COMMAND ${PYTHON_EXECUTABLE}
         ${CMAKE_MODULE_PATH}WindowsC99SymbolCheck.py ${obj_dir}
         COMMENT "Checking for dangerous use of C99-violating functions")

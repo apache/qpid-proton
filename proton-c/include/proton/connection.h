@@ -138,6 +138,7 @@ PN_EXTERN pn_error_t *pn_connection_error(pn_connection_t *connection);
 PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector);
 
 /**
+ * @deprecated
  * Get the application context that is associated with a connection
  * object.
  *
@@ -150,6 +151,7 @@ PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t
 PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
 
 /**
+ * @deprecated
  * Set a new application context for a connection object.
  *
  * The application context for a connection object may be retrieved
@@ -159,6 +161,14 @@ PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
  * @param[in] context the application context
  */
 PN_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *context);
+
+/**
+ * Get the attachments that are associated with a connection object.
+ *
+ * @param[in] connection the connection whose attachments are to be returned.
+ * @return the attachments for the connection object
+ */
+PN_EXTERN pn_record_t *pn_connection_attachments(pn_connection_t *connection);
 
 /**
  * Get the endpoint state flags for a connection.

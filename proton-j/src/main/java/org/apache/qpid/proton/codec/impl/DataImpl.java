@@ -458,6 +458,16 @@ public class DataImpl implements Data
         {
             putDescribedType((DescribedType)o);
         }
+        else if(o instanceof Symbol[])
+        {
+            putArray(false, Data.DataType.SYMBOL);
+            enter();
+            for(Symbol s : (Symbol[]) o)
+            {
+                putSymbol(s);
+            }
+            exit();
+        }
         else if(o instanceof Object[])
         {
             putJavaArray((Object[]) o);

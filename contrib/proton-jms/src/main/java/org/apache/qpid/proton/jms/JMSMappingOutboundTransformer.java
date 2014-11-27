@@ -166,7 +166,12 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
             } else if( key.equals(firstAcquirerKey) ) {
                 header.setFirstAcquirer(msg.getBooleanProperty(key));
             } else if( key.startsWith("JMSXDeliveryCount") ) {
-                header.setDeliveryCount(new UnsignedInteger(msg.getIntProperty(key)));
+                // The AMQP delivery-count field only includes prior failed delivery attempts,
+                // whereas JMSXDeliveryCount includes the first/current delivery attempt.
+                int amqpDeliveryCount = msg.getIntProperty(key) - 1;
+                if( amqpDeliveryCount > 0 ) {
+                    header.setDeliveryCount(new UnsignedInteger(amqpDeliveryCount));
+                }
             } else if( key.startsWith("JMSXUserID") ) {
                 String value = msg.getStringProperty(key);
                 props.setUserId(new Binary(value.getBytes("UTF-8")));
@@ -219,21 +224,39 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
         return (ProtonJMessage) org.apache.qpid.proton.message.Message.Factory.create(header, da, ma, props, ap, body, footer);
     }
 
-    private static String destinationAttributes(Destination destination) {
-        if( destination instanceof Queue ) {
-            if( destination instanceof TemporaryQueue ) {
-                return "temporary,queue";
-            } else {
-                return "queue";
+    private Object destinationAttributes(Destination destination) {
+        if(isUseByteDestinationTypeAnnotations()) {
+            if( destination instanceof Queue ) {
+                if( destination instanceof TemporaryQueue ) {
+                    return JMSVendor.TEMP_QUEUE_TYPE;
+                } else {
+                    return JMSVendor.QUEUE_TYPE;
+                }
             }
-        }
-        if( destination instanceof Topic ) {
-            if( destination instanceof TemporaryTopic ) {
-                return "temporary,topic";
-            } else {
-                return "topic";
+            if( destination instanceof Topic ) {
+                if( destination instanceof TemporaryTopic ) {
+                    return JMSVendor.TEMP_TOPIC_TYPE;
+                } else {
+                    return JMSVendor.TOPIC_TYPE;
+                }
             }
+            return JMSVendor.QUEUE_TYPE;
+        } else {
+            if( destination instanceof Queue ) {
+                if( destination instanceof TemporaryQueue ) {
+                    return "temporary,queue";
+                } else {
+                    return "queue";
+                }
+            }
+            if( destination instanceof Topic ) {
+                if( destination instanceof TemporaryTopic ) {
+                    return "temporary,topic";
+                } else {
+                    return "topic";
+                }
+            }
+            return "";
         }
-        return "";
     }
 }

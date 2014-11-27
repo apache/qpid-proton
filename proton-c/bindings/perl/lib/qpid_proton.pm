@@ -31,6 +31,7 @@ use qpid::proton::Messenger;
 use qpid::proton::Message;
 
 use qpid::proton;
+use qpid::proton::utils;
 
 package qpid_proton;
 

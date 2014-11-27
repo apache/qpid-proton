@@ -1,4 +1,4 @@
-#
+#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,13 +15,11 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+#++
 
-require 'cproton'
+module Qpid # :nodoc:
 
-module Qpid
-
-  module Proton
+  module Proton # :nodoc:
 
     # +DataError+ is raised when an error occurs while encoding
     # or decoding data.
@@ -725,7 +723,7 @@ module Qpid
       # If the current node is binary, returns its value. Otherwise, it returns
       # an empty string ("").
       def binary
-        Cproton.pn_data_get_binary(@data)
+        Qpid::Proton::BinaryString.new(Cproton.pn_data_get_binary(@data))
       end
 
       # Puts a unicode string value.
@@ -742,7 +740,7 @@ module Qpid
       # If the current node is a string, returns its value. Otherwise, it
       # returns an empty string ("").
       def string
-        Cproton.pn_data_get_string(@data)
+        Qpid::Proton::UTFString.new(Cproton.pn_data_get_string(@data))
       end
 
       # Puts a symbolic value.

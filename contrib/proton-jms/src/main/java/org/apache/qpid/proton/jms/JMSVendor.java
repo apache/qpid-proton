@@ -1,14 +1,22 @@
 package org.apache.qpid.proton.jms;
 
-import javax.jms.*;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import javax.jms.BytesMessage;
+import javax.jms.Destination;
+import javax.jms.MapMessage;
+import javax.jms.Message;
+import javax.jms.ObjectMessage;
+import javax.jms.StreamMessage;
+import javax.jms.TextMessage;
 
 /**
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
 abstract public class JMSVendor {
+
+    public static final byte QUEUE_TYPE = 0x00;
+    public static final byte TOPIC_TYPE = 0x01;
+    public static final byte TEMP_QUEUE_TYPE = 0x02;
+    public static final byte TEMP_TOPIC_TYPE = 0x03;
 
     public abstract BytesMessage createBytesMessage();
 

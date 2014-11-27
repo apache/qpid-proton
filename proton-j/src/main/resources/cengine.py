@@ -419,21 +419,22 @@ class pn_terminus:
   def decode(self, impl):
     if impl is not None:
       self.type = TERMINUS_TYPES_J2P[impl.__class__]
-      self.address = impl.getAddress()
-      self.durability = DURABILITY_J2P[impl.getDurable()]
-      self.expiry_policy = EXPIRY_POLICY_J2P[impl.getExpiryPolicy()]
-      self.timeout = impl.getTimeout().longValue()
-      self.dynamic = impl.getDynamic()
-      obj2dat(impl.getDynamicNodeProperties(), self.properties)
-      array2dat(impl.getCapabilities(), PN_SYMBOL, self.capabilities)
-      if self.type == PN_SOURCE:
-        self.distribution_mode = DISTRIBUTION_MODE_J2P[impl.getDistributionMode()]
-        array2dat(impl.getOutcomes(), PN_SYMBOL, self.outcomes)
-        obj2dat(impl.getFilter(), self.filter)
+      if self.type in (PN_SOURCE, PN_TARGET):
+        self.address = impl.getAddress()
+        self.durability = DURABILITY_J2P[impl.getDurable()]
+        self.expiry_policy = EXPIRY_POLICY_J2P[impl.getExpiryPolicy()]
+        self.timeout = impl.getTimeout().longValue()
+        self.dynamic = impl.getDynamic()
+        obj2dat(impl.getDynamicNodeProperties(), self.properties)
+        array2dat(impl.getCapabilities(), PN_SYMBOL, self.capabilities)
+        if self.type == PN_SOURCE:
+          self.distribution_mode = DISTRIBUTION_MODE_J2P[impl.getDistributionMode()]
+          array2dat(impl.getOutcomes(), PN_SYMBOL, self.outcomes)
+          obj2dat(impl.getFilter(), self.filter)
 
   def encode(self):
     impl = TERMINUS_TYPES_P2J[self.type]()
-    if impl is not None:
+    if self.type in (PN_SOURCE, PN_TARGET):
       impl.setAddress(self.address)
       impl.setDurable(DURABILITY_P2J[self.durability])
       impl.setExpiryPolicy(EXPIRY_POLICY_P2J[self.expiry_policy])
@@ -864,13 +865,16 @@ def pn_delivery_settle(dlv):
   dlv.impl.settle()
 
 class pn_transport_wrapper:
-
   def __init__(self, impl):
     self.impl = impl
+    self.server = False
     self.condition = pn_condition()
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
+
+def pn_transport_set_server(trans):
+  trans.server = True;
 
 def pn_transport_get_max_frame(trans):
   return trans.impl.getMaxFrameSize()
@@ -954,23 +958,23 @@ from org.apache.qpid.proton.engine import Event
 PN_CONNECTION_INIT = Event.Type.CONNECTION_INIT
 PN_CONNECTION_BOUND = Event.Type.CONNECTION_BOUND
 PN_CONNECTION_UNBOUND = Event.Type.CONNECTION_UNBOUND
-PN_CONNECTION_OPEN = Event.Type.CONNECTION_OPEN
+PN_CONNECTION_LOCAL_OPEN = Event.Type.CONNECTION_LOCAL_OPEN
 PN_CONNECTION_REMOTE_OPEN = Event.Type.CONNECTION_REMOTE_OPEN
-PN_CONNECTION_CLOSE = Event.Type.CONNECTION_CLOSE
+PN_CONNECTION_LOCAL_CLOSE = Event.Type.CONNECTION_LOCAL_CLOSE
 PN_CONNECTION_REMOTE_CLOSE = Event.Type.CONNECTION_REMOTE_CLOSE
 PN_CONNECTION_FINAL = Event.Type.CONNECTION_FINAL
 PN_SESSION_INIT = Event.Type.SESSION_INIT
-PN_SESSION_OPEN = Event.Type.SESSION_OPEN
+PN_SESSION_LOCAL_OPEN = Event.Type.SESSION_LOCAL_OPEN
 PN_SESSION_REMOTE_OPEN = Event.Type.SESSION_REMOTE_OPEN
-PN_SESSION_CLOSE = Event.Type.SESSION_CLOSE
+PN_SESSION_LOCAL_CLOSE = Event.Type.SESSION_LOCAL_CLOSE
 PN_SESSION_REMOTE_CLOSE = Event.Type.SESSION_REMOTE_CLOSE
 PN_SESSION_FINAL = Event.Type.SESSION_FINAL
 PN_LINK_INIT = Event.Type.LINK_INIT
-PN_LINK_OPEN = Event.Type.LINK_OPEN
+PN_LINK_LOCAL_OPEN = Event.Type.LINK_LOCAL_OPEN
 PN_LINK_REMOTE_OPEN = Event.Type.LINK_REMOTE_OPEN
-PN_LINK_CLOSE = Event.Type.LINK_CLOSE
+PN_LINK_LOCAL_CLOSE = Event.Type.LINK_LOCAL_CLOSE
 PN_LINK_REMOTE_CLOSE = Event.Type.LINK_REMOTE_CLOSE
-PN_LINK_DETACH = Event.Type.LINK_DETACH
+PN_LINK_LOCAL_DETACH = Event.Type.LINK_LOCAL_DETACH
 PN_LINK_REMOTE_DETACH = Event.Type.LINK_REMOTE_DETACH
 PN_LINK_FLOW = Event.Type.LINK_FLOW
 PN_LINK_FINAL = Event.Type.LINK_FINAL

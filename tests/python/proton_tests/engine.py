@@ -547,6 +547,9 @@ class LinkTest(Test):
   def test_target(self):
     self._test_source_target(None, TerminusConfig(address="target"))
 
+  def test_coordinator(self):
+    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR))
+
   def test_source_target_full(self):
     self._test_source_target(TerminusConfig(address="source",
                                             timeout=3,
@@ -619,8 +622,8 @@ class LinkTest(Test):
 
 class TerminusConfig:
 
-  def __init__(self, address=None, timeout=None, durability=None, filter=None,
-               capabilities=None, dynamic=False, dist_mode=None):
+  def __init__(self, type=None, address=None, timeout=None, durability=None,
+               filter=None, capabilities=None, dynamic=False, dist_mode=None):
     self.address = address
     self.timeout = timeout
     self.durability = durability
@@ -628,8 +631,11 @@ class TerminusConfig:
     self.capabilities = capabilities
     self.dynamic = dynamic
     self.dist_mode = dist_mode
+    self.type = type
 
   def __call__(self, terminus):
+    if self.type is not None:
+      terminus.type = self.type
     if self.address is not None:
       terminus.address = self.address
     if self.timeout is not None:
@@ -1817,7 +1823,6 @@ class ServerTest(Test):
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
     self.cxtr.transport.idle_timeout = idle_timeout_secs
     self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.cxtr.sasl().client()
     self.conn = Connection()
     self.cxtr.connection = self.conn
     self.conn.open()
@@ -1863,7 +1868,6 @@ class ServerTest(Test):
     self.driver = Driver()
     self.cxtr = self.driver.connector(self.server.host, self.server.port)
     self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.cxtr.sasl().client()
     self.conn = Connection()
     self.cxtr.connection = self.conn
     self.conn.open()
@@ -2139,13 +2143,13 @@ class EventTest(CollectorTest):
     rcv = ssn2.receiver("receiver")
     rcv.open()
     self.pump()
-    self.expect(Event.CONNECTION_OPEN, Event.TRANSPORT,
-                Event.SESSION_INIT, Event.SESSION_OPEN,
-                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_OPEN,
+    self.expect(Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.SESSION_INIT, Event.SESSION_LOCAL_OPEN,
+                Event.TRANSPORT, Event.LINK_INIT, Event.LINK_LOCAL_OPEN,
                 Event.TRANSPORT)
 
     rcv.close()
-    self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+    self.expect(Event.LINK_LOCAL_CLOSE, Event.TRANSPORT)
     self.pump()
     rcv.free()
     del rcv
@@ -2209,7 +2213,7 @@ class EventTest(CollectorTest):
     rcv.flow(10)
     self.pump()
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
-                Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+                Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
     snd.send("Hello World!")
     snd.advance()
@@ -2229,7 +2233,7 @@ class EventTest(CollectorTest):
     dlv = snd.delivery("delivery")
     snd.send("Hello World!")
     assert snd.advance()
-    self.expect(Event.LINK_OPEN, Event.TRANSPORT)
+    self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     self.pump()
     self.expect(Event.LINK_FLOW)
     rdlv = rcv.current
@@ -2276,7 +2280,7 @@ class EventTest(CollectorTest):
     t.bind(c)
     c.open()
 
-    self.expect(Event.CONNECTION_BOUND, Event.CONNECTION_OPEN, Event.TRANSPORT)
+    self.expect(Event.CONNECTION_BOUND, Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT)
 
     c2 = Connection()
     t2 = Transport()
@@ -2293,7 +2297,7 @@ class EventTest(CollectorTest):
 
     pump(t, t2)
 
-    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT,
+    self.expect(Event.CONNECTION_LOCAL_CLOSE, Event.TRANSPORT,
                 Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
   def testLinkDetach(self):
@@ -2307,7 +2311,7 @@ class EventTest(CollectorTest):
     l1 = s1.sender("asdf")
     l1.open()
     l1.detach()
-    self.expect_until(Event.LINK_DETACH, Event.TRANSPORT)
+    self.expect_until(Event.LINK_LOCAL_DETACH, Event.TRANSPORT)
 
     c2 = Connection()
     c2.collect(self.collector)
@@ -2339,15 +2343,15 @@ class TeardownLeakTest(PeerTest):
   def doLeak(self, local, remote):
     self.connection.open()
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
-                Event.CONNECTION_OPEN, Event.TRANSPORT)
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT)
 
     ssn = self.connection.session()
     ssn.open()
-    self.expect(Event.SESSION_INIT, Event.SESSION_OPEN, Event.TRANSPORT)
+    self.expect(Event.SESSION_INIT, Event.SESSION_LOCAL_OPEN, Event.TRANSPORT)
 
     snd = ssn.sender("sender")
     snd.open()
-    self.expect(Event.LINK_INIT, Event.LINK_OPEN, Event.TRANSPORT)
+    self.expect(Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
 
 
     self.pump()
@@ -2364,11 +2368,11 @@ class TeardownLeakTest(PeerTest):
 
     if local:
       snd.close() # ha!!
-      self.expect(Event.LINK_CLOSE, Event.TRANSPORT)
+      self.expect(Event.LINK_LOCAL_CLOSE, Event.TRANSPORT)
     ssn.close()
-    self.expect(Event.SESSION_CLOSE, Event.TRANSPORT)
+    self.expect(Event.SESSION_LOCAL_CLOSE, Event.TRANSPORT)
     self.connection.close()
-    self.expect(Event.CONNECTION_CLOSE, Event.TRANSPORT)
+    self.expect(Event.CONNECTION_LOCAL_CLOSE, Event.TRANSPORT)
 
     if remote:
       self.peer.link_head(0).close() # ha!!
@@ -2407,3 +2411,29 @@ class TeardownLeakTest(PeerTest):
 
   def testLeak(self):
     self.doLeak(False, False)
+
+class IdleTimeoutEventTest(PeerTest):
+
+  def half_pump(self):
+    p = self.transport.pending()
+    self.transport.pop(p)
+
+  def testTimeoutWithZombieServer(self):
+    self.transport.idle_timeout = self.delay
+    self.connection.open()
+    self.half_pump()
+    self.transport.tick(time())
+    sleep(self.delay*2)
+    self.transport.tick(time())
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
+    assert self.transport.capacity() < 0
+    assert self.transport.pending() > 0
+    self.half_pump()
+    self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+    assert self.transport.pending() < 0
+
+  def testTimeoutWithZombieServerAndSASL(self):
+    sasl = self.transport.sasl()
+    self.testTimeoutWithZombieServer()

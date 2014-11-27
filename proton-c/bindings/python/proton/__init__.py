@@ -343,13 +343,13 @@ will not be verified.
     if t == -1:
       return None
     else:
-      return float(t)/1000
+      return millis2secs(t)
 
   def _set_timeout(self, value):
     if value is None:
       t = -1
     else:
-      t = long(1000*value)
+      t = secs2millis(value)
     self._check(pn_messenger_set_timeout(self._mng, t))
 
   timeout = property(_get_timeout, _set_timeout,
@@ -565,7 +565,7 @@ first message.
     if timeout is None:
       t = -1
     else:
-      t = long(1000*timeout)
+      t = secs2millis(timeout)
     err = pn_messenger_work(self._mng, t)
     if (err == PN_TIMEOUT):
       return False
@@ -759,7 +759,7 @@ first message.
   def deadline(self):
     tstamp = pn_messenger_deadline(self._mng)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -806,7 +806,7 @@ class Message(object):
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, MessageException)
-      raise exc("[%s]: %s" % (err, pn_message_error(self._msg)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
     else:
       return err
 
@@ -902,15 +902,15 @@ The priority of the message.
 """)
 
   def _get_ttl(self):
-    return pn_message_get_ttl(self._msg)
+    return millis2secs(pn_message_get_ttl(self._msg))
 
   def _set_ttl(self, value):
-    self._check(pn_message_set_ttl(self._msg, value))
+    self._check(pn_message_set_ttl(self._msg, secs2millis(value)))
 
   ttl = property(_get_ttl, _set_ttl,
                  doc="""
-The time to live of the message measured in milliseconds. Expired
-messages may be dropped.
+The time to live of the message measured in seconds. Expired messages
+may be dropped.
 """)
 
   def _is_first_acquirer(self):
@@ -1028,10 +1028,10 @@ The content-encoding of the message.
 """)
 
   def _get_expiry_time(self):
-    return pn_message_get_expiry_time(self._msg)
+    return millis2secs(pn_message_get_expiry_time(self._msg))
 
   def _set_expiry_time(self, value):
-    self._check(pn_message_set_expiry_time(self._msg, value))
+    self._check(pn_message_set_expiry_time(self._msg, secs2millis(value)))
 
   expiry_time = property(_get_expiry_time, _set_expiry_time,
                          doc="""
@@ -1039,10 +1039,10 @@ The expiry time of the message.
 """)
 
   def _get_creation_time(self):
-    return pn_message_get_creation_time(self._msg)
+    return millis2secs(pn_message_get_creation_time(self._msg))
 
   def _set_creation_time(self, value):
-    self._check(pn_message_set_creation_time(self._msg, value))
+    self._check(pn_message_set_creation_time(self._msg, secs2millis(value)))
 
   creation_time = property(_get_creation_time, _set_creation_time,
                            doc="""
@@ -1177,7 +1177,7 @@ class Selectable(object):
     if not self._impl: raise ValueError("selectable freed")
     tstamp = pn_selectable_deadline(self._impl)
     if tstamp:
-      return float(tstamp)/1000
+      return millis2secs(tstamp)
     else:
       return None
 
@@ -1435,6 +1435,7 @@ class Data:
     current node sets it _before_ the first node, calling next() will advance to
     the first node.
     """
+    assert self._data is not None
     pn_data_rewind(self._data)
 
   def next(self):
@@ -2218,9 +2219,6 @@ class Condition:
                                         (self.name, self.description, self.info)
                                         if x])
 
-  def __str__(self):
-    return ": ".join(filter(None, [self.name, self.description, self.info]))
-
   def __eq__(self, o):
     if not isinstance(o, Condition): return False
     return self.name == o.name and \
@@ -2245,17 +2243,24 @@ def cond2obj(cond):
     return None
 
 def dat2obj(dimpl):
-  d = Data(dimpl)
-  d.rewind()
-  d.next()
-  obj = d.get_object()
-  d.rewind()
-  return obj
+  if dimpl:
+    d = Data(dimpl)
+    d.rewind()
+    d.next()
+    obj = d.get_object()
+    d.rewind()
+    return obj
 
 def obj2dat(obj, dimpl):
   if obj is not None:
     d = Data(dimpl)
     d.put_object(obj)
+
+def secs2millis(secs):
+  return long(secs*1000)
+
+def millis2secs(millis):
+  return float(millis)/1000.0
 
 class Connection(Endpoint):
 
@@ -2911,6 +2916,10 @@ class Delivery(object):
       self._dlv = None
 
   @property
+  def released(self):
+    return self._dlv is None
+
+  @property
   def tag(self):
     return pn_delivery_tag(self._dlv)
 
@@ -2975,12 +2984,28 @@ class Transport(object):
   TRACE_FRM = PN_TRACE_FRM
   TRACE_RAW = PN_TRACE_RAW
 
-  def __init__(self, _trans=None):
-    if not _trans:
+  CLIENT = 1
+  SERVER = 2
+
+  @staticmethod
+  def _wrap_transport(c_trans):
+    if not c_trans: return None
+    wrapper = Transport(_trans=c_trans)
+    return wrapper
+
+  def __init__(self, mode=None, _trans=None):
+    if not mode and not _trans:
       self._trans = pn_transport()
-    else:
+    elif not mode:
       self._shared_trans = True
       self._trans = _trans
+    elif mode==Transport.CLIENT:
+      self._trans = pn_transport()
+    elif mode==Transport.SERVER:
+      self._trans = pn_transport()
+      pn_transport_set_server(self._trans)
+    else:
+      raise TransportException("Cannot initialise Transport from mode: %s" % str(mode))
     self._sasl = None
     self._ssl = None
 
@@ -3024,8 +3049,7 @@ class Transport(object):
     """Process any timed events (like heartbeat generation).
     now = seconds since epoch (float).
     """
-    next = pn_transport_tick(self._trans, long(now * 1000))
-    return float(next) / 1000.0
+    return millis2secs(pn_transport_tick(self._trans, secs2millis(now)))
 
   def capacity(self):
     c = pn_transport_capacity(self._trans)
@@ -3100,11 +3124,10 @@ Sets the maximum channel that may be used on the transport.
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    msec = pn_transport_get_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_idle_timeout(self._trans))
 
   def _set_idle_timeout(self, sec):
-    pn_transport_set_idle_timeout(self._trans, long(sec * 1000))
+    pn_transport_set_idle_timeout(self._trans, secs2millis(sec))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -3113,8 +3136,7 @@ The idle timeout of the connection (float, in seconds).
 
   @property
   def remote_idle_timeout(self):
-    msec = pn_transport_get_remote_idle_timeout(self._trans)
-    return float(msec)/1000.0
+    return millis2secs(pn_transport_get_remote_idle_timeout(self._trans))
 
   @property
   def frames_output(self):
@@ -3139,6 +3161,10 @@ The idle timeout of the connection (float, in seconds).
   @property
   def condition(self):
     return cond2obj(pn_transport_condition(self._trans))
+
+  @property
+  def connection(self):
+    return Connection._wrap_connection(pn_transport_connection(self._trans))
 
 class SASLException(TransportException):
   pass
@@ -3167,9 +3193,11 @@ class SASL(object):
   def mechanisms(self, mechs):
     pn_sasl_mechanisms(self._sasl, mechs)
 
+  # @deprecated
   def client(self):
     pn_sasl_client(self._sasl)
 
+  # @deprecated
   def server(self):
     pn_sasl_server(self._sasl)
 
@@ -3206,7 +3234,6 @@ class SASL(object):
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
-  STATE_CONF = PN_SASL_CONF
   STATE_IDLE = PN_SASL_IDLE
   STATE_STEP = PN_SASL_STEP
   STATE_PASS = PN_SASL_PASS
@@ -3259,6 +3286,10 @@ class SSLDomain(object):
     return self._check( pn_ssl_domain_allow_unsecured_client(self._domain) )
 
 class SSL(object):
+
+  @staticmethod
+  def present():
+    return pn_ssl_present()
 
   def _check(self, err):
     if err < 0:
@@ -3341,7 +3372,7 @@ wrappers = {
   "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
   "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
   "pn_delivery": lambda x: Delivery._wrap_delivery(pn_cast_pn_delivery(x)),
-  "pn_transport": lambda x: Transport(pn_cast_pn_transport(x))
+  "pn_transport": lambda x: Transport._wrap_transport(pn_cast_pn_transport(x))
 }
 
 class Collector:
@@ -3351,7 +3382,7 @@ class Collector:
     self._contexts = set()
 
   def put(self, obj, etype):
-    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype)
+    pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
   def peek(self):
     event = pn_collector_peek(self._impl)
@@ -3360,7 +3391,7 @@ class Collector:
 
     clazz = pn_class_name(pn_event_class(event))
     context = wrappers[clazz](pn_event_context(event))
-    return Event(clazz, context, pn_event_type(event))
+    return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
 
   def pop(self):
     ev = self.peek()
@@ -3371,41 +3402,61 @@ class Collector:
   def __del__(self):
     pn_collector_free(self._impl)
 
+class EventType:
+
+  TYPES = {}
+
+  def __init__(self, number, method):
+    self.number = number
+    self.name = pn_event_type_name(self.number)
+    self.method = method
+    self.TYPES[number] = self
+
+  def __repr__(self):
+    return self.name
+
+def dispatch(handler, method, *args):
+  m = getattr(handler, method, None)
+  if m:
+    return m(*args)
+  elif hasattr(handler, "on_unhandled"):
+    return handler.on_unhandled(method, args)
+
 class Event:
 
-  CONNECTION_INIT = PN_CONNECTION_INIT
-  CONNECTION_BOUND = PN_CONNECTION_BOUND
-  CONNECTION_UNBOUND = PN_CONNECTION_UNBOUND
-  CONNECTION_OPEN = PN_CONNECTION_OPEN
-  CONNECTION_CLOSE = PN_CONNECTION_CLOSE
-  CONNECTION_REMOTE_OPEN = PN_CONNECTION_REMOTE_OPEN
-  CONNECTION_REMOTE_CLOSE = PN_CONNECTION_REMOTE_CLOSE
-  CONNECTION_FINAL = PN_CONNECTION_FINAL
+  CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
+  CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
+  CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+  CONNECTION_LOCAL_OPEN = EventType(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+  CONNECTION_LOCAL_CLOSE = EventType(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+  CONNECTION_REMOTE_OPEN = EventType(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+  CONNECTION_REMOTE_CLOSE = EventType(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+  CONNECTION_FINAL = EventType(PN_CONNECTION_FINAL, "on_connection_final")
 
-  SESSION_INIT = PN_SESSION_INIT
-  SESSION_OPEN = PN_SESSION_OPEN
-  SESSION_CLOSE = PN_SESSION_CLOSE
-  SESSION_REMOTE_OPEN = PN_SESSION_REMOTE_OPEN
-  SESSION_REMOTE_CLOSE = PN_SESSION_REMOTE_CLOSE
-  SESSION_FINAL = PN_SESSION_FINAL
+  SESSION_INIT = EventType(PN_SESSION_INIT, "on_session_init")
+  SESSION_LOCAL_OPEN = EventType(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+  SESSION_LOCAL_CLOSE = EventType(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+  SESSION_REMOTE_OPEN = EventType(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+  SESSION_REMOTE_CLOSE = EventType(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+  SESSION_FINAL = EventType(PN_SESSION_FINAL, "on_session_final")
 
-  LINK_INIT = PN_LINK_INIT
-  LINK_OPEN = PN_LINK_OPEN
-  LINK_CLOSE = PN_LINK_CLOSE
-  LINK_DETACH = PN_LINK_DETACH
-  LINK_REMOTE_OPEN = PN_LINK_REMOTE_OPEN
-  LINK_REMOTE_CLOSE = PN_LINK_REMOTE_CLOSE
-  LINK_REMOTE_DETACH = PN_LINK_REMOTE_DETACH
-  LINK_FLOW = PN_LINK_FLOW
-  LINK_FINAL = PN_LINK_FINAL
+  LINK_INIT = EventType(PN_LINK_INIT, "on_link_init")
+  LINK_LOCAL_OPEN = EventType(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+  LINK_LOCAL_CLOSE = EventType(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+  LINK_LOCAL_DETACH = EventType(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+  LINK_REMOTE_OPEN = EventType(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+  LINK_REMOTE_CLOSE = EventType(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+  LINK_REMOTE_DETACH = EventType(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+  LINK_FLOW = EventType(PN_LINK_FLOW, "on_link_flow")
+  LINK_FINAL = EventType(PN_LINK_FINAL, "on_link_final")
 
-  DELIVERY = PN_DELIVERY
+  DELIVERY = EventType(PN_DELIVERY, "on_delivery")
 
-  TRANSPORT = PN_TRANSPORT
-  TRANSPORT_ERROR = PN_TRANSPORT_ERROR
-  TRANSPORT_HEAD_CLOSED = PN_TRANSPORT_HEAD_CLOSED
-  TRANSPORT_TAIL_CLOSED = PN_TRANSPORT_TAIL_CLOSED
-  TRANSPORT_CLOSED = PN_TRANSPORT_CLOSED
+  TRANSPORT = EventType(PN_TRANSPORT, "on_transport")
+  TRANSPORT_ERROR = EventType(PN_TRANSPORT_ERROR, "on_transport_error")
+  TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+  TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+  TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
   def __init__(self, clazz, context, type):
     self.clazz = clazz
@@ -3418,8 +3469,73 @@ class Event:
       collector._contexts.remove(self.context)
       self.context._released()
 
+  def dispatch(self, handler):
+    return dispatch(handler, self.type.method, self)
+
+  @property
+  def connection(self):
+    if self.clazz == "pn_connection":
+      return self.context
+    elif self.clazz == "pn_session":
+      return self.context.connection
+    elif self.clazz == "pn_link":
+      return self.context.connection
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.connection
+    else:
+      return None
+
+  @property
+  def session(self):
+    if self.clazz == "pn_session":
+      return self.context
+    elif self.clazz == "pn_link":
+      return self.context.session
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link.session
+    else:
+      return None
+
+  @property
+  def link(self):
+    if self.clazz == "pn_link":
+      return self.context
+    elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link
+    else:
+      return None
+
+  @property
+  def sender(self):
+    l = self.link
+    if l and l.is_sender:
+      return l
+    else:
+      return None
+
+  @property
+  def receiver(self):
+    l = self.link
+    if l and l.is_receiver:
+      return l
+    else:
+      return None
+
+  @property
+  def delivery(self):
+    if self.clazz == "pn_delivery":
+      return self.context
+    else:
+      return None
+
   def __repr__(self):
-    return "%s(%s)" % (pn_event_type_name(self.type), self.context)
+    return "%s(%s)" % (self.type, self.context)
+
+class Handler(object):
+
+  def on_unhandled(self, method, args):
+    pass
+
 
 ###
 # Driver
@@ -3491,9 +3607,7 @@ class Connector(object):
   @property
   def transport(self):
     trans = pn_connector_transport(self._cxtr)
-    if trans:
-      return Transport(trans)
-    return None
+    return Transport._wrap_transport(trans)
 
   def close(self):
     return pn_connector_close(self._cxtr)
@@ -3586,7 +3700,7 @@ class Driver(object):
     if timeout_sec is None or timeout_sec < 0.0:
       t = -1
     else:
-      t = long(1000*timeout_sec)
+      t = secs2millis(timeout_sec)
     return pn_driver_wait(self._driver, t)
 
   def wakeup(self):
@@ -3612,61 +3726,6 @@ class Driver(object):
 
   def pending_connector(self):
     return Connector._wrap_connector(pn_driver_connector(self._driver))
-
-__all__ = [
-           "API_LANGUAGE",
-           "IMPLEMENTATION_LANGUAGE",
-           "ABORTED",
-           "ACCEPTED",
-           "AUTOMATIC",
-           "PENDING",
-           "MANUAL",
-           "REJECTED",
-           "RELEASED",
-           "SETTLED",
-           "UNDESCRIBED",
-           "Array",
-           "Collector",
-           "Condition",
-           "Connection",
-           "Connector",
-           "Data",
-           "Delivery",
-           "Disposition",
-           "Described",
-           "Driver",
-           "DriverException",
-           "Endpoint",
-           "Event",
-           "Link",
-           "Listener",
-           "Message",
-           "MessageException",
-           "Messenger",
-           "MessengerException",
-           "ProtonException",
-           "VERSION_MAJOR",
-           "VERSION_MINOR",
-           "Receiver",
-           "SASL",
-           "Sender",
-           "Session",
-           "SSL",
-           "SSLDomain",
-           "SSLSessionDetails",
-           "SSLUnavailable",
-           "SSLException",
-           "Terminus",
-           "Timeout",
-           "Interrupt",
-           "Transport",
-           "TransportException",
-           "char",
-           "symbol",
-           "timestamp",
-           "ulong"
-           ]
-
 
 class Url(object):
   """
@@ -3712,7 +3771,11 @@ class Url(object):
         try:
           return socket.getservbyname(value)
         except socket.error:
-          raise ValueError("Not a valid port number or service name: '%s'" % value)
+          # Not every system has amqp/amqps defined as a service
+          if value == Url.AMQPS:  return 5671
+          elif value == Url.AMQP: return 5672
+          else:
+            raise ValueError("Not a valid port number or service name: '%s'" % value)
 
   def __init__(self, url=None, **kwargs):
     """
@@ -3769,3 +3832,60 @@ class Url(object):
     self.host = self.host or '0.0.0.0'
     self.port = self.port or self.Port(self.scheme)
     return self
+
+__all__ = [
+           "API_LANGUAGE",
+           "IMPLEMENTATION_LANGUAGE",
+           "ABORTED",
+           "ACCEPTED",
+           "AUTOMATIC",
+           "PENDING",
+           "MANUAL",
+           "REJECTED",
+           "RELEASED",
+           "SETTLED",
+           "UNDESCRIBED",
+           "Array",
+           "Collector",
+           "Condition",
+           "Connection",
+           "Connector",
+           "Data",
+           "Delivery",
+           "Disposition",
+           "Described",
+           "Driver",
+           "DriverException",
+           "Endpoint",
+           "Event",
+           "Handler",
+           "Link",
+           "Listener",
+           "Message",
+           "MessageException",
+           "Messenger",
+           "MessengerException",
+           "ProtonException",
+           "VERSION_MAJOR",
+           "VERSION_MINOR",
+           "Receiver",
+           "SASL",
+           "Sender",
+           "Session",
+           "SSL",
+           "SSLDomain",
+           "SSLSessionDetails",
+           "SSLUnavailable",
+           "SSLException",
+           "Terminus",
+           "Timeout",
+           "Interrupt",
+           "Transport",
+           "TransportException",
+           "Url",
+           "char",
+           "dispatch",
+           "symbol",
+           "timestamp",
+           "ulong"
+           ]

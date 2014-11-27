@@ -24,18 +24,18 @@ set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
 if (CMAKE_BUILD_TYPE MATCHES "Deb")
   set (has_debug_symbols " (has debug symbols)")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb")
-message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
+message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
-option(BUILD_WITH_CXX "Compile Proton using C++" OFF)
-if ("${CMAKE_GENERATOR}" MATCHES "^Visual Studio")
+project (Proton C)
+
+if (MSVC)
   # No C99 capability, use C++
-  set(BUILD_WITH_CXX ON)
-endif ("${CMAKE_GENERATOR}" MATCHES "^Visual Studio")
+  set(DEFAULT_BUILD_WITH_CXX ON)
+endif (MSVC)
+option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 
 if (BUILD_WITH_CXX)
   project (Proton C CXX)
-else (BUILD_WITH_CXX)
-  project (Proton C)
 endif (BUILD_WITH_CXX)
 
 file(READ version.txt PN_VERSION_FILE)
