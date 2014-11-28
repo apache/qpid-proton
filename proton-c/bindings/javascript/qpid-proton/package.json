@@ -1,0 +1,11 @@
+{
+    "name" : "qpid-proton",
+    "version": "0.7.0",
+    "description": "apache qpid proton messenger AMQP 1.0 library",
+    "repository": {
+        "type": "svn",
+        "url": "https://svn.apache.org/repos/asf/qpid/proton/trunk/"
+    },
+    "main" : "./lib/proton.js",
+    "dependencies": {}
+}

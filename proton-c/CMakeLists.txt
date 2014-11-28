@@ -261,6 +261,19 @@ if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
 
+# Build the JavaScript language binding.
+# This is somewhat different to the other language bindings in that it does not use swig. It uses a C/C++ to
+# JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
+# and compiles it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can be
+# aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
+option("BUILD_JAVASCRIPT" "Build JavaScript language binding" ON)
+if (BUILD_JAVASCRIPT)
+  find_package(Emscripten)
+  if (EMSCRIPTEN_FOUND)
+    add_subdirectory(bindings/javascript)
+  endif (EMSCRIPTEN_FOUND)
+endif (BUILD_JAVASCRIPT)
+
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
@@ -539,6 +552,11 @@ else (RUBY_EXE)
 endif (RUBY_EXE)
 
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
+
+if (BUILD_JAVASCRIPT)
+  add_test (javascript-codec ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/codec.js)
+  add_test (javascript-message ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/message.js)
+endif (BUILD_JAVASCRIPT)
 
 # build examples to make sure they still work
 add_subdirectory(../examples ../examples)
