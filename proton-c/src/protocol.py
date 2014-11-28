@@ -35,7 +35,7 @@ RESTRICTIONS = {}
 COMPOSITES = {}
 
 for type in doc.query["amqp/section/type"] + mdoc.query["amqp/section/type"] + \
-    sdoc.query["amqp/section/type"] + tdoc.query["amqp/section/type"]::
+    sdoc.query["amqp/section/type"] + tdoc.query["amqp/section/type"]:
 
   source = type["@source"]
   if source:
