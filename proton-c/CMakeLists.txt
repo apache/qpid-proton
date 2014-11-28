@@ -553,5 +553,10 @@ endif (RUBY_EXE)
 
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
 
+if (BUILD_JAVASCRIPT)
+  add_test (javascript-codec ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/codec.js)
+  add_test (javascript-message ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/message.js)
+endif (BUILD_JAVASCRIPT)
+
 # build examples to make sure they still work
 add_subdirectory(../examples ../examples)
