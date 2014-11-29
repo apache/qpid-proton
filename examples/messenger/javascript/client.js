@@ -30,7 +30,6 @@ if (typeof process === 'object' && typeof require === 'function') {
     var replyTo = "~/replies";
     var msgtext = "Hello World!";
     var tracker = null;
-    var running = true;
 
     var message = new proton.Message();
     var messenger = new proton.Messenger();
@@ -39,7 +38,7 @@ if (typeof process === 'object' && typeof require === 'function') {
         while (messenger.incoming()) {
             var t = messenger.get(message);
 
-            console.log("Reply");
+            console.log("Reply:");
             console.log("Address: " + message.getAddress());
             console.log("Subject: " + message.getSubject());
 

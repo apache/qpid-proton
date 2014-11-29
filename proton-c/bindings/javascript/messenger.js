@@ -119,6 +119,9 @@ Module['Messenger'] = function(name) { // Messenger Constructor.
      */
     _pn_messenger_set_blocking(this._messenger, false);
 
+    // Set the Messenger "passive" as we are supplying our own event loop here.
+    _pn_messenger_set_passive(this._messenger, true);
+
     // Subscriptions that haven't yet completed, used for managing subscribe events.
     this._pendingSubscriptions = [];
 
@@ -234,7 +237,7 @@ _Messenger_._checkSubscriptions = function() {
  * pn_messenger_set_timeout()
  * pn_messenger_set_blocking()
  * pn_messenger_interrupt()
- * pn_messenger_send() // Not sure if this is useful in JavaScript.
+ * pn_messenger_work() - omitted because we have our own JavaScript Event loop.
  */
 
 /**
@@ -416,14 +419,19 @@ _Messenger_['start'] = function() {
  * should be stopped before being discarded to ensure a clean shutdown
  * handshake occurs on any internally managed connections.
  * <p>
- * The Messenger may require some time to stop if it is busy, and in that
- * case will return {@link proton.Error.INPROGRESS}. In that case, call isStopped
- * to see if it has fully stopped.
+ * The Messenger may require some time to stop if it is busy, so it is
+ * necessary to call isStopped to see if it has fully stopped.
  * @method stop
  * @memberof! proton.Messenger#
  */
 _Messenger_['stop'] = function() {
     _pn_messenger_stop(this._messenger);
+
+    // When we call stop it's quite likely that it will be busy. We call
+    // Module.EventDispatch.pump to flush the Messenger Event loop, but we
+    // wrap the call in a setTimeout to make sure that any Events generated
+    // by the flush occur on the next "tick" of the JavaScript Event loop.
+    setTimeout(Module.EventDispatch.pump, 0);
 };
 
 /**
@@ -475,20 +483,11 @@ _Messenger_['subscribe'] = function(source) {
  * @method put
  * @memberof! proton.Messenger#
  * @param {proton.Message} message a Message to send.
- * @param {boolean} flush if this is set true or is undefined then messages are
- *        flushed (this is the default). If explicitly set to false then messages
- *        may not be sent immediately and might require an explicit call to work().
- *        This may be used to "batch up" messages and *may* be more efficient.
  * @returns {proton.Data.Long} a tracker.
  */
-_Messenger_['put'] = function(message, flush) {
-    flush = flush === false ? false : true; // Defaults to true if not explicitly specified.
+_Messenger_['put'] = function(message) {
     message._preEncode();
     this._check(_pn_messenger_put(this._messenger, message._message));
-
-    if (flush) {
-        Module.EventDispatch.flush();
-    }
 
     // Getting the tracker is a little tricky as it is a 64 bit number. The way
     // emscripten handles this is to return the low 32 bits directly and pass
@@ -497,6 +496,32 @@ _Messenger_['put'] = function(message, flush) {
     var low = _pn_messenger_outgoing_tracker(this._messenger);
     var high = Runtime.getTempRet0();
     return new Data.Long(low, high);
+};
+
+/**
+ * Send messages from a Messenger's outgoing queue. This method forces the Event
+ * loop to pump data for as long as the underlying socket remains writeable.
+ * Note that after calling send() applications should yield control to the JavaScript
+ * Event loop by calling setTimeout() or process.nextTick() so that the underlying
+ * network processing can actually take place.
+ * @method send
+ * @memberof! proton.Messenger#
+ */
+_Messenger_['send'] = function(number) {
+    Module.EventDispatch.pump();
+};
+
+/**
+ * Gets the aggregate bufferedAmount values from all of the underlying WebSockets.
+ * This value represents the amount of data buffered but not yet sent over the
+ * network. If it grows too high it is a sign that the application is sending too
+ * much data and should be throttled by yielding control to the JavaScript Event loop.
+ * @method getBufferedAmount
+ * @memberof! proton.Messenger#
+ * @returns {number} the total amount of data buffered by the Messenger's sockets.
+ */
+_Messenger_['getBufferedAmount'] = function() {
+    return Module.EventDispatch.getBufferedAmount(this);
 };
 
 /**
@@ -558,25 +583,12 @@ _Messenger_['settle'] = function(tracker) {
 };
 
 /**
- * Sends or receives any outstanding messages queued for a Messenger.
- * For JavaScript the only timeout that makes sense is 0 (do not block).
- * This method may also do I/O work other than sending and receiving messages.
- * For example, closing connections after messenger.stop() has been called.
- * @method work
- * @memberof! proton.Messenger#
- * @returns {boolean} true if there is work still to do, false otherwise.
- */
-_Messenger_['work'] = function() {
-    return (this._check(_pn_messenger_work(this._messenger, 0)) > 0);
-};
-
-/**
  * Receives up to limit messages into the incoming queue.  If no value for limit
  * is supplied, this call will receive as many messages as it can buffer internally.
  * @method recv
  * @memberof! proton.Messenger#
- * @param {number} limit the maximum number of messages to receive or -1 to to receive
- *        as many messages as it can buffer internally.
+ * @param {number} limit the maximum number of messages to receive. If unspecified
+ *        receive as many messages as it can buffer internally.
  */
 _Messenger_['recv'] = function(limit) {
     _pn_messenger_recv(this._messenger, (limit ? limit : -1));

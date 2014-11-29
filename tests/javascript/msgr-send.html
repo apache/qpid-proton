@@ -22,7 +22,7 @@
 <html>
 
 <head>
-	<title>Simple Proton Messenger Send Example</title>
+	<title>Proton Messenger Send Benchmark</title>
 	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
 
 <!--
@@ -41,37 +41,30 @@
   is not really necessary to do this for this application as the default value
   of 16777216 is fine, it is simply done here to illustrate how to do it.
 -->
-<script type="text/javascript">PROTON_TOTAL_MEMORY = 50000000;</script>
-<script type="text/javascript" src="../../../node_modules/qpid-proton/lib/proton.js"></script>
+<script type="text/javascript">PROTON_TOTAL_MEMORY = 140000000;</script>
+<script type="text/javascript">PROTON_TOTAL_STACK = 25000000;</script>
+<script type="text/javascript" src="../../node_modules/qpid-proton/lib/proton.js"></script>
+<script type="text/javascript" src="./msgr-send-common.js"></script>
 
 <script type="text/javascript">
-var message = new proton.Message();
-var messenger = new proton.Messenger();
 
-var sendMessage = function() {
-    var address = document.getElementById("address").value;
-    var subject = document.getElementById("subject").value;
-    var body = document.getElementById("body").value;
+var start = function() {
+    var opts = {};
+    opts.addresses = document.getElementById("address").value;
+    opts.messageCount = parseInt(document.getElementById("messageCount").value, 10);
+    opts.messageSize = parseInt(document.getElementById("messageSize").value, 10);
+    opts.sendBatch = parseInt(document.getElementById("sendBatch").value, 10);
 
-console.log("sendMessage");
-console.log("address = " + address);
-console.log("subject = " + subject);
-console.log("body = " + body);
+    opts.recvCount = -1;
+    opts.outgoingWindow;
+    opts.reportInterval = 0;
+    opts.getReplies = false;
+    opts.name;
+    opts.verbose = false;
 
-    message.setAddress(address);
-    message.setSubject(subject);
-    message.body = body;
-
-    messenger.put(message);
-    messenger.send();
+    var sender = new MessengerSend(opts);
+    sender.start();
 };
-
-var errorHandler = function(error) {
-    console.log("Received error " + error);
-};
-
-messenger.on('error', errorHandler);
-messenger.start();
 
 </script>
 
@@ -106,16 +99,24 @@ input, textarea
            name="address" value="amqp://guest:guest@0.0.0.0" />
 </div>
 <div>    
-    <label for="subject">Subject:</label>
-    <input type="text" id="subject" size="40"
-           name="subject" value="Browser Message" />
+    <label for="messageCount">Message Count:</label>
+    <input type="text" id="messageCount" size="40"
+           name="messageCount" value="0" />
 </div>
-<div>
-    <label for="body">Message:</label>
-    <textarea id="body" name="body" rows="4" cols="40">Hello From Browser!</textarea>
+<div>    
+    <label for="messageSize">Message Size:</label>
+    <input type="text" id="messageSize" size="40"
+           name="messageSize" value="1024" />
 </div>
+<div>    
+    <label for="sendBatch">Send Batch Size:</label>
+    <input type="text" id="sendBatch" size="40"
+           name="sendBatch" value="1024" />
+</div>
+
+
 <div>
-    <input type="button" value="send" onclick="sendMessage()"/>
+    <input type="button" value="start" onclick="start()"/>
 </div>
 </body>
 

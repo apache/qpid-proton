@@ -87,7 +87,7 @@ if (typeof global === 'object') { // If Node.js
     if (global['PROTON_TOTAL_STACK']) {
         Module['TOTAL_STACK'] = global['PROTON_TOTAL_STACK'];
     }
-} else if (typeof window === 'object') { // If browser
+} else if (typeof window === 'object') { // If Browser
     if (window['PROTON_TOTAL_MEMORY']) {
         Module['TOTAL_MEMORY'] = window['PROTON_TOTAL_MEMORY'];
     }
@@ -134,8 +134,8 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
          * has to be mounted before can listen for any of these events.
          */
         Module['websocket']['on']('open', _pump);
-        Module['websocket']['on']('connection', _pump);
         Module['websocket']['on']('message', _pump);
+        Module['websocket']['on']('connection', _connectionHandler);
         Module['websocket']['on']('close', _closeHandler);
         Module['websocket']['on']('error', _errorHandler);
 
@@ -192,6 +192,26 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
     };
 
     /**
+     * This method uses some low-level emscripten internals (stream = FS.getStream(fd),
+     * sock = stream.node.sock, peer = SOCKFS.websocket_sock_ops.getPeer) to find
+     * the underlying WebSocket associated with a given file descriptor value.
+     */
+    var _getWebSocket = function(fd) {
+        var stream = FS.getStream(fd);
+        if (stream) {
+            var sock = stream.node.sock;
+            if (sock.server) {
+                return sock.server;
+            }
+            var peer = SOCKFS.websocket_sock_ops.getPeer(sock, sock.daddr, sock.dport);
+            if (peer) {
+                return peer.socket;
+            }
+        }
+        return null;
+    };
+
+    /**
      * This method iterates through all registered Messengers and retrieves any
      * pending selectables, which are stored in a _selectables map keyed by fd.
      */
@@ -206,7 +226,7 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
                 if (fd === -1) {
                     _pn_selectable_free(sel);
                 } else {
-                    _selectables[fd] = {messenger: messenger, selectable: sel};
+                    _selectables[fd] = {messenger: messenger, selectable: sel, socket: _getWebSocket(fd)};
                 }
             }
         }
@@ -216,8 +236,8 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
     /**
      * Continually pump data while there's still work to do.
      */
-    var _pump = function() {
-        while (_pumpOnce());
+    var _pump = function(fd) {
+        while (_pumpOnce(fd));
     };
 
     /**
@@ -228,83 +248,99 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
      * mask = sock.sock_ops.poll(sock)). We use the internals so we don't have
      * to massage from file descriptors into the C style poll interface.
      */
-    var _pumpOnce = function() {
+    var _pumpOnce = function(fdin) {
         _updateSelectables();
 
-        var count = 0;
+        var work = false;
         for (var fd in _selectables) {
             var selectable = _selectables[fd];
-            var sel = selectable.selectable;
-            var terminal = _pn_selectable_is_terminal(sel);
-            if (terminal) {
-                _pn_selectable_free(sel);
-                delete _selectables[fd];
-            } else {
-                var stream = FS.getStream(fd);
-                if (stream) {
-                    var sock = stream.node.sock;
-                    if (sock.sock_ops.poll) {
-                        var mask = sock.sock_ops.poll(sock); // Low-level poll call.
-                        if (mask) {
-                            var messenger = selectable.messenger;
-                            var capacity = _pn_selectable_capacity(sel) > 0;
-                            var pending = _pn_selectable_pending(sel) > 0;
+            if (selectable.socket) {
+                var messenger = selectable.messenger;
+                var sel = selectable.selectable;
+                var terminal = _pn_selectable_is_terminal(sel);
+                if (terminal) {
+//console.log(fd + " is terminal");
+                    _closeHandler(fd);
+                } else if (!fdin || (fd == fdin)) {
+                    var stream = FS.getStream(fd);
+                    if (stream) {
+                        var sock = stream.node.sock;
+                        if (sock.sock_ops.poll) {
+                            var mask = sock.sock_ops.poll(sock); // Low-level poll call.
+                            if (mask) {
+                                var capacity = _pn_selectable_capacity(sel) > 0;
+                                var pending = _pn_selectable_pending(sel) > 0;
 
-                            if ((mask & POLLIN) && capacity) {
+                                if ((mask & POLLIN) && capacity) {
 //console.log("- readable fd = " + fd + ", capacity = " + _pn_selectable_capacity(sel));
-                                _error = null; // May get set by _pn_selectable_readable.
-                                _pn_selectable_readable(sel);
-                                count++; // Should this be inside the test for _error? Don't know.
+                                    _error = null; // May get set by _pn_selectable_readable.
+                                    _pn_selectable_readable(sel);
+                                    work = true;
+                                }
+                                if ((mask & POLLOUT) && pending) {
+//console.log("- writable fd = " + fd + ", pending = " + _pn_selectable_pending(sel));
+                                    _pn_selectable_writable(sel);
+                                    work = true;
+                                }
+
                                 var errno = messenger['getErrno']();
                                 _error = errno ? messenger['getError']() : _error;
                                 if (_error) {
                                     _errorHandler([fd, 0, _error]);
                                 } else {
-                                    // Don't send work event if it's a listen socket.
-                                    if (!sock.server) {
+                                    // Don't send work Event if it's a listen socket.
+                                    if (work && !sock.server) {
                                         messenger._checkSubscriptions();
                                         messenger._emit('work');
                                     }
                                 }
-                            }
-                            if ((mask & POLLOUT) && pending) {
-//console.log("- writeable fd = " + fd + ", pending = " + _pn_selectable_pending(sel));
-                                _pn_selectable_writable(sel);
-                                //TODO looks like this block isn't needed. Need to
-                                //check with a test-case that writes data as fast as
-                                //it can. If not needed then delete.
-                                /*
-                                count++;
-                                // Check _selectables again in case the call to
-                                // _pn_selectable_writable caused a socket close.
-                                if (_selectables[fd]) {
-                                    messenger._checkSubscriptions();
-                                    messenger._emit('work');
-                                }
-                                */
                             }
                         }
                     }
                 }
             }
         }
+        return work;
+    };
 
-        return count;
+    /**
+     * Handler for the emscripten socket connection event.
+     * The causes _pump to be called with no fd, forcing all fds to be checked.
+     */
+    var _connectionHandler = function(fd) {
+        _pump();
     };
 
     /**
      * Handler for the emscripten socket close event.
      */
     var _closeHandler = function(fd) {
-        var selectable = _selectables[fd];
-        if (selectable) {
-            // Close and remove the selectable.
-            var sel = selectable.selectable;
-            _pn_selectable_free(sel); // This closes the underlying socket too.
-            delete _selectables[fd];
+        _updateSelectables();
 
-            var messenger = selectable.messenger;
-            messenger._emit('work');
+        var selectable = _selectables[fd];
+        if (selectable && selectable.socket) {
+            selectable.socket = null;
+//console.log("_closeHandler fd = " + fd);
+
+            /**
+             * We use the timeout to ensure that execution of the function to
+             * actually free and remove the selectable is deferred until next
+             * time round the (internal JavaScript) event loop. This turned out
+             * to be necessary because in some cases the ws WebSocket library
+             * calls the onclose callback (concurrently!!) before the onmessage
+             * callback exits, which could result in _pn_selectable_free being
+             * called whilst _pn_selectable_writable is executing, which is bad!!
+             */
+            setTimeout(function() {
+//console.log("deferred _closeHandler fd = " + fd);
+                // Close and remove the selectable.
+                var sel = selectable.selectable;
+                _pn_selectable_free(sel); // This closes the underlying socket too.
+                delete _selectables[fd];
+
+                var messenger = selectable.messenger;
+                messenger._emit('work');
+            }, 0);
         }
     };
 
@@ -330,7 +366,7 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
             var subscriptions = messenger._pendingSubscriptions;
             for (var i = 0; i < subscriptions.length; i++) {
                 subscription = subscriptions[i];
-                // Use == not === as we don't care if fd is a number or a string.
+                // Use == not === as fd is a number and subscription.fd is a string.
                 if (subscription.fd == fd) {
                     messenger._pendingSubscriptions.splice(i, 1);
                     if (message.indexOf('EHOSTUNREACH:') === 0) {
@@ -347,10 +383,32 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
 
     /**
      * Flush any data that has been written by the Messenger put() method.
-     * @method flush
+     * @method pump
+     * @memberof! proton.EventDispatch#
      */
-    this.flush = function() {
+    this.pump = function() {
         _pump();
+    };
+
+    /**
+     * For a given Messenger instance retrieve the bufferedAmount property from
+     * any connected WebSockets and return the aggregate total sum.
+     * @method getBufferedAmount
+     * @memberof! proton.EventDispatch#
+     * @param {proton.Messenger} messenger the Messenger instance that we want
+     *        to find the total buffered amount for.
+     * @returns {number} the total sum of the bufferedAmount property across all
+     *          connected WebSockets.
+     */
+    this.getBufferedAmount = function(messenger) {
+        var total = 0;
+        for (var fd in _selectables) {
+            var selectable = _selectables[fd];
+            if (selectable.messenger === messenger && selectable.socket) {
+                total += selectable.socket.bufferedAmount | 0; 
+            }
+        }
+        return total;
     };
 
     /**
@@ -406,9 +464,6 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
 
         var name = messenger['getName']();
         _messengers[name] = messenger;
-
-        // Set the Messenger "passive" as we are supplying our own event loop here.
-        _pn_messenger_set_passive(messenger._messenger, true);
     };
 
     /**

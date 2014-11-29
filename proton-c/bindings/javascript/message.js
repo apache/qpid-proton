@@ -42,16 +42,18 @@ Module['Message'] = function() { // Message Constructor.
 
     // ************************* Public properties ****************************
 
-    this['instructions'] = null;
-    this['annotations'] = null;
-
     // Intitialise with an empty Object so we can set properties in a natural way.
     // message.properties.prop1 = "foo";
     // message.properties.prop2 = "bar";
     this['properties'] = {};
 
-    this['body'] = null;
-    this['data'] = null;
+    /**
+    // The properties may be used, but are initially undefined.
+    this['instructions'];
+    this['annotations'];
+    this['body'];
+    this['data'];
+     */
 };
 
 // Expose constructor as package scope variable to make internal calls less verbose.
@@ -100,22 +102,22 @@ _Message_._preEncode = function() {
     var body = new Data(_pn_message_body(this._message));
 
     inst.clear();
-    if (this['instructions']) {
+    if (this['instructions'] !== undefined) {
         inst['putObject'](this['instructions']);
     }
 
     ann.clear();
-    if (this['annotations']) {
+    if (this['annotations'] !== undefined) {
         ann['putObject'](this['annotations']);
     }
 
     props.clear();
-    if (this['properties']) {
+    if (this['properties'] !== undefined) {
         props['putObject'](this['properties']);
     }
 
     body.clear();
-    if (this['body']) {
+    if (this['body'] !== undefined) {
         var contentType = this['getContentType']();
         if (contentType) {
             var value = this['body'];
@@ -154,13 +156,13 @@ _Message_._postDecode = function(decodeBinaryAsString) {
     if (inst.next()) {
         this['instructions'] = inst['getObject']();
     } else {
-        this['instructions'] = {};
+        delete this['instructions'];
     }
 
     if (ann.next()) {
         this['annotations'] = ann['getObject']();
     } else {
-        this['annotations'] = {};
+        delete this['annotations'];
     }
 
     if (props.next()) {
@@ -182,8 +184,9 @@ _Message_._postDecode = function(decodeBinaryAsString) {
             }
         }
     } else {
-        this['data'] = null;
-        this['body'] = null;
+        // If no body is present ensure that the properties are undefined.
+        delete this['data'];
+        delete this['body'];
     }
 };
 
@@ -226,11 +229,11 @@ _Message_['getError'] = function() {
  */
 _Message_['clear'] = function() {
     _pn_message_clear(this._message);
-    this['instructions'] = null;
-    this['annotations'] = null;
     this['properties'] = {};
-    this['body'] = null;
-    this['data'] = null;
+    delete this['instructions'];
+    delete this['annotations'];
+    delete this['body'];
+    delete this['data'];
 };
 
 /**
