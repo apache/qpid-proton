@@ -30,22 +30,22 @@ module Qpid
       end
 
       it "can be initialized" do
-        @data.should_not be_nil
+        expect(@data).not_to be_nil
       end
 
       it "can hold a null" do
         @data.null
-        @data.null?.should be_true
+        expect(@data.null?).to eq(true)
       end
 
       it "can hold a true boolean" do
         @data.bool = true
-        @data.bool.should be_true
+        expect(@data.bool).to eq(true)
       end
 
       it "can hold a false boolean" do
         @data.bool = false
-        @data.bool.should_not be_true
+        expect(@data.bool).to eq(false)
       end
 
       it "raises an error on a negative ubyte" do
@@ -63,19 +63,19 @@ module Qpid
       it "can hold an unsigned byte" do
         value = rand(255)
         @data.ubyte = value
-        @data.ubyte.should == value
+        expect(@data.ubyte).to eq(value)
       end
 
       it "can hold a byte" do
         value = rand(128)
         @data.byte = value
-        @data.byte.should == value
+        expect(@data.byte).to eq(value)
       end
 
       it "can hold a negative byte" do
         value = 0 - (rand(126) + 1)
         @data.byte = value
-        @data.byte.should == value
+        expect(@data.byte).to eq(value)
       end
 
       it "raises an error on a negative ushort" do
@@ -92,13 +92,13 @@ module Qpid
 
       it "can hold a zero unsigned short" do
         @data.ushort = 0
-        @data.ushort.should == 0
+        expect(@data.ushort).to eq(0)
       end
 
       it "can hold an unsigned short" do
         value = rand(2**15) + 1
         @data.ushort = value
-        @data.ushort.should == value
+        expect(@data.ushort).to eq(value)
       end
 
       it "raises an error on a nil short" do
@@ -110,18 +110,18 @@ module Qpid
       it "can hold a short" do
         value = rand(2**15) + 1
         @data.short = value
-        @data.short.should == value
+        expect(@data.short).to eq(value)
       end
 
       it "can hold a zero short" do
         @data.short = 0
-        @data.short.should == 0
+        expect(@data.short).to eq(0)
       end
 
       it "can hold a negative short" do
         value = (0 - (rand(2**15) + 1))
         @data.short = value
-        @data.short.should == value
+        expect(@data.short).to eq(value)
       end
 
       it "raises an error on a nil uint" do
@@ -139,12 +139,12 @@ module Qpid
       it "can hold an unsigned integer" do
         value = rand(2**32) + 1
         @data.uint = value
-        @data.uint.should == value
+        expect(@data.uint).to eq(value)
       end
 
       it "can hold a zero unsigned integer" do
         @data.uint = 0
-        @data.uint.should == 0
+        expect(@data.uint).to eq(0)
       end
 
       it "raise an error on a null integer" do
@@ -156,12 +156,12 @@ module Qpid
       it "can hold an integer" do
         value = rand(2**31) + 1
         @data.int = value
-        @data.int.should == value
+        expect(@data.int).to eq(value)
       end
 
       it "can hold zero as an integer" do
         @data.int = 0
-        @data.int.should == 0
+        expect(@data.int).to eq(0)
       end
 
       it "raises an error on a null character" do
@@ -173,7 +173,7 @@ module Qpid
       it "can hold a character" do
         value = rand(256).chr.ord
         @data.char = value
-        @data.char.should == value
+        expect(@data.char).to eq(value)
       end
 
       it "raises an error on a null ulong" do
@@ -190,13 +190,13 @@ module Qpid
 
       it "can have a zero unsigned long" do
         @data.ulong = 0
-        @data.ulong.should == 0
+        expect(@data.ulong).to eq(0)
       end
 
       it "can hold an unsigned long" do
         value = rand(2**63) + 1
         @data.ulong = value
-        @data.ulong.should == value
+        expect(@data.ulong).to eq(value)
       end
 
       it "raises an error on a null long" do
@@ -207,13 +207,13 @@ module Qpid
 
       it "can have a zero long" do
         @data.long = 0
-        @data.long.should == 0
+        expect(@data.long).to eq(0)
       end
 
       it "can hold a long" do
         value = rand(2**63) + 1
         @data.long = value
-        @data.long.should == value
+        expect(@data.long).to eq(value)
       end
 
       it "raise an error on a null timestamp" do
@@ -225,18 +225,18 @@ module Qpid
       it "can handle a negative timestamp" do
         last_year = Time.now - (60*60*24*365)
         @data.timestamp = last_year
-        @data.timestamp.should == last_year.to_i
+        expect(@data.timestamp).to eq(last_year.to_i)
       end
 
       it "can handle a zero timestamp" do
         @data.timestamp = 0
-        @data.timestamp.should == 0
+        expect(@data.timestamp).to eq(0)
       end
 
       it "can hold a timestamp" do
         next_year = Time.now + (60*60*24*365)
         @data.timestamp = next_year
-        @data.timestamp.should == next_year.to_i
+        expect(@data.timestamp).to eq(next_year.to_i)
       end
 
       it "raises an error on a null float" do
@@ -248,18 +248,18 @@ module Qpid
       it "can hold a negative float" do
         value = 0.0 - (1.0 + rand(2.0**15)).to_f
         @data.float = value
-        @data.float.should == value
+        expect(@data.float).to eq(value)
       end
 
       it "can hold a zero float" do
         @data.float = 0.0
-        @data.float.should == 0.0
+        expect(@data.float).to eq(0.0)
       end
 
       it "can hold a float" do
         value = (1.0 + rand(2.0**15)).to_f
         @data.float = value
-        @data.float.should == value
+        expect(@data.float).to eq(value)
       end
 
       it "raise an error on a null double" do
@@ -271,18 +271,18 @@ module Qpid
       it "can hold a negative double" do
         value = 0.0 - (1.0 + rand(2.0**31)).to_f
         @data.double = value
-        @data.double.should == value
+        expect(@data.double).to eq(value)
       end
 
       it "can hold a zero double" do
         @data.double = 0.0
-        @data.double.should == 0.0
+        expect(@data.double).to eq(0.0)
       end
 
       it "can hold a double" do
         value = (1.0 + rand(2.0**31)).to_f
         @data.double = value
-        @data.double.should == value
+        expect(@data.double).to eq(value)
       end
 
       it "raises an error on a null decimal32" do
@@ -293,13 +293,13 @@ module Qpid
 
       it "can hold a zero decimal32" do
         @data.decimal32 = 0
-        @data.decimal32.should == 0
+        expect(@data.decimal32).to eq(0)
       end
 
       it "can hold a decimal32" do
         value = 1 + rand(2**31)
         @data.decimal32 = value
-        @data.decimal32.should == value
+        expect(@data.decimal32).to eq(value)
       end
 
       it "raises an error on a null decimal64" do
@@ -310,13 +310,13 @@ module Qpid
 
       it "can hold a zero decimal64" do
         @data.decimal64 = 0
-        @data.decimal64.should == 0
+        expect(@data.decimal64).to eq(0)
       end
 
       it "can hold a decimal64" do
         value = 1 + rand(2**63)
         @data.decimal64 = value
-        @data.decimal64.should == value
+        expect(@data.decimal64).to eq(value)
       end
 
       it "raises an error on a null decimal128" do
@@ -327,13 +327,13 @@ module Qpid
 
       it "can hold a zero decimal128" do
         @data.decimal128 = 0
-        @data.decimal128.should == 0
+        expect(@data.decimal128).to eq(0)
       end
 
       it "can hold a decimal128" do
         value = rand(2**127)
         @data.decimal128 = value
-        @data.decimal128.should == value
+        expect(@data.decimal128).to eq(value)
       end
 
       it "raises an error on a null UUID" do
@@ -350,46 +350,46 @@ module Qpid
 
       it "can set a UUID from an integer value" do
         @data.uuid = 336307859334295828133695192821923655679
-        @data.uuid.should == "fd0289a5-8eec-4a08-9283-81d02c9d2fff"
+        expect(@data.uuid).to eq("fd0289a5-8eec-4a08-9283-81d02c9d2fff")
       end
 
       it "can hold a UUID" do
         value = "fd0289a5-8eec-4a08-9283-81d02c9d2fff"
         @data.uuid = value
-        @data.uuid.should == value
+        expect(@data.uuid).to eq(value)
       end
 
       it "can hold a null binary" do
         @data.binary = nil
-        @data.binary.should == ""
+        expect(@data.binary).to eq("")
       end
 
       it "can hold a binary" do
         value = random_string(128)
         @data.binary = value
-        @data.binary.should == value
+        expect(@data.binary).to eq(value)
       end
 
       it "can hold a null string" do
         @data.string = nil
-        @data.string.should == ""
+        expect(@data.string).to eq("")
       end
 
       it "can hold a string" do
         value = random_string(128)
         @data.string = value
-        @data.string.should == value
+        expect(@data.string).to eq(value)
       end
 
       it "can hold a null symbol" do
         @data.symbol = nil
-        @data.symbol.should == ""
+        expect(@data.symbol).to eq("")
       end
 
       it "can hold a symbol" do
         value = random_string(128)
         @data.symbol = value
-        @data.symbol.should == value
+        expect(@data.symbol).to eq(value)
       end
 
       it "can hold a described value" do
@@ -401,12 +401,12 @@ module Qpid
         @data.string = value
         @data.exit
 
-        @data.described?.should be_true
+        expect(@data.described?).to eq(true)
         @data.enter
         @data.next
-        @data.symbol.should == name
+        expect(@data.symbol).to eq(name)
         @data.next
-        @data.string.should == value
+        expect(@data.string).to eq(value)
       end
 
       it "raises an error when setting the wrong type in an array"
@@ -422,7 +422,7 @@ module Qpid
         @data.enter
         values.each do |value|
           @data.next
-          @data.int. should == value
+          expect(@data.int).to eq(value)
         end
       end
 
@@ -436,13 +436,13 @@ module Qpid
         values.each { |value| @data.string = value }
         @data.exit
 
-        @data.array.should == [values.size, true, Qpid::Proton::STRING]
+        expect(@data.array).to match_array([values.size, true, Qpid::Proton::STRING])
         @data.enter
         @data.next
-        @data.symbol.should == descriptor
+        expect(@data.symbol).to eq(descriptor)
         values.each do |value|
           @data.next
-          @data.string.should == value
+          expect(@data.string).to eq(value)
         end
       end
 
@@ -457,7 +457,7 @@ module Qpid
         @data.enter
         values.each do |value|
           @data.next
-          @data.string.should == value
+          expect(@data.string).to eq(value)
         end
       end
 
@@ -478,9 +478,9 @@ module Qpid
         @data.enter
         keys.each do |key|
           @data.next
-          @data.string.should == key
+          expect(@data.string).to eq(key)
           @data.next
-          @data.string.should == values[key]
+          expect(@data.string).to eq(values[key])
         end
       end
 

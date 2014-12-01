@@ -32,10 +32,10 @@ describe "The extended array type" do
   it "can be created like a normal array" do
     value = []
 
-    value.should respond_to :proton_put
-    value.should respond_to :proton_array_header
-    value.class.should respond_to :proton_get
-    value.should respond_to :proton_described?
+    expect(value).to respond_to(:proton_put)
+    expect(value).to respond_to(:proton_array_header)
+    expect(value.class).to respond_to(:proton_get)
+    expect(value).to respond_to :proton_described?
   end
 
   it "raises an error when putting into a nil Data object" do
@@ -66,19 +66,19 @@ describe "The extended array type" do
   end
 
   it "does not have an array header when it's a simple list" do
-    @list.proton_described?.should be_false
+    expect(@list.proton_described?).to eq(false)
   end
 
   it "can be put into a Data object as a list" do
     @list.proton_put(@data)
     result = Array.proton_get(@data)
-    result.should =~ @list
-    result.proton_array_header.should be_nil
+    expect(result).to match_array(@list)
+    expect(result.proton_array_header).to eq(nil)
   end
 
   it "has an array header when it's an AMQP array" do
-    @undescribed.proton_array_header.should_not be_nil
-    @described.proton_array_header.should_not be_nil
+    expect(@undescribed.proton_array_header).not_to be_nil
+    expect(@described.proton_array_header).not_to be_nil
   end
 
   it "raises an error when the elements of an Array are dissimilar and is put into a Data object" do
@@ -96,9 +96,9 @@ describe "The extended array type" do
     result = Array.proton_get(@data)
     be_close_array(@undescribed, result)
 
-    result.proton_array_header.should_not be_nil
-    result.proton_array_header.should == @undescribed.proton_array_header
-    result.proton_array_header.described?.should be_false
+    expect(result.proton_array_header).not_to be_nil
+    expect(result.proton_array_header).to eq(@undescribed.proton_array_header)
+    expect(result.proton_array_header.described?).to eq(false)
   end
 
   it "can be put into a Data object as a described array" do
@@ -106,9 +106,9 @@ describe "The extended array type" do
     result = Array.proton_get(@data)
     be_close_array(@described, result)
 
-    result.proton_array_header.should_not be_nil
-    result.proton_array_header.should == @described.proton_array_header
-    result.proton_array_header.described?.should be_true
+    expect(result.proton_array_header).not_to be_nil
+    expect(result.proton_array_header).to eq(@described.proton_array_header)
+    expect(result.proton_array_header.described?).to eq(true)
   end
 
 end

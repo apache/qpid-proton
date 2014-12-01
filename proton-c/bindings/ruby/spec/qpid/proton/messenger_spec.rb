@@ -38,13 +38,13 @@ module Qpid
       end
 
       it "will generate a name if one is not provided" do
-        @messenger.name.should_not be_nil
+        expect(@messenger.name).to_not be_nil
       end
 
       it "will accept an assigned name" do
         name = random_string(16)
         msgr = Qpid::Proton::Messenger.new(name)
-        msgr.name.should eq(name)
+        expect(msgr.name).to eq(name)
       end
 
       it "raises an error on a nil timeout" do
@@ -56,35 +56,35 @@ module Qpid
       it "can have a negative timeout" do
         timeout = (0 - rand(65535))
         @messenger.timeout = timeout
-        @messenger.timeout.should eq(timeout)
+        expect(@messenger.timeout).to eq(timeout)
       end
 
       it "has a timeout" do
         timeout = rand(65535)
         @messenger.timeout = timeout
-        @messenger.timeout.should eq(timeout)
+        expect(@messenger.timeout).to eq(timeout)
       end
 
       it "has an error number" do
-        @messenger.error?.should_not be_true
-        @messenger.errno.should eq(0)
+        expect(@messenger.error?).to eq(false)
+        expect(@messenger.errno).to eq(0)
         # force an error
         expect {
           @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
-        @messenger.error?.should be_true
-        @messenger.errno.should_not eq(0)
+        expect(@messenger.error?).to eq(true)
+        expect(@messenger.errno).to_not eq(0)
       end
 
       it "has an error message" do
-        @messenger.error?.should_not be_true
-        @messenger.error.should be_nil
+        expect(@messenger.error?).to eq(false)
+        expect(@messenger.error).to be_nil
         # force an error
         expect {
           @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
-        @messenger.error?.should be_true
-        @messenger.errno.should_not be_nil
+        expect(@messenger.error?).to eq(true)
+        expect(@messenger.errno).to_not be_nil
       end
 
       it "can be started" do
@@ -109,47 +109,47 @@ module Qpid
         expect {
           @messenger.subscribe("amqp://~#{random_string}")
         }.to raise_error(ProtonError)
-        @messenger.error?.should be_true
-        @messenger.errno.should_not be_nil
+        expect(@messenger.error?).to eq(true)
+        expect(@messenger.errno).to_not eq(nil)
       end
 
       it "can have a nil certificate" do
         expect {
           @messenger.certificate = nil
-          @messenger.certificate.should be_nil
+          expect(@messenger.certificate).to be_nil
         }.to_not raise_error
       end
 
       it "can have a certificate" do
         cert = random_string(128)
         @messenger.certificate = cert
-        @messenger.certificate.should eq(cert)
+        expect(@messenger.certificate).to eq(cert)
       end
 
       it "can have a nil private key" do
         expect {
           @messenger.private_key = nil
-          @messenger.private_key.should be_nil
+          expect(@messenger.private_key).to be_nil
         }.to_not raise_error
       end
 
       it "can have a private key" do
         key = random_string(128)
         @messenger.private_key = key
-        @messenger.private_key.should eq(key)
+        expect(@messenger.private_key).to eq(key)
       end
 
       it "can have a nil trusted certificates" do
         expect {
           @messenger.trusted_certificates = nil
-          @messenger.trusted_certificates.should be_nil
+          expect(@messenger.trusted_certificates).to be_nil
         }.to_not raise_error
       end
 
       it "has a list of trusted certificates" do
         certs = random_string(128)
         @messenger.trusted_certificates = certs
-        @messenger.trusted_certificates.should eq(certs)
+        expect(@messenger.trusted_certificates).to eq(certs)
       end
 
       it "raises an error on a nil outgoing window" do
@@ -167,19 +167,19 @@ module Qpid
       it "can have a negative outgoing window" do
         window = 0 - (rand(256) + 1)
         @messenger.outgoing_window = window
-        @messenger.outgoing_window.should eq(window)
+        expect(@messenger.outgoing_window).to eq(window)
       end
 
       it "can have a positive outgoing window" do
         window = (rand(256) + 1)
         @messenger.outgoing_window = window
-        @messenger.outgoing_window.should eq(window)
+        expect(@messenger.outgoing_window).to eq(window)
       end
 
       it "can have a zero outgoing window" do
         window = 0
         @messenger.outgoing_window = window
-        @messenger.outgoing_window.should eq(window)
+        expect(@messenger.outgoing_window).to eq(window)
       end
 
       it "raises an error on a nil incoming window" do
@@ -197,29 +197,29 @@ module Qpid
       it "can have a negative incoming window" do
         window = 0 - (rand(256) + 1)
         @messenger.incoming_window = window
-        @messenger.incoming_window.should eq(window)
+        expect(@messenger.incoming_window).to eq(window)
       end
 
       it "can have a positive incoming window" do
         window = (rand(256) + 1)
         @messenger.incoming_window = window
-        @messenger.incoming_window.should eq(window)
+        expect(@messenger.incoming_window).to eq(window)
       end
 
       it "can have a zero incoming window" do
         window = 0
         @messenger.incoming_window = window
-        @messenger.incoming_window.should eq(window)
+        expect(@messenger.incoming_window).to eq(window)
       end
 
       it "can be put into passive mode" do
         @messenger.passive = true
-        @messenger.passive?.should be_true
+        expect(@messenger.passive?).to eq(true)
       end
 
       it "can be taken out of passive mode" do
         @messenger.passive = false
-        @messenger.passive?.should_not be_true
+        expect(@messenger.passive?).to eq(false)
       end
 
       it "can clear non-existent errors with failing" do
@@ -233,9 +233,9 @@ module Qpid
           @messenger.accept # should cause an error
         rescue; end
 
-        @messenger.error.should_not be_nil
+        expect(@messenger.error).to_not be_nil
         @messenger.clear_error
-        @messenger.error.should be_nil
+        expect(@messenger.error).to be_nil
       end
 
       describe "once started" do
@@ -253,7 +253,7 @@ module Qpid
         end
 
         it "can subscribe to an address" do
-          @messenger.subscribe("amqp://~0.0.0.0:#{5700+rand(1024)}").should_not be_nil
+          expect(@messenger.subscribe("amqp://~0.0.0.0:#{5700+rand(1024)}")).to_not be_nil
         end
 
         it "returns a tracker's status"
@@ -318,7 +318,7 @@ module Qpid
             end
 
             it "has an outgoing tracker" do
-              @tracker.should_not be_nil
+              expect(@tracker).to_not be_nil
             end
 
             it "returns a tracker's status"
@@ -346,7 +346,7 @@ module Qpid
             end
 
             it "can check the status of a tracker" do
-              @messenger.status(@tracker).should_not be_nil
+              expect(@messenger.status(@tracker)).to_not be_nil
             end
 
           end

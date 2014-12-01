@@ -35,7 +35,8 @@ describe "The extended hash type" do
   it "can be put into an instance of Data" do
     @hash.proton_data_put(@data)
     result = Hash.proton_data_get(@data)
-    result.should be_eql(@hash)
+    expect(result.keys).to match_array(@hash.keys)
+    expect(result.values).to match_array(@hash.values)
   end
 
   it "raises an error when retrieved from a nil Data instance" do

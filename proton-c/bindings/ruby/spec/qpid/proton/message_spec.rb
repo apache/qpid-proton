@@ -30,39 +30,39 @@ module Qpid
       end
 
       it "can be created" do
-        @message.should_not be_nil
+        expect(@message).not_to be_nil
       end
 
       it "can be cleared" do
         subject = random_string(16)
         @message.subject = subject
-        @message.subject.should eq(subject)
+        expect(@message.subject).to eq(subject)
         @message.clear
-        @message.subject.should_not eq(subject)
+        expect(@message.subject).not_to eq(subject)
       end
 
       it "has an error number" do
-        @message.error?.should_not be_true
+        expect(@message.error?).to eq(false)
         @message.format = Qpid::Proton::MessageFormat::AMQP
         @message.content = "{"
-        @message.error?.should be_true
-        @message.errno.should_not eq(0)
+        expect(@message.error?).to eq(true)
+        expect(@message.errno).not_to eq(0)
       end
 
       it "has an error message" do
-        @message.error?.should_not be_true
-        @message.error.should be_nil
+        expect(@message.error?).to eq(false)
+        expect(@message.error).to be_nil
         @message.format = Qpid::Proton::MessageFormat::AMQP
         @message.content = "{"
-        @message.error?.should be_true
-        @message.error.should_not eq("")
+        expect(@message.error?).to eq(true)
+        expect(@message.error).not_to eq("")
       end
 
       it "can be durable" do
         @message.durable = true
-        @message.durable.should be_true
+        expect(@message.durable).to eq(true)
         @message.durable = false
-        @message.durable.should_not be_true
+        expect(@message.durable).to eq(false)
       end
 
       it "raises an error when setting durable to nil" do
@@ -86,7 +86,7 @@ module Qpid
       it "sets the priority to the integer portion when a float" do
         priority = rand(100) / 10
         @message.priority = priority
-        @message.priority.should eq(priority.floor)
+        expect(@message.priority).to eq(priority.floor)
       end
 
       it "rejects a priority with too large of a value" do
@@ -104,7 +104,7 @@ module Qpid
       it "has a priority" do
         priority = rand(256)
         @message.priority = priority
-        @message.priority.should equal(priority)
+        expect(@message.priority).to eq(priority)
       end
 
       it "raises an error when setting the time-to-live to nil" do
@@ -122,7 +122,7 @@ module Qpid
       it "sets the time-to-live to the integer portion when a float" do
         ttl = (rand(32767) / 10)
         @message.ttl = ttl
-        @message.ttl.should equal(ttl.floor)
+        expect(@message.ttl).to eq(ttl.floor)
       end
 
       it "raises an error when the time-to-live is negative" do
@@ -134,7 +134,7 @@ module Qpid
       it "has a time-to-live" do
         ttl = rand(32767)
         @message.ttl = ttl
-        @message.ttl.should equal(ttl)
+        expect(@message.ttl).to eq(ttl)
       end
 
       it "raises an error when setting first acquirer to nil" do
@@ -151,10 +151,10 @@ module Qpid
 
       it "has a first acquirer" do
         @message.first_acquirer = true
-        @message.first_acquirer?.should be_true
+        expect(@message.first_acquirer?).to eq(true)
 
         @message.first_acquirer = false
-        @message.first_acquirer?.should_not be_true
+        expect(@message.first_acquirer?).to eq(false)
       end
 
       it "raises an error on a nil delivery count" do
@@ -178,79 +178,79 @@ module Qpid
       it "converts a floating point delivery count to its integer portion" do
           count = rand(255) / 10.0
           @message.delivery_count = count
-          @message.delivery_count.should eq(count.floor)
+          expect(@message.delivery_count).to eq(count.floor)
         end
 
       it "has a delivery count" do
         count = rand(255)
         @message.delivery_count = count
-        @message.delivery_count.should eq(count)
+        expect(@message.delivery_count).to eq(count)
       end
 
       it "allows setting a nil id" do
         @message.id = nil
-        @message.id.should be_nil
+        expect(@message.id).to be_nil
       end
 
       it "has an id" do
         id = random_string(16)
         @message.id = id
-        @message.id.should eq(id)
+        expect(@message.id).to eq(id)
       end
 
       it "allows setting a nil user id" do
         @message.user_id = nil
-        @message.user_id.should eq("")
+        expect(@message.user_id).to eq("")
       end
 
       it "has a user id" do
         id = random_string(16)
         @message.user_id = id
-        @message.user_id.should eq(id)
+        expect(@message.user_id).to eq(id)
       end
 
       it "allows setting a nil address" do
         @message.address = nil
-        @message.address.should be_nil
+        expect(@message.address).to be_nil
       end
 
       it "has an address" do
         address = "//0.0.0.0/#{random_string(16)}"
         @message.address = address
-        @message.address.should eq(address)
+        expect(@message.address).to eq(address)
       end
 
       it "allows setting a nil subject" do
         @message.subject = nil
-        @message.subject.should be_nil
+        expect(@message.subject).to be_nil
       end
 
       it "has a subject" do
         subject = random_string(50)
         @message.subject = subject
-        @message.subject.should eq(subject)
+        expect(@message.subject).to eq(subject)
       end
 
       it "will allow a nil reply-to address" do
         @message.reply_to = nil
-        @message.reply_to.should be_nil
+        expect(@message.reply_to).to be_nil
       end
 
       it "has a reply-to address" do
         address = "//0.0.0.0/#{random_string(16)}"
         @message.reply_to = address
-        @message.reply_to.should eq(address)
+        expect(@message.reply_to).to eq(address)
       end
 
       it "will allow a nil correlation id" do
         @message.correlation_id = nil
-        @message.correlation_id.should be_nil
+        expect(@message.correlation_id).to be_nil
       end
 
       it "has a correlation id" do
         id = random_string(25)
         @message.correlation_id = id
-        @message.correlation_id.should eq(id)
+        expect(@message.correlation_id).to eq(id)
       end
 
       it "raises an error when setting  a nil format" do
@@ -268,35 +268,35 @@ module Qpid
       it "has a format" do
         Qpid::Proton::MessageFormat.formats.each do |format|
           @message.format = format
-          @message.format.should eq(format)
+          expect(@message.format).to eq(format)
         end
       end
 
       it "will allow a nil content type" do
         @message.content_type = nil
-        @message.content_type.should be_nil
+        expect(@message.content_type).to be_nil
       end
 
       it "will allow an empty content type" do
         @message.content_type = ""
-        @message.content_type.should eq("")
+        expect(@message.content_type).to eq("")
       end
 
       it "has a content type" do
         content_type = random_string(32)
         @message.content_type = content_type
-        @message.content_type.should eq(content_type)
+        expect(@message.content_type).to eq(content_type)
       end
 
       it "can have nil content encoding" do
         @message.content_encoding = nil
-        @message.content_encoding.should be_nil
+        expect(@message.content_encoding).to be_nil
       end
 
       it "has a content encoding" do
         encoding = "#{random_string(8)}/#{random_string(8)}"
         @message.content_encoding = encoding
-        @message.content_encoding.should eq(encoding)
+        expect(@message.content_encoding).to eq(encoding)
       end
 
       it "raises an error on a nil expiry time" do
@@ -313,13 +313,13 @@ module Qpid
 
       it "can have a zero expiry time" do
         @message.expires = 0
-        @message.expires.should equal(0)
+        expect(@message.expires).to equal(0)
       end
 
       it "has an expiry time" do
         time = rand(65535)
         @message.expires = time
-        @message.expires.should equal(time)
+        expect(@message.expires).to eq(time)
       end
 
       it "raises an error on a nil creation time" do
@@ -336,29 +336,29 @@ module Qpid
 
       it "can have a zero creation time" do
         @message.creation_time = 0
-        @message.creation_time.should equal(0)
+        expect(@message.creation_time).to eq(0)
       end
 
       it "has a creation time" do
         time = rand(65535)
         @message.creation_time = time
-        @message.creation_time.should equal(time)
+        expect(@message.creation_time).to eq(time)
       end
 
       it "can have a nil group id" do
         @message.group_id = nil
-        @message.group_id.should be_nil
+        expect(@message.group_id).to be_nil
       end
 
       it "can have an empty group id" do
         @message.group_id = ""
-        @message.group_id.should eq("")
+        expect(@message.group_id).to eq("")
       end
 
       it "has a group id" do
         id = random_string(16)
         @message.group_id = id
-        @message.group_id.should eq(id)
+        expect(@message.group_id).to eq(id)
       end
 
 
@@ -371,61 +371,61 @@ module Qpid
       it "can have a negative group sequence" do
         seq = (0 - rand(32767))
         @message.group_sequence = seq
-        @message.group_sequence.should eq(seq)
+        expect(@message.group_sequence).to eq(seq)
       end
 
       it "can have a zero group sequence" do
         @message.group_sequence = 0
-        @message.group_sequence.should eq(0)
+        expect(@message.group_sequence).to eq(0)
       end
 
       it "has a group sequence" do
         id = rand(32767)
         @message.group_sequence = id
-        @message.group_sequence.should eq(id)
+        expect(@message.group_sequence).to eq(id)
       end
 
       it "can have a nil reply-to group id" do
         @message.reply_to_group_id = nil
-        @message.reply_to_group_id.should be_nil
+        expect(@message.reply_to_group_id).to be_nil
       end
 
       it "can have an empty reply-to group id" do
         @message.reply_to_group_id = ""
-        @message.reply_to_group_id.should eq("")
+        expect(@message.reply_to_group_id).to eq("")
       end
 
       it "has a reply-to group id" do
         id = random_string(16)
         @message.reply_to_group_id = id
-        @message.reply_to_group_id.should eq(id)
+        expect(@message.reply_to_group_id).to eq(id)
       end
 
       it "can have an empty string as content" do
         @message.content = ""
-        @message.content.should eq("")
+        expect(@message.content).to eq("")
       end
 
       it "can have content" do
         content = random_string(255)
         @message.content = content
-        @message.content.should eq(content)
+        expect(@message.content).to eq(content)
       end
 
       it "has properties" do
-        @message.should respond_to(:properties)
-        @message.should respond_to(:properties=)
-        @message.should respond_to(:[])
-        @message.should respond_to(:[]=)
+        expect(@message).to respond_to(:properties)
+        expect(@message).to respond_to(:properties=)
+        expect(@message).to respond_to(:[])
+        expect(@message).to respond_to(:[]=)
 
-        @message.properties.should be_kind_of({}.class)
+        expect(@message.properties).to be_kind_of({}.class)
       end
 
       it "can replace the set of properties" do
         values = random_hash(128)
 
         @message.properties = values.clone
-        @message.properties.should eq values
+        expect(@message.properties).to eq(values)
       end
 
       it "can set properties" do
@@ -433,7 +433,7 @@ module Qpid
         value = random_string(128)
 
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
       end
 
       it "can update properties" do
@@ -441,11 +441,11 @@ module Qpid
         value = random_string(128)
 
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
 
         value = random_string(128)
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
       end
 
       it "can hold a null property" do
@@ -453,10 +453,10 @@ module Qpid
         value = random_string(128)
 
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
 
         @message[name] = nil
-        @message[name].should be_nil
+        expect(@message[name]).to be_nil
       end
 
       it "can delete a property" do
@@ -464,10 +464,10 @@ module Qpid
         value = random_string(128)
 
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
 
         @message.delete_property(name)
-        @message.properties.keys.should_not include(name)
+        expect(@message.properties.keys).to_not include(name)
       end
 
       it "has no properties after being cleared" do
@@ -475,15 +475,15 @@ module Qpid
         value = random_string(128)
 
         @message[name] = value
-        @message[name].should eq(value)
+        expect(@message[name]).to eq(value)
 
         @message.clear
-        @message.properties.should be_empty
+        expect(@message.properties).to be_empty
       end
 
       it "has instructions" do
-        @message.should respond_to(:instructions)
-        @message.should respond_to("instructions=".to_sym)
+        expect(@message).to respond_to(:instructions)
+        expect(@message).to respond_to("instructions=".to_sym)
       end
 
       it "can set an instruction" do
@@ -491,7 +491,7 @@ module Qpid
         value = random_string(128)
 
         @message.instructions[name] = value
-        @message.instructions[name].should eq(value)
+        expect(@message.instructions[name]).to eq(value)
       end
 
       it "can update an instruction" do
@@ -499,11 +499,11 @@ module Qpid
         value = random_string(128)
 
         @message.instructions[name] = value
-        @message.instructions[name].should eq(value)
+        expect(@message.instructions[name]).to eq(value)
 
         value = random_string(128)
         @message.instructions[name] = value
-        @message.instructions[name].should eq(value)
+        expect(@message.instructions[name]).to eq(value)
       end
 
       it "can delete the instructions" do
@@ -511,48 +511,47 @@ module Qpid
         value = random_string(128)
 
         @message.instructions[name] = value
-        @message.instructions.should_not be_empty
+        expect(@message.instructions).to_not be_empty
 
         @message.instructions = nil
-        @message.instructions.should be_nil
+        expect(@message.instructions).to be_nil
       end
 
       it "can replace the instructions" do
         values = random_hash(rand(128) + 1)
 
         @message.instructions = values.clone
-        @message.instructions.should eq values
+        expect(@message.instructions).to eq(values)
 
         values = random_hash(rand(64) + 1)
 
         @message.instructions = values.clone
-        @message.instructions.should eq values
+        expect(@message.instructions).to eq(values)
       end
 
       it "can delete the set of instructions" do
         values = random_hash(rand(128) + 1)
 
         @message.instructions = values.clone
-        @message.instructions.should eq values
+        expect(@message.instructions).to eq(values)
 
         @message.instructions = nil
-        @message.instructions.should be_nil
+        expect(@message.instructions).to be_nil
       end
 
       it "has no instructions after being cleared" do
-        name = random_string(16)
-        value = random_string(128)
+        value = random_hash(128)
 
-        @message.instructions = value
-        @message.instructions.should eq(value)
+        @message.instructions = value.clone
+        expect(@message.instructions).to eq(value)
 
-        @message.clear
-        @message.instructions.should be_empty
+         @message.clear
+        expect(@message.instructions).to be_empty
       end
 
       it "has annotations" do
-        @message.should respond_to(:annotations)
-        @message.should respond_to(:annotations=)
+        expect(@message).to respond_to(:annotations)
+        expect(@message).to respond_to(:annotations=)
       end
 
       it "can set an annotation" do
@@ -560,7 +559,7 @@ module Qpid
         value = random_hash(256)
 
         @message.annotations[name] = value.clone
-        @message.annotations[name].should eq(value)
+        expect(@message.annotations[name]).to eq(value)
       end
 
       it "can update an annotation" do
@@ -568,12 +567,12 @@ module Qpid
         value = random_hash(256)
 
         @message.annotations[name] = value.clone
-        @message.annotations[name].should eq(value)
+        expect(@message.annotations[name]).to eq(value)
 
         value = random_hash(128)
 
         @message.annotations[name] = value.clone
-        @message.annotations[name].should eq(value)
+        expect(@message.annotations[name]).to eq(value)
       end
 
       it "can delete an annotation" do
@@ -581,52 +580,51 @@ module Qpid
         value = random_hash(256)
 
         @message.annotations[name] = value.clone
-        @message.annotations[name].should eq(value)
+        expect(@message.annotations[name]).to eq(value)
 
         @message.annotations[name] = nil
-        @message.annotations[name].should be_nil
+        expect(@message.annotations[name]).to be_nil
       end
 
       it "can replace all annotations" do
         values = random_hash(rand(128) + 1)
 
         @message.annotations = values.clone
-        @message.annotations.should eq values
+        expect(@message.annotations).to eq(values)
 
         values = random_hash(rand(64) + 1)
 
         @message.annotations = values.clone
-        @message.annotations.should eq values
+        expect(@message.annotations).to eq(values)
       end
 
       it "can delete the set of annotations" do
-        values = random_hash(rand(128) + 1)
+        value = random_hash(rand(128) + 1)
 
-        @message.annotations = values.clone
-        @message.annotations.should eq values
+        @message.annotations = value.clone
+        expect(@message.annotations).to eq(value)
 
         @message.annotations = nil
-        @message.annotations.should be_nil
+        expect(@message.annotations).to be_nil
       end
 
       it "has no annotations after being cleared" do
-        name = random_string(16)
-        value = random_string(128)
+        value = random_hash(16)
 
         @message.annotations = value
-        @message.annotations.should eq(value)
+        expect(@message.annotations).to eq(value)
 
         @message.clear
-        @message.annotations.should be_empty
+        expect(@message.annotations).to be_empty
       end
 
       it "has a body property" do
-        @message.should respond_to(:body)
-        @message.should respond_to(:body=)
+        expect(@message).to respond_to(:body)
+        expect(@message).to respond_to(:body=)
       end
 
       it "has a default body that is nil" do
-        @message.body.should be_nil
+        expect(@message.body).to be_nil
       end
 
       it "has no body after being cleared" do
@@ -634,10 +632,10 @@ module Qpid
         value = random_string(128)
 
         @message.body = value
-        @message.body.should eq(value)
+        expect(@message.body).to eq(value)
 
         @message.clear
-        @message.body.should be_nil
+        expect(@message.body).to be_nil
       end
 
       it "can set the body property" do
@@ -654,7 +652,7 @@ module Qpid
           end
 
           @message.body = value
-          @message.body.should eq(value)
+          expect(@message.body).to eq(value)
         end
       end
 
@@ -672,10 +670,10 @@ module Qpid
           end
 
           @message.body = value
-          @message.body.should eq(value)
+          expect(@message.body).to eq(value)
 
           @message.body = nil
-          @message.body.should be_nil
+          expect(@message.body).to be_nil
         end
       end
 
