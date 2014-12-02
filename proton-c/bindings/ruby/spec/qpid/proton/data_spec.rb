@@ -171,7 +171,9 @@ module Qpid
       end
 
       it "can hold a character" do
-        value = rand(256).chr.ord
+        source = random_string(256)
+        index = rand(source.length)
+        value = source[index,1].bytes.to_a[0]
         @data.char = value
         expect(@data.char).to eq(value)
       end
