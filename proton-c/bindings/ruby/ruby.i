@@ -344,4 +344,151 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
+%inline %{
+#if defined(RUBY20) || defined(RUBY21)
+
+  typedef void *non_blocking_return_t;
+#define RB_BLOCKING_CALL rb_thread_call_without_gvl
+
+#elif defined(RUBY19)
+
+    typedef VALUE non_blocking_return_t;
+#define RB_BLOCKING_CALL rb_thread_blocking_region
+
+#endif
+  %}
+
+%rename(pn_messenger_send) wrap_pn_messenger_send;
+%rename(pn_messenger_recv) wrap_pn_messenger_recv;
+%rename(pn_messenger_work) wrap_pn_messenger_work;
+
+%inline %{
+
+#if defined(RB_BLOCKING_CALL)
+
+    static non_blocking_return_t pn_messenger_send_no_gvl(void *args) {
+    VALUE result = Qnil;
+    pn_messenger_t *messenger = (pn_messenger_t *)((void **)args)[0];
+    int *limit = (int *)((void **)args)[1];
+
+    int rc = pn_messenger_send(messenger, *limit);
+
+    result = INT2NUM(rc);
+    return (non_blocking_return_t )result;
+    }
+
+    static non_blocking_return_t pn_messenger_recv_no_gvl(void *args) {
+    VALUE result = Qnil;
+    pn_messenger_t *messenger = (pn_messenger_t *)((void **)args)[0];
+    int *limit = (int *)((void **)args)[1];
+
+    int rc = pn_messenger_recv(messenger, *limit);
+
+    result = INT2NUM(rc);
+    return (non_blocking_return_t )result;
+  }
+
+    static non_blocking_return_t pn_messenger_work_no_gvl(void *args) {
+      VALUE result = Qnil;
+      pn_messenger_t *messenger = (pn_messenger_t *)((void **)args)[0];
+      int *timeout = (int *)((void **)args)[1];
+
+      int rc = pn_messenger_work(messenger, *timeout);
+
+      result = INT2NUM(rc);
+      return (non_blocking_return_t )result;
+    }
+
+#endif
+
+  int wrap_pn_messenger_send(pn_messenger_t *messenger, int limit) {
+    int result = 0;
+
+#if defined(RB_BLOCKING_CALL)
+
+    // only release the gil if we're blocking
+    if(pn_messenger_is_blocking(messenger)) {
+      VALUE rc;
+      void* args[2];
+
+      args[0] = messenger;
+      args[1] = &limit;
+
+      rc = RB_BLOCKING_CALL(pn_messenger_send_no_gvl,
+                            &args, RUBY_UBF_PROCESS, NULL);
+
+      if(RTEST(rc))
+        {
+          result = FIX2INT(rc);
+        }
+    }
+
+#else // !defined(RB_BLOCKING_CALL)
+    result = pn_messenger_send(messenger, limit);
+#endif // defined(RB_BLOCKING_CALL)
+
+    return result;
+  }
+
+  int wrap_pn_messenger_recv(pn_messenger_t *messenger, int limit) {
+    int result = 0;
+
+#if defined(RB_BLOCKING_CALL)
+    // only release the gil if we're blocking
+    if(pn_messenger_is_blocking(messenger)) {
+      VALUE rc;
+      void* args[2];
+
+      args[0] = messenger;
+      args[1] = &limit;
+
+      rc = RB_BLOCKING_CALL(pn_messenger_recv_no_gvl,
+                            &args, RUBY_UBF_PROCESS, NULL);
+
+      if(RTEST(rc))
+        {
+          result = FIX2INT(rc);
+        }
+
+    } else {
+      result = pn_messenger_recv(messenger, limit);
+    }
+#else // !defined(RB_BLOCKING_CALL)
+    result = pn_messenger_recv(messenger, limit);
+#endif // defined(RB_BLOCKING_CALL)
+
+      return result;
+  }
+
+  int wrap_pn_messenger_work(pn_messenger_t *messenger, int timeout) {
+    int result = 0;
+
+#if defined(RB_BLOCKING_CALL)
+    // only release the gil if we're blocking
+    if(timeout) {
+      VALUE rc;
+      void* args[2];
+
+      args[0] = messenger;
+      args[1] = &timeout;
+
+      rc = RB_BLOCKING_CALL(pn_messenger_work_no_gvl,
+                            &args, RUBY_UBF_PROCESS, NULL);
+
+      if(RTEST(rc))
+        {
+          result = FIX2INT(rc);
+        }
+    } else {
+      result = pn_messenger_work(messenger, timeout);
+    }
+#else
+    result = pn_messenger_work(messenger, timeout);
+#endif
+
+    return result;
+  }
+
+  %}
+
 %include "proton/cproton.i"

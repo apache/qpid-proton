@@ -19,6 +19,10 @@
 
 require 'mkmf'
 
+# set the ruby version compiler flag
+runtime_version = RUBY_VERSION.gsub(/\./,'')[0,2]
+$CFLAGS << " -DRUBY#{runtime_version}"
+
 dir_config("qpid-proton")
 
 REQUIRED_LIBRARIES = [
