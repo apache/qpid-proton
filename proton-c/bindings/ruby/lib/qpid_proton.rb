@@ -20,6 +20,10 @@
 require "cproton"
 require "date"
 
+if RUBY_VERSION < "1.9"
+require "kconv"
+end
+
 require "qpid_proton/version"
 require "qpid_proton/described"
 require "qpid_proton/strings"

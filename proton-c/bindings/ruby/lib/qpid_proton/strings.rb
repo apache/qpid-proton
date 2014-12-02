@@ -29,18 +29,14 @@ module Qpid # :nodoc:
       # No such thing in Ruby 1.8. So there we need to use Iconv to try and
       # convert it to unicode. If it works, good! But if it raises an
       # exception then we'll treat it as binary.
-      if RUBY_VERSION >= "1.9"
+      if RUBY_VERSION < "1.9"
+        return true if value.isutf8
+        return false
+      else
         return true if (value.encoding == "UTF-8" ||
                         value.encode("UTF-8").valid_encoding?)
 
         return false
-      else
-        begin
-          newval = Iconv.new("UTF8//TRANSLIT//IGNORE", "UTF8").iconv(value.to_s)
-          return true
-        rescue
-          return false
-        end
       end
     end
 
