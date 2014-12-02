@@ -72,6 +72,16 @@ int pn_list_add(pn_list_t *list, void *value)
   return 0;
 }
 
+void *pn_list_pop(pn_list_t *list)
+{
+  assert(list);
+  if (list->size) {
+    return list->elements[list->size--];
+  } else {
+    return NULL;
+  }
+}
+
 ssize_t pn_list_index(pn_list_t *list, void *value)
 {
   for (size_t i = 0; i < list->size; i++) {

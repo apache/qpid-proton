@@ -138,6 +138,7 @@ PN_EXTERN size_t pn_list_size(pn_list_t *list);
 PN_EXTERN void *pn_list_get(pn_list_t *list, int index);
 PN_EXTERN void pn_list_set(pn_list_t *list, int index, void *value);
 PN_EXTERN int pn_list_add(pn_list_t *list, void *value);
+PN_EXTERN void *pn_list_pop(pn_list_t *list);
 PN_EXTERN ssize_t pn_list_index(pn_list_t *list, void *value);
 PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
