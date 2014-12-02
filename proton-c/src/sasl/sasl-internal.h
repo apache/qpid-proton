@@ -24,8 +24,6 @@
 
 #include <proton/sasl.h>
 
-void pn_sasl_trace(pn_transport_t *transport, pn_trace_t trace);
-
 /** Destructor for the given SASL layer.
  *
  * @param[in] sasl the SASL object to free. No longer valid on

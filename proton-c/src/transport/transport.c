@@ -212,7 +212,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     return PN_EOS;
   }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
-  if (transport->disp->trace & PN_TRACE_DRV)
+  if (transport->trace & PN_TRACE_DRV)
       pn_transport_logf(transport, "%s detected", pni_protocol_name(protocol));
   switch (protocol) {
   case PNI_PROTOCOL_SSL:
@@ -235,7 +235,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     }
     transport->io_layers[layer] = &sasl_write_header_layer;
     transport->io_layers[layer+1] = &pni_autodetect_layer;
-    if (transport->disp->trace & PN_TRACE_FRM)
+    if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "SASL");
     return 8;
   case PNI_PROTOCOL_AMQP1:
@@ -249,7 +249,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
       }
     }
     transport->io_layers[layer] = &amqp_write_header_layer;
-    if (transport->disp->trace & PN_TRACE_FRM)
+    if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "AMQP");
     return 8;
   case PNI_PROTOCOL_INSUFFICIENT:
@@ -357,6 +357,10 @@ static void pn_transport_initialize(void *object)
   transport->posted_idle_timeout = false;
 
   transport->server = false;
+
+  transport->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
+    (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
+    (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 }
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
@@ -1273,7 +1277,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
       break;
     } else {
       assert(n == PN_EOS);
-      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
+      if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
         pn_transport_log(transport, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
       return n;
@@ -1298,7 +1302,7 @@ static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int
     } else {
       transport->io_layers[layer] = &amqp_write_header_layer;
     }
-    if (transport->disp->trace & PN_TRACE_FRM)
+    if (transport->trace & PN_TRACE_FRM)
       pn_transport_logf(transport, "  <- %s", "AMQP");
     return 8;
   case PNI_PROTOCOL_INSUFFICIENT:
@@ -2009,7 +2013,7 @@ int pn_process(pn_transport_t *transport)
 
 static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  if (transport->disp->trace & PN_TRACE_FRM)
+  if (transport->trace & PN_TRACE_FRM)
     pn_transport_logf(transport, "  -> %s", "AMQP");
   assert(available >= 8);
   memmove(bytes, AMQP_HEADER, 8);
@@ -2088,7 +2092,7 @@ static ssize_t transport_produce(pn_transport_t *transport)
     } else {
       if (transport->output_pending)
         break;   // return what is available
-      if (transport->disp->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
+      if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
         if (n < 0) {
           pn_transport_log(transport, "  -> EOS");
         }
@@ -2117,9 +2121,7 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
 
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  if (transport->sasl) pn_sasl_trace(transport, trace);
-  if (transport->ssl) pn_ssl_trace(transport, trace);
-  transport->disp->trace = trace;
+  transport->trace = trace;
 }
 
 void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer)

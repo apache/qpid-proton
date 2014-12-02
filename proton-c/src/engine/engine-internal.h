@@ -168,6 +168,8 @@ struct pn_transport_t {
 
   pn_record_t *context;
 
+  pn_trace_t trace;
+
   uint16_t channel_max;
   uint16_t remote_channel_max;
   bool freed;

@@ -24,6 +24,7 @@
 #include "protocol.h"
 #include "util.h"
 #include "platform_fmt.h"
+#include "engine/engine-internal.h"
 
 #include "dispatch_actions.h"
 
@@ -66,9 +67,6 @@ pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
 
   disp->frame_type = frame_type;
   disp->transport = transport;
-  disp->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
-    (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
-    (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 
   disp->channel = 0;
   disp->args = pn_data(16);
@@ -107,7 +105,7 @@ typedef enum {IN, OUT} pn_dir_t;
 static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
                         pn_data_t *args, const char *payload, size_t size)
 {
-  if (disp->trace & PN_TRACE_FRM) {
+  if (disp->transport->trace & PN_TRACE_FRM) {
     pn_string_format(disp->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
     pn_inspect(args, disp->scratch);
 
@@ -129,7 +127,7 @@ static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
 int pn_dispatch_frame(pn_dispatcher_t *disp, pn_frame_t frame)
 {
   if (frame.size == 0) { // ignore null frames
-    if (disp->trace & PN_TRACE_FRM)
+    if (disp->transport->trace & PN_TRACE_FRM)
       pn_transport_logf(disp->transport, "%u <- (EMPTY FRAME)\n", frame.channel);
     return 0;
   }
@@ -257,7 +255,7 @@ int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
     disp->output = (char *) realloc(disp->output, disp->capacity);
   }
   disp->output_frames_ct += 1;
-  if (disp->trace & PN_TRACE_RAW) {
+  if (disp->transport->trace & PN_TRACE_RAW) {
     pn_string_set(disp->scratch, "RAW: \"");
     pn_quote(disp->scratch, disp->output + disp->available, n);
     pn_string_addf(disp->scratch, "\"");
@@ -366,7 +364,7 @@ int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
     }
     disp->output_frames_ct += 1;
     framecount++;
-    if (disp->trace & PN_TRACE_RAW) {
+    if (disp->transport->trace & PN_TRACE_RAW) {
       pn_string_set(disp->scratch, "RAW: \"");
       pn_quote(disp->scratch, disp->output + disp->available, n);
       pn_string_addf(disp->scratch, "\"");

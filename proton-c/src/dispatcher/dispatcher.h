@@ -50,7 +50,6 @@ struct pn_dispatcher_t {
   uint64_t output_frames_ct;
   uint64_t input_frames_ct;
   pn_string_t *scratch;
-  pn_trace_t trace;
   uint16_t channel;
   uint8_t frame_type; // Used when constructing outgoing frames
   bool halt;

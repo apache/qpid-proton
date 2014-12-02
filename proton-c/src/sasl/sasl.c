@@ -265,11 +265,6 @@ pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl0)
   return sasl ? sasl->outcome : PN_SASL_NONE;
 }
 
-void pn_sasl_trace(pn_transport_t *transport, pn_trace_t trace)
-{
-  transport->sasl->disp->trace = trace;
-}
-
 void pn_sasl_free(pn_transport_t *transport)
 {
   if (transport) {
@@ -472,7 +467,7 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
     } else {
         transport->io_layers[layer] = &sasl_write_header_layer;
     }
-    if (transport->sasl->disp->trace & PN_TRACE_FRM)
+    if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "SASL");
     return SASL_HEADER_LEN;
   case PNI_PROTOCOL_INSUFFICIENT:
@@ -505,8 +500,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t size)
 {
-  pni_sasl_t *sasl = transport->sasl;
-  if (sasl->disp->trace & PN_TRACE_FRM)
+  if (transport->trace & PN_TRACE_FRM)
     pn_transport_logf(transport, "  -> %s", "SASL");
   assert(size >= SASL_HEADER_LEN);
   memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);

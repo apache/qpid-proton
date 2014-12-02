@@ -107,8 +107,6 @@ struct pni_ssl_t {
   size_t in_size;
   size_t in_count;
 
-  pn_trace_t trace;
-
   bool ssl_shutdown;    // BIO_ssl_shutdown() called on socket.
   bool ssl_closed;      // shutdown complete, or SSL error
   bool read_blocked;    // SSL blocked until more network data is read
@@ -155,7 +153,7 @@ static size_t buffered_output( pn_transport_t *transport );
 // @todo: used to avoid littering the code with calls to printf...
 static void ssl_log(pn_transport_t *transport, const char *fmt, ...)
 {
-  if (PN_TRACE_DRV & transport->ssl->trace) {
+  if (PN_TRACE_DRV & transport->trace) {
     va_list ap;
     va_start(ap, fmt);
     pn_transport_vlogf(transport, fmt, ap);
@@ -194,9 +192,9 @@ static void ssl_log_error(const char *fmt, ...)
   }
 }
 
-static void ssl_log_clear_data(pni_ssl_t *ssl, const char *data, size_t len)
+static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
 {
-  if (PN_TRACE_RAW & ssl->trace) {
+  if (PN_TRACE_RAW & transport->trace) {
     fprintf(stderr, "SSL decrypted data: \"");
     pn_fprint_data( stderr, data, len );
     fprintf(stderr, "\"\n");
@@ -808,8 +806,6 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
   transport->ssl = ssl;
 
-  ssl->trace = (transport->disp) ? transport->disp->trace : PN_TRACE_OFF;
-
   return (pn_ssl_t *) transport;
 }
 
@@ -895,7 +891,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
       int read = BIO_read( ssl->bio_ssl, &ssl->inbuf[ssl->in_count], ssl->in_size - ssl->in_count );
       if (read > 0) {
         ssl_log( transport, "Read %d bytes from SSL socket for app", read );
-        ssl_log_clear_data( ssl, &ssl->inbuf[ssl->in_count], read );
+        ssl_log_clear_data(transport, &ssl->inbuf[ssl->in_count], read );
         ssl->in_count += read;
         work_pending = true;
       } else {
@@ -1193,11 +1189,6 @@ static void release_ssl_socket(pni_ssl_t *ssl)
   ssl->ssl = NULL;
 }
 
-
-void pn_ssl_trace(pn_transport_t *transport, pn_trace_t trace)
-{
-  transport->ssl->trace = trace;
-}
 
 
 pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl0)
