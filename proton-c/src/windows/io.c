@@ -170,7 +170,7 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
   }
 }
 
-static inline pn_socket_t pni_create_socket();
+static inline pn_socket_t pni_create_socket(int domain);
 
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
@@ -181,7 +181,7 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pni_create_socket();
+  pn_socket_t sock = pni_create_socket(addr->ai_family);
   if (sock == INVALID_SOCKET) {
     pni_win32_error(io->error, "pni_create_socket", WSAGetLastError());
     return INVALID_SOCKET;
@@ -235,7 +235,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pni_create_socket();
+  pn_socket_t sock = pni_create_socket(addr->ai_family);
   if (sock == INVALID_SOCKET) {
     pni_win32_error(io->error, "proton pni_create_socket", WSAGetLastError());
     freeaddrinfo(addr);
@@ -301,12 +301,12 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t s
   }
 }
 
-static inline pn_socket_t pni_create_socket() {
+static inline pn_socket_t pni_create_socket(int domain) {
   struct protoent * pe_tcp = getprotobyname("tcp");
   if (pe_tcp == NULL) {
     return -1;
   }
-  return socket(AF_INET, SOCK_STREAM, pe_tcp->p_proto);
+  return socket(domain, SOCK_STREAM, pe_tcp->p_proto);
 }
 
 ssize_t pn_send(pn_io_t *io, pn_socket_t sockfd, const void *buf, size_t len) {
