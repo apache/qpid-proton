@@ -19,22 +19,20 @@
 #
 
 from proton.handlers import MessagingHandler
-from proton.reactors import ApplicationEvent, EventLoop
+from proton.reactors import ApplicationEvent, Container
 from db_common import Db
 
 class Recv(MessagingHandler):
-    def __init__(self, host, address):
+    def __init__(self, url):
         super(Recv, self).__init__(auto_accept=False)
-        self.host = host
-        self.address = address
+        self.url = url
         self.delay = 0
         # TODO: load last tag from db
         self.last_id = None
 
     def on_start(self, event):
-        self.db = Db("dst_db", event.reactor.get_event_trigger())
-        context = event.reactor.connect(self.host)
-        context.create_receiver(self.address)
+        self.db = Db("dst_db", event.container.get_event_trigger())
+        event.container.create_receiver(self.url)
 
     def on_record_inserted(self, event):
         self.accept(event.delivery)
@@ -49,7 +47,7 @@ class Recv(MessagingHandler):
             self.accept(event.delivery)
 
 try:
-    EventLoop(Recv("localhost:5672", "examples")).run()
+    Container(Recv("localhost:5672/examples")).run()
 except KeyboardInterrupt: pass
 
 

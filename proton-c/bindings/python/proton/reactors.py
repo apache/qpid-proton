@@ -18,7 +18,7 @@
 #
 import heapq, os, Queue, socket, time, types
 from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
-from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
+from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Session, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 from proton.handlers import nested_handlers, ScopedHandler
@@ -310,9 +310,9 @@ class ApplicationEvent(Event):
                            ", ".join([str(o) for o in objects if o is not None]))
 
 class StartEvent(ApplicationEvent):
-    def __init__(self, reactor):
+    def __init__(self, container):
         super(StartEvent, self).__init__("start")
-        self.reactor = reactor
+        self.container = container
 
 class ScheduledEvents(Events):
     """
@@ -576,100 +576,38 @@ def _apply_link_options(options, link):
         else:
             if options.test(link): options.apply(link)
 
+def _create_session(connection, handler=None):
+    session = connection.session()
+    session.open()
+    return session
 
-class MessagingContext(object):
-    """
-    A context for creating links. This allows the user to ignore
-    sessions unless they explicitly want to control them. Additionally
-    provides support for transactional messaging.
-    """
-    def __init__(self, conn, handler=None, ssn=None):
-        self.conn = conn
-        if handler:
-            self.conn.context = handler
-        self.conn._mc = self
-        self.ssn = ssn
-        self.txn_ctrl = None
 
-    def _get_handler(self):
-        return self.conn.context
+def _get_attr(target, name):
+    if hasattr(target, name):
+        return getattr(target, name)
+    else:
+        return None
 
-    def _set_handler(self, value):
-        self.conn.context = value
+class SessionPerConnection(object):
+    def __init__(self):
+        self._default_session = None
 
-    handler = property(_get_handler, _set_handler)
-
-    def create_sender(self, target, source=None, name=None, handler=None, tags=None, options=None):
-        snd = self._get_ssn().sender(name or self._get_id(target, source))
-        if source:
-            snd.source.address = source
-        if target:
-            snd.target.address = target
-        if handler:
-            snd.context = handler
-        snd.tags = tags or delivery_tags()
-        snd.send_msg = types.MethodType(_send_msg, snd)
-        _apply_link_options(options, snd)
-        snd.open()
-        return snd
-
-    def create_receiver(self, source, target=None, name=None, dynamic=False, handler=None, options=None):
-        rcv = self._get_ssn().receiver(name or self._get_id(source, target))
-        if source:
-            rcv.source.address = source
-        if dynamic:
-            rcv.source.dynamic = True
-        if target:
-            rcv.target.address = target
-        if handler:
-            rcv.context = handler
-        _apply_link_options(options, rcv)
-        rcv.open()
-        return rcv
-
-    def create_session(self):
-        return MessageContext(conn=None, ssn=self._new_ssn())
-
-    def declare_transaction(self, handler=None, settle_before_discharge=False):
-        if not self.txn_ctrl:
-            self.txn_ctrl = self.create_sender(None, name="txn-ctrl")
-            self.txn_ctrl.target.type = Terminus.COORDINATOR
-            self.txn_ctrl.target.capabilities.put_object(symbol(u'amqp:local-transactions'))
-        return Transaction(self.txn_ctrl, handler, settle_before_discharge)
-
-    def close(self):
-        if self.ssn:
-            self.ssn.close()
-        if self.conn:
-            self.conn.close()
-
-    def _get_id(self, remote, local):
-        if local and remote: "%s-%s-%s" % (self.conn.container, remote, local)
-        elif local: return "%s-%s" % (self.conn.container, local)
-        elif remote: return "%s-%s" % (self.conn.container, remote)
-        else: return "%s-%s" % (self.conn.container, str(generate_uuid()))
-
-    def _get_ssn(self):
-        if not self.ssn:
-            self.ssn = self._new_ssn()
-            self.ssn.context = self
-        return self.ssn
-
-    def _new_ssn(self):
-        ssn = self.conn.session()
-        ssn.open()
-        return ssn
+    def session(self, connection):
+        if not self._default_session:
+            self._default_session = _create_session(connection)
+            self._default_session.context = self
+        return self._default_session
 
     def on_session_remote_close(self, event):
-        if self.conn:
-            self.conn.close()
+        event.connection.close()
+        self._default_session = None
 
 class Connector(Handler):
     """
     Internal handler that triggers the necessary socket connect for an
     opened connection.
     """
-    def attach_to(self, loop):
+    def __init__(self, loop):
         self.loop = loop
 
     def _connect(self, connection):
@@ -677,6 +615,7 @@ class Connector(Handler):
         #print "connecting to %s:%i" % (host, port)
         heartbeat = connection.heartbeat if hasattr(connection, 'heartbeat') else None
         self.loop.add(AmqpSocket(connection, socket.socket(), self.loop.events, heartbeat=heartbeat).connect(host, port))
+        connection._pin = None #connection is now referenced by AmqpSocket, so no need for circular reference
 
     def on_connection_local_open(self, event):
         if hasattr(event.connection, "address"):
@@ -688,6 +627,7 @@ class Connector(Handler):
 
     def on_disconnected(self, event):
         if hasattr(event.connection, "reconnect"):
+            event.connection._pin = event.connection #no longer referenced by AmqpSocket, so pin in memory with circular reference
             delay = event.connection.reconnect.next()
             if delay == 0:
                 print "Disconnected, reconnecting..."
@@ -739,31 +679,97 @@ class Urls(object):
             self.i = iter(self.values)
             return self._as_pair(self.i.next())
 
-class EventLoop(object):
+class Container(object):
     def __init__(self, *handlers):
-        self.connector = Connector()
-        h = [self.connector, ScopedHandler()]
+        h = [Connector(self), ScopedHandler()]
         h.extend(nested_handlers(handlers))
         self.events = ScheduledEvents(*h)
         self.loop = SelectLoop(self.events)
-        self.connector.attach_to(self)
         self.trigger = None
         self.container_id = str(generate_uuid())
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None):
-        context = MessagingContext(self.events.connection(), handler=handler)
-        context.conn.container = self.container_id or str(generate_uuid())
-        context.conn.heartbeat = heartbeat
-        if url: context.conn.address = Urls([url])
-        elif urls: context.conn.address = Urls(urls)
-        elif address: context.conn.address = address
+        conn = self.events.connection()
+        conn._pin = conn #circular reference until the open event gets handled
+        if handler:
+            conn.context = handler
+        conn.container = self.container_id or str(generate_uuid())
+        conn.heartbeat = heartbeat
+        if url: conn.address = Urls([url])
+        elif urls: conn.address = Urls(urls)
+        elif address: conn.address = address
         else: raise ValueError("One of url, urls or address required")
         if reconnect:
-            context.conn.reconnect = reconnect
+            conn.reconnect = reconnect
         elif reconnect is None:
-            context.conn.reconnect = Backoff()
-        context.conn.open()
-        return context
+            conn.reconnect = Backoff()
+        conn._session_policy = SessionPerConnection() #todo: make configurable
+        conn.open()
+        return conn
+
+    def _get_id(self, container, remote, local):
+        if local and remote: "%s-%s-%s" % (container, remote, local)
+        elif local: return "%s-%s" % (container, local)
+        elif remote: return "%s-%s" % (container, remote)
+        else: return "%s-%s" % (container, str(generate_uuid()))
+
+    def _get_session(self, context):
+        if isinstance(context, Url):
+            return self._get_session(self.connect(url=context))
+        elif isinstance(context, Session):
+            return context
+        elif isinstance(context, Connection):
+            if hasattr(context, '_session_policy'):
+                return context._session_policy.session(context)
+            else:
+                return _create_session(context)
+        else:
+            return context.session()
+
+    def create_sender(self, context, target=None, source=None, name=None, handler=None, tags=None, options=None):
+        if isinstance(context, basestring):
+            context = Url(context)
+        if isinstance(context, Url) and not target:
+            target = context.path
+        session = self._get_session(context)
+        snd = session.sender(name or self._get_id(session.connection.container, target, source))
+        if source:
+            snd.source.address = source
+        if target:
+            snd.target.address = target
+        if handler:
+            snd.context = handler
+        snd.tags = tags or delivery_tags()
+        snd.send_msg = types.MethodType(_send_msg, snd)
+        _apply_link_options(options, snd)
+        snd.open()
+        return snd
+
+    def create_receiver(self, context, source=None, target=None, name=None, dynamic=False, handler=None, options=None):
+        if isinstance(context, basestring):
+            context = Url(context)
+        if isinstance(context, Url) and not source:
+            source = context.path
+        session = self._get_session(context)
+        rcv = session.receiver(name or self._get_id(session.connection.container, source, target))
+        if source:
+            rcv.source.address = source
+        if dynamic:
+            rcv.source.dynamic = True
+        if target:
+            rcv.target.address = target
+        if handler:
+            rcv.context = handler
+        _apply_link_options(options, rcv)
+        rcv.open()
+        return rcv
+
+    def declare_transaction(self, context, handler=None, settle_before_discharge=False):
+        if not _get_attr(context, '_txn_ctrl'):
+            context._txn_ctrl = self.create_sender(context, None, name='txn-ctrl')
+            context._txn_ctrl.target.type = Terminus.COORDINATOR
+            context._txn_ctrl.target.capabilities.put_object(symbol(u'amqp:local-transactions'))
+        return Transaction(context._txn_ctrl, handler, settle_before_discharge)
 
     def listen(self, url):
         host, port = Urls([url]).next()
@@ -793,16 +799,4 @@ class EventLoop(object):
 
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
-
-EventLoop.DEFAULT = EventLoop()
-
-def connect(url=None, urls=None, address=None, handler=None, reconnect=None, eventloop=None, heartbeat=None):
-    if not eventloop:
-        eventloop = EventLoop.DEFAULT
-    return eventloop.connect(url=url, urls=urls, address=address, handler=handler, reconnect=reconnect, heartbeat=heartbeat)
-
-def run(eventloop=None):
-    if not eventloop:
-        eventloop = EventLoop.DEFAULT
-    eventloop.run()
 

@@ -19,23 +19,21 @@
 #
 
 from proton.handlers import MessagingHandler
-from proton.reactors import EventLoop
+from proton.reactors import Container
 
 class Recv(MessagingHandler):
-    def __init__(self, host, address):
+    def __init__(self, url):
         super(Recv, self).__init__()
-        self.host = host
-        self.address = address
+        self.url = url
 
     def on_start(self, event):
-        conn = event.reactor.connect(self.host)
-        conn.create_receiver(self.address)
+        event.container.create_receiver(self.url)
 
     def on_message(self, event):
         print event.message.body
 
 try:
-    EventLoop(Recv("localhost:5672", "examples")).run()
+    Container(Recv("localhost:5672/examples")).run()
 except KeyboardInterrupt: pass
 
 

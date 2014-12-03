@@ -18,10 +18,10 @@
 # under the License.
 #
 
-from proton.reactors import ApplicationEvent, EventLoop, StartEvent
+from proton.reactors import ApplicationEvent, Container, StartEvent
 import tornado.ioloop
 
-class TornadoLoop(EventLoop):
+class TornadoLoop(Container):
     def __init__(self, *handlers):
         super(TornadoLoop, self).__init__(*handlers)
         self.loop = tornado.ioloop.IOLoop.current()

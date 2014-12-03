@@ -20,7 +20,7 @@
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import EventLoop
+from proton.reactors import Container
 
 class Server(MessagingHandler):
     def __init__(self, host, address):
@@ -29,26 +29,27 @@ class Server(MessagingHandler):
         self.address = address
 
     def on_start(self, event):
-        self.conn = event.reactor.connect(self.host)
-        self.receiver = self.conn.create_receiver(self.address)
+        self.container = event.container
+        self.conn = event.container.connect(self.host)
+        self.receiver = event.container.create_receiver(self.conn, self.address)
         self.senders = {}
         self.relay = None
 
     def on_connection_opened(self, event):
         if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
-            self.relay = self.conn.create_sender(None)
+            self.relay = self.container.create_sender(self.conn, None)
 
     def on_message(self, event):
         sender = self.relay
         if not sender:
             sender = self.senders.get(event.message.reply_to)
         if not sender:
-            sender = self.conn.create_sender(event.message.reply_to)
+            sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
         sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
 try:
-    EventLoop(Server("localhost:5672", "examples")).run()
+    Container(Server("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

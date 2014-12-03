@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton.reactors import EventLoop
+from proton.reactors import Container
 from proton.handlers import TransactionalClientHandler
 
 class TxSend(TransactionalClientHandler):
@@ -30,10 +30,12 @@ class TxSend(TransactionalClientHandler):
         self.confirmed = 0
         self.total = messages
         self.batch_size = batch_size
-        self.eventloop = EventLoop()
-        self.conn = self.eventloop.connect("localhost:5672", handler=self)
-        self.sender = self.conn.create_sender("examples")
-        self.conn.declare_transaction(handler=self)
+
+    def on_start(self, event):
+        self.container = event.container
+        self.conn = self.container.connect("localhost:5672", handler=self)
+        self.sender = self.container.create_sender(self.conn, "examples")
+        self.container.declare_transaction(self.conn, handler=self)
         self.transaction = None
 
     def on_transaction_declared(self, event):
@@ -63,14 +65,11 @@ class TxSend(TransactionalClientHandler):
             event.connection.close()
         else:
             self.current_batch = 0
-            self.conn.declare_transaction(handler=self)
+            self.container.declare_transaction(self.conn, handler=self)
 
     def on_disconnected(self, event):
         self.current_batch = 0
 
-    def run(self):
-        self.eventloop.run()
-
 try:
-    TxSend(10000, 10).run()
+    Container(TxSend(10000, 10)).run()
 except KeyboardInterrupt: pass

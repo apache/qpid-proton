@@ -19,29 +19,25 @@
 #
 
 import time
-from proton.reactors import EventLoop, Handler
+from proton.reactors import Container, Handler
 
 class Recurring(Handler):
     def __init__(self, period):
-        self.eventloop = EventLoop(self)
         self.period = period
-        self.eventloop.schedule(time.time() + self.period, subject=self)
+
+    def on_start(self, event):
+        self.container = event.container
+        self.container.schedule(time.time() + self.period, subject=self)
 
     def on_timer(self, event):
         print "Tick..."
-        self.eventloop.schedule(time.time() + self.period, subject=self)
-
-    def run(self):
-        self.eventloop.run()
-
-    def stop(self):
-        self.eventloop.stop()
+        self.container.schedule(time.time() + self.period, subject=self)
 
 try:
-    app = Recurring(1.0)
-    app.run()
+    container = Container(Recurring(1.0))
+    container.run()
 except KeyboardInterrupt:
-    app.stop()
+    container.stop()
     print
 
 

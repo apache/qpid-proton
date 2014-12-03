@@ -19,16 +19,15 @@
 #
 
 from proton import Message
-from proton.reactors import EventLoop
+from proton.reactors import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRequest(TransactionHandler):
-    def __init__(self, response, sender, request_delivery, context):
+    def __init__(self, response, sender, request_delivery):
         super(TxRequest, self).__init__()
         self.response = response
         self.sender = sender
         self.request_delivery = request_delivery
-        self.context = context
 
     def on_transaction_declared(self, event):
         self.sender.send_msg(self.response, transaction=event.transaction)
@@ -49,8 +48,9 @@ class TxServer(MessagingHandler):
         self.address = address
 
     def on_start(self, event):
-        self.context = event.reactor.connect(self.host, reconnect=False)
-        self.receiver = self.context.create_receiver(self.address)
+        self.container = event.container
+        self.conn = event.container.connect(self.host, reconnect=False)
+        self.receiver = event.container.create_receiver(self.conn, self.address)
         self.senders = {}
         self.relay = None
 
@@ -59,18 +59,18 @@ class TxServer(MessagingHandler):
         if not sender:
             sender = self.senders.get(event.message.reply_to)
         if not sender:
-            sender = self.context.create_sender(event.message.reply_to)
+            sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
 
         response = Message(address=event.message.reply_to, body=event.message.body.upper())
-        self.context.declare_transaction(handler=TxRequest(response, sender, event.delivery, self.context))
+        self.container.declare_transaction(self.conn, handler=TxRequest(response, sender, event.delivery))
 
     def on_connection_open(self, event):
         if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
-            self.relay = self.context.create_sender(None)
+            self.relay = self.container.create_sender(self.conn, None)
 
 try:
-    EventLoop(TxServer("localhost:5672", "examples")).run()
+    Container(TxServer("localhost:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

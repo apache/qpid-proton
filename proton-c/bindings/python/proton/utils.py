@@ -17,8 +17,8 @@
 # under the License.
 #
 import Queue, socket, time
-from proton import ConnectionException, Endpoint, Handler, Message, Url
-from proton.reactors import AmqpSocket, Events, MessagingContext, SelectLoop, send_msg
+from proton import ConnectionException, Endpoint, Handler, Message, Timeout, Url
+from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
 from proton.handlers import ScopedHandler
 
 class BlockingLink(object):
@@ -52,36 +52,32 @@ class BlockingConnection(Handler):
     """
     A synchronous style connection wrapper.
     """
-    def __init__(self, url, timeout=None):
+    def __init__(self, url, timeout=None, container=None):
         self.timeout = timeout
-        self.events = Events(ScopedHandler())
-        self.loop = SelectLoop(self.events)
-        self.context = MessagingContext(self.loop.events.connection(), handler=self)
+        self.container = container or Container()
         if isinstance(url, basestring):
             self.url = Url(url)
         else:
             self.url = url
-        self.loop.add(
-            AmqpSocket(self.context.conn, socket.socket(), self.events).connect(self.url.host, self.url.port))
-        self.context.conn.open()
-        self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_UNINIT),
+        self.conn = self.container.connect(url=self.url, handler=self)
+        self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
     def create_sender(self, address, handler=None):
-        return BlockingSender(self, self.context.create_sender(address, handler=handler))
+        return BlockingSender(self, self.container.create_sender(self.conn, address, handler=handler))
 
     def create_receiver(self, address, credit=1, dynamic=False, handler=None):
         return BlockingReceiver(
-            self, self.context.create_receiver(address, dynamic=dynamic, handler=handler), credit=credit)
+            self, self.container.create_receiver(self.conn, address, dynamic=dynamic, handler=handler), credit=credit)
 
     def close(self):
-        self.context.conn.close()
-        self.wait(lambda: not (self.context.conn.state & Endpoint.REMOTE_ACTIVE),
+        self.conn.close()
+        self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
                   msg="Closing connection")
 
     def run(self):
         """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
-        self.loop.run()
+        self.container.run()
 
     def wait(self, condition, timeout=False, msg=None):
         """Call do_work until condition() is true"""
@@ -89,11 +85,11 @@ class BlockingConnection(Handler):
             timeout = self.timeout
         if timeout is None:
             while not condition():
-                self.loop.do_work()
+                self.container.do_work()
         else:
             deadline = time.time() + timeout
             while not condition():
-                if not self.loop.do_work(deadline - time.time()):
+                if not self.container.do_work(deadline - time.time()):
                     txt = "Connection %s timed out" % self.url
                     if msg: txt += ": " + msg
                     raise Timeout(txt)

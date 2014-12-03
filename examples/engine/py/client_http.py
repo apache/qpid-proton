@@ -36,9 +36,9 @@ class Client(MessagingHandler):
         self.receiver = None
 
     def on_start(self, event):
-        context = event.reactor.connect(self.host)
-        self.sender = context.create_sender(self.address)
-        self.receiver = context.create_receiver(None, dynamic=True)
+        conn = event.container.connect(self.host)
+        self.sender = event.container.create_sender(conn, self.address)
+        self.receiver = event.container.create_receiver(conn, None, dynamic=True)
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:

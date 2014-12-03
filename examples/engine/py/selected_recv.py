@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import EventLoop, Selector
+from proton.reactors import Container, Selector
 from proton.handlers import MessagingHandler
 
 class Recv(MessagingHandler):
@@ -26,14 +26,14 @@ class Recv(MessagingHandler):
         super(Recv, self).__init__()
 
     def on_start(self, event):
-        conn = event.reactor.connect("localhost:5672")
-        conn.create_receiver("examples", options=Selector(u"colour = 'green'"))
+        conn = event.container.connect("localhost:5672")
+        event.container.create_receiver(conn, "examples", options=Selector(u"colour = 'green'"))
 
     def on_message(self, event):
         print event.message.body
 
 try:
-    EventLoop(Recv()).run()
+    Container(Recv()).run()
 except KeyboardInterrupt: pass
 
 

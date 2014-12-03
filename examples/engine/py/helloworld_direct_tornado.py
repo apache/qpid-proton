@@ -29,10 +29,10 @@ class HelloWorld(MessagingHandler):
         self.address = address
 
     def on_start(self, event):
-        self.eventloop = event.reactor
-        self.acceptor = event.reactor.listen(self.server)
-        ctxt = event.reactor.connect(self.server)
-        ctxt.create_sender(self.address)
+        self.eventloop = event.container
+        self.acceptor = event.container.listen(self.server)
+        conn = event.container.connect(self.server)
+        event.container.create_sender(conn, self.address)
 
     def on_credit(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))

@@ -20,7 +20,7 @@
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import EventLoop
+from proton.reactors import Container
 
 class Client(MessagingHandler):
     def __init__(self, host, address, requests):
@@ -30,9 +30,9 @@ class Client(MessagingHandler):
         self.requests = requests
 
     def on_start(self, event):
-        self.conn = event.reactor.connect(self.host)
-        self.sender = self.conn.create_sender(self.address)
-        self.receiver = self.conn.create_receiver(None, dynamic=True)
+        self.conn = event.container.connect(self.host)
+        self.sender = event.container.create_sender(self.conn, self.address)
+        self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
 
     def next_request(self):
         if self.receiver.remote_source.address:
@@ -55,5 +55,5 @@ REQUESTS= ["Twas brillig, and the slithy toves",
            "All mimsy were the borogroves,",
            "And the mome raths outgrabe."]
 
-EventLoop(Client("localhost:5672", "examples", REQUESTS)).run()
+Container(Client("localhost:5672", "examples", REQUESTS)).run()
 

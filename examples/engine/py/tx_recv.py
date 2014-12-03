@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import EventLoop
+from proton.reactors import Container
 from proton.handlers import TransactionalClientHandler
 
 class TxRecv(TransactionalClientHandler):
@@ -26,10 +26,12 @@ class TxRecv(TransactionalClientHandler):
         super(TxRecv, self).__init__(prefetch=0)
         self.current_batch = 0
         self.batch_size = batch_size
-        self.event_loop = EventLoop(self)
-        self.conn = self.event_loop.connect("localhost:5672")
-        self.receiver = self.conn.create_receiver("examples")
-        self.conn.declare_transaction(handler=self)
+
+    def on_start(self, event):
+        self.container = event.container
+        self.conn = self.container.connect("localhost:5672")
+        self.receiver = self.container.create_receiver(self.conn, "examples")
+        self.container.declare_transaction(self.conn, handler=self)
         self.transaction = None
 
     def on_message(self, event):
@@ -46,16 +48,13 @@ class TxRecv(TransactionalClientHandler):
 
     def on_transaction_committed(self, event):
         self.current_batch = 0
-        self.conn.declare_transaction(handler=self)
+        self.container.declare_transaction(self.conn, handler=self)
 
     def on_disconnected(self, event):
         self.current_batch = 0
 
-    def run(self):
-        self.event_loop.run()
-
 try:
-    TxRecv(10).run()
+    Container(TxRecv(10)).run()
 except KeyboardInterrupt: pass
 
 

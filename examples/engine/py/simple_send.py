@@ -20,20 +20,18 @@
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import EventLoop
+from proton.reactors import Container
 
 class Send(MessagingHandler):
-    def __init__(self, host, address, messages):
+    def __init__(self, url, messages):
         super(Send, self).__init__()
-        self.host = host
-        self.address = address
+        self.url = url
         self.sent = 0
         self.confirmed = 0
         self.total = messages
 
     def on_start(self, event):
-        conn = event.reactor.connect(self.host)
-        conn.create_sender(self.address)
+        event.container.create_sender(self.url)
 
     def on_credit(self, event):
         while event.sender.credit and self.sent < self.total:
@@ -51,5 +49,5 @@ class Send(MessagingHandler):
         self.sent = self.confirmed
 
 try:
-    EventLoop(Send("localhost:5672", "examples", 10000)).run()
+    Container(Send("localhost:5672/examples", 10000)).run()
 except KeyboardInterrupt: pass

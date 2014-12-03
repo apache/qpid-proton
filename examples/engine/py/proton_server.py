@@ -18,15 +18,15 @@
 #
 
 from proton import Message
-from proton.reactors import EventLoop
-from proton.handlers import FlowController, IncomingMessageHandler
+from proton.reactors import Container
+from proton.handlers import MessagingHandler
 
-class Server(IncomingMessageHandler):
+class Server(MessagingHandler):
     def __init__(self, host, address):
         super(Server, self).__init__()
-        self.eventloop = EventLoop(self, FlowController(10))
-        self.conn = self.eventloop.connect(host)
-        self.receiver = self.conn.create_receiver(address)
+        self.container = Container(self)
+        self.conn = self.container.connect(host)
+        self.receiver = self.container.create_receiver(self.conn, address)
         self.senders = {}
         self.relay = None
 
@@ -35,21 +35,21 @@ class Server(IncomingMessageHandler):
 
     def on_connection_open(self, event):
         if event.connection.remote_offered_capabilities and "ANONYMOUS-RELAY" in event.connection.remote_offered_capabilities:
-            self.relay = self.conn.create_sender(None)
+            self.relay = self.container.create_sender(self.conn, None)
 
     def on_connection_close(self, endpoint, error):
         if error: print "Closed due to %s" % error
         self.conn.close()
 
     def run(self):
-        self.eventloop.run()
+        self.container.run()
 
     def send(self, response, reply_to):
         sender = self.relay
         if not sender:
             sender = self.senders.get(reply_to)
         if not sender:
-            sender = self.conn.create_sender(reply_to)
+            sender = self.container.create_sender(self.conn, reply_to)
             self.senders[reply_to] = sender
         msg = Message(body=response)
         if self.relay:

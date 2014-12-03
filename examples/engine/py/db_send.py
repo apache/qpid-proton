@@ -22,29 +22,27 @@ import Queue
 import time
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import ApplicationEvent, EventLoop
+from proton.reactors import ApplicationEvent, Container
 from db_common import Db
 
 class Send(MessagingHandler):
-    def __init__(self, host, address):
+    def __init__(self, url):
         super(Send, self).__init__()
-        self.host = host
-        self.address = address
+        self.url = url
         self.delay = 0
         self.sent = 0
         self.records = Queue.Queue(maxsize=50)
 
     def on_start(self, event):
-        self.eventloop = event.reactor
-        self.db = Db("src_db", event.reactor.get_event_trigger())
-        context = event.reactor.connect(self.host)
-        self.sender = context.create_sender(self.address)
+        self.container = event.container
+        self.db = Db("src_db", self.container.get_event_trigger())
+        self.sender = self.container.create_sender(self.url)
 
     def on_records_loaded(self, event):
         if self.records.empty() and event.subject == self.sent:
             print "Exhausted available data, waiting to recheck..."
             # check for new data after 5 seconds
-            self.eventloop.schedule(time.time() + 5, link=self.sender, subject="data")
+            self.container.schedule(time.time() + 5, link=self.sender, subject="data")
         else:
             self.send()
 
@@ -78,6 +76,6 @@ class Send(MessagingHandler):
             self.request_records()
 
 try:
-    EventLoop(Send("localhost:5672", "examples")).run()
+    Container(Send("localhost:5672/examples")).run()
 except KeyboardInterrupt: pass
 
