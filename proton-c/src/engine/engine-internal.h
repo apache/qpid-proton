@@ -161,12 +161,12 @@ struct pn_transport_t {
   size_t output_pending;
   char *output_buf;
 
-  pn_record_t *context;
-
   /* input from peer */
   size_t input_size;
   size_t input_pending;
   char *input_buf;
+
+  pn_record_t *context;
 
   uint16_t channel_max;
   uint16_t remote_channel_max;
