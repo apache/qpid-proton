@@ -31,6 +31,7 @@ class Send(MessagingHandler):
         self.url = url
         self.delay = 0
         self.sent = 0
+        self.load_count = 0
         self.records = Queue.Queue(maxsize=50)
 
     def on_start(self, event):
@@ -39,16 +40,19 @@ class Send(MessagingHandler):
         self.sender = self.container.create_sender(self.url)
 
     def on_records_loaded(self, event):
-        if self.records.empty() and event.subject == self.sent:
-            print "Exhausted available data, waiting to recheck..."
-            # check for new data after 5 seconds
-            self.container.schedule(time.time() + 5, link=self.sender, subject="data")
+        if self.records.empty():
+            if event.subject == self.load_count:
+                print "Exhausted available data, waiting to recheck..."
+                # check for new data after 5 seconds
+                self.container.schedule(time.time() + 5, link=self.sender, subject="data")
         else:
             self.send()
 
     def request_records(self):
         if not self.records.full():
-            self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.sent))
+            print "loading records..."
+            self.load_count += 1
+            self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.load_count))
 
     def on_credit(self, event):
         self.send()

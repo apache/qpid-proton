@@ -72,22 +72,19 @@ class ScopedHandler(Handler):
     or connection scoped handlers that will only be called with events
     for the object to which they are scoped.
     """
-    scopes = {
-        "pn_connection": ["connection"],
-        "pn_session": ["session", "connection"],
-        "pn_link": ["link", "session", "connection"],
-        "pn_delivery": ["delivery", "link", "session", "connection"]
-    }
+    scopes = ["delivery", "link", "session", "connection"]
 
     def on_unhandled(self, method, args):
         event = args[0]
         if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
             return
-        objects = [getattr(event, attr) for attr in self.scopes.get(event.clazz, [])]
+
+        objects = [getattr(event, attr) for attr in self.scopes if hasattr(event, attr) and getattr(event, attr)]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
         handlers = [getattr(t, event.type.method) for t in nested_handlers(targets) if hasattr(t, event.type.method)]
         for h in handlers:
             h(event)
+
 
 class OutgoingMessageHandler(Handler):
     """

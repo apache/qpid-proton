@@ -3405,7 +3405,7 @@ class Collector:
   def __del__(self):
     pn_collector_free(self._impl)
 
-class EventType:
+class EventType(object):
 
   TYPES = {}
 
@@ -3485,6 +3485,8 @@ class Event(object):
       return self.context.connection
     elif self.clazz == "pn_delivery" and not self.context.released:
       return self.context.link.connection
+    elif hasattr(self.context, 'connection'):
+      return self.context.connection
     else:
       return None
 
@@ -3496,6 +3498,8 @@ class Event(object):
       return self.context.session
     elif self.clazz == "pn_delivery" and not self.context.released:
       return self.context.link.session
+    elif hasattr(self.context, 'session'):
+      return self.context.session
     else:
       return None
 
@@ -3504,6 +3508,8 @@ class Event(object):
     if self.clazz == "pn_link":
       return self.context
     elif self.clazz == "pn_delivery" and not self.context.released:
+      return self.context.link
+    elif hasattr(self.context, 'link'):
       return self.context.link
     else:
       return None
@@ -3528,8 +3534,16 @@ class Event(object):
   def delivery(self):
     if self.clazz == "pn_delivery":
       return self.context
+    elif hasattr(self.context, 'delivery'):
+      return self.context.delivery
     else:
       return None
+
+  def __getattr__(self, name):
+    if hasattr(self.context, name):
+      return getattr(self.context, name)
+    else:
+      raise AttributeError
 
   def __repr__(self):
     return "%s(%s)" % (self.type, self.context)
