@@ -20,7 +20,7 @@
 include(UseSWIG)
 
 # Add any new bindings here - the directory name must be the same as the binding name
-set (BINDINGS python ruby php perl)
+set (BINDINGS python ruby php perl javascript)
 
 set (BINDING_DEPS qpid-proton)
 
@@ -86,6 +86,16 @@ include(ProtonFindPerl)
 if (PERLLIBS_FOUND)
   set (DEFAULT_PERL ON)
 endif (PERLLIBS_FOUND)
+
+# Prerequisites for the javascript "binding":
+# This is somewhat different to the other language bindings in that it does not use swig. It uses a C/C++ to
+# JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
+# and compiles it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can be
+# aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
+find_package(Emscripten)
+if (EMSCRIPTEN_FOUND)
+  set (DEFAULT_JAVASCRIPT ON)
+endif (EMSCRIPTEN_FOUND)
 
 # Shouldn't need to modify below here when adding new language binding
 foreach(BINDING ${BINDINGS})
