@@ -95,9 +95,11 @@ void onerror(int fd, int errno, const char* msg, void* userData) {
 int main(int argc, char** argv)
 {
     int c;
-    opterr = 0;
     char * address = (char *) "amqp://0.0.0.0";
     char * msgtext = (char *) "Hello World!";
+    pn_data_t* body;
+
+    opterr = 0;
 
     while((c = getopt(argc, argv, "ha:b:c:")) != -1)
     {
@@ -135,7 +137,7 @@ int main(int argc, char** argv)
     pn_messenger_start(messenger);
 
     pn_message_set_address(message, address);
-    pn_data_t* body = pn_message_body(message);
+    body = pn_message_body(message);
     pn_data_put_string(body, pn_bytes(strlen(msgtext), msgtext));
 
     pn_messenger_put(messenger, message);
