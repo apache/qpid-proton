@@ -85,6 +85,9 @@ except ImportError:
   def uuid4():
     return uuid.UUID(bytes=random_uuid())
 
+def generate_uuid():
+  return uuid.uuid4()
+
 try:
   bytes()
 except NameError:
@@ -2965,7 +2968,24 @@ class Delivery(object):
 
   @property
   def link(self):
-    return Link._wrap_link(pn_delivery_link(self._dlv))
+    if not self.released:
+      return Link._wrap_link(pn_delivery_link(self._dlv))
+    else:
+      return None
+
+  @property
+  def session(self):
+    if self.link:
+      return self.link.session
+    else:
+      return None
+
+  @property
+  def connection(self):
+    if self.session:
+      return self.session.connection
+    else:
+      return None
 
 class TransportException(ProtonException):
   pass
@@ -3384,7 +3404,10 @@ class Collector:
 
     clazz = pn_class_name(pn_event_class(event))
     context = wrappers[clazz](pn_event_context(event))
-    return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
+    if isinstance(context, EventBase):
+      return context
+    else:
+      return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
 
   def pop(self):
     ev = self.peek()
@@ -3396,7 +3419,7 @@ class Collector:
     pn_collector_free(self._impl)
     del self._impl
 
-class EventType:
+class EventType(object):
 
   TYPES = {}
 
@@ -3416,7 +3439,20 @@ def dispatch(handler, method, *args):
   elif hasattr(handler, "on_unhandled"):
     return handler.on_unhandled(method, args)
 
-class Event:
+class EventBase(object):
+
+  def __init__(self, clazz, context, type):
+    self.clazz = clazz
+    self.context = context
+    self.type = type
+
+  def _popped(self, collector):
+    pass
+
+  def dispatch(self, handler):
+    return dispatch(handler, self.type.method, self)
+
+class Event(EventBase):
 
   CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
   CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
@@ -3453,28 +3489,19 @@ class Event:
   TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
   def __init__(self, clazz, context, type):
-    self.clazz = clazz
-    self.context = context
-    self.type = type
+    super(Event, self).__init__(clazz, context, type)
 
   def _popped(self, collector):
     if self.type in (Event.LINK_FINAL, Event.SESSION_FINAL,
                      Event.CONNECTION_FINAL):
       collector._contexts.remove(self.context)
 
-  def dispatch(self, handler):
-    return dispatch(handler, self.type.method, self)
-
   @property
   def connection(self):
     if self.clazz == "pn_connection":
       return self.context
-    elif self.clazz == "pn_session":
+    elif self.clazz in ["pn_transport", "pn_session", "pn_link", "pn_delivery"]:
       return self.context.connection
-    elif self.clazz == "pn_link":
-      return self.context.connection
-    elif self.clazz == "pn_delivery" and not self.context.released:
-      return self.context.link.connection
     else:
       return None
 
@@ -3482,10 +3509,8 @@ class Event:
   def session(self):
     if self.clazz == "pn_session":
       return self.context
-    elif self.clazz == "pn_link":
+    elif self.clazz in ["pn_link", "pn_delivery"]:
       return self.context.session
-    elif self.clazz == "pn_delivery" and not self.context.released:
-      return self.context.link.session
     else:
       return None
 
@@ -3493,7 +3518,7 @@ class Event:
   def link(self):
     if self.clazz == "pn_link":
       return self.context
-    elif self.clazz == "pn_delivery" and not self.context.released:
+    elif self.clazz in ["pn_delivery"]:
       return self.context.link
     else:
       return None
