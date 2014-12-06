@@ -22,6 +22,7 @@
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
+#include <proton/delivery.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -161,6 +162,113 @@ static void test_incref_order_ls(void) {
   pn_decref(lnk);
 }
 
+static void swap(int array[], int i, int j) {
+  int a = array[i];
+  int b = array[j];
+  array[j] = a;
+  array[i] = b;
+}
+
+static void setup(void **objects) {
+  pn_connection_t *conn = pn_connection();
+  pn_session_t *ssn = pn_session(conn);
+  pn_link_t *lnk = pn_sender(ssn, "sender");
+  pn_delivery_t *dlv = pn_delivery(lnk, pn_dtag("dtag", 4));
+
+  assert(pn_refcount(conn) == 2);
+  assert(pn_refcount(ssn) == 2);
+  assert(pn_refcount(lnk) == 2);
+  assert(pn_refcount(dlv) == 1);
+
+  objects[0] = conn;
+  objects[1] = ssn;
+  objects[2] = lnk;
+  objects[3] = dlv;
+}
+
+static bool decreffed(int *indexes, void **objects, int step, void *object) {
+  for (int i = 0; i <= step; i++) {
+    if (object == objects[indexes[i]]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool live_descendent(int *indexes, void **objects, int step, int objidx) {
+  for (int i = objidx + 1; i < 4; i++) {
+    if (!decreffed(indexes, objects, step, objects[i])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static void assert_refcount(void *object, int expected) {
+  int rc = pn_refcount(object);
+  //printf("pn_refcount(%s) = %d\n", pn_object_reify(object)->name, rc);
+  assert(rc == expected);
+}
+
+static void test_decref_order(int *indexes, void **objects) {
+  setup(objects);
+
+  //printf("-----------\n");
+  for (int i = 0; i < 3; i++) {
+    int idx = indexes[i];
+    void *obj = objects[idx];
+    //printf("decreffing %s\n", pn_object_reify(obj)->name);
+    pn_decref(obj);
+    for (int j = 0; j <= i; j++) {
+      // everything we've decreffed already should have a refcount of
+      // 1 because it has been preserved by its parent
+      assert_refcount(objects[indexes[j]], 1);
+    }
+    for (int j = i+1; j < 4; j++) {
+      // everything we haven't decreffed yet should have a refcount of
+      // 2 unless it has a descendent that has not been decrefed (or
+      // it has no child) in which case it should have a refcount of 1
+      int idx = indexes[j];
+      void *obj = objects[idx];
+      assert(!decreffed(indexes, objects, i, obj));
+      if (live_descendent(indexes, objects, i, idx)) {
+        assert_refcount(obj, 2);
+      } else {
+        assert_refcount(obj, 1);
+      }
+    }
+  }
+
+  void *last = objects[indexes[3]];
+  //printf("decreffing %s\n", pn_object_reify(last)->name);
+  pn_decref(last);
+  // all should be gone now, need to run with valgrind to check
+}
+
+static void permute(int n, int *indexes, void **objects) {
+  int j;
+  if (n == 1) {
+    test_decref_order(indexes, objects);
+  } else {
+    for (int i = 1; i <= n; i++) {
+      permute(n-1, indexes, objects);
+      if ((n % 2) == 1) {
+        j = 1;
+      } else {
+        j = i;
+      }
+      swap(indexes, j-1, n-1);
+    }
+  }
+}
+
+static void test_decref_permutations(void) {
+  void *objects[4];
+  int indexes[4] = {0, 1, 2, 3};
+  permute(4, indexes, objects);
+}
+
 int main(int argc, char **argv)
 {
   test_decref_order_csl();
@@ -172,5 +280,7 @@ int main(int argc, char **argv)
 
   test_incref_order_sl();
   test_incref_order_ls();
+
+  test_decref_permutations();
   return 0;
 }

@@ -201,6 +201,7 @@ struct pn_connection_t {
   pn_data_t *properties;
   pn_collector_t *collector;
   pn_record_t *context;
+  pn_list_t *delivery_pool;
 };
 
 struct pn_session_t {
@@ -242,8 +243,6 @@ struct pn_link_t {
   pn_delivery_t *unsettled_head;
   pn_delivery_t *unsettled_tail;
   pn_delivery_t *current;
-  pn_delivery_t *settled_head;
-  pn_delivery_t *settled_tail;
   pn_record_t *context;
   size_t unsettled_count;
   pn_sequence_t available;
@@ -278,8 +277,6 @@ struct pn_delivery_t {
   pn_buffer_t *tag;
   pn_delivery_t *unsettled_next;
   pn_delivery_t *unsettled_prev;
-  pn_delivery_t *settled_next;
-  pn_delivery_t *settled_prev;
   pn_delivery_t *work_next;
   pn_delivery_t *work_prev;
   pn_delivery_t *tpwork_next;
@@ -292,6 +289,7 @@ struct pn_delivery_t {
   bool work;
   bool tpwork;
   bool done;
+  bool referenced;
 };
 
 #define PN_SET_LOCAL(OLD, NEW)                                          \
@@ -312,6 +310,7 @@ void pn_real_settle(pn_delivery_t *delivery);  // will free delivery if link is 
 void pn_clear_tpwork(pn_delivery_t *delivery);
 void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
+void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
 void pn_session_unbound(pn_session_t* ssn);

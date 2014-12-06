@@ -134,6 +134,11 @@ void pn_connection_free(pn_connection_t *connection)
   pn_decref(connection);
 }
 
+void pn_connection_bound(pn_connection_t *connection)
+{
+  pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_BOUND);
+}
+
 // invoked when transport has been removed:
 void pn_connection_unbound(pn_connection_t *connection)
 {
@@ -146,7 +151,6 @@ void pn_connection_unbound(pn_connection_t *connection)
         pn_clear_modified(connection, connection->transport_head);
     }
     while (connection->tpwork_head) {
-      pn_real_settle(connection->tpwork_head);
       pn_clear_tpwork(connection->tpwork_head);
     }
   }
@@ -306,11 +310,6 @@ void pn_link_free(pn_link_t *link)
     pn_delivery_settle(delivery);
     delivery = next;
   }
-  while (link->settled_head) {
-    delivery = link->settled_head;
-    LL_POP(link, settled, pn_delivery_t);
-    pn_decref(delivery);
-  }
   link->endpoint.freed = true;
   pn_decref(link);
 }
@@ -402,6 +401,7 @@ static void pn_connection_finalize(void *object)
   pn_free(conn->desired_capabilities);
   pn_free(conn->properties);
   pn_endpoint_tini(endpoint);
+  pn_free(conn->delivery_pool);
 }
 
 #define pn_connection_initialize NULL
@@ -433,6 +433,7 @@ pn_connection_t *pn_connection(void)
   conn->properties = pn_data(0);
   conn->collector = NULL;
   conn->context = pn_record();
+  conn->delivery_pool = pn_list(PN_OBJECT, 0);
 
   return conn;
 }
@@ -600,7 +601,6 @@ void pn_add_tpwork(pn_delivery_t *delivery)
   {
     LL_ADD(connection, tpwork, delivery);
     delivery->tpwork = true;
-    pn_incref(delivery);
   }
   pn_modified(connection, &connection->endpoint, true);
 }
@@ -612,7 +612,6 @@ void pn_clear_tpwork(pn_delivery_t *delivery)
   {
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
-    pn_decref(delivery);  // may free delivery!
   }
 }
 
@@ -634,7 +633,6 @@ void pn_modified(pn_connection_t *connection, pn_endpoint_t *endpoint, bool emit
   if (!endpoint->modified) {
     LL_ADD(connection, transport, endpoint);
     endpoint->modified = true;
-    pn_incref(endpoint);
   }
 
   if (emit && connection->transport) {
@@ -650,7 +648,6 @@ void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
     endpoint->transport_next = NULL;
     endpoint->transport_prev = NULL;
     endpoint->modified = false;
-    pn_decref(endpoint);  // may free endpoint!
   }
 }
 
@@ -739,12 +736,14 @@ static void pn_session_incref(void *object)
 
 static bool pni_preserve_child(pn_endpoint_t *endpoint, pn_endpoint_t *parent)
 {
-  if (!endpoint->freed && endpoint->referenced) {
+  pn_connection_t *conn = pn_ep_get_connection(endpoint);
+  if ((!endpoint->freed || (conn->transport && endpoint->modified)) && endpoint->referenced) {
     pn_object_incref(endpoint);
     endpoint->referenced = false;
     pn_decref(parent);
     return true;
   } else {
+    LL_REMOVE(conn, transport, endpoint);
     return false;
   }
 }
@@ -912,10 +911,6 @@ static void pn_link_finalize(void *object)
   pn_link_t *link = (pn_link_t *) object;
   pn_endpoint_t *endpoint = &link->endpoint;
 
-  // assumptions: all deliveries freed
-  assert(link->settled_head == NULL);
-  assert(link->unsettled_head == NULL);
-
   if (pni_post_final(endpoint, PN_LINK_FINAL)) {
     return;
   }
@@ -923,6 +918,11 @@ static void pn_link_finalize(void *object)
   if (pni_session_live(link->session) &&
       pni_preserve_child(endpoint, &link->session->endpoint)) {
     return;
+  }
+
+  while (link->unsettled_head) {
+    assert(!link->unsettled_head->referenced);
+    pn_free(link->unsettled_head);
   }
 
   pn_free(link->context);
@@ -963,7 +963,6 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   pn_terminus_init(&link->target, PN_TARGET);
   pn_terminus_init(&link->remote_source, PN_UNSPECIFIED);
   pn_terminus_init(&link->remote_target, PN_UNSPECIFIED);
-  link->settled_head = link->settled_tail = NULL;
   link->unsettled_head = link->unsettled_tail = link->current = NULL;
   link->unsettled_count = 0;
   link->available = 0;
@@ -1197,17 +1196,76 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
   pn_condition_tini(&ds->condition);
 }
 
+static bool pni_link_live(pn_link_t *link)
+{
+  return pni_session_live(link->session) || pn_refcount(link) > 1;
+}
+
+static void pn_delivery_incref(void *object)
+{
+  pn_delivery_t *delivery = (pn_delivery_t *) object;
+  if (delivery->link && !delivery->referenced) {
+    delivery->referenced = true;
+    pn_incref(delivery->link);
+  } else {
+    pn_object_incref(object);
+  }
+}
+
+static bool pni_preserve_delivery(pn_delivery_t *delivery)
+{
+  pn_connection_t *conn = delivery->link->session->connection;
+  return !delivery->local.settled || (conn->transport && delivery->tpwork);
+}
+
 static void pn_delivery_finalize(void *object)
 {
   pn_delivery_t *delivery = (pn_delivery_t *) object;
-  assert(delivery->settled);
-  assert(!delivery->state.init);  // no longer in session delivery map
-  pn_free(delivery->context);
-  pn_buffer_free(delivery->tag);
-  pn_buffer_free(delivery->bytes);
-  pn_disposition_finalize(&delivery->local);
-  pn_disposition_finalize(&delivery->remote);
-  pn_decref(delivery->link);
+  pn_link_t *link = delivery->link;
+
+  bool pooled = false;
+  bool referenced = true;
+  if (link) {
+    if (pni_link_live(link) && pni_preserve_delivery(delivery) && delivery->referenced) {
+      delivery->referenced = false;
+      pn_object_incref(delivery);
+      pn_decref(link);
+      return;
+    }
+    referenced = delivery->referenced;
+
+    pn_clear_tpwork(delivery);
+    LL_REMOVE(link, unsettled, delivery);
+    pn_delivery_map_del(pn_link_is_sender(link)
+                        ? &link->session->state.outgoing
+                        : &link->session->state.incoming,
+                        delivery);
+    pn_buffer_clear(delivery->tag);
+    pn_buffer_clear(delivery->bytes);
+    pn_record_clear(delivery->context);
+    delivery->settled = true;
+    pn_connection_t *conn = link->session->connection;
+    assert(pn_refcount(delivery) == 0);
+    if (pni_connection_live(conn)) {
+      pn_list_t *pool = link->session->connection->delivery_pool;
+      delivery->link = NULL;
+      pn_list_add(pool, delivery);
+      pooled = true;
+      assert(pn_refcount(delivery) == 1);
+    }
+  }
+
+  if (!pooled) {
+    pn_free(delivery->context);
+    pn_buffer_free(delivery->tag);
+    pn_buffer_free(delivery->bytes);
+    pn_disposition_finalize(&delivery->local);
+    pn_disposition_finalize(&delivery->remote);
+  }
+
+  if (referenced) {
+    pn_decref(link);
+  }
 }
 
 static void pn_disposition_init(pn_disposition_t *ds)
@@ -1230,6 +1288,11 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   pn_condition_clear(&ds->condition);
 }
 
+#define pn_delivery_new pn_object_new
+#define pn_delivery_refcount pn_object_refcount
+#define pn_delivery_decref pn_object_decref
+#define pn_delivery_free pn_object_free
+#define pn_delivery_reify pn_object_reify
 #define pn_delivery_initialize NULL
 #define pn_delivery_hashcode NULL
 #define pn_delivery_compare NULL
@@ -1238,14 +1301,12 @@ static void pn_disposition_clear(pn_disposition_t *ds)
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);
-  pn_delivery_t *delivery = link->settled_head;
-  LL_POP(link, settled, pn_delivery_t);
+  pn_list_t *pool = link->session->connection->delivery_pool;
+  pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
   if (!delivery) {
-    static const pn_class_t clazz = PN_CLASS(pn_delivery);
+    static const pn_class_t clazz = PN_METACLASS(pn_delivery);
     delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
     if (!delivery) return NULL;
-    delivery->link = link;
-    pn_incref(delivery->link);  // keep link until finalized
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
     pn_disposition_init(&delivery->local);
@@ -1254,6 +1315,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   } else {
     assert(!delivery->tpwork);
   }
+  delivery->link = link;
+  pn_incref(delivery->link);  // keep link until finalized
   pn_buffer_clear(delivery->tag);
   pn_buffer_append(delivery->tag, tag.bytes, tag.size);
   pn_disposition_clear(&delivery->local);
@@ -1261,6 +1324,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->updated = false;
   delivery->settled = false;
   LL_ADD(link, unsettled, delivery);
+  delivery->referenced = true;
   delivery->work_next = NULL;
   delivery->work_prev = NULL;
   delivery->work = false;
@@ -1556,25 +1620,6 @@ void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t mode)
     link->rcv_settle_mode = (uint8_t)mode;
 }
 
-void pn_real_settle(pn_delivery_t *delivery)
-{
-  pn_link_t *link = delivery->link;
-  LL_REMOVE(link, unsettled, delivery);
-  pn_delivery_map_del(pn_link_is_sender(link)
-                      ? &link->session->state.outgoing
-                      : &link->session->state.incoming,
-                      delivery);
-  pn_buffer_clear(delivery->tag);
-  pn_buffer_clear(delivery->bytes);
-  pn_record_clear(delivery->context);
-  delivery->settled = true;
-  if (link->endpoint.freed) {
-    pn_decref(delivery);
-  } else {
-    LL_ADD(link, settled, delivery);
-  }
-}
-
 void pn_delivery_settle(pn_delivery_t *delivery)
 {
   assert(delivery);
@@ -1588,6 +1633,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     delivery->local.settled = true;
     pn_add_tpwork(delivery);
     pn_work_update(delivery->link->session->connection, delivery);
+    pn_decref(delivery);
   }
 }
 

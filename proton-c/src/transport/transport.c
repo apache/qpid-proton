@@ -377,6 +377,7 @@ void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state);
 static void pni_unmap_remote_channel(pn_session_t *ssn)
 {
   // XXX: should really update link state also
+  pn_delivery_map_clear(&ssn->state.incoming);
   pni_transport_unbind_handles(ssn->state.remote_handles, false);
   pn_transport_t *transport = ssn->connection->transport;
   uint16_t channel = ssn->state.remote_channel;
@@ -463,9 +464,10 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   transport->connection = connection;
   connection->transport = transport;
 
-  pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_BOUND);
-
   pn_incref(connection);
+
+  pn_connection_bound(connection);
+
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
@@ -493,6 +495,8 @@ void pni_transport_unbind_channels(pn_hash_t *channels)
   for (pn_handle_t h = pn_hash_head(channels); h; h = pn_hash_next(channels, h)) {
     uintptr_t key = pn_hash_key(channels, h);
     pn_session_t *ssn = (pn_session_t *) pn_hash_value(channels, h);
+    pn_delivery_map_clear(&ssn->state.incoming);
+    pn_delivery_map_clear(&ssn->state.outgoing);
     pni_transport_unbind_handles(ssn->state.local_handles, true);
     pni_transport_unbind_handles(ssn->state.remote_handles, true);
     pn_session_unbound(ssn);
@@ -952,7 +956,6 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   assert(!delivery->work);
   pn_clear_tpwork(delivery);
-  pn_real_settle(delivery);
 }
 
 int pn_do_transfer(pn_dispatcher_t *disp)
@@ -1901,6 +1904,7 @@ bool pn_pointful_buffering(pn_transport_t *transport, pn_session_t *session)
 
 static void pni_unmap_local_channel(pn_session_t *ssn) {
   // XXX: should really update link state also
+  pn_delivery_map_clear(&ssn->state.outgoing);
   pni_transport_unbind_handles(ssn->state.local_handles, false);
   pn_transport_t *transport = ssn->connection->transport;
   pn_session_state_t *state = &ssn->state;
