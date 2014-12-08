@@ -21,7 +21,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <proton/framing.h>
+
+#include "framing.h"
 
 // TODO: These are near duplicates of code in codec.c - they should be
 // deduplicated.

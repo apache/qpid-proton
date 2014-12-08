@@ -32,12 +32,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "proton/buffer.h"
 #include "proton/codec.h"
 #include "proton/driver.h"
 #include "proton/engine.h"
 #include "proton/message.h"
 #include "proton/version.h"
+#include "buffer.h"
 #include "util.h"
 #include "platform_fmt.h"
 

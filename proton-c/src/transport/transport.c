@@ -19,9 +19,8 @@
  *
  */
 
-#include "proton/framing.h"
-
 #include "engine/engine-internal.h"
+#include "framing/framing.h"
 #include "sasl/sasl-internal.h"
 #include "ssl/ssl-internal.h"
 

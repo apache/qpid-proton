@@ -22,8 +22,7 @@
  *
  */
 
-#include <proton/buffer.h>
-
+#include "buffer.h"
 #include "decoder.h"
 #include "encoder.h"
 

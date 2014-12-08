@@ -19,12 +19,7 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <proton/framing.h>
-#include <proton/engine.h>
-#include <proton/buffer.h>
+#include "framing/framing.h"
 #include "dispatcher.h"
 #include "protocol.h"
 #include "util.h"

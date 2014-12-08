@@ -23,9 +23,9 @@
  */
 
 #include <proton/object.h>
-#include <proton/buffer.h>
 #include <proton/engine.h>
 #include <proton/types.h>
+#include "buffer.h"
 #include "dispatcher/dispatcher.h"
 #include "util.h"
 

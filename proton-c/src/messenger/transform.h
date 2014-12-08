@@ -23,7 +23,7 @@
  */
 
 #include <proton/object.h>
-#include <proton/buffer.h>
+#include "buffer.h"
 
 typedef struct pn_transform_t pn_transform_t;
 

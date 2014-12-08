@@ -23,12 +23,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <proton/buffer.h>
-#include <proton/framing.h>
 #include <proton/error.h>
 #include <proton/sasl.h>
+
+#include "buffer.h"
 #include "protocol.h"
 #include "dispatch_actions.h"
+#include "framing/framing.h"
 #include "engine/engine-internal.h"
 #include "dispatcher/dispatcher.h"
 #include "util.h"

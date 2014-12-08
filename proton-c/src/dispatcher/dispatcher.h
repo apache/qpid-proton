@@ -26,9 +26,9 @@
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
-#include "proton/buffer.h"
-#include "proton/codec.h"
+
 #include "proton/transport.h"
+#include "buffer.h"
 
 typedef struct pn_dispatcher_t pn_dispatcher_t;
 

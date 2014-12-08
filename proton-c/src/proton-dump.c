@@ -22,10 +22,10 @@
 #include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
-#include <proton/buffer.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <proton/framing.h>
+#include "buffer.h"
+#include "framing/framing.h"
 #include "util.h"
 
 void fatal_error(const char *msg, const char *arg, int err)

@@ -22,7 +22,7 @@
  *
  */
 
-#include <proton/buffer.h>
+#include "buffer.h"
 
 typedef struct pni_store_t pni_store_t;
 typedef struct pni_entry_t pni_entry_t;
