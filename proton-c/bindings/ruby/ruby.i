@@ -184,7 +184,7 @@
 
 %typemap (in) pn_decimal64_t
 {
-  $1 = NUM2ULONG($input);
+  $1 = NUM2ULL($input);
 }
 
 %typemap (out) pn_decimal64_t
