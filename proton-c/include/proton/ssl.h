@@ -127,17 +127,20 @@ PN_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
  * previous setting.
  *
  * @param[in] domain the ssl domain that will use this certificate.
- * @param[in] certificate_file path to file/database containing the identifying
- * certificate.
- * @param[in] private_key_file path to file/database containing the private key used to
- * sign the certificate
+ * @param[in] credential_1 specifier for the file/database containing the identifying
+ * certificate. For Openssl users, this is a PEM file. For Windows SChannel users, this is
+ * the PKCS#12 file or system store.
+ * @param[in] credential_2 an optional key to access the identifying certificate. For
+ * Openssl users, this is an optional PEM file containing the private key used to sign the
+ * certificate. For Windows SChannel users, this is the friendly name of the
+ * self-identifying certificate if there are multiple certificates in the store.
  * @param[in] password the password used to sign the key, else NULL if key is not
  * protected.
  * @return 0 on success
  */
 PN_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
-                                             const char *certificate_file,
-                                             const char *private_key_file,
+                                             const char *credential_1,
+                                             const char *credential_2,
                                              const char *password);
 
 /** Configure the set of trusted CA certificates used by this domain to verify peers.
