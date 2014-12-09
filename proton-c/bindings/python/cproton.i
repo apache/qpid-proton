@@ -243,12 +243,16 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   static void pn_pyref_incref(void *object) {
     PyObject* p = (PyObject*) object;
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     Py_XINCREF(p);
+    SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
   static void pn_pyref_decref(void *object) {
     PyObject* p = (PyObject*) object;
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     Py_XDECREF(p);
+    SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
   static int pn_pyref_refcount(void *object) {
@@ -269,7 +273,9 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
   PyObject *pn_void2py(void *object) {
     if (object) {
       PyObject* p = (PyObject*) object;
+      SWIG_PYTHON_THREAD_BEGIN_BLOCK;
       Py_INCREF(p);
+      SWIG_PYTHON_THREAD_END_BLOCK;
       return p;
     } else {
       Py_RETURN_NONE;
