@@ -204,6 +204,7 @@ PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
 
 PN_EXTERN pn_record_t *pn_record(void);
 PN_EXTERN void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
+PN_EXTERN bool pn_record_has(pn_record_t *record, pn_handle_t key);
 PN_EXTERN void *pn_record_get(pn_record_t *record, pn_handle_t key);
 PN_EXTERN void pn_record_set(pn_record_t *record, pn_handle_t key, void *value);
 PN_EXTERN void pn_record_clear(pn_record_t *record);
