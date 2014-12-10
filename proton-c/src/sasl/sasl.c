@@ -37,7 +37,6 @@
 
 
 struct pni_sasl_t {
-  pn_dispatcher_t *disp;
   char *mechanisms;
   char *remote_mechanisms;
   pn_buffer_t *send_data;
@@ -49,6 +48,7 @@ struct pni_sasl_t {
   bool rcvd_init;
   bool sent_done;
   bool rcvd_done;
+  bool halt;
   bool input_bypass;
   bool output_bypass;
 };
@@ -102,8 +102,6 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
     pni_sasl_t *sasl = (pni_sasl_t *) malloc(sizeof(pni_sasl_t));
-    sasl->disp = pn_dispatcher(1, transport);
-    sasl->disp->batch = false;
 
     sasl->client = !transport->server;
     sasl->mechanisms = NULL;
@@ -118,6 +116,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->rcvd_done = false;
     sasl->input_bypass = false;
     sasl->output_bypass = false;
+    sasl->halt = false;
 
     transport->sasl = sasl;
   }
@@ -274,22 +273,23 @@ void pn_sasl_free(pn_transport_t *transport)
       free(sasl->remote_mechanisms);
       pn_buffer_free(sasl->send_data);
       pn_buffer_free(sasl->recv_data);
-      pn_dispatcher_free(sasl->disp);
       free(sasl);
     }
   }
 }
 
-void pn_client_init(pni_sasl_t *sasl)
+void pn_client_init(pn_transport_t *transport)
 {
+  pni_sasl_t *sasl = transport->sasl;
   pn_buffer_memory_t bytes = pn_buffer_memory(sasl->send_data);
-  pn_post_frame(sasl->disp, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
+  pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
                 bytes.size, bytes.start);
   pn_buffer_clear(sasl->send_data);
 }
 
-void pn_server_init(pni_sasl_t *sasl)
+void pn_server_init(pn_transport_t *transport)
 {
+  pni_sasl_t *sasl = transport->sasl;
   // XXX
   char *mechs[16];
   int count = 0;
@@ -316,13 +316,14 @@ void pn_server_init(pni_sasl_t *sasl)
     }
   }
 
-  pn_post_frame(sasl->disp, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+  pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
 }
 
 void pn_server_done(pn_sasl_t *sasl0)
 {
-  pni_sasl_t *sasl = get_sasl_internal(sasl0);
-  pn_post_frame(sasl->disp, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
+  pn_transport_t *transport = get_transport_internal(sasl0);
+  pni_sasl_t *sasl = transport->sasl;
+  pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
 }
 
 void pn_sasl_process(pn_transport_t *transport)
@@ -330,16 +331,16 @@ void pn_sasl_process(pn_transport_t *transport)
   pni_sasl_t *sasl = transport->sasl;
   if (!sasl->sent_init) {
     if (sasl->client) {
-      pn_client_init(sasl);
+      pn_client_init(transport);
     } else {
-      pn_server_init(sasl);
+      pn_server_init(transport);
     }
     sasl->sent_init = true;
   }
 
   if (pn_buffer_size(sasl->send_data)) {
     pn_buffer_memory_t bytes = pn_buffer_memory(sasl->send_data);
-    pn_post_frame(sasl->disp, 0, "DL[z]", sasl->client ? SASL_RESPONSE : SASL_CHALLENGE,
+    pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", sasl->client ? SASL_RESPONSE : SASL_CHALLENGE,
                   bytes.size, bytes.start);
     pn_buffer_clear(sasl->send_data);
   }
@@ -355,14 +356,14 @@ void pn_sasl_process(pn_transport_t *transport)
   //      or challenges) from client
   if (!sasl->client && sasl->sent_done && sasl->rcvd_init) {
     sasl->rcvd_done = true;
-    sasl->disp->halt = true;
+    sasl->halt = true;
   }
 }
 
 ssize_t pn_sasl_input(pn_transport_t *transport, const char *bytes, size_t available)
 {
   pni_sasl_t *sasl = transport->sasl;
-  ssize_t n = pn_dispatcher_input(sasl->disp, bytes, available);
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &sasl->halt);
   if (n < 0) return n;
 
   pn_sasl_process(transport);
@@ -388,7 +389,7 @@ ssize_t pn_sasl_output(pn_transport_t *transport, char *bytes, size_t size)
   pn_sasl_process(transport);
 
   pni_sasl_t *sasl = transport->sasl;
-  if (sasl->disp->available == 0 && sasl->sent_done) {
+  if (transport->available == 0 && sasl->sent_done) {
     if (pn_sasl_state((pn_sasl_t *)transport) == PN_SASL_PASS) {
       return PN_EOS;
     } else {
@@ -396,7 +397,7 @@ ssize_t pn_sasl_output(pn_transport_t *transport, char *bytes, size_t size)
       return PN_ERR;
     }
   } else {
-    return pn_dispatcher_output(sasl->disp, bytes, size);
+    return pn_dispatcher_output(transport, bytes, size);
   }
 }
 
@@ -449,7 +450,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   sasl->outcome = (pn_sasl_outcome_t) outcome;
   sasl->rcvd_done = true;
   sasl->sent_done = true;
-  sasl->disp->halt = true;
+  sasl->halt = true;
   return 0;
 }
 
