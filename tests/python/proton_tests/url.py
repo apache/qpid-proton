@@ -40,16 +40,24 @@ class UrlTest(common.Test):
 
     def testDefaults(self):
         # Check that we allow None for scheme, port
-        url = Url(username='me', password='secret', host='myhost', path='foobar')
+        url = Url(username='me', password='secret', host='myhost', path='foobar', defaults=False)
         self.assertEqual(str(url), "me:secret@myhost/foobar")
         self.assertUrl(url, None, 'me', 'secret', 'myhost', None, 'foobar')
 
-        self.assertEqual(str(Url("amqp://me:secret@myhost/foobar").defaults()),
+        self.assertEqual(str(Url("amqp://me:secret@myhost/foobar")),
                          "amqp://me:secret@myhost:amqp/foobar")
 
         # Empty string vs. None for path
         self.assertEqual(Url("myhost/").path, "")
-        assert Url("myhost").path is None
+        assert Url("myhost", defaults=False).path is None
+
+        # Expanding abbreviated url strings.
+        for s, u in [
+                ("", "amqp://0.0.0.0:amqp"),
+                ("foo", "amqp://foo:amqp"),
+                (":1234", "amqp://0.0.0.0:1234"),
+                ("/path", "amqp://0.0.0.0:amqp/path")
+        ]: self.assertEqual(str(Url(s)), u)
 
     def assertPort(self, port, portint, portstr):
         self.assertEqual((port, port), (portint, portstr))
@@ -70,13 +78,13 @@ class UrlTest(common.Test):
             assert False, "Expected ValueError"
         except ValueError: pass
 
-        self.assertEqual(str(Url("host:amqp")), "host:amqp")
-        self.assertEqual(Url("host:amqp").port, 5672)
+        self.assertEqual(str(Url("host:amqp", defaults=False)), "host:amqp")
+        self.assertEqual(Url("host:amqp", defaults=False).port, 5672)
 
     def testArgs(self):
-        u = Url("amqp://u:p@host:amqp/path", scheme='foo', host='bar', port=1234, path='garden')
+        u = Url("amqp://u:p@host:amqp/path", scheme='foo', host='bar', port=1234, path='garden', defaults=False)
         self.assertUrl(u, 'foo', 'u', 'p', 'bar', 1234, 'garden')
-        u = Url()
+        u = Url(defaults=False)
         self.assertUrl(u, None, None, None, None, None, None)
 
     def assertRaises(self, exception, function, *args, **kwargs):
@@ -86,33 +94,44 @@ class UrlTest(common.Test):
         except exception: pass
 
     def testMissing(self):
-        self.assertUrl(Url(), None, None, None, None, None, None)
-        self.assertUrl(Url('amqp://'), 'amqp', None, None, None, None, None)
-        self.assertUrl(Url('username@'), None, 'username', None, None, None, None)
-        self.assertUrl(Url(':pass@'), None, '', 'pass', None, None, None)
-        self.assertUrl(Url('host'), None, None, None, 'host', None, None)
-        self.assertUrl(Url(':1234'), None, None, None, None, 1234, None)
-        self.assertUrl(Url('/path'), None, None, None, None, None, 'path')
+        self.assertUrl(Url(defaults=False), None, None, None, None, None, None)
+        self.assertUrl(Url('amqp://', defaults=False), 'amqp', None, None, None, None, None)
+        self.assertUrl(Url('username@', defaults=False), None, 'username', None, None, None, None)
+        self.assertUrl(Url(':pass@', defaults=False), None, '', 'pass', None, None, None)
+        self.assertUrl(Url('host', defaults=False), None, None, None, 'host', None, None)
+        self.assertUrl(Url(':1234', defaults=False), None, None, None, None, 1234, None)
+        self.assertUrl(Url('/path', defaults=False), None, None, None, None, None, 'path')
 
         for s in ['amqp://', 'username@', ':pass@', ':1234', '/path']:
-            self.assertEqual(s, str(Url(s)))
+            self.assertEqual(s, str(Url(s, defaults=False)))
 
         for s, full in [
                 ('amqp://', 'amqp://0.0.0.0:amqp'),
                 ('username@', 'amqp://username@0.0.0.0:amqp'),
                 (':pass@', 'amqp://:pass@0.0.0.0:amqp'),
                 (':1234', 'amqp://0.0.0.0:1234'),
-                ('/path', 'amqp://0.0.0.0:amqp/path')]:
-            self.assertEqual(str(Url(s).defaults()), full)
+                ('/path', 'amqp://0.0.0.0:amqp/path'),
+                ('foo/path', 'amqp://foo:amqp/path'),
+                (':1234/path', 'amqp://0.0.0.0:1234/path')
+        ]:
+            self.assertEqual(str(Url(s)), full)
 
     def testAmqps(self):
         # Scheme defaults
-        self.assertEqual(str(Url("me:secret@myhost/foobar").defaults()),
+        self.assertEqual(str(Url("me:secret@myhost/foobar")),
                          "amqp://me:secret@myhost:amqp/foobar")
         # Correct port for amqps vs. amqps
-        self.assertEqual(str(Url("amqps://me:secret@myhost/foobar").defaults()),
+        self.assertEqual(str(Url("amqps://me:secret@myhost/foobar")),
                          "amqps://me:secret@myhost:amqps/foobar")
 
         self.assertPort(Url.Port('amqps'), 5671, 'amqps')
-        self.assertEqual(str(Url("host:amqps")), "host:amqps")
-        self.assertEqual(Url("host:amqps").port, 5671)
+        self.assertEqual(str(Url("host:amqps", defaults=False)), "host:amqps")
+        self.assertEqual(Url("host:amqps", defaults=False).port, 5671)
+
+    def testEqual(self):
+        self.assertEqual(Url("foo/path"), 'amqp://foo:amqp/path')
+        self.assertEqual('amqp://foo:amqp/path', Url("foo/path"))
+        self.assertEqual(Url("foo/path"), Url("foo/path"))
+        self.assertNotEqual(Url("foo/path"), 'xamqp://foo:amqp/path')
+        self.assertNotEqual('xamqp://foo:amqp/path', Url("foo/path"))
+        self.assertNotEqual(Url("foo/path"), Url("bar/path"))

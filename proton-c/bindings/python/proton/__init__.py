@@ -3770,9 +3770,11 @@ class Url(object):
           else:
             raise ValueError("Not a valid port number or service name: '%s'" % value)
 
-  def __init__(self, url=None, **kwargs):
+  def __init__(self, url=None, defaults=True, **kwargs):
     """
     @param url: URL string to parse.
+    @param defaults: If true, fill in missing default values in the URL.
+        If false, you can fill them in later by calling self.defaults()
     @param kwargs: scheme, user, password, host, port, path.
       If specified, replaces corresponding part in url string.
     """
@@ -3784,6 +3786,7 @@ class Url(object):
     for k in kwargs:            # Let kwargs override values parsed from url
       getattr(self, k)          # Check for invalid kwargs
       setattr(self, k, kwargs[k])
+    if defaults: self.defaults()
 
   class PartDescriptor(object):
     def __init__(self, part):
@@ -3811,6 +3814,9 @@ class Url(object):
   def __str__(self): return pn_url_str(self._url)
 
   def __repr__(self): return "Url(%r)" % str(self)
+
+  def __eq__(self, x): return str(self) == str(x)
+  def __ne__(self, x): return not self == x
 
   def __del__(self):
     pn_url_free(self._url);
