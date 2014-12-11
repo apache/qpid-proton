@@ -20,21 +20,31 @@
 use strict;
 use warnings;
 use cproton_perl;
-use Devel::StackTrace;
+use Switch;
+
+use feature qw(switch);
 
 package qpid::proton;
 
 sub check_for_error {
     my $rc = $_[0];
 
-    if($rc < 0) {
-        my $source = $_[1];
+    switch($rc) {
+            case 'qpid::proton::Errors::NONE' {next;}
+            case 'qpid::proton::Errors::EOS' {next;}
+            case 'qpid::proton::Errors::ERROR' {next;}
+            case 'qpid::proton::Errors::OVERFLOW' {next;}
+            case 'qpid::proton::Errors::UNDERFLOW' {next;}
+            case 'qpid::proton::Errors::STATE' {next;}
+            case 'qpid::proton::Errors::ARGUMENT' {next;}
+            case 'qpid::proton::Errors::TIMEOUT' {next;}
+            case 'qpid::proton::Errors::INTERRUPTED' {
+                my $source = $_[1];
+                my $trace = Devel::StackTrace->new;
 
-        my $trace = Devel::StackTrace->new;
-
-        print $trace->as_string;
-
-        die "ERROR[$rc] " . $source->get_error() . "\n";
+                print $trace->as_string;
+                die "ERROR[$rc]" . $source->get_error() . "\n";
+            }
     }
 }
 
