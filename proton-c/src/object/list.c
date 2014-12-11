@@ -85,7 +85,7 @@ void *pn_list_pop(pn_list_t *list)
 ssize_t pn_list_index(pn_list_t *list, void *value)
 {
   for (size_t i = 0; i < list->size; i++) {
-    if (pn_equals(list->elements[i], value)) {
+    if (pn_class_equals(list->clazz, list->elements[i], value)) {
       return i;
     }
   }
