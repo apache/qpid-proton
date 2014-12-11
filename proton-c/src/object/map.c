@@ -169,6 +169,13 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
       void *key = entries[i].key;
       void *value = entries[i].value;
       pn_map_put(map, key, value);
+    }
+  }
+
+  for (size_t i = 0; i < oldcap; i++) {
+    if (entries[i].state != PNI_ENTRY_FREE) {
+      void *key = entries[i].key;
+      void *value = entries[i].value;
       pn_class_decref(map->key, key);
       pn_class_decref(map->value, value);
     }
@@ -242,9 +249,10 @@ int pn_map_put(pn_map_t *map, void *key, void *value)
 {
   assert(map);
   pni_entry_t *entry = pni_map_entry(map, key, NULL, true);
-  pn_class_decref(map->value, entry->value);
+  void *dref_val = entry->value;
   entry->value = value;
   pn_class_incref(map->value, value);
+  pn_class_decref(map->value, dref_val);
   return 0;
 }
 
