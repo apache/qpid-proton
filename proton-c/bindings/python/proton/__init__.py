@@ -1216,7 +1216,7 @@ indicate whether the fd has been registered or not.
     if self._impl:
       del self.messenger._selectables[self.fileno()]
       pn_selectable_free(self._impl)
-      self._impl = None
+      del self._impl
 
   def __del__(self):
     self.free()
@@ -2187,10 +2187,11 @@ class Endpoint(object):
   def _release(self):
     """Release the underlying C Engine resource."""
     if not self._release_invoked:
+      conn = self.connection    # Releasing the children may break self.connection.
       for c in self._children:
         c._release()
       self._free_resource()
-      self.connection._releasing(self)
+      conn._releasing(self)
       self._release_invoked = True
 
   def _update_cond(self):
@@ -2305,17 +2306,13 @@ class Connection(Endpoint):
 
   def _free_resource(self):
     pn_connection_free(self._conn)
-
-  def _released(self):
-    self._conn = None
+    del self._conn
 
   def _releasing(self, child):
     coll = getattr(self, "_collector", None)
     if coll: coll = coll()
     if coll:
       coll._contexts.add(child)
-    else:
-      child._released()
 
   def _check(self, err):
     if err < 0:
@@ -2433,9 +2430,7 @@ class Session(Endpoint):
 
   def _free_resource(self):
     pn_session_free(self._ssn)
-
-  def _released(self):
-    self._ssn = None
+    del self._ssn
 
   def free(self):
     """Release the Session, freeing its resources.
@@ -2532,10 +2527,8 @@ class Link(Endpoint):
     return self._deliveries
 
   def _free_resource(self):
-    pn_link_free(self._link)
-
-  def _released(self):
-    self._link = None
+    if self._link: pn_link_free(self._link)
+    del self._link
 
   def free(self):
     """Release the Link, freeing its resources"""
@@ -3013,6 +3006,7 @@ class Transport(object):
     if hasattr(self, "_trans"):
       if not hasattr(self, "_shared_trans"):
         pn_transport_free(self._trans)
+        del self._trans
         if hasattr(self, "_sasl") and self._sasl:
             # pn_transport_free deallocs the C sasl associated with the
             # transport, so erase the reference if a SASL object was used.
@@ -3022,7 +3016,6 @@ class Transport(object):
             # ditto the owned c SSL object
             self._ssl._ssl = None
             self._ssl = None
-      del self._trans
 
   def _check(self, err):
     if err < 0:
@@ -3401,6 +3394,7 @@ class Collector:
 
   def __del__(self):
     pn_collector_free(self._impl)
+    del self._impl
 
 class EventType:
 
@@ -3467,7 +3461,6 @@ class Event:
     if self.type in (Event.LINK_FINAL, Event.SESSION_FINAL,
                      Event.CONNECTION_FINAL):
       collector._contexts.remove(self.context)
-      self.context._released()
 
   def dispatch(self, handler):
     return dispatch(handler, self.type.method, self)
@@ -3573,7 +3566,7 @@ class Connector(object):
     if self._cxtr:
       pn_connector_set_context(self._cxtr, pn_py2void(None))
       pn_connector_free(self._cxtr)
-      self._cxtr = None
+      del self._cxtr
 
   def free(self):
     """Release the Connector, freeing its resources.
@@ -3657,7 +3650,7 @@ class Listener(object):
     if self._lsnr:
       pn_listener_set_context(self._lsnr, pn_py2void(None));
       pn_listener_free(self._lsnr)
-      self._lsnr = None
+      del self._lsnr
 
   def free(self):
     """Release the Listener, freeing its resources"""
@@ -3821,7 +3814,7 @@ class Url(object):
 
   def __del__(self):
     pn_url_free(self._url);
-    self._url = None
+    del self._url
 
   def defaults(self):
     """
