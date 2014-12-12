@@ -242,12 +242,6 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void unbind()
     {
-        put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
-        _connectionEndpoint.modifyEndpoints();
-
-        _connectionEndpoint.setTransport(null);
-        _connectionEndpoint.decref();
-
         for (TransportSession ts: _transportSessionState.values()) {
             ts.unbind();
         }
@@ -255,6 +249,12 @@ public class TransportImpl extends EndpointImpl
         for (TransportLink tl: _transportLinkState.values()) {
             tl.unbind();
         }
+
+        put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
+
+        _connectionEndpoint.modifyEndpoints();
+        _connectionEndpoint.setTransport(null);
+        _connectionEndpoint.decref();
     }
 
     @Override

@@ -49,10 +49,12 @@ struct pn_endpoint_t {
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;
   pn_endpoint_t *transport_prev;
+  int refcount; // when this hits zero we generate a final event
   bool modified;
   bool freed;
+  bool constructed; // track whether the endpoint was explicitly
+                    // constructed or not
   bool referenced;
-  bool posted_final;
 };
 
 typedef struct {
@@ -191,6 +193,7 @@ struct pn_connection_t {
   pn_endpoint_t *transport_head;  // reference counted
   pn_endpoint_t *transport_tail;
   pn_list_t *sessions;
+  pn_list_t *freed;
   pn_transport_t *transport;
   pn_delivery_t *work_head;
   pn_delivery_t *work_tail;
@@ -210,6 +213,7 @@ struct pn_session_t {
   pn_endpoint_t endpoint;
   pn_connection_t *connection;  // reference counted
   pn_list_t *links;
+  pn_list_t *freed;
   pn_record_t *context;
   size_t incoming_capacity;
   pn_sequence_t incoming_bytes;
@@ -291,6 +295,8 @@ struct pn_delivery_t {
   bool work;
   bool tpwork;
   bool done;
+  bool constructed; // track whether the delivery was explicitly
+                    // constructed or not
   bool referenced;
 };
 
@@ -315,7 +321,11 @@ void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
+void pn_session_bound(pn_session_t* ssn);
 void pn_session_unbound(pn_session_t* ssn);
+void pn_link_bound(pn_link_t* link);
 void pn_link_unbound(pn_link_t* link);
+void pn_ep_incref(pn_endpoint_t *endpoint);
+void pn_ep_decref(pn_endpoint_t *endpoint);
 
 #endif /* engine-internal.h */

@@ -376,6 +376,7 @@ static void pni_map_remote_channel(pn_session_t *session, uint16_t channel)
   pn_transport_t *transport = session->connection->transport;
   pn_hash_put(transport->remote_channels, channel, session);
   session->state.remote_channel = channel;
+  pn_ep_incref(&session->endpoint);
 }
 
 void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state);
@@ -388,6 +389,9 @@ static void pni_unmap_remote_channel(pn_session_t *ssn)
   pn_transport_t *transport = ssn->connection->transport;
   uint16_t channel = ssn->state.remote_channel;
   ssn->state.remote_channel = -2;
+  if (pn_hash_get(transport->remote_channels, channel)) {
+    pn_ep_decref(&ssn->endpoint);
+  }
   // note: may free the session:
   pn_hash_del(transport->remote_channels, channel);
 }
@@ -429,15 +433,18 @@ void pn_transport_free(pn_transport_t *transport)
   if (!transport) return;
   assert(!transport->freed);
   transport->freed = true;
-  // once the application frees the transport, no further I/O
-  // processing can be done to the connection:
-  pn_transport_unbind(transport);
   pn_decref(transport);
 }
 
 static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
+
+  // once the application frees the transport, no further I/O
+  // processing can be done to the connection:
+  pn_transport_unbind(transport);
+  // we may have posted events, so stay alive until they are processed
+  if (pn_refcount(transport) > 0) return;
 
   pn_free(transport->context);
   pn_ssl_free(transport);
@@ -488,10 +495,11 @@ void pni_transport_unbind_handles(pn_hash_t *handles, bool reset_state)
 {
   for (pn_handle_t h = pn_hash_head(handles); h; h = pn_hash_next(handles, h)) {
     uintptr_t key = pn_hash_key(handles, h);
+    pn_link_t *link = (pn_link_t *) pn_hash_value(handles, h);
     if (reset_state) {
-      pn_link_t *link = (pn_link_t *) pn_hash_value(handles, h);
       pn_link_unbound(link);
     }
+    pn_ep_decref(&link->endpoint);
     pn_hash_del(handles, key);
   }
 }
@@ -506,6 +514,7 @@ void pni_transport_unbind_channels(pn_hash_t *channels)
     pni_transport_unbind_handles(ssn->state.local_handles, true);
     pni_transport_unbind_handles(ssn->state.remote_handles, true);
     pn_session_unbound(ssn);
+    pn_ep_decref(&ssn->endpoint);
     pn_hash_del(channels, key);
   }
 }
@@ -567,12 +576,16 @@ static void pni_map_remote_handle(pn_link_t *link, uint32_t handle)
 {
   link->state.remote_handle = handle;
   pn_hash_put(link->session->state.remote_handles, handle, link);
+  pn_ep_incref(&link->endpoint);
 }
 
 static void pni_unmap_remote_handle(pn_link_t *link)
 {
   uintptr_t handle = link->state.remote_handle;
   link->state.remote_handle = -2;
+  if (pn_hash_get(link->session->state.remote_handles, handle)) {
+    pn_ep_decref(&link->endpoint);
+  }
   // may delete link:
   pn_hash_del(link->session->state.remote_handles, handle);
 }
@@ -763,6 +776,8 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     ssn = (pn_session_t *) pn_hash_get(transport->local_channels, remote_channel);
   } else {
     ssn = pn_session(transport->connection);
+    ssn->endpoint.constructed = false;
+    pn_decref(ssn);
   }
   ssn->state.incoming_transfer_count = next;
   pni_map_remote_channel(ssn, channel);
@@ -876,6 +891,8 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     } else {
       link = (pn_link_t *) pn_receiver(ssn, strname);
     }
+    link->endpoint.constructed = false;
+    pn_decref(link);
   }
 
   if (strheap) {
@@ -993,6 +1010,8 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     }
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
+    delivery->constructed = false;
+    pn_decref(delivery);
     pn_delivery_state_t *state = pn_delivery_map_push(incoming, delivery);
     if (id_present && id != state->id) {
       return pn_do_error(transport, "amqp:session:invalid-field",
@@ -1454,6 +1473,7 @@ static void pni_map_local_channel(pn_session_t *ssn)
   uint16_t channel = allocate_alias(transport->local_channels);
   state->local_channel = channel;
   pn_hash_put(transport->local_channels, channel, ssn);
+  pn_ep_incref(&ssn->endpoint);
 }
 
 int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -1499,6 +1519,7 @@ static void pni_map_local_handle(pn_link_t *link) {
   pn_session_state_t *ssn_state = &link->session->state;
   state->local_handle = allocate_alias(ssn_state->local_handles);
   pn_hash_put(ssn_state->local_handles, state->local_handle, link);
+  pn_ep_incref(&link->endpoint);
 }
 
 int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -1833,6 +1854,9 @@ static void pni_unmap_local_handle(pn_link_t *link) {
   pn_link_state_t *state = &link->state;
   uintptr_t handle = state->local_handle;
   state->local_handle = -2;
+  if (pn_hash_get(link->session->state.local_handles, handle)) {
+    pn_ep_decref(&link->endpoint);
+  }
   // may delete link
   pn_hash_del(link->session->state.local_handles, handle);
 }
@@ -1907,6 +1931,9 @@ static void pni_unmap_local_channel(pn_session_t *ssn) {
   pn_session_state_t *state = &ssn->state;
   uintptr_t channel = state->local_channel;
   state->local_channel = -2;
+  if (pn_hash_get(transport->local_channels, channel)) {
+    pn_ep_decref(&ssn->endpoint);
+  }
   // may delete session
   pn_hash_del(transport->local_channels, channel);
 }

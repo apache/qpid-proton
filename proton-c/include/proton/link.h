@@ -81,6 +81,18 @@ PN_EXTERN pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 PN_EXTERN void pn_link_free(pn_link_t *link);
 
 /**
+ * Releasing a link object.
+ *
+ * When a link object is freed, it will no longer be retained by its
+ * session once all internal references to the link are no longer
+ * needed. Releasing a link will settle any unsettled deliveries on
+ * the link.
+ *
+ * @param[in] link the link to be released
+ */
+PN_EXTERN void pn_link_release(pn_link_t *link);
+
+/**
  * @deprecated
  * Get the application context that is associated with a link object.
  *

@@ -40,3 +40,20 @@ def pn_cast_pn_delivery(obj):
 
 def pn_cast_pn_transport(obj):
     return obj
+
+PN_PYREF = None
+
+def pn_record_def(record, key, clazz):
+  pass
+
+def pn_record_get(record, key):
+  return record.get(key)
+
+def pn_record_set(record, key, value):
+  record[key] = value
+
+def pn_incref(obj):
+  pass
+
+def pn_decref(obj):
+  pass

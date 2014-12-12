@@ -175,15 +175,23 @@ class SaslTest(Test):
   def test_singleton(self):
       """Verify that only a single instance of SASL can exist per Transport"""
       transport = Transport()
+      attr = object()
       sasl1 = SASL(transport)
+      sasl1.my_attribute = attr
       sasl2 = transport.sasl()
       sasl3 = SASL(transport)
-      assert sasl1 is sasl2
-      assert sasl1 is sasl3
+      assert sasl1 == sasl2
+      assert sasl1 == sasl3
+      assert sasl1.my_attribute == attr
+      assert sasl2.my_attribute == attr
+      assert sasl3.my_attribute == attr
       transport = Transport()
       sasl1 = transport.sasl()
+      sasl1.my_attribute = attr
       sasl2 = SASL(transport)
-      assert sasl1 is sasl2
+      assert sasl1 == sasl2
+      assert sasl1.my_attribute == attr
+      assert sasl2.my_attribute == attr
 
   def testSaslSkipped(self):
     """Verify that the server (with SASL) correctly handles a client without SASL"""

@@ -62,6 +62,18 @@ PN_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
 PN_EXTERN void pn_session_free(pn_session_t *session);
 
 /**
+ * Release a session object.
+ *
+ * When a session is released it will no longer be retained by the
+ * connection once any internal references to the session are no
+ * longer needed. Releasing a session will release all links on that
+ * session and settle any deliveries on those links.
+ *
+ * @param[in] session a session object to release
+ */
+PN_EXTERN void pn_session_release(pn_session_t *session);
+
+/**
  * @deprecated
  * Get the application context that is associated with a session
  * object.

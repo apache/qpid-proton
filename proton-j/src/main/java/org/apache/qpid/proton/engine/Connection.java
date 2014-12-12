@@ -114,4 +114,6 @@ public interface Connection extends Endpoint
 
     void collect(Collector collector);
 
+    Transport getTransport();
+
 }

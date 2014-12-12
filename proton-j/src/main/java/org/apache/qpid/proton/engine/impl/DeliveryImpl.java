@@ -164,7 +164,7 @@ public class DeliveryImpl implements Delivery
 
     public void free()
     {
-
+        settle();
     }
 
     DeliveryImpl getLinkPrevious()

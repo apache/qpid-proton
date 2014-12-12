@@ -459,7 +459,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         _transport = transport;
     }
 
-    TransportImpl getTransport()
+    public TransportImpl getTransport()
     {
         return _transport;
     }

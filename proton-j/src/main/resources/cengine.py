@@ -143,7 +143,7 @@ class endpoint_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
-    self.context = None
+    self.attachments = {}
     self.condition = pn_condition()
     self.remote_condition = pn_condition()
 
@@ -214,11 +214,8 @@ def pn_connection_desired_capabilities(conn):
 def pn_connection_remote_desired_capabilities(conn):
   return array2dat(conn.impl.getRemoteDesiredCapabilities(), PN_SYMBOL)
 
-def pn_connection_get_context(conn):
-  return conn.context
-
-def pn_connection_set_context(conn, ctx):
-  conn.context = ctx
+def pn_connection_attachments(conn):
+  return conn.attachments
 
 def pn_connection_set_container(conn, name):
   conn.impl.setContainer(name)
@@ -251,8 +248,11 @@ def pn_connection_close(conn):
   conn.on_close()
   conn.impl.close()
 
-def pn_connection_free(conn):
+def pn_connection_release(conn):
   conn.impl.free()
+
+def pn_connection_transport(conn):
+  return wrap(conn.impl.getTransport(), pn_transport_wrapper)
 
 class pn_session_wrapper(endpoint_wrapper):
   pass
@@ -260,11 +260,8 @@ class pn_session_wrapper(endpoint_wrapper):
 def pn_session(conn):
   return wrap(conn.impl.session(), pn_session_wrapper)
 
-def pn_session_get_context(ssn):
-  return ssn.context
-
-def pn_session_set_context(ssn, ctx):
-  ssn.context = ctx
+def pn_session_attachments(ssn):
+  return ssn.attachments
 
 def pn_session_state(ssn):
   return endpoint_state(ssn.impl)
@@ -334,7 +331,7 @@ def pn_sender(ssn, name):
 def pn_receiver(ssn, name):
   return wrap(ssn.impl.receiver(name), pn_link_wrapper)
 
-def pn_session_free(ssn):
+def pn_session_release(ssn):
   ssn.impl.free()
 
 TERMINUS_TYPES_J2P = {
@@ -523,11 +520,8 @@ class pn_link_wrapper(endpoint_wrapper):
     self.impl.setSource(self.source.encode())
     self.impl.setTarget(self.target.encode())
 
-def pn_link_get_context(link):
-  return link.context
-
-def pn_link_set_context(link, ctx):
-  link.context = ctx
+def pn_link_attachments(link):
+  return link.attachments
 
 def pn_link_source(link):
   link.source.decode(link.impl.getSource())
@@ -669,7 +663,7 @@ def pn_link_advance(link):
 def pn_link_current(link):
   return wrap(link.impl.current(), pn_delivery_wrapper)
 
-def pn_link_free(link):
+def pn_link_release(link):
   link.impl.free()
 
 def pn_work_head(conn):
@@ -804,7 +798,7 @@ class pn_delivery_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
-    self.context = None
+    self.attachments = {}
     self.local = pn_disposition()
     self.remote = pn_disposition()
 
@@ -814,11 +808,8 @@ def pn_delivery(link, tag):
 def pn_delivery_tag(dlv):
   return dlv.impl.getTag().tostring()
 
-def pn_delivery_get_context(dlv):
-  return dlv.context
-
-def pn_delivery_set_context(dlv, ctx):
-  dlv.context = ctx
+def pn_delivery_attachments(dlv):
+  return dlv.attachments
 
 def pn_delivery_partial(dlv):
   return dlv.impl.isPartial()
@@ -867,11 +858,15 @@ def pn_delivery_settle(dlv):
 class pn_transport_wrapper:
   def __init__(self, impl):
     self.impl = impl
+    self.attachments = {}
     self.server = False
     self.condition = pn_condition()
 
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
+
+def pn_transport_attachments(trans):
+  return trans.attachments
 
 def pn_transport_set_server(trans):
   trans.server = True;

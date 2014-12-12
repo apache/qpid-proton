@@ -102,6 +102,17 @@ PN_EXTERN pn_connection_t *pn_connection(void);
 PN_EXTERN void pn_connection_free(pn_connection_t *connection);
 
 /**
+ * Release a connection object.
+ *
+ * When a connection object is released, all ::pn_session_t and
+ * ::pn_link_t, objects associated with the connection are also
+ * released and all ::pn_delivery_t objects are settled.
+ *
+ * @param[in] connection the connection object to be released
+ */
+PN_EXTERN void pn_connection_release(pn_connection_t *connection);
+
+/**
  * Get additional error information associated with the connection.
  *
  * Whenever a connection operation fails (i.e. returns an error code),

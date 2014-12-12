@@ -46,10 +46,8 @@ class Test(common.Test):
     c2 = Connection()
     t1 = Transport()
     t1.bind(c1)
-    c1._transport = t1
     t2 = Transport()
     t2.bind(c2)
-    c2._transport = t2
     self._wires.append((c1, t1, c2, t2))
 
     mask1 = 0
@@ -69,12 +67,12 @@ class Test(common.Test):
   def link(self, name, max_frame=None, idle_timeout=None):
     c1, c2 = self.connection()
     if max_frame:
-      c1._transport.max_frame_size = max_frame[0]
-      c2._transport.max_frame_size = max_frame[1]
+      c1.transport.max_frame_size = max_frame[0]
+      c2.transport.max_frame_size = max_frame[1]
     if idle_timeout:
       # idle_timeout in seconds expressed as float
-      c1._transport.idle_timeout = idle_timeout[0]
-      c2._transport.idle_timeout = idle_timeout[1]
+      c1.transport.idle_timeout = idle_timeout[0]
+      c2.transport.idle_timeout = idle_timeout[1]
     c1.open()
     c2.open()
     ssn1 = c1.session()
@@ -88,10 +86,6 @@ class Test(common.Test):
     return snd, rcv
 
   def cleanup(self):
-    # release resources created by this class
-    for w in self._wires:
-        w[0]._transport = None
-        w[2]._transport = None
     self._wires = []
 
   def pump(self, buffer_size=OUTPUT_SIZE):
@@ -215,10 +209,10 @@ class ConnectionTest(Test):
     assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
 
   def test_channel_max(self, value=1234):
-    self.c1._transport.channel_max = value
+    self.c1.transport.channel_max = value
     self.c1.open()
     self.pump()
-    assert self.c2._transport.remote_channel_max == value, (self.c2._transport.remote_channel_max, value)
+    assert self.c2.transport.remote_channel_max == value, (self.c2.transport.remote_channel_max, value)
 
   def test_cleanup(self):
     self.c1.open()
@@ -226,8 +220,8 @@ class ConnectionTest(Test):
     self.pump()
     assert self.c1.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
     assert self.c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
-    t1 = self.c1._transport
-    t2 = self.c2._transport
+    t1 = self.c1.transport
+    t2 = self.c2.transport
     c2 = self.c2
     self.c1.close()
     # release all references to C1, except that held by the transport
@@ -897,8 +891,8 @@ class MaxFrameTransferTest(Test):
     self.snd.open()
     self.rcv.open()
     self.pump()
-    assert self.rcv.session.connection._transport.max_frame_size == 512
-    assert self.snd.session.connection._transport.remote_max_frame_size == 512
+    assert self.rcv.session.connection.transport.max_frame_size == 512
+    assert self.snd.session.connection.transport.remote_max_frame_size == 512
 
     self.rcv.flow(1)
     self.snd.delivery("tag")
@@ -926,8 +920,8 @@ class MaxFrameTransferTest(Test):
     self.snd.open()
     self.rcv.open()
     self.pump()
-    assert self.rcv.session.connection._transport.max_frame_size == 521
-    assert self.snd.session.connection._transport.remote_max_frame_size == 521
+    assert self.rcv.session.connection.transport.max_frame_size == 521
+    assert self.snd.session.connection.transport.remote_max_frame_size == 521
 
     self.rcv.flow(2)
     self.snd.delivery("tag")
@@ -1023,10 +1017,10 @@ class IdleTimeoutTest(Test):
     self.rcv.open()
     self.pump()
     # proton advertises 1/2 the configured timeout to the peer:
-    assert self.rcv.session.connection._transport.idle_timeout == 2.0
-    assert self.rcv.session.connection._transport.remote_idle_timeout == 0.5
-    assert self.snd.session.connection._transport.idle_timeout == 1.0
-    assert self.snd.session.connection._transport.remote_idle_timeout == 1.0
+    assert self.rcv.session.connection.transport.idle_timeout == 2.0
+    assert self.rcv.session.connection.transport.remote_idle_timeout == 0.5
+    assert self.snd.session.connection.transport.idle_timeout == 1.0
+    assert self.snd.session.connection.transport.remote_idle_timeout == 1.0
 
   def testTimeout(self):
     """
@@ -1041,8 +1035,8 @@ class IdleTimeoutTest(Test):
     self.rcv.open()
     self.pump()
 
-    t_snd = self.snd.session.connection._transport
-    t_rcv = self.rcv.session.connection._transport
+    t_snd = self.snd.session.connection.transport
+    t_rcv = self.rcv.session.connection.transport
     assert t_rcv.idle_timeout == 0.0
     # proton advertises 1/2 the timeout (see spec)
     assert t_rcv.remote_idle_timeout == 0.5
@@ -1346,8 +1340,8 @@ class CreditTest(Test):
     assert self.rcv.credit == 0
     assert self.rcv.queued == 0
 
-    #self.rcv.session.connection._transport.trace(Transport.TRACE_FRM)
-    #self.snd.session.connection._transport.trace(Transport.TRACE_FRM)
+    #self.rcv.session.connection.transport.trace(Transport.TRACE_FRM)
+    #self.snd.session.connection.transport.trace(Transport.TRACE_FRM)
 
     ## verify that a sender that has reached the drain state will respond
     ## promptly to a drain issued by the peer.
@@ -2158,9 +2152,11 @@ class EventTest(CollectorTest):
     del ssn2
     self.pump()
     c1.free()
-    c1._transport.unbind()
-    self.expect(Event.CONNECTION_UNBOUND, Event.SESSION_FINAL, Event.LINK_FINAL,
-                Event.SESSION_FINAL, Event.CONNECTION_FINAL)
+    c1.transport.unbind()
+    self.expect_oneof((Event.SESSION_FINAL, Event.LINK_FINAL, Event.SESSION_FINAL,
+                       Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL),
+                      (Event.CONNECTION_UNBOUND, Event.SESSION_FINAL, Event.LINK_FINAL,
+                       Event.SESSION_FINAL, Event.CONNECTION_FINAL))
 
   def testConnectionINIT_FINAL(self):
     c = Connection()
@@ -2222,7 +2218,7 @@ class EventTest(CollectorTest):
     snd.open()
     self.pump()
     self.expect(Event.LINK_REMOTE_OPEN, Event.DELIVERY)
-    rcv.session.connection._transport.unbind()
+    rcv.session.connection.transport.unbind()
     rcv.session.connection.free()
     self.expect(Event.CONNECTION_UNBOUND, Event.TRANSPORT, Event.LINK_FINAL,
                 Event.SESSION_FINAL, Event.CONNECTION_FINAL)
@@ -2382,13 +2378,9 @@ class TeardownLeakTest(PeerTest):
     self.pump()
 
     if remote:
-      self.expect_oneof((Event.TRANSPORT_HEAD_CLOSED, Event.LINK_REMOTE_CLOSE,
-                         Event.SESSION_REMOTE_CLOSE, Event.CONNECTION_REMOTE_CLOSE,
-                         Event.TRANSPORT_TAIL_CLOSED, Event.TRANSPORT_CLOSED),
-                        (Event.TRANSPORT_HEAD_CLOSED, Event.LINK_REMOTE_CLOSE,
-                         Event.LINK_FINAL, Event.SESSION_REMOTE_CLOSE,
-                         Event.CONNECTION_REMOTE_CLOSE, Event.TRANSPORT_TAIL_CLOSED,
-                         Event.TRANSPORT_CLOSED))
+      self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.LINK_REMOTE_CLOSE,
+                  Event.SESSION_REMOTE_CLOSE, Event.CONNECTION_REMOTE_CLOSE,
+                  Event.TRANSPORT_TAIL_CLOSED, Event.TRANSPORT_CLOSED)
     else:
       self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.SESSION_REMOTE_CLOSE,
                   Event.CONNECTION_REMOTE_CLOSE, Event.TRANSPORT_TAIL_CLOSED,
@@ -2397,8 +2389,7 @@ class TeardownLeakTest(PeerTest):
     self.connection.free()
     self.transport.unbind()
 
-    self.expect_oneof((Event.LINK_FINAL, Event.CONNECTION_UNBOUND, Event.SESSION_FINAL, Event.CONNECTION_FINAL),
-                      (Event.CONNECTION_UNBOUND, Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_FINAL))
+    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
 
   def testLocalRemoteLeak(self):
     self.doLeak(True, True)

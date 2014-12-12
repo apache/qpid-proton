@@ -116,6 +116,12 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     @Override
     void doFree()
     {
+        DeliveryImpl dlv = _head;
+        while (dlv != null) {
+            dlv.free();
+            dlv = dlv.next();
+        }
+
         _session.getConnectionImpl().removeLinkEndpoint(_node);
         _node = null;
     }

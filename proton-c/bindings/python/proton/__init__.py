@@ -31,6 +31,7 @@ The proton APIs consist of the following classes:
 """
 
 from cproton import *
+from wrapper import Wrapper
 
 import weakref, re, socket
 try:
@@ -2183,19 +2184,8 @@ class Endpoint(object):
   LOCAL_CLOSED = PN_LOCAL_CLOSED
   REMOTE_CLOSED  = PN_REMOTE_CLOSED
 
-  def __init__(self):
+  def _init(self):
     self.condition = None
-    self._release_invoked = False
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if not self._release_invoked:
-      conn = self.connection    # Releasing the children may break self.connection.
-      for c in self._children:
-        c._release()
-      self._free_resource()
-      conn._releasing(self)
-      self._release_invoked = True
 
   def _update_cond(self):
     obj2cond(self.condition, self._get_cond_impl())
@@ -2266,236 +2256,193 @@ def secs2millis(secs):
 def millis2secs(millis):
   return float(millis)/1000.0
 
-class Connection(Endpoint):
+class Connection(Wrapper, Endpoint):
 
   @staticmethod
-  def _wrap_connection(c_conn):
-    """Maintain only a single instance of this class for each Connection
-    object that exists in the the C Engine.  This is done by storing a (weak)
-    reference to the python instance in the context field of the C object.
-    """
-    if not c_conn: return None
-    py_conn = pn_void2py(pn_connection_get_context(c_conn))
-    if py_conn: return py_conn
-    wrapper = Connection(_conn=c_conn)
-    return wrapper
-
-  def __init__(self, _conn=None):
-    Endpoint.__init__(self)
-    if _conn:
-      self._conn = _conn
+  def wrap(impl):
+    if impl is None:
+      return None
     else:
-      self._conn = pn_connection()
-    pn_connection_set_context(self._conn, pn_py2void(self))
+      return Connection(impl)
+
+  def __init__(self, impl = pn_connection):
+    Wrapper.__init__(self, impl, pn_connection_attachments)
+
+  def _init(self):
+    Endpoint._init(self)
     self.offered_capabilities = None
     self.desired_capabilities = None
     self.properties = None
-    self._sessions = set()
-
-  def __del__(self):
-    if hasattr(self, "_conn") and self._conn:
-      self._release()
-
-  def free(self):
-    self._release()
-
-  @property
-  def _children(self):
-    return self._sessions
 
   @property
   def connection(self):
     return self
 
-  def _free_resource(self):
-    pn_connection_free(self._conn)
-    del self._conn
-
-  def _releasing(self, child):
-    coll = getattr(self, "_collector", None)
-    if coll: coll = coll()
-    if coll:
-      coll._contexts.add(child)
+  @property
+  def transport(self):
+    return Transport.wrap(pn_connection_transport(self._impl))
 
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, ConnectionException)
-      raise exc("[%s]: %s" % (err, pn_connection_error(self._conn)))
+      raise exc("[%s]: %s" % (err, pn_connection_error(self._impl)))
     else:
       return err
 
   def _get_cond_impl(self):
-    return pn_connection_condition(self._conn)
+    return pn_connection_condition(self._impl)
 
   def _get_remote_cond_impl(self):
-    return pn_connection_remote_condition(self._conn)
+    return pn_connection_remote_condition(self._impl)
 
   def collect(self, collector):
     if collector is None:
-      pn_connection_collect(self._conn, None)
+      pn_connection_collect(self._impl, None)
     else:
-      pn_connection_collect(self._conn, collector._impl)
+      pn_connection_collect(self._impl, collector._impl)
     self._collector = weakref.ref(collector)
 
   def _get_container(self):
-    return pn_connection_get_container(self._conn)
+    return pn_connection_get_container(self._impl)
   def _set_container(self, name):
-    return pn_connection_set_container(self._conn, name)
+    return pn_connection_set_container(self._impl, name)
 
   container = property(_get_container, _set_container)
 
   def _get_hostname(self):
-    return pn_connection_get_hostname(self._conn)
+    return pn_connection_get_hostname(self._impl)
   def _set_hostname(self, name):
-    return pn_connection_set_hostname(self._conn, name)
+    return pn_connection_set_hostname(self._impl, name)
 
   hostname = property(_get_hostname, _set_hostname)
 
   @property
   def remote_container(self):
-    return pn_connection_remote_container(self._conn)
+    return pn_connection_remote_container(self._impl)
 
   @property
   def remote_hostname(self):
-    return pn_connection_remote_hostname(self._conn)
+    return pn_connection_remote_hostname(self._impl)
 
   @property
   def remote_offered_capabilities(self):
-    return dat2obj(pn_connection_remote_offered_capabilities(self._conn))
+    return dat2obj(pn_connection_remote_offered_capabilities(self._impl))
 
   @property
   def remote_desired_capabilities(self):
-    return dat2obj(pn_connection_remote_desired_capabilities(self._conn))
+    return dat2obj(pn_connection_remote_desired_capabilities(self._impl))
 
   @property
   def remote_properties(self):
-    return dat2obj(pn_connection_remote_properties(self._conn))
+    return dat2obj(pn_connection_remote_properties(self._impl))
 
   def open(self):
     obj2dat(self.offered_capabilities,
-            pn_connection_offered_capabilities(self._conn))
+            pn_connection_offered_capabilities(self._impl))
     obj2dat(self.desired_capabilities,
-            pn_connection_desired_capabilities(self._conn))
-    obj2dat(self.properties, pn_connection_properties(self._conn))
-    pn_connection_open(self._conn)
+            pn_connection_desired_capabilities(self._impl))
+    obj2dat(self.properties, pn_connection_properties(self._impl))
+    pn_connection_open(self._impl)
 
   def close(self):
     self._update_cond()
-    pn_connection_close(self._conn)
+    pn_connection_close(self._impl)
 
   @property
   def state(self):
-    return pn_connection_state(self._conn)
+    return pn_connection_state(self._impl)
+
+  def _pn_session(self):
+    return pn_session(self._impl)
 
   def session(self):
-    return Session._wrap_session(pn_session(self._conn))
+    return Session(self._pn_session)
 
   def session_head(self, mask):
-    return Session._wrap_session(pn_session_head(self._conn, mask))
+    return Session.wrap(pn_session_head(self._impl, mask))
 
   def link_head(self, mask):
-    return Link._wrap_link(pn_link_head(self._conn, mask))
+    return Link.wrap(pn_link_head(self._impl, mask))
 
   @property
   def work_head(self):
-    return Delivery._wrap_delivery(pn_work_head(self._conn))
+    return Delivery.wrap(pn_work_head(self._impl))
 
   @property
   def error(self):
-    return pn_error_code(pn_connection_error(self._conn))
+    return pn_error_code(pn_connection_error(self._impl))
+
+  def free(self):
+    pn_connection_release(self._impl)
 
 class SessionException(ProtonException):
   pass
 
-class Session(Endpoint):
+class Session(Wrapper, Endpoint):
 
   @staticmethod
-  def _wrap_session(c_ssn):
-    """Maintain only a single instance of this class for each Session object that
-    exists in the C Engine.
-    """
-    if c_ssn is None: return None
-    py_ssn = pn_void2py(pn_session_get_context(c_ssn))
-    if py_ssn: return py_ssn
-    wrapper = Session(c_ssn)
-    return wrapper
+  def wrap(impl):
+    if impl is None:
+      return None
+    else:
+      return Session(impl)
 
-  def __init__(self, ssn):
-    Endpoint.__init__(self)
-    self._ssn = ssn
-    pn_session_set_context(self._ssn, pn_py2void(self))
-    self._links = set()
-    self.connection._sessions.add(self)
-
-  @property
-  def _children(self):
-    return self._links
-
-  def _free_resource(self):
-    pn_session_free(self._ssn)
-    del self._ssn
-
-  def free(self):
-    """Release the Session, freeing its resources.
-
-    Call this when you no longer need the session.  This will allow the
-    session's resources to be reclaimed.  Once called, you should no longer
-    reference the session.
-
-    """
-    self.connection._sessions.remove(self)
-    self._release()
+  def __init__(self, impl):
+    Wrapper.__init__(self, impl, pn_session_attachments)
 
   def _get_cond_impl(self):
-    return pn_session_condition(self._ssn)
+    return pn_session_condition(self._impl)
 
   def _get_remote_cond_impl(self):
-    return pn_session_remote_condition(self._ssn)
+    return pn_session_remote_condition(self._impl)
 
   def _get_incoming_capacity(self):
-    return pn_session_get_incoming_capacity(self._ssn)
+    return pn_session_get_incoming_capacity(self._impl)
 
   def _set_incoming_capacity(self, capacity):
-    pn_session_set_incoming_capacity(self._ssn, capacity)
+    pn_session_set_incoming_capacity(self._impl, capacity)
 
   incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity)
 
   @property
   def outgoing_bytes(self):
-    return pn_session_outgoing_bytes(self._ssn)
+    return pn_session_outgoing_bytes(self._impl)
 
   @property
   def incoming_bytes(self):
-    return pn_session_incoming_bytes(self._ssn)
+    return pn_session_incoming_bytes(self._impl)
 
   def open(self):
-    pn_session_open(self._ssn)
+    pn_session_open(self._impl)
 
   def close(self):
     self._update_cond()
-    pn_session_close(self._ssn)
+    pn_session_close(self._impl)
 
   def next(self, mask):
-    return Session._wrap_session(pn_session_next(self._ssn, mask))
+    return Session.wrap(pn_session_next(self._impl, mask))
 
   @property
   def state(self):
-    return pn_session_state(self._ssn)
+    return pn_session_state(self._impl)
 
   @property
   def connection(self):
-    return Connection._wrap_connection(pn_session_connection(self._ssn))
+    return Connection.wrap(pn_session_connection(self._impl))
 
   def sender(self, name):
-    return Link._wrap_link(pn_sender(self._ssn, name))
+    return Sender(lambda: pn_sender(self._impl, name))
 
   def receiver(self, name):
-    return Link._wrap_link(pn_receiver(self._ssn, name))
+    return Receiver(lambda: pn_receiver(self._impl, name))
+
+  def free(self):
+    pn_session_release(self._impl)
 
 class LinkException(ProtonException):
   pass
 
-class Link(Endpoint):
+class Link(Wrapper, Endpoint):
 
   SND_UNSETTLED = PN_SND_UNSETTLED
   SND_SETTLED = PN_SND_SETTLED
@@ -2505,152 +2452,132 @@ class Link(Endpoint):
   RCV_SECOND = PN_RCV_SECOND
 
   @staticmethod
-  def _wrap_link(c_link):
-    """Maintain only a single instance of this class for each Session object that
-    exists in the C Engine.
-    """
-    if c_link is None: return None
-    py_link = pn_void2py(pn_link_get_context(c_link))
-    if py_link: return py_link
-    if pn_link_is_sender(c_link):
-      wrapper = Sender(c_link)
+  def wrap(impl):
+    if impl is None: return None
+    if pn_link_is_sender(impl):
+      return Sender(impl)
     else:
-      wrapper = Receiver(c_link)
-    return wrapper
+      return Receiver(impl)
 
-  def __init__(self, c_link):
-    Endpoint.__init__(self)
-    self._link = c_link
-    pn_link_set_context(self._link, pn_py2void(self))
-    self._deliveries = set()
-    self.session._links.add(self)
-
-  @property
-  def _children(self):
-    return self._deliveries
-
-  def _free_resource(self):
-    if self._link: pn_link_free(self._link)
-    del self._link
-
-  def free(self):
-    """Release the Link, freeing its resources"""
-    self.session._links.remove(self)
-    self._release()
+  def __init__(self, impl):
+    Wrapper.__init__(self, impl, pn_link_attachments)
 
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, LinkException)
-      raise exc("[%s]: %s" % (err, pn_link_error(self._link)))
+      raise exc("[%s]: %s" % (err, pn_link_error(self._impl)))
     else:
       return err
 
   def _get_cond_impl(self):
-    return pn_link_condition(self._link)
+    return pn_link_condition(self._impl)
 
   def _get_remote_cond_impl(self):
-    return pn_link_remote_condition(self._link)
+    return pn_link_remote_condition(self._impl)
 
   def open(self):
-    pn_link_open(self._link)
+    pn_link_open(self._impl)
 
   def close(self):
     self._update_cond()
-    pn_link_close(self._link)
+    pn_link_close(self._impl)
 
   @property
   def state(self):
-    return pn_link_state(self._link)
+    return pn_link_state(self._impl)
 
   @property
   def source(self):
-    return Terminus(pn_link_source(self._link))
+    return Terminus(pn_link_source(self._impl))
 
   @property
   def target(self):
-    return Terminus(pn_link_target(self._link))
+    return Terminus(pn_link_target(self._impl))
 
   @property
   def remote_source(self):
-    return Terminus(pn_link_remote_source(self._link))
+    return Terminus(pn_link_remote_source(self._impl))
   @property
   def remote_target(self):
-    return Terminus(pn_link_remote_target(self._link))
+    return Terminus(pn_link_remote_target(self._impl))
 
   @property
   def session(self):
-    return Session._wrap_session(pn_link_session(self._link))
+    return Session.wrap(pn_link_session(self._impl))
 
   @property
   def connection(self):
     return self.session.connection
 
   def delivery(self, tag):
-    return Delivery._wrap_delivery(pn_delivery(self._link, tag))
+    return Delivery(lambda: pn_delivery(self._impl, tag))
 
   @property
   def current(self):
-    return Delivery._wrap_delivery(pn_link_current(self._link))
+    return Delivery.wrap(pn_link_current(self._impl))
 
   def advance(self):
-    return pn_link_advance(self._link)
+    return pn_link_advance(self._impl)
 
   @property
   def unsettled(self):
-    return pn_link_unsettled(self._link)
+    return pn_link_unsettled(self._impl)
 
   @property
   def credit(self):
-    return pn_link_credit(self._link)
+    return pn_link_credit(self._impl)
 
   @property
   def available(self):
-    return pn_link_available(self._link)
+    return pn_link_available(self._impl)
 
   @property
   def queued(self):
-    return pn_link_queued(self._link)
+    return pn_link_queued(self._impl)
 
   def next(self, mask):
-    return Link._wrap_link(pn_link_next(self._link, mask))
+    return Link.wrap(pn_link_next(self._impl, mask))
 
   @property
   def name(self):
-      return pn_link_name(self._link)
+      return pn_link_name(self._impl)
 
   @property
   def is_sender(self):
-    return pn_link_is_sender(self._link)
+    return pn_link_is_sender(self._impl)
 
   @property
   def is_receiver(self):
-    return pn_link_is_receiver(self._link)
+    return pn_link_is_receiver(self._impl)
 
   @property
   def remote_snd_settle_mode(self):
-    return pn_link_remote_snd_settle_mode(self._link)
+    return pn_link_remote_snd_settle_mode(self._impl)
 
   @property
   def remote_rcv_settle_mode(self):
-    return pn_link_remote_rcv_settle_mode(self._link)
+    return pn_link_remote_rcv_settle_mode(self._impl)
 
   def _get_snd_settle_mode(self):
-    return pn_link_snd_settle_mode(self._link)
+    return pn_link_snd_settle_mode(self._impl)
   def _set_snd_settle_mode(self, mode):
-    pn_link_set_snd_settle_mode(self._link, mode)
+    pn_link_set_snd_settle_mode(self._impl, mode)
   snd_settle_mode = property(_get_snd_settle_mode, _set_snd_settle_mode)
 
   def _get_rcv_settle_mode(self):
-    return pn_link_rcv_settle_mode(self._link)
+    return pn_link_rcv_settle_mode(self._impl)
   def _set_rcv_settle_mode(self, mode):
-    pn_link_set_rcv_settle_mode(self._link, mode)
+    pn_link_set_rcv_settle_mode(self._impl, mode)
   rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
 
   def drained(self):
-    return pn_link_drained(self._link)
+    return pn_link_drained(self._impl)
 
   def detach(self):
-    return pn_link_detach(self._link)
+    return pn_link_detach(self._impl)
+
+  def free(self):
+    pn_link_release(self._impl)
 
 class Terminus(object):
 
@@ -2740,25 +2667,19 @@ class Terminus(object):
 
 class Sender(Link):
 
-  def __init__(self, c_link):
-    super(Sender, self).__init__(c_link)
-
   def offered(self, n):
-    pn_link_offered(self._link, n)
+    pn_link_offered(self._impl, n)
 
   def send(self, bytes):
-    return self._check(pn_link_send(self._link, bytes))
+    return self._check(pn_link_send(self._impl, bytes))
 
 class Receiver(Link):
 
-  def __init__(self, c_link):
-    super(Receiver, self).__init__(c_link)
-
   def flow(self, n):
-    pn_link_flow(self._link, n)
+    pn_link_flow(self._impl, n)
 
   def recv(self, limit):
-    n, bytes = pn_link_recv(self._link, limit)
+    n, bytes = pn_link_recv(self._impl, limit)
     if n == PN_EOS:
       return None
     else:
@@ -2766,10 +2687,10 @@ class Receiver(Link):
       return bytes
 
   def drain(self, n):
-    pn_link_drain(self._link, n)
+    pn_link_drain(self._impl, n)
 
   def draining(self):
-    return pn_link_draining(self._link)
+    return pn_link_draining(self._impl)
 
 class NamedInt(int):
 
@@ -2875,7 +2796,7 @@ class Disposition(object):
       raise AttributeError("condition attribute is read-only")
   condition = property(_get_condition, _set_condition)
 
-class Delivery(object):
+class Delivery(Wrapper):
 
   RECEIVED = Disposition.RECEIVED
   ACCEPTED = Disposition.ACCEPTED
@@ -2884,113 +2805,87 @@ class Delivery(object):
   MODIFIED = Disposition.MODIFIED
 
   @staticmethod
-  def _wrap_delivery(c_dlv):
-    """Maintain only a single instance of this class for each Delivery object that
-    exists in the C Engine.
-    """
-    if not c_dlv: return None
-    py_dlv = pn_void2py(pn_delivery_get_context(c_dlv))
-    if py_dlv: return py_dlv
-    wrapper = Delivery(c_dlv)
-    return wrapper
+  def wrap(impl):
+    if impl is None:
+      return None
+    else:
+      return Delivery(impl)
 
-  def __init__(self, dlv):
-    self._dlv = dlv
-    pn_delivery_set_context(self._dlv, pn_py2void(self))
-    self.local = Disposition(pn_delivery_local(self._dlv), True)
-    self.remote = Disposition(pn_delivery_remote(self._dlv), False)
-    self.link._deliveries.add(self)
+  def __init__(self, impl):
+    Wrapper.__init__(self, impl, pn_delivery_attachments)
 
-  def __del__(self):
-    self._release()
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if self._dlv:
-      pn_delivery_set_context(self._dlv, pn_py2void(None))
-      pn_delivery_settle(self._dlv)
-      self._dlv = None
-
-  @property
-  def released(self):
-    return self._dlv is None
+  def _init(self):
+    self.local = Disposition(pn_delivery_local(self._impl), True)
+    self.remote = Disposition(pn_delivery_remote(self._impl), False)
 
   @property
   def tag(self):
-    return pn_delivery_tag(self._dlv)
+    return pn_delivery_tag(self._impl)
 
   @property
   def writable(self):
-    return pn_delivery_writable(self._dlv)
+    return pn_delivery_writable(self._impl)
 
   @property
   def readable(self):
-    return pn_delivery_readable(self._dlv)
+    return pn_delivery_readable(self._impl)
 
   @property
   def updated(self):
-    return pn_delivery_updated(self._dlv)
+    return pn_delivery_updated(self._impl)
 
   def update(self, state):
     obj2dat(self.local._data, pn_disposition_data(self.local._impl))
     obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
     obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
-    pn_delivery_update(self._dlv, state)
+    pn_delivery_update(self._impl, state)
 
   @property
   def pending(self):
-    return pn_delivery_pending(self._dlv)
+    return pn_delivery_pending(self._impl)
 
   @property
   def partial(self):
-    return pn_delivery_partial(self._dlv)
+    return pn_delivery_partial(self._impl)
 
   @property
   def local_state(self):
-    return DispositionType.get(pn_delivery_local_state(self._dlv))
+    return DispositionType.get(pn_delivery_local_state(self._impl))
 
   @property
   def remote_state(self):
-    return DispositionType.get(pn_delivery_remote_state(self._dlv))
+    return DispositionType.get(pn_delivery_remote_state(self._impl))
 
   @property
   def settled(self):
-    return pn_delivery_settled(self._dlv)
+    return pn_delivery_settled(self._impl)
 
   def settle(self):
-    """Release the delivery"""
-    self.link._deliveries.remove(self)
-    self._release()
+    # XXX: we have to incref here because settle is overloaded to
+    # decref also, remove this when C semantics are fixed
+    pn_incref(self._impl)
+    pn_delivery_settle(self._impl)
 
   @property
   def work_next(self):
-    return Delivery._wrap_delivery(pn_work_next(self._dlv))
+    return Delivery.wrap(pn_work_next(self._impl))
 
   @property
   def link(self):
-    if not self.released:
-      return Link._wrap_link(pn_delivery_link(self._dlv))
-    else:
-      return None
+    return Link.wrap(pn_delivery_link(self._impl))
 
   @property
   def session(self):
-    if self.link:
-      return self.link.session
-    else:
-      return None
+    return self.link.session
 
   @property
   def connection(self):
-    if self.session:
-      return self.session.connection
-    else:
-      return None
+    return self.session.connection
 
 class TransportException(ProtonException):
   pass
 
-class Transport(object):
+class Transport(Wrapper):
 
   TRACE_OFF = PN_TRACE_OFF
   TRACE_DRV = PN_TRACE_DRV
@@ -3001,93 +2896,73 @@ class Transport(object):
   SERVER = 2
 
   @staticmethod
-  def _wrap_transport(c_trans):
-    if not c_trans: return None
-    wrapper = Transport(_trans=c_trans)
-    return wrapper
+  def wrap(impl):
+    if impl is None:
+      return None
+    else:
+      return Transport(_impl=impl)
 
-  def __init__(self, mode=None, _trans=None):
-    if not mode and not _trans:
-      self._trans = pn_transport()
-    elif not mode:
-      self._shared_trans = True
-      self._trans = _trans
-    elif mode==Transport.CLIENT:
-      self._trans = pn_transport()
-    elif mode==Transport.SERVER:
-      self._trans = pn_transport()
-      pn_transport_set_server(self._trans)
+  def __init__(self, mode=None, _impl = pn_transport):
+    Wrapper.__init__(self, _impl, pn_transport_attachments)
+    if mode == Transport.SERVER:
+      pn_transport_set_server(self._impl)
+    elif mode is None or mode==Transport.CLIENT:
+      pass
     else:
       raise TransportException("Cannot initialise Transport from mode: %s" % str(mode))
+
+  def _init(self):
     self._sasl = None
     self._ssl = None
-
-  def __del__(self):
-    if hasattr(self, "_trans"):
-      if not hasattr(self, "_shared_trans"):
-        pn_transport_free(self._trans)
-        del self._trans
-        if hasattr(self, "_sasl") and self._sasl:
-            # pn_transport_free deallocs the C sasl associated with the
-            # transport, so erase the reference if a SASL object was used.
-            self._sasl._sasl = None
-            self._sasl = None
-        if hasattr(self, "_ssl") and self._ssl:
-            # ditto the owned c SSL object
-            self._ssl._ssl = None
-            self._ssl = None
 
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, TransportException)
-      raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._trans))))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._impl))))
     else:
       return err
 
   def bind(self, connection):
     """Assign a connection to the transport"""
-    self._check(pn_transport_bind(self._trans, connection._conn))
-    # keep python connection from being garbage collected:
-    self._connection = connection
+    self._check(pn_transport_bind(self._impl, connection._impl))
 
   def unbind(self):
     """Release the connection"""
-    self._check(pn_transport_unbind(self._trans))
-    self._connection = None
+    self._check(pn_transport_unbind(self._impl))
 
   def trace(self, n):
-    pn_transport_trace(self._trans, n)
+    pn_transport_trace(self._impl, n)
 
   def tick(self, now):
     """Process any timed events (like heartbeat generation).
     now = seconds since epoch (float).
     """
-    return millis2secs(pn_transport_tick(self._trans, secs2millis(now)))
+    return millis2secs(pn_transport_tick(self._impl, secs2millis(now)))
 
   def capacity(self):
-    c = pn_transport_capacity(self._trans)
+    c = pn_transport_capacity(self._impl)
     if c >= PN_EOS:
       return c
     else:
       return self._check(c)
 
   def push(self, bytes):
-    n = self._check(pn_transport_push(self._trans, bytes))
+    n = self._check(pn_transport_push(self._impl, bytes))
     if n != len(bytes):
       raise OverflowError("unable to process all bytes")
 
   def close_tail(self):
-    self._check(pn_transport_close_tail(self._trans))
+    self._check(pn_transport_close_tail(self._impl))
 
   def pending(self):
-    p = pn_transport_pending(self._trans)
+    p = pn_transport_pending(self._impl)
     if p >= PN_EOS:
       return p
     else:
       return self._check(p)
 
   def peek(self, size):
-    cd, out = pn_transport_peek(self._trans, size)
+    cd, out = pn_transport_peek(self._impl, size)
     if cd == PN_EOS:
       return None
     else:
@@ -3095,21 +2970,21 @@ class Transport(object):
       return out
 
   def pop(self, size):
-    pn_transport_pop(self._trans, size)
+    pn_transport_pop(self._impl, size)
 
   def close_head(self):
-    self._check(pn_transport_close_head(self._trans))
+    self._check(pn_transport_close_head(self._impl))
 
   @property
   def closed(self):
-    return pn_transport_closed(self._trans)
+    return pn_transport_closed(self._impl)
 
   # AMQP 1.0 max-frame-size
   def _get_max_frame_size(self):
-    return pn_transport_get_max_frame(self._trans)
+    return pn_transport_get_max_frame(self._impl)
 
   def _set_max_frame_size(self, value):
-    pn_transport_set_max_frame(self._trans, value)
+    pn_transport_set_max_frame(self._impl, value)
 
   max_frame_size = property(_get_max_frame_size, _set_max_frame_size,
                             doc="""
@@ -3118,13 +2993,13 @@ Sets the maximum size for received frames (in bytes).
 
   @property
   def remote_max_frame_size(self):
-    return pn_transport_get_remote_max_frame(self._trans)
+    return pn_transport_get_remote_max_frame(self._impl)
 
   def _get_channel_max(self):
-    return pn_transport_get_channel_max(self._trans)
+    return pn_transport_get_channel_max(self._impl)
 
   def _set_channel_max(self, value):
-    pn_transport_set_channel_max(self._trans, value)
+    pn_transport_set_channel_max(self._impl, value)
 
   channel_max = property(_get_channel_max, _set_channel_max,
                          doc="""
@@ -3133,14 +3008,14 @@ Sets the maximum channel that may be used on the transport.
 
   @property
   def remote_channel_max(self):
-    return pn_transport_remote_channel_max(self._trans)
+    return pn_transport_remote_channel_max(self._impl)
 
   # AMQP 1.0 idle-time-out
   def _get_idle_timeout(self):
-    return millis2secs(pn_transport_get_idle_timeout(self._trans))
+    return millis2secs(pn_transport_get_idle_timeout(self._impl))
 
   def _set_idle_timeout(self, sec):
-    pn_transport_set_idle_timeout(self._trans, secs2millis(sec))
+    pn_transport_set_idle_timeout(self._impl, secs2millis(sec))
 
   idle_timeout = property(_get_idle_timeout, _set_idle_timeout,
                           doc="""
@@ -3149,21 +3024,18 @@ The idle timeout of the connection (float, in seconds).
 
   @property
   def remote_idle_timeout(self):
-    return millis2secs(pn_transport_get_remote_idle_timeout(self._trans))
+    return millis2secs(pn_transport_get_remote_idle_timeout(self._impl))
 
   @property
   def frames_output(self):
-    return pn_transport_get_frames_output(self._trans)
+    return pn_transport_get_frames_output(self._impl)
 
   @property
   def frames_input(self):
-    return pn_transport_get_frames_input(self._trans)
+    return pn_transport_get_frames_input(self._impl)
 
   def sasl(self):
-    # SASL factory (singleton for this transport)
-    if not self._sasl:
-      self._sasl = SASL(self)
-    return self._sasl
+    return SASL(self)
 
   def ssl(self, domain=None, session_details=None):
     # SSL factory (singleton for this transport)
@@ -3173,28 +3045,24 @@ The idle timeout of the connection (float, in seconds).
 
   @property
   def condition(self):
-    return cond2obj(pn_transport_condition(self._trans))
+    return cond2obj(pn_transport_condition(self._impl))
 
   @property
   def connection(self):
-    return Connection._wrap_connection(pn_transport_connection(self._trans))
+    return Connection.wrap(pn_transport_connection(self._impl))
 
 class SASLException(TransportException):
   pass
 
-class SASL(object):
+class SASL(Wrapper):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
   SKIPPED = PN_SASL_SKIPPED
 
-  def __new__(cls, transport):
-    """Enforce a singleton SASL object per Transport"""
-    if not transport._sasl:
-      obj = super(SASL, cls).__new__(cls)
-      obj._sasl = pn_sasl(transport._trans)
-      transport._sasl = obj
-    return transport._sasl
+  def __init__(self, transport):
+    Wrapper.__init__(self, transport._impl, pn_transport_attachments)
+    self._sasl = pn_sasl(transport._impl)
 
   def _check(self, err):
     if err < 0:
@@ -3328,7 +3196,7 @@ class SSL(object):
       session_id = None
       if session_details:
         session_id = session_details.get_session_id()
-      obj._ssl = pn_ssl( transport._trans )
+      obj._ssl = pn_ssl( transport._impl )
       if obj._ssl is None:
         raise SSLUnavailable()
       pn_ssl_init( obj._ssl, domain._domain, session_id )
@@ -3381,18 +3249,17 @@ class SSLSessionDetails(object):
 wrappers = {
   "pn_void": lambda x: pn_void2py(x),
   "pn_pyref": lambda x: pn_void2py(x),
-  "pn_connection": lambda x: Connection._wrap_connection(pn_cast_pn_connection(x)),
-  "pn_session": lambda x: Session._wrap_session(pn_cast_pn_session(x)),
-  "pn_link": lambda x: Link._wrap_link(pn_cast_pn_link(x)),
-  "pn_delivery": lambda x: Delivery._wrap_delivery(pn_cast_pn_delivery(x)),
-  "pn_transport": lambda x: Transport._wrap_transport(pn_cast_pn_transport(x))
+  "pn_connection": lambda x: Connection.wrap(pn_cast_pn_connection(x)),
+  "pn_session": lambda x: Session.wrap(pn_cast_pn_session(x)),
+  "pn_link": lambda x: Link.wrap(pn_cast_pn_link(x)),
+  "pn_delivery": lambda x: Delivery.wrap(pn_cast_pn_delivery(x)),
+  "pn_transport": lambda x: Transport.wrap(pn_cast_pn_transport(x))
 }
 
 class Collector:
 
   def __init__(self):
     self._impl = pn_collector()
-    self._contexts = set()
 
   def put(self, obj, etype):
     pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
@@ -3411,8 +3278,6 @@ class Collector:
 
   def pop(self):
     ev = self.peek()
-    if ev is not None:
-      ev._popped(self)
     pn_collector_pop(self._impl)
 
   def __del__(self):
@@ -3491,10 +3356,8 @@ class Event(EventBase):
   def __init__(self, clazz, context, type):
     super(Event, self).__init__(clazz, context, type)
 
-  def _popped(self, collector):
-    if self.type in (Event.LINK_FINAL, Event.SESSION_FINAL,
-                     Event.CONNECTION_FINAL):
-      collector._contexts.remove(self.context)
+  def dispatch(self, handler):
+    return dispatch(handler, self.type.method, self)
 
   @property
   def connection(self):
@@ -3625,7 +3488,7 @@ class Connector(object):
   @property
   def transport(self):
     trans = pn_connector_transport(self._cxtr)
-    return Transport._wrap_transport(trans)
+    return Transport.wrap(trans)
 
   def close(self):
     return pn_connector_close(self._cxtr)
@@ -3639,7 +3502,7 @@ class Connector(object):
 
   def _set_connection(self, conn):
     if conn:
-      pn_connector_set_connection(self._cxtr, conn._conn)
+      pn_connector_set_connection(self._cxtr, conn._impl)
     else:
       pn_connector_set_connection(self._cxtr, None)
     self._connection = conn
