@@ -2180,7 +2180,8 @@ pn_record_t *pn_transport_attachments(pn_transport_t *transport)
 void pn_transport_log(pn_transport_t *transport, const char *message)
 {
   assert(transport);
-  transport->tracer(transport, message);
+  if (transport->trace)
+    transport->tracer(transport, message);
 }
 
 void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
