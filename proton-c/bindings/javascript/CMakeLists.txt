@@ -125,6 +125,7 @@ set(qpid-proton-core
   ${PN_PATH}/src/object/iterator.c
   ${PN_PATH}/src/object/record.c
 
+  ${PN_PATH}/src/log.c
   ${PN_PATH}/src/util.c
   ${PN_PATH}/src/url.c
   ${PN_PATH}/src/error.c
