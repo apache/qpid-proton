@@ -221,22 +221,28 @@ class EndpointStateHandler(Handler):
         self.delegate = delegate
         self.peer_close_is_error = peer_close_is_error
 
-    def is_local_open(self, endpoint):
+    @classmethod
+    def is_local_open(cls, endpoint):
         return endpoint.state & Endpoint.LOCAL_ACTIVE
 
-    def is_local_uninitialised(self, endpoint):
+    @classmethod
+    def is_local_uninitialised(cls, endpoint):
         return endpoint.state & Endpoint.LOCAL_UNINIT
 
-    def is_local_closed(self, endpoint):
+    @classmethod
+    def is_local_closed(cls, endpoint):
         return endpoint.state & Endpoint.LOCAL_CLOSED
 
-    def is_remote_open(self, endpoint):
+    @classmethod
+    def is_remote_open(cls, endpoint):
         return endpoint.state & Endpoint.REMOTE_ACTIVE
 
-    def is_remote_closed(self, endpoint):
+    @classmethod
+    def is_remote_closed(cls, endpoint):
         return endpoint.state & Endpoint.REMOTE_CLOSED
 
-    def print_error(self, endpoint, endpoint_type):
+    @classmethod
+    def print_error(cls, endpoint, endpoint_type):
         if endpoint.remote_condition:
             logging.error(endpoint.remote_condition.description)
         elif self.is_local_open(endpoint) and self.is_remote_closed(endpoint):
@@ -392,6 +398,17 @@ class MessagingHandler(Handler, Acking):
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
         self.handlers.append(IncomingMessageHandler(auto_accept, self))
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
+
+    def on_connection_error(self, event):
+        EndpointStateHandler.print_error(event.connection, "connection")
+
+    def on_session_error(self, event):
+        EndpointStateHandler.print_error(event.session, "session")
+        event.connection.close()
+
+    def on_link_error(self, event):
+        EndpointStateHandler.print_error(event.link, "link")
+        event.connection.close()
 
 class TransactionalAcking(object):
     def accept(self, delivery, transaction):
