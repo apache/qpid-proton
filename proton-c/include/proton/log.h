@@ -51,10 +51,10 @@ PN_EXTERN void pn_log_enable(bool enabled);
 PN_EXTERN bool pn_log_enabled(void);
 
 /** Log a printf style message */
-#define pn_logf(fmt, ...)                       \
+#define pn_logf(...)                            \
     do {                                        \
         if (pn_log_enabled())                   \
-            pn_logf_impl(fmt , ##__VA_ARGS__);  \
+            pn_logf_impl(__VA_ARGS__);          \
     } while(0)
 
 /** va_list version of pn_logf */
