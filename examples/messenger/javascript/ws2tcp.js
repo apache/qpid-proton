@@ -148,7 +148,11 @@ var ws2tcp = function(lport, thost, tport) {
         });
 
         sock.on('data', function(data) {
-            ws.send(data);
+            try {
+                ws.send(data);
+            } catch (e) {
+                console.log("error sending: " + e);
+            }
         });
     });
     server.on('error', function(e) {
