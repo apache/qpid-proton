@@ -76,7 +76,7 @@ void *pn_list_pop(pn_list_t *list)
 {
   assert(list);
   if (list->size) {
-    return list->elements[list->size--];
+    return list->elements[--list->size];
   } else {
     return NULL;
   }

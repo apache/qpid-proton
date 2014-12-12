@@ -2428,3 +2428,17 @@ class IdleTimeoutEventTest(PeerTest):
   def testTimeoutWithZombieServerAndSASL(self):
     sasl = self.transport.sasl()
     self.testTimeoutWithZombieServer()
+
+class DeliverySegFaultTest(Test):
+
+  def testDeliveryAfterUnbind(self):
+    conn = Connection()
+    t = Transport()
+    ssn = conn.session()
+    snd = ssn.sender("sender")
+    dlv = snd.delivery("tag")
+    dlv.settle()
+    del dlv
+    t.bind(conn)
+    t.unbind()
+    dlv = snd.delivery("tag")
