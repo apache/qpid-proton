@@ -2201,6 +2201,10 @@ class Endpoint(object):
   def _get_remote_cond_impl(self):
       assert False, "Subclass must override this!"
 
+  @property
+  def transport(self):
+    return self.connection.transport
+
 class Condition:
 
   def __init__(self, name, description=None, info=None):
@@ -2882,6 +2886,10 @@ class Delivery(Wrapper):
   def connection(self):
     return self.session.connection
 
+  @property
+  def transport(self):
+    return self.connection.transport
+
 class TransportException(ProtonException):
   pass
 
@@ -3311,9 +3319,6 @@ class EventBase(object):
     self.context = context
     self.type = type
 
-  def _popped(self, collector):
-    pass
-
   def dispatch(self, handler):
     return dispatch(handler, self.type.method, self)
 
@@ -3358,6 +3363,15 @@ class Event(EventBase):
 
   def dispatch(self, handler):
     return dispatch(handler, self.type.method, self)
+
+  @property
+  def transport(self):
+    if self.clazz == "pn_transport":
+      return self.context
+    elif self.clazz in ["pn_connection", "pn_session", "pn_link", "pn_delivery"]:
+      return self.context.transport
+    else:
+      return None
 
   @property
   def connection(self):
