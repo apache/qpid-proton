@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import os, Queue, socket, time, types
+import logging, os, Queue, socket, time, types
 from heapq import heappush, heappop, nsmallest
 from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
 from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
@@ -122,10 +122,10 @@ class AmqpSocket(object):
                     else:
                         self.transport.close_tail()
             except TransportException, e:
-                print "Error on read: %s" % e
+                logging.error("Error on read: %s" % e)
                 self.read_done = True
             except socket.error, e:
-                print "Error on recv: %s" % e
+                logging.error("Error on recv: %s" % e)
                 self.read_done = True
                 self.write_done = True
         elif c < 0:
@@ -141,10 +141,10 @@ class AmqpSocket(object):
             elif p < 0:
                 self.write_done = True
         except TransportException, e:
-            print "Error on write: %s" % e
+            logging.error("Error on write: %s" % e)
             self.write_done = True
         except socket.error, e:
-            print "Error on send: %s" % e
+            logging.error("Error on send: %s" % e)
             self.write_done = True
 
     def removed(self):
@@ -530,7 +530,7 @@ class Transaction(object):
             elif event.delivery.remote_state == Delivery.REJECTED:
                 self.handler.on_transaction_declare_failed(event)
             else:
-                print "Unexpected outcome for declare: %s" % event.delivery.remote_state
+                logging.warning("Unexpected outcome for declare: %s" % event.delivery.remote_state)
                 self.handler.on_transaction_declare_failed(event)
         elif event.delivery == self._discharge:
             if event.delivery.remote_state == Delivery.REJECTED:
@@ -637,7 +637,7 @@ class Connector(Handler):
 
     def _connect(self, connection):
         host, port = connection.address.next()
-        #print "connecting to %s:%i" % (host, port)
+        logging.info("connecting to %s:%i" % (host, port))
         heartbeat = connection.heartbeat if hasattr(connection, 'heartbeat') else None
         self.loop.add(AmqpSocket(connection, socket.socket(), self.loop.events, heartbeat=heartbeat).connect(host, port))
         connection._pin = None #connection is now referenced by AmqpSocket, so no need for circular reference
@@ -655,13 +655,13 @@ class Connector(Handler):
             event.connection._pin = event.connection #no longer referenced by AmqpSocket, so pin in memory with circular reference
             delay = event.connection.reconnect.next()
             if delay == 0:
-                print "Disconnected, reconnecting..."
+                logging.info("Disconnected, reconnecting...")
                 self._connect(event.connection)
             else:
-                print "Disconnected will try to reconnect after %s seconds" % delay
+                logging.info("Disconnected will try to reconnect after %s seconds" % delay)
                 self.loop.schedule(time.time() + delay, connection=event.connection, subject=self)
         else:
-            print "Disconnected"
+            logging.info("Disconnected")
 
     def on_timer(self, event):
         if event.subject == self and event.connection:

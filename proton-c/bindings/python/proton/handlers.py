@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import heapq, os, Queue, re, socket, time, types
+import heapq, logging, os, Queue, re, socket, time, types
 from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
@@ -238,9 +238,9 @@ class EndpointStateHandler(Handler):
 
     def print_error(self, endpoint, endpoint_type):
         if endpoint.remote_condition:
-            print endpoint.remote_condition.description
+            logging.error(endpoint.remote_condition.description)
         elif self.is_local_open(endpoint) and self.is_remote_closed(endpoint):
-            print "%s closed by peer" % endpoint_type
+            logging.error("%s closed by peer" % endpoint_type)
 
     def on_link_remote_close(self, event):
         if event.link.remote_condition:
