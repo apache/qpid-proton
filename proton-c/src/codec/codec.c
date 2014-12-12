@@ -22,6 +22,7 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
+#include <proton/log.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -621,7 +622,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           }
           break;
         default:
-          fprintf(stderr, "unrecognized * code: 0x%.2X '%c'\n", code, code);
+          pn_logf("unrecognized * code: 0x%.2X '%c'", code, code);
           return PN_ARG_ERR;
         }
       }
@@ -639,7 +640,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     default:
-      fprintf(stderr, "unrecognized fill code: 0x%.2X '%c'\n", code, code);
+      pn_logf("unrecognized fill code: 0x%.2X '%c'", code, code);
       return PN_ARG_ERR;
     }
 

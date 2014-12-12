@@ -19,6 +19,8 @@
  *
  */
 
+#include <proton/log.h>
+
 #include "engine/engine-internal.h"
 #include "framing/framing.h"
 #include "sasl/sasl-internal.h"
@@ -362,6 +364,7 @@ static void pn_transport_initialize(void *object)
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
 }
+
 
 pn_session_t *pn_channel_state(pn_transport_t *transport, uint16_t channel)
 {
@@ -2159,8 +2162,7 @@ void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
     pn_string_vformat(transport->scratch, fmt, ap);
     pn_transport_log(transport, pn_string_get(transport->scratch));
   } else {
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
+    pn_vlogf(fmt, ap);
   }
 }
 

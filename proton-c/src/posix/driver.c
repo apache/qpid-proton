@@ -38,6 +38,7 @@
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/object.h>
+#include <proton/log.h>
 #include "util.h"
 #include "platform.h"
 
@@ -139,7 +140,7 @@ pn_listener_t *pn_listener(pn_driver_t *driver, const char *host,
     pn_listener_t *l = pn_listener_fd(driver, sock, context);
 
     if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-      fprintf(stderr, "Listening on %s:%s\n", host, port);
+      pn_logf("Listening on %s:%s", host, port);
 
     return l;
   }
@@ -204,7 +205,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
     return NULL;
   } else {
     if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-      fprintf(stderr, "Accepted from %s\n", name);
+      pn_logf("Accepted from %s", name);
     pn_connector_t *c = pn_connector_fd(l->driver, sock, NULL);
     snprintf(c->name, PN_NAME_MAX, "%s", name);
     c->listener = l;
@@ -271,7 +272,7 @@ pn_connector_t *pn_connector(pn_driver_t *driver, const char *host,
   c->sasl = pn_sasl(c->transport);
   snprintf(c->name, PN_NAME_MAX, "%s:%s", host, port);
   if (driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
-    fprintf(stderr, "Connected to %s\n", c->name);
+    pn_logf("Connected to %s", c->name);
   return c;
 }
 
@@ -536,7 +537,7 @@ void pn_connector_process(pn_connector_t *c)
 
     if (c->input_done && c->output_done) {
       if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
-        fprintf(stderr, "Closed %s\n", c->name);
+        pn_logf("Closed %s", c->name);
       }
       pn_connector_close(c);
     }
@@ -718,7 +719,7 @@ int pn_driver_wait_3(pn_driver_t *d)
           pn_connector_close(c);
       else if (idx && (d->fds[idx].revents & POLLHUP)) {
         if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
-          fprintf(stderr, "hangup on connector %s\n", c->name);
+          pn_logf("hangup on connector %s", c->name);
         }
         /* poll() is signalling POLLHUP. to see what happened we need
          * to do an actual recv() to get the error code. But we might
@@ -730,7 +731,7 @@ int pn_driver_wait_3(pn_driver_t *d)
           c->pending_write = true;
       } else if (idx && (d->fds[idx].revents & ~(POLLIN|POLLOUT|POLLERR|POLLHUP))) {
           if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
-            fprintf(stderr, "Unexpected poll events: %04x on %s\n",
+            pn_logf("Unexpected poll events: %04x on %s",
                     d->fds[idx].revents, c->name);
           }
       }

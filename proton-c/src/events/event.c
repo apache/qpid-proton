@@ -141,8 +141,6 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   event->type = type;
   pn_class_incref(clazz, event->context);
 
-  //printf("event %s on %p\n", pn_event_type_name(event->type), event->context);
-
   return event;
 }
 

@@ -281,6 +281,7 @@ set (qpid-proton-core
   src/object/iterator.c
   src/object/record.c
 
+  src/log.c
   src/util.c
   src/url.c
   src/error.c

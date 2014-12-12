@@ -24,6 +24,7 @@
 #include <proton/connection.h>
 #include <proton/delivery.h>
 #include <proton/event.h>
+#include <proton/log.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
@@ -195,7 +196,7 @@ static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
 
 static void pn_error_report(const char *pfx, const char *error)
 {
-  fprintf(stderr, "%s ERROR %s\n", pfx, error);
+  pn_logf("%s ERROR %s", pfx, error);
 }
 
 void pni_modified(pn_ctx_t *ctx)
@@ -872,7 +873,6 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
     const int more = pn_min( messenger->credit, batch );
     messenger->distributed += more;
     messenger->credit -= more;
-    //    printf("%s: flowing %i to %p\n", messenger->name, more, (void *) ctx->link);
     pn_link_flow(link, more);
     pn_list_add(messenger->credited, link);
     updated = true;
@@ -883,10 +883,10 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
   } else {
     // not enough credit for all links
     if (!messenger->draining) {
-      //      printf("%s: let's drain\n", messenger->name);
+      pn_logf("%s: let's drain", messenger->name);
       if (messenger->next_drain == 0) {
         messenger->next_drain = pn_i_now() + 250;
-        //        printf("%s: initializing next_drain\n", messenger->name);
+        pn_logf("%s: initializing next_drain", messenger->name);
       } else if (messenger->next_drain <= pn_i_now()) {
         // initiate drain, free up at most enough to satisfy blocked
         messenger->next_drain = 0;
@@ -894,7 +894,6 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
         for (size_t i = 0; i < pn_list_size(messenger->credited); i++) {
           pn_link_t *link = (pn_link_t *) pn_list_get(messenger->credited, i);
           if (!pn_link_get_drain(link)) {
-            //            printf("%s: initiating drain from %p\n", messenger->name, (void *) ctx->link);
             pn_link_set_drain(link, true);
             needed -= pn_link_remote_credit(link);
             messenger->draining++;
@@ -906,7 +905,7 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
           }
         }
       } else {
-        //        printf("%s: delaying\n", messenger->name);
+        pn_logf("%s: delaying", messenger->name);
       }
     }
   }
@@ -968,7 +967,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
 static void pn_condition_report(const char *pfx, pn_condition_t *condition)
 {
   if (pn_condition_is_redirect(condition)) {
-    fprintf(stderr, "%s NOTICE (%s) redirecting to %s:%i\n",
+    pn_logf("%s NOTICE (%s) redirecting to %s:%i",
             pfx,
             pn_condition_get_name(condition),
             pn_condition_redirect_host(condition),
@@ -1206,7 +1205,6 @@ void pn_messenger_process_flow(pn_messenger_t *messenger, pn_event_t *event)
       if (!pn_link_draining(link)) {
         // drain completed!
         int drained = pn_link_drained(link);
-        //          printf("%s: drained %i from %p\n", messenger->name, drained, (void *) ctx->link);
         messenger->distributed -= drained;
         messenger->credit += drained;
         pn_link_set_drain(link, false);
@@ -1233,7 +1231,7 @@ void pn_messenger_process_delivery(pn_messenger_t *messenger, pn_event_t *event)
   if (pn_delivery_readable(d)) {
     int err = pni_pump_in(messenger, pn_terminus_get_address(pn_link_source(link)), link);
     if (err) {
-      fprintf(stderr, "%s\n", pn_error_text(messenger->error));
+      pn_logf("%s", pn_error_text(messenger->error));
     }
   }
 }
@@ -1255,13 +1253,13 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
     processed++;
     switch (pn_event_type(event)) {
     case PN_CONNECTION_INIT:
-      //printf("connection created: %p\n", (void *) pn_event_connection(event));
+      pn_logf("connection created: %p", (void *) pn_event_connection(event));
       break;
     case PN_SESSION_INIT:
-      //printf("session created: %p\n", (void *) pn_event_session(event));
+      pn_logf("session created: %p", (void *) pn_event_session(event));
       break;
     case PN_LINK_INIT:
-      //printf("link created: %p\n", (void *) pn_event_link(event));
+      pn_logf("link created: %p", (void *) pn_event_link(event));
       break;
     case PN_CONNECTION_REMOTE_OPEN:
     case PN_CONNECTION_REMOTE_CLOSE:
