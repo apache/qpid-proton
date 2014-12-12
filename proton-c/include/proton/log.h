@@ -26,7 +26,7 @@
  */
 
 #include <proton/import_export.h>
-#include <stdbool.h>
+#include <proton/type_compat.h>
 #include <stdarg.h>
 
 /** Callback for customized logging */
