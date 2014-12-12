@@ -307,8 +307,12 @@ static void pn_transport_initialize(void *object)
   transport->tracer = pni_default_tracer;
   transport->sasl = NULL;
   transport->ssl = NULL;
+
   transport->scratch = pn_string(NULL);
-  transport->disp = pn_dispatcher(0, transport);
+  transport->args = pn_data(16);
+  transport->output_args = pn_data(16);
+  transport->frame = pn_buffer(4*1024);
+
   transport->connection = NULL;
   transport->context = pn_record();
 
@@ -359,6 +363,7 @@ static void pn_transport_initialize(void *object)
   transport->posted_idle_timeout = false;
 
   transport->server = false;
+  transport->halt = false;
 
   transport->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
@@ -420,6 +425,15 @@ pn_transport_t *pn_transport(void)
     pn_transport_free(transport);
     return NULL;
   }
+
+  transport->capacity = 4*1024;
+  transport->available = 0;
+  transport->output = (char *) malloc(transport->capacity);
+  if (!transport->output) {
+    pn_transport_free(transport);
+    return NULL;
+  }
+
   return transport;
 }
 
@@ -449,7 +463,6 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->context);
   pn_ssl_free(transport);
   pn_sasl_free(transport);
-  pn_dispatcher_free(transport->disp);
   free(transport->remote_container);
   free(transport->remote_hostname);
   pn_free(transport->remote_offered_capabilities);
@@ -464,6 +477,10 @@ static void pn_transport_finalize(void *object)
   if (transport->input_buf) free(transport->input_buf);
   if (transport->output_buf) free(transport->output_buf);
   pn_free(transport->scratch);
+  pn_data_free(transport->args);
+  pn_data_free(transport->output_args);
+  pn_buffer_free(transport->frame);
+  free(transport->output);
 }
 
 int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
@@ -484,7 +501,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
-    transport->disp->halt = false;
+    transport->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
   }
 
@@ -639,6 +656,185 @@ void pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data)
   }
 }
 
+
+void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
+                 pn_data_t *args, const char *payload, size_t size)
+{
+  if (transport->trace & PN_TRACE_FRM) {
+    pn_string_format(transport->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
+    pn_inspect(args, transport->scratch);
+
+    if (pn_data_size(args)==0) {
+        pn_string_addf(transport->scratch, "(EMPTY FRAME)");
+    }
+
+    if (size) {
+      char buf[1024];
+      int e = pn_quote_data(buf, 1024, payload, size);
+      pn_string_addf(transport->scratch, " (%" PN_ZU ") \"%s\"%s", size, buf,
+                     e == PN_OVERFLOW ? "... (truncated)" : "");
+    }
+
+    pn_transport_log(transport, pn_string_get(transport->scratch));
+  }
+}
+
+int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...)
+{
+  pn_buffer_t *frame_buf = transport->frame;
+  va_list ap;
+  va_start(ap, fmt);
+  pn_data_clear(transport->output_args);
+  int err = pn_data_vfill(transport->output_args, fmt, ap);
+  va_end(ap);
+  if (err) {
+    pn_transport_logf(transport,
+                      "error posting frame: %s, %s: %s", fmt, pn_code(err),
+                      pn_error_text(pn_data_error(transport->output_args)));
+    return PN_ERR;
+  }
+
+  pn_do_trace(transport, ch, OUT, transport->output_args, NULL, 0);
+
+ encode_performatives:
+  pn_buffer_clear( frame_buf );
+  pn_buffer_memory_t buf = pn_buffer_memory( frame_buf );
+  buf.size = pn_buffer_available( frame_buf );
+
+  ssize_t wr = pn_data_encode( transport->output_args, buf.start, buf.size );
+  if (wr < 0) {
+    if (wr == PN_OVERFLOW) {
+      pn_buffer_ensure( frame_buf, pn_buffer_available( frame_buf ) * 2 );
+      goto encode_performatives;
+    }
+    pn_transport_logf(transport,
+                      "error posting frame: %s", pn_code(wr));
+    return PN_ERR;
+  }
+
+  pn_frame_t frame = {type};
+  frame.channel = ch;
+  frame.payload = buf.start;
+  frame.size = wr;
+  size_t n;
+  while (!(n = pn_write_frame(transport->output + transport->available,
+                              transport->capacity - transport->available, frame))) {
+    transport->capacity *= 2;
+    transport->output = (char *) realloc(transport->output, transport->capacity);
+  }
+  transport->output_frames_ct += 1;
+  if (transport->trace & PN_TRACE_RAW) {
+    pn_string_set(transport->scratch, "RAW: \"");
+    pn_quote(transport->scratch, transport->output + transport->available, n);
+    pn_string_addf(transport->scratch, "\"");
+    pn_transport_log(transport, pn_string_get(transport->scratch));
+  }
+  transport->available += n;
+
+  return 0;
+}
+
+int pn_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
+                                uint32_t handle,
+                                pn_sequence_t id,
+                                pn_bytes_t *payload,
+                                const pn_bytes_t *tag,
+                                uint32_t message_format,
+                                bool settled,
+                                bool more,
+                                pn_sequence_t frame_limit)
+{
+  bool more_flag = more;
+  int framecount = 0;
+  pn_buffer_t *frame = transport->frame;
+
+  // create preformatives, assuming 'more' flag need not change
+
+ compute_performatives:
+  pn_data_clear(transport->output_args);
+  int err = pn_data_fill(transport->output_args, "DL[IIzIoo]", TRANSFER,
+                         handle, id, tag->size, tag->start,
+                         message_format,
+                         settled, more_flag);
+  if (err) {
+    pn_transport_logf(transport,
+                      "error posting transfer frame: %s: %s", pn_code(err),
+                      pn_error_text(pn_data_error(transport->output_args)));
+    return PN_ERR;
+  }
+
+  do { // send as many frames as possible without changing the 'more' flag...
+
+  encode_performatives:
+    pn_buffer_clear( frame );
+    pn_buffer_memory_t buf = pn_buffer_memory( frame );
+    buf.size = pn_buffer_available( frame );
+
+    ssize_t wr = pn_data_encode(transport->output_args, buf.start, buf.size);
+    if (wr < 0) {
+      if (wr == PN_OVERFLOW) {
+        pn_buffer_ensure( frame, pn_buffer_available( frame ) * 2 );
+        goto encode_performatives;
+      }
+      pn_transport_logf(transport, "error posting frame: %s", pn_code(wr));
+      return PN_ERR;
+    }
+    buf.size = wr;
+
+    // check if we need to break up the outbound frame
+    size_t available = payload->size;
+    if (transport->remote_max_frame) {
+      if ((available + buf.size) > transport->remote_max_frame - 8) {
+        available = transport->remote_max_frame - 8 - buf.size;
+        if (more_flag == false) {
+          more_flag = true;
+          goto compute_performatives;  // deal with flag change
+        }
+      } else if (more_flag == true && more == false) {
+        // caller has no more, and this is the last frame
+        more_flag = false;
+        goto compute_performatives;
+      }
+    }
+
+    if (pn_buffer_available( frame ) < (available + buf.size)) {
+      // not enough room for payload - try again...
+      pn_buffer_ensure( frame, available + buf.size );
+      goto encode_performatives;
+    }
+
+    pn_do_trace(transport, ch, OUT, transport->output_args, payload->start, available);
+
+    memmove( buf.start + buf.size, payload->start, available);
+    payload->start += available;
+    payload->size -= available;
+    buf.size += available;
+
+    pn_frame_t frame = {AMQP_FRAME_TYPE};
+    frame.channel = ch;
+    frame.payload = buf.start;
+    frame.size = buf.size;
+
+    size_t n;
+    while (!(n = pn_write_frame(transport->output + transport->available,
+                                transport->capacity - transport->available, frame))) {
+      transport->capacity *= 2;
+      transport->output = (char *) realloc(transport->output, transport->capacity);
+    }
+    transport->output_frames_ct += 1;
+    framecount++;
+    if (transport->trace & PN_TRACE_RAW) {
+      pn_string_set(transport->scratch, "RAW: \"");
+      pn_quote(transport->scratch, transport->output + transport->available, n);
+      pn_string_addf(transport->scratch, "\"");
+      pn_transport_log(transport, pn_string_get(transport->scratch));
+    }
+    transport->available += n;
+  } while (payload->size > 0 && framecount < frame_limit);
+
+  return framecount;
+}
+
 int pn_post_close(pn_transport_t *transport, const char *condition, const char *description)
 {
   pn_condition_t *cond = NULL;
@@ -652,7 +848,7 @@ int pn_post_close(pn_transport_t *transport, const char *condition, const char *
     info = pn_condition_info(cond);
   }
 
-  return pn_post_frame(transport->disp, 0, "DL[?DL[sSC]]", CLOSE,
+  return pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[?DL[sSC]]", CLOSE,
                        (bool) condition, ERROR, condition, description, info);
 }
 
@@ -693,13 +889,13 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   va_end(ap);
   if (!transport->close_sent) {
     if (!transport->open_sent) {
-      pn_post_frame(transport->disp, 0, "DL[S]", OPEN, "");
+      pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[S]", OPEN, "");
     }
 
     pn_post_close(transport, condition, buf);
     transport->close_sent = true;
   }
-  transport->disp->halt = true;
+  transport->halt = true;
   pn_condition_set_name(&transport->condition, condition);
   pn_condition_set_description(&transport->condition, buf);
   pn_collector_t *collector = pni_transport_collector(transport);
@@ -738,8 +934,6 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
                         transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
-    transport->disp->remote_max_frame = transport->remote_max_frame;
-    pn_buffer_clear( transport->disp->frame );
   }
   if (container_q) {
     transport->remote_container = pn_bytes_strdup(remote_container);
@@ -756,7 +950,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
     pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_REMOTE_OPEN);
   } else {
-    transport->disp->halt = true;
+    transport->halt = true;
   }
   transport->open_rcvd = true;
   return 0;
@@ -1347,7 +1541,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
   }
 
 
-  ssize_t n = pn_dispatcher_input(transport->disp, bytes, available);
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, true, &transport->halt);
   if (n < 0) {
     //return pn_error_set(transport->error, n, "dispatch error");
     return PN_EOS;
@@ -1387,10 +1581,10 @@ static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer
       transport->last_bytes_output = transport->bytes_output;
     } else if (transport->keepalive_deadline <= now) {
       transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
-      if (transport->disp->available == 0) {    // no outbound data pending
+      if (transport->available == 0) {    // no outbound data pending
         // so send empty frame (and account for it!)
-        pn_post_frame(transport->disp, 0, "");
-        transport->last_bytes_output += transport->disp->available;
+        pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "");
+        transport->last_bytes_output += transport->available;
       }
     }
     timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
@@ -1412,7 +1606,7 @@ int pn_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
           : 0;
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       const char *cid = pn_string_get(connection->container);
-      int err = pn_post_frame(transport->disp, 0, "DL[SS?I?H?InnCCC]", OPEN,
+      int err = pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[SS?I?H?InnCCC]", OPEN,
                               cid ? cid : "",
                               pn_string_get(connection->hostname),
                               // if not zero, advertise our max frame size and idle timeout
@@ -1487,7 +1681,7 @@ int pn_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       pni_map_local_channel(ssn);
       state->incoming_window = pn_session_incoming_window(ssn);
       state->outgoing_window = pn_session_outgoing_window(ssn);
-      pn_post_frame(transport->disp, state->local_channel, "DL[?HIII]", BEGIN,
+      pn_post_frame(transport, AMQP_FRAME_TYPE, state->local_channel, "DL[?HIII]", BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
                     state->incoming_window,
@@ -1536,7 +1730,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
       pni_map_local_handle(link);
       const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
       if (link->target.type == PN_COORDINATOR) {
-        int err = pn_post_frame(transport->disp, ssn_state->local_channel,
+        int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
                                 "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
@@ -1558,7 +1752,7 @@ int pn_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
                                 0);
         if (err) return err;
       } else {
-        int err = pn_post_frame(transport->disp, ssn_state->local_channel,
+        int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
                                 "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
@@ -1599,7 +1793,7 @@ int pn_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t *link)
   ssn->state.outgoing_window = pn_session_outgoing_window(ssn);
   bool linkq = (bool) link;
   pn_link_state_t *state = &link->state;
-  return pn_post_frame(transport->disp, ssn->state.local_channel, "DL[?IIII?I?I?In?o]", FLOW,
+  return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[?IIII?I?I?In?o]", FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
                        ssn->state.incoming_window,
                        ssn->state.outgoing_transfer_count,
@@ -1633,7 +1827,7 @@ int pn_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
   uint64_t code = ssn->state.disp_code;
   bool settled = ssn->state.disp_settled;
   if (ssn->state.disp) {
-    int err = pn_post_frame(transport->disp, ssn->state.local_channel, "DL[oIIo?DL[]]", DISPOSITION,
+    int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[oIIo?DL[]]", DISPOSITION,
                             ssn->state.disp_type, ssn->state.disp_first, ssn->state.disp_last,
                             settled, (bool)code, code);
     if (err) return err;
@@ -1665,7 +1859,7 @@ int pn_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   if (!pni_disposition_batchable(&delivery->local)) {
     pn_data_clear(transport->disp_data);
     pni_disposition_encode(&delivery->local, transport->disp_data);
-    return pn_post_frame(transport->disp, ssn->state.local_channel,
+    return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel,
                          "DL[oIIo?DLC]", DISPOSITION,
                          role, state->id, state->id, delivery->local.settled,
                          (bool)code, code, transport->disp_data);
@@ -1714,22 +1908,22 @@ int pn_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery,
       }
 
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
-      pn_set_payload(transport->disp, bytes.start, bytes.size);
+      size_t full_size = bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-      int count = pn_post_transfer_frame(transport->disp,
-                                         ssn_state->local_channel,
-                                         link_state->local_handle,
-                                         state->id, &tag,
-                                         0, // message-format
-                                         delivery->local.settled,
-                                         !delivery->done,
-                                         ssn_state->remote_incoming_window);
+      int count = pn_post_amqp_transfer_frame(transport,
+                                              ssn_state->local_channel,
+                                              link_state->local_handle,
+                                              state->id, &bytes, &tag,
+                                              0, // message-format
+                                              delivery->local.settled,
+                                              !delivery->done,
+                                              ssn_state->remote_incoming_window);
       if (count < 0) return count;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
 
-      int sent = bytes.size - transport->disp->output_size;
+      int sent = full_size - bytes.size;
       pn_buffer_trim(delivery->bytes, sent, 0);
       link->session->outgoing_bytes -= sent;
       if (!pn_buffer_size(delivery->bytes) && delivery->done) {
@@ -1887,7 +2081,7 @@ int pn_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
       }
 
       int err =
-          pn_post_frame(transport->disp, ssn_state->local_channel,
+          pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
                         "DL[Io?DL[sSC]]", DETACH, state->local_handle, !link->detached,
                         (bool)name, ERROR, name, description, info);
       if (err) return err;
@@ -1961,7 +2155,7 @@ int pn_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *endpoint)
         info = pn_condition_info(&endpoint->condition);
       }
 
-      int err = pn_post_frame(transport->disp, state->local_channel, "DL[?DL[sSC]]", END,
+      int err = pn_post_frame(transport, AMQP_FRAME_TYPE, state->local_channel, "DL[?DL[sSC]]", END,
                               (bool) name, ERROR, name, description, info);
       if (err) return err;
       pni_unmap_local_channel(session);
@@ -2059,11 +2253,11 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   // write out any buffered data _before_ returning PN_EOS, else we
   // could truncate an outgoing Close frame containing a useful error
   // status
-  if (!transport->disp->available && transport->close_sent) {
+  if (!transport->available && transport->close_sent) {
     return PN_EOS;
   }
 
-  return pn_dispatcher_output(transport->disp, bytes, available);
+  return pn_dispatcher_output(transport, bytes, available);
 }
 
 static void pni_close_head(pn_transport_t *transport)
@@ -2263,15 +2457,15 @@ pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now)
 
 uint64_t pn_transport_get_frames_output(const pn_transport_t *transport)
 {
-  if (transport && transport->disp)
-    return transport->disp->output_frames_ct;
+  if (transport)
+    return transport->output_frames_ct;
   return 0;
 }
 
 uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
 {
-  if (transport && transport->disp)
-    return transport->disp->input_frames_ct;
+  if (transport)
+    return transport->input_frames_ct;
   return 0;
 }
 

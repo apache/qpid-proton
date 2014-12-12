@@ -19,11 +19,10 @@
  *
  */
 
-#include "framing/framing.h"
 #include "dispatcher.h"
+
+#include "framing/framing.h"
 #include "protocol.h"
-#include "util.h"
-#include "platform_fmt.h"
 #include "engine/engine-internal.h"
 
 #include "dispatch_actions.h"
@@ -75,81 +74,21 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
   return action(transport, frame_type, channel, args, payload);
 }
 
-pn_dispatcher_t *pn_dispatcher(uint8_t frame_type, pn_transport_t *transport)
-{
-  pn_dispatcher_t *disp = (pn_dispatcher_t *) calloc(sizeof(pn_dispatcher_t), 1);
-
-  disp->frame_type = frame_type;
-  disp->transport = transport;
-
-  disp->args = pn_data(16);
-
-  disp->output_args = pn_data(16);
-  disp->frame = pn_buffer( 4*1024 );
-  // XXX
-  disp->capacity = 4*1024;
-  disp->output = (char *) malloc(disp->capacity);
-  disp->available = 0;
-
-  disp->halt = false;
-  disp->batch = true;
-
-  disp->scratch = pn_string(NULL);
-
-  return disp;
-}
-
-void pn_dispatcher_free(pn_dispatcher_t *disp)
-{
-  if (disp) {
-    pn_data_free(disp->args);
-    pn_data_free(disp->output_args);
-    pn_buffer_free(disp->frame);
-    free(disp->output);
-    pn_free(disp->scratch);
-    free(disp);
-  }
-}
-
-typedef enum {IN, OUT} pn_dir_t;
-
-static void pn_do_trace(pn_dispatcher_t *disp, uint16_t ch, pn_dir_t dir,
-                        pn_data_t *args, const char *payload, size_t size)
-{
-  if (disp->transport->trace & PN_TRACE_FRM) {
-    pn_string_format(disp->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
-    pn_inspect(args, disp->scratch);
-
-    if (pn_data_size(args)==0) {
-        pn_string_addf(disp->scratch, "(EMPTY FRAME)");
-    }
-
-    if (size) {
-      char buf[1024];
-      int e = pn_quote_data(buf, 1024, payload, size);
-      pn_string_addf(disp->scratch, " (%" PN_ZU ") \"%s\"%s", size, buf,
-                     e == PN_OVERFLOW ? "... (truncated)" : "");
-    }
-
-    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
-  }
-}
-
-static int pni_dispatch_frame(pn_dispatcher_t *disp, pn_data_t *args, pn_frame_t frame)
+static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_frame_t frame)
 {
   if (frame.size == 0) { // ignore null frames
-    if (disp->transport->trace & PN_TRACE_FRM)
-      pn_transport_logf(disp->transport, "%u <- (EMPTY FRAME)\n", frame.channel);
+    if (transport->trace & PN_TRACE_FRM)
+      pn_transport_logf(transport, "%u <- (EMPTY FRAME)\n", frame.channel);
     return 0;
   }
 
   ssize_t dsize = pn_data_decode(args, frame.payload, frame.size);
   if (dsize < 0) {
-    pn_string_format(disp->scratch,
+    pn_string_format(transport->scratch,
                      "Error decoding frame: %s %s\n", pn_code(dsize),
                      pn_error_text(pn_data_error(args)));
-    pn_quote(disp->scratch, frame.payload, frame.size);
-    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
+    pn_quote(transport->scratch, frame.payload, frame.size);
+    pn_transport_log(transport, pn_string_get(transport->scratch));
     return dsize;
   }
 
@@ -161,217 +100,56 @@ static int pni_dispatch_frame(pn_dispatcher_t *disp, pn_data_t *args, pn_frame_t
   bool scanned;
   int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
   if (e) {
-    pn_transport_log(disp->transport, "Scan error");
+    pn_transport_log(transport, "Scan error");
     return e;
   }
   if (!scanned) {
-    pn_transport_log(disp->transport, "Error dispatching frame");
+    pn_transport_log(transport, "Error dispatching frame");
     return PN_ERR;
   }
   size_t payload_size = frame.size - dsize;
   const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
   pn_bytes_t payload = {payload_size, payload_mem};
 
-  pn_do_trace(disp, channel, IN, args, payload_mem, payload_size);
+  pn_do_trace(transport, channel, IN, args, payload_mem, payload_size);
 
-  int err = pni_dispatch_action(disp->transport, lcode, frame_type, channel, args, &payload);
+  int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
 
   pn_data_clear(args);
 
   return err;
 }
 
-ssize_t pn_dispatcher_input(pn_dispatcher_t *disp, const char *bytes, size_t available)
+ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t available, bool batch, bool *halt)
 {
   size_t read = 0;
 
-  while (available && !disp->halt) {
+  while (available && !*halt) {
     pn_frame_t frame;
 
     size_t n = pn_read_frame(&frame, bytes + read, available);
     if (n) {
       read += n;
       available -= n;
-      disp->input_frames_ct += 1;
-      int e = pni_dispatch_frame(disp, disp->args, frame);
+      transport->input_frames_ct += 1;
+      int e = pni_dispatch_frame(transport, transport->args, frame);
       if (e) return e;
     } else {
       break;
     }
 
-    if (!disp->batch) break;
+    if (!batch) break;
   }
 
   return read;
 }
 
-void pn_set_payload(pn_dispatcher_t *disp, const char *data, size_t size)
+ssize_t pn_dispatcher_output(pn_transport_t *transport, char *bytes, size_t size)
 {
-  disp->output_payload = data;
-  disp->output_size = size;
-}
-
-int pn_post_frame(pn_dispatcher_t *disp, uint16_t ch, const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  pn_data_clear(disp->output_args);
-  int err = pn_data_vfill(disp->output_args, fmt, ap);
-  va_end(ap);
-  if (err) {
-    pn_transport_logf(disp->transport,
-                      "error posting frame: %s, %s: %s", fmt, pn_code(err),
-                      pn_error_text(pn_data_error(disp->output_args)));
-    return PN_ERR;
-  }
-
-  pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, disp->output_size);
-
- encode_performatives:
-  pn_buffer_clear( disp->frame );
-  pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
-  buf.size = pn_buffer_available( disp->frame );
-
-  ssize_t wr = pn_data_encode( disp->output_args, buf.start, buf.size );
-  if (wr < 0) {
-    if (wr == PN_OVERFLOW) {
-      pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
-      goto encode_performatives;
-    }
-    pn_transport_logf(disp->transport,
-                      "error posting frame: %s", pn_code(wr));
-    return PN_ERR;
-  }
-
-  pn_frame_t frame = {disp->frame_type};
-  frame.channel = ch;
-  frame.payload = buf.start;
-  frame.size = wr;
-  size_t n;
-  while (!(n = pn_write_frame(disp->output + disp->available,
-                              disp->capacity - disp->available, frame))) {
-    disp->capacity *= 2;
-    disp->output = (char *) realloc(disp->output, disp->capacity);
-  }
-  disp->output_frames_ct += 1;
-  if (disp->transport->trace & PN_TRACE_RAW) {
-    pn_string_set(disp->scratch, "RAW: \"");
-    pn_quote(disp->scratch, disp->output + disp->available, n);
-    pn_string_addf(disp->scratch, "\"");
-    pn_transport_log(disp->transport, pn_string_get(disp->scratch));
-  }
-  disp->available += n;
-
-  return 0;
-}
-
-ssize_t pn_dispatcher_output(pn_dispatcher_t *disp, char *bytes, size_t size)
-{
-  int n = disp->available < size ? disp->available : size;
-  memmove(bytes, disp->output, n);
-  memmove(disp->output, disp->output + n, disp->available - n);
-  disp->available -= n;
-  // XXX: need to check for errors
-  return n;
-}
-
-
-int pn_post_transfer_frame(pn_dispatcher_t *disp, uint16_t ch,
-                           uint32_t handle,
-                           pn_sequence_t id,
-                           const pn_bytes_t *tag,
-                           uint32_t message_format,
-                           bool settled,
-                           bool more,
-                           pn_sequence_t frame_limit)
-{
-  bool more_flag = more;
-  int framecount = 0;
-
-  // create preformatives, assuming 'more' flag need not change
-
- compute_performatives:
-  pn_data_clear(disp->output_args);
-  int err = pn_data_fill(disp->output_args, "DL[IIzIoo]", TRANSFER,
-                         handle, id, tag->size, tag->start,
-                         message_format,
-                         settled, more_flag);
-  if (err) {
-    pn_transport_logf(disp->transport,
-                      "error posting transfer frame: %s: %s", pn_code(err),
-                      pn_error_text(pn_data_error(disp->output_args)));
-    return PN_ERR;
-  }
-
-  do { // send as many frames as possible without changing the 'more' flag...
-
-  encode_performatives:
-    pn_buffer_clear( disp->frame );
-    pn_buffer_memory_t buf = pn_buffer_memory( disp->frame );
-    buf.size = pn_buffer_available( disp->frame );
-
-    ssize_t wr = pn_data_encode(disp->output_args, buf.start, buf.size);
-    if (wr < 0) {
-      if (wr == PN_OVERFLOW) {
-        pn_buffer_ensure( disp->frame, pn_buffer_available( disp->frame ) * 2 );
-        goto encode_performatives;
-      }
-      pn_transport_logf(disp->transport, "error posting frame: %s", pn_code(wr));
-      return PN_ERR;
-    }
-    buf.size = wr;
-
-    // check if we need to break up the outbound frame
-    size_t available = disp->output_size;
-    if (disp->remote_max_frame) {
-      if ((available + buf.size) > disp->remote_max_frame - 8) {
-        available = disp->remote_max_frame - 8 - buf.size;
-        if (more_flag == false) {
-          more_flag = true;
-          goto compute_performatives;  // deal with flag change
-        }
-      } else if (more_flag == true && more == false) {
-        // caller has no more, and this is the last frame
-        more_flag = false;
-        goto compute_performatives;
-      }
-    }
-
-    if (pn_buffer_available( disp->frame ) < (available + buf.size)) {
-      // not enough room for payload - try again...
-      pn_buffer_ensure( disp->frame, available + buf.size );
-      goto encode_performatives;
-    }
-
-    pn_do_trace(disp, ch, OUT, disp->output_args, disp->output_payload, available);
-
-    memmove( buf.start + buf.size, disp->output_payload, available);
-    disp->output_payload += available;
-    disp->output_size -= available;
-    buf.size += available;
-
-    pn_frame_t frame = {disp->frame_type};
-    frame.channel = ch;
-    frame.payload = buf.start;
-    frame.size = buf.size;
-
-    size_t n;
-    while (!(n = pn_write_frame(disp->output + disp->available,
-                                disp->capacity - disp->available, frame))) {
-      disp->capacity *= 2;
-      disp->output = (char *) realloc(disp->output, disp->capacity);
-    }
-    disp->output_frames_ct += 1;
-    framecount++;
-    if (disp->transport->trace & PN_TRACE_RAW) {
-      pn_string_set(disp->scratch, "RAW: \"");
-      pn_quote(disp->scratch, disp->output + disp->available, n);
-      pn_string_addf(disp->scratch, "\"");
-      pn_transport_log(disp->transport, pn_string_get(disp->scratch));
-    }
-    disp->available += n;
-  } while (disp->output_size > 0 && framecount < frame_limit);
-
-  disp->output_payload = NULL;
-  return framecount;
+    int n = transport->available < size ? transport->available : size;
+    memmove(bytes, transport->output, n);
+    memmove(transport->output, transport->output + n, transport->available - n);
+    transport->available -= n;
+    // XXX: need to check for errors
+    return n;
 }

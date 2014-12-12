@@ -122,7 +122,6 @@ struct pn_transport_t {
   pni_sasl_t *sasl;
   pni_ssl_t *ssl;
   pn_connection_t *connection;  // reference counted
-  pn_dispatcher_t *disp;
   char *remote_container;
   char *remote_hostname;
   pn_data_t *remote_offered_capabilities;
@@ -152,11 +151,23 @@ struct pn_transport_t {
 
   pn_hash_t *local_channels;
   pn_hash_t *remote_channels;
+
+
+  /* scratch area */
   pn_string_t *scratch;
+  pn_data_t *args;
+  pn_data_t *output_args;
+  pn_buffer_t *frame;  // frame under construction
+  // Temporary
+  size_t capacity;
+  size_t available; /* number of raw bytes pending output */
+  char *output;
 
   /* statistics */
   uint64_t bytes_input;
   uint64_t bytes_output;
+  uint64_t output_frames_ct;
+  uint64_t input_frames_ct;
 
   /* output buffered for send */
   size_t output_size;
@@ -184,6 +195,7 @@ struct pn_transport_t {
   bool done_processing; // if true, don't call pn_process again
   bool posted_idle_timeout;
   bool server;
+  bool halt;
 };
 
 struct pn_connection_t {
@@ -327,5 +339,12 @@ void pn_link_bound(pn_link_t* link);
 void pn_link_unbound(pn_link_t* link);
 void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
+
+int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...);
+
+typedef enum {IN, OUT} pn_dir_t;
+
+void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
+                 pn_data_t *args, const char *payload, size_t size);
 
 #endif /* engine-internal.h */
