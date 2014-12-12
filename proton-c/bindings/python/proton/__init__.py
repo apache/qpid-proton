@@ -1220,7 +1220,7 @@ indicate whether the fd has been registered or not.
     if self._impl:
       del self.messenger._selectables[self.fileno()]
       pn_selectable_free(self._impl)
-      del self._impl
+      self._impl = None
 
   def __del__(self):
     self.free()
@@ -3465,7 +3465,7 @@ class Connector(object):
 
   def _release(self):
     """Release the underlying C Engine resource."""
-    if self._cxtr:
+    if hasattr(self, '_cxtr'):
       pn_connector_set_context(self._cxtr, pn_py2void(None))
       pn_connector_free(self._cxtr)
       del self._cxtr
@@ -3549,7 +3549,7 @@ class Listener(object):
 
   def _release(self):
     """Release the underlying C Engine resource."""
-    if self._lsnr:
+    if hasattr(self, '_lsnr'):
       pn_listener_set_context(self._lsnr, pn_py2void(None));
       pn_listener_free(self._lsnr)
       del self._lsnr
