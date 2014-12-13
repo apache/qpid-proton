@@ -96,9 +96,7 @@ add_custom_command(
   DEPENDS ${PN_PATH}/src/protocol.h.py
   )
 
-#set(COMPILE_WARNING_FLAGS "-Werror -Wall -pedantic-errors -Wno-comment -Wno-warn-absolute-paths")
-#TODO re-add -Werror when warning had been fixed.
-set(COMPILE_WARNING_FLAGS "-Wall -pedantic-errors -Wno-comment -Wno-warn-absolute-paths")
+set(COMPILE_WARNING_FLAGS "-Werror -Wall -pedantic-errors -Wno-comment -Wno-warn-absolute-paths")
 
 # Explicitly set PLATFORM_DEFINITIONS to Linux ones for emscripten as we don't
 # want to inadvertently use Windows versions if we happen to be cross-compiling

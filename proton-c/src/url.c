@@ -130,8 +130,6 @@ PN_EXTERN void pn_url_clear(pn_url_t *url) {
     pn_string_clear(url->str);
 }
 
-static inline int len(const char *str) { return str ? strlen(str) : 0; }
-
 /** Return the string form of a URL. */
 PN_EXTERN const char *pn_url_str(pn_url_t *url) {
     if (pn_string_get(url->str) == NULL) {

@@ -34,8 +34,8 @@ void pn_log_init() {
     enabled = pn_env_bool("PN_TRACE_LOG");
 }
 
-void pn_log_enable(bool enabled) {
-    enabled = enabled;
+void pn_log_enable(bool new_enabled) {
+    enabled = new_enabled;
 }
 
 bool pn_log_enabled() {
