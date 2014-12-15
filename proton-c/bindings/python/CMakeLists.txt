@@ -58,6 +58,7 @@ set (pysrc
     proton/handlers.py
     proton/reactors.py
     proton/utils.py
+    proton/wrapper.py
     )
 
 macro (py_compile directory files artifacts)
