@@ -28,20 +28,23 @@ static void stderr_logger(const char *message) {
 }
 
 static pn_logger_t logger = stderr_logger;
-static int enabled = -1;        /* Undefined, use environment variables. */
+static int enabled_env  = -1;   /* Set from environment variable. */
+static int enabled_call = -1;   /* set by pn_log_enable */
 
-void pn_log_init() {
-    enabled = pn_env_bool("PN_TRACE_LOG");
+void pn_log_enable(bool value) {
+    enabled_call = value;
 }
 
-void pn_log_enable(bool new_enabled) {
-    enabled = new_enabled;
+bool pn_log_enabled(void) {
+    if (enabled_call != -1) return enabled_call; /* Takes precedence */
+    if (enabled_env == -1) 
+        enabled_env = pn_env_bool("PN_TRACE_LOG");
+    return enabled_env;
 }
 
-bool pn_log_enabled() {
-    if (!logger) return false;
-    if (enabled == -1) pn_log_init();
-    return enabled;
+void pn_log_logger(pn_logger_t new_logger) {
+    logger = new_logger;
+    if (!logger) pn_log_enable(false);
 }
 
 void pn_vlogf_impl(const char *fmt, va_list ap) {
@@ -58,7 +61,6 @@ void pn_vlogf_impl(const char *fmt, va_list ap) {
  * complicated messages.) It is important that a disabled log statement results
  * in nothing more than a call to pn_log_enabled().
  */
-
 void pn_logf_impl(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -66,6 +68,3 @@ void pn_logf_impl(const char *fmt, ...) {
   va_end(ap);
 }
 
-void pn_log_logger(pn_logger_t new_logger) {
-    logger = new_logger;
-}

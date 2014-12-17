@@ -22,7 +22,6 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <proton/log.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +37,7 @@
 #include "decoder.h"
 #include "encoder.h"
 #include "data.h"
+#include "../log_private.h"
 
 const char *pn_type_name(pn_type_t type)
 {

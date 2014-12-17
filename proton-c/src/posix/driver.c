@@ -38,7 +38,7 @@
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/object.h>
-#include <proton/log.h>
+#include "../log_private.h"
 #include "util.h"
 #include "platform.h"
 

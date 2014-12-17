@@ -19,8 +19,6 @@
  *
  */
 
-#include <proton/log.h>
-
 #include "engine/engine-internal.h"
 #include "framing/framing.h"
 #include "sasl/sasl-internal.h"
@@ -32,6 +30,7 @@
 #include "proton/event.h"
 #include "platform.h"
 #include "platform_fmt.h"
+#include "../log_private.h"
 
 #include <stdlib.h>
 #include <string.h>

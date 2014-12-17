@@ -24,7 +24,6 @@
 #include <proton/connection.h>
 #include <proton/delivery.h>
 #include <proton/event.h>
-#include <proton/log.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
@@ -43,6 +42,7 @@
 #include "transform.h"
 #include "subscription.h"
 #include "selectable.h"
+#include "../log_private.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 
