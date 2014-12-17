@@ -45,6 +45,7 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <Schnlsp.h>
+#include <WinInet.h>
 #undef SECURITY_WIN32
 
 
@@ -57,6 +58,7 @@
 static void ssl_log_error(const char *fmt, ...);
 static void ssl_log(pn_transport_t *transport, const char *fmt, ...);
 static void ssl_log_error_status(HRESULT status, const char *fmt, ...);
+static HCERTSTORE open_cert_db(const char *store_name, const char *passwd, int *error);
 
 /*
  * win_credential_t: SChannel context that must accompany TLS connections.
@@ -73,6 +75,9 @@ struct win_credential_t {
   pn_ssl_mode_t mode;
   PCCERT_CONTEXT cert_context;  // Particulars of the certificate (if any)
   CredHandle cred_handle;       // Bound session parameters, certificate, CAs, verification_mode
+  HCERTSTORE trust_store;       // Store of root CAs for validating
+  HCERTSTORE server_CA_certs;   // CAs advertised by server (may be a duplicate of the trust_store)
+  char *trust_store_name;
 };
 
 #define win_credential_compare NULL
@@ -84,6 +89,9 @@ static void win_credential_initialize(void *object)
   win_credential_t *c = (win_credential_t *) object;
   SecInvalidateHandle(&c->cred_handle);
   c->cert_context = 0;
+  c->trust_store = 0;
+  c->server_CA_certs = 0;
+  c->trust_store_name = 0;
 }
 
 static void win_credential_finalize(void *object)
@@ -93,6 +101,11 @@ static void win_credential_finalize(void *object)
     FreeCredentialsHandle(&c->cred_handle);
   if (c->cert_context)
     CertFreeCertificateContext(c->cert_context);
+  if (c->trust_store)
+    CertCloseStore(c->trust_store, 0);
+  if (c->server_CA_certs)
+    CertCloseStore(c->server_CA_certs, 0);
+  free(c->trust_store_name);
 }
 
 static win_credential_t *win_credential(pn_ssl_mode_t m)
@@ -109,86 +122,10 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
   if (!store_name)
     return -2;
 
-  char *buf = NULL;
-  DWORD sys_store_type = 0;
-  HCERTSTORE cert_store = 0;
-
-  if (store_name) {
-    if (strncmp(store_name, "ss:", 3) == 0) {
-      store_name += 3;
-      sys_store_type = CERT_SYSTEM_STORE_CURRENT_USER;
-    }
-    else if (strncmp(store_name, "lmss:", 5) == 0) {
-      store_name += 5;
-      sys_store_type = CERT_SYSTEM_STORE_LOCAL_MACHINE;
-    }
-  }
-
-  if (sys_store_type) {
-    // Opening a system store, names are not case sensitive.
-    // Map confusing GUI name to actual registry store name.
-    if (pni_eq_nocase(store_name, "personal"))
-      store_name= "my";
-    cert_store = CertOpenStore(CERT_STORE_PROV_SYSTEM_A, 0, NULL,
-                                CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG |
-                                sys_store_type, store_name);
-    if (!cert_store) {
-      ssl_log_error_status(GetLastError(), "Failed to open system certificate store %s", store_name);
-      return -3;
-    }
-  } else {
-    // PKCS#12 file
-    HANDLE cert_file = CreateFile(store_name, GENERIC_READ, 0, NULL, OPEN_EXISTING,
-                                  FILE_ATTRIBUTE_NORMAL, NULL);
-    if (INVALID_HANDLE_VALUE == cert_file) {
-      HRESULT status = GetLastError();
-      ssl_log_error_status(status, "Failed to open the file holding the private key: %s", store_name);
-      return -4;
-    }
-    DWORD nread = 0L;
-    const DWORD file_size = GetFileSize(cert_file, NULL);
-    if (INVALID_FILE_SIZE != file_size)
-      buf = (char *) malloc(file_size);
-    if (!buf || !ReadFile(cert_file, buf, file_size, &nread, NULL)
-        || file_size != nread) {
-      HRESULT status = GetLastError();
-      CloseHandle(cert_file);
-      free(buf);
-      ssl_log_error_status(status, "Reading the private key from file failed %s", store_name);
-      return -5;
-    }
-    CloseHandle(cert_file);
-
-    CRYPT_DATA_BLOB blob;
-    blob.cbData = nread;
-    blob.pbData = (BYTE *) buf;
-
-    wchar_t *pwUCS2 = NULL;
-    int pwlen = 0;
-    if (passwd) {
-      // convert passwd to null terminated wchar_t (Windows UCS2)
-      pwlen = strlen(passwd);
-      pwUCS2 = (wchar_t *) calloc(pwlen + 1, sizeof(wchar_t));
-      int nwc = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, passwd, pwlen, &pwUCS2[0], pwlen);
-      if (!nwc) {
-        ssl_log_error_status(GetLastError(), "Error converting password from UTF8");
-        free(buf);
-        free(pwUCS2);
-        return -6;
-      }
-    }
-
-    cert_store = PFXImportCertStore(&blob, pwUCS2, 0);
-    if (pwUCS2) {
-      SecureZeroMemory(pwUCS2, pwlen * sizeof(wchar_t));
-      free(pwUCS2);
-    }
-    if (cert_store == NULL) {
-      ssl_log_error_status(GetLastError(), "Failed to import the file based certificate store");
-      free(buf);
-      return -7;
-    }
-  }
+  int ec = 0;
+  HCERTSTORE cert_store = open_cert_db(store_name, passwd, &ec);
+  if (!cert_store)
+    return ec;
 
   // find friendly name that matches cert_name, or sole certificate
   PCCERT_CONTEXT tmpctx = NULL;
@@ -230,7 +167,6 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
     ssl_log_error("Could not find certificate %s in store %s\n", cert_name, store_name);
   cred->cert_context = found_ctx;
 
-  free(buf);
   free(fn);
   CertCloseStore(cert_store, 0);
   return found_ctx ? 0 : -8;
@@ -254,13 +190,18 @@ static CredHandle win_credential_cred_handle(win_credential_t *cred, pn_ssl_veri
   memset(&descriptor, 0, sizeof(descriptor));
 
   descriptor.dwVersion = SCHANNEL_CRED_VERSION;
-  descriptor.dwFlags = SCH_CRED_NO_DEFAULT_CREDS;
-  if (cred->mode == PN_SSL_MODE_CLIENT && verify_mode == PN_SSL_ANONYMOUS_PEER)
-    descriptor.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
+  descriptor.dwFlags = SCH_CRED_NO_DEFAULT_CREDS | SCH_CRED_MANUAL_CRED_VALIDATION;
   if (cred->cert_context != NULL) {
     // assign the certificate into the credentials
     descriptor.paCred = &cred->cert_context;
     descriptor.cCreds = 1;
+  }
+
+  if (cred->mode == PN_SSL_MODE_SERVER) {
+    descriptor.dwFlags |= SCH_CRED_NO_SYSTEM_MAPPER;
+    if (cred->server_CA_certs) {
+      descriptor.hRootStore = cred->server_CA_certs;
+    }
   }
 
   ULONG direction = (cred->mode == PN_SSL_MODE_SERVER) ? SECPKG_CRED_INBOUND : SECPKG_CRED_OUTBOUND;
@@ -338,6 +279,7 @@ struct pni_ssl_t {
   CredHandle cred_handle;
   CtxtHandle ctxt_handle;
   SecPkgContext_StreamSizes sc_sizes;
+  pn_ssl_verify_mode_t verify_mode;
   win_credential_t *cred;
 };
 
@@ -371,7 +313,7 @@ static size_t buffered_output( pn_transport_t *transport );
 static void start_ssl_shutdown(pn_transport_t *transport);
 static void rewind_sc_inbuf(pni_ssl_t *ssl);
 static bool grow_inbuf2(pn_transport_t *ssl, size_t minimum_size);
-
+static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *server_name, bool tracing);
 
 // @todo: used to avoid littering the code with calls to printf...
 static void ssl_log_error(const char *fmt, ...)
@@ -410,7 +352,7 @@ static void ssl_log_error_status(HRESULT status, const char *fmt, ...)
                     0, status, 0, buf, sizeof(buf), 0))
     ssl_log_error(" : %s\n", buf);
   else
-    fprintf(stderr, "pn internal Windows error: %lu\n", GetLastError());
+    fprintf(stderr, "pn internal Windows error: %x for %x\n", GetLastError(), status);
 
   fflush(stderr);
 }
@@ -447,15 +389,6 @@ static int ssl_failed(pn_transport_t *transport, const char *reason)
   pn_do_error(transport, "amqp:connection:framing-error", "SSL Failure: %s", reason);
   return PN_EOS;
 }
-
-/* match the DNS name pattern from the peer certificate against our configured peer
-   hostname */
-static bool match_dns_pattern( const char *hostname,
-                               const char *pattern, int plen )
-{
-  return false; // TODO
-}
-
 
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *domain, const char *id )
 {
@@ -532,25 +465,25 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
 int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                     const char *certificate_db)
 {
-  if (!domain) return -1;
+  if (!domain || !certificate_db) return -1;
 
-  if (certificate_db && !pni_eq_nocase(certificate_db, "ss:root") &&
-      !pni_eq_nocase(certificate_db, "lmss:root"))
-    // TODO: handle more than just the main system trust store
-    return -1;
-  if (!certificate_db && !domain->has_ca_db)
-    return 0;   // No change
-  if (certificate_db && domain->has_ca_db)
-    return 0;   // NO change
+  int ec = 0;
+  HCERTSTORE store = open_cert_db(certificate_db, NULL, &ec);
+  if (!store)
+    return ec;
 
-  win_credential_t *new_cred = win_credential(domain->mode);
-  if (!new_cred)
-    return -1;
-  new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
-  pn_decref(domain->cred);
-  domain->cred = new_cred;
+  if (domain->has_ca_db) {
+    win_credential_t *new_cred = win_credential(domain->mode);
+    if (!new_cred)
+      return -1;
+    new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
+    pn_decref(domain->cred);
+    domain->cred = new_cred;
+  }
 
-  domain->has_ca_db = (certificate_db != NULL);
+  domain->cred->trust_store = store;
+  domain->cred->trust_store_name = pn_strdup(certificate_db);
+  domain->has_ca_db = true;
   return 0;
 }
 
@@ -560,21 +493,53 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
                                           const char *trusted_CAs)
 {
   if (!domain) return -1;
+  if (!domain->has_ca_db && (mode == PN_SSL_VERIFY_PEER || mode == PN_SSL_VERIFY_PEER_NAME)) {
+    ssl_log_error("Error: cannot verify peer without a trusted CA configured.\n"
+                  "       Use pn_ssl_domain_set_trusted_ca_db()\n");
+    return -1;
+  }
+
+  HCERTSTORE store = 0;
+  bool changed = domain->verify_mode && mode != domain->verify_mode;
 
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
-    ssl_log_error("Error: optional peer name checking not yet implemented\n");  // But coming soon
-    return -1;
-
   case PN_SSL_VERIFY_PEER_NAME:
-    if (!domain->has_ca_db) {
-      ssl_log_error("Error: cannot verify peer without a trusted CA configured.\n"
-                    "       Use pn_ssl_domain_set_trusted_ca_db()\n");
-      return -1;
-    }
     if (domain->mode == PN_SSL_MODE_SERVER) {
-      ssl_log_error("Client certificates not yet supported.\n"); // But coming soon
-      return -1;
+      if (!trusted_CAs) {
+        ssl_log_error("Error: a list of trusted CAs must be provided.");
+        return -1;
+      }
+      if (!win_credential_has_certificate(domain->cred)) {
+        ssl_log_error("Error: Server cannot verify peer without configuring a certificate.\n"
+                   "       Use pn_ssl_domain_set_credentials()");
+        return -1;
+      }
+      int ec = 0;
+      if (!strcmp(trusted_CAs, domain->cred->trust_store_name)) {
+        store = open_cert_db(trusted_CAs, NULL, &ec);
+        if (!store)
+          return ec;
+      } else {
+        store = CertDuplicateStore(domain->cred->trust_store);
+      }
+
+      if (domain->cred->server_CA_certs) {
+        // Already have one
+        changed = true;
+        win_credential_t *new_cred = win_credential(domain->mode);
+        if (!new_cred) {
+          CertCloseStore(store, 0);
+          return -1;
+        }
+        new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
+        new_cred->trust_store = CertDuplicateStore(domain->cred->trust_store);
+        new_cred->trust_store_name = pn_strdup(domain->cred->trust_store_name);
+        pn_decref(domain->cred);
+        domain->cred = new_cred;
+      }
+
+      domain->cred->server_CA_certs = store;
     }
     break;
 
@@ -586,13 +551,21 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     return -1;
   }
 
+  if (changed) {
+    win_credential_t *new_cred = win_credential(domain->mode);
+    if (!new_cred) {
+      CertCloseStore(store, 0);
+      return -1;
+    }
+    new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
+    new_cred->trust_store = CertDuplicateStore(domain->cred->trust_store);
+    new_cred->trust_store_name = pn_strdup(domain->cred->trust_store_name);
+    pn_decref(domain->cred);
+    domain->cred = new_cred;
+  }
+
   domain->verify_mode = mode;
-  win_credential_t *new_cred = win_credential(domain->mode);
-  if (!new_cred)
-    return -1;
-  new_cred->cert_context = CertDuplicateCertificateContext(domain->cred->cert_context);
-  pn_decref(domain->cred);
-  domain->cred = new_cred;
+  domain->cred->server_CA_certs = store;
 
   return 0;
 }
@@ -641,7 +614,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   pn_incref(domain->cred);
 
   SECURITY_STATUS status = SEC_E_OK;
-  ssl->cred_handle = win_credential_cred_handle(ssl->cred, ssl->domain->verify_mode,
+  ssl->cred_handle = win_credential_cred_handle(ssl->cred, ssl->verify_mode,
                                                 ssl->session_id, &status);
   if (status != SEC_E_OK) {
     ssl_log_error_status(status, "Credentials handle failure");
@@ -649,6 +622,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   }
 
   ssl->state = (domain->mode == PN_SSL_MODE_CLIENT) ? CLIENT_HELLO : NEGOTIATING;
+  ssl->verify_mode = domain->verify_mode;
   return 0;
 }
 
@@ -877,6 +851,7 @@ static bool ssl_decrypt(pn_transport_t *transport)
       return false;
 
     case SEC_I_RENEGOTIATE:
+      ssl_log_error("unexpected TLS renegotiation\n");
       // TODO.  Fall through for now.
     default:
       ssl_failed(transport, 0);
@@ -912,7 +887,7 @@ static void client_handshake_init(pn_transport_t *transport)
   // Tell SChannel to create the first handshake token (ClientHello)
   // and place it in sc_outbuf
   SEC_CHAR *host = const_cast<SEC_CHAR *>(ssl->peer_hostname);
-  ULONG ctxt_requested = ISC_REQ_STREAM | ISC_REQ_USE_SUPPLIED_CREDS;
+  ULONG ctxt_requested = ISC_REQ_STREAM | ISC_REQ_USE_SUPPLIED_CREDS | ISC_REQ_EXTENDED_ERROR;
   ULONG ctxt_attrs;
 
   SecBuffer send_buffs[2];
@@ -993,7 +968,6 @@ static void client_handshake( pn_transport_t* transport) {
 
   case SEC_I_CONTINUE_NEEDED:
     // Successful handshake step, requiring data to be sent to peer.
-    // TODO: check if server has requested a client certificate
     ssl->sc_out_count = send_buffs[0].cbBuffer;
     // the token is the whole quantity to send
     ssl->network_out_pending = ssl->sc_out_count;
@@ -1024,6 +998,19 @@ static void client_handshake( pn_transport_t* transport) {
       ssl_failed(transport, err);
       break;
     }
+    if (ssl->verify_mode == PN_SSL_VERIFY_PEER || ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME) {
+      bool tracing = PN_TRACE_DRV & transport->trace;
+      HRESULT ec = verify_peer(ssl, ssl->cred->trust_store, ssl->peer_hostname, tracing);
+      if (ec) {
+        if (ssl->peer_hostname)
+          ssl_log_error_status(ec, "certificate verification failed for host %s\n", ssl->peer_hostname);
+        else
+          ssl_log_error_status(ec, "certificate verification failed\n");
+        ssl_failed(transport, "TLS certificate verification error");
+        break;
+      }
+    }
+
     if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0) {
       // This seems to work but not documented, plus logic differs from decrypt message
       // since the pvBuffer value is not set.  Grrr.
@@ -1072,8 +1059,9 @@ static void server_handshake(pn_transport_t* transport)
 {
   pni_ssl_t *ssl = transport->ssl;
   // Feed SChannel ongoing handshake records from the client until the handshake is complete.
-  ULONG ctxt_requested = ASC_REQ_STREAM;
-  // TODO:  if server and verifying client certificate, ctxtRequested |= ASC_REQ_MUTUAL_AUTH;
+  ULONG ctxt_requested = ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR;
+  if (ssl->verify_mode == PN_SSL_VERIFY_PEER || ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME)
+    ctxt_requested |= ASC_REQ_MUTUAL_AUTH;
   ULONG ctxt_attrs;
   size_t max = 0;
 
@@ -1143,7 +1131,17 @@ static void server_handshake(pn_transport_t* transport)
       break;
     }
     // Handshake complete.
-    // TODO: manual check of certificate chain here, if bad: ssl_failed() + break;
+
+    if (ssl->verify_mode == PN_SSL_VERIFY_PEER || ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME) {
+      bool tracing = PN_TRACE_DRV & transport->trace;
+      HRESULT ec = verify_peer(ssl, ssl->cred->trust_store, NULL, tracing);
+      if (ec) {
+        ssl_log_error_status(ec, "certificate verification failed\n");
+        ssl_failed(transport, "certificate verification error");
+        break;
+      }
+    }
+
     QueryContextAttributes(&ssl->ctxt_handle,
                              SECPKG_ATTR_STREAM_SIZES, &ssl->sc_sizes);
     max = ssl->sc_sizes.cbMaximumMessage + ssl->sc_sizes.cbHeader + ssl->sc_sizes.cbTrailer;
@@ -1651,4 +1649,453 @@ static size_t buffered_output(pn_transport_t *transport)
       count++;
   }
   return count;
+}
+
+static HCERTSTORE open_cert_db(const char *store_name, const char *passwd, int *error) {
+  *error = 0;
+  DWORD sys_store_type = 0;
+  HCERTSTORE cert_store = 0;
+
+  if (store_name) {
+    if (strncmp(store_name, "ss:", 3) == 0) {
+      store_name += 3;
+      sys_store_type = CERT_SYSTEM_STORE_CURRENT_USER;
+    }
+    else if (strncmp(store_name, "lmss:", 5) == 0) {
+      store_name += 5;
+      sys_store_type = CERT_SYSTEM_STORE_LOCAL_MACHINE;
+    }
+  }
+
+  if (sys_store_type) {
+    // Opening a system store, names are not case sensitive.
+    // Map confusing GUI name to actual registry store name.
+    if (pni_eq_nocase(store_name, "personal"))
+      store_name= "my";
+    cert_store = CertOpenStore(CERT_STORE_PROV_SYSTEM_A, 0, NULL,
+                               CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG |
+                               sys_store_type, store_name);
+    if (!cert_store) {
+      ssl_log_error_status(GetLastError(), "Failed to open system certificate store %s", store_name);
+      *error = -3;
+      return NULL;
+    }
+  } else {
+    // PKCS#12 file
+    HANDLE cert_file = CreateFile(store_name, GENERIC_READ, 0, NULL, OPEN_EXISTING,
+                                  FILE_ATTRIBUTE_NORMAL, NULL);
+    if (INVALID_HANDLE_VALUE == cert_file) {
+      HRESULT status = GetLastError();
+      ssl_log_error_status(status, "Failed to open the file holding the private key: %s", store_name);
+      *error = -4;
+      return NULL;
+    }
+    DWORD nread = 0L;
+    const DWORD file_size = GetFileSize(cert_file, NULL);
+    char *buf = NULL;
+    if (INVALID_FILE_SIZE != file_size)
+      buf = (char *) malloc(file_size);
+    if (!buf || !ReadFile(cert_file, buf, file_size, &nread, NULL)
+        || file_size != nread) {
+      HRESULT status = GetLastError();
+      CloseHandle(cert_file);
+      free(buf);
+      ssl_log_error_status(status, "Reading the private key from file failed %s", store_name);
+      *error = -5;
+      return NULL;
+    }
+    CloseHandle(cert_file);
+
+    CRYPT_DATA_BLOB blob;
+    blob.cbData = nread;
+    blob.pbData = (BYTE *) buf;
+
+    wchar_t *pwUCS2 = NULL;
+    int pwlen = 0;
+    if (passwd) {
+      // convert passwd to null terminated wchar_t (Windows UCS2)
+      pwlen = strlen(passwd);
+      pwUCS2 = (wchar_t *) calloc(pwlen + 1, sizeof(wchar_t));
+      int nwc = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, passwd, pwlen, &pwUCS2[0], pwlen);
+      if (!nwc) {
+        ssl_log_error_status(GetLastError(), "Error converting password from UTF8");
+        free(buf);
+        free(pwUCS2);
+        *error = -6;
+        return NULL;
+      }
+    }
+
+    cert_store = PFXImportCertStore(&blob, pwUCS2, 0);
+    if (pwUCS2) {
+      SecureZeroMemory(pwUCS2, pwlen * sizeof(wchar_t));
+      free(pwUCS2);
+    }
+    if (cert_store == NULL) {
+      ssl_log_error_status(GetLastError(), "Failed to import the file based certificate store");
+      free(buf);
+      *error = -7;
+      return NULL;
+    }
+
+    free(buf);
+  }
+
+  return cert_store;
+}
+
+static bool store_contains(HCERTSTORE store, PCCERT_CONTEXT cert)
+{
+  DWORD find_type = CERT_FIND_EXISTING; // Require exact match
+  PCCERT_CONTEXT tcert = CertFindCertificateInStore(store, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+						    0, find_type, cert, 0);
+  if (tcert) {
+    CertFreeCertificateContext(tcert);
+    return true;
+  }
+  return false;
+}
+
+/* Match the DNS name pattern from the peer certificate against our configured peer
+   hostname */
+static bool match_dns_pattern(const char *hostname, const char *pattern, int plen)
+{
+  int slen = (int) strlen(hostname);
+  if (memchr( pattern, '*', plen ) == NULL)
+    return (plen == slen &&
+            strncasecmp( pattern, hostname, plen ) == 0);
+
+  /* dns wildcarded pattern - RFC2818 */
+  char plabel[64];   /* max label length < 63 - RFC1034 */
+  char slabel[64];
+
+  while (plen > 0 && slen > 0) {
+    const char *cptr;
+    int len;
+
+    cptr = (const char *) memchr( pattern, '.', plen );
+    len = (cptr) ? cptr - pattern : plen;
+    if (len > (int) sizeof(plabel) - 1) return false;
+    memcpy( plabel, pattern, len );
+    plabel[len] = 0;
+    if (cptr) ++len;    // skip matching '.'
+    pattern += len;
+    plen -= len;
+
+    cptr = (const char *) memchr( hostname, '.', slen );
+    len = (cptr) ? cptr - hostname : slen;
+    if (len > (int) sizeof(slabel) - 1) return false;
+    memcpy( slabel, hostname, len );
+    slabel[len] = 0;
+    if (cptr) ++len;    // skip matching '.'
+    hostname += len;
+    slen -= len;
+
+    char *star = strchr( plabel, '*' );
+    if (!star) {
+      if (strcasecmp( plabel, slabel )) return false;
+    } else {
+      *star = '\0';
+      char *prefix = plabel;
+      int prefix_len = strlen(prefix);
+      char *suffix = star + 1;
+      int suffix_len = strlen(suffix);
+      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && strncasecmp( suffix,
+                                     slabel + (strlen(slabel) - suffix_len),
+                                     suffix_len )) return false;
+    }
+  }
+
+  return plen == slen;
+}
+
+// Caller must free the returned buffer
+static char* wide_to_utf8(LPWSTR wstring)
+{
+  int len = WideCharToMultiByte(CP_UTF8, 0, wstring, -1, 0, 0, 0, 0);
+  if (!len) {
+    ssl_log_error_status(GetLastError(), "converting UCS2 to UTF8");
+    return NULL;
+  }
+  char *p = (char *) malloc(len);
+  if (!p) return NULL;
+  if (WideCharToMultiByte(CP_UTF8, 0, wstring, -1, p, len, 0, 0))
+    return p;
+  ssl_log_error_status(GetLastError(), "converting UCS2 to UTF8");
+  free (p);
+  return NULL;
+}
+
+static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_name_ext, PCCERT_CONTEXT cert)
+{
+  // As for openssl.c: alt names first, then CN
+  bool matched = false;
+
+  if (alt_name_ext) {
+    CERT_ALT_NAME_INFO* alt_name_info = NULL;
+    DWORD size = 0;
+    if(!CryptDecodeObjectEx(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, szOID_SUBJECT_ALT_NAME2,
+                            alt_name_ext->Value.pbData, alt_name_ext->Value.cbData,
+                            CRYPT_DECODE_ALLOC_FLAG | CRYPT_DECODE_NOCOPY_FLAG,
+                            0, &alt_name_info, &size)) {
+      ssl_log_error_status(GetLastError(), "Alternative name match internal error");
+      return false;
+    }
+
+    int name_ct = alt_name_info->cAltEntry;
+    for (int i = 0; !matched && i < name_ct; ++i) {
+      if (alt_name_info->rgAltEntry[i].dwAltNameChoice == CERT_ALT_NAME_DNS_NAME) {
+        char *alt_name = wide_to_utf8(alt_name_info->rgAltEntry[i].pwszDNSName);
+        if (alt_name) {
+          matched = match_dns_pattern(server_name, (const char *) alt_name, strlen(alt_name));
+          free(alt_name);
+        }
+      }
+    }
+    LocalFree(&alt_name_info);
+  }
+
+  if (!matched) {
+    PCERT_INFO info = cert->pCertInfo;
+    DWORD len = CertGetNameString(cert, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, 0, 0);
+    char *name = (char *) malloc(len);
+    if (name) {
+      int count = CertGetNameString(cert, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, name, len);
+      if (count)
+        matched = match_dns_pattern(server_name, (const char *) name, strlen(name));
+      free(name);
+    }
+  }
+  return matched;
+}
+
+static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *server_name, bool tracing)
+{
+  // Free/release the following before return:
+  PCCERT_CONTEXT peer_cc = 0;
+  PCCERT_CONTEXT trust_anchor = 0;
+  PCCERT_CHAIN_CONTEXT chain_context = 0;
+  wchar_t *nameUCS2 = 0;
+
+  if (server_name && strlen(server_name) > 255) {
+    ssl_log_error("invalid server name: %s\n", server_name);
+    return WSAENAMETOOLONG;
+  }
+
+  // Get peer's certificate.
+  SECURITY_STATUS status;
+  status = QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &peer_cc);
+  if (status != SEC_E_OK) {
+    ssl_log_error_status(status, "can't obtain remote peer certificate information");
+    return status;
+  }
+
+  // Build the peer's certificate chain.  Multiple chains may be built but we
+  // care about rgpChain[0], which is the best.  Custom root stores are not
+  // allowed until W8/server 2012: see CERT_CHAIN_ENGINE_CONFIG.  For now, we
+  // manually override to taste.
+
+  // Chain verification functions give false reports for CRL if the trust anchor
+  // is not in the official root store.  We ignore CRL completely if it doesn't
+  // apply to any untrusted certs in the chain, and defer to SChannel's veto
+  // otherwise.  To rely on CRL, the CA must be in both the official system
+  // trusted root store and the Proton cred->trust_store.  To defeat CRL, the
+  // most distal cert with CRL must be placed in the Proton cred->trust_store.
+  // Similarly, certificate usage checking is overly strict at times.
+
+  CERT_CHAIN_PARA desc;
+  memset(&desc, 0, sizeof(desc));
+  desc.cbSize = sizeof(desc);
+
+  LPSTR usages[] = { szOID_PKIX_KP_SERVER_AUTH };
+  DWORD n_usages = sizeof(usages) / sizeof(LPSTR);
+  desc.RequestedUsage.dwType = USAGE_MATCH_TYPE_OR;
+  desc.RequestedUsage.Usage.cUsageIdentifier = n_usages;
+  desc.RequestedUsage.Usage.rgpszUsageIdentifier = usages;
+
+  if(!CertGetCertificateChain(0, peer_cc, 0, peer_cc->hCertStore, &desc,
+                             CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT |
+                             CERT_CHAIN_CACHE_END_CERT,
+                             0, &chain_context)){
+    HRESULT st = GetLastError();
+    ssl_log_error_status(st, "Basic certificate chain check failed");
+    CertFreeCertificateContext(peer_cc);
+    return st;
+  }
+  if (chain_context->cChain < 1 || chain_context->rgpChain[0]->cElement < 1) {
+    ssl_log_error("empty chain with status %x %x\n", chain_context->TrustStatus.dwErrorStatus,
+                 chain_context->TrustStatus.dwInfoStatus);
+    return SEC_E_CERT_UNKNOWN;
+  }
+
+  int chain_len = chain_context->rgpChain[0]->cElement;
+  PCCERT_CONTEXT leaf_cert = chain_context->rgpChain[0]->rgpElement[0]->pCertContext;
+  PCCERT_CONTEXT trunk_cert = chain_context->rgpChain[0]->rgpElement[chain_len - 1]->pCertContext;
+  if (tracing)
+    // See doc for CERT_CHAIN_POLICY_STATUS for bit field error and info status values
+    ssl_log_error("status for complete chain: error bits %x info bits %x\n",
+                  chain_context->TrustStatus.dwErrorStatus, chain_context->TrustStatus.dwInfoStatus);
+
+  // Supplement with checks against Proton's trusted_ca_db, custom revocation and usage.
+  HRESULT error = 0;
+  do {
+    // Do not return from this do loop.  Set error = SEC_E_XXX and break.
+    bool revocable = false;  // unless we see any untrusted certs that could be
+    for (int i = 0; i < chain_len; i++) {
+      CERT_CHAIN_ELEMENT *ce = chain_context->rgpChain[0]->rgpElement[i];
+      PCCERT_CONTEXT cc = ce->pCertContext;
+      if (cc->pCertInfo->dwVersion != CERT_V3) {
+        if (tracing)
+          ssl_log_error("certificate chain element %d is not version 3\n", i);
+        error = SEC_E_CERT_WRONG_USAGE; // A fossil
+        break;
+      }
+
+      if (!trust_anchor && store_contains(root_store, cc))
+        trust_anchor = CertDuplicateCertificateContext(cc);
+
+      int n_ext = cc->pCertInfo->cExtension;
+      for (int ii = 0; ii < n_ext && !revocable && !trust_anchor; ii++) {
+        CERT_EXTENSION *p = &cc->pCertInfo->rgExtension[ii];
+        // rfc 5280 extensions for revocation
+        if (!strcmp(p->pszObjId, szOID_AUTHORITY_INFO_ACCESS) ||
+            !strcmp(p->pszObjId, szOID_CRL_DIST_POINTS) ||
+            !strcmp(p->pszObjId, szOID_FRESHEST_CRL)) {
+          revocable = true;
+        }
+      }
+
+      if (tracing) {
+        char name[512];
+        const char *is_anchor = (cc == trust_anchor) ? " trust anchor" : "";
+        if (!CertNameToStr(cc->dwCertEncodingType, &cc->pCertInfo->Subject,
+                           CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG, name, sizeof(name)))
+          strcpy(name, "[too long]");
+        ssl_log_error("element %d (name: %s)%s error bits %x info bits %x\n", i, name, is_anchor,
+                      ce->TrustStatus.dwErrorStatus, ce->TrustStatus.dwInfoStatus);
+      }
+    }
+    if (error)
+      break;
+
+    if (!trust_anchor) {
+      // We don't trust any of the certs in the chain, see if the last cert
+      // is issued by a Proton trusted CA.
+      DWORD flags = CERT_STORE_NO_ISSUER_FLAG || CERT_STORE_SIGNATURE_FLAG ||
+        CERT_STORE_TIME_VALIDITY_FLAG;
+      trust_anchor = CertGetIssuerCertificateFromStore(root_store, trunk_cert, 0, &flags);
+      if (trust_anchor) {
+        if (tracing) {
+          if (flags & CERT_STORE_SIGNATURE_FLAG)
+            ssl_log_error("root certificate signature failure\n");
+          if (flags & CERT_STORE_TIME_VALIDITY_FLAG)
+            ssl_log_error("root certificate time validity failure\n");
+        }
+        if (flags) {
+          CertFreeCertificateContext(trust_anchor);
+          trust_anchor = 0;
+        }
+      }
+    }
+    if (!trust_anchor) {
+      error = SEC_E_UNTRUSTED_ROOT;
+      break;
+    }
+
+    bool strict_usage = false;
+    CERT_EXTENSION *leaf_alt_names = 0;
+    if (leaf_cert != trust_anchor) {
+      int n_ext = leaf_cert->pCertInfo->cExtension;
+      for (int ii = 0; ii < n_ext; ii++) {
+        CERT_EXTENSION *p = &leaf_cert->pCertInfo->rgExtension[ii];
+        if (!strcmp(p->pszObjId, szOID_ENHANCED_KEY_USAGE))
+          strict_usage = true;
+        if (!strcmp(p->pszObjId, szOID_SUBJECT_ALT_NAME2))
+          if (p->Value.pbData)
+            leaf_alt_names = p;
+      }
+    }
+
+    if (server_name) {
+      int len = strlen(server_name);
+      nameUCS2 = (wchar_t *) calloc(len + 1, sizeof(wchar_t));
+      int nwc = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, server_name, len, &nameUCS2[0], len);
+      if (!nwc) {
+        error = GetLastError();
+        ssl_log_error_status(error, "Error converting server name from UTF8");
+        break;
+      }
+    }
+
+    // SSL-specific parameters (ExtraPolicy below)
+    SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_desc;
+    memset(&ssl_desc, 0, sizeof(ssl_desc));
+    ssl_desc.cbSize = sizeof(ssl_desc);
+    ssl_desc.pwszServerName = nameUCS2;
+    ssl_desc.dwAuthType = nameUCS2 ? AUTHTYPE_SERVER : AUTHTYPE_CLIENT;
+    ssl_desc.fdwChecks = SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+    if (server_name)
+      ssl_desc.fdwChecks |= SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
+    if (!revocable)
+      ssl_desc.fdwChecks |= SECURITY_FLAG_IGNORE_REVOCATION;
+    if (!strict_usage)
+      ssl_desc.fdwChecks |= SECURITY_FLAG_IGNORE_WRONG_USAGE;
+
+    // General certificate chain parameters
+    CERT_CHAIN_POLICY_PARA chain_desc;
+    memset(&chain_desc, 0, sizeof(chain_desc));
+    chain_desc.cbSize = sizeof(chain_desc);
+    chain_desc.dwFlags = CERT_CHAIN_POLICY_ALLOW_UNKNOWN_CA_FLAG;
+    if (!revocable)
+      chain_desc.dwFlags |= CERT_CHAIN_POLICY_IGNORE_ALL_REV_UNKNOWN_FLAGS;
+    if (!strict_usage)
+      chain_desc.dwFlags |= CERT_CHAIN_POLICY_IGNORE_WRONG_USAGE_FLAG;
+    chain_desc.pvExtraPolicyPara = &ssl_desc;
+
+    CERT_CHAIN_POLICY_STATUS chain_status;
+    memset(&chain_status, 0, sizeof(chain_status));
+    chain_status.cbSize = sizeof(chain_status);
+
+    if (!CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, chain_context,
+                                          &chain_desc, &chain_status)) {
+      error = GetLastError();
+      // Failure to complete the check, does not (in)validate the cert.
+      ssl_log_error_status(error, "Supplemental certificate chain check failed");
+      break;
+    }
+
+    if (chain_status.dwError) {
+      error = chain_status.dwError;
+      if (tracing) {
+        ssl_log_error_status(chain_status.dwError, "Certificate chain verification error");
+        if (chain_status.lChainIndex == 0 && chain_status.lElementIndex != -1) {
+          int idx = chain_status.lElementIndex;
+          CERT_CHAIN_ELEMENT *ce = chain_context->rgpChain[0]->rgpElement[idx];
+          ssl_log_error("  chain failure at %d error/info: %x %x\n", idx,
+                        ce->TrustStatus.dwErrorStatus, ce->TrustStatus.dwInfoStatus);
+        }
+      }
+      break;
+    }
+
+    if (server_name && ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME &&
+        !server_name_matches(server_name, leaf_alt_names, leaf_cert)) {
+      error = SEC_E_WRONG_PRINCIPAL;
+      break;
+    }
+  } while (0);
+
+  if (tracing && !error)
+    ssl_log_error("peer certificate authenticated\n");
+
+  // Lots to clean up.
+  if (peer_cc)
+    CertFreeCertificateContext(peer_cc);
+  if (trust_anchor)
+    CertFreeCertificateContext(trust_anchor);
+  if (chain_context)
+    CertFreeCertificateChain(chain_context);
+  free(nameUCS2);
+  return error;
 }
