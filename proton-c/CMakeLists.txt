@@ -225,8 +225,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
       set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
     endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
-    # allow "%z" format specifier
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
+    # allow "%z" format specifier and variadic macros
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
   endif (NOT BUILD_WITH_CXX)
 
   if (ENABLE_UNDEFINED_ERROR)
