@@ -47,7 +47,7 @@ class FlowController(Handler):
             self.top_up(event.link)
 
     def on_delivery(self, event):
-        if not event.delivery.released and event.delivery.link.is_receiver:
+        if event.delivery.link.is_receiver:
             self.top_up(event.delivery.link)
 
 def nested_handlers(handlers):
@@ -101,7 +101,6 @@ class OutgoingMessageHandler(Handler):
 
     def on_delivery(self, event):
         dlv = event.delivery
-        if dlv.released: return
         if dlv.link.is_sender and dlv.updated:
             if dlv.remote_state == Delivery.ACCEPTED:
                 self.on_accepted(event)
@@ -182,7 +181,7 @@ class IncomingMessageHandler(Handler, Acking):
 
     def on_delivery(self, event):
         dlv = event.delivery
-        if dlv.released or not dlv.link.is_receiver: return
+        if not dlv.link.is_receiver: return
         if dlv.readable and not dlv.partial:
             event.message = recv_msg(dlv)
             try:
@@ -390,9 +389,6 @@ class MessagingHandler(Handler, Acking):
     """
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
-        # FlowController if used needs to see event before
-        # IncomingMessageHandler, as the latter may involve the
-        # delivery being released
         if prefetch:
             self.handlers.append(FlowController(prefetch))
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
@@ -447,9 +443,6 @@ class TransactionalClientHandler(Handler, TransactionalAcking):
     def __init__(self, prefetch=10, auto_accept=False, auto_settle=True, peer_close_is_error=False):
         super(TransactionalClientHandler, self).__init__()
         self.handlers = []
-        # FlowController if used needs to see event before
-        # IncomingMessageHandler, as the latter may involve the
-        # delivery being released
         if prefetch:
             self.handlers.append(FlowController(prefetch))
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
