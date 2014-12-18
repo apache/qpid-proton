@@ -2036,7 +2036,8 @@ pn_data_t *pn_condition_info(pn_condition_t *condition)
 bool pn_condition_is_redirect(pn_condition_t *condition)
 {
   const char *name = pn_condition_get_name(condition);
-  return name && !strcmp(name, "amqp:connection:redirect");
+  return name && (!strcmp(name, "amqp:connection:redirect") ||
+                  !strcmp(name, "amqp:link:redirect"));
 }
 
 const char *pn_condition_redirect_host(pn_condition_t *condition)
