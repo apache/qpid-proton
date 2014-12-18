@@ -22,6 +22,14 @@ include(UseSWIG)
 # Add any new bindings here - the directory name must be the same as the binding name
 set (BINDINGS python ruby php perl javascript)
 
+# If swig version is 3.0 or greater then we can build some additional bindings
+if (${SWIG_VERSION} VERSION_GREATER 3.0 OR ${SWIG_VERSION} VERSION_EQUAL 3.0)
+  set (BINDINGS
+    ${BINDINGS}
+    node
+    )
+endif()
+
 set (BINDING_DEPS qpid-proton)
 
 # Add a block here to detect the prerequisites to build each language binding:
