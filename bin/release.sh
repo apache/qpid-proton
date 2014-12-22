@@ -56,4 +56,5 @@ die()
     git checkout -b $VERSION ${REMOTE}/${BRANCH}
     bin/version.sh $VERSION
     git commit -a -m "Release $VERSION"
+    echo "Run 'git push -u ${REMOTE} ${VERSION}' to push the release upstream."
 )
