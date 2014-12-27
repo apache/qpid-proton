@@ -189,7 +189,7 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 {
   assert(obj);
   pn_event_t *event = (pn_event_t *) obj;
-  int err = pn_string_addf(dst, "(0x%X", (unsigned int)event->type);
+  int err = pn_string_addf(dst, "(%s<0x%X>", pn_event_type_name(event->type), (unsigned int) event->type);
   if (event->context) {
     err = pn_string_addf(dst, ", ");
     if (err) return err;
