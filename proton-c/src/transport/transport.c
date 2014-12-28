@@ -76,10 +76,10 @@ pn_delivery_state_t *pn_delivery_map_push(pn_delivery_map_t *db, pn_delivery_t *
 void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   if (delivery->state.init) {
+    delivery->state.init = false;
+    delivery->state.sent = false;
     pn_hash_del(db->deliveries, delivery->state.id);
   }
-  delivery->state.init = false;
-  delivery->state.sent = false;
 }
 
 void pn_delivery_map_clear(pn_delivery_map_t *dm)
@@ -1169,6 +1169,7 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   assert(!delivery->work);
   pn_clear_tpwork(delivery);
+  pn_delivery_map_del(db, delivery);
 }
 
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
