@@ -98,6 +98,14 @@ const pn_io_layer_t sasl_layer = {
     NULL
 };
 
+static void pni_emit(pn_sasl_t *sasl) {
+  pn_transport_t *transport = get_transport_internal(sasl);
+  if (transport->connection && transport->connection->collector) {
+    pn_collector_t *collector = transport->connection->collector;
+    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT);
+  }
+}
+
 pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
@@ -147,6 +155,7 @@ void pn_sasl_mechanisms(pn_sasl_t *sasl0, const char *mechanisms)
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
   if (!sasl) return;
   sasl->mechanisms = pn_strdup(mechanisms);
+  pni_emit(sasl0);
 }
 
 const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl0)
@@ -165,6 +174,7 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl0, const char *bytes, size_t size)
     }
     int err = pn_buffer_append(sasl->send_data, bytes, size);
     if (err) return err;
+    pni_emit(sasl0);
     return size;
   } else {
     return PN_ARG_ERR;
@@ -255,6 +265,7 @@ void pn_sasl_done(pn_sasl_t *sasl0, pn_sasl_outcome_t outcome)
       sasl->rcvd_done = true;
       sasl->sent_done = true;
     }
+    pni_emit(sasl0);
   }
 }
 
@@ -285,6 +296,7 @@ void pn_client_init(pn_transport_t *transport)
   pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[sz]", SASL_INIT, sasl->mechanisms,
                 bytes.size, bytes.start);
   pn_buffer_clear(sasl->send_data);
+  pni_emit((pn_sasl_t *) transport);
 }
 
 void pn_server_init(pn_transport_t *transport)
@@ -317,6 +329,7 @@ void pn_server_init(pn_transport_t *transport)
   }
 
   pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+  pni_emit((pn_sasl_t *) transport);
 }
 
 void pn_server_done(pn_sasl_t *sasl0)
@@ -324,6 +337,7 @@ void pn_server_done(pn_sasl_t *sasl0)
   pn_transport_t *transport = get_transport_internal(sasl0);
   pni_sasl_t *sasl = transport->sasl;
   pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
+  pni_emit(sasl0);
 }
 
 void pn_sasl_process(pn_transport_t *transport)
@@ -343,6 +357,7 @@ void pn_sasl_process(pn_transport_t *transport)
     pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", sasl->client ? SASL_RESPONSE : SASL_CHALLENGE,
                   bytes.size, bytes.start);
     pn_buffer_clear(sasl->send_data);
+    pni_emit((pn_sasl_t *) transport);
   }
 
   if (!sasl->client && sasl->outcome != PN_SASL_NONE && !sasl->sent_done) {
@@ -451,6 +466,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   sasl->rcvd_done = true;
   sasl->sent_done = true;
   sasl->halt = true;
+  pni_emit((pn_sasl_t *) transport);
   return 0;
 }
 
