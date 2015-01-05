@@ -26,7 +26,7 @@
 #include <proton/transport.h>
 #include <assert.h>
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include "selectable.h"
 
 // XXX: overloaded for both directions
@@ -57,7 +57,7 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   pn_string_t *str = pn_string(hostname);
   char *host = pn_string_buffer(str);
   const char *port = "5672";
-  char *colon = rindex(host, ':');
+  char *colon = strrchr(host, ':');
   if (colon) {
     port = colon + 1;
     colon[0] = '\0';
