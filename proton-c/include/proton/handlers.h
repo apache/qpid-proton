@@ -1,5 +1,6 @@
-#ifndef PROTON_CID_H
-#define PROTON_CID_H 1
+#ifndef PROTON_HANDLERS_H
+#define PROTON_HANDLERS_H 1
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,40 +22,38 @@
  *
  */
 
-typedef enum {
-  CID_pn_object = 1,
-  CID_pn_void,
-  CID_pn_weakref,
+#include <proton/import_export.h>
+#include <proton/type_compat.h>
+#include <proton/reactor.h>
 
-  CID_pn_string,
-  CID_pn_list,
-  CID_pn_map,
-  CID_pn_hash,
-  CID_pn_record,
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-  CID_pn_collector,
-  CID_pn_event,
+/**
+ * @file
+ *
+ * Reactor API for proton.
+ *
+ * @defgroup handlers Handlers
+ * @ingroup handlers
+ * @{
+ */
 
-  CID_pn_encoder,
-  CID_pn_decoder,
-  CID_pn_data,
+typedef struct pn_handshaker_t pn_handshaker_t;
+typedef struct pn_flowcontroller_t pn_flowcontroller_t;
 
-  CID_pn_connection,
-  CID_pn_session,
-  CID_pn_link,
-  CID_pn_delivery,
-  CID_pn_transport,
+PN_EXTERN pn_handshaker_t *pn_handshaker(void);
+PN_EXTERN pn_handler_t *pn_handshaker_handler(pn_handshaker_t *handshaker);
 
-  CID_pn_message,
+PN_EXTERN pn_flowcontroller_t *pn_flowcontroller(int window);
+PN_EXTERN pn_handler_t *pn_flowcontroller_handler(pn_flowcontroller_t *flowcontroller);
 
-  CID_pn_reactor,
-  CID_pn_handler,
+/** @}
+ */
 
-  CID_pn_io,
-  CID_pn_selector,
-  CID_pn_selectable,
+#ifdef __cplusplus
+}
+#endif
 
-  CID_pn_url
-} pn_cid_t;
-
-#endif /* cid.h */
+#endif /* handlers.h */

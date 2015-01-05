@@ -304,6 +304,14 @@ set (qpid-proton-core
   src/message/message.c
   src/sasl/sasl.c
 
+  src/reactor/reactor.c
+  src/reactor/handler.c
+  src/reactor/connection.c
+  src/reactor/acceptor.c
+
+  src/handlers/handshaker.c
+  src/handlers/flowcontroller.c
+
   src/messenger/messenger.c
   src/messenger/subscription.c
   src/messenger/store.c

@@ -232,6 +232,10 @@ const char *pn_event_type_name(pn_event_type_t type)
   switch (type) {
   case PN_EVENT_NONE:
     return "PN_EVENT_NONE";
+  case PN_REACTOR_INIT:
+    return "PN_REACTOR_INIT";
+  case PN_REACTOR_FINAL:
+    return "PN_REACTOR_FINAL";
   case PN_CONNECTION_INIT:
     return "PN_CONNECTION_INIT";
   case PN_CONNECTION_BOUND:

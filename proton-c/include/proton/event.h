@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/object.h>
 #include <stddef.h>
 #include <sys/types.h>
 
@@ -85,6 +86,16 @@ typedef enum {
    * ever be generated.
    */
   PN_EVENT_NONE = 0,
+
+  /**
+   * A reactor has been started. Events of this type point to the reactor.
+   */
+  PN_REACTOR_INIT,
+
+  /**
+   * A reactor has been stopped. Events of this type point to the reactor.
+   */
+  PN_REACTOR_FINAL,
 
   /**
    * The connection has been created. This is the first event that

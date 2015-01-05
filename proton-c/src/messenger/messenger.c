@@ -1306,6 +1306,8 @@ int pn_messenger_process_events(pn_messenger_t *messenger)
       break;
     case PN_LINK_FINAL:
       break;
+    default:
+      break;
     }
     pn_collector_pop(messenger->collector);
   }
