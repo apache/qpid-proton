@@ -90,6 +90,18 @@ PN_EXTERN pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables);
  */
 PN_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
 
+PN_EXTERN pn_selectable_t *pn_selectable(void);
+
+PN_EXTERN void pn_selectable_set_capacity(pn_selectable_t *sel, ssize_t (*capacity)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_pending(pn_selectable_t *sel, ssize_t (*pending)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t (*deadline)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_set_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
+
+PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
+
 /**
  * Get the file descriptor associated with a selectable.
  *

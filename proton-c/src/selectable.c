@@ -43,7 +43,7 @@ void pn_selectables_free(pn_selectables_t *selectables)
 struct pn_selectable_t {
   pn_socket_t fd;
   int index;
-  void *context;
+  pn_record_t *context;
   ssize_t (*capacity)(pn_selectable_t *);
   ssize_t (*pending)(pn_selectable_t *);
   pn_timestamp_t (*deadline)(pn_selectable_t *);
@@ -60,7 +60,7 @@ void pn_selectable_initialize(void *obj)
   pn_selectable_t *sel = (pn_selectable_t *) obj;
   sel->fd = PN_INVALID_SOCKET;
   sel->index = -1;
-  sel->context = NULL;
+  sel->context = pn_record();
   sel->capacity = NULL;
   sel->deadline = NULL;
   sel->pending = NULL;
@@ -76,11 +76,57 @@ void pn_selectable_finalize(void *obj)
 {
   pn_selectable_t *sel = (pn_selectable_t *) obj;
   sel->finalize(sel);
+  pn_free(sel->context);
 }
 
 #define pn_selectable_hashcode NULL
 #define pn_selectable_inspect NULL
 #define pn_selectable_compare NULL
+
+pn_selectable_t *pn_selectable(void)
+{
+  static const pn_class_t clazz = PN_CLASS(pn_selectable);
+  return (pn_selectable_t *) pn_class_new(&clazz, sizeof(pn_selectable_t));
+}
+
+void pn_selectable_set_capacity(pn_selectable_t *sel, ssize_t (*capacity)(pn_selectable_t *)) {
+  assert(sel);
+  sel->capacity = capacity;
+}
+
+void pn_selectable_set_pending(pn_selectable_t *sel, ssize_t (*pending)(pn_selectable_t *)) {
+  assert(sel);
+  sel->pending = pending;
+}
+
+void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t (*deadline)(pn_selectable_t *)) {
+  assert(sel);
+  sel->deadline = deadline;
+}
+
+void pn_selectable_set_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *)) {
+  assert(sel);
+  sel->readable = readable;
+}
+
+void pn_selectable_set_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *)) {
+  assert(sel);
+  sel->writable = writable;
+}
+
+void pn_selectable_set_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *)) {
+  assert(sel);
+  sel->expired = expired;
+}
+
+void pn_selectable_set_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *)) {
+  assert(sel);
+  sel->finalize = finalize;
+}
+
+pn_record_t *pn_selectable_attachments(pn_selectable_t *sel) {
+  return sel->context;
+}
 
 pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
                                 ssize_t (*pending)(pn_selectable_t *),
@@ -90,8 +136,7 @@ pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
                                 void (*expired)(pn_selectable_t *),
                                 void (*finalize)(pn_selectable_t *))
 {
-  static const pn_class_t clazz = PN_CLASS(pn_selectable);
-  pn_selectable_t *selectable = (pn_selectable_t *) pn_class_new(&clazz, sizeof(pn_selectable_t));
+  pn_selectable_t *selectable = pn_selectable();
   selectable->capacity = capacity;
   selectable->pending = pending;
   selectable->readable = readable;
@@ -105,13 +150,13 @@ pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
 void *pni_selectable_get_context(pn_selectable_t *selectable)
 {
   assert(selectable);
-  return selectable->context;
+  return pn_record_get(selectable->context, PN_LEGCTX);
 }
 
 void pni_selectable_set_context(pn_selectable_t *selectable, void *context)
 {
   assert(selectable);
-  selectable->context = context;
+  pn_record_set(selectable->context, PN_LEGCTX, context);
 }
 
 int pni_selectable_get_index(pn_selectable_t *selectable)
@@ -141,37 +186,55 @@ void pni_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd)
 ssize_t pn_selectable_capacity(pn_selectable_t *selectable)
 {
   assert(selectable);
-  return selectable->capacity(selectable);
+  if (selectable->capacity) {
+    return selectable->capacity(selectable);
+  } else {
+    return 0;
+  }
 }
 
 ssize_t pn_selectable_pending(pn_selectable_t *selectable)
 {
   assert(selectable);
-  return selectable->pending(selectable);
+  if (selectable->pending) {
+    return selectable->pending(selectable);
+  } else {
+    return 0;
+  }
 }
 
 pn_timestamp_t pn_selectable_deadline(pn_selectable_t *selectable)
 {
   assert(selectable);
-  return selectable->deadline(selectable);
+  if (selectable->deadline) {
+    return selectable->deadline(selectable);
+  } else {
+    return 0;
+  }
 }
 
 void pn_selectable_readable(pn_selectable_t *selectable)
 {
   assert(selectable);
-  selectable->readable(selectable);
+  if (selectable->readable) {
+    selectable->readable(selectable);
+  }
 }
 
 void pn_selectable_writable(pn_selectable_t *selectable)
 {
   assert(selectable);
-  selectable->writable(selectable);
+  if (selectable->writable) {
+    selectable->writable(selectable);
+  }
 }
 
 void pn_selectable_expired(pn_selectable_t *selectable)
 {
   assert(selectable);
-  selectable->expired(selectable);
+  if (selectable->expired) {
+    selectable->expired(selectable);
+  }
 }
 
 bool pn_selectable_is_registered(pn_selectable_t *selectable)

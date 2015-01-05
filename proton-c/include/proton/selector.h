@@ -39,6 +39,7 @@ PN_EXTERN void pn_selector_free(pn_selector_t *selector);
 PN_EXTERN void pn_selector_add(pn_selector_t *selector, pn_selectable_t *selectable);
 PN_EXTERN void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable);
 PN_EXTERN void pn_selector_remove(pn_selector_t *selector, pn_selectable_t *selectable);
+PN_EXTERN size_t pn_selector_size(pn_selector_t *selector);
 PN_EXTERN int pn_selector_select(pn_selector_t *select, int timeout);
 PN_EXTERN pn_selectable_t *pn_selector_next(pn_selector_t *select, int *events);
 
