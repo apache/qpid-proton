@@ -28,6 +28,8 @@
 #include <proton/driver_extras.h>
 #include <proton/types.h>
 #include <proton/url.h>
+#include <proton/reactor.h>
+#include <proton/handlers.h>
 
 #include <uuid/uuid.h>
 %}

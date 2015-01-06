@@ -39,6 +39,8 @@
 #include <proton/messenger.h>
 #include <proton/session.h>
 #include <proton/url.h>
+#include <proton/reactor.h>
+#include <proton/handlers.h>
 
 #define zend_error_noreturn zend_error
 %}

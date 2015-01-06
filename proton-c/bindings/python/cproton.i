@@ -30,6 +30,8 @@
 #include <proton/driver_extras.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
+#include <proton/reactor.h>
+#include <proton/handlers.h>
 %}
 
 %include <cstring.i>
@@ -284,6 +286,43 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   PyObject *pn_cast_pn_void(void *object) {
     return pn_void2py(object);
+  }
+
+  typedef struct {
+    PyObject *handler;
+  } pni_pyh_t;
+
+  static pni_pyh_t *pni_pyh(pn_handler_t *handler) {
+    return (pni_pyh_t *) pn_handler_mem(handler);
+  }
+
+  static void pni_pyh_finalize(pn_handler_t *handler) {
+    pni_pyh_t *pyh = pni_pyh(handler);
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    Py_DECREF(pyh->handler);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event) {
+    pni_pyh_t *pyh = pni_pyh(handler);
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    PyObject *arg = SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0);
+    PyObject *result = PyObject_CallFunctionObjArgs(pyh->handler, arg, NULL);
+    if (!result) {
+      PyErr_PrintEx(true);
+    }
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  pn_handler_t *pn_pyhandler(PyObject *handler) {
+    pn_handler_t *chandler = pn_handler_new(pni_pydispatch, sizeof(pni_pyh_t), pni_pyh_finalize);
+    pni_pyh_t *phy = pni_pyh(chandler);
+    phy->handler = handler;
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    Py_INCREF(phy->handler);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+    return chandler;
   }
 %}
 
