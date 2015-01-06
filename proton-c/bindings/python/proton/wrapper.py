@@ -18,9 +18,22 @@
 #
 from cproton import *
 
+class EmptyAttrs:
+
+    def __contains__(self, name):
+        return False
+
+    def __getitem__(self, name):
+        raise KeyError(name)
+
+    def __setitem__(self, name, value):
+        raise TypeError("does not support item assignment")
+
+EMPTY_ATTRS = EmptyAttrs()
+
 class Wrapper(object):
 
-    def __init__(self, impl_or_constructor, get_context):
+    def __init__(self, impl_or_constructor, get_context=None):
         init = False
         if callable(impl_or_constructor):
             # we are constructing a new object
@@ -31,13 +44,17 @@ class Wrapper(object):
             impl = impl_or_constructor
             pn_incref(impl)
 
-        record = get_context(impl)
-        attrs = pn_void2py(pn_record_get(record, PYCTX))
-        if attrs is None:
-            attrs = {}
-            pn_record_def(record, PYCTX, PN_PYREF)
-            pn_record_set(record, PYCTX, pn_py2void(attrs))
-            init = True
+        if get_context:
+            record = get_context(impl)
+            attrs = pn_void2py(pn_record_get(record, PYCTX))
+            if attrs is None:
+                attrs = {}
+                pn_record_def(record, PYCTX, PN_PYREF)
+                pn_record_set(record, PYCTX, pn_py2void(attrs))
+                init = True
+        else:
+            attrs = EMPTY_ATTRS
+            init = False
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
         if init: self._init()
