@@ -43,6 +43,9 @@ require "types/described"
 require "codec/mapping"
 require "codec/data"
 
+# Event API classes
+require "event/collector"
+
 # Main Proton classes
 require "core/message"
 
