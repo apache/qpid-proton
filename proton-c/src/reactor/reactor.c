@@ -154,36 +154,35 @@ static void pni_reactor_dispatch(pn_reactor_t *reactor, pn_event_t *event) {
   }
 }
 
-pn_record_t *pni_attachments(const pn_class_t *clazz, void *instance) {
-  switch (pn_class_id(clazz)) {
-  case CID_pn_connection:
-    return pn_connection_attachments((pn_connection_t *) instance);
-  case CID_pn_session:
-    return pn_session_attachments((pn_session_t *) instance);
-  case CID_pn_link:
-    return pn_link_attachments((pn_link_t *) instance);
-  default:
-    return NULL;
-  }
+pn_handler_t *pni_record_get_handler(pn_record_t *record) {
+  return (pn_handler_t *) pn_record_get(record, PN_HANDLER);
 }
 
-pn_handler_t *pn_event_handler(pn_event_t *event) {
-  pn_record_t *record = pni_attachments(pn_event_class(event), pn_event_context(event));
-  if (record) {
-    return (pn_handler_t *) pn_record_get(record, PN_HANDLER);
-  } else {
-    return NULL;
+pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler) {
+  pn_handler_t *handler = NULL;
+  pn_link_t *link = pn_event_link(event);
+  if (link) {
+    handler = pni_record_get_handler(pn_link_attachments(link));
+    if (handler) { return handler; }
   }
+  pn_session_t *session = pn_event_session(event);
+  if (session) {
+    handler = pni_record_get_handler(pn_session_attachments(session));
+    if (handler) { return handler; }
+  }
+  pn_connection_t *connection = pn_event_connection(event);
+  if (connection) {
+    handler = pni_record_get_handler(pn_connection_attachments(connection));
+    if (handler) { return handler; }
+  }
+  return default_handler;
 }
 
 void pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
   pn_event_t *event;
   while ((event = pn_collector_peek(reactor->collector))) {
-    pn_handler_t *handler = pn_event_handler(event);
-    if (!handler) {
-      handler = reactor->handler;
-    }
+    pn_handler_t *handler = pn_event_handler(event, reactor->handler);
     pn_handler_dispatch(handler, event);
     pni_reactor_dispatch(reactor, event);
     pn_collector_pop(reactor->collector);
@@ -237,4 +236,3 @@ void pn_reactor_run(pn_reactor_t *reactor) {
   while (pn_reactor_work(reactor, 1000)) {}
   pn_reactor_stop(reactor);
 }
-

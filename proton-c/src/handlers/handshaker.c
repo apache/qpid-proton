@@ -25,12 +25,16 @@
 #include <proton/handlers.h>
 #include <assert.h>
 
-struct pn_handshaker_t {
+typedef struct {
   pn_map_t *handlers;
-};
+} pni_handshaker_t;
+
+pni_handshaker_t *pni_handshaker(pn_handler_t *handler) {
+  return (pni_handshaker_t *) pn_handler_mem(handler);
+}
 
 static void pn_handshaker_finalize(pn_handler_t *handler) {
-  pn_handshaker_t *handshaker = (pn_handshaker_t *) pn_handler_mem(handler);
+  pni_handshaker_t *handshaker = pni_handshaker(handler);
   pn_free(handshaker->handlers);
 }
 
@@ -92,12 +96,8 @@ static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event) {
 }
 
 pn_handshaker_t *pn_handshaker(void) {
-  pn_handler_t *handler = pn_handler_new(pn_handshaker_dispatch, sizeof(pn_handshaker_t), pn_handshaker_finalize);
-  pn_handshaker_t *handshaker = (pn_handshaker_t *) pn_handler_mem(handler);
+  pn_handler_t *handler = pn_handler_new(pn_handshaker_dispatch, sizeof(pni_handshaker_t), pn_handshaker_finalize);
+  pni_handshaker_t *handshaker = pni_handshaker(handler);
   handshaker->handlers = NULL;
-  return handshaker;
-}
-
-pn_handler_t *pn_handshaker_handler(pn_handshaker_t *handshaker) {
-  return pn_handler_cast(handshaker);
+  return handler;
 }

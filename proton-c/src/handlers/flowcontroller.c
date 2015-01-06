@@ -23,9 +23,13 @@
 #include <proton/handlers.h>
 #include <assert.h>
 
-struct pn_flowcontroller_t {
+typedef struct {
   int window;
-};
+} pni_flowcontroller_t;
+
+pni_flowcontroller_t *pni_flowcontroller(pn_handler_t *handler) {
+  return (pni_flowcontroller_t *) pn_handler_mem(handler);
+}
 
 static void pni_topup(pn_link_t *link, int window) {
   int delta = window - pn_link_credit(link);
@@ -33,7 +37,7 @@ static void pni_topup(pn_link_t *link, int window) {
 }
 
 static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event) {
-  pn_flowcontroller_t *fc = (pn_flowcontroller_t *) pn_handler_mem(handler);
+  pni_flowcontroller_t *fc = pni_flowcontroller(handler);
   int window = fc->window;
 
   switch (pn_event_type(event)) {
@@ -54,12 +58,11 @@ static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event)
 }
 
 pn_flowcontroller_t *pn_flowcontroller(int window) {
-  pn_handler_t *handler = pn_handler_new(pn_flowcontroller_dispatch, sizeof(pn_flowcontroller_t), NULL);
-  pn_flowcontroller_t *flowcontroller = (pn_flowcontroller_t *) pn_handler_mem(handler);
-  flowcontroller->window = window;
-  return flowcontroller;
-}
-
-pn_handler_t *pn_flowcontroller_handler(pn_flowcontroller_t *flowcontroller) {
-  return pn_handler_cast(flowcontroller);
+  // XXX: a window of 1 doesn't work because we won't necessarily get
+  // notified when the one allowed delivery is settled
+  assert(window > 1);
+  pn_flowcontroller_t *handler = pn_handler_new(pn_flowcontroller_dispatch, sizeof(pni_flowcontroller_t), NULL);
+  pni_flowcontroller_t *fc = pni_flowcontroller(handler);
+  fc->window = window;
+  return handler;
 }

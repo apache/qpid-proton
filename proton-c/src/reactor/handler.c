@@ -22,6 +22,7 @@
 #include <proton/object.h>
 #include <proton/reactor.h>
 #include <proton/event.h>
+#include <string.h>
 #include <assert.h>
 
 struct pn_handler_t {
@@ -57,6 +58,7 @@ pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *), siz
   pn_handler_t *handler = (pn_handler_t *) pn_class_new(&clazz, sizeof(pn_handler_t) + size);
   handler->dispatch = dispatch;
   handler->finalize = finalize;
+  memset(pn_handler_mem(handler), 0, size);
   return handler;
 }
 
@@ -76,10 +78,6 @@ void pn_handler_free(pn_handler_t *handler) {
 
 void *pn_handler_mem(pn_handler_t *handler) {
   return (void *) (handler + 1);
-}
-
-pn_handler_t *pn_handler_cast(void *mem) {
-  return ((pn_handler_t *) mem) - 1;
 }
 
 void pn_handler_add(pn_handler_t *handler, pn_handler_t *child) {

@@ -48,7 +48,12 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
 void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   assert(reactor);
   assert(event);
+
   pn_connection_t *conn = pn_event_connection(event);
+  if (!(pn_connection_state(conn) & PN_REMOTE_UNINIT)) {
+    return;
+  }
+
   pn_transport_t *transport = pn_transport();
   pn_sasl_t *sasl = pn_sasl(transport);
   pn_sasl_mechanisms(sasl, "ANONYMOUS");

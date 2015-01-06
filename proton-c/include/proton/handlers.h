@@ -40,14 +40,11 @@ extern "C" {
  * @{
  */
 
-typedef struct pn_handshaker_t pn_handshaker_t;
-typedef struct pn_flowcontroller_t pn_flowcontroller_t;
+typedef pn_handler_t pn_handshaker_t;
+typedef pn_handler_t pn_flowcontroller_t;
 
 PN_EXTERN pn_handshaker_t *pn_handshaker(void);
-PN_EXTERN pn_handler_t *pn_handshaker_handler(pn_handshaker_t *handshaker);
-
 PN_EXTERN pn_flowcontroller_t *pn_flowcontroller(int window);
-PN_EXTERN pn_handler_t *pn_flowcontroller_handler(pn_flowcontroller_t *flowcontroller);
 
 /** @}
  */

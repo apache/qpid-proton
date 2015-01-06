@@ -21,8 +21,9 @@
 
 #include <proton/reactor.h>
 #include <proton/handlers.h>
-#include <proton/connection.h>
 #include <proton/event.h>
+#include <proton/connection.h>
+#include <proton/session.h>
 #include <proton/link.h>
 #include <proton/delivery.h>
 #include <stdlib.h>
@@ -209,11 +210,16 @@ static server_t *smem(pn_handler_t *handler) {
   return (server_t *) pn_handler_mem(handler);
 }
 
+#include <stdio.h>
+
 static void server_dispatch(pn_handler_t *handler, pn_event_t *event) {
   server_t *srv = smem(handler);
   pn_list_add(srv->events, (void *) pn_event_type(event));
   switch (pn_event_type(event)) {
   case PN_CONNECTION_REMOTE_OPEN:
+    pn_connection_open(pn_event_connection(event));
+    break;
+  case PN_CONNECTION_REMOTE_CLOSE:
     pn_acceptor_close(srv->reactor, srv->acceptor);
     pn_connection_close(pn_event_connection(event));
     pn_connection_release(pn_event_connection(event));
@@ -237,11 +243,13 @@ static void client_dispatch(pn_handler_t *handler, pn_event_t *event) {
   pn_connection_t *conn = pn_event_connection(event);
   switch (pn_event_type(event)) {
   case PN_CONNECTION_INIT:
-    pn_connection_set_hostname(conn, "localhost:5672");
+    pn_connection_set_hostname(conn, "127.0.0.1:5672");
     pn_connection_open(conn);
     break;
-  case PN_CONNECTION_REMOTE_CLOSE:
+  case PN_CONNECTION_REMOTE_OPEN:
     pn_connection_close(conn);
+    break;
+  case PN_CONNECTION_REMOTE_CLOSE:
     pn_connection_release(conn);
     break;
   default:
@@ -264,26 +272,41 @@ static void test_reactor_connect(void) {
   pn_reactor_connection(reactor, ch);
   pn_reactor_run(reactor);
   expect(srv->events, PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
-         PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_LOCAL_CLOSE,
-         PN_CONNECTION_REMOTE_CLOSE, PN_CONNECTION_UNBOUND,
-         PN_CONNECTION_FINAL, END);
+         PN_TRANSPORT, PN_CONNECTION_REMOTE_OPEN,
+         PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
+         PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
+         PN_CONNECTION_LOCAL_CLOSE, PN_TRANSPORT,
+         PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED,
+         PN_CONNECTION_UNBOUND, PN_CONNECTION_FINAL, END);
   pn_free(srv->events);
   expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
-         PN_CONNECTION_BOUND, PN_CONNECTION_REMOTE_OPEN,
-         PN_CONNECTION_REMOTE_CLOSE, PN_CONNECTION_LOCAL_CLOSE,
-         PN_CONNECTION_UNBOUND, PN_CONNECTION_FINAL, END);
+         PN_CONNECTION_BOUND, PN_TRANSPORT, PN_TRANSPORT,
+         PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_LOCAL_CLOSE,
+         PN_TRANSPORT, PN_TRANSPORT_HEAD_CLOSED,
+         PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
+         PN_TRANSPORT_CLOSED, PN_CONNECTION_UNBOUND,
+         PN_CONNECTION_FINAL, END);
   pn_free(cli->events);
   pn_decref(ch);
   pn_reactor_free(reactor);
 }
 
-/*
-void dispatch(pn_handler_t *handler, pn_event_t *event) {
+typedef struct {
+  int received;
+} sink_t;
+
+static sink_t *sink(pn_handler_t *handler) {
+  return (sink_t *) pn_handler_mem(handler);
+}
+
+void sink_dispatch(pn_handler_t *handler, pn_event_t *event) {
+  sink_t *snk = sink(handler);
   pn_delivery_t *dlv = pn_event_delivery(event);
   switch (pn_event_type(event)) {
   case PN_DELIVERY:
     if (!pn_delivery_partial(dlv)) {
       pn_delivery_settle(dlv);
+      snk->received++;
     }
     break;
   default:
@@ -291,18 +314,87 @@ void dispatch(pn_handler_t *handler, pn_event_t *event) {
   }
 }
 
-static void test_reactor_flow(void) {
+typedef struct {
+  int remaining;
+} source_t;
+
+static source_t *source(pn_handler_t *handler) {
+  return (source_t *) pn_handler_mem(handler);
+}
+
+
+void source_dispatch(pn_handler_t *handler, pn_event_t *event) {
+  source_t *src = source(handler);
+  pn_connection_t *conn = pn_event_connection(event);
+  switch (pn_event_type(event)) {
+  case PN_CONNECTION_INIT:
+    {
+      pn_connection_set_hostname(conn, "127.0.0.1:5678");
+      pn_session_t *ssn = pn_session(conn);
+      pn_link_t *snd = pn_sender(ssn, "sender");
+      pn_connection_open(conn);
+      pn_session_open(ssn);
+      pn_link_open(snd);
+      // XXX: these keep the connection alive even when we release it
+      pn_decref(ssn);
+      pn_decref(snd);
+    }
+    break;
+  case PN_LINK_FLOW:
+    {
+      pn_link_t *link = pn_event_link(event);
+      while (pn_link_credit(link) > 0 && src->remaining > 0) {
+        pn_delivery_t *dlv = pn_delivery(link, pn_dtag("", 0));
+        assert(dlv);
+        pn_delivery_settle(dlv);
+        src->remaining--;
+      }
+
+      if (!src->remaining) {
+        pn_connection_close(conn);
+      }
+    }
+    break;
+  case PN_CONNECTION_REMOTE_CLOSE:
+    printf("rc=%i\n", pn_refcount(conn));
+    pn_connection_release(conn);
+    break;
+  default:
+    break;
+  }
+}
+
+static void test_reactor_transfer(int count, int window) {
   pn_reactor_t *reactor = pn_reactor();
-  assert(reactor);
-  pn_handler_t *root = pn_reactor_handler(reactor);
-  assert(root);
-  pn_handler_add(root, pn_handler(dispatch));
-  pn_handler_add(root, pn_handler_cast(pn_handshaker()));
-  pn_handler_add(root, pn_handler_cast(pn_flowcontroller(4*1024)));
-  pn_reactor_acceptor(reactor, "0.0.0.0", "5672", NULL);
+
+  pn_handler_t *sh = pn_handler_new(server_dispatch, sizeof(server_t), NULL);
+  server_t *srv = smem(sh);
+  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", sh);
+  srv->reactor = reactor;
+  srv->acceptor = acceptor;
+  srv->events = pn_list(PN_VOID, 0);
+  pn_handler_add(sh, pn_handshaker());
+  // XXX: a window of 1 doesn't work unless the flowcontroller is
+  // added after the thing that settles the delivery
+  pn_handler_add(sh, pn_flowcontroller(window));
+  pn_handler_t *snk = pn_handler_new(sink_dispatch, sizeof(sink_t), NULL);
+  sink(snk)->received = 0;
+  pn_handler_add(sh, snk);
+
+  pn_handler_t *ch = pn_handler_new(source_dispatch, sizeof(source_t), NULL);
+  source_t *src = source(ch);
+  src->remaining = count;
+  pn_reactor_connection(reactor, ch);
+
   pn_reactor_run(reactor);
+
+  assert(sink(snk)->received == count);
+
+  pn_free(srv->events);
   pn_reactor_free(reactor);
-  }*/
+  pn_handler_free(sh);
+  pn_handler_free(ch);
+}
 
 int main(int argc, char **argv)
 {
@@ -316,5 +408,10 @@ int main(int argc, char **argv)
   test_reactor_acceptor();
   test_reactor_acceptor_run();
   test_reactor_connect();
+  for (int i = 0; i < 64; i++) {
+    test_reactor_transfer(i, 2);
+  }
+  test_reactor_transfer(1024, 64);
+  test_reactor_transfer(4*1024, 1024);
   return 0;
 }
