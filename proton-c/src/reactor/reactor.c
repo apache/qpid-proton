@@ -35,6 +35,7 @@
 #include "selectable.h"
 
 struct pn_reactor_t {
+  pn_record_t *attachments;
   pn_io_t *io;
   pn_selector_t *selector;
   pn_collector_t *collector;
@@ -53,6 +54,7 @@ static void pn_dummy_dispatch(pn_handler_t *handler, pn_event_t *event) {
 
 static void pn_reactor_initialize(void *object) {
   pn_reactor_t *reactor = (pn_reactor_t *) object;
+  reactor->attachments = pn_record();
   reactor->io = pn_io();
   reactor->selector = pn_io_selector(reactor->io);
   reactor->collector = pn_collector();
@@ -62,11 +64,12 @@ static void pn_reactor_initialize(void *object) {
 
 static void pn_reactor_finalize(void *object) {
   pn_reactor_t *reactor = (pn_reactor_t *) object;
-  pn_selector_free(reactor->selector);
-  pn_io_free(reactor->io);
-  pn_collector_free(reactor->collector);
-  pn_free(reactor->handler);
-  pn_free(reactor->children);
+  pn_decref(reactor->attachments);
+  pn_decref(reactor->selector);
+  pn_decref(reactor->io);
+  pn_decref(reactor->collector);
+  pn_decref(reactor->handler);
+  pn_decref(reactor->children);
 }
 
 #define pn_reactor_hashcode NULL
@@ -76,6 +79,11 @@ static void pn_reactor_finalize(void *object) {
 pn_reactor_t *pn_reactor() {
   static const pn_class_t clazz = PN_CLASS(pn_reactor);
   return (pn_reactor_t *) pn_class_new(&clazz, sizeof(pn_reactor_t));
+}
+
+pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor) {
+  assert(reactor);
+  return reactor->attachments;
 }
 
 void pn_reactor_free(pn_reactor_t *reactor) {
@@ -182,35 +190,51 @@ void pn_reactor_process(pn_reactor_t *reactor) {
   }
 }
 
-void pn_reactor_run(pn_reactor_t *reactor) {
+void pn_reactor_start(pn_reactor_t *reactor) {
   assert(reactor);
   pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_INIT);
-  while (true) {
-    pn_reactor_process(reactor);
+}
 
-    if (!pn_selector_size(reactor->selector)) {
-      break;
+bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
+  assert(reactor);
+  pn_reactor_process(reactor);
+
+  if (!pn_selector_size(reactor->selector)) {
+    return false;
+  }
+
+  pn_selector_select(reactor->selector, timeout);
+  pn_selectable_t *sel;
+  int events;
+  while ((sel = pn_selector_next(reactor->selector, &events))) {
+    if (events & PN_READABLE) {
+      pn_selectable_readable(sel);
     }
-
-    pn_selector_select(reactor->selector, 1000);
-    pn_selectable_t *sel;
-    int events;
-    while ((sel = pn_selector_next(reactor->selector, &events))) {
-      if (events & PN_READABLE) {
-        pn_selectable_readable(sel);
-      }
-      if (events & PN_WRITABLE) {
-        pn_selectable_writable(sel);
-      }
-      if (events & PN_EXPIRED) {
-        pn_selectable_expired(sel);
-      }
-      if (pn_selectable_is_terminal(sel)) {
-        pn_selector_remove(reactor->selector, sel);
-        pn_list_remove(reactor->children, sel);
-      }
+    if (events & PN_WRITABLE) {
+      pn_selectable_writable(sel);
+    }
+    if (events & PN_EXPIRED) {
+      pn_selectable_expired(sel);
+    }
+    if (pn_selectable_is_terminal(sel)) {
+      pn_selector_remove(reactor->selector, sel);
+      pn_list_remove(reactor->children, sel);
     }
   }
+
+  return true;
+}
+
+void pn_reactor_stop(pn_reactor_t *reactor) {
+  assert(reactor);
   pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
   pn_reactor_process(reactor);
 }
+
+void pn_reactor_run(pn_reactor_t *reactor) {
+  assert(reactor);
+  pn_reactor_start(reactor);
+  while (pn_reactor_work(reactor, 1000)) {}
+  pn_reactor_stop(reactor);
+}
+
