@@ -21,11 +21,11 @@
 import sys
 import threading
 from proton.reactors import ApplicationEvent, Container
-from proton.handlers import TransactionalClientHandler
+from proton.handlers import MessagingHandler, TransactionHandler
 
-class TxRecv(TransactionalClientHandler):
+class TxRecv(MessagingHandler, TransactionHandler):
     def __init__(self):
-        super(TxRecv, self).__init__(prefetch=0)
+        super(TxRecv, self).__init__(prefetch=0, auto_accept=False)
 
     def on_start(self, event):
         self.container = event.container

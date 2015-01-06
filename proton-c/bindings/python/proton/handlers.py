@@ -384,7 +384,7 @@ class EndpointStateHandler(Handler):
 class MessagingHandler(Handler, Acking):
     """
     A general purpose handler that makes the proton-c events somewhat
-    simpler to deal with and.or avoids repetitive tasks for common use
+    simpler to deal with and/or avoids repetitive tasks for common use
     cases.
     """
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
@@ -406,45 +406,37 @@ class MessagingHandler(Handler, Acking):
         EndpointStateHandler.print_error(event.link, "link")
         event.connection.close()
 
-class TransactionalAcking(object):
-    def accept(self, delivery, transaction):
-        transaction.accept(delivery)
-
-class TransactionHandler(OutgoingMessageHandler, TransactionalAcking):
-    def __init__(self, auto_settle=True, delegate=None):
-        super(TransactionHandler, self).__init__(auto_settle, delegate)
-
-    def on_settled(self, event):
-        if hasattr(event.delivery, "transaction"):
-            event.transaction = event.delivery.transaction
-            event.delivery.transaction.handle_outcome(event)
-
+class TransactionHandler(object):
+    """
+    The interface for transaction handlers, i.e. objects that want to
+    be notified of state changes related to a transaction.
+    """
     def on_transaction_declared(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_transaction_declared', event)
+        pass
 
     def on_transaction_committed(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_transaction_committed', event)
+        pass
 
     def on_transaction_aborted(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_transaction_aborted', event)
+        pass
 
     def on_transaction_declare_failed(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_transaction_declare_failed', event)
+        pass
 
     def on_transaction_commit_failed(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_transaction_commit_failed', event)
+        pass
 
-class TransactionalClientHandler(Handler, TransactionalAcking):
+class TransactionalClientHandler(MessagingHandler, TransactionHandler):
+    """
+    An extension to the MessagingHandler for applications using
+    transactions.
+    """
+
     def __init__(self, prefetch=10, auto_accept=False, auto_settle=True, peer_close_is_error=False):
-        super(TransactionalClientHandler, self).__init__()
-        self.handlers = []
-        if prefetch:
-            self.handlers.append(FlowController(prefetch))
-        self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
-        self.handlers.append(IncomingMessageHandler(auto_accept, self))
-        self.handlers.append(TransactionHandler(auto_settle, self))
+        super(TransactionalClientHandler, self).__init__(prefetch, auto_accept, auto_settle, peer_close_is_error)
+
+    def accept(self, delivery, transaction=None):
+        if transaction:
+            transaction.accept(delivery)
+        else:
+            super(TransactionalClientHandler, self).accept(delivery)

@@ -29,15 +29,22 @@ class Db(object):
         self.tasks = Queue.Queue()
         self.position = None
         self.pending_events = []
+        self.running = True
         self.thread = threading.Thread(target=self._process)
         self.thread.daemon=True
         self.thread.start()
+
+    def close(self):
+        self.tasks.put(lambda conn: self._close())
 
     def reset(self):
         self.tasks.put(lambda conn: self._reset())
 
     def load(self, records, event=None):
         self.tasks.put(lambda conn: self._load(conn, records, event))
+
+    def get_id(self, event):
+        self.tasks.put(lambda conn: self._get_id(conn, event))
 
     def insert(self, id, data, event=None):
         self.tasks.put(lambda conn: self._insert(conn, id, data, event))
@@ -47,6 +54,19 @@ class Db(object):
 
     def _reset(self, ignored=None):
         self.position = None
+
+    def _close(self, ignored=None):
+        self.running = False
+
+    def _get_id(self, conn, event):
+        cursor = conn.execute("SELECT * FROM records ORDER BY id DESC")
+        row = cursor.fetchone()
+        if event:
+            if row:
+                event.id = row['id']
+            else:
+                event.id = 0
+            self.events.trigger(event)
 
     def _load(self, conn, records, event):
         if self.position:
@@ -80,7 +100,7 @@ class Db(object):
         conn = sqlite3.connect(self.db)
         conn.row_factory = sqlite3.Row
         with conn:
-            while True:
+            while self.running:
                 f = self.tasks.get(True)
                 try:
                     while True:
@@ -91,3 +111,4 @@ class Db(object):
                 for event in self.pending_events:
                     self.events.trigger(event)
                 self.pending_events = []
+        self.events.close()

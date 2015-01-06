@@ -18,36 +18,61 @@
 # under the License.
 #
 
+import optparse
 from proton.handlers import MessagingHandler
 from proton.reactors import ApplicationEvent, Container
 from db_common import Db
 
 class Recv(MessagingHandler):
-    def __init__(self, url):
+    def __init__(self, url, count):
         super(Recv, self).__init__(auto_accept=False)
         self.url = url
         self.delay = 0
         # TODO: load last tag from db
         self.last_id = None
+        self.expected = count
+        self.received = 0
+        self.accepted = 0
 
     def on_start(self, event):
         self.db = Db("dst_db", event.container.get_event_trigger())
+        e = ApplicationEvent("id_loaded")
+        e.container = event.container
+        self.db.get_id(e)
+
+    def on_id_loaded(self, event):
+        self.last_id = event.id
         event.container.create_receiver(self.url)
 
     def on_record_inserted(self, event):
         self.accept(event.delivery)
+        self.accepted += 1
+        if self.accepted == self.expected:
+            event.connection.close()
+            self.db.close()
 
     def on_message(self, event):
         id = int(event.message.id)
         if (not self.last_id) or id > self.last_id:
-            self.last_id = id
-            self.db.insert(id, event.message.body, ApplicationEvent("record_inserted", delivery=event.delivery))
-            print "inserted message %s" % id
+            if self.received < self.expected:
+                self.received += 1
+                self.last_id = id
+                self.db.insert(id, event.message.body, ApplicationEvent("record_inserted", delivery=event.delivery))
+                print "inserted message %s" % id
+            else:
+                self.release(event.delivery)
         else:
             self.accept(event.delivery)
 
+parser = optparse.OptionParser(usage="usage: %prog [options]")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address from which messages are received (default %default)")
+parser.add_option("-m", "--messages", type="int", default=0,
+                  help="number of messages to receive; 0 receives indefinitely (default %default)")
+opts, args = parser.parse_args()
+
 try:
-    Container(Recv("localhost:5672/examples")).run()
+    Container(Recv(opts.address, opts.messages)).run()
 except KeyboardInterrupt: pass
 
 

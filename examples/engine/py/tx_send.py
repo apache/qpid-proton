@@ -18,13 +18,15 @@
 # under the License.
 #
 
-from proton import Message
+import optparse
+from proton import Message, Url
 from proton.reactors import Container
-from proton.handlers import TransactionalClientHandler
+from proton.handlers import MessagingHandler, TransactionHandler
 
-class TxSend(TransactionalClientHandler):
-    def __init__(self, messages, batch_size):
+class TxSend(MessagingHandler, TransactionHandler):
+    def __init__(self, url, messages, batch_size):
         super(TxSend, self).__init__()
+        self.url = Url(url)
         self.current_batch = 0
         self.committed = 0
         self.confirmed = 0
@@ -33,8 +35,8 @@ class TxSend(TransactionalClientHandler):
 
     def on_start(self, event):
         self.container = event.container
-        self.conn = self.container.connect("localhost:5672", handler=self)
-        self.sender = self.container.create_sender(self.conn, "examples")
+        self.conn = self.container.connect(self.url)
+        self.sender = self.container.create_sender(self.conn, self.url.path)
         self.container.declare_transaction(self.conn, handler=self)
         self.transaction = None
 
@@ -46,7 +48,7 @@ class TxSend(TransactionalClientHandler):
         self.send()
 
     def send(self):
-        while self.transaction and self.sender.credit and self.committed < self.total:
+        while self.transaction and self.sender.credit and (self.committed + self.current_batch) < self.total:
             msg = Message(body={'sequence':(self.committed+self.current_batch+1)})
             self.sender.send_msg(msg, transaction=self.transaction)
             self.current_batch += 1
@@ -70,6 +72,16 @@ class TxSend(TransactionalClientHandler):
     def on_disconnected(self, event):
         self.current_batch = 0
 
+parser = optparse.OptionParser(usage="usage: %prog [options]",
+                               description="Send messages transactionally to the supplied address.")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address to which messages are sent (default %default)")
+parser.add_option("-m", "--messages", type="int", default=100,
+                  help="number of messages to send (default %default)")
+parser.add_option("-b", "--batch-size", type="int", default=10,
+                  help="number of messages in each transaction (default %default)")
+opts, args = parser.parse_args()
+
 try:
-    Container(TxSend(10000, 10)).run()
+    Container(TxSend(opts.address, opts.messages, opts.batch_size)).run()
 except KeyboardInterrupt: pass

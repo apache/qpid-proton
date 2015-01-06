@@ -23,7 +23,7 @@ from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler
 from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, symbol
 from proton import Terminus, Timeout, Transport, TransportException, ulong, Url
 from select import select
-from proton.handlers import nested_handlers, ScopedHandler
+from proton.handlers import nested_handlers, OutgoingMessageHandler, ScopedHandler
 
 class AmqpSocket(object):
     """
@@ -224,12 +224,13 @@ class EventInjector(object):
 
     def close(self):
         self._closed = True
+        os.write(self.pipe[1], "!")
 
     def fileno(self):
         return self.pipe[0]
 
     def reading(self):
-        return True
+        return not self.closed()
 
     def writing(self):
         return False
@@ -481,6 +482,15 @@ class Transaction(object):
         self.failed = False
         self._pending = []
         self.settle_before_discharge = settle_before_discharge
+        class InternalTransactionHandler(OutgoingMessageHandler):
+            def __init__(self):
+                super(InternalTransactionHandler, self).__init__(auto_settle=True)
+
+            def on_settled(self, event):
+                if hasattr(event.delivery, "transaction"):
+                    event.transaction = event.delivery.transaction
+                    event.delivery.transaction.handle_outcome(event)
+        self.internal_handler = InternalTransactionHandler()
         self.declare()
 
     def commit(self):
@@ -497,7 +507,7 @@ class Transaction(object):
         self._discharge = self._send_ctrl(symbol(u'amqp:discharge:list'), [self.id, failed])
 
     def _send_ctrl(self, descriptor, value):
-        delivery = self.txn_ctrl.send_msg(Message(body=Described(descriptor, value)), handler=self.handler)
+        delivery = self.txn_ctrl.send_msg(Message(body=Described(descriptor, value)), handler=self.internal_handler)
         delivery.transaction = self
         return delivery
 

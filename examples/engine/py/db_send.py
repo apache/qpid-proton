@@ -18,6 +18,7 @@
 # under the License.
 #
 
+import optparse
 import Queue
 import time
 from proton import Message
@@ -26,13 +27,18 @@ from proton.reactors import ApplicationEvent, Container
 from db_common import Db
 
 class Send(MessagingHandler):
-    def __init__(self, url):
+    def __init__(self, url, count):
         super(Send, self).__init__()
         self.url = url
         self.delay = 0
         self.sent = 0
+        self.confirmed = 0
         self.load_count = 0
         self.records = Queue.Queue(maxsize=50)
+        self.target = count
+
+    def keep_sending(self):
+        return self.target == 0 or self.sent < self.target
 
     def on_start(self, event):
         self.container = event.container
@@ -59,6 +65,7 @@ class Send(MessagingHandler):
 
     def send(self):
         while self.sender.credit and not self.records.empty():
+            if not self.keep_sending(): return
             record = self.records.get(False)
             id = record['id']
             self.sender.send_msg(Message(id=id, durable=True, body=record['description']), tag=str(id))
@@ -70,16 +77,29 @@ class Send(MessagingHandler):
         id = int(event.delivery.tag)
         self.db.delete(id)
         print "settled message %s" % id
+        self.confirmed += 1
+        if self.confirmed == self.target:
+            event.connection.close()
+            self.db.close()
 
     def on_disconnected(self, event):
         self.db.reset()
+        self.sent = self.confirmed
 
     def on_timer(self, event):
         if event.subject == "data":
             print "Rechecking for data..."
             self.request_records()
 
+parser = optparse.OptionParser(usage="usage: %prog [options]",
+                               description="Send messages to the supplied address.")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address to which messages are sent (default %default)")
+parser.add_option("-m", "--messages", type="int", default=0,
+                  help="number of messages to send; 0 sends indefinitely (default %default)")
+opts, args = parser.parse_args()
+
 try:
-    Container(Send("localhost:5672/examples")).run()
+    Container(Send(opts.address, opts.messages)).run()
 except KeyboardInterrupt: pass
 

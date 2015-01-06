@@ -18,6 +18,7 @@
 # under the License.
 #
 
+import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactors import Container
@@ -48,6 +49,14 @@ class Send(MessagingHandler):
     def on_disconnected(self, event):
         self.sent = self.confirmed
 
+parser = optparse.OptionParser(usage="usage: %prog [options]",
+                               description="Send messages to the supplied address.")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address to which messages are sent (default %default)")
+parser.add_option("-m", "--messages", type="int", default=100,
+                  help="number of messages to send (default %default)")
+opts, args = parser.parse_args()
+
 try:
-    Container(Send("localhost:5672/examples", 10000)).run()
+    Container(Send(opts.address, opts.messages)).run()
 except KeyboardInterrupt: pass
