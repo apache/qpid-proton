@@ -950,6 +950,9 @@ def pn_transport_condition(trans):
 
 from org.apache.qpid.proton.engine import Event
 
+PN_REACTOR_INIT = Event.Type.REACTOR_INIT
+PN_REACTOR_FINAL = Event.Type.REACTOR_FINAL
+
 PN_CONNECTION_INIT = Event.Type.CONNECTION_INIT
 PN_CONNECTION_BOUND = Event.Type.CONNECTION_BOUND
 PN_CONNECTION_UNBOUND = Event.Type.CONNECTION_UNBOUND

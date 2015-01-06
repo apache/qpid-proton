@@ -3273,16 +3273,7 @@ class Collector:
     pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
   def peek(self):
-    event = pn_collector_peek(self._impl)
-    if event is None:
-      return None
-
-    clazz = pn_class_name(pn_event_class(event))
-    context = wrappers[clazz](pn_event_context(event))
-    if isinstance(context, EventBase):
-      return context
-    else:
-      return Event(clazz, context, EventType.TYPES[pn_event_type(event)])
+    return Event.wrap(pn_collector_peek(self._impl))
 
   def pop(self):
     ev = self.peek()
@@ -3323,6 +3314,21 @@ class EventBase(object):
     return dispatch(handler, self.type.method, self)
 
 class Event(EventBase):
+
+  @staticmethod
+  def wrap(impl):
+    if impl is None:
+      return None
+
+    clazz = pn_class_name(pn_event_class(impl))
+    context = wrappers[clazz](pn_event_context(impl))
+    if isinstance(context, EventBase):
+      return context
+    else:
+      return Event(clazz, context, EventType.TYPES[pn_event_type(impl)])
+
+  REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
+  REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
 
   CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
   CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")

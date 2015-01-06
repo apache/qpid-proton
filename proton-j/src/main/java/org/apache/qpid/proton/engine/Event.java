@@ -30,6 +30,9 @@ public interface Event
 {
 
     public enum Type {
+        REACTOR_INIT,
+        REACTOR_FINAL,
+
         CONNECTION_INIT,
         CONNECTION_BOUND,
         CONNECTION_UNBOUND,
