@@ -867,8 +867,8 @@ void test_heap(int seed, int size)
   srand(seed);
   pn_list_t *list = pn_list(PN_VOID, 0);
 
-  intptr_t min;
-  intptr_t max;
+  intptr_t min = 0;
+  intptr_t max = 0;
 
   for (int i = 0; i < size; i++) {
     intptr_t r = rand();
