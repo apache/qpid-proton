@@ -136,6 +136,44 @@ void pn_list_fill(pn_list_t *list, void *value, int n)
   }
 }
 
+void pn_list_minpush(pn_list_t *list, void *value)
+{
+  assert(list);
+  pn_list_add(list, value);
+  // we use one based indexing for the heap
+  void **heap = list->elements - 1;
+  int now = list->size;
+  while (now > 1 && pn_class_compare(list->clazz, heap[now/2], value) > 0) {
+    heap[now] = heap[now/2];
+    now /= 2;
+  }
+  heap[now] = value;
+}
+
+void *pn_list_minpop(pn_list_t *list)
+{
+  assert(list);
+  // we use one based indexing for the heap
+  void **heap = list->elements - 1;
+  void *min = heap[1];
+  void *last = pn_list_pop(list);
+  int size = pn_list_size(list);
+  int now, child;
+  for (now = 1; now*2 <= size; now = child) {
+    child = now*2;
+    if (child != size && pn_class_compare(list->clazz, heap[child], heap[child + 1]) > 0) {
+      child++;
+    }
+    if (pn_class_compare(list->clazz, last, heap[child]) > 0) {
+      heap[now] = heap[child];
+    } else {
+      break;
+    }
+  }
+  heap[now] = last;
+  return min;
+}
+
 typedef struct {
   pn_list_t *list;
   size_t index;

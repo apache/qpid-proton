@@ -144,6 +144,8 @@ PN_EXTERN bool pn_list_remove(pn_list_t *list, void *value);
 PN_EXTERN void pn_list_del(pn_list_t *list, int index, int n);
 PN_EXTERN void pn_list_clear(pn_list_t *list);
 PN_EXTERN void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
+PN_EXTERN void pn_list_minpush(pn_list_t *list, void *value);
+PN_EXTERN void *pn_list_minpop(pn_list_t *list);
 
 #define PN_REFCOUNT_KEY (0x2)
 #define PN_REFCOUNT_VALUE (0x4)

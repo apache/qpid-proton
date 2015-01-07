@@ -862,6 +862,48 @@ void test_iterator(void)
   pn_free(it);
 }
 
+void test_heap(int seed, int size)
+{
+  srand(seed);
+  pn_list_t *list = pn_list(PN_VOID, 0);
+
+  intptr_t min;
+  intptr_t max;
+
+  for (int i = 0; i < size; i++) {
+    intptr_t r = rand();
+
+    if (i == 0) {
+      min = r;
+      max = r;
+    } else {
+      if (r < min) {
+        min = r;
+      }
+      if (r > max) {
+        max = r;
+      }
+    }
+
+    pn_list_minpush(list, (void *) r);
+  }
+
+  intptr_t prev = (intptr_t) pn_list_minpop(list);
+  assert(prev == min);
+  assert(pn_list_size(list) == (size_t)(size - 1));
+  int count = 0;
+  while (pn_list_size(list)) {
+    intptr_t r = (intptr_t) pn_list_minpop(list);
+    assert(r >= prev);
+    prev = r;
+    count++;
+  }
+  assert(count == size - 1);
+  assert(prev == max);
+
+  pn_free(list);
+}
+
 int main(int argc, char **argv)
 {
   for (size_t i = 0; i < 128; i++) {
@@ -923,6 +965,11 @@ int main(int argc, char **argv)
   test_map_inspect();
   test_list_compare();
   test_iterator();
+  for (int seed = 0; seed < 64; seed++) {
+    for (int size = 1; size <= 64; size++) {
+      test_heap(seed, size);
+    }
+  }
 
   return 0;
 }

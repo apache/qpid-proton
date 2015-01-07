@@ -27,7 +27,7 @@
 #define pn_object_finalize NULL
 #define pn_object_inspect NULL
 uintptr_t pn_object_hashcode(void *object) { return (uintptr_t) object; }
-intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
+intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
 
 const pn_class_t PNI_OBJECT = PN_CLASS(pn_object);
 const pn_class_t *PN_OBJECT = &PNI_OBJECT;
@@ -41,7 +41,7 @@ static int pn_void_refcount(void *object) { return -1; }
 static void pn_void_free(void *object) { free(object); }
 static const pn_class_t *pn_void_reify(void *object) { return PN_VOID; }
 uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
-intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) b - (intptr_t) a; }
+intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
 int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
 
 const pn_class_t PNI_VOID = PN_METACLASS(pn_void);
@@ -162,7 +162,7 @@ intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
   if (a && b && clazz->compare) {
     return clazz->compare(a, b);
   } else {
-    return (intptr_t) b - (intptr_t) a;
+    return (intptr_t) a - (intptr_t) b;
   }
 }
 
