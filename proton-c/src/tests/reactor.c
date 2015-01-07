@@ -210,8 +210,6 @@ static server_t *smem(pn_handler_t *handler) {
   return (server_t *) pn_handler_mem(handler);
 }
 
-#include <stdio.h>
-
 static void server_dispatch(pn_handler_t *handler, pn_event_t *event) {
   server_t *srv = smem(handler);
   pn_list_add(srv->events, (void *) pn_event_type(event));
@@ -356,7 +354,6 @@ void source_dispatch(pn_handler_t *handler, pn_event_t *event) {
     }
     break;
   case PN_CONNECTION_REMOTE_CLOSE:
-    printf("rc=%i\n", pn_refcount(conn));
     pn_connection_release(conn);
     break;
   default:
