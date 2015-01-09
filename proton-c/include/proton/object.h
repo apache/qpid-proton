@@ -65,6 +65,61 @@ PN_EXTERN extern const pn_class_t *PN_OBJECT;
 PN_EXTERN extern const pn_class_t *PN_VOID;
 PN_EXTERN extern const pn_class_t *PN_WEAKREF;
 
+#define PN_CLASSDEF(PREFIX)                                               \
+static void PREFIX ## _initialize_cast(void *object) {                    \
+  PREFIX ## _initialize((PREFIX ## _t *) object);                         \
+}                                                                         \
+                                                                          \
+static void PREFIX ## _finalize_cast(void *object) {                      \
+  PREFIX ## _finalize((PREFIX ## _t *) object);                           \
+}                                                                         \
+                                                                          \
+static uintptr_t PREFIX ## _hashcode_cast(void *object) {                 \
+  uintptr_t (*fp)(PREFIX ## _t *) = PREFIX ## _hashcode;                  \
+  if (fp) {                                                               \
+    return fp((PREFIX ## _t *) object);                                   \
+  } else {                                                                \
+    return (uintptr_t) object;                                            \
+  }                                                                       \
+}                                                                         \
+                                                                          \
+static intptr_t PREFIX ## _compare_cast(void *a, void *b) {               \
+  intptr_t (*fp)(PREFIX ## _t *, PREFIX ## _t *) = PREFIX ## _compare;    \
+  if (fp) {                                                               \
+    return fp((PREFIX ## _t *) a, (PREFIX ## _t *) b);                    \
+  } else {                                                                \
+    return (intptr_t) a - (intptr_t) b;                                   \
+  }                                                                       \
+}                                                                         \
+                                                                          \
+static int PREFIX ## _inspect_cast(void *object, pn_string_t *str) {      \
+  int (*fp)(PREFIX ## _t *, pn_string_t *) = PREFIX ## _inspect;          \
+  if (fp) {                                                               \
+    return fp((PREFIX ## _t *) object, str);                              \
+  } else {                                                                \
+    return pn_string_addf(str, "%s<%p>", #PREFIX, object);                \
+  }                                                                       \
+}                                                                         \
+                                                                          \
+PREFIX ## _t *PREFIX ## _new(void) {                                      \
+  static const pn_class_t clazz = {                                       \
+    #PREFIX,                                                              \
+    CID_ ## PREFIX,                                                       \
+    pn_object_new,                                                        \
+    PREFIX ## _initialize_cast,                                           \
+    pn_object_incref,                                                     \
+    pn_object_decref,                                                     \
+    pn_object_refcount,                                                   \
+    PREFIX ## _finalize_cast,                                             \
+    pn_object_free,                                                       \
+    pn_object_reify,                                                      \
+    PREFIX ## _hashcode_cast,                                             \
+    PREFIX ## _compare_cast,                                              \
+    PREFIX ## _inspect_cast                                               \
+  };                                                                      \
+  return (PREFIX ## _t *) pn_class_new(&clazz, sizeof(PREFIX ## _t));     \
+}
+
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
     CID_ ## PREFIX,                             \
