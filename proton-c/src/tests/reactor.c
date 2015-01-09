@@ -77,7 +77,7 @@ void expect(pn_list_t *events, ...) {
       break;
     }
     assert(idx < pn_list_size(events));
-    pn_event_type_t actual = (pn_event_type_t) pn_list_get(events, idx++);
+    pn_event_type_t actual = (pn_event_type_t)(size_t) pn_list_get(events, idx++);
     assert(expected == actual);
   }
   va_end(ap);
