@@ -195,7 +195,17 @@ void pn_selector_remove(pn_selector_t *selector, pn_selectable_t *selectable)
     pn_selectable_t *sel = (pn_selectable_t *) pn_list_get(selector->selectables, i);
     pni_selectable_set_index(sel, i);
   }
+
   pni_selectable_set_index(selectable, -1);
+
+  if (selector->current >= (size_t) idx) {
+    selector->current--;
+  }
+}
+
+size_t pn_selector_size(pn_selector_t *selector) {
+  assert(selector);
+  return pn_list_size(selector->selectables);
 }
 
 int pn_selector_select(pn_selector_t *selector, int timeout)
