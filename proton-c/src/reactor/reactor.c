@@ -269,6 +269,7 @@ bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
   pn_selector_select(reactor->selector, timeout);
   pn_selectable_t *sel;
   int events;
+  reactor->now = pn_i_now();
   while ((sel = pn_selector_next(reactor->selector, &events))) {
     if (events & PN_READABLE) {
       pn_selectable_readable(sel);
