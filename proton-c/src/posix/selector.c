@@ -33,7 +33,6 @@ struct pn_selector_t {
   pn_timestamp_t *deadlines;
   size_t capacity;
   pn_list_t *selectables;
-  pn_timestamp_t deadline;
   size_t current;
   pn_timestamp_t awoken;
   pn_error_t *error;
@@ -46,7 +45,6 @@ void pn_selector_initialize(void *obj)
   selector->deadlines = NULL;
   selector->capacity = 0;
   selector->selectables = pn_list(PN_WEAKREF, 0);
-  selector->deadline = 0;
   selector->current = 0;
   selector->awoken = 0;
   selector->error = pn_error();
@@ -153,7 +151,7 @@ int pn_selector_select(pn_selector_t *selector, int timeout)
 
     if (deadline) {
       pn_timestamp_t now = pn_i_now();
-      int delta = selector->deadline - now;
+      int64_t delta = deadline - now;
       if (delta < 0) {
         timeout = 0;
       } else if (delta < timeout) {
