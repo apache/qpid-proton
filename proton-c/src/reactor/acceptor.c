@@ -20,10 +20,10 @@
  */
 
 #include <proton/io.h>
-#include <proton/reactor.h>
 #include <proton/sasl.h>
 #include <proton/selector.h>
 #include <proton/transport.h>
+#include "reactor.h"
 #include "selectable.h"
 
 static ssize_t pni_acceptor_capacity(pn_selectable_t *sel) {
@@ -36,8 +36,7 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
   char name[1024];
   pn_socket_t sock = pn_accept(pn_reactor_io(reactor), pn_selectable_fd(sel), name, 1024);
-  pn_record_t *record = pn_selectable_attachments(sel);
-  pn_handler_t *handler = (pn_handler_t *) pn_record_get(record, PN_HANDLER);
+  pn_handler_t *handler = pni_record_get_handler(pn_selectable_attachments(sel));
   if (!handler) { handler = pn_reactor_handler(reactor); }
   pn_connection_t *conn = pn_reactor_connection(reactor, handler);
   pn_transport_t *trans = pn_transport();
@@ -64,9 +63,7 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   pn_socket_t socket = pn_listen(pn_reactor_io(reactor), host, port);
   pni_selectable_set_fd(sel, socket);
   pni_selectable_set_context(sel, reactor);
-  pn_record_t *record = pn_selectable_attachments(sel);
-  pn_record_def(record, PN_HANDLER, PN_OBJECT);
-  pn_record_set(record, PN_HANDLER, handler);
+  pni_record_init_handler(pn_selectable_attachments(sel), handler);
   pn_reactor_update(reactor, sel);
   return (pn_acceptor_t *) sel;
 }

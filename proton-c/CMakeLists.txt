@@ -308,6 +308,7 @@ set (qpid-proton-core
   src/reactor/handler.c
   src/reactor/connection.c
   src/reactor/acceptor.c
+  src/reactor/timer.c
 
   src/handlers/handshaker.c
   src/handlers/flowcontroller.c

@@ -98,6 +98,11 @@ typedef enum {
   PN_REACTOR_FINAL,
 
   /**
+   * A timer event has occurred.
+   */
+  PN_TIMER,
+
+  /**
    * The connection has been created. This is the first event that
    * will ever be issued for a connection. Events of this type point
    * to the relevant connection.

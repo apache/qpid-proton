@@ -44,6 +44,8 @@ extern "C" {
 typedef struct pn_handler_t pn_handler_t;
 typedef struct pn_reactor_t pn_reactor_t;
 typedef struct pn_acceptor_t pn_acceptor_t;
+typedef struct pn_timer_t pn_timer_t;
+typedef struct pn_task_t pn_task_t;
 
 PN_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *));
 PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *), size_t size,
@@ -70,11 +72,18 @@ PN_EXTERN void pn_reactor_start(pn_reactor_t *reactor);
 PN_EXTERN bool pn_reactor_work(pn_reactor_t *reactor, int timeout);
 PN_EXTERN void pn_reactor_stop(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_run(pn_reactor_t *reactor);
+PN_EXTERN pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *handler);
+
 
 PN_EXTERN void pn_acceptor_close(pn_reactor_t *reactor, pn_acceptor_t *acceptor);
 
-PN_EXTERN extern void *pni_handler;
-#define PN_HANDLER ((pn_handle_t) &pni_handler)
+PN_EXTERN pn_timer_t *pn_timer(pn_collector_t *collector);
+PN_EXTERN pn_timestamp_t pn_timer_deadline(pn_timer_t *timer);
+PN_EXTERN void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now);
+PN_EXTERN pn_task_t *pn_timer_schedule(pn_timer_t *timer, pn_timestamp_t deadline);
+PN_EXTERN int pn_timer_tasks(pn_timer_t *timer);
+
+PN_EXTERN pn_record_t *pn_task_attachments(pn_task_t *task);
 
 /** @}
  */

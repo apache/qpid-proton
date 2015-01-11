@@ -236,6 +236,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_REACTOR_INIT";
   case PN_REACTOR_FINAL:
     return "PN_REACTOR_FINAL";
+  case PN_TIMER:
+    return "PN_TIMER";
   case PN_CONNECTION_INIT:
     return "PN_CONNECTION_INIT";
   case PN_CONNECTION_BOUND:

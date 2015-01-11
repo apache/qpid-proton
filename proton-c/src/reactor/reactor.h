@@ -1,5 +1,6 @@
-#ifndef PROTON_CID_H
-#define PROTON_CID_H 1
+#ifndef _PROTON_SRC_REACTOR_H
+#define _PROTON_SRC_REACTOR_H 1
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,42 +22,9 @@
  *
  */
 
-typedef enum {
-  CID_pn_object = 1,
-  CID_pn_void,
-  CID_pn_weakref,
+#include <proton/reactor.h>
 
-  CID_pn_string,
-  CID_pn_list,
-  CID_pn_map,
-  CID_pn_hash,
-  CID_pn_record,
+pn_handler_t *pni_record_get_handler(pn_record_t *record);
+void pni_record_init_handler(pn_record_t *record, pn_handler_t *handler);
 
-  CID_pn_collector,
-  CID_pn_event,
-
-  CID_pn_encoder,
-  CID_pn_decoder,
-  CID_pn_data,
-
-  CID_pn_connection,
-  CID_pn_session,
-  CID_pn_link,
-  CID_pn_delivery,
-  CID_pn_transport,
-
-  CID_pn_message,
-
-  CID_pn_reactor,
-  CID_pn_handler,
-  CID_pn_timer,
-  CID_pn_task,
-
-  CID_pn_io,
-  CID_pn_selector,
-  CID_pn_selectable,
-
-  CID_pn_url
-} pn_cid_t;
-
-#endif /* cid.h */
+#endif /* src/reactor.h */

@@ -21,13 +21,13 @@
 
 #include <proton/connection.h>
 #include <proton/object.h>
-#include <proton/reactor.h>
 #include <proton/sasl.h>
 #include <proton/transport.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include "selectable.h"
+#include "reactor.h"
 
 // XXX: overloaded for both directions
 static void *pni_transportctx = NULL;
@@ -202,9 +202,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
 pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *handler) {
   assert(reactor);
   pn_connection_t *connection = pn_connection();
-  pn_record_t *record = pn_connection_attachments(connection);
-  pn_record_def(record, PN_HANDLER, PN_OBJECT);
-  pn_record_set(record, PN_HANDLER, handler);
+  pni_record_init_handler(pn_connection_attachments(connection), handler);
   pn_connection_collect(connection, pn_reactor_collector(reactor));
   pn_list_add(pn_reactor_children(reactor), connection);
   pn_decref(connection);

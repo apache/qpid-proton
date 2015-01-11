@@ -159,7 +159,7 @@ static void test_reactor_connection(void) {
 static void test_reactor_acceptor(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5672", NULL);
+  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", NULL);
   assert(acceptor);
   pn_reactor_free(reactor);
 }
@@ -193,7 +193,7 @@ static void test_reactor_acceptor_run(void) {
   assert(reactor);
   pn_handler_t *root = pn_reactor_handler(reactor);
   assert(root);
-  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5672", NULL);
+  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", NULL);
   assert(acceptor);
   pn_handler_add(root, tra_handler(acceptor));
   pn_reactor_run(reactor);
@@ -241,7 +241,7 @@ static void client_dispatch(pn_handler_t *handler, pn_event_t *event) {
   pn_connection_t *conn = pn_event_connection(event);
   switch (pn_event_type(event)) {
   case PN_CONNECTION_INIT:
-    pn_connection_set_hostname(conn, "127.0.0.1:5672");
+    pn_connection_set_hostname(conn, "127.0.0.1:5678");
     pn_connection_open(conn);
     break;
   case PN_CONNECTION_REMOTE_OPEN:
@@ -259,7 +259,7 @@ static void test_reactor_connect(void) {
   pn_reactor_t *reactor = pn_reactor();
   pn_handler_t *sh = pn_handler_new(server_dispatch, sizeof(server_t), NULL);
   server_t *srv = smem(sh);
-  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5672", sh);
+  pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", sh);
   srv->reactor = reactor;
   srv->acceptor = acceptor;
   srv->events = pn_list(PN_VOID, 0);
@@ -393,6 +393,35 @@ static void test_reactor_transfer(int count, int window) {
   pn_handler_free(ch);
 }
 
+static void test_reactor_schedule(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_list_t *events = pn_list(PN_VOID, 0);
+  pn_handler_add(root, test_handler(events));
+  pn_reactor_schedule(reactor, 0, NULL);
+  pn_reactor_run(reactor);
+  pn_reactor_free(reactor);
+  expect(events, PN_REACTOR_INIT, PN_TIMER, PN_REACTOR_FINAL, END);
+  pn_free(events);
+}
+
+static void test_reactor_schedule_handler(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_list_t *events = pn_list(PN_VOID, 0);
+  pn_list_t *tevents = pn_list(PN_VOID, 0);
+  pn_handler_add(root, test_handler(events));
+  pn_handler_t *th = test_handler(tevents);
+  pn_reactor_schedule(reactor, 0, th);
+  pn_reactor_run(reactor);
+  pn_reactor_free(reactor);
+  pn_handler_free(th);
+  expect(events, PN_REACTOR_INIT, PN_REACTOR_FINAL, END);
+  expect(tevents, PN_TIMER, END);
+  pn_free(events);
+  pn_free(tevents);
+}
+
 int main(int argc, char **argv)
 {
   test_reactor();
@@ -410,5 +439,7 @@ int main(int argc, char **argv)
   }
   test_reactor_transfer(1024, 64);
   test_reactor_transfer(4*1024, 1024);
+  test_reactor_schedule();
+  test_reactor_schedule_handler();
   return 0;
 }

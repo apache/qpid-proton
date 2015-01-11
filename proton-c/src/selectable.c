@@ -75,7 +75,9 @@ void pn_selectable_initialize(void *obj)
 void pn_selectable_finalize(void *obj)
 {
   pn_selectable_t *sel = (pn_selectable_t *) obj;
-  sel->finalize(sel);
+  if (sel->finalize) {
+    sel->finalize(sel);
+  }
   pn_free(sel->context);
 }
 
