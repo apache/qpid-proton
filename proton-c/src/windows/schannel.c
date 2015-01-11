@@ -37,6 +37,7 @@
 #include "engine/engine-internal.h"
 #include "platform.h"
 #include "util.h"
+#include "transport/autodetect.h"
 
 #include <assert.h>
 
@@ -243,6 +244,7 @@ struct pni_ssl_t {
   const char *peer_hostname;
   ssl_state_t state;
 
+  bool protocol_detected;
   bool queued_shutdown;
   bool ssl_closed;            // shutdown complete, or SSL error
   ssize_t app_input_closed;   // error code returned by upper layer process input
@@ -644,18 +646,46 @@ bool pn_ssl_allow_unsecured(pn_transport_t *transport)
   return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
 }
 
-bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size )
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (ssl->state != RUNNING || !SecIsValidHandle(&ssl->ctxt_handle))
+    return false;
   *buffer = '\0';
-  snprintf( buffer, size, "%s", "TODO: cipher_name" );
-  return true;
+  SecPkgContext_ConnectionInfo info;
+  if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
+    // TODO: come up with string for all permutations?
+    snprintf( buffer, size, "%x_%x:%x_%x:%x_%x",
+              info.aiExch, info.dwExchStrength,
+              info.aiCipher, info.dwCipherStrength,
+              info.aiHash, info.dwHashStrength);
+    return true;
+  }
+  return false;
 }
 
-bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size )
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (ssl->state != RUNNING || !SecIsValidHandle(&ssl->ctxt_handle))
+    return false;
   *buffer = '\0';
-  snprintf( buffer, size, "%s", "TODO: protocol name" );
-  return true;
+  SecPkgContext_ConnectionInfo info;
+  if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
+    if (info.dwProtocol & (SP_PROT_TLS1_CLIENT | SP_PROT_TLS1_SERVER))
+      snprintf(buffer, size, "%s", "TLSv1");
+    // TLSV1.1 and TLSV1.2 are supported as of XP-SP3, but not defined until VS2010
+    else if ((info.dwProtocol & 0x300))
+      snprintf(buffer, size, "%s", "TLSv1.1");
+    else if ((info.dwProtocol & 0xC00))
+      snprintf(buffer, size, "%s", "TLSv1.2");
+    else {
+      ssl_log_error("unexpected protocol %x\n", info.dwProtocol);
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 
@@ -1058,6 +1088,25 @@ static void client_handshake( pn_transport_t* transport) {
 static void server_handshake(pn_transport_t* transport)
 {
   pni_ssl_t *ssl = transport->ssl;
+  if (!ssl->protocol_detected) {
+    // SChannel fails less aggressively than openssl on client hello, causing hangs
+    // waiting for more bytes.  Help out here.
+    pni_protocol_type_t type = pni_sniff_header(ssl->sc_inbuf, ssl->sc_in_count);
+    if (type == PNI_PROTOCOL_INSUFFICIENT) {
+      ssl_log(transport, "server handshake: incomplete record\n");
+      ssl->sc_in_incomplete = true;
+      return;
+    } else {
+      ssl->protocol_detected = true;
+      if (type != PNI_PROTOCOL_SSL) {
+        ssl_failed(transport, "bad client hello");
+        ssl->decrypting = false;
+        rewind_sc_inbuf(ssl);
+        return;
+      }
+    }
+  }
+
   // Feed SChannel ongoing handshake records from the client until the handshake is complete.
   ULONG ctxt_requested = ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR;
   if (ssl->verify_mode == PN_SSL_VERIFY_PEER || ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME)
@@ -1748,7 +1797,7 @@ static bool store_contains(HCERTSTORE store, PCCERT_CONTEXT cert)
 {
   DWORD find_type = CERT_FIND_EXISTING; // Require exact match
   PCCERT_CONTEXT tcert = CertFindCertificateInStore(store, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
-						    0, find_type, cert, 0);
+                                                    0, find_type, cert, 0);
   if (tcert) {
     CertFreeCertificateContext(tcert);
     return true;
