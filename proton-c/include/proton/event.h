@@ -100,7 +100,7 @@ typedef enum {
   /**
    * A timer event has occurred.
    */
-  PN_TIMER,
+  PN_TIMER_TASK,
 
   /**
    * The connection has been created. This is the first event that

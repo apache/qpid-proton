@@ -130,7 +130,7 @@ void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now) {
     if (now >= task->deadline) {
       pn_task_t *min = (pn_task_t *) pn_list_minpop(timer->tasks);
       assert(min == task);
-      pn_collector_put(timer->collector, PN_OBJECT, task, PN_TIMER);
+      pn_collector_put(timer->collector, PN_OBJECT, task, PN_TIMER_TASK);
       pn_decref(task);
     } else {
       break;

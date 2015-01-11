@@ -3330,6 +3330,8 @@ class Event(EventBase):
   REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
   REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
 
+  TIMER_TASK = EventType(PN_TIMER_TASK, "on_timer_task")
+
   CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
   CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
   CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")

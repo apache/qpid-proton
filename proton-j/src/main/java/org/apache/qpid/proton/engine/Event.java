@@ -33,6 +33,8 @@ public interface Event
         REACTOR_INIT,
         REACTOR_FINAL,
 
+        TIMER_TASK,
+
         CONNECTION_INIT,
         CONNECTION_BOUND,
         CONNECTION_UNBOUND,
