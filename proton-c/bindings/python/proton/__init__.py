@@ -3433,6 +3433,42 @@ class Handler(object):
   def on_unhandled(self, method, args):
     pass
 
+class _cadapter:
+
+  def __init__(self, handler):
+    self.handler = handler
+
+  def __call__(self, cevent):
+    ev = Event.wrap(cevent)
+    ev.dispatch(self.handler)
+    if hasattr(self.handler, "handlers"):
+      for h in self.handler.handlers:
+        # XXX: if Event wrapped c events rather than copying them, we
+        # could put this logic in Event.dispatch
+        if isinstance(h, WrappedHandler):
+          pn_handler_dispatch(h._impl, cevent)
+        else:
+          ev.dispatch(h)
+
+class WrappedHandler(Wrapper):
+
+  def __init__(self, impl_or_constructor):
+    Wrapper.__init__(self, impl_or_constructor)
+
+  def add(self, handler):
+    impl = _chandler(handler)
+    pn_handler_add(self._impl, impl)
+    pn_decref(impl)
+
+def _chandler(obj):
+  if obj is None:
+    return None
+  elif isinstance(obj, WrappedHandler):
+    impl = obj._impl
+    pn_incref(impl)
+    return impl
+  else:
+    return pn_pyhandler(_cadapter(obj))
 
 ###
 # Driver

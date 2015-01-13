@@ -835,3 +835,74 @@ class Container(object):
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
 
+from proton import WrappedHandler, _chandler, Connection, secs2millis
+from wrapper import Wrapper
+from cproton import *
+
+class Task(Wrapper):
+
+    @staticmethod
+    def wrap(impl):
+        if impl is None:
+            return None
+        else:
+            return Task(impl)
+
+    def __init__(self, impl):
+        Wrapper.__init__(self, impl, pn_task_attachments)
+
+    def _init(self):
+        pass
+
+class Acceptor(Wrapper):
+
+    def __init__(self, impl):
+        Wrapper.__init__(self, impl)
+
+class Reactor(Wrapper):
+
+    @staticmethod
+    def wrap(impl):
+        if impl is None:
+            return None
+        else:
+            return Reactor(impl=impl)
+
+    def __init__(self, *handlers, **kwargs):
+        Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
+        for h in handlers:
+            self.handler.add(h)
+
+    def _init(self):
+        pass
+
+    @property
+    def handler(self):
+        return WrappedHandler(pn_reactor_handler(self._impl))
+
+    def run(self):
+        pn_reactor_start(self._impl)
+        while pn_reactor_work(self._impl, 3142): pass
+        pn_reactor_stop(self._impl)
+
+    def schedule(self, delay, task):
+        impl = _chandler(task)
+        task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
+        pn_decref(impl)
+        return task
+
+    def acceptor(self, host, port, handler=None):
+        impl = _chandler(handler)
+        result = Acceptor(pn_reactor_acceptor(self._impl, host, port, impl))
+        pn_decref(impl)
+        return result
+
+    def connection(self, handler=None):
+        impl = _chandler(handler)
+        result = Connection.wrap(pn_reactor_connection(self._impl, impl))
+        pn_decref(impl)
+        return result
+
+from proton import wrappers as _wrappers
+_wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
+_wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))

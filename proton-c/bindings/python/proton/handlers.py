@@ -440,3 +440,16 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
             transaction.accept(delivery)
         else:
             super(TransactionalClientHandler, self).accept(delivery)
+
+from proton import WrappedHandler
+from cproton import pn_flowcontroller, pn_handshaker
+
+class CFlowController(WrappedHandler):
+
+    def __init__(self, window=1024):
+        WrappedHandler.__init__(self, lambda: pn_flowcontroller(window))
+
+class CHandshaker(WrappedHandler):
+
+    def __init__(self):
+        WrappedHandler.__init__(self, pn_handshaker)
