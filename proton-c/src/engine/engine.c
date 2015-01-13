@@ -66,22 +66,24 @@ static pn_event_type_t endpoint_event(pn_endpoint_type_t type, bool open) {
 
 static void pn_endpoint_open(pn_endpoint_t *endpoint)
 {
-  // TODO: do we care about the current state?
-  PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
-  pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, PN_OBJECT, endpoint,
-                   endpoint_event(endpoint->type, true));
-  pn_modified(conn, endpoint, true);
+  if (!(endpoint->state & PN_LOCAL_ACTIVE)) {
+    PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
+    pn_connection_t *conn = pn_ep_get_connection(endpoint);
+    pn_collector_put(conn->collector, PN_OBJECT, endpoint,
+                     endpoint_event(endpoint->type, true));
+    pn_modified(conn, endpoint, true);
+  }
 }
 
 static void pn_endpoint_close(pn_endpoint_t *endpoint)
 {
-  // TODO: do we care about the current state?
-  PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
-  pn_connection_t *conn = pn_ep_get_connection(endpoint);
-  pn_collector_put(conn->collector, PN_OBJECT, endpoint,
-                   endpoint_event(endpoint->type, false));
-  pn_modified(conn, endpoint, true);
+  if (!(endpoint->state & PN_LOCAL_CLOSED)) {
+    PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
+    pn_connection_t *conn = pn_ep_get_connection(endpoint);
+    pn_collector_put(conn->collector, PN_OBJECT, endpoint,
+                     endpoint_event(endpoint->type, false));
+    pn_modified(conn, endpoint, true);
+  }
 }
 
 void pn_connection_reset(pn_connection_t *connection)
