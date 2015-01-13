@@ -63,6 +63,7 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   pn_socket_t socket = pn_listen(pn_reactor_io(reactor), host, port);
   pni_selectable_set_fd(sel, socket);
   pni_selectable_set_context(sel, reactor);
+  pni_record_init_reactor(pn_selectable_attachments(sel), reactor);
   pni_record_init_handler(pn_selectable_attachments(sel), handler);
   pn_reactor_update(reactor, sel);
   return (pn_acceptor_t *) sel;

@@ -23,15 +23,16 @@
 #include <proton/io.h>
 #include <proton/selector.h>
 #include <proton/event.h>
-#include <proton/reactor.h>
 #include <proton/transport.h>
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
+#include <proton/delivery.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
+#include "reactor.h"
 #include "selectable.h"
 #include "platform.h"
 
@@ -173,8 +174,21 @@ void pni_handle_transport(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event);
 
-static void pni_reactor_dispatch(pn_reactor_t *reactor, pn_event_t *event) {
+static void pni_reactor_dispatch_pre(pn_reactor_t *reactor, pn_event_t *event) {
   assert(reactor);
+  assert(event);
+  switch (pn_event_type(event)) {
+  case PN_CONNECTION_INIT:
+    pni_record_init_reactor(pn_connection_attachments(pn_event_connection(event)), reactor);
+    break;
+  default:
+    break;
+  }
+}
+
+static void pni_reactor_dispatch_post(pn_reactor_t *reactor, pn_event_t *event) {
+  assert(reactor);
+  assert(event);
   switch (pn_event_type(event)) {
   case PN_TRANSPORT:
     pni_handle_transport(reactor, event);
@@ -200,6 +214,58 @@ pn_handler_t *pni_record_get_handler(pn_record_t *record) {
 void pni_record_init_handler(pn_record_t *record, pn_handler_t *handler) {
   pn_record_def(record, PN_HANDLER, PN_OBJECT);
   pn_record_set(record, PN_HANDLER, handler);
+}
+
+static void *pni_reactor = NULL;
+#define PN_REACTOR ((pn_handle_t) &pni_reactor)
+
+pn_reactor_t *pni_record_get_reactor(pn_record_t *record) {
+  return (pn_reactor_t *) pn_record_get(record, PN_REACTOR);
+}
+
+void pni_record_init_reactor(pn_record_t *record, pn_reactor_t *reactor) {
+  pn_record_def(record, PN_REACTOR, PN_WEAKREF);
+  pn_record_set(record, PN_REACTOR, reactor);
+}
+
+static pn_connection_t *pni_object_connection(const pn_class_t *clazz, void *object) {
+  switch (pn_class_id(clazz)) {
+  case CID_pn_delivery:
+    return pn_session_connection(pn_link_session(pn_delivery_link((pn_delivery_t *) object)));
+  case CID_pn_link:
+    return pn_session_connection(pn_link_session((pn_link_t *) object));
+  case CID_pn_session:
+    return pn_session_connection((pn_session_t *) object);
+  case CID_pn_connection:
+    return (pn_connection_t *) object;
+  case CID_pn_transport:
+    return pn_transport_connection((pn_transport_t *) object);
+  default:
+    return NULL;
+  }
+}
+
+pn_reactor_t *pn_event_reactor(pn_event_t *event) {
+  const pn_class_t *clazz = pn_event_class(event);
+  void *context = pn_event_context(event);
+  switch (pn_class_id(clazz)) {
+  case CID_pn_reactor:
+    return (pn_reactor_t *) context;
+  case CID_pn_task:
+    return pni_record_get_reactor(pn_task_attachments((pn_task_t *) context));
+  case CID_pn_delivery:
+  case CID_pn_link:
+  case CID_pn_session:
+  case CID_pn_connection:
+  case CID_pn_transport:
+    {
+      pn_connection_t *conn = pni_object_connection(pn_event_class(event), context);
+      pn_record_t *record = pn_connection_attachments(conn);
+      return pni_record_get_reactor(record);
+    }
+  default:
+    return NULL;
+  }
 }
 
 pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler) {
@@ -229,7 +295,9 @@ pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler)
 pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *handler) {
   pn_timer_t *timer = pni_timer(reactor->timer);
   pn_task_t *task = pn_timer_schedule(timer, reactor->now + delay);
-  pni_record_init_handler(pn_task_attachments(task), handler);
+  pn_record_t *record = pn_task_attachments(task);
+  pni_record_init_reactor(record, reactor);
+  pni_record_init_handler(record, handler);
   pn_reactor_update(reactor, reactor->timer);
   return task;
 }
@@ -238,9 +306,10 @@ void pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
   pn_event_t *event;
   while ((event = pn_collector_peek(reactor->collector))) {
+    pni_reactor_dispatch_pre(reactor, event);
     pn_handler_t *handler = pn_event_handler(event, reactor->handler);
     pn_handler_dispatch(handler, event);
-    pni_reactor_dispatch(reactor, event);
+    pni_reactor_dispatch_post(reactor, event);
     pn_collector_pop(reactor->collector);
   }
 }

@@ -85,6 +85,8 @@ PN_EXTERN int pn_timer_tasks(pn_timer_t *timer);
 
 PN_EXTERN pn_record_t *pn_task_attachments(pn_task_t *task);
 
+PN_EXTERN pn_reactor_t *pn_event_reactor(pn_event_t *event);
+
 /** @}
  */
 
