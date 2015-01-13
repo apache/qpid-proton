@@ -1654,12 +1654,18 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
       }
     }
 
-    if (ssl->network_out_pending == 0 && ssl->state == SHUTTING_DOWN) {
-      if (!ssl->queued_shutdown) {
-        start_ssl_shutdown(transport);
-        work_pending = true;
-      } else {
-        ssl->state = SSL_CLOSED;
+    if (ssl->network_out_pending == 0) {
+      if (ssl->state == SHUTTING_DOWN) {
+	if (!ssl->queued_shutdown) {
+	  start_ssl_shutdown(transport);
+	  work_pending = true;
+	} else {
+	  ssl->state = SSL_CLOSED;
+	}
+      }
+      else if (ssl->state == NEGOTIATING && ssl->app_input_closed) {
+	ssl->app_output_closed = PN_EOS;
+	ssl->state = SSL_CLOSED;
       }
     }
   } while (work_pending);

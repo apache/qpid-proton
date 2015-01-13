@@ -1060,12 +1060,16 @@ static void zombie_list_hard_close_all(iocp_t *iocp)
 
 static void iocp_shutdown(iocpdesc_t *iocpd)
 {
+  bool disconnected = false;
   if (shutdown(iocpd->socket, SD_SEND)) {
-    if (iocpd->iocp->iocp_trace)
-      iocp_log("socket shutdown failed %d\n", WSAGetLastError());
+    int err = WSAGetLastError();
+    if (err == WSAECONNABORTED || err == WSAECONNRESET || err == WSAENOTCONN)
+      disconnected = true;
+    else if (iocpd->iocp->iocp_trace)
+      iocp_log("socket shutdown failed %d\n", err);
   }
   iocpd->write_closed = true;
-  if (iocpd->read_closed) {
+  if (iocpd->read_closed || disconnected) {
     closesocket(iocpd->socket);
     iocpd->socket = INVALID_SOCKET;
   }
