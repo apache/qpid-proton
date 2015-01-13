@@ -52,8 +52,6 @@ struct pn_endpoint_t {
   int refcount; // when this hits zero we generate a final event
   bool modified;
   bool freed;
-  bool constructed; // track whether the endpoint was explicitly
-                    // constructed or not
   bool referenced;
 };
 

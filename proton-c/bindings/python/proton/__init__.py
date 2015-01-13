@@ -2356,11 +2356,8 @@ class Connection(Wrapper, Endpoint):
   def state(self):
     return pn_connection_state(self._impl)
 
-  def _pn_session(self):
-    return pn_session(self._impl)
-
   def session(self):
-    return Session(self._pn_session)
+    return Session(pn_session(self._impl))
 
   def session_head(self, mask):
     return Session.wrap(pn_session_head(self._impl, mask))
@@ -2435,13 +2432,13 @@ class Session(Wrapper, Endpoint):
     return Connection.wrap(pn_session_connection(self._impl))
 
   def sender(self, name):
-    return Sender(lambda: pn_sender(self._impl, name))
+    return Sender(pn_sender(self._impl, name))
 
   def receiver(self, name):
-    return Receiver(lambda: pn_receiver(self._impl, name))
+    return Receiver(pn_receiver(self._impl, name))
 
   def free(self):
-    pn_session_release(self._impl)
+    pn_session_free(self._impl)
 
 class LinkException(ProtonException):
   pass
@@ -2514,7 +2511,7 @@ class Link(Wrapper, Endpoint):
     return self.session.connection
 
   def delivery(self, tag):
-    return Delivery(lambda: pn_delivery(self._impl, tag))
+    return Delivery(pn_delivery(self._impl, tag))
 
   @property
   def current(self):
@@ -2581,7 +2578,7 @@ class Link(Wrapper, Endpoint):
     return pn_link_detach(self._impl)
 
   def free(self):
-    pn_link_release(self._impl)
+    pn_link_free(self._impl)
 
 class Terminus(object):
 
@@ -2865,9 +2862,6 @@ class Delivery(Wrapper):
     return pn_delivery_settled(self._impl)
 
   def settle(self):
-    # XXX: we have to incref here because settle is overloaded to
-    # decref also, remove this when C semantics are fixed
-    pn_incref(self._impl)
     pn_delivery_settle(self._impl)
 
   @property

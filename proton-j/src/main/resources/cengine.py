@@ -331,7 +331,7 @@ def pn_sender(ssn, name):
 def pn_receiver(ssn, name):
   return wrap(ssn.impl.receiver(name), pn_link_wrapper)
 
-def pn_session_release(ssn):
+def pn_session_free(ssn):
   ssn.impl.free()
 
 TERMINUS_TYPES_J2P = {
@@ -663,7 +663,7 @@ def pn_link_advance(link):
 def pn_link_current(link):
   return wrap(link.impl.current(), pn_delivery_wrapper)
 
-def pn_link_release(link):
+def pn_link_free(link):
   link.impl.free()
 
 def pn_work_head(conn):

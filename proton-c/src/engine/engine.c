@@ -107,10 +107,7 @@ void pn_connection_close(pn_connection_t *connection)
 
 void pn_endpoint_tini(pn_endpoint_t *endpoint);
 
-static void pn_session_free2(pn_session_t *session, bool decref);
-static void pn_link_free2(pn_link_t *link, bool decref);
-
-static void pn_connection_free2(pn_connection_t *connection, bool decref)
+void pn_connection_release(pn_connection_t *connection)
 {
   assert(!connection->endpoint.freed);
   // free those endpoints that haven't been freed by the application
@@ -120,11 +117,11 @@ static void pn_connection_free2(pn_connection_t *connection, bool decref)
     switch (ep->type) {
     case SESSION:
       // note: this will free all child links:
-      pn_session_free2((pn_session_t *)ep, decref);
+      pn_session_free((pn_session_t *)ep);
       break;
     case SENDER:
     case RECEIVER:
-      pn_link_free2((pn_link_t *)ep, decref);
+      pn_link_free((pn_link_t *)ep);
       break;
     default:
       assert(false);
@@ -138,17 +135,11 @@ static void pn_connection_free2(pn_connection_t *connection, bool decref)
     pn_connection_unbound(connection);
   }
   pn_ep_decref(&connection->endpoint);
-  if (decref) {
-    pn_decref(connection);
-  }
 }
 
 void pn_connection_free(pn_connection_t *connection) {
-  pn_connection_free2(connection, true);
-}
-
-void pn_connection_release(pn_connection_t *connection) {
-  pn_connection_free2(connection, false);
+  pn_connection_release(connection);
+  pn_decref(connection);
 }
 
 void pn_connection_bound(pn_connection_t *connection)
@@ -252,12 +243,12 @@ void pn_session_close(pn_session_t *session)
   pn_endpoint_close(&session->endpoint);
 }
 
-static void pn_session_free2(pn_session_t *session, bool decref)
+void pn_session_free(pn_session_t *session)
 {
   assert(!session->endpoint.freed);
   while(pn_list_size(session->links)) {
     pn_link_t *link = (pn_link_t *)pn_list_get(session->links, 0);
-    pn_link_free2(link, decref);
+    pn_link_free(link);
   }
   pn_remove_session(session->connection, session);
   pn_list_add(session->connection->freed, session);
@@ -265,17 +256,11 @@ static void pn_session_free2(pn_session_t *session, bool decref)
   LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
   session->endpoint.freed = true;
   pn_ep_decref(&session->endpoint);
-  if (decref && session->endpoint.constructed) {
-    pn_decref(session);
-  }
-}
 
-void pn_session_free(pn_session_t *session) {
-  pn_session_free2(session, true);
-}
-
-void pn_session_release(pn_session_t *session) {
-  pn_session_free2(session, false);
+  // the finalize logic depends on endpoint.freed, so we incref/decref
+  // to give it a chance to rerun
+  pn_incref(session);
+  pn_decref(session);
 }
 
 pn_record_t *pn_session_attachments(pn_session_t *session)
@@ -340,7 +325,7 @@ void pn_terminus_free(pn_terminus_t *terminus)
   pn_free(terminus->filter);
 }
 
-static void pn_link_free2(pn_link_t *link, bool decref)
+void pn_link_free(pn_link_t *link)
 {
   assert(!link->endpoint.freed);
   pn_endpoint_t *endpoint = (pn_endpoint_t *) link;
@@ -350,25 +335,16 @@ static void pn_link_free2(pn_link_t *link, bool decref)
   pn_delivery_t *delivery = link->unsettled_head;
   while (delivery) {
     pn_delivery_t *next = delivery->unsettled_next;
-    if (!(decref && delivery->constructed)) {
-      pn_incref(delivery);
-    }
     pn_delivery_settle(delivery);
     delivery = next;
   }
   link->endpoint.freed = true;
   pn_ep_decref(&link->endpoint);
-  if (decref && link->endpoint.constructed) {
-    pn_decref(link);
-  }
-}
 
-void pn_link_free(pn_link_t *link) {
-  pn_link_free2(link, true);
-}
-
-void pn_link_release(pn_link_t *link) {
-  pn_link_free2(link, false);
+  // the finalize logic depends on endpoint.freed (modified above), so
+  // we incref/decref to give it a chance to rerun
+  pn_incref(link);
+  pn_decref(link);
 }
 
 void *pn_link_get_context(pn_link_t *link)
@@ -403,7 +379,6 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
   endpoint->transport_prev = NULL;
   endpoint->modified = false;
   endpoint->freed = false;
-  endpoint->constructed = true;
   endpoint->refcount = 1;
   //fprintf(stderr, "initting 0x%lx\n", (uintptr_t) endpoint);
 
@@ -963,6 +938,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   if (conn->transport) {
     pn_session_bound(ssn);
   }
+  pn_decref(ssn);
   return ssn;
 }
 
@@ -1126,6 +1102,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   if (session->connection->transport) {
     pn_link_bound(link);
   }
+  pn_decref(link);
   return link;
 }
 
@@ -1475,7 +1452,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_buffer_clear(delivery->bytes);
   delivery->done = false;
   pn_record_clear(delivery->context);
-  delivery->constructed = true;
 
   // begin delivery state
   delivery->state.init = false;
@@ -1488,6 +1464,9 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   link->unsettled_count++;
 
   pn_work_update(link->session->connection, delivery);
+
+  // XXX: could just remove incref above
+  pn_decref(delivery);
 
   return delivery;
 }
@@ -1775,6 +1754,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
     delivery->local.settled = true;
     pn_add_tpwork(delivery);
     pn_work_update(delivery->link->session->connection, delivery);
+    pn_incref(delivery);
     pn_decref(delivery);
   }
 }

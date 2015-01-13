@@ -971,8 +971,6 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     ssn = (pn_session_t *) pn_hash_get(transport->local_channels, remote_channel);
   } else {
     ssn = pn_session(transport->connection);
-    ssn->endpoint.constructed = false;
-    pn_decref(ssn);
   }
   ssn->state.incoming_transfer_count = next;
   pni_map_remote_channel(ssn, channel);
@@ -1086,8 +1084,6 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     } else {
       link = (pn_link_t *) pn_receiver(ssn, strname);
     }
-    link->endpoint.constructed = false;
-    pn_decref(link);
   }
 
   if (strheap) {
@@ -1209,8 +1205,6 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     }
 
     delivery = pn_delivery(link, pn_dtag(tag.start, tag.size));
-    delivery->constructed = false;
-    pn_decref(delivery);
     pn_delivery_state_t *state = pn_delivery_map_push(incoming, delivery);
     if (id_present && id != state->id) {
       return pn_do_error(transport, "amqp:session:invalid-field",

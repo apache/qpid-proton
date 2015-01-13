@@ -39,7 +39,9 @@
 #define SETUP_CSL                               \
   pn_connection_t *conn = pn_connection();      \
   pn_session_t *ssn = pn_session(conn);         \
+  pn_incref(ssn);                               \
   pn_link_t *lnk = pn_sender(ssn, "sender");    \
+  pn_incref(lnk);                               \
                                                 \
   assert(pn_refcount(conn) == 2);               \
   assert(pn_refcount(ssn) == 2);                \
@@ -172,8 +174,11 @@ static void swap(int array[], int i, int j) {
 static void setup(void **objects) {
   pn_connection_t *conn = pn_connection();
   pn_session_t *ssn = pn_session(conn);
+  pn_incref(ssn);
   pn_link_t *lnk = pn_sender(ssn, "sender");
+  pn_incref(lnk);
   pn_delivery_t *dlv = pn_delivery(lnk, pn_dtag("dtag", 4));
+  pn_incref(dlv);
 
   assert(pn_refcount(conn) == 2);
   assert(pn_refcount(ssn) == 2);

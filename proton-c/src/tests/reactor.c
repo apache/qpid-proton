@@ -333,9 +333,6 @@ void source_dispatch(pn_handler_t *handler, pn_event_t *event) {
       pn_connection_open(conn);
       pn_session_open(ssn);
       pn_link_open(snd);
-      // XXX: these keep the connection alive even when we release it
-      pn_decref(ssn);
-      pn_decref(snd);
     }
     break;
   case PN_LINK_FLOW:
