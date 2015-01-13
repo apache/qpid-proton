@@ -1457,7 +1457,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->link = link;
   pn_incref(delivery->link);  // keep link until finalized
   pn_buffer_clear(delivery->tag);
-  pn_buffer_append(delivery->tag, tag.bytes, tag.size);
+  pn_buffer_append(delivery->tag, tag.start, tag.size);
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);
   delivery->updated = false;

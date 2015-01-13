@@ -243,7 +243,7 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
 %inline %{
     void wrap_pn_delivery_tag(pn_delivery_t *d, const char **RETURN_STRING, size_t *RETURN_LEN) {
         pn_delivery_tag_t tag = pn_delivery_tag(d);
-        *RETURN_STRING = tag.bytes;
+        *RETURN_STRING = tag.start;
         *RETURN_LEN = tag.size;
     }
 %}

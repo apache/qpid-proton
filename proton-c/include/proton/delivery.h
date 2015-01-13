@@ -45,10 +45,7 @@ extern "C" {
 /**
  * An AMQP delivery tag.
  */
-typedef struct pn_delivery_tag_t {
-  size_t size;
-  const char *bytes;
-} pn_delivery_tag_t;
+typedef pn_bytes_t pn_delivery_tag_t;
 
 #ifndef SWIG  // older versions of SWIG choke on this:
 /**

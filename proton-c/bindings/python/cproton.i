@@ -168,7 +168,7 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
     *ALLOC_OUTPUT = (char *) malloc(tag.size);
     *ALLOC_SIZE = tag.size;
-    memcpy(*ALLOC_OUTPUT, tag.bytes, tag.size);
+    memcpy(*ALLOC_OUTPUT, tag.start, tag.size);
   }
 %}
 %ignore pn_delivery_tag;

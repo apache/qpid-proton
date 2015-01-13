@@ -196,7 +196,7 @@ void server_callback(pn_connector_t *ctor)
   while (delivery)
   {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
-    pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
+    pn_quote_data(tagstr, 1024, tag.start, tag.size);
     pn_link_t *link = pn_delivery_link(delivery);
     if (pn_delivery_readable(delivery)) {
       if (!ctx->quiet) {
@@ -349,7 +349,7 @@ void client_callback(pn_connector_t *ctor)
   while (delivery)
   {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
-    pn_quote_data(tagstr, 1024, tag.bytes, tag.size);
+    pn_quote_data(tagstr, 1024, tag.start, tag.size);
     pn_link_t *link = pn_delivery_link(delivery);
     if (pn_delivery_writable(delivery)) {
       pn_link_send(link, data, ndata);
