@@ -195,6 +195,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_record_t *tr = pn_transport_attachments(transport);
   pn_record_def(tr, PN_TRANCTX, PN_WEAKREF);
   pn_record_set(tr, PN_TRANCTX, sel);
+  pni_record_init_reactor(tr, reactor);
   pn_reactor_update(reactor, sel);
   return sel;
 }

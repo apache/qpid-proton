@@ -3307,6 +3307,8 @@ class EventBase(object):
   def dispatch(self, handler):
     return dispatch(handler, self.type.method, self)
 
+def _none(x): return None
+
 class Event(EventBase):
 
   @staticmethod
@@ -3314,12 +3316,13 @@ class Event(EventBase):
     if impl is None:
       return None
 
+    reactor = wrappers.get("pn_reactor", _none)(pn_event_reactor(impl))
     clazz = pn_class_name(pn_event_class(impl))
     context = wrappers[clazz](pn_event_context(impl))
     if isinstance(context, EventBase):
       return context
     else:
-      return Event(clazz, context, EventType.TYPES[pn_event_type(impl)])
+      return Event(reactor, clazz, context, EventType.TYPES[pn_event_type(impl)])
 
   REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
   REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
@@ -3360,8 +3363,9 @@ class Event(EventBase):
   TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
   TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
-  def __init__(self, clazz, context, type):
+  def __init__(self, reactor, clazz, context, type):
     super(Event, self).__init__(clazz, context, type)
+    self.reactor = reactor
 
   def dispatch(self, handler):
     return dispatch(handler, self.type.method, self)

@@ -253,11 +253,12 @@ pn_reactor_t *pn_event_reactor(pn_event_t *event) {
     return (pn_reactor_t *) context;
   case CID_pn_task:
     return pni_record_get_reactor(pn_task_attachments((pn_task_t *) context));
+  case CID_pn_transport:
+    return pni_record_get_reactor(pn_transport_attachments((pn_transport_t *) context));
   case CID_pn_delivery:
   case CID_pn_link:
   case CID_pn_session:
   case CID_pn_connection:
-  case CID_pn_transport:
     {
       pn_connection_t *conn = pni_object_connection(pn_event_class(event), context);
       pn_record_t *record = pn_connection_attachments(conn);

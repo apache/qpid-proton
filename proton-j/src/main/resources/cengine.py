@@ -1000,6 +1000,9 @@ def pn_collector_pop(coll):
 def pn_collector_free(coll):
   pass
 
+def pn_event_reactor(event):
+  return None
+
 def pn_event_connection(event):
   return wrap(event.getConnection(), pn_connection_wrapper)
 
