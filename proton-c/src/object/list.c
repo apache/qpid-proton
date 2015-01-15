@@ -109,6 +109,7 @@ bool pn_list_remove(pn_list_t *list, void *value)
 void pn_list_del(pn_list_t *list, int index, int n)
 {
   assert(list);
+  if (!list->size) { return; }
   index %= list->size;
 
   for (int i = 0; i < n; i++) {
