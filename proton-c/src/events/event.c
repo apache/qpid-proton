@@ -16,9 +16,8 @@ struct pn_event_t {
   pn_event_type_t type;
 };
 
-static void pn_collector_initialize(void *obj)
+static void pn_collector_initialize(pn_collector_t *collector)
 {
-  pn_collector_t *collector = (pn_collector_t *) obj;
   collector->head = NULL;
   collector->tail = NULL;
   collector->free_head = NULL;
@@ -47,17 +46,15 @@ static void pn_collector_shrink(pn_collector_t *collector)
   collector->free_head = NULL;
 }
 
-static void pn_collector_finalize(void *obj)
+static void pn_collector_finalize(pn_collector_t *collector)
 {
-  pn_collector_t *collector = (pn_collector_t *) obj;
   pn_collector_drain(collector);
   pn_collector_shrink(collector);
 }
 
-static int pn_collector_inspect(void *obj, pn_string_t *dst)
+static int pn_collector_inspect(pn_collector_t *collector, pn_string_t *dst)
 {
-  assert(obj);
-  pn_collector_t *collector = (pn_collector_t *) obj;
+  assert(collector);
   int err = pn_string_addf(dst, "EVENTS[");
   if (err) return err;
   pn_event_t *event = collector->head;
@@ -79,11 +76,11 @@ static int pn_collector_inspect(void *obj, pn_string_t *dst)
 #define pn_collector_hashcode NULL
 #define pn_collector_compare NULL
 
+PN_CLASSDEF(pn_collector)
+
 pn_collector_t *pn_collector(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_collector);
-  pn_collector_t *collector = (pn_collector_t *) pn_class_new(&clazz, sizeof(pn_collector_t));
-  return collector;
+  return pn_collector_new();
 }
 
 void pn_collector_free(pn_collector_t *collector)
