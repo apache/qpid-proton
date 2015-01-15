@@ -95,7 +95,7 @@ void pn_collector_free(pn_collector_t *collector)
 }
 
 pn_event_t *pn_event(void);
-static void pn_event_initialize(void *obj);
+static void pn_event_initialize(pn_event_t *event);
 
 pn_event_t *pn_collector_put(pn_collector_t *collector,
                              const pn_class_t *clazz, void *context,
@@ -174,21 +174,20 @@ bool pn_collector_pop(pn_collector_t *collector)
   return true;
 }
 
-static void pn_event_initialize(void *obj)
+static void pn_event_initialize(pn_event_t *event)
 {
-  pn_event_t *event = (pn_event_t *) obj;
   event->type = PN_EVENT_NONE;
   event->clazz = NULL;
   event->context = NULL;
   event->next = NULL;
 }
 
-static void pn_event_finalize(void *obj) {}
+static void pn_event_finalize(pn_event_t *event) {}
 
-static int pn_event_inspect(void *obj, pn_string_t *dst)
+static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
 {
-  assert(obj);
-  pn_event_t *event = (pn_event_t *) obj;
+  assert(event);
+  assert(dst);
   int err = pn_string_addf(dst, "(%s<0x%X>", pn_event_type_name(event->type), (unsigned int) event->type);
   if (event->context) {
     err = pn_string_addf(dst, ", ");
@@ -203,11 +202,11 @@ static int pn_event_inspect(void *obj, pn_string_t *dst)
 #define pn_event_hashcode NULL
 #define pn_event_compare NULL
 
+PN_CLASSDEF(pn_event)
+
 pn_event_t *pn_event(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_event);
-  pn_event_t *event = (pn_event_t *) pn_class_new(&clazz, sizeof(pn_event_t));
-  return event;
+  return pn_event_new();
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)
