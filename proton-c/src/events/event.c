@@ -3,13 +3,14 @@
 #include <assert.h>
 
 struct pn_collector_t {
+  pn_list_t *pool;
   pn_event_t *head;
   pn_event_t *tail;
-  pn_event_t *free_head;
   bool freed;
 };
 
 struct pn_event_t {
+  pn_list_t *pool;
   const pn_class_t *clazz;
   void *context;    // depends on type
   pn_event_t *next;
@@ -18,9 +19,9 @@ struct pn_event_t {
 
 static void pn_collector_initialize(pn_collector_t *collector)
 {
+  collector->pool = pn_list(PN_OBJECT, 0);
   collector->head = NULL;
   collector->tail = NULL;
-  collector->free_head = NULL;
   collector->freed = false;
 }
 
@@ -36,20 +37,14 @@ static void pn_collector_drain(pn_collector_t *collector)
 
 static void pn_collector_shrink(pn_collector_t *collector)
 {
-  pn_event_t *event = collector->free_head;
-  while (event) {
-    pn_event_t *next = event->next;
-    pn_free(event);
-    event = next;
-  }
-
-  collector->free_head = NULL;
+  assert(collector);
+  pn_list_clear(collector->pool);
 }
 
 static void pn_collector_finalize(pn_collector_t *collector)
 {
   pn_collector_drain(collector);
-  pn_collector_shrink(collector);
+  pn_decref(collector->pool);
 }
 
 static int pn_collector_inspect(pn_collector_t *collector, pn_string_t *dst)
@@ -85,10 +80,11 @@ pn_collector_t *pn_collector(void)
 
 void pn_collector_free(pn_collector_t *collector)
 {
+  assert(collector);
   collector->freed = true;
   pn_collector_drain(collector);
   pn_collector_shrink(collector);
-  pn_class_decref(PN_OBJECT, collector);
+  pn_decref(collector);
 }
 
 pn_event_t *pn_event(void);
@@ -115,15 +111,16 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
 
   clazz = clazz->reify(context);
 
-  pn_event_t *event;
+  pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
 
-  if (collector->free_head) {
-    event = collector->free_head;
-    collector->free_head = collector->free_head->next;
+  if (event) {
     pn_event_initialize(event);
   } else {
     event = pn_event();
   }
+
+  event->pool = collector->pool;
+  pn_incref(event->pool);
 
   if (tail) {
     tail->next = event;
@@ -159,27 +156,35 @@ bool pn_collector_pop(pn_collector_t *collector)
     collector->tail = NULL;
   }
 
-  // decref before adding to the free list
-  if (event->context) {
-    pn_class_decref(event->clazz, event->context);
-    event->context = NULL;
-  }
-
-  event->next = collector->free_head;
-  collector->free_head = event;
-
+  pn_decref(event);
   return true;
 }
 
 static void pn_event_initialize(pn_event_t *event)
 {
+  event->pool = NULL;
   event->type = PN_EVENT_NONE;
   event->clazz = NULL;
   event->context = NULL;
   event->next = NULL;
 }
 
-static void pn_event_finalize(pn_event_t *event) {}
+static void pn_event_finalize(pn_event_t *event) {
+  // decref before adding to the free list
+  if (event->clazz && event->context) {
+    pn_class_decref(event->clazz, event->context);
+    event->context = NULL;
+  }
+
+  pn_list_t *pool = event->pool;
+
+  if (pool && pn_refcount(pool) > 1) {
+    event->pool = NULL;
+    pn_list_add(pool, event);
+  }
+
+  pn_decref(pool);
+}
 
 static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
 {
