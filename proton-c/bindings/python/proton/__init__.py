@@ -3309,20 +3309,7 @@ class EventBase(object):
 
 def _none(x): return None
 
-class Event(EventBase):
-
-  @staticmethod
-  def wrap(impl):
-    if impl is None:
-      return None
-
-    reactor = wrappers.get("pn_reactor", _none)(pn_event_reactor(impl))
-    clazz = pn_class_name(pn_event_class(impl))
-    context = wrappers[clazz](pn_event_context(impl))
-    if isinstance(context, EventBase):
-      return context
-    else:
-      return Event(reactor, clazz, context, EventType.TYPES[pn_event_type(impl)])
+class Event(Wrapper, EventBase):
 
   REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
   REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
@@ -3363,48 +3350,58 @@ class Event(EventBase):
   TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
   TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
-  def __init__(self, reactor, clazz, context, type):
-    super(Event, self).__init__(clazz, context, type)
-    self.reactor = reactor
+  @staticmethod
+  def wrap(impl):
+    if impl is None:
+      return None
+
+    event = Event(impl)
+
+    if isinstance(event.context, EventBase):
+      return event.context
+    else:
+      return event
+
+  def __init__(self, impl):
+    Wrapper.__init__(self, impl)
+
+  @property
+  def clazz(self):
+    return pn_class_name(pn_event_class(self._impl))
+
+  @property
+  def context(self):
+    return wrappers[self.clazz](pn_event_context(self._impl))
+
+  @property
+  def type(self):
+    return EventType.TYPES[pn_event_type(self._impl)]
 
   def dispatch(self, handler):
-    return dispatch(handler, self.type.method, self)
+    if isinstance(handler, WrappedHandler):
+      pn_handler_dispatch(handler._impl, self._impl)
+    else:
+      return dispatch(handler, self.type.method, self)
+
+  @property
+  def reactor(self):
+    return wrappers.get("pn_reactor", _none)(pn_event_reactor(self._impl))
 
   @property
   def transport(self):
-    if self.clazz == "pn_transport":
-      return self.context
-    elif self.clazz in ["pn_connection", "pn_session", "pn_link", "pn_delivery"]:
-      return self.context.transport
-    else:
-      return None
+    return Transport.wrap(pn_event_transport(self._impl))
 
   @property
   def connection(self):
-    if self.clazz == "pn_connection":
-      return self.context
-    elif self.clazz in ["pn_transport", "pn_session", "pn_link", "pn_delivery"]:
-      return self.context.connection
-    else:
-      return None
+    return Connection.wrap(pn_event_connection(self._impl))
 
   @property
   def session(self):
-    if self.clazz == "pn_session":
-      return self.context
-    elif self.clazz in ["pn_link", "pn_delivery"]:
-      return self.context.session
-    else:
-      return None
+    return Session.wrap(pn_event_session(self._impl))
 
   @property
   def link(self):
-    if self.clazz == "pn_link":
-      return self.context
-    elif self.clazz in ["pn_delivery"]:
-      return self.context.link
-    else:
-      return None
+    return Link.wrap(pn_event_link(self._impl))
 
   @property
   def sender(self):
@@ -3424,10 +3421,7 @@ class Event(EventBase):
 
   @property
   def delivery(self):
-    if self.clazz == "pn_delivery":
-      return self.context
-    else:
-      return None
+    return Delivery.wrap(pn_event_delivery(self._impl))
 
   def __repr__(self):
     return "%s(%s)" % (self.type, self.context)
@@ -3447,12 +3441,7 @@ class _cadapter:
     ev.dispatch(self.handler)
     if hasattr(self.handler, "handlers"):
       for h in self.handler.handlers:
-        # XXX: if Event wrapped c events rather than copying them, we
-        # could put this logic in Event.dispatch
-        if isinstance(h, WrappedHandler):
-          pn_handler_dispatch(h._impl, cevent)
-        else:
-          ev.dispatch(h)
+        ev.dispatch(h)
 
 class WrappedHandler(Wrapper):
 

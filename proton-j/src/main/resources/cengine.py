@@ -992,7 +992,11 @@ def pn_connection_collect(conn, coll):
   conn.impl.collect(coll)
 
 def pn_collector_peek(coll):
-  return coll.peek()
+  ev = coll.peek()
+  if ev:
+    return ev.copy()
+  else:
+    return None
 
 def pn_collector_pop(coll):
   coll.pop()
