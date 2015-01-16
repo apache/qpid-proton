@@ -35,6 +35,7 @@ require "util/error_handler"
 require "util/constants"
 require "util/swig_helper"
 require "util/condition"
+require "util/wrapper"
 require "util/engine"
 require "util/uuid"
 
