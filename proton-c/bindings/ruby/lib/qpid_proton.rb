@@ -62,6 +62,7 @@ require "core/delivery"
 require "core/link"
 require "core/sender"
 require "core/receiver"
+require "core/connection"
 
 # Messenger API classes
 require "messenger/filters"
