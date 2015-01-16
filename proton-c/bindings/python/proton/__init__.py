@@ -750,7 +750,7 @@ first message.
   def selectable(self):
     impl = pn_messenger_selectable(self._mng)
     if impl:
-      fd = pn_selectable_fd(impl)
+      fd = pn_selectable_get_fd(impl)
       sel = self._selectables.get(fd, None)
       if sel is None:
         sel = Selectable(self, impl)
@@ -1164,7 +1164,7 @@ class Selectable(object):
 
   def fileno(self):
     if not self._impl: raise ValueError("selectable freed")
-    return pn_selectable_fd(self._impl)
+    return pn_selectable_get_fd(self._impl)
 
   @property
   def capacity(self):

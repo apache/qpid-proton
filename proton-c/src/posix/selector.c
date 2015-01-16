@@ -96,7 +96,7 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
 {
   int idx = pni_selectable_get_index(selectable);
   assert(idx >= 0);
-  selector->fds[idx].fd = pn_selectable_fd(selectable);
+  selector->fds[idx].fd = pn_selectable_get_fd(selectable);
   selector->fds[idx].events = 0;
   selector->fds[idx].revents = 0;
   if (pn_selectable_capacity(selectable) > 0) {

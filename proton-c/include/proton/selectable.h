@@ -108,7 +108,15 @@ PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
  * @param[in] selectable a selectable object
  * @return the file descriptor associated with the selectable
  */
-PN_EXTERN pn_socket_t pn_selectable_fd(pn_selectable_t *selectable);
+PN_EXTERN pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable);
+
+/**
+ * Set the file descriptor associated with a selectable.
+ *
+ * @param[in] selectable a selectable object
+ * @param[in] fd the file descriptor
+ */
+PN_EXTERN void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd);
 
 /**
  * Get the capacity of a selectable.
@@ -202,6 +210,13 @@ PN_EXTERN void pn_selectable_set_registered(pn_selectable_t *selectable, bool re
  * @return true if the selectable is in the terminal state, false otherwise
  */
 PN_EXTERN bool pn_selectable_is_terminal(pn_selectable_t *selectable);
+
+/**
+ * Terminate a selectable.
+ *
+ * @param[in] selectable a selectable object
+ */
+PN_EXTERN void pn_selectable_terminate(pn_selectable_t *selectable);
 
 /**
  * Free a selectable object.

@@ -111,7 +111,7 @@ void pn_selector_add(pn_selector_t *selector, pn_selectable_t *selectable)
   assert(selector);
   assert(selectable);
   assert(pni_selectable_get_index(selectable) < 0);
-  pn_socket_t sock = pn_selectable_fd(selectable);
+  pn_socket_t sock = pn_selectable_get_fd(selectable);
 
   iocpdesc_t *iocpd = NULL;
   if (sock != INVALID_SOCKET) {
@@ -151,7 +151,7 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
   assert(idx >= 0);
   selector->deadlines[idx] = pn_selectable_deadline(selectable);
 
-  pn_socket_t sock = pn_selectable_fd(selectable);
+  pn_socket_t sock = pn_selectable_get_fd(selectable);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_list_get(selector->iocp_descriptors, idx);
   if (iocpd) {
     assert(sock == iocpd->socket || iocpd->closing);

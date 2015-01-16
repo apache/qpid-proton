@@ -91,7 +91,7 @@ static ssize_t pni_connection_capacity(pn_selectable_t *sel)
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity < 0) {
     if (pn_transport_closed(transport)) {
-      pni_selectable_set_terminal(sel, true);
+      pn_selectable_terminate(sel);
     }
   }
   return capacity;
@@ -103,7 +103,7 @@ static ssize_t pni_connection_pending(pn_selectable_t *sel)
   ssize_t pending = pn_transport_pending(transport);
   if (pending < 0) {
     if (pn_transport_closed(transport)) {
-      pni_selectable_set_terminal(sel, true);
+      pn_selectable_terminate(sel);
     }
   }
   return pending;
@@ -120,20 +120,15 @@ static void pni_connection_readable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity > 0) {
-    ssize_t n = pn_recv(pn_reactor_io(reactor), pn_selectable_fd(sel),
+    ssize_t n = pn_recv(pn_reactor_io(reactor), pn_selectable_get_fd(sel),
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
       if (n == 0 || !pn_wouldblock(pn_reactor_io(reactor))) {
         if (n < 0) perror("recv");
         pn_transport_close_tail(transport);
-        /*if (!(pn_connection_state(connection) & PN_REMOTE_CLOSED)) {
-          pn_error_report("CONNECTION", "connection aborted (remote)");
-          }*/
       }
     } else {
-      /*int err =*/ pn_transport_process(transport, (size_t)n);
-      /*if (err)
-        pn_error_copy(messenger->error, pn_transport_error(transport));*/
+      pn_transport_process(transport, (size_t)n);
     }
   }
 
@@ -149,7 +144,7 @@ static void pni_connection_writable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t pending = pn_transport_pending(transport);
   if (pending > 0) {
-    ssize_t n = pn_send(pn_reactor_io(reactor), pn_selectable_fd(sel),
+    ssize_t n = pn_send(pn_reactor_io(reactor), pn_selectable_get_fd(sel),
                         pn_transport_head(transport), pending);
     if (n < 0) {
       if (!pn_wouldblock(pn_reactor_io(reactor))) {
@@ -174,7 +169,7 @@ static void pni_connection_finalize(pn_selectable_t *sel) {
   pn_transport_t *transport = pni_transport(sel);
   pn_record_t *record = pn_transport_attachments(transport);
   pn_record_set(record, PN_TRANCTX, NULL);
-  pn_socket_t fd = pn_selectable_fd(sel);
+  pn_socket_t fd = pn_selectable_get_fd(sel);
   pn_close(pn_reactor_io(reactor), fd);
 }
 
@@ -187,7 +182,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_selectable_set_writable(sel, pni_connection_writable);
   pn_selectable_set_expired(sel, pni_connection_expired);
   pn_selectable_set_finalize(sel, pni_connection_finalize);
-  pni_selectable_set_fd(sel, sock);
+  pn_selectable_set_fd(sel, sock);
   pni_selectable_set_context(sel, reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, PN_TRANCTX, PN_OBJECT);

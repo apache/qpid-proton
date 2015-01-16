@@ -164,7 +164,7 @@ static ssize_t pni_connection_capacity(pn_selectable_t *sel)
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity < 0) {
     if (pn_transport_closed(transport)) {
-      pni_selectable_set_terminal(sel, true);
+      pn_selectable_terminate(sel);
     }
   }
   return capacity;
@@ -180,7 +180,7 @@ static ssize_t pni_connection_pending(pn_selectable_t *sel)
   ssize_t pending = pn_transport_pending(transport);
   if (pending < 0) {
     if (pn_transport_closed(transport)) {
-      pni_selectable_set_terminal(sel, true);
+      pn_selectable_terminate(sel);
     }
   }
   return pending;
@@ -229,7 +229,7 @@ static void pni_connection_readable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity > 0) {
-    ssize_t n = pn_recv(messenger->io, pn_selectable_fd(sel),
+    ssize_t n = pn_recv(messenger->io, pn_selectable_get_fd(sel),
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
       if (n == 0 || !pn_wouldblock(messenger->io)) {
@@ -259,7 +259,7 @@ static void pni_connection_writable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t pending = pn_transport_pending(transport);
   if (pending > 0) {
-    ssize_t n = pn_send(messenger->io, pn_selectable_fd(sel),
+    ssize_t n = pn_send(messenger->io, pn_selectable_get_fd(sel),
                         pn_transport_head(transport), pending);
     if (n < 0) {
       if (!pn_wouldblock(messenger->io)) {
@@ -290,7 +290,7 @@ static void pni_messenger_reclaim(pn_messenger_t *messenger, pn_connection_t *co
 static void pni_connection_finalize(pn_selectable_t *sel)
 {
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pni_selectable_get_context(sel);
-  pn_socket_t fd = pn_selectable_fd(sel);
+  pn_socket_t fd = pn_selectable_get_fd(sel);
   pn_close(ctx->messenger->io, fd);
   pn_list_remove(ctx->messenger->pending, sel);
   pni_messenger_reclaim(ctx->messenger, ctx->connection);
@@ -326,7 +326,7 @@ static void pni_listener_readable(pn_selectable_t *sel)
   pn_subscription_t *sub = ctx->subscription;
   const char *scheme = pn_subscription_scheme(sub);
   char name[1024];
-  pn_socket_t sock = pn_accept(ctx->messenger->io, pn_selectable_fd(sel), name, 1024);
+  pn_socket_t sock = pn_accept(ctx->messenger->io, pn_selectable_get_fd(sel), name, 1024);
 
   pn_transport_t *t = pn_transport();
   pn_transport_set_server(t);
@@ -358,7 +358,7 @@ static void pni_listener_finalize(pn_selectable_t *sel)
 {
   pn_listener_ctx_t *lnr = (pn_listener_ctx_t *) pni_selectable_get_context(sel);
   pn_messenger_t *messenger = lnr->messenger;
-  pn_close(messenger->io, pn_selectable_fd(sel));
+  pn_close(messenger->io, pn_selectable_get_fd(sel));
   pn_list_remove(messenger->pending, sel);
   pn_listener_ctx_free(messenger, lnr);
 }
@@ -424,7 +424,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
                                                pni_listener_writable,
                                                pni_listener_expired,
                                                pni_listener_finalize);
-  pni_selectable_set_fd(selectable, socket);
+  pn_selectable_set_fd(selectable, socket);
   pni_selectable_set_context(selectable, ctx);
   pn_list_add(messenger->pending, selectable);
   ctx->selectable = selectable;
@@ -466,7 +466,7 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
                                    pni_connection_writable,
                                    pni_connection_expired,
                                    pni_connection_finalize);
-  pni_selectable_set_fd(ctx->selectable, sock);
+  pn_selectable_set_fd(ctx->selectable, sock);
   pni_selectable_set_context(ctx->selectable, ctx);
   pn_list_add(messenger->pending, ctx->selectable);
   ctx->pending = true;
@@ -578,7 +578,7 @@ static void pni_interruptor_readable(pn_selectable_t *sel)
 {
   pn_messenger_t *messenger = (pn_messenger_t *) pni_selectable_get_context(sel);
   char buf[1024];
-  pn_read(messenger->io, pn_selectable_fd(sel), buf, 1024);
+  pn_read(messenger->io, pn_selectable_get_fd(sel), buf, 1024);
   messenger->interrupted = true;
 }
 
@@ -625,7 +625,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->ctrl[0] = -1;
     m->ctrl[1] = -1;
     pn_pipe(m->io, m->ctrl);
-    pni_selectable_set_fd(m->interruptor, m->ctrl[0]);
+    pn_selectable_set_fd(m->interruptor, m->ctrl[0]);
     pni_selectable_set_context(m->interruptor, m);
     m->listeners = pn_list(PN_WEAKREF, 0);
     m->connections = pn_list(PN_WEAKREF, 0);
@@ -1129,9 +1129,9 @@ void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *even
       char buf[1024];
       sprintf(buf, "%i", pn_condition_redirect_port(condition));
 
-      pn_close(messenger->io, pn_selectable_fd(ctx->selectable));
+      pn_close(messenger->io, pn_selectable_get_fd(ctx->selectable));
       pn_socket_t sock = pn_connect(messenger->io, host, buf);
-      pni_selectable_set_fd(ctx->selectable, sock);
+      pn_selectable_set_fd(ctx->selectable, sock);
       pn_transport_unbind(pn_connection_transport(conn));
       pn_connection_reset(conn);
       pn_transport_t *t = pn_transport();
@@ -1563,7 +1563,7 @@ int pn_messenger_stop(pn_messenger_t *messenger)
 
   for (size_t i = 0; i < pn_list_size(messenger->listeners); i++) {
     pn_listener_ctx_t *lnr = (pn_listener_ctx_t *) pn_list_get(messenger->listeners, i);
-    pni_selectable_set_terminal(lnr->selectable, true);
+    pn_selectable_terminate(lnr->selectable);
     pni_lnr_modified(lnr);
   }
 

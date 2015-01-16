@@ -173,13 +173,13 @@ void pni_selectable_set_index(pn_selectable_t *selectable, int index)
   selectable->index = index;
 }
 
-pn_socket_t pn_selectable_fd(pn_selectable_t *selectable)
+pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable)
 {
   assert(selectable);
   return selectable->fd;
 }
 
-void pni_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd)
+void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd)
 {
   assert(selectable);
   selectable->fd = fd;
@@ -261,10 +261,10 @@ bool pn_selectable_is_terminal(pn_selectable_t *selectable)
   return selectable->terminal;
 }
 
-void pni_selectable_set_terminal(pn_selectable_t *selectable, bool terminal)
+void pn_selectable_terminate(pn_selectable_t *selectable)
 {
   assert(selectable);
-  selectable->terminal = terminal;
+  selectable->terminal = true;
 }
 
 void pn_selectable_free(pn_selectable_t *selectable)
