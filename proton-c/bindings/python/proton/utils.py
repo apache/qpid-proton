@@ -29,8 +29,9 @@ class BlockingLink(object):
                              msg="Opening link %s" % link.name)
 
     def close(self):
-        self.connection.wait(not (self.link.state & Endpoint.REMOTE_ACTIVE),
-                             msg="Closing link %s" % link.name)
+        self.link.close()
+        self.connection.wait(lambda: not (self.link.state & Endpoint.REMOTE_ACTIVE),
+                             msg="Closing link %s" % self.link.name)
 
     # Access to other link attributes.
     def __getattr__(self, name): return getattr(self.link, name)
