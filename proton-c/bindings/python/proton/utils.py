@@ -90,10 +90,10 @@ class BlockingConnection(Handler):
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
-    def create_sender(self, address, handler=None):
-        return BlockingSender(self, self.container.create_sender(self.conn, address, handler=handler))
+    def create_sender(self, address, handler=None, name=None):
+        return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler))
 
-    def create_receiver(self, address, credit=None, dynamic=False, handler=None):
+    def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None):
         prefetch = credit
         if handler:
             fetcher = None
@@ -102,7 +102,7 @@ class BlockingConnection(Handler):
         else:
             fetcher = Fetcher(credit)
         return BlockingReceiver(
-            self, self.container.create_receiver(self.conn, address, dynamic=dynamic, handler=handler or fetcher), fetcher, credit=prefetch)
+            self, self.container.create_receiver(self.conn, address, name=name, dynamic=dynamic, handler=handler or fetcher), fetcher, credit=prefetch)
 
     def close(self):
         self.conn.close()
