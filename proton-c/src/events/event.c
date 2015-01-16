@@ -12,7 +12,8 @@ struct pn_collector_t {
 struct pn_event_t {
   pn_list_t *pool;
   const pn_class_t *clazz;
-  void *context;    // depends on type
+  void *context;    // depends on clazz
+  pn_record_t *attachments;
   pn_event_t *next;
   pn_event_type_t type;
 };
@@ -88,7 +89,6 @@ void pn_collector_free(pn_collector_t *collector)
 }
 
 pn_event_t *pn_event(void);
-static void pn_event_initialize(pn_event_t *event);
 
 pn_event_t *pn_collector_put(pn_collector_t *collector,
                              const pn_class_t *clazz, void *context,
@@ -113,9 +113,7 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
 
   pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
 
-  if (event) {
-    pn_event_initialize(event);
-  } else {
+  if (!event) {
     event = pn_event();
   }
 
@@ -167,20 +165,27 @@ static void pn_event_initialize(pn_event_t *event)
   event->clazz = NULL;
   event->context = NULL;
   event->next = NULL;
+  event->attachments = pn_record();
 }
 
 static void pn_event_finalize(pn_event_t *event) {
   // decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);
-    event->context = NULL;
   }
 
   pn_list_t *pool = event->pool;
 
   if (pool && pn_refcount(pool) > 1) {
     event->pool = NULL;
+    event->type = PN_EVENT_NONE;
+    event->clazz = NULL;
+    event->context = NULL;
+    event->next = NULL;
+    pn_record_clear(event->attachments);
     pn_list_add(pool, event);
+  } else {
+    pn_decref(event->attachments);
   }
 
   pn_decref(pool);
@@ -227,6 +232,14 @@ void *pn_event_context(pn_event_t *event)
   assert(event);
   return event->context;
 }
+
+pn_record_t *pn_event_attachments(pn_event_t *event)
+{
+  assert(event);
+  return event->attachments;
+}
+
+
 
 const char *pn_event_type_name(pn_event_type_t type)
 {

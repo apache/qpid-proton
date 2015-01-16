@@ -412,6 +412,14 @@ PN_EXTERN pn_delivery_t *pn_event_delivery(pn_event_t *event);
  */
 PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
 
+/**
+ * Get any attachments associated with an event.
+ *
+ * @param[in] event an event object
+ * @return the record holding the attachments
+ */
+PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
+
 #ifdef __cplusplus
 }
 #endif

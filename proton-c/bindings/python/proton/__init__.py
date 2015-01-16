@@ -3363,7 +3363,10 @@ class Event(Wrapper, EventBase):
       return event
 
   def __init__(self, impl):
-    Wrapper.__init__(self, impl)
+    Wrapper.__init__(self, impl, pn_event_attachments)
+
+  def _init(self):
+    pass
 
   @property
   def clazz(self):

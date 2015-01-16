@@ -991,10 +991,16 @@ def pn_collector():
 def pn_connection_collect(conn, coll):
   conn.impl.collect(coll)
 
+class pn_event:
+
+  def __init__(self, impl):
+    self.impl = impl
+    self.attachments = {}
+
 def pn_collector_peek(coll):
   ev = coll.peek()
   if ev:
-    return ev.copy()
+    return pn_event(ev.copy())
   else:
     return None
 
@@ -1008,19 +1014,19 @@ def pn_event_reactor(event):
   return None
 
 def pn_event_connection(event):
-  return wrap(event.getConnection(), pn_connection_wrapper)
+  return wrap(event.impl.getConnection(), pn_connection_wrapper)
 
 def pn_event_session(event):
-  return wrap(event.getSession(), pn_session_wrapper)
+  return wrap(event.impl.getSession(), pn_session_wrapper)
 
 def pn_event_link(event):
-  return wrap(event.getLink(), pn_link_wrapper)
+  return wrap(event.impl.getLink(), pn_link_wrapper)
 
 def pn_event_delivery(event):
-  return wrap(event.getDelivery(), pn_delivery_wrapper)
+  return wrap(event.impl.getDelivery(), pn_delivery_wrapper)
 
 def pn_event_transport(event):
-  return wrap(event.getTransport(), pn_transport_wrapper)
+  return wrap(event.impl.getTransport(), pn_transport_wrapper)
 
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
   SenderImpl, ReceiverImpl, DeliveryImpl, TransportImpl
@@ -1044,17 +1050,20 @@ wrappers = {
 }
 
 def pn_event_class(event):
-  ctx = event.getContext()
+  ctx = event.impl.getContext()
   return J2C.get(ctx.getClass(), "pn_void")
 
 def pn_event_context(event):
-  return wrappers[pn_event_class(event)](event.getContext())
+  return wrappers[pn_event_class(event)](event.impl.getContext())
 
 def pn_event_type(event):
-  return event.getType()
+  return event.impl.getType()
 
 def pn_event_type_name(etype):
   return str(etype)
 
 def pn_event_category(event):
-  return event.getCategory()
+  return event.impl.getCategory()
+
+def pn_event_attachments(event):
+  return event.attachments
