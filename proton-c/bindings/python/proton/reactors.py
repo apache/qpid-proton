@@ -835,7 +835,7 @@ class Container(object):
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
 
-from proton import WrappedHandler, _chandler, Connection, secs2millis
+from proton import WrappedHandler, _chandler, Connection, secs2millis, Selectable
 from wrapper import Wrapper
 from cproton import *
 
@@ -902,6 +902,14 @@ class Reactor(Wrapper):
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
         pn_decref(impl)
         return result
+
+    def selectable(self):
+        impl = pn_reactor_selectable(self._impl)
+        pn_selectable_collect(impl, pn_reactor_collector(self._impl))
+        return Selectable.wrap(impl)
+
+    def update(self, sel):
+        pn_reactor_update(self._impl, sel._impl)
 
 from proton import wrappers as _wrappers
 _wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))

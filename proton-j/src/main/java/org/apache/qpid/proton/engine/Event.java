@@ -67,7 +67,11 @@ public interface Event
         TRANSPORT_ERROR,
         TRANSPORT_HEAD_CLOSED,
         TRANSPORT_TAIL_CLOSED,
-        TRANSPORT_CLOSED
+        TRANSPORT_CLOSED,
+
+        SELECTABLE_READABLE,
+        SELECTABLE_WRITABLE,
+        SELECTABLE_EXPIRED
     }
 
     Type getType();

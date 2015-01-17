@@ -3258,7 +3258,8 @@ wrappers = {
   "pn_session": lambda x: Session.wrap(pn_cast_pn_session(x)),
   "pn_link": lambda x: Link.wrap(pn_cast_pn_link(x)),
   "pn_delivery": lambda x: Delivery.wrap(pn_cast_pn_delivery(x)),
-  "pn_transport": lambda x: Transport.wrap(pn_cast_pn_transport(x))
+  "pn_transport": lambda x: Transport.wrap(pn_cast_pn_transport(x)),
+  "pn_selectable": lambda x: Selectable.wrap(pn_cast_pn_selectable(x))
 }
 
 class Collector:
@@ -3352,6 +3353,10 @@ class Event(Wrapper, EventBase):
   TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
   TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
   TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
+
+  SELECTABLE_READABLE = EventType(PN_SELECTABLE_READABLE, "on_selectable_readable")
+  SELECTABLE_WRITABLE = EventType(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
+  SELECTABLE_EXPIRED = EventType(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
 
   @staticmethod
   def wrap(impl):

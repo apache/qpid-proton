@@ -270,6 +270,11 @@ pn_reactor_t *pn_event_reactor(pn_event_t *event) {
       pn_record_t *record = pn_connection_attachments(conn);
       return pni_record_get_reactor(record);
     }
+  case CID_pn_selectable:
+    {
+      pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
+      return (pn_reactor_t *) pni_selectable_get_context(sel);
+    }
   default:
     return NULL;
   }
