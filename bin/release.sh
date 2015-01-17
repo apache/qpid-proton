@@ -53,8 +53,9 @@ die()
     fi
     BRANCH=$(git symbolic-ref --short HEAD)
     REMOTE=$(git config branch.${BRANCH}.remote)
-    git checkout -b $VERSION ${REMOTE}/${BRANCH}
+    git checkout --detach ${REMOTE}/${BRANCH}
     bin/version.sh $VERSION
     git commit -a -m "Release $VERSION"
-    echo "Run 'git push -u ${REMOTE} ${VERSION}' to push the release upstream."
+    git tag -m "Release $VERSION" $VERSION
+    echo "Run 'git push ${REMOTE} ${VERSION}' to push the release upstream."
 )
