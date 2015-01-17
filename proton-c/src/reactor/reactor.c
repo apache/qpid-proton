@@ -99,7 +99,6 @@ static void pni_timer_expired(pn_selectable_t *sel) {
 pn_selectable_t *pni_selectable_timer(pn_reactor_t *reactor) {
   pn_selectable_t *sel = pn_reactor_selectable(reactor);
   pn_selectable_on_expired(sel, pni_timer_expired);
-  pni_selectable_set_context(sel, reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, 0x1, PN_OBJECT);
   pn_timer_t *timer = pn_timer(reactor->collector);
@@ -156,11 +155,18 @@ pn_list_t *pn_reactor_children(pn_reactor_t *reactor) {
   return reactor->children;
 }
 
+static void pni_selectable_release(pn_selectable_t *selectable) {
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(selectable);
+  pn_list_remove(reactor->children, selectable);
+}
+
 pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor) {
   assert(reactor);
   pn_selectable_t *sel = pn_selectable();
+  pni_selectable_set_context(sel, reactor);
   pn_selector_add(reactor->selector, sel);
   pn_list_add(reactor->children, sel);
+  pn_selectable_on_release(sel, pni_selectable_release);
   pn_decref(sel);
   return sel;
 }
@@ -353,7 +359,7 @@ bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
     }
     if (pn_selectable_is_terminal(sel)) {
       pn_selector_remove(reactor->selector, sel);
-      pn_list_remove(reactor->children, sel);
+      pn_selectable_release(sel);
     }
   }
 

@@ -47,6 +47,7 @@ struct pn_selectable_t {
   void (*readable)(pn_selectable_t *);
   void (*writable)(pn_selectable_t *);
   void (*expired)(pn_selectable_t *);
+  void (*release) (pn_selectable_t *);
   void (*finalize)(pn_selectable_t *);
   pn_collector_t *collector;
   pn_timestamp_t deadline;
@@ -64,6 +65,7 @@ void pn_selectable_initialize(pn_selectable_t *sel)
   sel->readable = NULL;
   sel->writable = NULL;
   sel->expired = NULL;
+  sel->release = NULL;
   sel->finalize = NULL;
   sel->collector = NULL;
   sel->deadline = 0;
@@ -135,6 +137,11 @@ void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selecta
 void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *)) {
   assert(sel);
   sel->expired = expired;
+}
+
+void pn_selectable_on_release(pn_selectable_t *sel, void (*release)(pn_selectable_t *)) {
+  assert(sel);
+  sel->release = release;
 }
 
 void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *)) {
@@ -230,9 +237,17 @@ void pn_selectable_terminate(pn_selectable_t *selectable)
   selectable->terminal = true;
 }
 
+void pn_selectable_release(pn_selectable_t *selectable)
+{
+  assert(selectable);
+  if (selectable->release) {
+    selectable->release(selectable);
+  }
+}
+
 void pn_selectable_free(pn_selectable_t *selectable)
 {
-  pn_free(selectable);
+  pn_decref(selectable);
 }
 
 static void pni_readable(pn_selectable_t *selectable) {

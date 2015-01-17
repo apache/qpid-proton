@@ -958,7 +958,7 @@ class Pump:
 
     for sel in self.selectables[:]:
       if sel.is_terminal:
-        sel.free()
+        sel.release()
         self.selectables.remove(sel)
       else:
         if sel.reading:

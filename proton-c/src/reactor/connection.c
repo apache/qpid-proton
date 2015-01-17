@@ -191,7 +191,6 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_selectable_on_writable(sel, pni_connection_writable);
   pn_selectable_on_expired(sel, pni_connection_expired);
   pn_selectable_on_finalize(sel, pni_connection_finalize);
-  pni_selectable_set_context(sel, reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, PN_TRANCTX, PN_OBJECT);
   pn_record_set(record, PN_TRANCTX, transport);

@@ -748,16 +748,7 @@ first message.
     self._check(pn_messenger_rewrite(self._mng, pattern, address))
 
   def selectable(self):
-    impl = pn_messenger_selectable(self._mng)
-    if impl:
-      fd = pn_selectable_get_fd(impl)
-      sel = self._selectables.get(fd, None)
-      if sel is None:
-        sel = Selectable(self, impl)
-        self._selectables[fd] = sel
-      return sel
-    else:
-      return None
+    return Selectable.wrap(pn_messenger_selectable(self._mng))
 
   @property
   def deadline(self):
@@ -1158,14 +1149,22 @@ class Subscription(object):
 
 _DEFAULT = object()
 
-class Selectable(object):
+class Selectable(Wrapper):
 
-  def __init__(self, messenger, impl):
-    self.messenger = messenger
-    self._impl = impl
+  @staticmethod
+  def wrap(impl):
+    if impl is None:
+      return None
+    else:
+      return Selectable(impl)
+
+  def __init__(self, impl):
+    Wrapper.__init__(self, impl, pn_selectable_attachments)
+
+  def _init(self):
+    pass
 
   def fileno(self, fd = _DEFAULT):
-    if not self._impl: raise ValueError("selectable freed")
     if fd is _DEFAULT:
       return pn_selectable_get_fd(self._impl)
     elif fd is None:
@@ -1174,27 +1173,22 @@ class Selectable(object):
       pn_selectable_set_fd(self._impl, fd)
 
   def _is_reading(self):
-    if not self._impl: raise ValueError("selectable freed")
     return pn_selectable_is_reading(self._impl)
 
   def _set_reading(self, val):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_set_reading(self._impl, bool(val))
 
   reading = property(_is_reading, _set_reading)
 
   def _is_writing(self):
-    if not self._impl: raise ValueError("selectable freed")
     return pn_selectable_is_writing(self._impl)
 
   def _set_writing(self, val):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_set_writing(self._impl, bool(val))
 
   writing = property(_is_writing, _set_writing)
 
   def _get_deadline(self):
-    if not self._impl: raise ValueError("selectable freed")
     tstamp = pn_selectable_get_deadline(self._impl)
     if tstamp:
       return millis2secs(tstamp)
@@ -1202,29 +1196,23 @@ class Selectable(object):
       return None
 
   def _set_deadline(self, deadline):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_set_deadline(self._impl, secs2millis(deadline))
 
   deadline = property(_get_deadline, _set_deadline)
 
   def readable(self):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_readable(self._impl)
 
   def writable(self):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_writable(self._impl)
 
   def expired(self):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_expired(self._impl)
 
   def _is_registered(self):
-    if not self._impl: raise ValueError("selectable freed")
     return pn_selectable_is_registered(self._impl)
 
   def _set_registered(self, registered):
-    if not self._impl: raise ValueError("selectable freed")
     pn_selectable_set_registered(self._impl, registered)
 
   registered = property(_is_registered, _set_registered,
@@ -1235,17 +1223,10 @@ indicate whether the fd has been registered or not.
 
   @property
   def is_terminal(self):
-    if not self._impl: return True
     return pn_selectable_is_terminal(self._impl)
 
-  def free(self):
-    if self._impl:
-      del self.messenger._selectables[self.fileno()]
-      pn_selectable_free(self._impl)
-      self._impl = None
-
-  def __del__(self):
-    self.free()
+  def release(self):
+    pn_selectable_release(self._impl)
 
 class DataException(ProtonException):
   """

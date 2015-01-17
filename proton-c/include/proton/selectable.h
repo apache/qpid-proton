@@ -96,6 +96,7 @@ PN_EXTERN pn_selectable_t *pn_selectable(void);
 PN_EXTERN void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_release(pn_selectable_t *sel, void (*release)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
 
 PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
@@ -213,6 +214,8 @@ PN_EXTERN bool pn_selectable_is_terminal(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  */
 PN_EXTERN void pn_selectable_terminate(pn_selectable_t *selectable);
+
+PN_EXTERN void pn_selectable_release(pn_selectable_t *selectable);
 
 /**
  * Free a selectable object.

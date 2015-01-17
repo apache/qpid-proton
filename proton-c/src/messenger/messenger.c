@@ -408,6 +408,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
   pn_selectable_t *selectable = pn_selectable();
   pn_selectable_set_reading(selectable, true);
   pn_selectable_on_readable(selectable, pni_listener_readable);
+  pn_selectable_on_release(selectable, pn_selectable_free);
   pn_selectable_on_finalize(selectable, pni_listener_finalize);
   pn_selectable_set_fd(selectable, socket);
   pni_selectable_set_context(selectable, ctx);
@@ -449,6 +450,7 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
   pn_selectable_on_readable(sel, pni_connection_readable);
   pn_selectable_on_writable(sel, pni_connection_writable);
   pn_selectable_on_expired(sel, pni_connection_expired);
+  pn_selectable_on_release(sel, pn_selectable_free);
   pn_selectable_on_finalize(sel, pni_connection_finalize);
   pn_selectable_set_fd(ctx->selectable, sock);
   pni_selectable_set_context(ctx->selectable, ctx);
@@ -574,6 +576,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->interruptor = pn_selectable();
     pn_selectable_set_reading(m->interruptor, true);
     pn_selectable_on_readable(m->interruptor, pni_interruptor_readable);
+    pn_selectable_on_release(m->interruptor, pn_selectable_free);
     pn_selectable_on_finalize(m->interruptor, pni_interruptor_finalize);
     pn_list_add(m->pending, m->interruptor);
     m->interrupted = false;

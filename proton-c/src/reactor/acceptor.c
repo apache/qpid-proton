@@ -57,7 +57,6 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   pn_selectable_set_fd(sel, socket);
   pn_selectable_on_readable(sel, pni_acceptor_readable);
   pn_selectable_on_finalize(sel, pni_acceptor_finalize);
-  pni_selectable_set_context(sel, reactor);
   pni_record_init_reactor(pn_selectable_attachments(sel), reactor);
   pni_record_init_handler(pn_selectable_attachments(sel), handler);
   pn_selectable_set_reading(sel, true);
