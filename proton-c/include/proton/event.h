@@ -281,7 +281,11 @@ typedef enum {
    * Indicates that the both the head and tail of the transport are
    * closed. Events of this type point to the relevant transport.
    */
-  PN_TRANSPORT_CLOSED
+  PN_TRANSPORT_CLOSED,
+
+  PN_SELECTABLE_READABLE,
+  PN_SELECTABLE_WRITABLE,
+  PN_SELECTABLE_EXPIRED
 
 } pn_event_type_t;
 

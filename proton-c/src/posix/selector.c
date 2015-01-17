@@ -99,13 +99,13 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
   selector->fds[idx].fd = pn_selectable_get_fd(selectable);
   selector->fds[idx].events = 0;
   selector->fds[idx].revents = 0;
-  if (pn_selectable_capacity(selectable) > 0) {
+  if (pn_selectable_is_reading(selectable)) {
     selector->fds[idx].events |= POLLIN;
   }
-  if (pn_selectable_pending(selectable) > 0) {
+  if (pn_selectable_is_writing(selectable)) {
     selector->fds[idx].events |= POLLOUT;
   }
-  selector->deadlines[idx] = pn_selectable_deadline(selectable);
+  selector->deadlines[idx] = pn_selectable_get_deadline(selectable);
 }
 
 void pn_selector_remove(pn_selector_t *selector, pn_selectable_t *selectable)

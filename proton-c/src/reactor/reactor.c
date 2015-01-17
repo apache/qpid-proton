@@ -98,14 +98,14 @@ static void pni_timer_expired(pn_selectable_t *sel) {
 
 pn_selectable_t *pni_selectable_timer(pn_reactor_t *reactor) {
   pn_selectable_t *sel = pn_reactor_selectable(reactor);
-  pn_selectable_set_deadline(sel, pni_timer_deadline);
-  pn_selectable_set_expired(sel, pni_timer_expired);
+  pn_selectable_on_expired(sel, pni_timer_expired);
   pni_selectable_set_context(sel, reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, 0x1, PN_OBJECT);
   pn_timer_t *timer = pn_timer(reactor->collector);
   pn_record_set(record, 0x1, timer);
   pn_decref(timer);
+  pn_selectable_set_deadline(sel, pni_timer_deadline(sel));
   pn_reactor_update(reactor, sel);
   return sel;
 }
@@ -299,6 +299,7 @@ pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *h
   pn_record_t *record = pn_task_attachments(task);
   pni_record_init_reactor(record, reactor);
   pni_record_init_handler(record, handler);
+  pn_selectable_set_deadline(reactor->timer, pni_timer_deadline(reactor->timer));
   pn_reactor_update(reactor, reactor->timer);
   return task;
 }

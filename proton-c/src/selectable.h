@@ -28,13 +28,6 @@
 
 #include <proton/selectable.h>
 
-pn_selectable_t *pni_selectable(ssize_t (*capacity)(pn_selectable_t *),
-                                ssize_t (*pending)(pn_selectable_t *),
-                                pn_timestamp_t (*deadline)(pn_selectable_t *),
-                                void (*readable)(pn_selectable_t *),
-                                void (*writable)(pn_selectable_t *),
-                                void (*expired)(pn_selectable_t *),
-                                void (*finalize)(pn_selectable_t *));
 void *pni_selectable_get_context(pn_selectable_t *selectable);
 void pni_selectable_set_context(pn_selectable_t *selectable, void *context);
 int pni_selectable_get_index(pn_selectable_t *selectable);

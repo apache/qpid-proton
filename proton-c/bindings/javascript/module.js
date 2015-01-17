@@ -221,7 +221,7 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
         for (var name in _messengers) {
             var messenger = _messengers[name];
             while ((sel = _pn_messenger_selectable(messenger._messenger))) {
-                fd = _pn_selectable_fd(sel);
+                fd = _pn_selectable_get_fd(sel);
                 // Only register valid selectables, otherwise free them.
                 if (fd === -1) {
                     _pn_selectable_free(sel);
@@ -268,8 +268,8 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
                         if (sock.sock_ops.poll) {
                             var mask = sock.sock_ops.poll(sock); // Low-level poll call.
                             if (mask) {
-                                var capacity = _pn_selectable_capacity(sel) > 0;
-                                var pending = _pn_selectable_pending(sel) > 0;
+                                var capacity = _pn_selectable_is_reading(sel);
+                                var pending = _pn_selectable_is_writing(sel);
 
                                 if ((mask & POLLIN) && capacity) {
 //console.log("- readable fd = " + fd + ", capacity = " + _pn_selectable_capacity(sel));

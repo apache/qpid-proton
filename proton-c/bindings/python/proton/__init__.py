@@ -1156,34 +1156,56 @@ class Subscription(object):
   def address(self):
     return pn_subscription_address(self._impl)
 
+_DEFAULT = object()
+
 class Selectable(object):
 
   def __init__(self, messenger, impl):
     self.messenger = messenger
     self._impl = impl
 
-  def fileno(self):
+  def fileno(self, fd = _DEFAULT):
     if not self._impl: raise ValueError("selectable freed")
-    return pn_selectable_get_fd(self._impl)
+    if fd is _DEFAULT:
+      return pn_selectable_get_fd(self._impl)
+    elif fd is None:
+      pn_selectable_set_fd(self._impl, PN_INVALID_SOCKET)
+    else:
+      pn_selectable_set_fd(self._impl, fd)
 
-  @property
-  def capacity(self):
+  def _is_reading(self):
     if not self._impl: raise ValueError("selectable freed")
-    return pn_selectable_capacity(self._impl)
+    return pn_selectable_is_reading(self._impl)
 
-  @property
-  def pending(self):
+  def _set_reading(self, val):
     if not self._impl: raise ValueError("selectable freed")
-    return pn_selectable_pending(self._impl)
+    pn_selectable_set_reading(self._impl, bool(val))
 
-  @property
-  def deadline(self):
+  reading = property(_is_reading, _set_reading)
+
+  def _is_writing(self):
     if not self._impl: raise ValueError("selectable freed")
-    tstamp = pn_selectable_deadline(self._impl)
+    return pn_selectable_is_writing(self._impl)
+
+  def _set_writing(self, val):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_set_writing(self._impl, bool(val))
+
+  writing = property(_is_writing, _set_writing)
+
+  def _get_deadline(self):
+    if not self._impl: raise ValueError("selectable freed")
+    tstamp = pn_selectable_get_deadline(self._impl)
     if tstamp:
       return millis2secs(tstamp)
     else:
       return None
+
+  def _set_deadline(self, deadline):
+    if not self._impl: raise ValueError("selectable freed")
+    pn_selectable_set_deadline(self._impl, secs2millis(deadline))
+
+  deadline = property(_get_deadline, _set_deadline)
 
   def readable(self):
     if not self._impl: raise ValueError("selectable freed")

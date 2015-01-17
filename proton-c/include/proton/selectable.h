@@ -24,6 +24,7 @@
 
 #include <proton/import_export.h>
 #include <proton/object.h>
+#include <proton/event.h>
 #include <proton/io.h>
 #include <proton/type_compat.h>
 
@@ -92,13 +93,10 @@ PN_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
 
 PN_EXTERN pn_selectable_t *pn_selectable(void);
 
-PN_EXTERN void pn_selectable_set_capacity(pn_selectable_t *sel, ssize_t (*capacity)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_pending(pn_selectable_t *sel, ssize_t (*pending)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t (*deadline)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_set_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
 
 PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
 
@@ -119,28 +117,24 @@ PN_EXTERN pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable);
 PN_EXTERN void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd);
 
 /**
- * Get the capacity of a selectable.
- *
- * A selectable with a positive capacity is interested in being
- * notified of read events. A negative capacity indicates that the
- * selectable will never be interested in read events ever again.
+ * Check if a selectable is interested in readable events.
  *
  * @param[in] selectable a selectable object
- * @return the selectables capacity
+ * @return true iff the selectable is interested in read events
  */
-PN_EXTERN ssize_t pn_selectable_capacity(pn_selectable_t *selectable);
+PN_EXTERN bool pn_selectable_is_reading(pn_selectable_t *selectable);
+
+PN_EXTERN void pn_selectable_set_reading(pn_selectable_t *sel, bool reading);
 
 /**
- * Get the number of bytes pending for a selectable.
- *
- * A selectable with pending bytes is interested in being notified of
- * write events. If this value is negative then the selectable will
- * never be interested in write events ever again.
+ * Check if a selectable is interested in writable events.
  *
  * @param[in] selectable a selectable object
- * @return the number of bytes pending for the selectable
+ * @return true iff the selectable is interested in writable events
  */
-PN_EXTERN ssize_t pn_selectable_pending(pn_selectable_t *selectable);
+PN_EXTERN bool pn_selectable_is_writing(pn_selectable_t *selectable);
+
+  PN_EXTERN void pn_selectable_set_writing(pn_selectable_t *sel, bool writing);
 
 /**
  * Get the next deadline for a selectable.
@@ -152,7 +146,9 @@ PN_EXTERN ssize_t pn_selectable_pending(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  * @return the next deadline or zero
  */
-PN_EXTERN pn_timestamp_t pn_selectable_deadline(pn_selectable_t *selectable);
+PN_EXTERN pn_timestamp_t pn_selectable_get_deadline(pn_selectable_t *selectable);
+
+PN_EXTERN void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t deadline);
 
 /**
  * Notify a selectable that the file descriptor is readable.
@@ -224,6 +220,15 @@ PN_EXTERN void pn_selectable_terminate(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object (or NULL)
  */
 PN_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
+
+/**
+ * Configure a selectable with a set of callbacks that emit events
+ * into the provided collector.
+ *
+ * @param[in] selectable a selectable objet
+ * @param[in] collector an event collector
+ */
+PN_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
 
 /**
  * @}

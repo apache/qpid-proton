@@ -310,6 +310,12 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_TRANSPORT_TAIL_CLOSED";
   case PN_TRANSPORT_CLOSED:
     return "PN_TRANSPORT_CLOSED";
+  case PN_SELECTABLE_READABLE:
+    return "PN_SELECTABLE_READABLE";
+  case PN_SELECTABLE_WRITABLE:
+    return "PN_SELECTABLE_WRITABLE";
+  case PN_SELECTABLE_EXPIRED:
+    return "PN_SELECTABLE_EXPIRED";
   }
 
   return "<unrecognized>";

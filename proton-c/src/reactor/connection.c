@@ -33,12 +33,55 @@
 static void *pni_transportctx = NULL;
 #define PN_TRANCTX ((pn_handle_t) &pni_transportctx)
 
+static pn_transport_t *pni_transport(pn_selectable_t *sel) {
+  pn_record_t *record = pn_selectable_attachments(sel);
+  return (pn_transport_t *) pn_record_get(record, PN_TRANCTX);
+}
+
+static ssize_t pni_connection_capacity(pn_selectable_t *sel)
+{
+  pn_transport_t *transport = pni_transport(sel);
+  ssize_t capacity = pn_transport_capacity(transport);
+  if (capacity < 0) {
+    if (pn_transport_closed(transport)) {
+      pn_selectable_terminate(sel);
+    }
+  }
+  return capacity;
+}
+
+static ssize_t pni_connection_pending(pn_selectable_t *sel)
+{
+  pn_transport_t *transport = pni_transport(sel);
+  ssize_t pending = pn_transport_pending(transport);
+  if (pending < 0) {
+    if (pn_transport_closed(transport)) {
+      pn_selectable_terminate(sel);
+    }
+  }
+  return pending;
+}
+
+static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
+{
+  return 0;
+}
+
+static void pni_connection_update(pn_selectable_t *sel) {
+  ssize_t c = pni_connection_capacity(sel);
+  ssize_t p = pni_connection_pending(sel);
+  pn_selectable_set_reading(sel, c > 0);
+  pn_selectable_set_writing(sel, p > 0);
+  pn_selectable_set_deadline(sel, pni_connection_deadline(sel));
+}
+
 void pni_handle_transport(pn_reactor_t *reactor, pn_event_t *event) {
   assert(reactor);
   pn_transport_t *transport = pn_event_transport(event);
   pn_record_t *record = pn_transport_attachments(transport);
   pn_selectable_t *sel = (pn_selectable_t *) pn_record_get(record, PN_TRANCTX);
   if (sel && !pn_selectable_is_terminal(sel)) {
+    pni_connection_update(sel);
     pn_reactor_update(reactor, sel);
   }
 }
@@ -80,40 +123,6 @@ void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event) {
   pn_list_remove(pn_reactor_children(reactor), conn);
 }
 
-static pn_transport_t *pni_transport(pn_selectable_t *sel) {
-  pn_record_t *record = pn_selectable_attachments(sel);
-  return (pn_transport_t *) pn_record_get(record, PN_TRANCTX);
-}
-
-static ssize_t pni_connection_capacity(pn_selectable_t *sel)
-{
-  pn_transport_t *transport = pni_transport(sel);
-  ssize_t capacity = pn_transport_capacity(transport);
-  if (capacity < 0) {
-    if (pn_transport_closed(transport)) {
-      pn_selectable_terminate(sel);
-    }
-  }
-  return capacity;
-}
-
-static ssize_t pni_connection_pending(pn_selectable_t *sel)
-{
-  pn_transport_t *transport = pni_transport(sel);
-  ssize_t pending = pn_transport_pending(transport);
-  if (pending < 0) {
-    if (pn_transport_closed(transport)) {
-      pn_selectable_terminate(sel);
-    }
-  }
-  return pending;
-}
-
-static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
-{
-  return 0;
-}
-
 static void pni_connection_readable(pn_selectable_t *sel)
 {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
@@ -134,6 +143,7 @@ static void pni_connection_readable(pn_selectable_t *sel)
 
   ssize_t newcap = pn_transport_capacity(transport);
   if (newcap != capacity) {
+    pni_connection_update(sel);
     pn_reactor_update(reactor, sel);
   }
 }
@@ -158,6 +168,7 @@ static void pni_connection_writable(pn_selectable_t *sel)
 
   ssize_t newpending = pn_transport_pending(transport);
   if (newpending != pending) {
+    pni_connection_update(sel);
     pn_reactor_update(reactor, sel);
   }
 }
@@ -175,14 +186,11 @@ static void pni_connection_finalize(pn_selectable_t *sel) {
 
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport) {
   pn_selectable_t *sel = pn_reactor_selectable(reactor);
-  pn_selectable_set_capacity(sel, pni_connection_capacity);
-  pn_selectable_set_pending(sel, pni_connection_pending);
-  pn_selectable_set_deadline(sel, pni_connection_deadline);
-  pn_selectable_set_readable(sel, pni_connection_readable);
-  pn_selectable_set_writable(sel, pni_connection_writable);
-  pn_selectable_set_expired(sel, pni_connection_expired);
-  pn_selectable_set_finalize(sel, pni_connection_finalize);
   pn_selectable_set_fd(sel, sock);
+  pn_selectable_on_readable(sel, pni_connection_readable);
+  pn_selectable_on_writable(sel, pni_connection_writable);
+  pn_selectable_on_expired(sel, pni_connection_expired);
+  pn_selectable_on_finalize(sel, pni_connection_finalize);
   pni_selectable_set_context(sel, reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, PN_TRANCTX, PN_OBJECT);
@@ -191,6 +199,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_record_def(tr, PN_TRANCTX, PN_WEAKREF);
   pn_record_set(tr, PN_TRANCTX, sel);
   pni_record_init_reactor(tr, reactor);
+  pni_connection_update(sel);
   pn_reactor_update(reactor, sel);
   return sel;
 }

@@ -192,6 +192,17 @@ static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
   return ctx->messenger->next_drain;
 }
 
+static void pni_connection_update(pn_selectable_t *sel) {
+  ssize_t c = pni_connection_capacity(sel);
+  pn_selectable_set_reading(sel, c > 0);
+  ssize_t p = pni_connection_pending(sel);
+  pn_selectable_set_writing(sel, p > 0);
+  pn_selectable_set_deadline(sel, pni_connection_deadline(sel));
+  if (c < 0 && p < 0) {
+    pn_selectable_terminate(sel);
+  }
+}
+
 #include <errno.h>
 
 static void pn_error_report(const char *pfx, const char *error)
@@ -211,6 +222,7 @@ void pni_modified(pn_ctx_t *ctx)
 
 void pni_conn_modified(pn_connection_ctx_t *ctx)
 {
+  pni_connection_update(ctx->selectable);
   pni_modified((pn_ctx_t *) ctx);
 }
 
@@ -296,21 +308,6 @@ static void pni_connection_finalize(pn_selectable_t *sel)
   pni_messenger_reclaim(ctx->messenger, ctx->connection);
 }
 
-static ssize_t pni_listener_capacity(pn_selectable_t *sel)
-{
-  return 1;
-}
-
-static ssize_t pni_listener_pending(pn_selectable_t *sel)
-{
-  return 0;
-}
-
-static pn_timestamp_t pni_listener_deadline(pn_selectable_t *sel)
-{
-  return 0;
-}
-
 pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
                                          pn_socket_t sock,
                                          const char *scheme,
@@ -340,16 +337,7 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
   pn_transport_bind(t, conn);
-}
-
-static void pni_listener_writable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void pni_listener_expired(pn_selectable_t *sel)
-{
-  // do nothing
+  pni_conn_modified((pn_connection_ctx_t *) pn_connection_get_context(conn));
 }
 
 static void pn_listener_ctx_free(pn_messenger_t *messenger, pn_listener_ctx_t *ctx);
@@ -417,13 +405,10 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
   ctx->host = pn_strdup(host);
   ctx->port = pn_strdup(port);
 
-  pn_selectable_t *selectable = pni_selectable(pni_listener_capacity,
-                                               pni_listener_pending,
-                                               pni_listener_deadline,
-                                               pni_listener_readable,
-                                               pni_listener_writable,
-                                               pni_listener_expired,
-                                               pni_listener_finalize);
+  pn_selectable_t *selectable = pn_selectable();
+  pn_selectable_set_reading(selectable, true);
+  pn_selectable_on_readable(selectable, pni_listener_readable);
+  pn_selectable_on_finalize(selectable, pni_listener_finalize);
   pn_selectable_set_fd(selectable, socket);
   pni_selectable_set_context(selectable, ctx);
   pn_list_add(messenger->pending, selectable);
@@ -459,13 +444,12 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
   ctx = (pn_connection_ctx_t *) malloc(sizeof(pn_connection_ctx_t));
   ctx->messenger = messenger;
   ctx->connection = conn;
-  ctx->selectable = pni_selectable(pni_connection_capacity,
-                                   pni_connection_pending,
-                                   pni_connection_deadline,
-                                   pni_connection_readable,
-                                   pni_connection_writable,
-                                   pni_connection_expired,
-                                   pni_connection_finalize);
+  pn_selectable_t *sel = pn_selectable();
+  ctx->selectable = sel;
+  pn_selectable_on_readable(sel, pni_connection_readable);
+  pn_selectable_on_writable(sel, pni_connection_writable);
+  pn_selectable_on_expired(sel, pni_connection_expired);
+  pn_selectable_on_finalize(sel, pni_connection_finalize);
   pn_selectable_set_fd(ctx->selectable, sock);
   pni_selectable_set_context(ctx->selectable, ctx);
   pn_list_add(messenger->pending, ctx->selectable);
@@ -477,7 +461,6 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
   ctx->port = pn_strdup(port);
   ctx->listener = lnr;
   pn_connection_set_context(conn, ctx);
-
   return ctx;
 }
 
@@ -559,37 +542,12 @@ static void link_ctx_release( pn_messenger_t *messenger, pn_link_t *link )
   }
 }
 
-static ssize_t pni_interruptor_capacity(pn_selectable_t *sel)
-{
-  return 1024;
-}
-
-static ssize_t pni_interruptor_pending(pn_selectable_t *sel)
-{
-  return 0;
-}
-
-static pn_timestamp_t pni_interruptor_deadline(pn_selectable_t *sel)
-{
-  return 0;
-}
-
 static void pni_interruptor_readable(pn_selectable_t *sel)
 {
   pn_messenger_t *messenger = (pn_messenger_t *) pni_selectable_get_context(sel);
   char buf[1024];
   pn_read(messenger->io, pn_selectable_get_fd(sel), buf, 1024);
   messenger->interrupted = true;
-}
-
-static void pni_interruptor_writable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void pni_interruptor_expired(pn_selectable_t *sel)
-{
-  // do nothing
 }
 
 static void pni_interruptor_finalize(pn_selectable_t *sel)
@@ -613,11 +571,10 @@ pn_messenger_t *pn_messenger(const char *name)
     m->passive = false;
     m->io = pn_io();
     m->pending = pn_list(PN_WEAKREF, 0);
-    m->interruptor = pni_selectable
-      (pni_interruptor_capacity, pni_interruptor_pending,
-       pni_interruptor_deadline, pni_interruptor_readable,
-       pni_interruptor_writable, pni_interruptor_expired,
-       pni_interruptor_finalize);
+    m->interruptor = pn_selectable();
+    pn_selectable_set_reading(m->interruptor, true);
+    pn_selectable_on_readable(m->interruptor, pni_interruptor_readable);
+    pn_selectable_on_finalize(m->interruptor, pni_interruptor_finalize);
     pn_list_add(m->pending, m->interruptor);
     m->interrupted = false;
     // Explicitly initialise pipe file descriptors to invalid values in case pipe
@@ -1659,10 +1616,10 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
     pn_messenger_connection(messenger, sock, scheme, user, pass, host, port, NULL);
   pn_transport_t *transport = pn_transport();
   pn_transport_bind(transport, connection);
+  pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
+  pn_selectable_t *sel = ctx->selectable;
   err = pn_transport_config(messenger, connection);
   if (err) {
-    pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
-    pn_selectable_t *sel = ctx->selectable;
     pn_selectable_free(sel);
     messenger->connection_error = err;
     return NULL;

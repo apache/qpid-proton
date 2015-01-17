@@ -26,10 +26,6 @@
 #include "reactor.h"
 #include "selectable.h"
 
-static ssize_t pni_acceptor_capacity(pn_selectable_t *sel) {
-  return 1;
-}
-
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport);
 
 void pni_acceptor_readable(pn_selectable_t *sel) {
@@ -57,14 +53,14 @@ void pni_acceptor_finalize(pn_selectable_t *sel) {
 
 pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port, pn_handler_t *handler) {
   pn_selectable_t *sel = pn_reactor_selectable(reactor);
-  pn_selectable_set_capacity(sel, pni_acceptor_capacity);
-  pn_selectable_set_readable(sel, pni_acceptor_readable);
-  pn_selectable_set_finalize(sel, pni_acceptor_finalize);
   pn_socket_t socket = pn_listen(pn_reactor_io(reactor), host, port);
   pn_selectable_set_fd(sel, socket);
+  pn_selectable_on_readable(sel, pni_acceptor_readable);
+  pn_selectable_on_finalize(sel, pni_acceptor_finalize);
   pni_selectable_set_context(sel, reactor);
   pni_record_init_reactor(pn_selectable_attachments(sel), reactor);
   pni_record_init_handler(pn_selectable_attachments(sel), handler);
+  pn_selectable_set_reading(sel, true);
   pn_reactor_update(reactor, sel);
   return (pn_acceptor_t *) sel;
 }

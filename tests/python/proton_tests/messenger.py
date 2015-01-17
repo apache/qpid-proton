@@ -961,9 +961,9 @@ class Pump:
         sel.free()
         self.selectables.remove(sel)
       else:
-        if sel.capacity > 0:
+        if sel.reading:
           reading.append(sel)
-        if sel.pending > 0:
+        if sel.writing:
           writing.append(sel)
 
     readable, writable, _ = select(reading, writing, [], 0)
