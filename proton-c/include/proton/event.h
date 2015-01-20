@@ -93,6 +93,12 @@ typedef enum {
   PN_REACTOR_INIT,
 
   /**
+   * A reactor has no more events to process. Events of this type
+   * point to the reactor.
+   */
+  PN_REACTOR_QUIESCED,
+
+  /**
    * A reactor has been stopped. Events of this type point to the reactor.
    */
   PN_REACTOR_FINAL,

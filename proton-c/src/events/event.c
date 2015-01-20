@@ -258,6 +258,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_EVENT_NONE";
   case PN_REACTOR_INIT:
     return "PN_REACTOR_INIT";
+  case PN_REACTOR_QUIESCED:
+    return "PN_REACTOR_QUIESCED";
   case PN_REACTOR_FINAL:
     return "PN_REACTOR_FINAL";
   case PN_TIMER_TASK:

@@ -45,6 +45,7 @@ struct pn_reactor_t {
   pn_list_t *children;
   pn_timer_t *timer;
   pn_selectable_t *selectable;
+  pn_event_type_t previous;
   pn_timestamp_t now;
   bool selected;
 };
@@ -70,6 +71,7 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
   reactor->children = pn_list(PN_OBJECT, 0);
   reactor->timer = pn_timer(reactor->collector);
   reactor->selectable = NULL;
+  reactor->previous = PN_EVENT_NONE;
   reactor->selected = false;
   pn_reactor_mark(reactor);
 }
@@ -320,13 +322,20 @@ pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *h
 void pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
   pn_reactor_mark(reactor);
-  pn_event_t *event;
-  while ((event = pn_collector_peek(reactor->collector))) {
-    pni_reactor_dispatch_pre(reactor, event);
-    pn_handler_t *handler = pn_event_handler(event, reactor->handler);
-    pn_handler_dispatch(handler, event);
-    pni_reactor_dispatch_post(reactor, event);
-    pn_collector_pop(reactor->collector);
+  while (true) {
+    pn_event_t *event = pn_collector_peek(reactor->collector);
+    if (event) {
+      pni_reactor_dispatch_pre(reactor, event);
+      pn_handler_t *handler = pn_event_handler(event, reactor->handler);
+      pn_handler_dispatch(handler, event);
+      pni_reactor_dispatch_post(reactor, event);
+      reactor->previous = pn_event_type(event);
+      pn_collector_pop(reactor->collector);
+    } else if (reactor->previous != PN_REACTOR_QUIESCED && reactor->previous != PN_REACTOR_FINAL) {
+      pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_QUIESCED);
+    } else {
+      break;
+    }
   }
 }
 

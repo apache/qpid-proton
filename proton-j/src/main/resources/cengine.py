@@ -951,6 +951,7 @@ def pn_transport_condition(trans):
 from org.apache.qpid.proton.engine import Event
 
 PN_REACTOR_INIT = Event.Type.REACTOR_INIT
+PN_REACTOR_QUIESCED = Event.Type.REACTOR_QUIESCED
 PN_REACTOR_FINAL = Event.Type.REACTOR_FINAL
 
 PN_TIMER_TASK = Event.Type.TIMER_TASK

@@ -3316,6 +3316,7 @@ def _none(x): return None
 class Event(Wrapper, EventBase):
 
   REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
+  REACTOR_QUIESCED = EventType(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
   REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
 
   TIMER_TASK = EventType(PN_TIMER_TASK, "on_timer_task")

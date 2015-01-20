@@ -31,6 +31,7 @@ public interface Event
 
     public enum Type {
         REACTOR_INIT,
+        REACTOR_QUIESCED,
         REACTOR_FINAL,
 
         TIMER_TASK,
