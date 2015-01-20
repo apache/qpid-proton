@@ -58,6 +58,7 @@ require "core/endpoint"
 require "core/session"
 require "core/terminus"
 require "core/disposition"
+require "core/delivery"
 
 # Messenger API classes
 require "messenger/filters"
