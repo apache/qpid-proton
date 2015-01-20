@@ -60,6 +60,7 @@ require "core/terminus"
 require "core/disposition"
 require "core/delivery"
 require "core/link"
+require "core/sender"
 
 # Messenger API classes
 require "messenger/filters"
