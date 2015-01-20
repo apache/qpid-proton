@@ -127,42 +127,6 @@ static void get_new_events(pn_driver_t *);
 
 // listener
 
-static void driver_listener_readable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void driver_listener_writable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void driver_listener_expired(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static ssize_t driver_listener_capacity(pn_selectable_t *sel)
-{
-  return 1;
-}
-
-static ssize_t driver_listener_pending(pn_selectable_t *sel)
-{
-  return 0;
-}
-
-static pn_timestamp_t driver_listener_deadline(pn_selectable_t *sel)
-{
-  return 0;
-}
-
-static void driver_listener_finalize(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-
 static void pn_driver_add_listener(pn_driver_t *d, pn_listener_t *l)
 {
   if (!l->driver) return;
@@ -228,14 +192,9 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd, void *context
   l->pending = false;
   l->closed = false;
   l->context = context;
-  l->selectable = pni_selectable(driver_listener_capacity,
-                                 driver_listener_pending,
-                                 driver_listener_deadline,
-                                 driver_listener_readable,
-                                 driver_listener_writable,
-                                 driver_listener_expired,
-                                 driver_listener_finalize);
-  pni_selectable_set_fd(l->selectable, fd);
+  l->selectable = pn_selectable();
+  pn_selectable_set_reading(l->selectable, true);
+  pn_selectable_set_fd(l->selectable, fd);
   pni_selectable_set_context(l->selectable, l);
   pn_driver_add_listener(driver, l);
   return l;
@@ -244,7 +203,7 @@ pn_listener_t *pn_listener_fd(pn_driver_t *driver, pn_socket_t fd, void *context
 pn_socket_t pn_listener_get_fd(pn_listener_t *listener)
 {
   assert(listener);
-  return pn_selectable_fd(listener->selectable);
+  return pn_selectable_get_fd(listener->selectable);
 }
 
 pn_listener_t *pn_listener_head(pn_driver_t *driver)
@@ -276,7 +235,7 @@ pn_connector_t *pn_listener_accept(pn_listener_t *l)
   if (!l || !l->pending) return NULL;
   char name[PN_NAME_MAX];
 
-  pn_socket_t sock = pn_accept(l->driver->io, pn_selectable_fd(l->selectable), name, PN_NAME_MAX);
+  pn_socket_t sock = pn_accept(l->driver->io, pn_selectable_get_fd(l->selectable), name, PN_NAME_MAX);
   if (sock == PN_INVALID_SOCKET) {
     return NULL;
   } else {
@@ -297,7 +256,7 @@ void pn_listener_close(pn_listener_t *l)
   if (!l) return;
   if (l->closed) return;
 
-  pn_close(l->driver->io, pn_selectable_fd(l->selectable));
+  pn_close(l->driver->io, pn_selectable_get_fd(l->selectable));
   l->closed = true;
 }
 
@@ -311,44 +270,6 @@ void pn_listener_free(pn_listener_t *l)
 }
 
 // connector
-
-static ssize_t driver_connection_capacity(pn_selectable_t *sel)
-{
-  pn_connector_t *c = (pn_connector_t *) pni_selectable_get_context(sel);
-  return c->posted_status & PN_SEL_RD ? 1 : 0;
-}
-
-static ssize_t driver_connection_pending(pn_selectable_t *sel)
-{
-  pn_connector_t *c = (pn_connector_t *) pni_selectable_get_context(sel);
-  return c->posted_status & PN_SEL_WR ? 1 : 0;
-}
-
-static pn_timestamp_t driver_connection_deadline(pn_selectable_t *sel)
-{
-  pn_connector_t *c = (pn_connector_t *) pni_selectable_get_context(sel);
-  return c->posted_wakeup;
-}
-
-static void driver_connection_readable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void driver_connection_writable(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void driver_connection_expired(pn_selectable_t *sel)
-{
-  // do nothing
-}
-
-static void driver_connection_finalize(pn_selectable_t *sel)
-{
-  // do nothing
-}
 
 static void pn_driver_add_connector(pn_driver_t *d, pn_connector_t *c)
 {
@@ -422,14 +343,8 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *conte
   c->output_done = false;
   c->context = context;
   c->listener = NULL;
-  c->selectable = pni_selectable(driver_connection_capacity,
-                                 driver_connection_pending,
-                                 driver_connection_deadline,
-                                 driver_connection_readable,
-                                 driver_connection_writable,
-                                 driver_connection_expired,
-                                 driver_connection_finalize);
-  pni_selectable_set_fd(c->selectable, fd);
+  c->selectable = pn_selectable();
+  pn_selectable_set_fd(c->selectable, fd);
   pni_selectable_set_context(c->selectable, c);
   pn_connector_trace(c, driver->trace);
 
@@ -440,7 +355,7 @@ pn_connector_t *pn_connector_fd(pn_driver_t *driver, pn_socket_t fd, void *conte
 pn_socket_t pn_connector_get_fd(pn_connector_t *connector)
 {
   assert(connector);
-  return pn_selectable_fd(connector->selectable);
+  return pn_selectable_get_fd(connector->selectable);
 }
 
 pn_connector_t *pn_connector_head(pn_driver_t *driver)
@@ -518,7 +433,7 @@ void pn_connector_close(pn_connector_t *ctor)
   if (!ctor) return;
 
   ctor->status = 0;
-  pn_close(ctor->driver->io, pn_selectable_fd(ctor->selectable));
+  pn_close(ctor->driver->io, pn_selectable_get_fd(ctor->selectable));
   ctor->closed = true;
 }
 
@@ -587,7 +502,7 @@ void pn_connector_process(pn_connector_t *c)
     if (c->closed) return;
 
     pn_transport_t *transport = c->transport;
-    pn_socket_t sock = pn_selectable_fd(c->selectable);
+    pn_socket_t sock = pn_selectable_get_fd(c->selectable);
 
     ///
     /// Socket read
@@ -782,6 +697,10 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
     if (c->posted_status != current_status || c->posted_wakeup != current_wakeup) {
       c->posted_status = current_status;
       c->posted_wakeup = current_wakeup;
+      pn_selectable_t *sel = c->selectable;
+      pn_selectable_set_reading(sel, c->posted_status & PN_SEL_RD ? 1 : 0);
+      pn_selectable_set_writing(sel, c->posted_status & PN_SEL_WR ? 1 : 0);
+      pn_selectable_set_deadline(sel, c->posted_wakeup);
       pn_selector_update(c->driver->selector, c->selectable);
     }
     if (c->closed) {
@@ -789,6 +708,7 @@ int pn_driver_wait_2(pn_driver_t *d, int timeout)
       c->pending_write = false;
       c->pending_tick = false;
       LL_ADD(d, ready_connector, c);
+      pn_selectable_terminate(c->selectable);
     }
     c = c->connector_next;
   }
@@ -892,13 +812,8 @@ pn_connector_t *pn_driver_connector(pn_driver_t *d) {
 static pn_selectable_t *create_ctrl_selectable(pn_socket_t fd)
 {
   // ctrl input only needs to know about read events, just like a listener.
-  pn_selectable_t *sel = pni_selectable(driver_listener_capacity,
-                                        driver_listener_pending,
-                                        driver_listener_deadline,
-                                        driver_listener_readable,
-                                        driver_listener_writable,
-                                        driver_listener_expired,
-                                        driver_listener_finalize);
-  pni_selectable_set_fd(sel, fd);
+  pn_selectable_t *sel = pn_selectable();
+  pn_selectable_set_reading(sel, true);
+  pn_selectable_set_fd(sel, fd);
   return sel;
 }

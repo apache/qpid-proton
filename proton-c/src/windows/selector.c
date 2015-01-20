@@ -48,7 +48,6 @@ struct pn_selector_t {
   size_t capacity;
   pn_list_t *selectables;
   pn_list_t *iocp_descriptors;
-  pn_timestamp_t deadline;
   size_t current;
   iocpdesc_t *current_triggered;
   pn_timestamp_t awoken;
@@ -67,7 +66,6 @@ void pn_selector_initialize(void *obj)
   selector->capacity = 0;
   selector->selectables = pn_list(PN_WEAKREF, 0);
   selector->iocp_descriptors = pn_list(PN_OBJECT, 0);
-  selector->deadline = 0;
   selector->current = 0;
   selector->current_triggered = NULL;
   selector->awoken = 0;
@@ -149,17 +147,17 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
 {
   int idx = pni_selectable_get_index(selectable);
   assert(idx >= 0);
-  selector->deadlines[idx] = pn_selectable_deadline(selectable);
+  selector->deadlines[idx] = pn_selectable_get_deadline(selectable);
 
   pn_socket_t sock = pn_selectable_get_fd(selectable);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_list_get(selector->iocp_descriptors, idx);
   if (iocpd) {
     assert(sock == iocpd->socket || iocpd->closing);
     int interests = 0;
-    if (pn_selectable_capacity(selectable) > 0) {
+    if (pn_selectable_is_reading(selectable)) {
       interests |= PN_READABLE;
     }
-    if (pn_selectable_pending(selectable) > 0) {
+    if (pn_selectable_is_writing(selectable)) {
       interests |= PN_WRITABLE;
     }
     if (selector->deadlines[idx]) {
@@ -220,15 +218,15 @@ int pn_selector_select(pn_selector_t *selector, int timeout)
       deadline = selector->deadlines_head->deadline;
   }
   if (deadline) {
-    int delta = deadline - now;
+    int64_t delta = deadline - now;
     if (delta < 0) {
       delta = 0;
-    } 
+    }
     if (timeout < 0)
       timeout = delta;
     else if (timeout > delta)
       timeout = delta;
-  }	
+  }
   deadline = (timeout >= 0) ? now + timeout : 0;
 
   // Process all currently available completions, even if matched events available
