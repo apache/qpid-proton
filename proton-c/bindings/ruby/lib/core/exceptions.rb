@@ -80,6 +80,11 @@ module Qpid
     class InProgressError < ProtonError
     end
 
+    # Raised by instances of SASL
+    #
+    class SASLError < TransportError
+    end
+
     # Raised by Session.
     #
     class SessionError < ProtonError
