@@ -61,7 +61,6 @@ PN_EXTERN void pn_reactor_free(pn_reactor_t *reactor);
 PN_EXTERN pn_collector_t *pn_reactor_collector(pn_reactor_t *reactor);
 PN_EXTERN pn_handler_t *pn_reactor_handler(pn_reactor_t *reactor);
 PN_EXTERN pn_io_t *pn_reactor_io(pn_reactor_t *reactor);
-PN_EXTERN pn_selector_t *pn_reactor_selector(pn_reactor_t *reactor);
 PN_EXTERN pn_list_t *pn_reactor_children(pn_reactor_t *reactor);
 PN_EXTERN pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable);

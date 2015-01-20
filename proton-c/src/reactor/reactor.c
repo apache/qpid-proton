@@ -49,6 +49,11 @@ struct pn_reactor_t {
   bool selected;
 };
 
+static void pn_reactor_mark(pn_reactor_t *reactor) {
+  assert(reactor);
+  reactor->now = pn_i_now();
+}
+
 static void pn_dummy_dispatch(pn_handler_t *handler, pn_event_t *event) {
   /*pn_string_t *str = pn_string(NULL);
   pn_inspect(event, str);
@@ -65,8 +70,8 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
   reactor->children = pn_list(PN_OBJECT, 0);
   reactor->timer = pn_timer(reactor->collector);
   reactor->selectable = NULL;
-  reactor->now = pn_i_now();
   reactor->selected = false;
+  pn_reactor_mark(reactor);
 }
 
 static void pn_reactor_finalize(pn_reactor_t *reactor) {
@@ -314,6 +319,7 @@ pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *h
 
 void pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
+  pn_reactor_mark(reactor);
   pn_event_t *event;
   while ((event = pn_collector_peek(reactor->collector))) {
     pni_reactor_dispatch_pre(reactor, event);
@@ -345,7 +351,6 @@ void pn_reactor_start(pn_reactor_t *reactor) {
 
 bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
   assert(reactor);
-  reactor->now = pn_i_now();
   pn_reactor_process(reactor);
 
   if (pn_selector_size(reactor->selector) == 1) {
@@ -368,7 +373,7 @@ bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
   pn_selector_select(reactor->selector, timeout);
   pn_selectable_t *sel;
   int events;
-  reactor->now = pn_i_now();
+  pn_reactor_mark(reactor);
   while ((sel = pn_selector_next(reactor->selector, &events))) {
     if (events & PN_READABLE) {
       pn_selectable_readable(sel);
