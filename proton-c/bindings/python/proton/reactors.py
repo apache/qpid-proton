@@ -859,6 +859,9 @@ class Acceptor(Wrapper):
     def __init__(self, impl):
         Wrapper.__init__(self, impl)
 
+    def close(self):
+        pn_acceptor_close(self._impl)
+
 class Reactor(Wrapper):
 
     @staticmethod
@@ -904,9 +907,7 @@ class Reactor(Wrapper):
         return result
 
     def selectable(self):
-        impl = pn_reactor_selectable(self._impl)
-        pn_selectable_collect(impl, pn_reactor_collector(self._impl))
-        return Selectable.wrap(impl)
+        return Selectable.wrap(pn_reactor_selectable(self._impl))
 
     def update(self, sel):
         pn_reactor_update(self._impl, sel._impl)

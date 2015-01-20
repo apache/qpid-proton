@@ -37,12 +37,26 @@ static void test_reactor(void) {
   pn_free(reactor);
 }
 
+static void test_reactor_free(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  assert(reactor);
+  pn_reactor_free(reactor);
+}
+
 static void test_reactor_run(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
   // run should exit if there is nothing left to do
   pn_reactor_run(reactor);
   pn_free(reactor);
+}
+
+static void test_reactor_run_free(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  assert(reactor);
+  // run should exit if there is nothing left to do
+  pn_reactor_run(reactor);
+  pn_reactor_free(reactor);
 }
 
 typedef struct {
@@ -123,7 +137,8 @@ static void test_reactor_handler_run(void) {
   pn_handler_t *th = test_handler(reactor, events);
   pn_handler_add(handler, th);
   pn_reactor_run(reactor);
-  expect(events, PN_REACTOR_INIT, PN_REACTOR_FINAL, END);
+  expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED,
+         PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   pn_free(reactor);
   pn_free(th);
   pn_free(events);
@@ -137,7 +152,8 @@ static void test_reactor_handler_run_free(void) {
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(handler, test_handler(reactor, events));
   pn_reactor_run(reactor);
-  expect(events, PN_REACTOR_INIT, PN_REACTOR_FINAL, END);
+  expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED,
+         PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   pn_reactor_free(reactor);
   pn_free(events);
 }
@@ -153,7 +169,8 @@ static void test_reactor_connection(void) {
   pn_list_t *revents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, revents));
   pn_reactor_run(reactor);
-  expect(revents, PN_REACTOR_INIT, PN_REACTOR_FINAL, END);
+  expect(revents, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED,
+         PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   expect(cevents, PN_CONNECTION_INIT, END);
   pn_reactor_free(reactor);
   pn_handler_free(tch);
@@ -178,8 +195,7 @@ static void tra_dispatch(pn_handler_t *handler, pn_event_t *event) {
   case PN_REACTOR_INIT:
     {
       pn_acceptor_t *acceptor = *tram(handler);
-      pn_reactor_t *reactor = (pn_reactor_t *) pn_event_context(event);
-      pn_acceptor_close(reactor, acceptor);
+      pn_acceptor_close(acceptor);
     }
     break;
   default:
@@ -223,7 +239,7 @@ static void server_dispatch(pn_handler_t *handler, pn_event_t *event) {
     pn_connection_open(pn_event_connection(event));
     break;
   case PN_CONNECTION_REMOTE_CLOSE:
-    pn_acceptor_close(srv->reactor, srv->acceptor);
+    pn_acceptor_close(srv->acceptor);
     pn_connection_close(pn_event_connection(event));
     pn_connection_release(pn_event_connection(event));
     break;
@@ -268,7 +284,6 @@ static void test_reactor_connect(void) {
   srv->reactor = reactor;
   srv->acceptor = acceptor;
   srv->events = pn_list(PN_VOID, 0);
-  pn_decref(sh);
   pn_handler_t *ch = pn_handler_new(client_dispatch, sizeof(client_t), NULL);
   client_t *cli = cmem(ch);
   cli->events = pn_list(PN_VOID, 0);
@@ -282,6 +297,7 @@ static void test_reactor_connect(void) {
          PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED,
          PN_CONNECTION_UNBOUND, PN_CONNECTION_FINAL, END);
   pn_free(srv->events);
+  pn_decref(sh);
   expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
          PN_CONNECTION_BOUND, PN_TRANSPORT, PN_TRANSPORT,
          PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_LOCAL_CLOSE,
@@ -403,7 +419,8 @@ static void test_reactor_schedule(void) {
   pn_reactor_schedule(reactor, 0, NULL);
   pn_reactor_run(reactor);
   pn_reactor_free(reactor);
-  expect(events, PN_REACTOR_INIT, PN_TIMER_TASK, PN_REACTOR_FINAL, END);
+  expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_TIMER_TASK,
+         PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   pn_free(events);
 }
 
@@ -418,7 +435,8 @@ static void test_reactor_schedule_handler(void) {
   pn_reactor_run(reactor);
   pn_reactor_free(reactor);
   pn_handler_free(th);
-  expect(events, PN_REACTOR_INIT, PN_REACTOR_FINAL, END);
+  expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED,
+         PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   expect(tevents, PN_TIMER_TASK, END);
   pn_free(events);
   pn_free(tevents);
@@ -427,7 +445,9 @@ static void test_reactor_schedule_handler(void) {
 int main(int argc, char **argv)
 {
   test_reactor();
+  test_reactor_free();
   test_reactor_run();
+  test_reactor_run_free();
   test_reactor_handler();
   test_reactor_handler_free();
   test_reactor_handler_run();

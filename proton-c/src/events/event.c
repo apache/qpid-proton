@@ -28,6 +28,8 @@ static void pn_collector_initialize(pn_collector_t *collector)
 
 static void pn_collector_drain(pn_collector_t *collector)
 {
+  assert(collector);
+
   while (pn_collector_peek(collector)) {
     pn_collector_pop(collector);
   }
@@ -82,10 +84,18 @@ pn_collector_t *pn_collector(void)
 void pn_collector_free(pn_collector_t *collector)
 {
   assert(collector);
-  collector->freed = true;
-  pn_collector_drain(collector);
-  pn_collector_shrink(collector);
+  pn_collector_release(collector);
   pn_decref(collector);
+}
+
+void pn_collector_release(pn_collector_t *collector)
+{
+  assert(collector);
+  if (!collector->freed) {
+    collector->freed = true;
+    pn_collector_drain(collector);
+    pn_collector_shrink(collector);
+  }
 }
 
 pn_event_t *pn_event(void);
@@ -310,12 +320,18 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_TRANSPORT_TAIL_CLOSED";
   case PN_TRANSPORT_CLOSED:
     return "PN_TRANSPORT_CLOSED";
+  case PN_SELECTABLE_INIT:
+    return "PN_SELECTABLE_INIT";
+  case PN_SELECTABLE_UPDATED:
+    return "PN_SELECTABLE_UPDATED";
   case PN_SELECTABLE_READABLE:
     return "PN_SELECTABLE_READABLE";
   case PN_SELECTABLE_WRITABLE:
     return "PN_SELECTABLE_WRITABLE";
   case PN_SELECTABLE_EXPIRED:
     return "PN_SELECTABLE_EXPIRED";
+  case PN_SELECTABLE_FINAL:
+    return "PN_SELECTABLE_FINAL";
   }
 
   return "<unrecognized>";

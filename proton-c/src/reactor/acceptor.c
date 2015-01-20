@@ -48,7 +48,9 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
 
 void pni_acceptor_finalize(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
-  pn_close(pn_reactor_io(reactor), pn_selectable_get_fd(sel));
+  if (pn_selectable_get_fd(sel) != PN_INVALID_SOCKET) {
+    pn_close(pn_reactor_io(reactor), pn_selectable_get_fd(sel));
+  }
 }
 
 pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port, pn_handler_t *handler) {
@@ -64,10 +66,14 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   return (pn_acceptor_t *) sel;
 }
 
-void pn_acceptor_close(pn_reactor_t *reactor, pn_acceptor_t *acceptor) {
+void pn_acceptor_close(pn_acceptor_t *acceptor) {
   pn_selectable_t *sel = (pn_selectable_t *) acceptor;
-  pn_socket_t socket = pn_selectable_get_fd(sel);
-  pn_close(pn_reactor_io(reactor), socket);
-  pn_selectable_set_fd(sel, PN_INVALID_SOCKET);
-  pn_selector_remove(pn_reactor_selector(reactor), sel);
+  if (!pn_selectable_is_terminal(sel)) {
+    pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+    pn_socket_t socket = pn_selectable_get_fd(sel);
+    pn_close(pn_reactor_io(reactor), socket);
+    pn_selectable_set_fd(sel, PN_INVALID_SOCKET);
+    pn_selectable_terminate(sel);
+    pn_reactor_update(reactor, sel);
+  }
 }

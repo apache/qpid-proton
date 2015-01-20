@@ -75,7 +75,7 @@ PN_EXTERN void pn_reactor_run(pn_reactor_t *reactor);
 PN_EXTERN pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *handler);
 
 
-PN_EXTERN void pn_acceptor_close(pn_reactor_t *reactor, pn_acceptor_t *acceptor);
+PN_EXTERN void pn_acceptor_close(pn_acceptor_t *acceptor);
 
 PN_EXTERN pn_timer_t *pn_timer(pn_collector_t *collector);
 PN_EXTERN pn_timestamp_t pn_timer_deadline(pn_timer_t *timer);

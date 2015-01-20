@@ -283,9 +283,12 @@ typedef enum {
    */
   PN_TRANSPORT_CLOSED,
 
+  PN_SELECTABLE_INIT,
+  PN_SELECTABLE_UPDATED,
   PN_SELECTABLE_READABLE,
   PN_SELECTABLE_WRITABLE,
-  PN_SELECTABLE_EXPIRED
+  PN_SELECTABLE_EXPIRED,
+  PN_SELECTABLE_FINAL
 
 } pn_event_type_t;
 
@@ -313,6 +316,16 @@ PN_EXTERN pn_collector_t *pn_collector(void);
  * @param[in] collector a collector to free, or NULL
  */
 PN_EXTERN void pn_collector_free(pn_collector_t *collector);
+
+/**
+ * Release a collector. Once in a released state a collector will
+ * drain any internally queued events (thereby releasing any pointers
+ * they may hold), shrink it's memory footprint to a minimum, and
+ * discard any newly created events.
+ *
+ * @param[in] collector a collector object
+ */
+PN_EXTERN void pn_collector_release(pn_collector_t *collector);
 
 /**
  * Place a new event on a collector.

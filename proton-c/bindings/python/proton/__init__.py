@@ -3354,9 +3354,12 @@ class Event(Wrapper, EventBase):
   TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
   TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
+  SELECTABLE_INIT = EventType(PN_SELECTABLE_INIT, "on_selectable_init")
+  SELECTABLE_UPDATED = EventType(PN_SELECTABLE_UPDATED, "on_selectable_updated")
   SELECTABLE_READABLE = EventType(PN_SELECTABLE_READABLE, "on_selectable_readable")
   SELECTABLE_WRITABLE = EventType(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
   SELECTABLE_EXPIRED = EventType(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
+  SELECTABLE_FINAL = EventType(PN_SELECTABLE_FINAL, "on_selectable_final")
 
   @staticmethod
   def wrap(impl):

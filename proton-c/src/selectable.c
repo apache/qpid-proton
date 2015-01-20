@@ -81,6 +81,7 @@ void pn_selectable_finalize(pn_selectable_t *sel)
     sel->finalize(sel);
   }
   pn_decref(sel->attachments);
+  pn_decref(sel->collector);
 }
 
 #define pn_selectable_hashcode NULL
@@ -267,6 +268,7 @@ void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collecto
   pn_decref(selectable->collector);
   selectable->collector = collector;
   pn_incref(selectable->collector);
+
   if (collector) {
     pn_selectable_on_readable(selectable, pni_readable);
     pn_selectable_on_writable(selectable, pni_writable);

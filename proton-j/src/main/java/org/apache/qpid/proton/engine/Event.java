@@ -69,9 +69,12 @@ public interface Event
         TRANSPORT_TAIL_CLOSED,
         TRANSPORT_CLOSED,
 
+        SELECTABLE_INIT,
+        SELECTABLE_UPDATED,
         SELECTABLE_READABLE,
         SELECTABLE_WRITABLE,
-        SELECTABLE_EXPIRED
+        SELECTABLE_EXPIRED,
+        SELECTABLE_FINAL
     }
 
     Type getType();
