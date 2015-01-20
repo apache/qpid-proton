@@ -55,6 +55,7 @@ require "event/collector"
 # Main Proton classes
 require "core/message"
 require "core/endpoint"
+require "core/session"
 
 # Messenger API classes
 require "messenger/filters"
