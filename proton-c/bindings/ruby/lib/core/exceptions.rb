@@ -80,6 +80,11 @@ module Qpid
     class InProgressError < ProtonError
     end
 
+    # Raised by Session.
+    #
+    class SessionError < ProtonError
+    end
+
   end
 
 end
