@@ -85,6 +85,16 @@ module Qpid
     class SessionError < ProtonError
     end
 
+    # Raised when an attempt is made to change an attribute that is read-only.
+    #
+    class AttributeError < ProtonError
+    end
+
+    # Raised by link components.
+    #
+    class LinkError < ProtonError
+    end
+
   end
 
 end
