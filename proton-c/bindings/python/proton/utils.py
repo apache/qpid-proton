@@ -17,7 +17,7 @@
 # under the License.
 #
 import collections, Queue, socket, time, threading
-from proton import ConnectionException, Endpoint, Handler, Message, Timeout, Url
+from proton import ConnectionException, Endpoint, Handler, LinkException, Message, Timeout, Url
 from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
 from proton.handlers import MessagingHandler, ScopedHandler, IncomingMessageHandler
 
@@ -27,6 +27,9 @@ class BlockingLink(object):
         self.link = link
         self.connection.wait(lambda: not (self.link.state & Endpoint.REMOTE_UNINIT),
                              msg="Opening link %s" % link.name)
+        if self.link.state & Endpoint.REMOTE_CLOSED:
+            self.link.close()
+            raise LinkException("Failed to open link %s" % link.name)
 
     def close(self):
         self.link.close()
@@ -39,6 +42,9 @@ class BlockingLink(object):
 class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
+        if self.link.target and self.link.target.address != self.link.remote_target.address:
+            self.link.close()
+            raise LinkException("Failed to open sender %s, target does not match" % link.name)
 
     def send_msg(self, msg, timeout=False):
         delivery = send_msg(self.link, msg)
@@ -52,6 +58,10 @@ class Fetcher(MessagingHandler):
     def on_message(self, event):
         self.incoming.append(event.message)
 
+    def on_link_error(self, event):
+        # This will be handled by BlockingConnection
+        pass
+
     @property
     def has_message(self):
         return len(self.incoming)
@@ -63,6 +73,9 @@ class Fetcher(MessagingHandler):
 class BlockingReceiver(BlockingLink):
     def __init__(self, connection, receiver, fetcher, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
+        if self.link.source and self.link.source.address != self.link.remote_source.address:
+            self.link.close()
+            raise LinkException("Failed to open receiver %s, source does not match" % link.name)
         if credit: receiver.flow(credit)
         self.fetcher = fetcher
 
@@ -127,23 +140,29 @@ class BlockingConnection(Handler):
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
-            self.closed(event.link.remote_condition)
+            event.link.close()
+            if event.link.is_sender:
+                txt = "sender %s to %s closed" % (event.link.name, event.link.target.address)
+            else:
+                txt = "receiver %s from %s closed" % (event.link.name, event.link.source.address)
+            if event.link.remote_condition:
+                txt += " due to: %s" % event.link.remote_condition
+            else:
+                txt += " by peer"
+            raise LinkException(txt)
 
     def on_connection_remote_close(self, event):
         if event.connection.state & Endpoint.LOCAL_ACTIVE:
-            self.closed(event.connection.remote_condition)
+            event.connection.close()
+            txt = "Connection %s closed" % self.url
+            if event.connection.remote_condition:
+                txt += " due to: %s" % event.connection.remote_condition
+            else:
+                txt += " by peer"
+            raise ConnectionException(txt)
 
     def on_disconnected(self, event):
         raise ConnectionException("Connection %s disconnected" % self.url);
-
-    def closed(self, error=None):
-        txt = "Connection %s closed" % self.url
-        if error:
-            txt += " due to: %s" % error
-        else:
-            txt += " by peer"
-        raise ConnectionException(txt)
-
 
 def atomic_count(start=0, step=1):
     """Thread-safe atomic count iterator"""
