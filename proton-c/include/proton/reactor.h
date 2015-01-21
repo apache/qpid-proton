@@ -57,8 +57,12 @@ PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event);
 
 PN_EXTERN pn_reactor_t *pn_reactor(void);
 PN_EXTERN pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor);
+PN_EXTERN int pn_reactor_timeout(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_mark(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_yield(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_free(pn_reactor_t *reactor);
 PN_EXTERN pn_collector_t *pn_reactor_collector(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_global(pn_reactor_t *reactor, pn_handler_t *handler);
 PN_EXTERN pn_handler_t *pn_reactor_handler(pn_reactor_t *reactor);
 PN_EXTERN pn_io_t *pn_reactor_io(pn_reactor_t *reactor);
 PN_EXTERN pn_list_t *pn_reactor_children(pn_reactor_t *reactor);

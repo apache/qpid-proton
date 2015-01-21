@@ -835,7 +835,8 @@ class Container(object):
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
 
-from proton import WrappedHandler, _chandler, Connection, secs2millis, Selectable
+import traceback
+from proton import WrappedHandler, _chandler, Connection, secs2millis, millis2secs, Selectable
 from wrapper import Wrapper
 from cproton import *
 
@@ -862,6 +863,11 @@ class Acceptor(Wrapper):
     def close(self):
         pn_acceptor_close(self._impl)
 
+def _wrap_handler(reactor, impl):
+    wrapped = WrappedHandler(impl)
+    wrapped.__dict__["errors"] = reactor.errors
+    return wrapped
+
 class Reactor(Wrapper):
 
     @staticmethod
@@ -877,31 +883,51 @@ class Reactor(Wrapper):
             self.handler.add(h)
 
     def _init(self):
-        pass
+        self.errors = []
+
+    def global_(self, handler):
+        impl = _chandler(handler, self.errors)
+        pn_reactor_global(self._impl, impl)
+        pn_decref(impl)
+
+    @property
+    def timeout(self):
+        return millis2secs(pn_reactor_timeout(self._impl))
+
+    def yield_(self):
+        pn_reactor_yield(self._impl)
+
+    def mark(self):
+        pn_reactor_mark(self._impl)
 
     @property
     def handler(self):
-        return WrappedHandler(pn_reactor_handler(self._impl))
+        return _wrap_handler(self, pn_reactor_handler(self._impl))
 
     def run(self):
         pn_reactor_start(self._impl)
-        while pn_reactor_work(self._impl, 3142): pass
+        while pn_reactor_work(self._impl, 3142):
+            if self.errors:
+                for exc, value, tb in self.errors[:-1]:
+                    traceback.print_exception(exc, value, tb)
+                exc, value, tb = self.errors[-1]
+                raise exc, value, tb
         pn_reactor_stop(self._impl)
 
     def schedule(self, delay, task):
-        impl = _chandler(task)
+        impl = _chandler(task, self.errors)
         task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
         pn_decref(impl)
         return task
 
     def acceptor(self, host, port, handler=None):
-        impl = _chandler(handler)
+        impl = _chandler(handler, self.errors)
         result = Acceptor(pn_reactor_acceptor(self._impl, host, port, impl))
         pn_decref(impl)
         return result
 
     def connection(self, handler=None):
-        impl = _chandler(handler)
+        impl = _chandler(handler, self.errors)
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
         pn_decref(impl)
         return result

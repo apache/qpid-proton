@@ -33,7 +33,7 @@ The proton APIs consist of the following classes:
 from cproton import *
 from wrapper import Wrapper
 
-import weakref, re, socket
+import weakref, re, socket, sys
 try:
   import uuid
 except ImportError:
@@ -3448,15 +3448,22 @@ class Handler(object):
 
 class _cadapter:
 
-  def __init__(self, handler):
+  def __init__(self, handler, errors=None):
     self.handler = handler
+    self.errors = errors
 
   def __call__(self, cevent):
     ev = Event.wrap(cevent)
-    ev.dispatch(self.handler)
-    if hasattr(self.handler, "handlers"):
-      for h in self.handler.handlers:
-        ev.dispatch(h)
+    try:
+      ev.dispatch(self.handler)
+      if hasattr(self.handler, "handlers"):
+        for h in self.handler.handlers:
+          ev.dispatch(h)
+    except:
+      if self.errors is None:
+        raise
+      else:
+        self.errors.append(sys.exc_info())
 
 class WrappedHandler(Wrapper):
 
@@ -3464,11 +3471,11 @@ class WrappedHandler(Wrapper):
     Wrapper.__init__(self, impl_or_constructor)
 
   def add(self, handler):
-    impl = _chandler(handler)
+    impl = _chandler(handler, getattr(self, "errors", None))
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
 
-def _chandler(obj):
+def _chandler(obj, errors=None):
   if obj is None:
     return None
   elif isinstance(obj, WrappedHandler):
@@ -3476,7 +3483,7 @@ def _chandler(obj):
     pn_incref(impl)
     return impl
   else:
-    return pn_pyhandler(_cadapter(obj))
+    return pn_pyhandler(_cadapter(obj, errors))
 
 ###
 # Driver

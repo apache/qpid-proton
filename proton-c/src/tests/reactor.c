@@ -420,7 +420,8 @@ static void test_reactor_schedule(void) {
   pn_reactor_run(reactor);
   pn_reactor_free(reactor);
   expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_REACTOR_QUIESCED,
-         PN_TIMER_TASK, PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
+         PN_TIMER_TASK, PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL,
+         END);
   pn_free(events);
 }
 
@@ -436,7 +437,7 @@ static void test_reactor_schedule_handler(void) {
   pn_reactor_free(reactor);
   pn_handler_free(th);
   expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_REACTOR_QUIESCED,
-         PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
+         PN_SELECTABLE_UPDATED, PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   expect(tevents, PN_TIMER_TASK, END);
   pn_free(events);
   pn_free(tevents);

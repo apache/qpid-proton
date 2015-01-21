@@ -311,6 +311,7 @@ set (qpid-proton-core
   src/reactor/timer.c
 
   src/handlers/handshaker.c
+  src/handlers/iohandler.c
   src/handlers/flowcontroller.c
 
   src/messenger/messenger.c
