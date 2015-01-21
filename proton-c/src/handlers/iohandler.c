@@ -69,12 +69,14 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
   case PN_SELECTABLE_UPDATED:
     {
       pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
-      if (pn_selectable_is_terminal(sel)) {
-        pn_selector_remove(selector, sel);
-        pn_selectable_release(sel);
-      } else {
-        pn_selector_update(selector, sel);
-      }
+      pn_selector_update(selector, sel);
+    }
+    break;
+  case PN_SELECTABLE_FINAL:
+    {
+      pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
+      pn_selector_remove(selector, sel);
+      pn_selectable_release(sel);
     }
     break;
   case PN_CONNECTION_LOCAL_OPEN:

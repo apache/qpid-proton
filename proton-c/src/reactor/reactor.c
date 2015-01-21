@@ -141,9 +141,11 @@ pn_list_t *pn_reactor_children(pn_reactor_t *reactor) {
 
 static void pni_selectable_release(pn_selectable_t *selectable) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(selectable);
-  pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_FINAL);
-  pn_list_remove(reactor->children, selectable);
-  reactor->selectables--;
+  pn_incref(selectable);
+  if (pn_list_remove(reactor->children, selectable)) {
+    reactor->selectables--;
+  }
+  pn_decref(selectable);
 }
 
 pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor) {
@@ -159,9 +161,21 @@ pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor) {
   return sel;
 }
 
+static void *pni_terminated = NULL;
+
+#define PNI_TERMINATED ((pn_handle_t) &pni_terminated)
+
 void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable) {
   assert(reactor);
-  pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_UPDATED);
+  pn_record_t *record = pn_selectable_attachments(selectable);
+  if (!pn_record_has(record, PNI_TERMINATED)) {
+    if (pn_selectable_is_terminal(selectable)) {
+      pn_record_def(record, PNI_TERMINATED, PN_VOID);
+      pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_FINAL);
+    } else {
+      pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_UPDATED);
+    }
+  }
 }
 
 static void pni_reactor_dispatch_pre(pn_reactor_t *reactor, pn_event_t *event) {
