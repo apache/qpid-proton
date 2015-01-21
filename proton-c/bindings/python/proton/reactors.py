@@ -908,10 +908,12 @@ class Reactor(Wrapper):
         pn_reactor_start(self._impl)
         while pn_reactor_work(self._impl, 3142):
             if self.errors:
-                for exc, value, tb in self.errors[:-1]:
-                    traceback.print_exception(exc, value, tb)
-                exc, value, tb = self.errors[-1]
-                raise exc, value, tb
+                break
+        if self.errors:
+            for exc, value, tb in self.errors[:-1]:
+                traceback.print_exception(exc, value, tb)
+            exc, value, tb = self.errors[-1]
+            raise exc, value, tb
         pn_reactor_stop(self._impl)
 
     def schedule(self, delay, task):
