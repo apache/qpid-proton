@@ -733,7 +733,6 @@ static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
   static const pn_cid_t CID_pni_iocpdesc = CID_pn_void;
   static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
-  assert (s != INVALID_SOCKET);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
   assert(iocpd);
   iocpd->socket = s;
@@ -749,6 +748,7 @@ static bool is_listener_socket(pn_socket_t s)
 }
 
 iocpdesc_t *pni_iocpdesc_create(iocp_t *iocp, pn_socket_t s, bool external) {
+  assert (s != INVALID_SOCKET);
   assert(!pni_iocpdesc_map_get(iocp, s));
   bool listening = is_listener_socket(s);
   iocpdesc_t *iocpd = pni_iocpdesc(s);
@@ -764,6 +764,15 @@ iocpdesc_t *pni_iocpdesc_create(iocp_t *iocp, pn_socket_t s, bool external) {
     }
     pni_iocpdesc_map_push(iocpd);
   }
+  return iocpd;
+}
+
+iocpdesc_t *pni_deadline_desc(iocp_t *iocp) {
+  // Non IO descriptor for selector deadlines.  Do not add to iocpdesc map or
+  // zombie list.  Selector responsible to free/decref object.
+  iocpdesc_t *iocpd = pni_iocpdesc(PN_INVALID_SOCKET);
+  iocpd->iocp = iocp;
+  iocpd->deadline_desc = true;
   return iocpd;
 }
 

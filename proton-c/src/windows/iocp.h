@@ -74,6 +74,7 @@ struct iocpdesc_t {
   bool closing;        // pn_close called
   bool read_closed;    // EOF or read error
   bool write_closed;   // shutdown sent or write error
+  bool deadline_desc;  // Socket-less deadline descriptor for selectors
   pn_selector_t *selector;
   pn_selectable_t *selectable;
   int events;
@@ -104,6 +105,7 @@ struct write_result_t {
 
 iocpdesc_t *pni_iocpdesc_create(iocp_t *, pn_socket_t s, bool external);
 iocpdesc_t *pni_iocpdesc_map_get(iocp_t *, pn_socket_t s);
+iocpdesc_t *pni_deadline_desc(iocp_t *);
 void pni_iocpdesc_map_del(iocp_t *, pn_socket_t s);
 void pni_iocpdesc_map_push(iocpdesc_t *iocpd);
 void pni_iocpdesc_start(iocpdesc_t *iocpd);

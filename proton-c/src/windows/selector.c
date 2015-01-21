@@ -44,8 +44,6 @@ static void deadlines_update(iocpdesc_t *iocpd, pn_timestamp_t t);
 
 struct pn_selector_t {
   iocp_t *iocp;
-  pn_timestamp_t *deadlines;
-  size_t capacity;
   pn_list_t *selectables;
   pn_list_t *iocp_descriptors;
   size_t current;
@@ -62,8 +60,6 @@ void pn_selector_initialize(void *obj)
 {
   pn_selector_t *selector = (pn_selector_t *) obj;
   selector->iocp = NULL;
-  selector->deadlines = NULL;
-  selector->capacity = 0;
   selector->selectables = pn_list(PN_WEAKREF, 0);
   selector->iocp_descriptors = pn_list(PN_OBJECT, 0);
   selector->current = 0;
@@ -79,7 +75,6 @@ void pn_selector_initialize(void *obj)
 void pn_selector_finalize(void *obj)
 {
   pn_selector_t *selector = (pn_selector_t *) obj;
-  free(selector->deadlines);
   pn_free(selector->selectables);
   pn_free(selector->iocp_descriptors);
   pn_error_free(selector->error);
@@ -110,34 +105,13 @@ void pn_selector_add(pn_selector_t *selector, pn_selectable_t *selectable)
   assert(selectable);
   assert(pni_selectable_get_index(selectable) < 0);
   pn_socket_t sock = pn_selectable_get_fd(selectable);
-
   iocpdesc_t *iocpd = NULL;
-  if (sock != INVALID_SOCKET) {
-    iocpd = pni_iocpdesc_map_get(selector->iocp, sock);
-    if (!iocpd) {
-      // Socket created outside proton.  Hook it up to iocp.
-      iocpd = pni_iocpdesc_create(selector->iocp, sock, true);
-      pni_iocpdesc_start(iocpd);
-    } else {
-      assert(iocpd->iocp == selector->iocp);
-    }
-  }
 
   if (pni_selectable_get_index(selectable) < 0) {
     pn_list_add(selector->selectables, selectable);
-    pn_list_add(selector->iocp_descriptors, iocpd);
+    pn_list_add(selector->iocp_descriptors, NULL);
     size_t size = pn_list_size(selector->selectables);
-
-    if (selector->capacity < size) {
-      selector->deadlines = (pn_timestamp_t *) realloc(selector->deadlines, size*sizeof(pn_timestamp_t));
-      selector->capacity = size;
-    }
-
     pni_selectable_set_index(selectable, size - 1);
-    if (iocpd) {
-      iocpd->selector = selector;
-      iocpd->selectable = selectable;
-    }
   }
 
   pn_selector_update(selector, selectable);
@@ -145,12 +119,48 @@ void pn_selector_add(pn_selector_t *selector, pn_selectable_t *selectable)
 
 void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
 {
+  // A selectable's fd may switch from PN_INVALID_SCOKET to a working socket between
+  // update calls.  If a selectable without a valid socket has a deadline, we need
+  // a dummy iocpdesc_t to participate in the deadlines list.
   int idx = pni_selectable_get_index(selectable);
   assert(idx >= 0);
-  selector->deadlines[idx] = pn_selectable_get_deadline(selectable);
-
+  pn_timestamp_t deadline = pn_selectable_get_deadline(selectable);
   pn_socket_t sock = pn_selectable_get_fd(selectable);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_list_get(selector->iocp_descriptors, idx);
+
+  if (!iocpd && deadline && sock == PN_INVALID_SOCKET) {
+    iocpd = pni_deadline_desc(selector->iocp);
+    assert(iocpd);
+    pn_list_set(selector->iocp_descriptors, idx, iocpd);
+    pn_decref(iocpd);  // life is solely tied to iocp_descriptors list
+    iocpd->selector = selector;
+    iocpd->selectable = selectable;
+  }
+  else if (iocpd && iocpd->deadline_desc && sock != PN_INVALID_SOCKET) {
+    // Switching to a real socket.  Stop using a deadline descriptor.
+    deadlines_update(iocpd, 0);
+    // decref descriptor in list and pick up a real iocpd below
+    pn_list_set(selector->iocp_descriptors, idx, NULL);
+    iocpd = NULL;
+  }
+
+  // The selectables socket may be set long after it has been added
+  if (!iocpd && sock != PN_INVALID_SOCKET) {
+    iocpd = pni_iocpdesc_map_get(selector->iocp, sock);
+    if (!iocpd) {
+      // Socket created outside proton.  Hook it up to iocp.
+      iocpd = pni_iocpdesc_create(selector->iocp, sock, true);
+      assert(iocpd);
+      if (iocpd)
+        pni_iocpdesc_start(iocpd);
+    }
+    if (iocpd) {
+      pn_list_set(selector->iocp_descriptors, idx, iocpd);
+      iocpd->selector = selector;
+      iocpd->selectable = selectable;
+    }
+  }
+
   if (iocpd) {
     assert(sock == iocpd->socket || iocpd->closing);
     int interests = 0;
@@ -160,11 +170,11 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
     if (pn_selectable_is_writing(selectable)) {
       interests |= PN_WRITABLE;
     }
-    if (selector->deadlines[idx]) {
+    if (deadline) {
       interests |= PN_EXPIRED;
     }
     interests_update(iocpd, interests);
-    deadlines_update(iocpd, selector->deadlines[idx]);
+    deadlines_update(iocpd, deadline);
   }
 }
 

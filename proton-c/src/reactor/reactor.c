@@ -76,12 +76,12 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
 
 static void pn_reactor_finalize(pn_reactor_t *reactor) {
   pn_decref(reactor->attachments);
-  pn_decref(reactor->selector);
-  pn_decref(reactor->io);
   pn_decref(reactor->collector);
   pn_decref(reactor->handler);
   pn_decref(reactor->children);
   pn_decref(reactor->timer);
+  pn_decref(reactor->selector);
+  pn_decref(reactor->io);
 }
 
 #define pn_reactor_hashcode NULL
