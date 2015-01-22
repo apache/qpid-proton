@@ -1225,6 +1225,9 @@ indicate whether the fd has been registered or not.
   def is_terminal(self):
     return pn_selectable_is_terminal(self._impl)
 
+  def terminate(self):
+    pn_selectable_terminate(self._impl)
+
   def release(self):
     pn_selectable_release(self._impl)
 

@@ -924,9 +924,12 @@ class Reactor(Wrapper):
 
     def acceptor(self, host, port, handler=None):
         impl = _chandler(handler, self.errors)
-        result = Acceptor(pn_reactor_acceptor(self._impl, host, port, impl))
+        aimpl = pn_reactor_acceptor(self._impl, host, str(port), impl)
         pn_decref(impl)
-        return result
+        if aimpl:
+            return Acceptor(aimpl)
+        else:
+            raise IOError(pn_error_text(pn_io_error(pn_reactor_io(self._impl))))
 
     def connection(self, handler=None):
         impl = _chandler(handler, self.errors)

@@ -183,6 +183,12 @@ pn_selectable_t *pn_selector_next(pn_selector_t *selector, int *events)
     if (pfd->revents & POLLIN) {
       ev |= PN_READABLE;
     }
+    if ((pfd->revents & POLLERR) ||
+        (pfd->revents & POLLHUP) ||
+        (pfd->revents & POLLNVAL)) {
+      ev |= PN_READABLE;
+      ev |= PN_WRITABLE;
+    }
     if (pfd->revents & POLLOUT) {
       ev |= PN_WRITABLE;
     }

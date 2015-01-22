@@ -54,8 +54,11 @@ void pni_acceptor_finalize(pn_selectable_t *sel) {
 }
 
 pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port, pn_handler_t *handler) {
-  pn_selectable_t *sel = pn_reactor_selectable(reactor);
   pn_socket_t socket = pn_listen(pn_reactor_io(reactor), host, port);
+  if (socket == PN_INVALID_SOCKET) {
+    return NULL;
+  }
+  pn_selectable_t *sel = pn_reactor_selectable(reactor);
   pn_selectable_set_fd(sel, socket);
   pn_selectable_on_readable(sel, pni_acceptor_readable);
   pn_selectable_on_finalize(sel, pni_acceptor_finalize);
