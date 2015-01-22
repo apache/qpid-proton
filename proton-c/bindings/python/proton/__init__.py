@@ -3363,6 +3363,7 @@ class Event(Wrapper, EventBase):
   SELECTABLE_READABLE = EventType(PN_SELECTABLE_READABLE, "on_selectable_readable")
   SELECTABLE_WRITABLE = EventType(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
   SELECTABLE_EXPIRED = EventType(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
+  SELECTABLE_ERROR = EventType(PN_SELECTABLE_ERROR, "on_selectable_error")
   SELECTABLE_FINAL = EventType(PN_SELECTABLE_FINAL, "on_selectable_final")
 
   @staticmethod

@@ -46,6 +46,7 @@ struct pn_selectable_t {
   pn_record_t *attachments;
   void (*readable)(pn_selectable_t *);
   void (*writable)(pn_selectable_t *);
+  void (*error)(pn_selectable_t *);
   void (*expired)(pn_selectable_t *);
   void (*release) (pn_selectable_t *);
   void (*finalize)(pn_selectable_t *);
@@ -64,6 +65,7 @@ void pn_selectable_initialize(pn_selectable_t *sel)
   sel->attachments = pn_record();
   sel->readable = NULL;
   sel->writable = NULL;
+  sel->error = NULL;
   sel->expired = NULL;
   sel->release = NULL;
   sel->finalize = NULL;
@@ -133,6 +135,11 @@ void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selecta
 void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *)) {
   assert(sel);
   sel->writable = writable;
+}
+
+void pn_selectable_on_error(pn_selectable_t *sel, void (*error)(pn_selectable_t *)) {
+  assert(sel);
+  sel->error = error;
 }
 
 void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *)) {
@@ -206,6 +213,14 @@ void pn_selectable_writable(pn_selectable_t *selectable)
   }
 }
 
+void pn_selectable_error(pn_selectable_t *selectable)
+{
+  assert(selectable);
+  if (selectable->error) {
+    selectable->error(selectable);
+  }
+}
+
 void pn_selectable_expired(pn_selectable_t *selectable)
 {
   assert(selectable);
@@ -259,6 +274,10 @@ static void pni_writable(pn_selectable_t *selectable) {
   pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_WRITABLE);
 }
 
+static void pni_error(pn_selectable_t *selectable) {
+  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_ERROR);
+}
+
 static void pni_expired(pn_selectable_t *selectable) {
   pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_EXPIRED);
 }
@@ -272,6 +291,7 @@ void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collecto
   if (collector) {
     pn_selectable_on_readable(selectable, pni_readable);
     pn_selectable_on_writable(selectable, pni_writable);
+    pn_selectable_on_error(selectable, pni_error);
     pn_selectable_on_expired(selectable, pni_expired);
   }
 }

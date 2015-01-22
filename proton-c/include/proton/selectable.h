@@ -96,6 +96,7 @@ PN_EXTERN pn_selectable_t *pn_selectable(void);
 PN_EXTERN void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
+PN_EXTERN void pn_selectable_on_error(pn_selectable_t *sel, void (*error)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_release(pn_selectable_t *sel, void (*release)(pn_selectable_t *));
 PN_EXTERN void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
 
@@ -164,6 +165,13 @@ PN_EXTERN void pn_selectable_readable(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  */
 PN_EXTERN void pn_selectable_writable(pn_selectable_t *selectable);
+
+/**
+ * Notify a selectable that there is an error on the file descriptor.
+ *
+ * @param[in] selectable a selectable object
+ */
+PN_EXTERN void pn_selectable_error(pn_selectable_t *selectable);
 
 /**
  * Notify a selectable that its deadline has expired.

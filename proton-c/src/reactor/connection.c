@@ -173,6 +173,12 @@ static void pni_connection_writable(pn_selectable_t *sel)
   }
 }
 
+static void pni_connection_error(pn_selectable_t *sel) {
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_selectable_terminate(sel);
+  pn_reactor_update(reactor, sel);
+}
+
 static void pni_connection_expired(pn_selectable_t *sel) {}
 
 static void pni_connection_finalize(pn_selectable_t *sel) {
@@ -189,6 +195,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_selectable_set_fd(sel, sock);
   pn_selectable_on_readable(sel, pni_connection_readable);
   pn_selectable_on_writable(sel, pni_connection_writable);
+  pn_selectable_on_error(sel, pni_connection_error);
   pn_selectable_on_expired(sel, pni_connection_expired);
   pn_selectable_on_finalize(sel, pni_connection_finalize);
   pn_record_t *record = pn_selectable_attachments(sel);

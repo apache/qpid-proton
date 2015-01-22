@@ -33,6 +33,7 @@ extern "C" {
 #define PN_READABLE (1)
 #define PN_WRITABLE (2)
 #define PN_EXPIRED (4)
+#define PN_ERROR (8)
 
 pn_selector_t *pni_selector(void);
 PN_EXTERN void pn_selector_free(pn_selector_t *selector);

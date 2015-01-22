@@ -75,6 +75,7 @@ public interface Event
         SELECTABLE_READABLE,
         SELECTABLE_WRITABLE,
         SELECTABLE_EXPIRED,
+        SELECTABLE_ERROR,
         SELECTABLE_FINAL
     }
 

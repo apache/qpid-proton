@@ -42,6 +42,9 @@ void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
     if (events & PN_EXPIRED) {
       pn_selectable_expired(sel);
     }
+    if (events & PN_ERROR) {
+      pn_selectable_error(sel);
+    }
   }
   pn_reactor_yield(reactor);
 }

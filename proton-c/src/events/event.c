@@ -330,6 +330,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_SELECTABLE_READABLE";
   case PN_SELECTABLE_WRITABLE:
     return "PN_SELECTABLE_WRITABLE";
+  case PN_SELECTABLE_ERROR:
+    return "PN_SELECTABLE_ERROR";
   case PN_SELECTABLE_EXPIRED:
     return "PN_SELECTABLE_EXPIRED";
   case PN_SELECTABLE_FINAL:
