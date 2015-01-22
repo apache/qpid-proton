@@ -2207,6 +2207,18 @@ class Endpoint(object):
   def _get_remote_cond_impl(self):
       assert False, "Subclass must override this!"
 
+  def _get_handler(self):
+    record = self._get_attachments()
+    return WrappedHandler(pn_record_get_handler(record))
+
+  def _set_handler(self, handler):
+    record = self._get_attachments()
+    impl = _chandler(handler)
+    pn_record_set_handler(record, impl)
+    pn_decref(impl)
+
+  handler = property(_get_handler, _set_handler)
+
   @property
   def transport(self):
     return self.connection.transport
@@ -2283,6 +2295,9 @@ class Connection(Wrapper, Endpoint):
     self.offered_capabilities = None
     self.desired_capabilities = None
     self.properties = None
+
+  def _get_attachments(self):
+    return pn_connection_attachments(self._impl)
 
   @property
   def connection(self):
@@ -2397,6 +2412,9 @@ class Session(Wrapper, Endpoint):
   def __init__(self, impl):
     Wrapper.__init__(self, impl, pn_session_attachments)
 
+  def _get_attachments(self):
+    return pn_session_attachments(self._impl)
+
   def _get_cond_impl(self):
     return pn_session_condition(self._impl)
 
@@ -2468,6 +2486,9 @@ class Link(Wrapper, Endpoint):
 
   def __init__(self, impl):
     Wrapper.__init__(self, impl, pn_link_attachments)
+
+  def _get_attachments(self):
+    return pn_link_attachments(self._impl)
 
   def _check(self, err):
     if err < 0:
@@ -3400,7 +3421,11 @@ class Event(Wrapper, EventBase):
     if isinstance(handler, WrappedHandler):
       pn_handler_dispatch(handler._impl, self._impl)
     else:
-      return dispatch(handler, self.type.method, self)
+      dispatch(handler, self.type.method, self)
+      if hasattr(handler, "handlers"):
+        for h in handler.handlers:
+          self.dispatch(h)
+
 
   @property
   def reactor(self):
@@ -3460,9 +3485,6 @@ class _cadapter:
     ev = Event.wrap(cevent)
     try:
       ev.dispatch(self.handler)
-      if hasattr(self.handler, "handlers"):
-        for h in self.handler.handlers:
-          ev.dispatch(h)
     except:
       if self.errors is None:
         raise

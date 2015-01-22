@@ -90,6 +90,9 @@ PN_EXTERN pn_record_t *pn_task_attachments(pn_task_t *task);
 
 PN_EXTERN pn_reactor_t *pn_event_reactor(pn_event_t *event);
 
+PN_EXTERN pn_handler_t *pn_record_get_handler(pn_record_t *record);
+PN_EXTERN void pn_record_set_handler(pn_record_t *record, pn_handler_t *handler);
+
 /** @}
  */
 

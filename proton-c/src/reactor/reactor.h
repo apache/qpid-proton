@@ -24,8 +24,6 @@
 
 #include <proton/reactor.h>
 
-pn_handler_t *pni_record_get_handler(pn_record_t *record);
-void pni_record_init_handler(pn_record_t *record, pn_handler_t *handler);
 void pni_record_init_reactor(pn_record_t *record, pn_reactor_t *reactor);
 
 

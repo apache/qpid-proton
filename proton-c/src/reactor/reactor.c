@@ -207,11 +207,13 @@ static void pni_reactor_dispatch_post(pn_reactor_t *reactor, pn_event_t *event) 
 static void *pni_handler = NULL;
 #define PN_HANDLER ((pn_handle_t) &pni_handler)
 
-pn_handler_t *pni_record_get_handler(pn_record_t *record) {
+pn_handler_t *pn_record_get_handler(pn_record_t *record) {
+  assert(record);
   return (pn_handler_t *) pn_record_get(record, PN_HANDLER);
 }
 
-void pni_record_init_handler(pn_record_t *record, pn_handler_t *handler) {
+void pn_record_set_handler(pn_record_t *record, pn_handler_t *handler) {
+  assert(record);
   pn_record_def(record, PN_HANDLER, PN_OBJECT);
   pn_record_set(record, PN_HANDLER, handler);
 }
@@ -282,21 +284,21 @@ pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler)
   pn_handler_t *handler = NULL;
   pn_link_t *link = pn_event_link(event);
   if (link) {
-    handler = pni_record_get_handler(pn_link_attachments(link));
+    handler = pn_record_get_handler(pn_link_attachments(link));
     if (handler) { return handler; }
   }
   pn_session_t *session = pn_event_session(event);
   if (session) {
-    handler = pni_record_get_handler(pn_session_attachments(session));
+    handler = pn_record_get_handler(pn_session_attachments(session));
     if (handler) { return handler; }
   }
   pn_connection_t *connection = pn_event_connection(event);
   if (connection) {
-    handler = pni_record_get_handler(pn_connection_attachments(connection));
+    handler = pn_record_get_handler(pn_connection_attachments(connection));
     if (handler) { return handler; }
   }
   if (pn_class_id(pn_event_class(event)) == CID_pn_task) {
-    handler = pni_record_get_handler(pn_task_attachments((pn_task_t *) pn_event_context(event)));
+    handler = pn_record_get_handler(pn_task_attachments((pn_task_t *) pn_event_context(event)));
     if (handler) { return handler; }
   }
   return default_handler;
@@ -306,7 +308,7 @@ pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *h
   pn_task_t *task = pn_timer_schedule(reactor->timer, reactor->now + delay);
   pn_record_t *record = pn_task_attachments(task);
   pni_record_init_reactor(record, reactor);
-  pni_record_init_handler(record, handler);
+  pn_record_set_handler(record, handler);
   if (reactor->selectable) {
     pn_selectable_set_deadline(reactor->selectable, pn_timer_deadline(reactor->timer));
     pn_reactor_update(reactor, reactor->selectable);

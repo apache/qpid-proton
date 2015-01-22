@@ -213,7 +213,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
 pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *handler) {
   assert(reactor);
   pn_connection_t *connection = pn_connection();
-  pni_record_init_handler(pn_connection_attachments(connection), handler);
+  pn_record_set_handler(pn_connection_attachments(connection), handler);
   pn_connection_collect(connection, pn_reactor_collector(reactor));
   pn_list_add(pn_reactor_children(reactor), connection);
   pn_decref(connection);
