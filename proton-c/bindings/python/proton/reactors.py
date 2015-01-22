@@ -929,7 +929,7 @@ class Reactor(Wrapper):
         if aimpl:
             return Acceptor(aimpl)
         else:
-            raise IOError(pn_error_text(pn_io_error(pn_reactor_io(self._impl))))
+            raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
 
     def connection(self, handler=None):
         impl = _chandler(handler, self.errors)
