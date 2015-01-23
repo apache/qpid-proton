@@ -43,7 +43,7 @@ fi
 ##
 (
     cd ${SRC}
-    BRANCH=$(git symbolic-ref --short HEAD)
-    ARCHIVE=$DIR/qpid-proton-${BRANCH}.tgz
-    git archive --format=tgz --prefix=qpid-proton-${BRANCH}/ ${BRANCH} -o ${ARCHIVE}
+    TAG=$(git describe --tags --always)
+    ARCHIVE=$DIR/qpid-proton-${TAG}.tgz
+    git archive --format=tgz --prefix=qpid-proton-${TAG}/ ${TAG} -o ${ARCHIVE}
 )
