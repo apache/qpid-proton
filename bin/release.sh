@@ -19,7 +19,7 @@
 # under the License.
 #
 
-# release.sh - Creates a release branch.
+# release.sh - Creates a release.
 
 ME=$(basename ${0})
 CURRDIR=$PWD
@@ -44,7 +44,7 @@ die()
 }
 
 ##
-## Create the branch
+## Create the tag
 ##
 (
     cd ${SRC}
