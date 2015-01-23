@@ -467,11 +467,11 @@ class PythonIO:
     def on_unhandled(self, method, event):
         event.dispatch(self.delegate)
 
-    def on_selectable_updated(self, event):
-        pass
-
     def on_selectable_init(self, event):
         self.selectables.append(event.context)
+
+    def on_selectable_updated(self, event):
+        pass
 
     def on_selectable_final(self, event):
         sel = event.context
