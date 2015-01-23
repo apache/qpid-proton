@@ -2493,7 +2493,7 @@ class Link(Wrapper, Endpoint):
   def _check(self, err):
     if err < 0:
       exc = EXCEPTIONS.get(err, LinkException)
-      raise exc("[%s]: %s" % (err, pn_link_error(self._impl)))
+      raise exc("[%s]: %s" % (err, pn_error_text(pn_link_error(self._impl))))
     else:
       return err
 
