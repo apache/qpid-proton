@@ -243,7 +243,7 @@ class EndpointStateHandler(Handler):
     def print_error(cls, endpoint, endpoint_type):
         if endpoint.remote_condition:
             logging.error(endpoint.remote_condition.description)
-        elif self.is_local_open(endpoint) and self.is_remote_closed(endpoint):
+        elif cls.is_local_open(endpoint) and cls.is_remote_closed(endpoint):
             logging.error("%s closed by peer" % endpoint_type)
 
     def on_link_remote_close(self, event):
@@ -334,20 +334,20 @@ class EndpointStateHandler(Handler):
         if self.delegate:
             dispatch(self.delegate, 'on_connection_error', event)
         else:
-            self.print_error(event.connection, "connection")
+            self.log_error(event.connection, "connection")
 
     def on_session_error(self, event):
         if self.delegate:
             dispatch(self.delegate, 'on_session_error', event)
         else:
-            self.print_error(event.session, "session")
+            self.log_error(event.session, "session")
             event.connection.close()
 
     def on_link_error(self, event):
         if self.delegate:
             dispatch(self.delegate, 'on_link_error', event)
         else:
-            self.print_error(event.link, "link")
+            self.log_error(event.link, "link")
             event.connection.close()
 
     def on_connection_closed(self, event):

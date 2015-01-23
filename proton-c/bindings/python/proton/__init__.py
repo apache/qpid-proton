@@ -33,7 +33,7 @@ The proton APIs consist of the following classes:
 from cproton import *
 from wrapper import Wrapper
 
-import weakref, re, socket, sys
+import weakref, socket, sys
 try:
   import uuid
 except ImportError:
@@ -68,7 +68,7 @@ except ImportError:
       def __hash__(self):
         return self.bytes.__hash__()
 
-  import os, random, socket, time
+  import os, random, time
   rand = random.Random()
   rand.seed((os.getpid(), time.time(), socket.gethostname()))
   def random_uuid():

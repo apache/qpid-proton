@@ -16,10 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import collections, Queue, socket, time
+import collections, Queue, socket, time, threading
 from proton import ConnectionException, Endpoint, Handler, Message, Timeout, Url
 from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
-from proton.handlers import MessagingHandler, ScopedHandler
+from proton.handlers import MessagingHandler, ScopedHandler, IncomingMessageHandler
 
 class BlockingLink(object):
     def __init__(self, connection, link):
@@ -82,10 +82,7 @@ class BlockingConnection(Handler):
     def __init__(self, url, timeout=None, container=None):
         self.timeout = timeout
         self.container = container or Container()
-        if isinstance(url, basestring):
-            self.url = Url(url)
-        else:
-            self.url = url
+        self.url = Url(url).defaults()
         self.conn = self.container.connect(url=self.url, handler=self)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
@@ -146,3 +143,72 @@ class BlockingConnection(Handler):
         else:
             txt += " by peer"
         raise ConnectionException(txt)
+
+
+def atomic_count(start=0, step=1):
+    """Thread-safe atomic count iterator"""
+    lock = threading.Lock()
+    count = start
+    while True:
+        with lock:
+            count += step;
+            yield count
+
+
+class SyncRequestResponse(IncomingMessageHandler):
+    """
+    Implementation of the synchronous request-responce (aka RPC) pattern.
+    """
+
+    correlation_id = atomic_count()
+
+    def __init__(self, connection, address=None):
+        """
+        Send requests and receive responses. A single instance can send many requests
+        to the same or different addresses.
+
+        @param connection: A L{BlockingConnection}
+        @param address: Address for all requests.
+            If not specified, each request must have the address property set.
+            Sucessive messages may have different addresses.
+
+        @ivar address: Address for all requests, may be None.
+        @ivar connection: Connection for requests and responses.
+        """
+        super(SyncRequestResponse, self).__init__()
+        self.connection = connection
+        self.address = address
+        self.sender = self.connection.create_sender(self.address)
+        # dynamic=true generates a unique address dynamically for this receiver.
+        # credit=1 because we want to receive 1 response message initially.
+        self.receiver = self.connection.create_receiver(None, dynamic=True, credit=1, handler=self)
+        self.response = None
+
+    def call(self, request):
+        """
+        Send a request message, wait for and return the response message.
+
+        @param request: A L{proton.Message}. If L{self.address} is not set the 
+            L{request.address} must be set and will be used.
+        """
+        if not self.address and not request.address:
+            raise ValueError("Request message has no address: %s" % request)
+        request.reply_to = self.reply_to
+        request.correlation_id = correlation_id = self.correlation_id.next()
+        self.sender.send_msg(request)
+        def wakeup():
+            return self.response and (self.response.correlation_id == correlation_id)
+        self.connection.wait(wakeup, msg="Waiting for response")
+        response = self.response
+        self.response = None    # Ready for next response.
+        self.receiver.flow(1)   # Set up credit for the next response.
+        return response
+
+    @property
+    def reply_to(self):
+        """Return the dynamic address of our receiver."""
+        return self.receiver.remote_source.address
+
+    def on_message(self, event):
+        """Called when we receive a message for our receiver."""
+        self.response = event.message

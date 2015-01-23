@@ -408,9 +408,13 @@ class SelectLoop(object):
     def do_work(self, timeout=None):
         """@return True if some work was done, False if time-out expired"""
         tick = self.events.timer.tick()
-        while self.events.process():
-            if self._abort: return
+
+        if self.events.process():
             tick = self.events.timer.tick()
+            while self.events.process():
+                if self._abort: return
+                tick = self.events.timer.tick()
+            return True # Did work, let caller check their conditions, don't select.
 
         stable = False
         while not stable:
@@ -429,7 +433,7 @@ class SelectLoop(object):
             stable = len(closed) == 0
 
         if self.redundant:
-            return
+            return False
 
         if tick:
             timeout = _min(tick - time.time(), timeout)
@@ -836,7 +840,7 @@ class Container(object):
         return self.loop.do_work(timeout)
 
 import traceback
-from proton import WrappedHandler, _chandler, Connection, secs2millis, millis2secs, Selectable
+from proton import WrappedHandler, _chandler, secs2millis, millis2secs, Selectable
 from wrapper import Wrapper
 from cproton import *
 
