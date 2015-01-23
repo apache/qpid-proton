@@ -937,8 +937,14 @@ class Reactor(Wrapper):
         pn_decref(impl)
         return result
 
-    def selectable(self):
-        return Selectable.wrap(pn_reactor_selectable(self._impl))
+    def selectable(self, handler=None):
+        impl = _chandler(handler, self.errors)
+        result = Selectable.wrap(pn_reactor_selectable(self._impl))
+        if impl:
+            record = pn_selectable_attachments(result._impl)
+            pn_record_set_handler(record, impl)
+            pn_decref(impl)
+        return result
 
     def update(self, sel):
         pn_reactor_update(self._impl, sel._impl)

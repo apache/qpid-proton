@@ -30,8 +30,7 @@
 #include "reactor.h"
 
 // XXX: overloaded for both directions
-static void *pni_transportctx = NULL;
-#define PN_TRANCTX ((pn_handle_t) &pni_transportctx)
+PN_HANDLE(PN_TRANCTX)
 
 static pn_transport_t *pni_transport(pn_selectable_t *sel) {
   pn_record_t *record = pn_selectable_attachments(sel);

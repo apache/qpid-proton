@@ -28,11 +28,13 @@
 
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport);
 
+PN_HANDLE(PNI_ACCEPTOR_HANDLER)
+
 void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
   char name[1024];
   pn_socket_t sock = pn_accept(pn_reactor_io(reactor), pn_selectable_get_fd(sel), name, 1024);
-  pn_handler_t *handler = pn_record_get_handler(pn_selectable_attachments(sel));
+  pn_handler_t *handler = (pn_handler_t *) pn_record_get(pn_selectable_attachments(sel), PNI_ACCEPTOR_HANDLER);
   if (!handler) { handler = pn_reactor_handler(reactor); }
   pn_connection_t *conn = pn_reactor_connection(reactor, handler);
   pn_transport_t *trans = pn_transport();
@@ -63,7 +65,9 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   pn_selectable_on_readable(sel, pni_acceptor_readable);
   pn_selectable_on_finalize(sel, pni_acceptor_finalize);
   pni_record_init_reactor(pn_selectable_attachments(sel), reactor);
-  pn_record_set_handler(pn_selectable_attachments(sel), handler);
+  pn_record_t *record = pn_selectable_attachments(sel);
+  pn_record_def(record, PNI_ACCEPTOR_HANDLER, PN_OBJECT);
+  pn_record_set(record, PNI_ACCEPTOR_HANDLER, handler);
   pn_selectable_set_reading(sel, true);
   pn_reactor_update(reactor, sel);
   return (pn_acceptor_t *) sel;

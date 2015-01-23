@@ -259,6 +259,10 @@ PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
 
 #define PN_LEGCTX ((pn_handle_t) 0)
 
+#define PN_HANDLE(name) \
+  static char *_PN_HANDLE_ ## name = 0; \
+  static pn_handle_t name = ((pn_handle_t) &_PN_HANDLE_ ## name);
+
 PN_EXTERN pn_record_t *pn_record(void);
 PN_EXTERN void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
 PN_EXTERN bool pn_record_has(pn_record_t *record, pn_handle_t key);

@@ -161,9 +161,7 @@ pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor) {
   return sel;
 }
 
-static void *pni_terminated = NULL;
-
-#define PNI_TERMINATED ((pn_handle_t) &pni_terminated)
+PN_HANDLE(PNI_TERMINATED)
 
 void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable) {
   assert(reactor);
@@ -204,8 +202,7 @@ static void pni_reactor_dispatch_post(pn_reactor_t *reactor, pn_event_t *event) 
   }
 }
 
-static void *pni_handler = NULL;
-#define PN_HANDLER ((pn_handle_t) &pni_handler)
+PN_HANDLE(PN_HANDLER)
 
 pn_handler_t *pn_record_get_handler(pn_record_t *record) {
   assert(record);
@@ -218,8 +215,7 @@ void pn_record_set_handler(pn_record_t *record, pn_handler_t *handler) {
   pn_record_set(record, PN_HANDLER, handler);
 }
 
-static void *pni_reactor_handle = NULL;
-#define PN_REACTOR ((pn_handle_t) &pni_reactor_handle)
+PN_HANDLE(PN_REACTOR)
 
 pn_reactor_t *pni_record_get_reactor(pn_record_t *record) {
   return (pn_reactor_t *) pn_record_get(record, PN_REACTOR);
@@ -297,9 +293,17 @@ pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler)
     handler = pn_record_get_handler(pn_connection_attachments(connection));
     if (handler) { return handler; }
   }
-  if (pn_class_id(pn_event_class(event)) == CID_pn_task) {
+  switch (pn_class_id(pn_event_class(event))) {
+  case CID_pn_task:
     handler = pn_record_get_handler(pn_task_attachments((pn_task_t *) pn_event_context(event)));
     if (handler) { return handler; }
+    break;
+  case CID_pn_selectable:
+    handler = pn_record_get_handler(pn_selectable_attachments((pn_selectable_t *) pn_event_context(event)));
+    if (handler) { return handler; }
+    break;
+  default:
+    break;
   }
   return default_handler;
 }
