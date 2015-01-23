@@ -3323,7 +3323,7 @@ def dispatch(handler, method, *args):
   if m:
     return m(*args)
   elif hasattr(handler, "on_unhandled"):
-    return handler.on_unhandled(method, args)
+    return handler.on_unhandled(method, *args)
 
 class EventBase(object):
 
@@ -3472,7 +3472,7 @@ class Event(Wrapper, EventBase):
 
 class Handler(object):
 
-  def on_unhandled(self, method, args):
+  def on_unhandled(self, method, *args):
     pass
 
 class _cadapter:

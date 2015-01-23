@@ -74,8 +74,7 @@ class ScopedHandler(Handler):
     """
     scopes = ["delivery", "link", "session", "connection"]
 
-    def on_unhandled(self, method, args):
-        event = args[0]
+    def on_unhandled(self, method, event):
         if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
             return
 
@@ -442,7 +441,7 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
             super(TransactionalClientHandler, self).accept(delivery)
 
 from proton import WrappedHandler
-from cproton import pn_flowcontroller, pn_handshaker
+from cproton import pn_flowcontroller, pn_handshaker, pn_iohandler
 
 class CFlowController(WrappedHandler):
 
@@ -453,3 +452,68 @@ class CHandshaker(WrappedHandler):
 
     def __init__(self):
         WrappedHandler.__init__(self, pn_handshaker)
+
+class IOHandler(WrappedHandler):
+
+    def __init__(self):
+        WrappedHandler.__init__(self, pn_iohandler)
+
+class PythonIO:
+
+    def __init__(self):
+        self.selectables = []
+        self.delegate = IOHandler()
+
+    def on_unhandled(self, method, event):
+        event.dispatch(self.delegate)
+
+    def on_selectable_updated(self, event):
+        pass
+
+    def on_selectable_init(self, event):
+        self.selectables.append(event.context)
+
+    def on_selectable_final(self, event):
+        sel = event.context
+        if sel.is_terminal:
+            self.selectables.remove(sel)
+            sel.release()
+
+    def on_reactor_quiesced(self, event):
+        reactor = event.reactor
+
+        reading = []
+        writing = []
+        deadline = None
+        for sel in self.selectables:
+            if sel.reading:
+                reading.append(sel)
+            if sel.writing:
+                writing.append(sel)
+            if sel.deadline:
+                if deadline is None:
+                    deadline = sel.deadline
+                else:
+                    deadline = min(sel.deadline, deadline)
+
+        if deadline is not None:
+            timeout = deadline - time.time()
+        else:
+            timeout = reactor.timeout
+        if (timeout < 0): timeout = 0
+        timeout = min(timeout, reactor.timeout)
+        readable, writable, _ = select(reading, writing, [], timeout)
+
+        reactor.mark()
+
+        now = time.time()
+
+        for s in readable:
+            s.readable()
+        for s in writable:
+            s.writable()
+        for s in self.selectables:
+            if s.deadline and now > s.deadline:
+                s.expired()
+
+        reactor.yield_()
