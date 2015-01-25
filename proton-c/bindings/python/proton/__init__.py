@@ -3477,19 +3477,19 @@ class Handler(object):
 
 class _cadapter:
 
-  def __init__(self, handler, errors=None):
+  def __init__(self, handler, on_error=None):
     self.handler = handler
-    self.errors = errors
+    self.on_error = on_error
 
   def __call__(self, cevent):
     ev = Event.wrap(cevent)
     try:
       ev.dispatch(self.handler)
     except:
-      if self.errors is None:
+      if self.on_error is None:
         raise
       else:
-        self.errors.append(sys.exc_info())
+        self.on_error(sys.exc_info())
 
 class WrappedHandler(Wrapper):
 
@@ -3497,11 +3497,11 @@ class WrappedHandler(Wrapper):
     Wrapper.__init__(self, impl_or_constructor)
 
   def add(self, handler):
-    impl = _chandler(handler, getattr(self, "errors", None))
+    impl = _chandler(handler, getattr(self, "on_error", None))
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
 
-def _chandler(obj, errors=None):
+def _chandler(obj, on_error=None):
   if obj is None:
     return None
   elif isinstance(obj, WrappedHandler):
@@ -3509,7 +3509,7 @@ def _chandler(obj, errors=None):
     pn_incref(impl)
     return impl
   else:
-    return pn_pyhandler(_cadapter(obj, errors))
+    return pn_pyhandler(_cadapter(obj, on_error))
 
 ###
 # Driver

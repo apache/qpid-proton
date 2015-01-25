@@ -869,7 +869,7 @@ class Acceptor(Wrapper):
 
 def _wrap_handler(reactor, impl):
     wrapped = WrappedHandler(impl)
-    wrapped.__dict__["errors"] = reactor.errors
+    wrapped.__dict__["on_error"] = reactor.on_error
     return wrapped
 
 class Reactor(Wrapper):
@@ -889,8 +889,12 @@ class Reactor(Wrapper):
     def _init(self):
         self.errors = []
 
+    def on_error(self, info):
+        self.errors.append(info)
+        self.yield_()
+
     def global_(self, handler):
-        impl = _chandler(handler, self.errors)
+        impl = _chandler(handler, self.on_error)
         pn_reactor_global(self._impl, impl)
         pn_decref(impl)
 
@@ -921,13 +925,13 @@ class Reactor(Wrapper):
         pn_reactor_stop(self._impl)
 
     def schedule(self, delay, task):
-        impl = _chandler(task, self.errors)
+        impl = _chandler(task, self.on_error)
         task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
         pn_decref(impl)
         return task
 
     def acceptor(self, host, port, handler=None):
-        impl = _chandler(handler, self.errors)
+        impl = _chandler(handler, self.on_error)
         aimpl = pn_reactor_acceptor(self._impl, host, str(port), impl)
         pn_decref(impl)
         if aimpl:
@@ -936,13 +940,13 @@ class Reactor(Wrapper):
             raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
 
     def connection(self, handler=None):
-        impl = _chandler(handler, self.errors)
+        impl = _chandler(handler, self.on_error)
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
         pn_decref(impl)
         return result
 
     def selectable(self, handler=None):
-        impl = _chandler(handler, self.errors)
+        impl = _chandler(handler, self.on_error)
         result = Selectable.wrap(pn_reactor_selectable(self._impl))
         if impl:
             record = pn_selectable_attachments(result._impl)
