@@ -311,6 +311,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     if (!result) {
       PyErr_PrintEx(true);
     }
+    Py_XDECREF(arg);
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
