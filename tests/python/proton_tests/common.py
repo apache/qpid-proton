@@ -46,6 +46,9 @@ def free_tcp_ports(count=1):
     s.close()
   return ports
 
+def free_tcp_port():
+  return free_tcp_ports(1)[0]
+
 def pump_uni(src, dst, buffer_size=1024):
   p = src.pending()
   c = dst.capacity()
