@@ -31,7 +31,7 @@ class TxRequest(TransactionHandler):
 
     def on_transaction_declared(self, event):
         self.sender.send_msg(self.response, transaction=event.transaction)
-        self.accept(self.request_delivery, transaction=event.transaction)
+        event.transaction.accept(self.request_delivery)
         event.transaction.commit()
 
     def on_transaction_committed(self, event):

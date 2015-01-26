@@ -49,8 +49,8 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_client_server(self, client='client.py', server='server.py'):
-        s = subprocess.Popen(['server.py'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        c = subprocess.Popen(['client.py'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        s = subprocess.Popen([server], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        c = subprocess.Popen([client], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         c.wait()
         actual = [l.strip() for l in c.stdout]
         inputs = ["Twas brillig, and the slithy toves",
@@ -64,11 +64,11 @@ class ExamplesTest(unittest.TestCase):
     def test_sync_client_server(self):
         self.test_client_server(client='sync_client.py')
 
-    def test_client_tx_server(self):
-        self.test_client_server(server='tx_server.py')
+    def test_client_server_tx(self):
+        self.test_client_server(server='server_tx.py')
 
-    def test_sync_client_tx_server(self):
-        self.test_client_server(client='sync_client.py', server='tx_server.py')
+    def test_sync_client_server_tx(self):
+        self.test_client_server(client='sync_client.py', server='server_tx.py')
 
     def test_db_send_recv(self):
         self.maxDiff = None
