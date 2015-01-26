@@ -42,7 +42,7 @@ class BlockingLink(object):
 class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
-        if self.link.target and self.link.target.address != self.link.remote_target.address:
+        if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
             self.link.close()
             raise LinkException("Failed to open sender %s, target does not match" % link.name)
 
@@ -73,7 +73,7 @@ class Fetcher(MessagingHandler):
 class BlockingReceiver(BlockingLink):
     def __init__(self, connection, receiver, fetcher, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
-        if self.link.source and self.link.source.address != self.link.remote_source.address:
+        if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
             self.link.close()
             raise LinkException("Failed to open receiver %s, source does not match" % link.name)
         if credit: receiver.flow(credit)
