@@ -48,10 +48,11 @@ class ExamplesTest(unittest.TestCase):
         expected = ["{'sequence': %iL}" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)
 
-    def test_client_server(self, client='client.py', server='server.py'):
-        s = subprocess.Popen([server], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        c = subprocess.Popen([client], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    def test_client_server(self, client=['client.py'], server=['server.py']):
+        s = subprocess.Popen(server, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        c = subprocess.Popen(client, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         c.wait()
+        s.terminate()
         actual = [l.strip() for l in c.stdout]
         inputs = ["Twas brillig, and the slithy toves",
                     "Did gire and gymble in the wabe.",
@@ -59,16 +60,21 @@ class ExamplesTest(unittest.TestCase):
                     "And the mome raths outgrabe."]
         expected = ["%s => %s" % (l, l.upper()) for l in inputs]
         self.assertEqual(actual, expected)
-        s.terminate()
 
     def test_sync_client_server(self):
-        self.test_client_server(client='sync_client.py')
+        self.test_client_server(client=['sync_client.py'])
 
     def test_client_server_tx(self):
-        self.test_client_server(server='server_tx.py')
+        self.test_client_server(server=['server_tx.py'])
 
     def test_sync_client_server_tx(self):
-        self.test_client_server(client='sync_client.py', server='server_tx.py')
+        self.test_client_server(client=['sync_client.py'], server=['server_tx.py'])
+
+    def test_client_server_direct(self):
+        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'])
+
+    def test_sync_client_server_direct(self):
+        self.test_client_server(client=['sync_client.py', 'localhost:8888/examples'], server=['server_direct.py'])
 
     def test_db_send_recv(self):
         self.maxDiff = None
