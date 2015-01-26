@@ -50,15 +50,6 @@ class FlowController(Handler):
         if event.delivery.link.is_receiver:
             self.top_up(event.delivery.link)
 
-def nested_handlers(handlers):
-    # currently only allows for a single level of nesting
-    nested = []
-    for h in handlers:
-        nested.append(h)
-        if hasattr(h, 'handlers'):
-            nested.extend(getattr(h, 'handlers'))
-    return nested
-
 def add_nested_handler(handler, nested):
     if hasattr(handler, 'handlers'):
         getattr(handler, 'handlers').append(nested)
@@ -80,7 +71,7 @@ class ScopedHandler(Handler):
 
         objects = [getattr(event, attr) for attr in self.scopes if hasattr(event, attr) and getattr(event, attr)]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
-        handlers = [getattr(t, event.type.method) for t in nested_handlers(targets) if hasattr(t, event.type.method)]
+        handlers = [getattr(t, event.type.method) for t in targets if hasattr(t, event.type.method)]
         for h in handlers:
             h(event)
 

@@ -23,7 +23,7 @@ from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler
 from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, symbol
 from proton import Terminus, Timeout, Transport, TransportException, ulong, Url
 from select import select
-from proton.handlers import nested_handlers, OutgoingMessageHandler, ScopedHandler
+from proton.handlers import OutgoingMessageHandler, ScopedHandler
 
 class AmqpSocket(object):
     """
@@ -721,7 +721,7 @@ class Urls(object):
 class Container(object):
     def __init__(self, *handlers):
         h = [Connector(self), ScopedHandler()]
-        h.extend(nested_handlers(handlers))
+        h.extend(handlers)
         self.events = Events(*h)
         self.loop = SelectLoop(self.events)
         self.trigger = None
