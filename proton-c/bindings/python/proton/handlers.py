@@ -71,9 +71,8 @@ class ScopedHandler(Handler):
 
         objects = [getattr(event, attr) for attr in self.scopes if hasattr(event, attr) and getattr(event, attr)]
         targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
-        handlers = [getattr(t, event.type.method) for t in targets if hasattr(t, event.type.method)]
-        for h in handlers:
-            h(event)
+        for t in targets:
+            event.dispatch(t)
 
 
 class OutgoingMessageHandler(Handler):

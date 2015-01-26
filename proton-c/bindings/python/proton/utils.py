@@ -17,9 +17,9 @@
 # under the License.
 #
 import collections, Queue, socket, time, threading
-from proton import ConnectionException, Endpoint, Handler, LinkException, Message, Timeout, Url
+from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message, Timeout, Url
 from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
-from proton.handlers import MessagingHandler, ScopedHandler, IncomingMessageHandler
+from proton.handlers import Acking, MessagingHandler, ScopedHandler, IncomingMessageHandler
 
 class BlockingLink(object):
     def __init__(self, connection, link):
@@ -52,11 +52,12 @@ class BlockingSender(BlockingLink):
 
 class Fetcher(MessagingHandler):
     def __init__(self, prefetch):
-        super(Fetcher, self).__init__(prefetch=prefetch)
+        super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
         self.incoming = collections.deque([])
+        self.unsettled = collections.deque([])
 
     def on_message(self, event):
-        self.incoming.append(event.message)
+        self.incoming.append((event.message, event.delivery))
 
     def on_link_error(self, event):
         # This will be handled by BlockingConnection
@@ -67,7 +68,16 @@ class Fetcher(MessagingHandler):
         return len(self.incoming)
 
     def pop(self):
-        return self.incoming.popleft()
+        message, delivery = self.incoming.popleft()
+        if not delivery.settled:
+            self.unsettled.append(delivery)
+        return message
+
+    def settle(self, state=None):
+        delivery = self.unsettled.popleft()
+        if state:
+            delivery.update(state)
+        delivery.settle()
 
 
 class BlockingReceiver(BlockingLink):
@@ -75,7 +85,7 @@ class BlockingReceiver(BlockingLink):
         super(BlockingReceiver, self).__init__(connection, receiver)
         if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
             self.link.close()
-            raise LinkException("Failed to open receiver %s, source does not match" % link.name)
+            raise LinkException("Failed to open receiver %s, source does not match" % self.link.name)
         if credit: receiver.flow(credit)
         self.fetcher = fetcher
 
@@ -86,6 +96,23 @@ class BlockingReceiver(BlockingLink):
             self.link.flow(1)
         self.connection.wait(lambda: self.fetcher.has_message, msg="Fetching on receiver %s" % self.link.name, timeout=timeout)
         return self.fetcher.pop()
+
+    def accept(self):
+        self.settle(Delivery.ACCEPTED)
+
+    def reject(self):
+        self.settle(Delivery.REJECTED)
+
+    def release(self, delivered=True):
+        if delivered:
+            self.settle(Delivery.MODIFIED)
+        else:
+            self.settle(Delivery.RELEASED)
+
+    def settle(self, state=None):
+        if not self.fetcher:
+            raise Exception("Can't call accept/reject etc on this receiver as a handler was provided")
+        self.fetcher.settle(state)
 
 
 class BlockingConnection(Handler):
@@ -100,10 +127,10 @@ class BlockingConnection(Handler):
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
-    def create_sender(self, address, handler=None, name=None):
+    def create_sender(self, address, handler=None, name=None, options=None):
         return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler))
 
-    def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None):
+    def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None, options=None):
         prefetch = credit
         if handler:
             fetcher = None
