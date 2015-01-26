@@ -44,7 +44,7 @@ class BlockingSender(BlockingLink):
         super(BlockingSender, self).__init__(connection, sender)
         if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
             self.link.close()
-            raise LinkException("Failed to open sender %s, target does not match" % link.name)
+            raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
     def send_msg(self, msg, timeout=False):
         delivery = send_msg(self.link, msg)
