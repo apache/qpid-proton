@@ -492,16 +492,16 @@ class MethodTest:
     if hasattr(inst, "setUp"):
       runner.run("setup", inst.setUp)
       if runner.halt(): return runner
-    elif hasattr(inst, "setup"):
+    if hasattr(inst, "setup"):
       runner.run("setup", inst.setup)
       if runner.halt(): return runner
 
     runner.run("test", test)
 
+    if hasattr(inst, "teardown"):
+      runner.run("teardown", inst.teardown)
     if hasattr(inst, "tearDown"):
       runner.run("teardown", inst.tearDown)
-    elif hasattr(inst, "teardown"):
-      runner.run("teardown", inst.teardown)
 
     return runner
 

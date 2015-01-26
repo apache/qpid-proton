@@ -17,6 +17,7 @@
 # under the License.
 #
 
+from unittest import TestCase
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
@@ -80,9 +81,10 @@ def pump(transport1, transport2, buffer_size=1024):
 def isSSLPresent():
     return SSL.present()
 
-class Test(object):
+class Test(TestCase):
 
   def __init__(self, name):
+    super(Test, self).__init__(name)
     self.name = name
 
   def configure(self, config):
@@ -106,6 +108,7 @@ class Test(object):
   @property
   def verbose(self):
     return int(self.default("verbose", 0))
+
 
 class Skipped(Exception):
   skipped = True
