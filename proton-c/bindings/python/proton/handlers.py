@@ -86,7 +86,7 @@ class OutgoingMessageHandler(Handler):
 
     def on_link_flow(self, event):
         if event.link.is_sender and event.link.credit:
-            self.on_credit(event)
+            self.on_sendable(event)
 
     def on_delivery(self, event):
         dlv = event.delivery
@@ -104,9 +104,9 @@ class OutgoingMessageHandler(Handler):
             if self.auto_settle:
                 dlv.settle()
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         if self.delegate:
-            dispatch(self.delegate, 'on_credit', event)
+            dispatch(self.delegate, 'on_sendable', event)
 
     def on_accepted(self, event):
         if self.delegate:

@@ -60,7 +60,7 @@ class Send(MessagingHandler):
             self.load_count += 1
             self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.load_count))
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         self.send()
 
     def send(self):

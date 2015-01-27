@@ -31,7 +31,7 @@ class HelloWorld(MessagingHandler):
         self.acceptor = event.container.listen(self.url)
         event.container.create_sender(self.url)
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         event.sender.send_msg(Message(body=u"Hello World!"))
         event.sender.close()
 

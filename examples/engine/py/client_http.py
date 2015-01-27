@@ -45,7 +45,7 @@ class Client(MessagingHandler):
             self.reply_address = event.link.remote_source.address
             self.do_request()
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         self.do_request()
 
     def on_message(self, event):

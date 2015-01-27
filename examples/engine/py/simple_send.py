@@ -34,7 +34,7 @@ class Send(MessagingHandler):
     def on_start(self, event):
         event.container.create_sender(self.url)
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         while event.sender.credit and self.sent < self.total:
             msg = Message(body={'sequence':(self.sent+1)})
             event.sender.send_msg(msg)

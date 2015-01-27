@@ -44,7 +44,7 @@ class TxSend(MessagingHandler, TransactionHandler):
         self.transaction = event.transaction
         self.send()
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
         self.send()
 
     def send(self):
