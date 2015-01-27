@@ -82,7 +82,7 @@ class SyncRequestResponseTest(Test):
                 self.assertEquals(response.address, client.reply_to)
                 self.assertEquals(response.body, body)
 
-        server = EchoServer(Url(host='127.0.0.1', port=free_tcp_port()))
+        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()))
         server.start()
         server.wait(self.timeout)
         connection = BlockingConnection(server.url, timeout=self.timeout)
