@@ -20,7 +20,7 @@
 import os
 from threading import Thread
 from unittest import TestCase
-from .common import Test, free_tcp_port
+from proton_tests.common import Test, free_tcp_port
 from copy import copy
 from proton import Message, Url, generate_uuid
 from proton.handlers import MessagingHandler
@@ -79,7 +79,7 @@ class SyncRequestResponseTest(Test):
 
         server = EchoServer(Url(port=free_tcp_port()))
         server.start()
-        client = SyncRequestResponse(BlockingConnection(server.url))
+        client = SyncRequestResponse(BlockingConnection(server.url, timeout=self.timeout))
         try:
             test("foo")         # Simple request/resposne
         finally:
