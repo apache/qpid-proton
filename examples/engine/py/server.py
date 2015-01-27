@@ -46,7 +46,7 @@ class Server(MessagingHandler):
         if not sender:
             sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
-        sender.send_msg(Message(address=event.message.reply_to, body=event.message.body.upper()))
+        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
 try:
     Container(Server("localhost:5672", "examples")).run()

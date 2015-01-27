@@ -36,7 +36,7 @@ class Client(MessagingHandler):
     def next_request(self):
         if self.receiver.remote_source.address:
             req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
-            self.sender.send_msg(req)
+            self.sender.send(req)
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:

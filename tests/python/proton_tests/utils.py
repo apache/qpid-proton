@@ -24,7 +24,7 @@ from proton_tests.common import Test, free_tcp_port
 from copy import copy
 from proton import Message, Url, generate_uuid
 from proton.handlers import MessagingHandler
-from proton.reactors import Container, send_msg, delivery_tags
+from proton.reactors import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
 
 
@@ -54,14 +54,13 @@ class EchoServer(MessagingHandler, Thread):
             if event.link.remote_source and event.link.remote_source.dynamic:
                 event.link.source.address = str(generate_uuid())
                 self.senders[event.link.source.address] = event.link
-                event.link.tags = delivery_tags()
 
     def on_message(self, event):
         m = event.message
         sender = self.senders.get(m.reply_to)
         if sender:
             reply = Message(address=m.reply_to, body=m.body, correlation_id=m.correlation_id)
-            send_msg(sender, reply)
+            sender.send(reply)
 
     def on_connection_closing(self, event):
         self.acceptor.close()

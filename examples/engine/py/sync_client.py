@@ -51,7 +51,7 @@ class SyncRequestClient(IncomingMessageHandler):
     def invoke(self, request):
         """Send a request, wait for and return the response"""
         request.reply_to = self.reply_to
-        self.sender.send_msg(request)
+        self.sender.send(request)
         self.connection.wait(lambda: self.response, msg="Waiting for response")
         response = self.response
         self.response = None    # Ready for next response.

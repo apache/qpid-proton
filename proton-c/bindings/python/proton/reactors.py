@@ -453,26 +453,6 @@ class SelectLoop(object):
         else:
             return False
 
-def delivery_tags():
-    count = 1
-    while True:
-        yield str(count)
-        count += 1
-
-def send_msg(sender, msg, tag=None, handler=None, transaction=None):
-    dlv = sender.delivery(tag or next(sender.tags))
-    if transaction:
-        dlv.local.data = [transaction.id]
-        dlv.update(0x34)
-    if handler:
-        dlv.context = handler
-    sender.send(msg.encode())
-    sender.advance()
-    return dlv
-
-def _send_msg(self, msg, tag=None, handler=None, transaction=None):
-    return send_msg(self, msg, tag, handler, transaction)
-
 
 class Transaction(object):
     """
@@ -512,9 +492,16 @@ class Transaction(object):
         self._discharge = self._send_ctrl(symbol(u'amqp:discharge:list'), [self.id, failed])
 
     def _send_ctrl(self, descriptor, value):
-        delivery = self.txn_ctrl.send_msg(Message(body=Described(descriptor, value)), handler=self.internal_handler)
+        delivery = self.txn_ctrl.send(Message(body=Described(descriptor, value)))
+        delivery.context=self.internal_handler
         delivery.transaction = self
         return delivery
+
+    def send(self, sender, msg, tag=None):
+        dlv = sender.send(msg, tag=tag)
+        dlv.local.data = [self.id]
+        dlv.update(0x34)
+        return dlv
 
     def accept(self, delivery):
         self.update(delivery, PN_ACCEPTED)
@@ -779,8 +766,8 @@ class Container(object):
             snd.target.address = target
         if handler:
             snd.context = handler
-        snd.tags = tags or delivery_tags()
-        snd.send_msg = types.MethodType(_send_msg, snd)
+        if tags:
+            snd.tag_generator = tags
         _apply_link_options(options, snd)
         snd.open()
         return snd

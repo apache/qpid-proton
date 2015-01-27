@@ -37,7 +37,7 @@ class Send(MessagingHandler):
     def on_sendable(self, event):
         while event.sender.credit and self.sent < self.total:
             msg = Message(body={'sequence':(self.sent+1)})
-            event.sender.send_msg(msg)
+            event.sender.send(msg)
             self.sent += 1
 
     def on_accepted(self, event):

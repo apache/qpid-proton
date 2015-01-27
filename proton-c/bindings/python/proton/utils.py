@@ -19,7 +19,7 @@
 import collections, Queue, socket, time, threading
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
 from proton import ProtonException, Timeout, Url
-from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
+from proton.reactors import AmqpSocket, Container, Events, SelectLoop
 from proton.handlers import Acking, MessagingHandler, ScopedHandler, IncomingMessageHandler
 
 def utf8(s):
@@ -60,8 +60,8 @@ class BlockingSender(BlockingLink):
             self.link.close()
             raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
-    def send_msg(self, msg, timeout=False, error_states=None):
-        delivery = send_msg(self.link, msg)
+    def send(self, msg, timeout=False, error_states=None):
+        delivery = self.link.send(msg)
         self.connection.wait(lambda: delivery.settled, msg="Sending on sender %s" % self.link.name, timeout=timeout)
         bad = error_states
         if bad is None:
@@ -265,7 +265,7 @@ class SyncRequestResponse(IncomingMessageHandler):
             raise ValueError("Request message has no address: %s" % request)
         request.reply_to = self.reply_to
         request.correlation_id = correlation_id = self.correlation_id.next()
-        self.sender.send_msg(request)
+        self.sender.send(request)
         def wakeup():
             return self.response and (self.response.correlation_id == correlation_id)
         self.connection.wait(wakeup, msg="Waiting for response")

@@ -60,7 +60,7 @@ class Client(MessagingHandler):
             request, handler = self.pending.pop(0)
             self.sent.append((request, handler))
             req = Message(reply_to=self.reply_address, body=request)
-            self.sender.send_msg(req)
+            self.sender.send(req)
 
     def request(self, body, handler):
         self.pending.append((body, handler))

@@ -1119,6 +1119,15 @@ The format of the message.
         self._check(err)
         return data
 
+  def send(self, sender, tag=None):
+    dlv = sender.delivery(tag or sender.delivery_tag())
+    encoded = self.encode()
+    sender.stream(encoded)
+    sender.advance()
+    if sender.snd_settle_mode == Link.SND_SETTLED:
+      dlv.settle()
+    return dlv
+
   def __repr2__(self):
     props = []
     for attr in ("inferred", "address", "reply_to", "durable", "ttl",
@@ -2719,8 +2728,36 @@ class Sender(Link):
   def offered(self, n):
     pn_link_offered(self._impl, n)
 
-  def send(self, bytes):
+  def stream(self, bytes):
+    """
+    Send specified bytes as part of the current delivery
+    """
     return self._check(pn_link_send(self._impl, bytes))
+
+  def send(self, obj, tag=None):
+    """
+    Send specified object over this sender; the object is expected to
+    have a send() method on it that takes the sender and an optional
+    tag as arguments.
+
+    Where the object is a Message, this will send the message over
+    this link, creating a new delivery for the purpose.
+    """
+    if hasattr(obj, 'send'):
+      return obj.send(self, tag=tag)
+    else:
+      # treat object as bytes
+      return self.stream(obj)
+
+  def delivery_tag(self):
+    if not hasattr(self, 'tag_generator'):
+      def simple_tags():
+        count = 1
+        while True:
+          yield str(count)
+          count += 1
+      self.tag_generator = simple_tags()
+    return next(self.tag_generator)
 
 class Receiver(Link):
 

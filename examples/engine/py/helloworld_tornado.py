@@ -35,7 +35,7 @@ class HelloWorld(MessagingHandler):
         event.container.create_sender(conn, self.address)
 
     def on_sendable(self, event):
-        event.sender.send_msg(Message(body=u"Hello World!"))
+        event.sender.send(Message(body=u"Hello World!"))
         event.sender.close()
 
     def on_message(self, event):

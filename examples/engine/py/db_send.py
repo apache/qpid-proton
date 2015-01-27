@@ -68,7 +68,7 @@ class Send(MessagingHandler):
             if not self.keep_sending(): return
             record = self.records.get(False)
             id = record['id']
-            self.sender.send_msg(Message(id=id, durable=True, body=record['description']), tag=str(id))
+            self.sender.send(Message(id=id, durable=True, body=record['description']), tag=str(id))
             self.sent += 1
             print "sent message %s" % id
         self.request_records()

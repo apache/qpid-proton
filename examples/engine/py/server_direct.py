@@ -20,7 +20,7 @@
 
 from proton import generate_uuid, Message
 from proton.handlers import MessagingHandler
-from proton.reactors import Container, delivery_tags, send_msg
+from proton.reactors import Container
 
 class Server(MessagingHandler):
     def __init__(self, url):
@@ -37,11 +37,9 @@ class Server(MessagingHandler):
             if event.link.remote_source and event.link.remote_source.dynamic:
                 event.link.source.address = str(generate_uuid())
                 self.senders[event.link.source.address] = event.link
-                event.link.tags = delivery_tags()
             elif event.link.remote_target and event.link.remote_target.address:
                 event.link.target.address = event.link.remote_target.address
                 self.senders[event.link.remote_target.address] = event.link
-                event.link.tags = delivery_tags()
             elif event.link.remote_source:
                 event.link.source.address = event.link.remote_source.address
         elif event.link.remote_target:
@@ -50,7 +48,7 @@ class Server(MessagingHandler):
     def on_message(self, event):
         sender = self.senders.get(event.message.reply_to)
         if sender:
-            send_msg(sender, Message(address=event.message.reply_to, body=event.message.body.upper()))
+            sender.send(Message(address=event.message.reply_to, body=event.message.body.upper()))
 
 try:
     Container(Server("localhost:8888")).run()
