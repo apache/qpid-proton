@@ -23,8 +23,10 @@ ls
 
 rm -rf build testresults >/dev/null 2>&1
 mkdir build testresults >/dev/null 2>&1
-cd build && cmake ..
+cd build >/dev/null 2>&1
+cmake ..
 make all
+cd ..  >/dev/null 2>&1
 
 echo Running tests
 XMLOUTPUT=testresults/TEST-protonc.xml
