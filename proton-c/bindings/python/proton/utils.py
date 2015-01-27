@@ -17,7 +17,8 @@
 # under the License.
 #
 import collections, Queue, socket, time, threading
-from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message, Timeout, Url
+from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
+from proton import ProtonException, Timeout, Url
 from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
 from proton.handlers import Acking, MessagingHandler, ScopedHandler, IncomingMessageHandler
 
@@ -39,6 +40,13 @@ class BlockingLink(object):
     # Access to other link attributes.
     def __getattr__(self, name): return getattr(self.link, name)
 
+class SendException(ProtonException):
+    """
+    Exception used to indicate an exceptional state/condition on a send request
+    """
+    def __init__(self, state):
+        self.state = state
+
 class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
@@ -46,9 +54,15 @@ class BlockingSender(BlockingLink):
             self.link.close()
             raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
-    def send_msg(self, msg, timeout=False):
+    def send_msg(self, msg, timeout=False, error_states=None):
         delivery = send_msg(self.link, msg)
         self.connection.wait(lambda: delivery.settled, msg="Sending on sender %s" % self.link.name, timeout=timeout)
+        bad = error_states
+        if bad is None:
+            bad = [Delivery.REJECTED, Delivery.RELEASED]
+        if delivery.remote_state in bad:
+            raise SendException(delivery.remote_state)
+        return delivery
 
 class Fetcher(MessagingHandler):
     def __init__(self, prefetch):
