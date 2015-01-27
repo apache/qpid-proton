@@ -17,8 +17,8 @@
 # under the License.
 #
 
-import os
-from threading import Thread
+import os, time
+from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
@@ -40,10 +40,12 @@ class EchoServer(MessagingHandler, Thread):
         self.url = url
         self.senders = {}
         self.container = None
+        self.event = Event()
 
     def on_start(self, event):
         self.acceptor = event.container.listen(self.url)
         self.container = event.container
+        self.event.set()
 
     def on_link_opening(self, event):
         if event.link.is_sender:
@@ -65,6 +67,9 @@ class EchoServer(MessagingHandler, Thread):
     def run(self):
         Container(self).run()
 
+    def wait(self, timeout):
+        self.event.wait(timeout)
+
 
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
@@ -77,9 +82,11 @@ class SyncRequestResponseTest(Test):
                 self.assertEquals(response.address, client.reply_to)
                 self.assertEquals(response.body, body)
 
-        server = EchoServer(Url(port=free_tcp_port()))
+        server = EchoServer(Url(host='127.0.0.1', port=free_tcp_port()))
         server.start()
-        client = SyncRequestResponse(BlockingConnection(server.url, timeout=self.timeout))
+        server.wait(self.timeout)
+        connection = BlockingConnection(server.url, timeout=self.timeout)
+        client = SyncRequestResponse(connection)
         try:
             test("foo")         # Simple request/resposne
         finally:
