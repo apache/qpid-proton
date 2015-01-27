@@ -20,6 +20,7 @@
 import os, common
 from proton import *
 
+
 class Test(common.Test):
   pass
 
@@ -161,3 +162,29 @@ class TransportTest(Test):
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])
     self.peer.push(dat3)
+
+  def testEOSAfterSASL(self):
+    srv = Transport(mode=Transport.SERVER)
+    srv.sasl().mechanisms("ANONYMOUS")
+    srv.sasl().done(SASL.OK)
+
+    self.peer.sasl().mechanisms("ANONYMOUS")
+
+    # this should send over the sasl header plus a sasl-init set up
+    # for anonymous
+    p = self.peer.pending()
+    srv.push(self.peer.peek(p))
+    self.peer.pop(p)
+
+    # now we send EOS
+    srv.close_tail()
+
+    # the server may send an error back
+    p = srv.pending()
+    while p>0:
+      self.peer.push(srv.peek(p))
+      srv.pop(p)
+      p = srv.pending()
+
+    # server closed
+    assert srv.pending() < 0

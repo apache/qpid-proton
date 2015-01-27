@@ -103,6 +103,9 @@ static void pni_default_tracer(pn_transport_t *transport, const char *message)
 static ssize_t pn_io_layer_input_passthru(pn_transport_t *, unsigned int, const char *, size_t );
 static ssize_t pn_io_layer_output_passthru(pn_transport_t *, unsigned int, char *, size_t );
 
+static ssize_t pn_io_layer_input_error(pn_transport_t *, unsigned int, const char *, size_t );
+static ssize_t pn_io_layer_output_error(pn_transport_t *, unsigned int, char *, size_t );
+
 static ssize_t pn_io_layer_input_setup(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
 static ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 
@@ -164,6 +167,13 @@ const pn_io_layer_t pni_passthru_layer = {
     NULL
 };
 
+const pn_io_layer_t pni_error_layer = {
+    pn_io_layer_input_error,
+    pn_io_layer_output_error,
+    NULL,
+    NULL
+};
+
 /* Set up the transport protocol layers depending on what is configured */
 static void pn_io_layer_setup(pn_transport_t *transport, unsigned int layer)
 {
@@ -203,6 +213,11 @@ ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, 
   return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
 }
 
+static void pni_set_error_layer(pn_transport_t *transport)
+{
+    transport->io_layers[0] = &pni_error_layer;
+}
+
 // Autodetect the layer by reading the protocol header
 ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
 {
@@ -210,6 +225,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   bool eos = pn_transport_capacity(transport)==PN_EOS;
   if (eos && available==0) {
     pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
+    pni_set_error_layer(transport);
     return PN_EOS;
   }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
@@ -246,7 +262,8 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
       } else {
         pn_do_error(transport, "amqp:connection:policy-error",
                     "Client skipped SASL exchange - forbidden");
-        return PN_EOS;
+        pni_set_error_layer(transport);
+        return 8;
       }
     }
     transport->io_layers[layer] = &amqp_write_header_layer;
@@ -270,7 +287,8 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   pn_do_error(transport, "amqp:connection:framing-error",
               "%s: '%s'%s", error, quoted,
               !eos ? "" : " (connection aborted)");
-  return PN_EOS;
+  pni_set_error_layer(transport);
+  return 0;
 }
 
 // We don't know what the output should be - do nothing
@@ -292,6 +310,18 @@ ssize_t pn_io_layer_output_passthru(pn_transport_t *transport, unsigned int laye
 {
     if (layer+1<PN_IO_LAYER_CT)
         return transport->io_layers[layer+1]->process_output(transport, layer+1, data, available);
+    return PN_EOS;
+}
+
+/** Input handler after detected error */
+ssize_t pn_io_layer_input_error(pn_transport_t *transport, unsigned int layer, const char *data, size_t available)
+{
+    return PN_EOS;
+}
+
+/** Output handler after detected error */
+ssize_t pn_io_layer_output_error(pn_transport_t *transport, unsigned int layer, char *data, size_t available)
+{
     return PN_EOS;
 }
 
