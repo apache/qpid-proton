@@ -191,22 +191,26 @@ class BlockingConnection(Handler):
     def on_disconnected(self, event):
         raise ConnectionException("Connection %s disconnected" % self.url);
 
-def atomic_count(start=0, step=1):
-    """Thread-safe atomic count iterator"""
-    lock = threading.Lock()
-    count = start
-    while True:
-        with lock:
-            count += step;
-            yield count
+class AtomicCount(object):
+    def __init__(self, start=0, step=1):
+        """Thread-safe atomic counter. Start at start, increment by step."""
+        self.count, self.step = start, step
+        self.lock = threading.Lock()
 
+    def next(self):
+        """Get the next value"""
+        self.lock.acquire()
+        self.count += self.step;
+        result = self.count
+        self.lock.release()
+        return result
 
 class SyncRequestResponse(IncomingMessageHandler):
     """
     Implementation of the synchronous request-responce (aka RPC) pattern.
     """
 
-    correlation_id = atomic_count()
+    correlation_id = AtomicCount()
 
     def __init__(self, connection, address=None):
         """
