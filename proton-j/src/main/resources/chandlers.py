@@ -17,24 +17,7 @@
 # under the License.
 #
 
-"""
-The cproton module defines a java implementation of the C interface as
-exposed to python via swig. This allows tests defined in python to run
-against both the C and Java protocol implementations.
-"""
-
-# @todo(kgiusti) dynamically set these via filters in the pom.xml file
-PN_VERSION_MAJOR = 0
-PN_VERSION_MINOR = 0
-
-from cobject import *
-from cerror import *
-from ccodec import *
-from cengine import *
-from csasl import *
-from cssl import *
-from cdriver import *
-from cmessenger import *
-from cmessage import *
-from curl import *
-from chandlers import *
+# from proton/handlers.h
+pn_flowcontroller = None
+pn_handshaker = None
+pn_iohandler = None
