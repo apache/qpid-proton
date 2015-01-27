@@ -34,9 +34,11 @@ class EchoServer(MessagingHandler, Thread):
     Will only accept a single connection and shut down when that connection closes.
     """
 
-    def __init__(self, url):
+    def __init__(self, url, timeout):
         MessagingHandler.__init__(self)
         Thread.__init__(self)
+        self.daemon = True
+        self.timeout = timeout
         self.url = url
         self.senders = {}
         self.container = None
@@ -67,8 +69,8 @@ class EchoServer(MessagingHandler, Thread):
     def run(self):
         Container(self).run()
 
-    def wait(self, timeout):
-        self.event.wait(timeout)
+    def wait(self):
+        self.event.wait(self.timeout)
 
 
 class SyncRequestResponseTest(Test):
@@ -82,12 +84,13 @@ class SyncRequestResponseTest(Test):
                 self.assertEquals(response.address, client.reply_to)
                 self.assertEquals(response.body, body)
 
-        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()))
+        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()), self.timeout)
         server.start()
-        server.wait(self.timeout)
+        server.wait()
         connection = BlockingConnection(server.url, timeout=self.timeout)
         client = SyncRequestResponse(connection)
         try:
             test("foo")         # Simple request/resposne
         finally:
             client.connection.close()
+        server.join(timeout=self.timeout)
