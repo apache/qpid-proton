@@ -296,6 +296,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     }
 
     @Override
+    public String getContainer()
+    {
+        return _localContainerId;
+    }
+
+    @Override
     public void setHostname(String hostname)
     {
         _localHostname = hostname;

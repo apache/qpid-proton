@@ -72,6 +72,12 @@ SASL_OUTCOMES_J2P = {
   Sasl.PN_SASL_SKIPPED: PN_SASL_SKIPPED
 }
 
+def pn_sasl_client(sasl):
+  sasl.client()
+
+def pn_sasl_server(sasl):
+  sasl.server()
+
 def pn_sasl_state(sasl):
   return SASL_STATES[sasl.getState()]
 
