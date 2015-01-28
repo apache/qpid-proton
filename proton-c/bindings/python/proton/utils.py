@@ -22,6 +22,12 @@ from proton import ProtonException, Timeout, Url
 from proton.reactors import AmqpSocket, Container, Events, SelectLoop, send_msg
 from proton.handlers import Acking, MessagingHandler, ScopedHandler, IncomingMessageHandler
 
+def utf8(s):
+    if isinstance(s, unicode):
+        return s.encode('utf8')
+    else:
+        return s
+
 class BlockingLink(object):
     def __init__(self, connection, link):
         self.connection = connection
@@ -136,13 +142,13 @@ class BlockingConnection(Handler):
     def __init__(self, url, timeout=None, container=None):
         self.timeout = timeout
         self.container = container or Container()
-        self.url = Url(url).defaults()
+        self.url = Url(utf8(url)).defaults()
         self.conn = self.container.connect(url=self.url, handler=self)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
     def create_sender(self, address, handler=None, name=None, options=None):
-        return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler))
+        return BlockingSender(self, self.container.create_sender(self.conn, utf8(address), name=utf8(name), handler=handler))
 
     def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None, options=None):
         prefetch = credit
@@ -153,7 +159,7 @@ class BlockingConnection(Handler):
         else:
             fetcher = Fetcher(credit)
         return BlockingReceiver(
-            self, self.container.create_receiver(self.conn, address, name=name, dynamic=dynamic, handler=handler or fetcher), fetcher, credit=prefetch)
+            self, self.container.create_receiver(self.conn, utf8(address), name=utf8(name), dynamic=dynamic, handler=handler or fetcher), fetcher, credit=prefetch)
 
     def close(self):
         self.conn.close()
