@@ -296,6 +296,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   case PNE_ULONG: return pn_encoder_writef64(encoder, atom->u.as_ulong);
   case PNE_SMALLULONG: return pn_encoder_writef8(encoder, atom->u.as_ulong);
   case PNE_LONG: return pn_encoder_writef64(encoder, atom->u.as_long);
+  case PNE_SMALLLONG: return pn_encoder_writef8(encoder, atom->u.as_long);
   case PNE_MS64: return pn_encoder_writef64(encoder, atom->u.as_timestamp);
   case PNE_FLOAT: c.f = atom->u.as_float; return pn_encoder_writef32(encoder, c.i);
   case PNE_DOUBLE: c.d = atom->u.as_double; return pn_encoder_writef64(encoder, c.l);

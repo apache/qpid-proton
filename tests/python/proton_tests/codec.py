@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import os, common
+import os, common, sys
 from proton import *
 try:
   from uuid import uuid4
@@ -182,7 +182,11 @@ class DataTest(Test):
     getter = getattr(self.data, "get_%s" % dtype)
 
     for v in values:
-      putter(v)
+      try:
+        putter(v)
+      except Exception, e:
+        etype, value, trace = sys.exc_info()
+        raise etype, "Testing %s: %s" % (v, value), trace
       gotten = getter()
       assert eq(gotten, v), (gotten, v)
 
@@ -209,8 +213,23 @@ class DataTest(Test):
       gotten = cgetter()
       assert eq(gotten, v), (gotten, v)
 
-  def testInt(self):
-    self._test("int", 1, 2, 3, -1, -2, -3)
+  def _test_int(self, dtype, bits, signed=True):
+    """Test a few basic integers and the min/max"""
+    values = [0, 1, 2, 3, 42]
+    if signed:
+      max = 2**(bits-1)-1
+      values += [-i for i in values] + [-2**(bits-1)]
+    else:
+      max = 2**(bits)-1
+    values.append(max)
+    self._test(dtype, *values)
+
+  def testByte(self): self._test_int("byte", 8)
+  def testUbyte(self): self._test_int("ubyte", 8, signed=False)
+  def testInt(self): self._test_int("int", 32)
+  def testUint(self): self._test_int("uint", 32, signed=False)
+  def testLong(self): self._test_int("long", 64)
+  def testUlong(self): self._test_int("ulong", 64, signed=False)
 
   def testString(self):
     self._test("string", "one", "two", "three", "this is a test", "")
