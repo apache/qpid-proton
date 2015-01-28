@@ -97,6 +97,18 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
 static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
   switch (node->atom.type) {
+  case PN_LONG:
+    if (-128 <= node->atom.u.as_long && node->atom.u.as_long <= 127) {
+      return PNE_SMALLLONG;
+    } else {
+      return PNE_LONG;
+    }
+  case PN_INT:
+    if (-128 <= node->atom.u.as_int && node->atom.u.as_int <= 127) {
+      return PNE_SMALLINT;
+    } else {
+      return PNE_INT;
+    }
   case PN_ULONG:
     if (node->atom.u.as_ulong < 256) {
       return PNE_SMALLULONG;

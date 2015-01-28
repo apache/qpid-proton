@@ -121,6 +121,40 @@ class DataTest(Test):
     assert self.data.get_list() == 1
     assert not self.data.exit()
 
+
+  def put(self, putter, v):
+    """More informative exception from putters, include bad value"""
+    try:
+      putter(v)
+    except Exception, e:
+      etype, value, trace = sys.exc_info()
+      raise etype, "%s(%r): %s" % (putter.__name__, v, value), trace
+    return putter
+
+  # (bits, signed) for each integer type
+  INT_TYPES = {
+    "byte": (8, True),
+    "ubyte": (8, False),
+    "int": (32, True),
+    "uint": (32, False),
+    "long": (64, True),
+    "ulong": (64, False)
+  }
+
+  def int_values(self, dtype):
+    """Set of test values for integer type dtype, include extreme and medial values"""
+    bits, signed = self.INT_TYPES[dtype]
+    values = [0, 1, 2, 5, 42]
+    if signed:
+      min, max = -2**(bits-1), 2**(bits-1)-1
+      values.append(max / 2)
+      values += [-i for i in values if i]
+      values += [min, max]
+    else:
+      max = 2**(bits) - 1
+      values += [max / 2, max]
+    return sorted(values)
+
   def _testArray(self, dtype, descriptor, atype, *values):
     if dtype: dTYPE = getattr(self.data, dtype.upper())
     aTYPE = getattr(self.data, atype.upper())
@@ -128,10 +162,10 @@ class DataTest(Test):
     self.data.enter()
     if dtype is not None:
       putter = getattr(self.data, "put_%s" % dtype)
-      putter(descriptor)
+      self.put(putter, descriptor)
     putter = getattr(self.data, "put_%s" % atype)
     for v in values:
-      putter(v)
+      self.put(putter, v)
     self.data.exit()
     self.data.rewind()
     assert self.data.next() == Data.ARRAY
@@ -163,8 +197,15 @@ class DataTest(Test):
   def testDescribedStringArray(self):
     self._testArray("symbol", "url", "string", "one", "two", "three")
 
-  def testIntArray(self):
-    self._testArray(None, None, "int", 1, 2, 3)
+  def _test_int_array(self, atype):
+    self._testArray(None, None, atype, *self.int_values(atype))
+
+  def testByteArray(self): self._test_int_array("byte")
+  def testUbyteArray(self): self._test_int_array("ubyte")
+  def testIntArray(self): self._test_int_array("int")
+  def testUintArray(self): self._test_int_array("uint")
+  def testLongArray(self): self._test_int_array("long")
+  def testUlongArray(self): self._test_int_array("ulong")
 
   def testUUIDArray(self):
     self._testArray(None, None, "uuid", uuid4(), uuid4(), uuid4())
@@ -182,11 +223,7 @@ class DataTest(Test):
     getter = getattr(self.data, "get_%s" % dtype)
 
     for v in values:
-      try:
-        putter(v)
-      except Exception, e:
-        etype, value, trace = sys.exc_info()
-        raise etype, "Testing %s: %s" % (v, value), trace
+      self.put(putter, v)
       gotten = getter()
       assert eq(gotten, v), (gotten, v)
 
@@ -213,23 +250,15 @@ class DataTest(Test):
       gotten = cgetter()
       assert eq(gotten, v), (gotten, v)
 
-  def _test_int(self, dtype, bits, signed=True):
-    """Test a few basic integers and the min/max"""
-    values = [0, 1, 2, 3, 42]
-    if signed:
-      max = 2**(bits-1)-1
-      values += [-i for i in values] + [-2**(bits-1)]
-    else:
-      max = 2**(bits)-1
-    values.append(max)
-    self._test(dtype, *values)
+  def _test_int(self, itype):
+    self._test(itype, *self.int_values(itype))
 
-  def testByte(self): self._test_int("byte", 8)
-  def testUbyte(self): self._test_int("ubyte", 8, signed=False)
-  def testInt(self): self._test_int("int", 32)
-  def testUint(self): self._test_int("uint", 32, signed=False)
-  def testLong(self): self._test_int("long", 64)
-  def testUlong(self): self._test_int("ulong", 64, signed=False)
+  def testByte(self): self._test_int("byte")
+  def testUbyte(self): self._test_int("ubyte")
+  def testInt(self): self._test_int("int")
+  def testUint(self): self._test_int("uint")
+  def testLong(self): self._test_int("long")
+  def testUlong(self): self._test_int("ulong")
 
   def testString(self):
     self._test("string", "one", "two", "three", "this is a test", "")
