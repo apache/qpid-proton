@@ -728,7 +728,7 @@ first message.
 
              >>> messenger.route("*", "amqp://user:password@broker/$1");
     """
-    self._check(pn_messenger_route(self._mng, pattern, address))
+    self._check(pn_messenger_route(self._mng, unicode2utf8(pattern), unicode2utf8(address)))
 
   def rewrite(self, pattern, address):
     """
@@ -745,7 +745,7 @@ first message.
     The default rewrite rule removes username and password from addresses
     before they are transmitted.
     """
-    self._check(pn_messenger_rewrite(self._mng, pattern, address))
+    self._check(pn_messenger_rewrite(self._mng, unicode2utf8(pattern), unicode2utf8(address)))
 
   def selectable(self):
     return Selectable.wrap(pn_messenger_selectable(self._mng))
@@ -955,10 +955,10 @@ The user id of the message creator.
 """)
 
   def _get_address(self):
-    return pn_message_get_address(self._msg)
+    return utf82unicode(pn_message_get_address(self._msg))
 
   def _set_address(self, value):
-    self._check(pn_message_set_address(self._msg, value))
+    self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
 
   address = property(_get_address, _set_address,
                      doc="""
@@ -977,10 +977,10 @@ The subject of the message.
 """)
 
   def _get_reply_to(self):
-    return pn_message_get_reply_to(self._msg)
+    return utf82unicode(pn_message_get_reply_to(self._msg))
 
   def _set_reply_to(self, value):
-    self._check(pn_message_set_reply_to(self._msg, value))
+    self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
 
   reply_to = property(_get_reply_to, _set_reply_to,
                       doc="""
@@ -2278,6 +2278,27 @@ def secs2millis(secs):
 def millis2secs(millis):
   return float(millis)/1000.0
 
+
+def unicode2utf8(string):
+    if string is None:
+        return None
+    if isinstance(string, unicode):
+        return string.encode('utf8')
+    elif isinstance(string, str):
+        return string
+    else:
+        raise TypeError("Unrecognized string type: %r" % string)
+
+def utf82unicode(string):
+    if string is None:
+        return None
+    if isinstance(string, unicode):
+        return string
+    elif isinstance(string, str):
+        return string.decode('utf8')
+    else:
+        raise TypeError("Unrecognized string type")
+
 class Connection(Wrapper, Endpoint):
 
   @staticmethod
@@ -2328,16 +2349,16 @@ class Connection(Wrapper, Endpoint):
     self._collector = weakref.ref(collector)
 
   def _get_container(self):
-    return pn_connection_get_container(self._impl)
+    return utf82unicode(pn_connection_get_container(self._impl))
   def _set_container(self, name):
-    return pn_connection_set_container(self._impl, name)
+    return pn_connection_set_container(self._impl, unicode2utf8(name))
 
   container = property(_get_container, _set_container)
 
   def _get_hostname(self):
-    return pn_connection_get_hostname(self._impl)
+    return utf82unicode(pn_connection_get_hostname(self._impl))
   def _set_hostname(self, name):
-    return pn_connection_set_hostname(self._impl, name)
+    return pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
   hostname = property(_get_hostname, _set_hostname)
 
@@ -2456,10 +2477,10 @@ class Session(Wrapper, Endpoint):
     return Connection.wrap(pn_session_connection(self._impl))
 
   def sender(self, name):
-    return Sender(pn_sender(self._impl, name))
+    return Sender(pn_sender(self._impl, unicode2utf8(name)))
 
   def receiver(self, name):
-    return Receiver(pn_receiver(self._impl, name))
+    return Receiver(pn_receiver(self._impl, unicode2utf8(name)))
 
   def free(self):
     pn_session_free(self._impl)
@@ -2568,7 +2589,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def name(self):
-      return pn_link_name(self._impl)
+    return utf82unicode(pn_link_name(self._impl))
 
   @property
   def is_sender(self):
@@ -2639,9 +2660,9 @@ class Terminus(object):
   type = property(_get_type, _set_type)
 
   def _get_address(self):
-    return pn_terminus_get_address(self._impl)
+    return utf82unicode(pn_terminus_get_address(self._impl))
   def _set_address(self, address):
-    self._check(pn_terminus_set_address(self._impl, address))
+    self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
   address = property(_get_address, _set_address)
 
   def _get_durability(self):
@@ -3252,11 +3273,11 @@ class SSL(object):
     return pn_ssl_resume_status( self._ssl )
 
   def _set_peer_hostname(self, hostname):
-    self._check(pn_ssl_set_peer_hostname( self._ssl, hostname ))
+    self._check(pn_ssl_set_peer_hostname( self._ssl, unicode2utf8(hostname) ))
   def _get_peer_hostname(self):
     err, name = pn_ssl_get_peer_hostname( self._ssl, 1024 )
     self._check(err)
-    return name
+    return utf82unicode(name)
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname,
                            doc="""
 Manage the expected name of the remote peer.  Used to authenticate the remote.
@@ -3682,7 +3703,7 @@ class Driver(object):
 
   def listener(self, host, port):
     """Construct a listener"""
-    return Listener._wrap_listener(pn_listener(self._driver, host, port, None),
+    return Listener._wrap_listener(pn_listener(self._driver, unicode2utf8(host), port, None),
                                    self)
 
   def pending_listener(self):
@@ -3692,7 +3713,7 @@ class Driver(object):
     return Listener._wrap_listener(pn_listener_head(self._driver))
 
   def connector(self, host, port):
-    return Connector._wrap_connector(pn_connector(self._driver, host, port, None),
+    return Connector._wrap_connector(pn_connector(self._driver, unicode2utf8(host), port, None),
                                      self)
 
   def head_connector(self):

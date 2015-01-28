@@ -24,6 +24,7 @@ from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, symbol
 from proton import Terminus, Timeout, Transport, TransportException, ulong, Url
 from select import select
 from proton.handlers import OutgoingMessageHandler, ScopedHandler
+from proton import unicode2utf8, utf82unicode
 
 class AmqpSocket(object):
     """
@@ -932,7 +933,7 @@ class Reactor(Wrapper):
 
     def acceptor(self, host, port, handler=None):
         impl = _chandler(handler, self.on_error)
-        aimpl = pn_reactor_acceptor(self._impl, host, str(port), impl)
+        aimpl = pn_reactor_acceptor(self._impl, unicode2utf8(host), str(port), impl)
         pn_decref(impl)
         if aimpl:
             return Acceptor(aimpl)
