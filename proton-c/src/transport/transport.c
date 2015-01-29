@@ -482,6 +482,13 @@ static void pn_transport_finalize(void *object)
   free(transport->output);
 }
 
+static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
+    pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
+    if (transport->remote_idle_timeout) {
+      pn_collector_put(connection->collector, PN_OBJECT, transport, PN_TRANSPORT);
+    }
+}
+
 int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
 {
   assert(transport);
@@ -499,7 +506,7 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
 
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
+    pni_post_remote_open_events(transport, connection);
     transport->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
   }
@@ -949,7 +956,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_REMOTE_OPEN);
+    pni_post_remote_open_events(transport, conn);
   } else {
     transport->halt = true;
   }
