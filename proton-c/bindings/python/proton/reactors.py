@@ -640,7 +640,9 @@ class Connector(Handler):
     def _connect(self, connection):
         host, port = connection.address.next()
         logging.info("connecting to %s:%i" % (host, port))
-        heartbeat = connection.heartbeat if hasattr(connection, 'heartbeat') else None
+        heartbeat = None
+        if hasattr(connection, 'heartbeat'):
+            heartbeat = connection.heartbeat
         self.loop.add(AmqpSocket(connection, socket.socket(), self.loop.events, heartbeat=heartbeat).connect(host, port))
         connection._pin = None #connection is now referenced by AmqpSocket, so no need for circular reference
 
