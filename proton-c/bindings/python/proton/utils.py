@@ -109,12 +109,12 @@ class BlockingReceiver(BlockingLink):
         if credit: receiver.flow(credit)
         self.fetcher = fetcher
 
-    def fetch(self, timeout=False):
+    def receive(self, timeout=False):
         if not self.fetcher:
-            raise Exception("Can't call fetch on this receiver as a handler was provided")
+            raise Exception("Can't call receive on this receiver as a handler was provided")
         if not self.link.credit:
             self.link.flow(1)
-        self.connection.wait(lambda: self.fetcher.has_message, msg="Fetching on receiver %s" % self.link.name, timeout=timeout)
+        self.connection.wait(lambda: self.fetcher.has_message, msg="Receiving on receiver %s" % self.link.name, timeout=timeout)
         return self.fetcher.pop()
 
     def accept(self):
