@@ -857,8 +857,9 @@ class Acceptor(Wrapper):
 
 def _wrap_handler(reactor, impl):
     wrapped = WrappedHandler(impl)
-    wrapped.__dict__["on_error"] = reactor.on_error
+    reactor._mark_handler(wrapped)
     return wrapped
+
 
 class Reactor(Wrapper):
 
@@ -880,6 +881,9 @@ class Reactor(Wrapper):
     def on_error(self, info):
         self.errors.append(info)
         self.yield_()
+
+    def _mark_handler(self, handler):
+        handler.__dict__["on_error"] = self.on_error
 
     def global_(self, handler):
         impl = _chandler(handler, self.on_error)

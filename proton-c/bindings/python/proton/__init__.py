@@ -3539,23 +3539,30 @@ class _cadapter:
     self.handler = handler
     self.on_error = on_error
 
-  def __call__(self, cevent):
+  def dispatch(self, cevent):
     ev = Event.wrap(cevent)
-    try:
-      ev.dispatch(self.handler)
-    except:
-      if self.on_error is None:
-        raise
-      else:
-        self.on_error(sys.exc_info())
+    ev.dispatch(self.handler)
+
+  def exception(self, exc, val, tb):
+    if self.on_error is None:
+      raise exc, val, tb
+    else:
+      self.on_error((exc, val, tb))
 
 class WrappedHandler(Wrapper):
 
   def __init__(self, impl_or_constructor):
     Wrapper.__init__(self, impl_or_constructor)
 
+  def _on_error(self, info):
+    on_error = getattr(self, "on_error", None)
+    if on_error is None:
+      raise info[0], info[1], info[2]
+    else:
+      on_error(info)
+
   def add(self, handler):
-    impl = _chandler(handler, getattr(self, "on_error", None))
+    impl = _chandler(handler, self._on_error)
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
 

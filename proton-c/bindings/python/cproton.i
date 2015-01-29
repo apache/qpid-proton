@@ -290,6 +290,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   typedef struct {
     PyObject *handler;
+    PyObject *dispatch;
+    PyObject *exception;
   } pni_pyh_t;
 
   static pni_pyh_t *pni_pyh(pn_handler_t *handler) {
@@ -300,6 +302,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     pni_pyh_t *pyh = pni_pyh(handler);
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     Py_DECREF(pyh->handler);
+    Py_DECREF(pyh->dispatch);
+    Py_DECREF(pyh->exception);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
@@ -307,9 +311,27 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     pni_pyh_t *pyh = pni_pyh(handler);
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     PyObject *arg = SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0);
-    PyObject *result = PyObject_CallFunctionObjArgs(pyh->handler, arg, NULL);
+    PyObject *result = PyObject_CallMethodObjArgs(pyh->handler, pyh->dispatch, arg, NULL);
     if (!result) {
-      PyErr_PrintEx(true);
+      PyObject *exc, *val, *tb;
+      PyErr_Fetch(&exc, &val, &tb);
+      PyErr_NormalizeException(&exc, &val, &tb);
+      if (!val) {
+        val = Py_None;
+        Py_INCREF(val);
+      }
+      if (!tb) {
+        tb = Py_None;
+        Py_INCREF(tb);
+      }
+      PyObject *result2 = PyObject_CallMethodObjArgs(pyh->handler, pyh->exception, exc, val, tb, NULL);
+      if (!result2) {
+        PyErr_PrintEx(true);
+      }
+      Py_XDECREF(result2);
+      Py_XDECREF(exc);
+      Py_XDECREF(val);
+      Py_XDECREF(tb);
     }
     Py_XDECREF(arg);
     Py_XDECREF(result);
@@ -321,6 +343,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     pni_pyh_t *phy = pni_pyh(chandler);
     phy->handler = handler;
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    phy->dispatch = PyString_FromString("dispatch");
+    phy->exception = PyString_FromString("exception");
     Py_INCREF(phy->handler);
     SWIG_PYTHON_THREAD_END_BLOCK;
     return chandler;
