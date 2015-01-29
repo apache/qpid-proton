@@ -63,7 +63,10 @@ static ssize_t pni_connection_pending(pn_selectable_t *sel)
 
 static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
 {
-  return 0;
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_timestamp_t deadline = pn_transport_tick(transport, pn_reactor_now(reactor));
+  return deadline;
 }
 
 static void pni_connection_update(pn_selectable_t *sel) {
@@ -178,7 +181,17 @@ static void pni_connection_error(pn_selectable_t *sel) {
   pn_reactor_update(reactor, sel);
 }
 
-static void pni_connection_expired(pn_selectable_t *sel) {}
+static void pni_connection_expired(pn_selectable_t *sel) {
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_timestamp_t deadline = pn_transport_tick(transport, pn_reactor_now(reactor));
+  pn_selectable_set_deadline(sel, deadline);
+  ssize_t c = pni_connection_capacity(sel);
+  ssize_t p = pni_connection_pending(sel);
+  pn_selectable_set_reading(sel, c > 0);
+  pn_selectable_set_writing(sel, p > 0);
+  pn_reactor_update(reactor, sel);
+}
 
 static void pni_connection_finalize(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);

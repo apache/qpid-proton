@@ -52,9 +52,15 @@ struct pn_reactor_t {
   bool yield;
 };
 
-void pn_reactor_mark(pn_reactor_t *reactor) {
+pn_timestamp_t pn_reactor_mark(pn_reactor_t *reactor) {
   assert(reactor);
   reactor->now = pn_i_now();
+  return reactor->now;
+}
+
+pn_timestamp_t pn_reactor_now(pn_reactor_t *reactor) {
+  assert(reactor);
+  return reactor->now;
 }
 
 static void pn_reactor_initialize(pn_reactor_t *reactor) {
@@ -351,9 +357,9 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
       }
       reactor->yield = false;
       pni_reactor_dispatch_pre(reactor, event);
+      pn_handler_dispatch(reactor->global, event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
       pn_handler_dispatch(handler, event);
-      pn_handler_dispatch(reactor->global, event);
       pni_reactor_dispatch_post(reactor, event);
       previous = reactor->previous = pn_event_type(event);
       pn_collector_pop(reactor->collector);
