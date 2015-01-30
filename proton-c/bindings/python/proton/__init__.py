@@ -1852,7 +1852,9 @@ class Data:
       >>> # read a symbolically described string
       >>> assert data.is_described() # will error if the current node is not described
       >>> data.enter()
+      >>> data.next()
       >>> print data.get_symbol()
+      >>> data.next()
       >>> print data.get_string()
       >>> data.exit()
     """
