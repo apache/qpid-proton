@@ -27,14 +27,13 @@ class Program:
         self.start = time.time()
         print "Hello, World!"
 
-        # If we want to hang around for a bit longer, we can schedule
-        # a task event for some point in the future. This will cause the
-        # reactor to stick around until it has a chance to process the
-        # event.
+        # We can schedule a task event for some point in the future.
+        # This will cause the reactor to stick around until it has a
+        # chance to process the event.
 
-        # The first argument is the delay. The second argument to is
-        # the handler for the event. We are just using self for now,
-        # but we could pass in another object if we wanted.
+        # The first argument is the delay. The second argument is the
+        # handler for the event. We are just using self for now, but
+        # we could pass in another object if we wanted.
         task = event.reactor.schedule(1.0, self)
 
         # We can ignore the task if we want to, but we can also use it
