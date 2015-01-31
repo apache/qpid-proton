@@ -73,6 +73,8 @@ void process(void) {
     if (pn_messenger_stopped(messenger)) {
         pn_message_free(message);
         pn_messenger_free(messenger);
+        message = NULL;
+        messenger = NULL;
     }
 }
 
@@ -158,7 +160,7 @@ int main(int argc, char** argv)
         process();
     }
 
-    while (!pn_messenger_stopped(messenger)) {
+    while (messenger && !pn_messenger_stopped(messenger)) {
         pn_messenger_work(messenger, 0);
         process();
     }
