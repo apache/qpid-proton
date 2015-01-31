@@ -36,7 +36,7 @@ if (typeof process === 'object' && typeof require === 'function') {
     // This allows us to test a really big string.
     PROTON_TOTAL_MEMORY = 140000000;
     PROTON_TOTAL_STACK = 25000000; // Needs to be bigger than the biggest string.
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     // Extend TestCase by creating a prototype instance and adding test methods as properties.
     var DataTest = new unittest.TestCase();

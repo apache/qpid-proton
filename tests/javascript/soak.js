@@ -21,7 +21,7 @@
 
 // Check if the environment is Node.js and if not log an error and exit.
 if (typeof process === 'object' && typeof require === 'function') {
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     var addr = 'guest:guest@localhost:5673';
     //var addr = 'localhost:5673';

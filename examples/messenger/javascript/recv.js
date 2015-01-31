@@ -21,7 +21,7 @@
 
 // Check if the environment is Node.js and if not log an error and exit.
 if (typeof process === 'object' && typeof require === 'function') {
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     var address = "amqp://~0.0.0.0";
     var message = new proton.Message();

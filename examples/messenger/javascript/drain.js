@@ -21,7 +21,7 @@
 
 // Check if the environment is Node.js and if not log an error and exit.
 if (typeof process === 'object' && typeof require === 'function') {
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     console.log("drain not implemented yet");
     process.exit(0);

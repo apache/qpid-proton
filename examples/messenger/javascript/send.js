@@ -26,7 +26,7 @@ if (typeof process === 'object' && typeof require === 'function') {
     // It is not really necessary to do this for this application as the default
     // value of 16777216 is fine, it is simply done here to illustrate how to do it.
     PROTON_TOTAL_MEMORY = 50000000;
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     var address = "amqp://0.0.0.0";
     var subject = "UK.WEATHER";

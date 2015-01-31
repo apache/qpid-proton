@@ -216,12 +216,12 @@ In a browser it would look like (see send.html):
 
 2. Load the library and create a message and messenger.
 In Node.js this would look like (see send.js):
-var proton = require("qpid-proton");
+var proton = require("qpid-proton-messenger");
 var message = new proton.Message();
 var messenger = new proton.Messenger();
 
 In a browser it would look like (see send.html):
-<script type="text/javascript" src="../../../node_modules/qpid-proton/lib/proton.js"></script>
+<script type="text/javascript" src="../../../node_modules/qpid-proton-messenger/lib/proton-messenger.js"></script>
 
 <script type="text/javascript">
 var message = new proton.Message();

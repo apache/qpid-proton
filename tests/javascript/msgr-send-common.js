@@ -21,7 +21,7 @@
 /**
  * This file is essentially a "module" that is common to msgr-send.js and msgr-send.html.
  * It defines the Statistics and MessengerSend classes and if the environment is Node.js
- * it will import qpid-proton and export MessengerSend for use in msgr-send.js.
+ * it will import qpid-proton-messenger and export MessengerSend for use in msgr-send.js.
  * Because it's really a module/library trying to execute msgr-send-common.js won't
  * itself do anything terribly exciting.
  */
@@ -239,7 +239,7 @@ console.log("messenger.getBufferedAmount() = " + messenger.getBufferedAmount());
 
 // If running in Node.js import the proton library and export MessengerSend.
 if (typeof module === 'object') {
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
     module.exports.MessengerSend = MessengerSend;
 }
 

@@ -28,7 +28,7 @@
 if (typeof process === 'object' && typeof require === 'function') {
     var unittest = require("./unittest.js");
     var assert = require("assert");
-    var proton = require("qpid-proton");
+    var proton = require("qpid-proton-messenger");
 
     /**
      * JavaScript Implementation of Python's range() function taken from:

@@ -41,7 +41,7 @@ if (typeof process === 'object' && typeof require === 'function') {
 
     var qmf = {}; // Create qmf namespace object.
     qmf.Console = function() { // qmf.Console Constructor.
-        var proton = require("qpid-proton");
+        var proton = require("qpid-proton-messenger");
         var message = new proton.Message();
         var messenger = new proton.Messenger();
 
