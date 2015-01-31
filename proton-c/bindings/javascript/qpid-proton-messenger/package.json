@@ -10,6 +10,9 @@
     },
     "main" : "./lib/proton-messenger.js",
     "dependencies": {
-        "ws": "0.5.0"
+        "ws": "0.5.0",
+        "crypto": "latest",
+        "fs": "latest",
+        "path": "latest"
     }
 }
