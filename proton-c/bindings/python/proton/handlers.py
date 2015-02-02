@@ -22,34 +22,6 @@ from proton import Collector, Connection, Delivery, Described, Endpoint, Event, 
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 
-class FlowController(Handler):
-    """
-    A handler that controls a configured credit window for associated
-    receivers.
-    """
-    def __init__(self, window=1):
-        self.window = window
-
-    def top_up(self, link):
-        delta = self.window - link.credit
-        link.flow(delta)
-
-    def on_link_local_open(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_link_remote_open(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_link_flow(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_delivery(self, event):
-        if event.delivery.link.is_receiver:
-            self.top_up(event.delivery.link)
-
 def add_nested_handler(handler, nested):
     if hasattr(handler, 'handlers'):
         getattr(handler, 'handlers').append(nested)
