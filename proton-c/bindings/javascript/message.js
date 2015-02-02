@@ -811,19 +811,25 @@ _Message_['setReplyToGroupID'] = function(id) {
  */
 _Message_['encode'] = function() {
     this._preEncode();
+    var sp = Runtime.stackSave();
+    var sizeptr = allocate(4, 'i32', ALLOC_STACK);
     var size = 1024;
     while (true) {
-        setValue(size, size, 'i32'); // Set pass by reference variable.
+        setValue(sizeptr, size, 'i32'); // Set pass by reference variable.
         var bytes = _malloc(size);   // Allocate storage from emscripten heap.
-        var err = _pn_message_encode(this._message, bytes, size);
-        var size = getValue(size, 'i32'); // Dereference the real size value;
+        var err = _pn_message_encode(this._message, bytes, sizeptr);
+        var size = getValue(sizeptr, 'i32'); // Dereference the real size value;
 
         if (err === Module['Error']['OVERFLOW']) {
             _free(bytes);
             size *= 2;
         } else if (err >= 0) {
+            // Tidy up the memory that we allocated on emscripten's stack.
+            Runtime.stackRestore(sp);
             return new Data['Binary'](size, bytes);
         } else {
+            // Tidy up the memory that we allocated on emscripten's stack.
+            Runtime.stackRestore(sp);
             _free(bytes);
             this._check(err);
             return;

@@ -1239,19 +1239,24 @@ _Data_['copy'] = function() {
  * @returns {string} a formatted string representation of the encoded Data.
  */
 _Data_['format'] = function() {
+    var sp = Runtime.stackSave();
+    var sizeptr = allocate(4, 'i32', ALLOC_STACK);
+
     var size = 1024; // Pass by reference variable - need to use setValue to initialise it.
     while (true) {
-        setValue(size, size, 'i32'); // Set pass by reference variable.
+        setValue(sizeptr, size, 'i32'); // Set pass by reference variable.
         var bytes = _malloc(size);   // Allocate storage from emscripten heap.
-        var err = _pn_data_format(this._data, bytes, size);
-        var size = getValue(size, 'i32'); // Dereference the real size value;
+        var err = _pn_data_format(this._data, bytes, sizeptr);
+        var size = getValue(sizeptr, 'i32'); // Dereference the real size value;
 
         if (err === Module['Error']['OVERFLOW']) {
             _free(bytes);
             size *= 2;
         } else {
-            var string = Pointer_stringify(bytes);
+            var string = Pointer_stringify(bytes, size);
             _free(bytes);
+            // Tidy up the memory that we allocated on emscripten's stack.
+            Runtime.stackRestore(sp);
             this._check(err)
             return string;
         }
