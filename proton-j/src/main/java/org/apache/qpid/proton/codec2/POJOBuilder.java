@@ -29,7 +29,6 @@ import java.util.*;
 
 public class POJOBuilder implements DataHandler
 {
-
     public static class Described {
 
         private Object descriptor;
@@ -62,7 +61,7 @@ public class POJOBuilder implements DataHandler
     private class DescribedBuilder implements Builder {
 
         private Object descriptor;
-        private Described described;
+        private Object described;
         private boolean first = true;
 
         public DescribedBuilder() {}
@@ -72,12 +71,28 @@ public class POJOBuilder implements DataHandler
                 descriptor = o;
                 first = false;
             } else {
-                described = new Described(descriptor, o);
+                PerformativeFactory factory = TypeRegistry.lookup(descriptor);
+                if (factory != null)
+                {
+                    try
+                    {
+                        described = factory.create(o);
+                    }
+                    catch (DecodeException e)
+                    {
+                        // TODO handle exception
+                        e.printStackTrace();
+                    }
+                }
+                else
+                {
+                    described = new Described(descriptor, o);
+                }
                 end();
             }
         }
 
-        public Described build() {
+        public Object build() {
             return described;
         }
 

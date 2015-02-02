@@ -20,43 +20,7 @@
  */
 package org.apache.qpid.proton.codec2;
 
-
-/**
- * Decoder
- * 
- */
-
-public interface Decoder
+public interface PerformativeFactory
 {
-    Type getType();
-
-    int getSize();
-
-    byte getByte();
-
-    short getShort();
-
-    int getInt();
-
-    long getLong();
-
-    float getFloat();
-
-    double getDouble();
-
-    String getString();
-
-    int getIntBits();
-
-    long getLongBits();
-
-    long getHiBits();
-
-    long getLoBits();
-
-    boolean getBoolean();
-
-    char getChar();
-
-    void decode(DataHandler handler);
+    public Object create(Object in) throws DecodeException;
 }
