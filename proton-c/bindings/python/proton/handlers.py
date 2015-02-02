@@ -379,7 +379,7 @@ class MessagingHandler(Handler, Acking):
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
         if prefetch:
-            self.handlers.append(FlowController(prefetch))
+            self.handlers.append(CFlowController(prefetch))
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
         self.handlers.append(IncomingMessageHandler(auto_accept, self))
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
