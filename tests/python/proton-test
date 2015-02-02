@@ -70,6 +70,9 @@ parser.add_option("-b", "--bare", action="store_true", default=False,
                   help="Run bare, i.e. don't capture stack traces. This is useful under Jython as " +
                   "captured stack traces do not include the Java portion of the stack," +
                   "whereas non captured stack traces do.")
+parser.add_option("-j", "--javatrace", action="store_true", default=False,
+                  help="Show the full java stack trace. This disables heuristics to eliminate the " +
+                  "jython portion of java stack traces.")
 
 class Config:
 
@@ -375,7 +378,24 @@ class Runner:
         output = indent("".join(traceback.format_exception_only(*self.exception[:2]))).rstrip()
       else:
         output = "Error during %s:" % self.exception_phase_name
-        output += indent("".join(traceback.format_exception(*self.exception))).rstrip()
+        lines = traceback.format_exception(*self.exception)
+        val = self.exception[1]
+        reflect = False
+        if val and hasattr(val, "getStackTrace"):
+          jlines = []
+          for frame in val.getStackTrace():
+            if reflect and frame.getClassName().startswith("org.python."):
+              # this is a heuristic to eliminate the jython portion of
+              # the java stack trace
+              if not opts.javatrace:
+                break
+            jlines.append("  %s\n" % frame.toString())
+            if frame.getClassName().startswith("java.lang.reflect"):
+              reflect = True
+            else:
+              reflect = False
+          lines.extend(jlines)
+        output += indent("".join(lines)).rstrip()
       return output
 
   def get_exception_type(self):
