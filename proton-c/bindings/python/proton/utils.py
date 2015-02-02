@@ -80,8 +80,10 @@ class Fetcher(MessagingHandler):
         self.incoming.append((event.message, event.delivery))
 
     def on_link_error(self, event):
-        # This will be handled by BlockingConnection
-        pass
+        raise LinkDetached(event.link)
+
+    def on_connection_error(self, event):
+        raise ConnectionClosed(event.connection)
 
     @property
     def has_message(self):
@@ -133,6 +135,35 @@ class BlockingReceiver(BlockingLink):
         if not self.fetcher:
             raise Exception("Can't call accept/reject etc on this receiver as a handler was provided")
         self.fetcher.settle(state)
+
+
+class LinkDetached(LinkException):
+    def __init__(self, link):
+        self.link = link
+        if link.is_sender:
+            txt = "sender %s to %s closed" % (link.name, link.target.address)
+        else:
+            txt = "receiver %s from %s closed" % (link.name, link.source.address)
+        if link.remote_condition:
+            txt += " due to: %s" % link.remote_condition
+            self.condition = link.remote_condition.name
+        else:
+            txt += " by peer"
+            self.condition = None
+        super(LinkDetached, self).__init__(txt)
+
+
+class ConnectionClosed(ConnectionException):
+    def __init__(self, connection):
+        self.connection = connection
+        txt = "Connection %s closed" % self.url
+        if event.connection.remote_condition:
+            txt += " due to: %s" % event.connection.remote_condition
+            self.condition = connection.remote_condition.name
+        else:
+            txt += " by peer"
+            self.condition = None
+        super(ConnectionClosed, self).__init__(txt)
 
 
 class BlockingConnection(Handler):
@@ -188,25 +219,12 @@ class BlockingConnection(Handler):
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
             event.link.close()
-            if event.link.is_sender:
-                txt = "sender %s to %s closed" % (event.link.name, event.link.target.address)
-            else:
-                txt = "receiver %s from %s closed" % (event.link.name, event.link.source.address)
-            if event.link.remote_condition:
-                txt += " due to: %s" % event.link.remote_condition
-            else:
-                txt += " by peer"
-            raise LinkException(txt)
+            raise LinkDetached(event.link)
 
     def on_connection_remote_close(self, event):
         if event.connection.state & Endpoint.LOCAL_ACTIVE:
             event.connection.close()
-            txt = "Connection %s closed" % self.url
-            if event.connection.remote_condition:
-                txt += " due to: %s" % event.connection.remote_condition
-            else:
-                txt += " by peer"
-            raise ConnectionException(txt)
+            raise ConnectionClosed(event.connection)
 
     def on_disconnected(self, event):
         raise ConnectionException("Connection %s disconnected" % self.url);
