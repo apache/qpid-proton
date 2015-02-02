@@ -20,43 +20,17 @@
  */
 package org.apache.qpid.proton.codec2;
 
-
-/**
- * Decoder
- * 
- */
-
-public interface Decoder
+@SuppressWarnings("serial")
+public class DecodeException extends Exception
 {
-    Type getType();
 
-    int getSize();
+    public DecodeException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
 
-    byte getByte();
-
-    short getShort();
-
-    int getInt();
-
-    long getLong();
-
-    float getFloat();
-
-    double getDouble();
-
-    String getString();
-
-    int getIntBits();
-
-    long getLongBits();
-
-    long getHiBits();
-
-    long getLoBits();
-
-    boolean getBoolean();
-
-    char getChar();
-
-    void decode(DataHandler handler);
+    public DecodeException(String message)
+    {
+        super(message);
+    }
 }
