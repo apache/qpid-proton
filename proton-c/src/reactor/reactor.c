@@ -104,9 +104,14 @@ pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor) {
   return reactor->attachments;
 }
 
-int pn_reactor_timeout(pn_reactor_t *reactor) {
+pn_millis_t pn_reactor_get_timeout(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->timeout;
+}
+
+void pn_reactor_set_timeout(pn_reactor_t *reactor, pn_millis_t timeout) {
+  assert(reactor);
+  reactor->timeout = timeout;
 }
 
 void pn_reactor_free(pn_reactor_t *reactor) {
@@ -404,12 +409,6 @@ void pn_reactor_start(pn_reactor_t *reactor) {
   reactor->selectable = pni_timer_selectable(reactor);
  }
 
-bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
-  assert(reactor);
-  reactor->timeout = timeout;
-  return pn_reactor_process(reactor);
-}
-
 void pn_reactor_stop(pn_reactor_t *reactor) {
   assert(reactor);
   pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
@@ -419,7 +418,8 @@ void pn_reactor_stop(pn_reactor_t *reactor) {
 
 void pn_reactor_run(pn_reactor_t *reactor) {
   assert(reactor);
+  pn_reactor_set_timeout(reactor, 3141);
   pn_reactor_start(reactor);
-  while (pn_reactor_work(reactor, 1000)) {}
+  while (pn_reactor_process(reactor)) {}
   pn_reactor_stop(reactor);
 }

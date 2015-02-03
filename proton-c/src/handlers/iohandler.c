@@ -28,7 +28,7 @@ static void *pni_selector_handle = NULL;
 #define PN_SELECTOR ((pn_handle_t) &pni_selector_handle)
 
 void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
-  pn_selector_select(selector, pn_reactor_timeout(reactor));
+  pn_selector_select(selector, pn_reactor_get_timeout(reactor));
   pn_selectable_t *sel;
   int events;
   pn_reactor_mark(reactor);

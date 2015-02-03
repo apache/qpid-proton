@@ -926,9 +926,13 @@ class Reactor(Wrapper):
         pn_reactor_global(self._impl, impl)
         pn_decref(impl)
 
-    @property
-    def timeout(self):
-        return millis2secs(pn_reactor_timeout(self._impl))
+    def _get_timeout(self):
+        return millis2secs(pn_reactor_get_timeout(self._impl))
+
+    def _set_timeout(self, secs):
+        return pn_reactor_set_timeout(self._impl, secs2millis(secs))
+
+    timeout = property(_get_timeout, _set_timeout)
 
     def yield_(self):
         pn_reactor_yield(self._impl)
@@ -941,15 +945,16 @@ class Reactor(Wrapper):
         return _wrap_handler(self, pn_reactor_handler(self._impl))
 
     def run(self):
+        self.timeout = 3.14159265359
         self.start()
-        while self.process(3.14159265359): pass
+        while self.process(): pass
         self.stop()
 
     def start(self):
         pn_reactor_start(self._impl)
 
-    def process(self, timeout=0):
-        result = pn_reactor_work(self._impl, secs2millis(timeout))
+    def process(self):
+        result = pn_reactor_process(self._impl)
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
