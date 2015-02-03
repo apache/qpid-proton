@@ -419,6 +419,7 @@ ssize_t pn_sasl_output(pn_transport_t *transport, char *bytes, size_t size)
 int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
+  assert(sasl && !sasl->client);
   pn_bytes_t mech;
   pn_bytes_t recv;
   int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
@@ -432,6 +433,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
+  assert(sasl && sasl->client);
   sasl->rcvd_init = true;
   return 0;
 }
@@ -448,17 +450,22 @@ int pn_do_recv(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
 int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+  pni_sasl_t *sasl = transport->sasl;
+  assert(sasl && sasl->client);
   return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
 int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+  pni_sasl_t *sasl = transport->sasl;
+  assert(sasl && !sasl->client);
   return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
 int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
+  assert(sasl && sasl->client);
   uint8_t outcome;
   int err = pn_data_scan(args, "D.[B]", &outcome);
   if (err) return err;
