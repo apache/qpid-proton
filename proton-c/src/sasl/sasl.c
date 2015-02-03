@@ -450,15 +450,19 @@ int pn_do_recv(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
 int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+#ifndef NDEBUG                  /* Avoid unused variable warnings in release builds. */
   pni_sasl_t *sasl = transport->sasl;
   assert(sasl && sasl->client);
+#endif
   return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
 int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+#ifndef NDEBUG                  /* Avoid unused variable warnings in release builds. */
   pni_sasl_t *sasl = transport->sasl;
   assert(sasl && !sasl->client);
+#endif
   return pn_do_recv(transport, frame_type, channel, args, payload);
 }
 
