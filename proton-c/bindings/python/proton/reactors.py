@@ -941,15 +941,23 @@ class Reactor(Wrapper):
         return _wrap_handler(self, pn_reactor_handler(self._impl))
 
     def run(self):
+        self.start()
+        while self.process(3.14159265359): pass
+        self.stop()
+
+    def start(self):
         pn_reactor_start(self._impl)
-        while pn_reactor_work(self._impl, 3142):
-            if self.errors:
-                break
+
+    def process(self, timeout=0):
+        result = pn_reactor_work(self._impl, secs2millis(timeout))
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
             raise exc, value, tb
+        return result
+
+    def stop(self):
         pn_reactor_stop(self._impl)
 
     def schedule(self, delay, task):
