@@ -51,6 +51,9 @@ require "codec/mapping"
 require "codec/data"
 
 # Event API classes
+require "event/event_type"
+require "event/event_base"
+require "event/event"
 require "event/collector"
 
 # Main Proton classes
