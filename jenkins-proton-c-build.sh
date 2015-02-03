@@ -4,6 +4,8 @@
 # extract by the Jenkins build process located at the following URL:
 # https://builds.apache.org/view/M-R/view/Qpid/job/Qpid-proton-c/
 #
+CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=DEBUG
+XMLOUTPUT=testresults/TEST-protonc.xml
 
 echo Arch: `arch` Uname: `uname -a` lsb_release: `lsb_release -a` User: `whoami`
 echo Java home: $JAVA_HOME
@@ -24,12 +26,11 @@ ls
 rm -rf build testresults >/dev/null 2>&1
 mkdir build testresults >/dev/null 2>&1
 cd build >/dev/null 2>&1
-cmake ..
+cmake ${CMAKE_FLAGS} ..
 make all
 cd ..  >/dev/null 2>&1
 
 echo Running tests
-XMLOUTPUT=testresults/TEST-protonc.xml
 
 . build/config.sh
 ./tests/python/proton-test --xml=${XMLOUTPUT}
