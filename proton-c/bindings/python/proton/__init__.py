@@ -3568,6 +3568,9 @@ class WrappedHandler(Wrapper):
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
 
+  def clear(self):
+    pn_handler_clear(self._impl)
+
 def _chandler(obj, on_error=None):
   if obj is None:
     return None

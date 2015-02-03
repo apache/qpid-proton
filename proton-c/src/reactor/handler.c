@@ -81,13 +81,22 @@ void *pn_handler_mem(pn_handler_t *handler) {
 }
 
 void pn_handler_add(pn_handler_t *handler, pn_handler_t *child) {
+  assert(handler);
   if (!handler->children) {
     handler->children = pn_list(PN_OBJECT, 0);
   }
   pn_list_add(handler->children, child);
 }
 
+void pn_handler_clear(pn_handler_t *handler) {
+  assert(handler);
+  if (handler->children) {
+    pn_list_clear(handler->children);
+  }
+}
+
 void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event) {
+  assert(handler);
   if (handler->dispatch) {
     handler->dispatch(handler, event);
   }

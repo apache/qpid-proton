@@ -53,6 +53,7 @@ PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event
 PN_EXTERN void pn_handler_free(pn_handler_t *handler);
 PN_EXTERN void *pn_handler_mem(pn_handler_t *handler);
 PN_EXTERN void pn_handler_add(pn_handler_t *handler, pn_handler_t *child);
+PN_EXTERN void pn_handler_clear(pn_handler_t *handler);
 PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event);
 
 PN_EXTERN pn_reactor_t *pn_reactor(void);
