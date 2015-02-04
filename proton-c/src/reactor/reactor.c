@@ -199,18 +199,6 @@ void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable) {
   }
 }
 
-static void pni_reactor_dispatch_pre(pn_reactor_t *reactor, pn_event_t *event) {
-  assert(reactor);
-  assert(event);
-  switch (pn_event_type(event)) {
-  case PN_CONNECTION_INIT:
-    pni_record_init_reactor(pn_connection_attachments(pn_event_connection(event)), reactor);
-    break;
-  default:
-    break;
-  }
-}
-
 void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event);
 
 static void pni_reactor_dispatch_post(pn_reactor_t *reactor, pn_event_t *event) {
@@ -270,33 +258,41 @@ static pn_reactor_t *pni_reactor(pn_selectable_t *sel) {
   return (pn_reactor_t *) pni_selectable_get_context(sel);
 }
 
-pn_reactor_t *pn_event_reactor(pn_event_t *event) {
-  const pn_class_t *clazz = pn_event_class(event);
-  void *context = pn_event_context(event);
+pn_reactor_t *pn_class_reactor(const pn_class_t *clazz, void *object) {
   switch (pn_class_id(clazz)) {
   case CID_pn_reactor:
-    return (pn_reactor_t *) context;
+    return (pn_reactor_t *) object;
   case CID_pn_task:
-    return pni_record_get_reactor(pn_task_attachments((pn_task_t *) context));
+    return pni_record_get_reactor(pn_task_attachments((pn_task_t *) object));
   case CID_pn_transport:
-    return pni_record_get_reactor(pn_transport_attachments((pn_transport_t *) context));
+    return pni_record_get_reactor(pn_transport_attachments((pn_transport_t *) object));
   case CID_pn_delivery:
   case CID_pn_link:
   case CID_pn_session:
   case CID_pn_connection:
     {
-      pn_connection_t *conn = pni_object_connection(pn_event_class(event), context);
+      pn_connection_t *conn = pni_object_connection(clazz, object);
       pn_record_t *record = pn_connection_attachments(conn);
       return pni_record_get_reactor(record);
     }
   case CID_pn_selectable:
     {
-      pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
+      pn_selectable_t *sel = (pn_selectable_t *) object;
       return pni_reactor(sel);
     }
   default:
     return NULL;
   }
+}
+
+pn_reactor_t *pn_object_reactor(void *object) {
+  return pn_class_reactor(pn_object_reify(object), object);
+}
+
+pn_reactor_t *pn_event_reactor(pn_event_t *event) {
+  const pn_class_t *clazz = pn_event_class(event);
+  void *context = pn_event_context(event);
+  return pn_class_reactor(clazz, context);
 }
 
 pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler) {
@@ -373,7 +369,6 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         return true;
       }
       reactor->yield = false;
-      pni_reactor_dispatch_pre(reactor, event);
       pn_handler_dispatch(reactor->global, event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
       pn_handler_dispatch(handler, event);

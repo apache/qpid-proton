@@ -891,12 +891,6 @@ class Acceptor(Wrapper):
     def close(self):
         pn_acceptor_close(self._impl)
 
-def _wrap_handler(reactor, impl):
-    wrapped = WrappedHandler(impl)
-    reactor._mark_handler(wrapped)
-    return wrapped
-
-
 class Reactor(Wrapper):
 
     @staticmethod
@@ -918,11 +912,8 @@ class Reactor(Wrapper):
         self.errors.append(info)
         self.yield_()
 
-    def _mark_handler(self, handler):
-        handler.__dict__["on_error"] = self.on_error
-
     def _get_global(self):
-        return _wrap_handler(self, pn_reactor_get_global_handler(self._impl))
+        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error)
 
     def _set_global(self, handler):
         impl = _chandler(handler, self.on_error)
@@ -946,10 +937,10 @@ class Reactor(Wrapper):
         pn_reactor_mark(self._impl)
 
     def _get_handler(self):
-        return _wrap_handler(self, pn_reactor_get_handler(self._impl))
+        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)
 
     def _set_handler(self, handler):
-        impl = _chandler(handler, self._on_error)
+        impl = _chandler(handler, self.on_error)
         pn_reactor_set_handler(self._impl, impl)
         pn_decref(impl)
 

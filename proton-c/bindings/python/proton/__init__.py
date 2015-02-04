@@ -2219,12 +2219,24 @@ class Endpoint(object):
       assert False, "Subclass must override this!"
 
   def _get_handler(self):
+    import reactors
+    reactor = reactors.Reactor.wrap(pn_object_reactor(self._impl))
+    if reactor:
+      on_error = reactor.on_error
+    else:
+      on_error = None
     record = self._get_attachments()
-    return WrappedHandler(pn_record_get_handler(record))
+    return WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
   def _set_handler(self, handler):
+    import reactors
+    reactor = reactors.Reactor.wrap(pn_object_reactor(self._impl))
+    if reactor:
+      on_error = reactor.on_error
+    else:
+      on_error = None
+    impl = _chandler(handler, on_error)
     record = self._get_attachments()
-    impl = _chandler(handler)
     pn_record_set_handler(record, impl)
     pn_decref(impl)
 
@@ -3552,6 +3564,15 @@ class _cadapter:
       self.on_error((exc, val, tb))
 
 class WrappedHandler(Wrapper):
+
+  @staticmethod
+  def wrap(impl, on_error=None):
+    if impl is None:
+      return None
+    else:
+      handler = WrappedHandler(impl)
+      handler.__dict__["on_error"] = on_error
+      return handler
 
   def __init__(self, impl_or_constructor):
     Wrapper.__init__(self, impl_or_constructor)

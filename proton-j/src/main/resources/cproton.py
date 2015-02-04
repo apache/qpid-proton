@@ -37,6 +37,7 @@ from cdriver import *
 from cmessenger import *
 from cmessage import *
 from curl import *
+from creactor import *
 from chandlers import *
 
 # XXX: this is for compatibility, apparently the version of jython we

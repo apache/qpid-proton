@@ -17,15 +17,10 @@
 # under the License.
 #
 
-import proton_tests.codec
-import proton_tests.engine
-import proton_tests.message
-import proton_tests.reactor
-import proton_tests.messenger
-import proton_tests.sasl
-import proton_tests.transport
-import proton_tests.ssl
-import proton_tests.interop
-import proton_tests.soak
-import proton_tests.url
-import proton_tests.utils
+from cerror import Skipped
+
+# from proton/reactor.h
+def pn_reactor():
+    raise Skipped()
+def pn_reactor_attachments(r):
+    raise Skipped()

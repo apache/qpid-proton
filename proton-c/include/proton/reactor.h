@@ -93,6 +93,8 @@ PN_EXTERN int pn_timer_tasks(pn_timer_t *timer);
 
 PN_EXTERN pn_record_t *pn_task_attachments(pn_task_t *task);
 
+PN_EXTERN pn_reactor_t *pn_class_reactor(const pn_class_t *clazz, void *object);
+PN_EXTERN pn_reactor_t *pn_object_reactor(void *object);
 PN_EXTERN pn_reactor_t *pn_event_reactor(pn_event_t *event);
 
 PN_EXTERN pn_handler_t *pn_record_get_handler(pn_record_t *record);
