@@ -18,17 +18,31 @@
 # under the License.
 #
 
-import time
+from proton import Message
 from proton.reactors import Reactor
+from proton.handlers import CHandshaker, CFlowController
 
 class Program:
 
-    # If an event occurs and its handler doesn't have an on_<event>
-    # method, the reactor will attempt to call the on_unhandled method
-    # if it exists. This can be useful not only for debugging, but for
-    # logging and for delegating/inheritance.
-    def on_unhandled(self, name, event):
-        print name, event
+    def __init__(self):
+        self.handlers = [CHandshaker(), CFlowController()]
+        self.message = Message()
+
+    def on_reactor_init(self, event):
+        # Create an amqp acceptor.
+        event.reactor.acceptor("0.0.0.0", 5672)
+        # There is an optional third argument to the Reactor.acceptor
+        # call. Using it, we could supply a handler here that would
+        # become the handler for all accepted connections. If we omit
+        # it, the reactor simply inherets all the connection events.
+
+    def on_delivery(self, event):
+        # XXX: we could make rcv.recv(self.message) work here to
+        # compliment the similar thing on send
+        rcv = event.receiver
+        if rcv and self.message.recv(rcv):
+            print self.message
+            event.delivery.settle()
 
 r = Reactor(Program())
 r.run()

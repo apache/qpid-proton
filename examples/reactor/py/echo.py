@@ -50,6 +50,11 @@ class Echo:
 class Program:
 
     def on_reactor_init(self, event):
+        # Every selectable is a possible source of future events. Our
+        # selectable stays alive until it reads the end of stream
+        # marker. This will keep the whole reactor running until we
+        # type Control-D.
+        print "Type whatever you want and then use Control-D to exit:"
         event.reactor.selectable(Echo(sys.stdin))
 
 r = Reactor(Program())

@@ -38,5 +38,5 @@ r = Reactor(Program())
 
 # When you call run, the reactor will process events. The reactor init
 # event is what kicks off everything else. When the reactor has no
-# more events to process, it will exit.
+# more events to process, it exits.
 r.run()

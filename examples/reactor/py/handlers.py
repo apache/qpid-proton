@@ -21,21 +21,28 @@
 import time
 from proton.reactors import Reactor
 
-class Logger:
 
-    def on_unhandled(self, name, event):
-        print name, event
-
-class Program:
+class World:
 
     def on_reactor_init(self, event):
-        print "Hello, World!"
+        print "World!"
+
+class Goodbye:
 
     def on_reactor_final(self, event):
         print "Goodbye, World!"
 
-# You can pass multiple handlers to the reactor. Each handler will see
-# every event. By combining this with on_unhandled, you can print out
-# every event as it happens.
-r = Reactor(Logger(), Program())
+class Hello:
+
+    def __init__(self):
+        # When an event dispatches itself to a handler, it also checks
+        # if that handler has a "handlers" attribute and dispatches
+        # the event to any children.
+        self.handlers = [World(), Goodbye()]
+
+    # The parent handler always receives the event first.
+    def on_reactor_init(self, event):
+        print "Hello",
+
+r = Reactor(Hello())
 r.run()

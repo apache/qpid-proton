@@ -18,8 +18,13 @@
 # under the License.
 #
 
-import time
+import time, random
 from proton.reactors import Reactor
+
+# Let's try to modify our counter example. In addition to counting to
+# 10 in quarter second intervals, let's also print out a random number
+# every half second. This is not a super easy thing to express in a
+# purely sequential program, but not so difficult using events.
 
 class Counter:
 
@@ -30,10 +35,12 @@ class Counter:
     def on_timer_task(self, event):
         self.count += 1
         print self.count
-        if self.count < self.limit:
-            # A recurring task can be acomplished by just scheduling
-            # another event.
+        if not self.done():
             event.reactor.schedule(0.25, self)
+
+    # add a public API to check for doneness
+    def done(self):
+        return self.count >= self.limit
 
 class Program:
 
@@ -41,11 +48,21 @@ class Program:
         self.start = time.time()
         print "Hello, World!"
 
-        # Note that unlike the previous scheduling example, we pass in
-        # a separate object for the handler. This means that the timer
-        # event we just scheduled will not be seen by Program as it is
-        # being handled by the Counter instance we create.
-        event.reactor.schedule(0.25, Counter(10))
+        # Save the counter instance in an attribute so we can refer to
+        # it later.
+        self.counter = Counter(10)
+        event.reactor.schedule(0.25, self.counter)
+
+        # Now schedule another event with a different handler. Note
+        # that the timer tasks go to separate handlers, and they don't
+        # interfere with each other.
+        event.reactor.schedule(0.5, self)
+
+    def on_timer_task(self, event):
+        # keep on shouting until we are done counting
+        print "Yay, %s!" % random.randint(10, 100)
+        if not self.counter.done():
+            event.reactor.schedule(0.5, self)
 
     def on_reactor_final(self, event):
         print "Goodbye, World! (after %s long seconds)" % (time.time() - self.start)
