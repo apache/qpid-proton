@@ -68,23 +68,23 @@ except ImportError:
       def __hash__(self):
         return self.bytes.__hash__()
 
-  import os, random, time
-  rand = random.Random()
-  rand.seed((os.getpid(), time.time(), socket.gethostname()))
-  def random_uuid():
-    bytes = [rand.randint(0, 255) for i in xrange(16)]
+    import os, random, time
+    rand = random.Random()
+    rand.seed((os.getpid(), time.time(), socket.gethostname()))
+    def random_uuid():
+      bytes = [rand.randint(0, 255) for i in xrange(16)]
 
-    # From RFC4122, the version bits are set to 0100
-    bytes[7] &= 0x0F
-    bytes[7] |= 0x40
+      # From RFC4122, the version bits are set to 0100
+      bytes[7] &= 0x0F
+      bytes[7] |= 0x40
 
-    # From RFC4122, the top two bits of byte 8 get set to 01
-    bytes[8] &= 0x3F
-    bytes[8] |= 0x80
-    return "".join(map(chr, bytes))
+      # From RFC4122, the top two bits of byte 8 get set to 01
+      bytes[8] &= 0x3F
+      bytes[8] |= 0x80
+      return "".join(map(chr, bytes))
 
-  def uuid4():
-    return uuid.UUID(bytes=random_uuid())
+    def uuid4():
+      return uuid.UUID(bytes=random_uuid())
 
 def generate_uuid():
   return uuid.uuid4()
