@@ -1129,8 +1129,18 @@ The format of the message.
     return dlv
 
   def recv(self, receiver):
+    """
+    Receives and decodes the message content for the current delivery
+    from the supplied receiver. Upon success it will return the
+    current delivery for the link. If there is no current delivery, or
+    if the current delivery is incomplete, it will return None.
+
+    @type receiver: Receiver
+    @param receiver: the link to receive a message from
+    @return the delivery associated with the decoded message (or None)
+    """
     dlv = receiver.current
-    if dlv.partial: return None
+    if not dlv or dlv.partial: return None
     encoded = receiver.recv(dlv.pending)
     # the sender has already forgotten about the delivery, so we might
     # as well too
