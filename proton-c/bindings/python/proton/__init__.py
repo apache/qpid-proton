@@ -778,7 +778,7 @@ class Message(object):
 
   DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
 
-  def __init__(self, **kwargs):
+  def __init__(self, body=None, **kwargs):
     """
     @param kwargs: Message property name/value pairs to initialise the Message
     """
@@ -788,7 +788,7 @@ class Message(object):
     self.instructions = None
     self.annotations = None
     self.properties = None
-    self.body = None
+    self.body = body
     for k,v in kwargs.iteritems():
       getattr(self, k)          # Raise exception if it's not a valid attribute.
       setattr(self, k, v)
@@ -1126,6 +1126,17 @@ The format of the message.
     sender.advance()
     if sender.snd_settle_mode == Link.SND_SETTLED:
       dlv.settle()
+    return dlv
+
+  def recv(self, receiver):
+    dlv = receiver.current
+    if dlv.partial: return None
+    encoded = receiver.recv(dlv.pending)
+    # the sender has already forgotten about the delivery, so we might
+    # as well too
+    if receiver.remote_snd_settle_mode == Link.SND_SETTLED:
+      dlv.settle()
+    self.decode(encoded)
     return dlv
 
   def __repr2__(self):
