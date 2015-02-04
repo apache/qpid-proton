@@ -884,6 +884,15 @@ def pn_transport_get_remote_max_frame(trans):
   return trans.impl.getRemoteMaxFrameSize()
 
 def pn_transport_set_idle_timeout(trans, value):
+  trans.impl.setIdleTimeout(value);
+
+def pn_transport_get_idle_timeout(trans):
+  return trans.impl.getIdleTimeout()
+
+def pn_transport_get_remote_idle_timeout(trans):
+  return trans.impl.getRemoteIdleTimeout()
+
+def pn_transport_get_frames_input(trans):
   raise Skipped()
 
 def pn_transport_set_channel_max(trans, n):
@@ -896,7 +905,7 @@ def pn_transport_remote_channel_max(trans):
   return trans.impl.getRemoteChannelMax()
 
 def pn_transport_tick(trans, now):
-  return 0
+  return trans.impl.tick(now);
 
 def pn_transport_bind(trans, conn):
   trans.impl.bind(conn.impl)

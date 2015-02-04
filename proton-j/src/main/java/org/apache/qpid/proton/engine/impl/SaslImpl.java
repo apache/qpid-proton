@@ -100,6 +100,18 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null, _transport);
     }
 
+    void fail() {
+        if (_role == null || _role == Role.CLIENT) {
+            _role = Role.CLIENT;
+            _initSent = true;
+        } else {
+            _initReceived = true;
+
+        }
+        _done = true;
+        _outcome = SaslOutcome.PN_SASL_SYS;
+    }
+
     @Override
     public boolean isDone()
     {

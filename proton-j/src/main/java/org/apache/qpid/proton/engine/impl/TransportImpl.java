@@ -27,8 +27,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
+import org.apache.qpid.proton.amqp.security.SaslCode;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
@@ -57,6 +59,7 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
@@ -126,6 +129,15 @@ public class TransportImpl extends EndpointImpl
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
+
+    private int _localIdleTimeout = 0;
+    private int _remoteIdleTimeout = 0;
+    private long _bytesInput = 0;
+    private long _bytesOutput = 0;
+    private long _localIdleDeadline = 0;
+    private long _lastBytesInput = 0;
+    private long _lastBytesOutput = 0;
+    private long _remoteIdleDeadline = 0;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -781,7 +793,9 @@ public class TransportImpl extends EndpointImpl
             if (_channelMax > 0) {
                 open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
             }
-
+            if (_localIdleTimeout > 0) {
+                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout));
+            }
             _isOpenSent = true;
 
             writeFrame(0, open, null, null);
@@ -968,7 +982,7 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
-    private void writeFrame(int channel, FrameBody frameBody,
+    protected void writeFrame(int channel, FrameBody frameBody,
                             ByteBuffer payload, Runnable onPayloadTooLarge)
     {
         _frameWriter.writeFrame(channel, frameBody, payload, onPayloadTooLarge);
@@ -1014,6 +1028,11 @@ public class TransportImpl extends EndpointImpl
         if (open.getChannelMax().longValue() > 0)
         {
             _remoteChannelMax = (int) open.getChannelMax().longValue();
+        }
+
+        if (open.getIdleTimeOut() != null && open.getIdleTimeOut().longValue() > 0)
+        {
+            _remoteIdleTimeout = open.getIdleTimeOut().intValue();
         }
     }
 
@@ -1217,6 +1236,7 @@ public class TransportImpl extends EndpointImpl
     public void handleClose(Close close, Binary payload, Integer channel)
     {
         _closeReceived = true;
+        _remoteIdleTimeout = 0;
         setRemoteState(EndpointState.CLOSED);
         if(_connectionEndpoint != null)
         {
@@ -1354,9 +1374,18 @@ public class TransportImpl extends EndpointImpl
     {
         _processingStarted = true;
 
+
         try {
             init();
+            int beforePosition = _inputProcessor.tail().position();
             _inputProcessor.process();
+            try {
+                _bytesInput += beforePosition - _inputProcessor.tail().position();
+            } catch(TransportException e) {
+                // This is because _inputProcessor.tail() can throw an exception if
+                // the tail has been closed.  It might be better to make process()
+                // return the number of bytes that have been processed.
+            }
         } catch (TransportException e) {
             _head_closed = true;
             throw e;
@@ -1389,6 +1418,7 @@ public class TransportImpl extends EndpointImpl
     {
         init();
         _outputProcessor.pop(bytes);
+        _bytesOutput += bytes;
 
         int p = pending();
         if (p < 0 && !postedHeadClosed) {
@@ -1396,6 +1426,76 @@ public class TransportImpl extends EndpointImpl
             postedHeadClosed = true;
             maybePostClosed();
         }
+    }
+
+    public void setIdleTimeout(int timeout) {
+        _localIdleTimeout = timeout;
+    }
+
+    public int getIdleTimeout() {
+        return _localIdleTimeout;
+    }
+
+    public int getRemoteIdleTimeout() {
+        return _remoteIdleTimeout / 2;
+    }
+
+    @Override
+    public long tick(long now)
+    {
+        long timeout = 0;
+
+        if (_localIdleTimeout > 0) {
+            if (_localIdleDeadline == 0 || _lastBytesInput != _bytesInput) {
+                _localIdleDeadline = now + _localIdleTimeout;
+                _lastBytesInput = _bytesInput;
+            } else if (_localIdleDeadline <= now) {
+                _localIdleDeadline = now + _localIdleTimeout;
+
+                if (_connectionEndpoint != null)
+                if (_connectionEndpoint != null &&
+                    _connectionEndpoint.getLocalState() != EndpointState.CLOSED) {
+                    ErrorCondition condition =
+                            new ErrorCondition(Symbol.getSymbol("amqp:resource-limit-exceeded"),
+                                                                "local-idle-timeout expired");
+                    _connectionEndpoint.setCondition(condition);
+                    _connectionEndpoint.setLocalState(EndpointState.CLOSED);
+
+                    if (!_isOpenSent) {
+                        if ((_sasl != null) && (!_sasl.isDone())) {
+                            _sasl.fail();
+                        }
+                        Open open = new Open();
+                        _isOpenSent = true;
+                        writeFrame(0, open, null, null);
+                    }
+                    if (!_isCloseSent) {
+                        Close close = new Close();
+                        close.setError(condition);
+                        _isCloseSent = true;
+                        writeFrame(0, close, null, null);
+                    }
+                }
+                close_tail();
+            }
+            timeout = _localIdleDeadline;
+        }
+
+        if (_remoteIdleTimeout != 0 && !_isCloseSent) {
+            if (_remoteIdleDeadline == 0 || _lastBytesOutput != _bytesOutput) {
+                _remoteIdleDeadline = now + (_remoteIdleTimeout / 2);
+                _lastBytesOutput = _bytesOutput;
+            } else if (_remoteIdleDeadline <= now) {
+                _remoteIdleDeadline = now + (_remoteIdleTimeout / 2);
+                if (pending() == 0) {
+                    writeFrame(0, null, null, null);
+                    _lastBytesOutput += pending();
+                }
+            }
+            timeout = Math.min(timeout == 0 ? _remoteIdleDeadline : timeout, _remoteIdleDeadline);
+        }
+
+        return timeout;
     }
 
     @Override

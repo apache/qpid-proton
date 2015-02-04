@@ -28,8 +28,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
 
+import org.apache.qpid.proton.Proton;
+import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
+import org.apache.qpid.proton.amqp.transport.FrameBody;
 import org.apache.qpid.proton.amqp.transport.Open;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
@@ -221,5 +226,99 @@ public class TransportImplTest
         {
             //expected, sasl must be initiated before processing begins
         }
+    }
+
+    private class MockTransportImpl extends TransportImpl
+    {
+        LinkedList<FrameBody> writes = new LinkedList<FrameBody>();
+        @Override
+        protected void writeFrame(int channel, FrameBody frameBody,
+                                  ByteBuffer payload, Runnable onPayloadTooLarge) {
+            super.writeFrame(channel, frameBody, payload, onPayloadTooLarge);
+            writes.addLast(frameBody);
+        }
+    }
+
+    @Test
+    public void testTickRemoteTimeout()
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        int timeout = 4000;
+        Open open = new Open();
+        open.setIdleTimeOut(new UnsignedInteger(4000));
+        TransportFrame openFrame = new TransportFrame(CHANNEL_ID, open, null);
+        transport.handleFrame(openFrame);
+        while(transport.pending() > 0) transport.pop(transport.head().remaining());
+
+        long deadline = transport.tick(0);
+        assertEquals("Expected to be returned a deadline of 2000",  2000, deadline);  // deadline = 4000 / 2
+
+        deadline = transport.tick(1000);    // Wait for less than the deadline with no data - get the same value
+        assertEquals("When the deadline hasn't been reached tick() should return the previous deadline",  2000, deadline);
+        assertEquals("When the deadline hasn't been reached tick() shouldn't write data", 0, transport.writes.size());
+
+        deadline = transport.tick(timeout/2); // Wait for the deadline - next deadline should be (4000/2)*2
+        assertEquals("When the deadline has been reached expected a new deadline to be returned 4000",  4000, deadline);
+        assertEquals("tick() should have written data", 1, transport.writes.size());
+        assertEquals("tick() should have written an empty frame", null, transport.writes.get(0));
+
+        transport.writeFrame(CHANNEL_ID, new Begin(), null, null);
+        while(transport.pending() > 0) transport.pop(transport.head().remaining());
+        int framesWrittenBeforeTick = transport.writes.size();
+        deadline = transport.tick(3000);
+        assertEquals("Writing data resets the deadline",  5000, deadline);
+        assertEquals("When the deadline is reset tick() shouldn't write an empty frame", 0, transport.writes.size() - framesWrittenBeforeTick);
+
+        transport.writeFrame(CHANNEL_ID, new Attach(), null, null);
+        assertTrue(transport.pending() > 0);
+        framesWrittenBeforeTick = transport.writes.size();
+        deadline = transport.tick(4000);
+        assertEquals("Having pending data does not reset the deadline",  5000, deadline);
+        assertEquals("Having pending data prevents tick() from sending an empty frame", 0, transport.writes.size() - framesWrittenBeforeTick);
+    }
+
+    @Test
+    public void testTickLocalTimeout()
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        transport.setIdleTimeout(4000);
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        transport.handleFrame(TRANSPORT_FRAME_OPEN);
+        connection.open();
+        while(transport.pending() > 0) transport.pop(transport.head().remaining());
+
+        long deadline = transport.tick(0);
+        assertEquals("Expected to be returned a deadline of 4000",  4000, deadline);
+
+        int framesWrittenBeforeTick = transport.writes.size();
+        deadline = transport.tick(1000);    // Wait for less than the deadline with no data - get the same value
+        assertEquals("When the deadline hasn't been reached tick() should return the previous deadline",  4000, deadline);
+        assertEquals("Reading data should never result in a frame being written", 0, transport.writes.size() - framesWrittenBeforeTick);
+
+        // Protocol header + empty frame
+        ByteBuffer data = ByteBuffer.wrap(new byte[] {'A', 'M', 'Q', 'P', 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x02, 0x00, 0x00, 0x00});
+        while (data.remaining() > 0)
+        {
+            int origLimit = data.limit();
+            int amount = Math.min(transport.tail().remaining(), data.remaining());
+            data.limit(data.position() + amount);
+            transport.tail().put(data);
+            data.limit(origLimit);
+            transport.process();
+        }
+        framesWrittenBeforeTick = transport.writes.size();
+        deadline = transport.tick(2000);
+        assertEquals("Reading data data resets the deadline",  6000, deadline);
+        assertEquals("Reading data should never result in a frame being written", 0, transport.writes.size() - framesWrittenBeforeTick);
+        assertEquals("Reading data before the deadline should keep the connection open", EndpointState.ACTIVE, connection.getLocalState());
+
+        framesWrittenBeforeTick = transport.writes.size();
+        deadline = transport.tick(7000);
+        assertEquals("Calling tick() after the deadline should result in the connection being closed", EndpointState.CLOSED, connection.getLocalState());
     }
 }
