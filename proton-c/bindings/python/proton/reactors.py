@@ -921,10 +921,15 @@ class Reactor(Wrapper):
     def _mark_handler(self, handler):
         handler.__dict__["on_error"] = self.on_error
 
-    def global_(self, handler):
+    def _get_global(self):
+        return _wrap_handler(self, pn_reactor_get_global_handler(self._impl))
+
+    def _set_global(self, handler):
         impl = _chandler(handler, self.on_error)
-        pn_reactor_global(self._impl, impl)
+        pn_reactor_set_global_handler(self._impl, impl)
         pn_decref(impl)
+
+    global_handler = property(_get_global, _set_global)
 
     def _get_timeout(self):
         return millis2secs(pn_reactor_get_timeout(self._impl))
@@ -940,9 +945,15 @@ class Reactor(Wrapper):
     def mark(self):
         pn_reactor_mark(self._impl)
 
-    @property
-    def handler(self):
-        return _wrap_handler(self, pn_reactor_handler(self._impl))
+    def _get_handler(self):
+        return _wrap_handler(self, pn_reactor_get_handler(self._impl))
+
+    def _set_handler(self, handler):
+        impl = _chandler(handler, self._on_error)
+        pn_reactor_set_handler(self._impl, impl)
+        pn_decref(impl)
+
+    handler = property(_get_handler, _set_handler)
 
     def run(self):
         self.timeout = 3.14159265359

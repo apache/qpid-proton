@@ -105,7 +105,7 @@ void expect(pn_list_t *events, ...) {
 static void test_reactor_handler(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_t *th = test_handler(reactor, events);
@@ -119,7 +119,7 @@ static void test_reactor_handler(void) {
 static void test_reactor_handler_free(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(handler, test_handler(reactor, events));
@@ -131,7 +131,7 @@ static void test_reactor_handler_free(void) {
 static void test_reactor_handler_run(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_t *th = test_handler(reactor, events);
@@ -146,7 +146,7 @@ static void test_reactor_handler_run(void) {
 static void test_reactor_handler_run_free(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(handler, test_handler(reactor, events));
@@ -163,7 +163,7 @@ static void test_reactor_connection(void) {
   pn_handler_t *tch = test_handler(reactor, cevents);
   pn_connection_t *connection = pn_reactor_connection(reactor, tch);
   assert(connection);
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *revents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, revents));
   pn_reactor_run(reactor);
@@ -210,7 +210,7 @@ static pn_handler_t *tra_handler(pn_acceptor_t *acceptor) {
 static void test_reactor_acceptor_run(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   assert(root);
   pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", NULL);
   assert(acceptor);
@@ -411,7 +411,7 @@ static void test_reactor_transfer(int count, int window) {
 
 static void test_reactor_schedule(void) {
   pn_reactor_t *reactor = pn_reactor();
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, events));
   pn_reactor_schedule(reactor, 0, NULL);
@@ -424,7 +424,7 @@ static void test_reactor_schedule(void) {
 
 static void test_reactor_schedule_handler(void) {
   pn_reactor_t *reactor = pn_reactor();
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_list_t *tevents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, events));

@@ -3564,6 +3564,7 @@ class WrappedHandler(Wrapper):
       on_error(info)
 
   def add(self, handler):
+    if handler is None: return
     impl = _chandler(handler, self._on_error)
     pn_handler_add(self._impl, impl)
     pn_decref(impl)

@@ -123,16 +123,28 @@ void pn_reactor_free(pn_reactor_t *reactor) {
   }
 }
 
-void pn_reactor_global(pn_reactor_t *reactor, pn_handler_t *handler) {
+pn_handler_t *pn_reactor_get_global_handler(pn_reactor_t *reactor) {
+  assert(reactor);
+  return reactor->global;
+}
+
+void pn_reactor_set_global_handler(pn_reactor_t *reactor, pn_handler_t *handler) {
   assert(reactor);
   pn_decref(reactor->global);
   reactor->global = handler;
   pn_incref(reactor->global);
 }
 
-pn_handler_t *pn_reactor_handler(pn_reactor_t *reactor) {
+pn_handler_t *pn_reactor_get_handler(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->handler;
+}
+
+void pn_reactor_set_handler(pn_reactor_t *reactor, pn_handler_t *handler) {
+  assert(reactor);
+  pn_decref(reactor->handler);
+  reactor->handler = handler;
+  pn_incref(reactor->handler);
 }
 
 pn_io_t *pn_reactor_io(pn_reactor_t *reactor) {

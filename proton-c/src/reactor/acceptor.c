@@ -35,7 +35,7 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   char name[1024];
   pn_socket_t sock = pn_accept(pn_reactor_io(reactor), pn_selectable_get_fd(sel), name, 1024);
   pn_handler_t *handler = (pn_handler_t *) pn_record_get(pn_selectable_attachments(sel), PNI_ACCEPTOR_HANDLER);
-  if (!handler) { handler = pn_reactor_handler(reactor); }
+  if (!handler) { handler = pn_reactor_get_handler(reactor); }
   pn_connection_t *conn = pn_reactor_connection(reactor, handler);
   pn_transport_t *trans = pn_transport();
   pn_transport_set_server(trans);
