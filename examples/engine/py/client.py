@@ -21,7 +21,7 @@
 import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import Container
+from proton.reactors import Container, DynamicNodeProperties
 
 class Client(MessagingHandler):
     def __init__(self, url, requests):
@@ -30,8 +30,8 @@ class Client(MessagingHandler):
         self.requests = requests
 
     def on_start(self, event):
-        self.sender = event.container.create_sender(self.url)
-        self.receiver = event.container.create_receiver(self.sender.connection, None, dynamic=True)
+        self.sender = event.container.create_sender(self.url, options=DynamicNodeProperties({"foo":u"bar"}))
+        self.receiver = event.container.create_receiver(self.sender.connection, None, dynamic=True, options=DynamicNodeProperties({"x-opt-qd.address":u"qmf.default.direct"}))
 
     def next_request(self):
         if self.receiver.remote_source.address:

@@ -587,6 +587,21 @@ class ReceiverOption(LinkOption):
     def apply(self, receiver): pass
     def test(self, link): return link.is_receiver
 
+class DynamicNodeProperties(LinkOption):
+    def __init__(self, props={}):
+        self.properties = {}
+        for k in props:
+            if isinstance(k, symbol):
+                self.properties[k] = props[k]
+            else:
+                self.properties[symbol(k)] = props[k]
+
+    def apply(self, link):
+        if link.is_receiver:
+            link.source.properties.put_dict(self.properties)
+        else:
+            link.target.properties.put_dict(self.properties)
+
 class Filter(ReceiverOption):
     def __init__(self, filter_set={}):
         self.filter_set = filter_set
