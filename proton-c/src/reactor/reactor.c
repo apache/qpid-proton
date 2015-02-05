@@ -356,6 +356,11 @@ void pn_reactor_yield(pn_reactor_t *reactor) {
   reactor->yield = true;
 }
 
+bool pn_reactor_quiesced(pn_reactor_t *reactor) {
+  assert(reactor);
+  return !pn_collector_peek(reactor->collector);
+}
+
 bool pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
   pn_reactor_mark(reactor);
@@ -369,11 +374,13 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         return true;
       }
       reactor->yield = false;
+      pn_incref(event);
       pn_handler_dispatch(reactor->global, event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
       pn_handler_dispatch(handler, event);
       pni_reactor_dispatch_post(reactor, event);
       previous = reactor->previous = pn_event_type(event);
+      pn_decref(event);
       pn_collector_pop(reactor->collector);
     } else {
       if (pni_reactor_more(reactor)) {
@@ -419,6 +426,7 @@ void pn_reactor_start(pn_reactor_t *reactor) {
 void pn_reactor_stop(pn_reactor_t *reactor) {
   assert(reactor);
   pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
+  // XXX: should consider removing this fron stop to avoid reentrance
   pn_reactor_process(reactor);
   pn_collector_release(reactor->collector);
 }

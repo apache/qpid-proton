@@ -970,6 +970,10 @@ class Reactor(Wrapper):
     def start(self):
         pn_reactor_start(self._impl)
 
+    @property
+    def quiesced(self):
+        return pn_reactor_quiesced(self._impl)
+
     def process(self):
         result = pn_reactor_process(self._impl)
         if self.errors:

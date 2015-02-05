@@ -3500,7 +3500,11 @@ class Event(Wrapper, EventBase):
 
   @property
   def clazz(self):
-    return pn_class_name(pn_event_class(self._impl))
+    cls = pn_event_class(self._impl)
+    if cls:
+      return pn_class_name(cls)
+    else:
+      return None
 
   @property
   def context(self):
