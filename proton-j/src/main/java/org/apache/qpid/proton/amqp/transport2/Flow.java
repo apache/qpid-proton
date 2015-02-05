@@ -24,13 +24,18 @@ package org.apache.qpid.proton.amqp.transport2;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.codec2.PerformativeFactory;
+import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 
 public class Flow implements Encodable
 {
+    public final static long DESCRIPTOR_LONG = 0x0000000000000013L;
+
+    public final static String DESCRIPTOR_STRING = "amqp:flow:list";
+
     private long _nextIncomingId;
 
     private long _incomingWindow;
@@ -176,9 +181,8 @@ public class Flow implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(0x0000000000000013L);
+        encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        // unsigned int ?
         encoder.putLong(_nextIncomingId);
         encoder.putLong(_incomingWindow);
         encoder.putLong(_nextOutgoingId);
@@ -197,23 +201,16 @@ public class Flow implements Encodable
         }
         if (_properties != null && _properties.size() > 0)
         {
-            encoder.putMap();
-            // ..... handle map
-            encoder.end();
+            CodecHelper.encodeMap(encoder, _properties);
         }
         encoder.end();
     }
 
-    public static final class Factory implements PerformativeFactory
+    public static final class Factory implements DescribedTypeFactory
     {
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-
-            if (l.size() <= 3)
-            {
-                throw new DecodeException("The outgoing-window field cannot be omitted");
-            }
 
             Flow flow = new Flow();
 
