@@ -80,7 +80,9 @@ class Fetcher(MessagingHandler):
         self.incoming.append((event.message, event.delivery))
 
     def on_link_error(self, event):
-        raise LinkDetached(event.link)
+        if event.link.state & Endpoint.LOCAL_ACTIVE:
+            event.link.close()
+            raise LinkDetached(event.link)
 
     def on_connection_error(self, event):
         raise ConnectionClosed(event.connection)
