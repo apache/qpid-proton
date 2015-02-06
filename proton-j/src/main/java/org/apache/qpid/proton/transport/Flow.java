@@ -36,21 +36,21 @@ public final class Flow implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:flow:list";
 
-    private long _nextIncomingId;
+    private int _nextIncomingId;
 
-    private long _incomingWindow;
+    private int _incomingWindow;
 
-    private long _nextOutgoingId;
+    private int _nextOutgoingId;
 
-    private long _outgoingWindow;
+    private int _outgoingWindow;
 
-    private long _handle;
+    private int _handle;
 
-    private long _deliveryCount;
+    private int _deliveryCount;
 
-    private long _linkCredit;
+    private int _linkCredit;
 
-    private long _available;
+    private int _available;
 
     private boolean _drain;
 
@@ -58,82 +58,82 @@ public final class Flow implements Encodable
 
     private Map<Object, Object> _properties;
 
-    public long getNextIncomingId()
+    public int getNextIncomingId()
     {
         return _nextIncomingId;
     }
 
-    public void setNextIncomingId(long nextIncomingId)
+    public void setNextIncomingId(int nextIncomingId)
     {
         _nextIncomingId = nextIncomingId;
     }
 
-    public long getIncomingWindow()
+    public int getIncomingWindow()
     {
         return _incomingWindow;
     }
 
-    public void setIncomingWindow(long incomingWindow)
+    public void setIncomingWindow(int incomingWindow)
     {
         _incomingWindow = incomingWindow;
     }
 
-    public long getNextOutgoingId()
+    public int getNextOutgoingId()
     {
         return _nextOutgoingId;
     }
 
-    public void setNextOutgoingId(long nextOutgoingId)
+    public void setNextOutgoingId(int nextOutgoingId)
     {
         _nextOutgoingId = nextOutgoingId;
     }
 
-    public long getOutgoingWindow()
+    public int getOutgoingWindow()
     {
         return _outgoingWindow;
     }
 
-    public void setOutgoingWindow(long outgoingWindow)
+    public void setOutgoingWindow(int outgoingWindow)
     {
         _outgoingWindow = outgoingWindow;
     }
 
-    public long getHandle()
+    public int getHandle()
     {
         return _handle;
     }
 
-    public void setHandle(long handle)
+    public void setHandle(int handle)
     {
         _handle = handle;
     }
 
-    public long getDeliveryCount()
+    public int getDeliveryCount()
     {
         return _deliveryCount;
     }
 
-    public void setDeliveryCount(long deliveryCount)
+    public void setDeliveryCount(int deliveryCount)
     {
         _deliveryCount = deliveryCount;
     }
 
-    public long getLinkCredit()
+    public int getLinkCredit()
     {
         return _linkCredit;
     }
 
-    public void setLinkCredit(long linkCredit)
+    public void setLinkCredit(int linkCredit)
     {
         _linkCredit = linkCredit;
     }
 
-    public long getAvailable()
+    public int getAvailable()
     {
         return _available;
     }
 
-    public void setAvailable(long available)
+    public void setAvailable(int available)
     {
         _available = available;
     }
@@ -174,14 +174,14 @@ public final class Flow implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putLong(_nextIncomingId);
-        encoder.putLong(_incomingWindow);
-        encoder.putLong(_nextOutgoingId);
-        encoder.putLong(_outgoingWindow);
-        encoder.putLong(_handle);
-        encoder.putLong(_deliveryCount);
-        encoder.putLong(_linkCredit);
-        encoder.putLong(_available);
+        encoder.putUint(_nextIncomingId);
+        encoder.putUint(_incomingWindow);
+        encoder.putUint(_nextOutgoingId);
+        encoder.putUint(_outgoingWindow);
+        encoder.putUint(_handle);
+        encoder.putUint(_deliveryCount);
+        encoder.putUint(_linkCredit);
+        encoder.putUint(_available);
         encoder.putBoolean(_drain);
         encoder.putBoolean(_echo);
         CodecHelper.encodeMap(encoder, _properties);
@@ -207,21 +207,21 @@ public final class Flow implements Encodable
             case 2:
                 flow.setDrain(l.get(8) == null ? false : (Boolean) l.get(8));
             case 3:
-                flow.setAvailable((long) l.get(7));
+                flow.setAvailable((int) l.get(7));
             case 4:
-                flow.setLinkCredit((long) l.get(6));
+                flow.setLinkCredit((int) l.get(6));
             case 5:
-                flow.setDeliveryCount((long) l.get(5));
+                flow.setDeliveryCount((int) l.get(5));
             case 6:
-                flow.setHandle((long) l.get(4));
+                flow.setHandle((int) l.get(4));
             case 7:
-                flow.setOutgoingWindow((long) l.get(3));
+                flow.setOutgoingWindow((int) l.get(3));
             case 8:
-                flow.setNextOutgoingId((long) l.get(2));
+                flow.setNextOutgoingId((int) l.get(2));
             case 9:
-                flow.setIncomingWindow((long) l.get(1));
+                flow.setIncomingWindow((int) l.get(1));
             case 10:
-                flow.setNextIncomingId((long) l.get(0));
+                flow.setNextIncomingId((int) l.get(0));
             }
 
             return flow;

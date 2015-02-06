@@ -97,5 +97,4 @@ public class ByteArrayEncoder extends AbstractEncoder
         System.arraycopy(bytes, offset, this.bytes, this.offset, size);
         this.offset += size;
     }
-
 }

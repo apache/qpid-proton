@@ -20,10 +20,9 @@
  */
 package org.apache.qpid.proton.codec2;
 
-
 /**
  * Encoder
- *
+ * 
  */
 
 public interface Encoder
@@ -36,6 +35,8 @@ public interface Encoder
     void putByte(byte b);
 
     void putShort(short s);
+
+    void putUshort(int i);
 
     void putInt(int i);
 

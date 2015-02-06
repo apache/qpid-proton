@@ -39,11 +39,11 @@ public final class Begin implements Encodable
 
     private int _remoteChannel;
 
-    private long _nextOutgoingId;
+    private int _nextOutgoingId;
 
-    private long _incomingWindow;
+    private int _incomingWindow;
 
-    private long _outgoingWindow;
+    private int _outgoingWindow;
 
     private int _handleMax = 0xffffffff;
 
@@ -68,27 +68,27 @@ public final class Begin implements Encodable
         return _nextOutgoingId;
     }
 
-    public void setNextOutgoingId(long nextOutgoingId)
+    public void setNextOutgoingId(int nextOutgoingId)
     {
         _nextOutgoingId = nextOutgoingId;
     }
 
-    public long getIncomingWindow()
+    public int getIncomingWindow()
     {
         return _incomingWindow;
     }
 
-    public void setIncomingWindow(long incomingWindow)
+    public void setIncomingWindow(int incomingWindow)
     {
         _incomingWindow = incomingWindow;
     }
 
-    public long getOutgoingWindow()
+    public int getOutgoingWindow()
     {
         return _outgoingWindow;
     }
 
-    public void setOutgoingWindow(long outgoingWindow)
+    public void setOutgoingWindow(int outgoingWindow)
     {
         _outgoingWindow = outgoingWindow;
     }
@@ -139,11 +139,11 @@ public final class Begin implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putInt(_remoteChannel);
-        encoder.putLong(_nextOutgoingId);
-        encoder.putLong(_incomingWindow);
-        encoder.putLong(_outgoingWindow);
-        encoder.putLong(_handleMax);
+        encoder.putUshort(_remoteChannel);
+        encoder.putUint(_nextOutgoingId);
+        encoder.putUint(_incomingWindow);
+        encoder.putUint(_outgoingWindow);
+        encoder.putUint(_handleMax);
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
         CodecHelper.encodeMap(encoder, _properties);
@@ -186,11 +186,11 @@ public final class Begin implements Encodable
             case 3:
                 begin.setHandleMax(l.get(4) == null ? 0xffffffff : (int) l.get(4));
             case 4:
-                begin.setOutgoingWindow((long) l.get(3));
+                begin.setOutgoingWindow((int) l.get(3));
             case 5:
-                begin.setIncomingWindow((long) l.get(2));
+                begin.setIncomingWindow((int) l.get(2));
             case 6:
-                begin.setNextOutgoingId((long) l.get(1));
+                begin.setNextOutgoingId((int) l.get(1));
             case 7:
                 begin.setRemoteChannel((int) l.get(0));
             }
