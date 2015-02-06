@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.amqp.transport2;
+package org.apache.qpid.proton.transport;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,7 +30,6 @@ import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.codec2.Type;
 
 public final class Open implements Encodable
 {
@@ -164,20 +163,6 @@ public final class Open implements Encodable
     }
 
     @Override
-    public String toString()
-    {
-        return "Open{" + " containerId='" + _containerId + '\'' + ", hostname='" + _hostname + '\'' + ", maxFrameSize="
-                + _maxFrameSize + ", channelMax=" + _channelMax + ", idleTimeOut=" + _idleTimeOut
-                + ", outgoingLocales=" + (_outgoingLocales == null ? null : Arrays.asList(_outgoingLocales))
-                + ", incomingLocales=" + (_incomingLocales == null ? null : Arrays.asList(_incomingLocales))
-                + ", offeredCapabilities="
-                + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities))
-                + ", desiredCapabilities="
-                + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) + ", properties="
-                + _properties + '}';
-    }
-
-    @Override
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
@@ -188,7 +173,6 @@ public final class Open implements Encodable
         encoder.putUint(_maxFrameSize);
         encoder.putUint(_channelMax);
         encoder.putLong(_idleTimeOut);
-        encoder.putArray(Type.STRING);
         CodecHelper.encodeSymbolArray(encoder, _outgoingLocales);
         CodecHelper.encodeSymbolArray(encoder, _incomingLocales);
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
@@ -198,6 +182,7 @@ public final class Open implements Encodable
 
     public static final class Factory implements DescribedTypeFactory
     {
+        @SuppressWarnings("unchecked")
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
@@ -207,7 +192,7 @@ public final class Open implements Encodable
             switch (10 - l.size())
             {
             case 0:
-                open.setProperties((Map) l.get(9));
+                open.setProperties((Map<Object, Object>) l.get(9));
             case 1:
                 Object val1 = l.get(8);
                 if (val1 == null || val1.getClass().isArray())
@@ -262,5 +247,22 @@ public final class Open implements Encodable
 
             return open;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Open{" +
+               " containerId='" + _containerId + '\'' +
+               ", hostname='" + _hostname + '\'' +
+               ", maxFrameSize=" + _maxFrameSize +
+               ", channelMax=" + _channelMax +
+               ", idleTimeOut=" + _idleTimeOut +
+               ", outgoingLocales=" + (_outgoingLocales == null ? null : Arrays.asList(_outgoingLocales)) +
+               ", incomingLocales=" + (_incomingLocales == null ? null : Arrays.asList(_incomingLocales)) +
+               ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
+               ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
+               ", properties=" + _properties +
+               '}';
     }
 }
