@@ -24,18 +24,22 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * AbstractDecoder
- *
+ * 
  */
 
 public abstract class AbstractDecoder implements Decoder
 {
 
     int start;
+
     int offset;
+
     int limit;
 
     private int code;
+
     private int size;
+
     private int count;
 
     abstract int readF8(int offset);
@@ -50,7 +54,8 @@ public abstract class AbstractDecoder implements Decoder
 
     public void decode(DataHandler handler)
     {
-        while (offset < limit) {
+        while (offset < limit)
+        {
             decodeType(handler);
             decodeValue(handler);
         }
@@ -59,7 +64,8 @@ public abstract class AbstractDecoder implements Decoder
     private void decodeType(DataHandler handler)
     {
         code = readF8(offset++);
-        if (code == 0) {
+        if (code == 0)
+        {
             handler.onDescriptor(this);
             decodeType(handler);
             decodeValue(handler);
@@ -71,7 +77,8 @@ public abstract class AbstractDecoder implements Decoder
     {
         int copy;
 
-        switch (code) {
+        switch (code)
+        {
         case Encodings.NULL:
             handler.onNull(this);
             offset += Widths.NULL;
@@ -263,35 +270,43 @@ public abstract class AbstractDecoder implements Decoder
         }
     }
 
-    private void decodeCompound(DataHandler handler) {
+    private void decodeCompound(DataHandler handler)
+    {
         int copy = count;
-        for (int i = 0; i < copy; i++) {
+        for (int i = 0; i < copy; i++)
+        {
             decodeType(handler);
             decodeValue(handler);
         }
     }
 
-    private void decodeArray(DataHandler handler) {
+    private void decodeArray(DataHandler handler)
+    {
         int copy = count;
         decodeType(handler);
-        for (int i = 0; i < copy; i++) {
+        for (int i = 0; i < copy; i++)
+        {
             decodeValue(handler);
         }
     }
 
     @Override
-    public Type getType() {
+    public Type getType()
+    {
         return Type.typeOf(code);
     }
 
     @Override
-    public int getSize() {
+    public int getSize()
+    {
         return count;
     }
 
     @Override
-    public int getInt() {
-        switch (code) {
+    public int getInt()
+    {
+        switch (code)
+        {
         case Encodings.NULL:
         case Encodings.FALSE:
             return 0;
@@ -326,8 +341,10 @@ public abstract class AbstractDecoder implements Decoder
     }
 
     @Override
-    public long getLong() {
-        switch (code) {
+    public long getLong()
+    {
+        switch (code)
+        {
         case Encodings.NULL:
         case Encodings.FALSE:
             return 0;
@@ -362,8 +379,10 @@ public abstract class AbstractDecoder implements Decoder
     }
 
     @Override
-    public float getFloat() {
-        switch (code) {
+    public float getFloat()
+    {
+        switch (code)
+        {
         case Encodings.NULL:
         case Encodings.FALSE:
             return 0;
@@ -398,8 +417,10 @@ public abstract class AbstractDecoder implements Decoder
     }
 
     @Override
-    public double getDouble() {
-        switch (code) {
+    public double getDouble()
+    {
+        switch (code)
+        {
         case Encodings.NULL:
         case Encodings.FALSE:
             return 0;
@@ -434,8 +455,10 @@ public abstract class AbstractDecoder implements Decoder
     }
 
     @Override
-    public String getString() {
-        switch (code) {
+    public String getString()
+    {
+        switch (code)
+        {
         case Encodings.SYM32:
         case Encodings.STR32:
             return new String(readBytes(offset, size), StandardCharsets.UTF_8);
@@ -445,23 +468,54 @@ public abstract class AbstractDecoder implements Decoder
     }
 
     @Override
-    public int getIntBits() {
+    public int getIntBits()
+    {
         return readF32(offset);
     }
 
     @Override
-    public long getLongBits() {
+    public long getLongBits()
+    {
         return readF64(offset);
     }
 
     @Override
-    public long getHiBits() {
+    public long getHiBits()
+    {
         return readF64(offset);
     }
 
     @Override
-    public long getLoBits() {
+    public long getLoBits()
+    {
         return readF64(offset + 8);
     }
 
+    @Override
+    public byte getByte()
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public short getShort()
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public boolean getBoolean()
+    {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public char getChar()
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 }

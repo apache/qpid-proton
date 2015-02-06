@@ -76,5 +76,4 @@ public final class ByteArrayDecoder extends AbstractDecoder
         System.arraycopy(bytes, offset, result, 0, size);
         return result;
     }
-
 }
