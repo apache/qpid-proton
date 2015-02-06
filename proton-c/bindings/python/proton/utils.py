@@ -181,7 +181,7 @@ class BlockingConnection(Handler):
                   msg="Opening connection")
 
     def create_sender(self, address, handler=None, name=None, options=None):
-        return BlockingSender(self, self.container.create_sender(self.conn, utf8(address), name=utf8(name), handler=handler))
+        return BlockingSender(self, self.container.create_sender(self.conn, utf8(address), name=utf8(name), handler=handler, options=options))
 
     def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None, options=None):
         prefetch = credit
@@ -192,7 +192,7 @@ class BlockingConnection(Handler):
         else:
             fetcher = Fetcher(credit)
         return BlockingReceiver(
-            self, self.container.create_receiver(self.conn, utf8(address), name=utf8(name), dynamic=dynamic, handler=handler or fetcher), fetcher, credit=prefetch)
+            self, self.container.create_receiver(self.conn, utf8(address), name=utf8(name), dynamic=dynamic, handler=handler or fetcher, options=options), fetcher, credit=prefetch)
 
     def close(self):
         self.conn.close()
