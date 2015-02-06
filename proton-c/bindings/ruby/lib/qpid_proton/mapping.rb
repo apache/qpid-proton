@@ -145,11 +145,15 @@ module Qpid # :nodoc:
     MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
 
     class << MAP # :nodoc:
-      def put(data, map)
+      def put(data, map, options = {})
         data.put_map
         data.enter
         map.each_pair do |key, value|
-          Mapping.for_class(key.class).put(data, key)
+          if options[:keys] == :SYMBOL
+            SYMBOL.put(data, key)
+          else
+            Mapping.for_class(key.class).put(data, key)
+          end
 
           if value.nil?
             data.null

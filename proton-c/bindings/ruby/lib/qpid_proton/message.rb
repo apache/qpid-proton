@@ -110,7 +110,7 @@ module Qpid # :nodoc:
         annts.clear
         if !@annotations.nil?
           mapping = Qpid::Proton::Mapping.for_class(@annotations.class)
-          mapping.put(annts, @annotations)
+          mapping.put(annts, @annotations, :keys => :SYMBOL)
         end
         body = Qpid::Proton::Data.new(Cproton::pn_message_body(@impl))
         body.clear
