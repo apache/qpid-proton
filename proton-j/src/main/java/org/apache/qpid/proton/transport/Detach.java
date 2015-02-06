@@ -76,7 +76,7 @@ public final class Detach implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putInt(_handle);
+        encoder.putUint(_handle);
         encoder.putBoolean(_closed);
         _error.encode(encoder);
         encoder.end();

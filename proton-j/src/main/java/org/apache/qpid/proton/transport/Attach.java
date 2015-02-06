@@ -221,16 +221,30 @@ public final class Attach implements Encodable
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
         encoder.putString(_name);
-        encoder.putLong(_handle);
+        encoder.putUint(_handle);
         encoder.putBoolean(_role.getValue());
         encoder.putUbyte(_sndSettleMode.getValue());
         encoder.putUbyte(_rcvSettleMode.getValue());
-        _source.encode(encoder);
-        _target.encode(encoder);
+        if (_source == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            _source.encode(encoder);
+        }
+        if (_target == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            _target.encode(encoder);
+        }
         CodecHelper.encodeMap(encoder, _unsettled);
         encoder.putBoolean(_incompleteUnsettled);
-        encoder.putLong(_initialDeliveryCount);
-        encoder.putLong(_maxMessageSize);
+        encoder.putUint(_initialDeliveryCount);
+        encoder.putUlong(_maxMessageSize);
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
         CodecHelper.encodeMap(encoder, _properties);

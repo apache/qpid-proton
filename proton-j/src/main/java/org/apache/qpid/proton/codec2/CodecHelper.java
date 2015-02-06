@@ -34,6 +34,11 @@ public class CodecHelper
 {
     public static void encodeSymbolArray(Encoder encoder, String[] array)
     {
+        if (array == null)
+        {
+            encoder.putNull();
+            return;
+        }
         encoder.putArray(Type.SYMBOL);
         for (String str : array)
         {
@@ -44,6 +49,11 @@ public class CodecHelper
 
     public static void encodeMap(Encoder encoder, Map<Object, Object> map)
     {
+        if (map == null)
+        {
+            encoder.putNull();
+            return;
+        }
         encoder.putMap();
         for (Object key : map.keySet())
         {
@@ -55,6 +65,11 @@ public class CodecHelper
 
     public static void encodeList(Encoder encoder, List<Object> list)
     {
+        if (list == null)
+        {
+            encoder.putNull();
+            return;
+        }
         encoder.putList();
         for (Object listEntry : (List<Object>) list)
         {
@@ -63,9 +78,14 @@ public class CodecHelper
         encoder.end();
     }
 
+    @SuppressWarnings("unchecked")
     public static void encodeObject(final Encoder encoder, final Object o)
     {
-        if (o.getClass().isPrimitive())
+        if (o == null)
+        {
+            encoder.putNull();
+        }
+        else if (o.getClass().isPrimitive())
         {
             if (o instanceof Byte)
             {
@@ -192,13 +212,14 @@ public class CodecHelper
             }
             else
             {
+                // TODO
                 // handle arrays of strings, lists, maps ..etc
             }
         }
         else if (o instanceof List)
         {
             encoder.putList();
-            for (Object listEntry : (List) o)
+            for (Object listEntry : (List<Object>) o)
             {
                 encodeObject(encoder, listEntry);
             }
@@ -208,7 +229,7 @@ public class CodecHelper
         else if (o instanceof Map)
         {
             encoder.putMap();
-            Map map = (Map) o;
+            Map<Object, Object> map = (Map<Object, Object>) o;
             for (Object k : map.keySet())
             {
                 encodeObject(encoder, k);

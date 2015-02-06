@@ -357,4 +357,10 @@ public abstract class AbstractEncoder implements Encoder
         increment();
     }
 
+
+    @Override
+    public void putUshort(int i)
+    {
+        // TODO Auto-generated method stub        
+    }
 }
