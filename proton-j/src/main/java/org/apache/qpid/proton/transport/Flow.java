@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.amqp.transport2;
+package org.apache.qpid.proton.transport;
 
 import java.util.List;
 import java.util.Map;
@@ -30,7 +30,7 @@ import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 
-public class Flow implements Encodable
+public final class Flow implements Encodable
 {
     public final static long DESCRIPTOR_LONG = 0x0000000000000013L;
 
@@ -169,15 +169,6 @@ public class Flow implements Encodable
     }
 
     @Override
-    public String toString()
-    {
-        return "Flow{" + "nextIncomingId=" + _nextIncomingId + ", incomingWindow=" + _incomingWindow
-                + ", nextOutgoingId=" + _nextOutgoingId + ", outgoingWindow=" + _outgoingWindow + ", handle=" + _handle
-                + ", deliveryCount=" + _deliveryCount + ", linkCredit=" + _linkCredit + ", available=" + _available
-                + ", drain=" + _drain + ", echo=" + _echo + ", properties=" + _properties + '}';
-    }
-
-    @Override
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
@@ -191,23 +182,15 @@ public class Flow implements Encodable
         encoder.putLong(_deliveryCount);
         encoder.putLong(_linkCredit);
         encoder.putLong(_available);
-        if (_drain)
-        {
-            encoder.putBoolean(true);
-        }
-        if (_echo)
-        {
-            encoder.putBoolean(true);
-        }
-        if (_properties != null && _properties.size() > 0)
-        {
-            CodecHelper.encodeMap(encoder, _properties);
-        }
+        encoder.putBoolean(_drain);
+        encoder.putBoolean(_echo);
+        CodecHelper.encodeMap(encoder, _properties);
         encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
     {
+        @SuppressWarnings("unchecked")
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
@@ -224,24 +207,42 @@ public class Flow implements Encodable
             case 2:
                 flow.setDrain(l.get(8) == null ? false : (Boolean) l.get(8));
             case 3:
-                flow.setAvailable((int) l.get(7));
+                flow.setAvailable((long) l.get(7));
             case 4:
-                flow.setLinkCredit((int) l.get(6));
+                flow.setLinkCredit((long) l.get(6));
             case 5:
-                flow.setDeliveryCount((int) l.get(5));
+                flow.setDeliveryCount((long) l.get(5));
             case 6:
-                flow.setHandle((int) l.get(4));
+                flow.setHandle((long) l.get(4));
             case 7:
-                flow.setOutgoingWindow((int) l.get(3));
+                flow.setOutgoingWindow((long) l.get(3));
             case 8:
-                flow.setNextOutgoingId((int) l.get(2));
+                flow.setNextOutgoingId((long) l.get(2));
             case 9:
-                flow.setIncomingWindow((int) l.get(1));
+                flow.setIncomingWindow((long) l.get(1));
             case 10:
-                flow.setNextIncomingId((int) l.get(0));
+                flow.setNextIncomingId((long) l.get(0));
             }
 
             return flow;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Flow{" +
+               "nextIncomingId=" + _nextIncomingId +
+               ", incomingWindow=" + _incomingWindow +
+               ", nextOutgoingId=" + _nextOutgoingId +
+               ", outgoingWindow=" + _outgoingWindow +
+               ", handle=" + _handle +
+               ", deliveryCount=" + _deliveryCount +
+               ", linkCredit=" + _linkCredit +
+               ", available=" + _available +
+               ", drain=" + _drain +
+               ", echo=" + _echo +
+               ", properties=" + _properties +
+               '}';
     }
 }
