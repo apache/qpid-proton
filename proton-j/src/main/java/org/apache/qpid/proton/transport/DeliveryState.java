@@ -1,7 +1,3 @@
-package org.apache.qpid.proton.transport;
-
-import org.apache.qpid.proton.codec2.Encodable;
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,7 +18,18 @@ import org.apache.qpid.proton.codec2.Encodable;
  * under the License.
  *
  */
+package org.apache.qpid.proton.transport;
 
-public interface Outcome extends Encodable
+import org.apache.qpid.proton.codec2.Encodable;
+
+/**
+ * Describes the state of a delivery at a link end-point.
+ * 
+ * Note that the the sender is the owner of the state. The receiver merely
+ * influences the state. TODO clarify the concept of ownership? how is link
+ * recovery involved?
+ */
+public interface DeliveryState extends Encodable
 {
+
 }

@@ -28,37 +28,13 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class Detach implements Encodable
+public final class End implements Encodable
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000016L;
+    public final static long DESCRIPTOR_LONG = 0x0000000000000017L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:detach:list";
-
-    private int _handle;
-
-    private boolean _closed;
+    public final static String DESCRIPTOR_STRING = "amqp:end:list";
 
     private ErrorCondition _error;
-
-    public int getHandle()
-    {
-        return _handle;
-    }
-
-    public void setHandle(int handle)
-    {
-        _handle = handle;
-    }
-
-    public boolean getClosed()
-    {
-        return _closed;
-    }
-
-    public void setClosed(boolean closed)
-    {
-        _closed = closed;
-    }
 
     public ErrorCondition getError()
     {
@@ -76,8 +52,6 @@ public final class Detach implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putUint(_handle);
-        encoder.putBoolean(_closed);
         if (_error == null)
         {
             encoder.putNull();
@@ -95,26 +69,20 @@ public final class Detach implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            Detach detach = new Detach();
+            End end = new End();
 
-            switch (3 - l.size())
+            if (!l.isEmpty())
             {
-
-            case 0:
-                detach.setError((ErrorCondition) l.get(2));
-            case 1:
-                detach.setClosed(l.get(1) == null ? false : (boolean) l.get(1));
-            case 2:
-                detach.setHandle((int) l.get(0));
+                end.setError((ErrorCondition) l.get(0));
             }
 
-            return detach;
+            return end;
         }
     }
 
     @Override
     public String toString()
     {
-        return "Detach{" + "handle=" + _handle + ", closed=" + _closed + ", error=" + _error + '}';
+        return "End{" + "error=" + _error + '}';
     }
 }

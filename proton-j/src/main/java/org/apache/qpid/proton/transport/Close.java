@@ -52,7 +52,14 @@ public final class Close implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        _error.encode(encoder);
+        if (_error == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            _error.encode(encoder);
+        }
         encoder.end();
     }
 
