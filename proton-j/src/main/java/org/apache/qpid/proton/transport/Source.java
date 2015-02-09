@@ -98,7 +98,14 @@ public final class Source extends Terminus implements Encodable
         CodecHelper.encodeMap(encoder, _dynamicNodeProperties);
         encoder.putSymbol(_distributionMode);
         CodecHelper.encodeMap(encoder, _filter);
-        // Handle default Outcomde
+        if (_defaultOutcome == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            _defaultOutcome.encode(encoder);
+        }
         CodecHelper.encodeSymbolArray(encoder, _outcomes);
         CodecHelper.encodeSymbolArray(encoder, _capabilities);
         encoder.end();
