@@ -30,7 +30,6 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
-import org.apache.qpid.proton.amqp.security.SaslCode;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
@@ -59,7 +58,6 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
-import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
@@ -410,7 +408,7 @@ public class TransportImpl extends EndpointImpl
                         UnsignedInteger localHandle = transportLink.getLocalHandle();
                         transportLink.clearLocalHandle();
                         transportSession.freeLocalHandle(localHandle);
-
+                        transportLink.clearSentAttach();
 
                         Detach detach = new Detach();
                         detach.setHandle(localHandle);
@@ -751,6 +749,7 @@ public class TransportImpl extends EndpointImpl
                             }
 
                             writeFrame(transportSession.getLocalChannel(), attach, null, null);
+                            transportLink.clearDetachReceived();
                             transportLink.sentAttach();
                         }
                     }
