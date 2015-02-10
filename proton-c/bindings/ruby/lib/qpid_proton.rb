@@ -31,6 +31,7 @@ require "core/exceptions"
 require "util/version"
 require "util/error_handler"
 require "util/constants"
+require "util/swig_helper"
 
 # Types
 require "types/strings"
