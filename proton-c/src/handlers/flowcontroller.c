@@ -39,17 +39,15 @@ static void pni_topup(pn_link_t *link, int window) {
 static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event) {
   pni_flowcontroller_t *fc = pni_flowcontroller(handler);
   int window = fc->window;
+  pn_link_t *link = pn_event_link(event);
 
   switch (pn_event_type(event)) {
   case PN_LINK_LOCAL_OPEN:
   case PN_LINK_REMOTE_OPEN:
   case PN_LINK_FLOW:
   case PN_DELIVERY:
-    {
-      pn_link_t *link = pn_event_link(event);
-      if (pn_link_is_receiver(link)) {
-        pni_topup(link, window);
-      }
+    if (pn_link_is_receiver(link) && !pn_link_drained(link)) {
+      pni_topup(link, window);
     }
     break;
   default:
