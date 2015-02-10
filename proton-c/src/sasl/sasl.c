@@ -117,7 +117,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->send_data = pn_buffer(16);
     sasl->recv_data = pn_buffer(16);
     sasl->outcome = PN_SASL_NONE;
-    sasl->allow_skip = false;
+    sasl->allow_skip = true;
     sasl->sent_init = false;
     sasl->rcvd_init = false;
     sasl->sent_done = false;
@@ -228,7 +228,7 @@ void pn_sasl_allow_skip(pn_sasl_t *sasl0, bool allow)
 
 bool pn_sasl_skipping_allowed(pn_transport_t *transport)
 {
-  return transport && transport->sasl && transport->sasl->allow_skip;
+  return transport && ( !transport->sasl || transport->sasl->allow_skip );
 }
 
 void pn_sasl_plain(pn_sasl_t *sasl0, const char *username, const char *password)

@@ -915,11 +915,13 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_ssl_domain_free( d );
   }
 
-  pn_sasl_t *sasl = pn_sasl(transport);
   if (ctx->user) {
-    pn_sasl_plain(sasl, ctx->user, ctx->pass);
-  } else {
-    pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    pn_sasl_t *sasl = pn_sasl(transport);
+    if (ctx->pass) {
+      pn_sasl_plain(sasl, ctx->user, ctx->pass);
+    } else {
+      pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    }
   }
 
   return 0;
