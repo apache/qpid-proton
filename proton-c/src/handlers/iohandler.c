@@ -28,6 +28,9 @@ static void *pni_selector_handle = NULL;
 #define PN_SELECTOR ((pn_handle_t) &pni_selector_handle)
 
 void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
+  // check if we are still quiesced, other handlers of
+  // PN_REACTOR_QUIESCED could have produced more events to process
+  if (!pn_reactor_quiesced(reactor)) { return; }
   pn_selector_select(selector, pn_reactor_get_timeout(reactor));
   pn_selectable_t *sel;
   int events;

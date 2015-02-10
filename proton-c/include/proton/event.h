@@ -376,6 +376,16 @@ PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
 PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
 
 /**
+ * Check if there are more events after the current event. If this
+ * returns true, then pn_collector_peek() will return an event even
+ * after pn_collector_pop() is called.
+ *
+ * @param[in] collector a collector object
+ * @return true if the collector has more than the current event
+ */
+PN_EXTERN  bool pn_collector_more(pn_collector_t *collector);
+
+/**
  * Get the type of an event.
  *
  * @param[in] event an event object

@@ -168,6 +168,12 @@ bool pn_collector_pop(pn_collector_t *collector)
   return true;
 }
 
+bool pn_collector_more(pn_collector_t *collector)
+{
+  assert(collector);
+  return collector->head && collector->head->next;
+}
+
 static void pn_event_initialize(pn_event_t *event)
 {
   event->pool = NULL;

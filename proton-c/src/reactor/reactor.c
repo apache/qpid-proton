@@ -358,7 +358,13 @@ void pn_reactor_yield(pn_reactor_t *reactor) {
 
 bool pn_reactor_quiesced(pn_reactor_t *reactor) {
   assert(reactor);
-  return !pn_collector_peek(reactor->collector);
+  pn_event_t *event = pn_collector_peek(reactor->collector);
+  // no events
+  if (!event) { return true; }
+  // more than one event
+  if (pn_collector_more(reactor->collector)) { return false; }
+  // if we have just one event then we are quiesced if the quiesced event
+  return pn_event_type(event) == PN_REACTOR_QUIESCED;
 }
 
 bool pn_reactor_process(pn_reactor_t *reactor) {
@@ -375,9 +381,9 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
       }
       reactor->yield = false;
       pn_incref(event);
-      pn_handler_dispatch(reactor->global, event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
       pn_handler_dispatch(handler, event);
+      pn_handler_dispatch(reactor->global, event);
       pni_reactor_dispatch_post(reactor, event);
       previous = reactor->previous = pn_event_type(event);
       pn_decref(event);

@@ -443,6 +443,9 @@ class PythonIO:
 
     def on_reactor_quiesced(self, event):
         reactor = event.reactor
+        # check if we are still quiesced, other handlers of
+        # on_reactor_quiesced could have produced events to process
+        if not reactor.quiesced: return
 
         reading = []
         writing = []
