@@ -30,6 +30,7 @@ require "core/exceptions"
 # Utility classes
 require "util/version"
 require "util/error_handler"
+require "util/constants"
 
 # Types
 require "types/strings"
