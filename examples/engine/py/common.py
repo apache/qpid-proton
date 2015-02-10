@@ -125,11 +125,10 @@ class Acceptor:
         if sock:
             conn = Connection()
             conn.collect(self.driver.collector)
-            transport = Transport()
+            transport = Transport(mode=Transport.SERVER)
             transport.bind(conn)
             sasl = transport.sasl()
             sasl.mechanisms("ANONYMOUS")
-            sasl.server()
             sasl.done(SASL.OK)
             sel = Selectable(transport, sock)
             self.driver.add(sel)
@@ -353,7 +352,6 @@ class Driver(Handler):
         transport.idle_timeout = 300
         sasl = transport.sasl()
         sasl.mechanisms("ANONYMOUS")
-        sasl.client()
         transport.bind(conn)
         sock = socket()
         sock.setblocking(0)
