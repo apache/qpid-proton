@@ -25,7 +25,7 @@ module Qpid::Proton::Messenger
   # @private
   class Selectable
 
-    include Qpid::Proton::Filters
+    include Filters
 
     call_before :check_is_initialized,
                 :fileno, :capacity, :pending, :deadline,

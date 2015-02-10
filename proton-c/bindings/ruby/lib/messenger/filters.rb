@@ -17,7 +17,7 @@
 # under the License.
 #++
 
-module Qpid::Proton
+module Qpid::Proton::Messenger
 
   # @private
   module Filters
