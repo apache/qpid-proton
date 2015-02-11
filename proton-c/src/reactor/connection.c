@@ -156,7 +156,9 @@ static void pni_connection_readable(pn_selectable_t *sel)
   }
 
   ssize_t newcap = pn_transport_capacity(transport);
-  if (newcap != capacity) {
+  //occasionally transport events aren't generated when expected, so
+  //the following hack ensures we always update the selector
+  if (1 || newcap != capacity) {
     pni_connection_update(sel);
     pn_reactor_update(reactor, sel);
   }
