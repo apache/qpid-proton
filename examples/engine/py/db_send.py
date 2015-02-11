@@ -50,7 +50,7 @@ class Send(MessagingHandler):
             if event.subject == self.load_count:
                 print "Exhausted available data, waiting to recheck..."
                 # check for new data after 5 seconds
-                self.container.schedule(time.time() + 5, link=self.sender, subject="data")
+                self.container.schedule(5, self)
         else:
             self.send()
 
@@ -86,10 +86,9 @@ class Send(MessagingHandler):
         self.db.reset()
         self.sent = self.confirmed
 
-    def on_timer(self, event):
-        if event.subject == "data":
-            print "Rechecking for data..."
-            self.request_records()
+    def on_timer_task(self, event):
+        print "Rechecking for data..."
+        self.request_records()
 
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="Send messages to the supplied address.")

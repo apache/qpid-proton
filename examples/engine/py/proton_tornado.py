@@ -18,53 +18,97 @@
 # under the License.
 #
 
-from proton.reactors import ApplicationEvent, Container, StartEvent
 import tornado.ioloop
+from proton.reactors import Container as BaseContainer
+from proton.handlers import IOHandler
 
-class TornadoLoop(Container):
-    def __init__(self, *handlers):
-        super(TornadoLoop, self).__init__(*handlers)
-        self.loop = tornado.ioloop.IOLoop.current()
+class TornadoLoopHandler:
 
-    def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None):
-        conn = super(TornadoLoop, self).connect(url, urls, address, handler, reconnect)
-        self.events.process()
-        return conn
+    def __init__(self, loop=None, handler_base=None):
+        self.loop = loop or tornado.ioloop.IOLoop.instance()
+        self.io = handler_base or IOHandler()
+        self.count = 0
 
-    def schedule(self, deadline, connection=None, session=None, link=None, delivery=None, subject=None):
-        self.loop.call_at(deadline, self.events.dispatch, ApplicationEvent("timer", connection, session, link, delivery, subject))
+    def on_reactor_init(self, event):
+        self.reactor = event.reactor
 
-    def add(self, conn):
-        self.loop.add_handler(conn, self._connection_ready, tornado.ioloop.IOLoop.READ | tornado.ioloop.IOLoop.WRITE)
+    def on_reactor_quiesced(self, event):
+        event.reactor.yield_()
 
-    def remove(self, conn):
-        self.loop.remove_handler(conn)
+    def on_unhandled(self, name, event):
+        event.dispatch(self.io)
 
-    def run(self):
-        self.events.dispatch(StartEvent(self))
-        self.loop.start()
+    def _events(self, sel):
+        events = self.loop.ERROR
+        if sel.reading:
+            events |= self.loop.READ
+        if sel.writing:
+            events |= self.loop.WRITE
+        return events
 
-    def stop(self):
+    def _schedule(self, sel):
+        if sel.deadline:
+            self.loop.add_timeout(sel.deadline, lambda: self.expired(sel))
+
+    def _expired(self, sel):
+        sel.expired()
+
+    def _process(self):
+        self.reactor.process()
+        if not self.reactor.quiesced:
+            self.loop.add_callback(self._process)
+
+    def _callback(self, sel, events):
+        if self.loop.READ & events:
+            sel.readable()
+        if self.loop.WRITE & events:
+            sel.writable()
+        self._process()
+
+    def on_selectable_init(self, event):
+        sel = event.context
+        if sel.fileno() >= 0:
+            self.loop.add_handler(sel.fileno(), lambda fd, events: self._callback(sel, events), self._events(sel))
+        self._schedule(sel)
+        self.count += 1
+
+    def on_selectable_updated(self, event):
+        sel = event.context
+        if sel.fileno() > 0:
+            self.loop.update_handler(sel.fileno(), self._events(sel))
+        self._schedule(sel)
+
+    def on_selectable_final(self, event):
+        sel = event.context
+        if sel.fileno() > 0:
+            self.loop.remove_handler(sel.fileno())
+        sel.release()
+        self.count -= 1
+        if self.count == 0:
+            self.loop.add_callback(self._stop)
+
+    def _stop(self):
+        self.reactor.stop()
         self.loop.stop()
 
-    def _get_event_flags(self, conn):
-        flags = 0
-        if conn.reading():
-            flags |= tornado.ioloop.IOLoop.READ
-        # FIXME: need way to update flags to avoid busy loop
-        #if conn.writing():
-        #    flags |= tornado.ioloop.IOLoop.WRITE
-        flags |= tornado.ioloop.IOLoop.WRITE
-        return flags
+class Container(object):
+    def __init__(self, *handlers, **kwargs):
+        self.tornado_loop = kwargs.get('loop', tornado.ioloop.IOLoop.instance())
+        kwargs['global_handler'] = TornadoLoopHandler(self.tornado_loop, kwargs.get('handler_base', None))
+        self.container = BaseContainer(*handlers, **kwargs)
 
-    def _connection_ready(self, conn, events):
-        if events & tornado.ioloop.IOLoop.READ:
-            conn.readable()
-        if events & tornado.ioloop.IOLoop.WRITE:
-            conn.writable()
-        if events & tornado.ioloop.IOLoop.ERROR:# or conn.closed():
-            self.loop.remove_handler(conn)
-            conn.close()
-            conn.removed()
-        self.events.process()
-        self.loop.update_handler(conn, self._get_event_flags(conn))
+    def initialise(self):
+        self.container.start()
+        self.container.process()
+
+    def run(self):
+        self.initialise()
+        self.tornado_loop.start()
+
+    def touch(self):
+        self._process()
+
+    def _process(self):
+        self.container.process()
+        if not self.container.quiesced:
+            self.tornado_loop.add_callback(self._process)

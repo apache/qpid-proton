@@ -18,6 +18,7 @@
 #
 
 import subprocess
+import time
 import unittest
 
 class ExamplesTest(unittest.TestCase):
@@ -48,8 +49,10 @@ class ExamplesTest(unittest.TestCase):
         expected = ["{'sequence': %iL}" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)
 
-    def test_client_server(self, client=['client.py'], server=['server.py']):
+    def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
         s = subprocess.Popen(server, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        if sleep:
+            time.sleep(sleep)
         c = subprocess.Popen(client, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         c.wait()
         s.terminate()
@@ -71,10 +74,10 @@ class ExamplesTest(unittest.TestCase):
         self.test_client_server(client=['sync_client.py'], server=['server_tx.py'])
 
     def test_client_server_direct(self):
-        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'])
+        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
 
     def test_sync_client_server_direct(self):
-        self.test_client_server(client=['sync_client.py', 'localhost:8888/examples'], server=['server_direct.py'])
+        self.test_client_server(client=['sync_client.py', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
 
     def test_db_send_recv(self):
         self.maxDiff = None

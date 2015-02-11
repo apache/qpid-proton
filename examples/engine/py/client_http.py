@@ -18,11 +18,11 @@
 # under the License.
 #
 
+import tornado.ioloop
+import tornado.web
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton_tornado import TornadoLoop
-from tornado.ioloop import IOLoop
-import tornado.web
+from proton_tornado import Container
 
 class Client(MessagingHandler):
     def __init__(self, host, address):
@@ -65,6 +65,7 @@ class Client(MessagingHandler):
     def request(self, body, handler):
         self.pending.append((body, handler))
         self.do_request()
+        self.container.touch()
 
 class ExampleHandler(tornado.web.RequestHandler):
     def initialize(self, client):
@@ -100,11 +101,13 @@ class ExampleHandler(tornado.web.RequestHandler):
                    '</form>')
 
 
+loop = tornado.ioloop.IOLoop.instance()
 client = Client("localhost:5672", "examples")
-loop = TornadoLoop(client)
+client.container = Container(client, loop=loop)
+client.container.initialise()
 app = tornado.web.Application([tornado.web.url(r"/client", ExampleHandler, dict(client=client))])
 app.listen(8888)
 try:
-    loop.run()
+    loop.start()
 except KeyboardInterrupt:
     loop.stop()

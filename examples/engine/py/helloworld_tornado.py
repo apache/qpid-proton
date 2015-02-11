@@ -20,7 +20,7 @@
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton_tornado import TornadoLoop
+from proton_tornado import Container
 
 class HelloWorld(MessagingHandler):
     def __init__(self, server, address):
@@ -29,7 +29,6 @@ class HelloWorld(MessagingHandler):
         self.address = address
 
     def on_start(self, event):
-        self.eventloop = event.container
         conn = event.container.connect(self.server)
         event.container.create_receiver(conn, self.address)
         event.container.create_sender(conn, self.address)
@@ -42,8 +41,4 @@ class HelloWorld(MessagingHandler):
         print event.message.body
         event.connection.close()
 
-    def on_connection_closed(self, event):
-        self.eventloop.stop()
-
-TornadoLoop(HelloWorld("localhost:5672", "examples")).run()
-
+Container(HelloWorld("localhost:5672", "examples")).run()

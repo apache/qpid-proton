@@ -42,4 +42,3 @@ class HelloWorld(MessagingHandler):
         event.connection.close()
 
 Container(HelloWorld("localhost:5672", "examples")).run()
-

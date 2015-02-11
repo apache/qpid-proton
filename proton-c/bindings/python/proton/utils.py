@@ -19,8 +19,8 @@
 import collections, Queue, socket, time, threading
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
 from proton import ProtonException, Timeout, Url
-from proton.reactors import AmqpSocket, Container, Events, SelectLoop
-from proton.handlers import Acking, MessagingHandler, ScopedHandler, IncomingMessageHandler
+from proton.reactors import Container
+from proton.handlers import MessagingHandler, IncomingMessageHandler
 
 def utf8(s):
     if isinstance(s, unicode):
@@ -190,6 +190,7 @@ class BlockingConnection(Handler):
     def __init__(self, url, timeout=None, container=None, ssl_domain=None):
         self.timeout = timeout
         self.container = container or Container()
+        self.container.start()
         self.url = Url(utf8(url)).defaults()
         self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
@@ -216,7 +217,7 @@ class BlockingConnection(Handler):
 
     def run(self):
         """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
-        self.container.run()
+        while self.container.process(): pass
 
     def wait(self, condition, timeout=False, msg=None):
         """Call do_work until condition() is true"""
@@ -224,11 +225,12 @@ class BlockingConnection(Handler):
             timeout = self.timeout
         if timeout is None:
             while not condition():
-                self.container.do_work()
+                self.container.process()
         else:
             deadline = time.time() + timeout
             while not condition():
-                if not self.container.do_work(deadline - time.time()):
+                self.container.process()
+                if deadline < time.time():
                     txt = "Connection %s timed out" % self.url
                     if msg: txt += ": " + msg
                     raise Timeout(txt)

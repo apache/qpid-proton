@@ -342,6 +342,10 @@ class EndpointStateHandler(Handler):
         elif self.peer_close_is_error:
             self.on_link_error(event)
 
+    def on_transport_closed(self, event):
+        if self.delegate:
+            dispatch(self.delegate, 'on_disconnected', event)
+
 class MessagingHandler(Handler, Acking):
     """
     A general purpose handler that makes the proton-c events somewhat
@@ -366,6 +370,14 @@ class MessagingHandler(Handler, Acking):
     def on_link_error(self, event):
         EndpointStateHandler.print_error(event.link, "link")
         event.connection.close()
+
+    def on_reactor_init(self, event):
+        if hasattr(event.reactor, 'subclass'):
+            setattr(event, event.reactor.subclass.__name__.lower(), event.reactor)
+        self.on_start(event)
+
+    def on_start(self, event): pass
+    def on_disconnected(self, event): pass
 
 class TransactionHandler(object):
     """
