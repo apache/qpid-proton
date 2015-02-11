@@ -26,6 +26,159 @@ from select import select
 from proton.handlers import OutgoingMessageHandler, ScopedHandler
 from proton import unicode2utf8, utf82unicode
 
+import traceback
+from proton import WrappedHandler, _chandler, secs2millis, millis2secs, Selectable
+from wrapper import Wrapper, PYCTX
+from cproton import *
+
+class Task(Wrapper):
+
+    @staticmethod
+    def wrap(impl):
+        if impl is None:
+            return None
+        else:
+            return Task(impl)
+
+    def __init__(self, impl):
+        Wrapper.__init__(self, impl, pn_task_attachments)
+
+    def _init(self):
+        pass
+
+class Acceptor(Wrapper):
+
+    def __init__(self, impl):
+        Wrapper.__init__(self, impl)
+
+    def close(self):
+        pn_acceptor_close(self._impl)
+
+class Reactor(Wrapper):
+
+    @staticmethod
+    def wrap(impl):
+        if impl is None:
+            return None
+        else:
+            record = pn_reactor_attachments(impl)
+            attrs = pn_void2py(pn_record_get(record, PYCTX))
+            if attrs and 'subclass' in attrs:
+                return attrs['subclass'](impl=impl)
+            else:
+                return Reactor(impl=impl)
+
+    def __init__(self, *handlers, **kwargs):
+        Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
+        for h in handlers:
+            self.handler.add(h)
+
+    def _init(self):
+        self.errors = []
+
+    def on_error(self, info):
+        self.errors.append(info)
+        self.yield_()
+
+    def _get_global(self):
+        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error)
+
+    def _set_global(self, handler):
+        impl = _chandler(handler, self.on_error)
+        pn_reactor_set_global_handler(self._impl, impl)
+        pn_decref(impl)
+
+    global_handler = property(_get_global, _set_global)
+
+    def _get_timeout(self):
+        return millis2secs(pn_reactor_get_timeout(self._impl))
+
+    def _set_timeout(self, secs):
+        return pn_reactor_set_timeout(self._impl, secs2millis(secs))
+
+    timeout = property(_get_timeout, _set_timeout)
+
+    def yield_(self):
+        pn_reactor_yield(self._impl)
+
+    def mark(self):
+        pn_reactor_mark(self._impl)
+
+    def _get_handler(self):
+        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)
+
+    def _set_handler(self, handler):
+        impl = _chandler(handler, self.on_error)
+        pn_reactor_set_handler(self._impl, impl)
+        pn_decref(impl)
+
+    handler = property(_get_handler, _set_handler)
+
+    def run(self):
+        self.timeout = 3.14159265359
+        self.start()
+        while self.process(): pass
+        self.stop()
+
+    def start(self):
+        pn_reactor_start(self._impl)
+
+    @property
+    def quiesced(self):
+        return pn_reactor_quiesced(self._impl)
+
+    def process(self):
+        result = pn_reactor_process(self._impl)
+        if self.errors:
+            for exc, value, tb in self.errors[:-1]:
+                traceback.print_exception(exc, value, tb)
+            exc, value, tb = self.errors[-1]
+            raise exc, value, tb
+        return result
+
+    def stop(self):
+        pn_reactor_stop(self._impl)
+
+    def schedule(self, delay, task):
+        impl = _chandler(task, self.on_error)
+        task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
+        pn_decref(impl)
+        return task
+
+    def acceptor(self, host, port, handler=None):
+        impl = _chandler(handler, self.on_error)
+        aimpl = pn_reactor_acceptor(self._impl, unicode2utf8(host), str(port), impl)
+        pn_decref(impl)
+        if aimpl:
+            return Acceptor(aimpl)
+        else:
+            raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
+
+    def connection(self, handler=None):
+        impl = _chandler(handler, self.on_error)
+        result = Connection.wrap(pn_reactor_connection(self._impl, impl))
+        pn_decref(impl)
+        return result
+
+    def selectable(self, handler=None):
+        impl = _chandler(handler, self.on_error)
+        result = Selectable.wrap(pn_reactor_selectable(self._impl))
+        if impl:
+            record = pn_selectable_attachments(result._impl)
+            pn_record_set_handler(record, impl)
+            pn_decref(impl)
+        return result
+
+    def update(self, sel):
+        pn_reactor_update(self._impl, sel._impl)
+
+    def push_event(self, obj, etype):
+        pn_collector_put(pn_reactor_collector(self._impl), PN_PYREF, pn_py2void(obj), etype.number)
+
+from proton import wrappers as _wrappers
+_wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
+_wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
+
 class AmqpSocket(object):
     """
     Associates a transport with a connection and a socket and can be
@@ -877,156 +1030,3 @@ class Container(object):
 
     def do_work(self, timeout=None):
         return self.loop.do_work(timeout)
-
-import traceback
-from proton import WrappedHandler, _chandler, secs2millis, millis2secs, Selectable
-from wrapper import Wrapper, PYCTX
-from cproton import *
-
-class Task(Wrapper):
-
-    @staticmethod
-    def wrap(impl):
-        if impl is None:
-            return None
-        else:
-            return Task(impl)
-
-    def __init__(self, impl):
-        Wrapper.__init__(self, impl, pn_task_attachments)
-
-    def _init(self):
-        pass
-
-class Acceptor(Wrapper):
-
-    def __init__(self, impl):
-        Wrapper.__init__(self, impl)
-
-    def close(self):
-        pn_acceptor_close(self._impl)
-
-class Reactor(Wrapper):
-
-    @staticmethod
-    def wrap(impl):
-        if impl is None:
-            return None
-        else:
-            record = pn_reactor_attachments(impl)
-            attrs = pn_void2py(pn_record_get(record, PYCTX))
-            if attrs and 'subclass' in attrs:
-                return attrs['subclass'](impl=impl)
-            else:
-                return Reactor(impl=impl)
-
-    def __init__(self, *handlers, **kwargs):
-        Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
-        for h in handlers:
-            self.handler.add(h)
-
-    def _init(self):
-        self.errors = []
-
-    def on_error(self, info):
-        self.errors.append(info)
-        self.yield_()
-
-    def _get_global(self):
-        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error)
-
-    def _set_global(self, handler):
-        impl = _chandler(handler, self.on_error)
-        pn_reactor_set_global_handler(self._impl, impl)
-        pn_decref(impl)
-
-    global_handler = property(_get_global, _set_global)
-
-    def _get_timeout(self):
-        return millis2secs(pn_reactor_get_timeout(self._impl))
-
-    def _set_timeout(self, secs):
-        return pn_reactor_set_timeout(self._impl, secs2millis(secs))
-
-    timeout = property(_get_timeout, _set_timeout)
-
-    def yield_(self):
-        pn_reactor_yield(self._impl)
-
-    def mark(self):
-        pn_reactor_mark(self._impl)
-
-    def _get_handler(self):
-        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)
-
-    def _set_handler(self, handler):
-        impl = _chandler(handler, self.on_error)
-        pn_reactor_set_handler(self._impl, impl)
-        pn_decref(impl)
-
-    handler = property(_get_handler, _set_handler)
-
-    def run(self):
-        self.timeout = 3.14159265359
-        self.start()
-        while self.process(): pass
-        self.stop()
-
-    def start(self):
-        pn_reactor_start(self._impl)
-
-    @property
-    def quiesced(self):
-        return pn_reactor_quiesced(self._impl)
-
-    def process(self):
-        result = pn_reactor_process(self._impl)
-        if self.errors:
-            for exc, value, tb in self.errors[:-1]:
-                traceback.print_exception(exc, value, tb)
-            exc, value, tb = self.errors[-1]
-            raise exc, value, tb
-        return result
-
-    def stop(self):
-        pn_reactor_stop(self._impl)
-
-    def schedule(self, delay, task):
-        impl = _chandler(task, self.on_error)
-        task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
-        pn_decref(impl)
-        return task
-
-    def acceptor(self, host, port, handler=None):
-        impl = _chandler(handler, self.on_error)
-        aimpl = pn_reactor_acceptor(self._impl, unicode2utf8(host), str(port), impl)
-        pn_decref(impl)
-        if aimpl:
-            return Acceptor(aimpl)
-        else:
-            raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
-
-    def connection(self, handler=None):
-        impl = _chandler(handler, self.on_error)
-        result = Connection.wrap(pn_reactor_connection(self._impl, impl))
-        pn_decref(impl)
-        return result
-
-    def selectable(self, handler=None):
-        impl = _chandler(handler, self.on_error)
-        result = Selectable.wrap(pn_reactor_selectable(self._impl))
-        if impl:
-            record = pn_selectable_attachments(result._impl)
-            pn_record_set_handler(record, impl)
-            pn_decref(impl)
-        return result
-
-    def update(self, sel):
-        pn_reactor_update(self._impl, sel._impl)
-
-    def push_event(self, obj, etype):
-        pn_collector_put(pn_reactor_collector(self._impl), PN_PYREF, pn_py2void(obj), etype.number)
-
-from proton import wrappers as _wrappers
-_wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
-_wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
