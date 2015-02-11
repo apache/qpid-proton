@@ -880,7 +880,7 @@ class Container(object):
 
 import traceback
 from proton import WrappedHandler, _chandler, secs2millis, millis2secs, Selectable
-from wrapper import Wrapper
+from wrapper import Wrapper, PYCTX
 from cproton import *
 
 class Task(Wrapper):
@@ -913,7 +913,12 @@ class Reactor(Wrapper):
         if impl is None:
             return None
         else:
-            return Reactor(impl=impl)
+            record = pn_reactor_attachments(impl)
+            attrs = pn_void2py(pn_record_get(record, PYCTX))
+            if attrs and 'subclass' in attrs:
+                return attrs['subclass'](impl=impl)
+            else:
+                return Reactor(impl=impl)
 
     def __init__(self, *handlers, **kwargs):
         Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
