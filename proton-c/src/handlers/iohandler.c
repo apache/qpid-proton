@@ -55,6 +55,7 @@ void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
 
 void pni_handle_transport(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event);
+void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event);
 
 static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
   pn_reactor_t *reactor = pn_event_reactor(event);
@@ -88,6 +89,9 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
     break;
   case PN_CONNECTION_LOCAL_OPEN:
     pni_handle_open(reactor, event);
+    break;
+  case PN_CONNECTION_BOUND:
+    pni_handle_bound(reactor, event);
     break;
   case PN_TRANSPORT:
     pni_handle_transport(reactor, event);

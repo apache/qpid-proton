@@ -22,6 +22,7 @@
 #include <proton/connection.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 #include <proton/transport.h>
 #include <assert.h>
 #include <stdio.h>
@@ -104,7 +105,17 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
   pn_transport_bind(transport, conn);
   pn_decref(transport);
+}
+
+void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
+  assert(reactor);
+  assert(event);
+
+  pn_connection_t *conn = pn_event_connection(event);
   const char *hostname = pn_connection_get_hostname(conn);
+  if (!hostname) {
+      return;
+  }
   pn_string_t *str = pn_string(hostname);
   char *host = pn_string_buffer(str);
   const char *port = "5672";
@@ -115,6 +126,7 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   }
   pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
   pn_free(str);
+  pn_transport_t *transport = pn_event_transport(event);
   pn_reactor_selectable_transport(reactor, sock, transport);
 }
 
