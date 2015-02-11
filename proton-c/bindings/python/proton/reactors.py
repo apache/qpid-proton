@@ -1019,6 +1019,9 @@ class Reactor(Wrapper):
     def update(self, sel):
         pn_reactor_update(self._impl, sel._impl)
 
+    def push_event(self, obj, etype):
+        pn_collector_put(pn_reactor_collector(self._impl), PN_PYREF, pn_py2void(obj), etype.number)
+
 from proton import wrappers as _wrappers
 _wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
 _wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
