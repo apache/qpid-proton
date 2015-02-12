@@ -364,6 +364,8 @@ static void pn_transport_initialize(void *object)
   transport->server = false;
   transport->halt = false;
 
+  transport->referenced = true;
+
   transport->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF);
@@ -400,15 +402,35 @@ static void pni_unmap_remote_channel(pn_session_t *ssn)
   pn_hash_del(transport->remote_channels, channel);
 }
 
+static void pn_transport_incref(void *object)
+{
+  pn_transport_t *transport = (pn_transport_t *) object;
+  if (!transport->referenced) {
+    transport->referenced = true;
+    if (transport->connection) {
+      pn_incref(transport->connection);
+    } else {
+      pn_object_incref(object);
+    }
+  } else {
+    pn_object_incref(object);
+  }
+}
 
 static void pn_transport_finalize(void *object);
+#define pn_transport_new pn_object_new
+#define pn_transport_refcount pn_object_refcount
+#define pn_transport_decref pn_object_decref
+#define pn_transport_reify pn_object_reify
 #define pn_transport_hashcode NULL
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL
 
 pn_transport_t *pn_transport(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_transport);
+#define pn_transport_free pn_object_free
+  static const pn_class_t clazz = PN_METACLASS(pn_transport);
+#undef pn_transport_free
   pn_transport_t *transport =
     (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
@@ -452,6 +474,13 @@ void pn_transport_free(pn_transport_t *transport)
 static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
+
+  if (transport->referenced && transport->connection && pn_refcount(transport->connection) > 1) {
+    pn_object_incref(transport);
+    transport->referenced = false;
+    pn_decref(transport->connection);
+    return;
+  }
 
   // once the application frees the transport, no further I/O
   // processing can be done to the connection:
@@ -550,6 +579,7 @@ int pn_transport_unbind(pn_transport_t *transport)
 
   pn_connection_t *conn = transport->connection;
   transport->connection = NULL;
+  bool was_referenced = transport->referenced;
 
   pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_UNBOUND);
 
@@ -572,7 +602,9 @@ int pn_transport_unbind(pn_transport_t *transport)
   pni_transport_unbind_channels(transport->remote_channels);
 
   pn_connection_unbound(conn);
-  pn_decref(conn);
+  if (was_referenced) {
+    pn_decref(conn);
+  }
   return 0;
 }
 

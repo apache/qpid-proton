@@ -103,6 +103,7 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   pn_sasl_t *sasl = pn_sasl(transport);
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
   pn_transport_bind(transport, conn);
+  pn_decref(transport);
   const char *hostname = pn_connection_get_hostname(conn);
   pn_string_t *str = pn_string(hostname);
   char *host = pn_string_buffer(str);
@@ -115,7 +116,6 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
   pn_free(str);
   pn_reactor_selectable_transport(reactor, sock, transport);
-  pn_decref(transport);
 }
 
 void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event) {

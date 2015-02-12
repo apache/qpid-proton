@@ -21,6 +21,7 @@
 
 #include <proton/handlers.h>
 #include <proton/selector.h>
+#include <proton/transport.h>
 #include <assert.h>
 
 static void *pni_selector_handle = NULL;
@@ -90,6 +91,9 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
     break;
   case PN_TRANSPORT:
     pni_handle_transport(reactor, event);
+    break;
+  case PN_TRANSPORT_CLOSED:
+    pn_transport_unbind(pn_event_transport(event));
     break;
   case PN_REACTOR_QUIESCED:
     pni_handle_quiesced(reactor, selector);

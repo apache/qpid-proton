@@ -44,8 +44,8 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_sasl_mechanisms(sasl, "ANONYMOUS");
   pn_sasl_done(sasl, PN_SASL_OK);
   pn_transport_bind(trans, conn);
-  pn_reactor_selectable_transport(reactor, sock, trans);
   pn_decref(trans);
+  pn_reactor_selectable_transport(reactor, sock, trans);
 }
 
 void pni_acceptor_finalize(pn_selectable_t *sel) {

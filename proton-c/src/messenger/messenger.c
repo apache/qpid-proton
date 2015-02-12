@@ -337,6 +337,7 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
   pn_transport_bind(t, conn);
+  pn_decref(t);
   pni_conn_modified((pn_connection_ctx_t *) pn_connection_get_context(conn));
 }
 
@@ -1096,6 +1097,7 @@ void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *even
       pn_connection_reset(conn);
       pn_transport_t *t = pn_transport();
       pn_transport_bind(t, conn);
+      pn_decref(t);
       pn_transport_config(messenger, conn);
     }
   }
@@ -1623,6 +1625,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
     pn_messenger_connection(messenger, sock, scheme, user, pass, host, port, NULL);
   pn_transport_t *transport = pn_transport();
   pn_transport_bind(transport, connection);
+  pn_decref(transport);
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_selectable_t *sel = ctx->selectable;
   err = pn_transport_config(messenger, connection);

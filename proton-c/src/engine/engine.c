@@ -460,6 +460,16 @@ static void pn_connection_finalize(void *object)
   pn_connection_t *conn = (pn_connection_t *) object;
   pn_endpoint_t *endpoint = &conn->endpoint;
 
+  if (conn->transport) {
+    assert(!conn->transport->referenced);
+    pn_free(conn->transport);
+  }
+
+  // freeing the transport could post events
+  if (pn_refcount(conn) > 0) {
+    return;
+  }
+
   pni_free_children(conn->sessions, conn->freed);
   pn_free(conn->context);
   pn_decref(conn->collector);

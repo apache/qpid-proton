@@ -194,6 +194,8 @@ struct pn_transport_t {
   bool posted_idle_timeout;
   bool server;
   bool halt;
+
+  bool referenced;
 };
 
 struct pn_connection_t {
