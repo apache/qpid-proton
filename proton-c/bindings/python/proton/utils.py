@@ -34,9 +34,18 @@ class BlockingLink(object):
         self.link = link
         self.connection.wait(lambda: not (self.link.state & Endpoint.REMOTE_UNINIT),
                              msg="Opening link %s" % link.name)
+        self._checkClosed()
+
+    def _waitForClosed(self, timeout=1):
+        self.connection.wait(lambda: self.link.state & Endpoint.REMOTE_CLOSED,
+                             timeout=timeout,
+                             msg="Opening link %s" % self.link.name)
+        self._checkClosed()
+
+    def _checkClosed(self):
         if self.link.state & Endpoint.REMOTE_CLOSED:
             self.link.close()
-            raise LinkException("Failed to open link %s" % link.name)
+            raise LinkDetached(self.link)
 
     def close(self):
         self.link.close()
@@ -57,6 +66,9 @@ class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
         if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
+            #this may be followed by a detach, which may contain an error condition, so wait a little...
+            self._waitForClose()
+            #...but close ourselves if peer does not
             self.link.close()
             raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
@@ -108,6 +120,9 @@ class BlockingReceiver(BlockingLink):
     def __init__(self, connection, receiver, fetcher, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
         if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
+            #this may be followed by a detach, which may contain an error condition, so wait a little...
+            self._waitForClose()
+            #...but close ourselves if peer does not
             self.link.close()
             raise LinkException("Failed to open receiver %s, source does not match" % self.link.name)
         if credit: receiver.flow(credit)
