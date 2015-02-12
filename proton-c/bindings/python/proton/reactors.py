@@ -505,6 +505,9 @@ class Connector(Handler):
             self.reconnect.reset()
             self.transport = None
 
+    def on_transport_tail_closed(self, event):
+        self.on_transport_closed(event)
+
     def on_transport_closed(self, event):
         if self.connection and self.connection.state & Endpoint.LOCAL_ACTIVE:
             if self.reconnect:
