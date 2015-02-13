@@ -57,7 +57,7 @@ void pni_handle_transport(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event);
 
-static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
+static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pn_reactor_t *reactor = pn_event_reactor(event);
   pn_record_t *record = pn_reactor_attachments(reactor);
   pn_selector_t *selector = (pn_selector_t *) pn_record_get(record, PN_SELECTOR);
@@ -67,7 +67,7 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
     pn_record_set(record, PN_SELECTOR, selector);
     pn_decref(selector);
   }
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_SELECTABLE_INIT:
     {
       pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);

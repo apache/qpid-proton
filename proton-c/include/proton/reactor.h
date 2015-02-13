@@ -47,14 +47,14 @@ typedef struct pn_acceptor_t pn_acceptor_t;
 typedef struct pn_timer_t pn_timer_t;
 typedef struct pn_task_t pn_task_t;
 
-PN_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *));
-PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *), size_t size,
+PN_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t));
+PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t), size_t size,
                                        void (*finalize)(pn_handler_t *));
 PN_EXTERN void pn_handler_free(pn_handler_t *handler);
 PN_EXTERN void *pn_handler_mem(pn_handler_t *handler);
 PN_EXTERN void pn_handler_add(pn_handler_t *handler, pn_handler_t *child);
 PN_EXTERN void pn_handler_clear(pn_handler_t *handler);
-PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event);
+PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type);
 
 PN_EXTERN pn_reactor_t *pn_reactor(void);
 PN_EXTERN pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor);

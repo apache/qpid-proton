@@ -68,11 +68,11 @@ pni_test_handler_t *thmem(pn_handler_t *handler) {
   return (pni_test_handler_t *) pn_handler_mem(handler);
 }
 
-void test_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void test_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pni_test_handler_t *th = thmem(handler);
   pn_reactor_t *reactor = pn_event_reactor(event);
   assert(reactor == th->reactor);
-  pn_list_add(th->events, (void *) pn_event_type(event));
+  pn_list_add(th->events, (void *) type);
 }
 
 pn_handler_t *test_handler(pn_reactor_t *reactor, pn_list_t *events) {
@@ -188,8 +188,8 @@ pn_acceptor_t **tram(pn_handler_t *h) {
   return (pn_acceptor_t **) pn_handler_mem(h);
 }
 
-static void tra_dispatch(pn_handler_t *handler, pn_event_t *event) {
-  switch (pn_event_type(event)) {
+static void tra_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+  switch (type) {
   case PN_REACTOR_INIT:
     {
       pn_acceptor_t *acceptor = *tram(handler);
@@ -229,10 +229,10 @@ static server_t *smem(pn_handler_t *handler) {
   return (server_t *) pn_handler_mem(handler);
 }
 
-static void server_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void server_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   server_t *srv = smem(handler);
   pn_list_add(srv->events, (void *) pn_event_type(event));
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_CONNECTION_REMOTE_OPEN:
     pn_connection_open(pn_event_connection(event));
     break;
@@ -254,9 +254,9 @@ static client_t *cmem(pn_handler_t *handler) {
   return (client_t *) pn_handler_mem(handler);
 }
 
-static void client_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void client_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   client_t *cli = cmem(handler);
-  pn_list_add(cli->events, (void *) pn_event_type(event));
+  pn_list_add(cli->events, (void *) type);
   pn_connection_t *conn = pn_event_connection(event);
   switch (pn_event_type(event)) {
   case PN_CONNECTION_INIT:
@@ -316,10 +316,10 @@ static sink_t *sink(pn_handler_t *handler) {
   return (sink_t *) pn_handler_mem(handler);
 }
 
-void sink_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void sink_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   sink_t *snk = sink(handler);
   pn_delivery_t *dlv = pn_event_delivery(event);
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_DELIVERY:
     if (!pn_delivery_partial(dlv)) {
       pn_delivery_settle(dlv);
@@ -340,10 +340,10 @@ static source_t *source(pn_handler_t *handler) {
 }
 
 
-void source_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void source_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   source_t *src = source(handler);
   pn_connection_t *conn = pn_event_connection(event);
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_CONNECTION_INIT:
     {
       pn_connection_set_hostname(conn, "127.0.0.1:5678");

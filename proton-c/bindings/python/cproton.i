@@ -305,11 +305,12 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
-  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event) {
+  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
     pni_pyh_t *pyh = pni_pyh(handler);
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     PyObject *arg = SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0);
-    PyObject *result = PyObject_CallMethodObjArgs(pyh->handler, pyh->dispatch, arg, NULL);
+    PyObject *pytype = PyInt_FromLong(type);
+    PyObject *result = PyObject_CallMethodObjArgs(pyh->handler, pyh->dispatch, arg, pytype, NULL);
     if (!result) {
       PyObject *exc, *val, *tb;
       PyErr_Fetch(&exc, &val, &tb);
@@ -332,6 +333,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
       Py_XDECREF(tb);
     }
     Py_XDECREF(arg);
+    Py_XDECREF(pytype);
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }

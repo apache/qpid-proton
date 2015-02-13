@@ -3493,19 +3493,23 @@ class Event(Wrapper, EventBase):
   SELECTABLE_FINAL = EventType(PN_SELECTABLE_FINAL, "on_selectable_final")
 
   @staticmethod
-  def wrap(impl):
+  def wrap(impl, number=None):
     if impl is None:
       return None
 
-    event = Event(impl)
+    if number is None:
+      number = pn_event_type(impl)
+
+    event = Event(impl, number)
 
     if isinstance(event.context, EventBase):
       return event.context
     else:
       return event
 
-  def __init__(self, impl):
+  def __init__(self, impl, number):
     Wrapper.__init__(self, impl, pn_event_attachments)
+    self.__dict__["type"] = EventType.TYPES[number]
 
   def _init(self):
     pass
@@ -3522,13 +3526,9 @@ class Event(Wrapper, EventBase):
   def context(self):
     return wrappers[self.clazz](pn_event_context(self._impl))
 
-  @property
-  def type(self):
-    return EventType.TYPES[pn_event_type(self._impl)]
-
   def dispatch(self, handler):
     if isinstance(handler, WrappedHandler):
-      pn_handler_dispatch(handler._impl, self._impl)
+      pn_handler_dispatch(handler._impl, self._impl, self.type.number)
     else:
       dispatch(handler, self.type.method, self)
       if hasattr(handler, "handlers"):
@@ -3590,8 +3590,8 @@ class _cadapter:
     self.handler = handler
     self.on_error = on_error
 
-  def dispatch(self, cevent):
-    ev = Event.wrap(cevent)
+  def dispatch(self, cevent, ctype):
+    ev = Event.wrap(cevent, ctype)
     ev.dispatch(self.handler)
 
   def exception(self, exc, val, tb):

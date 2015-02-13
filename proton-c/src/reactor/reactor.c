@@ -397,10 +397,11 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
       reactor->yield = false;
       pn_incref(event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
-      pn_handler_dispatch(handler, event);
-      pn_handler_dispatch(reactor->global, event);
+      pn_event_type_t type = pn_event_type(event);
+      pn_handler_dispatch(handler, event, type);
+      pn_handler_dispatch(reactor->global, event, type);
       pni_reactor_dispatch_post(reactor, event);
-      previous = reactor->previous = pn_event_type(event);
+      previous = reactor->previous = type;
       pn_decref(event);
       pn_collector_pop(reactor->collector);
     } else {

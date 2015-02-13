@@ -36,7 +36,7 @@ static void pni_topup(pn_link_t *link, int window) {
   pn_link_flow(link, delta);
 }
 
-static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pni_flowcontroller_t *fc = pni_flowcontroller(handler);
   int window = fc->window;
   pn_link_t *link = pn_event_link(event);
