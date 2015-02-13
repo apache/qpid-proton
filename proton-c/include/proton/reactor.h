@@ -76,6 +76,7 @@ PN_EXTERN void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selecta
 PN_EXTERN pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port,
                                              pn_handler_t *handler);
 PN_EXTERN pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *handler);
+PN_EXTERN int pn_reactor_wakeup(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_start(pn_reactor_t *reactor);
 PN_EXTERN bool pn_reactor_quiesced(pn_reactor_t *reactor);
 PN_EXTERN bool pn_reactor_process(pn_reactor_t *reactor);

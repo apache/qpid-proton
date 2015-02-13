@@ -120,6 +120,10 @@ class Reactor(Wrapper):
         while self.process(): pass
         self.stop()
 
+    def wakeup(self):
+        n = pn_reactor_wakeup(self._impl)
+        if n: raise IOError(pn_error_text(pn_io_error(pn_reactor_io(self._impl))))
+
     def start(self):
         pn_reactor_start(self._impl)
 
