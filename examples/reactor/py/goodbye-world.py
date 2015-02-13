@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # So far the reactive hello-world doesn't look too different from a
 # regular old non-reactive hello-world. The on_reactor_init method can

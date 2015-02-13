@@ -24,7 +24,7 @@ from proton_tests.common import Test, free_tcp_port
 from copy import copy
 from proton import Message, Url, generate_uuid
 from proton.handlers import MessagingHandler
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
 
 

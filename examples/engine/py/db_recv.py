@@ -20,7 +20,7 @@
 
 import optparse
 from proton.handlers import MessagingHandler
-from proton.reactors import ApplicationEvent, Container
+from proton.reactor import ApplicationEvent, Container
 from db_common import Db
 
 class Recv(MessagingHandler):

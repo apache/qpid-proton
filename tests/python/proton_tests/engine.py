@@ -21,7 +21,7 @@ import os, common, gc
 from time import time, sleep
 from proton import *
 from common import pump
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # older versions of gc do not provide the garbage list
 if not hasattr(gc, "garbage"):

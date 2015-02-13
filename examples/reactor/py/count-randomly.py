@@ -19,7 +19,7 @@
 #
 
 import time, random
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # Let's try to modify our counter example. In addition to counting to
 # 10 in quarter second intervals, let's also print out a random number

@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRequest(TransactionHandler):

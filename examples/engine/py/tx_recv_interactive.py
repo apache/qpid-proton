@@ -20,7 +20,7 @@
 
 import sys
 import threading
-from proton.reactors import ApplicationEvent, Container
+from proton.reactor import ApplicationEvent, Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRecv(MessagingHandler, TransactionHandler):

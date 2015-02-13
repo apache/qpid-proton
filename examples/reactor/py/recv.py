@@ -19,7 +19,7 @@
 #
 
 from proton import Message
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 from proton.handlers import CHandshaker, CFlowController
 
 class Program:

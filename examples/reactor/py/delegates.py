@@ -19,7 +19,7 @@
 #
 
 import time
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # Events know how to dispatch themselves to handlers. By combining
 # this with on_unhandled, you can provide a kind of inheritance

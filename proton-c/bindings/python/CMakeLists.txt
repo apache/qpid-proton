@@ -56,7 +56,7 @@ set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
     proton/handlers.py
-    proton/reactors.py
+    proton/reactor.py
     proton/utils.py
     proton/wrapper.py
     )

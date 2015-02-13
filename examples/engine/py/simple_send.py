@@ -21,7 +21,7 @@
 import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import Container
+from proton.reactor import Container
 
 class Send(MessagingHandler):
     def __init__(self, url, messages):

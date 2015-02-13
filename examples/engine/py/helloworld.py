@@ -20,7 +20,7 @@
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import Container
+from proton.reactor import Container
 
 class HelloWorld(MessagingHandler):
     def __init__(self, server, address):

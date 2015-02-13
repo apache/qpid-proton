@@ -19,7 +19,7 @@
 #
 
 import tornado.ioloop
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 from proton.handlers import IOHandler
 
 class TornadoApp:

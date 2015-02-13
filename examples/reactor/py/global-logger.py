@@ -19,7 +19,7 @@
 #
 
 import time
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # Not every event goes to the reactor's event handler. If we have a
 # separate handler for something like a scheduled task, then those

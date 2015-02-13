@@ -24,7 +24,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
 import sys, os, string
 from proton import Connection, Transport, SASL, Endpoint, Delivery, SSL
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.handlers import CHandshaker, CFlowController
 
 

@@ -20,7 +20,7 @@
 
 import optparse
 from proton.handlers import MessagingHandler
-from proton.reactors import Container
+from proton.reactor import Container
 
 class Recv(MessagingHandler):
     def __init__(self, url, count):

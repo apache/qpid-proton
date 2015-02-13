@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import Container, Handler
+from proton.reactor import Container, Handler
 
 class Recurring(Handler):
     def __init__(self, period):

@@ -21,7 +21,7 @@
 import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactors import Container, DynamicNodeProperties
+from proton.reactor import Container, DynamicNodeProperties
 
 class Client(MessagingHandler):
     def __init__(self, url, requests):

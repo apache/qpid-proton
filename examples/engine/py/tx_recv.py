@@ -20,7 +20,7 @@
 
 import optparse
 from proton import Url
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRecv(MessagingHandler, TransactionHandler):

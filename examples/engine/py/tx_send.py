@@ -20,7 +20,7 @@
 
 import optparse
 from proton import Message, Url
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxSend(MessagingHandler, TransactionHandler):

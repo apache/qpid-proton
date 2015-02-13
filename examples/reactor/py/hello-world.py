@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import Reactor
+from proton.reactor import Reactor
 
 # The proton reactor provides a general purpose event processing
 # library for writing reactive programs. A reactive program is defined

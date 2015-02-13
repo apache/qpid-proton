@@ -19,7 +19,7 @@
 #
 
 import tornado.ioloop
-from proton.reactors import Container as BaseContainer
+from proton.reactor import Container as BaseContainer
 from proton.handlers import IOHandler
 
 class TornadoLoopHandler:

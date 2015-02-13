@@ -2244,20 +2244,20 @@ class Endpoint(object):
       assert False, "Subclass must override this!"
 
   def _get_handler(self):
-    import reactors
-    reactor = reactors.Reactor.wrap(pn_object_reactor(self._impl))
-    if reactor:
-      on_error = reactor.on_error
+    import reactor
+    ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+    if ractor:
+      on_error = ractor.on_error
     else:
       on_error = None
     record = self._get_attachments()
     return WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
   def _set_handler(self, handler):
-    import reactors
-    reactor = reactors.Reactor.wrap(pn_object_reactor(self._impl))
-    if reactor:
-      on_error = reactor.on_error
+    import reactor
+    ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+    if ractor:
+      on_error = ractor.on_error
     else:
       on_error = None
     impl = _chandler(handler, on_error)

@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from proton.reactors import Container, Selector
+from proton.reactor import Container, Selector
 from proton.handlers import MessagingHandler
 
 class Recv(MessagingHandler):

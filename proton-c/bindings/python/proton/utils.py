@@ -19,7 +19,7 @@
 import collections, Queue, socket, time, threading
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
 from proton import ProtonException, Timeout, Url
-from proton.reactors import Container
+from proton.reactor import Container
 from proton.handlers import MessagingHandler, IncomingMessageHandler
 
 def utf8(s):
