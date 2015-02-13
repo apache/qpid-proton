@@ -2667,6 +2667,14 @@ class Link(Wrapper, Endpoint):
     pn_link_set_rcv_settle_mode(self._impl, mode)
   rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
 
+  def _get_drain(self):
+    return pn_link_get_drain(self._impl)
+
+  def _set_drain(self, b):
+    pn_link_set_drain(self._impl, bool(b))
+
+  drain_mode = property(_get_drain, _set_drain)
+
   def drained(self):
     return pn_link_drained(self._impl)
 
@@ -2810,14 +2818,6 @@ class Receiver(Link):
     else:
       self._check(n)
       return bytes
-
-  def _get_drain(self):
-    return pn_link_get_drain(self._impl)
-
-  def _set_drain(self, b):
-    pn_link_set_drain(self._impl, bool(b))
-
-  drain_mode = property(_get_drain, _set_drain)
 
   def drain(self, n):
     pn_link_drain(self._impl, n)
