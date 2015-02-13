@@ -359,14 +359,11 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
-add_executable (proton src/proton.c)
-target_link_libraries (proton qpid-proton)
-
 add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
-  proton proton-dump
+  proton-dump
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
   )
@@ -382,10 +379,10 @@ macro(pn_c_files)
   endforeach (src_file)
 endmacro(pn_c_files)
 
-pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
+pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton-dump.c)
 
 # Install executables and libraries
-install (TARGETS proton proton-dump
+install (TARGETS proton-dump
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
