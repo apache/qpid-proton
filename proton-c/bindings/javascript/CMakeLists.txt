@@ -69,14 +69,13 @@ set(PN_PATH ${CMAKE_SOURCE_DIR}/proton-c)
 # for libraries with emscripten) see https://github.com/kripken/emscripten/wiki/FAQ
 # "Q. How do I link against system libraries like SDL, boost, etc.?"
 # Though it might be more natural to simply use a TLS protected wss:// WebSocket URL.
-#  set(pn_driver_ssl_impl src/ssl/openssl.c)
+#  set(pn_ssl_impl src/ssl/openssl.c)
 #  set(SSL_LIB ${OPENSSL_LIBRARIES})
-set(pn_driver_ssl_impl ${PN_PATH}/src/ssl/ssl_stub.c)
+set(pn_ssl_impl ${PN_PATH}/src/ssl/ssl_stub.c)
 
-# emscripten is Linux like so use the posix driver.
+# emscripten is Linux like so use the posix impls.
 set(pn_io_impl ${PN_PATH}/src/posix/io.c)
 set(pn_selector_impl ${PN_PATH}/src/posix/selector.c)
-set(pn_driver_impl ${PN_PATH}/src/posix/driver.c)
 
 
 # Generate encodings.h and protocol.h
@@ -110,9 +109,8 @@ set(PLATFORM_DEFINITIONS "USE_CLOCK_GETTIME;USE_UUID_GENERATE;USE_STRERROR_R;USE
 set(qpid-proton-platform
   ${pn_io_impl}
   ${pn_selector_impl}
-  ${pn_driver_impl}
   ${PN_PATH}/src/platform.c
-  ${pn_driver_ssl_impl}
+  ${pn_ssl_impl}
   )
 
 set(qpid-proton-core
