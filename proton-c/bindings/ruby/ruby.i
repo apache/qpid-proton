@@ -491,6 +491,10 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
     return result;
   }
 
-  %}
+%}
+
+%ignore pn_messenger_send;
+%ignore pn_messenger_recv;
+%ignore pn_messenger_work;
 
 %include "proton/cproton.i"
