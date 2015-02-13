@@ -3640,196 +3640,6 @@ def _chandler(obj, on_error=None):
   else:
     return pn_pyhandler(_cadapter(obj, on_error))
 
-###
-# Driver
-###
-
-class DriverException(ProtonException):
-  """
-  The DriverException class is the root of the driver exception hierarchy.
-  """
-  pass
-
-class Connector(object):
-
-  @staticmethod
-  def _wrap_connector(c_cxtr, py_driver=None):
-    """Maintain only a single instance of this class for each Connector object that
-    exists in the C Driver.
-    """
-    if not c_cxtr: return None
-    py_cxtr = pn_void2py(pn_connector_context(c_cxtr))
-    if py_cxtr: return py_cxtr
-    wrapper = Connector(_cxtr=c_cxtr, _py_driver=py_driver)
-    return wrapper
-
-  def __init__(self, _cxtr, _py_driver):
-    self._cxtr = _cxtr
-    assert(_py_driver)
-    self._driver = weakref.ref(_py_driver)
-    pn_connector_set_context(self._cxtr, pn_py2void(self))
-    self._connection = None
-    self._driver()._connectors.add(self)
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if hasattr(self, '_cxtr'):
-      pn_connector_set_context(self._cxtr, pn_py2void(None))
-      pn_connector_free(self._cxtr)
-      del self._cxtr
-
-  def free(self):
-    """Release the Connector, freeing its resources.
-
-    Call this when you no longer need the Connector.  This will allow the
-    connector's resources to be reclaimed.  Once called, you should no longer
-    reference this connector.
-
-    """
-    self.connection = None
-    d = self._driver()
-    if d: d._connectors.remove(self)
-    self._release()
-
-  def next(self):
-    return Connector._wrap_connector(pn_connector_next(self._cxtr))
-
-  def process(self):
-    pn_connector_process(self._cxtr)
-
-  def listener(self):
-    return Listener._wrap_listener(pn_connector_listener(self._cxtr))
-
-  def sasl(self):
-    ## seems easier just to grab the SASL associated with the transport:
-    trans = self.transport
-    if trans:
-      return SASL(self.transport)
-    return None
-
-  @property
-  def transport(self):
-    trans = pn_connector_transport(self._cxtr)
-    return Transport.wrap(trans)
-
-  def close(self):
-    return pn_connector_close(self._cxtr)
-
-  @property
-  def closed(self):
-    return pn_connector_closed(self._cxtr)
-
-  def _get_connection(self):
-    return self._connection
-
-  def _set_connection(self, conn):
-    if conn:
-      pn_connector_set_connection(self._cxtr, conn._impl)
-    else:
-      pn_connector_set_connection(self._cxtr, None)
-    self._connection = conn
-
-
-  connection = property(_get_connection, _set_connection,
-                        doc="""
-Associate a Connection with this Connector.
-""")
-
-class Listener(object):
-
-  @staticmethod
-  def _wrap_listener(c_lsnr, py_driver=None):
-    """Maintain only a single instance of this class for each Listener object that
-    exists in the C Driver.
-    """
-    if not c_lsnr: return None
-    py_lsnr = pn_void2py(pn_listener_context(c_lsnr))
-    if py_lsnr: return py_lsnr
-    wrapper = Listener(_lsnr=c_lsnr, _py_driver=py_driver)
-    return wrapper
-
-  def __init__(self, _lsnr, _py_driver):
-    self._lsnr = _lsnr
-    assert(_py_driver)
-    self._driver = weakref.ref(_py_driver)
-    pn_listener_set_context(self._lsnr, pn_py2void(self))
-    self._driver()._listeners.add(self)
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if hasattr(self, '_lsnr'):
-      pn_listener_set_context(self._lsnr, pn_py2void(None));
-      pn_listener_free(self._lsnr)
-      del self._lsnr
-
-  def free(self):
-    """Release the Listener, freeing its resources"""
-    d = self._driver()
-    if d: d._listeners.remove(self)
-    self._release()
-
-  def next(self):
-    return Listener._wrap_listener(pn_listener_next(self._lsnr))
-
-  def accept(self):
-    d = self._driver()
-    if d:
-      cxtr = pn_listener_accept(self._lsnr)
-      c = Connector._wrap_connector(cxtr, d)
-      return c
-    return None
-
-  def close(self):
-    pn_listener_close(self._lsnr)
-
-class Driver(object):
-  def __init__(self):
-    self._driver = pn_driver()
-    self._listeners = set()
-    self._connectors = set()
-
-  def __del__(self):
-    # freeing the driver will release all child objects in the C Engine, so
-    # clean up their references in the corresponding Python objects
-    for c in self._connectors:
-      c._release()
-    for l in self._listeners:
-      l._release()
-    if hasattr(self, "_driver") and self._driver:
-      pn_driver_free(self._driver)
-      del self._driver
-
-  def wait(self, timeout_sec):
-    if timeout_sec is None or timeout_sec < 0.0:
-      t = -1
-    else:
-      t = secs2millis(timeout_sec)
-    return pn_driver_wait(self._driver, t)
-
-  def wakeup(self):
-    return pn_driver_wakeup(self._driver)
-
-  def listener(self, host, port):
-    """Construct a listener"""
-    return Listener._wrap_listener(pn_listener(self._driver, unicode2utf8(host), port, None),
-                                   self)
-
-  def pending_listener(self):
-    return Listener._wrap_listener(pn_driver_listener(self._driver))
-
-  def head_listener(self):
-    return Listener._wrap_listener(pn_listener_head(self._driver))
-
-  def connector(self, host, port):
-    return Connector._wrap_connector(pn_connector(self._driver, unicode2utf8(host), port, None),
-                                     self)
-
-  def head_connector(self):
-    return Connector._wrap_connector(pn_connector_head(self._driver))
-
-  def pending_connector(self):
-    return Connector._wrap_connector(pn_driver_connector(self._driver))
-
 class Url(object):
   """
   Simple URL parser/constructor, handles URLs of the form:
@@ -3958,18 +3768,14 @@ __all__ = [
            "Collector",
            "Condition",
            "Connection",
-           "Connector",
            "Data",
            "Delivery",
            "Disposition",
            "Described",
-           "Driver",
-           "DriverException",
            "Endpoint",
            "Event",
            "Handler",
            "Link",
-           "Listener",
            "Message",
            "MessageException",
            "Messenger",

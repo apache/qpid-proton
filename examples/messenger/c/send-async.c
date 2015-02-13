@@ -22,7 +22,6 @@
 
 #include "proton/message.h"
 #include "proton/messenger.h"
-#include "proton/driver.h"
 
 #include "pncompat/misc_funcs.inc"
 #include <stdio.h>

@@ -4,10 +4,8 @@
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
-#include <proton/driver.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
-#include <proton/driver_extras.h>
 #include <proton/url.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>

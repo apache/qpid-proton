@@ -1046,7 +1046,7 @@ class IdleTimeoutTest(common.Test):
     idle_timeout_secs = self.delay
 
     try:
-      idle_server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
+      idle_server = common.TestServer(idle_timeout=idle_timeout_secs)
       idle_server.timeout = self.timeout
       idle_server.start()
 
@@ -1067,18 +1067,7 @@ class IdleTimeoutTest(common.Test):
         continue
 
       # confirm link is still active
-      cxtr = idle_server.driver.head_connector()
-      assert not cxtr.closed, "Connector has unexpectedly been closed"
-      conn = cxtr.connection
-      assert conn.state == (Endpoint.LOCAL_ACTIVE
-                            | Endpoint.REMOTE_ACTIVE
-                            ), "Connection has unexpectedly terminated"
-      link = conn.link_head(0)
-      while link:
-        assert link.state != (Endpoint.REMOTE_CLOSED
-                              ), "Link unexpectedly closed"
-        link = link.next(0)
-
+      assert not idle_server.conditions, idle_server.conditions
     finally:
       try:
         idle_client.stop()

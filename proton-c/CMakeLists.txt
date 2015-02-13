@@ -85,28 +85,26 @@ add_custom_command (
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
-# Select driver
+# Select IO impl
 if(PN_WINAPI)
   set (pn_io_impl src/windows/io.c src/windows/iocp.c src/windows/write_pipeline.c)
   set (pn_selector_impl src/windows/selector.c)
-  set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
   set (pn_io_impl src/posix/io.c)
   set (pn_selector_impl src/posix/selector.c)
-  set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/ssl/openssl.c)
+  set (pn_ssl_impl src/ssl/openssl.c)
   include_directories ("${OPENSSL_INCLUDE_DIR}")
   set (SSL_LIB ${OPENSSL_LIBRARIES})
 else (SSL_IMPL STREQUAL openssl)
   if (SSL_IMPL STREQUAL schannel)
-    set (pn_driver_ssl_impl src/windows/schannel.c)
+    set (pn_ssl_impl src/windows/schannel.c)
     set (SSL_LIB Crypt32.lib Secur32.lib)
   else (SSL_IMPL STREQUAL schannel)
-    set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
+    set (pn_ssl_impl src/ssl/ssl_stub.c)
   endif (SSL_IMPL STREQUAL schannel)
 endif (SSL_IMPL STREQUAL openssl)
 
@@ -268,9 +266,8 @@ add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 set (qpid-proton-platform
   ${pn_io_impl}
   ${pn_selector_impl}
-  ${pn_driver_impl}
   src/platform.c
-  ${pn_driver_ssl_impl}
+  ${pn_ssl_impl}
   )
 
 set (qpid-proton-core
