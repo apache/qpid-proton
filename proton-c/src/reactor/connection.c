@@ -125,8 +125,16 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
     colon[0] = '\0';
   }
   pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
-  pn_free(str);
   pn_transport_t *transport = pn_event_transport(event);
+  // invalid sockets are ignored by poll, so we need to do this manualy
+  if (sock == PN_INVALID_SOCKET) {
+    pn_condition_t *cond = pn_transport_condition(transport);
+    pn_condition_set_name(cond, "proton:connect");
+    pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+    pn_transport_close_tail(transport);
+    pn_transport_close_head(transport);
+  }
+  pn_free(str);
   pn_reactor_selectable_transport(reactor, sock, transport);
 }
 

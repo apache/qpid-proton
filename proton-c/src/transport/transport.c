@@ -966,8 +966,20 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     transport->close_sent = true;
   }
   transport->halt = true;
-  pn_condition_set_name(&transport->condition, condition);
-  pn_condition_set_description(&transport->condition, buf);
+  pn_condition_t *cond = &transport->condition;
+  if (!pn_condition_is_set(cond)) {
+    pn_condition_set_name(cond, condition);
+    pn_condition_set_description(cond, buf);
+  } else {
+    const char *first = pn_condition_get_description(cond);
+    if (first) {
+      char extended[2048];
+      snprintf(extended, 2048, "%s (%s)", first, buf);
+      pn_condition_set_description(cond, extended);
+    } else {
+      pn_condition_set_description(cond, buf);
+    }
+  }
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
   if (transport->trace & PN_TRACE_DRV) {
