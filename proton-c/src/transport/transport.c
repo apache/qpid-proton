@@ -954,8 +954,12 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   va_list ap;
   va_start(ap, fmt);
   char buf[1024];
-  // XXX: result
-  vsnprintf(buf, 1024, fmt, ap);
+  if (fmt) {
+    // XXX: result
+    vsnprintf(buf, 1024, fmt, ap);
+  } else {
+    buf[0] = '\0';
+  }
   va_end(ap);
   if (!transport->close_sent) {
     if (!transport->open_sent) {
@@ -969,14 +973,16 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   pn_condition_t *cond = &transport->condition;
   if (!pn_condition_is_set(cond)) {
     pn_condition_set_name(cond, condition);
-    pn_condition_set_description(cond, buf);
+    if (fmt) {
+      pn_condition_set_description(cond, buf);
+    }
   } else {
     const char *first = pn_condition_get_description(cond);
-    if (first) {
+    if (first && fmt) {
       char extended[2048];
       snprintf(extended, 2048, "%s (%s)", first, buf);
       pn_condition_set_description(cond, extended);
-    } else {
+    } else if (fmt) {
       pn_condition_set_description(cond, buf);
     }
   }
@@ -1555,6 +1561,18 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 // process pending input until none remaining or EOS
 static ssize_t transport_consume(pn_transport_t *transport)
 {
+  // This allows whatever is driving the I/O to set the error
+  // condition on the transport before doing pn_transport_close_head()
+  // or pn_transport_close_tail(). This allows all transport errors to
+  // flow to the app the same way, but provides cleaner error messages
+  // since we don't try to look for a protocol header when, e.g. the
+  // connection was refused.
+  if (!transport->bytes_input && transport->tail_closed &&
+      pn_condition_is_set(&transport->condition)) {
+    pn_do_error(transport, NULL, NULL);
+    return PN_EOS;
+  }
+
   size_t consumed = 0;
 
   while (transport->input_pending || transport->tail_closed) {
