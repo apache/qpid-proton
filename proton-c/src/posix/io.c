@@ -223,7 +223,8 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 #ifdef MSG_NOSIGNAL
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len) {
   ssize_t count = send(socket, buf, len, MSG_NOSIGNAL);
-  io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  io->wouldblock = (errno == EAGAIN || errno == EWOULDBLOCK);
+  if (count < 0) { pn_i_error_from_errno(io->error, "send"); }
   return count;
 }
 
@@ -237,7 +238,8 @@ static inline int pn_create_socket(int af) {
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
   ssize_t count = send(socket, buf, size, 0);
-  io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  io->wouldblock = (errno == EAGAIN || errno == EWOULDBLOCK);
+  if (count < 0) { pn_i_error_from_errno(io->error, "send"); }
   return count;
 }
 
@@ -266,6 +268,7 @@ ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
 {
   ssize_t count = recv(socket, buf, size, 0);
   io->wouldblock = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK);
+  if (count < 0) { pn_i_error_from_errno(io->error, "recv"); }
   return count;
 }
 

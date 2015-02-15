@@ -129,7 +129,7 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
   // invalid sockets are ignored by poll, so we need to do this manualy
   if (sock == PN_INVALID_SOCKET) {
     pn_condition_t *cond = pn_transport_condition(transport);
-    pn_condition_set_name(cond, "proton:connect");
+    pn_condition_set_name(cond, "proton:io");
     pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
     pn_transport_close_tail(transport);
     pn_transport_close_head(transport);
@@ -155,7 +155,11 @@ static void pni_connection_readable(pn_selectable_t *sel)
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
       if (n == 0 || !pn_wouldblock(pn_reactor_io(reactor))) {
-        if (n < 0) perror("recv");
+        if (n < 0) {
+          pn_condition_t *cond = pn_transport_condition(transport);
+          pn_condition_set_name(cond, "proton:io");
+          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+        }
         pn_transport_close_tail(transport);
       }
     } else {
@@ -182,7 +186,11 @@ static void pni_connection_writable(pn_selectable_t *sel)
                         pn_transport_head(transport), pending);
     if (n < 0) {
       if (!pn_wouldblock(pn_reactor_io(reactor))) {
-        perror("send");
+        pn_condition_t *cond = pn_transport_condition(transport);
+        if (!pn_condition_is_set(cond)) {
+          pn_condition_set_name(cond, "proton:io");
+          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+        }
         pn_transport_close_head(transport);
       }
     } else {
