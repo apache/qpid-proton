@@ -3442,6 +3442,8 @@ class EventBase(object):
 
 def _none(x): return None
 
+DELEGATED = Constant("DELEGATED")
+
 class Event(Wrapper, EventBase):
 
   REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
@@ -3526,14 +3528,15 @@ class Event(Wrapper, EventBase):
   def context(self):
     return wrappers[self.clazz](pn_event_context(self._impl))
 
-  def dispatch(self, handler):
+  def dispatch(self, handler, type=None):
+    type = type or self.type
     if isinstance(handler, WrappedHandler):
-      pn_handler_dispatch(handler._impl, self._impl, self.type.number)
+      pn_handler_dispatch(handler._impl, self._impl, type.number)
     else:
-      dispatch(handler, self.type.method, self)
-      if hasattr(handler, "handlers"):
+      result = dispatch(handler, type.method, self)
+      if result != DELEGATED and hasattr(handler, "handlers"):
         for h in handler.handlers:
-          self.dispatch(h)
+          self.dispatch(h, type)
 
 
   @property
