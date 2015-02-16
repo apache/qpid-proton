@@ -562,6 +562,20 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         }
 
         @Override
+        public int position()
+        {
+            if (_tail_closed) return Transport.END_OF_STREAM;
+            if (isInputInSaslMode())
+            {
+                return _inputBuffer.position();
+            }
+            else
+            {
+                return _underlyingInput.position();
+            }
+        }
+
+        @Override
         public ByteBuffer tail()
         {
             if (!isInputInSaslMode())

@@ -28,10 +28,10 @@ import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
-import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 
 public class SslImpl implements Ssl
 {
@@ -107,6 +107,17 @@ public class SslImpl implements Ssl
             initTransportWrapperOnFirstIO();
             if (_initException == null) {
                 return _transportWrapper.capacity();
+            } else {
+                return Transport.END_OF_STREAM;
+            }
+        }
+
+        @Override
+        public int position()
+        {
+            initTransportWrapperOnFirstIO();
+            if (_initException == null) {
+                return _transportWrapper.position();
             } else {
                 return Transport.END_OF_STREAM;
             }

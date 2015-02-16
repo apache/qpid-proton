@@ -484,6 +484,14 @@ class FrameParser implements TransportInput
     }
 
     @Override
+    public int position() {
+        if (_tail_closed) {
+            return Transport.END_OF_STREAM;
+        }
+        return (_inputBuffer == null) ? 0 : _inputBuffer.position();
+    }
+
+    @Override
     public ByteBuffer tail()
     {
         if (_tail_closed) {

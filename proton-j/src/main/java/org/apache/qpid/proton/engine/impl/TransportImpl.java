@@ -1373,18 +1373,11 @@ public class TransportImpl extends EndpointImpl
     {
         _processingStarted = true;
 
-
         try {
             init();
-            int beforePosition = _inputProcessor.tail().position();
+            int beforePosition = _inputProcessor.position();
             _inputProcessor.process();
-            try {
-                _bytesInput += beforePosition - _inputProcessor.tail().position();
-            } catch(TransportException e) {
-                // This is because _inputProcessor.tail() can throw an exception if
-                // the tail has been closed.  It might be better to make process()
-                // return the number of bytes that have been processed.
-            }
+            _bytesInput += beforePosition - _inputProcessor.position();
         } catch (TransportException e) {
             _head_closed = true;
             throw e;
