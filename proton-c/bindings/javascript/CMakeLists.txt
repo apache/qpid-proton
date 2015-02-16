@@ -186,10 +186,10 @@ set_target_properties(
 
 
 # Compile the send-async.c and recv-async.c examples into JavaScript
-add_executable(send-async.js ${PN_PATH}/../examples/messenger/c/send-async.c)
+add_executable(send-async.js ${PN_PATH}/../examples/c/messenger/send-async.c)
 target_link_libraries(send-async.js qpid-proton-bitcode)
 
-add_executable(recv-async.js ${PN_PATH}/../examples/messenger/c/recv-async.c)
+add_executable(recv-async.js ${PN_PATH}/../examples/c/messenger/recv-async.c)
 target_link_libraries(recv-async.js qpid-proton-bitcode)
 
 set_target_properties(
