@@ -33,7 +33,7 @@ The proton APIs consist of the following classes:
 from cproton import *
 from wrapper import Wrapper
 
-import weakref, socket, sys
+import weakref, socket, sys, threading
 try:
   import uuid
 
@@ -3412,13 +3412,32 @@ class Collector:
 
 class EventType(object):
 
+  _lock = threading.Lock()
+  _extended = 10000
   TYPES = {}
 
-  def __init__(self, number, method):
-    self.number = number
-    self.name = pn_event_type_name(self.number)
-    self.method = method
-    self.TYPES[number] = self
+  def __init__(self, name=None, number=None, method=None):
+    if name is None and number is None:
+      raise TypeError("extended events require a name")
+    try:
+      self._lock.acquire()
+      if name is None:
+        name = pn_event_type_name(number)
+
+      if number is None:
+        number = EventType._extended
+        EventType._extended += 1
+
+      if method is None:
+        method = "on_%s" % name
+
+      self.name = name
+      self.number = number
+      self.method = method
+
+      self.TYPES[number] = self
+    finally:
+      self._lock.release()
 
   def __repr__(self):
     return self.name
@@ -3444,55 +3463,58 @@ def _none(x): return None
 
 DELEGATED = Constant("DELEGATED")
 
+def _core(number, method):
+  return EventType(number=number, method=method)
+
 class Event(Wrapper, EventBase):
 
-  REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
-  REACTOR_QUIESCED = EventType(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
-  REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
+  REACTOR_INIT = _core(PN_REACTOR_INIT, "on_reactor_init")
+  REACTOR_QUIESCED = _core(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
+  REACTOR_FINAL = _core(PN_REACTOR_FINAL, "on_reactor_final")
 
-  TIMER_TASK = EventType(PN_TIMER_TASK, "on_timer_task")
+  TIMER_TASK = _core(PN_TIMER_TASK, "on_timer_task")
 
-  CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
-  CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
-  CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")
-  CONNECTION_LOCAL_OPEN = EventType(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
-  CONNECTION_LOCAL_CLOSE = EventType(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
-  CONNECTION_REMOTE_OPEN = EventType(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
-  CONNECTION_REMOTE_CLOSE = EventType(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
-  CONNECTION_FINAL = EventType(PN_CONNECTION_FINAL, "on_connection_final")
+  CONNECTION_INIT = _core(PN_CONNECTION_INIT, "on_connection_init")
+  CONNECTION_BOUND = _core(PN_CONNECTION_BOUND, "on_connection_bound")
+  CONNECTION_UNBOUND = _core(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+  CONNECTION_LOCAL_OPEN = _core(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+  CONNECTION_LOCAL_CLOSE = _core(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+  CONNECTION_REMOTE_OPEN = _core(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+  CONNECTION_REMOTE_CLOSE = _core(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+  CONNECTION_FINAL = _core(PN_CONNECTION_FINAL, "on_connection_final")
 
-  SESSION_INIT = EventType(PN_SESSION_INIT, "on_session_init")
-  SESSION_LOCAL_OPEN = EventType(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
-  SESSION_LOCAL_CLOSE = EventType(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
-  SESSION_REMOTE_OPEN = EventType(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
-  SESSION_REMOTE_CLOSE = EventType(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
-  SESSION_FINAL = EventType(PN_SESSION_FINAL, "on_session_final")
+  SESSION_INIT = _core(PN_SESSION_INIT, "on_session_init")
+  SESSION_LOCAL_OPEN = _core(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+  SESSION_LOCAL_CLOSE = _core(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+  SESSION_REMOTE_OPEN = _core(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+  SESSION_REMOTE_CLOSE = _core(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+  SESSION_FINAL = _core(PN_SESSION_FINAL, "on_session_final")
 
-  LINK_INIT = EventType(PN_LINK_INIT, "on_link_init")
-  LINK_LOCAL_OPEN = EventType(PN_LINK_LOCAL_OPEN, "on_link_local_open")
-  LINK_LOCAL_CLOSE = EventType(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
-  LINK_LOCAL_DETACH = EventType(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
-  LINK_REMOTE_OPEN = EventType(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
-  LINK_REMOTE_CLOSE = EventType(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
-  LINK_REMOTE_DETACH = EventType(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
-  LINK_FLOW = EventType(PN_LINK_FLOW, "on_link_flow")
-  LINK_FINAL = EventType(PN_LINK_FINAL, "on_link_final")
+  LINK_INIT = _core(PN_LINK_INIT, "on_link_init")
+  LINK_LOCAL_OPEN = _core(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+  LINK_LOCAL_CLOSE = _core(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+  LINK_LOCAL_DETACH = _core(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+  LINK_REMOTE_OPEN = _core(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+  LINK_REMOTE_CLOSE = _core(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+  LINK_REMOTE_DETACH = _core(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+  LINK_FLOW = _core(PN_LINK_FLOW, "on_link_flow")
+  LINK_FINAL = _core(PN_LINK_FINAL, "on_link_final")
 
-  DELIVERY = EventType(PN_DELIVERY, "on_delivery")
+  DELIVERY = _core(PN_DELIVERY, "on_delivery")
 
-  TRANSPORT = EventType(PN_TRANSPORT, "on_transport")
-  TRANSPORT_ERROR = EventType(PN_TRANSPORT_ERROR, "on_transport_error")
-  TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
-  TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
-  TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
+  TRANSPORT = _core(PN_TRANSPORT, "on_transport")
+  TRANSPORT_ERROR = _core(PN_TRANSPORT_ERROR, "on_transport_error")
+  TRANSPORT_HEAD_CLOSED = _core(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+  TRANSPORT_TAIL_CLOSED = _core(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+  TRANSPORT_CLOSED = _core(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
-  SELECTABLE_INIT = EventType(PN_SELECTABLE_INIT, "on_selectable_init")
-  SELECTABLE_UPDATED = EventType(PN_SELECTABLE_UPDATED, "on_selectable_updated")
-  SELECTABLE_READABLE = EventType(PN_SELECTABLE_READABLE, "on_selectable_readable")
-  SELECTABLE_WRITABLE = EventType(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
-  SELECTABLE_EXPIRED = EventType(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
-  SELECTABLE_ERROR = EventType(PN_SELECTABLE_ERROR, "on_selectable_error")
-  SELECTABLE_FINAL = EventType(PN_SELECTABLE_FINAL, "on_selectable_final")
+  SELECTABLE_INIT = _core(PN_SELECTABLE_INIT, "on_selectable_init")
+  SELECTABLE_UPDATED = _core(PN_SELECTABLE_UPDATED, "on_selectable_updated")
+  SELECTABLE_READABLE = _core(PN_SELECTABLE_READABLE, "on_selectable_readable")
+  SELECTABLE_WRITABLE = _core(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
+  SELECTABLE_EXPIRED = _core(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
+  SELECTABLE_ERROR = _core(PN_SELECTABLE_ERROR, "on_selectable_error")
+  SELECTABLE_FINAL = _core(PN_SELECTABLE_FINAL, "on_selectable_final")
 
   @staticmethod
   def wrap(impl, number=None):

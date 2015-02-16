@@ -211,7 +211,14 @@ static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
 {
   assert(event);
   assert(dst);
-  int err = pn_string_addf(dst, "(%s<0x%X>", pn_event_type_name(event->type), (unsigned int) event->type);
+  const char *name = pn_event_type_name(event->type);
+  int err;
+  if (name) {
+    err = pn_string_addf(dst, "(%s", pn_event_type_name(event->type));
+  } else {
+    err = pn_string_addf(dst, "(<%u>", (unsigned int) event->type);
+  }
+  if (err) return err;
   if (event->context) {
     err = pn_string_addf(dst, ", ");
     if (err) return err;
@@ -344,5 +351,5 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_SELECTABLE_FINAL";
   }
 
-  return "<unrecognized>";
+  return NULL;
 }

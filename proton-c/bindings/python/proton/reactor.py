@@ -223,33 +223,13 @@ class EventInjector(object):
             event.reactor.update(s)
 
 
-class Names(object):
-    def __init__(self, base=10000):
-        self.names = []
-        self.base = base
-
-    def number(self, name):
-        if name not in self.names:
-            self.names.append(name)
-        return self.names.index(name) + self.base
-
-class ExtendedEventType(EventType):
-    USED = Names()
-    """
-    Event type identifier for events defined outside the proton-c
-    library
-    """
-    def __init__(self, name, number=None):
-        super(ExtendedEventType, self).__init__(number or ExtendedEventType.USED.number(name), "on_%s" % name)
-        self.name = name
-
 class ApplicationEvent(EventBase):
     """
     Application defined event, which can optionally be associated with
     an engine object and or an arbitrary subject
     """
     def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
-        super(ApplicationEvent, self).__init__(PN_PYREF, self, ExtendedEventType(typename))
+        super(ApplicationEvent, self).__init__(PN_PYREF, self, EventType(typename))
         self.connection = connection
         self.session = session
         self.link = link
