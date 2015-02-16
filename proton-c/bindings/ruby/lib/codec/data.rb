@@ -96,13 +96,13 @@ module Qpid::Proton::Codec
       end
 
       # destructor
-      ObjectSpace.define_finalizer(self, self.class.finalize!(@data))
+      ObjectSpace.define_finalizer(self, self.class.finalize!(@data, @free))
     end
 
     # @private
-    def self.finalize!(data)
+    def self.finalize!(data, free)
       proc {
-        Cproton.pn_data_free(data) if @free
+        Cproton.pn_data_free(data) if free
       }
     end
 
@@ -439,6 +439,27 @@ module Qpid::Proton::Codec
     #
     def null=(value)
       null
+    end
+
+    # Puts an arbitrary object type.
+    #
+    # The Data instance will determine which AMQP type is appropriate and will
+    # use that to encode the object.
+    #
+    # @param object [Object] The value.
+    #
+    def object=(object)
+      Mapping.for_class(object.class).put(self, object)
+    end
+
+    # Gets the current node, based on how it was encoded.
+    #
+    # @return [Object] The current node.
+    #
+    def object
+      type = self.type
+      return nil if type.nil?
+      type.get(data)
     end
 
     # Checks if the current node is null.
