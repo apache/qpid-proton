@@ -98,14 +98,6 @@ foreach (LANG ${BINDING_LANGS})
   endif ()
 endforeach()
 
-if (WIN32)
-  set (EXAMPLES_INSTALL_DIR proton/examples)
-endif (WIN32)
-
-if (UNIX)
-  set (EXAMPLES_INSTALL_DIR ${SHARE_INSTALL_DIR}/proton/examples)
-endif (UNIX)
-
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
@@ -134,20 +126,8 @@ add_subdirectory(proton-c)
 install (FILES LICENSE README TODO
          DESTINATION ${PROTON_SHARE})
 
-# install the C messenger example
-install (FILES examples/messenger/c/CMakeLists.txt
-               examples/messenger/c/send.c
-               examples/messenger/c/recv.c
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger)
-
-install (FILES examples/include/pncompat/misc_defs.h
-               examples/include/pncompat/misc_funcs.inc
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
-
-install (FILES examples/include/pncompat/internal/LICENSE
-               examples/include/pncompat/internal/getopt.c
-               examples/include/pncompat/internal/getopt.h
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat/internal)
+install (DIRECTORY examples
+         DESTINATION ${PROTON_SHARE})
 
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")
