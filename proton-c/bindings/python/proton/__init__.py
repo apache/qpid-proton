@@ -1132,23 +1132,27 @@ The format of the message.
       dlv.settle()
     return dlv
 
-  def recv(self, receiver):
+  def recv(self, link):
     """
     Receives and decodes the message content for the current delivery
-    from the supplied receiver. Upon success it will return the
-    current delivery for the link. If there is no current delivery, or
-    if the current delivery is incomplete, it will return None.
+    from the link. Upon success it will return the current delivery
+    for the link. If there is no current delivery, or if the current
+    delivery is incomplete, or if the link is not a receiver, it will
+    return None.
 
-    @type receiver: Receiver
-    @param receiver: the link to receive a message from
+    @type link: Link
+    @param link: the link to receive a message from
     @return the delivery associated with the decoded message (or None)
+
     """
-    dlv = receiver.current
+    if link.is_sender: return None
+    dlv = link.current
     if not dlv or dlv.partial: return None
-    encoded = receiver.recv(dlv.pending)
+    encoded = link.recv(dlv.pending)
+    link.advance()
     # the sender has already forgotten about the delivery, so we might
     # as well too
-    if receiver.remote_snd_settle_mode == Link.SND_SETTLED:
+    if link.remote_snd_settle_mode == Link.SND_SETTLED:
       dlv.settle()
     self.decode(encoded)
     return dlv
