@@ -58,11 +58,6 @@ def main(argv=None):
     if len(args) == 0 or len(args[0]) == 0:
         raise Exception("Error: syntax error in command arguments")
 
-    if new_env.get("VALGRIND") and new_env.get("VALGRIND_ALL"):
-        # Python generates a lot of possibly-lost errors that are not errors, don't show them.
-        args = [new_env.get("VALGRIND"), "--show-reachable=no", "--show-possibly-lost=no",
-                "--error-exitcode=42"] + args
-
     p = subprocess.Popen(args, env=new_env)
     return p.wait()
 

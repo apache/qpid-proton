@@ -73,17 +73,15 @@ include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 # if/when this executable gets sorted out remove
 include_directories ("${CMAKE_SOURCE_DIR}/examples/include")
 
-set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py)
-
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
   )
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
@@ -473,6 +471,9 @@ else (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
+
+set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
+
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND)
@@ -502,7 +503,7 @@ if (BUILD_PYTHON)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     set_path (py_pythonpath "${py_bin}${bld_suffix}:${py_pythonpath}")
   endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  add_test (python-test ${env_py}
+  add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
@@ -521,7 +522,7 @@ if (RUBY_EXE)
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
-    add_test (ruby-unit-test ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+    add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
       "${rb_root}/proton-test")
 
     # ruby spec tests
@@ -529,7 +530,7 @@ if (RUBY_EXE)
     if (RSPEC_EXE)
       add_test (NAME ruby-spec-test
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-                COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
                         ${RSPEC_EXE})
 
     else(RSPEC_EXE)
@@ -545,8 +546,8 @@ endif (RUBY_EXE)
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
 
 if (BUILD_JAVASCRIPT)
-  add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
-  add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
+  add_test (javascript-codec ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/codec.js)
+  add_test (javascript-message ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/message.js)
 endif (BUILD_JAVASCRIPT)
 
 # build examples to make sure they still work
