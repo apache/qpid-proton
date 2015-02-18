@@ -3304,6 +3304,9 @@ class SSLDomain(object):
   def allow_unsecured_client(self):
     return self._check( pn_ssl_domain_allow_unsecured_client(self._domain) )
 
+  def __del__(self):
+    pn_ssl_domain_free(self._domain)
+
 class SSL(object):
 
   @staticmethod

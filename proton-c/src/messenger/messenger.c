@@ -887,6 +887,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
                                                messenger->private_key,
                                                messenger->password);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "invalid credentials");
         return err;
       }
@@ -894,17 +895,20 @@ static int pn_transport_config(pn_messenger_t *messenger,
     if (messenger->trusted_certificates) {
       int err = pn_ssl_domain_set_trusted_ca_db(d, messenger->trusted_certificates);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "invalid certificate db");
         return err;
       }
       err = pn_ssl_domain_set_peer_authentication(
           d, messenger->ssl_peer_authentication_mode, NULL);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "error configuring ssl to verify peer");
       }
     } else {
       int err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_ANONYMOUS_PEER, NULL);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "error configuring ssl for anonymous peer");
         return err;
       }
