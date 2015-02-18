@@ -19,6 +19,10 @@
 
 include_directories("${PERL_INCLUDE_PATH}")
 
+if (BUILD_WITH_CXX)
+  SET_SOURCE_FILES_PROPERTIES(cproton.i perl.i PROPERTIES CPLUSPLUS ON)
+endif(BUILD_WITH_CXX)
+
 # Need to pass in the same compiler flags used to build Perl itself
 execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
                 OUTPUT_VARIABLE PERLCFLAGS)
