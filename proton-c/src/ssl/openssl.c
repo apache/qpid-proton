@@ -150,15 +150,23 @@ static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
 
-// @todo: used to avoid littering the code with calls to printf...
+static void ssl_vlog(pn_transport_t *transport, const char *fmt, va_list ap)
+{
+  if (transport) {
+    if (PN_TRACE_DRV & transport->trace) {
+      pn_transport_vlogf(transport, fmt, ap);
+    }
+  } else {
+    pn_transport_vlogf(transport, fmt, ap);
+  }
+}
+
 static void ssl_log(pn_transport_t *transport, const char *fmt, ...)
 {
-  if (PN_TRACE_DRV & transport->trace) {
-    va_list ap;
-    va_start(ap, fmt);
-    pn_transport_vlogf(transport, fmt, ap);
-    va_end(ap);
-  }
+  va_list ap;
+  va_start(ap, fmt);
+  ssl_vlog(transport, fmt, ap);
+  va_end(ap);
 }
 
 static void ssl_log_flush(pn_transport_t* transport)
@@ -167,7 +175,7 @@ static void ssl_log_flush(pn_transport_t* transport)
   unsigned long err = ERR_get_error();
   while (err) {
     ERR_error_string_n(err, buf, sizeof(buf));
-    pn_transport_logf(transport, "%s", buf);
+    ssl_log(transport, "%s", buf);
     err = ERR_get_error();
   }
 }
@@ -175,21 +183,14 @@ static void ssl_log_flush(pn_transport_t* transport)
 // log an error and dump the SSL error stack
 static void ssl_log_error(const char *fmt, ...)
 {
-  va_list ap;
-
   if (fmt) {
+    va_list ap;
     va_start(ap, fmt);
-    pn_transport_vlogf(NULL, fmt, ap);
+    ssl_vlog(NULL, fmt, ap);
     va_end(ap);
   }
 
-  char buf[128];        // see "man ERR_error_string_n()"
-  unsigned long err = ERR_get_error();
-  while (err) {
-    ERR_error_string_n(err, buf, sizeof(buf));
-    pn_transport_logf(NULL, "%s", buf);
-    err = ERR_get_error();
-  }
+  ssl_log_flush(NULL);
 }
 
 static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
