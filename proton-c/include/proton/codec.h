@@ -792,7 +792,8 @@ PN_EXTERN int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d);
 PN_EXTERN int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
 
 /**
- * Puts a ::PN_BINARY value.
+ * Puts a ::PN_BINARY value. The bytes referenced by the pn_bytes_t
+ * argument are copied and stored inside the pn_data_t object.
  *
  * @param data a pn_data_t object
  * @param bytes the value
@@ -801,7 +802,8 @@ PN_EXTERN int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u);
 PN_EXTERN int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
 
 /**
- * Puts a ::PN_STRING value.
+ * Puts a ::PN_STRING value. The bytes referenced by the pn_bytes_t
+ * argument are copied and stored inside the pn_data_t object.
  *
  * @param data a pn_data_t object
  * @param string utf8 encoded unicode
@@ -810,7 +812,8 @@ PN_EXTERN int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes);
 PN_EXTERN int pn_data_put_string(pn_data_t *data, pn_bytes_t string);
 
 /**
- * Puts a ::PN_SYMBOL value.
+ * Puts a ::PN_SYMBOL value. The bytes referenced by the pn_bytes_t
+ * argument are copied and stored inside the pn_data_t object.
  *
  * @param data a pn_data_t object
  * @param symbol ascii encoded symbol
@@ -1119,7 +1122,9 @@ PN_EXTERN pn_uuid_t pn_data_get_uuid(pn_data_t *data);
 
 /**
  * If the current node is binary, returns its value, returns ""
- * otherwise.
+ * otherwise. The pn_bytes_t returned will point to memory held inside
+ * the pn_data_t. When the pn_data_t is cleared or freed, this memory
+ * will be reclaimed.
  *
  * @param data a pn_data_t object
  */
@@ -1127,7 +1132,9 @@ PN_EXTERN pn_bytes_t pn_data_get_binary(pn_data_t *data);
 
 /**
  * If the current node is a string, returns its value, returns ""
- * otherwise.
+ * otherwise. The pn_bytes_t returned will point to memory held inside
+ * the pn_data_t. When the pn_data_t is cleared or freed, this memory
+ * will be reclaimed.
  *
  * @param data a pn_data_t object
  * @return a pn_bytes_t pointing to utf8
@@ -1136,7 +1143,9 @@ PN_EXTERN pn_bytes_t pn_data_get_string(pn_data_t *data);
 
 /**
  * If the current node is a symbol, returns its value, returns ""
- * otherwise.
+ * otherwise. The pn_bytes_t returned will point to memory held inside
+ * the pn_data_t. When the pn_data_t is cleared or freed, this memory
+ * will be reclaimed.
  *
  * @param data a pn_data_t object
  * @return a pn_bytes_t pointing to ascii
@@ -1145,7 +1154,9 @@ PN_EXTERN pn_bytes_t pn_data_get_symbol(pn_data_t *data);
 
 /**
  * If the current node is a symbol, string, or binary, return the
- * bytes representing its value.
+ * bytes representing its value. The pn_bytes_t returned will point to
+ * memory held inside the pn_data_t. When the pn_data_t is cleared or
+ * freed, this memory will be reclaimed.
  *
  * @param data a pn_data_t object
  * @return a pn_bytes_t pointing to the node's value
