@@ -352,6 +352,9 @@ class EndpointStateHandler(Handler):
         elif self.peer_close_is_error:
             self.on_link_error(event)
 
+    def on_transport_tail_closed(self, event):
+        self.on_transport_closed(event)
+
     def on_transport_closed(self, event):
         if self.delegate:
             dispatch(self.delegate, 'on_disconnected', event)
