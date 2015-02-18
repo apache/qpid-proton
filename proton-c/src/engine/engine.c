@@ -222,6 +222,7 @@ void pn_remove_session(pn_connection_t *conn, pn_session_t *ssn)
 {
   if (pn_list_remove(conn->sessions, ssn)) {
     pn_ep_decref(&conn->endpoint);
+    LL_REMOVE(conn, endpoint, &ssn->endpoint);
   }
 }
 
@@ -252,8 +253,6 @@ void pn_session_free(pn_session_t *session)
   }
   pn_remove_session(session->connection, session);
   pn_list_add(session->connection->freed, session);
-  pn_endpoint_t *endpoint = (pn_endpoint_t *) session;
-  LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
   session->endpoint.freed = true;
   pn_ep_decref(&session->endpoint);
 
@@ -292,6 +291,7 @@ void pn_remove_link(pn_session_t *ssn, pn_link_t *link)
 {
   if (pn_list_remove(ssn->links, link)) {
     pn_ep_decref(&ssn->endpoint);
+    LL_REMOVE(ssn->connection, endpoint, &link->endpoint);
   }
 }
 
@@ -328,10 +328,8 @@ void pn_terminus_free(pn_terminus_t *terminus)
 void pn_link_free(pn_link_t *link)
 {
   assert(!link->endpoint.freed);
-  pn_endpoint_t *endpoint = (pn_endpoint_t *) link;
   pn_remove_link(link->session, link);
   pn_list_add(link->session->freed, link);
-  LL_REMOVE(pn_ep_get_connection(endpoint), endpoint, endpoint);
   pn_delivery_t *delivery = link->unsettled_head;
   while (delivery) {
     pn_delivery_t *next = delivery->unsettled_next;
@@ -692,6 +690,10 @@ void pn_clear_tpwork(pn_delivery_t *delivery)
   {
     LL_REMOVE(connection, tpwork, delivery);
     delivery->tpwork = false;
+    if (pn_refcount(delivery) > 0) {
+      pn_incref(delivery);
+      pn_decref(delivery);
+    }
   }
 }
 
@@ -900,6 +902,13 @@ static void pn_session_finalize(void *object)
   pn_free(session->state.remote_handles);
   pn_remove_session(session->connection, session);
   pn_list_remove(session->connection->freed, session);
+
+  if (session->connection->transport) {
+    pn_transport_t *transport = session->connection->transport;
+    pn_hash_del(transport->local_channels, session->state.local_channel);
+    pn_hash_del(transport->remote_channels, session->state.remote_channel);
+  }
+
   if (endpoint->referenced) {
     pn_decref(session->connection);
   }
@@ -940,8 +949,8 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->state.remote_channel = (uint16_t)-1;
   pn_delivery_map_init(&ssn->state.incoming, 0);
   pn_delivery_map_init(&ssn->state.outgoing, 0);
-  ssn->state.local_handles = pn_hash(PN_OBJECT, 0, 0.75);
-  ssn->state.remote_handles = pn_hash(PN_OBJECT, 0, 0.75);
+  ssn->state.local_handles = pn_hash(PN_WEAKREF, 0, 0.75);
+  ssn->state.remote_handles = pn_hash(PN_WEAKREF, 0, 0.75);
   // end transport state
 
   pn_collector_put(conn->collector, PN_OBJECT, ssn, PN_SESSION_INIT);
@@ -1055,6 +1064,8 @@ static void pn_link_finalize(void *object)
   pn_free(link->name);
   pn_endpoint_tini(endpoint);
   pn_remove_link(link->session, link);
+  pn_hash_del(link->session->state.local_handles, link->state.local_handle);
+  pn_hash_del(link->session->state.remote_handles, link->state.remote_handle);
   pn_list_remove(link->session->freed, link);
   if (endpoint->referenced) {
     pn_decref(link->session);
