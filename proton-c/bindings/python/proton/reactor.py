@@ -23,7 +23,7 @@ from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler
 from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, SSL, SSLDomain, symbol
 from proton import Terminus, Timeout, Transport, TransportException, ulong, Url
 from select import select
-from proton.handlers import OutgoingMessageHandler, ScopedHandler
+from proton.handlers import OutgoingMessageHandler
 from proton import unicode2utf8, utf82unicode
 
 import traceback
@@ -186,9 +186,12 @@ _wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
 
 class EventInjector(object):
     """
-    Can be added to an io loop to allow events to be triggered by an
+    Can be added to a reactor to allow events to be triggered by an
     external thread but handled on the event thread associated with
-    the loop.
+    the reactor. An instance of this class can be passed to the
+    Reactor.selectable() method of the reactor in order to activate
+    it. The close() method should be called when it is no longer
+    needed, to allow the event loop to end if needed.
     """
     def __init__(self):
         self.queue = Queue.Queue()
@@ -196,10 +199,19 @@ class EventInjector(object):
         self._closed = False
 
     def trigger(self, event):
+        """
+        Request that the given event be dispatched on the event thread
+        of the reactor to which this EventInjector was added.
+        """
         self.queue.put(event)
         os.write(self.pipe[1], "!")
 
     def close(self):
+        """
+        Request that this EventInjector be closed. Existing events
+        will be dispctahed on the reactors event dispactch thread,
+        then this will be removed from the set of interest.
+        """
         self._closed = True
         os.write(self.pipe[1], "!")
 
@@ -245,12 +257,6 @@ class ApplicationEvent(EventBase):
     def __repr__(self):
         objects = [self.connection, self.session, self.link, self.delivery, self.subject]
         return "%s(%s)" % (typename, ", ".join([str(o) for o in objects if o is not None]))
-
-class StartEvent(ApplicationEvent):
-    def __init__(self, container):
-        super(StartEvent, self).__init__("start")
-        self.container = container
-
 
 class Transaction(object):
     """
@@ -562,6 +568,12 @@ class SSLConfig(object):
 
 
 class Container(Reactor):
+    """A representation of the AMQP concept of a 'container', which
+       lossely speaking is something that establishes links to or from
+       another container, over which messages are transfered. This is
+       an extension to the Reactor class that adds convenience methods
+       for creating connections and sender- or receiver- links.
+    """
     def __init__(self, *handlers, **kwargs):
         super(Container, self).__init__(*handlers, **kwargs)
         if "impl" not in kwargs:
@@ -572,6 +584,9 @@ class Container(Reactor):
             Wrapper.__setattr__(self, 'subclass', self.__class__)
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None):
+        """
+        Initiates the establishment of an AMQP connection.
+        """
         conn = self.connection(handler)
         conn.container = self.container_id or str(generate_uuid())
 
@@ -612,6 +627,9 @@ class Container(Reactor):
             return context.session()
 
     def create_sender(self, context, target=None, source=None, name=None, handler=None, tags=None, options=None):
+        """
+        Initiates the establishment of a link over which messages can be sent.
+        """
         if isinstance(context, basestring):
             context = Url(context)
         if isinstance(context, Url) and not target:
@@ -631,6 +649,9 @@ class Container(Reactor):
         return snd
 
     def create_receiver(self, context, source=None, target=None, name=None, dynamic=False, handler=None, options=None):
+        """
+        Initiates the establishment of a link over which messages can be received (aka a subscription).
+        """
         if isinstance(context, basestring):
             context = Url(context)
         if isinstance(context, Url) and not source:
@@ -665,17 +686,15 @@ class Container(Reactor):
         return Transaction(context._txn_ctrl, handler, settle_before_discharge)
 
     def listen(self, url, ssl_domain=None):
+        """
+        Initiates a server socket, accepting incoming AMQP connections
+        on the interface and port specified.
+        """
         url = Url(url)
         ssl_config = ssl_domain
         if not ssl_config and url.scheme == 'amqps':
             ssl_config = self.ssl_domain
         return self.acceptor(url.host, url.port)
-
-    def get_event_trigger(self):
-        if not self.trigger or self.trigger.closed():
-            self.trigger = EventInjector()
-            self.selectable(self.trigger)
-        return self.trigger
 
     def do_work(self, timeout=None):
         if timeout:

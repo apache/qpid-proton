@@ -49,7 +49,8 @@ class TxSend(MessagingHandler, TransactionHandler):
 
     def send(self):
         while self.transaction and self.sender.credit and (self.committed + self.current_batch) < self.total:
-            msg = Message(body={'sequence':(self.committed+self.current_batch+1)})
+            seq = self.committed + self.current_batch + 1
+            msg = Message(id=seq, body={'sequence':seq})
             self.transaction.send(self.sender, msg)
             self.current_batch += 1
             if self.current_batch == self.batch_size:

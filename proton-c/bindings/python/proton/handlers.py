@@ -22,30 +22,6 @@ from proton import Collector, Connection, Delivery, Described, Endpoint, Event, 
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 
-def add_nested_handler(handler, nested):
-    if hasattr(handler, 'handlers'):
-        getattr(handler, 'handlers').append(nested)
-    else:
-        handler.handlers = [nested]
-
-class ScopedHandler(Handler):
-    """
-    An internal handler that checks for handlers scoped to the engine
-    objects an event relates to. E.g it allows delivery, link, session
-    or connection scoped handlers that will only be called with events
-    for the object to which they are scoped.
-    """
-    scopes = ["delivery", "link", "session", "connection"]
-
-    def on_unhandled(self, method, event):
-        if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
-            return
-
-        objects = [getattr(event, attr) for attr in self.scopes if hasattr(event, attr) and getattr(event, attr)]
-        targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
-        for t in targets:
-            event.dispatch(t)
-
 
 class OutgoingMessageHandler(Handler):
     """
@@ -67,36 +43,50 @@ class OutgoingMessageHandler(Handler):
                 self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
                 self.on_rejected(event)
-            elif dlv.remote_state == Delivery.RELEASED:
+            elif dlv.remote_state == Delivery.RELEASED or dlv.remote_state == Delivery.MODIFIED:
                 self.on_released(event)
-            elif dlv.remote_state == Delivery.MODIFIED:
-                self.on_modified(event)
             if dlv.settled:
                 self.on_settled(event)
             if self.auto_settle:
                 dlv.settle()
 
     def on_sendable(self, event):
+        """
+        Called when the sender link has credit and messages can
+        therefore be transferred.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_sendable', event)
 
     def on_accepted(self, event):
+        """
+        Called when the remote peer accepts an outgoing message.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_accepted', event)
 
     def on_rejected(self, event):
+        """
+        Called when the remote peer rejects an outgoing message.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_rejected', event)
 
     def on_released(self, event):
+        """
+        Called when the remote peer releases an outgoing message. Note
+        that this may be in response to either the RELEASE or MODIFIED
+        state as defined by the AMQP specification.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_released', event)
 
-    def on_modified(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_modified', event)
-
     def on_settled(self, event):
+        """
+        Called when the remote peer has settled the outgoing
+        message. This is the point at which it shouod never be
+        retransmitted.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_settled', event)
 
@@ -114,12 +104,25 @@ class Reject(ProtonException):
 
 class Acking(object):
     def accept(self, delivery):
+        """
+        Accepts a received message.
+        """
         self.settle(delivery, Delivery.ACCEPTED)
 
     def reject(self, delivery):
+        """
+        Rejects a received message that is considered invalid or
+        unprocessable.
+        """
         self.settle(delivery, Delivery.REJECTED)
 
     def release(self, delivery, delivered=True):
+        """
+        Releases a received message, making it available at the source
+        for any (other) interested receiver. The ``delivered``
+        parameter indicates whether this should be considered a
+        delivery attempt (and the delivery count updated) or not.
+        """
         if delivered:
             self.settle(delivery, Delivery.MODIFIED)
         else:
@@ -157,6 +160,13 @@ class IncomingMessageHandler(Handler, Acking):
             self.on_settled(event)
 
     def on_message(self, event):
+        """
+        Called when a message is received. The message itself can be
+        obtained as a property on the event. For the purpose of
+        refering to this message in further actions (e.g. if
+        explicitly accepting it, the ``delivery`` should be used, also
+        obtainable via a property on the event.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_message', event)
 
@@ -361,23 +371,117 @@ class MessagingHandler(Handler, Acking):
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
 
     def on_connection_error(self, event):
+        """
+        Called when the peer closes the connection with an error condition.
+        """
         EndpointStateHandler.print_error(event.connection, "connection")
 
     def on_session_error(self, event):
+        """
+        Called when the peer closes the session with an error condition.
+        """
         EndpointStateHandler.print_error(event.session, "session")
         event.connection.close()
 
     def on_link_error(self, event):
+        """
+        Called when the peer closes the link with an error condition.
+        """
         EndpointStateHandler.print_error(event.link, "link")
         event.connection.close()
 
     def on_reactor_init(self, event):
+        """
+        Called when the event loop - the reactor - starts.
+        """
         if hasattr(event.reactor, 'subclass'):
             setattr(event, event.reactor.subclass.__name__.lower(), event.reactor)
         self.on_start(event)
 
-    def on_start(self, event): pass
-    def on_disconnected(self, event): pass
+    def on_start(self, event):
+        """
+        Called when the event loop starts. (Just an alias for on_reactor_init)
+        """
+        pass
+    def on_connection_closed(self, event):
+        """
+        Called when the connection is closed.
+        """
+        pass
+    def on_session_closed(self, event):
+        """
+        Called when the session is closed.
+        """
+        pass
+    def on_link_closed(self, event):
+        """
+        Called when the link is closed.
+        """
+        pass
+    def on_connection_closing(self, event):
+        """
+        Called when the peer initiates the closing of the connection.
+        """
+        pass
+    def on_session_closing(self, event):
+        """
+        Called when the peer initiates the closing of the session.
+        """
+        pass
+    def on_link_closing(self, event):
+        """
+        Called when the peer initiates the closing of the link.
+        """
+        pass
+    def on_disconnected(self, event):
+        """
+        Called when the socket is disconnected.
+        """
+        pass
+
+    def on_sendable(self, event):
+        """
+        Called when the sender link has credit and messages can
+        therefore be transferred.
+        """
+        pass
+
+    def on_accepted(self, event):
+        """
+        Called when the remote peer accepts an outgoing message.
+        """
+        pass
+
+    def on_rejected(self, event):
+        """
+        Called when the remote peer rejects an outgoing message.
+        """
+        pass
+
+    def on_released(self, event):
+        """
+        Called when the remote peer releases an outgoing message. Note
+        that this may be in response to either the RELEASE or MODIFIED
+        state as defined by the AMQP specification.
+        """
+        pass
+
+    def on_settled(self, event):
+        """
+        Called when the remote peer has settled the outgoing
+        message. This is the point at which it shouod never be
+        retransmitted.
+        """
+        pass
+    def on_message(self, event):
+        """
+        Called when a message is received. The message itself can be
+        obtained as a property on the event. For the purpose of
+        refering to this message in further actions (e.g. if
+        explicitly accepting it, the ``delivery`` should be used, also
+        obtainable via a property on the event.
+        """
+        pass
 
 class TransactionHandler(object):
     """

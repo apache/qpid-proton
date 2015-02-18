@@ -2326,6 +2326,9 @@ def utf82unicode(string):
         raise TypeError("Unrecognized string type")
 
 class Connection(Wrapper, Endpoint):
+  """
+  A representation of an AMQP connection
+  """
 
   @staticmethod
   def wrap(impl):
@@ -2390,25 +2393,37 @@ class Connection(Wrapper, Endpoint):
 
   @property
   def remote_container(self):
+    """The container identifier specified by the remote peer for this connection."""
     return pn_connection_remote_container(self._impl)
 
   @property
   def remote_hostname(self):
+    """The hostname specified by the remote peer for this connection."""
     return pn_connection_remote_hostname(self._impl)
 
   @property
   def remote_offered_capabilities(self):
+    """The capabilities offered by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_offered_capabilities(self._impl))
 
   @property
   def remote_desired_capabilities(self):
+    """The capabilities desired by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_desired_capabilities(self._impl))
 
   @property
   def remote_properties(self):
+    """The properties specified by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_properties(self._impl))
 
   def open(self):
+    """
+    Opens the connection.
+
+    In more detail, this moves the local state of the connection to
+    the ACTIVE state and triggers an open frame to be sent to the
+    peer. A connection is fully active once both peers have opened it.
+    """
     obj2dat(self.offered_capabilities,
             pn_connection_offered_capabilities(self._impl))
     obj2dat(self.desired_capabilities,
@@ -2417,14 +2432,31 @@ class Connection(Wrapper, Endpoint):
     pn_connection_open(self._impl)
 
   def close(self):
+    """
+    Closes the connection.
+
+    In more detail, this moves the local state of the connection to
+    the CLOSED state and triggers a close frame to be sent to the
+    peer. A connection is fully closed once both peers have closed it.
+    """
     self._update_cond()
     pn_connection_close(self._impl)
 
   @property
   def state(self):
+    """
+    The state of the connection as a bit field. The state has a local
+    and a remote component. Each of these can be in one of three
+    states: UNINIT, ACTIVE or CLOSED. These can be tested by masking
+    against LOCAL_UNINIT, LOCAL_ACTIVE, LOCAL_CLOSED, REMOTE_UNINIT,
+    REMOTE_ACTIVE and REMOTE_CLOSED.
+    """
     return pn_connection_state(self._impl)
 
   def session(self):
+    """
+    Returns a new session on this connection.
+    """
     return Session(pn_session(self._impl))
 
   def session_head(self, mask):
@@ -2515,6 +2547,10 @@ class LinkException(ProtonException):
   pass
 
 class Link(Wrapper, Endpoint):
+  """
+  A representation of an AMQP link, of which there are two concrete
+  implementations, Sender and Receiver.
+  """
 
   SND_UNSETTLED = PN_SND_UNSETTLED
   SND_SETTLED = PN_SND_SETTLED
@@ -2551,29 +2587,55 @@ class Link(Wrapper, Endpoint):
     return pn_link_remote_condition(self._impl)
 
   def open(self):
+    """
+    Opens the link.
+
+    In more detail, this moves the local state of the link to the
+    ACTIVE state and triggers an attach frame to be sent to the
+    peer. A link is fully active once both peers have attached it.
+    """
     pn_link_open(self._impl)
 
   def close(self):
+    """
+    Closes the link.
+
+    In more detail, this moves the local state of the link to the
+    CLOSED state and triggers an detach frame (with the closed flag
+    set) to be sent to the peer. A link is fully closed once both
+    peers have detached it.
+    """
     self._update_cond()
     pn_link_close(self._impl)
 
   @property
   def state(self):
+    """
+    The state of the link as a bit field. The state has a local
+    and a remote component. Each of these can be in one of three
+    states: UNINIT, ACTIVE or CLOSED. These can be tested by masking
+    against LOCAL_UNINIT, LOCAL_ACTIVE, LOCAL_CLOSED, REMOTE_UNINIT,
+    REMOTE_ACTIVE and REMOTE_CLOSED.
+    """
     return pn_link_state(self._impl)
 
   @property
   def source(self):
+    """The source of the link as described by the local peer."""
     return Terminus(pn_link_source(self._impl))
 
   @property
   def target(self):
+    """The target of the link as described by the local peer."""
     return Terminus(pn_link_target(self._impl))
 
   @property
   def remote_source(self):
+    """The source of the link as described by the remote peer."""
     return Terminus(pn_link_remote_source(self._impl))
   @property
   def remote_target(self):
+    """The target of the link as described by the remote peer."""
     return Terminus(pn_link_remote_target(self._impl))
 
   @property
@@ -2582,6 +2644,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def connection(self):
+    """The connection on which this link was attached."""
     return self.session.connection
 
   def delivery(self, tag):
@@ -2600,6 +2663,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def credit(self):
+    """The amount of oustanding credit on this link."""
     return pn_link_credit(self._impl)
 
   @property
@@ -2619,10 +2683,12 @@ class Link(Wrapper, Endpoint):
 
   @property
   def is_sender(self):
+    """Returns true if this link is a sender."""
     return pn_link_is_sender(self._impl)
 
   @property
   def is_receiver(self):
+    """Returns true if this link is a receiver."""
     return pn_link_is_receiver(self._impl)
 
   @property
@@ -2749,6 +2815,9 @@ class Terminus(object):
     self._check(pn_terminus_copy(self._impl, src._impl))
 
 class Sender(Link):
+  """
+  A link over which messages are sent.
+  """
 
   def offered(self, n):
     pn_link_offered(self._impl, n)
@@ -2785,8 +2854,12 @@ class Sender(Link):
     return next(self.tag_generator)
 
 class Receiver(Link):
+  """
+  A link over which messages are received.
+  """
 
   def flow(self, n):
+    """Increases the credit issued to the remote sender by the specified number of messages."""
     pn_link_flow(self._impl, n)
 
   def recv(self, limit):
@@ -2908,6 +2981,9 @@ class Disposition(object):
   condition = property(_get_condition, _set_condition)
 
 class Delivery(Wrapper):
+  """
+  Tracks and/or records the delivery of a message over a link.
+  """
 
   RECEIVED = Disposition.RECEIVED
   ACCEPTED = Disposition.ACCEPTED
@@ -2931,21 +3007,29 @@ class Delivery(Wrapper):
 
   @property
   def tag(self):
+    """The identifier for the delivery."""
     return pn_delivery_tag(self._impl)
 
   @property
   def writable(self):
+    """Returns true for an outgoing delivery to which data can now be written."""
     return pn_delivery_writable(self._impl)
 
   @property
   def readable(self):
+    """Returns true for an incoming delivery that has data to read."""
     return pn_delivery_readable(self._impl)
 
   @property
   def updated(self):
+    """Returns true if the state of the delivery has been updated
+    (e.g. it has been settled and/or accepted, rejected etc)."""
     return pn_delivery_updated(self._impl)
 
   def update(self, state):
+    """
+    Set the local state of the delivery e.g. ACCEPTED, REJECTED, RELEASED.
+    """
     obj2dat(self.local._data, pn_disposition_data(self.local._impl))
     obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
     obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
@@ -2957,21 +3041,38 @@ class Delivery(Wrapper):
 
   @property
   def partial(self):
+    """
+    Returns true for an incoming delivery if not all the data is
+    yet available.
+    """
     return pn_delivery_partial(self._impl)
 
   @property
   def local_state(self):
+    """Returns the local state of the delivery."""
     return DispositionType.get(pn_delivery_local_state(self._impl))
 
   @property
   def remote_state(self):
+    """
+    Returns the state of the delivery as indicated by the remote
+    peer.
+    """
     return DispositionType.get(pn_delivery_remote_state(self._impl))
 
   @property
   def settled(self):
+    """
+    Returns true if the delivery has been settled by the remote peer.
+    """
     return pn_delivery_settled(self._impl)
 
   def settle(self):
+    """
+    Settles the delivery locally. This indicates the aplication
+    considers the delivery complete and does not wish to receive any
+    further events about it. Every delivery should be settled locally.
+    """
     pn_delivery_settle(self._impl)
 
   @property
@@ -2980,14 +3081,23 @@ class Delivery(Wrapper):
 
   @property
   def link(self):
+    """
+    Returns the link on which the delivery was sent or received.
+    """
     return Link.wrap(pn_delivery_link(self._impl))
 
   @property
   def session(self):
+    """
+    Returns the session over which the delivery was sent or received.
+    """
     return self.link.session
 
   @property
   def connection(self):
+    """
+    Returns the connection over which the delivery was sent or received.
+    """
     return self.session.connection
 
   @property
@@ -3529,6 +3639,7 @@ class Event(Wrapper, EventBase):
 
   @property
   def context(self):
+    """Returns the context object associated with the event. The type of this depend on the type of event."""
     return wrappers[self.clazz](pn_event_context(self._impl))
 
   def dispatch(self, handler, type=None):
@@ -3544,26 +3655,35 @@ class Event(Wrapper, EventBase):
 
   @property
   def reactor(self):
+    """Returns the reactor associated with the event."""
     return wrappers.get("pn_reactor", _none)(pn_event_reactor(self._impl))
 
   @property
   def transport(self):
+    """Returns the transport associated with the event, or null if none is associated with it."""
     return Transport.wrap(pn_event_transport(self._impl))
 
   @property
   def connection(self):
+    """Returns the connection associated with the event, or null if none is associated with it."""
     return Connection.wrap(pn_event_connection(self._impl))
 
   @property
   def session(self):
+    """Returns the session associated with the event, or null if none is associated with it."""
     return Session.wrap(pn_event_session(self._impl))
 
   @property
   def link(self):
+    """Returns the link associated with the event, or null if none is associated with it."""
     return Link.wrap(pn_event_link(self._impl))
 
   @property
   def sender(self):
+    """Returns the sender link associated with the event, or null if
+       none is associated with it. This is essentially an alias for
+       link(), that does an additional checkon the type of the
+       link."""
     l = self.link
     if l and l.is_sender:
       return l
@@ -3572,6 +3692,9 @@ class Event(Wrapper, EventBase):
 
   @property
   def receiver(self):
+    """Returns the receiver link associated with the event, or null if
+       none is associated with it. This is essentially an alias for
+       link(), that does an additional checkon the type of the link."""
     l = self.link
     if l and l.is_receiver:
       return l
@@ -3580,6 +3703,7 @@ class Event(Wrapper, EventBase):
 
   @property
   def delivery(self):
+    """Returns the delivery associated with the event, or null if none is associated with it."""
     return Delivery.wrap(pn_event_delivery(self._impl))
 
   def __repr__(self):

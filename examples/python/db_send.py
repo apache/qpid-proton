@@ -23,7 +23,7 @@ import Queue
 import time
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import ApplicationEvent, Container
+from proton.reactor import ApplicationEvent, Container, EventInjector
 from db_common import Db
 
 class Send(MessagingHandler):
@@ -36,13 +36,14 @@ class Send(MessagingHandler):
         self.load_count = 0
         self.records = Queue.Queue(maxsize=50)
         self.target = count
+        self.db = Db("src_db", EventInjector())
 
     def keep_sending(self):
         return self.target == 0 or self.sent < self.target
 
     def on_start(self, event):
         self.container = event.container
-        self.db = Db("src_db", self.container.get_event_trigger())
+        self.container.selectable(self.db.injector)
         self.sender = self.container.create_sender(self.url)
 
     def on_records_loaded(self, event):

@@ -33,6 +33,9 @@ class Recv(MessagingHandler):
         event.container.create_receiver(self.url)
 
     def on_message(self, event):
+        if event.message.id and event.message.id < self.received:
+            # ignore duplicate message
+            return
         if self.expected == 0 or self.received < self.expected:
             print event.message.body
             self.received += 1

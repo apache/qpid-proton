@@ -23,9 +23,9 @@ import sqlite3
 import threading
 
 class Db(object):
-    def __init__(self, db, events):
+    def __init__(self, db, injector):
         self.db = db
-        self.events = events
+        self.injector = injector
         self.tasks = Queue.Queue()
         self.position = None
         self.pending_events = []
@@ -66,7 +66,7 @@ class Db(object):
                 event.id = row['id']
             else:
                 event.id = 0
-            self.events.trigger(event)
+            self.injector.trigger(event)
 
     def _load(self, conn, records, event):
         if self.position:
@@ -81,7 +81,7 @@ class Db(object):
             else:
                 break
         if event:
-            self.events.trigger(event)
+            self.injector.trigger(event)
 
     def _insert(self, conn, id, data, event):
         if id:
@@ -109,6 +109,6 @@ class Db(object):
                 except Queue.Empty: pass
                 conn.commit()
                 for event in self.pending_events:
-                    self.events.trigger(event)
+                    self.injector.trigger(event)
                 self.pending_events = []
-        self.events.close()
+        self.injector.close()

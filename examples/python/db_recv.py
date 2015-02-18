@@ -20,7 +20,7 @@
 
 import optparse
 from proton.handlers import MessagingHandler
-from proton.reactor import ApplicationEvent, Container
+from proton.reactor import ApplicationEvent, Container, EventInjector
 from db_common import Db
 
 class Recv(MessagingHandler):
@@ -28,14 +28,14 @@ class Recv(MessagingHandler):
         super(Recv, self).__init__(auto_accept=False)
         self.url = url
         self.delay = 0
-        # TODO: load last tag from db
         self.last_id = None
         self.expected = count
         self.received = 0
         self.accepted = 0
+        self.db = Db("dst_db", EventInjector())
 
     def on_start(self, event):
-        self.db = Db("dst_db", event.container.get_event_trigger())
+        event.container.selectable(self.db.injector)
         e = ApplicationEvent("id_loaded")
         e.container = event.container
         self.db.get_id(e)
