@@ -96,11 +96,9 @@ class Broker(MessagingHandler):
             self._unsubscribe(event.link)
 
     def on_connection_closing(self, event):
-        print "on_connection_closing"
         self.remove_stale_consumers(event.connection)
 
     def on_disconnected(self, event):
-        print "on_disconnected"
         self.remove_stale_consumers(event.connection)
 
     def remove_stale_consumers(self, connection):

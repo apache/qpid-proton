@@ -110,7 +110,7 @@ class ExamplesTest(unittest.TestCase):
 
     def test_simple_send_direct_recv(self):
         self.maxDiff = None
-        r = subprocess.Popen(['direct_recv.py'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        r = subprocess.Popen(['direct_recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         time.sleep(0.5)
         s = subprocess.Popen(['simple_send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         s.wait()
@@ -120,11 +120,11 @@ class ExamplesTest(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
-        s = subprocess.Popen(['direct_send.py'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        s = subprocess.Popen(['direct_send.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         time.sleep(0.5)
         r = subprocess.Popen(['simple_recv.py', '-a', 'localhost:8888'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         r.wait()
+        s.wait()
         actual = [l.strip() for l in r.stdout]
         expected = ["{'sequence': %iL}" % (i+1) for i in range(100)]
-        s.terminate()
         self.assertEqual(actual, expected)
