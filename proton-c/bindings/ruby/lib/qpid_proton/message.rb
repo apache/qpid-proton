@@ -427,39 +427,6 @@ module Qpid # :nodoc:
         Cproton.pn_message_get_content_type(@impl)
       end
 
-      # Sets the message content.
-      #
-      # *WARNING:* This method has been deprecated. Please use #body= instead to
-      # set the content of a message.
-      #
-      # ==== Options
-      #
-      # * content - the content
-      #
-      def content=(content)
-        Cproton.pn_message_load(@impl, content)
-      end
-
-      # Returns the message content.
-      #
-      # *WARNING:* This method has been deprecated. Please use #body instead to
-      # retrieve the content of a message.
-      #
-      def content
-        size = 16
-        loop do
-          result = Cproton.pn_message_save(@impl, size)
-          error = result[0]
-          data = result[1]
-          if error == Qpid::Proton::Error::OVERFLOW
-            size = size * 2
-          else
-            check(error)
-            return data
-          end
-        end
-      end
-
       # Sets the content encoding type.
       #
       # ==== Options
@@ -642,7 +609,7 @@ module Qpid # :nodoc:
 
       def check(err) # :nodoc:
         if err < 0
-          raise DataError, "[#{err}]: #{Cproton.pn_message_error(@data)}"
+          raise DataError, "[#{err}]: #{Cproton.pn_message_error(@impl)}"
         else
           return err
         end

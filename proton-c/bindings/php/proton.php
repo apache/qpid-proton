@@ -266,9 +266,9 @@ class Message {
     $props->clear();
     if ($this->properties != null)
       $props->put_object($this->properties);
+
+    $body->clear();
     if ($this->body != null) {
-      // XXX: move this out when load/save are gone
-      $body->clear();
       $body->put_object($this->body);
     }
   }
@@ -486,24 +486,6 @@ class Message {
   public function decode($data) {
     $this->_check(pn_message_decode($this->impl, $data, strlen($data)));
     $this->_post_decode();
-  }
-
-  public function load($data) {
-    $this->_check(pn_message_load($this->impl, $data, strlen($data)));
-  }
-
-  public function save() {
-    $sz = 16;
-    while (true) {
-      list($err, $data) = pn_message_save($this->impl, $sz);
-      if ($err == PN_OVERFLOW) {
-        $sz *= 2;
-        continue;
-      } else {
-        $this->_check($err);
-        return $data;
-      }
-    }
   }
 }
 

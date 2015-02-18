@@ -1081,18 +1081,6 @@ The sequence of the message within its group.
 The group-id for any replies.
 """)
 
-  # XXX
-  def _get_format(self):
-    return pn_message_get_format(self._msg)
-
-  def _set_format(self, value):
-    self._check(pn_message_set_format(self._msg, value))
-
-  format = property(_get_format, _set_format,
-                    doc="""
-The format of the message.
-""")
-
   def encode(self):
     self._pre_encode()
     sz = 16
@@ -1108,20 +1096,6 @@ The format of the message.
   def decode(self, data):
     self._check(pn_message_decode(self._msg, data, len(data)))
     self._post_decode()
-
-  def load(self, data):
-    self._check(pn_message_load(self._msg, data))
-
-  def save(self):
-    sz = 16
-    while True:
-      err, data = pn_message_save(self._msg, sz)
-      if err == PN_OVERFLOW:
-        sz *= 2
-        continue
-      else:
-        self._check(err)
-        return data
 
   def send(self, sender, tag=None):
     dlv = sender.delivery(tag or sender.delivery_tag())

@@ -231,20 +231,6 @@ sub get_content_type {
     return cproton_perl::pn_message_get_content_type($self->{_impl});
 }
 
-sub set_content {
-    my ($self) = @_;
-    my $content = $_[1];
-
-    cproton_perl::pn_message_load($self->{_impl}, $content);
-}
-
-sub get_content {
-    my ($self) = @_;
-    my $content = cproton_perl::pn_message_save($self->{_impl}, 1024);
-
-    return cproton_perl::pn_message_save($self->{_impl}, 1024);
-}
-
 sub set_content_encoding {
     my ($self) = @_;
     cproton_perl::pn_message_set_content_encoding($self->{_impl}, $_[1]);

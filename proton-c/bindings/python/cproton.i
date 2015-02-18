@@ -85,38 +85,8 @@
 
 %apply pn_uuid_t { pn_decimal128_t };
 
-int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load;
-
-int pn_message_load_data(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_data;
-
-int pn_message_load_text(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_text;
-
-int pn_message_load_amqp(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_amqp;
-
-int pn_message_load_json(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_json;
-
 int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
-
-int pn_message_save(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save;
-
-int pn_message_save_data(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_data;
-
-int pn_message_save_text(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_text;
-
-int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_amqp;
-
-int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_json;
 
 ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_link_send;

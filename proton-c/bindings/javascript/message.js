@@ -784,23 +784,6 @@ _Message_['setReplyToGroupID'] = function(id) {
 };
 
 /**
- * The following methods are marked as deprecated and are not implemented.
- * pn_message_get_format()
- * pn_message_set_format()
- * pn_message_load()
- * pn_message_load_data()
- * pn_message_load_text()
- * pn_message_load_amqp()
- * pn_message_load_json()
- * pn_message_save()
- * pn_message_save_data()
- * pn_message_save_text()
- * pn_message_save_amqp()
- * pn_message_save_json()
- * pn_message_data()
- */
-
-/**
  * Return a Binary representation of the message encoded in AMQP format. N.B. the
  * returned {@link proton.Data.Binary} "owns" the underlying raw data and is thus
  * responsible for freeing it or passing it to a method that consumes a Binary

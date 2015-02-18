@@ -49,7 +49,7 @@ class InteropTest < Test::Unit::TestCase
   def decode_message_file(name)
     message = Message.new()
     message.decode(self.get_data(name))
-    self.decode_data(message.content)
+    self.decode_data(message.body)
   end
 
   def assert_next(type, value)

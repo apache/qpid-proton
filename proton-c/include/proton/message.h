@@ -658,66 +658,6 @@ PN_EXTERN const char *   pn_message_get_reply_to_group_id (pn_message_t *msg);
 PN_EXTERN int            pn_message_set_reply_to_group_id (pn_message_t *msg, const char *reply_to_group_id);
 
 /**
- * @deprecated
- */
-PN_EXTERN pn_format_t pn_message_get_format(pn_message_t *message);
-
-/**
- * @deprecated
- */
-PN_EXTERN int pn_message_set_format(pn_message_t *message, pn_format_t format);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_data(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_text(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_amqp(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_json(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_data(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_text(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_amqp(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_json(pn_message_t *message, char *data, size_t *size);
-
-/**
  * Get/set the delivery instructions for a message.
  *
  * This operation returns a pointer to a ::pn_data_t representing the
@@ -807,11 +747,6 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
  * @return zero on success or an error code on failure
  */
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
-
-/**
- * @deprecated
- */
-PN_EXTERN ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size);
 
 /** @}
  */

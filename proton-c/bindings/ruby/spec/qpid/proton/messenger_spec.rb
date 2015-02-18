@@ -275,7 +275,7 @@ module Qpid
 
             @msg = Qpid::Proton::Message.new
             @msg.address = "amqp://0.0.0.0:#{@port}"
-            @msg.content = "Test sent #{Time.new}"
+            @msg.body = "Test sent #{Time.new}"
           end
 
           after (:each) do
