@@ -101,7 +101,7 @@ class FrameWriter
             try
             {
                 _buffer.position(_frameStart + 8);
-                _encoder.writeObject(frameBody);
+                if (frameBody != null) _encoder.writeObject(frameBody);
                 break;
             }
             catch (BufferOverflowException e)
