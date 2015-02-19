@@ -141,20 +141,6 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
 %}
 %ignore pn_delivery_tag;
 
-%rename(pn_message_data) wrap_pn_message_data;
-%inline %{
-  int wrap_pn_message_data(char *STRING, size_t LENGTH, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_message_data;
-
 ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %ignore pn_data_decode;
 

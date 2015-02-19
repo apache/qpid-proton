@@ -50,16 +50,6 @@ extern "C" {
 typedef struct pn_message_t pn_message_t;
 
 /**
- * Encoding format for message content.
- */
-typedef enum {
-  PN_DATA, /**< Raw binary data. Not all messages can be encoded this way.*/
-  PN_TEXT, /**< Raw text. Not all messages can be encoded this way.*/
-  PN_AMQP, /**< AMQP formatted data. All messages can be encoded this way.*/
-  PN_JSON /**< JSON formatted data. Not all messages can be encoded with full fidelity way.*/
-} pn_format_t;
-
-/**
  * Default priority for messages.
  */
 #define PN_DEFAULT_PRIORITY (4)

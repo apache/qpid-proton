@@ -775,11 +775,6 @@ class Message(object):
   @type body: bytes | unicode | dict | list | int | long | float | UUID
   """
 
-  DATA = PN_DATA
-  TEXT = PN_TEXT
-  AMQP = PN_AMQP
-  JSON = PN_JSON
-
   DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
 
   def __init__(self, body=None, **kwargs):

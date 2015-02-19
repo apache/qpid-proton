@@ -79,9 +79,6 @@ typedef unsigned long int uintptr_t;
 %aggregate_check(int, check_trace,
                  PN_TRACE_OFF, PN_TRACE_RAW, PN_TRACE_FRM, PN_TRACE_DRV);
 
-%aggregate_check(int, check_format,
-                 PN_DATA, PN_TEXT, PN_AMQP, PN_JSON);
-
 %aggregate_check(int, check_sasl_outcome,
                  PN_SASL_NONE, PN_SASL_OK, PN_SASL_AUTH,
                  PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP, PN_SASL_SKIPPED);
@@ -874,12 +871,6 @@ typedef unsigned long int uintptr_t;
  require:
   msg != NULL;
   *size >= 0;
-}
-
-%contract pn_message_data(char *dst, size_t available, const char *src, size_t size)
-{
- ensure:
-  pn_message_data >= 0;
 }
 
 %include "proton/message.h"

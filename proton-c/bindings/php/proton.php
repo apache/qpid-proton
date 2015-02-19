@@ -196,11 +196,6 @@ class Messenger
 
 class Message {
 
-  const DATA = PN_DATA;
-  const TEXT = PN_TEXT;
-  const AMQP = PN_AMQP;
-  const JSON = PN_JSON;
-
   const DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY;
 
   var $impl;
@@ -457,15 +452,6 @@ class Message {
 
   private function _set_reply_to_group_id($value) {
     $this->_check(pn_message_set_reply_to_group_id($this->impl, $value));
-  }
-
-  # XXX
-  private function _get_format() {
-    return pn_message_get_format($this->impl);
-  }
-
-  private function _set_format($value) {
-    $this->_check(pn_message_set_format($this->impl, $value));
   }
 
   public function encode() {

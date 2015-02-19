@@ -71,7 +71,6 @@ struct pn_message_t {
   pn_parser_t *parser;
   pn_error_t *error;
 
-  pn_format_t format;
   pn_sequence_t group_sequence;
   pn_millis_t ttl;
   uint32_t delivery_count;
@@ -349,7 +348,6 @@ pn_message_t *pn_message()
   msg->properties = pn_data(16);
   msg->body = pn_data(16);
 
-  msg->format = PN_DATA;
   msg->parser = NULL;
   msg->error = pn_error();
   return msg;
