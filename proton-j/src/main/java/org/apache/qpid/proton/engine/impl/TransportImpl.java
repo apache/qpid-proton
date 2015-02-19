@@ -1444,7 +1444,6 @@ public class TransportImpl extends EndpointImpl
             } else if (_localIdleDeadline <= now) {
                 _localIdleDeadline = now + _localIdleTimeout;
 
-                if (_connectionEndpoint != null)
                 if (_connectionEndpoint != null &&
                     _connectionEndpoint.getLocalState() != EndpointState.CLOSED) {
                     ErrorCondition condition =
@@ -1467,8 +1466,8 @@ public class TransportImpl extends EndpointImpl
                         _isCloseSent = true;
                         writeFrame(0, close, null, null);
                     }
+                    close_tail();
                 }
-                close_tail();
             }
             timeout = _localIdleDeadline;
         }
