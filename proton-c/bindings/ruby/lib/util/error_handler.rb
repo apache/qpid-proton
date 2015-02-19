@@ -41,7 +41,9 @@ module Qpid::Proton::Util
       end
     end
 
-    def can_raise_error(method_names, error_class = nil)
+    def can_raise_error(method_names, options = {})
+      error_class = options[:error_class]
+      below = options[:below] || 0
       # coerce the names to be an array
       Array(method_names).each do |method_name|
         # if the method doesn't already exist then queue this aliasing
@@ -49,12 +51,12 @@ module Qpid::Proton::Util
           @@to_be_wrapped ||= []
           @@to_be_wrapped << method_name
         else
-          create_exception_handler_wrapper(method_name, error_class)
+          create_exception_handler_wrapper(method_name, error_class, below)
         end
       end
     end
 
-    def create_exception_handler_wrapper(method_name, error_class = nil)
+    def create_exception_handler_wrapper(method_name, error_class = nil, below = 0)
       original_method_name = method_name.to_s
       wrapped_method_name = "_excwrap_#{original_method_name}"
       alias_method wrapped_method_name, original_method_name
@@ -63,7 +65,8 @@ module Qpid::Proton::Util
         # calls to Class.send interfere with Messenger.send
         method = self.method(wrapped_method_name.to_sym)
         rc = method.call(*args, &block)
-        check_for_error(rc, error_class)
+        check_for_error(rc, error_class) if rc < below
+        return rc
       end
     end
 
