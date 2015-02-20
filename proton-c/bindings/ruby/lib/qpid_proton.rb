@@ -24,19 +24,30 @@ if RUBY_VERSION < "1.9"
 require "kconv"
 end
 
-require "qpid_proton/version"
-require "qpid_proton/described"
-require "qpid_proton/strings"
-require "qpid_proton/mapping"
-require "qpid_proton/array"
-require "qpid_proton/hash"
-require "qpid_proton/exceptions"
-require "qpid_proton/exception_handling"
-require "qpid_proton/filters"
-require "qpid_proton/data"
-require "qpid_proton/message"
-require "qpid_proton/subscription"
-require "qpid_proton/tracker_status"
-require "qpid_proton/tracker"
-require "qpid_proton/selectable"
-require "qpid_proton/messenger"
+# Exception classes
+require "core/exceptions"
+
+# Utility classes
+require "util/version"
+require "util/error_handler"
+
+# Types
+require "types/strings"
+require "types/hash"
+require "types/array"
+require "types/described"
+
+# Codec classes
+require "codec/mapping"
+require "codec/data"
+
+# Main Proton classes
+require "core/message"
+
+# Messenger API classes
+require "messenger/filters"
+require "messenger/subscription"
+require "messenger/tracker_status"
+require "messenger/tracker"
+require "messenger/selectable"
+require "messenger/messenger"
