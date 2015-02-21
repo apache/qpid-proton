@@ -234,11 +234,11 @@ public final class Open implements Encodable
                     open.setOutgoingLocales((String) val4);
                 }
             case 5:
-                open.setIdleTimeOut((long) l.get(4));
+                open.setIdleTimeOut((Long) l.get(4));
             case 6:
-                open.setChannelMax(l.get(3) == null ? 65535 : (int) l.get(3));
+                open.setChannelMax(l.get(3) == null ? 65535 : (Integer) l.get(3));
             case 7:
-                open.setMaxFrameSize(l.get(2) == null ? Integer.MAX_VALUE : (int) l.get(2));
+                open.setMaxFrameSize(l.get(2) == null ? Integer.MAX_VALUE : (Integer) l.get(2));
             case 8:
                 open.setHostname((String) l.get(1));
             case 9:

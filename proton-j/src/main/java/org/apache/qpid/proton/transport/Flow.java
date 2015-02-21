@@ -207,21 +207,21 @@ public final class Flow implements Encodable
             case 2:
                 flow.setDrain(l.get(8) == null ? false : (Boolean) l.get(8));
             case 3:
-                flow.setAvailable((int) l.get(7));
+                flow.setAvailable((Integer) l.get(7));
             case 4:
-                flow.setLinkCredit((int) l.get(6));
+                flow.setLinkCredit((Integer) l.get(6));
             case 5:
-                flow.setDeliveryCount((int) l.get(5));
+                flow.setDeliveryCount((Integer) l.get(5));
             case 6:
-                flow.setHandle((int) l.get(4));
+                flow.setHandle((Integer) l.get(4));
             case 7:
-                flow.setOutgoingWindow((int) l.get(3));
+                flow.setOutgoingWindow((Integer) l.get(3));
             case 8:
-                flow.setNextOutgoingId((int) l.get(2));
+                flow.setNextOutgoingId((Integer) l.get(2));
             case 9:
-                flow.setIncomingWindow((int) l.get(1));
+                flow.setIncomingWindow((Integer) l.get(1));
             case 10:
-                flow.setNextIncomingId((int) l.get(0));
+                flow.setNextIncomingId((Integer) l.get(0));
             }
 
             return flow;

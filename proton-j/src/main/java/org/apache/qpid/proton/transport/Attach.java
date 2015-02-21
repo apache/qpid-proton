@@ -285,9 +285,9 @@ public final class Attach implements Encodable
                     attach.setOfferedCapabilities((String) val2);
                 }
             case 3:
-                attach.setMaxMessageSize((long) l.get(10));
+                attach.setMaxMessageSize((Long) l.get(10));
             case 4:
-                attach.setInitialDeliveryCount((int) l.get(9));
+                attach.setInitialDeliveryCount((Integer) l.get(9));
             case 5:
                 Boolean incompleteUnsettled = (Boolean) l.get(8);
                 attach.setIncompleteUnsettled(incompleteUnsettled == null ? false : incompleteUnsettled);
@@ -299,14 +299,14 @@ public final class Attach implements Encodable
                 attach.setSource((Source) l.get(5));
             case 9:
                 attach.setRcvSettleMode(l.get(4) == null ? ReceiverSettleMode.FIRST
-                        : ReceiverSettleMode.values()[(int) l.get(4)]);
+                        : ReceiverSettleMode.values()[(Integer) l.get(4)]);
             case 10:
-                attach.setSndSettleMode(l.get(3) == null ? SenderSettleMode.MIXED : SenderSettleMode.values()[(int) l
+                attach.setSndSettleMode(l.get(3) == null ? SenderSettleMode.MIXED : SenderSettleMode.values()[(Integer) l
                         .get(3)]);
             case 11:
                 attach.setRole(Boolean.TRUE.equals(l.get(2)) ? Role.RECEIVER : Role.SENDER);
             case 12:
-                attach.setHandle((int) l.get(1));
+                attach.setHandle((Integer) l.get(1));
             case 13:
                 attach.setName((String) l.get(0));
             }

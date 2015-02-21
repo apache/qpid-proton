@@ -78,14 +78,14 @@ public final class Target extends Terminus implements Encodable
             case 1:
                 target.setDynamicNodeProperties((Map<Object, Object>) l.get(5));
             case 2:
-                target.setDynamic(l.get(4) == null ? false : (boolean) l.get(4));
+                target.setDynamic(l.get(4) == null ? false : (Boolean) l.get(4));
             case 3:
-                target.setTimeout(l.get(3) == null ? 0 : (int) l.get(3));
+                target.setTimeout(l.get(3) == null ? 0 : (Integer) l.get(3));
             case 4:
                 target.setExpiryPolicy(l.get(2) == null ? TerminusExpiryPolicy.SESSION_END : TerminusExpiryPolicy
                         .getEnum((String) l.get(2)));
             case 5:
-                target.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get((byte) l.get(1)));
+                target.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get((Byte) l.get(1)));
             case 6:
                 target.setAddress((String) l.get(0));
             }

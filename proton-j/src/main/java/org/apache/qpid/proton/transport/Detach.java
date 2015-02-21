@@ -103,9 +103,9 @@ public final class Detach implements Encodable
             case 0:
                 detach.setError((ErrorCondition) l.get(2));
             case 1:
-                detach.setClosed(l.get(1) == null ? false : (boolean) l.get(1));
+                detach.setClosed(l.get(1) == null ? false : (Boolean) l.get(1));
             case 2:
-                detach.setHandle((int) l.get(0));
+                detach.setHandle((Integer) l.get(0));
             }
 
             return detach;

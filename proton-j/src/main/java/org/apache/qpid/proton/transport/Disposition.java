@@ -148,15 +148,15 @@ public final class Disposition implements Encodable
             {
 
             case 0:
-                disposition.setBatchable(l.get(5) == null ? false : (boolean) l.get(5));
+                disposition.setBatchable(l.get(5) == null ? false : (Boolean) l.get(5));
             case 1:
                 disposition.setState((DeliveryState) l.get(4));
             case 2:
-                disposition.setSettled(l.get(3) == null ? false : (boolean) l.get(3));
+                disposition.setSettled(l.get(3) == null ? false : (Boolean) l.get(3));
             case 3:
-                disposition.setLast((int) l.get(2));
+                disposition.setLast((Integer) l.get(2));
             case 4:
-                disposition.setFirst((int) l.get(1));
+                disposition.setFirst((Integer) l.get(1));
             case 5:
                 disposition.setRole(Boolean.TRUE.equals(l.get(0)) ? Role.RECEIVER : Role.SENDER);
             }

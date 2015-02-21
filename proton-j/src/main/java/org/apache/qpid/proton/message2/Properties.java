@@ -228,13 +228,13 @@ public final class Properties implements Encodable
             case 0:
                 props.setReplyToGroupId((String) l.get(12));
             case 1:
-                props.setGroupSequence((int) l.get(11));
+                props.setGroupSequence((Integer) l.get(11));
             case 2:
                 props.setGroupId((String) l.get(10));
             case 3:
-                props.setCreationTime(new Date((long) l.get(9)));
+                props.setCreationTime(new Date((Long) l.get(9)));
             case 4:
-                props.setAbsoluteExpiryTime(new Date((long) l.get(8)));
+                props.setAbsoluteExpiryTime(new Date((Long) l.get(8)));
             case 5:
                 props.setContentEncoding((String) l.get(7));
             case 6:

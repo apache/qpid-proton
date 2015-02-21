@@ -96,7 +96,7 @@ public final class SaslOutcome implements Encodable
                 case 0:
                     saslOutcome.setAdditionalData( (byte[]) l.get( 1 ) );
                 case 1:
-                    saslOutcome.setCode(SaslCode.valueOf((byte)l.get(0)));
+                    saslOutcome.setCode(SaslCode.valueOf((Byte)l.get(0)));
             }
 
 
