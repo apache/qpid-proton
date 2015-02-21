@@ -63,6 +63,38 @@ public class CodecHelper
         encoder.end();
     }
 
+    public static void encodeMapWithKeyAsString(Encoder encoder, Map<String, Object> map)
+    {
+        if (map == null)
+        {
+            encoder.putNull();
+            return;
+        }
+        encoder.putMap();
+        for (String key : map.keySet())
+        {
+            encoder.putString(key);
+            encodeObject(encoder, map.get(key));
+        }
+        encoder.end();
+    }
+    
+    public static void encodeMapWithKeyAsSymbol(Encoder encoder, Map<String, Object> map)
+    {
+        if (map == null)
+        {
+            encoder.putNull();
+            return;
+        }
+        encoder.putMap();
+        for (String key : map.keySet())
+        {
+            encoder.putSymbol(key);
+            encodeObject(encoder, map.get(key));
+        }
+        encoder.end();
+    }
+    
     public static void encodeList(Encoder encoder, List<Object> list)
     {
         if (list == null)
