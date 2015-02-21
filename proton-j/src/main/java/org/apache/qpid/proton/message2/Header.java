@@ -120,15 +120,15 @@ public final class Header implements Encodable
             {
 
             case 0:
-                header.setDeliveryCount((int) l.get(4));
+                header.setDeliveryCount((Integer) l.get(4));
             case 1:
-                header.setFirstAcquirer(l.get(3) == null ? false : (boolean) l.get(3));
+                header.setFirstAcquirer(l.get(3) == null ? false : (Boolean) l.get(3));
             case 2:
-                header.setTtl((int) l.get(2));
+                header.setTtl((Integer) l.get(2));
             case 3:
-                header.setPriority(l.get(1) == null ? 4 : (byte) l.get(1));
+                header.setPriority(l.get(1) == null ? 4 : (Byte) l.get(1));
             case 4:
-                header.setDurable(l.get(0) == null ? false : (boolean) l.get(0));
+                header.setDurable(l.get(0) == null ? false : (Boolean) l.get(0));
             }
             return header;
         }

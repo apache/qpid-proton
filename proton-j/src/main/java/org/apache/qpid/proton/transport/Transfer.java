@@ -42,7 +42,7 @@ public final class Transfer implements Encodable
 
     private int _messageFormat;
 
-    private Boolean _settled;
+    private boolean _settled;
 
     private boolean _more;
 
@@ -204,27 +204,27 @@ public final class Transfer implements Encodable
             switch (11 - l.size())
             {
             case 0:
-                transfer.setBatchable(l.get(10) == null ? false : (boolean) l.get(10));
+                transfer.setBatchable(l.get(10) == null ? false : (Boolean) l.get(10));
             case 1:
-                transfer.setAborted(l.get(9) == null ? false : (boolean) l.get(9));
+                transfer.setAborted(l.get(9) == null ? false : (Boolean) l.get(9));
             case 2:
-                transfer.setResume(l.get(8) == null ? false : (boolean) l.get(8));
+                transfer.setResume(l.get(8) == null ? false : (Boolean) l.get(8));
             case 3:
                 transfer.setState((DeliveryState) l.get(7));
             case 4:
-                transfer.setRcvSettleMode(l.get(6) == null ? null : ReceiverSettleMode.values()[(int) l.get(6)]);
+                transfer.setRcvSettleMode(l.get(6) == null ? null : ReceiverSettleMode.values()[(Integer) l.get(6)]);
             case 5:
-                transfer.setMore(l.get(5) == null ? false : (boolean) l.get(5));
+                transfer.setMore(l.get(5) == null ? false : (Boolean) l.get(5));
             case 6:
-                transfer.setSettled((boolean) l.get(4));
+                transfer.setSettled((Boolean) l.get(4));
             case 7:
-                transfer.setMessageFormat((int) l.get(3));
+                transfer.setMessageFormat((Integer) l.get(3));
             case 8:
                 transfer.setDeliveryTag((byte[]) l.get(2));
             case 9:
-                transfer.setDeliveryId((int) l.get(1));
+                transfer.setDeliveryId((Integer) l.get(1));
             case 10:
-                transfer.setHandle((int) l.get(0));
+                transfer.setHandle((Integer) l.get(0));
             }
 
             return transfer;

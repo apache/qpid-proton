@@ -184,15 +184,15 @@ public final class Begin implements Encodable
                     begin.setOfferedCapabilities((String) val2);
                 }
             case 3:
-                begin.setHandleMax(l.get(4) == null ? 0xffffffff : (int) l.get(4));
+                begin.setHandleMax(l.get(4) == null ? 0xffffffff : (Integer) l.get(4));
             case 4:
-                begin.setOutgoingWindow((int) l.get(3));
+                begin.setOutgoingWindow((Integer) l.get(3));
             case 5:
-                begin.setIncomingWindow((int) l.get(2));
+                begin.setIncomingWindow((Integer) l.get(2));
             case 6:
-                begin.setNextOutgoingId((int) l.get(1));
+                begin.setNextOutgoingId((Integer) l.get(1));
             case 7:
-                begin.setRemoteChannel((int) l.get(0));
+                begin.setRemoteChannel((Integer) l.get(0));
             }
 
             return begin;
