@@ -78,7 +78,7 @@ public class CodecHelper
         }
         encoder.end();
     }
-    
+
     public static void encodeMapWithKeyAsSymbol(Encoder encoder, Map<String, Object> map)
     {
         if (map == null)
@@ -94,7 +94,7 @@ public class CodecHelper
         }
         encoder.end();
     }
-    
+
     public static void encodeList(Encoder encoder, List<Object> list)
     {
         if (list == null)
@@ -116,6 +116,10 @@ public class CodecHelper
         if (o == null)
         {
             encoder.putNull();
+        }
+        else if (o instanceof Encodable)
+        {
+            ((Encodable) o).encode(encoder);
         }
         else if (o.getClass().isPrimitive())
         {
