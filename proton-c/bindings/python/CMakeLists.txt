@@ -29,6 +29,7 @@ endif (BUILD_WITH_CXX)
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${PROTON_HEADERS}
 )
 
 swig_add_module(cproton python cproton.i)

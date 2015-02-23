@@ -61,6 +61,7 @@ swig_add_module(cproton javascript javascript.i)
 set_target_properties (cproton PROPERTIES LINKER_LANGUAGE CXX)
 list(APPEND SWIG_MODULE_cproton_javascript_EXTRA_DEPS
   ${CMAKE_CURRENT_SOURCE_DIR}/../../proton-c/include/proton/cproton.i
+  ${PROTON_HEADERS}
 )
 set_target_properties (cproton PROPERTIES
   COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DBUILDING_NODE_EXTENSION"

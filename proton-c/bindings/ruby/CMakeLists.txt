@@ -22,6 +22,7 @@ if (NOT DEFAULT_RUBY_TESTING)
 endif (NOT DEFAULT_RUBY_TESTING)
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${PROTON_HEADERS}
 )
 
 include_directories (${RUBY_INCLUDE_PATH})
