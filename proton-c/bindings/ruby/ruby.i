@@ -559,4 +559,57 @@ VALUE pni_address_of(void *object) {
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
+%inline %{
+
+  VALUE pni_ruby_get_proton_module() {
+    VALUE mQpid = rb_define_module("Qpid");
+    return rb_define_module_under(mQpid, "Proton");
+  }
+
+  void pni_ruby_add_to_registry(VALUE key, VALUE value) {
+    VALUE result = rb_funcall(pni_ruby_get_proton_module(), rb_intern("add_to_registry"), 2, key, value);
+  }
+
+  VALUE pni_ruby_get_from_registry(VALUE key) {
+    rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
+  }
+
+  void pni_ruby_delete_from_registry(VALUE stored_key) {
+    rb_funcall(pni_ruby_get_proton_module(), rb_intern("delete_from_registry"), 1, stored_key);
+  }
+
+  typedef struct {
+    VALUE handler_key;
+  } pni_rbhandler_t;
+
+  static pni_rbhandler_t *pni_rbhandler(pn_handler_t *handler) {
+    return (pni_rbhandler_t *) pn_handler_mem(handler);
+  }
+
+  static void pni_rbdispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+    pni_rbhandler_t *rbh = pni_rbhandler(handler);
+    VALUE rbhandler = pni_ruby_get_from_registry(rbh->handler_key);
+
+    rb_funcall(rbhandler, rb_intern("dispatch"), 2, SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0), INT2FIX(type));
+  }
+
+  static void pni_rbhandler_finalize(pn_handler_t *handler) {
+    pni_rbhandler_t *rbh = pni_rbhandler(handler);
+    pni_ruby_delete_from_registry(rbh->handler_key);
+  }
+
+  pn_handler_t *pn_rbhandler(VALUE handler) {
+    pn_handler_t *chandler = pn_handler_new(pni_rbdispatch, sizeof(pni_rbhandler_t), pni_rbhandler_finalize);
+    pni_rbhandler_t *rhy = pni_rbhandler(chandler);
+
+    VALUE ruby_key = rb_class_new_instance(0, NULL, rb_cObject);
+    pni_ruby_add_to_registry(ruby_key, handler);
+
+    rhy->handler_key = ruby_key;
+
+    return chandler;
+  }
+
+%}
+
 %include "proton/cproton.i"
