@@ -2299,6 +2299,13 @@ def secs2millis(secs):
 def millis2secs(millis):
   return float(millis)/1000.0
 
+def timeout2millis(secs):
+  if secs is None: return PN_MILLIS_MAX
+  return secs2millis(secs)
+
+def millis2timeout(millis):
+  if millis == PN_MILLIS_MAX: return None
+  return millis2secs(millis)
 
 def unicode2utf8(string):
     if string is None:

@@ -27,7 +27,7 @@ from proton.handlers import OutgoingMessageHandler
 from proton import unicode2utf8, utf82unicode
 
 import traceback
-from proton import WrappedHandler, _chandler, secs2millis, millis2secs, Selectable
+from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
 from wrapper import Wrapper, PYCTX
 from cproton import *
 
@@ -91,10 +91,10 @@ class Reactor(Wrapper):
     global_handler = property(_get_global, _set_global)
 
     def _get_timeout(self):
-        return millis2secs(pn_reactor_get_timeout(self._impl))
+        return millis2timeout(pn_reactor_get_timeout(self._impl))
 
     def _set_timeout(self, secs):
-        return pn_reactor_set_timeout(self._impl, secs2millis(secs))
+        return pn_reactor_set_timeout(self._impl, timeout2millis(secs))
 
     timeout = property(_get_timeout, _set_timeout)
 
