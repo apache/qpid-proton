@@ -228,13 +228,18 @@ class BlockingConnection(Handler):
             while not condition():
                 self.container.process()
         else:
-            deadline = time.time() + timeout
-            while not condition():
-                self.container.process()
-                if deadline < time.time():
-                    txt = "Connection %s timed out" % self.url
-                    if msg: txt += ": " + msg
-                    raise Timeout(txt)
+            container_timeout = self.container.timeout
+            self.container.timeout = timeout
+            try:
+                deadline = time.time() + timeout
+                while not condition():
+                    self.container.process()
+                    if deadline < time.time():
+                        txt = "Connection %s timed out" % self.url
+                        if msg: txt += ": " + msg
+                        raise Timeout(txt)
+            finally:
+                self.container.timeout = container_timeout
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
