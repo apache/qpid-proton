@@ -82,6 +82,10 @@ require "messenger/tracker"
 require "messenger/selectable"
 require "messenger/messenger"
 
+# Handler classes
+require "handler/c_adaptor"
+require "handler/wrapped_handler"
+
 module Qpid::Proton
   # @private
   def self.registry
