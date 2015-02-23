@@ -92,6 +92,9 @@ require "handler/outgoing_message_handler"
 require "handler/c_flow_controller"
 require "handler/messaging_handler"
 
+# Reactor classes
+require "reactor/task"
+
 module Qpid::Proton
   # @private
   def self.registry
