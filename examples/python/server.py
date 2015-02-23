@@ -46,10 +46,11 @@ class Server(MessagingHandler):
         if not sender:
             sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
-        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper()))
+        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
+                            correlation_id=event.message.correlation_id))
 
 try:
-    Container(Server("localhost:5672", "examples")).run()
+    Container(Server("0.0.0.0:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

@@ -79,6 +79,15 @@ PN_EXTERN pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handl
 PN_EXTERN int pn_reactor_wakeup(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_start(pn_reactor_t *reactor);
 PN_EXTERN bool pn_reactor_quiesced(pn_reactor_t *reactor);
+
+/**
+ * Process any available events and return.  If there are no events available,
+ * wait up to the timeout for more to arrive.
+ *
+ *@return True if there may be more events to process in future (there are still open
+ * connection, timers, etc.) False if there is nothing registered with the reactor
+ * that can produce further events.
+ */
 PN_EXTERN bool pn_reactor_process(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_stop(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_run(pn_reactor_t *reactor);

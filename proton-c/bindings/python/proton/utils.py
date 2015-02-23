@@ -221,7 +221,7 @@ class BlockingConnection(Handler):
         while self.container.process(): pass
 
     def wait(self, condition, timeout=False, msg=None):
-        """Call do_work until condition() is true"""
+        """Call process until condition() is true"""
         if timeout is False:
             timeout = self.timeout
         if timeout is None:
