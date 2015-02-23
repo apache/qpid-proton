@@ -190,6 +190,7 @@ class BlockingConnection(Handler):
     def __init__(self, url, timeout=None, container=None, ssl_domain=None):
         self.timeout = timeout
         self.container = container or Container()
+        self.container.timeout = self.timeout
         self.container.start()
         self.url = Url(utf8(url)).defaults()
         self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False)
