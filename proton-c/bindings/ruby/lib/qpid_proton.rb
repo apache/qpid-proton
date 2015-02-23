@@ -95,6 +95,7 @@ require "handler/messaging_handler"
 # Reactor classes
 require "reactor/task"
 require "reactor/acceptor"
+require "reactor/reactor"
 
 module Qpid::Proton
   # @private
