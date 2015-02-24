@@ -23,14 +23,15 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
 class Server(MessagingHandler):
-    def __init__(self, host, address):
+    def __init__(self, url, address):
         super(Server, self).__init__()
-        self.host = host
+        self.url = url
         self.address = address
 
     def on_start(self, event):
+        print "Listening on", self.url
         self.container = event.container
-        self.conn = event.container.connect(self.host)
+        self.conn = event.container.connect(self.url)
         self.receiver = event.container.create_receiver(self.conn, self.address)
         self.senders = {}
         self.relay = None
@@ -40,16 +41,18 @@ class Server(MessagingHandler):
             self.relay = self.container.create_sender(self.conn, None)
 
     def on_message(self, event):
+        print "Received", event.message 
         sender = self.relay
         if not sender:
             sender = self.senders.get(event.message.reply_to)
         if not sender:
             sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
-        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper()))
+        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
+                            correlation_id=event.message.correlation_id))
 
 try:
-    Container(Server("localhost:5672", "examples")).run()
+    Container(Server("0.0.0.0:5672", "examples")).run()
 except KeyboardInterrupt: pass
 
 

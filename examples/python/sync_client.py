@@ -24,65 +24,31 @@ Demonstrates the client side of the synchronous request-response pattern
 
 """
 
+import optparse
 from proton import Message, Url, ConnectionException, Timeout
-from proton.utils import BlockingConnection
+from proton.utils import SyncRequestResponse, BlockingConnection
 from proton.handlers import IncomingMessageHandler
 import sys
 
-class SyncRequestClient(IncomingMessageHandler):
-    """
-    Implementation of the synchronous request-responce (aka RPC) pattern.
-    Create an instance and call invoke() to send a request and wait for a response.
-    """
+parser = optparse.OptionParser(usage="usage: %prog [options]",
+                               description="Send requests to the supplied address and print responses.")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address to which messages are sent (default %default)")
+parser.add_option("-t", "--timeout", type="float", default=5,
+                  help="Give up after this time out (default %default)")
+opts, args = parser.parse_args()
 
-    def __init__(self, url, timeout=None):
-        """
-        @param url: a proton.Url or a URL string of the form 'host:port/path'
-            host:port is used to connect, path is used to identify the remote messaging endpoint.
-        """
-        super(SyncRequestClient, self).__init__()
-        self.connection = BlockingConnection(Url(url).defaults(), timeout=timeout)
-        self.sender = self.connection.create_sender(url.path)
-        # dynamic=true generates a unique address dynamically for this receiver.
-        # credit=1 because we want to receive 1 response message initially.
-        self.receiver = self.connection.create_receiver(None, dynamic=True, credit=1, handler=self)
-        self.response = None
+url = Url(opts.address)
+client = SyncRequestResponse(BlockingConnection(url, timeout=opts.timeout), url.path)
 
-    def invoke(self, request):
-        """Send a request, wait for and return the response"""
-        request.reply_to = self.reply_to
-        self.sender.send(request)
-        self.connection.wait(lambda: self.response, msg="Waiting for response")
-        response = self.response
-        self.response = None    # Ready for next response.
-        self.receiver.flow(1)   # Set up credit for the next response.
-        return response
+try:
+    REQUESTS= ["Twas brillig, and the slithy toves",
+               "Did gire and gymble in the wabe.",
+               "All mimsy were the borogroves,",
+               "And the mome raths outgrabe."]
+    for request in REQUESTS:
+        response = client.call(Message(body=request))
+        print "%s => %s" % (request, response.body)
+finally:
+    client.connection.close()
 
-    @property
-    def reply_to(self):
-        """Return the dynamic address of our receiver."""
-        return self.receiver.remote_source.address
-
-    def on_message(self, event):
-        """Called when we receive a message for our receiver."""
-        self.response = event.message # Store the response
-
-    def close(self):
-        self.connection.close()
-
-
-if __name__ == '__main__':
-    url = Url("0.0.0.0/examples")
-    if len(sys.argv) > 1: url = Url(sys.argv[1])
-
-    invoker = SyncRequestClient(url, timeout=2)
-    try:
-        REQUESTS= ["Twas brillig, and the slithy toves",
-                   "Did gire and gymble in the wabe.",
-                   "All mimsy were the borogroves,",
-                   "And the mome raths outgrabe."]
-        for request in REQUESTS:
-            response = invoker.invoke(Message(body=request))
-            print "%s => %s" % (request, response.body)
-    finally:
-        invoker.close()

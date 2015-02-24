@@ -29,6 +29,7 @@ class Server(MessagingHandler):
         self.senders = {}
 
     def on_start(self, event):
+        print "Listening on", self.url
         self.container = event.container
         self.acceptor = event.container.listen(self.url)
 
@@ -46,12 +47,14 @@ class Server(MessagingHandler):
             event.link.target.address = event.link.remote_target.address
 
     def on_message(self, event):
+        print "Received", event.message 
         sender = self.senders.get(event.message.reply_to)
         if sender:
-            sender.send(Message(address=event.message.reply_to, body=event.message.body.upper()))
+            sender.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
+                                correlation_id=event.message.correlation_id))
 
 try:
-    Container(Server("localhost:8888")).run()
+    Container(Server("0.0.0.0:8888")).run()
 except KeyboardInterrupt: pass
 
 
