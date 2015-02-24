@@ -421,11 +421,6 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         }
       }
     }
-    // If the next event will quiesce the reactor, then give the thread back
-    // before we process it so the application's processing thread can deal with
-    // the effects of events processed so far.
-    if (pn_reactor_quiesced(reactor)) 
-      return true;
   }
 }
 
