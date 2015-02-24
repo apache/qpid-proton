@@ -58,6 +58,7 @@ require "event/event"
 require "event/collector"
 
 # Main Proton classes
+require "core/selectable"
 require "core/message"
 require "core/endpoint"
 require "core/session"
@@ -78,7 +79,6 @@ require "core/transport"
 require "messenger/subscription"
 require "messenger/tracker_status"
 require "messenger/tracker"
-require "messenger/selectable"
 require "messenger/messenger"
 
 # Handler classes
