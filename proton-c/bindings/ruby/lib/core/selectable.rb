@@ -17,7 +17,7 @@
 # under the License.
 #++
 
-module Qpid::Proton::Messenger
+module Qpid::Proton
 
   # Selectable enables accessing the underlying file descriptors
   # for Messenger.
