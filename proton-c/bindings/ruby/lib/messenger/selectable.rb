@@ -25,12 +25,6 @@ module Qpid::Proton::Messenger
   # @private
   class Selectable
 
-    include Filters
-
-    call_before :check_is_initialized,
-                :fileno, :capacity, :pending, :deadline,
-                :readable, :writable, :expired,
-                :registered=, :registered?
 
     def initialize(messenger, impl) # :nodoc:
       @messenger = messenger

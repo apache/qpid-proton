@@ -75,7 +75,6 @@ require "core/ssl"
 require "core/transport"
 
 # Messenger API classes
-require "messenger/filters"
 require "messenger/subscription"
 require "messenger/tracker_status"
 require "messenger/tracker"
