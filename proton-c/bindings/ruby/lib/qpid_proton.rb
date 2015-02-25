@@ -84,6 +84,7 @@ require "messenger/messenger"
 # Handler classes
 require "handler/c_adaptor"
 require "handler/wrapped_handler"
+require "handler/acking"
 
 module Qpid::Proton
   # @private
