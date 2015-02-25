@@ -90,6 +90,7 @@ require "handler/endpoint_state_handler"
 require "handler/incoming_message_handler"
 require "handler/outgoing_message_handler"
 require "handler/c_flow_controller"
+require "handler/messaging_handler"
 
 module Qpid::Proton
   # @private
