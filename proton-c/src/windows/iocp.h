@@ -71,9 +71,10 @@ struct iocpdesc_t {
   read_result_t *read_result;
   bool external;       // true if socket set up outside Proton
   bool bound;          // associted with the completion port
-  bool closing;        // pn_close called
+  bool closing;        // pn_close called by application
   bool read_closed;    // EOF or read error
   bool write_closed;   // shutdown sent or write error
+  bool poll_error;     // flag posix-like POLLERR/POLLHUP/POLLNVAL
   bool deadline_desc;  // Socket-less deadline descriptor for selectors
   pn_selector_t *selector;
   pn_selectable_t *selectable;
