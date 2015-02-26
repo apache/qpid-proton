@@ -96,6 +96,7 @@ require "handler/messaging_handler"
 require "reactor/task"
 require "reactor/acceptor"
 require "reactor/reactor"
+require "reactor/ssl_config"
 
 module Qpid::Proton
   # @private
