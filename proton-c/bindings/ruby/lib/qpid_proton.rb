@@ -22,6 +22,8 @@ require "date"
 
 if RUBY_VERSION < "1.9"
 require "kconv"
+else
+  require "securerandom"
 end
 
 # Exception classes
@@ -33,6 +35,7 @@ require "util/error_handler"
 require "util/constants"
 require "util/swig_helper"
 require "util/engine"
+require "util/uuid"
 
 # Types
 require "types/strings"
