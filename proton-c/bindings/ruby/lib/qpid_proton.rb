@@ -88,6 +88,7 @@ require "handler/wrapped_handler"
 require "handler/acking"
 require "handler/endpoint_state_handler"
 require "handler/incoming_message_handler"
+require "handler/outgoing_message_handler"
 require "handler/c_flow_controller"
 
 module Qpid::Proton
