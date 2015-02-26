@@ -155,6 +155,7 @@ PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
 RELEASED = Constant("RELEASED")
+MODIFIED = Constant("MODIFIED")
 ABORTED = Constant("ABORTED")
 SETTLED = Constant("SETTLED")
 
@@ -163,6 +164,7 @@ STATUSES = {
   PN_STATUS_ACCEPTED: ACCEPTED,
   PN_STATUS_REJECTED: REJECTED,
   PN_STATUS_RELEASED: RELEASED,
+  PN_STATUS_MODIFIED: MODIFIED,
   PN_STATUS_PENDING: PENDING,
   PN_STATUS_SETTLED: SETTLED,
   PN_STATUS_UNKNOWN: None
@@ -511,7 +513,7 @@ first message.
     @type tracker: tracker
     @param tracker: the tracker whose status is to be retrieved
 
-    @return: one of None, PENDING, REJECTED, or ACCEPTED
+    @return: one of None, PENDING, REJECTED, MODIFIED, or ACCEPTED
     """
     disp = pn_messenger_status(self._mng, tracker);
     return STATUSES.get(disp, disp)
@@ -3894,6 +3896,7 @@ __all__ = [
            "MANUAL",
            "REJECTED",
            "RELEASED",
+           "MODIFIED",
            "SETTLED",
            "UNDESCRIBED",
            "Array",
