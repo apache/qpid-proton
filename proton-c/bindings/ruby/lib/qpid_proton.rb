@@ -97,6 +97,7 @@ require "reactor/task"
 require "reactor/acceptor"
 require "reactor/reactor"
 require "reactor/ssl_config"
+require "reactor/global_overrides"
 
 module Qpid::Proton
   # @private
