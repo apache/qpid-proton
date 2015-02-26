@@ -448,3 +448,41 @@ class MessengerReceiverPython(MessengerReceiver):
 
 
 
+class ReactorSenderC(MessengerSender):
+    def __init__(self):
+        MessengerSender.__init__(self)
+        self._command = ["reactor-send"]
+
+class ReactorSenderValgrind(ReactorSenderC):
+    """ Run the C sender under Valgrind
+    """
+    def __init__(self, suppressions=None):
+        if "VALGRIND" not in os.environ:
+            raise Skipped("Skipping test - $VALGRIND not set.")
+        ReactorSenderC.__init__(self)
+        if not suppressions:
+            suppressions = os.path.join(os.path.dirname(__file__),
+                                        "valgrind.supp" )
+        self._command = [os.environ["VALGRIND"], "--error-exitcode=1", "--quiet",
+                         "--trace-children=yes", "--leak-check=full",
+                         "--suppressions=%s" % suppressions] + self._command
+
+class ReactorReceiverC(MessengerReceiver):
+    def __init__(self):
+        MessengerReceiver.__init__(self)
+        self._command = ["reactor-recv"]
+
+class ReactorReceiverValgrind(ReactorReceiverC):
+    """ Run the C receiver under Valgrind
+    """
+    def __init__(self, suppressions=None):
+        if "VALGRIND" not in os.environ:
+            raise Skipped("Skipping test - $VALGRIND not set.")
+        ReactorReceiverC.__init__(self)
+        if not suppressions:
+            suppressions = os.path.join(os.path.dirname(__file__),
+                                        "valgrind.supp" )
+        self._command = [os.environ["VALGRIND"], "--error-exitcode=1", "--quiet",
+                         "--trace-children=yes", "--leak-check=full",
+                         "--suppressions=%s" % suppressions] + self._command
+

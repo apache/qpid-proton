@@ -22,6 +22,8 @@ from common import Test, Skipped, free_tcp_ports, \
     MessengerReceiverC, MessengerSenderC, \
     MessengerReceiverValgrind, MessengerSenderValgrind, \
     MessengerReceiverPython, MessengerSenderPython, \
+    ReactorReceiverC, ReactorSenderC, \
+    ReactorReceiverValgrind, ReactorSenderValgrind, \
     isSSLPresent
 from proton import *
 
@@ -354,3 +356,10 @@ class MessengerTests(AppTests):
 
     def test_star_topology_C_Python(self):
         self._do_star_topology_test( MessengerReceiverPython, MessengerSenderC )
+
+    def test_oneway_reactor(self):
+        self._do_oneway_test(ReactorReceiverC(), ReactorSenderC())
+
+    def test_oneway_reactor_valgrind(self):
+        self.valgrind_test()
+        self._do_oneway_test(ReactorReceiverValgrind(), ReactorSenderValgrind())
