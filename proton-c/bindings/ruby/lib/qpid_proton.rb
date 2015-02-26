@@ -106,6 +106,7 @@ require "reactor/urls"
 require "reactor/connector"
 require "reactor/backoff"
 require "reactor/session_per_connection"
+require "reactor/container"
 
 module Qpid::Proton
   # @private
