@@ -307,8 +307,6 @@ struct pn_delivery_t {
   bool work;
   bool tpwork;
   bool done;
-  bool constructed; // track whether the delivery was explicitly
-                    // constructed or not
   bool referenced;
 };
 
