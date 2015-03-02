@@ -66,7 +66,7 @@ func ParseURL(s string) (u *url.URL, err error) {
 	path := C.GoString(C.pn_url_get_path(pnUrl))
 
 	if err != nil {
-		return nil, errorf2(err, "bad URL %#v", s)
+		return nil, errorf("bad URL %#v: %s", s, err)
 	}
 	if scheme == "" {
 		scheme = AMQP

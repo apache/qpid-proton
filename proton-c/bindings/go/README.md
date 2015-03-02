@@ -94,5 +94,40 @@ also supports traditional locking, so we could adopt locking strategies similar
 to our other bindings, but we should investigate the Go-like alternatives. There
 are analogies between Go channels and AMQP links that we will probably exploit.
 
+## Implementation status
 
+Working on API to marshal/unmarshal AMQP data into Go types.
+
+The API will follow the style of the standard libraries encoding/json and encoding/xml.
+
+To be done:
+
+Easy unmarshaling into native Go types:
+
+- String-like AMQP types (symbol, binary, string) into Go string or []byte
+- Numeric AMQP types into any Go numeric (numeric conversion)
+- Any AMQP type into GO reflect.Value choosing the closest native Go type
+- AMQP map into go struct if keys match struct field names and values match field types
+- AMQP maps into map[K]T if all AMQP keys/values can convert to K and T (reflect.Value allowed)
+- AMQP list into []T if all list elements can convert to T (reflect.Value allowed)
+
+Easy marshaling of native Go types:
+
+- Go struct: amqp map with field names as string keys (use tags to customize?)
+- Go string to AMQP string, Go []byte to AMQP binary, Go numerics to closest AMQP numeric
+- Go []T to AMQP list
+- Go map to AMQP map
+
+Customization:
+
+- Standard encoding libraries define Marshaler and Unmarshaler interfaces.
+- User implements to customize behavior of a user type.
+- Does this require exposing the proton codec?
+
+Exact (strict) (un)marshaling:
+
+- Define special Go AMQP types that exactly reflect AMQP types & encodings.
+- Unmarshal to special types only if exact match for wire
+- Marshal special types exactly
+- Define AMQPValue which can unmarshal from any AMQP type using strict unmarshaling types.
 

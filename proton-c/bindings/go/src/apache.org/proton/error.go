@@ -71,12 +71,21 @@ func (code errorCode) Error() string {
 	return fmt.Sprintf("proton: %v", code)
 }
 
-// errorf formats an error message with a proton: prefix.
-func errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("proton: %v", fmt.Sprintf(format, a...))
-}
+// pnError is a simple error string.
+//
+// NOTE: All error types used in proton have both String() and Error() methods.
+// The String() method prints the plain error message, the Error() method
+// prints the error message with a "proton:" prefix.
+// Thus you can format nested error messages with "%s" without getting nested "proton:"
+// prefixes but the prefix will be added when the end user uses Error()
+// or "%v" on the error value.
+//
+type pnError string
 
-// errorf2 formats an error message with a proton: prefix and an inner error message.
-func errorf2(err error, format string, a ...interface{}) error {
-	return fmt.Errorf("proton: %v: %v", fmt.Sprintf(format, a...), err)
+func (err pnError) String() string { return string(err) }
+func (err pnError) Error() string  { return fmt.Sprintf("proton: %s", string(err)) }
+
+// errorf creates an error with a formatted message
+func errorf(format string, a ...interface{}) error {
+	return pnError(fmt.Sprintf(format, a...))
 }
