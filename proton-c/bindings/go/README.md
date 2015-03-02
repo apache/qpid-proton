@@ -1,11 +1,17 @@
-# Go binding for proton
+# *EXPERIMENTAL* Go binding for proton
 
-This is the (very early) beginning of a go binding for proton.
+This is the beginning of a [Go](http://golang.org) binding for proton.
+
+This work is in very early *experimental* stages, *everything* might change in
+future.  Comments and contributions are strongly encouraged, this experiment is
+public so early feedback can guide development.
+
+- Email <proton@qpid.apache.org>
+- Create issues <https://issues.apache.org/jira/browse/PROTON>, attach patches to an issue.
 
 ## Goals
 
-The API will be inspired by the reactive, event-driven python API. Key features
-to preserve:
+The API will be inspired by the reactive, event-driven python API. Key features:
 
 - support client and server development.
 - incremental composition of functionality via handlers.
@@ -25,36 +31,22 @@ There are two types of developer we want to support
    - Full access to AMQP concepts like connections, sessions and links via handler interfaces.
 
 We will follow conventions of the C and python API where possible to help
-multi-language developers but idiomatic Go is the overriding consideration.
+cross-language developers but idiomatic Go is the overriding consideration.
+
+## Status
+
+So just a simple Go `Url` type using `pn_url_t`.  This establishes the basics of
+using cgo to call into proton code.
 
 ## Layout
 
-The plan is to adopt standard Go tools and practices, see the <http://golang.org>
-for what that means.
+This directory is a [Go work-space](http://golang.org/doc/code.html), it is not
+yet connected to the rest of the proton build.
 
-This directory is layered out as a [Go work-space](http://golang.org/doc/code.html)
-Only the `src/` directory is committed. Tools like `go build` will create output
-directories such as `pkg` and `bin`, they must not be committed.
+To experiment, install proton in a standard place or set these environment
+variables: `PATH`, `C_INCLUDE_PATH`, `LIBRARY_PATH` and `LD_LIBRARY_PATH`.
 
-Set `GOPATH=<this directory>[:<other directories>]` in your environment for the go tools.
-
-We will eventually have a cmake integration to drive the go tool-chain so that:
-
-- Users who don't know/care about Go can build, test & install everything with a single tool (cmake)
-- Go developers can contribute using familiar Go tools.
-
-## New to Go?
-
-If you are new to Go (like me) then these are a good place to start:
-
-- [A Tour of Go](http://tour.golang.org)
-- [Effective Go](http://golang.org/doc/effective_go.html)
-
-Then look at the tools and library docs at <http://golang.org> as you need them.
-
-Here are some things you can try. First set your environment:
-
-    export GOPATH=<path to this directory>
+Add this directory to `GOPATH` for the Go tools.
 
 To see the docs as text:
 
@@ -65,14 +57,21 @@ http://localhost:6060 in your browser:
 
     godoc -http=:6060 -index=true&
 
-This gives you the full standard Go library documentation plus the proton
-docs. The index takes a few minutes to generate so search may not work
-immediately, but you can click "Packages" and "proton" to go straight to the
-proton docs.
+Click "Packages" and "proton" to see the proton docs. It takes a minute or two
+to generate the index so search may not work immediately.
 
 To run the unit tests:
 
     go test -a apache.org/proton
+
+## New to Go?
+
+If you are new to Go then these are a good place to start:
+
+- [A Tour of Go](http://tour.golang.org)
+- [Effective Go](http://golang.org/doc/effective_go.html)
+
+Then look at the tools and library docs at <http://golang.org> as you need them.
 
 ## Design Notes
 
@@ -95,10 +94,5 @@ also supports traditional locking, so we could adopt locking strategies similar
 to our other bindings, but we should investigate the Go-like alternatives. There
 are analogies between Go channels and AMQP links that we will probably exploit.
 
-## State of the implementation
-
-So far we have a wrapper for `pn_url_t` with unit tests and docs. This just
-gives us an initial work-space and exercise for the tools and establishes the
-basics of using cgo to call into proton code.
 
 
