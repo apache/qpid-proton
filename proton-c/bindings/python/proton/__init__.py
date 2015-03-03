@@ -2855,7 +2855,7 @@ class Sender(Link):
           yield str(count)
           count += 1
       self.tag_generator = simple_tags()
-    return next(self.tag_generator)
+    return self.tag_generator.next()
 
 class Receiver(Link):
   """
