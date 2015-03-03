@@ -823,6 +823,7 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
     if (max > used)
       messenger->credit = max - used;
   } else if (messenger->credit_mode == LINK_CREDIT_MANUAL) {
+    messenger->next_drain = 0;
     return false;
   }
 
