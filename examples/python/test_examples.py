@@ -77,7 +77,7 @@ class ExamplesTest(unittest.TestCase):
         self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
 
     def test_sync_client_server_direct(self):
-        self.test_client_server(client=['sync_client.py', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
+        self.test_client_server(client=['sync_client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
 
     def test_db_send_recv(self):
         self.maxDiff = None

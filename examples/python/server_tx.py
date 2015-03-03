@@ -62,7 +62,8 @@ class TxServer(MessagingHandler):
             sender = self.container.create_sender(self.conn, event.message.reply_to)
             self.senders[event.message.reply_to] = sender
 
-        response = Message(address=event.message.reply_to, body=event.message.body.upper())
+        response = Message(address=event.message.reply_to, body=event.message.body.upper(),
+                           correlation_id=event.message.correlation_id)
         self.container.declare_transaction(self.conn, handler=TxRequest(response, sender, event.delivery))
 
     def on_connection_open(self, event):
