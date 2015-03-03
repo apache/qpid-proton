@@ -83,13 +83,15 @@ class BlockingSender(BlockingLink):
         return delivery
 
 class Fetcher(MessagingHandler):
-    def __init__(self, prefetch):
+    def __init__(self, connection, prefetch):
         super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
+        self.connection = connection
         self.incoming = collections.deque([])
         self.unsettled = collections.deque([])
 
     def on_message(self, event):
         self.incoming.append((event.message, event.delivery))
+        self.connection.container.yield_() # Wake up the wait() loop to handle the message.
 
     def on_link_error(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
@@ -207,7 +209,7 @@ class BlockingConnection(Handler):
             if prefetch is None:
                 prefetch = 1
         else:
-            fetcher = Fetcher(credit)
+            fetcher = Fetcher(self, credit)
         return BlockingReceiver(
             self, self.container.create_receiver(self.conn, utf8(address), name=utf8(name), dynamic=dynamic, handler=handler or fetcher, options=options), fetcher, credit=prefetch)
 

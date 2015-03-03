@@ -22,14 +22,12 @@ from proton import Message
 from proton.utils import BlockingConnection
 from proton.handlers import IncomingMessageHandler
 
-class HelloWorldReceiver(IncomingMessageHandler):
-    def on_message(self, event):
-        print event.message.body
-        event.connection.close()
-
 conn = BlockingConnection("localhost:5672")
-conn.create_receiver("examples", handler=HelloWorldReceiver())
+receiver = conn.create_receiver("examples")
 sender = conn.create_sender("examples")
 sender.send(Message(body=u"Hello World!"));
-conn.run()
+msg = receiver.receive(timeout=30)
+print msg.body
+receiver.accept()
+conn.close()
 
