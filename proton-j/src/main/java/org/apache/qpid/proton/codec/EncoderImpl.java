@@ -788,7 +788,7 @@ public final class EncoderImpl implements ByteBufferEncoder
                 _buffer.put((byte)(0xC0 | ((c >> 6) & 0x1F)));
                 _buffer.put((byte)(0x80 | (c & 0x3F)));
             }
-            else if ((c & 0xD800) != 0xD800)     /* U+0800..U+FFFF - excluding surrogate pairs */
+            else if ((c & 0xD800) != 0xD800 || (c & 0xDC00) == 0xDC00)     /* U+0800..U+FFFF - excluding surrogate pairs */
             {
                 _buffer.put((byte)(0xE0 | ((c >> 12) & 0x0F)));
                 _buffer.put((byte)(0x80 | ((c >> 6) & 0x3F)));
@@ -798,7 +798,7 @@ public final class EncoderImpl implements ByteBufferEncoder
             {
                 int low;
 
-                if(((c & 0xDC00) == 0xDC00) || (++i == length) || ((low = string.charAt(i)) & 0xDC00) != 0xDC00)
+                if((++i == length) || ((low = string.charAt(i)) & 0xDC00) != 0xDC00)
                 {
                     throw new IllegalArgumentException("String contains invalid Unicode code points");
                 }
@@ -812,7 +812,4 @@ public final class EncoderImpl implements ByteBufferEncoder
             }
         }
     }
-
-
-
 }
