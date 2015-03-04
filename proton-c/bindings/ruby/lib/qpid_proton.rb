@@ -78,6 +78,7 @@ require "core/ssl_details"
 require "core/ssl"
 require "core/transport"
 require "core/base_handler"
+require "core/url"
 
 # Messenger API classes
 require "messenger/subscription"
