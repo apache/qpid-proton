@@ -29,8 +29,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Test;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.junit.Test;
 
 /**
  * Test the encoding and decoding of {@link StringType} values.
@@ -140,6 +140,7 @@ public class StringTypeTest
                                                          UnicodeBlock.MUSICAL_SYMBOLS,
                                                          /*UnicodeBlock.EMOTICONS,*/
                                                          /*UnicodeBlock.PLAYING_CARDS,*/
+                                                         UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS,
                                                          UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_A,
                                                          UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_B));
                 }
