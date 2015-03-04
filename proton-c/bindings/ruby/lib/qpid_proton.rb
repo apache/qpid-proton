@@ -105,6 +105,7 @@ require "reactor/global_overrides"
 require "reactor/urls"
 require "reactor/connector"
 require "reactor/backoff"
+require "reactor/session_per_connection"
 
 module Qpid::Proton
   # @private
