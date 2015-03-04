@@ -41,6 +41,7 @@ require "util/class_wrapper"
 require "util/engine"
 require "util/uuid"
 require "util/timeout"
+require "util/handler"
 
 # Types
 require "types/strings"
