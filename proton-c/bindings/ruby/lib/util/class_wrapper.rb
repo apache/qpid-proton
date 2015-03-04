@@ -36,6 +36,8 @@ module Qpid::Proton::Util
         "pn_delivery" => proc {|x| Qpid::Proton::Delivery.wrap(Cproton.pn_cast_pn_delivery(x))},
         "pn_transport" => proc {|x| Qpid::Proton::Transport.wrap(Cproton.pn_cast_pn_transport(x))},
         "pn_selectable" => proc {|x| Qpid::Proton::Selectable.wrap(Cproton.pn_cast_pn_selectable(x))},
+        "pn_reactor" => proc {|x| Qpid::Proton::Reactor::Reactor.wrap(Cproton.pn_cast_pn_reactor(x))},
+        "pn_task" => proc {|x| Qpid::Proton::Reactor::Task.wrap(Cproton.pn_cast_pn_task(x))},
       }
 
     def class_wrapper(clazz, c_impl, &block)
