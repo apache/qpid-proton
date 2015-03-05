@@ -394,6 +394,7 @@ public class TransportImpl extends EndpointImpl
 
                     if(((link.getLocalState() == EndpointState.CLOSED) || link.detached())
                        && transportLink.isLocalHandleSet()
+                       && transportSession.isLocalChannelSet()
                        && !_isCloseSent)
                     {
                         if((link instanceof SenderImpl)
@@ -528,6 +529,7 @@ public class TransportImpl extends EndpointImpl
         if(!delivery.isDone() &&
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
            tpSession.hasOutgoingCredit() && tpLink.hasCredit() &&
+           tpSession.isLocalChannelSet() &&
            tpLink.getLocalHandle() != null && !_frameWriter.isFull())
         {
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
@@ -624,20 +626,24 @@ public class TransportImpl extends EndpointImpl
         SessionImpl session = rcv.getSession();
         TransportSession tpSession = session.getTransportSession();
 
-        Disposition disposition = new Disposition();
-        disposition.setFirst(tpDelivery.getDeliveryId());
-        disposition.setLast(tpDelivery.getDeliveryId());
-        disposition.setRole(Role.RECEIVER);
-        disposition.setSettled(delivery.isSettled());
-
-        disposition.setState(delivery.getLocalState());
-        writeFrame(tpSession.getLocalChannel(), disposition, null,
-                   null);
-        if(delivery.isSettled())
+        if (tpSession.isLocalChannelSet())
         {
-            tpDelivery.settled();
+            Disposition disposition = new Disposition();
+            disposition.setFirst(tpDelivery.getDeliveryId());
+            disposition.setLast(tpDelivery.getDeliveryId());
+            disposition.setRole(Role.RECEIVER);
+            disposition.setSettled(delivery.isSettled());
+
+            disposition.setState(delivery.getLocalState());
+            writeFrame(tpSession.getLocalChannel(), disposition, null, null);
+            if (delivery.isSettled())
+            {
+                tpDelivery.settled();
+            }
+            return true;
         }
-        return true;
+
+        return false;
     }
 
     private void processReceiverFlow()
