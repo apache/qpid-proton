@@ -40,6 +40,7 @@ class Recv(MessagingHandler):
             print event.message.body
             self.received += 1
             if self.received == self.expected:
+                event.receiver.close()
                 event.connection.close()
 
 parser = optparse.OptionParser(usage="usage: %prog [options]")

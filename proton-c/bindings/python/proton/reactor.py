@@ -404,6 +404,14 @@ class Selector(Filter):
     def __init__(self, value, name='selector'):
         super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
 
+class Move(ReceiverOption):
+    def apply(self, receiver):
+        receiver.source.distribution_mode = Terminus.DIST_MODE_MOVE
+
+class Copy(ReceiverOption):
+    def apply(self, receiver):
+        receiver.source.distribution_mode = Terminus.DIST_MODE_COPY
+
 def _apply_link_options(options, link):
     if options:
         if isinstance(options, list):

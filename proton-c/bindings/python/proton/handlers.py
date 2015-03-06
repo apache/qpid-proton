@@ -102,6 +102,12 @@ class Reject(ProtonException):
   """
   pass
 
+class Release(ProtonException):
+  """
+  An exception that indicate a message should be rejected
+  """
+  pass
+
 class Acking(object):
     def accept(self, delivery):
         """
@@ -148,14 +154,22 @@ class IncomingMessageHandler(Handler, Acking):
         if not dlv.link.is_receiver: return
         if dlv.readable and not dlv.partial:
             event.message = recv_msg(dlv)
-            try:
-                self.on_message(event)
+            if event.link.state & Endpoint.LOCAL_CLOSED:
                 if self.auto_accept:
-                    dlv.update(Delivery.ACCEPTED)
+                    dlv.update(Delivery.RELEASED)
                     dlv.settle()
-            except Reject:
-                dlv.update(Delivery.REJECTED)
-                dlv.settle()
+            else:
+                try:
+                    self.on_message(event)
+                    if self.auto_accept:
+                        dlv.update(Delivery.ACCEPTED)
+                        dlv.settle()
+                except Reject:
+                    dlv.update(Delivery.REJECTED)
+                    dlv.settle()
+                except Release:
+                    dlv.update(Delivery.MODIFIED)
+                    dlv.settle()
         elif dlv.updated and dlv.settled:
             self.on_settled(event)
 
