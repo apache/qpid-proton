@@ -1,7 +1,9 @@
 Most (though not all) of the current examples require a broker or
 similar intermediary that supports the AMQP 1.0 protocol, allows
 anonymous connections and accepts links to and from a node named
-'examples'.
+'examples'. A very simple broker emulating script - broker.py - is
+provided against which the examples can also be run (transactions are
+not yet supported in this script).
 
 ------------------------------------------------------------------
 
@@ -84,12 +86,6 @@ tx_send.py
 
 A sender that sends messages in atomic batches using local
 transactions (this example does not persist the messages in anyway).
-
-tx_send_sync.py
-
-A variant of the former example that waits for all messages in a batch
-to be acknowledged before committing. Used only to work around an
-ordering issue in preoton that affected qpidd.
 
 tx_recv.py
 
