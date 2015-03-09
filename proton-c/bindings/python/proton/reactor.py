@@ -585,7 +585,10 @@ class Container(Reactor):
     def __init__(self, *handlers, **kwargs):
         super(Container, self).__init__(*handlers, **kwargs)
         if "impl" not in kwargs:
-            self.ssl = SSLConfig()
+            try:
+                self.ssl = SSLConfig()
+            except SSLUnavailable:
+                self.ssl = None
             self.global_handler = GlobalOverrides(kwargs.get('global_handler', self.global_handler))
             self.trigger = None
             self.container_id = str(generate_uuid())
