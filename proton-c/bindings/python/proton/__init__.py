@@ -3778,7 +3778,7 @@ class Url(object):
   """
   Simple URL parser/constructor, handles URLs of the form:
 
-    <scheme>://<user>:<password>@<host>:<port>/<path>
+  <scheme>://<user>:<password>@<host>:<port>/<path>
 
   All components can be None if not specifeid in the URL string.
 
