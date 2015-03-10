@@ -1166,6 +1166,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_session_t *ssn = pn_channel_state(transport, channel);
   if (!ssn) {
       pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
+      if (strheap) free(strheap);
       return PN_EOS;
   }
   pn_link_t *link = pn_find_link(ssn, name, is_sender);
@@ -1208,6 +1209,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_data_clear(link->remote_target.capabilities);
     err = pn_data_scan(args, "D.[.....D..DL[C]...]", &code,
                        link->remote_target.capabilities);
+    if (err) return err;
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
     } else {
@@ -2718,9 +2720,10 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 
 int pn_transport_close_head(pn_transport_t *transport)
 {
-  size_t pending = pn_transport_pending(transport);
+  ssize_t pending = pn_transport_pending(transport);
   pni_close_head(transport);
-  pn_transport_pop(transport, pending);
+  if (pending > 0)
+    pn_transport_pop(transport, pending);
   return 0;
 }
 

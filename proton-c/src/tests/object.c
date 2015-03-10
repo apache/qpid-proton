@@ -854,7 +854,8 @@ void test_iterator(void)
   void *obj;
   int index = 0;
   while ((obj = pn_iterator_next(it))) {
-    assert(obj == pn_list_get(list, index++));
+    assert(obj == pn_list_get(list, index));
+    ++index;
   }
   assert(index == 4);
 

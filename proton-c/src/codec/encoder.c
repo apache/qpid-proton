@@ -365,6 +365,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
       int err = pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
       if (err) return err;
     }
+    // fallthrough
   case PN_LIST:
   case PN_MAP:
     pos = encoder->position;
