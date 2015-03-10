@@ -20,6 +20,7 @@ under the License.
 package proton
 
 // #include <proton/error.h>
+// #include <proton/codec.h>
 import "C"
 
 import (
@@ -65,4 +66,12 @@ func (err pnError) Error() string  { return fmt.Sprintf("proton: %s", string(err
 // errorf creates an error with a formatted message
 func errorf(format string, a ...interface{}) error {
 	return pnError(fmt.Sprintf(format, a...))
+}
+
+func pnDataError(data *C.pn_data_t) string {
+	err := C.pn_data_error(data)
+	if err != nil && int(C.pn_error_code(err)) != 0 {
+		return C.GoString(C.pn_error_text(err))
+	}
+	return ""
 }

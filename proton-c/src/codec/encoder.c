@@ -152,7 +152,7 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 
 static size_t pn_encoder_remaining(pn_encoder_t *encoder)
 {
-  return encoder->output + encoder->size - encoder->position;
+  return encoder->output ? (encoder->output + encoder->size - encoder->position) : 0;
 }
 
 static inline int pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)

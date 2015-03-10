@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	AMQP  string = "amqp"
-	AMQPS        = "amqps"
+	amqp  string = "amqp"
+	amqps        = "amqps"
 )
 
 // ParseUrl parses an AMQP URL string and returns a net/url.Url.
@@ -69,13 +69,13 @@ func ParseURL(s string) (u *url.URL, err error) {
 		return nil, errorf("bad URL %#v: %s", s, err)
 	}
 	if scheme == "" {
-		scheme = AMQP
+		scheme = amqp
 	}
 	if port == "" {
-		if scheme == AMQPS {
-			port = AMQPS
+		if scheme == amqps {
+			port = amqps
 		} else {
-			port = AMQP
+			port = amqp
 		}
 	}
 	var user *url.Userinfo
