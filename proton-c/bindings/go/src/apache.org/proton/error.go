@@ -26,54 +26,31 @@ import (
 	"fmt"
 )
 
-// errorCode is an error code returned by proton C.
-type errorCode int
+var pnErrorNames = map[int]string{
+	C.PN_EOS:        "end of data",
+	C.PN_ERR:        "error",
+	C.PN_OVERFLOW:   "overflow",
+	C.PN_UNDERFLOW:  "underflow",
+	C.PN_STATE_ERR:  "bad state",
+	C.PN_ARG_ERR:    "invalid argument",
+	C.PN_TIMEOUT:    "timeout",
+	C.PN_INTR:       "interrupted",
+	C.PN_INPROGRESS: "in progress",
+}
 
-const (
-	errEOS         errorCode = C.PN_EOS
-	errError                 = C.PN_ERR
-	errOverflow              = C.PN_OVERFLOW
-	errUnderflow             = C.PN_UNDERFLOW
-	errState                 = C.PN_STATE_ERR
-	errArgument              = C.PN_ARG_ERR
-	errTimeout               = C.PN_TIMEOUT
-	errInterrupted           = C.PN_INTR
-	errInProgress            = C.PN_INPROGRESS
-)
-
-// String gives a brief description of an errorCode.
-func (code errorCode) String() string {
-	switch code {
-	case errEOS:
-		return "end of data"
-	case errError:
-		return "error"
-	case errOverflow:
-		return "overflow"
-	case errUnderflow:
-		return "underflow"
-	case errState:
-		return "bad state"
-	case errArgument:
-		return "invalid argument"
-	case errTimeout:
-		return "timeout"
-	case errInterrupted:
-		return "interrupted"
-	case errInProgress:
-		return "in progress"
+func nonBlank(a, b string) string {
+	if a == "" {
+		return b
 	}
-	return fmt.Sprintf("invalid error code %d", code)
+	return a
 }
 
-// An errorCode can be used as an error
-func (code errorCode) Error() string {
-	return fmt.Sprintf("proton: %v", code)
+func pnErrorName(code int) string {
+	return nonBlank(pnErrorNames[code], "unknown error code")
 }
 
-// pnError is a simple error string.
-//
-// NOTE: All error types used in proton have both String() and Error() methods.
+///
+// NOTE: pnError has String() and Error() methods.
 // The String() method prints the plain error message, the Error() method
 // prints the error message with a "proton:" prefix.
 // Thus you can format nested error messages with "%s" without getting nested "proton:"

@@ -19,7 +19,49 @@ under the License.
 
 package proton
 
-// Types to exactly represent specific AMQP encodings
+// #include <proton/codec.h>
+import "C"
 
-// Symbol is the AMQP symbol data type, it can be converted to a Go string or []byte
-type Symbol string
+import (
+	"reflect"
+)
+
+type pnGetter func(data *C.pn_data_t) reflect.Value
+
+type pnType struct {
+	code   C.pn_type_t
+	name   string
+	getter pnGetter
+}
+
+var pnTypes = map[C.pn_type_t]pnType{
+	C.PN_NULL:       {C.PN_NULL, "null", nil},
+	C.PN_BOOL:       {C.PN_BOOL, "bool", getPnBool},
+	C.PN_UBYTE:      {C.PN_UBYTE, "ubyte", getPnUbyte},
+	C.PN_BYTE:       {C.PN_BYTE, "byte", getPnByte},
+	C.PN_USHORT:     {C.PN_USHORT, "ushort", getPnUshort},
+	C.PN_SHORT:      {C.PN_SHORT, "short", getPnShort},
+	C.PN_UINT:       {C.PN_UINT, "uint", getPnUint},
+	C.PN_INT:        {C.PN_INT, "int", getPnInt},
+	C.PN_CHAR:       {C.PN_CHAR, "char", getPnChar},
+	C.PN_ULONG:      {C.PN_ULONG, "ulong", getPnUlong},
+	C.PN_LONG:       {C.PN_LONG, "long", getPnLong},
+	C.PN_TIMESTAMP:  {C.PN_TIMESTAMP, "timestamp", nil},
+	C.PN_FLOAT:      {C.PN_FLOAT, "float", getPnFloat},
+	C.PN_DOUBLE:     {C.PN_DOUBLE, "double", getPnDouble},
+	C.PN_DECIMAL32:  {C.PN_DECIMAL32, "decimal32", nil},
+	C.PN_DECIMAL64:  {C.PN_DECIMAL64, "decimal64", nil},
+	C.PN_DECIMAL128: {C.PN_DECIMAL128, "decimal128", nil},
+	C.PN_UUID:       {C.PN_UUID, "uuid", nil},
+	C.PN_BINARY:     {C.PN_BINARY, "binary", getPnBinary},
+	C.PN_STRING:     {C.PN_STRING, "string", getPnString},
+	C.PN_SYMBOL:     {C.PN_SYMBOL, "symbol", getPnSymbol},
+	C.PN_DESCRIBED:  {C.PN_DESCRIBED, "described", nil},
+	C.PN_ARRAY:      {C.PN_ARRAY, "array", nil},
+	C.PN_LIST:       {C.PN_LIST, "list", nil},
+}
+
+func pnTypeName(t C.pn_type_t) string {
+	name := pnTypes[t].name
+	return nonBlank(name, "unknown type")
+}

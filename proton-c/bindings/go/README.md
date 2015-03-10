@@ -100,16 +100,17 @@ Working on API to marshal/unmarshal AMQP data into Go types.
 
 The API will follow the style of the standard libraries encoding/json and encoding/xml.
 
-To be done:
+## To be done:
 
 Easy unmarshaling into native Go types:
 
 - String-like AMQP types (symbol, binary, string) into Go string or []byte
 - Numeric AMQP types into any Go numeric (numeric conversion)
 - Any AMQP type into GO reflect.Value choosing the closest native Go type
-- AMQP map into go struct if keys match struct field names and values match field types
+- AMQP map into Go struct if keys match struct field names and values match field types
 - AMQP maps into map[K]T if all AMQP keys/values can convert to K and T (reflect.Value allowed)
 - AMQP list into []T if all list elements can convert to T (reflect.Value allowed)
+- AMQP list into Go struct if AMQP types match struct field types in order.
 
 Easy marshaling of native Go types:
 
@@ -126,8 +127,9 @@ Customization:
 
 Exact (strict) (un)marshaling:
 
-- Define special Go AMQP types that exactly reflect AMQP types & encodings.
+- Special Go AMQP types that exactly reflect AMQP types & encodings.
 - Unmarshal to special types only if exact match for wire
 - Marshal special types exactly
 - Define AMQPValue which can unmarshal from any AMQP type using strict unmarshaling types.
 
+Use of tags to control AMQP marshalling/unmarshalling?
