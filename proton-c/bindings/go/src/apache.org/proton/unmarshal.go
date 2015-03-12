@@ -67,11 +67,7 @@ func (d *Decoder) Buffered() io.Reader {
 // See the documentation for Unmarshal for details about the conversion of AMQP into a Go value.
 //
 func (d *Decoder) Decode(v interface{}) (err error) {
-	defer func() {
-		if x := recover(); x != nil {
-			err = errorf("%v", x)
-		}
-	}()
+	defer doRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	var n int
@@ -90,35 +86,59 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 
 /*
 Unmarshal decodes AMQP-encoded bytes and stores the result in the value pointed to by v.
+Types are converted as follows:
 
-Go types that can be unmarshalled from AMQP types
+ +---------------------------+----------------------------------------------------------------------+
+ |To Go types                |From AMQP types                                                       |
+ +===========================+======================================================================+
+ |bool                       |bool                                                                  |
+ +---------------------------+----------------------------------------------------------------------+
+ |int, int8, int16,          |Equivalent or smaller signed integer type: char, byte, short, int,    |
+ |int32, int64               |long.                                                                 |
+ +---------------------------+----------------------------------------------------------------------+
+ |uint, uint8, uint16,       |Equivalent or smaller unsigned integer type: char, ubyte, ushort,     |
+ |uint32, uint64 types       |uint, ulong                                                           |
+ +---------------------------+----------------------------------------------------------------------+
+ |float32, float64           |Equivalent or smaller float or double.                                |
+ +---------------------------+----------------------------------------------------------------------+
+ |string, []byte             |string, symbol or binary.                                             |
+ +---------------------------+----------------------------------------------------------------------+
+ |map[K]T                    |map, provided all keys and values can unmarshal to types K, T         |
+ +---------------------------+----------------------------------------------------------------------+
+ |Map|map, any AMQP map                                                     |
+ +---------------------------+----------------------------------------------------------------------+
+ |interface{}                |Any AMQP value can be unmarshaled to an interface{} as follows:       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |AMQP Type               |Go Type in interface{}                       |
+ |                           +========================+=============================================+
+ |                           |bool                    |bool                                         |
+ |                           +------------------------+---------------------------------------------+
+ |                           |char                    |unint8                                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |byte,short,int,long     |int8,int16,int32,int64                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |ubyte,ushort,uint,ulong |uint8,uint16,uint32,uint64                   |
+ |                           +------------------------+---------------------------------------------+
+ |                           |float, double           |float32, float64                             |
+ |                           +------------------------+---------------------------------------------+
+ |                           |string, symbol          |string                                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |binary                  |byte[]                                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |map                     |Map                  |
+ +---------------------------+------------------------+---------------------------------------------+
 
-bool from AMQP bool
+The following Go types cannot be unmarshaled: complex64/128, uintptr, function, interface, channel.
 
-int, int8, int16, int32, int64 from equivalent or smaller AMQP signed integer type or char
+ODO types
 
-uint, uint8, uint16, uint32, uint64 types from equivalent or smaller AMQP unsigned integer type or char
+AMQP: null, timestamp, decimal32/64/128, uuid, described, array, list.
 
-float32, float64 from equivalent or smaller AMQP float type.
+Go: array, slice, struct.
 
-string, []byte from AMQP string, symbol or binary.
-
-TODO types
-
-AMQP from AMQP null, char, timestamp, decimal32/64/128, uuid, described, array, list, map
-
-Go: array, slice, struct, map, reflect/Value
-
-Go types that cannot be unmarshalled
-
-complex64/128, uintptr, function, interface, channel
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
-	defer func() {
-		if x := recover(); x != nil {
-			err = errorf("%v", x)
-		}
-	}()
+	defer doRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	n = unmarshal(data, bytes, v)
@@ -152,15 +172,14 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 	if n == 0 {
 		return 0
 	}
-	pnType := C.pn_data_type(data)
+	get(data, v)
+	return
+}
 
-	badUnmarshal := func() error {
-		notPtr := ""
-		if reflect.TypeOf(v).Kind() != reflect.Ptr {
-			notPtr = ", target is not a pointer"
-		}
-		return errorf("cannot unmarshal AMQP %s to %s%s", getPnType(pnType), reflect.TypeOf(v), notPtr)
-	}
+// Get value v from data
+func get(data *C.pn_data_t, v interface{}) {
+
+	pnType := C.pn_data_type(data)
 
 	switch v := v.(type) {
 	case *bool:
@@ -168,7 +187,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_BOOL:
 			*v = bool(C.pn_data_get_bool(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *int8:
 		switch pnType {
@@ -177,7 +196,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_BYTE:
 			*v = int8(C.pn_data_get_byte(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *uint8:
 		switch pnType {
@@ -186,7 +205,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_UBYTE:
 			*v = uint8(C.pn_data_get_ubyte(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *int16:
 		switch pnType {
@@ -197,7 +216,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_SHORT:
 			*v = int16(C.pn_data_get_short(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *uint16:
 		switch pnType {
@@ -208,7 +227,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_USHORT:
 			*v = uint16(C.pn_data_get_ushort(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *int32:
 		switch pnType {
@@ -221,7 +240,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_INT:
 			*v = int32(C.pn_data_get_int(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 	case *uint32:
 		switch pnType {
@@ -234,7 +253,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_UINT:
 			*v = uint32(C.pn_data_get_uint(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *int64:
@@ -250,7 +269,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_LONG:
 			*v = int64(C.pn_data_get_long(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *uint64:
@@ -264,7 +283,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_ULONG:
 			*v = uint64(C.pn_data_get_ulong(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *int:
@@ -281,10 +300,10 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 			if unsafe.Sizeof(0) == 8 {
 				*v = int(C.pn_data_get_long(data))
 			} else {
-				panic(badUnmarshal())
+				panic(newBadUnmarshal(pnType, v))
 			}
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *uint:
@@ -301,10 +320,10 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 			if unsafe.Sizeof(0) == 8 {
 				*v = uint(C.pn_data_get_ulong(data))
 			} else {
-				panic(badUnmarshal())
+				panic(newBadUnmarshal(pnType, v))
 			}
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *float32:
@@ -312,7 +331,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_FLOAT:
 			*v = float32(C.pn_data_get_float(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *float64:
@@ -322,7 +341,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_DOUBLE:
 			*v = float64(C.pn_data_get_double(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *string:
@@ -334,7 +353,7 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_BINARY:
 			*v = goString(C.pn_data_get_binary(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
 	case *[]byte:
@@ -346,53 +365,122 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 		case C.PN_BINARY:
 			*v = goBytes(C.pn_data_get_binary(data))
 		default:
-			panic(badUnmarshal())
+			panic(newBadUnmarshal(pnType, v))
 		}
 
-	case *reflect.Value:
-		switch pnType {
-		case C.PN_BOOL:
-			*v = reflect.ValueOf(bool(C.pn_data_get_bool(data)))
-		case C.PN_UBYTE:
-			*v = reflect.ValueOf(uint8(C.pn_data_get_ubyte(data)))
-		case C.PN_BYTE:
-			*v = reflect.ValueOf(int8(C.pn_data_get_byte(data)))
-		case C.PN_USHORT:
-			*v = reflect.ValueOf(uint16(C.pn_data_get_ushort(data)))
-		case C.PN_SHORT:
-			*v = reflect.ValueOf(int16(C.pn_data_get_short(data)))
-		case C.PN_UINT:
-			*v = reflect.ValueOf(uint32(C.pn_data_get_uint(data)))
-		case C.PN_INT:
-			*v = reflect.ValueOf(int32(C.pn_data_get_int(data)))
-		case C.PN_CHAR:
-			*v = reflect.ValueOf(uint8(C.pn_data_get_char(data)))
-		case C.PN_ULONG:
-			*v = reflect.ValueOf(uint64(C.pn_data_get_ulong(data)))
-		case C.PN_LONG:
-			*v = reflect.ValueOf(int64(C.pn_data_get_long(data)))
-		case C.PN_FLOAT:
-			*v = reflect.ValueOf(float32(C.pn_data_get_float(data)))
-		case C.PN_DOUBLE:
-			*v = reflect.ValueOf(float64(C.pn_data_get_double(data)))
-		case C.PN_BINARY:
-			*v = valueOfBytes(C.pn_data_get_binary(data))
-		case C.PN_STRING:
-			*v = valueOfString(C.pn_data_get_string(data))
-		case C.PN_SYMBOL:
-			*v = valueOfString(C.pn_data_get_symbol(data))
-		default:
-			panic(badUnmarshal())
-		}
+	case *interface{}:
+		getInterface(data, v)
 
 	default:
-		panic(badUnmarshal())
+		if reflect.TypeOf(v).Kind() != reflect.Ptr {
+			panic(newBadUnmarshal(pnType, v))
+		}
+		switch reflect.TypeOf(v).Elem().Kind() {
+		case reflect.Map:
+			getMap(data, v)
+		case reflect.Slice:
+			getList(data, v)
+		default:
+			panic(newBadUnmarshal(pnType, v))
+		}
 	}
 	err := pnDataError(data)
 	if err != "" {
 		panic(errorf("unmarshal %s", err))
 	}
 	return
+}
+
+// Getting into an interface is driven completely by the AMQP type, since the interface{}
+// target is type-neutral.
+func getInterface(data *C.pn_data_t, v *interface{}) {
+	pnType := C.pn_data_type(data)
+	switch pnType {
+	case C.PN_BOOL:
+		*v = bool(C.pn_data_get_bool(data))
+	case C.PN_UBYTE:
+		*v = uint8(C.pn_data_get_ubyte(data))
+	case C.PN_BYTE:
+		*v = int8(C.pn_data_get_byte(data))
+	case C.PN_USHORT:
+		*v = uint16(C.pn_data_get_ushort(data))
+	case C.PN_SHORT:
+		*v = int16(C.pn_data_get_short(data))
+	case C.PN_UINT:
+		*v = uint32(C.pn_data_get_uint(data))
+	case C.PN_INT:
+		*v = int32(C.pn_data_get_int(data))
+	case C.PN_CHAR:
+		*v = uint8(C.pn_data_get_char(data))
+	case C.PN_ULONG:
+		*v = uint64(C.pn_data_get_ulong(data))
+	case C.PN_LONG:
+		*v = int64(C.pn_data_get_long(data))
+	case C.PN_FLOAT:
+		*v = float32(C.pn_data_get_float(data))
+	case C.PN_DOUBLE:
+		*v = float64(C.pn_data_get_double(data))
+	case C.PN_BINARY:
+		*v = goBytes(C.pn_data_get_binary(data))
+	case C.PN_STRING:
+		*v = goString(C.pn_data_get_string(data))
+	case C.PN_SYMBOL:
+		*v = goString(C.pn_data_get_symbol(data))
+	case C.PN_MAP:
+		m := make(Map)
+		get(data, &m)
+		*v = m // FIXME aconway 2015-03-13: avoid the copy?
+	case C.PN_LIST:
+		l := make(List, 0)
+		get(data, &l)
+		*v = l
+	default:
+		panic(newBadUnmarshal(pnType, v))
+	}
+}
+
+func getMap(data *C.pn_data_t, v interface{}) {
+	pnType := C.pn_data_type(data)
+	if pnType != C.PN_MAP {
+		panic(newBadUnmarshal(pnType, v))
+	}
+	mapValue := reflect.ValueOf(v).Elem()
+	mapValue.Set(reflect.MakeMap(mapValue.Type())) // Clear the map
+	count := int(C.pn_data_get_map(data))
+	if bool(C.pn_data_enter(data)) {
+		for i := 0; i < count/2; i++ {
+			if bool(C.pn_data_next(data)) {
+				key := reflect.New(mapValue.Type().Key())
+				get(data, key.Interface())
+				if bool(C.pn_data_next(data)) {
+					val := reflect.New(mapValue.Type().Elem())
+					get(data, val.Interface())
+					mapValue.SetMapIndex(key.Elem(), val.Elem())
+				}
+			}
+		}
+		C.pn_data_exit(data)
+	}
+}
+
+func getList(data *C.pn_data_t, v interface{}) {
+	pnType := C.pn_data_type(data)
+	if pnType != C.PN_LIST {
+		panic(newBadUnmarshal(pnType, v))
+	}
+	count := int(C.pn_data_get_list(data))
+	listValue := reflect.MakeSlice(reflect.TypeOf(v).Elem(), count, count)
+	if bool(C.pn_data_enter(data)) {
+		for i := 0; i < count; i++ {
+			if bool(C.pn_data_next(data)) {
+				val := reflect.New(listValue.Type().Elem())
+				get(data, val.Interface())
+				listValue.Index(i).Set(val.Elem())
+			}
+		}
+		C.pn_data_exit(data)
+	}
+	reflect.ValueOf(v).Elem().Set(listValue)
 }
 
 // decode from bytes.
@@ -410,20 +498,6 @@ func decode(data *C.pn_data_t, bytes []byte) int {
 		panic(errorf("unmarshal %s", pnErrorName(n)))
 	}
 	return n
-}
-
-func valueOfBytes(bytes C.pn_bytes_t) reflect.Value {
-	if bytes.start == nil || bytes.size == 0 {
-		return reflect.ValueOf([]byte{})
-	}
-	return reflect.ValueOf(C.GoBytes(unsafe.Pointer(bytes.start), C.int(bytes.size)))
-}
-
-func valueOfString(bytes C.pn_bytes_t) reflect.Value {
-	if bytes.start == nil || bytes.size == 0 {
-		return reflect.ValueOf("")
-	}
-	return reflect.ValueOf(C.GoStringN(bytes.start, C.int(bytes.size)))
 }
 
 func goBytes(cBytes C.pn_bytes_t) (bytes []byte) {

@@ -35,21 +35,31 @@ Marshal encodes a value as AMQP.
 
 Go types are encoded as follows
 
-bool to AMQP bool.
-
-int, int8, int16, int32, int64 to equivalent AMQP signed integer type.
-
-uint, uint8, uint16, uint32, uint64 to equivalent or smaller AMQP unsigned integer type.
-
-float32, float64 to AMQP float or double.
-
-string to AMQP string.
-
-[]byte to AMQP binary.
+ +-------------------------------------+--------------------------------------------+
+ |Go type                              |AMQP type                                   |
+ +-------------------------------------+--------------------------------------------+
+ |bool                                 |bool                                        |
+ +-------------------------------------+--------------------------------------------+
+ |int8, int16, int32, int64 (int)      |byte, short, int, long (int or long)        |
+ +-------------------------------------+--------------------------------------------+
+ |uint8, uint16, uint32, uint64 (uint) |ubyte, ushort, uint, ulong (uint or ulong)  |
+ +-------------------------------------+--------------------------------------------+
+ |float32, float64                     |float, double.                              |
+ +-------------------------------------+--------------------------------------------+
+ |string                               |string                                      |
+ +-------------------------------------+--------------------------------------------+
+ |[]byte                               |binary                                      |
+ +-------------------------------------+--------------------------------------------+
+ |interface{}                          |as to the contained type                    |
+ +-------------------------------------+--------------------------------------------+
+ |map[K]T                              |map with K and T converted as above         |
+ +-------------------------------------+--------------------------------------------+
+ |Map                                  |map may have mixed types for keys and values|
+ +-------------------------------------+--------------------------------------------+
 
 TODO types
 
-Go: array, slice, struct, map, reflect/Value
+Go: array, slice, struct
 
 Go types that cannot be marshaled
 
@@ -57,17 +67,32 @@ complex64/128, uintptr, function, interface, channel
 
 */
 func Marshal(v interface{}) (bytes []byte, err error) {
-	defer func() {
-		if x := recover(); x != nil {
-			err = errorf("%v", x)
-		}
-	}()
 	return marshal(make([]byte, minEncode), v)
 }
 
 func marshal(bytesIn []byte, v interface{}) (bytes []byte, err error) {
+	defer doRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
+	put(data, v)
+	// FIXME aconway 2015-03-11: get size from proton.
+	bytes = bytesIn
+	for {
+		n := int(C.pn_data_encode(data, (*C.char)(unsafe.Pointer(&bytes[0])), C.size_t(cap(bytes))))
+		if n != int(C.PN_EOS) {
+			if n < 0 {
+				err = errorf(pnErrorName(n))
+			} else {
+				bytes = bytes[0:n]
+			}
+			return
+		}
+		bytes = make([]byte, cap(bytes)*2)
+	}
+	return
+}
+
+func put(data *C.pn_data_t, v interface{}) {
 	switch v := v.(type) {
 	case bool:
 		C.pn_data_put_bool(data, C.bool(v))
@@ -107,26 +132,50 @@ func marshal(bytesIn []byte, v interface{}) (bytes []byte, err error) {
 		C.pn_data_put_string(data, toPnBytes([]byte(v)))
 	case []byte:
 		C.pn_data_put_binary(data, toPnBytes(v))
-	case reflect.Value:
-		return marshal(bytesIn, v.Interface())
-	default:
-		panic(errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
-	}
-	// FIXME aconway 2015-03-11: get size from proton.
-	bytes = bytesIn
-	for {
-		n := int(C.pn_data_encode(data, (*C.char)(unsafe.Pointer(&bytes[0])), C.size_t(cap(bytes))))
-		if n != int(C.PN_EOS) {
-			if n < 0 {
-				err = errorf(pnErrorName(n))
-			} else {
-				bytes = bytes[0:n]
-			}
-			return
+	case Map: // Special map type
+		C.pn_data_put_map(data)
+		C.pn_data_enter(data)
+		for key, val := range v {
+			put(data, key)
+			put(data, val)
 		}
-		bytes = make([]byte, cap(bytes)*2)
+		C.pn_data_exit(data)
+	default:
+		switch reflect.TypeOf(v).Kind() {
+		case reflect.Map:
+			putMap(data, v)
+		case reflect.Slice:
+			putList(data, v)
+		default:
+			panic(errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
+		}
+	}
+	err := pnDataError(data)
+	if err != "" {
+		panic(errorf("marshal %s", err))
 	}
 	return
+}
+
+func putMap(data *C.pn_data_t, v interface{}) {
+	mapValue := reflect.ValueOf(v)
+	C.pn_data_put_map(data)
+	C.pn_data_enter(data)
+	for _, key := range mapValue.MapKeys() {
+		put(data, key.Interface())
+		put(data, mapValue.MapIndex(key).Interface())
+	}
+	C.pn_data_exit(data)
+}
+
+func putList(data *C.pn_data_t, v interface{}) {
+	listValue := reflect.ValueOf(v)
+	C.pn_data_put_list(data)
+	C.pn_data_enter(data)
+	for i := 0; i < listValue.Len(); i++ {
+		put(data, listValue.Index(i).Interface())
+	}
+	C.pn_data_exit(data)
 }
 
 // Encoder encodes AMQP values to an io.Writer

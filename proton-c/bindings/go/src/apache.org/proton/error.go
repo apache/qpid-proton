@@ -25,6 +25,8 @@ import "C"
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 )
 
 var pnErrorNames = map[int]string{
@@ -39,33 +41,35 @@ var pnErrorNames = map[int]string{
 	C.PN_INPROGRESS: "in progress",
 }
 
-func nonBlank(a, b string) string {
-	if a == "" {
-		return b
-	}
-	return a
-}
-
 func pnErrorName(code int) string {
-	return nonBlank(pnErrorNames[code], "unknown error code")
+	name := pnErrorNames[code]
+	if name != "" {
+		return name
+	} else {
+		return "unknown error code"
+	}
 }
 
-///
-// NOTE: pnError has String() and Error() methods.
-// The String() method prints the plain error message, the Error() method
-// prints the error message with a "proton:" prefix.
-// Thus you can format nested error messages with "%s" without getting nested "proton:"
-// prefixes but the prefix will be added when the end user uses Error()
-// or "%v" on the error value.
-//
-type pnError string
+type BadUnmarshal struct {
+	AMQPType C.pn_type_t
+	GoType   reflect.Type
+}
 
-func (err pnError) String() string { return string(err) }
-func (err pnError) Error() string  { return fmt.Sprintf("proton: %s", string(err)) }
+func newBadUnmarshal(pnType C.pn_type_t, v interface{}) *BadUnmarshal {
+	return &BadUnmarshal{pnType, reflect.TypeOf(v)}
+}
+
+func (e BadUnmarshal) Error() string {
+	if e.GoType.Kind() != reflect.Ptr {
+		return fmt.Sprintf("proton: cannot unmarshal to type %s, not a pointer", e.GoType)
+	} else {
+		return fmt.Sprintf("proton: cannot unmarshal AMQP %s to %s", getPnType(e.AMQPType), e.GoType)
+	}
+}
 
 // errorf creates an error with a formatted message
 func errorf(format string, a ...interface{}) error {
-	return pnError(fmt.Sprintf(format, a...))
+	return fmt.Errorf("proton: %s", fmt.Sprintf(format, a...))
 }
 
 func pnDataError(data *C.pn_data_t) string {
@@ -74,4 +78,19 @@ func pnDataError(data *C.pn_data_t) string {
 		return C.GoString(C.pn_error_text(err))
 	}
 	return ""
+}
+
+// doRecover is called to recover from internal panics
+func doRecover(err *error) {
+	r := recover()
+	switch r := r.(type) {
+	case nil:
+		return
+	case runtime.Error:
+		panic(r)
+	case error:
+		*err = r
+	default:
+		panic(r)
+	}
 }

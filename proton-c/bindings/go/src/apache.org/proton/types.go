@@ -23,6 +23,8 @@ package proton
 import "C"
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
 )
 
@@ -33,13 +35,6 @@ type pnPut func(data *C.pn_data_t, v interface{})
 type pnType struct {
 	code C.pn_type_t // AMQP type code
 	name string      // AMQP type name
-
-	// unmarshal data
-	get     pnGet        // pn_data_*_get function wrapper returning a reflect.Value
-	getType reflect.Type // go type for unmarshaling into a Value
-
-	// marshal data
-	put pnPut // pn_data_*_put function wrapper taking an interface{}
 }
 
 func (pt *pnType) String() string { return pt.name }
@@ -116,3 +111,27 @@ var (
 	bytesType = reflect.TypeOf([]byte{})
 	valueType = reflect.TypeOf(reflect.Value{})
 )
+
+// Map is a generic map that can have mixed key and value types and so can represent any AMQP map
+//
+type Map map[interface{}]interface{}
+
+// List is a generic list that can hold mixed values and can represent any AMQP list.
+//
+type List []interface{}
+
+// GoString for Map prints values with their types, useful for debugging.
+func (m Map) GoString() string {
+	out := &bytes.Buffer{}
+	fmt.Fprintf(out, "%s{", reflect.TypeOf(m))
+	i := len(m)
+	for k, v := range m {
+		fmt.Fprintf(out, "%T(%#v): %T(%#v)", k, k, v, v)
+		i--
+		if i > 0 {
+			fmt.Fprint(out, ", ")
+		}
+	}
+	fmt.Fprint(out, "}")
+	return out.String()
+}

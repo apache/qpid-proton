@@ -20,9 +20,6 @@ under the License.
 // Test that conversion of Go type to/from AMQP is compatible with other
 // bindings.
 //
-// FIXME aconway 2015-03-01: this should move to proton/tests/go when we integrate
-// better with the proton build system.
-//
 package proton
 
 import (
@@ -37,7 +34,7 @@ import (
 
 func assertEqual(want interface{}, got interface{}) {
 	if !reflect.DeepEqual(want, got) {
-		panic(errorf("%T(%v) != %T(%v)", want, want, got, got))
+		panic(errorf("%#v != %#v", want, got))
 	}
 }
 
@@ -144,38 +141,35 @@ func TestPrimitivesCompatible(t *testing.T) {
 }
 
 // assertDecodeValue: want is the expected value, decode into a reflect.Value
-func assertDecodeValue(d *Decoder, want interface{}) {
+func assertDecodeInterface(d *Decoder, want interface{}) {
 
-	var v reflect.Value
-	assertNil(d.Decode(&v))
+	var got, got2 interface{}
+	assertNil(d.Decode(&got))
 
-	got := v.Interface()
 	assertEqual(want, got)
 
 	// Try round trip encoding
-	bytes, err := Marshal(v)
+	bytes, err := Marshal(got)
 	assertNil(err)
-	n, err := Unmarshal(bytes, &v)
+	n, err := Unmarshal(bytes, &got2)
 	assertNil(err)
 	assertEqual(n, len(bytes))
-	got = v.Interface()
-	assertEqual(want, got)
+	assertEqual(want, got2)
 }
 
-func TestPrimitivesValue(t *testing.T) {
+func TestPrimitivesInterface(t *testing.T) {
 	d := NewDecoder(getReader("primitives"))
-	// Decoding into reflect.Value
-	assertDecodeValue(d, true)
-	assertDecodeValue(d, false)
-	assertDecodeValue(d, uint8(42))
-	assertDecodeValue(d, uint16(42))
-	assertDecodeValue(d, int16(-42))
-	assertDecodeValue(d, uint32(12345))
-	assertDecodeValue(d, int32(-12345))
-	assertDecodeValue(d, uint64(12345))
-	assertDecodeValue(d, int64(-12345))
-	assertDecodeValue(d, float32(0.125))
-	assertDecodeValue(d, float64(0.125))
+	assertDecodeInterface(d, true)
+	assertDecodeInterface(d, false)
+	assertDecodeInterface(d, uint8(42))
+	assertDecodeInterface(d, uint16(42))
+	assertDecodeInterface(d, int16(-42))
+	assertDecodeInterface(d, uint32(12345))
+	assertDecodeInterface(d, int32(-12345))
+	assertDecodeInterface(d, uint64(12345))
+	assertDecodeInterface(d, int64(-12345))
+	assertDecodeInterface(d, float32(0.125))
+	assertDecodeInterface(d, float64(0.125))
 }
 
 func TestStrings(t *testing.T) {
@@ -209,12 +203,23 @@ func TestStrings(t *testing.T) {
 	d = NewDecoder(getReader("strings"))
 	var s string
 	err := d.Decode(s)
+	if err == nil {
+		t.Fatal("Expected error")
+	}
 	if !strings.Contains(err.Error(), "not a pointer") {
 		t.Error(err)
 	}
 	var i int
 	err = d.Decode(&i)
 	if !strings.Contains(err.Error(), "cannot unmarshal") {
+		t.Error(err)
+	}
+	_, err = Unmarshal([]byte{}, nil)
+	if !strings.Contains(err.Error(), "not enough data") {
+		t.Error(err)
+	}
+	_, err = Unmarshal([]byte("foobar"), nil)
+	if !strings.Contains(err.Error(), "invalid argument") {
 		t.Error(err)
 	}
 }
@@ -226,9 +231,10 @@ func TestEncodeDecode(t *testing.T) {
 		u8 uint8
 		b  bool
 		f  float32
+		v  interface{}
 	}
 
-	in := data{"foo", 42, 9, true, 1.234}
+	in := data{"foo", 42, 9, true, 1.234, "thing"}
 
 	buf := bytes.Buffer{}
 	e := NewEncoder(&buf)
@@ -237,6 +243,7 @@ func TestEncodeDecode(t *testing.T) {
 	e.Encode(in.u8)
 	e.Encode(in.b)
 	e.Encode(in.f)
+	e.Encode(in.v)
 
 	var out data
 	d := NewDecoder(&buf)
@@ -245,103 +252,39 @@ func TestEncodeDecode(t *testing.T) {
 	d.Decode(&out.u8)
 	d.Decode(&out.b)
 	d.Decode(&out.f)
+	d.Decode(&out.v)
 
 	assertEqual(in, out)
-
-	vIn := reflect.ValueOf("thing")
-	e.Encode(vIn)
-	var vOut reflect.Value
-	d.Decode(&vOut)
-	assertEqual("thing", vOut.Interface())
 }
 
-func BenchmarkDecode(b *testing.B) {
-	var buf bytes.Buffer
-	for _, f := range []string{"strings", "primitives"} {
-		_, err := buf.ReadFrom(getReader(f))
-		if err != nil {
-			panic(err)
-		}
-	}
+func TestMap(t *testing.T) {
+	d := NewDecoder(getReader("maps"))
 
-	d := NewDecoder(bytes.NewReader(buf.Bytes()))
+	// Generic map
+	var m Map
+	assertDecode(d, Map{"one": int32(1), "two": int32(2), "three": int32(3)}, &m)
 
-	decode := func(v interface{}) {
-		err := d.Decode(v)
-		if err != nil {
-			panic(err)
-		}
-	}
+	// Interface as map
+	var i interface{}
+	assertDecode(d, Map{int32(1): "one", int32(2): "two", int32(3): "three"}, &i)
 
-	for i := 0; i < b.N; i++ {
-		var by []byte
-		// strings
-		decode(&by)
-		var s string
-		decode(&s)
-		decode(&s)
-		decode(&by)
-		decode(&s)
-		decode(&s)
-		// primitives
-		var b bool
-		decode(&b)
-		decode(&b)
-		var u8 uint8
-		decode(&u8)
-		var u16 uint16
-		decode(&u16)
-		var i16 int16
-		decode(&i16)
-		var u32 uint32
-		decode(&u32)
-		var i32 int32
-		decode(&i32)
-		var u64 uint64
-		decode(&u64)
-		var i64 int64
-		decode(&i64)
-		var f32 float32
-		decode(&f32)
-		var f64 float64
-		decode(&f64)
+	d = NewDecoder(getReader("maps"))
+	// Specific typed map
+	var m2 map[string]int
+	assertDecode(d, map[string]int{"one": 1, "two": 2, "three": 3}, &m2)
 
-		d = NewDecoder(bytes.NewReader(buf.Bytes()))
-	}
+	// Round trip a nested map
+	m = Map{int64(1): "one", "two": int32(2), true: Map{uint8(1): true, uint8(2): false}}
+	bytes, err := Marshal(m)
+	assertNil(err)
+	_, err = Unmarshal(bytes, &i)
+	assertNil(err)
+	assertEqual(m, i)
 }
 
-func BenchmarkEncode(b *testing.B) {
-
-	var buf bytes.Buffer
-	buf.Grow(10000) // Avoid buffer reallocation during benchmark
-	e := NewEncoder(&buf)
-	encode := func(v interface{}) {
-		err := e.Encode(v)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	for i := 0; i < b.N; i++ {
-		// strings
-		encode([]byte("foo"))
-		encode("foo")
-		encode("bar")
-		encode([]byte(""))
-		encode("")
-		encode("")
-		// primitives
-		encode(true)
-		encode(false)
-		encode(uint8(42))
-		encode(int8(-42))
-		encode(uint16(12345))
-		encode(int16(-12345))
-		encode(uint32(123453245))
-		encode(int32(-123453245))
-		encode(uint64(123456445))
-		encode(int64(-123456445))
-		encode(float32(1.2345))
-		encode(float64(1.23456))
-	}
+func TestList(t *testing.T) {
+	d := NewDecoder(getReader("lists"))
+	var l List
+	assertDecode(d, List{int32(32), "foo", true}, &l)
+	assertDecode(d, List{}, &l)
 }
