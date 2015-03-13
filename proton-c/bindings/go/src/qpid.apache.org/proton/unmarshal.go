@@ -125,16 +125,18 @@ Types are converted as follows:
  |                           +------------------------+---------------------------------------------+
  |                           |binary                  |byte[]                                       |
  |                           +------------------------+---------------------------------------------+
- |                           |map                     |Map                  |
+ |                           |map                     |Map                                          |
+ |                           +------------------------+---------------------------------------------+
+ |                           |list                    |List                                         |
  +---------------------------+------------------------+---------------------------------------------+
 
 The following Go types cannot be unmarshaled: complex64/128, uintptr, function, interface, channel.
 
-ODO types
+TODO types
 
-AMQP: null, timestamp, decimal32/64/128, uuid, described, array, list.
+AMQP: null, timestamp, decimal32/64/128, uuid, described, array.
 
-Go: array, slice, struct.
+Go: array, struct.
 
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {

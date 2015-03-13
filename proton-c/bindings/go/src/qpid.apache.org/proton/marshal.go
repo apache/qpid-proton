@@ -54,7 +54,11 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |map[K]T                              |map with K and T converted as above         |
  +-------------------------------------+--------------------------------------------+
- |Map                                  |map may have mixed types for keys and values|
+ |Map                                  |map, may have mixed types for keys, values  |
+ +-------------------------------------+--------------------------------------------+
+ |[]T                                  |list with T converted as above              |
+ +-------------------------------------+--------------------------------------------+
+ |List                                 |list, may have mixed types  values          |
  +-------------------------------------+--------------------------------------------+
 
 TODO types

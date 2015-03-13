@@ -35,8 +35,7 @@ cross-language developers but idiomatic Go is the overriding consideration.
 
 ## Status
 
-So just a simple Go `Url` type using `pn_url_t`.  This establishes the basics of
-using cgo to call into proton code.
+Marshal and unmarshal most of the AMQP types (TODO: described, array)
 
 ## Layout
 

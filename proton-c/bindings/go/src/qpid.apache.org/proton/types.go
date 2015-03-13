@@ -123,12 +123,26 @@ type List []interface{}
 // GoString for Map prints values with their types, useful for debugging.
 func (m Map) GoString() string {
 	out := &bytes.Buffer{}
-	fmt.Fprintf(out, "%s{", reflect.TypeOf(m))
+	fmt.Fprintf(out, "%T{", m)
 	i := len(m)
 	for k, v := range m {
 		fmt.Fprintf(out, "%T(%#v): %T(%#v)", k, k, v, v)
 		i--
 		if i > 0 {
+			fmt.Fprint(out, ", ")
+		}
+	}
+	fmt.Fprint(out, "}")
+	return out.String()
+}
+
+// GoString for List prints values with their types, useful for debugging.
+func (l List) GoString() string {
+	out := &bytes.Buffer{}
+	fmt.Fprintf(out, "%T{", l)
+	for i := 0; i < len(l); i++ {
+		fmt.Fprintf(out, "%T(%#v)", l[i], l[i])
+		if i == len(l)-1 {
 			fmt.Fprint(out, ", ")
 		}
 	}
