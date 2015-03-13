@@ -167,7 +167,6 @@ public class AmqpTransport extends WatchBase {
         transport.setSendBufferSize(options.getSendBufferSize());
         transport.setTrafficClass(options.getTrafficClass());
         transport.setUseLocalHost(options.isUseLocalHost());
-        transport.connecting(host, options.getLocalAddress());
 
         transport.setTransportListener(new DefaultTransportListener(){
             public void onTransportConnected() {
