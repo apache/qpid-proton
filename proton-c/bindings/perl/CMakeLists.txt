@@ -56,13 +56,13 @@ swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
 if ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
-        DESTINATION ${PERL_VENDORARCH_DIR}
+        DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
         COMPONENT Perl
         )
 else()
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcproton_perl.so
         RENAME cproton_perl.so
-        DESTINATION ${PERL_VENDORARCH_DIR}
+        DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
         COMPONENT Perl
         )
 endif ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))
