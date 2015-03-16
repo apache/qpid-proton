@@ -30,6 +30,7 @@
 #include "data.h"
 
 struct pn_encoder_t {
+  bool counting;   /* Count the total size of the data even if there is not enough buffer */
   char *output;
   size_t size;
   char *position;
@@ -39,6 +40,7 @@ struct pn_encoder_t {
 static void pn_encoder_initialize(void *obj)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) obj;
+  encoder->counting = false;
   encoder->output = NULL;
   encoder->size = 0;
   encoder->position = NULL;
@@ -155,6 +157,14 @@ static size_t pn_encoder_remaining(pn_encoder_t *encoder)
   return encoder->output ? (encoder->output + encoder->size - encoder->position) : 0;
 }
 
+static int overflow(pn_encoder_t *encoder, int size) {
+    if (encoder->counting) {
+        encoder->position += size; /* Count even if overflowing */
+        return 0;
+    }
+    return PN_OVERFLOW;
+}
+
 static inline int pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
 {
   if (pn_encoder_remaining(encoder)) {
@@ -162,14 +172,14 @@ static inline int pn_encoder_writef8(pn_encoder_t *encoder, uint8_t value)
     encoder->position++;
     return 0;
   } else {
-    return PN_OVERFLOW;
+    return overflow(encoder, 1);
   }
 }
 
 static inline int pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 {
   if (pn_encoder_remaining(encoder) < 2) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 2);
   } else {
     encoder->position[0] = 0xFF & (value >> 8);
     encoder->position[1] = 0xFF & (value     );
@@ -181,7 +191,7 @@ static inline int pn_encoder_writef16(pn_encoder_t *encoder, uint16_t value)
 static inline int pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 {
   if (pn_encoder_remaining(encoder) < 4) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 4);
   } else {
     encoder->position[0] = 0xFF & (value >> 24);
     encoder->position[1] = 0xFF & (value >> 16);
@@ -194,7 +204,7 @@ static inline int pn_encoder_writef32(pn_encoder_t *encoder, uint32_t value)
 
 static inline int pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
   if (pn_encoder_remaining(encoder) < 8) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 8);
   } else {
     encoder->position[0] = 0xFF & (value >> 56);
     encoder->position[1] = 0xFF & (value >> 48);
@@ -211,7 +221,7 @@ static inline int pn_encoder_writef64(pn_encoder_t *encoder, uint64_t value) {
 
 static inline int pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
   if (pn_encoder_remaining(encoder) < 16) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 16);
   } else {
     memmove(encoder->position, value, 16);
     encoder->position += 16;
@@ -222,7 +232,7 @@ static inline int pn_encoder_writef128(pn_encoder_t *encoder, char *value) {
 static inline int pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   if (pn_encoder_remaining(encoder) < 1 + value->size) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 1 + value->size);
   } else {
     int e = pn_encoder_writef8(encoder, value->size);
     if (e) return e;
@@ -235,7 +245,7 @@ static inline int pn_encoder_writev8(pn_encoder_t *encoder, const pn_bytes_t *va
 static inline int pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *value)
 {
   if (pn_encoder_remaining(encoder) < 4 + value->size) {
-    return PN_OVERFLOW;
+    return overflow(encoder, 4 + value->size);
   } else {
     int e = pn_encoder_writef32(encoder, value->size);
     if (e) return e;
@@ -326,7 +336,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     node->start = encoder->position;
     node->small = false;
     // we'll backfill the size on exit
-    if (pn_encoder_remaining(encoder) < 4) return PN_OVERFLOW;
+    if (pn_encoder_remaining(encoder) < 4) return overflow(encoder, 4);
     encoder->position += 4;
 
     err = pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
@@ -342,7 +352,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     node->start = encoder->position;
     node->small = false;
     // we'll backfill the size later
-    if (pn_encoder_remaining(encoder) < 4) return PN_OVERFLOW;
+    if (pn_encoder_remaining(encoder) < 4) return overflow(encoder, 4);
     encoder->position += 4;
     return pn_encoder_writef32(encoder, node->children);
   default:
@@ -388,6 +398,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
 ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
 {
+  encoder->counting = false;
   encoder->output = dst;
   encoder->position = dst;
   encoder->size = size;
@@ -395,5 +406,17 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   int err = pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
   if (err) return err;
 
-  return size - pn_encoder_remaining(encoder);
+  return encoder->position - encoder->output;
 }
+
+size_t pn_encoder_encode2(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size)
+{
+  encoder->counting = true;
+  encoder->output = dst;
+  encoder->position = dst;
+  encoder->size = size;
+
+  pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
+  return encoder->position - encoder->output;
+}
+

@@ -512,6 +512,21 @@ PN_EXTERN int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 PN_EXTERN ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
 
 /**
+ * Writes the contents of a data object to the given buffer as an AMQP data
+ * stream. If the entire contents cannot be written, returns the number of bytes
+ * that would be needed to write it all.
+ *
+ * @param data the data object to encode
+ * @param bytes the buffer for encoded data (0 if you just want to calculate the size needed)
+ * @param size the size of the buffer (0 if you just want to calculate the size needed)
+ *
+ * @param size_t returns the size needed to encode all the data. If the returned
+ *     size <= size parameter then all the data was encoded successfully. If not,
+ *     a buffer of the returned size is required to encode it all.
+ */
+PN_EXTERN size_t pn_data_encode2(pn_data_t *data, char *bytes, size_t size);
+
+/**
  * Decodes a single value from the contents of the AMQP data stream
  * into the current data object. Note that if the pn_data_t object is
  * pointing to a current node, the decoded value will overwrite the
