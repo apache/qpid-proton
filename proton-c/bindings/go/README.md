@@ -33,6 +33,22 @@ There are two types of developer we want to support
 We will follow conventions of the C and python API where possible to help
 cross-language developers but idiomatic Go is the overriding consideration.
 
+## API design thoughts
+
+The original idea was to provide a reactive API similar to the proton C and
+python APIs reavctive APIs. Looking more carefully at Go this does not seem like
+the right direction. Go provides built-in fine-grained concurrency and
+specifically aims to reduce the complexity traditional designs based on polling,
+callbacks and threading with communication between concurrent goroutines.
+
+So my current thinking is to build on the C reactor API as the internal core,
+but present message exchange to the user as messages on Go channels. There is a
+strong resemblence between Go channels and AMQP links that we can exploit.
+
+The reactor model probably still has a role for advanced users that want fine
+control over specifc AMPQ protocol features. The challenge will be to fit these
+models together.
+
 ## Status
 
 Marshal and unmarshal most of the AMQP types (TODO: described, array)
