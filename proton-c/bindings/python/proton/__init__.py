@@ -1515,6 +1515,12 @@ class Data:
     else:
       return dtype
 
+  def encoded_size(self):
+    """
+    Returns the size in bytes needed to encode the data in AMQP format.
+    """
+    return pn_data_encoded_size(self._data)
+
   def encode(self):
     """
     Returns a representation of the data encoded in AMQP format.

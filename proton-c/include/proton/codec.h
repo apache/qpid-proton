@@ -512,6 +512,15 @@ PN_EXTERN int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 PN_EXTERN ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
 
 /**
+ * Returns the number of bytes needed to encode a data object.
+ *
+ * @param data the data object
+ *
+ * @param ssize_t returns the size of the encoded data or an error code if data is invalid.
+ */
+PN_EXTERN ssize_t pn_data_encoded_size(pn_data_t *data);
+
+/**
  * Decodes a single value from the contents of the AMQP data stream
  * into the current data object. Note that if the pn_data_t object is
  * pointing to a current node, the decoded value will overwrite the

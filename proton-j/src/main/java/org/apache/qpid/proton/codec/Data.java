@@ -98,6 +98,7 @@ public interface Data
 //    int print();
 //    int format(ByteBuffer buf);
     Binary encode();
+    long encodedSize();
     long encode(ByteBuffer buf);
     long decode(ByteBuffer buf);
 

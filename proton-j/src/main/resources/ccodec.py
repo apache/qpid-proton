@@ -300,6 +300,9 @@ def pn_data_encode(data, size):
   else:
     return len(enc), enc
 
+def pn_data_encoded_size(data):
+  return data.encodedSize()
+
 def pn_data_decode(data, encoded):
   return data.decode(ByteBuffer.wrap(array(encoded, 'b')))
 

@@ -1423,6 +1423,11 @@ ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
   return pn_encoder_encode(data->encoder, data, bytes, size);
 }
 
+ssize_t pn_data_encoded_size(pn_data_t *data)
+{
+  return pn_encoder_size(data->encoder, data);
+}
+
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   return pn_decoder_decode(data->decoder, bytes, size, data);
