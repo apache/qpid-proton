@@ -140,9 +140,17 @@ public class StringTypeTest
                                                          UnicodeBlock.MUSICAL_SYMBOLS,
                                                          /*UnicodeBlock.EMOTICONS,*/
                                                          /*UnicodeBlock.PLAYING_CARDS,*/
+                                                         UnicodeBlock.BOX_DRAWING,
                                                          UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS,
                                                          UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_A,
                                                          UnicodeBlock.SUPPLEMENTARY_PRIVATE_USE_AREA_B));
+                    // some additional combinations of characters that could cause problems to the encoder
+                    String[] boxDrawing = getAllStringsFromUnicodeBlocks(UnicodeBlock.BOX_DRAWING).toArray(new String[0]);
+                    String[] halfFullWidthForms = getAllStringsFromUnicodeBlocks(UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS).toArray(new String[0]);
+                    for (int i = 0; i < halfFullWidthForms.length; i++)
+                    {
+                        add(halfFullWidthForms[i] + boxDrawing[i % boxDrawing.length]);
+                    }
                 }
             };
     }
