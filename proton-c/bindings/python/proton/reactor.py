@@ -613,7 +613,7 @@ class Container(Reactor):
             connector.reconnect = reconnect
         elif reconnect is None:
             connector.reconnect = Backoff()
-        connector.ssl_domain = ssl_domain or self.ssl.client
+        connector.ssl_domain = ssl_domain or (self.ssl and self.ssl.client)
         conn._session_policy = SessionPerConnection() #todo: make configurable
         conn.open()
         return conn
