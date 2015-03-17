@@ -24,7 +24,7 @@
 
 #include <proton/import_export.h>
 #include <stddef.h>
-#include <sys/types.h>
+#include <stdint.h>
 #include <proton/type_compat.h>
 
 /**
