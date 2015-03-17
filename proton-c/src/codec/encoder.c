@@ -369,7 +369,10 @@ ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)
   encoder->position = 0;
   encoder->size = 0;
 
+  pn_handle_t save = pn_data_point(src);
   int err = pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
+  pn_data_restore(src, save);
+
   if (err) return err;
   return encoder->position - encoder->output;
 }
