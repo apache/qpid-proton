@@ -59,7 +59,7 @@ foreach (@messages)
 {
     $msg->set_address($address);
     $msg->set_subject($subject);
-    $msg->set_content($content);
+    $msg->set_body($content);
     # try a few different body types
     my $body_type = int(rand(6));
     $msg->set_property("sent", "" . localtime(time));

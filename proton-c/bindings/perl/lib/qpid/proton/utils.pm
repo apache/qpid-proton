@@ -28,4 +28,11 @@ sub is_num {
     $_[0] ^ $_[0] ? 0 : 1
 }
 
+sub is_float {
+    my $val = $_[0];
+
+    return 1 if ($val - int($val));
+    return 0;
+}
+
 1;

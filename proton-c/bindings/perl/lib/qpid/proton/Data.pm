@@ -1165,8 +1165,8 @@ sub put_list_helper {
     $self->enter;
 
     for my $value (@{$array}) {
-        if (qpid::proton::is_num($value)) {
-            if (qpid::proton::is_float($value)) {
+        if (qpid::proton::utils::is_num($value)) {
+            if (qpid::proton::utils::is_float($value)) {
                 $self->put_float($value);
             } else {
                 $self->put_int($value);

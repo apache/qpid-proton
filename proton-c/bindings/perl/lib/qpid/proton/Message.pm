@@ -438,7 +438,7 @@ sub set_body {
     # be, which is going to be a best guess
     if (!defined($body_type)) {
         if (qpid::proton::utils::is_num($body)) {
-            if (qpid::proton::is_float($body)) {
+            if (qpid::proton::utils::is_float($body)) {
                 $body_type = qpid::proton::FLOAT;
             } else {
                 $body_type = qpid::proton::INT;
