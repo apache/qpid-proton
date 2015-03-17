@@ -26,7 +26,6 @@
 #include <proton/types.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <sys/types.h>
 #include <proton/type_compat.h>
 
 #ifdef __cplusplus
