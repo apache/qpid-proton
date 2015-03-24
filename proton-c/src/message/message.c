@@ -32,20 +32,6 @@
 #include "util.h"
 #include "platform_fmt.h"
 
-ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size)
-{
-  pn_data_t *data = pn_data(16);
-  pn_data_put_described(data);
-  pn_data_enter(data);
-  pn_data_put_long(data, 0x75);
-  pn_data_put_binary(data, pn_bytes(size, (char *)src));
-  pn_data_exit(data);
-  pn_data_rewind(data);
-  int err = pn_data_encode(data, dst, available);
-  pn_data_free(data);
-  return err;
-}
-
 // message
 
 struct pn_message_t {
@@ -752,41 +738,60 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 {
   if (!msg || !bytes || !size || !*size) return PN_ARG_ERR;
-
   pn_data_clear(msg->data);
+  pn_message_data(msg, msg->data);
+  size_t remaining = *size;
+  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
+  if (encoded < 0) {
+    if (encoded == PN_OVERFLOW) {
+      return encoded;
+    } else {
+      return pn_error_format(msg->error, encoded, "data error: %s",
+                             pn_data_error(msg->data));
+    }
+  }
+  bytes += encoded;
+  remaining -= encoded;
+  *size -= remaining;
+  pn_data_clear(msg->data);
+  return 0;
+}
 
-  int err = pn_data_fill(msg->data, "DL[oB?IoI]", HEADER, msg->durable,
+int pn_message_data(pn_message_t *msg, pn_data_t *data)
+{
+  pn_data_clear(data);
+  int err = pn_data_fill(data, "DL[oB?IoI]", HEADER, msg->durable,
                          msg->priority, msg->ttl, msg->ttl, msg->first_acquirer,
                          msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
-                           pn_data_error(msg->data));
+                           pn_data_error(data));
 
   if (pn_data_size(msg->instructions)) {
-    pn_data_put_described(msg->data);
-    pn_data_enter(msg->data);
-    pn_data_put_ulong(msg->data, DELIVERY_ANNOTATIONS);
+    pn_data_put_described(data);
+    pn_data_enter(data);
+    pn_data_put_ulong(data, DELIVERY_ANNOTATIONS);
     pn_data_rewind(msg->instructions);
-    err = pn_data_append(msg->data, msg->instructions);
+    err = pn_data_append(data, msg->instructions);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(msg->data));
-    pn_data_exit(msg->data);
+                             pn_data_error(data));
+    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->annotations)) {
-    pn_data_put_described(msg->data);
-    pn_data_enter(msg->data);
-    pn_data_put_ulong(msg->data, MESSAGE_ANNOTATIONS);
+    pn_data_put_described(data);
+    pn_data_enter(data);
+    pn_data_put_ulong(data, MESSAGE_ANNOTATIONS);
     pn_data_rewind(msg->annotations);
-    err = pn_data_append(msg->data, msg->annotations);
+    err = pn_data_append(data, msg->annotations);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(msg->data));
-    pn_data_exit(msg->data);
+                             pn_data_error(data));
+    pn_data_exit(data);
   }
 
-  err = pn_data_fill(msg->data, "DL[CzSSSCssttSIS]", PROPERTIES,
+  err = pn_data_fill(data, "DL[CzSSSCssttSIS]", PROPERTIES,
                      msg->id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_get(msg->address),
@@ -802,18 +807,18 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
                      pn_string_get(msg->reply_to_group_id));
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
-                           pn_data_error(msg->data));
+                           pn_data_error(data));
 
   if (pn_data_size(msg->properties)) {
-    pn_data_put_described(msg->data);
-    pn_data_enter(msg->data);
-    pn_data_put_ulong(msg->data, APPLICATION_PROPERTIES);
+    pn_data_put_described(data);
+    pn_data_enter(data);
+    pn_data_put_ulong(data, APPLICATION_PROPERTIES);
     pn_data_rewind(msg->properties);
-    err = pn_data_append(msg->data, msg->properties);
+    err = pn_data_append(data, msg->properties);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(msg->data));
-    pn_data_exit(msg->data);
+                             pn_data_error(data));
+    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->body)) {
@@ -822,44 +827,25 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
     pn_type_t body_type = pn_data_type(msg->body);
     pn_data_rewind(msg->body);
 
-    pn_data_put_described(msg->data);
-    pn_data_enter(msg->data);
+    pn_data_put_described(data);
+    pn_data_enter(data);
     if (msg->inferred) {
       switch (body_type) {
       case PN_BINARY:
-        pn_data_put_ulong(msg->data, DATA);
+        pn_data_put_ulong(data, DATA);
         break;
       case PN_LIST:
-        pn_data_put_ulong(msg->data, AMQP_SEQUENCE);
+        pn_data_put_ulong(data, AMQP_SEQUENCE);
         break;
       default:
-        pn_data_put_ulong(msg->data, AMQP_VALUE);
+        pn_data_put_ulong(data, AMQP_VALUE);
         break;
       }
     } else {
-      pn_data_put_ulong(msg->data, AMQP_VALUE);
+      pn_data_put_ulong(data, AMQP_VALUE);
     }
-    pn_data_append(msg->data, msg->body);
+    pn_data_append(data, msg->body);
   }
-
-  size_t remaining = *size;
-  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
-  if (encoded < 0) {
-    if (encoded == PN_OVERFLOW) {
-      return encoded;
-    } else {
-      return pn_error_format(msg->error, encoded, "data error: %s",
-                             pn_data_error(msg->data));
-    }
-  }
-
-  bytes += encoded;
-  remaining -= encoded;
-
-  *size -= remaining;
-
-  pn_data_clear(msg->data);
-
   return 0;
 }
 

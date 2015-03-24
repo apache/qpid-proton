@@ -738,6 +738,11 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
  */
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
+/**
+ * Save message content into a pn_data_t object data. The data object will first be cleared.
+ */
+PN_EXTERN int pn_message_data(pn_message_t *msg, pn_data_t *data);
+
 /** @}
  */
 
