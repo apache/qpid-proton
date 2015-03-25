@@ -8,7 +8,7 @@ An overview of the model
 
 Messages are transferred between connected peers over 'links'. At the
 sending peer the link is called a sender. At the receiving peer it is
-a receiver. Messages are sent by senders and receiver by receivers.
+a receiver. Messages are sent by senders and received by receivers.
 
 Links are established over sessions. Sessions are established over
 connections. Connections are (generally) established between two
