@@ -42,10 +42,23 @@ class BarfOnTask:
     def on_timer_task(self, event):
         raise Barf()
 
+class BarfOnFinal:
+
+    def on_reactor_final(self, event):
+        raise Barf()
+
 class ExceptionTest(Test):
 
     def setup(self):
         self.reactor = Reactor()
+
+    def test_reactor_final(self):
+        self.reactor.global_handler = BarfOnFinal()
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except Barf:
+            pass
 
     def test_global_set(self):
         self.reactor.global_handler = BarfOnInit()
