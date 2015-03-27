@@ -131,17 +131,21 @@ class Reactor(Wrapper):
     def quiesced(self):
         return pn_reactor_quiesced(self._impl)
 
-    def process(self):
-        result = pn_reactor_process(self._impl)
+    def _check_errors(self):
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
             raise exc, value, tb
+
+    def process(self):
+        result = pn_reactor_process(self._impl)
+        self._check_errors()
         return result
 
     def stop(self):
         pn_reactor_stop(self._impl)
+        self._check_errors()
 
     def schedule(self, delay, task):
         impl = _chandler(task, self.on_error)
