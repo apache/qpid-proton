@@ -51,9 +51,13 @@ die()
     if [ -n "$(git status -uno --porcelain)" ]; then
         die must release from a clean checkout
     fi
-    BRANCH=$(git symbolic-ref --short HEAD)
-    REMOTE=$(git config branch.${BRANCH}.remote)
-    git checkout --detach ${REMOTE}/${BRANCH}
+    BRANCH=$(git symbolic-ref -q --short HEAD)
+    if [ -n "${BRANCH}" ]; then
+        REMOTE=$(git config branch.${BRANCH}.remote)
+        git checkout --detach ${REMOTE}/${BRANCH}
+    else
+        REMOTE="origin"
+    fi
     bin/version.sh $VERSION
     git commit -a -m "Release $VERSION"
     git tag -m "Release $VERSION" $VERSION
