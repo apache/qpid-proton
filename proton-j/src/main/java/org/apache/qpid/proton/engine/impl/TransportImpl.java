@@ -798,8 +798,11 @@ public class TransportImpl extends EndpointImpl
             if (_channelMax > 0) {
                 open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
             }
+
+            // as per the recommendation in the spec, advertise half our
+            // actual timeout to the remote
             if (_localIdleTimeout > 0) {
-                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout));
+                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout / 2));
             }
             _isOpenSent = true;
 
