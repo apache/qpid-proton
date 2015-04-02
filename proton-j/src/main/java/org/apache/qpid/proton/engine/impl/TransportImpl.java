@@ -1458,7 +1458,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     public int getRemoteIdleTimeout() {
-        return _remoteIdleTimeout / 2;
+        return _remoteIdleTimeout;
     }
 
     @Override
