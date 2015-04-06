@@ -20,11 +20,13 @@ import org.apache.qpid.proton.codec.CompositeWritableBuffer;
 import org.apache.qpid.proton.codec.DroppingWritableBuffer;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.amqp.messaging.Header;
 
 import javax.jms.BytesMessage;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageFormatException;
+
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.message.ProtonJMessage;
@@ -83,6 +85,10 @@ public class AMQPNativeOutboundTransformer extends OutboundTransformer {
                 // Update the DeliveryCount header...
                 // The AMQP delivery-count field only includes prior failed delivery attempts,
                 // whereas JMSXDeliveryCount includes the first/current delivery attempt. Subtract 1.
+                if (amqp.getHeader() == null) {
+                    amqp.setHeader(new Header());
+                }
+
                 amqp.getHeader().setDeliveryCount(new UnsignedInteger(count - 1));
 
                 // Re-encode...
