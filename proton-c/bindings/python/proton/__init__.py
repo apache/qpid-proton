@@ -2683,6 +2683,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def name(self):
+    """Returns the name of the link"""
     return utf82unicode(pn_link_name(self._impl))
 
   @property
@@ -2764,6 +2765,7 @@ class Terminus(object):
   type = property(_get_type, _set_type)
 
   def _get_address(self):
+    """The address that identifies the source or target node"""
     return utf82unicode(pn_terminus_get_address(self._impl))
   def _set_address(self, address):
     self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
@@ -2788,6 +2790,8 @@ class Terminus(object):
   timeout = property(_get_timeout, _set_timeout)
 
   def _is_dynamic(self):
+    """Indicates whether the source or target node was dynamically
+    created"""
     return pn_terminus_is_dynamic(self._impl)
   def _set_dynamic(self, dynamic):
     self._check(pn_terminus_set_dynamic(self._impl, dynamic))
@@ -2801,10 +2805,12 @@ class Terminus(object):
 
   @property
   def properties(self):
+    """Properties of a dynamic source or target."""
     return Data(pn_terminus_properties(self._impl))
 
   @property
   def capabilities(self):
+    """Capabilities of the source or target."""
     return Data(pn_terminus_capabilities(self._impl))
 
   @property
@@ -2813,6 +2819,8 @@ class Terminus(object):
 
   @property
   def filter(self):
+    """A filter on a source allows the set of messages transfered over
+    the link to be restricted"""
     return Data(pn_terminus_filter(self._impl))
 
   def copy(self, src):
