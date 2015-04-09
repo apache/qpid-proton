@@ -263,6 +263,14 @@ typedef enum {
   PN_TRANSPORT,
 
   /**
+   * The transport has authenticated, if this is received by a server
+   * the associated transport has authenticated an incoming connection
+   * and pn_transport_get_user() can be used to obtain the authenticated
+   * user.
+   */
+  PN_TRANSPORT_AUTHENTICATED,
+
+  /**
    * Indicates that a transport error has occurred. Use
    * ::pn_transport_condition() to access the details of the error
    * from the associated transport.

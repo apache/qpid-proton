@@ -17,6 +17,7 @@
 # under the License.
 #
 
+include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 
@@ -128,6 +129,25 @@ else (CLOCK_GETTIME_IN_LIBC)
     endif (WINDOWS_FILETIME)
   endif (CLOCK_GETTIME_IN_RT)
 endif (CLOCK_GETTIME_IN_LIBC)
+
+# See if Cyrus SASL is desired and available
+CHECK_LIBRARY_EXISTS (sasl2 sasl_checkpass "" FOUND_SASL_LIB)
+CHECK_INCLUDE_FILES (sasl/sasl.h FOUND_SASL_H)
+find_package_handle_standard_args(SASL DEFAULT_MSG FOUND_SASL_LIB FOUND_SASL_H)
+set(sasl_providers cyrus none)
+if (SASL_FOUND)
+  set (sasl_impl cyrus)
+else (SASL_FOUND)
+  set (sasl_impl none)
+endif (SASL_FOUND)
+set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${sasl_providers}")
+
+if (SASL_IMPL STREQUAL cyrus)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
+  set(SASL_LIB "sasl2")
+elseif (SASL_IMPL STREQUAL none)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
+endif ()
 
 CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" UUID_GENERATE_IN_LIBC)
 if (UUID_GENERATE_IN_LIBC)
@@ -269,6 +289,7 @@ set (qpid-proton-platform
   ${pn_io_impl}
   ${pn_selector_impl}
   src/platform.c
+  ${pn_sasl_impl}
   ${pn_ssl_impl}
   )
 
@@ -301,7 +322,6 @@ set (qpid-proton-core
   src/transport/autodetect.c
   src/transport/transport.c
   src/message/message.c
-  src/sasl/sasl.c
 
   src/reactor/reactor.c
   src/reactor/handler.c
@@ -343,7 +363,7 @@ add_library (
   ${qpid-proton-platform}
   )
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
 set_target_properties (
   qpid-proton

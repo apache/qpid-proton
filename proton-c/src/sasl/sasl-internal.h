@@ -22,7 +22,7 @@
 #ifndef PROTON_SASL_INTERNAL_H
 #define PROTON_SASL_INTERNAL_H 1
 
-#include <proton/sasl.h>
+#include "proton/types.h"
 
 /** Destructor for the given SASL layer.
  *
@@ -31,6 +31,10 @@
  */
 void pn_sasl_free(pn_transport_t *transport);
 
-bool pn_sasl_skipping_allowed(pn_transport_t *transport);
+ssize_t pn_sasl_input(pn_transport_t *transport, const char *bytes, size_t available);
+ssize_t pn_sasl_output(pn_transport_t *transport, char *bytes, size_t size);
+
+void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *password);
+void pni_sasl_set_remote_hostname(pn_transport_t *transport, const char* fqdn);
 
 #endif /* sasl-internal.h */

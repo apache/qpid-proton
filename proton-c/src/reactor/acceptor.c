@@ -39,10 +39,6 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_connection_t *conn = pn_reactor_connection(reactor, handler);
   pn_transport_t *trans = pn_transport();
   pn_transport_set_server(trans);
-  pn_sasl_t *sasl = pn_sasl(trans);
-  pn_sasl_allow_skip(sasl, true);
-  pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_done(sasl, PN_SASL_OK);
   pn_transport_bind(trans, conn);
   pn_decref(trans);
   pn_reactor_selectable_transport(reactor, sock, trans);

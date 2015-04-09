@@ -474,6 +474,8 @@ static void pn_connection_finalize(void *object)
 
   pn_free(conn->container);
   pn_free(conn->hostname);
+  pn_free(conn->auth_user);
+  pn_free(conn->auth_password);
   pn_free(conn->offered_capabilities);
   pn_free(conn->desired_capabilities);
   pn_free(conn->properties);
@@ -506,6 +508,8 @@ pn_connection_t *pn_connection(void)
   conn->tpwork_tail = NULL;
   conn->container = pn_string(NULL);
   conn->hostname = pn_string(NULL);
+  conn->auth_user = pn_string(NULL);
+  conn->auth_password = pn_string(NULL);
   conn->offered_capabilities = pn_data(0);
   conn->desired_capabilities = pn_data(0);
   conn->properties = pn_data(0);
@@ -566,6 +570,24 @@ void pn_connection_set_hostname(pn_connection_t *connection, const char *hostnam
 {
   assert(connection);
   pn_string_set(connection->hostname, hostname);
+}
+
+const char *pn_connection_get_user(pn_connection_t *connection)
+{
+    assert(connection);
+    return pn_string_get(connection->auth_user);
+}
+
+void pn_connection_set_user(pn_connection_t *connection, const char *user)
+{
+    assert(connection);
+    pn_string_set(connection->auth_user, user);
+}
+
+void pn_connection_set_password(pn_connection_t *connection, const char *password)
+{
+    assert(connection);
+    pn_string_set(connection->auth_password, password);
 }
 
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)

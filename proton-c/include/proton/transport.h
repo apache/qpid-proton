@@ -121,6 +121,73 @@ PN_EXTERN void pn_transport_set_server(pn_transport_t *transport);
  */
 PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 
+/** Retrieve the authenticated user
+ *
+ * This is usually used at the the server end to find the name of the authenticated user.
+ * On the client it will merely return whatever user was passed in to the
+ * pn_transport_set_user_password() API.
+ *
+ * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ *
+ * @param[in] transport the transport
+ *
+ * @return
+ * If a the user is anonymous (either no SASL layer is negotiated or the SASL ANONYMOUS mechanism is used)
+ * then the user will be "anonymous"
+ * Otherwise a string containing the user is returned.
+ */
+PN_EXTERN const char *pn_transport_get_user(pn_transport_t *transport);
+
+/**
+ * Set whether a non authenticated transport connection is allowed
+ *
+ * There are several ways within the AMQP protocol suite to get unauthenticated connections:
+ * - Use no SASL layer (with either no TLS or TLS without client certificates)
+ * - Use an SASL layer but the ANONYMOUS mechanism
+ *
+ * The default if this option is not set is to allow unauthenticated connections.
+ *
+ * @param[in] transport the transport
+ * @param[in] required boolean is true when authenticated connections are required
+ */
+PN_EXTERN void pn_transport_require_auth(pn_transport_t *transport, bool required);
+
+/**
+ * Tell whether the transport connection is authenticated
+ *
+ * Note that this property may not be stable until the PN_CONNECTION_REMOTE_OPEN
+ * event is received.
+ *
+ * @param[in] transport the transport
+ * @return bool representing authentication
+ */
+PN_EXTERN bool pn_transport_is_authenticated(pn_transport_t *transport);
+
+/**
+ * Set whether a non encrypted transport connection is allowed
+ *
+ * There are several ways within the AMQP protocol suite to get encrypted connections:
+ * - Use TLS/SSL
+ * - Use an SASL with a mechanism that supports saecurity layers
+ *
+ * The default if this option is not set is to allow unencrypted connections.
+ *
+ * @param[in] transport the transport
+ * @param[in] required boolean is true when encrypted connections are required
+ */
+PN_EXTERN void pn_transport_require_encryption(pn_transport_t *transport, bool required);
+
+/**
+ * Tell whether the transport connection is encrypted
+ *
+ * Note that this property may not be stable until the PN_CONNECTION_REMOTE_OPEN
+ * event is received.
+ *
+ * @param[in] transport the transport
+ * @return bool representing encryption
+ */
+PN_EXTERN bool pn_transport_is_encrypted(pn_transport_t *transport);
+
 /**
  * Get additional information about the condition of the transport.
  *

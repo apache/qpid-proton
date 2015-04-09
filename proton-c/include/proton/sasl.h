@@ -55,122 +55,19 @@ typedef enum {
   PN_SASL_SYS=2,    /** failed due to a system error */
   PN_SASL_PERM=3,   /** failed due to unrecoverable error */
   PN_SASL_TEMP=4,   /** failed due to transient error */
-  PN_SASL_SKIPPED=5 /** the peer didn't perform the sasl exchange */
 } pn_sasl_outcome_t;
-
-/** The state of the SASL negotiation process */
-typedef enum {
-  PN_SASL_IDLE,    /** Pending SASL Init */
-  PN_SASL_STEP,    /** negotiation in progress */
-  PN_SASL_PASS,    /** negotiation completed successfully */
-  PN_SASL_FAIL     /** negotiation failed */
-} pn_sasl_state_t;
 
 /** Construct an Authentication and Security Layer object
  *
- * @return a new SASL object representing the layer.
+ * This will return the SASL layer object for the supplied transport
+ * object. If there is currently no SASL layer one will be created.
+ *
+ * On the client side of an AMQP connection this will have the effect
+ * of ensuring that the AMQP SASL layer is used for that connection.
+ *
+ * @return an object representing the SASL layer.
  */
 PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
-
-/** Access the current state of the layer.
- *
- * @param[in] sasl the layer to retrieve the state from.
- * @return The state of the sasl layer.
- */
-PN_EXTERN pn_sasl_state_t pn_sasl_state(pn_sasl_t *sasl);
-
-/** Set the acceptable SASL mechanisms for the layer.
- *
- * @param[in] sasl the layer to update
- * @param[in] mechanisms a list of acceptable SASL mechanisms,
- *                       separated by space
- */
-PN_EXTERN void pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms);
-
-/** Retrieve the list of SASL mechanisms provided by the remote.
- *
- * @param[in] sasl the SASL layer.
- * @return a string containing a list of the SASL mechanisms
- *         advertised by the remote (separated by spaces)
- */
-PN_EXTERN const char *pn_sasl_remote_mechanisms(pn_sasl_t *sasl);
-
-/**
- * @deprecated
- * Configure the SASL layer to act as a SASL client.
- *
- * This is now unnecessary, and performs no function. The server/clientness
- * of the sasl layer is determined from the role of the transport that is used to create
- * it. The API is retained here so as not to break existing code.
- *
- * @param[in] sasl the SASL layer to configure as a client
- */
-PN_EXTERN void pn_sasl_client(pn_sasl_t *sasl);
-
-/**
- * @deprecated
- * Configure the SASL layer to act as a server.
- *
- * This is now only necessary for backwards compatibility if creating a server pn_sasl_t
- * from a pn_transport_t which was created implicitly as a client by pn_transport().
- *
- * @param[in] sasl the SASL layer to configure as a server
- */
-PN_EXTERN void pn_sasl_server(pn_sasl_t *sasl);
-
-/** Configure a SASL server layer to permit the client to skip the SASL exchange.
- *
- * If the peer client skips the SASL exchange (i.e. goes right to the AMQP header)
- * this server layer will succeed and result in the outcome of PN_SASL_SKIPPED.
- * The default behavior is to fail and close the connection if the client skips
- * SASL.
- *
- * @param[in] sasl the SASL layer to configure
- * @param[in] allow true -> allow skip; false -> forbid skip
- */
-PN_EXTERN void pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow);
-
-/** Configure the SASL layer to use the "PLAIN" mechanism.
- *
- * A utility function to configure a simple client SASL layer using
- * PLAIN authentication.
- *
- * @param[in] sasl the layer to configure.
- * @param[in] username credential for the PLAIN authentication
- *                     mechanism
- * @param[in] password credential for the PLAIN authentication
- *                     mechanism
- */
-PN_EXTERN void pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password);
-
-/** Determine the size of the bytes available via pn_sasl_recv().
- *
- * Returns the size in bytes available via pn_sasl_recv().
- *
- * @param[in] sasl the SASL layer.
- * @return The number of bytes available, zero if no available data.
- */
-PN_EXTERN size_t pn_sasl_pending(pn_sasl_t *sasl);
-
-/** Read challenge/response data sent from the peer.
- *
- * Use pn_sasl_pending to determine the size of the data.
- *
- * @param[in] sasl the layer to read from.
- * @param[out] bytes written with up to size bytes of inbound data.
- * @param[in] size maximum number of bytes that bytes can accept.
- * @return The number of bytes written to bytes, or an error code if < 0.
- */
-PN_EXTERN ssize_t pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size);
-
-/** Send challenge or response data to the peer.
- *
- * @param[in] sasl The SASL layer.
- * @param[in] bytes The challenge/response data.
- * @param[in] size The number of data octets in bytes.
- * @return The number of octets read from bytes, or an error code if < 0
- */
-PN_EXTERN ssize_t pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size);
 
 /** Set the outcome of SASL negotiation
  *
@@ -185,6 +82,74 @@ PN_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
  * @todo
  */
 PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
+
+/** Retrieve the authenticated user
+ *
+ * This is usually used at the the server end to find the name of the authenticated user.
+ * On the client it will merely return whatever user was passed in to the
+ * pn_transport_set_user_password() API.
+ *
+ * If pn_sasl_outcome() returns a value other than PN_SASL_OK, then there will be no user to return.
+ * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ *
+ * @param[in] sasl the sasl layer
+ *
+ * @return
+ * If the SASL layer was not negotiated then 0 is returned
+ * If the ANONYMOUS mechanism is used then the user will be "anonymous"
+ * Otherwise a string containing the user is returned.
+ */
+PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
+
+/** Return the selected SASL mechanism
+ *
+ * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ *
+ * @param[in] sasl the SASL layer
+ *
+ * @return The authentication mechanism selected by the SASL layer
+ */
+PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
+
+/** SASL mechanism that are not to be considered for authentication
+ *
+ * This can be used on either the client or the server to restrict the SASL mechanisms that may be used.
+ *
+ * @param[in] sasl the SASL layer
+ * @param[in] mechs space separated list of mechanisms that are not to be allowed for authentication
+ */
+PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
+
+/**
+ * Set the sasl configuration name
+ *
+ * This is used to construct the SASL configuration filename. In the current implementation
+ * it ".conf" is added to the name and the file is looked for in the configuration directory.
+ *
+ * If not set it will default to "proton-server" for a sasl server and "proton-client"
+ * for a client.
+ *
+ * @param[in] sasl the SASL layer
+ * @param[in] name the configuration name
+ */
+PN_EXTERN void pn_sasl_config_name(pn_sasl_t *sasl, const char *name);
+
+/**
+ * Set the sasl configuration path
+ *
+ * This is used to tell SASL where to look for the configuration file.
+ * In the current implementation it can be a colon separated list of directories.
+ *
+ * The environment variable PN_SASL_CONFIG_PATH can also be used to set this path,
+ * but if both methods are used then this pn_sasl_config_path() will take precedence.
+ *
+ * If not set the underlying implementation default will be used.
+ * for a client.
+ *
+ * @param[in] sasl the SASL layer
+ * @param[in] path the configuration path
+ */
+PN_EXTERN void pn_sasl_config_path(pn_sasl_t *sasl, const char *path);
 
 /** @} */
 

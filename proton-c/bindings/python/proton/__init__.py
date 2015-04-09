@@ -2401,6 +2401,20 @@ class Connection(Wrapper, Endpoint):
 
   hostname = property(_get_hostname, _set_hostname)
 
+  def _get_user(self):
+    return utf82unicode(pn_connection_get_user(self._impl))
+  def _set_user(self, name):
+    return pn_connection_set_user(self._impl, unicode2utf8(name))
+
+  user = property(_get_user, _set_user)
+
+  def _get_password(self):
+    return None
+  def _set_password(self, name):
+    return pn_connection_set_password(self._impl, unicode2utf8(name))
+
+  user = property(_get_password, _set_password)
+
   @property
   def remote_container(self):
     """The container identifier specified by the remote peer for this connection."""
@@ -3162,6 +3176,20 @@ class Transport(Wrapper):
     else:
       return err
 
+  def require_auth(self, bool):
+    pn_transport_require_auth(self._impl, bool)
+
+  @property
+  def authenticated(self):
+    return pn_transport_is_authenticated(self._impl)
+
+  def require_encryption(self, bool):
+    pn_transport_require_encryption(self._impl, bool)
+
+  @property
+  def encrypted(self):
+    return pn_transport_is_encrypted(self._impl)
+
   def bind(self, connection):
     """Assign a connection to the transport"""
     self._check(pn_transport_bind(self._impl, connection._impl))
@@ -3298,7 +3326,6 @@ class SASL(Wrapper):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
-  SKIPPED = PN_SASL_SKIPPED
 
   def __init__(self, transport):
     Wrapper.__init__(self, transport._impl, pn_transport_attachments)
@@ -3311,39 +3338,6 @@ class SASL(Wrapper):
     else:
       return err
 
-  def mechanisms(self, mechs):
-    pn_sasl_mechanisms(self._sasl, mechs)
-
-  # @deprecated
-  def client(self):
-    pn_sasl_client(self._sasl)
-
-  # @deprecated
-  def server(self):
-    pn_sasl_server(self._sasl)
-
-  def allow_skip(self, allow):
-    pn_sasl_allow_skip(self._sasl, allow)
-
-  def plain(self, user, password):
-    pn_sasl_plain(self._sasl, user, password)
-
-  def send(self, data):
-    self._check(pn_sasl_send(self._sasl, data, len(data)))
-
-  def recv(self):
-    sz = 16
-    while True:
-      n, data = pn_sasl_recv(self._sasl, sz)
-      if n == PN_OVERFLOW:
-        sz *= 2
-        continue
-      elif n == PN_EOS:
-        return None
-      else:
-        self._check(n)
-        return data
-
   @property
   def outcome(self):
     outcome = pn_sasl_outcome(self._sasl)
@@ -3352,17 +3346,11 @@ class SASL(Wrapper):
     else:
       return outcome
 
+  def allowed_mechs(self, mechs):
+    pn_sasl_allowed_mechs(self._sasl, mechs)
+
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
-
-  STATE_IDLE = PN_SASL_IDLE
-  STATE_STEP = PN_SASL_STEP
-  STATE_PASS = PN_SASL_PASS
-  STATE_FAIL = PN_SASL_FAIL
-
-  @property
-  def state(self):
-    return pn_sasl_state(self._sasl)
 
 
 class SSLException(TransportException):

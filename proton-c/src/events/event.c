@@ -327,6 +327,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_DELIVERY";
   case PN_TRANSPORT:
     return "PN_TRANSPORT";
+  case PN_TRANSPORT_AUTHENTICATED:
+    return "PN_TRANSPORT_AUTHENTICATED";
   case PN_TRANSPORT_ERROR:
     return "PN_TRANSPORT_ERROR";
   case PN_TRANSPORT_HEAD_CLOSED:
