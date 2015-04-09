@@ -26,25 +26,29 @@ There are two types of developer we want to support
 
 2. AMQP-aware developers using Go as an implementation language:
    - Go types to exactly represent all AMQP types and encoding details.
-   - Full access to AMQP concepts like connections, sessions and links.
-
-We will follow conventions of the C and python API where possible to help
-cross-language developers but idiomatic Go is the overriding consideration.
+   - Full access to detailed AMQP concepts: sessions, links, deliveries etc.
 
 ## Status
-
-The current code is a foundation, not an implementation of the target API.
 
 There are two Go modules so far. See the documentation using
 
     godoc apache.org/proton
     godoc apache.org/proton/event
 
-The event module contains a straightforward mapping of the proton event API and
-the simplified MessagingHandler python API.
+The proton module maps between AMQP and Go types and has a Go representation of
+an AMQP message. It is the beginning of the "real" Go API. For examples of what
+this API will look like see:
 
-The proton module contains the mapping between AMQP types and messages and Go
-types.
+- [receive.go](../../../examples/go/receive.go) uses channels and goroutines to receive concurrently.
+- [send.go](../../../examples/go/send.go) less interesting but there for symmetry.
+
+The event module is a port of the proton C and python MessagingHandler APIs. It
+provides low-level, goroutine-unsafe but (mostly) complete access to proton. It
+is the foundation for building the Go API and may be useful for advanced AMQP
+projects or cross-langauge proton development in future.
+
+The event API is functional but not completely complete. The Go API doesn't
+exist yet, there is some dummy code so the examples will compile and run.
 
 ## The event driven API
 

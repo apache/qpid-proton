@@ -19,27 +19,64 @@ under the License.
 
 package proton
 
-type Connection struct{}
+import (
+	"fmt"
+	"net"
+)
 
-func (c Connection) Open(string) {}
-func (c Connection) Close()      {}
-func (c Connection) Receiver(addr string) *Receiver {
-	r := &Receiver{make(chan Message)}
-	// FIXME aconway 2015-04-10: dummy implementation to test initial example, will be removed.
+// Placeholder definitions to allow examples to compile.
+
+type Connection struct {
+	Server bool // Server connection does protocol negotiation
+	// FIXME aconway 2015-04-17: Other parameters to set up SSL, SASL etc.
+}
+
+// Map an AMQP connection using conn
+func (c Connection) Connect(conn net.Conn) error { return nil }
+func (c Connection) Close() error                { return nil }
+
+func (c Connection) Receiver(addr string) (*Receiver, error) {
+	// FIXME aconway 2015-04-10: dummy implementation to test examples, returns endless messages.
+	r := &Receiver{make(chan Message), make(chan struct{})}
 	go func() {
-		m := NewMessage()
-		m.SetBody(addr)
-		r.Receive <- m
-		m = NewMessage()
-		m.SetBody(addr)
-		m.SetSubject("stop")
-		r.Receive <- m
+		for i := 0; ; i++ {
+			m := NewMessage()
+			m.SetBody(fmt.Sprintf("%v-%v", addr, i))
+			select {
+			case r.Receive <- m:
+			case <-r.closed:
+				return
+			}
+		}
 	}()
-	return r
+	return r, nil
+}
+
+func (c Connection) Sender(addr string) (*Sender, error) {
+	return &Sender{}, nil
 }
 
 type Receiver struct {
 	Receive chan Message
+	closed  chan struct{}
 }
 
-func (r Receiver) Close() {}
+func (r Receiver) Close() error { return nil }
+
+type Sender struct{}
+
+func (s Sender) Send(m Message) error { fmt.Println(m.Body()); return nil }
+func (s Sender) Close() error         { return nil }
+
+// Connect makes a default client connection using conn.
+//
+// For more control do:
+//     c := Connection{}
+//     // set parameters on c
+//     c.Connect(conn)
+//
+func Connect(conn net.Conn) (Connection, error) {
+	c := Connection{}
+	c.Connect(conn)
+	return c, nil
+}
