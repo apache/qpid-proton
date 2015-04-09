@@ -20,90 +20,74 @@ under the License.
 package proton
 
 // #include <proton/codec.h>
+// const pn_type_t PN_DATA_TYPE_ERROR = (pn_type_t) -1;
 import "C"
 
 import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"time"
+	"unsafe"
 )
 
-type pnGet func(data *C.pn_data_t) reflect.Value
-type pnPut func(data *C.pn_data_t, v interface{})
-
-// Information about a proton type
-type pnType struct {
-	code C.pn_type_t // AMQP type code
-	name string      // AMQP type name
-}
-
-func (pt *pnType) String() string { return pt.name }
-
-// pnType definitions for each proton type.
-var (
-	pnNull       = pnType{code: C.PN_NULL, name: "null"}
-	pnBool       = pnType{code: C.PN_BOOL, name: "bool"}
-	pnUbyte      = pnType{code: C.PN_UBYTE, name: "ubyte"}
-	pnByte       = pnType{code: C.PN_BYTE, name: "byte"}
-	pnUshort     = pnType{code: C.PN_USHORT, name: "ushort"}
-	pnShort      = pnType{code: C.PN_SHORT, name: "short"}
-	pnChar       = pnType{code: C.PN_CHAR, name: "char"}
-	pnUint       = pnType{code: C.PN_UINT, name: "uint"}
-	pnInt        = pnType{code: C.PN_INT, name: "int"}
-	pnUlong      = pnType{code: C.PN_ULONG, name: "ulong"}
-	pnLong       = pnType{code: C.PN_LONG, name: "long"}
-	pnTimestamp  = pnType{code: C.PN_TIMESTAMP, name: "timestamp"}
-	pnFloat      = pnType{code: C.PN_FLOAT, name: "float"}
-	pnDouble     = pnType{code: C.PN_DOUBLE, name: "double"}
-	pnDecimal32  = pnType{code: C.PN_DECIMAL32, name: "decimal32"}
-	pnDecimal64  = pnType{code: C.PN_DECIMAL64, name: "decimal64"}
-	pnDecimal128 = pnType{code: C.PN_DECIMAL128, name: "decimal128"}
-	pnUuid       = pnType{code: C.PN_UUID, name: "uuid"}
-	pnBinary     = pnType{code: C.PN_BINARY, name: "binary"}
-	pnString     = pnType{code: C.PN_STRING, name: "string"}
-	pnSymbol     = pnType{code: C.PN_SYMBOL, name: "symbol"}
-	pnDescribed  = pnType{code: C.PN_DESCRIBED, name: "described"}
-	pnArray      = pnType{code: C.PN_ARRAY, name: "array"}
-	pnList       = pnType{code: C.PN_LIST, name: "list"}
-	pnMap        = pnType{code: C.PN_MAP, name: "map"}
-)
-
-// Map from pn_type_t codes to pnType structs
-var pnTypes = map[C.pn_type_t]*pnType{
-	C.PN_NULL:       &pnNull,
-	C.PN_BOOL:       &pnBool,
-	C.PN_UBYTE:      &pnUbyte,
-	C.PN_BYTE:       &pnByte,
-	C.PN_USHORT:     &pnUshort,
-	C.PN_SHORT:      &pnShort,
-	C.PN_UINT:       &pnUint,
-	C.PN_INT:        &pnInt,
-	C.PN_CHAR:       &pnChar,
-	C.PN_ULONG:      &pnUlong,
-	C.PN_LONG:       &pnLong,
-	C.PN_TIMESTAMP:  &pnTimestamp,
-	C.PN_FLOAT:      &pnFloat,
-	C.PN_DOUBLE:     &pnDouble,
-	C.PN_DECIMAL32:  &pnDecimal32,
-	C.PN_DECIMAL64:  &pnDecimal64,
-	C.PN_DECIMAL128: &pnDecimal128,
-	C.PN_UUID:       &pnUuid,
-	C.PN_BINARY:     &pnBinary,
-	C.PN_STRING:     &pnString,
-	C.PN_SYMBOL:     &pnSymbol,
-	C.PN_DESCRIBED:  &pnDescribed,
-	C.PN_ARRAY:      &pnArray,
-	C.PN_LIST:       &pnList,
-	C.PN_MAP:        &pnMap,
-}
-
-// Get the pnType for a pn_type_t code, panic if unknown code.
-func getPnType(code C.pn_type_t) *pnType {
-	pt, ok := pnTypes[code]
-	if !ok {
-		panic(errorf("unknown AMQP type code %v", code))
+func pnTypeString(pt C.pn_type_t) string {
+	switch pt {
+	case C.PN_NULL:
+		return "null"
+	case C.PN_BOOL:
+		return "bool"
+	case C.PN_UBYTE:
+		return "ubyte"
+	case C.PN_BYTE:
+		return "byte"
+	case C.PN_USHORT:
+		return "ushort"
+	case C.PN_SHORT:
+		return "short"
+	case C.PN_CHAR:
+		return "char"
+	case C.PN_UINT:
+		return "uint"
+	case C.PN_INT:
+		return "int"
+	case C.PN_ULONG:
+		return "ulong"
+	case C.PN_LONG:
+		return "long"
+	case C.PN_TIMESTAMP:
+		return "timestamp"
+	case C.PN_FLOAT:
+		return "float"
+	case C.PN_DOUBLE:
+		return "double"
+	case C.PN_DECIMAL32:
+		return "decimal32"
+	case C.PN_DECIMAL64:
+		return "decimal64"
+	case C.PN_DECIMAL128:
+		return "decimal128"
+	case C.PN_UUID:
+		return "uuid"
+	case C.PN_BINARY:
+		return "binary"
+	case C.PN_STRING:
+		return "string"
+	case C.PN_SYMBOL:
+		return "symbol"
+	case C.PN_DESCRIBED:
+		return "described"
+	case C.PN_ARRAY:
+		return "array"
+	case C.PN_LIST:
+		return "list"
+	case C.PN_MAP:
+		return "map"
+	case C.PN_DATA_TYPE_ERROR:
+		return "no-data"
+	default:
+		return fmt.Sprintf("unknown-type(%d)", pt)
 	}
-	return pt
 }
 
 // Go types
@@ -112,13 +96,22 @@ var (
 	valueType = reflect.TypeOf(reflect.Value{})
 )
 
+// FIXME aconway 2015-04-08: can't handle AMQP maps with key types that are not valid Go map keys.
+
 // Map is a generic map that can have mixed key and value types and so can represent any AMQP map
-//
 type Map map[interface{}]interface{}
 
 // List is a generic list that can hold mixed values and can represent any AMQP list.
 //
 type List []interface{}
+
+// Symbol is a string that is encoded as an AMQP symbol
+type Symbol string
+
+// Binary is a string that is encoded as an AMQP binary.
+// It is a string rather than a byte[] because byte[] is not hashable and can't be used as
+// a map key, AMQP frequently uses binary types as map keys. It can convert to and from []byte
+type Binary string
 
 // GoString for Map prints values with their types, useful for debugging.
 func (m Map) GoString() string {
@@ -148,4 +141,53 @@ func (l List) GoString() string {
 	}
 	fmt.Fprint(out, "}")
 	return out.String()
+}
+
+// pnTime converts Go time.Time to Proton millisecond Unix time.
+func pnTime(t time.Time) C.pn_timestamp_t {
+	secs := t.Unix()
+	// Note: sub-second accuracy is not guaraunteed if the Unix time in
+	// nanoseconds cannot be represented by an int64 (sometime around year 2260)
+	msecs := (t.UnixNano() % int64(time.Second)) / int64(time.Millisecond)
+	return C.pn_timestamp_t(secs*1000 + msecs)
+}
+
+// goTime converts a pn_timestamp_t to a Go time.Time.
+func goTime(t C.pn_timestamp_t) time.Time {
+	secs := int64(t) / 1000
+	nsecs := (int64(t) % 1000) * int64(time.Millisecond)
+	return time.Unix(secs, nsecs)
+}
+
+func goBytes(cBytes C.pn_bytes_t) (bytes []byte) {
+	if cBytes.start != nil {
+		bytes = C.GoBytes(unsafe.Pointer(cBytes.start), C.int(cBytes.size))
+	}
+	return
+}
+
+func goString(cBytes C.pn_bytes_t) (str string) {
+	if cBytes.start != nil {
+		str = C.GoStringN(cBytes.start, C.int(cBytes.size))
+	}
+	return
+}
+
+func pnBytes(b []byte) C.pn_bytes_t {
+	if len(b) == 0 {
+		return C.pn_bytes_t{0, nil}
+	} else {
+		return C.pn_bytes_t{C.size_t(len(b)), (*C.char)(unsafe.Pointer(&b[0]))}
+	}
+}
+
+func cPtr(b []byte) *C.char {
+	if len(b) == 0 {
+		return nil
+	}
+	return (*C.char)(unsafe.Pointer(&b[0]))
+}
+
+func cLen(b []byte) C.size_t {
+	return C.size_t(len(b))
 }

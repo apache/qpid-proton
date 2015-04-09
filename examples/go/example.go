@@ -17,37 +17,38 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package proton
+package main
 
 import (
-	"net"
+	"fmt"
+	"qpid.apache.org/proton"
+	"sync"
 )
 
-type Acceptor struct{}
-
-type Event struct {
-	Container *Container
-	Message   *Message
+func receive(c proton.Connection, addr string, wait *sync.WaitGroup) {
+	defer wait.Done()
+	r := c.Receiver(addr)
+	defer r.Close()
+	for m := range r.Receive { // r.Receive is a chan Message
+		fmt.Println("received: ", addr, m.Body(), m.Subject())
+		if m.Subject() == "stop" {
+			return
+		}
+	}
 }
 
-type Connection struct{}
+func main() {
+	var c1, c2 proton.Connection
+	c1.Open("amqp://foo:amqp")
+	defer c1.Close()
+	c2.Open("amqp://localhost:4567")
+	defer c2.Close()
 
-func (e *Event) Connection() *Connection { return nil }
+	var wait sync.WaitGroup
+	wait.Add(2)
 
-func (e *Event) Sender() *Sender { return nil }
+	go receive(c1, "foo", &wait)
+	go receive(c2, "bar", &wait)
 
-func (c *Connection) NewSender(name string) *Sender { return nil }
-
-func (c *Connection) Close() {}
-
-type Container struct{}
-
-type Sender struct{}
-
-func (s *Sender) Credit() int { return 0 }
-
-func (s *Sender) Send(m *Message) {}
-
-func Run(connection net.Conn, handler interface{}) error { return nil }
-
-type Message struct{ Body interface{} }
+	wait.Wait()
+}
