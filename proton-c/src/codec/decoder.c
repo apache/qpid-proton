@@ -488,6 +488,9 @@ ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, p
   decoder->position = src;
 
   int err = pn_decoder_single(decoder, dst);
+
+  if (err == PN_UNDERFLOW) 
+      return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");
   if (err) return err;
 
   return decoder->position - decoder->input;

@@ -360,7 +360,11 @@ ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size
   int err = pni_data_traverse(src, pni_encoder_enter, pni_encoder_exit, encoder);
   if (err) return err;
   size_t encoded = encoder->position - encoder->output;
-  return (encoded > size) ? PN_OVERFLOW : (ssize_t)encoded;
+  if (encoded > size) {
+      pn_error_format(pn_data_error(src), PN_OVERFLOW, "not enough space to encode");
+      return PN_OVERFLOW;
+  }
+  return (ssize_t)encoded;
 }
 
 ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src)

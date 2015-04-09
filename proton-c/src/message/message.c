@@ -644,15 +644,16 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   while (size) {
     pn_data_clear(msg->data);
     ssize_t used = pn_data_decode(msg->data, bytes, size);
-    if (used < 0) return pn_error_format(msg->error, used, "data error: %s",
-                                         pn_data_error(msg->data));
+    if (used < 0)
+        return pn_error_format(msg->error, used, "data error: %s",
+                               pn_error_text(pn_data_error(msg->data)));
     size -= used;
     bytes += used;
     bool scanned;
     uint64_t desc;
     int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
     if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                    pn_data_error(msg->data));
+                                    pn_error_text(pn_data_error(msg->data)));
     if (!scanned) {
       desc = 0;
     }
@@ -679,7 +680,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
         if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                        pn_data_error(msg->data));
+                                        pn_error_text(pn_data_error(msg->data)));
         err = pn_string_set_bytes(msg->user_id, user_id);
         if (err) return pn_error_format(msg->error, err, "error setting user_id");
         err = pn_string_setn(msg->address, address.start, address.size);
@@ -747,7 +748,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
       return encoded;
     } else {
       return pn_error_format(msg->error, encoded, "data error: %s",
-                             pn_data_error(msg->data));
+                             pn_error_text(pn_data_error(msg->data)));
     }
   }
   bytes += encoded;
@@ -765,7 +766,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                          msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
-                           pn_data_error(data));
+                           pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->instructions)) {
     pn_data_put_described(data);
@@ -775,7 +776,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     err = pn_data_append(data, msg->instructions);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(data));
+                             pn_error_text(pn_data_error(data)));
     pn_data_exit(data);
   }
 
@@ -787,7 +788,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     err = pn_data_append(data, msg->annotations);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(data));
+                             pn_error_text(pn_data_error(data)));
     pn_data_exit(data);
   }
 
@@ -807,7 +808,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                      pn_string_get(msg->reply_to_group_id));
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
-                           pn_data_error(data));
+                           pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->properties)) {
     pn_data_put_described(data);
