@@ -1,4 +1,4 @@
-y# *EXPERIMENTAL* Go binding for proton
+# *EXPERIMENTAL* Go binding for proton
 
 This is the beginning of a [Go](http://golang.org) binding for proton.
 
