@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.transport.Disposition;
@@ -38,16 +39,16 @@ class TransportSession
     private int _localChannel = -1;
     private int _remoteChannel = -1;
     private boolean _openSent;
-    private UnsignedInteger _handleMax = UnsignedInteger.valueOf(1024);
+    private final UnsignedInteger _handleMax = UnsignedInteger.valueOf(65536);
     private UnsignedInteger _outgoingDeliveryId = UnsignedInteger.ZERO;
     private UnsignedInteger _incomingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _outgoingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _nextOutgoingId = UnsignedInteger.ONE;
     private UnsignedInteger _nextIncomingId = null;
 
-    private TransportLink[] _remoteHandleMap = new TransportLink[1024];
-    private TransportLink[] _localHandleMap = new TransportLink[1024];
-    private Map<String, TransportLink> _halfOpenLinks = new HashMap<String, TransportLink>();
+    private final TransportLink[] _remoteHandleMap = new TransportLink[_handleMax.intValue() + 1];
+    private final TransportLink[] _localHandleMap = new TransportLink[_handleMax.intValue() + 1];
+    private final Map<String, TransportLink> _halfOpenLinks = new HashMap<String, TransportLink>();
 
 
     private UnsignedInteger _incomingDeliveryId = null;
@@ -55,9 +56,9 @@ class TransportSession
     private UnsignedInteger _remoteOutgoingWindow;
     private UnsignedInteger _remoteNextIncomingId = _nextOutgoingId;
     private UnsignedInteger _remoteNextOutgoingId;
-    private Map<UnsignedInteger, DeliveryImpl>
+    private final Map<UnsignedInteger, DeliveryImpl>
             _unsettledIncomingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
-    private Map<UnsignedInteger, DeliveryImpl>
+    private final Map<UnsignedInteger, DeliveryImpl>
             _unsettledOutgoingDeliveriesById = new HashMap<UnsignedInteger, DeliveryImpl>();
     private int _unsettledIncomingSize;
     private boolean _endReceived;
@@ -218,8 +219,7 @@ class TransportSession
                 return rc;
             }
         }
-        // TODO - error
-        return UnsignedInteger.MAX_VALUE;
+        throw new IllegalStateException("no local handle available for allocation");
     }
 
     public void addLinkRemoteHandle(TransportLink link, UnsignedInteger remoteHandle)

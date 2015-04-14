@@ -20,7 +20,6 @@ under the License.
 package proton
 
 /*
-#cgo LDFLAGS: -lqpid-proton
 #include <stdlib.h>
 #include <string.h>
 #include <proton/url.h>

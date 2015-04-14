@@ -28,10 +28,11 @@ import (
 	"unsafe"
 )
 
-const minEncode = 256
-
 /*
-Marshal encodes a value as AMQP.
+Marshal encodes a Go value as AMQP data in buffer.
+If buffer is nil, or is not large enough, a new buffer  is created.
+
+Returns the buffer used for encoding with len() adjusted to the actual size of data.
 
 Go types are encoded as follows
 
@@ -48,9 +49,13 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |string                               |string                                      |
  +-------------------------------------+--------------------------------------------+
- |[]byte                               |binary                                      |
+ |[]byte, Binary                       |binary                                      |
  +-------------------------------------+--------------------------------------------+
- |interface{}                          |as to the contained type                    |
+ |Symbol                               |symbol                                      |
+ +-------------------------------------+--------------------------------------------+
+ |interface{}                          |the contained type                          |
+ +-------------------------------------+--------------------------------------------+
+ |nil                                  |null                                        |
  +-------------------------------------+--------------------------------------------+
  |map[K]T                              |map with K and T converted as above         |
  +-------------------------------------+--------------------------------------------+
@@ -61,43 +66,56 @@ Go types are encoded as follows
  |List                                 |list, may have mixed types  values          |
  +-------------------------------------+--------------------------------------------+
 
-TODO types
+TODO Go types: array, slice, struct
 
-Go: array, slice, struct
-
-Go types that cannot be marshaled
-
-complex64/128, uintptr, function, interface, channel
-
+Go types that cannot be marshaled: complex64/128, uintptr, function, interface, channel
 */
-func Marshal(v interface{}) (bytes []byte, err error) {
-	return marshal(make([]byte, minEncode), v)
-}
-
-func marshal(bytesIn []byte, v interface{}) (bytes []byte, err error) {
+func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	defer doRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	put(data, v)
-	// FIXME aconway 2015-03-11: get size from proton.
-	bytes = bytesIn
-	for {
-		n := int(C.pn_data_encode(data, (*C.char)(unsafe.Pointer(&bytes[0])), C.size_t(cap(bytes))))
-		if n != int(C.PN_EOS) {
-			if n < 0 {
-				err = errorf(pnErrorName(n))
-			} else {
-				bytes = bytes[0:n]
-			}
-			return
+	encode := func(buf []byte) ([]byte, error) {
+		n := int(C.pn_data_encode(data, cPtr(buf), cLen(buf)))
+		switch {
+		case n == int(C.PN_OVERFLOW):
+			return buf, overflow
+		case n < 0:
+			return buf, dataError("marshal error", data)
+		default:
+			return buf[:n], nil
 		}
-		bytes = make([]byte, cap(bytes)*2)
 	}
-	return
+	return encodeGrow(buffer, encode)
+}
+
+const minEncode = 256
+
+// overflow is returned when an encoding function can't fit data in the buffer.
+var overflow = errorf("buffer too small")
+
+// encodeFn encodes into buffer[0:len(buffer)].
+// Returns buffer with length adjusted for data encoded.
+// If buffer too small, returns overflow as error.
+type encodeFn func(buffer []byte) ([]byte, error)
+
+// encodeGrow calls encode() into buffer, if it returns overflow grows the buffer.
+// Returns the final buffer.
+func encodeGrow(buffer []byte, encode encodeFn) ([]byte, error) {
+	if buffer == nil || len(buffer) == 0 {
+		buffer = make([]byte, minEncode)
+	}
+	var err error
+	for buffer, err = encode(buffer); err == overflow; buffer, err = encode(buffer) {
+		buffer = make([]byte, 2*len(buffer))
+	}
+	return buffer, err
 }
 
 func put(data *C.pn_data_t, v interface{}) {
 	switch v := v.(type) {
+	case nil:
+		C.pn_data_put_null(data)
 	case bool:
 		C.pn_data_put_bool(data, C.bool(v))
 	case int8:
@@ -133,9 +151,13 @@ func put(data *C.pn_data_t, v interface{}) {
 	case float64:
 		C.pn_data_put_double(data, C.double(v))
 	case string:
-		C.pn_data_put_string(data, toPnBytes([]byte(v)))
+		C.pn_data_put_string(data, pnBytes([]byte(v)))
 	case []byte:
-		C.pn_data_put_binary(data, toPnBytes(v))
+		C.pn_data_put_binary(data, pnBytes(v))
+	case Binary:
+		C.pn_data_put_binary(data, pnBytes([]byte(v)))
+	case Symbol:
+		C.pn_data_put_symbol(data, pnBytes([]byte(v)))
 	case Map: // Special map type
 		C.pn_data_put_map(data)
 		C.pn_data_enter(data)
@@ -154,9 +176,9 @@ func put(data *C.pn_data_t, v interface{}) {
 			panic(errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
 		}
 	}
-	err := pnDataError(data)
-	if err != "" {
-		panic(errorf("marshal %s", err))
+	err := dataError("marshal", data)
+	if err != nil {
+		panic(err)
 	}
 	return
 }
@@ -194,17 +216,14 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 func (e *Encoder) Encode(v interface{}) (err error) {
-	e.buffer, err = marshal(e.buffer, v)
+	e.buffer, err = Marshal(v, e.buffer)
 	if err == nil {
 		e.writer.Write(e.buffer)
 	}
-	return
+	return err
 }
 
-func toPnBytes(b []byte) C.pn_bytes_t {
-	if len(b) == 0 {
-		return C.pn_bytes_t{0, nil}
-	} else {
-		return C.pn_bytes_t{C.size_t(len(b)), (*C.char)(unsafe.Pointer(&b[0]))}
-	}
+func replace(data *C.pn_data_t, v interface{}) {
+	C.pn_data_clear(data)
+	put(data, v)
 }

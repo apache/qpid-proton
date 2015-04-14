@@ -17,20 +17,29 @@ specific language governing permissions and limitations
 under the License.
 */
 
-/*
-Package proton is a Go binding for the proton AMQP protocol engine.
-
-It alows you to construct and parse AMQP messages, and to implement AMQP
-clients, servers and intermediaries that can exchange messages with any
-AMQP 1.0 compliant endpoint.
-
-Encoding and decoding AMQP data follows the pattern of the standard
-encoding/json and encoding/xml packages.The mapping between AMQP and Go types is
-described in the documentation of the Marshal and Unmarshal functions.
-*/
 package proton
 
-// #cgo LDFLAGS: -lqpid-proton
-import "C"
+type Connection struct{}
 
-// This file is just for the package comment.
+func (c Connection) Open(string) {}
+func (c Connection) Close()      {}
+func (c Connection) Receiver(addr string) *Receiver {
+	r := &Receiver{make(chan Message)}
+	// FIXME aconway 2015-04-10: dummy implementation to test initial example, will be removed.
+	go func() {
+		m := NewMessage()
+		m.SetBody(addr)
+		r.Receive <- m
+		m = NewMessage()
+		m.SetBody(addr)
+		m.SetSubject("stop")
+		r.Receive <- m
+	}()
+	return r
+}
+
+type Receiver struct {
+	Receive chan Message
+}
+
+func (r Receiver) Close() {}

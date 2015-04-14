@@ -17,9 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package proton
-
-// FIXME aconway 2015-04-08: consolidate with event/errors.go
+package event // FIXME aconway 2015-03-26: duplicated from package proton, clean up
 
 // #include <proton/error.h>
 // #include <proton/codec.h>
@@ -27,7 +25,6 @@ import "C"
 
 import (
 	"fmt"
-	"reflect"
 	"runtime"
 )
 
@@ -48,35 +45,15 @@ func pnErrorName(code int) string {
 	if name != "" {
 		return name
 	} else {
-		return fmt.Sprintf("unknown-error(%s)", code)
+		return "unknown"
 	}
 }
 
-// pnError converst a pn_error_t to a Go error. Returns nil if e has 0 error status
-func pnError(prefix string, e *C.pn_error_t) error {
-	if e == nil || int(C.pn_error_code(e)) == 0 {
+func pnError(e *C.pn_error_t) error {
+	if e == nil || C.pn_error_code(e) == 0 {
 		return nil
 	}
-	code := int(C.pn_error_code(e))
-	return errorf("%s %s: %s", pnErrorName(code), prefix,
-		C.GoString(C.pn_error_text(e)))
-}
-
-type BadUnmarshal struct {
-	AMQPType string
-	GoType   reflect.Type
-}
-
-func newBadUnmarshal(pnType C.pn_type_t, v interface{}) *BadUnmarshal {
-	return &BadUnmarshal{pnTypeString(pnType), reflect.TypeOf(v)}
-}
-
-func (e BadUnmarshal) Error() string {
-	if e.GoType.Kind() != reflect.Ptr {
-		return fmt.Sprintf("proton: cannot unmarshal to type %s, not a pointer", e.GoType)
-	} else {
-		return fmt.Sprintf("proton: cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
-	}
+	return errorf("%s: %s", pnErrorName(int(C.pn_error_code(e))), C.GoString(C.pn_error_text(e)))
 }
 
 // errorf creates an error with a formatted message
@@ -97,15 +74,4 @@ func doRecover(err *error) {
 	default:
 		panic(r)
 	}
-}
-
-// panicIf panics if condition is true, the panic value is errorf(fmt, args...)
-func panicIf(condition bool, fmt string, args ...interface{}) {
-	if condition {
-		panic(errorf(fmt, args...))
-	}
-}
-
-func dataError(prefix string, data *C.pn_data_t) error {
-	return pnError(prefix, C.pn_data_error(data))
 }

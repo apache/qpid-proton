@@ -18,17 +18,9 @@ under the License.
 */
 
 /*
-Package proton is a Go binding for the proton AMQP protocol engine.
-
-It alows you to construct and parse AMQP messages, and to implement AMQP
-clients, servers and intermediaries that can exchange messages with any
-AMQP 1.0 compliant endpoint.
-
-Encoding and decoding AMQP data follows the pattern of the standard
-encoding/json and encoding/xml packages.The mapping between AMQP and Go types is
-described in the documentation of the Marshal and Unmarshal functions.
+Package event provides an event-oriented API to the  proton AMQP engine.
 */
-package proton
+package event
 
 // #cgo LDFLAGS: -lqpid-proton
 import "C"

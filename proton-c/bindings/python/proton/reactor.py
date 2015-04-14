@@ -131,17 +131,21 @@ class Reactor(Wrapper):
     def quiesced(self):
         return pn_reactor_quiesced(self._impl)
 
-    def process(self):
-        result = pn_reactor_process(self._impl)
+    def _check_errors(self):
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
             raise exc, value, tb
+
+    def process(self):
+        result = pn_reactor_process(self._impl)
+        self._check_errors()
         return result
 
     def stop(self):
         pn_reactor_stop(self._impl)
+        self._check_errors()
 
     def schedule(self, delay, task):
         impl = _chandler(task, self.on_error)
@@ -596,7 +600,8 @@ class Container(Reactor):
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None):
         """
-        Initiates the establishment of an AMQP connection.
+        Initiates the establishment of an AMQP connection. Returns an
+        instance of proton.Connection.
         """
         conn = self.connection(handler)
         conn.container = self.container_id or str(generate_uuid())
@@ -639,7 +644,25 @@ class Container(Reactor):
 
     def create_sender(self, context, target=None, source=None, name=None, handler=None, tags=None, options=None):
         """
-        Initiates the establishment of a link over which messages can be sent.
+        Initiates the establishment of a link over which messages can
+        be sent. Returns an instance of proton.Sender.
+
+        There are two patterns of use. (1) A connection can be passed
+        as the first argument, in which case the link is established
+        on that connection. In this case the target address can be
+        specified as the second argument (or as a keyword
+        argument). The source address can also be specified if
+        desired. (2) Alternatively a URL can be passed as the first
+        argument. In this case a new connection will be establised on
+        which the link will be attached. If a path is specified and
+        the target is not, then the path of the URL is used as the
+        target address.
+
+        The name of the link may be specified if desired, otherwise a
+        unique name will be generated.
+
+        Various LinkOptions can be specified to further control the
+        attachment.
         """
         if isinstance(context, basestring):
             context = Url(context)
@@ -661,7 +684,26 @@ class Container(Reactor):
 
     def create_receiver(self, context, source=None, target=None, name=None, dynamic=False, handler=None, options=None):
         """
-        Initiates the establishment of a link over which messages can be received (aka a subscription).
+        Initiates the establishment of a link over which messages can
+        be received (aka a subscription). Returns an instance of
+        proton.Receiver.
+
+        There are two patterns of use. (1) A connection can be passed
+        as the first argument, in which case the link is established
+        on that connection. In this case the source address can be
+        specified as the second argument (or as a keyword
+        argument). The target address can also be specified if
+        desired. (2) Alternatively a URL can be passed as the first
+        argument. In this case a new connection will be establised on
+        which the link will be attached. If a path is specified and
+        the source is not, then the path of the URL is used as the
+        target address.
+
+        The name of the link may be specified if desired, otherwise a
+        unique name will be generated.
+
+        Various LinkOptions can be specified to further control the
+        attachment.
         """
         if isinstance(context, basestring):
             context = Url(context)

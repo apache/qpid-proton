@@ -798,8 +798,11 @@ public class TransportImpl extends EndpointImpl
             if (_channelMax > 0) {
                 open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
             }
+
+            // as per the recommendation in the spec, advertise half our
+            // actual timeout to the remote
             if (_localIdleTimeout > 0) {
-                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout));
+                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout / 2));
             }
             _isOpenSent = true;
 
@@ -1089,7 +1092,27 @@ public class TransportImpl extends EndpointImpl
         else
         {
             SessionImpl session = transportSession.getSession();
-            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(attach.getHandle());
+            final UnsignedInteger handle = attach.getHandle();
+            if (handle.compareTo(transportSession.getHandleMax()) > 0) {
+                // The handle-max value is the highest handle value that can be used on the session. A peer MUST
+                // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
+                // A peer that receives a handle outside the supported range MUST close the connection with the
+                // framing-error error-code.
+                ErrorCondition condition =
+                        new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                            "handle-max exceeded");
+                _connectionEndpoint.setCondition(condition);
+                _connectionEndpoint.setLocalState(EndpointState.CLOSED);
+                if (!_isCloseSent) {
+                    Close close = new Close();
+                    close.setError(condition);
+                    _isCloseSent = true;
+                    writeFrame(0, close, null, null);
+                }
+                close_tail();
+                return;
+            }
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
             LinkImpl link = null;
 
             if(transportLink != null)
@@ -1124,8 +1147,8 @@ public class TransportImpl extends EndpointImpl
                 link.setRemoteSenderSettleMode(attach.getSndSettleMode());
 
                 transportLink.setName(attach.getName());
-                transportLink.setRemoteHandle(attach.getHandle());
-                transportSession.addLinkRemoteHandle(transportLink, attach.getHandle());
+                transportLink.setRemoteHandle(handle);
+                transportSession.addLinkRemoteHandle(transportLink, handle);
 
             }
 
@@ -1435,7 +1458,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     public int getRemoteIdleTimeout() {
-        return _remoteIdleTimeout / 2;
+        return _remoteIdleTimeout;
     }
 
     @Override

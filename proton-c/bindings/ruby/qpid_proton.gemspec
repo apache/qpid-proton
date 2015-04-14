@@ -31,5 +31,6 @@ EOF
                 "lib/**/*.rb",
                 ]
   s.require_path = 'lib'
+  s.add_runtime_dependency "json"
 end
 

@@ -24,6 +24,7 @@ package proton
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -67,7 +68,7 @@ func assertDecode(d *Decoder, want interface{}, gotPtr interface{}) {
 	assertEqual(want, got)
 
 	// Try round trip encoding
-	bytes, err := Marshal(want)
+	bytes, err := Marshal(want, nil)
 	assertNil(err)
 	n, err := Unmarshal(bytes, gotPtr)
 	assertNil(err)
@@ -149,7 +150,7 @@ func assertDecodeInterface(d *Decoder, want interface{}) {
 	assertEqual(want, got)
 
 	// Try round trip encoding
-	bytes, err := Marshal(got)
+	bytes, err := Marshal(got, nil)
 	assertNil(err)
 	n, err := Unmarshal(bytes, &got2)
 	assertNil(err)
@@ -238,21 +239,21 @@ func TestEncodeDecode(t *testing.T) {
 
 	buf := bytes.Buffer{}
 	e := NewEncoder(&buf)
-	e.Encode(in.s)
-	e.Encode(in.i)
-	e.Encode(in.u8)
-	e.Encode(in.b)
-	e.Encode(in.f)
-	e.Encode(in.v)
+	assertNil(e.Encode(in.s))
+	assertNil(e.Encode(in.i))
+	assertNil(e.Encode(in.u8))
+	assertNil(e.Encode(in.b))
+	assertNil(e.Encode(in.f))
+	assertNil(e.Encode(in.v))
 
 	var out data
 	d := NewDecoder(&buf)
-	d.Decode(&out.s)
-	d.Decode(&out.i)
-	d.Decode(&out.u8)
-	d.Decode(&out.b)
-	d.Decode(&out.f)
-	d.Decode(&out.v)
+	assertNil(d.Decode(&out.s))
+	assertNil(d.Decode(&out.i))
+	assertNil(d.Decode(&out.u8))
+	assertNil(d.Decode(&out.b))
+	assertNil(d.Decode(&out.f))
+	assertNil(d.Decode(&out.v))
 
 	assertEqual(in, out)
 }
@@ -275,7 +276,7 @@ func TestMap(t *testing.T) {
 
 	// Round trip a nested map
 	m = Map{int64(1): "one", "two": int32(2), true: Map{uint8(1): true, uint8(2): false}}
-	bytes, err := Marshal(m)
+	bytes, err := Marshal(m, nil)
 	assertNil(err)
 	_, err = Unmarshal(bytes, &i)
 	assertNil(err)
@@ -288,3 +289,20 @@ func TestList(t *testing.T) {
 	assertDecode(d, List{int32(32), "foo", true}, &l)
 	assertDecode(d, List{}, &l)
 }
+
+func FIXMETestMessage(t *testing.T) {
+	// FIXME aconway 2015-04-09: integrate Message encoding under marshal/unmarshal API.
+	bytes, err := ioutil.ReadAll(getReader("message"))
+	assertNil(err)
+	m, err := DecodeMessage(bytes)
+	assertNil(err)
+	fmt.Printf("%+v\n", m)
+	assertEqual(m.Body(), "hello")
+
+	bytes2 := make([]byte, len(bytes))
+	bytes2, err = m.Encode(bytes2)
+	assertNil(err)
+	assertEqual(bytes, bytes2)
+}
+
+// FIXME aconway 2015-03-13: finish the full interop test

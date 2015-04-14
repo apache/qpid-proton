@@ -29,7 +29,7 @@ import (
 	"unsafe"
 )
 
-const minDecode = 256
+const minDecode = 1024
 
 //
 // Decoding from a pn_data_t
@@ -103,9 +103,11 @@ Types are converted as follows:
  +---------------------------+----------------------------------------------------------------------+
  |string, []byte             |string, symbol or binary.                                             |
  +---------------------------+----------------------------------------------------------------------+
+ |Symbol                     |symbol                                                                |
+ +---------------------------+----------------------------------------------------------------------+
  |map[K]T                    |map, provided all keys and values can unmarshal to types K, T         |
  +---------------------------+----------------------------------------------------------------------+
- |Map|map, any AMQP map                                                     |
+ |Map                        |map, any AMQP map                                                     |
  +---------------------------+----------------------------------------------------------------------+
  |interface{}                |Any AMQP value can be unmarshaled to an interface{} as follows:       |
  |                           +------------------------+---------------------------------------------+
@@ -121,9 +123,13 @@ Types are converted as follows:
  |                           +------------------------+---------------------------------------------+
  |                           |float, double           |float32, float64                             |
  |                           +------------------------+---------------------------------------------+
- |                           |string, symbol          |string                                       |
+ |                           |string                  |string                                       |
  |                           +------------------------+---------------------------------------------+
- |                           |binary                  |byte[]                                       |
+ |                           |symbol                  |Symbol                                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |binary                  |Binary                                       |
+ |                           +------------------------+---------------------------------------------+
+ |                           |nulll                   |nil                                          |
  |                           +------------------------+---------------------------------------------+
  |                           |map                     |Map                                          |
  |                           +------------------------+---------------------------------------------+
@@ -134,10 +140,12 @@ The following Go types cannot be unmarshaled: complex64/128, uintptr, function, 
 
 TODO types
 
-AMQP: null, timestamp, decimal32/64/128, uuid, described, array.
+AMQP: timestamp, decimal32/64/128, uuid, described, array.
 
 Go: array, struct.
 
+Maps: currently we cannot unmarshal AMQP maps with unhashable key types, need an alternate
+representation for those.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	defer doRecover(&err)
@@ -178,9 +186,8 @@ func unmarshal(data *C.pn_data_t, bytes []byte, v interface{}) (n int) {
 	return
 }
 
-// Get value v from data
+// get value from data into value pointed at by v.
 func get(data *C.pn_data_t, v interface{}) {
-
 	pnType := C.pn_data_type(data)
 
 	switch v := v.(type) {
@@ -370,6 +377,22 @@ func get(data *C.pn_data_t, v interface{}) {
 			panic(newBadUnmarshal(pnType, v))
 		}
 
+	case *Binary:
+		switch pnType {
+		case C.PN_BINARY:
+			*v = Binary(goBytes(C.pn_data_get_binary(data)))
+		default:
+			panic(newBadUnmarshal(pnType, v))
+		}
+
+	case *Symbol:
+		switch pnType {
+		case C.PN_SYMBOL:
+			*v = Symbol(goBytes(C.pn_data_get_symbol(data)))
+		default:
+			panic(newBadUnmarshal(pnType, v))
+		}
+
 	case *interface{}:
 		getInterface(data, v)
 
@@ -386,9 +409,9 @@ func get(data *C.pn_data_t, v interface{}) {
 			panic(newBadUnmarshal(pnType, v))
 		}
 	}
-	err := pnDataError(data)
-	if err != "" {
-		panic(errorf("unmarshal %s", err))
+	err := dataError("unmarshaling", data)
+	if err != nil {
+		panic(err)
 	}
 	return
 }
@@ -398,6 +421,8 @@ func get(data *C.pn_data_t, v interface{}) {
 func getInterface(data *C.pn_data_t, v *interface{}) {
 	pnType := C.pn_data_type(data)
 	switch pnType {
+	case C.PN_NULL:
+		*v = nil
 	case C.PN_BOOL:
 		*v = bool(C.pn_data_get_bool(data))
 	case C.PN_UBYTE:
@@ -423,11 +448,11 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 	case C.PN_DOUBLE:
 		*v = float64(C.pn_data_get_double(data))
 	case C.PN_BINARY:
-		*v = goBytes(C.pn_data_get_binary(data))
+		*v = Binary(goBytes(C.pn_data_get_binary(data)))
 	case C.PN_STRING:
 		*v = goString(C.pn_data_get_string(data))
 	case C.PN_SYMBOL:
-		*v = goString(C.pn_data_get_symbol(data))
+		*v = Symbol(goString(C.pn_data_get_symbol(data)))
 	case C.PN_MAP:
 		m := make(Map)
 		get(data, &m)
@@ -435,12 +460,13 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 	case C.PN_LIST:
 		l := make(List, 0)
 		get(data, &l)
-		*v = l
+		*v = l // FIXME aconway 2015-03-13: avoid the copy?
 	default:
 		panic(newBadUnmarshal(pnType, v))
 	}
 }
 
+// get into map pointed at by v
 func getMap(data *C.pn_data_t, v interface{}) {
 	pnType := C.pn_data_type(data)
 	if pnType != C.PN_MAP {
@@ -482,6 +508,7 @@ func getList(data *C.pn_data_t, v interface{}) {
 		}
 		C.pn_data_exit(data)
 	}
+	// FIXME aconway 2015-04-09: avoid the copy?
 	reflect.ValueOf(v).Elem().Set(listValue)
 }
 
@@ -492,26 +519,12 @@ func decode(data *C.pn_data_t, bytes []byte) int {
 	if len(bytes) == 0 {
 		return 0
 	}
-	cBuf := (*C.char)(unsafe.Pointer(&bytes[0]))
-	n := int(C.pn_data_decode(data, cBuf, C.size_t(len(bytes))))
-	if n == int(C.PN_EOS) {
+	n := int(C.pn_data_decode(data, cPtr(bytes), cLen(bytes)))
+	if n == int(C.PN_UNDERFLOW) {
+		C.pn_error_clear(C.pn_data_error(data))
 		return 0
 	} else if n <= 0 {
 		panic(errorf("unmarshal %s", pnErrorName(n)))
 	}
 	return n
-}
-
-func goBytes(cBytes C.pn_bytes_t) (bytes []byte) {
-	if cBytes.start != nil {
-		bytes = C.GoBytes(unsafe.Pointer(cBytes.start), C.int(cBytes.size))
-	}
-	return
-}
-
-func goString(cBytes C.pn_bytes_t) (str string) {
-	if cBytes.start != nil {
-		str = C.GoStringN(cBytes.start, C.int(cBytes.size))
-	}
-	return
 }

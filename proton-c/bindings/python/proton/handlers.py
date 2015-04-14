@@ -370,7 +370,7 @@ class EndpointStateHandler(Handler):
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
-        if self.delegate and self.is_local_open(event.connection):
+        if self.delegate and event.connection and self.is_local_open(event.connection):
             dispatch(self.delegate, 'on_disconnected', event)
 
 class MessagingHandler(Handler, Acking):
