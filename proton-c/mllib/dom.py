@@ -24,8 +24,8 @@ Simple DOM for both SGML and XML documents.
 from __future__ import division
 from __future__ import generators
 from __future__ import nested_scopes
+from __future__ import absolute_import
 
-import transforms
 
 class Container:
 
@@ -109,6 +109,7 @@ class Node(Container, Component, Dispatcher):
       return nd
 
   def text(self):
+    from . import transforms
     return self.dispatch(transforms.Text())
 
   def tag(self, name, *attrs, **kwargs):
@@ -238,7 +239,7 @@ class Flatten(View):
     sources = [iter(self.source)]
     while sources:
       try:
-        nd = sources[-1].next()
+        nd = next(sources[-1])
         if isinstance(nd, Tree):
           sources.append(iter(nd.children))
         else:

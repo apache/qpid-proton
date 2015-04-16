@@ -18,16 +18,17 @@
 # under the License.
 #
 
+from __future__ import print_function
 import mllib, optparse, os, sys
 
 xml = os.path.join(os.path.dirname(__file__), "types.xml")
 doc = mllib.xml_parse(xml)
 
-print "/* generated from %s */" % xml
-print "#ifndef _PROTON_ENCODINGS_H"
-print "#define _PROTON_ENCODINGS_H 1"
-print
-print "#define PNE_DESCRIPTOR          (0x00)"
+print("/* generated from %s */" % xml)
+print("#ifndef _PROTON_ENCODINGS_H")
+print("#define _PROTON_ENCODINGS_H 1")
+print()
+print("#define PNE_DESCRIPTOR          (0x00)")
 
 for enc in doc.query["amqp/section/type/encoding"]:
   name = enc["@name"] or enc.parent["@name"]
@@ -35,7 +36,7 @@ for enc in doc.query["amqp/section/type/encoding"]:
   if name == "ieee-754":
     name = enc.parent["@name"]
   cname = "PNE_" + name.replace("-", "_").upper()
-  print "#define %s%s(%s)" % (cname, " "*(20-len(cname)), enc["@code"])
+  print("#define %s%s(%s)" % (cname, " "*(20-len(cname)), enc["@code"]))
 
-print
-print "#endif /* encodings.h */"
+print()
+print("#endif /* encodings.h */")
