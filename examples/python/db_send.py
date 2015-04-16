@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import optparse
 import Queue
 import time
@@ -49,7 +50,7 @@ class Send(MessagingHandler):
     def on_records_loaded(self, event):
         if self.records.empty():
             if event.subject == self.load_count:
-                print "Exhausted available data, waiting to recheck..."
+                print("Exhausted available data, waiting to recheck...")
                 # check for new data after 5 seconds
                 self.container.schedule(5, self)
         else:
@@ -57,7 +58,7 @@ class Send(MessagingHandler):
 
     def request_records(self):
         if not self.records.full():
-            print "loading records..."
+            print("loading records...")
             self.load_count += 1
             self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.load_count))
 
@@ -71,13 +72,13 @@ class Send(MessagingHandler):
             id = record['id']
             self.sender.send(Message(id=id, durable=True, body=record['description']), tag=str(id))
             self.sent += 1
-            print "sent message %s" % id
+            print("sent message %s" % id)
         self.request_records()
 
     def on_settled(self, event):
         id = int(event.delivery.tag)
         self.db.delete(id)
-        print "settled message %s" % id
+        print("settled message %s" % id)
         self.confirmed += 1
         if self.confirmed == self.target:
             event.connection.close()
@@ -88,7 +89,7 @@ class Send(MessagingHandler):
         self.sent = self.confirmed
 
     def on_timer_task(self, event):
-        print "Rechecking for data..."
+        print("Rechecking for data...")
         self.request_records()
 
 parser = optparse.OptionParser(usage="usage: %prog [options]",

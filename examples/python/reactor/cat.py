@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import sys, os
 from proton.reactor import Reactor
 
@@ -42,7 +43,7 @@ class Echo:
         # to be read, or the end of stream has been reached.
         data = os.read(sel.fileno(), 1024)
         if data:
-            print data,
+            print(data, end=' ')
         else:
             sel.terminate()
             event.reactor.update(sel)

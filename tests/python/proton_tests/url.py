@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,7 +19,7 @@
 #
 
 
-import common
+from . import common
 from proton import Url
 
 class UrlTest(common.Test):

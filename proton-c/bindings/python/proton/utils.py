@@ -312,7 +312,7 @@ class SyncRequestResponse(IncomingMessageHandler):
         if not self.address and not request.address:
             raise ValueError("Request message has no address: %s" % request)
         request.reply_to = self.reply_to
-        request.correlation_id = correlation_id = self.correlation_id.next()
+        request.correlation_id = correlation_id = next(self.correlation_id)
         self.sender.send(request)
         def wakeup():
             return self.response and (self.response.correlation_id == correlation_id)

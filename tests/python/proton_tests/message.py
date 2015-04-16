@@ -17,7 +17,8 @@
 # under the License.
 #
 
-import os, common
+import os
+from . import common
 from proton import *
 try:
   from uuid import uuid4

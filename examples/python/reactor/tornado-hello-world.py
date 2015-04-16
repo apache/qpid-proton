@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import tornado.ioloop
 from tornado_app import TornadoApp
 
@@ -32,7 +33,7 @@ class Program:
     # The reactor init event is produced by the reactor itself when it
     # starts.
     def on_reactor_init(self, event):
-        print "Hello, World!"
+        print("Hello, World!")
 
 # The TornadoApp integrates a Reactor into tornado's ioloop.
 TornadoApp(Program())

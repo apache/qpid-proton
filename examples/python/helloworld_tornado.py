@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton_tornado import Container
@@ -38,7 +39,7 @@ class HelloWorld(MessagingHandler):
         event.sender.close()
 
     def on_message(self, event):
-        print event.message.body
+        print(event.message.body)
         event.connection.close()
 
 Container(HelloWorld("localhost:5672", "examples")).run()

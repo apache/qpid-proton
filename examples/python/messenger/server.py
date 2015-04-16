@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import print_function
 import sys, optparse
 from proton import *
 
@@ -38,7 +39,7 @@ def dispatch(request, response):
   if request.subject:
     response.subject = "Re: %s" % request.subject
   response.properties = request.properties
-  print "Dispatched %s %s" % (request.subject, request.properties)
+  print("Dispatched %s %s" % (request.subject, request.properties))
 
 msg = Message()
 reply = Message()
@@ -50,7 +51,7 @@ while True:
   if mng.incoming > 0:
     mng.get(msg)
     if msg.reply_to:
-      print msg.reply_to
+      print(msg.reply_to)
       reply.address = msg.reply_to
       reply.correlation_id = msg.correlation_id
       reply.body = msg.body

@@ -20,8 +20,9 @@
 """
 Useful transforms for dom objects.
 """
+from __future__ import absolute_import
 
-import dom
+from . import dom
 from cStringIO import StringIO
 
 class Visitor:

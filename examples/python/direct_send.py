@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
@@ -43,7 +44,7 @@ class Send(MessagingHandler):
     def on_accepted(self, event):
         self.confirmed += 1
         if self.confirmed == self.total:
-            print "all messages confirmed"
+            print("all messages confirmed")
             event.connection.close()
             self.acceptor.close()
 

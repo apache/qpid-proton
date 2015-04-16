@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,11 +18,12 @@
 # under the License.
 #
 
-import os, common, sys, traceback
+import os, sys, traceback
+from . import common
 from proton import *
 from threading import Thread, Event
 from time import sleep, time
-from common import Skipped
+from .common import Skipped
 
 class Test(common.Test):
 
@@ -180,7 +182,8 @@ class MessengerTest(Test):
     try:
       self.client.put(msg)
       assert False, "Expecting MessengerException"
-    except MessengerException, exc:
+    except MessengerException:
+      exc = sys.exc_info()[1]
       err = str(exc)
       assert "unable to send to address: totally-bogus-address" in err, err
 
