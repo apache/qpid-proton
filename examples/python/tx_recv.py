@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import optparse
 from proton import Url
 from proton.reactor import Container
@@ -40,7 +41,7 @@ class TxRecv(MessagingHandler, TransactionHandler):
         self.transaction = None
 
     def on_message(self, event):
-        print event.message.body
+        print(event.message.body)
         self.transaction.accept(event.delivery)
         self.current_batch += 1
         if self.current_batch == self.batch_size:

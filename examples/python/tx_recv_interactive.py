@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import sys
 import threading
 from proton.reactor import ApplicationEvent, Container
@@ -35,19 +36,19 @@ class TxRecv(MessagingHandler, TransactionHandler):
         self.transaction = None
 
     def on_message(self, event):
-        print event.message.body
+        print(event.message.body)
         self.transaction.accept(event.delivery)
 
     def on_transaction_declared(self, event):
         self.transaction = event.transaction
-        print "transaction declared"
+        print("transaction declared")
 
     def on_transaction_committed(self, event):
-        print "transaction committed"
+        print("transaction committed")
         self.container.declare_transaction(self.conn, handler=self)
 
     def on_transaction_aborted(self, event):
-        print "transaction aborted"
+        print("transaction aborted")
         self.container.declare_transaction(self.conn, handler=self)
 
     def on_commit(self, event):
@@ -71,7 +72,7 @@ try:
     thread.daemon=True
     thread.start()
 
-    print "Enter 'fetch', 'commit' or 'abort'"
+    print("Enter 'fetch', 'commit' or 'abort'")
     while True:
         line = sys.stdin.readline()
         if line:

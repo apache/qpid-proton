@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Reactor
 
@@ -25,12 +26,12 @@ from proton.reactor import Reactor
 class World:
 
     def on_reactor_init(self, event):
-        print "World!"
+        print("World!")
 
 class Goodbye:
 
     def on_reactor_final(self, event):
-        print "Goodbye, World!"
+        print("Goodbye, World!")
 
 class Hello:
 
@@ -42,7 +43,7 @@ class Hello:
 
     # The parent handler always receives the event first.
     def on_reactor_init(self, event):
-        print "Hello",
+        print("Hello", end=' ')
 
 r = Reactor(Hello())
 r.run()

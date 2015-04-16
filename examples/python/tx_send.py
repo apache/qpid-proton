@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import optparse
 from proton import Message, Url
 from proton.reactor import Container
@@ -64,7 +65,7 @@ class TxSend(MessagingHandler, TransactionHandler):
     def on_transaction_committed(self, event):
         self.committed += self.current_batch
         if self.committed == self.total:
-            print "all messages committed"
+            print("all messages committed")
             event.connection.close()
         else:
             self.current_batch = 0

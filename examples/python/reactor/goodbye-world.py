@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton.reactor import Reactor
 
 # So far the reactive hello-world doesn't look too different from a
@@ -30,7 +31,7 @@ class Program:
 
     # As before we handle the reactor init event.
     def on_reactor_init(self, event):
-        print "Hello, World!"
+        print("Hello, World!")
 
     # In addition to an initial event, the reactor also produces an
     # event when it is about to exit. This may not behave much
@@ -40,7 +41,7 @@ class Program:
     # regardless of what other paths the main logic of our program
     # might take.
     def on_reactor_final(self, event):
-        print "Goodbye, World!"
+        print("Goodbye, World!")
 
 r = Reactor(Program())
 r.run()

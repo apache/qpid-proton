@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -30,7 +31,7 @@ class Server(MessagingHandler):
         self.senders = {}
 
     def on_start(self, event):
-        print "Listening on", self.url
+        print("Listening on", self.url)
         self.container = event.container
         self.conn = event.container.connect(self.url)
         self.receiver = event.container.create_receiver(self.conn, self.address)
@@ -41,7 +42,7 @@ class Server(MessagingHandler):
             self.relay = self.container.create_sender(self.conn, None)
 
     def on_message(self, event):
-        print "Received", event.message
+        print("Received", event.message)
         sender = self.relay or self.senders.get(event.message.reply_to)
         if not sender:
             sender = self.container.create_sender(self.conn, event.message.reply_to)

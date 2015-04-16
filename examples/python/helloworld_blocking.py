@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.utils import BlockingConnection
 from proton.handlers import IncomingMessageHandler
@@ -27,7 +28,7 @@ receiver = conn.create_receiver("examples")
 sender = conn.create_sender("examples")
 sender.send(Message(body=u"Hello World!"));
 msg = receiver.receive(timeout=30)
-print msg.body
+print(msg.body)
 receiver.accept()
 conn.close()
 

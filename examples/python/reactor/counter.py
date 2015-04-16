@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Reactor
 
@@ -29,7 +30,7 @@ class Counter:
 
     def on_timer_task(self, event):
         self.count += 1
-        print self.count
+        print(self.count)
         if self.count < self.limit:
             # A recurring task can be acomplished by just scheduling
             # another event.
@@ -39,7 +40,7 @@ class Program:
 
     def on_reactor_init(self, event):
         self.start = time.time()
-        print "Hello, World!"
+        print("Hello, World!")
 
         # Note that unlike the previous scheduling example, we pass in
         # a separate object for the handler. This means that the timer
@@ -48,7 +49,7 @@ class Program:
         event.reactor.schedule(0.25, Counter(10))
 
     def on_reactor_final(self, event):
-        print "Goodbye, World! (after %s long seconds)" % (time.time() - self.start)
+        print("Goodbye, World! (after %s long seconds)" % (time.time() - self.start))
 
 # In hello-world.py we said the reactor exits when there are no more
 # events to process. While this is true, it's not actually complete.

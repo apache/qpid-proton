@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
@@ -35,10 +36,10 @@ class TxRequest(TransactionHandler):
         event.transaction.commit()
 
     def on_transaction_committed(self, event):
-        print "Request processed successfully"
+        print("Request processed successfully")
 
     def on_transaction_aborted(self, event):
-        print "Request processing aborted"
+        print("Request processing aborted")
 
 
 class TxServer(MessagingHandler):
