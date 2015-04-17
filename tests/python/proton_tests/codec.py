@@ -17,7 +17,8 @@
 # under the License.
 #
 
-import os, common, sys
+import os, sys
+from . import common
 from proton import *
 try:
   from uuid import uuid4
@@ -36,58 +37,58 @@ class Test(common.Test):
 class DataTest(Test):
 
   def testTopLevelNext(self):
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_null()
     self.data.put_bool(False)
     self.data.put_int(0)
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.rewind()
-    assert self.data.next() == Data.NULL
-    assert self.data.next() == Data.BOOL
-    assert self.data.next() == Data.INT
-    assert self.data.next() is None
+    assert next(self.data) == Data.NULL
+    assert next(self.data) == Data.BOOL
+    assert next(self.data) == Data.INT
+    assert next(self.data) is None
 
   def testNestedNext(self):
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_null()
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_list()
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_bool(False)
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.rewind()
-    assert self.data.next() is Data.NULL
-    assert self.data.next() is Data.LIST
+    assert next(self.data) is Data.NULL
+    assert next(self.data) is Data.LIST
     self.data.enter()
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_ubyte(0)
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_uint(0)
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_int(0)
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.exit()
-    assert self.data.next() is Data.BOOL
-    assert self.data.next() is None
+    assert next(self.data) is Data.BOOL
+    assert next(self.data) is None
 
     self.data.rewind()
-    assert self.data.next() is Data.NULL
-    assert self.data.next() is Data.LIST
+    assert next(self.data) is Data.NULL
+    assert next(self.data) is Data.LIST
     assert self.data.enter()
-    assert self.data.next() is Data.UBYTE
-    assert self.data.next() is Data.UINT
-    assert self.data.next() is Data.INT
-    assert self.data.next() is None
+    assert next(self.data) is Data.UBYTE
+    assert next(self.data) is Data.UINT
+    assert next(self.data) is Data.INT
+    assert next(self.data) is None
     assert self.data.exit()
-    assert self.data.next() is Data.BOOL
-    assert self.data.next() is None
+    assert next(self.data) is Data.BOOL
+    assert next(self.data) is None
 
   def testEnterExit(self):
-    assert self.data.next() is None
+    assert next(self.data) is None
     assert not self.data.enter()
     self.data.put_list()
     assert self.data.enter()
-    assert self.data.next() is None
+    assert next(self.data) is None
     self.data.put_list()
     assert self.data.enter()
     self.data.put_list()
@@ -100,19 +101,19 @@ class DataTest(Test):
     assert self.data.get_list() == 1
     assert not self.data.exit()
     assert self.data.get_list() == 1
-    assert self.data.next() is None
+    assert next(self.data) is None
 
     self.data.rewind()
-    assert self.data.next() is Data.LIST
+    assert next(self.data) is Data.LIST
     assert self.data.get_list() == 1
     assert self.data.enter()
-    assert self.data.next() is Data.LIST
+    assert next(self.data) is Data.LIST
     assert self.data.get_list() == 1
     assert self.data.enter()
-    assert self.data.next() is Data.LIST
+    assert next(self.data) is Data.LIST
     assert self.data.get_list() == 0
     assert self.data.enter()
-    assert self.data.next() is None
+    assert next(self.data) is None
     assert self.data.exit()
     assert self.data.get_list() == 0
     assert self.data.exit()
@@ -126,7 +127,7 @@ class DataTest(Test):
     """More informative exception from putters, include bad value"""
     try:
       putter(v)
-    except Exception, e:
+    except Exception:
       etype, value, trace = sys.exc_info()
       raise etype, "%s(%r): %s" % (putter.__name__, v, value), trace
     return putter
@@ -168,7 +169,7 @@ class DataTest(Test):
       self.put(putter, v)
     self.data.exit()
     self.data.rewind()
-    assert self.data.next() == Data.ARRAY
+    assert next(self.data) == Data.ARRAY
     count, described, type = self.data.get_array()
     assert count == len(values), count
     if dtype is None:
@@ -178,17 +179,17 @@ class DataTest(Test):
     assert type == aTYPE, type
     assert self.data.enter()
     if described:
-      assert self.data.next() == dTYPE
+      assert next(self.data) == dTYPE
       getter = getattr(self.data, "get_%s" % dtype)
       gotten = getter()
       assert gotten == descriptor, gotten
     if values:
       getter = getattr(self.data, "get_%s" % atype)
       for v in values:
-        assert self.data.next() == aTYPE
+        assert next(self.data) == aTYPE
         gotten = getter()
         assert gotten == v, gotten
-    assert self.data.next() is None
+    assert next(self.data) is None
     assert self.data.exit()
 
   def testStringArray(self):
@@ -230,7 +231,7 @@ class DataTest(Test):
     self.data.rewind()
 
     for v in values:
-      vtype = self.data.next()
+      vtype = next(self.data)
       assert vtype == ntype, vtype
       gotten = getter()
       assert eq(gotten, v), (gotten, v)
@@ -245,7 +246,7 @@ class DataTest(Test):
     cgetter = getattr(copy, "get_%s" % dtype)
 
     for v in values:
-      vtype = copy.next()
+      vtype = next(copy)
       assert vtype == ntype, vtype
       gotten = cgetter()
       assert eq(gotten, v), (gotten, v)
@@ -345,7 +346,7 @@ class DataTest(Test):
     data = Data()
     data.decode(enc)
     data.rewind()
-    assert data.next()
+    assert next(data)
     copy = data.get_object()
     assert copy == obj, (copy, obj)
 
@@ -355,7 +356,7 @@ class DataTest(Test):
            symbol("list"): [1, 2, 3, 4]}
     self.data.put_object(obj)
     self.data.rewind()
-    self.data.next()
+    next(self.data)
     self.data.enter()
     self.data.narrow()
     assert self.data.lookup("pi")

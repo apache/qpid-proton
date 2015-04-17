@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 from proton import *
 
@@ -16,7 +17,7 @@ messenger.start()
 while True:
   messenger.recv()
   messenger.get(message)
-  print "Got: %s" % message
+  print("Got: %s" % message)
   messenger.accept()
 
 messenger.stop()

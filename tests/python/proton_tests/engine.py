@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,10 +18,11 @@
 # under the License.
 #
 
-import os, common, gc
+import os, gc
+from . import common
 from time import time, sleep
 from proton import *
-from common import pump
+from .common import pump
 from proton.reactor import Reactor
 
 # older versions of gc do not provide the garbage list
@@ -1836,7 +1838,7 @@ class PipelineTest(Test):
     assert rcv.queued == 0, rcv.queued
 
 import sys
-from common import Skipped
+from .common import Skipped
 
 class ServerTest(Test):
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,9 +18,10 @@
 # under the License.
 #
 
-import os, common
+import os
+from . import common
 from proton import *
-from common import pump
+from .common import pump
 
 class Test(common.Test):
   pass
