@@ -21,6 +21,7 @@
 
 package org.apache.qpid.proton.example.reactor;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe.SourceChannel;
@@ -31,7 +32,7 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 
-public class Echo extends BaseHandler {
+public class Cat extends BaseHandler {
 
     private class EchoHandler extends BaseHandler {
         @Override
@@ -68,13 +69,12 @@ public class Echo extends BaseHandler {
 
     private final SourceChannel channel;
 
-    private Echo(SourceChannel channel) {
+    private Cat(SourceChannel channel) {
         this.channel = channel;
     }
 
     @Override
     public void onReactorInit(Event event) {
-        System.out.println("Type whatever you want and then use Control-D to exit:");
         Reactor reactor = event.getReactor();
         Selectable selectable = reactor.selectable();
         selectable.setChannel(channel);
@@ -83,8 +83,13 @@ public class Echo extends BaseHandler {
     }
 
     public static void main(String[] args) throws IOException {
-        SourceChannel inChannel = EchoInputStreamWrapper.wrap(System.in);
-        Reactor reactor = Proton.reactor(new Echo(inChannel));
+        if (args.length != 1) {
+            System.err.println("Specify a file name as an argument.");
+            System.exit(1);
+        }
+        FileInputStream inFile = new FileInputStream(args[0]);
+        SourceChannel inChannel = EchoInputStreamWrapper.wrap(inFile);
+        Reactor reactor = Proton.reactor(new Cat(inChannel));
         reactor.run();
     }
 }
