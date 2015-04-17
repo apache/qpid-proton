@@ -29,7 +29,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.amqp.transport.Open;
 
-public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
+public class ConnectionImpl extends HandlerEndpointImpl implements ProtonJConnection
 {
     public static final int MAX_CHANNELS = 65535;
 

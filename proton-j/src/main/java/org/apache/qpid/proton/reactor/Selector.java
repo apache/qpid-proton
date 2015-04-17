@@ -18,28 +18,26 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+package org.apache.qpid.proton.reactor;
 
-/**
- * Collector
- *
- */
+import java.io.IOException;
+import java.util.Iterator;
 
-public interface Collector
-{
+public interface Selector {
 
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
-        }
-    }
+    public void add(Selectable selectable) throws IOException ;
 
-    Event peek();
+    public void update(Selectable selectable);
 
-    void pop();
+    public void remove(Selectable selectable) ;
 
-    boolean more();
+    public void select(long timeout) throws IOException ;
+
+    public Iterator<Selectable> readable() ;
+
+    public Iterator<Selectable> writeable() ;
+
+    public Iterator<Selectable> expired() ;
+    public Iterator<Selectable> error() ;
 }

@@ -18,28 +18,27 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+package org.apache.qpid.proton.engine.impl;
 
-/**
- * Collector
- *
- */
+import org.apache.qpid.proton.engine.BaseHandler;
+import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.HandlerEndpoint;
 
-public interface Collector
-{
 
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
+public abstract class HandlerEndpointImpl extends EndpointImpl implements HandlerEndpoint {
+
+    private Handler handler = null;
+
+    @Override
+    public void add(Handler handler) {
+        if (this.handler == null) {
+            this.handler = new BaseHandler();
         }
+        this.handler.add(handler);
     }
 
-    Event peek();
-
-    void pop();
-
-    boolean more();
+    public Handler getHandler() {
+        return handler;
+    }
 }

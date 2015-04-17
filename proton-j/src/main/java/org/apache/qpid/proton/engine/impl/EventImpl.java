@@ -20,13 +20,18 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.util.Iterator;
+
+import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Handler;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Link;
-import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.Selectable;
+import org.apache.qpid.proton.reactor.Task;
 
 /**
  * EventImpl
@@ -57,16 +62,19 @@ class EventImpl implements Event
         context = null;
     }
 
+    @Override
     public Type getType()
     {
         return type;
     }
 
+    @Override
     public Object getContext()
     {
         return context;
     }
 
+    @Override
     public void dispatch(Handler handler)
     {
         switch (type) {
@@ -157,12 +165,51 @@ class EventImpl implements Event
         case TRANSPORT_CLOSED:
             handler.onTransportClosed(this);
             break;
+        case REACTOR_FINAL:
+            handler.onReactorFinal(this);
+            break;
+        case REACTOR_QUIESCED:
+            handler.onReactorQuiesced(this);
+            break;
+        case REACTOR_INIT:
+            handler.onReactorInit(this);
+            break;
+        case SELECTABLE_ERROR:
+            handler.onSelectableError(this);
+            break;
+        case SELECTABLE_EXPIRED:
+            handler.onSelectableExpired(this);
+            break;
+        case SELECTABLE_FINAL:
+            handler.onSelectableFinal(this);
+            break;
+        case SELECTABLE_INIT:
+            handler.onSelectableInit(this);
+            break;
+        case SELECTABLE_READABLE:
+            handler.onSelectableReadable(this);
+            break;
+        case SELECTABLE_UPDATED:
+            handler.onSelectableWritable(this);
+            break;
+        case SELECTABLE_WRITABLE:
+            handler.onSelectableWritable(this);
+            break;
+        case TIMER_TASK:
+            handler.onTimerTask(this);
+            break;
         default:
             handler.onUnhandled(this);
             break;
         }
+
+        Iterator<Handler> children = handler.children();
+        while(children.hasNext()) {
+            dispatch(children.next());
+        }
     }
 
+    @Override
     public Connection getConnection()
     {
         if (context instanceof Connection) {
@@ -182,6 +229,7 @@ class EventImpl implements Event
         }
     }
 
+    @Override
     public Session getSession()
     {
         if (context instanceof Session) {
@@ -195,6 +243,7 @@ class EventImpl implements Event
         }
     }
 
+    @Override
     public Link getLink()
     {
         if (context instanceof Link) {
@@ -208,6 +257,7 @@ class EventImpl implements Event
         }
     }
 
+    @Override
     public Delivery getDelivery()
     {
         if (context instanceof Delivery) {
@@ -217,6 +267,7 @@ class EventImpl implements Event
         }
     }
 
+    @Override
     public Transport getTransport()
     {
         if (context instanceof Transport) {
@@ -225,6 +276,52 @@ class EventImpl implements Event
             return null;
         }
     }
+
+    @Override
+    public Selectable getSelectable() {
+        if (context instanceof Selectable) {
+            return (Selectable) context;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public Reactor getReactor() {
+        if (context instanceof Reactor) {
+            return (Reactor) context;
+        } else if (context instanceof Task) {
+            return ((Task)context).getReactor();
+        } else if (context instanceof Transport) {
+            return ((TransportImpl)context).getReactor();
+        } else if (context instanceof Delivery) {
+            Transport transport = ((Delivery)context).getLink().getSession().getConnection().getTransport();
+            return ((TransportImpl)transport).getReactor();
+        } else if (context instanceof Link) {
+            Transport transport = ((Link)context).getSession().getConnection().getTransport();
+            return ((TransportImpl)transport).getReactor();
+        } else if (context instanceof Session) {
+            Transport transport = ((Session)context).getConnection().getTransport();
+            return ((TransportImpl)transport).getReactor();
+        } else if (context instanceof Connection) {
+            Transport transport = ((Connection)context).getTransport();
+            return ((TransportImpl)transport).getReactor();
+        } else if (context instanceof Selectable) {
+            return ((Selectable)context).getReactor();
+        }
+        return null;
+    }
+
+    @Override
+    public Task getTask() {
+        if (context instanceof Task) {
+            return (Task) context;
+        } else {
+            return null;
+        }
+    }
+
+    @Override
     public Event copy()
     {
        EventImpl newEvent = new EventImpl();
