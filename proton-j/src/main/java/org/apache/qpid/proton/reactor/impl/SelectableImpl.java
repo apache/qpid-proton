@@ -259,9 +259,12 @@ public class SelectableImpl implements Selectable {
     }
 
     // TODO: all this gets stuffed into records in the C code...
-    private BaseHandler _handler = new BaseHandler();
+    private BaseHandler _handler;
     @Override
     public void add(Handler handler) {
+        if (_handler == null) {
+            _handler = new BaseHandler();
+        }
         _handler.add(handler);
     }
 
