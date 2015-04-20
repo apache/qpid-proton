@@ -1648,7 +1648,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
     }
   }
 
-  if (!available) {
+  if (!transport->close_rcvd && !available) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
     return PN_EOS;
   }

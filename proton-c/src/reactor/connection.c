@@ -207,6 +207,9 @@ static void pni_connection_writable(pn_selectable_t *sel)
 
 static void pni_connection_error(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_transport_close_head(transport);
+  pn_transport_close_tail(transport);
   pn_selectable_terminate(sel);
   pn_reactor_update(reactor, sel);
 }
