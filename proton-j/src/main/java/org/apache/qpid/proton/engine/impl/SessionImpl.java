@@ -100,6 +100,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
 
     @Override
     void doFree() {
+        _connection.freeSession(this);
         _connection.removeSessionEndpoint(_node);
         _node = null;
 
