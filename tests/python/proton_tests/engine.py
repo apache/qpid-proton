@@ -369,6 +369,50 @@ class SessionTest(Test):
     self.pump()
     assert rcv_ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
+  def test_reopen_on_same_session_without_free(self):
+    """
+    confirm that a link is correctly opened when attaching to a previously
+    closed link *that has not been freed yet* on the same session
+    """
+    self.ssn.open()
+    self.pump()
+
+    ssn2 = self.c2.session_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+    ssn2.open()
+    self.pump()
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    snd.close()
+    rcv.close()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+
 class LinkTest(Test):
 
   def setup(self):
