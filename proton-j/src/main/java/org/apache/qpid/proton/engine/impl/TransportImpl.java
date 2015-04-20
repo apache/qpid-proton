@@ -22,15 +22,12 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArr
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
-import org.apache.qpid.proton.amqp.security.SaslCode;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
@@ -55,12 +52,9 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
-import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 
