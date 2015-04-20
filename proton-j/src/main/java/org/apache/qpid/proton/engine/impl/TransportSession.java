@@ -130,19 +130,46 @@ class TransportSession
     public void unsetLocalChannel()
     {
         if (isLocalChannelSet()) {
+            unsetLocalHandles();
             _session.decref();
         }
         _localChannel = -1;
     }
 
+    private void unsetLocalHandles()
+    {
+        for(int i = 0; i < _localHandleMap.length; i++)
+        {
+            TransportLink<?> tl = _localHandleMap[i];
+            if(tl != null)
+            {
+                _localHandleMap[i] = null;
+                tl.clearLocalHandle();
+            }
+        }
+    }
+
     public void unsetRemoteChannel()
     {
         if (isRemoteChannelSet()) {
+            unsetRemoteHandles();
             _session.decref();
         }
         _remoteChannel = -1;
     }
 
+    private void unsetRemoteHandles()
+    {
+        for(int i = 0; i < _remoteHandleMap.length; i++)
+        {
+            TransportLink<?> tl = _remoteHandleMap[i];
+            if(tl != null)
+            {
+                _remoteHandleMap[i] = null;
+                tl.clearRemoteHandle();
+            }
+        }
+    }
 
     public UnsignedInteger getHandleMax()
     {
@@ -332,6 +359,11 @@ class TransportSession
     public void freeLocalChannel()
     {
         unsetLocalChannel();
+    }
+
+    public void freeRemoteChannel()
+    {
+        unsetRemoteChannel();
     }
 
     private void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
