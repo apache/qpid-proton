@@ -18,11 +18,11 @@
 #
 
 """
-Parsers for SGML and XML to dom.
+Parsers for XML to dom.
 """
 from __future__ import absolute_import
 
-import sgmllib, xml.sax.handler
+import xml.sax.handler
 from .dom import *
 
 class Parser:
@@ -73,39 +73,6 @@ class Parser:
       self.node.singleton = True
       self.node = self.node.parent
 
-
-class SGMLParser(sgmllib.SGMLParser):
-
-  def __init__(self, entitydefs = None):
-    sgmllib.SGMLParser.__init__(self)
-    if entitydefs == None:
-      self.entitydefs = {}
-    else:
-      self.entitydefs = entitydefs
-    self.parser = Parser()
-
-  def unknown_starttag(self, name, attrs):
-    self.parser.start(name, attrs)
-
-  def handle_data(self, data):
-    self.parser.data(data)
-
-  def handle_comment(self, comment):
-    self.parser.comment(comment)
-
-  def unknown_entityref(self, ref):
-    self.parser.entity(ref)
-
-  def unknown_charref(self, ref):
-    self.parser.character(ref)
-
-  def unknown_endtag(self, name):
-    self.parser.end(name)
-
-  def close(self):
-    sgmllib.SGMLParser.close(self)
-    self.parser.balance()
-    assert self.parser.node == self.parser.tree
 
 class XMLParser(xml.sax.handler.ContentHandler):
 

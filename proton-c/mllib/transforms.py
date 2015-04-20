@@ -23,7 +23,7 @@ Useful transforms for dom objects.
 from __future__ import absolute_import
 
 from . import dom
-from cStringIO import StringIO
+from six.moves import cStringIO as StringIO
 
 class Visitor:
 
