@@ -2399,9 +2399,10 @@ class TeardownLeakTest(PeerTest):
                   Event.TRANSPORT_CLOSED)
 
     self.connection.free()
+    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL)
     self.transport.unbind()
 
-    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
+    self.expect(Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
 
   def testLocalRemoteLeak(self):
     self.doLeak(True, True)

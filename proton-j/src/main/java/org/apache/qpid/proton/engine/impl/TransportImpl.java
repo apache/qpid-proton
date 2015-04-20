@@ -96,10 +96,6 @@ public class TransportImpl extends EndpointImpl
     private TransportInput _inputProcessor;
     private TransportOutput _outputProcessor;
 
-    private Map<SessionImpl, TransportSession> _transportSessionState = new HashMap<SessionImpl, TransportSession>();
-    private Map<LinkImpl, TransportLink<?>> _transportLinkState = new HashMap<LinkImpl, TransportLink<?>>();
-
-
     private DecoderImpl _decoder = new DecoderImpl();
     private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
@@ -252,12 +248,11 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void unbind()
     {
-        for (TransportSession ts: _transportSessionState.values()) {
+        for (TransportSession ts: _localSessions.values()) {
             ts.unbind();
         }
-
-        for (TransportLink tl: _transportLinkState.values()) {
-            tl.unbind();
+        for (TransportSession ts: _remoteSessions.values()) {
+            ts.unbind();
         }
 
         put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
@@ -846,23 +841,21 @@ public class TransportImpl extends EndpointImpl
 
     private TransportSession getTransportState(SessionImpl session)
     {
-        TransportSession transportSession = _transportSessionState.get(session);
+        TransportSession transportSession = session.getTransportSession();
         if(transportSession == null)
         {
             transportSession = new TransportSession(this, session);
             session.setTransportSession(transportSession);
-            _transportSessionState.put(session, transportSession);
         }
         return transportSession;
     }
 
     private TransportLink<?> getTransportState(LinkImpl link)
     {
-        TransportLink<?> transportLink = _transportLinkState.get(link);
+        TransportLink<?> transportLink = link.getTransportLink();
         if(transportLink == null)
         {
             transportLink = TransportLink.createTransportLink(link);
-            _transportLinkState.put(link, transportLink);
         }
         return transportLink;
     }
@@ -1248,6 +1241,7 @@ public class TransportImpl extends EndpointImpl
         {
             _remoteSessions.remove(channel);
             transportSession.receivedEnd();
+            transportSession.unsetRemoteChannel();
             SessionImpl session = transportSession.getSession();
             session.setRemoteState(EndpointState.CLOSED);
             ErrorCondition errorCondition = end.getError();
