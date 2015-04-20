@@ -212,11 +212,6 @@ class TransportLink<T extends LinkImpl>
         return _detachReceived;
     }
 
-    public void clearDetachReceived()
-    {
-        _detachReceived = false;
-    }
-
     public boolean attachSent()
     {
         return _attachSent;
@@ -225,11 +220,6 @@ class TransportLink<T extends LinkImpl>
     public void sentAttach()
     {
         _attachSent = true;
-    }
-
-    public void clearSentAttach()
-    {
-        _attachSent = false;
     }
 
     public void setRemoteDeliveryCount(UnsignedInteger remoteDeliveryCount)
