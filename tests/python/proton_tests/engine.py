@@ -1888,10 +1888,14 @@ class ServerTest(Test):
         self.conn = event.reactor.connection()
         self.conn.hostname = "%s:%s" % (server.host, server.port)
         self.conn.open()
+        self.remote_condition = None
         self.old_count = None
         # verify the connection stays up even if we don't explicitly send stuff
         # wait up to 3x the idle timeout
         event.reactor.schedule(3 * idle_timeout, self)
+
+      def on_connection_bound(self, event):
+        self.transport = event.transport
 
       def on_connection_remote_open(self, event):
         self.old_count = event.transport.frames_output
@@ -1899,6 +1903,7 @@ class ServerTest(Test):
       def on_connection_remote_close(self, event):
         assert self.conn.remote_condition
         assert self.conn.remote_condition.name == "amqp:resource-limit-exceeded"
+        self.remote_condition = self.conn.remote_condition
 
       def on_timer_task(self, event):
         assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
@@ -1909,8 +1914,8 @@ class ServerTest(Test):
 
     p = Program()
     Reactor(p).run()
-    assert p.conn.remote_condition
-    assert p.conn.remote_condition.name == "amqp:resource-limit-exceeded"
+    assert p.remote_condition
+    assert p.remote_condition.name == "amqp:resource-limit-exceeded"
     server.stop()
 
 class NoValue:
