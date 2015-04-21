@@ -807,6 +807,13 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
   transport->ssl = ssl;
 
+  // Set up hostname from any bound connection
+  if (transport->connection) {
+    if (pn_string_size(transport->connection->hostname)) {
+      pn_ssl_set_peer_hostname((pn_ssl_t *) transport, pn_string_get(transport->connection->hostname));
+    }
+  }
+
   return (pn_ssl_t *) transport;
 }
 

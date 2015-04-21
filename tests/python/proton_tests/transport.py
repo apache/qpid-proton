@@ -165,10 +165,9 @@ class TransportTest(Test):
 
   def testEOSAfterSASL(self):
     srv = Transport(mode=Transport.SERVER)
-    srv.sasl().mechanisms("ANONYMOUS")
-    srv.sasl().done(SASL.OK)
+    srv.sasl().allowed_mechs('ANONYMOUS')
 
-    self.peer.sasl().mechanisms("ANONYMOUS")
+    self.peer.sasl().allowed_mechs('ANONYMOUS')
 
     # this should send over the sasl header plus a sasl-init set up
     # for anonymous

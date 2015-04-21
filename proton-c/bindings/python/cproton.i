@@ -158,20 +158,6 @@ ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %}
 %ignore pn_data_encode;
 
-%rename(pn_sasl_recv) wrap_pn_sasl_recv;
-%inline %{
-  int wrap_pn_sasl_recv(pn_sasl_t *sasl, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_sasl_recv(sasl, OUTPUT, *OUTPUT_SIZE);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_sasl_recv;
-
 int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_data_format;
 

@@ -81,11 +81,7 @@ typedef unsigned long int uintptr_t;
 
 %aggregate_check(int, check_sasl_outcome,
                  PN_SASL_NONE, PN_SASL_OK, PN_SASL_AUTH,
-                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP, PN_SASL_SKIPPED);
-
-%aggregate_check(int, check_sasl_state,
-                 PN_SASL_IDLE, PN_SASL_STEP,
-                 PN_SASL_PASS, PN_SASL_FAIL);
+                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP);
 
 
 %contract pn_code(int code)
@@ -881,71 +877,12 @@ typedef unsigned long int uintptr_t;
   pn_sasl != NULL;
 }
 
-%contract pn_sasl_state(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
- ensure:
-  check_sasl_state(pn_sasl_state);
-}
-
-%contract pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms)
+%contract pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechanisms)
 {
  require:
   sasl != NULL;
 }
 
-%contract pn_sasl_remote_mechanisms(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_client(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_server(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_pending(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  size > 0;
-}
-
-%contract pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  size > 0;
-}
 
 %contract pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome)
 {

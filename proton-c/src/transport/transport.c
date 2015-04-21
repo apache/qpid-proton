@@ -213,9 +213,13 @@ ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, 
   return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
 }
 
-static void pni_set_error_layer(pn_transport_t *transport)
+void pn_set_error_layer(pn_transport_t *transport)
 {
-    transport->io_layers[0] = &pni_error_layer;
+  // Set every layer to the error layer in case we manually
+  // pass through (happens from SASL to AMQP)
+  for (int layer=0; layer<PN_IO_LAYER_CT; ++layer) {
+    transport->io_layers[layer] = &pni_error_layer;
+  }
 }
 
 // Autodetect the layer by reading the protocol header
@@ -225,7 +229,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   bool eos = pn_transport_capacity(transport)==PN_EOS;
   if (eos && available==0) {
     pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
-    pni_set_error_layer(transport);
+    pn_set_error_layer(transport);
     return PN_EOS;
   }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
@@ -256,16 +260,21 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
         pn_transport_logf(transport, "  <- %s", "SASL");
     return 8;
   case PNI_PROTOCOL_AMQP1:
-    if (transport->sasl && pn_sasl_state((pn_sasl_t *)transport)==PN_SASL_IDLE) {
-      if (pn_sasl_skipping_allowed(transport)) {
-        pn_sasl_done((pn_sasl_t *)transport, PN_SASL_SKIPPED);
-      } else {
-        pn_do_error(transport, "amqp:connection:policy-error",
-                    "Client skipped SASL exchange - forbidden");
-        pni_set_error_layer(transport);
-        return 8;
-      }
+    if (!transport->authenticated && transport->auth_required) {
+      pn_do_error(transport, "amqp:connection:policy-error",
+                  "Client skipped authentication - forbidden");
+      pn_set_error_layer(transport);
+      return 8;
     }
+// TODO: Encrypted connection detection not implemented yet
+#if 0
+    if (!transport->encrypted && transport->encryption_required) {
+      pn_do_error(transport, "amqp:connection:policy-error",
+                  "Client connection unencryted - forbidden");
+      pn_set_error_layer(transport);
+      return 8;
+    }
+#endif
     transport->io_layers[layer] = &amqp_write_header_layer;
     if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "AMQP");
@@ -287,7 +296,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   pn_do_error(transport, "amqp:connection:framing-error",
               "%s: '%s'%s", error, quoted,
               !eos ? "" : " (connection aborted)");
-  pni_set_error_layer(transport);
+  pn_set_error_layer(transport);
   return 0;
 }
 
@@ -395,8 +404,15 @@ static void pn_transport_initialize(void *object)
 
   transport->server = false;
   transport->halt = false;
+  transport->auth_required = false;
+  transport->authenticated = false;
+  transport->encryption_required = false;
+  transport->encrypted = false;
 
   transport->referenced = true;
+
+  transport->sasl_input_bypass = false;
+  transport->sasl_output_bypass = false;
 
   transport->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
@@ -492,7 +508,40 @@ pn_transport_t *pn_transport(void)
 
 void pn_transport_set_server(pn_transport_t *transport)
 {
+  assert(transport);
   transport->server = true;
+}
+
+const char *pn_transport_get_user(pn_transport_t *transport)
+{
+  assert(transport);
+  if (!transport->sasl) return "anonymous";
+
+  return pn_sasl_get_user((pn_sasl_t *)transport);
+}
+
+void pn_transport_require_auth(pn_transport_t *transport, bool required)
+{
+  assert(transport);
+  transport->auth_required = required;
+}
+
+bool pn_transport_is_authenticated(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->authenticated;
+}
+
+void pn_transport_require_encryption(pn_transport_t *transport, bool required)
+{
+  assert(transport);
+  transport->encryption_required = required;
+}
+
+bool pn_transport_is_encrypted(pn_transport_t *transport)
+{
+    assert(transport);
+    return transport->encrypted;
 }
 
 void pn_transport_free(pn_transport_t *transport)
@@ -564,6 +613,18 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   pn_incref(connection);
 
   pn_connection_bound(connection);
+
+  // set the hostname/user/password
+  if (pn_string_size(connection->auth_user)) {
+    pn_sasl(transport);
+    pni_sasl_set_user_password(transport, pn_string_get(connection->auth_user), pn_string_get(connection->auth_password));
+  }
+  if (transport->sasl) {
+    pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
+  }
+  if (transport->ssl) {
+    pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+  }
 
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
@@ -2374,6 +2435,7 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   return pn_dispatcher_output(transport, bytes, available);
 }
 
+// Mark transport output as closed and send event
 static void pni_close_head(pn_transport_t *transport)
 {
   if (!transport->head_closed) {
@@ -2422,9 +2484,7 @@ static ssize_t transport_produce(pn_transport_t *transport)
       if (transport->output_pending)
         break;   // return what is available
       if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
-        if (n < 0) {
-          pn_transport_log(transport, "  -> EOS");
-        }
+        pn_transport_log(transport, "  -> EOS");
       }
       pni_close_head(transport);
       return n;
@@ -2712,7 +2772,9 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
                transport->output_pending );
     }
 
-    if (!transport->output_pending && pn_transport_pending(transport) < 0) {
+    if (transport->output_pending==0 && pn_transport_pending(transport) < 0) {
+      // TODO: It looks to me that this is a NOP as iff we ever get here
+      // TODO: pni_close_head() will always have been already called before leaving pn_transport_pending()
       pni_close_head(transport);
     }
   }

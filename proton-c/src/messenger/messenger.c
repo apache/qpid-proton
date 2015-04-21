@@ -330,10 +330,6 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
-  pn_sasl_t *sasl = pn_sasl(t);
-
-  pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_done(sasl, PN_SASL_OK);
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
   pn_transport_bind(t, conn);
@@ -916,17 +912,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
     }
     pn_ssl_t *ssl = pn_ssl(transport);
     pn_ssl_init(ssl, d, NULL);
-    pn_ssl_set_peer_hostname(ssl, pn_connection_get_hostname(connection));
     pn_ssl_domain_free( d );
-  }
-
-  if (ctx->user) {
-    pn_sasl_t *sasl = pn_sasl(transport);
-    if (ctx->pass) {
-      pn_sasl_plain(sasl, ctx->user, ctx->pass);
-    } else {
-      pn_sasl_mechanisms(sasl, "ANONYMOUS");
-    }
   }
 
   return 0;
@@ -1073,6 +1059,8 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
 
   pn_connection_set_container(connection, messenger->name);
   pn_connection_set_hostname(connection, host);
+  pn_connection_set_user(connection, user);
+  pn_connection_set_password(connection, pass);
 
   pn_list_add(messenger->connections, connection);
 
