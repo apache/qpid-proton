@@ -72,7 +72,6 @@ struct pn_messenger_t {
   char *private_key;
   char *password;
   char *trusted_certificates;
-  char *client_sasl_mechanism;
   pn_io_t *io;
   pn_list_t *pending; // pending selectables
   pn_selectable_t *interruptor;
@@ -616,7 +615,6 @@ pn_messenger_t *pn_messenger(const char *name)
     m->original = pn_string(NULL);
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
-    m->client_sasl_mechanism = pn_strdup("ANONYMOUS");
     m->connection_error = 0;
     m->flags = 0;
     m->snd_settle_mode = PN_SND_SETTLED;
@@ -771,7 +769,6 @@ void pn_messenger_free(pn_messenger_t *messenger)
     free(messenger->private_key);
     free(messenger->password);
     free(messenger->trusted_certificates);
-    free(messenger->client_sasl_mechanism);
     pni_reclaim(messenger);
     pn_free(messenger->pending);
     pn_selectable_free(messenger->interruptor);
@@ -924,13 +921,12 @@ static int pn_transport_config(pn_messenger_t *messenger,
   }
 
   if (ctx->user) {
-  pn_sasl_t *sasl = pn_sasl(transport);
+    pn_sasl_t *sasl = pn_sasl(transport);
     if (ctx->pass) {
-    pn_sasl_plain(sasl, ctx->user, ctx->pass);
-  } else {
-    pn_sasl_mechanisms(sasl, messenger->client_sasl_mechanism);
-    pn_sasl_client(sasl);
-  }
+      pn_sasl_plain(sasl, ctx->user, ctx->pass);
+    } else {
+      pn_sasl_mechanisms(sasl, "ANONYMOUS");
+    }
   }
 
   return 0;
@@ -2375,20 +2371,4 @@ pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
     return PN_ARG_ERR;
   messenger->ssl_peer_authentication_mode = mode;
   return 0;
-}
-
-PN_EXTERN int
-pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
-                                       const char* mechanism)
-{
-    if ((!messenger) || (mechanism == NULL))
-		return PN_ARG_ERR;
-    else 
-    {
-        if (messenger->client_sasl_mechanism != NULL)
-        {
-            free(messenger->client_sasl_mechanism);
-        }
-        return (messenger->client_sasl_mechanism = pn_strdup(mechanism)) != NULL ? 0 : PN_ERR;
-    }
 }
