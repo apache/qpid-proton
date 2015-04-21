@@ -1028,17 +1028,6 @@ PN_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
 
-/**
-* Sets the SASL mechanism to be used if no username/password is specified.
-*
-* @param[in] messenger a messenger object
-* @param[in] SASL mechanism (example: EXTERNAL)
-* @return 0 if successful or -1 if an error occurs
-*/
-PN_EXTERN int
-pn_messenger_set_client_sasl_mechanism(pn_messenger_t *messenger,
-                                       const char* mechanism);
-
 #ifdef __cplusplus
 }
 #endif
