@@ -44,8 +44,16 @@ endif()
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
-
 find_package (PythonInterp REQUIRED)
+find_package(SWIG)
+# FindSwig.cmake "forgets" make its outputs advanced like a good citizen
+mark_as_advanced(SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
+
+# See if Cyrus SASL is available
+find_library(CYRUS_SASL_LIBRARY sasl2)
+find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
+find_package_handle_standard_args(CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
+mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
 if(PN_WINAPI)
   set(ssl_impl schannel)
@@ -58,7 +66,14 @@ if (OPENSSL_FOUND)
   set(ssl_impl openssl)
 endif (OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${ssl_providers}")
-mark_as_advanced (SSL_IMPL)
+
+set(sasl_providers cyrus none)
+if (CYRUSSASL_FOUND)
+  set (sasl_impl cyrus)
+else ()
+  set (sasl_impl none)
+endif ()
+set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${sasl_providers}")
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
@@ -97,19 +112,26 @@ else(PN_WINAPI)
   set (pn_selector_impl src/posix/selector.c)
 endif(PN_WINAPI)
 
+# Link in SASL if present
+if (SASL_IMPL STREQUAL cyrus)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
+  include_directories (${CYRUS_SASL_INCLUDE_DIR})
+  set(SASL_LIB ${CYRUS_SASL_LIBRARY})
+elseif (SASL_IMPL STREQUAL none)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
+endif ()
+
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_ssl_impl src/ssl/openssl.c)
-  include_directories ("${OPENSSL_INCLUDE_DIR}")
+  include_directories (${OPENSSL_INCLUDE_DIR})
   set (SSL_LIB ${OPENSSL_LIBRARIES})
-else (SSL_IMPL STREQUAL openssl)
-  if (SSL_IMPL STREQUAL schannel)
-    set (pn_ssl_impl src/windows/schannel.c)
-    set (SSL_LIB Crypt32.lib Secur32.lib)
-  else (SSL_IMPL STREQUAL schannel)
-    set (pn_ssl_impl src/ssl/ssl_stub.c)
-  endif (SSL_IMPL STREQUAL schannel)
-endif (SSL_IMPL STREQUAL openssl)
+elseif (SSL_IMPL STREQUAL schannel)
+  set (pn_ssl_impl src/windows/schannel.c)
+  set (SSL_LIB Crypt32.lib Secur32.lib)
+else ()
+  set (pn_ssl_impl src/ssl/ssl_stub.c)
+endif ()
 
 # First check whether we get clock_gettime without any special library linked
 CHECK_SYMBOL_EXISTS(clock_gettime "time.h" CLOCK_GETTIME_IN_LIBC)
@@ -129,25 +151,6 @@ else (CLOCK_GETTIME_IN_LIBC)
     endif (WINDOWS_FILETIME)
   endif (CLOCK_GETTIME_IN_RT)
 endif (CLOCK_GETTIME_IN_LIBC)
-
-# See if Cyrus SASL is desired and available
-CHECK_LIBRARY_EXISTS (sasl2 sasl_checkpass "" FOUND_SASL_LIB)
-CHECK_INCLUDE_FILES (sasl/sasl.h FOUND_SASL_H)
-find_package_handle_standard_args(SASL DEFAULT_MSG FOUND_SASL_LIB FOUND_SASL_H)
-set(sasl_providers cyrus none)
-if (SASL_FOUND)
-  set (sasl_impl cyrus)
-else (SASL_FOUND)
-  set (sasl_impl none)
-endif (SASL_FOUND)
-set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${sasl_providers}")
-
-if (SASL_IMPL STREQUAL cyrus)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
-  set(SASL_LIB "sasl2")
-elseif (SASL_IMPL STREQUAL none)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
-endif ()
 
 CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" UUID_GENERATE_IN_LIBC)
 if (UUID_GENERATE_IN_LIBC)
@@ -276,7 +279,6 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
-find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
