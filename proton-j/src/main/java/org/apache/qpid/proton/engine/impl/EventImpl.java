@@ -295,17 +295,13 @@ class EventImpl implements Event
         } else if (context instanceof Transport) {
             return ((TransportImpl)context).getReactor();
         } else if (context instanceof Delivery) {
-            Transport transport = ((Delivery)context).getLink().getSession().getConnection().getTransport();
-            return ((TransportImpl)transport).getReactor();
+            return ((Delivery)context).getLink().getSession().getConnection().getReactor();
         } else if (context instanceof Link) {
-            Transport transport = ((Link)context).getSession().getConnection().getTransport();
-            return ((TransportImpl)transport).getReactor();
+            return ((Link)context).getSession().getConnection().getReactor();
         } else if (context instanceof Session) {
-            Transport transport = ((Session)context).getConnection().getTransport();
-            return ((TransportImpl)transport).getReactor();
+            return ((Session)context).getConnection().getReactor();
         } else if (context instanceof Connection) {
-            Transport transport = ((Connection)context).getTransport();
-            return ((TransportImpl)transport).getReactor();
+            return ((Connection)context).getReactor();
         } else if (context instanceof Selectable) {
             return ((Selectable)context).getReactor();
         }

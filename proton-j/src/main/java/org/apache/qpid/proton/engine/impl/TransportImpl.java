@@ -121,6 +121,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
+    private boolean postedTransportError = false;
 
     private int _localIdleTimeout = 0;
     private int _remoteIdleTimeout = 0;
@@ -591,7 +592,9 @@ public class TransportImpl extends EndpointImpl
                 session.incrementOutgoingBytes(-delta);
             }
 
-            getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            if (snd.getLocalState() != EndpointState.CLOSED) {
+                getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            }
         }
 
         if(wasDone && delivery.getLocalState() != null)
@@ -1319,8 +1322,9 @@ public class TransportImpl extends EndpointImpl
             }
             _head_closed = true;
         }
-        if (_condition != null) {
+        if (_condition != null && !postedTransportError) {
             put(Event.Type.TRANSPORT_ERROR, this);
+            postedTransportError = true;
         }
         if (!postedTailClosed) {
             put(Event.Type.TRANSPORT_TAIL_CLOSED, this);

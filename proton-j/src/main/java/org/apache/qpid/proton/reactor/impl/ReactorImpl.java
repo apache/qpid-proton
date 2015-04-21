@@ -30,12 +30,15 @@ import java.util.Set;
 import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Collector;
+import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
+import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.engine.impl.HandlerEndpointImpl;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.apache.qpid.proton.reactor.Selectable.RecordKeyType;
@@ -68,7 +71,7 @@ public class ReactorImpl implements Reactor {
     private long timeout;
     private Handler global;
     private Handler handler;
-    private Set<Selectable> children;
+    private Set<ReactorChild> children;
     private int selectables;
     private boolean yield;
     private Selectable selectable;
@@ -109,7 +112,7 @@ public class ReactorImpl implements Reactor {
         collector = (CollectorImpl)Proton.collector();
         global = new IOHandler();
         handler = new BaseHandler();
-        children = new HashSet<Selectable>();
+        children = new HashSet<ReactorChild>();
         selectables = 0;
         timer = new Timer(collector);
         wakeup = Pipe.open();
@@ -182,7 +185,7 @@ public class ReactorImpl implements Reactor {
  */
 
     @Override
-    public Set<Selectable> children() {
+    public Set<ReactorChild> children() {
         return children;
     }
 
@@ -441,5 +444,17 @@ public class ReactorImpl implements Reactor {
 
     protected void setSelector(Selector selector) {
         this.selector = selector;
+    }
+
+    // pn_reactor_connection from connection.c
+    @Override
+    public Connection connection(Handler handler) {
+        Connection connection = Proton.connection();
+        connection.add(handler);
+        connection.collect(collector);
+        children.add(connection);
+        ((ConnectionImpl)connection).setReactor(this);
+        // TODO: C code adds a reference back to the reactor from connection
+        return connection;
     }
 }

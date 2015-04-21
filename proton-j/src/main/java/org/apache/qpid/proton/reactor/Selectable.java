@@ -27,7 +27,7 @@ import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Transport;
 
-public interface Selectable {
+public interface Selectable extends ReactorChild {
 
     public interface Callback {
         void run(Selectable selectable);

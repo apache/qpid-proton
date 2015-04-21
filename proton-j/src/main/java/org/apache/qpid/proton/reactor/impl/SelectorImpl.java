@@ -44,27 +44,34 @@ public class SelectorImpl implements Selector {
 
     @Override
     public void add(Selectable selectable) throws IOException {
-        selectable.getChannel().configureBlocking(false);
-        SelectionKey key = selectable.getChannel().register(selector, 0);
-        key.attach(selectable);
+        // TODO: valid for selectable to have a 'null' channel - in this case it can only expire...
+        if (selectable.getChannel() != null) {
+            selectable.getChannel().configureBlocking(false);
+            SelectionKey key = selectable.getChannel().register(selector, 0);
+            key.attach(selectable);
+        }
         selectables.add(selectable);
         update(selectable);
     }
 
     @Override
     public void update(Selectable selectable) {
-        int interestedOps = 0;
-        if (selectable.isReading()) interestedOps |= SelectionKey.OP_READ;
-        if (selectable.isWriting()) interestedOps |= SelectionKey.OP_WRITE;
-        SelectionKey key = selectable.getChannel().keyFor(selector);
-        key.interestOps(interestedOps);
+        if (selectable.getChannel() != null) {
+            int interestedOps = 0;
+            if (selectable.isReading()) interestedOps |= SelectionKey.OP_READ;
+            if (selectable.isWriting()) interestedOps |= SelectionKey.OP_WRITE;
+            SelectionKey key = selectable.getChannel().keyFor(selector);
+            key.interestOps(interestedOps);
+        }
     }
 
     @Override
     public void remove(Selectable selectable) {
-        SelectionKey key = selectable.getChannel().keyFor(selector);
-        key.cancel();
-        key.attach(null);
+        if (selectable.getChannel() != null) {
+            SelectionKey key = selectable.getChannel().keyFor(selector);
+            key.cancel();
+            key.attach(null);
+        }
         selectables.remove(selectable);
     }
 
@@ -106,6 +113,7 @@ public class SelectorImpl implements Selector {
             if (key.isReadable()) readable.add(selectable);
             if (key.isWritable()) writeable.add(selectable);
         }
+        selector.selectedKeys().clear();
         for (Selectable selectable : selectables) {    // TODO: this is different to the C code which evaluates expiry at the point the selectable is iterated over.
             long deadline = selectable.getDeadline();
             if (deadline > 0 && awoken >= deadline) {

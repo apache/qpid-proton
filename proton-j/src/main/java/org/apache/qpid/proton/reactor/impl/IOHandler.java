@@ -22,6 +22,7 @@
 package org.apache.qpid.proton.reactor.impl;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
@@ -96,16 +97,20 @@ public class IOHandler extends BaseHandler {
             hostname = hostname.substring(0, colonIndex);
         }
 
-        Transport transport = event.getTransport();
+        Transport transport = event.getConnection().getTransport();
         Socket socket = null;   // TODO: null is our equivalent of PN_INVALID_SOCKET
         try {
-            socket = new Socket(hostname, port);
+            SocketChannel socketChannel = SocketChannel.open();
+            socketChannel.connect(new InetSocketAddress(hostname, port));
+            socket = socketChannel.socket();
         } catch(IOException ioException) {
-            ErrorCondition condition = transport.getCondition();
+            ErrorCondition condition = new ErrorCondition();
             condition.setCondition(Symbol.getSymbol("proton:io"));
             condition.setDescription(ioException.getMessage());
+            transport.setCondition(condition);
             transport.close_tail();
             transport.close_head();
+            transport.pop(transport.pending());   // TODO: force generation of TRANSPORT_HEAD_CLOSE (not in C code)
         }
         selectableTransport(reactor, socket, transport);
     }
@@ -170,9 +175,10 @@ public class IOHandler extends BaseHandler {
                         transport.process();
                     }
                 } catch (IOException e) {
-                    ErrorCondition condition = transport.getCondition();
+                    ErrorCondition condition = new ErrorCondition();
                     condition.setCondition(Symbol.getSymbol("proton:io"));
                     condition.setDescription(e.getMessage());
+                    transport.setCondition(condition);
                     transport.close_tail();
                 }
             }
@@ -201,9 +207,10 @@ public class IOHandler extends BaseHandler {
                         transport.pop(n);
                     }
                 } catch(IOException ioException) {
-                    ErrorCondition condition = transport.getCondition();
+                    ErrorCondition condition = new ErrorCondition();
                     condition.setCondition(Symbol.getSymbol("proton:io"));
                     condition.setDescription(ioException.getMessage());
+                    transport.setCondition(condition);
                     transport.close_head();
                 }
             }
@@ -259,7 +266,7 @@ public class IOHandler extends BaseHandler {
     private Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
         // TODO: this code needs to be able to deal with a null socket (this is our equivalent of PN_INVALID_SOCKET)
         Selectable selectable = reactor.selectable();
-        selectable.setChannel(socket.getChannel());
+        selectable.setChannel(socket != null ? socket.getChannel() : null);
         selectable.onReadable(new ConnectionReadable());
         selectable.onWritable(new ConnectionWritable());
         selectable.onError(new ConnectionError());

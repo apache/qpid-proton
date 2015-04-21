@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.qpid.proton.engine.Collector;
+import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.reactor.impl.ReactorImpl;
 
@@ -64,7 +65,7 @@ public interface Reactor {
 
  */
 
-    public Set<Selectable> children();
+    public Set<ReactorChild> children();
 
     public Collector collector();
 
@@ -93,7 +94,7 @@ public interface Reactor {
     // pn_reactor_schedule from reactor.c
     public Task schedule(int delay, Handler handler);
     // TODO: acceptor
-    // TODO: connection
     // TODO: acceptorClose
 
+    Connection connection(Handler handler);
 }
