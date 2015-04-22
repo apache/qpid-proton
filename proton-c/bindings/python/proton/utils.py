@@ -17,6 +17,7 @@
 # under the License.
 #
 import collections, socket, time, threading
+import six
 from six.moves import queue as Queue
 
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
@@ -24,11 +25,6 @@ from proton import ProtonException, Timeout, Url
 from proton.reactor import Container
 from proton.handlers import MessagingHandler, IncomingMessageHandler
 
-def utf8(s):
-    if isinstance(s, unicode):
-        return s.encode('utf8')
-    else:
-        return s
 
 class BlockingLink(object):
     def __init__(self, connection, link):
@@ -196,13 +192,13 @@ class BlockingConnection(Handler):
         self.container = container or Container()
         self.container.timeout = self.timeout
         self.container.start()
-        self.url = Url(utf8(url)).defaults()
+        self.url = Url(url).defaults()
         self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
     def create_sender(self, address, handler=None, name=None, options=None):
-        return BlockingSender(self, self.container.create_sender(self.conn, utf8(address), name=utf8(name), handler=handler, options=options))
+        return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler, options=options))
 
     def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None, options=None):
         prefetch = credit
@@ -213,7 +209,7 @@ class BlockingConnection(Handler):
         else:
             fetcher = Fetcher(self, credit)
         return BlockingReceiver(
-            self, self.container.create_receiver(self.conn, utf8(address), name=utf8(name), dynamic=dynamic, handler=handler or fetcher, options=options), fetcher, credit=prefetch)
+            self, self.container.create_receiver(self.conn, address, name=name, dynamic=dynamic, handler=handler or fetcher, options=options), fetcher, credit=prefetch)
 
     def close(self):
         self.conn.close()
@@ -314,7 +310,7 @@ class SyncRequestResponse(IncomingMessageHandler):
         if not self.address and not request.address:
             raise ValueError("Request message has no address: %s" % request)
         request.reply_to = self.reply_to
-        request.correlation_id = correlation_id = next(self.correlation_id)
+        request.correlation_id = correlation_id = self.correlation_id.next()
         self.sender.send(request)
         def wakeup():
             return self.response and (self.response.correlation_id == correlation_id)

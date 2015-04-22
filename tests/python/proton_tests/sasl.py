@@ -19,6 +19,7 @@ from __future__ import absolute_import
 #
 
 import sys, os
+import six
 from . import common
 from proton import *
 from .common import pump, Skipped
@@ -121,7 +122,7 @@ class SaslTest(Test):
     c1.open()
 
     # get all t1's output in one buffer then pass it all to t2
-    out1_sasl_and_amqp = ""
+    out1_sasl_and_amqp = six.b("")
     t1_still_producing = True
     while t1_still_producing:
       out1 = self.t1.peek(1024)
@@ -171,17 +172,17 @@ class SaslTest(Test):
 
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("AMQP\x03\x01\x00\x00")
+    self.t1.push(six.b("AMQP\x03\x01\x00\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("\x00\x00\x00")
+    self.t1.push(six.b("\x00\x00\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
 
-    self.t1.push("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5")
+    self.t1.push(six.b("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00")
+    self.t1.push(six.b("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
     while out:

@@ -482,9 +482,9 @@ class Connector(Handler):
         self.ssl_domain = None
 
     def _connect(self, connection):
-        url = next(self.address)
+        url = self.address.next()
         # IoHandler uses the hostname to determine where to try to connect to
-        connection.hostname = "%s:%i" % (url.host, url.port)
+        connection.hostname = "%s:%s" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
 
         transport = Transport()
@@ -517,7 +517,7 @@ class Connector(Handler):
         if self.connection and self.connection.state & Endpoint.LOCAL_ACTIVE:
             if self.reconnect:
                 event.transport.unbind()
-                delay = next(self.reconnect)
+                delay = self.reconnect.next()
                 if delay == 0:
                     logging.info("Disconnected, reconnecting...")
                     self._connect(self.connection)
@@ -667,7 +667,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, basestring):
+        if isinstance(context, six.string_types):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -708,7 +708,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, basestring):
+        if isinstance(context, six.string_types):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

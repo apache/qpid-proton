@@ -79,16 +79,16 @@ except ImportError:
   rand = random.Random()
   rand.seed((os.getpid(), time.time(), socket.gethostname()))
   def random_uuid():
-    bytes = [rand.randint(0, 255) for i in xrange(16)]
+    data = [rand.randint(0, 255) for i in xrange(16)]
 
     # From RFC4122, the version bits are set to 0100
-    bytes[7] &= 0x0F
-    bytes[7] |= 0x40
+    data[7] &= 0x0F
+    data[7] |= 0x40
 
     # From RFC4122, the top two bits of byte 8 get set to 01
-    bytes[8] &= 0x3F
-    bytes[8] |= 0x80
-    return "".join(map(chr, bytes))
+    data[8] &= 0x3F
+    data[8] |= 0x80
+    return "".join(map(chr, data))
 
   def uuid4():
     return uuid.UUID(bytes=random_uuid())
@@ -805,7 +805,7 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = body
-    for k,v in kwargs.iteritems():
+    for k,v in six.iteritems(kwargs):
       getattr(self, k)          # Raise exception if it's not a valid attribute.
       setattr(self, k, v)
 
@@ -846,19 +846,19 @@ class Message(object):
     props = Data(pn_message_properties(self._msg))
     body = Data(pn_message_body(self._msg))
 
-    if next(inst):
+    if inst.next():
       self.instructions = inst.get_object()
     else:
       self.instructions = None
-    if next(ann):
+    if ann.next():
       self.annotations = ann.get_object()
     else:
       self.annotations = None
-    if next(props):
+    if props.next():
       self.properties = props.get_object()
     else:
       self.properties = None
-    if next(body):
+    if body.next():
       self.body = body.get_object()
     else:
       self.body = None
@@ -1106,7 +1106,7 @@ The group-id for any replies.
         return data
 
   def decode(self, data):
-    self._check(pn_message_decode(self._msg, data, len(data)))
+    self._check(pn_message_decode(self._msg, data))
     self._post_decode()
 
   def send(self, sender, tag=None):
@@ -1803,7 +1803,7 @@ class Data:
     @type s: string
     @param s: the symbol name
     """
-    self._check(pn_data_put_symbol(self._data, s))
+    self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
 
   def get_list(self):
     """
@@ -1941,7 +1941,7 @@ class Data:
     If the current node is a char, returns its value, returns 0
     otherwise.
     """
-    return char(unichr(pn_data_get_char(self._data)))
+    return char(six.unichr(pn_data_get_char(self._data)))
 
   def get_ulong(self):
     """
@@ -2031,7 +2031,7 @@ class Data:
     If the current node is a symbol, returns its value, returns ""
     otherwise.
     """
-    return symbol(pn_data_get_symbol(self._data))
+    return symbol(pn_data_get_symbol(self._data).decode('ascii'))
 
   def copy(self, src):
     self._check(pn_data_copy(self._data, src._data))
@@ -2064,9 +2064,9 @@ class Data:
     if self.enter():
       try:
         result = {}
-        while next(self):
+        while self.next():
           k = self.get_object()
-          if next(self):
+          if self.next():
             v = self.get_object()
           else:
             v = None
@@ -2088,7 +2088,7 @@ class Data:
     if self.enter():
       try:
         result = []
-        while next(self):
+        while self.next():
           result.append(self.get_object())
       finally:
         self.exit()
@@ -2097,9 +2097,9 @@ class Data:
   def get_py_described(self):
     if self.enter():
       try:
-        next(self)
+        self.next()
         descriptor = self.get_object()
-        next(self)
+        self.next()
         value = self.get_object()
       finally:
         self.exit()
@@ -2126,12 +2126,12 @@ class Data:
     if self.enter():
       try:
         if described:
-          next(self)
+          self.next()
           descriptor = self.get_object()
         else:
           descriptor = UNDESCRIBED
         elements = []
-        while next(self):
+        while self.next():
           elements.append(self.get_object())
       finally:
         self.exit()
@@ -2309,7 +2309,7 @@ def dat2obj(dimpl):
   if dimpl:
     d = Data(dimpl)
     d.rewind()
-    next(d)
+    d.next()
     obj = d.get_object()
     d.rewind()
     return obj
@@ -2334,21 +2334,34 @@ def millis2timeout(millis):
   return millis2secs(millis)
 
 def unicode2utf8(string):
+    """Some Proton APIs expect a null terminated string. Convert python text
+    types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
+    This method will throw if the string cannot be converted.
+    """
     if string is None:
         return None
-    if isinstance(string, six.text_type):
-        return string.encode('utf8')
-    elif isinstance(string, str):
-        return string
-    else:
-        raise TypeError("Unrecognized string type: %r" % string)
+    if six.PY2:
+        if isinstance(string, unicode):
+            return string.encode('utf-8')
+        elif isinstance(string, str):
+            return string
+    elif six.PY3:
+        # decoding a string results in bytes
+        if isinstance(string, str):
+            string = string.encode('utf-8')
+            # fall through
+        if isinstance(string, bytes):
+            return string.decode('utf-8')
+    raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
 def utf82unicode(string):
+    """Covert C strings returned from proton-c into python unicode"""
     if string is None:
         return None
     if isinstance(string, six.text_type):
+        # already unicode
         return string
-    elif isinstance(string, str):
+    elif isinstance(string, six.binary_type):
         return string.decode('utf8')
     else:
         raise TypeError("Unrecognized string type")
@@ -2872,11 +2885,16 @@ class Sender(Link):
   def offered(self, n):
     pn_link_offered(self._impl, n)
 
-  def stream(self, bytes):
+  def stream(self, data):
     """
-    Send specified bytes as part of the current delivery
+    Send specified data as part of the current delivery
+
+    @type data: binary
+    @param data: data to send
     """
-    return self._check(pn_link_send(self._impl, bytes))
+    #if six.PY3 and isinstance(data, six.text_type):
+    #    data = data.encode('utf-8')
+    return self._check(pn_link_send(self._impl, data))
 
   def send(self, obj, tag=None):
     """
@@ -2913,12 +2931,12 @@ class Receiver(Link):
     pn_link_flow(self._impl, n)
 
   def recv(self, limit):
-    n, bytes = pn_link_recv(self._impl, limit)
+    n, binary = pn_link_recv(self._impl, limit)
     if n == PN_EOS:
       return None
     else:
       self._check(n)
-      return bytes
+      return binary
 
   def drain(self, n):
     pn_link_drain(self._impl, n)
@@ -3232,9 +3250,9 @@ class Transport(Wrapper):
     else:
       return self._check(c)
 
-  def push(self, bytes):
-    n = self._check(pn_transport_push(self._impl, bytes))
-    if n != len(bytes):
+  def push(self, binary):
+    n = self._check(pn_transport_push(self._impl, binary))
+    if n != len(binary):
       raise OverflowError("unable to process all bytes")
 
   def close_tail(self):
@@ -3369,7 +3387,6 @@ class SASL(Wrapper):
 
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
-
 
 class SSLException(TransportException):
   pass
@@ -3853,7 +3870,7 @@ class Url(object):
       If specified, replaces corresponding part in url string.
     """
     if url:
-      self._url = pn_url_parse(str(url))
+      self._url = pn_url_parse(unicode2utf8(str(url)))
       if not self._url: raise ValueError("Invalid URL '%s'" % url)
     else:
       self._url = pn_url()

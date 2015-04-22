@@ -38,6 +38,9 @@
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 %cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
+%include <pybuffer.i>
+%pybuffer_binary(const char *BIN_IN, size_t BIN_LEN)
+
 // Typemap for methods that return binary data:
 // force the return type as binary - this is necessary for Python3
 %typemap(in,noblock=1,fragment=SWIG_AsVal_frag(size_t)) (char *BIN_OUT, size_t *BIN_SIZE)
@@ -110,7 +113,10 @@
 int pn_message_encode(pn_message_t *msg, char *BIN_OUT, size_t *BIN_SIZE);
 %ignore pn_message_encode;
 
-ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
+int pn_message_decode(pn_message_t *msg, const char *BIN_IN, size_t BIN_LEN);
+%ignore pn_message_encode;
+
+ssize_t pn_link_send(pn_link_t *transport, const char *BIN_IN, size_t BIN_LEN);
 %ignore pn_link_send;
 
 %rename(pn_link_recv) wrap_pn_link_recv;
@@ -127,7 +133,7 @@ ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %}
 %ignore pn_link_recv;
 
-ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH);
+ssize_t pn_transport_push(pn_transport_t *transport, const char *BIN_IN, size_t BIN_LEN);
 %ignore pn_transport_push;
 
 %rename(pn_transport_peek) wrap_pn_transport_peek;
@@ -163,7 +169,7 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
 %}
 %ignore pn_delivery_tag;
 
-ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
+ssize_t pn_data_decode(pn_data_t *data, const char *BIN_IN, size_t BIN_LEN);
 %ignore pn_data_decode;
 
 %rename(pn_data_encode) wrap_pn_data_encode;

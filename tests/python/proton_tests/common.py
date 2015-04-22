@@ -88,9 +88,9 @@ def pump_uni(src, dst, buffer_size=1024):
   elif p == 0 or c == 0:
     return False
   else:
-    bytes = src.peek(min(c, buffer_size))
-    dst.push(bytes)
-    src.pop(len(bytes))
+    binary = src.peek(min(c, buffer_size))
+    dst.push(binary)
+    src.pop(len(binary))
 
   return True
 
@@ -244,7 +244,8 @@ class MessengerApp(object):
                     del cmd[0:1]
                     cmd.insert(0, foundfile)
                     cmd.insert(0, sys.executable)
-            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
+            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT,
+                                  bufsize=4096, universal_newlines=True)
         except OSError:
             e = sys.exc_info()[1]
             print("ERROR: '%s'" % e)

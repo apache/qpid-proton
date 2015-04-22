@@ -18,6 +18,7 @@
 #
 
 import os, time
+from six.moves import range as xrange
 from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port

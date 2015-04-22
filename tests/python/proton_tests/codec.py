@@ -18,13 +18,13 @@
 #
 
 import os, sys
+import six
 from . import common
 from proton import *
 try:
   from uuid import uuid4
 except ImportError:
   from proton import uuid4
-  
 
 class Test(common.Test):
 
@@ -37,58 +37,58 @@ class Test(common.Test):
 class DataTest(Test):
 
   def testTopLevelNext(self):
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_null()
     self.data.put_bool(False)
     self.data.put_int(0)
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.rewind()
-    assert next(self.data) == Data.NULL
-    assert next(self.data) == Data.BOOL
-    assert next(self.data) == Data.INT
-    assert next(self.data) is None
+    assert self.data.next() == Data.NULL
+    assert self.data.next() == Data.BOOL
+    assert self.data.next() == Data.INT
+    assert self.data.next() is None
 
   def testNestedNext(self):
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_null()
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_list()
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_bool(False)
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.rewind()
-    assert next(self.data) is Data.NULL
-    assert next(self.data) is Data.LIST
+    assert self.data.next() is Data.NULL
+    assert self.data.next() is Data.LIST
     self.data.enter()
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_ubyte(0)
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_uint(0)
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_int(0)
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.exit()
-    assert next(self.data) is Data.BOOL
-    assert next(self.data) is None
+    assert self.data.next() is Data.BOOL
+    assert self.data.next() is None
 
     self.data.rewind()
-    assert next(self.data) is Data.NULL
-    assert next(self.data) is Data.LIST
+    assert self.data.next() is Data.NULL
+    assert self.data.next() is Data.LIST
     assert self.data.enter()
-    assert next(self.data) is Data.UBYTE
-    assert next(self.data) is Data.UINT
-    assert next(self.data) is Data.INT
-    assert next(self.data) is None
+    assert self.data.next() is Data.UBYTE
+    assert self.data.next() is Data.UINT
+    assert self.data.next() is Data.INT
+    assert self.data.next() is None
     assert self.data.exit()
-    assert next(self.data) is Data.BOOL
-    assert next(self.data) is None
+    assert self.data.next() is Data.BOOL
+    assert self.data.next() is None
 
   def testEnterExit(self):
-    assert next(self.data) is None
+    assert self.data.next() is None
     assert not self.data.enter()
     self.data.put_list()
     assert self.data.enter()
-    assert next(self.data) is None
+    assert self.data.next() is None
     self.data.put_list()
     assert self.data.enter()
     self.data.put_list()
@@ -101,19 +101,19 @@ class DataTest(Test):
     assert self.data.get_list() == 1
     assert not self.data.exit()
     assert self.data.get_list() == 1
-    assert next(self.data) is None
+    assert self.data.next() is None
 
     self.data.rewind()
-    assert next(self.data) is Data.LIST
+    assert self.data.next() is Data.LIST
     assert self.data.get_list() == 1
     assert self.data.enter()
-    assert next(self.data) is Data.LIST
+    assert self.data.next() is Data.LIST
     assert self.data.get_list() == 1
     assert self.data.enter()
-    assert next(self.data) is Data.LIST
+    assert self.data.next() is Data.LIST
     assert self.data.get_list() == 0
     assert self.data.enter()
-    assert next(self.data) is None
+    assert self.data.next() is None
     assert self.data.exit()
     assert self.data.get_list() == 0
     assert self.data.exit()
@@ -129,7 +129,7 @@ class DataTest(Test):
       putter(v)
     except Exception:
       etype, value, trace = sys.exc_info()
-      raise etype, "%s(%r): %s" % (putter.__name__, v, value), trace
+      six.reraise(etype, etype("%s(%r): %s" % (putter.__name__, v, value)), trace)
     return putter
 
   # (bits, signed) for each integer type
@@ -148,12 +148,12 @@ class DataTest(Test):
     values = [0, 1, 2, 5, 42]
     if signed:
       min, max = -2**(bits-1), 2**(bits-1)-1
-      values.append(max / 2)
+      values.append(max // 2)
       values += [-i for i in values if i]
       values += [min, max]
     else:
       max = 2**(bits) - 1
-      values += [max / 2, max]
+      values += [max // 2, max]
     return sorted(values)
 
   def _testArray(self, dtype, descriptor, atype, *values):
@@ -169,7 +169,7 @@ class DataTest(Test):
       self.put(putter, v)
     self.data.exit()
     self.data.rewind()
-    assert next(self.data) == Data.ARRAY
+    assert self.data.next() == Data.ARRAY
     count, described, type = self.data.get_array()
     assert count == len(values), count
     if dtype is None:
@@ -179,17 +179,17 @@ class DataTest(Test):
     assert type == aTYPE, type
     assert self.data.enter()
     if described:
-      assert next(self.data) == dTYPE
+      assert self.data.next() == dTYPE
       getter = getattr(self.data, "get_%s" % dtype)
       gotten = getter()
       assert gotten == descriptor, gotten
     if values:
       getter = getattr(self.data, "get_%s" % atype)
       for v in values:
-        assert next(self.data) == aTYPE
+        assert self.data.next() == aTYPE
         gotten = getter()
         assert gotten == v, gotten
-    assert next(self.data) is None
+    assert self.data.next() is None
     assert self.data.exit()
 
   def testStringArray(self):
@@ -231,7 +231,7 @@ class DataTest(Test):
     self.data.rewind()
 
     for v in values:
-      vtype = next(self.data)
+      vtype = self.data.next()
       assert vtype == ntype, vtype
       gotten = getter()
       assert eq(gotten, v), (gotten, v)
@@ -246,7 +246,7 @@ class DataTest(Test):
     cgetter = getattr(copy, "get_%s" % dtype)
 
     for v in values:
-      vtype = next(copy)
+      vtype = copy.next()
       assert vtype == ntype, vtype
       gotten = cgetter()
       assert eq(gotten, v), (gotten, v)
@@ -275,7 +275,8 @@ class DataTest(Test):
     self._test("double", 0, 1, 2, 3, 0.1, 0.2, 0.3, -1, -2, -3, -0.1, -0.2, -0.3)
 
   def testBinary(self):
-    self._test("binary", "this", "is", "a", "test", "of" "b\x00inary")
+    self._test("binary", six.b("this"), six.b("is"), six.b("a"), six.b("test"),
+               six.b("of" "b\x00inary"))
 
   def testSymbol(self):
     self._test("symbol", "this is a symbol test", "bleh", "blah")
@@ -284,7 +285,7 @@ class DataTest(Test):
     self._test("timestamp", 0, 12345, 1000000)
 
   def testChar(self):
-    self._test("char", 'a', 'b', 'c', u'\u1234')
+    self._test("char", 'a', 'b', 'c', six.u('\u1234'))
 
   def testUUID(self):
     self._test("uuid", uuid4(), uuid4(), uuid4())
@@ -296,7 +297,7 @@ class DataTest(Test):
     self._test("decimal64", 0, 1, 2, 3, 4, 2**60)
 
   def testDecimal128(self):
-    self._test("decimal128", "fdsaasdf;lkjjkl;", "x"*16 )
+    self._test("decimal128", six.b("fdsaasdf;lkjjkl;"), six.b("x"*16))
 
   def testCopy(self):
     self.data.put_described()
@@ -337,33 +338,33 @@ class DataTest(Test):
     obj = {symbol("key"): timestamp(1234),
            ulong(123): "blah",
            char("c"): "bleh",
-           u"desc": Described(symbol("url"), u"http://example.org"),
-           u"array": Array(UNDESCRIBED, Data.INT, 1, 2, 3),
-           u"list": [1, 2, 3, None, 4],
-           u"boolean": True}
+           six.u("desc"): Described(symbol("url"), six.u("http://example.org")),
+           six.u("array"): Array(UNDESCRIBED, Data.INT, 1, 2, 3),
+           six.u("list"): [1, 2, 3, None, 4],
+           six.u("boolean"): True}
     self.data.put_object(obj)
     enc = self.data.encode()
     data = Data()
     data.decode(enc)
     data.rewind()
-    assert next(data)
+    assert data.next()
     copy = data.get_object()
     assert copy == obj, (copy, obj)
 
   def testLookup(self):
-    obj = {symbol("key"): u"value",
+    obj = {symbol("key"): six.u("value"),
            symbol("pi"): 3.14159,
            symbol("list"): [1, 2, 3, 4]}
     self.data.put_object(obj)
     self.data.rewind()
-    next(self.data)
+    self.data.next()
     self.data.enter()
     self.data.narrow()
     assert self.data.lookup("pi")
     assert self.data.get_object() == 3.14159
     self.data.rewind()
     assert self.data.lookup("key")
-    assert self.data.get_object() == u"value"
+    assert self.data.get_object() == six.u("value")
     self.data.rewind()
     assert self.data.lookup("list")
     assert self.data.get_object() == [1, 2, 3, 4]

@@ -19,6 +19,7 @@
 
 from proton import *
 import os
+import six
 from . import common
 
 
@@ -71,7 +72,7 @@ class InteropTest(common.Test):
         self.decode_data(body)
 
     def assert_next(self, type, value):
-        next_type = next(self.data)
+        next_type = self.data.next()
         assert next_type == type, "Type mismatch: %s != %s"%(
             Data.type_names[next_type], Data.type_names[type])
         next_value = self.data.get_object()
@@ -80,7 +81,7 @@ class InteropTest(common.Test):
     def test_message(self):
         self.decode_message_file("message")
         self.assert_next(Data.STRING, "hello")
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_primitives(self):
         self.decode_data_file("primitives")
@@ -95,30 +96,30 @@ class InteropTest(common.Test):
         self.assert_next(Data.LONG, -12345)
         self.assert_next(Data.FLOAT, 0.125)
         self.assert_next(Data.DOUBLE, 0.125)
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_strings(self):
         self.decode_data_file("strings")
-        self.assert_next(Data.BINARY, "abc\0defg")
+        self.assert_next(Data.BINARY, six.b("abc\0defg"))
         self.assert_next(Data.STRING, "abcdefg")
         self.assert_next(Data.SYMBOL, "abcdefg")
-        self.assert_next(Data.BINARY, "")
+        self.assert_next(Data.BINARY, six.b(""))
         self.assert_next(Data.STRING, "")
         self.assert_next(Data.SYMBOL, "")
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_described(self):
         self.decode_data_file("described")
         self.assert_next(Data.DESCRIBED, Described("foo-descriptor", "foo-value"))
         self.data.exit()
 
-        assert next(self.data) == Data.DESCRIBED
+        assert self.data.next() == Data.DESCRIBED
         self.data.enter()
         self.assert_next(Data.INT, 12)
         self.assert_next(Data.INT, 13)
         self.data.exit()
 
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_described_array(self):
         self.decode_data_file("described_array")
@@ -129,17 +130,17 @@ class InteropTest(common.Test):
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT, *range(0,100)))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.STRING, *["a", "b", "c"]))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT))
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_lists(self):
         self.decode_data_file("lists")
         self.assert_next(Data.LIST, [32, "foo", True])
         self.assert_next(Data.LIST, [])
-        assert next(self.data) is None
+        assert self.data.next() is None
 
     def test_maps(self):
         self.decode_data_file("maps")
         self.assert_next(Data.MAP, {"one":1, "two":2, "three":3 })
         self.assert_next(Data.MAP, {1:"one", 2:"two", 3:"three"})
         self.assert_next(Data.MAP, {})
-        assert next(self.data) is None
+        assert self.data.next() is None

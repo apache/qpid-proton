@@ -19,6 +19,7 @@ from __future__ import absolute_import
 #
 
 import os, sys, traceback
+from six.moves import range as xrange
 from . import common
 from proton import *
 from threading import Thread, Event

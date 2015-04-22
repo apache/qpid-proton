@@ -18,6 +18,7 @@
 #
 
 import os
+import six
 from . import common
 from proton import *
 try:
@@ -38,7 +39,7 @@ class AccessorsTest(Test):
 
   def _test(self, name, default, values):
     d = getattr(self.msg, name)
-    assert d == default, d
+    assert d == default, (d, default)
     for v in values:
       setattr(self.msg, name, v)
       gotten = getattr(self.msg, name)
@@ -72,7 +73,8 @@ class AccessorsTest(Test):
     self._test("delivery_count", 0, range(0, 1024))
 
   def testUserId(self):
-    self._test("user_id", "", ("asdf", "fdsa", "asd\x00fdsa", ""))
+    self._test("user_id", six.b(""), (six.b("asdf"), six.b("fdsa"),
+                                      six.b("asd\x00fdsa"), six.b("")))
 
   def testAddress(self):
     self._test_str("address")

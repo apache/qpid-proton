@@ -18,6 +18,7 @@
 #
 
 import os
+import six
 from . import common
 from proton import *
 
@@ -44,9 +45,9 @@ class TransportTest(Test):
       if p < 0:
         return
       elif p > 0:
-        bytes = self.transport.peek(p)
-        self.peer.push(bytes)
-        self.transport.pop(len(bytes))
+        data = self.transport.peek(p)
+        self.peer.push(data)
+        self.transport.pop(len(data))
       else:
         assert False
 
@@ -61,16 +62,16 @@ class TransportTest(Test):
     assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
   def testEOS(self):
-    self.transport.push("") # should be a noop
+    self.transport.push(six.b("")) # should be a noop
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
   def testPartial(self):
-    self.transport.push("AMQ") # partial header
+    self.transport.push(six.b("AMQ")) # partial header
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
-  def testGarbage(self, garbage="GARBAGE_"):
+  def testGarbage(self, garbage=six.b("GARBAGE_")):
     self.transport.push(garbage)
     self.assert_error(u'amqp:connection:framing-error')
     assert self.transport.pending() < 0
@@ -78,13 +79,13 @@ class TransportTest(Test):
     assert self.transport.pending() < 0
 
   def testSmallGarbage(self):
-    self.testGarbage("XXX")
+    self.testGarbage(six.b("XXX"))
 
   def testBigGarbage(self):
-    self.testGarbage("GARBAGE_XXX")
+    self.testGarbage(six.b("GARBAGE_XXX"))
 
   def testHeader(self):
-    self.transport.push("AMQP\x00\x01\x00\x00")
+    self.transport.push(six.b("AMQP\x00\x01\x00\x00"))
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
@@ -102,8 +103,8 @@ class TransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert "test-container" in out, repr(out)
-    assert "test-hostname" in out, repr(out)
+    assert six.b("test-container") in out, repr(out)
+    assert six.b("test-hostname") in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -160,7 +161,7 @@ class TransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == ""
+    assert self.transport.peek(1024) == six.b("")
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])

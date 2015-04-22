@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import os, gc
 from . import common
 from time import time, sleep
+import six
 from proton import *
 from .common import pump
 from proton.reactor import Reactor
@@ -35,6 +36,19 @@ if not hasattr(gc, "garbage"):
 #  + shrinking output_size down to something small? should the enginge buffer?
 #  + resuming
 #    - locally and remotely created deliveries with the same tag
+
+# Jython 2.5 needs this:
+try:
+    bytes()
+except:
+    bytes = str
+
+# and this...
+try:
+    bytearray()
+except:
+    def bytearray(x):
+        return six.b('\x00') * x
 
 OUTPUT_SIZE = 10*1024
 
@@ -725,7 +739,7 @@ class TransferTest(Test):
     assert tag == "tag", tag
     assert d.writable
 
-    n = self.snd.send("this is a test")
+    n = self.snd.send(six.b("this is a test"))
     assert self.snd.advance()
     assert self.c1.work_head is None
 
@@ -738,7 +752,7 @@ class TransferTest(Test):
   def test_multiframe(self):
     self.rcv.flow(1)
     self.snd.delivery("tag")
-    msg = "this is a test"
+    msg = six.b("this is a test")
     n = self.snd.send(msg)
     assert n == len(msg)
 
@@ -749,24 +763,24 @@ class TransferTest(Test):
     assert d.tag == "tag", repr(d.tag)
     assert d.readable
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == msg, (bytes, msg)
+    binary = self.rcv.recv(1024)
+    assert binary == msg, (binary, msg)
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == ""
+    binary = self.rcv.recv(1024)
+    assert binary == six.b("")
 
-    msg = "this is more"
+    msg = six.b("this is more")
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
 
     self.pump()
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == msg, (bytes, msg)
+    binary = self.rcv.recv(1024)
+    assert binary == msg, (binary, msg)
 
-    bytes = self.rcv.recv(1024)
-    assert bytes is None
+    binary = self.rcv.recv(1024)
+    assert binary is None
 
   def test_disposition(self):
     self.rcv.flow(1)
@@ -774,7 +788,7 @@ class TransferTest(Test):
     self.pump()
 
     sd = self.snd.delivery("tag")
-    msg = "this is a test"
+    msg = six.b("this is a test")
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -809,7 +823,7 @@ class TransferTest(Test):
     #fill up delivery buffer on sender
     for m in range(1024):
       sd = self.snd.delivery("tag%s" % m)
-      msg = "message %s" % m
+      msg = ("message %s" % m).encode('ascii')
       n = self.snd.send(msg)
       assert n == len(msg)
       assert self.snd.advance()
@@ -822,7 +836,7 @@ class TransferTest(Test):
       assert rd is not None, m
       assert rd.tag == ("tag%s" % m), (rd.tag, m)
       msg = self.rcv.recv(1024)
-      assert msg == ("message %s" % m), (msg, m)
+      assert msg == ("message %s" % m).encode('ascii'), (msg, m)
       rd.update(Delivery.ACCEPTED)
       rd.settle()
 
@@ -831,7 +845,7 @@ class TransferTest(Test):
     #add some new deliveries
     for m in range(1024, 1450):
       sd = self.snd.delivery("tag%s" % m)
-      msg = "message %s" % m
+      msg = ("message %s" % m).encode('ascii')
       n = self.snd.send(msg)
       assert n == len(msg)
       assert self.snd.advance()
@@ -848,7 +862,7 @@ class TransferTest(Test):
     #submit some more deliveries
     for m in range(1450, 1500):
       sd = self.snd.delivery("tag%s" % m)
-      msg = "message %s" % m
+      msg = ("message %s" % m).encode('ascii')
       n = self.snd.send(msg)
       assert n == len(msg)
       assert self.snd.advance()
@@ -863,7 +877,7 @@ class TransferTest(Test):
       assert rd is not None, m
       assert rd.tag == ("tag%s" % m), (rd.tag, m)
       msg = self.rcv.recv(1024)
-      assert msg == ("message %s" % m), (msg, m)
+      assert msg == ("message %s" % m).encode('ascii'), (msg, m)
       rd.update(Delivery.ACCEPTED)
       rd.settle()
 
@@ -873,7 +887,7 @@ class TransferTest(Test):
 
     for x in range(10):
         self.snd.delivery("tag%d" % x)
-        msg = "this is a test"
+        msg = six.b("this is a test")
         n = self.snd.send(msg)
         assert n == len(msg)
         assert self.snd.advance()
@@ -915,7 +929,7 @@ class MaxFrameTransferTest(Test):
     parts = []
     for i in range(size):
       parts.append(str(i))
-    return "/".join(parts)[:size]
+    return "/".join(parts)[:size].encode("utf-8")
 
   def testMinFrame(self):
     """
@@ -940,11 +954,11 @@ class MaxFrameTransferTest(Test):
 
     self.pump()
 
-    bytes = self.rcv.recv(513)
-    assert bytes == msg
+    binary = self.rcv.recv(513)
+    assert binary == msg
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == None
+    binary = self.rcv.recv(1024)
+    assert binary == None
 
   def testOddFrame(self):
     """
@@ -962,18 +976,18 @@ class MaxFrameTransferTest(Test):
 
     self.rcv.flow(2)
     self.snd.delivery("tag")
-    msg = "X" * 1699
+    msg = ("X" * 1699).encode('utf-8')
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
 
     self.pump()
 
-    bytes = self.rcv.recv(1699)
-    assert bytes == msg
+    binary = self.rcv.recv(1699)
+    assert binary == msg
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == None
+    binary = self.rcv.recv(1024)
+    assert binary == None
 
     self.rcv.advance()
 
@@ -985,13 +999,13 @@ class MaxFrameTransferTest(Test):
 
     self.pump()
 
-    bytes = self.rcv.recv(1426)
-    assert bytes == msg
+    binary = self.rcv.recv(1426)
+    assert binary == msg
 
     self.pump()
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == None
+    binary = self.rcv.recv(1024)
+    assert binary == None
     
   def testBigMessage(self):
     """
@@ -1013,11 +1027,11 @@ class MaxFrameTransferTest(Test):
 
     self.pump()
 
-    bytes = self.rcv.recv(1024*256)
-    assert bytes == msg
+    binary = self.rcv.recv(1024*256)
+    assert binary == msg
 
-    bytes = self.rcv.recv(1024)
-    assert bytes == None
+    binary = self.rcv.recv(1024)
+    assert binary == None
 
 
 class IdleTimeoutTest(Test):
@@ -1389,7 +1403,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagA")
     assert sd
-    n = self.snd.send("A")
+    n = self.snd.send(six.b("A"))
     assert n == 1
     self.pump()
     self.snd.advance()
@@ -1405,8 +1419,8 @@ class CreditTest(Test):
     assert self.snd.credit == 9, self.snd.credit
     assert self.rcv.credit == 10, self.rcv.credit
 
-    bytes = self.rcv.recv(10)
-    assert bytes == "A", bytes
+    data = self.rcv.recv(10)
+    assert data == six.b("A"), data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 9, self.snd.credit
@@ -1427,7 +1441,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagB")
     assert sd
-    n = self.snd.send("B")
+    n = self.snd.send(six.b("B"))
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1441,7 +1455,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagC")
     assert sd
-    n = self.snd.send("C")
+    n = self.snd.send(six.b("C"))
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1455,11 +1469,11 @@ class CreditTest(Test):
     assert self.snd.credit == 0, self.snd.credit
     assert self.rcv.credit == 2, self.rcv.credit
 
-    bytes = self.rcv.recv(10)
-    assert bytes == "B", bytes
+    data = self.rcv.recv(10)
+    assert data == six.b("B"), data
     self.rcv.advance()
-    bytes = self.rcv.recv(10)
-    assert bytes == "C", bytes
+    data = self.rcv.recv(10)
+    assert data == six.b("C"), data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 0, self.snd.credit
@@ -1512,10 +1526,10 @@ class CreditTest(Test):
       for i in range(10):
           tag = "test %d" % i
           self.snd.delivery( tag )
-          self.snd.send( tag )
+          self.snd.send( tag.encode("ascii") )
           assert self.snd.advance()
           self.snd2.delivery( tag )
-          self.snd2.send( tag )
+          self.snd2.send( tag.encode("ascii") )
           assert self.snd2.advance()
 
       self.pump()
@@ -1554,11 +1568,12 @@ class SessionCreditTest(Test):
     assert snd.queued == 0, snd.queued
     assert rcv.queued == 0, rcv.queued
 
+    data = bytes(bytearray(size))
     idx = 0
     while snd.credit:
       d = snd.delivery("tag%s" % idx)
       assert d
-      n = snd.send(chr(ord("a") + idx)*size)
+      n = snd.send(data)
       assert n == size, (n, size)
       assert snd.advance()
       self.pump()
@@ -1632,7 +1647,7 @@ class SessionCreditTest(Test):
     idx = 0
     while snd.credit:
       d = snd.delivery("tag%s" % idx)
-      snd.send("x"*1024)
+      snd.send(("x"*1024).encode('ascii'))
       assert d
       assert snd.advance()
       self.pump()
@@ -1735,7 +1750,7 @@ class SettlementTest(Test):
     for i in range(count):
       sd = self.snd.delivery("tag%s" % i)
       assert sd
-      n = self.snd.send("x"*size)
+      n = self.snd.send(("x"*size).encode('ascii'))
       assert n == size, n
       assert self.snd.advance()
       self.pump()
@@ -1793,7 +1808,7 @@ class PipelineTest(Test):
 
     for i in range(10):
       d = snd.delivery("delivery-%s" % i)
-      snd.send("delivery-%s" % i)
+      snd.send(six.b("delivery-%s" % i))
       d.settle()
 
     snd.close()
@@ -2225,7 +2240,7 @@ class EventTest(CollectorTest):
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
                 Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
-    snd.send("Hello World!")
+    snd.send(six.b("Hello World!"))
     snd.advance()
     self.pump()
     self.expect()
@@ -2241,7 +2256,7 @@ class EventTest(CollectorTest):
     snd, rcv = self.testFlowEvents()
     snd.open()
     dlv = snd.delivery("delivery")
-    snd.send("Hello World!")
+    snd.send(six.b("Hello World!"))
     assert snd.advance()
     self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     self.pump()
@@ -2252,7 +2267,7 @@ class EventTest(CollectorTest):
     rdlv.update(Delivery.ACCEPTED)
     self.pump()
     event = self.expect(Event.DELIVERY)
-    assert event.context == dlv
+    assert event.context == dlv, (dlv, event.context)
 
   def testConnectionBOUND_UNBOUND(self):
     c = Connection()
@@ -2272,7 +2287,7 @@ class EventTest(CollectorTest):
     t.bind(c)
     self.expect(Event.CONNECTION_BOUND)
     assert t.condition is None
-    t.push("asdf")
+    t.push(six.b("asdf"))
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert t.condition is not None
     assert t.condition.name == "amqp:connection:framing-error"

@@ -23,6 +23,11 @@ import sys, optparse, time
 import logging
 from proton import *
 
+# Hi python3!
+try:
+    long()
+except:
+    long = int
 
 
 usage = """
