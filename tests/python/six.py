@@ -32,6 +32,17 @@ __author__ = "Benjamin Peterson <benjamin@python.org>"
 __version__ = "1.9.0"
 
 
+# begin QPID
+# added to support running the unit tests under JYTHON
+if not hasattr(operator, 'methodcaller'):
+    def _methodcaller(cls, name, *args, **kwargs):
+        def caller(obj):
+            return getattr(obj, name)(*args, **kwargs)
+        return caller
+    operator.methodcaller = classmethod(_methodcaller)
+# QPID end
+
+
 # Useful for very coarse version differentiation.
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
