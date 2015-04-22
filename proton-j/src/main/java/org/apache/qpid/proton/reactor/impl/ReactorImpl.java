@@ -37,6 +37,7 @@ import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.engine.impl.HandlerEndpointImpl;
+import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable;
@@ -454,7 +455,16 @@ public class ReactorImpl implements Reactor {
         connection.collect(collector);
         children.add(connection);
         ((ConnectionImpl)connection).setReactor(this);
-        // TODO: C code adds a reference back to the reactor from connection
         return connection;
+    }
+
+    @Override
+    public Acceptor acceptor(String host, int port) throws IOException {
+        return this.acceptor(host, port, null);
+    }
+
+    @Override
+    public Acceptor acceptor(String host, int port, Handler handler) throws IOException {
+        return new AcceptorImpl(this, host, port, handler);
     }
 }

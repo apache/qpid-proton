@@ -1,0 +1,112 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
+
+package org.apache.qpid.proton.reactor.impl;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+
+import org.apache.qpid.proton.Proton;
+import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Sasl;
+import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
+import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.reactor.Acceptor;
+import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.Selectable;
+import org.apache.qpid.proton.reactor.Selectable.Callback;
+
+public class AcceptorImpl implements Acceptor {
+
+    private class AcceptorReadable implements Callback {
+        @Override
+        public void run(Selectable selectable) {
+            Reactor reactor = selectable.getReactor();
+            try {
+                SocketChannel socketChannel = ((ServerSocketChannel)selectable.getChannel()).accept();
+                Handler handler = (Handler)selectable.getAttachment();
+                if (handler == null) {
+                    // TODO: set selectable.getAttachment() to null?
+                    handler = reactor.getHandler();
+                }
+                Connection conn = reactor.connection(handler);
+                Transport trans = Proton.transport();
+                // TODO: the C code calls pn_transport_set_server(trans) - is there a Java equivalent we need to worry about?
+                Sasl sasl = trans.sasl();
+                sasl.server();  // TODO: it would be nice if SASL was more pluggable than this (but this is what the C API currently does...)
+                //sasl.allowSkip(true); // TODO: this in in the C code - but the proton-j code throws a ProtonUnsupportedOperationException (as it is not implemented)
+                sasl.setMechanisms("ANONYMOUS");
+                sasl.done(SaslOutcome.PN_SASL_OK);
+                trans.bind(conn);
+                IOHandler.selectableTransport(reactor, socketChannel.socket(), trans);  // TODO: could we pass in a channel object instead of doing socketChannel.socket()?
+            } catch(IOException ioException) {
+                ioException.printStackTrace();
+                // TODO: what do we do with this exception?
+            }
+        }
+    }
+
+    private class AcceptorFinalize implements Callback {
+        @Override
+        public void run(Selectable selectable) {
+            try {
+                selectable.getChannel().close();
+            } catch(IOException ioException) {
+                ioException.printStackTrace();
+                // TODO: what now?
+            }
+        }
+    }
+
+    private final Selectable sel;
+
+    protected AcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
+        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ssc.bind(new InetSocketAddress(host, port));
+        sel = reactor.selectable();
+        sel.setChannel(ssc);
+        sel.onReadable(new AcceptorReadable());
+        sel.onFinalize(new AcceptorFinalize()); // TODO: currently, this is not called from anywhere!!
+        sel.setReactor(reactor);
+        sel.setAttachment(handler);
+        sel.setReading(true);
+        reactor.update(sel);
+    }
+
+    @Override
+    public void close() {
+        if (!sel.isTerminal()) {
+            Reactor reactor = sel.getReactor();
+            try {
+                sel.getChannel().close();
+            } catch(IOException ioException) {
+                ioException.printStackTrace();
+                // TODO: what now?
+            }
+            sel.setChannel(null);
+            sel.terminate();
+            reactor.update(sel);
+        }
+    }
+}

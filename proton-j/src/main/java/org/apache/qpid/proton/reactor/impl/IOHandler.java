@@ -78,6 +78,7 @@ public class IOHandler extends BaseHandler {
         }
         Transport transport = Proton.transport();
         Sasl sasl = transport.sasl();
+        sasl.client();
         sasl.setMechanisms("ANONYMOUS");
         transport.bind(connection);
     }
@@ -86,7 +87,7 @@ public class IOHandler extends BaseHandler {
     private void handleBound(Reactor reactor, Event event) {
         Connection connection = event.getConnection();
         String hostname = connection.getHostname();
-        if (hostname == null) {
+        if (hostname == null || hostname.equals("")) {
             return;
         }
 
@@ -116,7 +117,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_capacity from connection.c
-    private int capacity(Selectable selectable) {
+    private static int capacity(Selectable selectable) {
         Transport transport = selectable.getTransport();
         int capacity = transport.capacity();
         if (capacity < 0) {
@@ -128,7 +129,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_pending from connection.c
-    private int pending(Selectable selectable) {
+    private static int pending(Selectable selectable) {
         Transport transport = selectable.getTransport();
         int pending = transport.pending();
         if (pending < 0) {
@@ -140,7 +141,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_deadline from connection.c
-    private long deadline(Selectable selectable) {
+    private static long deadline(Selectable selectable) {
         Reactor reactor = selectable.getReactor();
         Transport transport = selectable.getTransport();
         long deadline = transport.tick(reactor.now());
@@ -148,7 +149,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_update from connection.c
-    private void update(Selectable selectable) {
+    private static void update(Selectable selectable) {
         int c = capacity(selectable);
         int p = pending(selectable);
         selectable.setReading(c > 0);
@@ -157,7 +158,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_readable from connection.c
-    private class ConnectionReadable implements Callback {
+    private static class ConnectionReadable implements Callback {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -191,7 +192,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_writable from connection.c
-    private class ConnectionWritable implements Callback {
+    private static class ConnectionWritable implements Callback {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -224,7 +225,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_error from connection.c
-    private class ConnectionError implements Callback {
+    private static class ConnectionError implements Callback {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -235,7 +236,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_expired from connection.c
-    private class ConnectionExpired implements Callback {
+    private static class ConnectionExpired implements Callback {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -250,7 +251,7 @@ public class IOHandler extends BaseHandler {
         }
     }
 
-    private class ConnectionFinalize implements Callback {
+    private static class ConnectionFinalize implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {
@@ -263,11 +264,11 @@ public class IOHandler extends BaseHandler {
     }
 
     // pn_reactor_selectable_transport
-    private Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
+    protected static Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
         // TODO: this code needs to be able to deal with a null socket (this is our equivalent of PN_INVALID_SOCKET)
         Selectable selectable = reactor.selectable();
         selectable.setChannel(socket != null ? socket.getChannel() : null);
-        selectable.onReadable(new ConnectionReadable());
+        selectable.onReadable(new ConnectionReadable());    // TODO: *IF* these callbacks are stateless, do we more than one instance of them?
         selectable.onWritable(new ConnectionWritable());
         selectable.onError(new ConnectionError());
         selectable.onExpired(new ConnectionExpired());

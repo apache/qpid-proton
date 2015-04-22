@@ -97,4 +97,7 @@ public interface Reactor {
     // TODO: acceptorClose
 
     Connection connection(Handler handler);
+
+    Acceptor acceptor(String host, int port) throws IOException;
+    Acceptor acceptor(String host, int port, Handler handler) throws IOException;
 }

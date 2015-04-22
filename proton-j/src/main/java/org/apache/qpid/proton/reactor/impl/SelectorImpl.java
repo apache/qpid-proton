@@ -23,6 +23,7 @@ package org.apache.qpid.proton.reactor.impl;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.ServerSocketChannel;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -58,7 +59,13 @@ public class SelectorImpl implements Selector {
     public void update(Selectable selectable) {
         if (selectable.getChannel() != null) {
             int interestedOps = 0;
-            if (selectable.isReading()) interestedOps |= SelectionKey.OP_READ;
+            if (selectable.isReading()) {
+                if (selectable.getChannel() instanceof ServerSocketChannel) {
+                    interestedOps |= SelectionKey.OP_ACCEPT;
+                } else {
+                    interestedOps |= SelectionKey.OP_READ;
+                }
+            }
             if (selectable.isWriting()) interestedOps |= SelectionKey.OP_WRITE;
             SelectionKey key = selectable.getChannel().keyFor(selector);
             key.interestOps(interestedOps);
@@ -111,6 +118,7 @@ public class SelectorImpl implements Selector {
         for (SelectionKey key : selector.selectedKeys()) {
             Selectable selectable = (Selectable)key.attachment();
             if (key.isReadable()) readable.add(selectable);
+            if (key.isAcceptable()) readable.add(selectable);
             if (key.isWritable()) writeable.add(selectable);
         }
         selector.selectedKeys().clear();
