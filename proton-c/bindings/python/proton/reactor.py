@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -29,7 +28,7 @@ from proton import unicode2utf8, utf82unicode
 
 import traceback
 from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
-from .wrapper import Wrapper, PYCTX
+from wrapper import Wrapper, PYCTX
 from cproton import *
 
 class Task(Wrapper):
@@ -480,7 +479,7 @@ class Connector(Handler):
         self.ssl_domain = None
 
     def _connect(self, connection):
-        url = next(self.address)
+        url = self.address.next()
         # IoHandler uses the hostname to determine where to try to connect to
         connection.hostname = "%s:%i" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
@@ -515,7 +514,7 @@ class Connector(Handler):
         if self.connection and self.connection.state & Endpoint.LOCAL_ACTIVE:
             if self.reconnect:
                 event.transport.unbind()
-                delay = next(self.reconnect)
+                delay = self.reconnect.next()
                 if delay == 0:
                     logging.info("Disconnected, reconnecting...")
                     self._connect(self.connection)
@@ -561,10 +560,10 @@ class Urls(object):
 
     def next(self):
         try:
-            return next(self.i)
+            return self.i.next()
         except StopIteration:
             self.i = iter(self.values)
-            return next(self.i)
+            return self.i.next()
 
 class SSLConfig(object):
     def __init__(self):

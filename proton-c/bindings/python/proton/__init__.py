@@ -29,10 +29,9 @@ The proton APIs consist of the following classes:
                   data.
 
 """
-from __future__ import absolute_import
 
 from cproton import *
-from .wrapper import Wrapper
+from wrapper import Wrapper
 
 import weakref, socket, sys, threading
 try:
@@ -832,19 +831,19 @@ class Message(object):
     props = Data(pn_message_properties(self._msg))
     body = Data(pn_message_body(self._msg))
 
-    if next(inst):
+    if inst.next():
       self.instructions = inst.get_object()
     else:
       self.instructions = None
-    if next(ann):
+    if ann.next():
       self.annotations = ann.get_object()
     else:
       self.annotations = None
-    if next(props):
+    if props.next():
       self.properties = props.get_object()
     else:
       self.properties = None
-    if next(body):
+    if body.next():
       self.body = body.get_object()
     else:
       self.body = None
@@ -2050,9 +2049,9 @@ class Data:
     if self.enter():
       try:
         result = {}
-        while next(self):
+        while self.next():
           k = self.get_object()
-          if next(self):
+          if self.next():
             v = self.get_object()
           else:
             v = None
@@ -2074,7 +2073,7 @@ class Data:
     if self.enter():
       try:
         result = []
-        while next(self):
+        while self.next():
           result.append(self.get_object())
       finally:
         self.exit()
@@ -2083,9 +2082,9 @@ class Data:
   def get_py_described(self):
     if self.enter():
       try:
-        next(self)
+        self.next()
         descriptor = self.get_object()
-        next(self)
+        self.next()
         value = self.get_object()
       finally:
         self.exit()
@@ -2112,12 +2111,12 @@ class Data:
     if self.enter():
       try:
         if described:
-          next(self)
+          self.next()
           descriptor = self.get_object()
         else:
           descriptor = UNDESCRIBED
         elements = []
-        while next(self):
+        while self.next():
           elements.append(self.get_object())
       finally:
         self.exit()
@@ -2226,7 +2225,7 @@ class Endpoint(object):
       assert False, "Subclass must override this!"
 
   def _get_handler(self):
-    from . import reactor
+    import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
       on_error = ractor.on_error
@@ -2236,7 +2235,7 @@ class Endpoint(object):
     return WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
   def _set_handler(self, handler):
-    from . import reactor
+    import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
       on_error = ractor.on_error
@@ -2292,7 +2291,7 @@ def dat2obj(dimpl):
   if dimpl:
     d = Data(dimpl)
     d.rewind()
-    next(d)
+    d.next()
     obj = d.get_object()
     d.rewind()
     return obj
@@ -2884,7 +2883,7 @@ class Sender(Link):
           yield str(count)
           count += 1
       self.tag_generator = simple_tags()
-    return next(self.tag_generator)
+    return self.tag_generator.next()
 
 class Receiver(Link):
   """
