@@ -38,6 +38,27 @@
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 %cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
+// Typemap for methods that return binary data:
+// force the return type as binary - this is necessary for Python3
+%typemap(in,noblock=1,fragment=SWIG_AsVal_frag(size_t)) (char *BIN_OUT, size_t *BIN_SIZE)
+(int res, size_t n, char *buff = 0, $*2_ltype size) {
+  res = SWIG_AsVal(size_t)($input, &n);
+  if (!SWIG_IsOK(res)) {
+    %argument_fail(res, "(char *BIN_OUT, size_t *BIN_SIZE)", $symname, $argnum);
+  }
+  buff= %new_array(n+1, char);
+  $1 = %static_cast(buff, $1_ltype);
+  size = %numeric_cast(n,$*2_ltype);
+  $2 = &size;
+}
+%typemap(freearg,noblock=1,match="in")(char *BIN_OUT, size_t *BIN_SIZE) {
+  if (buff$argnum) %delete_array(buff$argnum);
+}
+%typemap(argout,noblock=1) (char *BIN_OUT, size_t *BIN_SIZE) {
+  %append_output(PyBytes_FromStringAndSize($1,*$2));
+}
+
+
 // These are not used/needed in the python binding
 %ignore pn_message_get_id;
 %ignore pn_message_set_id;
@@ -49,20 +70,21 @@
     $1.start = NULL;
     $1.size = 0;
   } else {
-    $1.start = PyString_AsString($input);
+    $1.start = PyBytes_AsString($input);
+
     if (!$1.start) {
       return NULL;
     }
-    $1.size = PyString_Size($input);
+    $1.size = PyBytes_Size($input);
   }
 }
 
 %typemap(out) pn_bytes_t {
-  $result = PyString_FromStringAndSize($1.start, $1.size);
+  $result = PyBytes_FromStringAndSize($1.start, $1.size);
 }
 
 %typemap(out) pn_delivery_tag_t {
-  $result = PyString_FromStringAndSize($1.bytes, $1.size);
+  $result = PyBytes_FromStringAndSize($1.bytes, $1.size);
 }
 
 %typemap(in) pn_uuid_t {
@@ -70,9 +92,9 @@
   if ($input == Py_None) {
     ; // Already zeroed out
   } else {
-    const char* b = PyString_AsString($input);
+    const char* b = PyBytes_AsString($input);
     if (b) {
-        memmove($1.bytes, b, (PyString_Size($input) < 16 ? PyString_Size($input) : 16));
+        memmove($1.bytes, b, (PyBytes_Size($input) < 16 ? PyBytes_Size($input) : 16));
     } else {
         return NULL;
     }
@@ -80,12 +102,12 @@
 }
 
 %typemap(out) pn_uuid_t {
-  $result = PyString_FromStringAndSize($1.bytes, 16);
+  $result = PyBytes_FromStringAndSize($1.bytes, 16);
 }
 
 %apply pn_uuid_t { pn_decimal128_t };
 
-int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
+int pn_message_encode(pn_message_t *msg, char *BIN_OUT, size_t *BIN_SIZE);
 %ignore pn_message_encode;
 
 ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
@@ -93,12 +115,12 @@ ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 
 %rename(pn_link_recv) wrap_pn_link_recv;
 %inline %{
-  int wrap_pn_link_recv(pn_link_t *link, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_link_recv(link, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_link_recv(pn_link_t *link, char *BIN_OUT, size_t *BIN_SIZE) {
+    ssize_t sz = pn_link_recv(link, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
+      *BIN_SIZE = sz;
     } else {
-      *OUTPUT_SIZE = 0;
+      *BIN_SIZE = 0;
     }
     return sz;
   }
@@ -110,12 +132,12 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
 
 %rename(pn_transport_peek) wrap_pn_transport_peek;
 %inline %{
-  int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_transport_peek(pn_transport_t *transport, char *BIN_OUT, size_t *BIN_SIZE) {
+    ssize_t sz = pn_transport_peek(transport, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
+      *BIN_SIZE = sz;
     } else {
-      *OUTPUT_SIZE = 0;
+      *BIN_SIZE = 0;
     }
     return sz;
   }
@@ -146,12 +168,12 @@ ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 
 %rename(pn_data_encode) wrap_pn_data_encode;
 %inline %{
-  int wrap_pn_data_encode(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_data_encode(data, OUTPUT, *OUTPUT_SIZE);
+  int wrap_pn_data_encode(pn_data_t *data, char *BIN_OUT, size_t *BIN_SIZE) {
+    ssize_t sz = pn_data_encode(data, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
+      *BIN_SIZE = sz;
     } else {
-      *OUTPUT_SIZE = 0;
+      *BIN_SIZE = 0;
     }
     return sz;
   }

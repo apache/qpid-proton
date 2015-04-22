@@ -34,7 +34,9 @@ from __future__ import absolute_import
 from cproton import *
 from .wrapper import Wrapper
 
+import six
 import weakref, socket, sys, threading
+
 try:
   import uuid
 
@@ -94,10 +96,22 @@ except ImportError:
   def generate_uuid():
     return uuid4()
 
+#
+# Hacks to provide Python2 <---> Python3 compatibility
+#
 try:
   bytes()
 except NameError:
   bytes = str
+try:
+  long()
+except NameError:
+  long = int
+try:
+  unicode()
+except NameError:
+  unicode = str
+
 
 VERSION_MAJOR = PN_VERSION_MAJOR
 VERSION_MINOR = PN_VERSION_MINOR
@@ -936,7 +950,7 @@ The number of delivery attempts made for this message.
   def _get_id(self):
     return self._id.get_object()
   def _set_id(self, value):
-    if type(value) in (int, long):
+    if type(value) in six.integer_types:
       value = ulong(value)
     self._id.rewind()
     self._id.put_object(value)
@@ -992,7 +1006,7 @@ The reply-to address for the message.
   def _get_correlation_id(self):
     return self._correlation_id.get_object()
   def _set_correlation_id(self, value):
-    if type(value) in (int, long):
+    if type(value) in six.integer_types:
       value = ulong(value)
     self._correlation_id.rewind()
     self._correlation_id.put_object(value)
@@ -1424,7 +1438,7 @@ class Data:
   def type_name(type): return Data.type_names[type]
 
   def __init__(self, capacity=16):
-    if type(capacity) in (int, long):
+    if type(capacity) in six.integer_types:
       self._data = pn_data(capacity)
       self._free = True
     else:
@@ -2146,7 +2160,6 @@ class Data:
     symbol: put_symbol,
     int: put_long,
     char: put_char,
-    long: put_long,
     ulong: put_ulong,
     timestamp: put_timestamp,
     float: put_double,
@@ -2154,6 +2167,10 @@ class Data:
     Described: put_py_described,
     Array: put_py_array
     }
+  # for python 2.x:
+  if long not in put_mappings:
+      put_mappings[long] = put_long
+
   get_mappings = {
     NULL: lambda s: None,
     BOOL: get_bool,
@@ -2319,7 +2336,7 @@ def millis2timeout(millis):
 def unicode2utf8(string):
     if string is None:
         return None
-    if isinstance(string, unicode):
+    if isinstance(string, six.text_type):
         return string.encode('utf8')
     elif isinstance(string, str):
         return string
@@ -2329,7 +2346,7 @@ def unicode2utf8(string):
 def utf82unicode(string):
     if string is None:
         return None
-    if isinstance(string, unicode):
+    if isinstance(string, six.text_type):
         return string
     elif isinstance(string, str):
         return string.decode('utf8')
@@ -3733,7 +3750,7 @@ class _cadapter:
 
   def exception(self, exc, val, tb):
     if self.on_error is None:
-      raise exc, val, tb
+      six.reraise(exc, val, tb)
     else:
       self.on_error((exc, val, tb))
 
@@ -3754,7 +3771,7 @@ class WrappedHandler(Wrapper):
   def _on_error(self, info):
     on_error = getattr(self, "on_error", None)
     if on_error is None:
-      raise info[0], info[1], info[2]
+      six.reraise(info[0], info[1], info[2])
     else:
       on_error(info)
 

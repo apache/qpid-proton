@@ -16,7 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import heapq, logging, os, Queue, re, socket, time, types
+import heapq, logging, os, re, socket, time, types
+from six.moves import queue as Queue
+
 from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException

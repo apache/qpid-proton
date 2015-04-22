@@ -16,7 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import collections, Queue, socket, time, threading
+import collections, socket, time, threading
+from six.moves import queue as Queue
+
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
 from proton import ProtonException, Timeout, Url
 from proton.reactor import Container

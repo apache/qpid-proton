@@ -17,7 +17,9 @@ from __future__ import absolute_import
 # specific language governing permissions and limitations
 # under the License.
 #
-import logging, os, Queue, socket, time, types
+import logging, os, socket, time, types
+import six
+from six.moves import queue as Queue
 from heapq import heappush, heappop, nsmallest
 from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
 from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
@@ -137,7 +139,7 @@ class Reactor(Wrapper):
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
-            raise exc, value, tb
+            six.reraise(exc, value, tb)
 
     def process(self):
         result = pn_reactor_process(self._impl)
