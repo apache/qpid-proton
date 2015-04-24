@@ -4,7 +4,7 @@
 # extract by the Jenkins build process located at the following URL:
 # https://builds.apache.org/view/M-R/view/Qpid/job/Qpid-proton-c/
 #
-CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=DEBUG
+CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=$PWD/build/ship"
 XMLOUTPUT=../testresults/TEST-protonc.xml
 
 echo Arch: `arch` Uname: `uname -a` lsb_release: `lsb_release -a` User: `whoami`
