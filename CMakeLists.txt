@@ -123,7 +123,7 @@ endif()
 
 add_subdirectory(proton-c)
 
-install (FILES LICENSE README TODO
+install (FILES LICENSE README.md TODO
          DESTINATION ${PROTON_SHARE})
 
 install (DIRECTORY examples
