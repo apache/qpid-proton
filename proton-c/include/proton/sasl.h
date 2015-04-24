@@ -111,12 +111,13 @@ PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
  */
 PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
 
-/** SASL mechanism that are not to be considered for authentication
+/** SASL mechanisms that are to be considered for authentication
  *
- * This can be used on either the client or the server to restrict the SASL mechanisms that may be used.
+ * This can be used on either the client or the server to restrict the SASL
+ * mechanisms that may be used to the mechanisms on the list.
  *
  * @param[in] sasl the SASL layer
- * @param[in] mechs space separated list of mechanisms that are not to be allowed for authentication
+ * @param[in] mechs space separated list of mechanisms that are allowed for authentication
  */
 PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
 
