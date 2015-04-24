@@ -1,7 +1,7 @@
 Qpid Proton Install Information
 ===============================
 
-Proton comes with two separate build systems. The CMake build system can buildS
+Proton comes with two separate build systems. The CMake build system can builds
 the entire codebase, including proton-c, all proton-c language bindings, and
 the pure Java proton-j implementation. The maven build system can only build
 the Java portions of the code.
@@ -154,7 +154,7 @@ PYTHON or RUBY, e.g.:
 Maven (All platforms)
 ---------------------
 
-The following prerequesuites are required to do a full build.
+The following prerequisites are required to do a full build.
 
   + Apache Maven 3.0 (or higher) (http://maven.apache.org/)
 
