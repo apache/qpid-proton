@@ -28,6 +28,15 @@
 
 #include <sasl/sasl.h>
 
+// If the version of Cyrus SASL is too early for sasl_client_done()/sasl_server_done()
+// don't do any global clean up as it's not safe to use just sasl_done() for an
+// executable that uses both client and server parts of Cyrus SASL, because it can't
+// be called twice.
+#if SASL_VERSION_FULL<0x020118
+# define sasl_client_done()
+# define sasl_server_done()
+#endif
+
 enum pni_sasl_state {
   SASL_NONE,
   SASL_POSTED_INIT,

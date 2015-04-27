@@ -46,9 +46,22 @@ class TransportLink<T extends LinkImpl>
 
     static <L extends LinkImpl> TransportLink<L> createTransportLink(L link)
     {
-        return (TransportLink<L>) (link instanceof ReceiverImpl
-                       ? new TransportReceiver((ReceiverImpl)link)
-                       : new TransportSender((SenderImpl)link));
+        if (link instanceof ReceiverImpl)
+        {
+            ReceiverImpl r = (ReceiverImpl) link;
+            TransportReceiver tr = new TransportReceiver(r);
+            r.setTransportLink(tr);
+
+            return (TransportLink<L>) tr;
+        }
+        else
+        {
+            SenderImpl s = (SenderImpl) link;
+            TransportSender ts = new TransportSender(s);
+            s.setTransportLink(ts);
+
+            return (TransportLink<L>) ts;
+        }
     }
 
     void unbind()
@@ -199,11 +212,6 @@ class TransportLink<T extends LinkImpl>
         return _detachReceived;
     }
 
-    public void clearDetachReceived()
-    {
-        _detachReceived = false;
-    }
-
     public boolean attachSent()
     {
         return _attachSent;
@@ -212,11 +220,6 @@ class TransportLink<T extends LinkImpl>
     public void sentAttach()
     {
         _attachSent = true;
-    }
-
-    public void clearSentAttach()
-    {
-        _attachSent = false;
     }
 
     public void setRemoteDeliveryCount(UnsignedInteger remoteDeliveryCount)

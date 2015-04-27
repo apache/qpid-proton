@@ -385,6 +385,50 @@ class SessionTest(Test):
     self.pump()
     assert rcv_ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
+  def test_reopen_on_same_session_without_free(self):
+    """
+    confirm that a link is correctly opened when attaching to a previously
+    closed link *that has not been freed yet* on the same session
+    """
+    self.ssn.open()
+    self.pump()
+
+    ssn2 = self.c2.session_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+    ssn2.open()
+    self.pump()
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    snd.close()
+    rcv.close()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+
 class LinkTest(Test):
 
   def setup(self):
@@ -445,40 +489,6 @@ class LinkTest(Test):
 
     assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
     assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
-
-  def test_reopen_on_same_session(self):
-    """
-    confirm that a link is correctly opened when attaching to a previously
-    detached link on the same session
-    """
-    assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
-    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
-
-    self.snd.open()
-    self.rcv.open()
-    self.pump()
-
-    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
-    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
-
-    self.snd.close()
-    self.rcv.close()
-    self.pump()
-
-    assert self.snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
-    assert self.rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
-
-    self.snd, self.rcv = self.link("test-link")
-    assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
-    assert self.rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
-
-    self.snd.open()
-    self.rcv.open()
-    self.pump()
-
-    assert self.snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
-    assert self.rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
-
 
   def test_simultaneous_open_close(self):
     assert self.snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
@@ -2416,9 +2426,10 @@ class TeardownLeakTest(PeerTest):
                   Event.TRANSPORT_CLOSED)
 
     self.connection.free()
+    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL)
     self.transport.unbind()
 
-    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
+    self.expect(Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
 
   def testLocalRemoteLeak(self):
     self.doLeak(True, True)

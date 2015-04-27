@@ -62,6 +62,15 @@
 // Determinine default action
 #ifndef _MSC_VER
 // Not Windows and not using Visual Studio
+
+/* MBED_BUILD_TIMESTAMP is used to detect whether Proton is being built on www.mbed.org with
+the ARM compiler. In that case ssize_t needs to be defined in this file. */
+#if defined(MBED_BUILD_TIMESTAMP)
+#  define PNI_DEFINE_SSIZE_T
+#else
+#include <sys/types.h>
+#endif /* defined(MBED_LIBRARY_VERSION) */
+
 # ifndef PNI_INCLUDE_STDINT
 #  define PNI_INCLUDE_STDINT
 # endif
@@ -108,7 +117,7 @@
 #  include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 # else
-#  error ssize_t definition not kown
+typedef intptr_t ssize_t;
 # endif
 #endif // PNI_DEFINE_SSIZE_T
 

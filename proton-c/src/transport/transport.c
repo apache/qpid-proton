@@ -1139,6 +1139,11 @@ pn_link_t *pn_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
   {
     pn_link_t *link = (pn_link_t *) pn_list_get(ssn->links, i);
     if (link->endpoint.type == type &&
+        // This function is used to locate the link object for an
+        // incoming attach. If a link object of the same name is found
+        // which is closed both locally and remotely, assume that is
+        // no longer in use.
+        !((link->endpoint.state & PN_LOCAL_CLOSED) && (link->endpoint.state & PN_REMOTE_CLOSED)) &&
         !strncmp(name.start, pn_string_get(link->name), name.size))
     {
       return link;

@@ -34,20 +34,22 @@ import org.apache.qpid.proton.engine.Event;
 
 class TransportSession
 {
+    private static final int HANDLE_MAX = 65535;
+
     private final TransportImpl _transport;
     private final SessionImpl _session;
     private int _localChannel = -1;
     private int _remoteChannel = -1;
     private boolean _openSent;
-    private final UnsignedInteger _handleMax = UnsignedInteger.valueOf(65536);
+    private final UnsignedInteger _handleMax = UnsignedInteger.valueOf(HANDLE_MAX); //TODO: should this be configurable?
     private UnsignedInteger _outgoingDeliveryId = UnsignedInteger.ZERO;
     private UnsignedInteger _incomingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _outgoingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _nextOutgoingId = UnsignedInteger.ONE;
     private UnsignedInteger _nextIncomingId = null;
 
-    private final TransportLink[] _remoteHandleMap = new TransportLink[_handleMax.intValue() + 1];
-    private final TransportLink[] _localHandleMap = new TransportLink[_handleMax.intValue() + 1];
+    private final Map<UnsignedInteger, TransportLink<?>> _remoteHandlesMap = new HashMap<UnsignedInteger, TransportLink<?>>();
+    private final Map<UnsignedInteger, TransportLink<?>> _localHandlesMap = new HashMap<UnsignedInteger, TransportLink<?>>();
     private final Map<String, TransportLink> _halfOpenLinks = new HashMap<String, TransportLink>();
 
 
@@ -130,19 +132,38 @@ class TransportSession
     public void unsetLocalChannel()
     {
         if (isLocalChannelSet()) {
+            unsetLocalHandles();
             _session.decref();
         }
         _localChannel = -1;
     }
 
+    private void unsetLocalHandles()
+    {
+        for (TransportLink<?> tl : _localHandlesMap.values())
+        {
+            tl.clearLocalHandle();
+        }
+        _localHandlesMap.clear();
+    }
+
     public void unsetRemoteChannel()
     {
         if (isRemoteChannelSet()) {
+            unsetRemoteHandles();
             _session.decref();
         }
         _remoteChannel = -1;
     }
 
+    private void unsetRemoteHandles()
+    {
+        for (TransportLink<?> tl : _remoteHandlesMap.values())
+        {
+            tl.clearRemoteHandle();
+        }
+        _remoteHandlesMap.clear();
+    }
 
     public UnsignedInteger getHandleMax()
     {
@@ -204,19 +225,19 @@ class TransportSession
 
     public TransportLink getLinkFromRemoteHandle(UnsignedInteger handle)
     {
-        return _remoteHandleMap[handle.intValue()];
+        return _remoteHandlesMap.get(handle);
     }
 
     public UnsignedInteger allocateLocalHandle(TransportLink transportLink)
     {
-        for(int i = 0; i < _localHandleMap.length; i++)
+        for(int i = 0; i <= HANDLE_MAX; i++)
         {
-            if(_localHandleMap[i] == null)
+            UnsignedInteger handle = UnsignedInteger.valueOf(i);
+            if(!_localHandlesMap.containsKey(handle))
             {
-                UnsignedInteger rc = UnsignedInteger.valueOf(i);
-                _localHandleMap[i] = transportLink;
-                transportLink.setLocalHandle(rc);
-                return rc;
+                _localHandlesMap.put(handle, transportLink);
+                transportLink.setLocalHandle(handle);
+                return handle;
             }
         }
         throw new IllegalStateException("no local handle available for allocation");
@@ -224,22 +245,22 @@ class TransportSession
 
     public void addLinkRemoteHandle(TransportLink link, UnsignedInteger remoteHandle)
     {
-        _remoteHandleMap[remoteHandle.intValue()] = link;
+        _remoteHandlesMap.put(remoteHandle, link);
     }
 
     public void addLinkLocalHandle(TransportLink link, UnsignedInteger localhandle)
     {
-        _localHandleMap[localhandle.intValue()] = link;
+        _localHandlesMap.put(localhandle, link);
     }
 
     public void freeLocalHandle(UnsignedInteger handle)
     {
-        _localHandleMap[handle.intValue()] = null;
+        _localHandlesMap.remove(handle);
     }
 
     public void freeRemoteHandle(UnsignedInteger handle)
     {
-        _remoteHandleMap[handle.intValue()] = null;
+        _remoteHandlesMap.remove(handle);
     }
 
     public TransportLink resolveHalfOpenLink(String name)
@@ -332,6 +353,11 @@ class TransportSession
     public void freeLocalChannel()
     {
         unsetLocalChannel();
+    }
+
+    public void freeRemoteChannel()
+    {
+        unsetRemoteChannel();
     }
 
     private void setRemoteIncomingWindow(UnsignedInteger incomingWindow)

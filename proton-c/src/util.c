@@ -22,7 +22,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <proton/type_compat.h>
 #include <ctype.h>
 #include <string.h>
