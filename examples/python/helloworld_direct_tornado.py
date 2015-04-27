@@ -33,7 +33,7 @@ class HelloWorld(MessagingHandler):
         event.container.create_sender(self.url)
 
     def on_sendable(self, event):
-        event.sender.send(Message(body=u"Hello World!"))
+        event.sender.send(Message(body="Hello World!"))
         event.sender.close()
 
     def on_message(self, event):

@@ -20,8 +20,13 @@
 
 from __future__ import print_function
 import optparse
-import Queue
 import time
+try:
+    import Queue
+except:
+    import queue as Queue
+
+
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import ApplicationEvent, Container, EventInjector

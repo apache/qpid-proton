@@ -211,7 +211,7 @@ class EventInjector(object):
         of the reactor to which this EventInjector was added.
         """
         self.queue.put(event)
-        os.write(self.pipe[1], "!")
+        os.write(self.pipe[1], six.b("!"))
 
     def close(self):
         """

@@ -36,7 +36,7 @@ mng.start()
 msg = Message()
 for m in args:
   msg.address = opts.address
-  msg.body = unicode(m)
+  msg.body = str(m)
   mng.put(msg)
 
 mng.send()

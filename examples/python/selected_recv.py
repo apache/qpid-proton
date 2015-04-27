@@ -28,7 +28,7 @@ class Recv(MessagingHandler):
 
     def on_start(self, event):
         conn = event.container.connect("localhost:5672")
-        event.container.create_receiver(conn, "examples", options=Selector(u"colour = 'green'"))
+        event.container.create_receiver(conn, "examples", options=Selector("colour = 'green'"))
 
     def on_message(self, event):
         print(event.message.body)

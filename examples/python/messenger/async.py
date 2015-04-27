@@ -58,7 +58,7 @@ class CallbackAdapter:
         self._process_incoming()
 
     def _process_outgoing(self):
-        for t, on_status in self.tracked.items():
+        for t, on_status in list(self.tracked.items()):
             status = self.messenger.status(t)
             if status != PENDING:
                 on_status(status)

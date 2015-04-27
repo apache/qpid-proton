@@ -26,7 +26,7 @@ from proton.handlers import IncomingMessageHandler
 conn = BlockingConnection("localhost:5672")
 receiver = conn.create_receiver("examples")
 sender = conn.create_sender("examples")
-sender.send(Message(body=u"Hello World!"));
+sender.send(Message(body="Hello World!"));
 msg = receiver.receive(timeout=30)
 print(msg.body)
 receiver.accept()
