@@ -24,12 +24,34 @@ import "C"
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"qpid.apache.org/proton/internal"
 	"reflect"
 	"unsafe"
 )
 
 const minDecode = 1024
+
+// Error returned if AMQP data cannot be unmarshaled as the desired Go type.
+type BadUnmarshal struct {
+	// The name of the AMQP type.
+	AMQPType string
+	// The Go type.
+	GoType reflect.Type
+}
+
+func newBadUnmarshal(pnType C.pn_type_t, v interface{}) *BadUnmarshal {
+	return &BadUnmarshal{pnTypeString(pnType), reflect.TypeOf(v)}
+}
+
+func (e BadUnmarshal) Error() string {
+	if e.GoType.Kind() != reflect.Ptr {
+		return fmt.Sprintf("proton: cannot unmarshal to type %s, not a pointer", e.GoType)
+	} else {
+		return fmt.Sprintf("proton: cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
+	}
+}
 
 //
 // Decoding from a pn_data_t
@@ -67,7 +89,7 @@ func (d *Decoder) Buffered() io.Reader {
 // See the documentation for Unmarshal for details about the conversion of AMQP into a Go value.
 //
 func (d *Decoder) Decode(v interface{}) (err error) {
-	defer doRecover(&err)
+	defer internal.DoRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	var n int
@@ -148,12 +170,12 @@ Maps: currently we cannot unmarshal AMQP maps with unhashable key types, need an
 representation for those.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
-	defer doRecover(&err)
+	defer internal.DoRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	n = unmarshal(data, bytes, v)
 	if n == 0 {
-		err = errorf("not enough data")
+		err = internal.Errorf("not enough data")
 	}
 	return
 }
@@ -524,7 +546,7 @@ func decode(data *C.pn_data_t, bytes []byte) int {
 		C.pn_error_clear(C.pn_data_error(data))
 		return 0
 	} else if n <= 0 {
-		panic(errorf("unmarshal %s", pnErrorName(n)))
+		panic(internal.Errorf("unmarshal %s", internal.PnErrorCode(n)))
 	}
 	return n
 }

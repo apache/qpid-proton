@@ -23,6 +23,10 @@ package event
 // #include <proton/handlers.h>
 import "C"
 
+import (
+	"qpid.apache.org/proton/internal"
+)
+
 // CoreHandler handles core proton events.
 type CoreHandler interface {
 	// Handle is called with an event.
@@ -40,24 +44,18 @@ func (h cHandler) Handle(e Event) error {
 	return nil // FIXME aconway 2015-03-31: error handling
 }
 
-func HandShaker() CoreHandler {
-	return cHandler{C.pn_handshaker()}
-}
-
-func FlowController(prefetch int) CoreHandler {
-	return cHandler{C.pn_flowcontroller(C.int(prefetch))}
-}
-
-// MessagingHandler provides a higher-level, easier-to-use interface for writing
-// applications that send and receive messages.
+// MessagingHandler provides an alternative interface to CoreHandler,
+// it is easier to use for most applications that send and receive messages.
 //
-// You can implement this interface and wrap it with a MessagingHandlerDelegator
+// Implement this interface and then wrap your value with a MessagingHandlerDelegator.
+// MessagingHandlerDelegator implements CoreHandler and can be registered with a Pump.
+//
 type MessagingHandler interface {
 	Handle(MessagingEventType, Event) error
 }
 
-// MessagingEventType provides an easier set of event types to work with
-// that the core proton EventType.
+// MessagingEventType provides a set of events that are easier to work with than the
+// core events defined by EventType
 //
 type MessagingEventType int
 
@@ -101,13 +99,13 @@ const (
 	// The peer initiates the closing of the link.
 	MLinkClosing
 
-	// The connection is closed.
+	// Both ends of the connection are closed.
 	MConnectionClosed
 
-	// The session is closed.
+	// Both ends of the session are closed.
 	MSessionClosed
 
-	// The link is closed.
+	// Both ends of the link are closed.
 	MLinkClosed
 
 	// The socket is disconnected.
@@ -137,7 +135,60 @@ const (
 	MMessage
 )
 
-// Capture common patterns for endpoints opening/closing
+func (t MessagingEventType) String() string {
+	switch t {
+	case MStart:
+		return "Start"
+	case MConnectionError:
+		return "ConnectionError"
+	case MSessionError:
+		return "SessionError"
+	case MLinkError:
+		return "LinkError"
+	case MConnectionOpening:
+		return "ConnectionOpening"
+	case MSessionOpening:
+		return "SessionOpening"
+	case MLinkOpening:
+		return "LinkOpening"
+	case MConnectionOpened:
+		return "ConnectionOpened"
+	case MSessionOpened:
+		return "SessionOpened"
+	case MLinkOpened:
+		return "LinkOpened"
+	case MConnectionClosing:
+		return "ConnectionClosing"
+	case MSessionClosing:
+		return "SessionClosing"
+	case MLinkClosing:
+		return "LinkClosing"
+	case MConnectionClosed:
+		return "ConnectionClosed"
+	case MSessionClosed:
+		return "SessionClosed"
+	case MLinkClosed:
+		return "LinkClosed"
+	case MDisconnected:
+		return "Disconnected"
+	case MSendable:
+		return "Sendable"
+	case MAccepted:
+		return "Accepted"
+	case MRejected:
+		return "Rejected"
+	case MReleased:
+		return "Released"
+	case MSettled:
+		return "Settled"
+	case MMessage:
+		return "Message"
+	default:
+		return "Unknown"
+	}
+}
+
+// endpointDelegator captures common patterns for endpoints opening/closing
 type endpointDelegator struct {
 	remoteOpen, remoteClose, localOpen, localClose EventType
 	opening, opened, closing, closed, error        MessagingEventType
@@ -145,52 +196,63 @@ type endpointDelegator struct {
 	delegate                                       MessagingHandler
 }
 
-func (d endpointDelegator) Handle(e Event) error {
+// Handle handles an open/close event for an endpoint in a generic way.
+func (d endpointDelegator) Handle(e Event) (err error) {
 	endpoint := d.endpoint(e)
 	state := endpoint.State()
 
 	switch e.Type() {
 
 	case d.localOpen:
-		if state.RemoteOpen() {
-			return d.delegate.Handle(d.opened, e)
+		if state.Is(SRemoteActive) {
+			err = d.delegate.Handle(d.opened, e)
 		}
 
 	case d.remoteOpen:
 		switch {
-		case state.LocalOpen():
-			return d.delegate.Handle(d.opened, e)
-		case state.LocalUninitialized():
-			err := d.delegate.Handle(d.opening, e)
+		case state.Is(SLocalActive):
+			err = d.delegate.Handle(d.opened, e)
+		case state.Is(SLocalUninit):
+			err = d.delegate.Handle(d.opening, e)
 			if err == nil {
 				endpoint.Open()
 			}
-			return err
 		}
 
 	case d.remoteClose:
-		switch {
-		case endpoint.RemoteCondition().IsSet():
-			d.delegate.Handle(d.error, e)
-		case state.LocalClosed():
-			d.delegate.Handle(d.closed, e)
-		default:
-			d.delegate.Handle(d.closing, e)
+		var err1 error
+		if endpoint.RemoteCondition().IsSet() {
+			err1 = d.delegate.Handle(d.error, e)
+			if err1 == nil {
+				err1 = endpoint.RemoteCondition().Error()
+			}
 		}
-		endpoint.Close()
+		if state.Is(SLocalClosed) {
+			err = d.delegate.Handle(d.closed, e)
+		} else {
+			err = d.delegate.Handle(d.closing, e)
+			endpoint.Close()
+		}
+		if err1 != nil {
+			err = err1
+		}
 
 	case d.localClose:
-		// Nothing to do
+		if state.Is(SRemoteClosed) {
+			err = d.delegate.Handle(d.closed, e)
+		}
 
 	default:
-		panic("internal error") // We shouldn't be called with any other event type.
+		// We shouldn't be called with any other event type.
+		panic(internal.Errorf("internal error, not an open/close event: %s", e))
 	}
-	return nil
+
+	return err
 }
 
 // MessagingDelegator implments a CoreHandler and delegates to a MessagingHandler.
 // You can modify the exported fields before you pass the MessagingDelegator to
-// a Pump
+// a Pump.
 type MessagingDelegator struct {
 	delegate                   MessagingHandler
 	connection, session, link  endpointDelegator
@@ -231,7 +293,6 @@ func NewMessagingDelegator(h MessagingHandler) CoreHandler {
 			func(e Event) Endpoint { return e.Link() },
 			h,
 		},
-		handshaker:     HandShaker(),
 		flowcontroller: nil,
 		AutoSettle:     true,
 		AutoAccept:     true,
@@ -248,13 +309,12 @@ func handleIf(h CoreHandler, e Event) error {
 }
 
 func (d *MessagingDelegator) Handle(e Event) error {
-	handleIf(d.handshaker, e)
 	handleIf(d.flowcontroller, e) // FIXME aconway 2015-03-31: error handling.
 
 	switch e.Type() {
 
 	case EConnectionInit:
-		d.flowcontroller = FlowController(d.Prefetch)
+		d.flowcontroller = cHandler{C.pn_flowcontroller(C.int(d.Prefetch))}
 		d.delegate.Handle(MStart, e)
 
 	case EConnectionRemoteOpen, EConnectionRemoteClose, EConnectionLocalOpen, EConnectionLocalClose:
@@ -277,6 +337,9 @@ func (d *MessagingDelegator) Handle(e Event) error {
 		} else {
 			d.outgoing(e)
 		}
+
+	case ETransportTailClosed:
+		d.delegate.Handle(MDisconnected, e)
 	}
 	return nil
 }
@@ -284,7 +347,7 @@ func (d *MessagingDelegator) Handle(e Event) error {
 func (d *MessagingDelegator) incoming(e Event) (err error) {
 	delivery := e.Delivery()
 	if delivery.Readable() && !delivery.Partial() {
-		if e.Link().State().LocalClosed() {
+		if e.Link().State().Is(SLocalClosed) {
 			e.Link().Advance()
 			if d.AutoAccept {
 				delivery.Release(false)

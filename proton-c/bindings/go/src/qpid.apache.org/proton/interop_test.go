@@ -35,7 +35,7 @@ import (
 
 func assertEqual(want interface{}, got interface{}) {
 	if !reflect.DeepEqual(want, got) {
-		panic(errorf("%#v != %#v", want, got))
+		panic(fmt.Errorf("%#v != %#v", want, got))
 	}
 }
 
@@ -48,7 +48,7 @@ func assertNil(err interface{}) {
 func getReader(name string) (r io.Reader) {
 	r, err := os.Open("../../../../../../tests/interop/" + name + ".amqp")
 	if err != nil {
-		panic(errorf("Can't open %#v: %v", name, err))
+		panic(fmt.Errorf("Can't open %#v: %v", name, err))
 	}
 	return
 }
@@ -197,7 +197,7 @@ func TestStrings(t *testing.T) {
 	assertDecode(d, "", &sym)
 	remains = remaining(d)
 	if remains != "" {
-		panic(errorf("leftover: %s", remains))
+		t.Fatalf("leftover: %s", remains)
 	}
 
 	// Test some error handling
@@ -220,7 +220,7 @@ func TestStrings(t *testing.T) {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte("foobar"), nil)
-	if !strings.Contains(err.Error(), "invalid argument") {
+	if !strings.Contains(err.Error(), "invalid-argument") {
 		t.Error(err)
 	}
 }

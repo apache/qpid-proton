@@ -22,25 +22,24 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"math"
 	"net"
 	"os"
+	"path"
 	"qpid.apache.org/proton"
+	"qpid.apache.org/proton/messaging"
 	"sync"
 	"time"
 )
 
-// Simplistic error handling for demo. Not recommended.
-func panicIf(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 // Command-line flags
+var verbose = flag.Int("verbose", 1, "Output level, 0 means none, higher means more")
 var count = flag.Int64("count", 0, "Stop after receiving this many messages. 0 means unlimited.")
 var timeout = flag.Int64("time", 0, "Stop after this many seconds. 0 means unlimited.")
-var short = flag.Bool("short", false, "Short format of message: body only")
+var full = flag.Bool("full", false, "Print full message not just body.")
 
 func main() {
 	// Parse flags and arguments, print usage message on error.
@@ -76,29 +75,44 @@ Receive messages from all the listed URLs concurrently and print them.
 
 	wait.Add(len(urls)) // Wait for one goroutine per URL.
 
-	for _, urlStr := range urls {
-		// Start a goroutine to receive from urlStr
+	// Arrange to close all connections on exit
+	connections := make([]*messaging.Connection, len(urls))
+	defer func() {
+		for _, c := range connections {
+			if c != nil {
+				c.Close()
+			}
+		}
+	}()
+
+	for i, urlStr := range urls {
+		debug.Printf("Connecting to %s", urlStr)
 		go func(urlStr string) {
 			defer wait.Done()                   // Notify main() that this goroutine is done.
 			url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
-			panicIf(err)
+			fatalIf(err)
 
 			// Open a standard Go net.Conn for the AMQP connection
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
-			panicIf(err)
-			defer conn.Close() // Close conn on goroutine exit.
+			fatalIf(err)
 
-			pc, err := proton.Connect(conn) // This is our AMQP connection.
-			panicIf(err)
-			// We could 'defer pc.Close()' but conn.close() will automatically close the proton connection.
+			pc, err := messaging.Connect(conn) // This is our AMQP connection.
+			fatalIf(err)
+			connections[i] = pc
 
 			// For convenience a proton.Connection provides a DefaultSession()
 			// pc.Receiver() is equivalent to pc.DefaultSession().Receiver()
 			r, err := pc.Receiver(url.Path)
-			panicIf(err)
+			fatalIf(err)
 
-			for m := range r.Receive { // r.Receive is a channel to receive messages.
-				select {
+			for {
+				var m proton.Message
+				select { // Receive a message or stop.
+				case m = <-r.Receive:
+				case <-stop: // The program is stopping.
+					return
+				}
+				select { // Send m to main() or stop
 				case messages <- m: // Send m to main()
 				case <-stop: // The program is stopping.
 					return
@@ -106,24 +120,57 @@ Receive messages from all the listed URLs concurrently and print them.
 			}
 		}(urlStr)
 	}
+	info.Printf("Listening")
 
 	// time.After() returns a channel that will close when the timeout is up.
 	timer := time.After(duration)
 
 	// main() prints each message and checks for count or timeout being exceeded.
-	for i := *count; i > 0; i-- {
+	for i := int64(0); i < *count; i++ {
 		select {
 		case m := <-messages:
-			if *short {
-				fmt.Println(m.Body())
-			} else {
-				fmt.Printf("%#v\n\n", m)
-			}
+			debug.Print(formatMessage{m})
 		case <-timer: // Timeout has expired
 			i = 0
 		}
 	}
-
+	info.Printf("Received %d messages", *count)
 	close(stop) // Signal all goroutines to stop.
 	wait.Wait() // Wait for all goroutines to finish.
+}
+
+// Logging
+func logger(prefix string, level int, w io.Writer) *log.Logger {
+	if *verbose >= level {
+		return log.New(w, prefix, 0)
+	}
+	return log.New(ioutil.Discard, "", 0)
+}
+
+var info, debug *log.Logger
+
+func init() {
+	flag.Parse()
+	name := path.Base(os.Args[0])
+	log.SetFlags(0)                                               // Use default logger for errors.
+	log.SetPrefix(fmt.Sprintf("%s: ", name))                      // Log errors on stderr.
+	info = logger(fmt.Sprintf("%s: ", name), 1, os.Stdout)        // Log info on stdout.
+	debug = logger(fmt.Sprintf("%s debug: ", name), 2, os.Stderr) // Log debug on stderr.
+}
+
+// Simple error handling for demo.
+func fatalIf(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+type formatMessage struct{ m proton.Message }
+
+func (fm formatMessage) String() string {
+	if *full {
+		return fmt.Sprintf("%#v", fm.m)
+	} else {
+		return fmt.Sprintf("%#v", fm.m.Body())
+	}
 }

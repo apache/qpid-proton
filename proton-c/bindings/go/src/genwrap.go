@@ -44,7 +44,11 @@ func mixedCase(s string) string {
 	return result
 }
 
-var templateFuncs = template.FuncMap{"mixedCase": mixedCase}
+func mixedCaseTrim(s, prefix string) string {
+	return mixedCase(strings.TrimPrefix(s, prefix))
+}
+
+var templateFuncs = template.FuncMap{"mixedCase": mixedCase, "mixedCaseTrim": mixedCaseTrim}
 
 func doTemplate(out io.Writer, data interface{}, tmpl string) {
 	panicIf(template.Must(template.New("").Funcs(templateFuncs).Parse(tmpl)).Execute(out, data))
@@ -73,7 +77,7 @@ const ({{range $values}}
 func (e {{mixedCase $enumName}}) String() string {
 	switch e {
 {{range $values}}
-	case C.{{.}}: return "{{mixedCase .}}" {{end}}
+	case C.{{.}}: return "{{mixedCaseTrim . "PN_"}}" {{end}}
 	}
 	return "unknown"
 }
@@ -131,7 +135,7 @@ type eventType struct {
 func newEventType(cName string) eventType {
 	var etype eventType
 	etype.Cname = cName
-	etype.Name = mixedCase(strings.TrimPrefix(cName, "PN_"))
+	etype.Name = mixedCaseTrim(cName, "PN_")
 	etype.Fname = "On" + etype.Name
 	etype.Iname = etype.Fname + "Interface"
 	return etype
@@ -141,7 +145,7 @@ var (
 	enumDefRe   = regexp.MustCompile("typedef enum {([^}]*)} pn_([a-z_]+)_t;")
 	enumValRe   = regexp.MustCompile("PN_[A-Z_]+")
 	skipEventRe = regexp.MustCompile("EVENT_NONE|REACTOR|SELECTABLE|TIMER")
-	skipFnRe    = regexp.MustCompile("attach|context|class|collect|^recv$|^send$")
+	skipFnRe    = regexp.MustCompile("attach|context|class|collect|^recv$|^send$|transport")
 )
 
 // Generate event wrappers.
@@ -183,6 +187,7 @@ type genType struct {
 	Ctype, Gotype string
 	ToGo          func(value string) string
 	ToC           func(value string) string
+	Assign        func(value string) string
 }
 
 func (g genType) printBody(out io.Writer, value string) {
@@ -237,19 +242,24 @@ func mapType(ctype string) (g genType) {
 	case "C.uint64_t":
 		g.Gotype = "uint64"
 	case "C.uint32_t":
+		g.Gotype = "uint16"
+	case "C.uint16_t":
 		g.Gotype = "uint32"
 	case "C.const char *":
-		g.Gotype = "string"
-		g.Ctype = "C.CString"
+		fallthrough
 	case "C.char *":
 		g.Gotype = "string"
 		g.Ctype = "C.CString"
+		g.ToC = func(v string) string { return fmt.Sprintf("%sC", v) }
+		g.Assign = func(v string) string {
+			return fmt.Sprintf("%sC := C.CString(%s)\n defer C.free(unsafe.Pointer(%sC))\n", v, v, v)
+		}
 	case "C.pn_seconds_t":
 		g.Gotype = "time.Duration"
 		g.ToGo = func(v string) string { return fmt.Sprintf("(time.Duration(%s) * time.Second)", v) }
 	case "C.pn_error_t *":
 		g.Gotype = "error"
-		g.ToGo = func(v string) string { return fmt.Sprintf("pnError(%s)", v) }
+		g.ToGo = func(v string) string { return fmt.Sprintf("internal.PnError(unsafe.Pointer(%s))", v) }
 	default:
 		pnId := regexp.MustCompile(" *pn_([a-z_]+)_t *\\*? *")
 		match := pnId.FindStringSubmatch(g.Ctype)
@@ -285,6 +295,7 @@ func splitArgs(argstr string) []genArg {
 	}
 	args := make([]genArg, 0)
 	for _, item := range strings.Split(argstr, ",") {
+		item = strings.Trim(item, " \n")
 		typeName := typeNameRe.FindStringSubmatch(item)
 		if typeName == nil {
 			panic(fmt.Errorf("Can't split argument type/name %#v", item))
@@ -318,6 +329,16 @@ func cArgs(args []genArg) string {
 	return l
 }
 
+func cAssigns(args []genArg) string {
+	l := "\n"
+	for _, arg := range args {
+		if arg.Assign != nil {
+			l += fmt.Sprintf("%s\n", arg.Assign(arg.Name))
+		}
+	}
+	return l
+}
+
 // Return the go name of the function or "" to skip the function.
 func goFnName(api, fname string) string {
 	// Skip class, context and attachment functions.
@@ -328,13 +349,13 @@ func goFnName(api, fname string) string {
 	case "link.get_drain":
 		return "IsDrain"
 	default:
-		return mixedCase(strings.TrimPrefix(fname, "get_"))
+		return mixedCaseTrim(fname, "get_")
 	}
 }
 
 func apiWrapFns(api, header string, out io.Writer) {
 	fmt.Fprintf(out, "type %s struct{pn *C.pn_%s_t}\n", mixedCase(api), api)
-	fmt.Fprintf(out, "func (%c %s) isNil() bool { return %c.pn == nil }\n", api[0], mixedCase(api), api[0])
+	fmt.Fprintf(out, "func (%c %s) IsNil() bool { return %c.pn == nil }\n", api[0], mixedCase(api), api[0])
 	fn := regexp.MustCompile(fmt.Sprintf(`PN_EXTERN ([a-z0-9_ ]+ *\*?) *pn_%s_([a-z_]+)\(pn_%s_t *\*[a-z_]+ *,? *([^)]*)\)`, api, api))
 	for _, m := range fn.FindAllStringSubmatch(header, -1) {
 		rtype, fname, argstr := mapType(m[1]), m[2], m[3]
@@ -345,6 +366,7 @@ func apiWrapFns(api, header string, out io.Writer) {
 		args := splitArgs(argstr)
 		fmt.Fprintf(out, "func (%c %s) %s", api[0], mixedCase(api), gname)
 		fmt.Fprintf(out, "(%s) %s { ", goArgs(args), rtype.Gotype)
+		fmt.Fprint(out, cAssigns(args))
 		rtype.printBody(out, fmt.Sprintf("C.pn_%s_%s(%c.pn%s)", api, fname, api[0], cArgs(args)))
 		fmt.Fprintf(out, "}\n")
 	}
@@ -363,10 +385,13 @@ package event
 
 import (
 	"time"
+  "unsafe"
+  "qpid.apache.org/proton/internal"
 )
 
 // #include <proton/types.h>
 // #include <proton/event.h>
+// #include <stdlib.h>
 `)
 	for _, api := range apis {
 		fmt.Fprintf(out, "// #include <proton/%s.h>\n", api)

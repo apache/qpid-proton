@@ -35,6 +35,7 @@ import "C"
 import (
 	"net"
 	"net/url"
+	"qpid.apache.org/proton/internal"
 	"unsafe"
 )
 
@@ -53,7 +54,7 @@ func ParseURL(s string) (u *url.URL, err error) {
 	defer C.free(unsafe.Pointer(cstr))
 	pnUrl := C.pn_url_parse(cstr)
 	if pnUrl == nil {
-		return nil, errorf("bad URL %#v", s)
+		return nil, internal.Errorf("bad URL %#v", s)
 	}
 	defer C.pn_url_free(pnUrl)
 
@@ -65,7 +66,7 @@ func ParseURL(s string) (u *url.URL, err error) {
 	path := C.GoString(C.pn_url_get_path(pnUrl))
 
 	if err != nil {
-		return nil, errorf("bad URL %#v: %s", s, err)
+		return nil, internal.Errorf("bad URL %#v: %s", s, err)
 	}
 	if scheme == "" {
 		scheme = amqp

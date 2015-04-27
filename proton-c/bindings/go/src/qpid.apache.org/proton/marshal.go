@@ -24,9 +24,18 @@ import "C"
 
 import (
 	"io"
+	"qpid.apache.org/proton/internal"
 	"reflect"
 	"unsafe"
 )
+
+func dataError(prefix string, data *C.pn_data_t) error {
+	err := internal.PnError(unsafe.Pointer(C.pn_data_error(data)))
+	if err != nil {
+		err = internal.Errorf("%s: %s", prefix, err.(internal.Error))
+	}
+	return err
+}
 
 /*
 Marshal encodes a Go value as AMQP data in buffer.
@@ -71,7 +80,7 @@ TODO Go types: array, slice, struct
 Go types that cannot be marshaled: complex64/128, uintptr, function, interface, channel
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer doRecover(&err)
+	defer internal.DoRecover(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	put(data, v)
@@ -92,7 +101,7 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 const minEncode = 256
 
 // overflow is returned when an encoding function can't fit data in the buffer.
-var overflow = errorf("buffer too small")
+var overflow = internal.Errorf("buffer too small")
 
 // encodeFn encodes into buffer[0:len(buffer)].
 // Returns buffer with length adjusted for data encoded.
@@ -173,7 +182,7 @@ func put(data *C.pn_data_t, v interface{}) {
 		case reflect.Slice:
 			putList(data, v)
 		default:
-			panic(errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
+			panic(internal.Errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
 		}
 	}
 	err := dataError("marshal", data)

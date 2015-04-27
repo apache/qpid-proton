@@ -543,7 +543,7 @@ class CFlowController(WrappedHandler):
     def __init__(self, window=1024):
         WrappedHandler.__init__(self, lambda: pn_flowcontroller(window))
 
-class CHandshaker(WrappedHandler):
+oclass CHandshaker(WrappedHandler):
 
     def __init__(self):
         WrappedHandler.__init__(self, pn_handshaker)

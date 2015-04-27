@@ -36,15 +36,29 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"qpid.apache.org/proton"
 	"qpid.apache.org/proton/event"
+	"sync"
 )
 
-// panicIf is simplistic error handling for example code, not recommended practice.
-func panicIf(err error) {
-	if err != nil {
-		panic(err)
+// Command-line flags
+var addr = flag.String("addr", ":amqp", "Listening address")
+var verbose = flag.Int("verbose", 1, "Output level, 0 means none, higher means more")
+var full = flag.Bool("full", false, "Print full message not just body.")
+
+func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `
+Usage: %s
+A simple broker-like demo. Queues are created automatically for sender or receiver addrsses.
+`, os.Args[0])
+		flag.PrintDefaults()
 	}
+	flag.Parse()
+	b := newBroker()
+	err := b.listen(*addr)
+	fatalIf(err)
 }
 
 // queue is a structure representing a queue.
@@ -54,18 +68,20 @@ type queue struct {
 	consumers map[event.Link]bool // Set of consumer links
 }
 
-func newQueue(name string) *queue {
-	debug.Printf("Create queue %s\n", name)
-	return &queue{name, list.New(), make(map[event.Link]bool)}
+type logLink event.Link // Wrapper to print links in format for logging
+
+func (ll logLink) String() string {
+	l := event.Link(ll)
+	return fmt.Sprintf("%s[%p]", l.Name(), l.Session().Connection().Pump())
 }
 
 func (q *queue) subscribe(link event.Link) {
-	debug.Printf("Subscribe to %s\n", q.name)
+	debug.Printf("link %s subscribed to queue %s", logLink(link), q.name)
 	q.consumers[link] = true
 }
 
 func (q *queue) unsubscribe(link event.Link) {
-	debug.Printf("Unsubscribe from %s\n", q.name)
+	debug.Printf("link %s unsubscribed from queue %s", logLink(link), q.name)
 	delete(q.consumers, link)
 }
 
@@ -73,30 +89,37 @@ func (q *queue) empty() bool {
 	return len(q.consumers) == 0 && q.messages.Len() == 0
 }
 
-func (q *queue) publish(message proton.Message) {
-	debug.Printf("Push to %s: %#v\n", q.name, message)
+func (q *queue) push(context *event.Pump, message proton.Message) {
 	q.messages.PushBack(message)
-	q.dispatch()
+	q.pop(context)
 }
 
-func (q *queue) dispatchTo(link event.Link) bool {
+func (q *queue) popTo(context *event.Pump, link event.Link) bool {
 	if q.messages.Len() != 0 && link.Credit() > 0 {
-		message := q.messages.Front().Value.(proton.Message)
-		debug.Printf("Pop from %s: %#v\n", q.name, message)
+		message := q.messages.Remove(q.messages.Front()).(proton.Message)
+		debug.Printf("link %s <- queue %s: %s", logLink(link), q.name, formatMessage{message})
 		// The first return parameter is an event.Delivery.
 		// The Deliver can be used to track message status, e.g. so we can re-delver on failure.
 		// This demo broker doesn't do that.
-		_, err := message.Send(link)
-		panicIf(err)
-		q.messages.Remove(q.messages.Front())
+		linkPump := link.Session().Connection().Pump()
+		if context == linkPump {
+			if context == nil {
+				log.Fatal("pop in nil context")
+			}
+			link.Send(message) // link is in the current pump, safe to call Send() direct
+		} else {
+			linkPump.Inject <- func() { // Inject to link's pump
+				link.Send(message) // FIXME aconway 2015-05-04: error handlig
+			}
+		}
 		return true
 	}
 	return false
 }
 
-func (q *queue) dispatch() (dispatched bool) {
+func (q *queue) pop(context *event.Pump) (popped bool) {
 	for c, _ := range q.consumers {
-		dispatched = dispatched || q.dispatchTo(c)
+		popped = popped || q.popTo(context, c)
 	}
 	return
 }
@@ -104,54 +127,79 @@ func (q *queue) dispatch() (dispatched bool) {
 // broker implements event.MessagingHandler and reacts to events by moving messages on or off queues.
 type broker struct {
 	queues map[string]*queue
-	pumps  map[*event.Pump]struct{} // Set of running event pumps (i.e. connections)
+	lock   sync.Mutex // FIXME aconway 2015-05-04: un-golike, better broker coming...
 }
 
 func newBroker() *broker {
-	return &broker{queues: make(map[string]*queue), pumps: make(map[*event.Pump]struct{})}
+	return &broker{queues: make(map[string]*queue)}
 }
 
 func (b *broker) getQueue(name string) *queue {
 	q := b.queues[name]
 	if q == nil {
-		q = newQueue(name)
+		debug.Printf("Create queue %s", name)
+		q = &queue{name, list.New(), make(map[event.Link]bool)}
 		b.queues[name] = q
 	}
 	return q
 }
 
+func (b *broker) unsubscribe(l event.Link) {
+	if l.IsSender() {
+		q := b.queues[l.RemoteSource().Address()]
+		if q != nil {
+			q.unsubscribe(l)
+			if q.empty() {
+				debug.Printf("Delete queue %s", q.name)
+				delete(b.queues, q.name)
+			}
+		}
+	}
+}
+
 func (b *broker) Handle(t event.MessagingEventType, e event.Event) error {
+	// FIXME aconway 2015-05-04: locking is un-golike, better example coming soon.
+	// Needed because Handle is called for multiple connections concurrently
+	// and the queue data structures are not thread safe.
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	switch t {
 
 	case event.MLinkOpening:
 		if e.Link().IsSender() {
-			// FIXME aconway 2015-03-23: handle dynamic consumers
-			b.getQueue(e.Link().RemoteSource().Address()).subscribe(e.Link())
+			q := b.getQueue(e.Link().RemoteSource().Address())
+			q.subscribe(e.Link())
 		}
 
 	case event.MLinkClosing:
-		if e.Link().IsSender() {
-			q := b.getQueue(e.Link().RemoteSource().Address())
-			q.unsubscribe(e.Link())
-			if q.empty() {
-				delete(b.queues, q.name)
-			}
+		b.unsubscribe(e.Link())
+
+	case event.MDisconnected:
+		fallthrough
+	case event.MConnectionClosing:
+		c := e.Connection()
+		for l := c.LinkHead(event.SRemoteActive); !l.IsNil(); l = l.Next(event.SRemoteActive) {
+			b.unsubscribe(l)
 		}
 
 	case event.MSendable:
-		b.getQueue(e.Link().RemoteSource().Address()).dispatchTo(e.Link())
+		q := b.getQueue(e.Link().RemoteSource().Address())
+		q.popTo(e.Connection().Pump(), e.Link())
 
 	case event.MMessage:
-		m, err := proton.EventMessage(e)
-		panicIf(err)
-		b.getQueue(e.Link().RemoteTarget().Address()).publish(m)
+		m, err := event.DecodeMessage(e)
+		fatalIf(err)
+		qname := e.Link().RemoteTarget().Address()
+		debug.Printf("link %s -> queue %s: %s", logLink(e.Link()), qname, formatMessage{m})
+		b.getQueue(qname).push(e.Connection().Pump(), m)
 	}
 	return nil
 }
 
 func (b *broker) listen(addr string) (err error) {
 	// Use the standard Go "net" package to listen for connections.
-	info.Printf("Listening on %s\n", addr)
+	info.Printf("Listening on %s", addr)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -160,46 +208,56 @@ func (b *broker) listen(addr string) (err error) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			info.Printf("Accept error: %s\n", err)
+			info.Printf("Accept error: %s", err)
 			continue
 		}
-		info.Printf("Accepted connection %s<-%s\n", conn.LocalAddr(), conn.RemoteAddr())
 		pump, err := event.NewPump(conn, event.NewMessagingDelegator(b))
-		panicIf(err)
+		fatalIf(err)
+		info.Printf("Accepted %s[%p]", pump, pump)
 		pump.Server()
-		b.pumps[pump] = struct{}{}
-		go pump.Run()
+		go func() {
+			pump.Run()
+			if pump.Error == nil {
+				info.Printf("Closed %s", pump)
+			} else {
+				info.Printf("Closed %s: %s", pump, pump.Error)
+			}
+		}()
 	}
 }
 
-var addr = flag.String("addr", ":amqp", "Listening address")
-var quiet = flag.Bool("quiet", false, "Don't print informational messages")
-var debugFlag = flag.Bool("debug", false, "Print debugging messages")
+// Logging
+func logger(prefix string, level int, w io.Writer) *log.Logger {
+	if *verbose >= level {
+		return log.New(w, prefix, 0)
+	}
+	return log.New(ioutil.Discard, "", 0)
+}
+
 var info, debug *log.Logger
 
-func output(enable bool) io.Writer {
-	if enable {
-		return os.Stdout
-	} else {
-		return ioutil.Discard
+func init() {
+	flag.Parse()
+	name := path.Base(os.Args[0])
+	log.SetFlags(0)
+	log.SetPrefix(fmt.Sprintf("%s: ", name))                      // Log errors on stderr.
+	info = logger(fmt.Sprintf("%s: ", name), 1, os.Stdout)        // Log info on stdout.
+	debug = logger(fmt.Sprintf("%s debug: ", name), 2, os.Stderr) // Log debug on stderr.
+}
+
+// Simple error handling for demo.
+func fatalIf(err error) {
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
-func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `
-Usage: %s [queue ...]
-A simple broker. Queues are created automatically for sender or receiver addrsses.
-`, os.Args[0])
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	debug = log.New(output(*debugFlag), "debug: ", log.Ltime)
-	info = log.New(output(!*quiet), "info: ", log.Ltime)
-	b := newBroker()
-	err := b.listen(*addr)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+type formatMessage struct{ m proton.Message }
+
+func (fm formatMessage) String() string {
+	if *full {
+		return fmt.Sprintf("%#v", fm.m)
+	} else {
+		return fmt.Sprintf("%#v", fm.m.Body())
 	}
 }

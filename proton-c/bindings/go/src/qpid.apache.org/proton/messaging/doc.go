@@ -17,38 +17,12 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package main
+/*
+Package messaging provides a procedural, concurrent Go API for exchanging AMQP messages.
+*/
+package messaging
 
-import (
-	"fmt"
-	"qpid.apache.org/proton"
-	"sync"
-)
+// #cgo LDFLAGS: -lqpid-proton
+import "C"
 
-func receive(c proton.Connection, addr string, wait *sync.WaitGroup) {
-	defer wait.Done()
-	r := c.Receiver(addr)
-	defer r.Close()
-	for m := range r.Receive { // r.Receive is a chan Message
-		fmt.Println("received: ", addr, m.Body(), m.Subject())
-		if m.Subject() == "stop" {
-			return
-		}
-	}
-}
-
-func main() {
-	var c1, c2 proton.Connection
-	c1.Open("amqp://foo:amqp")
-	defer c1.Close()
-	c2.Open("amqp://localhost:4567")
-	defer c2.Close()
-
-	var wait sync.WaitGroup
-	wait.Add(2)
-
-	go receive(c1, "foo", &wait)
-	go receive(c2, "bar", &wait)
-
-	wait.Wait()
-}
+// Just for package comment

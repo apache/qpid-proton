@@ -30,55 +30,33 @@ There are two types of developer we want to support
 
 ## Status
 
-There are two Go modules so far. See the documentation using
+Package proton encodes and decodes AMQP messages and data as Go types.
 
-    godoc apache.org/proton
-    godoc apache.org/proton/event
+Sub-packages 'event' and 'messaging' provide two alternative ways to write
+AMQP clients and servers. 'messaging' is easier for general purpose use. 'event'
+gives complete low-level control of the underlying proton C engine.
 
-The proton module maps between AMQP and Go types and has a Go representation of
-an AMQP message. It is the beginning of the "real" Go API. For examples of what
-this API will look like see:
+The event package is fairly complete, with the exception of the proton
+reactor. It's unclear if the reactor is important for go.
 
-- [receive.go](../../../examples/go/receive.go) uses channels and goroutines to receive concurrently.
-- [send.go](../../../examples/go/send.go) less interesting but there for symmetry.
+The messaging package is just starting. The examples work but anything else might not.
 
-The event module is a port of the proton C and python MessagingHandler APIs. It
-provides low-level, goroutine-unsafe but (mostly) complete access to proton. It
-is the foundation for building the Go API and may be useful for advanced AMQP
-projects or cross-langauge proton development in future.
+### Examples
 
-The event API is functional but not completely complete. The Go API doesn't
-exist yet, there is some dummy code so the examples will compile and run.
+messaging API:
+
+- [receive.go](../../../examples/go/receive.go) receive from many connections concurrently
+- [send.go](../../../examples/go/send.go) send to many connections concurrently
+
+event API:
+- [broker.go](../../../examples/go/event/broker.go) simple mini-broker
+
+The examples work with each other and with the python `broker.py`,
+`simple_send.py` and `simple_receive.py`.
 
 ## The event driven API
 
-The event module contains
-
-- Go Proton events (AMQP events only, no reactor events yet)
-- Go MessagingHandler events (equivalent to python MessagingHandler.)
-- Pump to feed data between a Go net.Conn connection and a proton event loop.
-
-The Pump uses 3 goroutines per connection, one to read, one to write and one to
-run the proton event loop. Proton's thread-unsafe data is never used outside the
-event loop goroutine.
-
-This API provides direct access to proton events, equivalent to C or python
-event API. It does not yet support reactor events or allow multiple connections
-to be handled in a single event loop goroutine, these are temporary limitations.
-
-There is one example: examples/go/broker.go. It is a port of
-examples/python/broker.py and can be used with the python `simple_send.py` and
-`simple_recv.py` clients.
-
-The broker example works for simple tests but is concurrency-unsafe. It uses a
-single `broker`, implementing MessagingHandler, with multiple pumps. The proton
-event loops are safe in their separate goroutines but the `broker` state (queues
-etc.) is not. We can fix this by funneling multiple connections into a single
-event loop as mentioned above.
-
-However this API is not the end of the story. It will be the foundation to build
-a more Go-like API that allows *any* goroutine to send or receive messages
-without having to know anything about event loops or pumps.
+See the package documentation for details.
 
 ## The Go API
 
@@ -87,15 +65,49 @@ AMQP messages and other information (acknowledgments, flow control instructions
 etc.) using channels. There will be no user-visible locks and no need to run
 user code in special goroutines, e.g. as handlers in a proton event loop.
 
-There is a (trivial, speculative, incomplete) example in examples/go/example.go
-of what part of it might look like. It shows receiving messages concurrently
-from two different connections in a single goroutine (it omits sessions). 
+See the package documentation for emerging details.
 
-There is a tempting analogy between Go channels and AMQP links, but Go channels
-are much simpler beasts than AMQP links. It is likely a link will be implemented
-by a Go type that uses more than one channel. E.g. there will probably be
-separate channels for messages and acknowledgments, perhaps also for flow
-control status.
+Currently using a channel to receive messages, a function to send them (channels
+internally) and a channel as a "future" for acknowledgements to senders. This
+may change.
+
+## Design Questions
+
+
+1. Error reporting and handling, esp. async. errors:
+
+What are common patterns for handling errors across channels?  I.e. the thing at
+one end of the channel blows up, how do you tell the other end?
+
+readers: you can close the channel, but there's no error info. You could pass a
+struct { data, error } or use a second channel. Pros & cons?
+
+writers: you can't close without a panic so you need a second channel.  Is this
+a normal pattern:
+
+    select {
+        data -> sendChan: sentit()
+        err := <- errChan: oops(err)
+    }
+
+2. Use of channels:
+
+I recently saw an interesting Go tip: "Make your API synchronous because in Go
+it is simple to make a sync call async by putting it in a goroutine."
+
+What are the tradeoffs of exposing channels directly in the API vs. hiding them
+behind methods? Exposing lets users select directly, less overhead than starting
+a goroutine, creating MORE channels and selecting those. Hiding lets us wrap
+patterns like the 'select {data, err}' pattern above, which is easier and less
+error prone than asking users to do it themselves.
+
+The standard net.Conn uses blocking methods, not channels. I did as the tip says
+and wrapped them in goroutines and channels. The library does expose *read*
+channels e.g. time.After. Are there any *write* channels in the standard
+library? I note that time.After has no errors, and suspect that may be a key
+factor in the descison.
+
+3. The "future" pattern for acknowledgements: super easy in Go but depends on 1. and 2. above.
 
 ## Why a separate API for Go?
 

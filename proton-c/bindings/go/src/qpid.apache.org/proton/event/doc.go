@@ -18,7 +18,17 @@ under the License.
 */
 
 /*
-Package event provides an event-oriented API to the  proton AMQP engine.
+Package event provides a low-level API to the proton AMQP engine.
+
+For most tasks, consider instead package qpid.apache.org/proton/messaging.
+It provides a higher-level, concurrent API that is easier to use.
+
+The API is event based. There are two alternative styles of handler. CoreHandler
+provides the core proton events. MessagingHandler provides a slighly simplified
+view of the event stream and automates some common tasks.
+
+See type Pump documentation for more details of the interaction between proton
+events and goroutines.
 */
 package event
 

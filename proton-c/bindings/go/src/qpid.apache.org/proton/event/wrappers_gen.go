@@ -24,11 +24,14 @@ under the License.
 package event
 
 import (
+	"qpid.apache.org/proton/internal"
 	"time"
+	"unsafe"
 )
 
 // #include <proton/types.h>
 // #include <proton/event.h>
+// #include <stdlib.h>
 // #include <proton/session.h>
 // #include <proton/link.h>
 // #include <proton/delivery.h>
@@ -40,47 +43,57 @@ import "C"
 
 type Event struct{ pn *C.pn_event_t }
 
-func (e Event) isNil() bool            { return e.pn == nil }
-func (e Event) Type() EventType        { return EventType(C.pn_event_type(e.pn)) }
-func (e Event) Connection() Connection { return Connection{C.pn_event_connection(e.pn)} }
-func (e Event) Session() Session       { return Session{C.pn_event_session(e.pn)} }
-func (e Event) Link() Link             { return Link{C.pn_event_link(e.pn)} }
-func (e Event) Delivery() Delivery     { return Delivery{C.pn_event_delivery(e.pn)} }
-func (e Event) Transport() Transport   { return Transport{C.pn_event_transport(e.pn)} }
-func (e Event) String() string         { return e.Type().String() }
+func (e Event) IsNil() bool { return e.pn == nil }
+func (e Event) Type() EventType {
+	return EventType(C.pn_event_type(e.pn))
+}
+func (e Event) Connection() Connection {
+	return Connection{C.pn_event_connection(e.pn)}
+}
+func (e Event) Session() Session {
+	return Session{C.pn_event_session(e.pn)}
+}
+func (e Event) Link() Link {
+	return Link{C.pn_event_link(e.pn)}
+}
+func (e Event) Delivery() Delivery {
+	return Delivery{C.pn_event_delivery(e.pn)}
+}
+func (e Event) String() string { return e.Type().String() }
 
 type EventType int
 
 const (
-	EConnectionInit        EventType = C.PN_CONNECTION_INIT
-	EConnectionBound       EventType = C.PN_CONNECTION_BOUND
-	EConnectionUnbound     EventType = C.PN_CONNECTION_UNBOUND
-	EConnectionLocalOpen   EventType = C.PN_CONNECTION_LOCAL_OPEN
-	EConnectionRemoteOpen  EventType = C.PN_CONNECTION_REMOTE_OPEN
-	EConnectionLocalClose  EventType = C.PN_CONNECTION_LOCAL_CLOSE
-	EConnectionRemoteClose EventType = C.PN_CONNECTION_REMOTE_CLOSE
-	EConnectionFinal       EventType = C.PN_CONNECTION_FINAL
-	ESessionInit           EventType = C.PN_SESSION_INIT
-	ESessionLocalOpen      EventType = C.PN_SESSION_LOCAL_OPEN
-	ESessionRemoteOpen     EventType = C.PN_SESSION_REMOTE_OPEN
-	ESessionLocalClose     EventType = C.PN_SESSION_LOCAL_CLOSE
-	ESessionRemoteClose    EventType = C.PN_SESSION_REMOTE_CLOSE
-	ESessionFinal          EventType = C.PN_SESSION_FINAL
-	ELinkInit              EventType = C.PN_LINK_INIT
-	ELinkLocalOpen         EventType = C.PN_LINK_LOCAL_OPEN
-	ELinkRemoteOpen        EventType = C.PN_LINK_REMOTE_OPEN
-	ELinkLocalClose        EventType = C.PN_LINK_LOCAL_CLOSE
-	ELinkRemoteClose       EventType = C.PN_LINK_REMOTE_CLOSE
-	ELinkLocalDetach       EventType = C.PN_LINK_LOCAL_DETACH
-	ELinkRemoteDetach      EventType = C.PN_LINK_REMOTE_DETACH
-	ELinkFlow              EventType = C.PN_LINK_FLOW
-	ELinkFinal             EventType = C.PN_LINK_FINAL
-	EDelivery              EventType = C.PN_DELIVERY
-	ETransport             EventType = C.PN_TRANSPORT
-	ETransportError        EventType = C.PN_TRANSPORT_ERROR
-	ETransportHeadClosed   EventType = C.PN_TRANSPORT_HEAD_CLOSED
-	ETransportTailClosed   EventType = C.PN_TRANSPORT_TAIL_CLOSED
-	ETransportClosed       EventType = C.PN_TRANSPORT_CLOSED
+	EConnectionInit         EventType = C.PN_CONNECTION_INIT
+	EConnectionBound        EventType = C.PN_CONNECTION_BOUND
+	EConnectionUnbound      EventType = C.PN_CONNECTION_UNBOUND
+	EConnectionLocalOpen    EventType = C.PN_CONNECTION_LOCAL_OPEN
+	EConnectionRemoteOpen   EventType = C.PN_CONNECTION_REMOTE_OPEN
+	EConnectionLocalClose   EventType = C.PN_CONNECTION_LOCAL_CLOSE
+	EConnectionRemoteClose  EventType = C.PN_CONNECTION_REMOTE_CLOSE
+	EConnectionFinal        EventType = C.PN_CONNECTION_FINAL
+	ESessionInit            EventType = C.PN_SESSION_INIT
+	ESessionLocalOpen       EventType = C.PN_SESSION_LOCAL_OPEN
+	ESessionRemoteOpen      EventType = C.PN_SESSION_REMOTE_OPEN
+	ESessionLocalClose      EventType = C.PN_SESSION_LOCAL_CLOSE
+	ESessionRemoteClose     EventType = C.PN_SESSION_REMOTE_CLOSE
+	ESessionFinal           EventType = C.PN_SESSION_FINAL
+	ELinkInit               EventType = C.PN_LINK_INIT
+	ELinkLocalOpen          EventType = C.PN_LINK_LOCAL_OPEN
+	ELinkRemoteOpen         EventType = C.PN_LINK_REMOTE_OPEN
+	ELinkLocalClose         EventType = C.PN_LINK_LOCAL_CLOSE
+	ELinkRemoteClose        EventType = C.PN_LINK_REMOTE_CLOSE
+	ELinkLocalDetach        EventType = C.PN_LINK_LOCAL_DETACH
+	ELinkRemoteDetach       EventType = C.PN_LINK_REMOTE_DETACH
+	ELinkFlow               EventType = C.PN_LINK_FLOW
+	ELinkFinal              EventType = C.PN_LINK_FINAL
+	EDelivery               EventType = C.PN_DELIVERY
+	ETransport              EventType = C.PN_TRANSPORT
+	ETransportAuthenticated EventType = C.PN_TRANSPORT_AUTHENTICATED
+	ETransportError         EventType = C.PN_TRANSPORT_ERROR
+	ETransportHeadClosed    EventType = C.PN_TRANSPORT_HEAD_CLOSED
+	ETransportTailClosed    EventType = C.PN_TRANSPORT_TAIL_CLOSED
+	ETransportClosed        EventType = C.PN_TRANSPORT_CLOSED
 )
 
 func (e EventType) String() string {
@@ -136,6 +149,8 @@ func (e EventType) String() string {
 		return "Delivery"
 	case C.PN_TRANSPORT:
 		return "Transport"
+	case C.PN_TRANSPORT_AUTHENTICATED:
+		return "TransportAuthenticated"
 	case C.PN_TRANSPORT_ERROR:
 		return "TransportError"
 	case C.PN_TRANSPORT_HEAD_CLOSED:
@@ -152,21 +167,43 @@ func (e EventType) String() string {
 
 type Session struct{ pn *C.pn_session_t }
 
-func (s Session) isNil() bool                { return s.pn == nil }
-func (s Session) Free()                      { C.pn_session_free(s.pn) }
-func (s Session) State() State               { return State(C.pn_session_state(s.pn)) }
-func (s Session) Error() error               { return pnError(C.pn_session_error(s.pn)) }
-func (s Session) Condition() Condition       { return Condition{C.pn_session_condition(s.pn)} }
-func (s Session) RemoteCondition() Condition { return Condition{C.pn_session_remote_condition(s.pn)} }
-func (s Session) Connection() Connection     { return Connection{C.pn_session_connection(s.pn)} }
-func (s Session) Open()                      { C.pn_session_open(s.pn) }
-func (s Session) Close()                     { C.pn_session_close(s.pn) }
-func (s Session) IncomingCapacity() uint     { return uint(C.pn_session_get_incoming_capacity(s.pn)) }
+func (s Session) IsNil() bool { return s.pn == nil }
+func (s Session) Free() {
+	C.pn_session_free(s.pn)
+}
+func (s Session) State() State {
+	return State(C.pn_session_state(s.pn))
+}
+func (s Session) Error() error {
+	return internal.PnError(unsafe.Pointer(C.pn_session_error(s.pn)))
+}
+func (s Session) Condition() Condition {
+	return Condition{C.pn_session_condition(s.pn)}
+}
+func (s Session) RemoteCondition() Condition {
+	return Condition{C.pn_session_remote_condition(s.pn)}
+}
+func (s Session) Connection() Connection {
+	return Connection{C.pn_session_connection(s.pn)}
+}
+func (s Session) Open() {
+	C.pn_session_open(s.pn)
+}
+func (s Session) Close() {
+	C.pn_session_close(s.pn)
+}
+func (s Session) IncomingCapacity() uint {
+	return uint(C.pn_session_get_incoming_capacity(s.pn))
+}
 func (s Session) SetIncomingCapacity(capacity uint) {
 	C.pn_session_set_incoming_capacity(s.pn, C.size_t(capacity))
 }
-func (s Session) OutgoingBytes() uint { return uint(C.pn_session_outgoing_bytes(s.pn)) }
-func (s Session) IncomingBytes() uint { return uint(C.pn_session_incoming_bytes(s.pn)) }
+func (s Session) OutgoingBytes() uint {
+	return uint(C.pn_session_outgoing_bytes(s.pn))
+}
+func (s Session) IncomingBytes() uint {
+	return uint(C.pn_session_incoming_bytes(s.pn))
+}
 func (s Session) Next(state State) Session {
 	return Session{C.pn_session_next(s.pn, C.pn_state_t(state))}
 }
@@ -185,11 +222,11 @@ func (e SndSettleMode) String() string {
 	switch e {
 
 	case C.PN_SND_UNSETTLED:
-		return "PnSndUnsettled"
+		return "SndUnsettled"
 	case C.PN_SND_SETTLED:
-		return "PnSndSettled"
+		return "SndSettled"
 	case C.PN_SND_MIXED:
-		return "PnSndMixed"
+		return "SndMixed"
 	}
 	return "unknown"
 }
@@ -205,43 +242,97 @@ func (e RcvSettleMode) String() string {
 	switch e {
 
 	case C.PN_RCV_FIRST:
-		return "PnRcvFirst"
+		return "RcvFirst"
 	case C.PN_RCV_SECOND:
-		return "PnRcvSecond"
+		return "RcvSecond"
 	}
 	return "unknown"
 }
 
 type Link struct{ pn *C.pn_link_t }
 
-func (l Link) isNil() bool                  { return l.pn == nil }
-func (l Link) Free()                        { C.pn_link_free(l.pn) }
-func (l Link) Name() string                 { return C.GoString(C.pn_link_name(l.pn)) }
-func (l Link) IsSender() bool               { return bool(C.pn_link_is_sender(l.pn)) }
-func (l Link) IsReceiver() bool             { return bool(C.pn_link_is_receiver(l.pn)) }
-func (l Link) State() State                 { return State(C.pn_link_state(l.pn)) }
-func (l Link) Error() error                 { return pnError(C.pn_link_error(l.pn)) }
-func (l Link) Condition() Condition         { return Condition{C.pn_link_condition(l.pn)} }
-func (l Link) RemoteCondition() Condition   { return Condition{C.pn_link_remote_condition(l.pn)} }
-func (l Link) Session() Session             { return Session{C.pn_link_session(l.pn)} }
-func (l Link) Next(state State) Link        { return Link{C.pn_link_next(l.pn, C.pn_state_t(state))} }
-func (l Link) Open()                        { C.pn_link_open(l.pn) }
-func (l Link) Close()                       { C.pn_link_close(l.pn) }
-func (l Link) Detach()                      { C.pn_link_detach(l.pn) }
-func (l Link) Source() Terminus             { return Terminus{C.pn_link_source(l.pn)} }
-func (l Link) Target() Terminus             { return Terminus{C.pn_link_target(l.pn)} }
-func (l Link) RemoteSource() Terminus       { return Terminus{C.pn_link_remote_source(l.pn)} }
-func (l Link) RemoteTarget() Terminus       { return Terminus{C.pn_link_remote_target(l.pn)} }
-func (l Link) Current() Delivery            { return Delivery{C.pn_link_current(l.pn)} }
-func (l Link) Advance() bool                { return bool(C.pn_link_advance(l.pn)) }
-func (l Link) Credit() int                  { return int(C.pn_link_credit(l.pn)) }
-func (l Link) Queued() int                  { return int(C.pn_link_queued(l.pn)) }
-func (l Link) RemoteCredit() int            { return int(C.pn_link_remote_credit(l.pn)) }
-func (l Link) IsDrain() bool                { return bool(C.pn_link_get_drain(l.pn)) }
-func (l Link) Drained() int                 { return int(C.pn_link_drained(l.pn)) }
-func (l Link) Available() int               { return int(C.pn_link_available(l.pn)) }
-func (l Link) SndSettleMode() SndSettleMode { return SndSettleMode(C.pn_link_snd_settle_mode(l.pn)) }
-func (l Link) RcvSettleMode() RcvSettleMode { return RcvSettleMode(C.pn_link_rcv_settle_mode(l.pn)) }
+func (l Link) IsNil() bool { return l.pn == nil }
+func (l Link) Free() {
+	C.pn_link_free(l.pn)
+}
+func (l Link) Name() string {
+	return C.GoString(C.pn_link_name(l.pn))
+}
+func (l Link) IsSender() bool {
+	return bool(C.pn_link_is_sender(l.pn))
+}
+func (l Link) IsReceiver() bool {
+	return bool(C.pn_link_is_receiver(l.pn))
+}
+func (l Link) State() State {
+	return State(C.pn_link_state(l.pn))
+}
+func (l Link) Error() error {
+	return internal.PnError(unsafe.Pointer(C.pn_link_error(l.pn)))
+}
+func (l Link) Condition() Condition {
+	return Condition{C.pn_link_condition(l.pn)}
+}
+func (l Link) RemoteCondition() Condition {
+	return Condition{C.pn_link_remote_condition(l.pn)}
+}
+func (l Link) Session() Session {
+	return Session{C.pn_link_session(l.pn)}
+}
+func (l Link) Next(state State) Link {
+	return Link{C.pn_link_next(l.pn, C.pn_state_t(state))}
+}
+func (l Link) Open() {
+	C.pn_link_open(l.pn)
+}
+func (l Link) Close() {
+	C.pn_link_close(l.pn)
+}
+func (l Link) Detach() {
+	C.pn_link_detach(l.pn)
+}
+func (l Link) Source() Terminus {
+	return Terminus{C.pn_link_source(l.pn)}
+}
+func (l Link) Target() Terminus {
+	return Terminus{C.pn_link_target(l.pn)}
+}
+func (l Link) RemoteSource() Terminus {
+	return Terminus{C.pn_link_remote_source(l.pn)}
+}
+func (l Link) RemoteTarget() Terminus {
+	return Terminus{C.pn_link_remote_target(l.pn)}
+}
+func (l Link) Current() Delivery {
+	return Delivery{C.pn_link_current(l.pn)}
+}
+func (l Link) Advance() bool {
+	return bool(C.pn_link_advance(l.pn))
+}
+func (l Link) Credit() int {
+	return int(C.pn_link_credit(l.pn))
+}
+func (l Link) Queued() int {
+	return int(C.pn_link_queued(l.pn))
+}
+func (l Link) RemoteCredit() int {
+	return int(C.pn_link_remote_credit(l.pn))
+}
+func (l Link) IsDrain() bool {
+	return bool(C.pn_link_get_drain(l.pn))
+}
+func (l Link) Drained() int {
+	return int(C.pn_link_drained(l.pn))
+}
+func (l Link) Available() int {
+	return int(C.pn_link_available(l.pn))
+}
+func (l Link) SndSettleMode() SndSettleMode {
+	return SndSettleMode(C.pn_link_snd_settle_mode(l.pn))
+}
+func (l Link) RcvSettleMode() RcvSettleMode {
+	return RcvSettleMode(C.pn_link_rcv_settle_mode(l.pn))
+}
 func (l Link) SetSndSettleMode(mode SndSettleMode) {
 	C.pn_link_set_snd_settle_mode(l.pn, C.pn_snd_settle_mode_t(mode))
 }
@@ -254,79 +345,165 @@ func (l Link) RemoteSndSettleMode() SndSettleMode {
 func (l Link) RemoteRcvSettleMode() RcvSettleMode {
 	return RcvSettleMode(C.pn_link_remote_rcv_settle_mode(l.pn))
 }
-func (l Link) Unsettled() int      { return int(C.pn_link_unsettled(l.pn)) }
-func (l Link) Offered(credit int)  { C.pn_link_offered(l.pn, C.int(credit)) }
-func (l Link) Flow(credit int)     { C.pn_link_flow(l.pn, C.int(credit)) }
-func (l Link) Drain(credit int)    { C.pn_link_drain(l.pn, C.int(credit)) }
-func (l Link) SetDrain(drain bool) { C.pn_link_set_drain(l.pn, C.bool(drain)) }
-func (l Link) Draining() bool      { return bool(C.pn_link_draining(l.pn)) }
+func (l Link) Unsettled() int {
+	return int(C.pn_link_unsettled(l.pn))
+}
+func (l Link) Offered(credit int) {
+	C.pn_link_offered(l.pn, C.int(credit))
+}
+func (l Link) Flow(credit int) {
+	C.pn_link_flow(l.pn, C.int(credit))
+}
+func (l Link) Drain(credit int) {
+	C.pn_link_drain(l.pn, C.int(credit))
+}
+func (l Link) SetDrain(drain bool) {
+	C.pn_link_set_drain(l.pn, C.bool(drain))
+}
+func (l Link) Draining() bool {
+	return bool(C.pn_link_draining(l.pn))
+}
 
 // Wrappers for declarations in delivery.h
 
 type Delivery struct{ pn *C.pn_delivery_t }
 
-func (d Delivery) isNil() bool         { return d.pn == nil }
-func (d Delivery) Tag() DeliveryTag    { return DeliveryTag{C.pn_delivery_tag(d.pn)} }
-func (d Delivery) Link() Link          { return Link{C.pn_delivery_link(d.pn)} }
-func (d Delivery) Local() Disposition  { return Disposition{C.pn_delivery_local(d.pn)} }
-func (d Delivery) LocalState() uint64  { return uint64(C.pn_delivery_local_state(d.pn)) }
-func (d Delivery) Remote() Disposition { return Disposition{C.pn_delivery_remote(d.pn)} }
-func (d Delivery) RemoteState() uint64 { return uint64(C.pn_delivery_remote_state(d.pn)) }
-func (d Delivery) Settled() bool       { return bool(C.pn_delivery_settled(d.pn)) }
-func (d Delivery) Pending() uint       { return uint(C.pn_delivery_pending(d.pn)) }
-func (d Delivery) Partial() bool       { return bool(C.pn_delivery_partial(d.pn)) }
-func (d Delivery) Writable() bool      { return bool(C.pn_delivery_writable(d.pn)) }
-func (d Delivery) Readable() bool      { return bool(C.pn_delivery_readable(d.pn)) }
-func (d Delivery) Updated() bool       { return bool(C.pn_delivery_updated(d.pn)) }
-func (d Delivery) Update(state uint64) { C.pn_delivery_update(d.pn, C.uint64_t(state)) }
-func (d Delivery) Clear()              { C.pn_delivery_clear(d.pn) }
-func (d Delivery) Settle()             { C.pn_delivery_settle(d.pn) }
-func (d Delivery) Dump()               { C.pn_delivery_dump(d.pn) }
-func (d Delivery) Buffered() bool      { return bool(C.pn_delivery_buffered(d.pn)) }
+func (d Delivery) IsNil() bool { return d.pn == nil }
+func (d Delivery) Tag() DeliveryTag {
+	return DeliveryTag{C.pn_delivery_tag(d.pn)}
+}
+func (d Delivery) Link() Link {
+	return Link{C.pn_delivery_link(d.pn)}
+}
+func (d Delivery) Local() Disposition {
+	return Disposition{C.pn_delivery_local(d.pn)}
+}
+func (d Delivery) LocalState() uint64 {
+	return uint64(C.pn_delivery_local_state(d.pn))
+}
+func (d Delivery) Remote() Disposition {
+	return Disposition{C.pn_delivery_remote(d.pn)}
+}
+func (d Delivery) RemoteState() uint64 {
+	return uint64(C.pn_delivery_remote_state(d.pn))
+}
+func (d Delivery) Settled() bool {
+	return bool(C.pn_delivery_settled(d.pn))
+}
+func (d Delivery) Pending() uint {
+	return uint(C.pn_delivery_pending(d.pn))
+}
+func (d Delivery) Partial() bool {
+	return bool(C.pn_delivery_partial(d.pn))
+}
+func (d Delivery) Writable() bool {
+	return bool(C.pn_delivery_writable(d.pn))
+}
+func (d Delivery) Readable() bool {
+	return bool(C.pn_delivery_readable(d.pn))
+}
+func (d Delivery) Updated() bool {
+	return bool(C.pn_delivery_updated(d.pn))
+}
+func (d Delivery) Update(state uint64) {
+	C.pn_delivery_update(d.pn, C.uint64_t(state))
+}
+func (d Delivery) Clear() {
+	C.pn_delivery_clear(d.pn)
+}
+func (d Delivery) Settle() {
+	C.pn_delivery_settle(d.pn)
+}
+func (d Delivery) Dump() {
+	C.pn_delivery_dump(d.pn)
+}
+func (d Delivery) Buffered() bool {
+	return bool(C.pn_delivery_buffered(d.pn))
+}
 
 // Wrappers for declarations in disposition.h
 
 type Disposition struct{ pn *C.pn_disposition_t }
 
-func (d Disposition) isNil() bool           { return d.pn == nil }
-func (d Disposition) Type() uint64          { return uint64(C.pn_disposition_type(d.pn)) }
-func (d Disposition) Condition() Condition  { return Condition{C.pn_disposition_condition(d.pn)} }
-func (d Disposition) Data() Data            { return Data{C.pn_disposition_data(d.pn)} }
-func (d Disposition) SectionNumber() uint32 { return uint32(C.pn_disposition_get_section_number(d.pn)) }
-func (d Disposition) SetSectionNumber(section_number uint32) {
+func (d Disposition) IsNil() bool { return d.pn == nil }
+func (d Disposition) Type() uint64 {
+	return uint64(C.pn_disposition_type(d.pn))
+}
+func (d Disposition) Condition() Condition {
+	return Condition{C.pn_disposition_condition(d.pn)}
+}
+func (d Disposition) Data() Data {
+	return Data{C.pn_disposition_data(d.pn)}
+}
+func (d Disposition) SectionNumber() uint16 {
+	return uint16(C.pn_disposition_get_section_number(d.pn))
+}
+func (d Disposition) SetSectionNumber(section_number uint16) {
 	C.pn_disposition_set_section_number(d.pn, C.uint32_t(section_number))
 }
-func (d Disposition) SectionOffset() uint64 { return uint64(C.pn_disposition_get_section_offset(d.pn)) }
+func (d Disposition) SectionOffset() uint64 {
+	return uint64(C.pn_disposition_get_section_offset(d.pn))
+}
 func (d Disposition) SetSectionOffset(section_offset uint64) {
 	C.pn_disposition_set_section_offset(d.pn, C.uint64_t(section_offset))
 }
-func (d Disposition) IsFailed() bool        { return bool(C.pn_disposition_is_failed(d.pn)) }
-func (d Disposition) SetFailed(failed bool) { C.pn_disposition_set_failed(d.pn, C.bool(failed)) }
-func (d Disposition) IsUndeliverable() bool { return bool(C.pn_disposition_is_undeliverable(d.pn)) }
+func (d Disposition) IsFailed() bool {
+	return bool(C.pn_disposition_is_failed(d.pn))
+}
+func (d Disposition) SetFailed(failed bool) {
+	C.pn_disposition_set_failed(d.pn, C.bool(failed))
+}
+func (d Disposition) IsUndeliverable() bool {
+	return bool(C.pn_disposition_is_undeliverable(d.pn))
+}
 func (d Disposition) SetUndeliverable(undeliverable bool) {
 	C.pn_disposition_set_undeliverable(d.pn, C.bool(undeliverable))
 }
-func (d Disposition) Annotations() Data { return Data{C.pn_disposition_annotations(d.pn)} }
+func (d Disposition) Annotations() Data {
+	return Data{C.pn_disposition_annotations(d.pn)}
+}
 
 // Wrappers for declarations in condition.h
 
 type Condition struct{ pn *C.pn_condition_t }
 
-func (c Condition) isNil() bool  { return c.pn == nil }
-func (c Condition) IsSet() bool  { return bool(C.pn_condition_is_set(c.pn)) }
-func (c Condition) Clear()       { C.pn_condition_clear(c.pn) }
-func (c Condition) Name() string { return C.GoString(C.pn_condition_get_name(c.pn)) }
+func (c Condition) IsNil() bool { return c.pn == nil }
+func (c Condition) IsSet() bool {
+	return bool(C.pn_condition_is_set(c.pn))
+}
+func (c Condition) Clear() {
+	C.pn_condition_clear(c.pn)
+}
+func (c Condition) Name() string {
+	return C.GoString(C.pn_condition_get_name(c.pn))
+}
 func (c Condition) SetName(name string) int {
-	return int(C.pn_condition_set_name(c.pn, C.CString(name)))
+	nameC := C.CString(name)
+	defer C.free(unsafe.Pointer(nameC))
+
+	return int(C.pn_condition_set_name(c.pn, nameC))
 }
-func (c Condition) Description() string { return C.GoString(C.pn_condition_get_description(c.pn)) }
+func (c Condition) Description() string {
+	return C.GoString(C.pn_condition_get_description(c.pn))
+}
 func (c Condition) SetDescription(description string) int {
-	return int(C.pn_condition_set_description(c.pn, C.CString(description)))
+	descriptionC := C.CString(description)
+	defer C.free(unsafe.Pointer(descriptionC))
+
+	return int(C.pn_condition_set_description(c.pn, descriptionC))
 }
-func (c Condition) Info() Data           { return Data{C.pn_condition_info(c.pn)} }
-func (c Condition) IsRedirect() bool     { return bool(C.pn_condition_is_redirect(c.pn)) }
-func (c Condition) RedirectHost() string { return C.GoString(C.pn_condition_redirect_host(c.pn)) }
-func (c Condition) RedirectPort() int    { return int(C.pn_condition_redirect_port(c.pn)) }
+func (c Condition) Info() Data {
+	return Data{C.pn_condition_info(c.pn)}
+}
+func (c Condition) IsRedirect() bool {
+	return bool(C.pn_condition_is_redirect(c.pn))
+}
+func (c Condition) RedirectHost() string {
+	return C.GoString(C.pn_condition_redirect_host(c.pn))
+}
+func (c Condition) RedirectPort() int {
+	return int(C.pn_condition_redirect_port(c.pn))
+}
 
 // Wrappers for declarations in terminus.h
 
@@ -343,13 +520,13 @@ func (e TerminusType) String() string {
 	switch e {
 
 	case C.PN_UNSPECIFIED:
-		return "PnUnspecified"
+		return "Unspecified"
 	case C.PN_SOURCE:
-		return "PnSource"
+		return "Source"
 	case C.PN_TARGET:
-		return "PnTarget"
+		return "Target"
 	case C.PN_COORDINATOR:
-		return "PnCoordinator"
+		return "Coordinator"
 	}
 	return "unknown"
 }
@@ -366,11 +543,11 @@ func (e Durability) String() string {
 	switch e {
 
 	case C.PN_NONDURABLE:
-		return "PnNondurable"
+		return "Nondurable"
 	case C.PN_CONFIGURATION:
-		return "PnConfiguration"
+		return "Configuration"
 	case C.PN_DELIVERIES:
-		return "PnDeliveries"
+		return "Deliveries"
 	}
 	return "unknown"
 }
@@ -388,13 +565,13 @@ func (e ExpiryPolicy) String() string {
 	switch e {
 
 	case C.PN_EXPIRE_WITH_LINK:
-		return "PnExpireWithLink"
+		return "ExpireWithLink"
 	case C.PN_EXPIRE_WITH_SESSION:
-		return "PnExpireWithSession"
+		return "ExpireWithSession"
 	case C.PN_EXPIRE_WITH_CONNECTION:
-		return "PnExpireWithConnection"
+		return "ExpireWithConnection"
 	case C.PN_EXPIRE_NEVER:
-		return "PnExpireNever"
+		return "ExpireNever"
 	}
 	return "unknown"
 }
@@ -411,30 +588,39 @@ func (e DistributionMode) String() string {
 	switch e {
 
 	case C.PN_DIST_MODE_UNSPECIFIED:
-		return "PnDistModeUnspecified"
+		return "DistModeUnspecified"
 	case C.PN_DIST_MODE_COPY:
-		return "PnDistModeCopy"
+		return "DistModeCopy"
 	case C.PN_DIST_MODE_MOVE:
-		return "PnDistModeMove"
+		return "DistModeMove"
 	}
 	return "unknown"
 }
 
 type Terminus struct{ pn *C.pn_terminus_t }
 
-func (t Terminus) isNil() bool        { return t.pn == nil }
-func (t Terminus) Type() TerminusType { return TerminusType(C.pn_terminus_get_type(t.pn)) }
+func (t Terminus) IsNil() bool { return t.pn == nil }
+func (t Terminus) Type() TerminusType {
+	return TerminusType(C.pn_terminus_get_type(t.pn))
+}
 func (t Terminus) SetType(type_ TerminusType) int {
 	return int(C.pn_terminus_set_type(t.pn, C.pn_terminus_type_t(type_)))
 }
-func (t Terminus) Address() string { return C.GoString(C.pn_terminus_get_address(t.pn)) }
+func (t Terminus) Address() string {
+	return C.GoString(C.pn_terminus_get_address(t.pn))
+}
 func (t Terminus) SetAddress(address string) int {
-	return int(C.pn_terminus_set_address(t.pn, C.CString(address)))
+	addressC := C.CString(address)
+	defer C.free(unsafe.Pointer(addressC))
+
+	return int(C.pn_terminus_set_address(t.pn, addressC))
 }
 func (t Terminus) SetDistributionMode(mode DistributionMode) int {
 	return int(C.pn_terminus_set_distribution_mode(t.pn, C.pn_distribution_mode_t(mode)))
 }
-func (t Terminus) Durability() Durability { return Durability(C.pn_terminus_get_durability(t.pn)) }
+func (t Terminus) Durability() Durability {
+	return Durability(C.pn_terminus_get_durability(t.pn))
+}
 func (t Terminus) SetDurability(durability Durability) int {
 	return int(C.pn_terminus_set_durability(t.pn, C.pn_durability_t(durability)))
 }
@@ -450,56 +636,114 @@ func (t Terminus) Timeout() time.Duration {
 func (t Terminus) SetTimeout(timeout time.Duration) int {
 	return int(C.pn_terminus_set_timeout(t.pn, C.pn_seconds_t(timeout)))
 }
-func (t Terminus) IsDynamic() bool { return bool(C.pn_terminus_is_dynamic(t.pn)) }
+func (t Terminus) IsDynamic() bool {
+	return bool(C.pn_terminus_is_dynamic(t.pn))
+}
 func (t Terminus) SetDynamic(dynamic bool) int {
 	return int(C.pn_terminus_set_dynamic(t.pn, C.bool(dynamic)))
 }
-func (t Terminus) Properties() Data      { return Data{C.pn_terminus_properties(t.pn)} }
-func (t Terminus) Capabilities() Data    { return Data{C.pn_terminus_capabilities(t.pn)} }
-func (t Terminus) Outcomes() Data        { return Data{C.pn_terminus_outcomes(t.pn)} }
-func (t Terminus) Filter() Data          { return Data{C.pn_terminus_filter(t.pn)} }
-func (t Terminus) Copy(src Terminus) int { return int(C.pn_terminus_copy(t.pn, src.pn)) }
+func (t Terminus) Properties() Data {
+	return Data{C.pn_terminus_properties(t.pn)}
+}
+func (t Terminus) Capabilities() Data {
+	return Data{C.pn_terminus_capabilities(t.pn)}
+}
+func (t Terminus) Outcomes() Data {
+	return Data{C.pn_terminus_outcomes(t.pn)}
+}
+func (t Terminus) Filter() Data {
+	return Data{C.pn_terminus_filter(t.pn)}
+}
+func (t Terminus) Copy(src Terminus) int {
+	return int(C.pn_terminus_copy(t.pn, src.pn))
+}
 
 // Wrappers for declarations in connection.h
 
 type Connection struct{ pn *C.pn_connection_t }
 
-func (c Connection) isNil() bool          { return c.pn == nil }
-func (c Connection) Free()                { C.pn_connection_free(c.pn) }
-func (c Connection) Release()             { C.pn_connection_release(c.pn) }
-func (c Connection) Error() error         { return pnError(C.pn_connection_error(c.pn)) }
-func (c Connection) State() State         { return State(C.pn_connection_state(c.pn)) }
-func (c Connection) Open()                { C.pn_connection_open(c.pn) }
-func (c Connection) Close()               { C.pn_connection_close(c.pn) }
-func (c Connection) Reset()               { C.pn_connection_reset(c.pn) }
-func (c Connection) Condition() Condition { return Condition{C.pn_connection_condition(c.pn)} }
+func (c Connection) IsNil() bool { return c.pn == nil }
+func (c Connection) Free() {
+	C.pn_connection_free(c.pn)
+}
+func (c Connection) Release() {
+	C.pn_connection_release(c.pn)
+}
+func (c Connection) Error() error {
+	return internal.PnError(unsafe.Pointer(C.pn_connection_error(c.pn)))
+}
+func (c Connection) State() State {
+	return State(C.pn_connection_state(c.pn))
+}
+func (c Connection) Open() {
+	C.pn_connection_open(c.pn)
+}
+func (c Connection) Close() {
+	C.pn_connection_close(c.pn)
+}
+func (c Connection) Reset() {
+	C.pn_connection_reset(c.pn)
+}
+func (c Connection) Condition() Condition {
+	return Condition{C.pn_connection_condition(c.pn)}
+}
 func (c Connection) RemoteCondition() Condition {
 	return Condition{C.pn_connection_remote_condition(c.pn)}
 }
-func (c Connection) Container() string { return C.GoString(C.pn_connection_get_container(c.pn)) }
-func (c Connection) SetContainer(container string) {
-	C.pn_connection_set_container(c.pn, C.CString(container))
+func (c Connection) Container() string {
+	return C.GoString(C.pn_connection_get_container(c.pn))
 }
-func (c Connection) Hostname() string { return C.GoString(C.pn_connection_get_hostname(c.pn)) }
+func (c Connection) SetContainer(container string) {
+	containerC := C.CString(container)
+	defer C.free(unsafe.Pointer(containerC))
+
+	C.pn_connection_set_container(c.pn, containerC)
+}
+func (c Connection) SetUser(user string) {
+	userC := C.CString(user)
+	defer C.free(unsafe.Pointer(userC))
+
+	C.pn_connection_set_user(c.pn, userC)
+}
+func (c Connection) SetPassword(password string) {
+	passwordC := C.CString(password)
+	defer C.free(unsafe.Pointer(passwordC))
+
+	C.pn_connection_set_password(c.pn, passwordC)
+}
+func (c Connection) User() string {
+	return C.GoString(C.pn_connection_get_user(c.pn))
+}
+func (c Connection) Hostname() string {
+	return C.GoString(C.pn_connection_get_hostname(c.pn))
+}
 func (c Connection) SetHostname(hostname string) {
-	C.pn_connection_set_hostname(c.pn, C.CString(hostname))
+	hostnameC := C.CString(hostname)
+	defer C.free(unsafe.Pointer(hostnameC))
+
+	C.pn_connection_set_hostname(c.pn, hostnameC)
 }
 func (c Connection) RemoteContainer() string {
 	return C.GoString(C.pn_connection_remote_container(c.pn))
 }
-func (c Connection) RemoteHostname() string { return C.GoString(C.pn_connection_remote_hostname(c.pn)) }
+func (c Connection) RemoteHostname() string {
+	return C.GoString(C.pn_connection_remote_hostname(c.pn))
+}
 func (c Connection) OfferedCapabilities() Data {
 	return Data{C.pn_connection_offered_capabilities(c.pn)}
 }
 func (c Connection) DesiredCapabilities() Data {
 	return Data{C.pn_connection_desired_capabilities(c.pn)}
 }
-func (c Connection) Properties() Data { return Data{C.pn_connection_properties(c.pn)} }
+func (c Connection) Properties() Data {
+	return Data{C.pn_connection_properties(c.pn)}
+}
 func (c Connection) RemoteOfferedCapabilities() Data {
 	return Data{C.pn_connection_remote_offered_capabilities(c.pn)}
 }
 func (c Connection) RemoteDesiredCapabilities() Data {
 	return Data{C.pn_connection_remote_desired_capabilities(c.pn)}
 }
-func (c Connection) RemoteProperties() Data { return Data{C.pn_connection_remote_properties(c.pn)} }
-func (c Connection) Transport() Transport   { return Transport{C.pn_connection_transport(c.pn)} }
+func (c Connection) RemoteProperties() Data {
+	return Data{C.pn_connection_remote_properties(c.pn)}
+}

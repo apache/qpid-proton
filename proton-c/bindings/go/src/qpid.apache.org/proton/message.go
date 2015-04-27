@@ -25,12 +25,15 @@ package proton
 import "C"
 
 import (
-	"qpid.apache.org/proton/event"
-	"sync/atomic"
+	"qpid.apache.org/proton/internal"
 	"time"
+	"unsafe"
 )
 
+// FIXME aconway 2015-04-28: Do we need the interface or can we just export the struct?
+
 // Message is the interface to an AMQP message.
+// Instances of this interface contain a pointer to the underlying struct.
 type Message interface {
 	/**
 	 * Inferred indicates how the message content
@@ -156,11 +159,9 @@ type Message interface {
 	// the message is encoded into it, otherwise a new buffer is created.
 	// Returns the buffer containing the message.
 	Encode(buffer []byte) ([]byte, error)
-
-	// Send the message over an outgoing link
-	Send(event.Link) (event.Delivery, error)
 }
 
+// NewMessage creates a new message instance. The returned interface contains a pointer.
 func NewMessage() Message {
 	pn := C.pn_message() // Pick up default setting from C message.
 	defer C.pn_message_free(pn)
@@ -310,28 +311,13 @@ func DecodeMessage(data []byte) (Message, error) {
 	pnMsg := C.pn_message()
 	defer C.pn_message_free(pnMsg)
 	if len(data) == 0 {
-		return nil, errorf("empty buffer for decode")
+		return nil, internal.Errorf("empty buffer for decode")
 	}
 	if C.pn_message_decode(pnMsg, cPtr(data), cLen(data)) < 0 {
-		return nil, pnError("decoding message", C.pn_message_error(pnMsg))
+		return nil, internal.Errorf("decoding message: %s",
+			internal.PnError(unsafe.Pointer(C.pn_message_error(pnMsg))))
 	}
 	return goMessage(pnMsg), nil
-}
-
-// EventMessage decodes the message containined in a delivery event.
-func EventMessage(e event.Event) (Message, error) {
-	// FIXME aconway 2015-04-07: temporary
-	//	defer doRecover(&err)
-	delivery := e.Delivery()
-	if !delivery.Readable() || delivery.Partial() {
-		return nil, errorf("attempting to get incomplete message")
-	}
-	data := make([]byte, delivery.Pending())
-	result := delivery.Link().Recv(data)
-	if result != len(data) {
-		return nil, errorf("cannot receive message: %s", pnErrorName(result))
-	}
-	return DecodeMessage(data)
 }
 
 // Encode the message into bufffer.
@@ -347,42 +333,10 @@ func (m *message) Encode(buffer []byte) ([]byte, error) {
 		case result == C.PN_OVERFLOW:
 			return buf, overflow
 		case result < 0:
-			return buf, errorf("cannot encode message: %s", pnErrorName(int(result)))
+			return buf, internal.Errorf("cannot encode message: %s", internal.PnErrorCode(result))
 		default:
 			return buf[:len], nil
 		}
 	}
 	return encodeGrow(buffer, encode)
-}
-
-// FIXME aconway 2015-04-08: proper handling of delivery tags.
-var tag uint64
-
-func getTag() string {
-	return string(atomic.AddUint64(&tag, 1))
-}
-
-func (m *message) Send(link event.Link) (event.Delivery, error) {
-	if !link.IsSender() {
-		return event.Delivery{}, errorf("attempt to send message on receiving link")
-	}
-	// FIXME aconway 2015-04-08: buffering, error handling
-	delivery := link.Delivery(getTag())
-	bytes, err := m.Encode(nil)
-	if err != nil {
-		return event.Delivery{}, errorf("cannot send mesage %s", err)
-	}
-	result := link.Send(bytes)
-	link.Advance()
-	if result != len(bytes) {
-		if result < 0 {
-			return delivery, errorf("send failed %v", pnErrorName(result))
-		} else {
-			return delivery, errorf("send incomplete %v of %v", result, len(bytes))
-		}
-	}
-	if link.RemoteSndSettleMode() == event.PnSndSettled { // FIXME aconway 2015-04-08: enum names
-		delivery.Settle()
-	}
-	return delivery, nil
 }
