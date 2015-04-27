@@ -34,6 +34,13 @@ if (MSVC)
 endif (MSVC)
 option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  # Default to universal binary on Mac OS X unless user has overriden
+  if (NOT DEFINED CMAKE_OSX_ARCHITECTURES OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+    set(CMAKE_OSX_ARCHITECTURES "i386;x86_64")
+  endif ()
+endif ()
+
 if (BUILD_WITH_CXX)
   project (Proton C CXX)
 endif (BUILD_WITH_CXX)
