@@ -34,7 +34,6 @@
 
 %include <cstring.i>
 
-%cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 %cstring_output_maxsize(char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 
@@ -59,6 +58,27 @@
 }
 %typemap(argout,noblock=1) (char *BIN_OUT, size_t *BIN_SIZE) {
   %append_output(PyBytes_FromStringAndSize($1,*$2));
+}
+
+// Typemap for those methods that return variable length text data in a buffer
+// provided as a parameter.  If the method fails we must avoid attempting to
+// decode the contents of the buffer as it does not carry valid text data.
+%typemap(in,noblock=1,fragment=SWIG_AsVal_frag(size_t)) (char *VTEXT_OUT, size_t *VTEXT_SIZE)
+(int res, size_t n, char *buff = 0, $*2_ltype size) {
+  res = SWIG_AsVal(size_t)($input, &n);
+  if (!SWIG_IsOK(res)) {
+    %argument_fail(res, "(char *VTEXT_OUT, size_t *VTEXT_SIZE)", $symname, $argnum);
+  }
+  buff = %new_array(n+1, char);
+  $1 = %static_cast(buff, $1_ltype);
+  size = %numeric_cast(n,$*2_ltype);
+  $2 = &size;
+}
+%typemap(freearg,noblock=1,match="in")(char *VTEXT_OUT, size_t *VTEXT_SIZE) {
+  if (buff$argnum) %delete_array(buff$argnum);
+}
+%typemap(argout,noblock=1,fragment="SWIG_FromCharPtrAndSize") (char *VTEXT_OUT, size_t *VTEXT_SIZE) {
+  %append_output(SWIG_FromCharPtrAndSize($1,*$2));
 }
 
 
@@ -186,7 +206,14 @@ ssize_t pn_data_decode(pn_data_t *data, const char *BIN_IN, size_t BIN_LEN);
 %}
 %ignore pn_data_encode;
 
-int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
+%rename(pn_data_format) wrap_pn_data_format;
+%inline %{
+  int wrap_pn_data_format(pn_data_t *data, char *VTEXT_OUT, size_t *VTEXT_SIZE) {
+    int err = pn_data_format(data, VTEXT_OUT, VTEXT_SIZE);
+    if (err) *VTEXT_SIZE = 0;
+    return err;
+  }
+%}
 %ignore pn_data_format;
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
@@ -195,7 +222,14 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
-int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
+%rename(pn_ssl_get_peer_hostname) wrap_pn_ssl_get_peer_hostname;
+%inline %{
+  int wrap_pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *VTEXT_OUT, size_t *VTEXT_SIZE) {
+    int err = pn_ssl_get_peer_hostname(ssl, VTEXT_OUT, VTEXT_SIZE);
+    if (err) *VTEXT_SIZE = 0;
+    return err;
+  }
+%}
 %ignore pn_ssl_get_peer_hostname;
 
 %immutable PN_PYREF;
