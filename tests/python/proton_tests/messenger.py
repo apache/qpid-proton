@@ -1020,9 +1020,10 @@ class SelectableMessengerTest(common.Test):
       assert mc.body == u"Hello World! %s" % i, (i, mc.body)
 
     mrcv.stop()
-    assert not mrcv.stopped
+    msnd.stop()
     p.pump()
     assert mrcv.stopped
+    assert msnd.stopped
 
   def testSelectable16(self):
     self.testSelectable(count=16)
