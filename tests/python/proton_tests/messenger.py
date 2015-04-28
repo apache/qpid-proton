@@ -1013,7 +1013,7 @@ class SelectableMessengerTest(common.Test):
     mc = Message()
 
     for i in range(count):
-      before = mrcv.outgoing
+      before = msnd.outgoing
       if mrcv.incoming == 0:
         p.pump()
       # if we didn't receive the messages, they should be "in flight"
