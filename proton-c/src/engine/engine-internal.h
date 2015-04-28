@@ -97,9 +97,6 @@ typedef struct {
   bool disp;
 } pn_session_state_t;
 
-#include <proton/sasl.h>
-#include <proton/ssl.h>
-
 typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
