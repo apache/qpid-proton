@@ -1508,6 +1508,18 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
+    public long getFramesOutput()
+    {
+        return _frameWriter.getFramesOutput();
+    }
+
+    @Override
+    public long getFramesInput()
+    {
+        return _frameParser.getFramesInput();
+    }
+
+    @Override
     public void close_head()
     {
         _outputProcessor.close_head();
