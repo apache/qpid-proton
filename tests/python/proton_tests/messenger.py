@@ -1015,7 +1015,7 @@ class SelectableMessengerTest(common.Test):
     for i in range(count):
       if mrcv.incoming == 0:
         p.pump()
-      assert mrcv.incoming > 0
+      assert mrcv.incoming > 0, (count, msnd.outgoing, mrcv.incoming)
       mrcv.get(mc)
       assert mc.body == u"Hello World! %s" % i, (i, mc.body)
 
