@@ -1013,16 +1013,6 @@ class SelectableMessengerTest(common.Test):
     mc = Message()
 
     for i in range(count):
-      before = msnd.outgoing
-      if mrcv.incoming == 0:
-        p.pump()
-      # If we didn't receive the messages, check that they are
-      # in-flight. We can only check this after the first message
-      # arrives since sasl handshaking might require multiple pumps
-      # prior to the first message arrival.
-      if i > 0 and mrcv.incoming == 0:
-        assert msnd.outgoing < before
-      # now pump until they arrive
       while mrcv.incoming == 0:
         p.pump()
       assert mrcv.incoming > 0, (count, msnd.outgoing, mrcv.incoming)
