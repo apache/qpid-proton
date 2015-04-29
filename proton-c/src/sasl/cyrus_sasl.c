@@ -241,6 +241,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     case SASL_POSTED_INIT:
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[sz]", SASL_INIT, sasl->selected_mechanism,
                     out.size, out.start);
+      pni_emit(transport);
       break;
     case SASL_PRETEND_OUTCOME:
       if (sasl->last_state < SASL_POSTED_INIT) {
@@ -267,10 +268,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       }
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
+      pni_emit(transport);
       break;
     }
     case SASL_POSTED_RESPONSE:
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
+      pni_emit(transport);
       break;
     case SASL_POSTED_CHALLENGE:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
@@ -278,6 +281,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       }
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
+      pni_emit(transport);
       break;
     case SASL_POSTED_OUTCOME:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
@@ -285,6 +289,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       }
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
+      pni_emit(transport);
       break;
     case SASL_NONE:
     case SASL_RECVED_OUTCOME:
@@ -293,7 +298,6 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     sasl->last_state = desired_state;
     desired_state = sasl->desired_state;
   }
-  pni_emit(transport);
 }
 
 // Set up callbacks to use interact
