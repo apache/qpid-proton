@@ -229,4 +229,8 @@ public interface Transport extends Endpoint
     int getRemoteIdleTimeout();
 
     long tick(long now);
+
+    long getFramesInput();
+
+    long getFramesOutput();
 }

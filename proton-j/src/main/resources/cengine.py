@@ -893,7 +893,10 @@ def pn_transport_get_remote_idle_timeout(trans):
   return trans.impl.getRemoteIdleTimeout()
 
 def pn_transport_get_frames_input(trans):
-  raise Skipped()
+  return trans.impl.getFramesInput()
+
+def pn_transport_get_frames_output(trans):
+  return trans.impl.getFramesOutput()
 
 def pn_transport_set_channel_max(trans, n):
   trans.impl.setChannelMax(n)

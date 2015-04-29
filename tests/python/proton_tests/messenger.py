@@ -1015,17 +1015,21 @@ class SelectableMessengerTest(common.Test):
 
     mc = Message()
 
-    for i in range(count):
-      if mrcv.incoming == 0:
-        p.pump()
-      assert mrcv.incoming > 0
-      mrcv.get(mc)
-      assert mc.body == u"Hello World! %s" % i, (i, mc.body)
-
-    mrcv.stop()
-    assert not mrcv.stopped
-    p.pump()
-    assert mrcv.stopped
+    try:
+      for i in range(count):
+        while mrcv.incoming == 0:
+          p.pump()
+        assert mrcv.incoming > 0, (count, msnd.outgoing, mrcv.incoming)
+        mrcv.get(mc)
+        assert mc.body == u"Hello World! %s" % i, (i, mc.body)
+    finally:
+      mrcv.stop()
+      msnd.stop()
+      assert not mrcv.stopped
+      assert not msnd.stopped
+      p.pump()
+      assert mrcv.stopped
+      assert msnd.stopped
 
   def testSelectable16(self):
     self.testSelectable(count=16)

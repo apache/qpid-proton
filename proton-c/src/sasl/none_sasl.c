@@ -25,6 +25,7 @@
 #include "buffer.h"
 #include "protocol.h"
 #include "dispatch_actions.h"
+#include "util.h"
 #include "engine/engine-internal.h"
 
 struct pni_sasl_t {
@@ -93,7 +94,7 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
   if (!sasl) return;
   free(sasl->included_mechanisms);
-  sasl->included_mechanisms = mechs ? strdup(mechs) : NULL;
+  sasl->included_mechanisms = mechs ? pn_strdup(mechs) : NULL;
   if (strcmp(mechs, "ANONYMOUS")==0 ) {
     // If we do this on the client it is a hack to tell us that
     // no actual negatiation is going to happen and we can go
@@ -165,7 +166,7 @@ void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, con
 {
   pni_sasl_t *sasl = transport->sasl;
   sasl->username = user;
-  sasl->password = password ? strdup(password) : NULL;
+  sasl->password = password ? pn_strdup(password) : NULL;
 }
 
 const char *pn_sasl_get_user(pn_sasl_t *sasl0)

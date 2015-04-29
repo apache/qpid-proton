@@ -53,7 +53,7 @@ typedef enum {
   PN_SASL_AUTH=1,   /** failed due to bad credentials */
   PN_SASL_SYS=2,    /** failed due to a system error */
   PN_SASL_PERM=3,   /** failed due to unrecoverable error */
-  PN_SASL_TEMP=4,   /** failed due to transient error */
+  PN_SASL_TEMP=4    /** failed due to transient error */
 } pn_sasl_outcome_t;
 
 /** Construct an Authentication and Security Layer object
