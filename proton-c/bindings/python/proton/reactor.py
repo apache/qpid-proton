@@ -224,7 +224,7 @@ class EventInjector(object):
         then this will be removed from the set of interest.
         """
         self._closed = True
-        os.write(self.pipe[1], "!")
+        os.write(self.pipe[1], _compat.str2bin("!"))
 
     def fileno(self):
         return self.pipe[0]
