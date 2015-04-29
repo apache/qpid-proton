@@ -55,11 +55,11 @@ die()
     BRANCH=$(git symbolic-ref -q --short HEAD)
     if [ -n "${BRANCH}" ]; then
         REMOTE=$(git config branch.${BRANCH}.remote)
-        git checkout --detach ${REMOTE}/${BRANCH}
     else
         REMOTE="origin"
     fi
-    bin/version.sh $VERSION && \
+    git checkout --detach && \
+        bin/version.sh $VERSION && \
         git commit -a -m "Release $VERSION" && \
         git tag -m "Release $VERSION" $TAG && \
         echo "Run 'git push ${REMOTE} ${TAG}' to push the tag upstream."
