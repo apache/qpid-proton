@@ -18,9 +18,9 @@
 #
 
 import os
-import six
 from . import common
 from proton import *
+from proton._compat import str2bin
 
 
 class Test(common.Test):
@@ -62,16 +62,16 @@ class TransportTest(Test):
     assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
   def testEOS(self):
-    self.transport.push(six.b("")) # should be a noop
+    self.transport.push(str2bin("")) # should be a noop
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
   def testPartial(self):
-    self.transport.push(six.b("AMQ")) # partial header
+    self.transport.push(str2bin("AMQ")) # partial header
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
-  def testGarbage(self, garbage=six.b("GARBAGE_")):
+  def testGarbage(self, garbage=str2bin("GARBAGE_")):
     self.transport.push(garbage)
     self.assert_error(u'amqp:connection:framing-error')
     assert self.transport.pending() < 0
@@ -79,13 +79,13 @@ class TransportTest(Test):
     assert self.transport.pending() < 0
 
   def testSmallGarbage(self):
-    self.testGarbage(six.b("XXX"))
+    self.testGarbage(str2bin("XXX"))
 
   def testBigGarbage(self):
-    self.testGarbage(six.b("GARBAGE_XXX"))
+    self.testGarbage(str2bin("GARBAGE_XXX"))
 
   def testHeader(self):
-    self.transport.push(six.b("AMQP\x00\x01\x00\x00"))
+    self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
@@ -103,8 +103,8 @@ class TransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert six.b("test-container") in out, repr(out)
-    assert six.b("test-hostname") in out, repr(out)
+    assert str2bin("test-container") in out, repr(out)
+    assert str2bin("test-hostname") in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -161,7 +161,7 @@ class TransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == six.b("")
+    assert self.transport.peek(1024) == str2bin("")
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])

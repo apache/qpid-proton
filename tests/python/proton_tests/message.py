@@ -18,9 +18,9 @@
 #
 
 import os
-import six
 from . import common
 from proton import *
+from proton._compat import str2bin
 try:
   from uuid import uuid4
 except ImportError:
@@ -73,8 +73,8 @@ class AccessorsTest(Test):
     self._test("delivery_count", 0, range(0, 1024))
 
   def testUserId(self):
-    self._test("user_id", six.b(""), (six.b("asdf"), six.b("fdsa"),
-                                      six.b("asd\x00fdsa"), six.b("")))
+    self._test("user_id", str2bin(""), (str2bin("asdf"), str2bin("fdsa"),
+                                      str2bin("asd\x00fdsa"), str2bin("")))
 
   def testAddress(self):
     self._test_str("address")

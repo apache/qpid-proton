@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,14 +16,15 @@ from __future__ import absolute_import
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import absolute_import
 
 import os, gc
 from . import common
 from time import time, sleep
-import six
 from proton import *
 from .common import pump
 from proton.reactor import Reactor
+from proton._compat import str2bin
 
 # older versions of gc do not provide the garbage list
 if not hasattr(gc, "garbage"):
@@ -48,7 +48,7 @@ try:
     bytearray()
 except:
     def bytearray(x):
-        return six.b('\x00') * x
+        return str2bin('\x00') * x
 
 OUTPUT_SIZE = 10*1024
 
@@ -749,7 +749,7 @@ class TransferTest(Test):
     assert tag == "tag", tag
     assert d.writable
 
-    n = self.snd.send(six.b("this is a test"))
+    n = self.snd.send(str2bin("this is a test"))
     assert self.snd.advance()
     assert self.c1.work_head is None
 
@@ -762,7 +762,7 @@ class TransferTest(Test):
   def test_multiframe(self):
     self.rcv.flow(1)
     self.snd.delivery("tag")
-    msg = six.b("this is a test")
+    msg = str2bin("this is a test")
     n = self.snd.send(msg)
     assert n == len(msg)
 
@@ -777,9 +777,9 @@ class TransferTest(Test):
     assert binary == msg, (binary, msg)
 
     binary = self.rcv.recv(1024)
-    assert binary == six.b("")
+    assert binary == str2bin("")
 
-    msg = six.b("this is more")
+    msg = str2bin("this is more")
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -798,7 +798,7 @@ class TransferTest(Test):
     self.pump()
 
     sd = self.snd.delivery("tag")
-    msg = six.b("this is a test")
+    msg = str2bin("this is a test")
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -897,7 +897,7 @@ class TransferTest(Test):
 
     for x in range(10):
         self.snd.delivery("tag%d" % x)
-        msg = six.b("this is a test")
+        msg = str2bin("this is a test")
         n = self.snd.send(msg)
         assert n == len(msg)
         assert self.snd.advance()
@@ -1413,7 +1413,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagA")
     assert sd
-    n = self.snd.send(six.b("A"))
+    n = self.snd.send(str2bin("A"))
     assert n == 1
     self.pump()
     self.snd.advance()
@@ -1430,7 +1430,7 @@ class CreditTest(Test):
     assert self.rcv.credit == 10, self.rcv.credit
 
     data = self.rcv.recv(10)
-    assert data == six.b("A"), data
+    assert data == str2bin("A"), data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 9, self.snd.credit
@@ -1451,7 +1451,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagB")
     assert sd
-    n = self.snd.send(six.b("B"))
+    n = self.snd.send(str2bin("B"))
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1465,7 +1465,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagC")
     assert sd
-    n = self.snd.send(six.b("C"))
+    n = self.snd.send(str2bin("C"))
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1480,10 +1480,10 @@ class CreditTest(Test):
     assert self.rcv.credit == 2, self.rcv.credit
 
     data = self.rcv.recv(10)
-    assert data == six.b("B"), data
+    assert data == str2bin("B"), data
     self.rcv.advance()
     data = self.rcv.recv(10)
-    assert data == six.b("C"), data
+    assert data == str2bin("C"), data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 0, self.snd.credit
@@ -1818,7 +1818,7 @@ class PipelineTest(Test):
 
     for i in range(10):
       d = snd.delivery("delivery-%s" % i)
-      snd.send(six.b("delivery-%s" % i))
+      snd.send(str2bin("delivery-%s" % i))
       d.settle()
 
     snd.close()
@@ -2250,7 +2250,7 @@ class EventTest(CollectorTest):
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
                 Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
-    snd.send(six.b("Hello World!"))
+    snd.send(str2bin("Hello World!"))
     snd.advance()
     self.pump()
     self.expect()
@@ -2266,7 +2266,7 @@ class EventTest(CollectorTest):
     snd, rcv = self.testFlowEvents()
     snd.open()
     dlv = snd.delivery("delivery")
-    snd.send(six.b("Hello World!"))
+    snd.send(str2bin("Hello World!"))
     assert snd.advance()
     self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     self.pump()
@@ -2297,7 +2297,7 @@ class EventTest(CollectorTest):
     t.bind(c)
     self.expect(Event.CONNECTION_BOUND)
     assert t.condition is None
-    t.push(six.b("asdf"))
+    t.push(str2bin("asdf"))
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert t.condition is not None
     assert t.condition.name == "amqp:connection:framing-error"

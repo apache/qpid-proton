@@ -27,12 +27,17 @@ import os, sys
 import xml.sax, types
 from xml.sax.handler import ErrorHandler
 from xml.sax.xmlreader import InputSource
-import six
-from six.moves import cStringIO as StringIO
 
-from . import dom
-from . import transforms
-from . import parsers
+try:
+    from io import StringIO
+except ImportError:
+    from cStringIO import StringIO
+
+if sys.version_info[0] == 2:
+    import types
+    CLASS_TYPES = (type, types.ClassType)
+else:
+    CLASS_TYPES = (type,)
 
 from . import dom
 from . import transforms
@@ -41,7 +46,7 @@ from . import parsers
 def transform(node, *args):
   result = node
   for t in args:
-    if isinstance(t, six.class_types):
+    if isinstance(t, CLASS_TYPES):
       t = t()
     result = result.dispatch(t)
   return result

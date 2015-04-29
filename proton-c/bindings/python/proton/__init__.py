@@ -33,8 +33,8 @@ from __future__ import absolute_import
 
 from cproton import *
 from .wrapper import Wrapper
+from . import _compat
 
-import six
 import weakref, socket, sys, threading
 
 try:
@@ -805,7 +805,7 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = body
-    for k,v in six.iteritems(kwargs):
+    for k,v in _compat.iteritems(kwargs):
       getattr(self, k)          # Raise exception if it's not a valid attribute.
       setattr(self, k, v)
 
@@ -950,7 +950,7 @@ The number of delivery attempts made for this message.
   def _get_id(self):
     return self._id.get_object()
   def _set_id(self, value):
-    if type(value) in six.integer_types:
+    if type(value) in _compat.INT_TYPES:
       value = ulong(value)
     self._id.rewind()
     self._id.put_object(value)
@@ -1006,7 +1006,7 @@ The reply-to address for the message.
   def _get_correlation_id(self):
     return self._correlation_id.get_object()
   def _set_correlation_id(self, value):
-    if type(value) in six.integer_types:
+    if type(value) in _compat.INT_TYPES:
       value = ulong(value)
     self._correlation_id.rewind()
     self._correlation_id.put_object(value)
@@ -1438,7 +1438,7 @@ class Data:
   def type_name(type): return Data.type_names[type]
 
   def __init__(self, capacity=16):
-    if type(capacity) in six.integer_types:
+    if type(capacity) in _compat.INT_TYPES:
       self._data = pn_data(capacity)
       self._free = True
     else:
@@ -1941,7 +1941,7 @@ class Data:
     If the current node is a char, returns its value, returns 0
     otherwise.
     """
-    return char(six.unichr(pn_data_get_char(self._data)))
+    return char(_compat.unichar(pn_data_get_char(self._data)))
 
   def get_ulong(self):
     """
@@ -2340,12 +2340,12 @@ def unicode2utf8(string):
     """
     if string is None:
         return None
-    if six.PY2:
+    if _compat.IS_PY2:
         if isinstance(string, unicode):
             return string.encode('utf-8')
         elif isinstance(string, str):
             return string
-    elif six.PY3:
+    else:
         # decoding a string results in bytes
         if isinstance(string, str):
             string = string.encode('utf-8')
@@ -2358,10 +2358,10 @@ def utf82unicode(string):
     """Covert C strings returned from proton-c into python unicode"""
     if string is None:
         return None
-    if isinstance(string, six.text_type):
+    if isinstance(string, _compat.TEXT_TYPES):
         # already unicode
         return string
-    elif isinstance(string, six.binary_type):
+    elif isinstance(string, _compat.BINARY_TYPES):
         return string.decode('utf8')
     else:
         raise TypeError("Unrecognized string type")
@@ -2892,8 +2892,6 @@ class Sender(Link):
     @type data: binary
     @param data: data to send
     """
-    #if six.PY3 and isinstance(data, six.text_type):
-    #    data = data.encode('utf-8')
     return self._check(pn_link_send(self._impl, data))
 
   def send(self, obj, tag=None):
@@ -3767,7 +3765,7 @@ class _cadapter:
 
   def exception(self, exc, val, tb):
     if self.on_error is None:
-      six.reraise(exc, val, tb)
+      _compat.raise_(exc, val, tb)
     else:
       self.on_error((exc, val, tb))
 
@@ -3788,7 +3786,7 @@ class WrappedHandler(Wrapper):
   def _on_error(self, info):
     on_error = getattr(self, "on_error", None)
     if on_error is None:
-      six.reraise(info[0], info[1], info[2])
+      _compat.raise_(info[0], info[1], info[2])
     else:
       on_error(info)
 

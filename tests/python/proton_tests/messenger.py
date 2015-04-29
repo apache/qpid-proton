@@ -19,7 +19,6 @@ from __future__ import absolute_import
 #
 
 import os, sys, traceback
-from six.moves import range as xrange
 from . import common
 from proton import *
 from threading import Thread, Event
@@ -762,8 +761,8 @@ class NBMessengerTest(common.Test):
 
     msg = Message()
     msg.address = self.address
-    for i in xrange(16):
-      for i in xrange(1024):
+    for i in range(16):
+      for i in range(1024):
         self.client.put(msg)
       self.pump()
       if self.client.outgoing > 0:
@@ -801,7 +800,7 @@ class NBMessengerTest(common.Test):
     deadline = time() + self.timeout
     while time() < deadline:
         old = self.server.incoming
-        for j in xrange(1001):
+        for j in range(1001):
             self.client.put(msg)
         self.pump()
         if old == self.server.incoming:

@@ -18,8 +18,6 @@ from __future__ import absolute_import
 # under the License.
 #
 import logging, os, socket, time, types
-import six
-from six.moves import queue as Queue
 from heapq import heappush, heappop, nsmallest
 from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
 from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
@@ -33,6 +31,12 @@ import traceback
 from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
 from .wrapper import Wrapper, PYCTX
 from cproton import *
+from . import _compat
+
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 class Task(Wrapper):
 
@@ -139,7 +143,7 @@ class Reactor(Wrapper):
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
-            six.reraise(exc, value, tb)
+            _compat.raise_(exc, value, tb)
 
     def process(self):
         result = pn_reactor_process(self._impl)
@@ -211,7 +215,7 @@ class EventInjector(object):
         of the reactor to which this EventInjector was added.
         """
         self.queue.put(event)
-        os.write(self.pipe[1], six.b("!"))
+        os.write(self.pipe[1], _compat.str2bin("!"))
 
     def close(self):
         """
@@ -667,7 +671,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, six.string_types):
+        if isinstance(context, _compat.STRING_TYPES):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -708,7 +712,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, six.string_types):
+        if isinstance(context, _compat.STRING_TYPES):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

@@ -18,9 +18,9 @@
 #
 
 import os, sys
-import six
 from . import common
 from proton import *
+from proton._compat import raise_, str2unicode, unichar, str2bin
 try:
   from uuid import uuid4
 except ImportError:
@@ -129,7 +129,7 @@ class DataTest(Test):
       putter(v)
     except Exception:
       etype, value, trace = sys.exc_info()
-      six.reraise(etype, etype("%s(%r): %s" % (putter.__name__, v, value)), trace)
+      raise_(etype, etype("%s(%r): %s" % (putter.__name__, v, value)), trace)
     return putter
 
   # (bits, signed) for each integer type
@@ -275,8 +275,8 @@ class DataTest(Test):
     self._test("double", 0, 1, 2, 3, 0.1, 0.2, 0.3, -1, -2, -3, -0.1, -0.2, -0.3)
 
   def testBinary(self):
-    self._test("binary", six.b("this"), six.b("is"), six.b("a"), six.b("test"),
-               six.b("of" "b\x00inary"))
+    self._test("binary", str2bin("this"), str2bin("is"), str2bin("a"), str2bin("test"),
+               str2bin("of" "b\x00inary"))
 
   def testSymbol(self):
     self._test("symbol", "this is a symbol test", "bleh", "blah")
@@ -285,7 +285,7 @@ class DataTest(Test):
     self._test("timestamp", 0, 12345, 1000000)
 
   def testChar(self):
-    self._test("char", 'a', 'b', 'c', six.u('\u1234'))
+    self._test("char", 'a', 'b', 'c', unichar(0x20AC))
 
   def testUUID(self):
     self._test("uuid", uuid4(), uuid4(), uuid4())
@@ -297,7 +297,7 @@ class DataTest(Test):
     self._test("decimal64", 0, 1, 2, 3, 4, 2**60)
 
   def testDecimal128(self):
-    self._test("decimal128", six.b("fdsaasdf;lkjjkl;"), six.b("x"*16))
+    self._test("decimal128", str2bin("fdsaasdf;lkjjkl;"), str2bin("x"*16))
 
   def testCopy(self):
     self.data.put_described()
@@ -338,10 +338,10 @@ class DataTest(Test):
     obj = {symbol("key"): timestamp(1234),
            ulong(123): "blah",
            char("c"): "bleh",
-           six.u("desc"): Described(symbol("url"), six.u("http://example.org")),
-           six.u("array"): Array(UNDESCRIBED, Data.INT, 1, 2, 3),
-           six.u("list"): [1, 2, 3, None, 4],
-           six.u("boolean"): True}
+           str2unicode("desc"): Described(symbol("url"), str2unicode("http://example.org")),
+           str2unicode("array"): Array(UNDESCRIBED, Data.INT, 1, 2, 3),
+           str2unicode("list"): [1, 2, 3, None, 4],
+           str2unicode("boolean"): True}
     self.data.put_object(obj)
     enc = self.data.encode()
     data = Data()
@@ -352,7 +352,7 @@ class DataTest(Test):
     assert copy == obj, (copy, obj)
 
   def testLookup(self):
-    obj = {symbol("key"): six.u("value"),
+    obj = {symbol("key"): str2unicode("value"),
            symbol("pi"): 3.14159,
            symbol("list"): [1, 2, 3, 4]}
     self.data.put_object(obj)
@@ -364,7 +364,7 @@ class DataTest(Test):
     assert self.data.get_object() == 3.14159
     self.data.rewind()
     assert self.data.lookup("key")
-    assert self.data.get_object() == six.u("value")
+    assert self.data.get_object() == str2unicode("value")
     self.data.rewind()
     assert self.data.lookup("list")
     assert self.data.get_object() == [1, 2, 3, 4]

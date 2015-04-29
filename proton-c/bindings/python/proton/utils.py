@@ -17,8 +17,6 @@
 # under the License.
 #
 import collections, socket, time, threading
-import six
-from six.moves import queue as Queue
 
 from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
 from proton import ProtonException, Timeout, Url

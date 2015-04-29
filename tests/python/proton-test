@@ -20,12 +20,16 @@
 
 # TODO: summarize, test harness preconditions (e.g. broker is alive)
 
-import six
 import logging, optparse, os, struct, sys, time, traceback, types, cgi
 from fnmatch import fnmatchcase as match
 from getopt import GetoptError
 from logging import getLogger, StreamHandler, Formatter, Filter, \
     WARN, DEBUG, ERROR
+
+if sys.version_info[0] == 3:
+    CLASS_TYPES = (type,)
+else:
+    CLASS_TYPES = (type, types.ClassType)
 
 levels = {
   "DEBUG": DEBUG,
@@ -555,7 +559,7 @@ class FunctionScanner(PatternMatcher):
 class ClassScanner(PatternMatcher):
 
   def inspect(self, obj):
-    return type(obj) in six.class_types and self.matches(obj.__name__)
+    return type(obj) in CLASS_TYPES and self.matches(obj.__name__)
 
   def descend(self, cls):
     # the None is required for older versions of python
@@ -566,7 +570,7 @@ class ClassScanner(PatternMatcher):
     names.sort()
     for name in names:
       obj = getattr(cls, name)
-      if six.callable(obj) and name.startswith("test"):
+      if hasattr(obj, '__call__') and name.startswith("test"):
         yield MethodTest(cls, name)
 
 class ModuleScanner:
@@ -667,19 +671,19 @@ def runthrough():
       skip = "skip"
     else:
       skip = "pass"
-    six.print_(colorize("Totals:", 1), end=' ')
+    sys.stdout.write(colorize("Totals: ", 1))
     totals = [colorize_word("total", "%s tests" % total),
               colorize_word(_pass, "%s passed" % passed),
               colorize_word(skip, "%s skipped" % skipped),
               colorize_word(ign, "%s ignored" % len(ignored)),
               colorize_word(outcome, "%s failed" % failed)]
-    six.print_(", ".join(totals), end=' ')
+    sys.stdout.write(", ".join(totals))
     if opts.hoe and failed > 0:
       print(" -- (halted after %s)" % run)
     else:
-      print()
+      print("")
     if opts.time and run > 0:
-      six.print_(colorize("Timing:", 1), end=' ')
+      sys.stdout.write(colorize("Timing:", 1))
       timing = [colorize_word("elapsed", "%.2fs elapsed" % (end - start)),
                 colorize_word("average", "%.2fs average" % ((end - start)/run))]
       print(", ".join(timing))
