@@ -94,7 +94,7 @@ pn_token_t pn_scanner_token(pn_scanner_t *scanner)
   if (scanner) {
     return scanner->token;
   } else {
-    pn_token_t tok = {PN_TOK_ERR};
+    pn_token_t tok = {PN_TOK_ERR, 0, (size_t)0};
     return tok;
   }
 }

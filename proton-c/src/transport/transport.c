@@ -843,7 +843,8 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
     return PN_ERR;
   }
 
-  pn_frame_t frame = {type};
+  pn_frame_t frame = {0,};
+  frame.type = type;
   frame.channel = ch;
   frame.payload = buf.start;
   frame.size = wr;
