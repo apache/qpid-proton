@@ -64,6 +64,9 @@ require "core/sender"
 require "core/receiver"
 require "core/connection"
 require "core/sasl"
+require "core/ssl_domain"
+require "core/ssl_details"
+require "core/ssl"
 
 # Messenger API classes
 require "messenger/filters"
