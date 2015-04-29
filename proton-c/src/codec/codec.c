@@ -1934,7 +1934,7 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
   if (node) {
     return *((pn_atom_t *) &node->atom);
   } else {
-    pn_atom_t t = {PN_NULL};
+    pn_atom_t t = {PN_NULL, {0,}};
     return t;
   }
 }
