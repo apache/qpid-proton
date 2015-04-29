@@ -100,6 +100,12 @@ module Qpid
     class LinkError < ProtonError
     end
 
+    class SSLError < TransportError
+    end
+
+    class SSLUnavailableError < SSLError
+    end
+
   end
 
 end
