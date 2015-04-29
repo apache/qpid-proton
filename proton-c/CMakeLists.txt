@@ -465,36 +465,6 @@ install (FILES
 
 # CTest
 
-  # suffix for Visual Studio targets.  Only support RelWithDebInfo for now.
-if (MSVC)
-  set (bld_suffix "/RelWithDebInfo")
-endif(MSVC)
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-  # Substitute windows separators in path and remove empty entries.
-  # Replace necessary colons after windows drive letters.
-  function(set_path result path)
-    string (REGEX REPLACE ":" ";" path "${path}")
-    string (REGEX REPLACE ";;" ";" path "${path}")
-    string (REGEX REPLACE "^;" "" path "${path}")
-    string (REGEX REPLACE "\\\\" "/" path "${path}")
-    string (REGEX REPLACE ";([a-zA-Z]);" ";\\1:" path "${path}")
-    string (REGEX REPLACE "^([a-zA-Z]);" "\\1:" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-  # Set variable result to path, with empty entries removed
-  function(set_path result path)
-    string (REGEX REPLACE "^:" "" path "${path}")
-    string (REGEX REPLACE "::" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND)
@@ -511,20 +481,35 @@ mark_as_advanced (VALGRIND_EXE)
 
 add_subdirectory(src/tests)
 
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # No change needed for windows already use correct separator
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Just change ';'->':'
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    string (REGEX REPLACE ";" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
   set (py_root "${pn_test_root}/python")
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
-  set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
-  set (app_path "${pn_test_bin}/tools/apps/c${bld_suffix}")
-  set (app_path "${app_path}:${pn_test_root}/tools/apps/python")
-  set_path (py_path "${py_bin}:${py_bld}:${app_path}:$ENV{PATH}")
-  set_path (py_pythonpath "${py_root}:${py_src}:${py_bin}:${py_bld}|$ENV{PYTHONPATH}")
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    set_path (py_pythonpath "${py_bin}${bld_suffix}:${py_pythonpath}")
-  endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  add_test (python-test ${env_py}
+  set (py_dll "$<TARGET_FILE_DIR:_cproton>")
+  set (py_bld "$<TARGET_FILE_DIR:qpid-proton>") # For windows
+  set (app_path $<TARGET_FILE_DIR:msgr-send> "${pn_test_root}/tools/apps/python")
+  set (py_path ${py_bld} ${app_path} $ENV{PATH})
+  set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
+  to_native_path ("${py_path}" py_path)
+  to_native_path ("${py_pythonpath}" py_pythonpath)
+  add_test (NAME python-test
+            COMMAND ${env_py}
             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
@@ -532,19 +517,22 @@ endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
 if (RUBY_EXE)
-  set (rb_root "${pn_test_root}/ruby")
-  set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
-  set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
-  set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
-  set (rb_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
-  set (rb_path "$ENV{PATH}:${rb_bin}:${rb_bld}")
-  set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
-
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
-    add_test (ruby-unit-test ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-      "${rb_root}/proton-test")
+    set (rb_root "${pn_test_root}/ruby")
+    set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
+    set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
+    set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
+    set (rb_bld "$<TARGET_FILE_DIR:qpid-proton>")
+    set (rb_path $ENV{PATH} ${rb_bin} ${rb_bld})
+    set (rb_rubylib ${rb_root} ${rb_src} ${rb_bin} ${rb_bld} ${rb_lib})
+    to_native_path("${rb_path}" rb_path)
+    to_native_path("${rb_rubylib}" rb_rubylib)
+
+    add_test (NAME ruby-unit-test
+              COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                      "${rb_root}/proton-test")
 
     # ruby spec tests
     find_program(RSPEC_EXE rspec)
