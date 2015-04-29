@@ -24,10 +24,8 @@ import unittest
 
 if sys.version_info[0] == 2:
     _unicode_prefix = 'u'
-    _long_suffix = 'L'
 else:
     _unicode_prefix = ''
-    _long_suffix = ''
 
 
 class ExamplesTest(unittest.TestCase):
@@ -58,7 +56,7 @@ class ExamplesTest(unittest.TestCase):
         s.wait()
         r.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{'sequence': %i%s}" % ((i+1), _long_suffix) for i in range(100)]
+        expected = ["{'sequence': %i}" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
@@ -137,7 +135,7 @@ class ExamplesTest(unittest.TestCase):
         s.wait()
         r.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{'sequence': %i%s}" % ((i+1), _long_suffix) for i in range(100)]
+        expected = ["{'sequence': %i}" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
@@ -149,5 +147,5 @@ class ExamplesTest(unittest.TestCase):
         r.wait()
         s.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{'sequence': %i%s}" % ((i+1), _long_suffix) for i in range(100)]
+        expected = ["{'sequence': %i}" % (i+1) for i in range(100)]
         self.assertEqual(actual, expected)

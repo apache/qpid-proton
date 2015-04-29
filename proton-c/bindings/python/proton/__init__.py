@@ -1934,7 +1934,7 @@ class Data:
     If the current node is a signed int, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_int(self._data)
+    return int(pn_data_get_int(self._data))
 
   def get_char(self):
     """
@@ -1955,7 +1955,7 @@ class Data:
     If the current node is an signed long, returns its value, returns
     0 otherwise.
     """
-    return pn_data_get_long(self._data)
+    return long(pn_data_get_long(self._data))
 
   def get_timestamp(self):
     """
@@ -2158,7 +2158,7 @@ class Data:
     unicode: put_string,
     bytes: put_binary,
     symbol: put_symbol,
-    int: put_long,
+    long: put_long,
     char: put_char,
     ulong: put_ulong,
     timestamp: put_timestamp,
@@ -2167,9 +2167,10 @@ class Data:
     Described: put_py_described,
     Array: put_py_array
     }
-  # for python 2.x:
-  if long not in put_mappings:
-      put_mappings[long] = put_long
+  # for python 3.x, long is merely an alias for int, but for python 2.x
+  # we need to add an explicit int since it is a different type
+  if int not in put_mappings:
+      put_mappings[int] = put_int
 
   get_mappings = {
     NULL: lambda s: None,
