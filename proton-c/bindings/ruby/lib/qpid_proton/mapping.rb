@@ -70,11 +70,11 @@ module Qpid # :nodoc:
       def to_s; @name; end
 
       def put(data, value)
-        data.send(@put_method, value)
+        data.__send__(@put_method, value)
       end
 
       def get(data)
-        data.send(@get_method)
+        data.__send__(@get_method)
       end
 
       def self.for_class(klass) # :nodoc:
