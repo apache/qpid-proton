@@ -477,6 +477,7 @@ int pn_data_intern_node(pn_data_t *data, pni_node_t *node)
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   int err = 0;
+  const char *begin = fmt;
   while (*fmt) {
     char code = *(fmt++);
     if (!code) return 0;
@@ -578,7 +579,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     case '[':
-      if (*(fmt - 2) != 'T') {
+      if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pn_data_put_list(data);
         if (err) return err;
         pn_data_enter(data);
