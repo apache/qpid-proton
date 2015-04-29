@@ -17,9 +17,9 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid
 
-  module Proton # :nodoc:
+  module Proton
 
     module Error
 

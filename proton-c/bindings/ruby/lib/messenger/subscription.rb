@@ -17,23 +17,19 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Messenger
 
-  module Proton # :nodoc:
+  # A +Subscription+ is an opaque object for working with a +Messenger+'s
+  # subscriptions.
+  #
+  class Subscription
 
-    # A +Subscription+ is an opaque object for working with a +Messenger+'s
-    # subscriptions.
-    #
-    class Subscription
+    def initialize(impl) # :nodoc:
+      @impl = impl
+    end
 
-      def initialize(impl) # :nodoc:
-          @impl = impl
-      end
-
-      def impl # :nodoc:
-          @impl
-      end
-
+    def impl # :nodoc:
+      @impl
     end
 
   end

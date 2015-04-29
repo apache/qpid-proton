@@ -31,7 +31,7 @@ end
 
 addresses = ["~0.0.0.0"] if addresses.empty?
 
-messenger = Qpid::Proton::Messenger.new
+messenger = Qpid::Proton::Messenger::Messenger.new
 
 begin
   messenger.start

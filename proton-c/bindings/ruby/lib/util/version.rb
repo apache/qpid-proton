@@ -17,16 +17,14 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Util
 
-  module Proton # :nodoc:
+  # The major version for the underlying Proton library.
+  # @private
+  VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
 
-    # The major version for the underlying Proton library.
-    VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
-
-    # The minor version for the underlying Proton library.
-    VERSION_MINOR = Cproton::PN_VERSION_MINOR
-
-  end
+  # The minor version for the underlying Proton library.
+  # @private
+  VERSION_MINOR = Cproton::PN_VERSION_MINOR
 
 end

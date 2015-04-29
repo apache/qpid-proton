@@ -17,56 +17,52 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Messenger
 
-  module Proton # :nodoc:
+  # TrackerStatus contains symbols that represent the status value for a
+  # Tracker.
+  #
+  class TrackerStatus
 
-    # TrackerStatus contains symbols that represent the status value for a
-    # Tracker.
-    #
-    class TrackerStatus
-
-        def initialize value, name # :nodoc:
-          @value = value
-          @name = name
-        end
-
-        def value # :nodoc:
-          @value
-        end
-
-        def to_s # :nodoc:
-          @name.to_s
-        end
-
-       def self.by_name(name) # :nodoc:
-          @by_name[name.to_sym] unless name.nil?
-        end
-
-        def self.by_value(value) # :nodoc:
-          @by_value[value] unless value.nil?
-        end
-
-        private
-
-        def self.add_item(key, value) # :nodoc:
-          @by_name ||= {}
-          @by_name[key] = TrackerStatus.new value, key
-          @by_value ||= {}
-          @by_value[value] = @by_name[key]
-        end
-
-        def self.const_missing(key) # :nodoc:
-          @by_name[key]
-        end
-
-        self.add_item :UNKNOWN,  Cproton::PN_STATUS_UNKNOWN
-        self.add_item :PENDING,  Cproton::PN_STATUS_PENDING
-        self.add_item :ACCEPTED, Cproton::PN_STATUS_ACCEPTED
-        self.add_item :REJECTED, Cproton::PN_STATUS_REJECTED
-        self.add_item :SETTLED,  Cproton::PN_STATUS_SETTLED
-
+    def initialize value, name # :nodoc:
+      @value = value
+      @name = name
     end
+
+    def value # :nodoc:
+      @value
+    end
+
+    def to_s # :nodoc:
+      @name.to_s
+    end
+
+    def self.by_name(name) # :nodoc:
+      @by_name[name.to_sym] unless name.nil?
+    end
+
+    def self.by_value(value) # :nodoc:
+      @by_value[value] unless value.nil?
+    end
+
+    private
+
+    def self.add_item(key, value) # :nodoc:
+      @by_name ||= {}
+      @by_name[key] = TrackerStatus.new value, key
+      @by_value ||= {}
+      @by_value[value] = @by_name[key]
+    end
+
+    def self.const_missing(key) # :nodoc:
+      @by_name[key]
+    end
+
+    self.add_item :UNKNOWN,  Cproton::PN_STATUS_UNKNOWN
+    self.add_item :PENDING,  Cproton::PN_STATUS_PENDING
+    self.add_item :ACCEPTED, Cproton::PN_STATUS_ACCEPTED
+    self.add_item :REJECTED, Cproton::PN_STATUS_REJECTED
+    self.add_item :SETTLED,  Cproton::PN_STATUS_SETTLED
 
   end
 

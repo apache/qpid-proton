@@ -17,49 +17,46 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Types
 
-  module Proton # :nodoc:
-
-    def self.is_valid_utf?(value)
-      # In Ruby 1.9+ we have encoding methods that can check the content of
-      # the string, so use them to see if what we have is unicode. If so,
-      # good! If not, then just treat is as binary.
-      #
-      # No such thing in Ruby 1.8. So there we need to use Iconv to try and
-      # convert it to unicode. If it works, good! But if it raises an
-      # exception then we'll treat it as binary.
-      if RUBY_VERSION < "1.9"
-        return true if value.isutf8
-        return false
-      else
-        return true if (value.encoding == "UTF-8" ||
-                        value.encode("UTF-8").valid_encoding?)
-
-        return false
-      end
-    end
-
-    # UTFString lets an application explicitly state that a
-    # string of characters is to be UTF-8 encoded.
+  # @private
+  def self.is_valid_utf?(value)
+    # In Ruby 1.9+ we have encoding methods that can check the content of
+    # the string, so use them to see if what we have is unicode. If so,
+    # good! If not, then just treat is as binary.
     #
-    class UTFString < ::String
+    # No such thing in Ruby 1.8. So there we need to use Iconv to try and
+    # convert it to unicode. If it works, good! But if it raises an
+    # exception then we'll treat it as binary.
+    if RUBY_VERSION < "1.9"
+      return true if value.isutf8
+      return false
+    else
+      return true if (value.encoding == "UTF-8" ||
+                      value.encode("UTF-8").valid_encoding?)
 
-      def initialize(value)
-        if !Qpid::Proton.is_valid_utf?(value)
-          raise RuntimeError.new("invalid UTF string")
-        end
+      return false
+    end
+  end
 
-        super(value)
+  # UTFString lets an application explicitly state that a
+  # string of characters is to be UTF-8 encoded.
+  #
+  class UTFString < ::String
+
+    def initialize(value)
+      if !Qpid::Proton::Types.is_valid_utf?(value)
+        raise RuntimeError.new("invalid UTF string")
       end
 
+      super(value)
     end
-
-    # BinaryString lets an application explicitly declare that
-    # a string value represents arbitrary data.
-    #
-    class BinaryString < ::String; end
 
   end
+
+  # BinaryString lets an application explicitly declare that
+  # a string value represents arbitrary data.
+  #
+  class BinaryString < ::String; end
 
 end
