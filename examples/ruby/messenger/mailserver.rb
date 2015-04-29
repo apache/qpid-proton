@@ -50,7 +50,7 @@ def log(text)
   STDOUT.puts "#{Time.new}: #{text}" if $options[:verbose]
 end
 
-msgr = Qpid::Proton::Messenger.new
+msgr = Qpid::Proton::Messenger::Messenger.new
 msgr.start
 
 $options[:address].each {|addr| msgr.subscribe(addr)}
@@ -82,4 +82,3 @@ loop do
 end
 
 msgr.stop
-

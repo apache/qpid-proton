@@ -17,47 +17,44 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton
 
-  module Proton # :nodoc:
+  # @private
+  module Filters
 
-    module Filters
+    def self.included(base)
+      base.class_eval do
+        extend ClassMethods
+      end
+    end
 
-      def self.included(base)
-        base.class_eval do
-          extend ClassMethods
+    module ClassMethods
+
+      def method_added(method_name)
+        @@hooked_methods ||= []
+        return if @@hooked_methods.include?(method_name)
+        @@hooked_methods << method_name
+        hooks = @@before_hooks[method_name]
+        return if hooks.nil?
+        orig_method = instance_method(method_name)
+        define_method(method_name) do |*args, &block|
+          hooks = @@before_hooks[method_name]
+          hooks.each do |hook|
+            method(hook).call
+          end
+
+          orig_method.bind(self).call(*args, &block)
         end
       end
 
-      module ClassMethods
-
-        def method_added(method_name)
-          @@hooked_methods ||= []
-          return if @@hooked_methods.include?(method_name)
-          @@hooked_methods << method_name
-          hooks = @@before_hooks[method_name]
-          return if hooks.nil?
-          orig_method = instance_method(method_name)
-          define_method(method_name) do |*args, &block|
-            hooks = @@before_hooks[method_name]
-            hooks.each do |hook|
-              method(hook).call
-            end
-
-            orig_method.bind(self).call(*args, &block)
-          end
+      def call_before(before_method, *methods)
+        @@before_hooks ||= {}
+        methods.each do |method|
+          hooks = @@before_hooks[method] || []
+          raise "Repeat filter: #{before_method}" if hooks.include? before_method
+          hooks << before_method
+          @@before_hooks[method] = hooks
         end
-
-        def call_before(before_method, *methods)
-          @@before_hooks ||= {}
-          methods.each do |method|
-            hooks = @@before_hooks[method] || []
-            raise "Repeat filter: #{before_method}" if hooks.include? before_method
-            hooks << before_method
-            @@before_hooks[method] = hooks
-          end
-        end
-
       end
 
     end

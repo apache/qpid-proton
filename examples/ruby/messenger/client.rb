@@ -68,7 +68,7 @@ def log(text)
   printf "#{Time.new}: #{text}\n" if $options[:verbose]
 end
 
-msgr = Qpid::Proton::Messenger.new
+msgr = Qpid::Proton::Messenger::Messenger.new
 msgr.start
 
 msg = Qpid::Proton::Message.new
