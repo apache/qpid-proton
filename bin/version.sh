@@ -39,5 +39,5 @@ else
     usage
 fi
 
-echo ${VERSION} > ${SRC}/version.txt
-mvn org.codehaus.mojo:versions-maven-plugin:1.2:set org.codehaus.mojo:versions-maven-plugin:1.2:commit -DnewVersion="${VERSION}" -f ${SRC}/pom.xml
+echo ${VERSION} > ${SRC}/version.txt && \
+    mvn -q org.codehaus.mojo:versions-maven-plugin:1.2:set org.codehaus.mojo:versions-maven-plugin:1.2:commit -DnewVersion="${VERSION}" -f ${SRC}/pom.xml

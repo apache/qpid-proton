@@ -59,8 +59,8 @@ die()
     else
         REMOTE="origin"
     fi
-    bin/version.sh $VERSION
-    git commit -a -m "Release $VERSION"
-    git tag -m "Release $VERSION" $TAG
-    echo "Run 'git push ${REMOTE} ${TAG}' to push the tag upstream."
+    bin/version.sh $VERSION && \
+        git commit -a -m "Release $VERSION" && \
+        git tag -m "Release $VERSION" $TAG && \
+        echo "Run 'git push ${REMOTE} ${TAG}' to push the tag upstream."
 )
