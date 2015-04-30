@@ -1553,7 +1553,7 @@ pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery)
   return d;
 }
 
-bool pn_is_current(pn_delivery_t *delivery)
+bool pn_delivery_current(pn_delivery_t *delivery)
 {
   pn_link_t *link = delivery->link;
   return pn_link_current(link) == delivery;
@@ -1568,7 +1568,7 @@ void pn_delivery_dump(pn_delivery_t *d)
          "remote.settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
          tag, d->local.type, d->remote.type, d->local.settled,
-         d->remote.settled, d->updated, pn_is_current(d),
+         d->remote.settled, d->updated, pn_delivery_current(d),
          pn_delivery_writable(d), pn_delivery_readable(d), d->work);
 }
 
@@ -1789,7 +1789,7 @@ void pn_delivery_settle(pn_delivery_t *delivery)
   assert(delivery);
   if (!delivery->local.settled) {
     pn_link_t *link = delivery->link;
-    if (pn_is_current(delivery)) {
+    if (pn_delivery_current(delivery)) {
       pn_link_advance(link);
     }
 
@@ -1955,14 +1955,14 @@ bool pn_delivery_writable(pn_delivery_t *delivery)
   if (!delivery) return false;
 
   pn_link_t *link = delivery->link;
-  return pn_link_is_sender(link) && pn_is_current(delivery) && pn_link_credit(link) > 0;
+  return pn_link_is_sender(link) && pn_delivery_current(delivery) && pn_link_credit(link) > 0;
 }
 
 bool pn_delivery_readable(pn_delivery_t *delivery)
 {
   if (delivery) {
     pn_link_t *link = delivery->link;
-    return pn_link_is_receiver(link) && pn_is_current(delivery);
+    return pn_link_is_receiver(link) && pn_delivery_current(delivery);
   } else {
     return false;
   }
