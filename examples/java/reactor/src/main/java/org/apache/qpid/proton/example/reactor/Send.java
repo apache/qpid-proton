@@ -78,7 +78,7 @@ public class Send extends BaseHandler {
         @Override
         public void onLinkFlow(Event event) {
             Sender snd = (Sender)event.getLink();
-            if (snd.getCredit() > 0 && message != null) {
+            if (snd.getCredit() > 0) {
                 byte[] msgData = new byte[1024];
                 int length;
                 while(true) {

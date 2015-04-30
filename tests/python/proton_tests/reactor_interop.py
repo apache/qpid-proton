@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from common import Test
+from common import Test, free_tcp_port
 from proton import Message
 from proton.reactor import Reactor
 from proton.handlers import CHandshaker, CFlowController
@@ -28,33 +28,60 @@ import os
 from threading import Thread
 
 class JavaSendThread(Thread):
-  def __init__(self):
+  def __init__(self, port, count):
     Thread.__init__(self)
+    self.port = str(port)
+    self.count = str(count)
+    self.result = 1
 
   def run(self):
-    subprocess.check_output(['java', 'org.apache.qpid.proton.ProtonJInterop'])
+    self.result = subprocess.call(['java',
+        'org.apache.qpid.proton.ProtonJInterop',
+        self.port, self.count])
 
-
-class Receive:
-  def __init__(self):
+class ReceiveHandler:
+  def __init__(self, count):
+    self.count = count
     self.handlers = [CHandshaker(), CFlowController()]
-    self.message = Message()
+    self.messages = []
 
   def on_reactor_init(self, event):
-    self.acceptor = event.reactor.acceptor("localhost", 56789)
-    JavaSendThread().start()
+    port = free_tcp_port()
+    self.acceptor = event.reactor.acceptor("localhost", port)
+    self.java_thread = JavaSendThread(port, self.count)
+    self.java_thread.start()
 
   def on_delivery(self, event):
     rcv = event.receiver
-    if rcv and self.message.recv(rcv):
+    msg = Message()
+    if rcv and msg.recv(rcv):
       event.delivery.settle()
-      self.acceptor.close()
+      self.messages += [msg.body]
+      self.count -= 1
+      if (self.count == 0):
+        self.acceptor.close()
 
 class ReactorInteropTest(Test):
 
-  def test_protonj_to_protonc(self):
-    rcv = Receive()
-    r = Reactor(rcv)
+  def protonj_to_protonc(self, count):
+    rh = ReceiveHandler(count)
+    r = Reactor(rh)
     r.run()
-    assert(rcv.message.body == "test1")
 
+    rh.java_thread.join()
+    assert(rh.java_thread.result == 0)
+
+    for i in range(1, count):
+      assert(rh.messages[i-1] == ("message-" + str(i)))
+
+  def test_protonj_to_protonc_1(self):
+    self.protonj_to_protonc(1)
+
+  def test_protonj_to_protonc_5(self):
+    self.protonj_to_protonc(5)
+
+  def test_protonj_to_protonc_500(self):
+    self.protonj_to_protonc(500)
+
+  def test_protonj_to_protonc_5000(self):
+    self.protonj_to_protonc(5000)

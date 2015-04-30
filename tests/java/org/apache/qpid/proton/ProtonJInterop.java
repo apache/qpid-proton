@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
@@ -36,22 +37,18 @@ import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.reactor.Handshaker;
 import org.apache.qpid.proton.reactor.Reactor;
 
-public class ProtonJInterop {   // TODO: this doesn't return a useful RC
-
+public class ProtonJInterop {
 
     private static class SendHandler extends BaseHandler {
 
         private final String hostname;
-        private final Message message;
-        private int nextTag = 0;
-        private int result = 1;
+        private int numMsgs;
+        private int count = 0;
+        private boolean result = false;
 
-        private SendHandler(String hostname, Message message) {
+        private SendHandler(String hostname, int numMsgs) {
             this.hostname = hostname;
-            this.message = message;
-
-            // Add a child handler that performs some default handshaking
-            // behaviour.
+            this.numMsgs = numMsgs;
             add(new Handshaker());
         }
 
@@ -59,16 +56,7 @@ public class ProtonJInterop {   // TODO: this doesn't return a useful RC
         public void onConnectionInit(Event event) {
             Connection conn = event.getConnection();
             conn.setHostname(hostname);
-
-            // Every session or link could have their own handler(s) if we
-            // wanted simply by adding the handler to the given session
-            // or link
             Session ssn = conn.session();
-
-            // If a link doesn't have an event handler, the events go to
-            // its parent session. If the session doesn't have a handler
-            // the events go to its parent connection. If the connection
-            // doesn't have a handler, the events go to the reactor.
             Sender snd = ssn.sender("sender");
             conn.open();
             ssn.open();
@@ -78,7 +66,10 @@ public class ProtonJInterop {   // TODO: this doesn't return a useful RC
         @Override
         public void onLinkFlow(Event event) {
             Sender snd = (Sender)event.getLink();
-            if (snd.getCredit() > 0 && message != null) {
+            if (snd.getCredit() > 0 && snd.getLocalState() != EndpointState.CLOSED) {
+                Message message = Proton.message();
+                ++count;
+                message.setBody(new AmqpValue("message-"+count));
                 byte[] msgData = new byte[1024];
                 int length;
                 while(true) {
@@ -89,20 +80,23 @@ public class ProtonJInterop {   // TODO: this doesn't return a useful RC
                         msgData = new byte[msgData.length * 2];
                     }
                 }
-                byte[] tag = String.valueOf(nextTag++).getBytes();
+                byte[] tag = String.valueOf(count).getBytes();
                 Delivery dlv = snd.delivery(tag);
                 snd.send(msgData, 0, length);
                 dlv.settle();
                 snd.advance();
-                snd.close();
-                snd.getSession().close();
-                snd.getSession().getConnection().close();
-                result = 0;
+                if (count == numMsgs) {
+                    snd.close();
+                    snd.getSession().close();
+                    snd.getSession().getConnection().close();
+                    result = true;
+                }
             }
         }
 
         @Override
         public void onTransportError(Event event) {
+            result = false;
             ErrorCondition condition = event.getTransport().getCondition();
             if (condition != null) {
                 System.err.println("Error: " + condition.getDescription());
@@ -113,33 +107,37 @@ public class ProtonJInterop {   // TODO: this doesn't return a useful RC
     }
 
     private static class Send extends BaseHandler {
-        private final String hostname;
-        private final Message message;
+        private final SendHandler sendHandler;
 
-        private Send(String hostname, String content) {
-            this.hostname = hostname;
-            message = Proton.message();
-            message.setBody(new AmqpValue(content));
+        private Send(String hostname, int numMsgs) {
+            sendHandler = new SendHandler(hostname, numMsgs);
         }
 
         @Override
         public void onReactorInit(Event event) {
-            // You can use the connection method to create AMQP connections.
+            event.getReactor().connection(sendHandler);
+        }
 
-            // This connection's handler is the SendHandler object. All the events
-            // for this connection will go to the SendHandler object instead of
-            // going to the reactor. If you were to omit the SendHandler object,
-            // all the events would go to the reactor.
-            event.getReactor().connection(new SendHandler(hostname, message));
+        public boolean getResult() {
+            return sendHandler.result;
         }
     }
 
-    private static void sendTest() throws IOException {
-        Reactor r = Proton.reactor(new Send("localhost:56789", "test1"));
+    private static boolean sendTest(String[] args) throws IOException {
+        int port = Integer.valueOf(args[0]);
+        int numMsgs = Integer.valueOf(args[1]);
+        Send send = new Send("localhost:" + port, numMsgs);
+        Reactor r = Proton.reactor(send);
         r.run();
+        return send.getResult();
     }
 
     public static void main(String[] args) throws IOException {
-        sendTest();
+        try {
+            System.exit(sendTest(args) ? 0 : 1);
+        } catch(Throwable t) {
+            t.printStackTrace();
+            System.exit(1);
+        }
     }
 }
