@@ -63,7 +63,19 @@ class ReceiveHandler:
 
 class ReactorInteropTest(Test):
 
+  def setup(self):
+    classpath = ""
+    if ('CLASSPATH' in os.environ):
+      classpath = os.environ['CLASSPATH']
+    entries = classpath.split(os.sep)
+    self.proton_j_available = len(entries) > 0
+    for entry in entries:
+      self.proton_j_available |= os.path.exists(entry)
+
   def protonj_to_protonc(self, count):
+    if (not self.proton_j_available):
+      raise Skip()
+
     rh = ReceiveHandler(count)
     r = Reactor(rh)
     r.run()
