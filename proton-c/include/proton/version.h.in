@@ -24,5 +24,6 @@
 
 #define PN_VERSION_MAJOR @PN_VERSION_MAJOR@
 #define PN_VERSION_MINOR @PN_VERSION_MINOR@
+#define PN_VERSION_POINT @PN_VERSION_POINT@
 
 #endif /* version.h */
