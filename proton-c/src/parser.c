@@ -38,10 +38,12 @@ struct pn_parser_t {
 pn_parser_t *pn_parser()
 {
   pn_parser_t *parser = (pn_parser_t *) malloc(sizeof(pn_parser_t));
-  parser->scanner = pn_scanner();
-  parser->atoms = NULL;
-  parser->size = 0;
-  parser->capacity = 0;
+  if (parser != NULL) {
+    parser->scanner = pn_scanner();
+    parser->atoms = NULL;
+    parser->size = 0;
+    parser->capacity = 0;
+  }
   return parser;
 }
 

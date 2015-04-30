@@ -69,20 +69,21 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
     pni_sasl_t *sasl = (pni_sasl_t *) malloc(sizeof(pni_sasl_t));
+    if (sasl != NULL) {
+      sasl->client = !transport->server;
+      sasl->included_mechanisms = NULL;
+      sasl->selected_mechanism = NULL;
+      sasl->send_data = pn_buffer(16);
+      sasl->recv_data = pn_buffer(16);
+      sasl->outcome = PN_SASL_NONE;
+      sasl->sent_init = false;
+      sasl->rcvd_init = false;
+      sasl->sent_done = false;
+      sasl->rcvd_done = false;
+      sasl->halt = false;
 
-    sasl->client = !transport->server;
-    sasl->included_mechanisms = NULL;
-    sasl->selected_mechanism = NULL;
-    sasl->send_data = pn_buffer(16);
-    sasl->recv_data = pn_buffer(16);
-    sasl->outcome = PN_SASL_NONE;
-    sasl->sent_init = false;
-    sasl->rcvd_init = false;
-    sasl->sent_done = false;
-    sasl->rcvd_done = false;
-    sasl->halt = false;
-
-    transport->sasl = sasl;
+      transport->sasl = sasl;
+    }
   }
 
   // The actual external pn_sasl_t pointer is a pointer to its enclosing pn_transport_t
@@ -204,15 +205,16 @@ void pn_sasl_plain(pn_sasl_t *sasl0, const char *username, const char *password)
   size_t psize = strlen(pass);
   size_t size = usize + psize + 2;
   char *iresp = (char *) malloc(size);
+  if (iresp != NULL) {
+    iresp[0] = 0;
+    memmove(iresp + 1, user, usize);
+    iresp[usize + 1] = 0;
+    memmove(iresp + usize + 2, pass, psize);
 
-  iresp[0] = 0;
-  memmove(iresp + 1, user, usize);
-  iresp[usize + 1] = 0;
-  memmove(iresp + usize + 2, pass, psize);
-
-  pn_sasl_allowed_mechs(sasl0, "PLAIN");
-  pn_sasl_send(sasl0, iresp, size);
-  free(iresp);
+    pn_sasl_allowed_mechs(sasl0, "PLAIN");
+    pn_sasl_send(sasl0, iresp, size);
+    free(iresp);
+  }
 }
 
 void pn_sasl_done(pn_sasl_t *sasl0, pn_sasl_outcome_t outcome)

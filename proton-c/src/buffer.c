@@ -40,10 +40,21 @@ struct pn_buffer_t {
 pn_buffer_t *pn_buffer(size_t capacity)
 {
   pn_buffer_t *buf = (pn_buffer_t *) malloc(sizeof(pn_buffer_t));
-  buf->capacity = capacity;
-  buf->start = 0;
-  buf->size = 0;
-  buf->bytes = capacity ? (char *) malloc(capacity) : NULL;
+  if (buf != NULL) {
+    buf->capacity = capacity;
+    buf->start = 0;
+    buf->size = 0;
+    if (capacity > 0) {
+        buf->bytes = (char *)malloc(capacity);
+        if (buf->bytes == NULL) {
+            free(buf);
+            buf = NULL;
+        }
+    }
+    else {
+        buf->bytes = NULL;
+    }
+  }
   return buf;
 }
 
@@ -135,12 +146,15 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   }
 
   if (buf->capacity != old_capacity) {
-    buf->bytes = (char *) realloc(buf->bytes, buf->capacity);
+    char* new_bytes = (char *)realloc(buf->bytes, buf->capacity);
+    if (new_bytes) {
+      buf->bytes = new_bytes;
 
-    if (wrapped) {
-      size_t n = old_capacity - old_head;
-      memmove(buf->bytes + buf->capacity - n, buf->bytes + old_head, n);
-      buf->start = buf->capacity - n;
+      if (wrapped) {
+          size_t n = old_capacity - old_head;
+          memmove(buf->bytes + buf->capacity - n, buf->bytes + old_head, n);
+          buf->start = buf->capacity - n;
+      }
     }
   }
 
