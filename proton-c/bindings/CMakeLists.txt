@@ -20,7 +20,7 @@
 include(UseSWIG)
 
 # Add any new bindings here - the directory name must be the same as the binding name
-set (BINDINGS python ruby php perl javascript)
+set (BINDINGS python ruby php perl javascript cpp)
 
 # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
 file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/proton-c/include/proton/*.h")
@@ -108,6 +108,11 @@ find_package(Emscripten)
 if (EMSCRIPTEN_FOUND)
   set (DEFAULT_JAVASCRIPT ON)
 endif (EMSCRIPTEN_FOUND)
+
+# C++ client: very experimental.  To try, change this to "ON"
+# or provide -DBUILD_CPP=ON to CMake
+set (DEFAULT_CPP OFF)
+
 
 # Shouldn't need to modify below here when adding new language binding
 foreach(BINDING ${BINDINGS})
