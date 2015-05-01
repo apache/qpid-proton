@@ -37,6 +37,7 @@ if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSI
   # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
   # so turn off unknown symbol warnings
   set (NOENABLE_UNDEFINED_ERROR ON)
+  set (OLD_ADD_TEST_COMMAND ON)
 else()
   set (OPTIONAL_ARG OPTIONAL)
   add_custom_target(docs)
@@ -506,13 +507,26 @@ if (BUILD_PYTHON)
   set (app_path $<TARGET_FILE_DIR:msgr-send> "${pn_test_root}/tools/apps/python")
   set (py_path ${py_bld} ${app_path} $ENV{PATH})
   set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
+
+  if (NOT OLD_ADD_TEST_COMMAND)
   to_native_path ("${py_path}" py_path)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (NAME python-test
             COMMAND ${env_py}
+                    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+                    ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+  else (NOT OLD_ADD_TEST_COMMAND)
+  list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+  to_native_path ("${py_path}" py_path)
+  to_native_path ("${py_pythonpath}" py_pythonpath)
+  add_test (python-test
+            ${env_py}
             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+  endif (NOT OLD_ADD_TEST_COMMAND)
+
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
