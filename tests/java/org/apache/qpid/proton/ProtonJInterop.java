@@ -31,9 +31,12 @@ import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
+import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.reactor.Acceptor;
+import org.apache.qpid.proton.reactor.FlowController;
 import org.apache.qpid.proton.reactor.Handshaker;
 import org.apache.qpid.proton.reactor.Reactor;
 
@@ -123,18 +126,75 @@ public class ProtonJInterop {
         }
     }
 
-    private static boolean sendTest(String[] args) throws IOException {
-        int port = Integer.valueOf(args[0]);
-        int numMsgs = Integer.valueOf(args[1]);
-        Send send = new Send("localhost:" + port, numMsgs);
-        Reactor r = Proton.reactor(send);
-        r.run();
-        return send.getResult();
+    private static class Recv extends BaseHandler {
+        private final int port;
+        private final int numMsgs;
+        private int count = 0;
+        private Acceptor acceptor = null;
+
+        private Recv(int port, int numMsgs) {
+            this.port = port;
+            this.numMsgs = numMsgs;
+            add(new Handshaker());
+            add(new FlowController());
+        }
+
+        @Override
+        public void onReactorInit(Event event) {
+            try {
+                acceptor = event.getReactor().acceptor("localhost", port);
+            } catch(IOException ioException) {
+                throw new RuntimeException(ioException);
+            }
+        }
+
+        @Override
+        public void onDelivery(Event event) {
+            Receiver recv = (Receiver)event.getLink();
+            Delivery delivery = recv.current();
+            if (delivery.isReadable() && !delivery.isPartial()) {
+                int size = delivery.pending();
+                byte[] buffer = new byte[size];
+                int read = recv.recv(buffer, 0, buffer.length);
+                recv.advance();
+
+                Message msg = Proton.message();
+                msg.decode(buffer, 0, read);
+
+                ++count;
+                String msgBody = ((AmqpValue)msg.getBody()).getValue().toString();
+                String expected = "message-" + count;
+                if (!expected.equals(msgBody)) {
+                    throw new RuntimeException("Received message body '" + msgBody + "', expected: '" + expected + "'");
+                }
+
+                if (count == numMsgs) {
+                    recv.close();
+                    recv.getSession().close();
+                    recv.getSession().getConnection().close();
+                    acceptor.close();
+                }
+            }
+        }
     }
 
     public static void main(String[] args) throws IOException {
         try {
-            System.exit(sendTest(args) ? 0 : 1);
+            int port = Integer.valueOf(args[1]);
+            int numMsgs = Integer.valueOf(args[2]);
+            boolean result = false;
+
+            if ("send".equalsIgnoreCase(args[0])) {
+                Send send = new Send("localhost:" + port, numMsgs);
+                Reactor r = Proton.reactor(send);
+                r.run();
+                result = send.getResult();
+            } else {
+                Reactor r = Proton.reactor(new Recv(port, numMsgs));
+                r.run();
+                result = true;
+            }
+            System.exit(result ? 0 : 1);
         } catch(Throwable t) {
             t.printStackTrace();
             System.exit(1);
