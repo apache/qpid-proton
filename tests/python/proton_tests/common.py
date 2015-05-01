@@ -418,7 +418,7 @@ class MessengerReceiver(MessengerApp):
     def _ready(self):
         """ wait for subscriptions to complete setup. """
         r = self._process.stdout.readline()
-        assert r == "READY" + os.linesep, "Unexpected input while waiting for receiver to initialize: %s" % r
+        assert r.strip() == "READY", "Unexpected input while waiting for receiver to initialize: %s" % r
 
 class MessengerSenderC(MessengerSender):
     def __init__(self):
