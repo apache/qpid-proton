@@ -42,8 +42,6 @@ import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
-import org.apache.qpid.proton.reactor.Selectable.RecordKeyType;
-import org.apache.qpid.proton.reactor.Selectable.RecordValueType;
 import org.apache.qpid.proton.reactor.Selector;
 import org.apache.qpid.proton.reactor.Task;
 
@@ -224,9 +222,10 @@ public class ReactorImpl implements Reactor {
 
     @Override
     public void update(Selectable selectable) {
-        if (!selectable.hasRecord(RecordKeyType.PNI_TERMINATED)) {
-            if (selectable.isTerminal()) {
-                selectable.setRecord(RecordKeyType.PNI_TERMINATED, RecordValueType.PN_VOID);
+        SelectableImpl selectableImpl = (SelectableImpl)selectable;
+        if (!selectableImpl.isTerminated()) {
+            if (selectableImpl.isTerminal()) {
+                selectableImpl.terminated();
                 collector.put(Type.SELECTABLE_FINAL, selectable);
             } else {
                 collector.put(Type.SELECTABLE_UPDATED, selectable);

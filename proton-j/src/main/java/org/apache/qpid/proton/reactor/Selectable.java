@@ -87,19 +87,7 @@ public interface Selectable extends ReactorChild {
     public Reactor getReactor() ;
     public void terminate() ;
 
-    public enum RecordKeyType {
-        PNI_TERMINATED
-    }
-
-    public enum RecordValueType {
-        PN_VOID
-    }
-
-    public boolean hasRecord(RecordKeyType type);
-
-    public void setRecord(RecordKeyType key, RecordValueType value) ;
     public boolean isTerminal();
-
 
     public Transport getTransport() ;
 

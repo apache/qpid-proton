@@ -22,7 +22,6 @@
 package org.apache.qpid.proton.reactor.impl;
 
 import java.nio.channels.SelectableChannel;
-import java.util.HashMap;
 
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Collector;
@@ -51,6 +50,7 @@ public class SelectableImpl implements Selectable {
     private Reactor reactor;
     private Transport transport;
     private boolean terminal;
+    private boolean terminated;
 
     @Override
     public boolean isReading() {
@@ -225,23 +225,10 @@ public class SelectableImpl implements Selectable {
         terminal = true;
     }
 
-    private final HashMap<RecordKeyType, RecordValueType> records = new HashMap<RecordKeyType, RecordValueType>();
-
-    @Override
-    public boolean hasRecord(RecordKeyType type) {
-        return records.containsKey(type);
-    }
-
-    @Override
-    public void setRecord(RecordKeyType key, RecordValueType value) {
-        records.put(key, value);
-    }
-
     @Override
     public boolean isTerminal() {
         return terminal;
     }
-
 
     @Override
     public Transport getTransport() {
@@ -271,5 +258,14 @@ public class SelectableImpl implements Selectable {
     @Override
     public Handler getHandler() {
         return _handler;
+    }
+
+
+    public boolean isTerminated() {
+        return terminated;
+    }
+
+    public void terminated() {
+        terminated = true;
     }
 }
