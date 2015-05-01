@@ -2494,9 +2494,9 @@ class SaslEventTest(CollectorTest):
     transport.bind(conn)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
 
-    transport.push('AMQP\x03\x01\x00\x00\x00\x00\x00 \x02\x01\x00\x00\x00SA'
-                   '\xd0\x00\x00\x00\x10\x00\x00\x00\x02\xa3\tANONYMOUS@'
-                   'AMQP\x00\x01\x00\x00')
+    transport.push(str2bin('AMQP\x03\x01\x00\x00\x00\x00\x00 \x02\x01\x00\x00\x00SA'
+                           '\xd0\x00\x00\x00\x10\x00\x00\x00\x02\xa3\tANONYMOUS@'
+                           'AMQP\x00\x01\x00\x00'))
     self.expect(Event.TRANSPORT)
     for i in range(1024):
       p = transport.pending()
