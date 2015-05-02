@@ -40,7 +40,7 @@ public class SelectorImpl implements Selector {
     private final HashSet<Selectable> error = new HashSet<Selectable>();
 
     public SelectorImpl() throws IOException {
-        selector = java.nio.channels.Selector.open();
+        selector = java.nio.channels.Selector.open();   // TODO: need to ensure we close this somewhere...
     }
 
     @Override

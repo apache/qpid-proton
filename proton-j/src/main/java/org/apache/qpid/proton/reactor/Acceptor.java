@@ -21,7 +21,10 @@
 
 package org.apache.qpid.proton.reactor;
 
-public interface Acceptor {
+import org.apache.qpid.proton.engine.Handler;
 
+public interface Acceptor extends ReactorChild {
+
+    void add(Handler handler);
     void close();
 }

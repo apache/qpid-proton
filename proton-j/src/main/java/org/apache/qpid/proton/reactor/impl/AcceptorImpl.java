@@ -45,6 +45,9 @@ public class AcceptorImpl implements Acceptor {
             Reactor reactor = selectable.getReactor();
             try {
                 SocketChannel socketChannel = ((ServerSocketChannel)selectable.getChannel()).accept();
+                if (socketChannel == null) {
+                    throw new ReactorInternalException("Selectable readable, but no socket to accept");
+                }
                 Handler handler = (Handler)selectable.getAttachment();
                 if (handler == null) {
                     // TODO: set selectable.getAttachment() to null?
@@ -61,8 +64,7 @@ public class AcceptorImpl implements Acceptor {
                 trans.bind(conn);
                 IOHandler.selectableTransport(reactor, socketChannel.socket(), trans);  // TODO: could we pass in a channel object instead of doing socketChannel.socket()?
             } catch(IOException ioException) {
-                ioException.printStackTrace();
-                // TODO: what do we do with this exception?
+                sel.error();
             }
         }
     }
@@ -81,10 +83,16 @@ public class AcceptorImpl implements Acceptor {
 
     private final Selectable sel;
 
+    // Split out from AcceptorImpl to make it easier for unittests to mock this class
+    // without having to open an actual port.
+    protected ServerSocketChannel openServerSocket() throws IOException {
+        return ServerSocketChannel.open();
+    }
+
     protected AcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
-        ServerSocketChannel ssc = ServerSocketChannel.open();
+        ServerSocketChannel ssc = openServerSocket();
         ssc.bind(new InetSocketAddress(host, port));
-        sel = reactor.selectable();
+        sel = ((ReactorImpl)reactor).selectable(this);
         sel.setChannel(ssc);
         sel.onReadable(new AcceptorReadable());
         sel.onFinalize(new AcceptorFinalize()); // TODO: currently, this is not called from anywhere!!
@@ -108,5 +116,10 @@ public class AcceptorImpl implements Acceptor {
             sel.terminate();
             reactor.update(sel);
         }
+    }
+
+    @Override
+    public void add(Handler handler) {
+        sel.add(handler);
     }
 }

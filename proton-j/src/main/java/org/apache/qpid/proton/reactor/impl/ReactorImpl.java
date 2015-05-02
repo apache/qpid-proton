@@ -195,12 +195,14 @@ public class ReactorImpl implements Reactor {
 
     private class ReleaseCallback implements Callback {
         private final ReactorImpl reactor;
-        public ReleaseCallback(ReactorImpl reactor) {
+        private final ReactorChild child;
+        public ReleaseCallback(ReactorImpl reactor, ReactorChild child) {
             this.reactor = reactor;
+            this.child = child;
         }
         @Override
         public void run(Selectable selectable) {
-            if (reactor.children.remove(selectable)) {
+            if (reactor.children.remove(child)) {
                 --reactor.selectables;
             }
         }
@@ -208,17 +210,19 @@ public class ReactorImpl implements Reactor {
 
     @Override
     public Selectable selectable() {
+        return selectable(null);
+    }
+
+    public Selectable selectable(ReactorChild child) {
         Selectable result = new SelectableImpl();
         result.setCollector(collector);
         collector.put(Type.SELECTABLE_INIT, result);
         result.setReactor(this);
-        children.add(result);
-        result.onRelease(new ReleaseCallback(this));
+        children.add(child == null ? result : child);
+        result.onRelease(new ReleaseCallback(this, child == null ? result : child));
         ++selectables;
         return result;
     }
-
-
 
     @Override
     public void update(Selectable selectable) {
