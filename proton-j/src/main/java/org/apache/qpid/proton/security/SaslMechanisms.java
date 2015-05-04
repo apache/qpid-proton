@@ -36,6 +36,8 @@ public final class SaslMechanisms implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:sasl-mechanisms:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private String[] _saslServerMechanisms;
 
     public String[] getSaslServerMechanisms()
