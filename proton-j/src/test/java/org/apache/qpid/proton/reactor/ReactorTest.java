@@ -1,3 +1,24 @@
+/*
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
+
 package org.apache.qpid.proton.reactor;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -36,6 +57,7 @@ public class ReactorTest {
         Reactor reactor = Proton.reactor();
         assertNotNull(reactor);
         reactor.run();
+        reactor.free();
     }
 
     private static class TestHandler extends BaseHandler {
@@ -65,6 +87,7 @@ public class ReactorTest {
         TestHandler testHandler = new TestHandler();
         handler.add(testHandler);
         reactor.run();
+        reactor.free();
         testHandler.assertEvents(Type.REACTOR_INIT, Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.SELECTABLE_FINAL, Type.REACTOR_FINAL);
     }
 
@@ -89,6 +112,7 @@ public class ReactorTest {
         TestHandler reactorHandler = new TestHandler();
         reactor.getHandler().add(reactorHandler);
         reactor.run();
+        reactor.free();
         reactorHandler.assertEvents(Type.REACTOR_INIT, Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.SELECTABLE_FINAL, Type.REACTOR_FINAL);
         connectionHandler.assertEvents(Type.CONNECTION_INIT);
     }
@@ -119,6 +143,7 @@ public class ReactorTest {
             }
         });
         reactor.run();
+        reactor.free();
         acceptorHandler.assertEvents(Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.SELECTABLE_FINAL);
         assertFalse("acceptor should have been removed from the reactor's children", reactor.children().contains(acceptor));
     }
@@ -184,6 +209,7 @@ public class ReactorTest {
         assertTrue("connection should be one of the reactor's children", reactor.children().contains(connection));
 
         reactor.run();
+        reactor.free();
 
         assertFalse("acceptor should have been removed from the reactor's children", reactor.children().contains(acceptor));
         assertFalse("connection should have been removed from the reactor's children", reactor.children().contains(connection));
@@ -278,6 +304,7 @@ public class ReactorTest {
         reactor.connection(src);
 
         reactor.run();
+        reactor.free();
         assertEquals("Did not receive the expected number of messages", count, snk.received);
     }
 
@@ -306,6 +333,7 @@ public class ReactorTest {
         TestHandler taskHandler = new TestHandler();
         reactor.schedule(0, taskHandler);
         reactor.run();
+        reactor.free();
         reactorHandler.assertEvents(Type.REACTOR_INIT, Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.REACTOR_QUIESCED, Type.SELECTABLE_UPDATED,
                 Type.SELECTABLE_FINAL, Type.REACTOR_FINAL);
         taskHandler.assertEvents(Type.TIMER_TASK);

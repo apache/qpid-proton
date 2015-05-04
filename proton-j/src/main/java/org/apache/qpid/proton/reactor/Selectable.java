@@ -55,7 +55,7 @@ public interface Selectable extends ReactorChild {
 
     public void onRelease(Callback runnable);
 
-    public void onFinalize(Callback runnable);
+    public void onFree(Callback runnable);
 
     void readable() ;
 
@@ -67,7 +67,7 @@ public interface Selectable extends ReactorChild {
 
     void release() ;
 
-    void _finalize() ;
+    void free() ;
 
     // These are equivalent to the C code's set/get file descritor functions.
     void setChannel(SelectableChannel channel) ;

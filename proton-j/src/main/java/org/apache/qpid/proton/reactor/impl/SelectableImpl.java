@@ -39,7 +39,7 @@ public class SelectableImpl implements Selectable {
     private Callback error;
     private Callback expire;
     private Callback release;
-    private Callback finalize;
+    private Callback free;
 
     private boolean reading = false;
     private boolean writing = false;
@@ -108,8 +108,8 @@ public class SelectableImpl implements Selectable {
     }
 
     @Override
-    public void onFinalize(Callback runnable) {
-        this.finalize = runnable;
+    public void onFree(Callback runnable) {
+        this.free = runnable;
     }
 
     @Override
@@ -148,9 +148,9 @@ public class SelectableImpl implements Selectable {
     }
 
     @Override
-    public void _finalize() {
-        if (finalize != null) {
-            finalize.run(this);
+    public void free() {
+        if (free != null) {
+            free.run(this);
         }
     }
 

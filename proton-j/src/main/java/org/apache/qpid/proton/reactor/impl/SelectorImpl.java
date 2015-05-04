@@ -150,4 +150,12 @@ public class SelectorImpl implements Selector {
         return error.iterator();
     }
 
+    @Override
+    public void free() {
+        try {
+            selector.close();
+        } catch(IOException ioException) {
+            // Ignore
+        }
+    }
 }

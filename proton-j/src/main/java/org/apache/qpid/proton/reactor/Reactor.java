@@ -99,5 +99,6 @@ public interface Reactor {
     Acceptor acceptor(String host, int port) throws IOException;
     Acceptor acceptor(String host, int port, Handler handler) throws IOException;
 
+    // This also frees any children that the reactor has!
     public void free();
 }

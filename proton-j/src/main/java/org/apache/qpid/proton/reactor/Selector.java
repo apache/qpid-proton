@@ -26,18 +26,18 @@ import java.util.Iterator;
 
 public interface Selector {
 
-    public void add(Selectable selectable) throws IOException ;
+    void add(Selectable selectable) throws IOException ;
 
-    public void update(Selectable selectable);
+    void update(Selectable selectable);
 
-    public void remove(Selectable selectable) ;
+    void remove(Selectable selectable) ;
 
-    public void select(long timeout) throws IOException ;
+    void select(long timeout) throws IOException ;
 
-    public Iterator<Selectable> readable() ;
+    Iterator<Selectable> readable() ;
+    Iterator<Selectable> writeable() ;
+    Iterator<Selectable> expired() ;
+    Iterator<Selectable> error() ;
 
-    public Iterator<Selectable> writeable() ;
-
-    public Iterator<Selectable> expired() ;
-    public Iterator<Selectable> error() ;
+    void free();
 }

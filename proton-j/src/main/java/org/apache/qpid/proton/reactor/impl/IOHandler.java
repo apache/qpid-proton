@@ -251,7 +251,7 @@ public class IOHandler extends BaseHandler {
         }
     }
 
-    private static class ConnectionFinalize implements Callback {
+    private static class ConnectionFree implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {
@@ -272,7 +272,7 @@ public class IOHandler extends BaseHandler {
         selectable.onWritable(new ConnectionWritable());
         selectable.onError(new ConnectionError());
         selectable.onExpired(new ConnectionExpired());
-        selectable.onFinalize(new ConnectionFinalize());    // TODO: the corresponding selectable._finalize method is never called anywhere in the C codebase!
+        selectable.onFree(new ConnectionFree());
         selectable.setTransport(transport);
         ((TransportImpl)transport).setSelectable(selectable);
         ((TransportImpl)transport).setReactor(reactor);

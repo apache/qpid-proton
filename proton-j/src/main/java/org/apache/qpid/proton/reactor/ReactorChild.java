@@ -21,7 +21,8 @@
 
 package org.apache.qpid.proton.reactor;
 
-// Tagging interface used to identify classes that can be a child of a reactor.
+// Interface used to identify classes that can be a child of a reactor.
 public interface ReactorChild {
 
+    void free();
 }

@@ -69,11 +69,13 @@ public class AcceptorImpl implements Acceptor {
         }
     }
 
-    private class AcceptorFinalize implements Callback {
+    private class AcceptorFree implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {
-                selectable.getChannel().close();
+                if (selectable.getChannel() != null) {
+                    selectable.getChannel().close();
+                }
             } catch(IOException ioException) {
                 ioException.printStackTrace();
                 // TODO: what now?
@@ -95,7 +97,7 @@ public class AcceptorImpl implements Acceptor {
         sel = ((ReactorImpl)reactor).selectable(this);
         sel.setChannel(ssc);
         sel.onReadable(new AcceptorReadable());
-        sel.onFinalize(new AcceptorFinalize()); // TODO: currently, this is not called from anywhere!!
+        sel.onFree(new AcceptorFree()); // TODO: currently, this is not called from anywhere!!
         sel.setReactor(reactor);
         sel.setAttachment(handler);
         sel.setReading(true);
@@ -127,5 +129,10 @@ public class AcceptorImpl implements Acceptor {
     public int getPortNumber() throws IOException {
         ServerSocketChannel ssc = (ServerSocketChannel)sel.getChannel();
         return ((InetSocketAddress)ssc.getLocalAddress()).getPort();
+    }
+
+    @Override
+    public void free() {
+        sel.free();
     }
 }

@@ -120,33 +120,28 @@ public class ReactorImpl implements Reactor {
 
     @Override
     public void free() {
-        // TODO
-/*
-  132 void pn_reactor_free(pn_reactor_t *reactor) {
-  133   if (reactor) {
-  134     pn_collector_release(reactor->collector);
-  135     pn_handler_free(reactor->handler);
-  136     reactor->handler = NULL;
-  137     pn_decref(reactor);
-  138   }
-  139 }
- */
-    /*
- 85 static void pn_reactor_finalize(pn_reactor_t *reactor) {
- 86   for (int i = 0; i < 2; i++) {
- 87     if (reactor->wakeup[i] != PN_INVALID_SOCKET) {
- 88       pn_close(reactor->io, reactor->wakeup[i]);
- 89     }
- 90   }
- 91   pn_decref(reactor->attachments);
- 92   pn_decref(reactor->collector);
- 93   pn_decref(reactor->global);
- 94   pn_decref(reactor->handler);
- 95   pn_decref(reactor->children);
- 96   pn_decref(reactor->timer);
- 97   pn_decref(reactor->io);
- 98 }
- */
+        if (wakeup.source().isOpen()) {
+            try {
+                wakeup.source().close();
+            } catch(IOException e) {
+                // Ignore.
+            }
+        }
+        if (wakeup.sink().isOpen()) {
+            try {
+                wakeup.sink().close();
+            } catch(IOException e) {
+                // Ignore
+            }
+        }
+
+        if (selector != null) {
+            selector.free();
+        }
+
+        for (ReactorChild child : children) {
+            child.free();
+        }
     }
 
     @Override
@@ -219,6 +214,7 @@ public class ReactorImpl implements Reactor {
         public void run(Selectable selectable) {
             if (reactor.children.remove(child)) {
                 --reactor.selectables;
+                child.free();
             }
         }
     }
@@ -430,7 +426,7 @@ public class ReactorImpl implements Reactor {
 
 
     // pni_timer_finalize from reactor.c
-    private class TimerFinalize implements Callback {
+    private class TimerFree implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {
@@ -447,7 +443,7 @@ public class ReactorImpl implements Reactor {
         sel.setChannel(wakeup.source());
         sel.onReadable(new TimerReadable());
         sel.onExpired(new TimerExpired());
-        sel.onFinalize(new TimerFinalize());    // TODO: not sure the corresponding sel._finalize() gets called anywhere...
+        sel.onFree(new TimerFree());
         sel.setReading(true);
         sel.setDeadline(timer.deadline());
         update(sel);
