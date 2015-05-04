@@ -37,6 +37,8 @@ public final class Attach implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:attach:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private String _name;
 
     private int _handle;
@@ -302,7 +304,7 @@ public final class Attach implements Encodable
                         : ReceiverSettleMode.values()[(Integer) l.get(4)]);
             case 10:
                 attach.setSndSettleMode(l.get(3) == null ? SenderSettleMode.MIXED : SenderSettleMode.values()[(Integer) l
-                        .get(3)]);
+                                                                                                              .get(3)]);
             case 11:
                 attach.setRole(Boolean.TRUE.equals(l.get(2)) ? Role.RECEIVER : Role.SENDER);
             case 12:
@@ -319,20 +321,20 @@ public final class Attach implements Encodable
     public String toString()
     {
         return "Attach{" +
-               "name='" + _name + '\'' +
-               ", handle=" + _handle +
-               ", role=" + _role +
-               ", sndSettleMode=" + _sndSettleMode +
-               ", rcvSettleMode=" + _rcvSettleMode +
-               ", source=" + _source +
-               ", target=" + _target +
-               ", unsettled=" + _unsettled +
-               ", incompleteUnsettled=" + _incompleteUnsettled +
-               ", initialDeliveryCount=" + _initialDeliveryCount +
-               ", maxMessageSize=" + _maxMessageSize +
-               ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
-               ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
-               ", properties=" + _properties +
-               '}';
+                "name='" + _name + '\'' +
+                ", handle=" + _handle +
+                ", role=" + _role +
+                ", sndSettleMode=" + _sndSettleMode +
+                ", rcvSettleMode=" + _rcvSettleMode +
+                ", source=" + _source +
+                ", target=" + _target +
+                ", unsettled=" + _unsettled +
+                ", incompleteUnsettled=" + _incompleteUnsettled +
+                ", initialDeliveryCount=" + _initialDeliveryCount +
+                ", maxMessageSize=" + _maxMessageSize +
+                ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
+                ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
+                ", properties=" + _properties +
+                '}';
     }
 }

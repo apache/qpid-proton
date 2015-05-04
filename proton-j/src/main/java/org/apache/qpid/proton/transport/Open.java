@@ -37,6 +37,8 @@ public final class Open implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:open:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private String _containerId;
 
     private String _hostname;
@@ -253,16 +255,16 @@ public final class Open implements Encodable
     public String toString()
     {
         return "Open{" +
-               " containerId='" + _containerId + '\'' +
-               ", hostname='" + _hostname + '\'' +
-               ", maxFrameSize=" + _maxFrameSize +
-               ", channelMax=" + _channelMax +
-               ", idleTimeOut=" + _idleTimeOut +
-               ", outgoingLocales=" + (_outgoingLocales == null ? null : Arrays.asList(_outgoingLocales)) +
-               ", incomingLocales=" + (_incomingLocales == null ? null : Arrays.asList(_incomingLocales)) +
-               ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
-               ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
-               ", properties=" + _properties +
-               '}';
+                " containerId='" + _containerId + '\'' +
+                ", hostname='" + _hostname + '\'' +
+                ", maxFrameSize=" + _maxFrameSize +
+                ", channelMax=" + _channelMax +
+                ", idleTimeOut=" + _idleTimeOut +
+                ", outgoingLocales=" + (_outgoingLocales == null ? null : Arrays.asList(_outgoingLocales)) +
+                ", incomingLocales=" + (_incomingLocales == null ? null : Arrays.asList(_incomingLocales)) +
+                ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
+                ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
+                ", properties=" + _properties +
+                '}';
     }
 }

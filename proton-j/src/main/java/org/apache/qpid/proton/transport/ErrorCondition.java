@@ -36,6 +36,8 @@ public final class ErrorCondition implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:error:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private String _condition;
 
     private String _description;

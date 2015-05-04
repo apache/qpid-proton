@@ -34,6 +34,8 @@ public final class Disposition implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:disposition:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private Role _role = Role.SENDER;
 
     private int _first;
@@ -168,12 +170,12 @@ public final class Disposition implements Encodable
     public String toString()
     {
         return "Disposition{" +
-               "role=" + _role +
-               ", first=" + _first +
-               ", last=" + _last +
-               ", settled=" + _settled +
-               ", state=" + _state +
-               ", batchable=" + _batchable +
-               '}';
+                "role=" + _role +
+                ", first=" + _first +
+                ", last=" + _last +
+                ", settled=" + _settled +
+                ", state=" + _state +
+                ", batchable=" + _batchable +
+                '}';
     }
 }

@@ -34,6 +34,8 @@ public final class End implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:end:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private ErrorCondition _error;
 
     public ErrorCondition getError()

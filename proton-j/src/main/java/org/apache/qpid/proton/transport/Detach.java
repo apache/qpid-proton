@@ -34,6 +34,8 @@ public final class Detach implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:detach:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private int _handle;
 
     private boolean _closed;

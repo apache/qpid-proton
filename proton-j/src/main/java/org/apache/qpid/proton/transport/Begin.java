@@ -37,6 +37,8 @@ public final class Begin implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:begin:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private int _remoteChannel;
 
     private int _nextOutgoingId;
@@ -203,14 +205,14 @@ public final class Begin implements Encodable
     public String toString()
     {
         return "Begin{" +
-               "remoteChannel=" + _remoteChannel +
-               ", nextOutgoingId=" + _nextOutgoingId +
-               ", incomingWindow=" + _incomingWindow +
-               ", outgoingWindow=" + _outgoingWindow +
-               ", handleMax=" + _handleMax +
-               ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
-               ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
-               ", properties=" + _properties +
-               '}';
+                "remoteChannel=" + _remoteChannel +
+                ", nextOutgoingId=" + _nextOutgoingId +
+                ", incomingWindow=" + _incomingWindow +
+                ", outgoingWindow=" + _outgoingWindow +
+                ", handleMax=" + _handleMax +
+                ", offeredCapabilities=" + (_offeredCapabilities == null ? null : Arrays.asList(_offeredCapabilities)) +
+                ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
+                ", properties=" + _properties +
+                '}';
     }
 }
