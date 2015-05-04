@@ -18,52 +18,49 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.message2;
 
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
+import org.apache.qpid.proton.transport.DeliveryState;
 
-public enum LifetimePolicy implements Encodable, DescribedTypeFactory
+public final class Released implements DeliveryState, Outcome, Encodable
 {
-    DELETE_ON_CLOSE_TYPE(0x000000000000002bL, "amqp:delete-on-close:list"), DELETE_ON_NO_LINKS_TYPE(
-            0x000000000000002cL, "amqp:delete-on-no-links:list"), DELETE_ON_NO_MSGS_TYPE(0x000000000000002dL,
-            "amqp:delete-on-no-messages:list"), DELETE_ON_NO_LINKS_OR_MSGS_TYPE(0x000000000000002eL,
-            "amqp:delete-on-no-links-or-messages:list");
+    public final static long DESCRIPTOR_LONG = 0x0000000000000026L;
 
-    public final long _descLong;
+    public final static String DESCRIPTOR_STRING = "amqp:released:list";
 
-    public final String _descString;
+    public final static Factory FACTORY = new Factory();
 
-    LifetimePolicy(long descLong, String descString)
-    {
-        _descLong = descLong;
-        _descString = descString;
-    }
-
-    public long getLongDesc()
-    {
-        return _descLong;
-    }
-
-    public String getStringDesc()
-    {
-        return _descString;
-    }
+    private static final Released INSTANCE = new Released();
 
     @Override
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(_descLong);
-        encoder.putList();
+        encoder.putUlong(DESCRIPTOR_LONG);
         encoder.end();
     }
 
-    @Override
-    public Object create(Object in) throws DecodeException
+    public static final class Factory implements DescribedTypeFactory
     {
-        return this;
+        public Object create(Object in) throws DecodeException
+        {
+            return INSTANCE;
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Released{}";
+    }
+
+    public static Released getInstance()
+    {
+        return INSTANCE;
     }
 }
