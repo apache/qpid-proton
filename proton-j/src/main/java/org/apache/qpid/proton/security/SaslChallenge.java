@@ -34,6 +34,8 @@ public final class SaslChallenge implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:sasl-challenge:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private byte[] _challenge;
 
     public byte[] getChallenge()

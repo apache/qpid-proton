@@ -34,6 +34,8 @@ public final class SaslResponse implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:sasl-response:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private byte[] _response;
 
     public byte[] getResponse()

@@ -34,6 +34,8 @@ public final class SaslOutcome implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:sasl-saslOutcome:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private SaslCode _code;
 
     private byte[] _additionalData;
