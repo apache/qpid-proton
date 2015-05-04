@@ -34,15 +34,17 @@ public final class Header implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:header:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private boolean _durable;
 
     private byte _priority;
 
-    private int _ttl;
+    private long _ttl;
 
     private boolean _firstAcquirer;
 
-    private int _deliveryCount;
+    private long _deliveryCount;
 
     public Boolean getDurable()
     {
@@ -64,7 +66,7 @@ public final class Header implements Encodable
         _priority = priority;
     }
 
-    public int getTtl()
+    public long getTtl()
     {
         return _ttl;
     }
@@ -84,12 +86,12 @@ public final class Header implements Encodable
         _firstAcquirer = firstAcquirer;
     }
 
-    public int getDeliveryCount()
+    public long getDeliveryCount()
     {
         return _deliveryCount;
     }
 
-    public void setDeliveryCount(int deliveryCount)
+    public void setDeliveryCount(long deliveryCount)
     {
         _deliveryCount = deliveryCount;
     }
@@ -102,9 +104,9 @@ public final class Header implements Encodable
         encoder.putList();
         encoder.putBoolean(_durable);
         encoder.putUbyte(_priority);
-        encoder.putUint(_ttl);
+        encoder.putUint((int)_ttl);
         encoder.putBoolean(_firstAcquirer);
-        encoder.putUint(_deliveryCount);
+        encoder.putUint((int)_deliveryCount);
         encoder.end();
     }
 
@@ -138,11 +140,11 @@ public final class Header implements Encodable
     public String toString()
     {
         return "Header{" +
-               "durable=" + _durable +
-               ", priority=" + _priority +
-               ", ttl=" + _ttl +
-               ", firstAcquirer=" + _firstAcquirer +
-               ", deliveryCount=" + _deliveryCount +
-               '}';
+                "durable=" + _durable +
+                ", priority=" + _priority +
+                ", ttl=" + _ttl +
+                ", firstAcquirer=" + _firstAcquirer +
+                ", deliveryCount=" + _deliveryCount +
+                '}';
     }
 }

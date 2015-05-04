@@ -37,6 +37,8 @@ public final class DeliveryAnnotations implements Encodable
 
     private final Map<String, Object> _value;
 
+    public final static Factory FACTORY = new Factory();
+
     public DeliveryAnnotations(Map<String, Object> value)
     {
         _value = value;

@@ -37,6 +37,8 @@ public final class Footer implements Encodable
 
     private final Map<Object, Object> _value;
 
+    public final static Factory FACTORY = new Factory();
+
     public Footer(Map<Object, Object> value)
     {
         _value = value;

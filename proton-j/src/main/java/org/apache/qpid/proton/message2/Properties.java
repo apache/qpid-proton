@@ -36,6 +36,8 @@ public final class Properties implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:properties:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private Object _messageId;
 
     private byte[] _userId;
