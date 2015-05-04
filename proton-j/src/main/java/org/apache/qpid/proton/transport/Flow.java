@@ -26,15 +26,17 @@ import java.util.Map;
 
 import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.DecodeException;
+import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 
 public final class Flow implements Encodable
 {
     public final static long DESCRIPTOR_LONG = 0x0000000000000013L;
 
     public final static String DESCRIPTOR_STRING = "amqp:flow:list";
+
+    public final static Factory FACTORY = new Factory();
 
     private int _nextIncomingId;
 
@@ -232,17 +234,17 @@ public final class Flow implements Encodable
     public String toString()
     {
         return "Flow{" +
-               "nextIncomingId=" + _nextIncomingId +
-               ", incomingWindow=" + _incomingWindow +
-               ", nextOutgoingId=" + _nextOutgoingId +
-               ", outgoingWindow=" + _outgoingWindow +
-               ", handle=" + _handle +
-               ", deliveryCount=" + _deliveryCount +
-               ", linkCredit=" + _linkCredit +
-               ", available=" + _available +
-               ", drain=" + _drain +
-               ", echo=" + _echo +
-               ", properties=" + _properties +
-               '}';
+                "nextIncomingId=" + _nextIncomingId +
+                ", incomingWindow=" + _incomingWindow +
+                ", nextOutgoingId=" + _nextOutgoingId +
+                ", outgoingWindow=" + _outgoingWindow +
+                ", handle=" + _handle +
+                ", deliveryCount=" + _deliveryCount +
+                ", linkCredit=" + _linkCredit +
+                ", available=" + _available +
+                ", drain=" + _drain +
+                ", echo=" + _echo +
+                ", properties=" + _properties +
+                '}';
     }
 }

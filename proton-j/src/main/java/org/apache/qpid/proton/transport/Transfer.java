@@ -34,6 +34,8 @@ public final class Transfer implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:transfer:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private int _handle;
 
     private int _deliveryId;
@@ -235,17 +237,17 @@ public final class Transfer implements Encodable
     public String toString()
     {
         return "Transfer{" +
-               "handle=" + _handle +
-               ", deliveryId=" + _deliveryId +
-               ", deliveryTag=" + _deliveryTag +
-               ", messageFormat=" + _messageFormat +
-               ", settled=" + _settled +
-               ", more=" + _more +
-               ", rcvSettleMode=" + _rcvSettleMode +
-               ", state=" + _state +
-               ", resume=" + _resume +
-               ", aborted=" + _aborted +
-               ", batchable=" + _batchable +
-               '}';
+                "handle=" + _handle +
+                ", deliveryId=" + _deliveryId +
+                ", deliveryTag=" + _deliveryTag +
+                ", messageFormat=" + _messageFormat +
+                ", settled=" + _settled +
+                ", more=" + _more +
+                ", rcvSettleMode=" + _rcvSettleMode +
+                ", state=" + _state +
+                ", resume=" + _resume +
+                ", aborted=" + _aborted +
+                ", batchable=" + _batchable +
+                '}';
     }
 }

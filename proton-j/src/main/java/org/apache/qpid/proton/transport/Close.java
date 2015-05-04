@@ -34,6 +34,8 @@ public final class Close implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:close:list";
 
+    public final static Factory FACTORY = new Factory();
+
     private ErrorCondition _error;
 
     public ErrorCondition getError()
