@@ -93,11 +93,11 @@ public interface Reactor {
 
     // pn_reactor_schedule from reactor.c
     public Task schedule(int delay, Handler handler);
-    // TODO: acceptor
-    // TODO: acceptorClose
 
     Connection connection(Handler handler);
 
     Acceptor acceptor(String host, int port) throws IOException;
     Acceptor acceptor(String host, int port, Handler handler) throws IOException;
+
+    public void free();
 }

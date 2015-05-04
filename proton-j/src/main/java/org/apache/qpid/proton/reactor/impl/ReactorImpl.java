@@ -117,6 +117,20 @@ public class ReactorImpl implements Reactor {
         wakeup = Pipe.open();
         mark();
     }
+
+    @Override
+    public void free() {
+        // TODO
+/*
+  132 void pn_reactor_free(pn_reactor_t *reactor) {
+  133   if (reactor) {
+  134     pn_collector_release(reactor->collector);
+  135     pn_handler_free(reactor->handler);
+  136     reactor->handler = NULL;
+  137     pn_decref(reactor);
+  138   }
+  139 }
+ */
     /*
  85 static void pn_reactor_finalize(pn_reactor_t *reactor) {
  86   for (int i = 0; i < 2; i++) {
@@ -133,6 +147,7 @@ public class ReactorImpl implements Reactor {
  97   pn_decref(reactor->io);
  98 }
  */
+    }
 
     @Override
     public void attach(Object attachment) {

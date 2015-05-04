@@ -122,4 +122,10 @@ public class AcceptorImpl implements Acceptor {
     public void add(Handler handler) {
         sel.add(handler);
     }
+
+    // Used for unit tests, where acceptor is bound to an ephemeral port
+    public int getPortNumber() throws IOException {
+        ServerSocketChannel ssc = (ServerSocketChannel)sel.getChannel();
+        return ((InetSocketAddress)ssc.getLocalAddress()).getPort();
+    }
 }
