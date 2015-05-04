@@ -35,6 +35,8 @@ public final class MessageAnnotations implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:message-annotations:map";
 
+    public final static Factory FACTORY = new Factory();
+
     private final Map<String, Object> _value;
 
     public MessageAnnotations(Map<String, Object> value)

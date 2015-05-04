@@ -35,6 +35,8 @@ public final class ApplicationProperties implements Encodable
 
     public final static String DESCRIPTOR_STRING = "amqp:application-properties:map";
 
+    public final static Factory FACTORY = new Factory();
+
     private final Map<Object, Object> _value;
 
     public ApplicationProperties(Map<Object, Object> value)
