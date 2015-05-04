@@ -30,12 +30,15 @@ import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
+import org.apache.qpid.proton.message2.Accepted.Factory;
 
 public final class Target extends Terminus implements Encodable
 {
     public final static long DESCRIPTOR_LONG = 0x0000000000000029L;
 
     public final static String DESCRIPTOR_STRING = "amqp:target:list";
+
+    public final static Factory FACTORY = new Factory();
 
     @Override
     public void encode(Encoder encoder)
