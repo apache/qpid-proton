@@ -36,7 +36,7 @@ import (
 
 // Command-line flags
 var verbose = flag.Int("verbose", 1, "Output level, 0 means none, higher means more")
-var count = flag.Int64("count", 0, "Send this may messages per address. 0 means unlimited.")
+var count = flag.Int64("count", 1, "Send this may messages per address. 0 means unlimited.")
 
 // Ack associates an info string with an acknowledgement
 type Ack struct {

@@ -51,8 +51,34 @@ messaging API:
 event API:
 - [broker.go](../../../examples/go/event/broker.go) simple mini-broker
 
-The examples work with each other and with the python `broker.py`,
-`simple_send.py` and `simple_receive.py`.
+The examples work with each other and with the python examples.
+
+To try them out, start a broker with either of:
+
+    python python/broker.py
+    go run go/event/broker.go
+
+The go broker is more informative, the python broker is a strong, silent type.
+
+Now you can send messages to the broker concurrently (10 to each queue foo and bar):
+
+    go run go/send.go -count 10 localhost:/foo localhost:/bar
+
+And receive them concurrently (note count 20, 10 each on 2 queues)
+
+    go run go/receive.go -count 20 localhost:/foo localhost:/bar
+
+You can also try python clients with the go broker. Others should work but that's all I've tried.
+
+All the example programs have usage messages for more details.
+
+NOTE: they seem slow to run because `go run` *compiles the program and
+all it's libraries then runs it* in one step!! (I'm looking at YOU C++!)
+
+You can build an executable first and run that:
+
+    go build go/send.go
+    ./send ...
 
 ## The event driven API
 
