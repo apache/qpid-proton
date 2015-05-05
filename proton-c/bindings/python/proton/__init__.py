@@ -2413,7 +2413,7 @@ class Connection(Wrapper, Endpoint):
   def _set_password(self, name):
     return pn_connection_set_password(self._impl, unicode2utf8(name))
 
-  user = property(_get_password, _set_password)
+  password = property(_get_password, _set_password)
 
   @property
   def remote_container(self):
