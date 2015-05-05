@@ -38,7 +38,6 @@ public class POJOBuilder implements DataHandler
 
     private class DescribedBuilder implements Builder
     {
-
         private Object descriptor;
 
         private Object described;
