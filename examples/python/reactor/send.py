@@ -55,6 +55,9 @@ class Send:
         ssn.open()
         snd.open()
 
+    def on_transport_error(self, event):
+        print event.transport.condition
+
     def on_link_flow(self, event):
         snd = event.sender
         if snd.credit > 0:
