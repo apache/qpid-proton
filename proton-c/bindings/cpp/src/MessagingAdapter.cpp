@@ -28,23 +28,26 @@
 #include "proton/handlers.h"
 #include "proton/delivery.h"
 #include "proton/connection.h"
+#include "proton/session.h"
 
 namespace proton {
 namespace reactor {
 
-MessagingAdapter::MessagingAdapter(MessagingHandler &d) : delegate(d), handshaker(pn_handshaker()) {
-    pn_handler_t *flowcontroller = pn_flowcontroller(10);
-    pn_handler_add(handshaker, flowcontroller);
-    pn_decref(flowcontroller);
+MessagingAdapter::MessagingAdapter(MessagingHandler &d) : delegate(d), handshaker(pn_handshaker()),
+                                                          autoSettle(true), autoAccept(true),
+                                                          peerCloseIsError(false) {
 };
 MessagingAdapter::~MessagingAdapter(){
     pn_decref(handshaker);
 };
 
+
 void MessagingAdapter::onReactorInit(Event &e) {
-    // create onStart extended event
-    MessagingEvent mevent(PN_MESSAGING_START, NULL, e.getContainer());
-    mevent.dispatch(delegate);
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        MessagingEvent mevent(PN_MESSAGING_START, *pe);
+        delegate.onStart(mevent);
+    }
 }
 
 void MessagingAdapter::onLinkFlow(Event &e) {
@@ -54,8 +57,8 @@ void MessagingAdapter::onLinkFlow(Event &e) {
         pn_link_t *lnk = pn_event_link(pne);
         if (lnk && pn_link_is_sender(lnk) && pn_link_credit(lnk) > 0) {
             // create onMessage extended event
-            MessagingEvent mevent(PN_MESSAGING_SENDABLE, pe, e.getContainer());
-            mevent.dispatch(delegate);
+            MessagingEvent mevent(PN_MESSAGING_SENDABLE, *pe);
+            delegate.onSendable(mevent);;
         }
    }
 }
@@ -85,32 +88,60 @@ void MessagingAdapter::onDelivery(Event &e) {
         if (pn_link_is_receiver(lnk)) {
             if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
                 // generate onMessage
-                MessagingEvent mevent(PN_MESSAGING_MESSAGE, pe, pe->getContainer());
+                MessagingEvent mevent(PN_MESSAGING_MESSAGE, *pe);
                 Message m(receiveMessage(lnk, dlv));
                 mevent.setMessage(m);
-                // TODO: check if endpoint closed...
-                mevent.dispatch(delegate);
-                // only do auto accept for now
-                pn_delivery_update(dlv, PN_ACCEPTED);
-                pn_delivery_settle(dlv);
-                // TODO: generate onSettled
+                if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
+                    if (autoAccept) {
+                        pn_delivery_update(dlv, PN_RELEASED);
+                        pn_delivery_settle(dlv);
+                    }
+                }
+                else {
+                    try {
+                        delegate.onMessage(mevent);
+                        if (autoAccept) {
+                            pn_delivery_update(dlv, PN_ACCEPTED);
+                            pn_delivery_settle(dlv);
+                        }
+                    }
+                    catch (MessageReject &) {
+                        pn_delivery_update(dlv, PN_REJECTED);
+                        pn_delivery_settle(dlv);
+                    }
+                    catch (MessageRelease &) {
+                        pn_delivery_update(dlv, PN_REJECTED);
+                        pn_delivery_settle(dlv);
+                    }
+                }
+            }
+            else if (pn_delivery_updated(dlv) && pn_delivery_settled(dlv)) {
+                MessagingEvent mevent(PN_MESSAGING_SETTLED, *pe);
+                delegate.onSettled(mevent);
             }
         } else {
             // Sender
             if (pn_delivery_updated(dlv)) {
                 uint64_t rstate = pn_delivery_remote_state(dlv);
-                if (rstate == PN_ACCEPTED)
-                    // generate onAccepted
-                    MessagingEvent(PN_MESSAGING_ACCEPTED, pe, pe->getContainer()).dispatch(delegate);
-                else if (rstate = PN_REJECTED)
-                    MessagingEvent(PN_MESSAGING_REJECTED, pe, pe->getContainer()).dispatch(delegate);
-                else if (rstate == PN_RELEASED || rstate == PN_MODIFIED)
-                    MessagingEvent(PN_MESSAGING_RELEASED, pe, pe->getContainer()).dispatch(delegate);
+                if (rstate == PN_ACCEPTED) {
+                    MessagingEvent mevent(PN_MESSAGING_ACCEPTED, *pe);
+                    delegate.onAccepted(mevent);
+                }
+                else if (rstate = PN_REJECTED) {
+                    MessagingEvent mevent(PN_MESSAGING_REJECTED, *pe);
+                    delegate.onRejected(mevent);
+                }
+                else if (rstate == PN_RELEASED || rstate == PN_MODIFIED) {
+                    MessagingEvent mevent(PN_MESSAGING_RELEASED, *pe);
+                    delegate.onReleased(mevent);
+                }
 
-                if (pn_delivery_settled(dlv))
-                    MessagingEvent(PN_MESSAGING_SETTLED, pe, pe->getContainer()).dispatch(delegate);
-
-                pn_delivery_settle(dlv); // TODO: only if auto settled
+                if (pn_delivery_settled(dlv)) {
+                    MessagingEvent mevent(PN_MESSAGING_SETTLED, *pe);
+                    delegate.onSettled(mevent);
+                }
+                if (autoSettle)
+                    pn_delivery_settle(dlv);
             }
         }
     }
@@ -140,52 +171,247 @@ bool isRemoteClosed(pn_state_t state) {
 
 } // namespace
 
+void MessagingAdapter::onLinkRemoteClose(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_event_t *cevent = pe->getPnEvent();
+        pn_link_t *lnk = pn_event_link(cevent);
+        pn_state_t state = pn_link_state(lnk);
+        if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
+            MessagingEvent mevent(PN_MESSAGING_LINK_ERROR, *pe);
+            onLinkError(mevent);
+        }
+        else if (isLocalClosed(state)) {
+            MessagingEvent mevent(PN_MESSAGING_LINK_CLOSED, *pe);
+            onLinkClosed(mevent);
+        }
+        else {
+            MessagingEvent mevent(PN_MESSAGING_LINK_CLOSING, *pe);
+            onLinkClosing(mevent);
+        }
+        pn_link_close(lnk);
+    }
+}
+
+void MessagingAdapter::onSessionRemoteClose(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_event_t *cevent = pe->getPnEvent();
+        pn_session_t *session = pn_event_session(cevent);
+        pn_state_t state = pn_session_state(session);
+        if (pn_condition_is_set(pn_session_remote_condition(session))) {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_ERROR, *pe);
+            onSessionError(mevent);
+        }
+        else if (isLocalClosed(state)) {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_CLOSED, *pe);
+            onSessionClosed(mevent);
+        }
+        else {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_CLOSING, *pe);
+            onSessionClosing(mevent);
+        }
+        pn_session_close(session);
+    }
+}
+
 void MessagingAdapter::onConnectionRemoteClose(Event &e) {
     ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
     if (pe) {
         pn_event_t *cevent = pe->getPnEvent();
-        pn_connection_t *conn = pn_event_connection(cevent);
-        // TODO: remote condition -> error
-        if (isLocalClosed(pn_connection_state(conn))) {
-            MessagingEvent(PN_MESSAGING_CONNECTION_CLOSED, pe, pe->getContainer()).dispatch(delegate);
+        pn_connection_t *connection = pn_event_connection(cevent);
+        pn_state_t state = pn_connection_state(connection);
+        if (pn_condition_is_set(pn_connection_remote_condition(connection))) {
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_ERROR, *pe);
+            onConnectionError(mevent);
+        }
+        else if (isLocalClosed(state)) {
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_CLOSED, *pe);
+            onConnectionClosed(mevent);
         }
         else {
-            MessagingEvent(PN_MESSAGING_CONNECTION_CLOSING, pe, pe->getContainer()).dispatch(delegate);
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_CLOSING, *pe);
+            onConnectionClosing(mevent);
         }
-        pn_connection_close(conn);
+        pn_connection_close(connection);
     }
 }
 
+void MessagingAdapter::onConnectionLocalOpen(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_connection_t *connection = pn_event_connection(pe->getPnEvent());
+        if (isRemoteOpen(pn_connection_state(connection))) {
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_OPENED, *pe);
+            onConnectionOpened(mevent);
+        }
+    }
+}
+
+void MessagingAdapter::onConnectionRemoteOpen(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_connection_t *connection = pn_event_connection(pe->getPnEvent());
+        if (isLocalOpen(pn_connection_state(connection))) {
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_OPENED, *pe);
+            onConnectionOpened(mevent);
+        }
+        else if (isLocalUnititialised(pn_connection_state(connection))) {
+            MessagingEvent mevent(PN_MESSAGING_CONNECTION_OPENING, *pe);
+            onConnectionOpening(mevent);
+            pn_connection_open(connection);
+        }
+    }
+}
+
+void MessagingAdapter::onSessionLocalOpen(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_session_t *session = pn_event_session(pe->getPnEvent());
+        if (isRemoteOpen(pn_session_state(session))) {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_OPENED, *pe);
+            onSessionOpened(mevent);
+        }
+    }
+}
+
+void MessagingAdapter::onSessionRemoteOpen(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_session_t *session = pn_event_session(pe->getPnEvent());
+        if (isLocalOpen(pn_session_state(session))) {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_OPENED, *pe);
+            onSessionOpened(mevent);
+        }
+        else if (isLocalUnititialised(pn_session_state(session))) {
+            MessagingEvent mevent(PN_MESSAGING_SESSION_OPENING, *pe);
+            onSessionOpening(mevent);
+            pn_session_open(session);
+        }
+    }
+}
+
+void MessagingAdapter::onLinkLocalOpen(Event &e) {
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_link_t *link = pn_event_link(pe->getPnEvent());
+        if (isRemoteOpen(pn_link_state(link))) {
+            MessagingEvent mevent(PN_MESSAGING_LINK_OPENED, *pe);
+            onLinkOpened(mevent);
+        }
+    }
+}
 
 void MessagingAdapter::onLinkRemoteOpen(Event &e) {
     ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
     if (pe) {
-        pn_event_t *cevent = pe->getPnEvent();
-        pn_link_t *link = pn_event_link(cevent);
-        // TODO: remote condition -> error
+        pn_link_t *link = pn_event_link(pe->getPnEvent());
         if (isLocalOpen(pn_link_state(link))) {
-            MessagingEvent(PN_MESSAGING_LINK_OPENED, pe, pe->getContainer()).dispatch(delegate);
+            MessagingEvent mevent(PN_MESSAGING_LINK_OPENED, *pe);
+            onLinkOpened(mevent);
         }
         else if (isLocalUnititialised(pn_link_state(link))) {
-            MessagingEvent(PN_MESSAGING_LINK_OPENING, pe, pe->getContainer()).dispatch(delegate);
+            MessagingEvent mevent(PN_MESSAGING_LINK_OPENING, *pe);
+            onLinkOpening(mevent);
             pn_link_open(link);
         }
     }
 }
 
-
-void MessagingAdapter::onUnhandled(Event &e) {
-    // Until this code fleshes out closer to python's, cheat a bit with a pn_handshaker
-
+void MessagingAdapter::onTransportTailClosed(Event &e) {
     ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
     if (pe) {
-        pn_event_type_t type = (pn_event_type_t) pe->getType();
-        if (type != PN_EVENT_NONE) {
-            pn_handler_dispatch(handshaker, pe->getPnEvent(), type);
+        pn_connection_t *conn = pn_event_connection(pe->getPnEvent());
+        if (conn && isLocalOpen(pn_connection_state(conn))) {
+            MessagingEvent mevent(PN_MESSAGING_DISCONNECTED, *pe);
+            delegate.onDisconnected(mevent);
         }
     }
 }
 
 
+void MessagingAdapter::onConnectionOpened(Event &e) {
+    delegate.onConnectionOpened(e);
+}
+
+void MessagingAdapter::onSessionOpened(Event &e) {
+    delegate.onSessionOpened(e);
+}
+
+void MessagingAdapter::onLinkOpened(Event &e) {
+    delegate.onLinkOpened(e);
+}
+
+void MessagingAdapter::onConnectionOpening(Event &e) {
+    delegate.onConnectionOpening(e);
+}
+
+void MessagingAdapter::onSessionOpening(Event &e) {
+    delegate.onSessionOpening(e);
+}
+
+void MessagingAdapter::onLinkOpening(Event &e) {
+    delegate.onLinkOpening(e);
+}
+
+void MessagingAdapter::onConnectionError(Event &e) {
+    delegate.onConnectionError(e);
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_connection_t *connection = pn_event_connection(pe->getPnEvent());
+        pn_connection_close(connection);
+    }
+}
+
+void MessagingAdapter::onSessionError(Event &e) {
+    delegate.onSessionError(e);
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_session_t *session = pn_event_session(pe->getPnEvent());
+        pn_session_close(session);
+    }
+}
+
+void MessagingAdapter::onLinkError(Event &e) {
+    delegate.onLinkError(e);
+    ProtonEvent *pe = dynamic_cast<ProtonEvent*>(&e);
+    if (pe) {
+        pn_link_t *link = pn_event_link(pe->getPnEvent());
+        pn_link_close(link);
+    }
+}
+
+void MessagingAdapter::onConnectionClosed(Event &e) {
+    delegate.onConnectionClosed(e);
+}
+
+void MessagingAdapter::onSessionClosed(Event &e) {
+    delegate.onSessionClosed(e);
+}
+
+void MessagingAdapter::onLinkClosed(Event &e) {
+    delegate.onLinkClosed(e);
+}
+
+void MessagingAdapter::onConnectionClosing(Event &e) {
+    delegate.onConnectionClosing(e);
+    if (peerCloseIsError)
+        onConnectionError(e);
+}
+
+void MessagingAdapter::onSessionClosing(Event &e) {
+    delegate.onSessionClosing(e);
+    if (peerCloseIsError)
+        onSessionError(e);
+}
+
+void MessagingAdapter::onLinkClosing(Event &e) {
+    delegate.onLinkClosing(e);
+    if (peerCloseIsError)
+        onLinkError(e);
+}
+
+void MessagingAdapter::onUnhandled(Event &e) {
+}
 
 }} // namespace proton::reactor

@@ -49,6 +49,7 @@ class ContainerImpl
     PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr);
     PROTON_CPP_EXTERN Sender createSender(std::string &url);
     PROTON_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
+    PROTON_CPP_EXTERN Receiver createReceiver(const std::string &url); //ZZZ
     PROTON_CPP_EXTERN Acceptor listen(const std::string &url);
     PROTON_CPP_EXTERN std::string getContainerId();
     static void incref(ContainerImpl *);

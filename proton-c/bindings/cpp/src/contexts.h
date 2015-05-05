@@ -23,6 +23,7 @@
  */
 #include "proton/reactor.h"
 #include "proton/connection.h"
+#include "proton/message.h"
 
 namespace proton {
 namespace reactor {
@@ -42,6 +43,9 @@ Link *getLinkContext(pn_link_t *pnLink);
 class ContainerImpl;
 void setContainerContext(pn_reactor_t *pnReactor, ContainerImpl *container);
 ContainerImpl *getContainerContext(pn_reactor_t *pnReactor);
+
+void setEventContext(pn_event_t *pnEvent, pn_message_t *m);
+pn_message_t *getEventContext(pn_event_t *pnEvent);
 
 }} // namespace proton::reactor
 

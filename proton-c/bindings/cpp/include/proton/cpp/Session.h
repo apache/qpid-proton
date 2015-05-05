@@ -27,6 +27,7 @@
 
 #include "proton/types.h"
 #include "proton/link.h"
+#include "ProtonImplRef.h"
 #include <string>
 
 struct pn_connection_t;
@@ -38,19 +39,22 @@ class Container;
 class Handler;
 class Transport;
 
-class Session : public Endpoint
+ class Session : public Endpoint, public ProtonHandle<pn_session_t>
 {
   public:
     PROTON_CPP_EXTERN Session(pn_session_t *s);
+    PROTON_CPP_EXTERN Session();
     PROTON_CPP_EXTERN ~Session();
     PROTON_CPP_EXTERN void open();
+    PROTON_CPP_EXTERN Session(const Session&);
+    PROTON_CPP_EXTERN Session& operator=(const Session&);
     PROTON_CPP_EXTERN void close();
     PROTON_CPP_EXTERN pn_session_t *getPnSession();
     virtual PROTON_CPP_EXTERN Connection &getConnection();
     Receiver createReceiver(std::string name);
     Sender createSender(std::string name);
   private:
-    pn_session_t *pnSession;
+    friend class ProtonImplRef<Session>;
 };
 
 

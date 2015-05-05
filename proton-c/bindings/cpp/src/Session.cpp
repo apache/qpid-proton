@@ -30,34 +30,43 @@
 namespace proton {
 namespace reactor {
 
+template class ProtonHandle<pn_session_t>;
+typedef ProtonImplRef<Session> PI;
 
-Session::Session(pn_session_t *s) : pnSession(s)
-{
-    pn_incref(pnSession);
+Session::Session(pn_session_t *p) {
+    PI::ctor(*this, p);
 }
-
+Session::Session() {
+    PI::ctor(*this, 0);
+}
+Session::Session(const Session& c) : ProtonHandle<pn_session_t>() {
+    PI::copy(*this, c);
+}
+Session& Session::operator=(const Session& c) {
+    return PI::assign(*this, c);
+}
 Session::~Session() {
-    pn_decref(pnSession);
+    PI::dtor(*this);
 }
 
-pn_session_t *Session::getPnSession() { return pnSession; }
+pn_session_t *Session::getPnSession() { return impl; }
 
 void Session::open() {
-    pn_session_open(pnSession);
+    pn_session_open(impl);
 }
 
 Connection &Session::getConnection() {
-    pn_connection_t *c = pn_session_connection(pnSession);
+    pn_connection_t *c = pn_session_connection(impl);
     return ConnectionImpl::getReactorReference(c);
 }
 
 Receiver Session::createReceiver(std::string name) {
-    pn_link_t *link = pn_receiver(pnSession, name.c_str());
+    pn_link_t *link = pn_receiver(impl, name.c_str());
     return Receiver(link);
 }
 
 Sender Session::createSender(std::string name) {
-    pn_link_t *link = pn_sender(pnSession, name.c_str());
+    pn_link_t *link = pn_sender(impl, name.c_str());
     return Sender(link);
 }
 

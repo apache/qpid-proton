@@ -22,6 +22,7 @@
 #include "proton/cpp/Handler.h"
 #include "proton/cpp/exceptions.h"
 #include "ConnectionImpl.h"
+#include "proton/cpp/Transport.h"
 #include "Msg.h"
 #include "contexts.h"
 
@@ -47,7 +48,10 @@ ConnectionImpl::ConnectionImpl(Container &c) : container(c), refCount(0), overri
     setConnectionContext(pnConnection, this);
 }
 
-ConnectionImpl::~ConnectionImpl() {}
+ConnectionImpl::~ConnectionImpl() {
+    delete transport;
+    delete override;
+}
 
 Transport &ConnectionImpl::getTransport() {
     if (transport)
@@ -56,7 +60,11 @@ Transport &ConnectionImpl::getTransport() {
 }
 
 Handler* ConnectionImpl::getOverride() { return override; }
-void ConnectionImpl::setOverride(Handler *h) { override = h; }
+void ConnectionImpl::setOverride(Handler *h) {
+    if (override)
+        delete override;
+    override = h;
+}
 
 void ConnectionImpl::open() {
     pn_connection_open(pnConnection);

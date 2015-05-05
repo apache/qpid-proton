@@ -62,15 +62,14 @@ void Connector::onConnectionRemoteOpen(Event &e) {
 }
 
 void Connector::onConnectionInit(Event &e) {
-
 }
 
 void Connector::onTransportClosed(Event &e) {
     // TODO: prepend with reconnect logic
     PN_CPP_LOG(info, "Disconnected");
-    connection.setOverride(0);  // No more call backs
     pn_connection_release(connection.impl->pnConnection);
-    delete this;
+    // No more interaction, so drop our counted reference.
+    connection = Connection();
 }
 
 

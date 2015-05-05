@@ -22,6 +22,7 @@
  *
  */
 #include "proton/cpp/ImportExport.h"
+#include "proton/cpp/ProtonHandle.h"
 #include "proton/message.h"
 #include <string>
 
@@ -29,22 +30,36 @@
 namespace proton {
 namespace reactor {
 
-class Message
+class Message : public ProtonHandle<pn_message_t>
 {
   public:
     PROTON_CPP_EXTERN Message();
-    PROTON_CPP_EXTERN ~Message();
+    PROTON_CPP_EXTERN Message(pn_message_t *);
     PROTON_CPP_EXTERN Message(const Message&);
     PROTON_CPP_EXTERN Message& operator=(const Message&);
+    PROTON_CPP_EXTERN ~Message();
 
-    PROTON_CPP_EXTERN pn_message_t *getPnMessage();
+    PROTON_CPP_EXTERN pn_message_t *getPnMessage() const;
+
+    PROTON_CPP_EXTERN void setId(uint64_t id);
+    PROTON_CPP_EXTERN uint64_t getId();
+    PROTON_CPP_EXTERN pn_type_t getIdType();
+
     PROTON_CPP_EXTERN void setBody(const std::string &data);
     PROTON_CPP_EXTERN std::string getBody();
+
+    PROTON_CPP_EXTERN void getBody(std::string &str);
+
+    PROTON_CPP_EXTERN void setBody(const char *, size_t len);
+    PROTON_CPP_EXTERN size_t getBody(char *, size_t len);
+    PROTON_CPP_EXTERN size_t getBinaryBodySize();
+
+
     PROTON_CPP_EXTERN void encode(std::string &data);
     PROTON_CPP_EXTERN void decode(const std::string &data);
 
   private:
-    pn_message_t *pnMessage;
+    friend class ProtonImplRef<Message>;
 };
 
 

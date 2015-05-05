@@ -74,6 +74,10 @@ Receiver Container::createReceiver(Connection &connection, std::string &addr) {
     return impl->createReceiver(connection, addr);
 }
 
+Receiver Container::createReceiver(const std::string &url) {
+    return impl->createReceiver(url);
+}
+
 Acceptor Container::listen(const std::string &urlString) {
     return impl->listen(urlString);
 }

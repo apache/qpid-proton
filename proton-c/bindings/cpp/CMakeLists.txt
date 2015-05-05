@@ -93,6 +93,10 @@ add_executable (HelloWorld examples/HelloWorld.cpp)
 target_link_libraries (HelloWorld qpid-proton-cpp)
 add_executable (HelloWorldDirect examples/HelloWorldDirect.cpp)
 target_link_libraries (HelloWorldDirect qpid-proton-cpp)
+add_executable (SimpleRecv examples/SimpleRecv.cpp)
+target_link_libraries (SimpleRecv qpid-proton-cpp)
+add_executable (SimpleSend examples/SimpleSend.cpp)
+target_link_libraries (SimpleSend qpid-proton-cpp)
 
 install (TARGETS qpid-proton-cpp
   EXPORT  proton

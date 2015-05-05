@@ -35,7 +35,7 @@ namespace reactor {
 template class Handle<ConnectionImpl>;
 typedef PrivateImplRef<Connection> PI;
 
-Connection::Connection() {}
+Connection::Connection() {PI::ctor(*this, 0); }
 Connection::Connection(ConnectionImpl* p) { PI::ctor(*this, p); }
 Connection::Connection(const Connection& c) : Handle<ConnectionImpl>() { PI::copy(*this, c); }
 

@@ -24,6 +24,7 @@
 #include "proton/link.h"
 
 #include "proton/cpp/MessagingEvent.h"
+#include "proton/cpp/Message.h"
 #include "proton/cpp/ProtonHandler.h"
 #include "proton/cpp/MessagingHandler.h"
 #include "proton/cpp/exceptions.h"
@@ -37,8 +38,8 @@ MessagingEvent::MessagingEvent(pn_event_t *ce, pn_event_type_t t, Container &c) 
     ProtonEvent(ce, t, c), messagingType(PN_MESSAGING_PROTON), parentEvent(0), message(0)
 {}
 
-MessagingEvent::MessagingEvent(MessagingEventType_t t, ProtonEvent *p, Container &c) :
-    ProtonEvent(NULL, PN_EVENT_NONE, c), messagingType(t), parentEvent(p), message(0) {
+MessagingEvent::MessagingEvent(MessagingEventType_t t, ProtonEvent &p) :
+    ProtonEvent(NULL, PN_EVENT_NONE, p.getContainer()), messagingType(t), parentEvent(&p), message(0) {
     if (messagingType == PN_MESSAGING_PROTON)
         throw ProtonException(MSG("invalid messaging event type"));
 }
@@ -80,16 +81,18 @@ Link MessagingEvent::getLink() {
 }
 
 Message MessagingEvent::getMessage() {
-    if (message)
-        return *message;
+    if (parentEvent) {
+        pn_message_t *m = getEventContext(parentEvent->getPnEvent());
+        if (m)
+            return Message(m);
+    }
     throw ProtonException(MSG("No message context for event"));
 }
 
 void MessagingEvent::setMessage(Message &m) {
-    if (messagingType != PN_MESSAGING_MESSAGE)
+    if (messagingType != PN_MESSAGING_MESSAGE || !parentEvent)
         throw ProtonException(MSG("Event type does not provide message"));
-    delete message;
-    message = new Message(m);
+    setEventContext(parentEvent->getPnEvent(), m.getPnMessage());
 }
 
 void MessagingEvent::dispatch(Handler &h) {
@@ -112,9 +115,23 @@ void MessagingEvent::dispatch(Handler &h) {
 
         case PN_MESSAGING_CONNECTION_CLOSING:     handler->onConnectionClosing(*this); break;
         case PN_MESSAGING_CONNECTION_CLOSED:      handler->onConnectionClosed(*this); break;
+        case PN_MESSAGING_CONNECTION_ERROR:       handler->onConnectionError(*this); break;
+        case PN_MESSAGING_CONNECTION_OPENING:     handler->onConnectionOpening(*this); break;
+        case PN_MESSAGING_CONNECTION_OPENED:      handler->onConnectionOpened(*this); break;
+
+        case PN_MESSAGING_LINK_CLOSED:            handler->onLinkClosed(*this); break;
+        case PN_MESSAGING_LINK_CLOSING:           handler->onLinkClosing(*this); break;
+        case PN_MESSAGING_LINK_ERROR:             handler->onLinkError(*this); break;
         case PN_MESSAGING_LINK_OPENING:           handler->onLinkOpening(*this); break;
         case PN_MESSAGING_LINK_OPENED:            handler->onLinkOpened(*this); break;
 
+        case PN_MESSAGING_SESSION_CLOSED:         handler->onSessionClosed(*this); break;
+        case PN_MESSAGING_SESSION_CLOSING:        handler->onSessionClosing(*this); break;
+        case PN_MESSAGING_SESSION_ERROR:          handler->onSessionError(*this); break;
+        case PN_MESSAGING_SESSION_OPENING:        handler->onSessionOpening(*this); break;
+        case PN_MESSAGING_SESSION_OPENED:         handler->onSessionOpened(*this); break;
+
+        case PN_MESSAGING_TRANSPORT_CLOSED:       handler->onTransportClosed(*this); break;
         default:
             throw ProtonException(MSG("Unkown messaging event type " << messagingType));
             break;

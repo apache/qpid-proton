@@ -32,10 +32,10 @@
 namespace proton {
 namespace reactor {
 
-// For now, stands in for Python's: EndpointStateHandler, IncomingMessageHandler, OutgoingMessageHandler
+// Combine's Python's: EndpointStateHandler, IncomingMessageHandler, OutgoingMessageHandler
 
 
-class MessagingAdapter : public ProtonHandler
+class MessagingAdapter : public MessagingHandler
 {
   public:
     PROTON_CPP_EXTERN MessagingAdapter(MessagingHandler &delegate);
@@ -44,11 +44,37 @@ class MessagingAdapter : public ProtonHandler
     PROTON_CPP_EXTERN virtual void onLinkFlow(Event &e);
     PROTON_CPP_EXTERN virtual void onDelivery(Event &e);
     PROTON_CPP_EXTERN virtual void onUnhandled(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionClosed(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionClosing(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionError(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionLocalOpen(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionRemoteOpen(Event &e);
     PROTON_CPP_EXTERN virtual void onConnectionRemoteClose(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionOpened(Event &e);
+    PROTON_CPP_EXTERN virtual void onConnectionOpening(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionClosed(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionClosing(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionError(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionLocalOpen(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionRemoteOpen(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionRemoteClose(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionOpened(Event &e);
+    PROTON_CPP_EXTERN virtual void onSessionOpening(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkClosed(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkClosing(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkError(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkLocalOpen(Event &e);
     PROTON_CPP_EXTERN virtual void onLinkRemoteOpen(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkRemoteClose(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkOpened(Event &e);
+    PROTON_CPP_EXTERN virtual void onLinkOpening(Event &e);
+    PROTON_CPP_EXTERN virtual void onTransportTailClosed(Event &e);
   private:
     MessagingHandler &delegate;  // The actual MessagingHandler
     pn_handler_t *handshaker;
+    bool autoSettle;
+    bool autoAccept;
+    bool peerCloseIsError;
 };
 
 

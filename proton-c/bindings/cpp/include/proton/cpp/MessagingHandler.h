@@ -34,20 +34,23 @@ class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler
 {
   public:
     PROTON_CPP_EXTERN MessagingHandler();
+//ZZZ    PROTON_CPP_EXTERN MessagingHandler(int prefetch=10, bool autoAccept=true, autoSettle=true, peerCloseIsError=false);
     virtual ~MessagingHandler();
 
     virtual void onAbort(Event &e);
     virtual void onAccepted(Event &e);
     virtual void onCommit(Event &e);
-    virtual void onConnectionClose(Event &e);
     virtual void onConnectionClosed(Event &e);
     virtual void onConnectionClosing(Event &e);
-    virtual void onConnectionOpen(Event &e);
+    virtual void onConnectionError(Event &e);
+    virtual void onConnectionOpening(Event &e);
     virtual void onConnectionOpened(Event &e);
     virtual void onDisconnected(Event &e);
     virtual void onFetch(Event &e);
     virtual void onIdLoaded(Event &e);
+    virtual void onLinkClosed(Event &e);
     virtual void onLinkClosing(Event &e);
+    virtual void onLinkError(Event &e);
     virtual void onLinkOpened(Event &e);
     virtual void onLinkOpening(Event &e);
     virtual void onMessage(Event &e);
@@ -59,12 +62,18 @@ class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler
     virtual void onRequest(Event &e);
     virtual void onResponse(Event &e);
     virtual void onSendable(Event &e);
+    virtual void onSessionClosed(Event &e);
+    virtual void onSessionClosing(Event &e);
+    virtual void onSessionError(Event &e);
+    virtual void onSessionOpened(Event &e);
+    virtual void onSessionOpening(Event &e);
     virtual void onSettled(Event &e);
     virtual void onStart(Event &e);
     virtual void onTimer(Event &e);
     virtual void onTransactionAborted(Event &e);
     virtual void onTransactionCommitted(Event &e);
     virtual void onTransactionDeclared(Event &e);
+    virtual void onTransportClosed(Event &e);
 };
 
 

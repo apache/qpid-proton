@@ -37,6 +37,7 @@
 
 #include "proton/connection.h"
 #include "proton/session.h"
+#include "proton/handlers.h"
 
 namespace proton {
 namespace reactor {
@@ -64,22 +65,19 @@ class CHandler : public Handler
         pn_decref(pnHandler);
     }
     pn_handler_t *getPnHandler() { return pnHandler; }
+
+    virtual void onUnhandled(Event &e) {
+        ProtonEvent *pne = dynamic_cast<ProtonEvent *>(&e);
+        if (!pne) return;
+        int type = pne->getType();
+        if (!type) return;  // Not from the reactor
+        pn_handler_dispatch(pnHandler, pne->getPnEvent(), (pn_event_type_t) type);
+    }
+
   private:
     pn_handler_t *pnHandler;
 };
 
-
-void dispatch(Handler &h, MessagingEvent &e) {
-    // TODO: also dispatch to add()'ed Handlers
-    CHandler *chandler;
-    int type = e.getType();
-    if (type &&  (chandler = dynamic_cast<CHandler*>(&h))) {
-        // event and handler are both native Proton C
-        pn_handler_dispatch(chandler->getPnHandler(), e.getPnEvent(), (pn_event_type_t) type);
-    }
-    else
-        e.dispatch(h);
-}
 
 // Used to sniff for Connector events before the reactor's global handler sees them.
 class OverrideHandler : public Handler
@@ -109,8 +107,9 @@ class OverrideHandler : public Handler
             ConnectionImpl *connection = getConnectionContext(conn);
             if (connection) {
                 Handler *override = connection->getOverride();
-                if (override)
+                if (override) {
                     e.dispatch(*override);
+                }
             }
         }
 
@@ -126,6 +125,29 @@ class OverrideHandler : public Handler
         }
     }
 };
+
+
+class CFlowController : public ProtonHandler
+{
+  public:
+    pn_handler_t *flowcontroller;
+
+    CFlowController(int window) : flowcontroller(pn_flowcontroller(window)) {}
+    ~CFlowController() {
+        pn_decref(flowcontroller);
+    }
+
+    void redirect(Event &e) {
+        ProtonEvent *pne = dynamic_cast<ProtonEvent *>(&e);
+        pn_handler_dispatch(flowcontroller, pne->getPnEvent(), (pn_event_type_t) pne->getType());
+    }
+
+    virtual void onLinkLocalOpen(Event &e) { redirect(e); }
+    virtual void onLinkRemoteOpen(Event &e) { redirect(e); }
+    virtual void onLinkFlow(Event &e) { redirect(e); }
+    virtual void onDelivery(Event &e) { redirect(e); }
+};
+
 
 namespace {
 
@@ -162,8 +184,8 @@ Handler &getCppHandler(pn_handler_t *c_handler) {
 
 void cpp_handler_dispatch(pn_handler_t *c_handler, pn_event_t *cevent, pn_event_type_t type)
 {
-    MessagingEvent ev(cevent, type, getContainerRef(c_handler));
-    dispatch(getCppHandler(c_handler), ev);
+    MessagingEvent mevent(cevent, type, getContainerRef(c_handler));
+    mevent.dispatch(getCppHandler(c_handler));
 }
 
 void cpp_handler_cleanup(pn_handler_t *c_handler)
@@ -176,7 +198,7 @@ pn_handler_t *cpp_handler(ContainerImpl *c, Handler *h)
 {
     pn_handler_t *handler = pn_handler_new(cpp_handler_dispatch, sizeof(struct InboundContext), cpp_handler_cleanup);
     struct InboundContext *ctxt = (struct InboundContext *) pn_handler_mem(handler);
-    ctxt->containerRef = Container(c);
+    new (&ctxt->containerRef) Container(c);
     ctxt->containerImpl = c;
     ctxt->cppHandler = h;
     return handler;
@@ -254,6 +276,17 @@ Receiver ContainerImpl::createReceiver(Connection &connection, std::string &addr
     return rcv;
 }
 
+Receiver ContainerImpl::createReceiver(const std::string &urlString) {
+    // TODO: const cleanup of API
+    Connection conn = connect(const_cast<std::string &>(urlString));
+    Session session = getDefaultSession(conn.getPnConnection(), &getImpl(conn)->defaultSession);
+    std::string path = Url(urlString).getPath();
+    Receiver rcv = session.createReceiver(containerId + '-' + path);
+    pn_terminus_set_address(pn_link_source(rcv.getPnLink()), path.c_str());
+    rcv.open();
+    return rcv;
+}
+
 Acceptor ContainerImpl::acceptor(const std::string &host, const std::string &port) {
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor, host.c_str(), port.c_str(), NULL);
     if (acptr)
@@ -271,11 +304,20 @@ Acceptor ContainerImpl::listen(const std::string &urlString) {
 
 void ContainerImpl::run() {
     reactor = pn_reactor();
+
     // Set our context on the reactor
     setContainerContext(reactor, this);
 
+    int prefetch = 10; // TODO: configurable
+    Handler *flowController = 0;
+
+
     // Set the reactor's main/default handler (see note below)
     MessagingAdapter messagingAdapter(messagingHandler);
+    if (prefetch) {
+        flowController = new CFlowController(prefetch);
+        messagingHandler.addChildHandler(*flowController);
+    }
     messagingHandler.addChildHandler(messagingAdapter);
     pn_handler_t *cppHandler = cpp_handler(this, &messagingHandler);
     pn_reactor_set_handler(reactor, cppHandler);
@@ -287,15 +329,18 @@ void ContainerImpl::run() {
     pn_handler_t *cppGlobalHandler = cpp_handler(this, &overrideHandler);
     pn_reactor_set_global_handler(reactor, cppGlobalHandler);
 
-    // Note: we have just set up the following 4 handlers that see events in this order:
-    // messagingHandler, messagingAdapter, connector override, the reactor's default global
-    // handler (pn_iohandler)
-    // TODO: remove fifth pn_handshaker once messagingAdapter matures
-
+    // Note: we have just set up the following 4/5 handlers that see events in this order:
+    // messagingHandler (Proton C events), pn_flowcontroller (optional), messagingAdapter,
+    // messagingHandler (Messaging events from the messagingAdapter), connector override,
+    // the reactor's default globalhandler (pn_iohandler)
     pn_reactor_run(reactor);
+
+    pn_decref(cppHandler);
+    pn_decref(cppGlobalHandler);
     pn_decref(cGlobalHandler);
     pn_reactor_free(reactor);
     reactor = 0;
+    delete(flowController);
 }
 
 }} // namespace proton::reactor
