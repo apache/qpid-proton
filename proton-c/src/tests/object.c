@@ -793,6 +793,142 @@ void test_map_inspect(void)
   pn_free(m);
 }
 
+void test_map_coalesced_chain(void)
+{
+  pn_hash_t *map = pn_hash(PN_OBJECT, 16, 0.75);
+  pn_string_t *values[9] = {
+      pn_string("a"),
+      pn_string("b"),
+      pn_string("c"),
+      pn_string("d"),
+      pn_string("e"),
+      pn_string("f"),
+      pn_string("g"),
+      pn_string("h"),
+      pn_string("i")
+  };
+  //add some items:
+  pn_hash_put(map, 1, values[0]);
+  pn_hash_put(map, 2, values[1]);
+  pn_hash_put(map, 3, values[2]);
+
+  //use up all non-addressable elements:
+  pn_hash_put(map, 14, values[3]);
+  pn_hash_put(map, 15, values[4]);
+  pn_hash_put(map, 16, values[5]);
+
+  //use an addressable element for a key that doesn't map to it:
+  pn_hash_put(map, 4, values[6]);
+  pn_hash_put(map, 17, values[7]);
+  assert(pn_hash_size(map) == 8);
+
+  //free up one non-addressable entry:
+  pn_hash_del(map, 16);
+  assert(pn_hash_get(map, 16) == NULL);
+  assert(pn_hash_size(map) == 7);
+
+  //add a key whose addressable slot is already taken (by 17),
+  //generating a coalesced chain:
+  pn_hash_put(map, 12, values[8]);
+
+  //remove an entry from the coalesced chain:
+  pn_hash_del(map, 4);
+  assert(pn_hash_get(map, 4) == NULL);
+
+  //test lookup of all entries:
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 1)), "a"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 2)), "b"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 3)), "c"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 14)), "d"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 15)), "e"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 17)), "h"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 12)), "i"));
+  assert(pn_hash_size(map) == 7);
+
+  //cleanup:
+  for (pn_handle_t i = pn_hash_head(map); i; i = pn_hash_head(map)) {
+    pn_hash_del(map, pn_hash_key(map, i));
+  }
+  assert(pn_hash_size(map) == 0);
+
+  for (size_t i = 0; i < 9; ++i) {
+      pn_free(values[i]);
+  }
+  pn_free(map);
+}
+
+void test_map_coalesced_chain2(void)
+{
+  pn_hash_t *map = pn_hash(PN_OBJECT, 16, 0.75);
+  pn_string_t *values[10] = {
+      pn_string("a"),
+      pn_string("b"),
+      pn_string("c"),
+      pn_string("d"),
+      pn_string("e"),
+      pn_string("f"),
+      pn_string("g"),
+      pn_string("h"),
+      pn_string("i"),
+      pn_string("j")
+  };
+  //add some items:
+  pn_hash_put(map, 1, values[0]);//a
+  pn_hash_put(map, 2, values[1]);//b
+  pn_hash_put(map, 3, values[2]);//c
+
+  //use up all non-addressable elements:
+  pn_hash_put(map, 14, values[3]);//d
+  pn_hash_put(map, 15, values[4]);//e
+  pn_hash_put(map, 16, values[5]);//f
+  //take slot from addressable region
+  pn_hash_put(map, 29, values[6]);//g, goes into slot 12
+
+  //free up one non-addressable entry:
+  pn_hash_del(map, 14);
+  assert(pn_hash_get(map, 14) == NULL);
+
+  //add a key whose addressable slot is already taken (by 29),
+  //generating a coalesced chain:
+  pn_hash_put(map, 12, values[7]);//h
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 12)), "h"));
+  //delete from tail of coalesced chain:
+  pn_hash_del(map, 12);
+  assert(pn_hash_get(map, 12) == NULL);
+
+  //extend chain into cellar again, then coalesce again extending back
+  //into addressable region
+  pn_hash_put(map, 42, values[8]);//i
+  pn_hash_put(map, 25, values[9]);//j
+  //delete entry from coalesced chain, where next element in chain is
+  //in cellar:
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 29)), "g"));
+  pn_hash_del(map, 29);
+
+  //test lookup of all entries:
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 1)), "a"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 2)), "b"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 3)), "c"));
+  //d was deleted
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 15)), "e"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 16)), "f"));
+  //g was deleted, h was deleted
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 42)), "i"));
+  assert(pn_strequals(pn_string_get((pn_string_t *) pn_hash_get(map, 25)), "j"));
+  assert(pn_hash_size(map) == 7);
+
+  //cleanup:
+  for (pn_handle_t i = pn_hash_head(map); i; i = pn_hash_head(map)) {
+    pn_hash_del(map, pn_hash_key(map, i));
+  }
+  assert(pn_hash_size(map) == 0);
+
+  for (size_t i = 0; i < 10; ++i) {
+      pn_free(values[i]);
+  }
+  pn_free(map);
+}
+
 void test_list_compare(void)
 {
   pn_list_t *a = pn_list(PN_OBJECT, 0);
@@ -971,6 +1107,9 @@ int main(int argc, char **argv)
       test_heap(seed, size);
     }
   }
+
+  test_map_coalesced_chain();
+  test_map_coalesced_chain2();
 
   return 0;
 }

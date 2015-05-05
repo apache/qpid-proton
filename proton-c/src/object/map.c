@@ -263,28 +263,76 @@ void *pn_map_get(pn_map_t *map, void *key)
   return entry ? entry->value : NULL;
 }
 
+void pn_map_rehash(pn_map_t *map, size_t index)
+{
+  //reinsert entries in chain starting at index
+  assert(map);
+  size_t i = index;
+  bool complete = false;
+  while (!complete) {
+    pni_entry_t *entry = &map->entries[i];
+    assert(entry);
+    assert(entry->state != PNI_ENTRY_FREE);
+    size_t current = i;
+    if (entry->state == PNI_ENTRY_TAIL) {
+      complete = true;
+    } else {
+      assert(entry->state == PNI_ENTRY_LINK);
+      i = entry->next;
+    }
+    uintptr_t hashcode = map->hashcode(entry->key);
+    pni_entry_t *reloc = &map->entries[hashcode % map->addressable];
+    if (reloc->state == PNI_ENTRY_FREE) {
+      //correct addressable slot is available, copy into that...
+      reloc->state = PNI_ENTRY_TAIL;
+      reloc->key = entry->key;
+      reloc->value = entry->value;
+      //...then free the current entry
+      entry->key = NULL;
+      entry->value = NULL;
+      entry->state = PNI_ENTRY_FREE;
+      entry->next = 0;
+    } else {
+      //iterate to end of chain...
+      while (reloc->state == PNI_ENTRY_LINK) {
+        reloc = &map->entries[reloc->next];
+      }
+      assert(reloc->state == PNI_ENTRY_TAIL);
+      //... and append current entry
+      reloc->state = PNI_ENTRY_LINK;
+      reloc->next = current;
+      entry->state = PNI_ENTRY_TAIL;
+      entry->next = 0;
+    }
+  }
+}
+
 void pn_map_del(pn_map_t *map, void *key)
 {
   assert(map);
   pni_entry_t *prev = NULL;
   pni_entry_t *entry = pni_map_entry(map, key, &prev, false);
   if (entry) {
+    uint8_t orig_state = entry->state;
+    size_t orig_next = entry->next;
+
     void *dref_key = entry->key;
     void *dref_value = entry->value;
     if (prev) {
-      prev->next = entry->next;
-      prev->state = entry->state;
-    } else if (entry->next) {
-      assert(entry->state == PNI_ENTRY_LINK);
-      pni_entry_t *next = &map->entries[entry->next];
-      *entry = *next;
-      entry = next;
+      prev->next = 0;
+      prev->state = PNI_ENTRY_TAIL;
     }
     entry->state = PNI_ENTRY_FREE;
     entry->next = 0;
     entry->key = NULL;
     entry->value = NULL;
     map->size--;
+
+    if (orig_state == PNI_ENTRY_LINK) {
+      pn_map_rehash(map, orig_next);
+    }
+
+    // do this last as it may trigger further deletions
     pn_class_decref(map->key, dref_key);
     pn_class_decref(map->value, dref_value);
   }

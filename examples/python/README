@@ -25,7 +25,7 @@ desired.
 
 helloworld_direct.py
 
-A variant of the basic hellpwprld example, that does not use an
+A variant of the basic helloworld example, that does not use an
 intermediary, but listens for incoming connections itself. It
 establishes a connection to itself with a link over which a single
 message is sent. This demonstrates the ease with which a simple daemon
@@ -85,7 +85,7 @@ populate src_db, e.g. for i in `seq 1 50`; do echo "Message-$i"; done
 tx_send.py
 
 A sender that sends messages in atomic batches using local
-transactions (this example does not persist the messages in anyway).
+transactions (this example does not persist the messages in any way).
 
 tx_recv.py
 
@@ -106,7 +106,7 @@ The various send/recv examples can be mixed and matched if desired.
 client.py
 
 The client part of a request-response example. Sends requests and
-prints out responses. Requires an intermediary that support the AMQP
+prints out responses. Requires an intermediary that supports the AMQP
 1.0 dynamic nodes on which the responses are received. The requests
 are sent through the 'examples' node.
 

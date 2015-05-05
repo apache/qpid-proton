@@ -19,12 +19,14 @@
 from __future__ import absolute_import
 
 import os, gc
+import sys
 from . import common
 from time import time, sleep
 from proton import *
-from .common import pump
+from .common import pump, Skipped
 from proton.reactor import Reactor
 from proton._compat import str2bin
+
 
 # older versions of gc do not provide the garbage list
 if not hasattr(gc, "garbage"):
@@ -247,6 +249,25 @@ class ConnectionTest(Test):
     # transport should flush last state from C1:
     pump(t1, t2)
     assert c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+  def test_user_config(self):
+    if "java" in sys.platform:
+      raise Skipped("Unsupported API")
+
+    self.c1.user = "vindaloo"
+    self.c1.password = "secret"
+    self.c1.open()
+    self.pump()
+
+    self.c2.user = "leela"
+    self.c2.password = "trustno1"
+    self.c2.open()
+    self.pump()
+
+    assert self.c1.user == "vindaloo", self.c1.user
+    assert self.c1.password == None, self.c1.password
+    assert self.c2.user == "leela", self.c2.user
+    assert self.c2.password == None, self.c2.password
 
 class SessionTest(Test):
 
@@ -1862,8 +1883,6 @@ class PipelineTest(Test):
 
     assert rcv.queued == 0, rcv.queued
 
-import sys
-from .common import Skipped
 
 class ServerTest(Test):
 

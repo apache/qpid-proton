@@ -27,12 +27,13 @@ SRC=$(dirname $(dirname $(readlink -f $0)))
 
 usage()
 {
-    echo "Usage: ${ME} VERSION"
+    echo "Usage: ${ME} VERSION TAG"
     exit 1
 }
 
-if [ $# == 1 ]; then
+if [ $# == 2 ]; then
     VERSION=$1
+    TAG=$2
 else
     usage
 fi
@@ -54,12 +55,12 @@ die()
     BRANCH=$(git symbolic-ref -q --short HEAD)
     if [ -n "${BRANCH}" ]; then
         REMOTE=$(git config branch.${BRANCH}.remote)
-        git checkout --detach ${REMOTE}/${BRANCH}
     else
         REMOTE="origin"
     fi
-    bin/version.sh $VERSION
-    git commit -a -m "Release $VERSION"
-    git tag -m "Release $VERSION" $VERSION
-    echo "Run 'git push ${REMOTE} ${VERSION}' to push the release upstream."
+    git checkout --detach && \
+        bin/version.sh $VERSION && \
+        git commit -a -m "Release $VERSION" && \
+        git tag -m "Release $VERSION" $TAG && \
+        echo "Run 'git push ${REMOTE} ${TAG}' to push the tag upstream."
 )
