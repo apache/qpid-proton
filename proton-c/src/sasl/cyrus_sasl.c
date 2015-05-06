@@ -259,9 +259,17 @@ static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, co
     const char *out;
     unsigned outlen;
     sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    // If we didn't get any initial response, pretend we got an empty response as it seems cyrus
+    // assumes this is what it will get.
+    const char *in_bytes = in->start;
+    size_t in_size = in->size;
+    if (!in_bytes) {
+        in_bytes = "";
+        in_size = 0;
+    }
     result = sasl_server_start(cyrus_conn,
                                mech_selected,
-                               in->start, in->size,
+                               in_bytes, in_size,
                                &out, &outlen);
 
     sasl->cyrus_out.start = out;
