@@ -51,6 +51,9 @@ class Acceptor(Wrapper):
     def __init__(self, impl):
         Wrapper.__init__(self, impl)
 
+    def set_ssl_domain(self, ssl_domain):
+        pn_acceptor_set_ssl_domain(self._impl, ssl_domain._domain)
+
     def close(self):
         pn_acceptor_close(self._impl)
 
@@ -742,10 +745,13 @@ class Container(Reactor):
         on the interface and port specified.
         """
         url = Url(url)
+        acceptor = self.acceptor(url.host, url.port)
         ssl_config = ssl_domain
-        if not ssl_config and url.scheme == 'amqps':
-            ssl_config = self.ssl_domain
-        return self.acceptor(url.host, url.port)
+        if not ssl_config and url.scheme == 'amqps' and self.ssl:
+            ssl_config = self.ssl.server
+        if ssl_config:
+            acceptor.set_ssl_domain(ssl_config)
+        return acceptor
 
     def do_work(self, timeout=None):
         if timeout:
