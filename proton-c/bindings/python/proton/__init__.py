@@ -1299,6 +1299,9 @@ class Array(object):
     self.type = type
     self.elements = elements
 
+  def __iter__(self):
+    return iter(self.elements)
+
   def __repr__(self):
     if self.elements:
       els = ", %s"  % (", ".join(map(repr, self.elements)))
