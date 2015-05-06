@@ -72,7 +72,6 @@ WORKDIR=$(mktemp -d)
     [ -d ${WORKDIR} ] || mkdir -p ${WORKDIR}
     git archive --format=tar --prefix=${PREFIX}/ tags/${TAG} \
         | tar -x -C ${WORKDIR}
-    ${SRC}/bin/version.sh ${WORKDIR}/${PREFIX} ${VERSION}
     cd ${WORKDIR}
     tar -c -z \
         --owner=root --group=root --numeric-owner \
