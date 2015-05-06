@@ -39,7 +39,7 @@ func newHandler(c *Connection) *handler {
 	return &handler{c, make(acksMap), make(receiverMap)}
 }
 
-func (h *handler) Handle(t event.MessagingEventType, e event.Event) error {
+func (h *handler) HandleMessagingEvent(t event.MessagingEventType, e event.Event) error {
 	switch t {
 	// FIXME aconway 2015-04-29: handle errors.
 	case event.MConnectionClosed:

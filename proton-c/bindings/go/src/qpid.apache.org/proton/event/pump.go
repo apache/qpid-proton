@@ -73,7 +73,7 @@ connections concurrently.
 
 Methods in this package can only be called in the goroutine that executes the
 corresponding Pump.Run(). You implement the CoreHandler or MessagingHandler
-interfaces and provide those values to NewPump(). Their Handle method will be
+interfaces and provide those values to NewPump(). Their HandleEvent method will be
 called in the Pump goroutine, in typical event-driven style.
 
 Handlers can pass values from an event (Connections, Links, Deliveries etc.) to
@@ -331,7 +331,7 @@ func (p *Pump) push(buf []byte) {
 
 func (p *Pump) handle(e Event) error {
 	for _, h := range p.handlers {
-		if err := h.Handle(e); err != nil {
+		if err := h.HandleEvent(e); err != nil {
 			return err
 		}
 	}

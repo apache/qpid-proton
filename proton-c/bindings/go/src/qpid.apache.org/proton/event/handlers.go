@@ -29,9 +29,9 @@ import (
 
 // CoreHandler handles core proton events.
 type CoreHandler interface {
-	// Handle is called with an event.
-	// Typically Handle() is implemented as a switch on e.Type()
-	Handle(e Event) error
+	// HandleEvent is called with an event.
+	// Typically HandleEvent() is implemented as a switch on e.Type()
+	HandleEvent(e Event) error
 }
 
 // cHandler wraps a C pn_handler_t
@@ -39,19 +39,19 @@ type cHandler struct {
 	pn *C.pn_handler_t
 }
 
-func (h cHandler) Handle(e Event) error {
+func (h cHandler) HandleEvent(e Event) error {
 	C.pn_handler_dispatch(h.pn, e.pn, C.pn_event_type(e.pn))
 	return nil // FIXME aconway 2015-03-31: error handling
 }
 
-// MessagingHandler provides an alternative interface to CoreHandler,
+// MessagingHandler provides an alternative interface to CoreHandler.
 // it is easier to use for most applications that send and receive messages.
 //
 // Implement this interface and then wrap your value with a MessagingHandlerDelegator.
 // MessagingHandlerDelegator implements CoreHandler and can be registered with a Pump.
 //
 type MessagingHandler interface {
-	Handle(MessagingEventType, Event) error
+	HandleMessagingEvent(MessagingEventType, Event) error
 }
 
 // MessagingEventType provides a set of events that are easier to work with than the
@@ -188,6 +188,8 @@ func (t MessagingEventType) String() string {
 	}
 }
 
+// ResourceHandler provides a simple way to track the creation and deletion of
+// various proton objects.
 // endpointDelegator captures common patterns for endpoints opening/closing
 type endpointDelegator struct {
 	remoteOpen, remoteClose, localOpen, localClose EventType
@@ -196,8 +198,8 @@ type endpointDelegator struct {
 	delegate                                       MessagingHandler
 }
 
-// Handle handles an open/close event for an endpoint in a generic way.
-func (d endpointDelegator) Handle(e Event) (err error) {
+// HandleEvent handles an open/close event for an endpoint in a generic way.
+func (d endpointDelegator) HandleEvent(e Event) (err error) {
 	endpoint := d.endpoint(e)
 	state := endpoint.State()
 
@@ -205,15 +207,15 @@ func (d endpointDelegator) Handle(e Event) (err error) {
 
 	case d.localOpen:
 		if state.Is(SRemoteActive) {
-			err = d.delegate.Handle(d.opened, e)
+			err = d.delegate.HandleMessagingEvent(d.opened, e)
 		}
 
 	case d.remoteOpen:
 		switch {
 		case state.Is(SLocalActive):
-			err = d.delegate.Handle(d.opened, e)
+			err = d.delegate.HandleMessagingEvent(d.opened, e)
 		case state.Is(SLocalUninit):
-			err = d.delegate.Handle(d.opening, e)
+			err = d.delegate.HandleMessagingEvent(d.opening, e)
 			if err == nil {
 				endpoint.Open()
 			}
@@ -222,15 +224,15 @@ func (d endpointDelegator) Handle(e Event) (err error) {
 	case d.remoteClose:
 		var err1 error
 		if endpoint.RemoteCondition().IsSet() {
-			err1 = d.delegate.Handle(d.error, e)
+			err1 = d.delegate.HandleMessagingEvent(d.error, e)
 			if err1 == nil {
 				err1 = endpoint.RemoteCondition().Error()
 			}
 		}
 		if state.Is(SLocalClosed) {
-			err = d.delegate.Handle(d.closed, e)
+			err = d.delegate.HandleMessagingEvent(d.closed, e)
 		} else {
-			err = d.delegate.Handle(d.closing, e)
+			err = d.delegate.HandleMessagingEvent(d.closing, e)
 			endpoint.Close()
 		}
 		if err1 != nil {
@@ -239,7 +241,7 @@ func (d endpointDelegator) Handle(e Event) (err error) {
 
 	case d.localClose:
 		if state.Is(SRemoteClosed) {
-			err = d.delegate.Handle(d.closed, e)
+			err = d.delegate.HandleMessagingEvent(d.closed, e)
 		}
 
 	default:
@@ -303,32 +305,32 @@ func NewMessagingDelegator(h MessagingHandler) CoreHandler {
 
 func handleIf(h CoreHandler, e Event) error {
 	if h != nil {
-		return h.Handle(e)
+		return h.HandleEvent(e)
 	}
 	return nil
 }
 
-func (d *MessagingDelegator) Handle(e Event) error {
+func (d *MessagingDelegator) HandleEvent(e Event) error {
 	handleIf(d.flowcontroller, e) // FIXME aconway 2015-03-31: error handling.
 
 	switch e.Type() {
 
 	case EConnectionInit:
 		d.flowcontroller = cHandler{C.pn_flowcontroller(C.int(d.Prefetch))}
-		d.delegate.Handle(MStart, e)
+		d.delegate.HandleMessagingEvent(MStart, e)
 
 	case EConnectionRemoteOpen, EConnectionRemoteClose, EConnectionLocalOpen, EConnectionLocalClose:
-		return d.connection.Handle(e)
+		return d.connection.HandleEvent(e)
 
 	case ESessionRemoteOpen, ESessionRemoteClose, ESessionLocalOpen, ESessionLocalClose:
-		return d.session.Handle(e)
+		return d.session.HandleEvent(e)
 
 	case ELinkRemoteOpen, ELinkRemoteClose, ELinkLocalOpen, ELinkLocalClose:
-		return d.link.Handle(e)
+		return d.link.HandleEvent(e)
 
 	case ELinkFlow:
 		if e.Link().IsSender() && e.Link().Credit() > 0 {
-			return d.delegate.Handle(MSendable, e)
+			return d.delegate.HandleMessagingEvent(MSendable, e)
 		}
 
 	case EDelivery:
@@ -339,7 +341,7 @@ func (d *MessagingDelegator) Handle(e Event) error {
 		}
 
 	case ETransportTailClosed:
-		d.delegate.Handle(MDisconnected, e)
+		d.delegate.HandleMessagingEvent(MDisconnected, e)
 	}
 	return nil
 }
@@ -353,7 +355,7 @@ func (d *MessagingDelegator) incoming(e Event) (err error) {
 				delivery.Release(false)
 			}
 		} else {
-			err = d.delegate.Handle(MMessage, e)
+			err = d.delegate.HandleMessagingEvent(MMessage, e)
 			e.Link().Advance()
 			if d.AutoAccept && !delivery.Settled() {
 				if err == nil {
@@ -364,7 +366,7 @@ func (d *MessagingDelegator) incoming(e Event) (err error) {
 			}
 		}
 	} else if delivery.Updated() && delivery.Settled() {
-		err = d.delegate.Handle(MSettled, e)
+		err = d.delegate.HandleMessagingEvent(MSettled, e)
 	}
 	return
 }
@@ -374,14 +376,14 @@ func (d *MessagingDelegator) outgoing(e Event) (err error) {
 	if delivery.Updated() {
 		switch delivery.Remote().Type() {
 		case Accepted:
-			err = d.delegate.Handle(MAccepted, e)
+			err = d.delegate.HandleMessagingEvent(MAccepted, e)
 		case Rejected:
-			err = d.delegate.Handle(MRejected, e)
+			err = d.delegate.HandleMessagingEvent(MRejected, e)
 		case Released, Modified:
-			err = d.delegate.Handle(MReleased, e)
+			err = d.delegate.HandleMessagingEvent(MReleased, e)
 		}
 		if err == nil && delivery.Settled() {
-			err = d.delegate.Handle(MSettled, e)
+			err = d.delegate.HandleMessagingEvent(MSettled, e)
 		}
 		if err == nil && d.AutoSettle {
 			delivery.Settle()

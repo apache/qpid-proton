@@ -157,9 +157,9 @@ func (b *broker) unsubscribe(l event.Link) {
 	}
 }
 
-func (b *broker) Handle(t event.MessagingEventType, e event.Event) error {
+func (b *broker) HandleMessagingEvent(t event.MessagingEventType, e event.Event) error {
 	// FIXME aconway 2015-05-04: locking is un-golike, better example coming soon.
-	// Needed because Handle is called for multiple connections concurrently
+	// Needed because the same handler is used for multiple connections concurrently
 	// and the queue data structures are not thread safe.
 	b.lock.Lock()
 	defer b.lock.Unlock()
