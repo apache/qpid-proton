@@ -101,6 +101,19 @@ will commit it.
 
 The various send/recv examples can be mixed and matched if desired.
 
+direct_send.py
+
+An example that accepts incoming links and connections over which it
+will then send out messages. Can be used with simple_recv.py or
+db_recv.py for direct, non-intermediated communication.
+
+direct_recv.py
+
+An example that accepts incoming links and connections over which it
+will then receive messages, printing out the content. Can be used with
+simple_send.py or db_send.py for direct, non-intermediated
+communication.
+
 -------------------------------------------------------------------
 
 client.py
@@ -130,6 +143,15 @@ server_tx.py
 
 A variant of the server part that consumes the request and sends out
 the response atomically in a local transaction.
+
+direct_server.py
+
+A variant of the server part of a request-response example, that
+accepts incoming connections and does not need an intermediary. Much
+like the original server, it receives incoming requests, converts the
+body to uppercase and sends the result back to the indicated reply
+address. Can be used in conjunction with any of the client
+alternatives.
 
 -------------------------------------------------------------------
 
