@@ -68,6 +68,8 @@ struct pni_sasl_t {
   enum pni_sasl_state desired_state;
   enum pni_sasl_state last_state;
   bool client;
+  bool input_bypass;
+  bool output_bypass;
   bool halt;
 };
 

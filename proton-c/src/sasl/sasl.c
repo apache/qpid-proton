@@ -114,12 +114,12 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
     return PN_EOS;
   }
 
-  if (!transport->sasl_input_bypass) {
+  if (!transport->sasl->input_bypass) {
     ssize_t n = pn_sasl_input(transport, bytes, available);
     if (n != PN_EOS) return n;
 
-    transport->sasl_input_bypass = true;
-    if (transport->sasl_output_bypass)
+    transport->sasl->input_bypass = true;
+    if (transport->sasl->output_bypass)
         transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_input(transport, layer, bytes, available );
@@ -141,7 +141,7 @@ static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned i
 
 static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  if (!transport->sasl_output_bypass) {
+  if (!transport->sasl->output_bypass) {
     // this accounts for when pn_do_error is invoked, e.g. by idle timeout
     ssize_t n;
     if (transport->close_sent) {
@@ -151,8 +151,8 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
     }
     if (n != PN_EOS) return n;
 
-    transport->sasl_output_bypass = true;
-    if (transport->sasl_input_bypass)
+    transport->sasl->output_bypass = true;
+    if (transport->sasl->input_bypass)
         transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_output(transport, layer, bytes, available );
@@ -368,6 +368,8 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->cyrus_out.start = NULL;
     sasl->desired_state = SASL_NONE;
     sasl->last_state = SASL_NONE;
+    sasl->input_bypass = false;
+    sasl->output_bypass = false;
     sasl->halt = false;
 
     transport->sasl = sasl;

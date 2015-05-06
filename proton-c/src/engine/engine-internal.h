@@ -197,10 +197,6 @@ struct pn_transport_t {
   bool encrypted;
 
   bool referenced;
-
-  // Temporarily here until refactor
-  bool sasl_input_bypass;
-  bool sasl_output_bypass;
 };
 
 struct pn_connection_t {
