@@ -484,6 +484,10 @@ class Connector(Handler):
         connection.hostname = "%s:%i" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
 
+        if url.username:
+            connection.user = url.username
+        if url.password:
+            connection.password = url.password
         transport = Transport()
         transport.bind(connection)
         if self.heartbeat:
@@ -491,12 +495,6 @@ class Connector(Handler):
         if url.scheme == 'amqps' and self.ssl_domain:
             self.ssl = SSL(transport, self.ssl_domain)
             self.ssl.peer_hostname = url.host
-        if url.username:
-            sasl = transport.sasl()
-            if url.username == 'anonymous':
-                sasl.mechanisms('ANONYMOUS')
-            else:
-                sasl.plain(url.username, url.password)
 
     def on_connection_local_open(self, event):
         self._connect(event.connection)
