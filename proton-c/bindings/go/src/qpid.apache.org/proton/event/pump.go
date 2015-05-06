@@ -72,7 +72,7 @@ data to/from a net.Conn. You can create multiple Pumps to handle multiple
 connections concurrently.
 
 Methods in this package can only be called in the goroutine that executes the
-corresponding Pump.Run(). You implement the CoreHandler or MessagingHandler
+corresponding Pump.Run(). You implement the EventHandler or MessagingHandler
 interfaces and provide those values to NewPump(). Their HandleEvent method will be
 called in the Pump goroutine, in typical event-driven style.
 
@@ -109,10 +109,10 @@ type Pump struct {
 	transport  *C.pn_transport_t
 	connection *C.pn_connection_t
 	collector  *C.pn_collector_t
-	read       *bufferChan   // Read buffers channel.
-	write      *bufferChan   // Write buffers channel.
-	handlers   []CoreHandler // Handlers for proton events.
-	running    chan struct{} // This channel will be closed when the goroutines are done.
+	read       *bufferChan    // Read buffers channel.
+	write      *bufferChan    // Write buffers channel.
+	handlers   []EventHandler // Handlers for proton events.
+	running    chan struct{}  // This channel will be closed when the goroutines are done.
 }
 
 const bufferSize = 4096
@@ -129,7 +129,7 @@ func init() {
 // The goroutine will exit when the pump is closed or disconnected.
 // You can check for errors on Pump.Error.
 //
-func NewPump(conn net.Conn, handlers ...CoreHandler) (*Pump, error) {
+func NewPump(conn net.Conn, handlers ...EventHandler) (*Pump, error) {
 	// Save the connection ID for Connection.String()
 	p := &Pump{
 		Inject:     make(chan func(), 100), // FIXME aconway 2015-05-04: blocking hack
@@ -344,7 +344,7 @@ func (p *Pump) handle(e Event) error {
 func (p *Pump) process() error {
 	// FIXME aconway 2015-05-04: if a Handler returns error we should stop the pump
 	for ce := C.pn_collector_peek(p.collector); ce != nil; ce = C.pn_collector_peek(p.collector) {
-		e := Event{ce}
+		e := makeEvent(ce)
 		if err := p.handle(e); err != nil {
 			return err
 		}

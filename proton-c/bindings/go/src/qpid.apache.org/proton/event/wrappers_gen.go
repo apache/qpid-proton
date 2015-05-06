@@ -41,26 +41,6 @@ import (
 // #include <proton/connection.h>
 import "C"
 
-type Event struct{ pn *C.pn_event_t }
-
-func (e Event) IsNil() bool { return e.pn == nil }
-func (e Event) Type() EventType {
-	return EventType(C.pn_event_type(e.pn))
-}
-func (e Event) Connection() Connection {
-	return Connection{C.pn_event_connection(e.pn)}
-}
-func (e Event) Session() Session {
-	return Session{C.pn_event_session(e.pn)}
-}
-func (e Event) Link() Link {
-	return Link{C.pn_event_link(e.pn)}
-}
-func (e Event) Delivery() Delivery {
-	return Delivery{C.pn_event_delivery(e.pn)}
-}
-func (e Event) String() string { return e.Type().String() }
-
 type EventType int
 
 const (
@@ -410,6 +390,9 @@ func (d Delivery) Update(state uint64) {
 }
 func (d Delivery) Clear() {
 	C.pn_delivery_clear(d.pn)
+}
+func (d Delivery) Current() bool {
+	return bool(C.pn_delivery_current(d.pn))
 }
 func (d Delivery) Settle() {
 	C.pn_delivery_settle(d.pn)

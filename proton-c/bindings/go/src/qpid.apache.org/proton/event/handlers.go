@@ -27,8 +27,8 @@ import (
 	"qpid.apache.org/proton/internal"
 )
 
-// CoreHandler handles core proton events.
-type CoreHandler interface {
+// EventHandler handles core proton events.
+type EventHandler interface {
 	// HandleEvent is called with an event.
 	// Typically HandleEvent() is implemented as a switch on e.Type()
 	HandleEvent(e Event) error
@@ -44,11 +44,11 @@ func (h cHandler) HandleEvent(e Event) error {
 	return nil // FIXME aconway 2015-03-31: error handling
 }
 
-// MessagingHandler provides an alternative interface to CoreHandler.
+// MessagingHandler provides an alternative interface to EventHandler.
 // it is easier to use for most applications that send and receive messages.
 //
 // Implement this interface and then wrap your value with a MessagingHandlerDelegator.
-// MessagingHandlerDelegator implements CoreHandler and can be registered with a Pump.
+// MessagingHandlerDelegator implements EventHandler and can be registered with a Pump.
 //
 type MessagingHandler interface {
 	HandleMessagingEvent(MessagingEventType, Event) error
@@ -57,82 +57,80 @@ type MessagingHandler interface {
 // MessagingEventType provides a set of events that are easier to work with than the
 // core events defined by EventType
 //
+// There are 3 types of "endpoint": Connection, Session and Link.
+// For each endpoint there are 5 event types: Opening, Opened, Closing, Closed and Error.
+// The meaning of these events is as follows:
+//
+// Opening: The remote end opened, the local end will open automatically.
+//
+// Opened: Both ends are open, regardless of which end opened first.
+//
+// Closing: The remote end closed without error, the local end will close automatically.
+//
+// Error: The remote end closed with an error, the local end will close automatically.
+//
+// Closed: Both ends are closed, regardless of which end closed first or if there was an error.
+//
 type MessagingEventType int
 
 const (
 	// The event loop starts.
 	MStart MessagingEventType = iota
-
 	// The peer closes the connection with an error condition.
 	MConnectionError
-
 	// The peer closes the session with an error condition.
 	MSessionError
-
 	// The peer closes the link with an error condition.
 	MLinkError
-
 	// The peer Initiates the opening of the connection.
 	MConnectionOpening
-
 	// The peer initiates the opening of the session.
 	MSessionOpening
-
 	// The peer initiates the opening of the link.
 	MLinkOpening
-
 	// The connection is opened.
 	MConnectionOpened
-
 	// The session is opened.
 	MSessionOpened
-
 	// The link is opened.
 	MLinkOpened
-
 	// The peer initiates the closing of the connection.
 	MConnectionClosing
-
 	// The peer initiates the closing of the session.
 	MSessionClosing
-
 	// The peer initiates the closing of the link.
 	MLinkClosing
-
 	// Both ends of the connection are closed.
 	MConnectionClosed
-
 	// Both ends of the session are closed.
 	MSessionClosed
-
 	// Both ends of the link are closed.
 	MLinkClosed
-
-	// The socket is disconnected.
-	MDisconnected
-
+	// The connection is disconnected.
+	MConnectionDisconnected
+	// The session's connection was disconnected
+	MSessionDisconnected
+	// The session's connection was disconnected
+	MLinkDisconnected
 	// The sender link has credit and messages can
 	// therefore be transferred.
 	MSendable
-
 	// The remote peer accepts an outgoing message.
 	MAccepted
-
 	// The remote peer rejects an outgoing message.
 	MRejected
-
 	// The peer releases an outgoing message. Note that this may be in response to
 	// either the RELEASE or MODIFIED state as defined by the AMQP specification.
 	MReleased
-
 	// The peer has settled the outgoing message. This is the point at which it
 	// shouod never be retransmitted.
 	MSettled
-
 	// A message is received. Call proton.EventMessage(Event) to get the message.
 	// To manage the outcome of this messages (e.g. to accept or reject the message)
 	// use Event.Delivery().
 	MMessage
+	// The event loop terminates, there are no more events to process.
+	MFinal
 )
 
 func (t MessagingEventType) String() string {
@@ -169,8 +167,12 @@ func (t MessagingEventType) String() string {
 		return "SessionClosed"
 	case MLinkClosed:
 		return "LinkClosed"
-	case MDisconnected:
-		return "Disconnected"
+	case MConnectionDisconnected:
+		return "ConnectionDisconnected"
+	case MSessionDisconnected:
+		return "MSessionDisconnected"
+	case MLinkDisconnected:
+		return "MLinkDisconnected"
 	case MSendable:
 		return "Sendable"
 	case MAccepted:
@@ -223,19 +225,20 @@ func (d endpointDelegator) HandleEvent(e Event) (err error) {
 
 	case d.remoteClose:
 		var err1 error
-		if endpoint.RemoteCondition().IsSet() {
+		if endpoint.RemoteCondition().IsSet() { // Closed with error
 			err1 = d.delegate.HandleMessagingEvent(d.error, e)
-			if err1 == nil {
+			if err1 == nil { // Don't overwrite an application error.
 				err1 = endpoint.RemoteCondition().Error()
 			}
+		} else {
+			err1 = d.delegate.HandleMessagingEvent(d.closing, e)
 		}
 		if state.Is(SLocalClosed) {
 			err = d.delegate.HandleMessagingEvent(d.closed, e)
-		} else {
-			err = d.delegate.HandleMessagingEvent(d.closing, e)
+		} else if state.Is(SLocalActive) {
 			endpoint.Close()
 		}
-		if err1 != nil {
+		if err1 != nil { // Keep the first error.
 			err = err1
 		}
 
@@ -252,13 +255,13 @@ func (d endpointDelegator) HandleEvent(e Event) (err error) {
 	return err
 }
 
-// MessagingDelegator implments a CoreHandler and delegates to a MessagingHandler.
+// MessagingDelegator implments a EventHandler and delegates to a MessagingHandler.
 // You can modify the exported fields before you pass the MessagingDelegator to
 // a Pump.
 type MessagingDelegator struct {
 	delegate                   MessagingHandler
 	connection, session, link  endpointDelegator
-	handshaker, flowcontroller CoreHandler
+	handshaker, flowcontroller EventHandler
 
 	// AutoSettle (default true) automatically pre-settle outgoing messages.
 	AutoSettle bool
@@ -271,7 +274,7 @@ type MessagingDelegator struct {
 	PeerCloseError bool
 }
 
-func NewMessagingDelegator(h MessagingHandler) CoreHandler {
+func NewMessagingDelegator(h MessagingHandler) EventHandler {
 	return &MessagingDelegator{
 		delegate: h,
 		connection: endpointDelegator{
@@ -303,13 +306,15 @@ func NewMessagingDelegator(h MessagingHandler) CoreHandler {
 	}
 }
 
-func handleIf(h CoreHandler, e Event) error {
+func handleIf(h EventHandler, e Event) error {
 	if h != nil {
 		return h.HandleEvent(e)
 	}
 	return nil
 }
 
+// Handle a proton event by passing the corresponding MessagingEvent(s) to
+// the MessagingHandler.
 func (d *MessagingDelegator) HandleEvent(e Event) error {
 	handleIf(d.flowcontroller, e) // FIXME aconway 2015-03-31: error handling.
 
@@ -341,7 +346,20 @@ func (d *MessagingDelegator) HandleEvent(e Event) error {
 		}
 
 	case ETransportTailClosed:
-		d.delegate.HandleMessagingEvent(MDisconnected, e)
+		c := e.Connection()
+		for l := c.LinkHead(SRemoteActive); !l.IsNil(); l = l.Next(SRemoteActive) {
+			e2 := e
+			e2.link = l
+			e2.session = l.Session()
+			d.delegate.HandleMessagingEvent(MLinkDisconnected, e2)
+		}
+		for s := c.SessionHead(SRemoteActive); !s.IsNil(); s = s.Next(SRemoteActive) {
+			e2 := e
+			e2.session = s
+			d.delegate.HandleMessagingEvent(MSessionDisconnected, e2)
+		}
+		d.delegate.HandleMessagingEvent(MConnectionDisconnected, e)
+		d.delegate.HandleMessagingEvent(MFinal, e)
 	}
 	return nil
 }

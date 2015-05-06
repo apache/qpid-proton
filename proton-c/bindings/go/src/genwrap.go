@@ -152,9 +152,7 @@ var (
 func event(out io.Writer) {
 	event_h := readHeader("event")
 
-	// event.h API functions
-	apiWrapFns("event", event_h, out)
-	fmt.Fprintln(out, `func (e Event) String() string { return e.Type().String() }`)
+	// Event is implented by hand in wrappers.go
 
 	// Get all the pn_event_type_t enum values
 	var etypes []eventType
@@ -206,6 +204,8 @@ func (g genType) goConvert(value string) string {
 	switch g.Gotype {
 	case "string":
 		return fmt.Sprintf("C.GoString(%s)", value)
+	case "Event":
+		return fmt.Sprintf("makeEvent(%s)", value)
 	default:
 		return fmt.Sprintf("%s(%s)", g.Gotype, value)
 	}

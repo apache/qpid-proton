@@ -172,16 +172,8 @@ func (b *broker) HandleMessagingEvent(t event.MessagingEventType, e event.Event)
 			q.subscribe(e.Link())
 		}
 
-	case event.MLinkClosing:
+	case event.MLinkDisconnected, event.MLinkClosing:
 		b.unsubscribe(e.Link())
-
-	case event.MDisconnected:
-		fallthrough
-	case event.MConnectionClosing:
-		c := e.Connection()
-		for l := c.LinkHead(event.SRemoteActive); !l.IsNil(); l = l.Next(event.SRemoteActive) {
-			b.unsubscribe(l)
-		}
 
 	case event.MSendable:
 		q := b.getQueue(e.Link().RemoteSource().Address())

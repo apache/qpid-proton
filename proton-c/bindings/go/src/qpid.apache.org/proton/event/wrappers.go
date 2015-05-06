@@ -24,6 +24,7 @@ package event
 //#include <proton/session.h>
 //#include <proton/session.h>
 //#include <proton/delivery.h>
+//#include <proton/link.h>
 //#include <proton/event.h>
 //#include <proton/transport.h>
 //#include <proton/link.h>
@@ -37,6 +38,34 @@ import (
 )
 
 // FIXME aconway 2015-05-05: Documentation for generated types.
+
+// Event is an AMQP protocol event.
+type Event struct {
+	pn         *C.pn_event_t
+	eventType  EventType
+	connection Connection
+	session    Session
+	link       Link
+	delivery   Delivery
+}
+
+func makeEvent(pn *C.pn_event_t) Event {
+	return Event{
+		pn:         pn,
+		eventType:  EventType(C.pn_event_type(pn)),
+		connection: Connection{C.pn_event_connection(pn)},
+		session:    Session{C.pn_event_session(pn)},
+		link:       Link{C.pn_event_link(pn)},
+		delivery:   Delivery{C.pn_event_delivery(pn)},
+	}
+}
+func (e Event) IsNil() bool            { return e.eventType == EventType(0) }
+func (e Event) Type() EventType        { return e.eventType }
+func (e Event) Connection() Connection { return e.connection }
+func (e Event) Session() Session       { return e.session }
+func (e Event) Link() Link             { return e.link }
+func (e Event) Delivery() Delivery     { return e.delivery }
+func (e Event) String() string         { return e.Type().String() }
 
 // Data holds a pointer to decoded AMQP data.
 // Use proton.marshal/unmarshal to access it as Go data types.
