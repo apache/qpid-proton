@@ -18,28 +18,11 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+package org.apache.qpid.proton.reactor;
 
-/**
- * Collector
- *
- */
+// Interface used to identify classes that can be a child of a reactor.
+public interface ReactorChild {
 
-public interface Collector
-{
-
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
-        }
-    }
-
-    Event peek();
-
-    void pop();
-
-    boolean more();
+    void free();
 }

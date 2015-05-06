@@ -21,7 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
-import java.util.Iterator;
+
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -37,7 +37,7 @@ import org.apache.qpid.proton.amqp.transport.Target;
  *
  * TODO describe the application's responsibility to honour settlement.
  */
-public interface Link extends Endpoint
+public interface Link extends HandlerEndpoint
 {
 
     /**

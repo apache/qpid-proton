@@ -18,28 +18,18 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+package org.apache.qpid.proton.reactor;
 
-/**
- * Collector
- *
- */
+import org.apache.qpid.proton.engine.Handler;
 
-public interface Collector
-{
+public interface Task {
 
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
-        }
-    }
-
-    Event peek();
-
-    void pop();
-
-    boolean more();
+    public long deadline();
+    public void setReactor(Reactor reactor) ;
+    public Reactor getReactor();
+    public void setHandler(Handler handler) ;
+    public Handler getHandler() ;
+    public Object getAttachment() ;
+    public void setAttachment(Object attachment) ;
 }
