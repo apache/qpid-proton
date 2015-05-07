@@ -63,7 +63,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
   if (found && (found==mechs || found[-1]==' ') && (found[5]==0 || found[5]==' ') &&
       pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(5, found)) &&
       transport->sasl->username && transport->sasl->password) {
-    transport->sasl->selected_mechanism = strdup(PLAIN);
+    transport->sasl->selected_mechanism = pn_strdup(PLAIN);
     size_t usize = strlen(transport->sasl->username);
     size_t psize = strlen(transport->sasl->password);
     size_t size = usize + psize + 2;
@@ -91,7 +91,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
   // Make sure that string is separated and terminated and allowed
   if (found && (found==mechs || found[-1]==' ') && (found[9]==0 || found[9]==' ') &&
       pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(9, found))) {
-    transport->sasl->selected_mechanism = strdup(ANONYMOUS);
+    transport->sasl->selected_mechanism = pn_strdup(ANONYMOUS);
     if (transport->sasl->username) {
       size_t size = strlen(transport->sasl->username);
       char *iresp = (char *) malloc(size);
@@ -115,7 +115,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
 // Server will offer only ANONYMOUS
 int pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist)
 {
-  *mechlist = strdup("ANONYMOUS");
+  *mechlist = pn_strdup("ANONYMOUS");
   return 1;
 }
 

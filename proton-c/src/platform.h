@@ -85,9 +85,6 @@ int64_t pn_i_atoll(const char* num);
 int pn_i_snprintf(char *buf, size_t count, const char *fmt, ...);
 int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 
-#define strcasecmp(A,B) (!pni_eq_nocase(A,B))
-#define strncasecmp(A,B,C) (!pni_eq_n_nocase(A,B,C))
-
 #if !defined(S_ISDIR)
 # define S_ISDIR(X) ((X) & _S_IFDIR)
 #endif

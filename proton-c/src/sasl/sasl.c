@@ -24,7 +24,7 @@
 #include "dispatch_actions.h"
 #include "engine/engine-internal.h"
 #include "protocol.h"
-#include "platform.h" // For strncasecmp on Windows
+#include "util.h"
 #include "transport/autodetect.h"
 
 #include <assert.h>
@@ -221,7 +221,7 @@ bool pni_included_mech(const char *included_mech_list, pn_bytes_t s)
     if ((ptrdiff_t)len > end_list-c) return false;
 
     // Is word equal with a space or end of string afterwards?
-    if (strncasecmp(c, s.start, len)==0 && (c[len]==' ' || c[len]==0) ) return true;
+    if (pn_strncasecmp(c, s.start, len)==0 && (c[len]==' ' || c[len]==0) ) return true;
 
     c = strchr(c, ' ');
     c = c ? c+1 : NULL;
@@ -360,7 +360,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->username = NULL;
     sasl->password = NULL;
     sasl->config_name = sasl->client ? "proton-client" : "proton-server";
-    sasl->config_dir =  sasl_config_path ? strdup(sasl_config_path) : NULL;
+    sasl->config_dir =  sasl_config_path ? pn_strdup(sasl_config_path) : NULL;
     sasl->remote_fqdn = NULL;
     sasl->outcome = PN_SASL_NONE;
     sasl->impl_context = NULL;
@@ -411,7 +411,7 @@ void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, con
   pni_sasl_t *sasl = transport->sasl;
   sasl->username = user;
   free(sasl->password);
-  sasl->password = password ? strdup(password) : NULL;
+  sasl->password = password ? pn_strdup(password) : NULL;
 }
 
 const char *pn_sasl_get_user(pn_sasl_t *sasl0)
@@ -430,7 +430,7 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
 {
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
     free(sasl->included_mechanisms);
-    sasl->included_mechanisms = mechs ? strdup(mechs) : NULL;
+    sasl->included_mechanisms = mechs ? pn_strdup(mechs) : NULL;
     if (strcmp(mechs, "ANONYMOUS")==0 ) {
       pn_transport_t *transport = get_transport_internal(sasl0);
       pni_sasl_force_anonymous(transport);
@@ -447,7 +447,7 @@ void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
 {
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
     free(sasl->config_dir);
-    sasl->config_dir = strdup(dir);
+    sasl->config_dir = pn_strdup(dir);
 }
 
 void pn_sasl_done(pn_sasl_t *sasl0, pn_sasl_outcome_t outcome)

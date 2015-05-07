@@ -79,7 +79,7 @@ int pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist)
     int r = sasl_listmech(cyrus_conn, NULL, "", " ", "", &result, NULL, &count);
     if (pni_check_sasl_result(cyrus_conn, r, transport)) {
       if (result && *result) {
-        *mechlist = strdup(result);
+        *mechlist = pn_strdup(result);
       }
     }
   }
@@ -157,7 +157,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
     switch (result) {
         case SASL_OK:
         case SASL_CONTINUE:
-          sasl->selected_mechanism = strdup(mech_selected);
+          sasl->selected_mechanism = pn_strdup(mech_selected);
           return true;
         case SASL_NOMECH:
         default:

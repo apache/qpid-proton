@@ -230,7 +230,7 @@ static bool match_dns_pattern( const char *hostname,
   int slen = (int) strlen(hostname);
   if (memchr( pattern, '*', plen ) == NULL)
     return (plen == slen &&
-            strncasecmp( pattern, hostname, plen ) == 0);
+            pn_strncasecmp( pattern, hostname, plen ) == 0);
 
   /* dns wildcarded pattern - RFC2818 */
   char plabel[64];   /* max label length < 63 - RFC1034 */
@@ -260,15 +260,15 @@ static bool match_dns_pattern( const char *hostname,
 
     char *star = strchr( plabel, '*' );
     if (!star) {
-      if (strcasecmp( plabel, slabel )) return false;
+      if (pn_strcasecmp( plabel, slabel )) return false;
     } else {
       *star = '\0';
       char *prefix = plabel;
       int prefix_len = strlen(prefix);
       char *suffix = star + 1;
       int suffix_len = strlen(suffix);
-      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
-      if (suffix_len && strncasecmp( suffix,
+      if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && pn_strncasecmp( suffix,
                                      slabel + (strlen(slabel) - suffix_len),
                                      suffix_len )) return false;
     }
