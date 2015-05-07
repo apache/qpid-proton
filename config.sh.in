@@ -33,7 +33,7 @@ PERL_BINDINGS=$PROTON_BINDINGS/perl
 COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 export JYTHONPATH=$COMMON_PYPATH:$PROTON_HOME/proton-j/src/main/resources:$PROTON_JARS
-export CLASSPATH=$PROTON_JARS
+export CLASSPATH=$PROTON_JARS:$PROTON_HOME/tests/target/test-classes
 
 # PHP
 if [ -d $PHP_BINDINGS ]; then

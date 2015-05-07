@@ -20,6 +20,9 @@
  */
 package org.apache.qpid.proton.engine;
 
+import java.util.HashSet;
+import java.util.Iterator;
+
 
 /**
  * BaseHandler
@@ -28,6 +31,7 @@ package org.apache.qpid.proton.engine;
 
 public class BaseHandler implements Handler
 {
+    private HashSet<Handler> children = new HashSet<Handler>();
 
     @Override public void onConnectionInit(Event e) { onUnhandled(e); }
     @Override public void onConnectionLocalOpen(Event e) { onUnhandled(e); }
@@ -62,6 +66,30 @@ public class BaseHandler implements Handler
     @Override public void onTransportTailClosed(Event e) { onUnhandled(e); }
     @Override public void onTransportClosed(Event e) { onUnhandled(e); }
 
+    @Override public void onReactorInit(Event e) { onUnhandled(e); }
+    @Override public void onReactorQuiesced(Event e) { onUnhandled(e); }
+    @Override public void onReactorFinal(Event e) { onUnhandled(e); }
+
+    @Override public void onTimerTask(Event e) { onUnhandled(e); }
+
+    @Override public void onSelectableInit(Event e) { onUnhandled(e); }
+    @Override public void onSelectableUpdated(Event e) { onUnhandled(e); }
+    @Override public void onSelectableReadable(Event e) { onUnhandled(e); }
+    @Override public void onSelectableWritable(Event e) { onUnhandled(e); }
+    @Override public void onSelectableExpired(Event e) { onUnhandled(e); }
+    @Override public void onSelectableError(Event e) { onUnhandled(e); }
+    @Override public void onSelectableFinal(Event e) { onUnhandled(e); }
+
     @Override public void onUnhandled(Event event) {}
+
+    @Override
+    public void add(Handler child) {
+        children.add(child);
+    }
+
+    @Override
+    public Iterator<Handler> children() {
+        return children.iterator();
+    }
 
 }

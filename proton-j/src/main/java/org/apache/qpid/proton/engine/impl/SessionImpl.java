@@ -20,14 +20,18 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.engine.Event;
 
-public class SessionImpl extends EndpointImpl implements ProtonJSession
+public class SessionImpl extends HandlerEndpointImpl implements ProtonJSession
 {
     private final ConnectionImpl _connection;
 
@@ -52,6 +56,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _connection.put(Event.Type.SESSION_INIT, this);
     }
 
+    @Override
     public SenderImpl sender(String name)
     {
         SenderImpl sender = _senders.get(name);
@@ -74,6 +79,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return sender;
     }
 
+    @Override
     public ReceiverImpl receiver(String name)
     {
         ReceiverImpl receiver = _receivers.get(name);
@@ -96,6 +102,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return receiver;
     }
 
+    @Override
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         LinkNode.Query<SessionImpl> query = new EndpointImplQuery<SessionImpl>(local, remote);
@@ -111,6 +118,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return _connection;
     }
 
+    @Override
     public ConnectionImpl getConnection()
     {
         return getConnectionImpl();

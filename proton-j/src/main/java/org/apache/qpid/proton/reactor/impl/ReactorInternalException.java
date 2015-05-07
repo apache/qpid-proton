@@ -18,28 +18,27 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+package org.apache.qpid.proton.reactor.impl;
 
 /**
- * Collector
- *
+ * Thrown by the reactor when it encounters an internal error condition.
+ * This is analogous to an assertion failure in the proton-c reactor
+ * implementation.
  */
+class ReactorInternalException extends RuntimeException {
 
-public interface Collector
-{
+    private static final long serialVersionUID = 8979674526584642454L;
 
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
-        }
+    protected ReactorInternalException(String msg) {
+        super(msg);
     }
 
-    Event peek();
+    protected ReactorInternalException(Throwable cause) {
+        super(cause);
+    }
 
-    void pop();
-
-    boolean more();
+    protected ReactorInternalException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

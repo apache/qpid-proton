@@ -18,28 +18,11 @@
  * under the License.
  *
  */
+
 package org.apache.qpid.proton.engine;
 
-import org.apache.qpid.proton.engine.impl.CollectorImpl;
+public interface HandlerEndpoint extends Endpoint {
 
-/**
- * Collector
- *
- */
+    void add(Handler handler);
 
-public interface Collector
-{
-
-    public static final class Factory
-    {
-        public static Collector create() {
-            return new CollectorImpl();
-        }
-    }
-
-    Event peek();
-
-    void pop();
-
-    boolean more();
 }
