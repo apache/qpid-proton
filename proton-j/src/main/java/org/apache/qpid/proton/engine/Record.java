@@ -18,27 +18,18 @@
  * under the License.
  *
  */
-
-package org.apache.qpid.proton.engine.impl;
-
-import org.apache.qpid.proton.engine.BaseHandler;
-import org.apache.qpid.proton.engine.Handler;
-import org.apache.qpid.proton.engine.HandlerEndpoint;
+package org.apache.qpid.proton.engine;
 
 
-public abstract class HandlerEndpointImpl extends EndpointImpl implements HandlerEndpoint {
+/**
+ * Record
+ *
+ */
 
-    private Handler handler = null;
+public interface Record
+{
 
-    @Override
-    public void add(Handler handler) {
-        if (this.handler == null) {
-            this.handler = new BaseHandler();
-        }
-        this.handler.add(handler);
-    }
+    <T> T get(Object key, Class<T> klass);
+    <T> void set(Object key, Class<T> klass, T value);
 
-    public Handler getHandler() {
-        return handler;
-    }
 }

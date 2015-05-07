@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.reactor.impl.ReactorImpl;
 
 
@@ -42,8 +43,7 @@ public interface Reactor {
 
     public long mark();
     public long now();
-    public void attach(Object attachment);
-    public Object attachment();
+    public Record attachments();
     public long getTimeout();
 
     public void setTimeout(long timeout);

@@ -31,7 +31,7 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Session;
 
-public class SessionImpl extends HandlerEndpointImpl implements ProtonJSession
+public class SessionImpl extends EndpointImpl implements ProtonJSession
 {
     private final ConnectionImpl _connection;
 

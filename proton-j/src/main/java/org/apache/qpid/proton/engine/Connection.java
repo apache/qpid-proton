@@ -37,7 +37,7 @@ import org.apache.qpid.proton.reactor.ReactorChild;
  * {@link #sessionHead(EnumSet, EnumSet)}, {@link #linkHead(EnumSet, EnumSet)}
  * {@link #getWorkHead()} respectively.
  */
-public interface Connection extends HandlerEndpoint, ReactorChild
+public interface Connection extends Endpoint, ReactorChild
 {
 
     public static final class Factory

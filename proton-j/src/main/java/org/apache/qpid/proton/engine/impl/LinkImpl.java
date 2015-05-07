@@ -30,7 +30,7 @@ import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Link;
 
-public abstract class LinkImpl extends HandlerEndpointImpl implements Link
+public abstract class LinkImpl extends EndpointImpl implements Link
 {
 
     private final SessionImpl _session;

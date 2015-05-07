@@ -37,7 +37,7 @@ import org.apache.qpid.proton.amqp.transport.Target;
  *
  * TODO describe the application's responsibility to honour settlement.
  */
-public interface Link extends HandlerEndpoint
+public interface Link extends Endpoint
 {
 
     /**

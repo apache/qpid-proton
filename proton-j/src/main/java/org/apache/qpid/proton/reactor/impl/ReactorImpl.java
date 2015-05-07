@@ -34,9 +34,10 @@ import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
-import org.apache.qpid.proton.engine.impl.HandlerEndpointImpl;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
@@ -47,7 +48,6 @@ import org.apache.qpid.proton.reactor.Task;
 
 public class ReactorImpl implements Reactor {
 
-    private Object attachment;
     private CollectorImpl collector;
     private long now;
     private long timeout;
@@ -61,6 +61,7 @@ public class ReactorImpl implements Reactor {
     private Timer timer;
     private final Pipe wakeup;
     private Selector selector;
+    private Record attachments;
 
     @Override
     public long mark() {
@@ -82,6 +83,7 @@ public class ReactorImpl implements Reactor {
         timer = new Timer(collector);
         wakeup = Pipe.open();
         mark();
+        attachments = new RecordImpl();
     }
 
     @Override
@@ -110,14 +112,8 @@ public class ReactorImpl implements Reactor {
         }
     }
 
-    @Override
-    public void attach(Object attachment) {
-        this.attachment = attachment;
-    }
-
-    @Override
-    public Object attachment() {
-        return attachment;
+    public Record attachments() {
+        return attachments;
     }
 
     @Override
@@ -205,19 +201,27 @@ public class ReactorImpl implements Reactor {
         }
     }
 
+    static Handler getHandler(Record record) {
+        return record.get(ReactorImpl.class, Handler.class);
+    }
+
+    static void setHandler(Record record, Handler handler) {
+        record.set(ReactorImpl.class, Handler.class, handler);
+    }
+
     // pn_event_handler
     private Handler eventHandler(Event event) {
         Handler result;
         if (event.getLink() != null) {
-            result = ((HandlerEndpointImpl)event.getLink()).getHandler();
+            result = getHandler(event.getLink().attachments());
             if (result != null) return result;
         }
         if (event.getSession() != null) {
-            result = ((HandlerEndpointImpl)event.getSession()).getHandler();
+            result = getHandler(event.getSession().attachments());
             if (result != null) return result;
         }
         if (event.getConnection() != null) {
-            result = ((HandlerEndpointImpl)event.getConnection()).getHandler();
+            result = getHandler(event.getConnection().attachments());
             if (result != null) return result;
         }
 
@@ -394,7 +398,7 @@ public class ReactorImpl implements Reactor {
     @Override
     public Connection connection(Handler handler) {
         Connection connection = Proton.connection();
-        connection.add(handler);
+        setHandler(connection.attachments(), handler);
         connection.collect(collector);
         children.add(connection);
         ((ConnectionImpl)connection).setReactor(this);

@@ -36,7 +36,7 @@ import org.apache.qpid.proton.engine.ProtonJConnection;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.reactor.Reactor;
 
-public class ConnectionImpl extends HandlerEndpointImpl implements ProtonJConnection
+public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 {
     public static final int MAX_CHANNELS = 65535;
 

@@ -76,4 +76,7 @@ public interface Endpoint
      * @see #setContext(Object)
      */
     public Object getContext();
+
+    Record attachments();
+
 }

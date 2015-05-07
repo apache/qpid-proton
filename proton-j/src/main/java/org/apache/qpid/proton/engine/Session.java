@@ -28,7 +28,7 @@ import java.util.EnumSet;
  *
  * Note that session level flow control is handled internally by Proton.
  */
-public interface Session extends HandlerEndpoint
+public interface Session extends Endpoint
 {
     /**
      * Returns a newly created sender endpoint

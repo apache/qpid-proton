@@ -18,11 +18,29 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.engine.impl;
 
-package org.apache.qpid.proton.engine;
+import org.apache.qpid.proton.engine.Record;
+import java.util.HashMap;
+import java.util.Map;
 
-public interface HandlerEndpoint extends Endpoint {
 
-    void add(Handler handler);
+/**
+ * RecordImpl
+ *
+ */
+
+public class RecordImpl implements Record
+{
+
+    private Map<Object,Object> values = new HashMap<Object,Object>();
+
+    public <T> void set(Object key, Class<T> klass, T value) {
+        values.put(key, value);
+    }
+
+    public <T> T get(Object key, Class<T> klass) {
+        return klass.cast(values.get(key));
+    }
 
 }
