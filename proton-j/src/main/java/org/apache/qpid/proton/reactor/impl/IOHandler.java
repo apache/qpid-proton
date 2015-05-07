@@ -99,7 +99,7 @@ public class IOHandler extends BaseHandler {
         }
 
         Transport transport = event.getConnection().getTransport();
-        Socket socket = null;   // TODO: null is our equivalent of PN_INVALID_SOCKET
+        Socket socket = null;   // In this case, 'null' is the proton-j equivalent of PN_INVALID_SOCKET
         try {
             SocketChannel socketChannel = SocketChannel.open();
             socketChannel.connect(new InetSocketAddress(hostname, port));
@@ -111,7 +111,7 @@ public class IOHandler extends BaseHandler {
             transport.setCondition(condition);
             transport.close_tail();
             transport.close_head();
-            transport.pop(transport.pending());   // TODO: force generation of TRANSPORT_HEAD_CLOSE (not in C code)
+            transport.pop(transport.pending());   // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
         }
         selectableTransport(reactor, socket, transport);
     }
@@ -183,9 +183,9 @@ public class IOHandler extends BaseHandler {
                     transport.close_tail();
                 }
             }
-            // TODO: comment from C code...
-            // occasionally transport events aren't generated when expected, so
-            // the following hack ensures we always update the selector
+            // (Comment from C code:) occasionally transport events aren't
+            // generated when expected, so the following hack ensures we
+            // always update the selector
             update(selectable);
             reactor.update(selectable);
         }
@@ -264,8 +264,8 @@ public class IOHandler extends BaseHandler {
     }
 
     // pn_reactor_selectable_transport
+    // Note the socket argument can, validly be 'null' this is the equivalent of proton-c's PN_INVALID_SOCKET
     protected static Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
-        // TODO: this code needs to be able to deal with a null socket (this is our equivalent of PN_INVALID_SOCKET)
         Selectable selectable = reactor.selectable();
         selectable.setChannel(socket != null ? socket.getChannel() : null);
         selectable.onReadable(new ConnectionReadable());    // TODO: *IF* these callbacks are stateless, do we more than one instance of them?
@@ -296,7 +296,7 @@ public class IOHandler extends BaseHandler {
             ReactorImpl reactor = (ReactorImpl)event.getReactor();
             Selector selector = reactor.getSelector();
             if (selector == null) {
-                selector = new SelectorImpl();     // TODO: the C code supplies the reactor's pn_io object here...
+                selector = new SelectorImpl();
                 reactor.setSelector(selector);
             }
 

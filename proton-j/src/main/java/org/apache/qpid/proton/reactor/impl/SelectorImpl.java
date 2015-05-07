@@ -40,12 +40,12 @@ public class SelectorImpl implements Selector {
     private final HashSet<Selectable> error = new HashSet<Selectable>();
 
     public SelectorImpl() throws IOException {
-        selector = java.nio.channels.Selector.open();   // TODO: need to ensure we close this somewhere...
+        selector = java.nio.channels.Selector.open();
     }
 
     @Override
     public void add(Selectable selectable) throws IOException {
-        // TODO: valid for selectable to have a 'null' channel - in this case it can only expire...
+        // Selectable can be 'null' - if this is the case it can only ever receive expiry events.
         if (selectable.getChannel() != null) {
             selectable.getChannel().configureBlocking(false);
             SelectionKey key = selectable.getChannel().register(selector, 0);

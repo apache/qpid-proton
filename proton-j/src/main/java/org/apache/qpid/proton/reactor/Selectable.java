@@ -67,9 +67,10 @@ public interface Selectable extends ReactorChild {
 
     void release() ;
 
+    @Override
     void free() ;
 
-    // These are equivalent to the C code's set/get file descritor functions.
+    // These are equivalent to the C code's set/get file descriptor functions.
     void setChannel(SelectableChannel channel) ;
 
     public SelectableChannel getChannel() ;

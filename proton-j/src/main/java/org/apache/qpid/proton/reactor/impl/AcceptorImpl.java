@@ -97,7 +97,7 @@ public class AcceptorImpl implements Acceptor {
         sel = ((ReactorImpl)reactor).selectable(this);
         sel.setChannel(ssc);
         sel.onReadable(new AcceptorReadable());
-        sel.onFree(new AcceptorFree()); // TODO: currently, this is not called from anywhere!!
+        sel.onFree(new AcceptorFree());
         sel.setReactor(reactor);
         sel.setAttachment(handler);
         sel.setReading(true);

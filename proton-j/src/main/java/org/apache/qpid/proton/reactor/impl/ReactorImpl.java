@@ -47,23 +47,6 @@ import org.apache.qpid.proton.reactor.Task;
 
 public class ReactorImpl implements Reactor {
 
-    /*
-     *   pn_record_t *attachments;
- 41   pn_io_t *io;
- 42   pn_collector_t *collector;
- 43   pn_handler_t *global;
- 44   pn_handler_t *handler;
- 45   pn_list_t *children;
- 46   pn_timer_t *timer;
- 47   pn_socket_t wakeup[2];
- 48   pn_selectable_t *selectable;
- 49   pn_event_type_t previous;
- 50   pn_timestamp_t now;
- 51   int selectables;
- 52   int timeout;
- 53   bool yield;
-     */
-
     private Object attachment;
     private CollectorImpl collector;
     private long now;
@@ -77,6 +60,7 @@ public class ReactorImpl implements Reactor {
     private Type previous;
     private Timer timer;
     private final Pipe wakeup;
+    private Selector selector;
 
     @Override
     public long mark() {
@@ -88,25 +72,7 @@ public class ReactorImpl implements Reactor {
     public long now() {
         return now;
     }
-/*
- * tatic void pn_reactor_initialize(pn_reactor_t *reactor) {
- 68   reactor->attachments = pn_record();
- 69   reactor->io = pn_io();    TODO: pn_io most literally translates to SocketFactory (and possibly also ServerSocketFactory...)
- 70   reactor->collector = pn_collector();
- 71   reactor->global = pn_iohandler();
- 72   reactor->handler = pn_handler(NULL);
- 73   reactor->children = pn_list(PN_OBJECT, 0);
- 74   reactor->timer = pn_timer(reactor->collector);
- 75   reactor->wakeup[0] = PN_INVALID_SOCKET;
- 76   reactor->wakeup[1] = PN_INVALID_SOCKET;
- 77   reactor->selectable = NULL;
- 78   reactor->previous = PN_EVENT_NONE;
- 79   reactor->selectables = 0;
- 80   reactor->timeout = 0;
- 81   reactor->yield = false;
- 82   pn_reactor_mark(reactor);
- 83 }
- 84  */
+
     public ReactorImpl() throws IOException {
         collector = (CollectorImpl)Proton.collector();
         global = new IOHandler();
@@ -184,15 +150,6 @@ public class ReactorImpl implements Reactor {
         this.handler = handler;
     }
 
-/* TODO
- * pn_io_t *pn_reactor_io(pn_reactor_t *reactor) {
-166   assert(reactor);
-167   return reactor->io;
-168 }
-169
-
- */
-
     @Override
     public Set<ReactorChild> children() {
         return children;
@@ -248,13 +205,7 @@ public class ReactorImpl implements Reactor {
         }
     }
 
-    // TODO: pn_record_get_handler
-    // TODO: pn_record_set_handler
-    // TODO: pn_class_reactor
-    // TODO: pn_object_reactor
-    // TODO: pn_event_reactor
-
-    // pn_event_handler - TODO: this is copied from the Reactor.java code, so might need some tweaks...
+    // pn_event_handler
     private Handler eventHandler(Event event) {
         Handler result;
         if (event.getLink() != null) {
@@ -269,10 +220,6 @@ public class ReactorImpl implements Reactor {
             result = ((HandlerEndpointImpl)event.getConnection()).getHandler();
             if (result != null) return result;
         }
-//        if (event.getTransport() != null) { // TODO: do we want to allow handlers to be added to the Transport object?
-//            result = ((EndpointImpl)event.getTransport()).getHandlers();
-//            if (result.hasNext()) return result;
-//        }
 
         if (event.getTask() != null) {
             result = event.getTask().getHandler();
@@ -347,7 +294,6 @@ public class ReactorImpl implements Reactor {
 
     @Override
     public void wakeup() throws IOException {
-        //selector.wakeup();
         wakeup.sink().write(ByteBuffer.allocate(1));    // TODO: c version returns a value!
     }
 
@@ -355,7 +301,6 @@ public class ReactorImpl implements Reactor {
     public void start() {
         collector.put(Type.REACTOR_INIT, this);
         selectable = timerSelectable();
-        //selectable.setDeadline(now + timeout);      // TODO: this isn't in the C code...
     }
 
     @Override
@@ -372,7 +317,7 @@ public class ReactorImpl implements Reactor {
 
     @Override
     public void run() {
-        setTimeout(3141);   // TODO: eh?
+        setTimeout(3141);
         start();
         while(process()) {}
         stop();
@@ -390,24 +335,11 @@ public class ReactorImpl implements Reactor {
         }
         return task;
     }
-    // TODO: acceptor
-    // TODO: connection
-    // TODO: acceptorClose
 
     private class TimerReadable implements Callback {
 
         @Override
         public void run(Selectable selectable) {
-            // TODO: the implication is that this will be called when the selectable is woken-up
-/*
-  434 static void pni_timer_readable(pn_selectable_t *sel) {
-  435   char buf[64];
-  436   pn_reactor_t *reactor = pni_reactor(sel);
-  437   pn_socket_t fd = pn_selectable_get_fd(sel);
-  438   pn_read(reactor->io, fd, buf, 64);
-  439   pni_timer_expired(sel);
-  440 }
- */
             // TODO: this could be more elegant...
             new TimerExpired().run(selectable);
         }
@@ -433,7 +365,7 @@ public class ReactorImpl implements Reactor {
                 selectable.getChannel().close();
             } catch(IOException e) {
                 e.printStackTrace();
-                // TODO: no idea what to do here...
+                // TODO: what to do here...
             }
         }
     }
@@ -449,9 +381,6 @@ public class ReactorImpl implements Reactor {
         update(sel);
         return sel;
     }
-
-    // TODO: the C code allows records to be associated with a Reactor and the Selector is get/set using that capability.
-    private Selector selector;
 
     protected Selector getSelector() {
         return selector;
