@@ -19,12 +19,17 @@
  *
  */
 #include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/Event.h"
+#include "proton/cpp/ProtonEvent.h"
+#include "proton/cpp/MessagingAdapter.h"
+#include "proton/handlers.h"
 
 namespace proton {
 namespace reactor {
 
-MessagingHandler::MessagingHandler(){};
+MessagingHandler::MessagingHandler(int prefetch0, bool autoAccept0, bool autoSettle0, bool peerCloseIsError0) :
+    prefetch(prefetch0), autoAccept(autoAccept0), autoSettle(autoSettle0), peerCloseIsError(peerCloseIsError0)
+{}
+
 MessagingHandler::~MessagingHandler(){};
 
 void MessagingHandler::onAbort(Event &e) { onUnhandled(e); }

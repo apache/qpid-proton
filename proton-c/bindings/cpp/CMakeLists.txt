@@ -48,6 +48,8 @@ set (qpid-proton-cpp-core
     src/Receiver.cpp
     src/Sender.cpp
     src/Session.cpp
+    src/Delivery.cpp
+    src/Acking.cpp
     src/Transport.cpp
     src/Logger.cpp
     src/contexts.cpp

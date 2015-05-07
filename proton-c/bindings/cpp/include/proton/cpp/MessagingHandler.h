@@ -23,6 +23,7 @@
  */
 
 #include "proton/cpp/ProtonHandler.h"
+#include "proton/cpp/Acking.h"
 #include "proton/event.h"
 
 namespace proton {
@@ -30,11 +31,11 @@ namespace reactor {
 
 class Event;
 
-class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler
+class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler , public Acking
 {
   public:
-    PROTON_CPP_EXTERN MessagingHandler();
-//ZZZ    PROTON_CPP_EXTERN MessagingHandler(int prefetch=10, bool autoAccept=true, autoSettle=true, peerCloseIsError=false);
+    PROTON_CPP_EXTERN MessagingHandler(int prefetch=10, bool autoAccept=true, bool autoSettle=true,
+                                       bool peerCloseIsError=false);
     virtual ~MessagingHandler();
 
     virtual void onAbort(Event &e);
@@ -74,6 +75,14 @@ class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler
     virtual void onTransactionCommitted(Event &e);
     virtual void onTransactionDeclared(Event &e);
     virtual void onTransportClosed(Event &e);
+  protected:
+    int prefetch;
+    bool autoSettle;
+    bool autoAccept;
+    bool peerCloseIsError;
+  private:
+    friend class ContainerImpl;
+    friend class MessagingAdapter;
 };
 
 

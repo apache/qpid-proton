@@ -33,13 +33,14 @@
 namespace proton {
 namespace reactor {
 
-MessagingAdapter::MessagingAdapter(MessagingHandler &d) : delegate(d), handshaker(pn_handshaker()),
-                                                          autoSettle(true), autoAccept(true),
-                                                          peerCloseIsError(false) {
-};
-MessagingAdapter::~MessagingAdapter(){
-    pn_decref(handshaker);
-};
+MessagingAdapter::MessagingAdapter(MessagingHandler &delegate_) :
+    autoSettle(delegate_.autoSettle),
+    autoAccept(delegate_.autoAccept),
+    peerCloseIsError(delegate_.peerCloseIsError),
+    delegate(delegate_)
+{};
+
+MessagingAdapter::~MessagingAdapter(){};
 
 
 void MessagingAdapter::onReactorInit(Event &e) {

@@ -43,7 +43,51 @@ class Message : public ProtonHandle<pn_message_t>
 
     PROTON_CPP_EXTERN void setId(uint64_t id);
     PROTON_CPP_EXTERN uint64_t getId();
+    PROTON_CPP_EXTERN void setId(const std::string &id);
+    PROTON_CPP_EXTERN std::string getStringId();
+    PROTON_CPP_EXTERN void setId(const char *p, size_t len);
+    PROTON_CPP_EXTERN size_t getId(const char **p);
+    // TODO: UUID version
     PROTON_CPP_EXTERN pn_type_t getIdType();
+
+    PROTON_CPP_EXTERN void setUserId(const std::string &id);
+    PROTON_CPP_EXTERN std::string getUserId();
+
+    PROTON_CPP_EXTERN void setAddress(const std::string &addr);
+    PROTON_CPP_EXTERN std::string getAddress();
+
+    PROTON_CPP_EXTERN void setSubject(const std::string &s);
+    PROTON_CPP_EXTERN std::string getSubject();
+
+    PROTON_CPP_EXTERN void setReplyTo(const std::string &s);
+    PROTON_CPP_EXTERN std::string getReplyTo();
+
+    PROTON_CPP_EXTERN void setCorrelationId(uint64_t id);
+    PROTON_CPP_EXTERN uint64_t getCorrelationId();
+    PROTON_CPP_EXTERN void setCorrelationId(const std::string &id);
+    PROTON_CPP_EXTERN std::string getStringCorrelationId();
+    PROTON_CPP_EXTERN void setCorrelationId(const char *p, size_t len);
+    PROTON_CPP_EXTERN size_t getCorrelationId(const char **p);
+    // TODO: UUID version
+    PROTON_CPP_EXTERN pn_type_t getCorrelationIdType();
+
+    PROTON_CPP_EXTERN void setContentType(const std::string &s);
+    PROTON_CPP_EXTERN std::string getContentType();
+
+    PROTON_CPP_EXTERN void setContentEncoding(const std::string &s);
+    PROTON_CPP_EXTERN std::string getContentEncoding();
+
+    PROTON_CPP_EXTERN void setExpiry(pn_timestamp_t t);
+    PROTON_CPP_EXTERN pn_timestamp_t getExpiry();
+
+    PROTON_CPP_EXTERN void setCreationTime(pn_timestamp_t t);
+    PROTON_CPP_EXTERN pn_timestamp_t getCreationTime();
+
+    PROTON_CPP_EXTERN void setGroupId(const std::string &s);
+    PROTON_CPP_EXTERN std::string getGroupId();
+
+    PROTON_CPP_EXTERN void setReplyToGroupId(const std::string &s);
+    PROTON_CPP_EXTERN std::string getReplyToGroupId();
 
     PROTON_CPP_EXTERN void setBody(const std::string &data);
     PROTON_CPP_EXTERN std::string getBody();

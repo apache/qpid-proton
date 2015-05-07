@@ -308,16 +308,15 @@ void ContainerImpl::run() {
     // Set our context on the reactor
     setContainerContext(reactor, this);
 
-    int prefetch = 10; // TODO: configurable
+    int prefetch = messagingHandler.prefetch;
     Handler *flowController = 0;
 
-
     // Set the reactor's main/default handler (see note below)
-    MessagingAdapter messagingAdapter(messagingHandler);
     if (prefetch) {
         flowController = new CFlowController(prefetch);
         messagingHandler.addChildHandler(*flowController);
     }
+    MessagingAdapter messagingAdapter(messagingHandler);
     messagingHandler.addChildHandler(messagingAdapter);
     pn_handler_t *cppHandler = cpp_handler(this, &messagingHandler);
     pn_reactor_set_handler(reactor, cppHandler);

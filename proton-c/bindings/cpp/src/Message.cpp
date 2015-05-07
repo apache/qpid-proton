@@ -93,6 +93,45 @@ uint64_t Message::getId() {
     throw ProtonException(MSG("Message ID is not a ULONG"));
 }
 
+void Message::setId(const std::string &id) {
+    confirm(impl);
+    pn_data_t *data = pn_message_id(impl);
+    pn_data_clear(data);
+    if (int err = pn_data_put_string(data, pn_bytes(id.size(), id.data())))
+        throw ProtonException(MSG("setId error " << err));
+}
+
+std::string Message::getStringId() {
+    confirm(impl);
+    pn_data_t *data = pn_message_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_STRING) {
+        pn_bytes_t bytes = pn_data_get_string(data);
+        return (std::string(bytes.start, bytes.size));
+    }
+    throw ProtonException(MSG("Message ID is not a string value"));
+}
+
+void Message::setId(const char *p, size_t len) {
+    confirm(impl);
+    pn_data_t *data = pn_message_id(impl);
+    pn_data_clear(data);
+    if (int err = pn_data_put_binary(data, pn_bytes(len, p)))
+        throw ProtonException(MSG("setId error " << err));
+}
+
+size_t Message::getId(const char **p) {
+    confirm(impl);
+    pn_data_t *data = pn_message_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_BINARY) {
+        pn_bytes_t pnb = pn_data_get_binary(data);
+        *p = pnb.start;
+        return pnb.size;
+    }
+    throw ProtonException(MSG("Message ID is not a binary value"));
+}
+
 pn_type_t Message::getIdType() {
     confirm(impl);
     pn_data_t *data = pn_message_id(impl);
@@ -113,6 +152,199 @@ pn_type_t Message::getIdType() {
     return PN_NULL;
 }
 
+void Message::setUserId(const std::string &id) {
+    confirm(impl);
+    if (int err = pn_message_set_user_id(impl, pn_bytes(id.size(), id.data())))
+        throw ProtonException(MSG("setUserId error " << err));
+}
+
+std::string Message::getUserId() {
+    confirm(impl);
+    pn_bytes_t bytes = pn_message_get_user_id(impl);
+    return (std::string(bytes.start, bytes.size));
+}
+
+void Message::setAddress(const std::string &addr) {
+    confirm(impl);
+    if (int err = pn_message_set_address(impl, addr.c_str()))
+        throw ProtonException(MSG("setAddress error " << err));
+}
+
+std::string Message::getAddress() {
+    confirm(impl);
+    const char* addr = pn_message_get_address(impl);
+    return addr ? std::string(addr) : std::string();
+}
+
+void Message::setSubject(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_subject(impl, s.c_str()))
+        throw ProtonException(MSG("setSubject error " << err));
+}
+
+std::string Message::getSubject() {
+    confirm(impl);
+    const char* s = pn_message_get_subject(impl);
+    return s ? std::string(s) : std::string();
+}
+
+void Message::setReplyTo(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_reply_to(impl, s.c_str()))
+        throw ProtonException(MSG("setReplyTo error " << err));
+}
+
+std::string Message::getReplyTo() {
+    confirm(impl);
+    const char* s = pn_message_get_reply_to(impl);
+    return s ? std::string(s) : std::string();
+}
+
+void Message::setCorrelationId(uint64_t id) {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_clear(data);
+    if (int err = pn_data_put_ulong(data, id))
+        throw ProtonException(MSG("setCorrelationId error " << err));
+}
+
+uint64_t Message::getCorrelationId() {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_ULONG) {
+        return pn_data_get_ulong(data);
+    }
+    throw ProtonException(MSG("Correlation ID is not a ULONG"));
+}
+
+void Message::setCorrelationId(const std::string &id) {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_clear(data);
+    if (int err = pn_data_put_string(data, pn_bytes(id.size(), id.data())))
+        throw ProtonException(MSG("setCorrelationId error " << err));
+}
+
+std::string Message::getStringCorrelationId() {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_STRING) {
+        pn_bytes_t bytes = pn_data_get_string(data);
+        return (std::string(bytes.start, bytes.size));
+    }
+    throw ProtonException(MSG("Message ID is not a string value"));
+}
+
+void Message::setCorrelationId(const char *p, size_t len) {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_clear(data);
+    if (int err = pn_data_put_binary(data, pn_bytes(len, p)))
+        throw ProtonException(MSG("setCorrelationId error " << err));
+}
+
+size_t Message::getCorrelationId(const char **p) {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_BINARY) {
+        pn_bytes_t pnb = pn_data_get_binary(data);
+        *p = pnb.start;
+        return pnb.size;
+    }
+    throw ProtonException(MSG("Message ID is not a binary value"));
+}
+
+pn_type_t Message::getCorrelationIdType() {
+    confirm(impl);
+    pn_data_t *data = pn_message_correlation_id(impl);
+    pn_data_rewind(data);
+    if (pn_data_size(data) == 1 && pn_data_next(data)) {
+        pn_type_t type = pn_data_type(data);
+        switch (type) {
+        case PN_ULONG:
+        case PN_STRING:
+        case PN_BINARY:
+        case PN_UUID:
+            return type;
+            break;
+        default:
+            break;
+        }
+    }
+    return PN_NULL;
+}
+
+void Message::setContentType(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_content_type(impl, s.c_str()))
+        throw ProtonException(MSG("setContentType error " << err));
+}
+
+std::string Message::getContentType() {
+    confirm(impl);
+    const char* s = pn_message_get_content_type(impl);
+    return s ? std::string(s) : std::string();
+}
+
+void Message::setContentEncoding(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_content_encoding(impl, s.c_str()))
+        throw ProtonException(MSG("setContentEncoding error " << err));
+}
+
+std::string Message::getContentEncoding() {
+    confirm(impl);
+    const char* s = pn_message_get_content_encoding(impl);
+    return s ? std::string(s) : std::string();
+}
+
+void Message::setExpiry(pn_timestamp_t t) {
+    confirm(impl);
+    pn_message_set_expiry_time(impl, t);
+}
+pn_timestamp_t Message::getExpiry() {
+    confirm(impl);
+    return pn_message_get_expiry_time(impl);
+}
+
+void Message::setCreationTime(pn_timestamp_t t) {
+    confirm(impl);
+    pn_message_set_creation_time(impl, t);
+}
+pn_timestamp_t Message::getCreationTime() {
+    confirm(impl);
+    return pn_message_get_creation_time(impl);
+}
+
+
+void Message::setGroupId(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_group_id(impl, s.c_str()))
+        throw ProtonException(MSG("setGroupId error " << err));
+}
+
+std::string Message::getGroupId() {
+    confirm(impl);
+    const char* s = pn_message_get_group_id(impl);
+    return s ? std::string(s) : std::string();
+}
+
+void Message::setReplyToGroupId(const std::string &s) {
+    confirm(impl);
+    if (int err = pn_message_set_reply_to_group_id(impl, s.c_str()))
+        throw ProtonException(MSG("setReplyToGroupId error " << err));
+}
+
+std::string Message::getReplyToGroupId() {
+    confirm(impl);
+    const char* s = pn_message_get_reply_to_group_id(impl);
+    return s ? std::string(s) : std::string();
+}
+
+
 void Message::setBody(const std::string &buf) {
     confirm(impl);
     pn_data_t *body = pn_message_body(impl);
@@ -127,7 +359,7 @@ void Message::getBody(std::string &str) {
     pn_data_rewind(body);
 
     if (pn_data_next(body) && pn_data_type(body) == PN_STRING) {
-        pn_bytes_t bytes= pn_data_get_string(body);
+        pn_bytes_t bytes = pn_data_get_string(body);
         if (!pn_data_next(body)) {
             // String data and nothing else
             str.resize(bytes.size);
