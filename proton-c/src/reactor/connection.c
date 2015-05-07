@@ -101,6 +101,8 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   }
 
   pn_transport_t *transport = pn_transport();
+  pn_sasl_t *sasl = pn_sasl(transport);
+  pn_sasl_allowed_mechs(sasl, "ANONYMOUS");
   pn_transport_bind(transport, conn);
   pn_decref(transport);
 }

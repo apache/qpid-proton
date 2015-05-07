@@ -19,6 +19,7 @@
  *
  */
 
+#include <proton/sasl.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>
 #include <proton/event.h>
@@ -288,8 +289,8 @@ static void test_reactor_connect(void) {
   pn_reactor_connection(reactor, ch);
   pn_reactor_run(reactor);
   expect(srv->events, PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
-         PN_CONNECTION_REMOTE_OPEN,
-         PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
+         PN_TRANSPORT, PN_CONNECTION_REMOTE_OPEN,
+         PN_TRANSPORT, PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
          PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
          PN_CONNECTION_LOCAL_CLOSE, PN_TRANSPORT,
          PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED,
@@ -298,7 +299,8 @@ static void test_reactor_connect(void) {
   pn_decref(sh);
   expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
          PN_CONNECTION_BOUND,
-         PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_LOCAL_CLOSE,
+         PN_TRANSPORT, PN_CONNECTION_REMOTE_OPEN,
+         PN_CONNECTION_LOCAL_CLOSE,
          PN_TRANSPORT, PN_TRANSPORT_HEAD_CLOSED,
          PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
          PN_TRANSPORT_CLOSED, PN_CONNECTION_UNBOUND,
