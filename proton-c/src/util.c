@@ -214,7 +214,7 @@ void pni_fatal(const char *fmt, ...)
 
 int pn_strcasecmp(const char *a, const char *b)
 {
-  char diff;
+  int diff;
   while (*b) {
     diff = tolower(*a++)-tolower(*b++);
     if ( diff!=0 ) return diff;
@@ -224,7 +224,7 @@ int pn_strcasecmp(const char *a, const char *b)
 
 int pn_strncasecmp(const char* a, const char* b, size_t len)
 {
-  char diff = 0;
+  int diff = 0;
   while (*b && len > 0) {
     diff = tolower(*a++)-tolower(*b++);
     if ( diff!=0 ) return diff;
