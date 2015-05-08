@@ -3142,6 +3142,14 @@ class Delivery(Wrapper):
 class TransportException(ProtonException):
   pass
 
+class TraceAdapter:
+
+  def __init__(self, tracer):
+    self.tracer = tracer
+
+  def __call__(self, trans_impl, message):
+    self.tracer(Transport.wrap(trans_impl), message)
+
 class Transport(Wrapper):
 
   TRACE_OFF = PN_TRACE_OFF
@@ -3178,6 +3186,24 @@ class Transport(Wrapper):
       raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._impl))))
     else:
       return err
+
+  def _set_tracer(self, tracer):
+    pn_transport_set_pytracer(self._impl, TraceAdapter(tracer));
+
+  def _get_tracer(self):
+    adapter = pn_transport_get_pytracer(self._impl)
+    if adapter:
+      return adapter.tracer
+    else:
+      return None
+
+  tracer = property(_get_tracer, _set_tracer,
+                            doc="""
+A callback for trace logging. The callback is passed the transport and log message.
+""")
+
+  def log(self, message):
+    pn_transport_log(self._impl, message)
 
   def require_auth(self, bool):
     pn_transport_require_auth(self._impl, bool)

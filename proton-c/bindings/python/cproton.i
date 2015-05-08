@@ -291,6 +291,42 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     SWIG_PYTHON_THREAD_END_BLOCK;
     return chandler;
   }
+
+  PN_HANDLE(PNI_PYTRACER)
+
+  void pn_pytracer(pn_transport_t *transport, const char *message) {
+    PyObject *pytracer = (PyObject *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    PyObject *pytrans = SWIG_NewPointerObj(transport, SWIGTYPE_p_pn_transport_t, 0);
+    PyObject *pymsg = PyString_FromString(message);
+    PyObject *result = PyObject_CallFunctionObjArgs(pytracer, pytrans, pymsg, NULL);
+    if (!result) {
+      PyErr_PrintEx(true);
+    }
+    Py_XDECREF(pytrans);
+    Py_XDECREF(pymsg);
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  void pn_transport_set_pytracer(pn_transport_t *transport, PyObject *obj) {
+    pn_record_t *record = pn_transport_attachments(transport);
+    pn_record_def(record, PNI_PYTRACER, PN_PYREF);
+    pn_record_set(record, PNI_PYTRACER, obj);
+    pn_transport_set_tracer(transport, pn_pytracer);
+  }
+
+  PyObject *pn_transport_get_pytracer(pn_transport_t *transport) {
+    pn_record_t *record = pn_transport_attachments(transport);
+    PyObject *obj = pn_record_get(record, PNI_PYTRACER);
+    if (obj) {
+      Py_XINCREF(obj);
+      return obj;
+    } else {
+      Py_RETURN_NONE;
+    }
+  }
+
 %}
 
 %include "proton/cproton.i"
