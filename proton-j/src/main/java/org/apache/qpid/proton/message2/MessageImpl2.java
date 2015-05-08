@@ -29,6 +29,10 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.messaging.*;
+import org.apache.qpid.proton.codec.CompositeWritableBuffer;
+import org.apache.qpid.proton.codec.DroppingWritableBuffer;
+import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.codec2.*;
 import org.apache.qpid.proton.message.*;
 
@@ -585,7 +589,9 @@ public class MessageImpl2 implements Message
         decoder.decode(pb);
         System.out.println(pb.build());
 
-        if(buffer.hasRemaining())
+        return decoder.getSize();
+        
+        /*if(buffer.hasRemaining())
         {
             section = (Section) decoder
         }
@@ -678,7 +684,7 @@ public class MessageImpl2 implements Message
 
         }
 
-        decoder.setByteBuffer(null);
+        decoder.setByteBuffer(null); */
     }
 
     @Override
@@ -688,7 +694,7 @@ public class MessageImpl2 implements Message
         return encode(new WritableBuffer.ByteBufferWrapper(buffer));
     }
 
-    @Override
+    //@Override
     public int encode2(byte[] data, int offset, int length)
     {
         ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
@@ -700,11 +706,11 @@ public class MessageImpl2 implements Message
         return composite.position() - start;
     }
 
-    @Override
+    //@Override
     public int encode(WritableBuffer buffer)
     {
         int length = buffer.remaining();
-        EncoderImpl encoder = tlsCodec.get().encoder;
+        EncoderImpl encoder = null; //tlsCodec.get().encoder;
         encoder.setByteBuffer(buffer);
 
         if(getHeader() != null)
@@ -769,7 +775,7 @@ public class MessageImpl2 implements Message
                 {
                     binData = null;
                 }
-                _body = new Data(binData);
+                //_body = new Data(binData);
                 break;
             case TEXT:
                 _body = new AmqpValue(data == null ? "" : data.toString());
@@ -789,7 +795,7 @@ public class MessageImpl2 implements Message
             case DATA:
                 if(_body instanceof Data)
                 {
-                    return ((Data)_body).getValue().getArray();
+                    return null; // ((Data)_body).getValue().getArray();
                 }
                 else return null;
             case AMQP:
@@ -849,5 +855,19 @@ public class MessageImpl2 implements Message
     public MessageError getError()
     {
         return MessageError.OK;
+    }
+
+    @Override
+    public org.apache.qpid.proton.amqp.messaging.Section getBodyAsSection(int i)
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void addBodySection(org.apache.qpid.proton.amqp.messaging.Section section)
+    {
+        // TODO Auto-generated method stub
+        
     }
 }
