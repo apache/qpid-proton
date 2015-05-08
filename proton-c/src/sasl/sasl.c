@@ -337,8 +337,13 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
       pni_emit(transport);
       break;
-    case SASL_NONE:
     case SASL_RECVED_OUTCOME:
+      if (sasl->last_state < SASL_POSTED_INIT) {
+        desired_state = SASL_POSTED_INIT;
+        continue;
+      }
+      break;
+    case SASL_NONE:
       return;
     }
     sasl->last_state = desired_state;
@@ -575,9 +580,8 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
       pni_process_mechanisms(transport, pn_string_get(mechs))) {
     pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
   } else {
-    sasl->last_state = SASL_RECVED_OUTCOME;
-    sasl->halt = true;
-    pn_transport_close_tail(transport);
+    sasl->outcome = PN_SASL_PERM;
+    pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
   }
 
   pn_free(mechs);
@@ -617,8 +621,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   pni_sasl_t *sasl = transport->sasl;
   sasl->outcome = (pn_sasl_outcome_t) outcome;
-  sasl->last_state = SASL_RECVED_OUTCOME;
-  sasl->halt = true;
+  pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
 
   return 0;
 }
