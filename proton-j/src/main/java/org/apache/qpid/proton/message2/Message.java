@@ -20,7 +20,6 @@
  */
 package org.apache.qpid.proton.message2;
 
-
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.MessageError;
 import org.apache.qpid.proton.message.MessageFormat;
@@ -37,23 +36,20 @@ public interface Message
 
     public static final class Factory
     {
-        public static Message create() {
+        public static Message create()
+        {
             return new MessageImpl2();
         }
 
-        public static Message create(Header header,
-                                     DeliveryAnnotations deliveryAnnotations,
-                                     MessageAnnotations messageAnnotations,
-                                     Properties properties,
-                                     ApplicationProperties applicationProperties,
-                                     Section body,
-                                     Footer footer) {
-            return new MessageImpl2(header, deliveryAnnotations,
-                                   messageAnnotations, properties,
-                                   applicationProperties, body, footer);
+        public static Message create(Header header, DeliveryAnnotations deliveryAnnotations,
+                MessageAnnotations messageAnnotations, Properties properties,
+                ApplicationProperties applicationProperties, Section body, Footer footer)
+        {
+            //return new MessageImpl2(header, deliveryAnnotations, messageAnnotations, properties, applicationProperties,
+            //        body, footer);
+            return new MessageImpl2();
         }
     }
-
 
     short DEFAULT_PRIORITY = 4;
 
@@ -82,7 +78,6 @@ public interface Message
     long getGroupSequence();
 
     String getReplyToGroupId();
-
 
     long getCreationTime();
 
@@ -142,6 +137,8 @@ public interface Message
 
     Object getBody();
 
+    Section getBodyAsSection(int i);
+
     Footer getFooter();
 
     void setHeader(Header header);
@@ -156,20 +153,22 @@ public interface Message
 
     void setBody(Object body);
 
+    void addBodySection(Section section);
+
     void setFooter(Footer footer);
 
     /**
-     * TODO describe what happens if the data does not represent a complete message.
-     * Currently this appears to leave the message in an unknown state.
+     * TODO describe what happens if the data does not represent a complete
+     * message. Currently this appears to leave the message in an unknown state.
      */
     int decode(byte[] data, int offset, int length);
 
     /**
-     * Encodes up to {@code length} bytes of the message into the provided byte array,
-     * starting at position {@code offset}.
+     * Encodes up to {@code length} bytes of the message into the provided byte
+     * array, starting at position {@code offset}.
      *
-     * TODO describe what happens if length is smaller than the encoded form, Currently
-     * Proton-J throws an exception. What does Proton-C do?
+     * TODO describe what happens if length is smaller than the encoded form,
+     * Currently Proton-J throws an exception. What does Proton-C do?
      *
      * @return the number of bytes written to the byte array
      */
@@ -178,14 +177,16 @@ public interface Message
     /**
      * Loads message body from the {@code data}.
      *
-     * TODO describe how the object is interpreted according to the MessageFormat.
+     * TODO describe how the object is interpreted according to the
+     * MessageFormat.
      *
      * @see #setMessageFormat(MessageFormat)
      */
     void load(Object data);
 
     /**
-     * Return the message body in a format determined by {@link #getMessageFormat()}.
+     * Return the message body in a format determined by
+     * {@link #getMessageFormat()}.
      *
      * TODO describe the formatting process
      *
