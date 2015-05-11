@@ -35,9 +35,11 @@ struct pn_error_t {
 pn_error_t *pn_error()
 {
   pn_error_t *error = (pn_error_t *) malloc(sizeof(pn_error_t));
-  error->code = 0;
-  error->text = NULL;
-  error->root = NULL;
+  if (error != NULL) {
+    error->code = 0;
+    error->text = NULL;
+    error->root = NULL;
+  }
   return error;
 }
 

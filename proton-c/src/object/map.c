@@ -80,11 +80,13 @@ static uintptr_t pn_map_hashcode(void *object)
 static void pni_map_allocate(pn_map_t *map)
 {
   map->entries = (pni_entry_t *) malloc(map->capacity * sizeof (pni_entry_t));
-  for (size_t i = 0; i < map->capacity; i++) {
-    map->entries[i].key = NULL;
-    map->entries[i].value = NULL;
-    map->entries[i].next = 0;
-    map->entries[i].state = PNI_ENTRY_FREE;
+  if (map->entries != NULL) {
+    for (size_t i = 0; i < map->capacity; i++) {
+      map->entries[i].key = NULL;
+      map->entries[i].value = NULL;
+      map->entries[i].next = 0;
+      map->entries[i].state = PNI_ENTRY_FREE;
+    }
   }
   map->size = 0;
 }
