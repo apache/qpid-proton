@@ -318,7 +318,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   PyObject *pn_transport_get_pytracer(pn_transport_t *transport) {
     pn_record_t *record = pn_transport_attachments(transport);
-    PyObject *obj = pn_record_get(record, PNI_PYTRACER);
+    PyObject *obj = (PyObject *)pn_record_get(record, PNI_PYTRACER);
     if (obj) {
       Py_XINCREF(obj);
       return obj;
