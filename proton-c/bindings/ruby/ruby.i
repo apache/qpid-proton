@@ -273,6 +273,20 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %}
 %ignore pn_transport_output;
 
+%rename(pn_transport_peek) wrap_pn_transport_peek;
+%inline %{
+  int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_transport_peek(transport, OUTPUT, OUTPUT_SIZE);
+    if(sz >= 0) {
+      *OUTPUT_SIZE = sz;
+    } else {
+      *OUTPUT_SIZE = 0;
+    }
+    return sz;
+  }
+%}
+%ignore pn_transport_peek;
+
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
   pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {
