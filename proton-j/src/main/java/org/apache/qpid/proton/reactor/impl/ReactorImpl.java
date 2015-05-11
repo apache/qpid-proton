@@ -344,6 +344,11 @@ public class ReactorImpl implements Reactor {
 
         @Override
         public void run(Selectable selectable) {
+            try {
+                wakeup.source().read(ByteBuffer.allocate(64));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             // TODO: this could be more elegant...
             new TimerExpired().run(selectable);
         }
