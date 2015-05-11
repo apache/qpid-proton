@@ -342,6 +342,8 @@ set (qpid-proton-core
   src/messenger/transform.c
   src/selectable.c
 
+  src/config.h
+
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
