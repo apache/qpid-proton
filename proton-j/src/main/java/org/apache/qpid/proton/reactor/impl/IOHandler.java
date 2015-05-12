@@ -24,6 +24,7 @@ package org.apache.qpid.proton.reactor.impl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
@@ -254,11 +255,13 @@ public class IOHandler extends BaseHandler {
     private static class ConnectionFree implements Callback {
         @Override
         public void run(Selectable selectable) {
-            try {
-                selectable.getChannel().close();
-            } catch(IOException ioException) {
-                ioException.printStackTrace();
-                // TODO: what now?
+            Channel channel = selectable.getChannel();
+            if (channel != null) {
+                try {
+                    channel.close();
+                } catch(IOException ioException) {
+                    throw new RuntimeException(ioException);
+                }
             }
         }
     }
