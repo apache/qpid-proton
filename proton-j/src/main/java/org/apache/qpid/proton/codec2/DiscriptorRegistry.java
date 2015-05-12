@@ -34,6 +34,7 @@ import org.apache.qpid.proton.message2.Header;
 import org.apache.qpid.proton.message2.LifetimePolicy;
 import org.apache.qpid.proton.message2.MessageAnnotations;
 import org.apache.qpid.proton.message2.Modified;
+import org.apache.qpid.proton.message2.Properties;
 import org.apache.qpid.proton.message2.Received;
 import org.apache.qpid.proton.message2.Rejected;
 import org.apache.qpid.proton.message2.Released;
@@ -92,6 +93,8 @@ public class DiscriptorRegistry
     private static void registerMessageTypes()
     {
         registerType(Header.DESCRIPTOR_LONG, Header.DESCRIPTOR_STRING, Header.FACTORY);
+        registerType(Properties.DESCRIPTOR_LONG, Properties.DESCRIPTOR_STRING,
+                Properties.FACTORY);
         registerType(DeliveryAnnotations.DESCRIPTOR_LONG, DeliveryAnnotations.DESCRIPTOR_STRING,
                 DeliveryAnnotations.FACTORY);
         registerType(MessageAnnotations.DESCRIPTOR_LONG, MessageAnnotations.DESCRIPTOR_STRING,
@@ -133,11 +136,11 @@ public class DiscriptorRegistry
     {
         if (code instanceof Long)
         {
-            return lookup((Long) code);
+            return lookupLongCode((Long) code);
         }
         else if (code instanceof String)
         {
-            return lookup((String) code);
+            return lookupStringCode((String) code);
         }
         else
         {
@@ -145,12 +148,12 @@ public class DiscriptorRegistry
         }
     }
 
-    static DescribedTypeFactory lookup(long code)
+    static DescribedTypeFactory lookupLongCode(long code)
     {
         return _typeRegByLongCode.get(code);
     }
 
-    static DescribedTypeFactory lookup(String code)
+    static DescribedTypeFactory lookupStringCode(String code)
     {
         return _typeRegByStrCode.get(code);
     }
