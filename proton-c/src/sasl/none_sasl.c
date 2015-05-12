@@ -23,17 +23,6 @@
 
 #include "engine/engine-internal.h"
 
-#if 0
-// TODO: skeleton to produce PLAIN init frame
-void pn_sasl_plain(pni_sasl_t *sasl, const char *username, const char *password)
-{
-  if (!sasl) return;
-
-  const char *user = username ? username : "";
-  const char *pass = password ? password : "";
-
-}
-#endif
 static const char ANONYMOUS[] = "ANONYMOUS";
 static const char PLAIN[] = "PLAIN";
 
