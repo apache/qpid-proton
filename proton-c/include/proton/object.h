@@ -101,7 +101,7 @@ static int PREFIX ## _inspect_cast(void *object, pn_string_t *str) {      \
   }                                                                       \
 }                                                                         \
                                                                           \
-PREFIX ## _t *PREFIX ## _new(void) {                                      \
+const pn_class_t *PREFIX ## __class(void) {                               \
   static const pn_class_t clazz = {                                       \
     #PREFIX,                                                              \
     CID_ ## PREFIX,                                                       \
@@ -117,7 +117,12 @@ PREFIX ## _t *PREFIX ## _new(void) {                                      \
     PREFIX ## _compare_cast,                                              \
     PREFIX ## _inspect_cast                                               \
   };                                                                      \
-  return (PREFIX ## _t *) pn_class_new(&clazz, sizeof(PREFIX ## _t));     \
+  return &clazz;                                                          \
+}                                                                         \
+                                                                          \
+PREFIX ## _t *PREFIX ## _new(void) {                                      \
+  return (PREFIX ## _t *) pn_class_new(PREFIX ## __class(),               \
+                                       sizeof(PREFIX ## _t));             \
 }
 
 #define PN_CLASS(PREFIX) {                      \
