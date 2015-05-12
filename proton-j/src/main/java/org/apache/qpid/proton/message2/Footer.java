@@ -54,6 +54,7 @@ public final class Footer implements Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         CodecHelper.encodeMap(encoder, _value);
         encoder.end();
     }

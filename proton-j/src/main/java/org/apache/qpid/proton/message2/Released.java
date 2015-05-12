@@ -42,6 +42,7 @@ public final class Released implements DeliveryState, Outcome, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         encoder.end();
     }
 

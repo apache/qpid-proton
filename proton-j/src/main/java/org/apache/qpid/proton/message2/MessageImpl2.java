@@ -687,13 +687,6 @@ public class MessageImpl2 implements Message
         decoder.setByteBuffer(null); */
     }
 
-    @Override
-    public int encode(byte[] data, int offset, int length)
-    {
-        ByteBuffer buffer = ByteBuffer.wrap(data, offset, length);
-        return encode(new WritableBuffer.ByteBufferWrapper(buffer));
-    }
-
     //@Override
     public int encode2(byte[] data, int offset, int length)
     {
@@ -702,48 +695,45 @@ public class MessageImpl2 implements Message
         DroppingWritableBuffer second = new DroppingWritableBuffer();
         CompositeWritableBuffer composite = new CompositeWritableBuffer(first, second);
         int start = composite.position();
-        encode(composite);
+        //encode(composite);
         return composite.position() - start;
     }
 
     //@Override
-    public int encode(WritableBuffer buffer)
+    public int encode(byte[] data, int offset, int length)
     {
-        int length = buffer.remaining();
-        EncoderImpl encoder = null; //tlsCodec.get().encoder;
-        encoder.setByteBuffer(buffer);
+        ByteArrayEncoder encoder = tlsCodec.get().encoder;
+        encoder.init(data, 0, data.length);
 
         if(getHeader() != null)
         {
-            encoder.writeObject(getHeader());
+            getHeader().encode(encoder);
         }
         if(getDeliveryAnnotations() != null)
         {
-            encoder.writeObject(getDeliveryAnnotations());
+            getDeliveryAnnotations().encode(encoder);
         }
         if(getMessageAnnotations() != null)
         {
-            encoder.writeObject(getMessageAnnotations());
+            getMessageAnnotations().encode(encoder);;
         }
         if(getProperties() != null)
         {
-            encoder.writeObject(getProperties());
+            getProperties().encode(encoder);;
         }
         if(getApplicationProperties() != null)
         {
-            encoder.writeObject(getApplicationProperties());
+            getApplicationProperties().encode(encoder);;
         }
         if(getBody() != null)
         {
-            encoder.writeObject(getBody());
+            CodecHelper.encodeObject(encoder, getBody());
         }
         if(getFooter() != null)
         {
-            encoder.writeObject(getFooter());
+            getFooter().encode(encoder);;
         }
-        encoder.setByteBuffer((WritableBuffer)null);
-
-        return length - buffer.remaining();
+        return encoder.getPosition();
     }
 
     @Override

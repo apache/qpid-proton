@@ -21,6 +21,8 @@
 
 package org.apache.qpid.proton.message2;
 
+import java.util.List;
+
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
@@ -51,6 +53,7 @@ public final class Data implements Section, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         encoder.putBinary(_value, 0, _value.length);
         encoder.end();
     }
@@ -59,7 +62,7 @@ public final class Data implements Section, Encodable
     {
         public Object create(Object in) throws DecodeException
         {
-            return new Data((byte[]) in);
+            return new Data((byte[]) ((List)in).get(0));
         }
     }
 
