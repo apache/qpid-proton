@@ -51,6 +51,10 @@ template <class T> class Handle {
     /** Operator ! supports idiom if (!handle) { do_if_handle_is_null(); } */
     PROTON_CPP_INLINE_EXTERN bool operator !() const { return !impl; }
 
+    /** Operator ==  equal if they point to same non-null object*/
+    PROTON_CPP_INLINE_EXTERN bool operator ==(const Handle<T>& other) const { return impl == other.impl; }
+    PROTON_CPP_INLINE_EXTERN bool operator !=(const Handle<T>& other) const { return impl != other.impl; }
+
     void swap(Handle<T>& h) { T* t = h.impl; h.impl = impl; impl = t; }
 
   private:

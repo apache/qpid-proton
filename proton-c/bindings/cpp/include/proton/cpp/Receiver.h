@@ -37,6 +37,7 @@ class Receiver : public Link
   public:
     PROTON_CPP_EXTERN Receiver(pn_link_t *lnk);
     PROTON_CPP_EXTERN Receiver();
+    PROTON_CPP_EXTERN Receiver(const Link& c);
   protected:
     virtual void verifyType(pn_link_t *l);
 };

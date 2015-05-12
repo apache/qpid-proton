@@ -46,6 +46,9 @@ void Sender::verifyType(pn_link_t *lnk) {
         throw ProtonException(MSG("Creating sender with receiver context"));
 }
 
+Sender::Sender(const Link& c) : Link(c.getPnLink()) {}
+
+
 namespace{
 // revisit if thread safety required
 uint64_t tagCounter = 0;

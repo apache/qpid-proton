@@ -22,6 +22,7 @@
  *
  */
 #include "proton/cpp/ImportExport.h"
+#include "proton/connection.h"
 
 namespace proton {
 namespace reactor {
@@ -33,6 +34,16 @@ class Transport;
 class Endpoint
 {
   public:
+    enum {
+        LOCAL_UNINIT = PN_LOCAL_UNINIT,
+        REMOTE_UNINIT = PN_REMOTE_UNINIT,
+        LOCAL_ACTIVE = PN_LOCAL_ACTIVE,
+        REMOTE_ACTIVE = PN_REMOTE_ACTIVE,
+        LOCAL_CLOSED = PN_LOCAL_CLOSED,
+        REMOTE_CLOSED  = PN_REMOTE_CLOSED
+    };
+    typedef int State;
+
     // TODO: getCondition, getRemoteCondition, updateCondition, get/setHandler
     virtual PROTON_CPP_EXTERN Connection &getConnection() = 0;
     Transport PROTON_CPP_EXTERN &getTransport();

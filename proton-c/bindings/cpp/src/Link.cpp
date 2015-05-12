@@ -33,12 +33,6 @@
 namespace proton {
 namespace reactor {
 
-namespace {
-
-static inline void throwIfNull(pn_link_t *l) { if (!l) throw ProtonException(MSG("Disassociated link")); }
-
-}
-
 template class ProtonHandle<pn_link_t>;
 typedef ProtonImplRef<Link> PI;
 
@@ -67,12 +61,10 @@ void Link::verifyType(pn_link_t *l) {} // Generic link can be sender or receiver
 pn_link_t *Link::getPnLink() const { return impl; }
 
 void Link::open() {
-    throwIfNull(impl);
     pn_link_open(impl);
 }
 
 void Link::close() {
-    throwIfNull(impl);
     pn_link_close(impl);
 }
 
@@ -85,15 +77,34 @@ bool Link::isReceiver() {
 }
 
 int Link::getCredit() {
-    throwIfNull(impl);
     return pn_link_credit(impl);
 }
 
+Terminus Link::getSource() {
+    return Terminus(pn_link_source(impl), this);
+}
+
+Terminus Link::getTarget() {
+    return Terminus(pn_link_target(impl), this);
+}
+
+Terminus Link::getRemoteSource() {
+    return Terminus(pn_link_remote_source(impl), this);
+}
+
+Terminus Link::getRemoteTarget() {
+    return Terminus(pn_link_remote_target(impl), this);
+}
+
 Connection &Link::getConnection() {
-    throwIfNull(impl);
     pn_session_t *s = pn_link_session(impl);
     pn_connection_t *c = pn_session_connection(s);
     return ConnectionImpl::getReactorReference(c);
+}
+
+Link Link::getNext(Endpoint::State mask) {
+
+    return Link(pn_link_next(impl, (pn_state_t) mask));
 }
 
 }} // namespace proton::reactor

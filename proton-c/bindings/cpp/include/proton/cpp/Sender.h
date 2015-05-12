@@ -39,6 +39,7 @@ class Sender : public Link
   public:
     PROTON_CPP_EXTERN Sender(pn_link_t *lnk);
     PROTON_CPP_EXTERN Sender();
+    PROTON_CPP_EXTERN Sender(const Link& c);
     PROTON_CPP_EXTERN void send(Message &m);
   protected:
     virtual void verifyType(pn_link_t *l);

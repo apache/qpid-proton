@@ -39,7 +39,7 @@ class Container;
 class ConnectionImpl : public Endpoint
 {
   public:
-    PROTON_CPP_EXTERN ConnectionImpl(Container &c);
+    PROTON_CPP_EXTERN ConnectionImpl(Container &c, pn_connection_t *pnConn = 0);
     PROTON_CPP_EXTERN ~ConnectionImpl();
     PROTON_CPP_EXTERN Transport &getTransport();
     PROTON_CPP_EXTERN Handler *getOverride();
@@ -49,6 +49,7 @@ class ConnectionImpl : public Endpoint
     PROTON_CPP_EXTERN pn_connection_t *getPnConnection();
     PROTON_CPP_EXTERN Container &getContainer();
     PROTON_CPP_EXTERN std::string getHostname();
+    PROTON_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
     virtual PROTON_CPP_EXTERN Connection &getConnection();
     static Connection &getReactorReference(pn_connection_t *);
     static ConnectionImpl *getImpl(const Connection &c) { return c.impl; }

@@ -122,6 +122,8 @@ class OverrideHandler : public Handler
             ConnectionImpl *cimpl = getConnectionContext(conn);
             if (cimpl)
                 cimpl->reactorDetach();
+            // TODO: remember all connections and do reactorDetach of zombies connections
+            // not pn_connection_release'd at PN_REACTOR_FINAL.
         }
     }
 };

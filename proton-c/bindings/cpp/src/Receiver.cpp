@@ -34,6 +34,8 @@ namespace reactor {
 Receiver::Receiver(pn_link_t *lnk) : Link(lnk) {}
 Receiver::Receiver() : Link(0) {}
 
+Receiver::Receiver(const Link& c) : Link(c.getPnLink()) {}
+
 void Receiver::verifyType(pn_link_t *lnk) {
     if (lnk && pn_link_is_sender(lnk))
         throw ProtonException(MSG("Creating receiver with sender context"));

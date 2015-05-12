@@ -66,4 +66,8 @@ Connection &Connection::getConnection() {
 
 Container &Connection::getContainer() { return impl->getContainer(); }
 
+Link Connection::getLinkHead(Endpoint::State mask) {
+    return impl->getLinkHead(mask);
+}
+
 }} // namespace proton::reactor

@@ -24,6 +24,7 @@
 #include "proton/cpp/ImportExport.h"
 #include "proton/cpp/ProtonHandle.h"
 #include "proton/cpp/Endpoint.h"
+#include "proton/cpp/Terminus.h"
 #include "proton/types.h"
 #include <string>
 
@@ -45,8 +46,13 @@ class Link : public Endpoint, public ProtonHandle<pn_link_t>
     PROTON_CPP_EXTERN bool isSender();
     PROTON_CPP_EXTERN bool isReceiver();
     PROTON_CPP_EXTERN int getCredit();
+    PROTON_CPP_EXTERN Terminus getSource();
+    PROTON_CPP_EXTERN Terminus getTarget();
+    PROTON_CPP_EXTERN Terminus getRemoteSource();
+    PROTON_CPP_EXTERN Terminus getRemoteTarget();
     PROTON_CPP_EXTERN pn_link_t *getPnLink() const;
     virtual PROTON_CPP_EXTERN Connection &getConnection();
+    PROTON_CPP_EXTERN Link getNext(Endpoint::State mask);
   protected:
     virtual void verifyType(pn_link_t *l);
   private:

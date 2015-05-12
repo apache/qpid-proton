@@ -57,6 +57,7 @@ class Connection : public Endpoint, public Handle<ConnectionImpl>
     PROTON_CPP_EXTERN Container &getContainer();
     PROTON_CPP_EXTERN std::string getHostname();
     virtual PROTON_CPP_EXTERN Connection &getConnection();
+    PROTON_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
   private:
    friend class PrivateImplRef<Connection>;
    friend class Connector;

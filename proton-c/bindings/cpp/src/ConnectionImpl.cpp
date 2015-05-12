@@ -41,10 +41,12 @@ void ConnectionImpl::decref(ConnectionImpl *impl) {
         delete impl;
 }
 
-ConnectionImpl::ConnectionImpl(Container &c) : container(c), refCount(0), override(0), transport(0), defaultSession(0),
-                                               pnConnection(pn_reactor_connection(container.getReactor(), NULL)),
+ConnectionImpl::ConnectionImpl(Container &c, pn_connection_t *pnConn) : container(c), refCount(0), override(0), transport(0), defaultSession(0),
+                                               pnConnection(pnConn),
                                                reactorReference(this)
 {
+    if (!pnConnection)
+        pnConnection = pn_reactor_connection(container.getReactor(), NULL);
     setConnectionContext(pnConnection, this);
 }
 
@@ -110,12 +112,14 @@ Connection &ConnectionImpl::getReactorReference(pn_connection_t *conn) {
         Container container(getContainerContext(reactor));
         if (!container)  // can't be one created by our container
             throw ProtonException(MSG("Unknown Proton connection specifier"));
-        Connection connection(container);
-        impl = connection.impl;
-        setConnectionContext(conn, impl);
-        impl->reactorReference = connection;
+        impl = new ConnectionImpl(container, conn);
     }
     return impl->reactorReference;
 }
+
+Link ConnectionImpl::getLinkHead(Endpoint::State mask) {
+    return Link(pn_link_head(pnConnection, mask));
+}
+
 
 }} // namespace proton::reactor

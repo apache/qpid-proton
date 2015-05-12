@@ -37,6 +37,7 @@ set (qpid-proton-cpp-core
     src/Event.cpp
     src/Handler.cpp
     src/Link.cpp
+    src/Terminus.cpp
     src/Acceptor.cpp
     src/Url.cpp
     src/Message.cpp
@@ -99,6 +100,9 @@ add_executable (SimpleRecv examples/SimpleRecv.cpp)
 target_link_libraries (SimpleRecv qpid-proton-cpp)
 add_executable (SimpleSend examples/SimpleSend.cpp)
 target_link_libraries (SimpleSend qpid-proton-cpp)
+add_executable (Broker examples/Broker.cpp)
+target_link_libraries (Broker qpid-proton-cpp)
+
 
 install (TARGETS qpid-proton-cpp
   EXPORT  proton
