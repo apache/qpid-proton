@@ -113,12 +113,14 @@ bool pni_init_client(pn_transport_t* transport) {
     if (result!=SASL_OK) return false;
 
     const sasl_callback_t *callbacks = sasl->username ? sasl->password ? pni_user_password_callbacks : pni_user_callbacks : NULL;
+    sasl_conn_t *cyrus_conn;
     result = sasl_client_new(amqp_service,
                              sasl->remote_fqdn,
                              NULL, NULL,
                              callbacks, 0,
-                             (sasl_conn_t**)&sasl->impl_context);
+                             &cyrus_conn);
     if (result!=SASL_OK) return false;
+    sasl->impl_context = cyrus_conn;
 
     return true;
 }
@@ -227,14 +229,15 @@ static int pni_wrap_server_new(pn_transport_t *transport)
     result = sasl_server_init(NULL, sasl->config_name);
     if (result!=SASL_OK) return result;
 
-    result = sasl_server_new(amqp_service, NULL, NULL, NULL, NULL, NULL, 0, (sasl_conn_t**)&sasl->impl_context);
+    sasl_conn_t *cyrus_conn;
+    result = sasl_server_new(amqp_service, NULL, NULL, NULL, NULL, NULL, 0, &cyrus_conn);
     if (result!=SASL_OK) return result;
+    sasl->impl_context = cyrus_conn;
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
     SASL_SEC_NOPLAINTEXT |
     ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) return result;
@@ -356,7 +359,9 @@ void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
 
 void pni_sasl_impl_free(pn_transport_t *transport)
 {
-    sasl_dispose((sasl_conn_t**)&transport->sasl->impl_context);
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+    sasl_dispose(&cyrus_conn);
+    transport->sasl->impl_context = cyrus_conn;
     if (transport->sasl->client) {
         sasl_client_done();
     } else {
