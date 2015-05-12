@@ -54,6 +54,7 @@ public final class MessageAnnotations implements Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         CodecHelper.encodeMapWithKeyAsSymbol(encoder, _value);
         encoder.end();
     }

@@ -21,6 +21,8 @@
 
 package org.apache.qpid.proton.message2;
 
+import java.util.List;
+
 import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
@@ -52,6 +54,7 @@ public final class AmqpValue implements Section, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         CodecHelper.encodeObject(encoder, _value);
         encoder.end();
     }
@@ -60,7 +63,7 @@ public final class AmqpValue implements Section, Encodable
     {
         public Object create(Object in) throws DecodeException
         {
-            return new Data((byte[]) in);
+            return new AmqpValue(((List<Object>)in).get(0));
         }
     }
 

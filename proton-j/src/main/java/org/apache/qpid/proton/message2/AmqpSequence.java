@@ -54,6 +54,7 @@ public final class AmqpSequence implements Section, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putList();
         CodecHelper.encodeList(encoder, _value);
         encoder.end();
     }

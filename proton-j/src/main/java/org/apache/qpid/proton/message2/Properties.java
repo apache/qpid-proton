@@ -201,15 +201,36 @@ public final class Properties implements Encodable
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
         CodecHelper.encodeObject(encoder, _messageId);
-        encoder.putBinary(_userId, 0, _userId.length);
+        if (_userId == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            encoder.putBinary(_userId, 0, _userId.length);
+        }
         encoder.putString(_to);
         encoder.putString(_subject);
         encoder.putString(_replyTo);
         CodecHelper.encodeObject(encoder, _correlationId);
         encoder.putSymbol(_contentType);
         encoder.putSymbol(_contentEncoding);
-        encoder.putTimestamp(_absoluteExpiryTime.getTime());
-        encoder.putTimestamp(_creationTime.getTime());
+        if (_absoluteExpiryTime == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            encoder.putTimestamp(_absoluteExpiryTime.getTime());
+        }
+        if (_creationTime == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            encoder.putTimestamp(_creationTime.getTime());
+        }        
         encoder.putString(_groupId);
         encoder.putUint(_groupSequence);
         encoder.putString(_replyToGroupId);
@@ -234,9 +255,9 @@ public final class Properties implements Encodable
             case 2:
                 props.setGroupId((String) l.get(10));
             case 3:
-                props.setCreationTime(new Date((Long) l.get(9)));
+                props.setCreationTime(l.get(9) == null ? null : new Date((Long) l.get(9)));
             case 4:
-                props.setAbsoluteExpiryTime(new Date((Long) l.get(8)));
+                props.setAbsoluteExpiryTime(l.get(8) == null ? null : new Date((Long) l.get(8)));
             case 5:
                 props.setContentEncoding((String) l.get(7));
             case 6:
