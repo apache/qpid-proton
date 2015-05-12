@@ -54,9 +54,7 @@ public final class DeliveryAnnotations implements Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
-        encoder.putList();
         CodecHelper.encodeMapWithKeyAsSymbol(encoder, _value);
-        encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory

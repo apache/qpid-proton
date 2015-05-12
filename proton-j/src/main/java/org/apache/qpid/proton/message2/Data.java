@@ -53,16 +53,14 @@ public final class Data implements Section, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
-        encoder.putList();
         encoder.putBinary(_value, 0, _value.length);
-        encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
     {
         public Object create(Object in) throws DecodeException
         {
-            return new Data((byte[]) ((List)in).get(0));
+            return new Data((byte[])in);
         }
     }
 

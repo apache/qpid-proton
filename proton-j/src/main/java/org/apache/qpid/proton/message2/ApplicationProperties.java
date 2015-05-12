@@ -54,9 +54,7 @@ public final class ApplicationProperties implements Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
-        encoder.putList();
         CodecHelper.encodeMap(encoder, _value);
-        encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
@@ -71,6 +69,6 @@ public final class ApplicationProperties implements Encodable
     @Override
     public String toString()
     {
-        return "ApplicationProperties{" + _value + '}';
+        return "ApplicationProperties " + _value;
     }
 }

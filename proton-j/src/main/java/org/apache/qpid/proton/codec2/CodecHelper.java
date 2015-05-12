@@ -280,6 +280,34 @@ public class CodecHelper
             encodeObject(encoder, descType.getDescriptor());
             encodeObject(encoder, descType.getValue());
         }
+        else if (o instanceof Byte)
+        {
+            encoder.putByte((Byte) o);
+        }
+        else if (o instanceof Short)
+        {
+            encoder.putShort((Short) o);
+        }
+        else if (o instanceof Integer)
+        {
+            encoder.putInt((Integer) o);
+        }
+        else if (o instanceof Long)
+        {
+            encoder.putLong((Long) o);
+        }
+        else if (o instanceof Float)
+        {
+            encoder.putFloat((Float) o);
+        }
+        else if (o instanceof Double)
+        {
+            encoder.putDouble((Double) o);
+        }
+        else if (o instanceof Character)
+        {
+            encoder.putChar((Character) o);
+        }
         else
         {
             throw new IllegalArgumentException("Do not know how to write Objects of class " + o.getClass().getName());

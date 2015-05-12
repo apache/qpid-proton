@@ -54,16 +54,14 @@ public final class AmqpValue implements Section, Encodable
     {
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
-        encoder.putList();
         CodecHelper.encodeObject(encoder, _value);
-        encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
     {
         public Object create(Object in) throws DecodeException
         {
-            return new AmqpValue(((List<Object>)in).get(0));
+            return new AmqpValue(in);
         }
     }
 
