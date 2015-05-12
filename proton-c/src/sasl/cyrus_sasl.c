@@ -209,9 +209,9 @@ void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
         default:
             pni_check_sasl_result(cyrus_conn, result, transport);
 
-            // Failed somehow
-            sasl->halt = true;
-            pn_transport_close_tail(transport);
+            // Failed somehow - equivalent to failing authentication
+            sasl->outcome = PN_SASL_AUTH;
+            pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
             break;
     }
 }

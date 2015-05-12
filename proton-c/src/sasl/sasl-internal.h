@@ -70,7 +70,6 @@ struct pni_sasl_t {
   bool client;
   bool input_bypass;
   bool output_bypass;
-  bool halt;
 };
 
 void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count);

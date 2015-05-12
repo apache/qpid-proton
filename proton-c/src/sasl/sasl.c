@@ -375,7 +375,6 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->last_state = SASL_NONE;
     sasl->input_bypass = false;
     sasl->output_bypass = false;
-    sasl->halt = false;
 
     transport->sasl = sasl;
   }
@@ -398,9 +397,8 @@ static void pni_sasl_force_anonymous(pn_transport_t *transport)
         pni_process_mechanisms(transport, "ANONYMOUS")) {
       pni_sasl_set_desired_state(transport, SASL_PRETEND_OUTCOME);
     } else {
-      sasl->last_state = SASL_RECVED_OUTCOME;
-      sasl->halt = true;
-      pn_transport_close_tail(transport);
+      sasl->outcome = PN_SASL_PERM;
+      pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
     }
   }
 }
@@ -512,7 +510,8 @@ ssize_t pn_sasl_input(pn_transport_t *transport, const char *bytes, size_t avail
   pn_sasl_process(transport);
 
   pni_sasl_t *sasl = transport->sasl;
-  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &sasl->halt);
+  bool dummy = false;
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &dummy);
 
   if (n==0 && pni_sasl_is_final_input_state(sasl)) {
     return PN_EOS;
