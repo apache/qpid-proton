@@ -280,6 +280,11 @@ public abstract class AbstractEncoder implements Encoder
 
     @Override
     public void putString(String s) {
+        if(s == null)
+        {
+            putNull();
+            return;
+        }
         byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         putString(bytes, 0, bytes.length);
     }
@@ -300,6 +305,11 @@ public abstract class AbstractEncoder implements Encoder
 
     @Override
     public void putSymbol(String s) {
+        if(s == null)
+        {
+            putNull();
+            return;
+        }
         byte[] bytes = s.getBytes(StandardCharsets.US_ASCII);
         putSymbol(bytes, 0, bytes.length);
     }

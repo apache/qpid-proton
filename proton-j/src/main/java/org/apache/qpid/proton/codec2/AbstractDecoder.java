@@ -463,7 +463,8 @@ public abstract class AbstractDecoder implements Decoder
         case Encodings.STR32:
             return new String(readBytes(offset, size), StandardCharsets.UTF_8);
         default:
-            throw new IllegalStateException("cannot convert to a string: " + Type.typeOf(code));
+            return new String(readBytes(offset, size), StandardCharsets.UTF_8);
+            //throw new IllegalStateException("cannot convert to a string: " + Type.typeOf(code));
         }
     }
 
