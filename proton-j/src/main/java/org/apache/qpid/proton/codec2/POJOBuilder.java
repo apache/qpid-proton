@@ -58,6 +58,7 @@ public class POJOBuilder implements DataHandler
             else
             {
                 DescribedTypeFactory factory = DiscriptorRegistry.lookup(descriptor);
+                System.out.println(String.format("Described Builder: {descriptor=%s, factory=%s}", descriptor, factory));
                 if (factory != null)
                 {
                     try
@@ -269,6 +270,7 @@ public class POJOBuilder implements DataHandler
     {
         if (builder instanceof ArrayBuilder)
         {
+            System.out.println("Array builder");
             ArrayBuilder ab = (ArrayBuilder) builder;
             ab.described = true;
         }
@@ -288,19 +290,19 @@ public class POJOBuilder implements DataHandler
     @Override
     public void onBoolean(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getBoolean());
     }
 
     @Override
     public void onByte(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getByte());
     }
 
     @Override
     public void onShort(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getShort());
     }
 
     @Override
@@ -312,31 +314,31 @@ public class POJOBuilder implements DataHandler
     @Override
     public void onLong(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getLong());
     }
 
     @Override
     public void onUbyte(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getByte());
     }
 
     @Override
     public void onUshort(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getShort());
     }
 
     @Override
     public void onUint(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getInt());
     }
 
     @Override
     public void onUlong(Decoder decoder)
     {
-        // TODO
+        builder.add(decoder.getLong());
     }
 
     public void onFloat(Decoder decoder)
@@ -402,7 +404,6 @@ public class POJOBuilder implements DataHandler
     @Override
     public void onBinary(Decoder decoder)
     {
-        // TODO
-        // builder.add(decoder.getBytes());
+        //builder.add(decoder.get);
     }
 }
