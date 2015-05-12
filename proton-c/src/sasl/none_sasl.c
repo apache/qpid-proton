@@ -65,8 +65,8 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
     memmove(iresp + 1, transport->sasl->username, usize);
     iresp[usize + 1] = 0;
     memmove(iresp + usize + 2, transport->sasl->password, psize);
-    transport->sasl->cyrus_out.start = iresp;
-    transport->sasl->cyrus_out.size =  size;
+    transport->sasl->bytes_out.start = iresp;
+    transport->sasl->bytes_out.size =  size;
 
     // Zero out password and dealloc
     free(memset(transport->sasl->password, 0, psize));
@@ -89,12 +89,12 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
       transport->sasl->impl_context = iresp;
 
       memmove(iresp, transport->sasl->username, size);
-      transport->sasl->cyrus_out.start = iresp;
-      transport->sasl->cyrus_out.size =  size;
+      transport->sasl->bytes_out.start = iresp;
+      transport->sasl->bytes_out.size =  size;
     } else {
       static const char anon[] = "anonymous";
-      transport->sasl->cyrus_out.start = anon;
-      transport->sasl->cyrus_out.size =  sizeof anon-1;
+      transport->sasl->bytes_out.start = anon;
+      transport->sasl->bytes_out.size =  sizeof anon-1;
     }
     return true;
   }

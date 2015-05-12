@@ -64,7 +64,7 @@ struct pni_sasl_t {
   char *config_dir;
   const char *remote_fqdn;
   pn_sasl_outcome_t outcome;
-  pn_bytes_t cyrus_out;
+  pn_bytes_t bytes_out;
   enum pni_sasl_state desired_state;
   enum pni_sasl_state last_state;
   bool client;

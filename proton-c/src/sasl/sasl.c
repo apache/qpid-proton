@@ -287,7 +287,7 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
 static void pni_post_sasl_frame(pn_transport_t *transport)
 {
   pni_sasl_t *sasl = transport->sasl;
-  pn_bytes_t out = sasl->cyrus_out;
+  pn_bytes_t out = sasl->bytes_out;
   enum pni_sasl_state desired_state = sasl->desired_state;
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
@@ -369,8 +369,8 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->remote_fqdn = NULL;
     sasl->outcome = PN_SASL_NONE;
     sasl->impl_context = NULL;
-    sasl->cyrus_out.size = 0;
-    sasl->cyrus_out.start = NULL;
+    sasl->bytes_out.size = 0;
+    sasl->bytes_out.start = NULL;
     sasl->desired_state = SASL_NONE;
     sasl->last_state = SASL_NONE;
     sasl->input_bypass = false;

@@ -145,8 +145,8 @@ static int pni_wrap_client_start(pni_sasl_t *sasl, const char *mechs, const char
         }
     } while (result==SASL_INTERACT);
 
-    sasl->cyrus_out.start = out;
-    sasl->cyrus_out.size = outlen;
+    sasl->bytes_out.start = out;
+    sasl->bytes_out.size = outlen;
     return result;
 }
 
@@ -188,8 +188,8 @@ static int pni_wrap_client_step(pni_sasl_t *sasl, const pn_bytes_t *in)
         }
     } while (result==SASL_INTERACT);
 
-    sasl->cyrus_out.start = out;
-    sasl->cyrus_out.size = outlen;
+    sasl->bytes_out.start = out;
+    sasl->bytes_out.size = outlen;
     return result;
 }
 
@@ -275,8 +275,8 @@ static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, co
                                in_bytes, in_size,
                                &out, &outlen);
 
-    sasl->cyrus_out.start = out;
-    sasl->cyrus_out.size = outlen;
+    sasl->bytes_out.start = out;
+    sasl->bytes_out.size = outlen;
     return result;
 }
 
@@ -345,8 +345,8 @@ static int pni_wrap_server_step(pni_sasl_t *sasl, const pn_bytes_t *in)
                               in->start, in->size,
                               &out, &outlen);
 
-    sasl->cyrus_out.start = out;
-    sasl->cyrus_out.size = outlen;
+    sasl->bytes_out.start = out;
+    sasl->bytes_out.size = outlen;
     return result;
 }
 
