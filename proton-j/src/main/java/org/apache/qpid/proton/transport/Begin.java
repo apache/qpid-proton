@@ -39,7 +39,7 @@ public final class Begin implements Encodable
 
     public final static Factory FACTORY = new Factory();
 
-    private int _remoteChannel;
+    private int _remoteChannel = -1;
 
     private int _nextOutgoingId;
 
@@ -53,7 +53,7 @@ public final class Begin implements Encodable
 
     private String[] _desiredCapabilities;
 
-    private Map<Object, Object> _properties;
+    private Map<String, Object> _properties;
 
     public int getRemoteChannel()
     {
@@ -125,12 +125,12 @@ public final class Begin implements Encodable
         _desiredCapabilities = desiredCapabilities;
     }
 
-    public Map<Object, Object> getProperties()
+    public Map<String, Object> getProperties()
     {
         return _properties;
     }
 
-    public void setProperties(Map<Object, Object> properties)
+    public void setProperties(Map<String, Object> properties)
     {
         _properties = properties;
     }
@@ -148,7 +148,7 @@ public final class Begin implements Encodable
         encoder.putUint(_handleMax);
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
-        CodecHelper.encodeMap(encoder, _properties);
+        CodecHelper.encodeMapWithKeyAsSymbol(encoder, _properties);
         encoder.end();
     }
 
@@ -164,7 +164,7 @@ public final class Begin implements Encodable
             {
 
             case 0:
-                begin.setProperties((Map<Object, Object>) l.get(7));
+                begin.setProperties((Map<String, Object>) l.get(7));
             case 1:
                 Object val1 = l.get(6);
                 if (val1 == null || val1.getClass().isArray())
