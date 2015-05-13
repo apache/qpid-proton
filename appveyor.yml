@@ -1,0 +1,16 @@
+version: 0.10-SNAPSHOT-{branch}.{build}
+configuration: RelWithDebInfo
+install:
+- cinst -y swig
+before_build:
+- mkdir BLD
+- cd BLD
+- cmake -G "Visual Studio 12" -DBUILD_PERL=no ..
+- cd ..
+build:
+  parallel: true
+  verbosity: normal
+test_script:
+- cd BLD
+- ctest -V -C RelWithDebInfo
+- cd ..
