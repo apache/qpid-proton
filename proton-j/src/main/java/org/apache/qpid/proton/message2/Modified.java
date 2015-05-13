@@ -29,7 +29,7 @@ import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.transport.DeliveryState;
+import org.apache.qpid.proton.transport2.DeliveryState;
 
 public final class Modified implements DeliveryState, Outcome, Encodable
 {

@@ -27,8 +27,8 @@ import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.transport.DeliveryState;
-import org.apache.qpid.proton.transport.ErrorCondition;
+import org.apache.qpid.proton.transport2.DeliveryState;
+import org.apache.qpid.proton.transport2.ErrorCondition;
 
 public final class Rejected implements DeliveryState, Outcome, Encodable
 {
