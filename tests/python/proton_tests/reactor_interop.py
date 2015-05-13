@@ -49,7 +49,7 @@ class ReceiveHandler:
 
   def on_reactor_init(self, event):
     port = free_tcp_port()
-    self.acceptor = event.reactor.acceptor("localhost", port)
+    self.acceptor = event.reactor.acceptor("127.0.0.1", port)
     self.java_thread = JavaThread("send", port, self.count)
     self.java_thread.start()
 
@@ -116,7 +116,7 @@ class ReactorInteropTest(Test):
     # XXX: would be better to parse the stdout output for a message
     time.sleep(1)
 
-    sh = SendHandler('localhost:' + str(port), count)
+    sh = SendHandler('127.0.0.1:' + str(port), count)
     r = Reactor(sh)
     r.run()
 
