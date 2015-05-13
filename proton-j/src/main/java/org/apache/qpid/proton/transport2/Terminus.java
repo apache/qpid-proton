@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-package org.apache.qpid.proton.transport;
+package org.apache.qpid.proton.transport2;
 
 import java.util.Map;
 

@@ -1,4 +1,4 @@
-package org.apache.qpid.proton.transport;
+package org.apache.qpid.proton.transport2;
 
 import org.apache.qpid.proton.codec2.Encodable;
 
