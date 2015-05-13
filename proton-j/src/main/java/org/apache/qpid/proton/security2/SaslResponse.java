@@ -19,40 +19,38 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
-import org.apache.qpid.proton.codec2.Type;
 
-public final class SaslMechanisms implements Encodable
+public final class SaslResponse implements Encodable
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000040L;
+    public final static long DESCRIPTOR_LONG = 0x0000000000000043L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-mechanisms:list";
+    public final static String DESCRIPTOR_STRING = "amqp:sasl-response:list";
 
     public final static Factory FACTORY = new Factory();
 
-    private String[] _saslServerMechanisms;
+    private byte[] _response;
 
-    public String[] getSaslServerMechanisms()
+    public byte[] getResponse()
     {
-        return _saslServerMechanisms;
+        return _response;
     }
 
-    public void setSaslServerMechanisms(String... saslServerMechanisms)
+    public void setResponse(byte[] response)
     {
-        if (saslServerMechanisms == null)
+        if (response == null)
         {
-            throw new NullPointerException("the sasl-server-mechanisms field is mandatory");
+            throw new NullPointerException("the response field is mandatory");
         }
 
-        _saslServerMechanisms = saslServerMechanisms;
+        _response = response;
     }
 
     @Override
@@ -61,12 +59,7 @@ public final class SaslMechanisms implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putArray(Type.SYMBOL);
-        for (String mech : _saslServerMechanisms)
-        {
-            encoder.putSymbol(mech);
-        }
-        encoder.end();
+        encoder.putBinary(_response, 0, _response.length);
         encoder.end();
     }
 
@@ -76,30 +69,20 @@ public final class SaslMechanisms implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            SaslMechanisms saslMech = new SaslMechanisms();
+            SaslResponse saslResponse = new SaslResponse();
 
-            if (l.isEmpty())
+            if (l.size() > 0)
             {
-                throw new DecodeException("The sasl-server-mechanisms field cannot be omitted");
+                saslResponse.setResponse((byte[]) l.get(0));
             }
 
-            Object val0 = l.get(0);
-            if (val0 == null || val0.getClass().isArray())
-            {
-                saslMech.setSaslServerMechanisms((String[]) val0);
-            }
-            else
-            {
-                saslMech.setSaslServerMechanisms((String) val0);
-            }
-            return saslMech;
+            return saslResponse;
         }
     }
 
     @Override
     public String toString()
     {
-        return "SaslMechanisms{" + "saslServerMechanisms="
-                + (_saslServerMechanisms == null ? null : Arrays.asList(_saslServerMechanisms)) + '}';
+        return "SaslResponse{response=" + _response + '}';
     }
 }

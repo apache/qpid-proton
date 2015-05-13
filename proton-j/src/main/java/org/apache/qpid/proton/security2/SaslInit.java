@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
 import java.util.List;
 
@@ -28,7 +28,7 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class SaslChallenge implements Encodable
+public final class SaslInit implements Encodable
 {
     public final static long DESCRIPTOR_LONG = 0x0000000000000042L;
 
@@ -36,21 +36,45 @@ public final class SaslChallenge implements Encodable
 
     public final static Factory FACTORY = new Factory();
 
-    private byte[] _challenge;
+    private String _mechanism;
 
-    public byte[] getChallenge()
+    private byte[] _initialResponse;
+
+    private String _hostname;
+
+    public String getMechanism()
     {
-        return _challenge;
+        return _mechanism;
     }
 
-    public void setChallenge(byte[] challenge)
+    public void setMechanism(String mechanism)
     {
-        if (challenge == null)
+        if (mechanism == null)
         {
-            throw new NullPointerException("the challenge field is mandatory");
+            throw new NullPointerException("the mechanism field is mandatory");
         }
 
-        _challenge = challenge;
+        _mechanism = mechanism;
+    }
+
+    public byte[] getInitialResponse()
+    {
+        return _initialResponse;
+    }
+
+    public void setInitialResponse(byte[] initialResponse)
+    {
+        _initialResponse = initialResponse;
+    }
+
+    public String getHostname()
+    {
+        return _hostname;
+    }
+
+    public void setHostname(String hostname)
+    {
+        _hostname = hostname;
     }
 
     @Override
@@ -59,7 +83,9 @@ public final class SaslChallenge implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putBinary(_challenge, 0, _challenge.length);
+        encoder.putSymbol(_mechanism);
+        encoder.putBinary(_initialResponse, 0, _initialResponse.length);
+        encoder.putString(_hostname);
         encoder.end();
     }
 
@@ -69,20 +95,30 @@ public final class SaslChallenge implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            SaslChallenge saslChallenge = new SaslChallenge();
+            SaslInit saslInit = new SaslInit();
 
-            if (l.size() > 0)
+            switch (3 - l.size())
             {
-                saslChallenge.setChallenge((byte[]) l.get(0));
+
+            case 0:
+                saslInit.setHostname((String) l.get(2));
+            case 1:
+                saslInit.setInitialResponse((byte[]) l.get(1));
+            case 2:
+                saslInit.setMechanism((String) l.get(0));
             }
 
-            return saslChallenge;
+            return saslInit;
         }
     }
 
     @Override
     public String toString()
     {
-        return "SaslChallenge{" + "challenge=" + _challenge + '}';
+        return "SaslInit{" +
+               "mechanism=" + _mechanism +
+               ", initialResponse=" + _initialResponse +
+               ", hostname='" + _hostname + '\'' +
+               '}';
     }
 }
