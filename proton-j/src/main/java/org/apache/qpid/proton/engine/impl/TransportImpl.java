@@ -44,7 +44,6 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.codec2.ByteArrayEncoder;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
@@ -97,15 +96,14 @@ public class TransportImpl extends EndpointImpl
     private TransportOutput _outputProcessor;
 
     private DecoderImpl _decoder = new DecoderImpl();
-    //private EncoderImpl _encoder = new EncoderImpl(_decoder);
-    private ByteArrayEncoder _encoder = new ByteArrayEncoder();
+    private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int _remoteMaxFrameSize = 512;
     private int _channelMax       = CHANNEL_MAX_LIMIT;
     private int _remoteChannelMax = CHANNEL_MAX_LIMIT;
 
-    private final FrameWriter2 _frameWriter;
+    private final FrameWriter _frameWriter;
 
     private boolean _closeReceived;
     private Open _open;
@@ -154,10 +152,10 @@ public class TransportImpl extends EndpointImpl
      */
     TransportImpl(int maxFrameSize)
     {
-        AMQPDefinedTypes.registerAllTypes(_decoder, new EncoderImpl(_decoder));
+        AMQPDefinedTypes.registerAllTypes(_decoder, _encoder);
 
         _maxFrameSize = maxFrameSize;
-        _frameWriter = new FrameWriter2(_encoder, _remoteMaxFrameSize,
+        _frameWriter = new FrameWriter(_encoder, _remoteMaxFrameSize,
                                        FrameWriter.AMQP_FRAME_TYPE,
                                        _protocolTracer,
                                        this);
@@ -793,23 +791,23 @@ public class TransportImpl extends EndpointImpl
              (_connectionEndpoint != null &&
               _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
             !_isOpenSent) {
-            org.apache.qpid.proton.transport.Open open = new org.apache.qpid.proton.transport.Open();
+            Open open = new Open();
             if (_connectionEndpoint != null) {
                 String cid = _connectionEndpoint.getLocalContainerId();
                 open.setContainerId(cid == null ? "" : cid);
                 open.setHostname(_connectionEndpoint.getHostname());
-                open.setDesiredCapabilities();
-                open.setOfferedCapabilities();
-                //open.setProperties(_connectionEndpoint.getProperties());
+                open.setDesiredCapabilities(_connectionEndpoint.getDesiredCapabilities());
+                open.setOfferedCapabilities(_connectionEndpoint.getOfferedCapabilities());
+                open.setProperties(_connectionEndpoint.getProperties());
             } else {
                 open.setContainerId("");
             }
 
             if (_maxFrameSize > 0) {
-                open.setMaxFrameSize(_maxFrameSize); //UnsignedInteger.valueOf(_maxFrameSize));
+                open.setMaxFrameSize(UnsignedInteger.valueOf(_maxFrameSize));
             }
             if (_channelMax > 0) {
-                open.setChannelMax(_channelMax); //UnsignedShort.valueOf((short) _channelMax));
+                open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
             }
 
             // as per the recommendation in the spec, advertise half our
@@ -819,8 +817,7 @@ public class TransportImpl extends EndpointImpl
             }
             _isOpenSent = true;
 
-            //writeFrame(0, open, null, null);
-            _frameWriter.writeFrame(0, open, null, null);
+            writeFrame(0, open, null, null);
         }
     }
 
