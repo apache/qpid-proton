@@ -57,7 +57,7 @@ public final class Open implements Encodable
 
     private String[] _desiredCapabilities;
 
-    private Map<Object, Object> _properties;
+    private Map<String, Object> _properties;
 
     public String getContainerId()
     {
@@ -154,12 +154,12 @@ public final class Open implements Encodable
         _desiredCapabilities = desiredCapabilities;
     }
 
-    public Map<Object, Object> getProperties()
+    public Map<String, Object> getProperties()
     {
         return _properties;
     }
 
-    public void setProperties(Map<Object, Object> properties)
+    public void setProperties(Map<String, Object> properties)
     {
         _properties = properties;
     }
@@ -179,6 +179,7 @@ public final class Open implements Encodable
         CodecHelper.encodeSymbolArray(encoder, _incomingLocales);
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
+        CodecHelper.encodeMapWithKeyAsSymbol(encoder, _properties);
         encoder.end();
     }
 
@@ -194,7 +195,7 @@ public final class Open implements Encodable
             switch (10 - l.size())
             {
             case 0:
-                open.setProperties((Map<Object, Object>) l.get(9));
+                open.setProperties((Map<String, Object>) l.get(9));
             case 1:
                 Object val1 = l.get(8);
                 if (val1 == null || val1.getClass().isArray())
