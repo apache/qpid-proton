@@ -1,6 +1,6 @@
 language: c
 install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y -qq bash cmake libssl-dev maven ruby python php5 openjdk-7-jdk swig uuid-dev
+  - sudo apt-get install -y -qq bash cmake libssl-dev maven ruby python php5 openjdk-7-jdk swig uuid-dev valgrind
 script:
   - bin/jenkins-proton-c-build.sh
