@@ -1,0 +1,1 @@
+proton-c/bindings/go

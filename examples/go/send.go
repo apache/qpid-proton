@@ -29,8 +29,8 @@ import (
 	"net"
 	"os"
 	"path"
-	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/messaging"
+	"qpid.apache.org/proton/go/amqp"
+	"qpid.apache.org/proton/go/messaging"
 	"sync"
 )
 
@@ -85,8 +85,8 @@ To each URL, send the string "path-n" where n is the message number.
 	for i, urlStr := range urls {
 		debug.Printf("Connecting to %v", urlStr)
 		go func(urlStr string) {
-			defer wait.Done()                   // Notify main() that this goroutine is done.
-			url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
+			defer wait.Done()                 // Notify main() that this goroutine is done.
+			url, err := amqp.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
 			fatalIf(err)
 
 			// Open a standard Go net.Conn and and AMQP connection using it.
@@ -101,7 +101,7 @@ To each URL, send the string "path-n" where n is the message number.
 			fatalIf(err)
 
 			for i := int64(0); i < *count; i++ {
-				m := proton.NewMessage()
+				m := amqp.NewMessage()
 				body := fmt.Sprintf("%v-%v", url.Path, i)
 				m.SetBody(body)
 				ack, err := s.Send(m)

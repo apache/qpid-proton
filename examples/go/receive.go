@@ -29,8 +29,8 @@ import (
 	"net"
 	"os"
 	"path"
-	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/messaging"
+	"qpid.apache.org/proton/go/amqp"
+	"qpid.apache.org/proton/go/messaging"
 	"sync"
 	"time"
 )
@@ -68,8 +68,8 @@ Receive messages from all the listed URLs concurrently and print them.
 	// Create a goroutine for each URL that receives messages and sends them to
 	// the messages channel. main() receives and prints them.
 
-	messages := make(chan proton.Message) // Channel for messages from goroutines to main()
-	stop := make(chan struct{})           // Closing this channel means the program is stopping.
+	messages := make(chan amqp.Message) // Channel for messages from goroutines to main()
+	stop := make(chan struct{})         // Closing this channel means the program is stopping.
 
 	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
 
@@ -88,8 +88,8 @@ Receive messages from all the listed URLs concurrently and print them.
 	for i, urlStr := range urls {
 		debug.Printf("Connecting to %s", urlStr)
 		go func(urlStr string) {
-			defer wait.Done()                   // Notify main() that this goroutine is done.
-			url, err := proton.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
+			defer wait.Done()                 // Notify main() that this goroutine is done.
+			url, err := amqp.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
 			fatalIf(err)
 
 			// Open a standard Go net.Conn and and AMQP connection using it.
@@ -104,7 +104,7 @@ Receive messages from all the listed URLs concurrently and print them.
 			fatalIf(err)
 
 			for {
-				var m proton.Message
+				var m amqp.Message
 				select { // Receive a message or stop.
 				case m = <-r.Receive:
 				case <-stop: // The program is stopping.
@@ -163,7 +163,7 @@ func fatalIf(err error) {
 	}
 }
 
-type formatMessage struct{ m proton.Message }
+type formatMessage struct{ m amqp.Message }
 
 func (fm formatMessage) String() string {
 	if *full {
