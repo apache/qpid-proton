@@ -23,7 +23,7 @@ package org.apache.qpid.proton.messenger;
 import java.io.IOException;
 
 import org.apache.qpid.proton.TimeoutException;
-import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message2.Message;
 
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
 

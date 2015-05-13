@@ -20,10 +20,12 @@
  */
 package org.apache.qpid.proton.message2;
 
-import org.apache.qpid.proton.amqp.messaging.Section;
+import java.util.Map;
+
+import javax.xml.soap.MessageFactory;
+
 import org.apache.qpid.proton.message.MessageError;
 import org.apache.qpid.proton.message.MessageFormat;
-import org.apache.qpid.proton.message.impl.MessageImpl;
 
 /**
  * Represents a Message within Proton.
@@ -45,9 +47,8 @@ public interface Message
                 MessageAnnotations messageAnnotations, Properties properties,
                 ApplicationProperties applicationProperties, Section body, Footer footer)
         {
-            //return new MessageImpl2(header, deliveryAnnotations, messageAnnotations, properties, applicationProperties,
-            //        body, footer);
-            return new MessageImpl2();
+            return new MessageImpl2(header, deliveryAnnotations, messageAnnotations, properties, applicationProperties,
+                    body, footer);
         }
     }
 
@@ -127,13 +128,13 @@ public interface Message
 
     Header getHeader();
 
-    DeliveryAnnotations getDeliveryAnnotations();
+    Map<String, Object> getDeliveryAnnotations();
 
-    MessageAnnotations getMessageAnnotations();
+    Map<String, Object> getMessageAnnotations();
 
     Properties getProperties();
 
-    ApplicationProperties getApplicationProperties();
+    Map<Object, Object> getApplicationProperties();
 
     Object getBody();
 
@@ -143,13 +144,13 @@ public interface Message
 
     void setHeader(Header header);
 
-    void setDeliveryAnnotations(DeliveryAnnotations deliveryAnnotations);
+    void setDeliveryAnnotations(Map<String, Object> deliveryAnnotations);
 
-    void setMessageAnnotations(MessageAnnotations messageAnnotations);
+    void setMessageAnnotations(Map<String, Object> messageAnnotations);
 
     void setProperties(Properties properties);
 
-    void setApplicationProperties(ApplicationProperties applicationProperties);
+    void setApplicationProperties(Map<Object, Object> props);
 
     void setBody(Object body);
 
