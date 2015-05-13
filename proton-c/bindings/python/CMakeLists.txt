@@ -29,6 +29,7 @@ endif (BUILD_WITH_CXX)
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${PROTON_HEADERS}
 )
 
 swig_add_module(cproton python cproton.i)
@@ -56,7 +57,7 @@ set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
     proton/handlers.py
-    proton/reactors.py
+    proton/reactor.py
     proton/utils.py
     proton/wrapper.py
     )
@@ -79,10 +80,13 @@ py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 find_program(EPYDOC_EXE epydoc)
 mark_as_advanced (EPYDOC_EXE)
 if (EPYDOC_EXE)
+   foreach (py_src_doc ${pysrc})
+     list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
+   endforeach(py_src_doc)
    add_custom_target(docs-py COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
      PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
-     ${CMAKE_CURRENT_SOURCE_DIR}/${pysrc})
+     ${PY_DOC_FILES})
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"

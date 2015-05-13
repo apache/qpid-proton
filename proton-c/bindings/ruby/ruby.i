@@ -22,10 +22,8 @@
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
-#include <proton/driver.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
-#include <proton/driver_extras.h>
 #include <proton/types.h>
 #include <proton/url.h>
 #include <proton/reactor.h>
@@ -238,38 +236,8 @@
     }
 }
 
-int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load;
-
-int pn_message_load_data(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_data;
-
-int pn_message_load_text(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_text;
-
-int pn_message_load_amqp(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_amqp;
-
-int pn_message_load_json(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_json;
-
 int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
-
-int pn_message_save(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save;
-
-int pn_message_save_data(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_data;
-
-int pn_message_save_text(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_text;
-
-int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_amqp;
-
-int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_json;
 
 ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_link_send;
@@ -325,20 +293,6 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
   }
 %}
 %ignore pn_delivery_tag;
-
-%rename(pn_message_data) wrap_pn_message_data;
-%inline %{
-  int wrap_pn_message_data(char *STRING, size_t LENGTH, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_message_data;
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_cipher_name;
@@ -491,6 +445,10 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
     return result;
   }
 
-  %}
+%}
+
+%ignore pn_messenger_send;
+%ignore pn_messenger_recv;
+%ignore pn_messenger_work;
 
 %include "proton/cproton.i"

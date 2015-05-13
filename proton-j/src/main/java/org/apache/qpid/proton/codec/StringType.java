@@ -93,10 +93,14 @@ public class StringType extends AbstractPrimitiveType<String>
             if ((c & 0xFF80) != 0)         /* U+0080..    */
             {
                 len++;
-                // surrogate pairs should always combine to create a code point with a 4 octet representation
-                if(((c & 0xF800) != 0) && ((c & 0xD800) != 0xD800))     /* U+0800..  excluding surrogate pairs  */
+                if(((c & 0xF800) != 0))    /* U+0800..    */
                 {
                     len++;
+                    // surrogate pairs should always combine to create a code point with a 4 octet representation
+                    if ((c & 0xD800) == 0xD800 && c < 0xDC00)
+                    {
+                        i++;
+                    }
                 }
             }
         }

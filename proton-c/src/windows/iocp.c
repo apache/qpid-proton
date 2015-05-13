@@ -97,7 +97,8 @@ static void iocpdesc_fail(iocpdesc_t *iocpd, HRESULT status, const char* text)
     iocp_shutdown(iocpd);
   iocpd->write_closed = true;
   iocpd->read_closed = true;
-  pni_events_update(iocpd, iocpd->events | PN_READABLE | PN_WRITABLE);
+  iocpd->poll_error = true;
+  pni_events_update(iocpd, iocpd->events & ~(PN_READABLE | PN_WRITABLE));
 }
 
 // Helper functions to use specialized IOCP AcceptEx() and ConnectEx()
@@ -552,8 +553,17 @@ static void complete_write(write_result_t *result, DWORD xfer_count, HRESULT sta
       return;
     }
   }
+  // Other error
   pni_write_pipeline_return(iocpd->pipeline, result);
-  iocpdesc_fail(iocpd, status, "IOCP async write error");
+  if (status == WSAECONNABORTED || status == WSAECONNRESET || status == WSAENOTCONN
+      || status == ERROR_NETNAME_DELETED) {
+    iocpd->write_closed = true;
+    iocpd->poll_error = true;
+    pni_events_update(iocpd, iocpd->events & ~PN_WRITABLE);
+    pni_win32_error(iocpd->error, "Remote close or timeout", status);
+  } else {
+    iocpdesc_fail(iocpd, status, "IOCP async write error");
+  }
 }
 
 

@@ -168,6 +168,12 @@ bool pn_collector_pop(pn_collector_t *collector)
   return true;
 }
 
+bool pn_collector_more(pn_collector_t *collector)
+{
+  assert(collector);
+  return collector->head && collector->head->next;
+}
+
 static void pn_event_initialize(pn_event_t *event)
 {
   event->pool = NULL;
@@ -205,7 +211,14 @@ static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
 {
   assert(event);
   assert(dst);
-  int err = pn_string_addf(dst, "(%s<0x%X>", pn_event_type_name(event->type), (unsigned int) event->type);
+  const char *name = pn_event_type_name(event->type);
+  int err;
+  if (name) {
+    err = pn_string_addf(dst, "(%s", pn_event_type_name(event->type));
+  } else {
+    err = pn_string_addf(dst, "(<%u>", (unsigned int) event->type);
+  }
+  if (err) return err;
   if (event->context) {
     err = pn_string_addf(dst, ", ");
     if (err) return err;
@@ -314,6 +327,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_DELIVERY";
   case PN_TRANSPORT:
     return "PN_TRANSPORT";
+  case PN_TRANSPORT_AUTHENTICATED:
+    return "PN_TRANSPORT_AUTHENTICATED";
   case PN_TRANSPORT_ERROR:
     return "PN_TRANSPORT_ERROR";
   case PN_TRANSPORT_HEAD_CLOSED:
@@ -338,5 +353,5 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_SELECTABLE_FINAL";
   }
 
-  return "<unrecognized>";
+  return NULL;
 }

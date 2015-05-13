@@ -21,6 +21,8 @@
  *
  */
 
+#include "proton/ssl.h"
+
 /** @file
  * Internal API for SSL/TLS support in the Driver Layer.
  *

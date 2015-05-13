@@ -27,12 +27,13 @@ SRC=$(dirname $(dirname $(readlink -f $0)))
 
 usage()
 {
-    echo "Usage: ${ME} VERSION"
+    echo "Usage: ${ME} VERSION TAG"
     exit 1
 }
 
-if [ $# == 1 ]; then
+if [ $# == 2 ]; then
     VERSION=$1
+    TAG=$2
 else
     usage
 fi
@@ -51,11 +52,15 @@ die()
     if [ -n "$(git status -uno --porcelain)" ]; then
         die must release from a clean checkout
     fi
-    BRANCH=$(git symbolic-ref --short HEAD)
-    REMOTE=$(git config branch.${BRANCH}.remote)
-    git checkout --detach ${REMOTE}/${BRANCH}
-    bin/version.sh $VERSION
-    git commit -a -m "Release $VERSION"
-    git tag -m "Release $VERSION" $VERSION
-    echo "Run 'git push ${REMOTE} ${VERSION}' to push the release upstream."
+    BRANCH=$(git symbolic-ref -q --short HEAD)
+    if [ -n "${BRANCH}" ]; then
+        REMOTE=$(git config branch.${BRANCH}.remote)
+    else
+        REMOTE="origin"
+    fi
+    git checkout --detach && \
+        bin/version.sh $VERSION && \
+        git commit -a -m "Release $VERSION" && \
+        git tag -m "Release $VERSION" $TAG && \
+        echo "Run 'git push ${REMOTE} ${TAG}' to push the tag upstream."
 )

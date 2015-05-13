@@ -79,16 +79,9 @@ typedef unsigned long int uintptr_t;
 %aggregate_check(int, check_trace,
                  PN_TRACE_OFF, PN_TRACE_RAW, PN_TRACE_FRM, PN_TRACE_DRV);
 
-%aggregate_check(int, check_format,
-                 PN_DATA, PN_TEXT, PN_AMQP, PN_JSON);
-
 %aggregate_check(int, check_sasl_outcome,
                  PN_SASL_NONE, PN_SASL_OK, PN_SASL_AUTH,
-                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP, PN_SASL_SKIPPED);
-
-%aggregate_check(int, check_sasl_state,
-                 PN_SASL_IDLE, PN_SASL_STEP,
-                 PN_SASL_PASS, PN_SASL_FAIL);
+                 PN_SASL_SYS, PN_SASL_PERM, PN_SASL_TEMP);
 
 
 %contract pn_code(int code)
@@ -862,91 +855,6 @@ typedef unsigned long int uintptr_t;
   msg != NULL;
 }
 
-%contract pn_message_get_format(pn_message_t *message)
-{
- require:
-  message != NULL;
- ensure:
-  check_format(pn_message_get_format);
-}
-
-%contract pn_message_set_format(pn_message_t *message, pn_format_t format)
-{
- require:
-  message != NULL;
-  check_format(format);
-}
-
-%contract pn_message_load(pn_message_t *message, const char *data, size_t size)
-{
- require:
-  message != NULL;
-  size >= 0;
-}
-
-%contract pn_message_load_data(pn_message_t *message, const char *data, size_t size)
-{
- require:
-  message != NULL;
-  size >= 0;
-}
-
-%contract pn_message_load_text(pn_message_t *message, const char *data, size_t size)
-{
- require:
-  message != NULL;
-  size >= 0;
-}
-
-%contract pn_message_load_amqp(pn_message_t *message, const char *data, size_t size)
-{
- require:
-  message != NULL;
-  size >= 0;
-}
-
-%contract pn_message_load_json(pn_message_t *message, const char *data, size_t size)
-{
- require:
-  message != NULL;
-  size >= 0;
-}
-
-%contract pn_message_save(pn_message_t *message, char *data, size_t *size)
-{
- require:
-  message != NULL;
-  *size >= 0;
-}
-
-%contract pn_message_save_data(pn_message_t *message, char *data, size_t *size)
-{
- require:
-  message != NULL;
-  *size >= 0;
-}
-
-%contract pn_message_save_text(pn_message_t *message, char *data, size_t *size)
-{
- require:
-  message != NULL;
-  *size >= 0;
-}
-
-%contract pn_message_save_amqp(pn_message_t *message, char *data, size_t *size)
-{
- require:
-  message != NULL;
-  *size >= 0;
-}
-
-%contract pn_message_save_json(pn_message_t *message, char *data, size_t *size)
-{
- require:
-  message != NULL;
-  *size >= 0;
-}
-
 %contract pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
  require:
@@ -961,12 +869,6 @@ typedef unsigned long int uintptr_t;
   *size >= 0;
 }
 
-%contract pn_message_data(char *dst, size_t available, const char *src, size_t size)
-{
- ensure:
-  pn_message_data >= 0;
-}
-
 %include "proton/message.h"
 
 %contract pn_sasl()
@@ -975,71 +877,12 @@ typedef unsigned long int uintptr_t;
   pn_sasl != NULL;
 }
 
-%contract pn_sasl_state(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
- ensure:
-  check_sasl_state(pn_sasl_state);
-}
-
-%contract pn_sasl_mechanisms(pn_sasl_t *sasl, const char *mechanisms)
+%contract pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechanisms)
 {
  require:
   sasl != NULL;
 }
 
-%contract pn_sasl_remote_mechanisms(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_client(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_server(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_allow_skip(pn_sasl_t *sasl, bool allow)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_plain(pn_sasl_t *sasl, const char *username, const char *password)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_pending(pn_sasl_t *sasl)
-{
- require:
-  sasl != NULL;
-}
-
-%contract pn_sasl_recv(pn_sasl_t *sasl, char *bytes, size_t size)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  size > 0;
-}
-
-%contract pn_sasl_send(pn_sasl_t *sasl, const char *bytes, size_t size)
-{
- require:
-  sasl != NULL;
-  bytes != NULL;
-  size > 0;
-}
 
 %contract pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome)
 {
@@ -1057,202 +900,6 @@ typedef unsigned long int uintptr_t;
 }
 
 %include "proton/sasl.h"
-
-%contract pn_driver(void)
-{
- ensure:
-  pn_driver != NULL;
-}
-
-%contract pn_driver_trace(pn_driver_t *driver, pn_trace_t trace)
-{
- require:
-  driver != NULL;
-  check_trace(trace);
-}
-
-%contract pn_driver_wakeup(pn_driver_t *driver)
-{
- require:
-  driver != NULL;
-}
-
-%contract pn_driver_wait(pn_driver_t *driver, int timeout)
-{
- require:
-  driver != NULL;
-  timeout >= -1;
-}
-
-/** Get the next listener with pending data in the driver.
- *
- * @param[in] driver the driver
- * @return NULL if no active listener available
- */
-%contract pn_driver_listener(pn_driver_t *driver)
-{
- require:
-  driver != NULL;
-}
-
-%contract pn_driver_connector(pn_driver_t *driver)
-{
- require:
-  driver != NULL;
-}
-
-%contract pn_driver_free(pn_driver_t *driver)
-{
- require:
-  driver != NULL;
-}
-
-%contract pn_listener(pn_driver_t *driver, const char *host,
-                      const char *port, void* context)
-{
- require:
-  driver != NULL;
-  host != NULL;
-  port != NULL;
-}
-
-%contract pn_listener_fd(pn_driver_t *driver, int fd, void *context)
-{
- require:
-  driver != NULL;
-  fd >= 0;
-}
-
-%contract pn_listener_trace(pn_listener_t *listener, pn_trace_t trace)
-{
- require:
-  listener != NULL;
-  check_trace(trace);
-}
-
-%contract pn_listener_accept(pn_listener_t *listener)
-{
- require:
-  listener != NULL;
- ensure:
-  pn_listener_accept != NULL;
-}
-
-%contract pn_listener_context(pn_listener_t *listener)
-{
- require:
-  listener != NULL;
-}
-
-%contract pn_listener_set_context(pn_listener_t *listener, void *context)
-{
- require:
-  listener != NULL;
-}
-
-%contract pn_listener_close(pn_listener_t *listener)
-{
- require:
-  listener != NULL;
-}
-
-%contract pn_listener_free(pn_listener_t *listener)
-{
- require:
-  listener != NULL;
-}
-
-
-%contract pn_connector(pn_driver_t *driver, const char *host,
-                       const char *port, void* context)
-{
- require:
-  driver != NULL;
-  host != NULL;
-  port != NULL;
- ensure:
-  pn_connector != NULL;
-}
-
-%contract pn_connector_fd(pn_driver_t *driver, int fd, void *context)
-{
- require:
-  driver != NULL;
-  fd >= 0;
- ensure:
-  pn_connector_fd != NULL;
-}
-
-%contract pn_connector_trace(pn_connector_t *connector, pn_trace_t trace)
-{
- require:
-  connector != NULL;
-  check_trace(trace);
-}
-
-%contract pn_connector_process(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_listener(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_sasl(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_connection(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_set_connection(pn_connector_t *ctor, pn_connection_t *connection)
-{
- require:
-  ctor != NULL;
-}
-
-%contract pn_connector_context(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_set_context(pn_connector_t *connector, void *context)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_close(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_closed(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-%contract pn_connector_free(pn_connector_t *connector)
-{
- require:
-  connector != NULL;
-}
-
-
-%include "proton/driver.h"
-%include "proton/driver_extras.h"
 
 %contract pn_messenger(const char *name)
 {

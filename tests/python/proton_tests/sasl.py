@@ -17,9 +17,9 @@
 # under the License.
 #
 
-import os, common
+import sys, os, common
 from proton import *
-from common import pump
+from common import pump, Skipped
 
 class Test(common.Test):
   pass
@@ -35,33 +35,72 @@ class SaslTest(Test):
   def pump(self):
     pump(self.t1, self.t2, 1024)
 
-  def testPipelined(self):
-    self.s1.mechanisms("ANONYMOUS")
+  # Note that due to server protocol autodetect, there can be no "pipelining"
+  # of protocol frames from the server end only from the client end.
+  #
+  # This is because the server cannot know which protocol layers are active
+  # and therefore which headers need to be sent,
+  # until it sees the respective protocol headers from the client.
+  def testPipelinedClient(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support client pipelining")
+
+    # Client
+    self.s1.allowed_mechs('ANONYMOUS')
+    # Server
+    self.s2.allowed_mechs('ANONYMOUS')
 
     assert self.s1.outcome is None
+    assert self.s2.outcome is None
 
-    self.s2.mechanisms("ANONYMOUS")
-    self.s2.done(SASL.OK)
-
+    # Push client bytes into server
     out1 = self.t1.peek(1024)
     self.t1.pop(len(out1))
+    self.t2.push(out1)
+
     out2 = self.t2.peek(1024)
     self.t2.pop(len(out2))
-
-    self.t2.push(out1)
 
     assert self.s1.outcome is None
 
     self.t1.push(out2)
 
+    assert self.s1.outcome == SASL.OK
     assert self.s2.outcome == SASL.OK
 
-  def testSaslAndAmqpInSingleChunk(self):
-    self.s1.mechanisms("ANONYMOUS")
-    self.s1.done(SASL.OK)
+  def testPipelinedClientFail(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support client pipelining")
 
-    self.s2.mechanisms("ANONYMOUS")
-    self.s2.done(SASL.OK)
+    # Client
+    self.s1.allowed_mechs('ANONYMOUS')
+    # Server
+    self.s2.allowed_mechs('PLAIN DIGEST-MD5 SCRAM-SHA-1')
+
+    assert self.s1.outcome is None
+    assert self.s2.outcome is None
+
+    # Push client bytes into server
+    out1 = self.t1.peek(1024)
+    self.t1.pop(len(out1))
+    self.t2.push(out1)
+
+    out2 = self.t2.peek(1024)
+    self.t2.pop(len(out2))
+
+    assert self.s1.outcome is None
+
+    self.t1.push(out2)
+
+    assert self.s1.outcome == SASL.AUTH
+    assert self.s2.outcome == SASL.AUTH
+
+  def testSaslAndAmqpInSingleChunk(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support client pipelining")
+
+    self.s1.allowed_mechs('ANONYMOUS')
+    self.s2.allowed_mechs('ANONYMOUS')
 
     # send the server's OK to the client
     # This is still needed for the Java impl
@@ -101,38 +140,15 @@ class SaslTest(Test):
     assert self.s2.outcome == SASL.OK
     assert c2.state & Endpoint.REMOTE_ACTIVE
 
-
-  def testChallengeResponse(self):
-    self.s1.mechanisms("FAKE_MECH")
-    self.s2.mechanisms("FAKE_MECH")
-    self.pump()
-    challenge = "Who goes there!"
-    self.s2.send(challenge)
-    self.pump()
-    ch = self.s1.recv()
-    assert ch == challenge, (ch, challenge)
-
-    response = "It is I, Secundus!"
-    self.s1.send(response)
-    self.pump()
-    re = self.s2.recv()
-    assert re == response, (re, response)
-
-  def testInitialResponse(self):
-    self.s1.plain("secundus", "trustno1")
-    self.pump()
-    re = self.s2.recv()
-    assert re == "\x00secundus\x00trustno1", repr(re)
-
   def testPipelined2(self):
-    self.s1.mechanisms("ANONYMOUS")
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support client pipelining")
 
     out1 = self.t1.peek(1024)
     self.t1.pop(len(out1))
     self.t2.push(out1)
 
-    self.s2.mechanisms("ANONYMOUS")
-    self.s2.done(SASL.OK)
+    self.s2.allowed_mechs('ANONYMOUS')
     c2 = Connection()
     c2.open()
     self.t2.bind(c2)
@@ -147,7 +163,6 @@ class SaslTest(Test):
   def testFracturedSASL(self):
     """ PROTON-235
     """
-    self.s1.mechanisms("ANONYMOUS")
     assert self.s1.outcome is None
 
     # self.t1.trace(Transport.TRACE_FRM)
@@ -160,7 +175,8 @@ class SaslTest(Test):
     self.t1.push("\x00\x00\x00")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("A\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x06\xa3\x06GSSAPI\x05PLAIN\x0aDIGEST-MD5\x08AMQPLAIN\x08CRAM-MD5\x04NTLM")
+
+    self.t1.push("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
     self.t1.push("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00")
@@ -196,8 +212,21 @@ class SaslTest(Test):
   def testSaslSkipped(self):
     """Verify that the server (with SASL) correctly handles a client without SASL"""
     self.t1 = Transport()
-    self.s2.mechanisms("ANONYMOUS")
-    self.s2.allow_skip(True)
+    self.t2.require_auth(False)
     self.pump()
-    assert self.s2.outcome == SASL.SKIPPED
+    assert self.s2.outcome == None
+    self.t2.condition == None
+    self.t2.authenticated == False
+    assert self.s1.outcome == None
+    self.t1.condition == None
+    self.t1.authenticated == False
 
+  def testSaslSkippedFail(self):
+    """Verify that the server (with SASL) correctly handles a client without SASL"""
+    self.t1 = Transport()
+    self.t2.require_auth(True)
+    self.pump()
+    assert self.s2.outcome == None
+    self.t2.condition != None
+    assert self.s1.outcome == None
+    self.t1.condition != None

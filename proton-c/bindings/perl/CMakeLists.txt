@@ -19,6 +19,10 @@
 
 include_directories("${PERL_INCLUDE_PATH}")
 
+if (BUILD_WITH_CXX)
+  SET_SOURCE_FILES_PROPERTIES(cproton.i perl.i PROPERTIES CPLUSPLUS ON)
+endif(BUILD_WITH_CXX)
+
 # Need to pass in the same compiler flags used to build Perl itself
 execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
                 OUTPUT_VARIABLE PERLCFLAGS)
@@ -45,19 +49,20 @@ endif()
 set (CMAKE_C_FLAGS ${PERLCFLAGS})
 list(APPEND SWIG_MODULE_cproton_perl_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${PROTON_HEADERS}
 )
 swig_add_module(cproton_perl perl perl.i)
 swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
 if ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
-        DESTINATION ${PERL_VENDORARCH_DIR}
+        DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
         COMPONENT Perl
         )
 else()
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcproton_perl.so
         RENAME cproton_perl.so
-        DESTINATION ${PERL_VENDORARCH_DIR}
+        DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
         COMPONENT Perl
         )
 endif ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))

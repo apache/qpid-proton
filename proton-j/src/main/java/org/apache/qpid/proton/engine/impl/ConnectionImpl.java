@@ -86,6 +86,11 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return session;
     }
 
+    void freeSession(SessionImpl session)
+    {
+        _sessions.remove(session);
+    }
+
     protected LinkNode<SessionImpl> addSessionEndpoint(SessionImpl endpoint)
     {
         LinkNode<SessionImpl> node;
@@ -190,7 +195,8 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
 
     @Override
     void doFree() {
-        for(Session session : _sessions) {
+        List<SessionImpl> sessions = new ArrayList<SessionImpl>(_sessions);
+        for(Session session : sessions) {
             session.free();
         }
         _sessions = null;
@@ -293,6 +299,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     public void setContainer(String container)
     {
         _localContainerId = container;
+    }
+
+    @Override
+    public String getContainer()
+    {
+        return _localContainerId;
     }
 
     @Override

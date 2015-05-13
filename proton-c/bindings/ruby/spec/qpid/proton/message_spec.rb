@@ -41,23 +41,6 @@ module Qpid
         expect(@message.subject).not_to eq(subject)
       end
 
-      it "has an error number" do
-        expect(@message.error?).to eq(false)
-        @message.format = Qpid::Proton::MessageFormat::AMQP
-        @message.content = "{"
-        expect(@message.error?).to eq(true)
-        expect(@message.errno).not_to eq(0)
-      end
-
-      it "has an error message" do
-        expect(@message.error?).to eq(false)
-        expect(@message.error).to be_nil
-        @message.format = Qpid::Proton::MessageFormat::AMQP
-        @message.content = "{"
-        expect(@message.error?).to eq(true)
-        expect(@message.error).not_to eq("")
-      end
-
       it "can be durable" do
         @message.durable = true
         expect(@message.durable).to eq(true)
@@ -253,25 +236,6 @@ module Qpid
         expect(@message.correlation_id).to eq(id)
       end
 
-      it "raises an error when setting  a nil format" do
-        expect {
-          @message.format = nil
-        }.to raise_error(TypeError)
-      end
-
-      it "raises an error on an invalid format" do
-        expect {
-          @message.format = "farkle"
-        }.to raise_error(TypeError)
-      end
-
-      it "has a format" do
-        Qpid::Proton::MessageFormat.formats.each do |format|
-          @message.format = format
-          expect(@message.format).to eq(format)
-        end
-      end
-
       it "will allow a nil content type" do
         @message.content_type = nil
         expect(@message.content_type).to be_nil
@@ -399,17 +363,6 @@ module Qpid
         id = random_string(16)
         @message.reply_to_group_id = id
         expect(@message.reply_to_group_id).to eq(id)
-      end
-
-      it "can have an empty string as content" do
-        @message.content = ""
-        expect(@message.content).to eq("")
-      end
-
-      it "can have content" do
-        content = random_string(255)
-        @message.content = content
-        expect(@message.content).to eq(content)
       end
 
       it "has properties" do

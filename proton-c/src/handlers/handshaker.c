@@ -38,8 +38,8 @@ static void pn_handshaker_finalize(pn_handler_t *handler) {
   pn_free(handshaker->handlers);
 }
 
-static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event) {
-  switch (pn_event_type(event)) {
+static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+  switch (type) {
   case PN_CONNECTION_REMOTE_OPEN:
     {
       pn_connection_t *conn = pn_event_connection(event);

@@ -26,8 +26,6 @@
 #include <proton/url.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
-#include <proton/driver.h>
-#include <proton/driver_extras.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 #include <proton/reactor.h>
@@ -87,38 +85,8 @@
 
 %apply pn_uuid_t { pn_decimal128_t };
 
-int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load;
-
-int pn_message_load_data(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_data;
-
-int pn_message_load_text(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_text;
-
-int pn_message_load_amqp(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_amqp;
-
-int pn_message_load_json(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_json;
-
 int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
-
-int pn_message_save(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save;
-
-int pn_message_save_data(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_data;
-
-int pn_message_save_text(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_text;
-
-int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_amqp;
-
-int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_json;
 
 ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_link_send;
@@ -173,20 +141,6 @@ ssize_t pn_transport_push(pn_transport_t *transport, char *STRING, size_t LENGTH
 %}
 %ignore pn_delivery_tag;
 
-%rename(pn_message_data) wrap_pn_message_data;
-%inline %{
-  int wrap_pn_message_data(char *STRING, size_t LENGTH, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_message_data;
-
 ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
 %ignore pn_data_decode;
 
@@ -203,20 +157,6 @@ ssize_t pn_data_decode(pn_data_t *data, char *STRING, size_t LENGTH);
   }
 %}
 %ignore pn_data_encode;
-
-%rename(pn_sasl_recv) wrap_pn_sasl_recv;
-%inline %{
-  int wrap_pn_sasl_recv(pn_sasl_t *sasl, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_sasl_recv(sasl, OUTPUT, *OUTPUT_SIZE);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_sasl_recv;
 
 int pn_data_format(pn_data_t *data, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_data_format;
@@ -290,6 +230,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 
   typedef struct {
     PyObject *handler;
+    PyObject *dispatch;
+    PyObject *exception;
   } pni_pyh_t;
 
   static pni_pyh_t *pni_pyh(pn_handler_t *handler) {
@@ -300,18 +242,40 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     pni_pyh_t *pyh = pni_pyh(handler);
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     Py_DECREF(pyh->handler);
+    Py_DECREF(pyh->dispatch);
+    Py_DECREF(pyh->exception);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
-  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event) {
+  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
     pni_pyh_t *pyh = pni_pyh(handler);
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
     PyObject *arg = SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0);
-    PyObject *result = PyObject_CallFunctionObjArgs(pyh->handler, arg, NULL);
+    PyObject *pytype = PyInt_FromLong(type);
+    PyObject *result = PyObject_CallMethodObjArgs(pyh->handler, pyh->dispatch, arg, pytype, NULL);
     if (!result) {
-      PyErr_PrintEx(true);
+      PyObject *exc, *val, *tb;
+      PyErr_Fetch(&exc, &val, &tb);
+      PyErr_NormalizeException(&exc, &val, &tb);
+      if (!val) {
+        val = Py_None;
+        Py_INCREF(val);
+      }
+      if (!tb) {
+        tb = Py_None;
+        Py_INCREF(tb);
+      }
+      PyObject *result2 = PyObject_CallMethodObjArgs(pyh->handler, pyh->exception, exc, val, tb, NULL);
+      if (!result2) {
+        PyErr_PrintEx(true);
+      }
+      Py_XDECREF(result2);
+      Py_XDECREF(exc);
+      Py_XDECREF(val);
+      Py_XDECREF(tb);
     }
     Py_XDECREF(arg);
+    Py_XDECREF(pytype);
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
@@ -321,10 +285,48 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     pni_pyh_t *phy = pni_pyh(chandler);
     phy->handler = handler;
     SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    phy->dispatch = PyString_FromString("dispatch");
+    phy->exception = PyString_FromString("exception");
     Py_INCREF(phy->handler);
     SWIG_PYTHON_THREAD_END_BLOCK;
     return chandler;
   }
+
+  PN_HANDLE(PNI_PYTRACER)
+
+  void pn_pytracer(pn_transport_t *transport, const char *message) {
+    PyObject *pytracer = (PyObject *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    PyObject *pytrans = SWIG_NewPointerObj(transport, SWIGTYPE_p_pn_transport_t, 0);
+    PyObject *pymsg = PyString_FromString(message);
+    PyObject *result = PyObject_CallFunctionObjArgs(pytracer, pytrans, pymsg, NULL);
+    if (!result) {
+      PyErr_PrintEx(true);
+    }
+    Py_XDECREF(pytrans);
+    Py_XDECREF(pymsg);
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  void pn_transport_set_pytracer(pn_transport_t *transport, PyObject *obj) {
+    pn_record_t *record = pn_transport_attachments(transport);
+    pn_record_def(record, PNI_PYTRACER, PN_PYREF);
+    pn_record_set(record, PNI_PYTRACER, obj);
+    pn_transport_set_tracer(transport, pn_pytracer);
+  }
+
+  PyObject *pn_transport_get_pytracer(pn_transport_t *transport) {
+    pn_record_t *record = pn_transport_attachments(transport);
+    PyObject *obj = (PyObject *)pn_record_get(record, PNI_PYTRACER);
+    if (obj) {
+      Py_XINCREF(obj);
+      return obj;
+    } else {
+      Py_RETURN_NONE;
+    }
+  }
+
 %}
 
 %include "proton/cproton.i"

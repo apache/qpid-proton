@@ -1,0 +1,122 @@
+<!DOCTYPE html> <!-- HTML5 doctype -->
+
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+  
+    http://www.apache.org/licenses/LICENSE-2.0
+  
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->
+
+<html>
+
+<head>
+	<title>Simple Proton Messenger Send Example</title>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+
+<!--
+  Import the Messenger Binding proton.js. Note that this simple example pulls
+  it from the node_modules/qpid-proton/lib, which is created by the build process
+  so that the node.js based examples "just work", in a real Web App you would
+  clearly need to copy the proton.js to your own server.
+
+  In actual fact the CMake build actually builds proton.js into the directory:
+  <build>/proton-c/bindings/javascript
+  where <build> is the build directory created to run cmake from, it is then
+  copied to the node_modules/qpid-proton/lib directory.
+
+  In this example we also set the global variable PROTON_TOTAL_MEMORY in order to
+  increase the virtual heap available to the emscripten compiled C runtime. It
+  is not really necessary to do this for this application as the default value
+  of 16777216 is fine, it is simply done here to illustrate how to do it.
+-->
+<script type="text/javascript">PROTON_TOTAL_MEMORY = 50000000;</script>
+<script type="text/javascript" src="../../../node_modules/qpid-proton-messenger/lib/proton-messenger.js"></script>
+
+<script type="text/javascript">
+var message = new proton.Message();
+var messenger = new proton.Messenger();
+
+var sendMessage = function() {
+    var address = document.getElementById("address").value;
+    var subject = document.getElementById("subject").value;
+    var body = document.getElementById("body").value;
+
+console.log("sendMessage");
+console.log("address = " + address);
+console.log("subject = " + subject);
+console.log("body = " + body);
+
+    message.setAddress(address);
+    message.setSubject(subject);
+    message.body = body;
+
+    messenger.put(message);
+    messenger.send();
+};
+
+var errorHandler = function(error) {
+    console.log("Received error " + error);
+};
+
+messenger.on('error', errorHandler);
+messenger.start();
+
+</script>
+
+<style>
+body
+{
+	font: 13px/1.5 Helvetica, Arial, 'Liberation Sans', FreeSans, sans-serif;
+    overflow-x: hidden; /* Hide horizontal scrollbar */
+    background: #dddddd;
+}
+
+label
+{
+    display: block;
+	font-size: 17px;
+}
+
+input, textarea
+{
+	font-size: 13px;
+    margin-bottom: 10px;
+}
+</style>
+
+</head>
+
+<body>
+<div>
+    <label for="address">Address:</label>
+    <input type="text" id="address" size="40"
+           placeholder="amqp://user:password@host:port"
+           name="address" value="amqp://guest:guest@0.0.0.0" />
+</div>
+<div>    
+    <label for="subject">Subject:</label>
+    <input type="text" id="subject" size="40"
+           name="subject" value="Browser Message" />
+</div>
+<div>
+    <label for="body">Message:</label>
+    <textarea id="body" name="body" rows="4" cols="40">Hello From Browser!</textarea>
+</div>
+<div>
+    <input type="button" value="send" onclick="sendMessage()"/>
+</div>
+</body>
+
+</html>

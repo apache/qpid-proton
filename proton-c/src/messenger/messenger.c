@@ -330,13 +330,10 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
-  pn_sasl_t *sasl = pn_sasl(t);
-
-  pn_sasl_mechanisms(sasl, "ANONYMOUS");
-  pn_sasl_done(sasl, PN_SASL_OK);
 
   pn_connection_t *conn = pn_messenger_connection(ctx->messenger, sock, scheme, NULL, NULL, NULL, NULL, ctx);
   pn_transport_bind(t, conn);
+  pn_decref(t);
   pni_conn_modified((pn_connection_ctx_t *) pn_connection_get_context(conn));
 }
 
@@ -822,6 +819,7 @@ bool pn_messenger_flow(pn_messenger_t *messenger)
     if (max > used)
       messenger->credit = max - used;
   } else if (messenger->credit_mode == LINK_CREDIT_MANUAL) {
+    messenger->next_drain = 0;
     return false;
   }
 
@@ -886,6 +884,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
                                                messenger->private_key,
                                                messenger->password);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "invalid credentials");
         return err;
       }
@@ -893,32 +892,27 @@ static int pn_transport_config(pn_messenger_t *messenger,
     if (messenger->trusted_certificates) {
       int err = pn_ssl_domain_set_trusted_ca_db(d, messenger->trusted_certificates);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "invalid certificate db");
         return err;
       }
       err = pn_ssl_domain_set_peer_authentication(
           d, messenger->ssl_peer_authentication_mode, NULL);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "error configuring ssl to verify peer");
       }
     } else {
       int err = pn_ssl_domain_set_peer_authentication(d, PN_SSL_ANONYMOUS_PEER, NULL);
       if (err) {
+        pn_ssl_domain_free(d);
         pn_error_report("CONNECTION", "error configuring ssl for anonymous peer");
         return err;
       }
     }
     pn_ssl_t *ssl = pn_ssl(transport);
     pn_ssl_init(ssl, d, NULL);
-    pn_ssl_set_peer_hostname(ssl, pn_connection_get_hostname(connection));
     pn_ssl_domain_free( d );
-  }
-
-  pn_sasl_t *sasl = pn_sasl(transport);
-  if (ctx->user) {
-    pn_sasl_plain(sasl, ctx->user, ctx->pass);
-  } else {
-    pn_sasl_mechanisms(sasl, "ANONYMOUS");
   }
 
   return 0;
@@ -1065,6 +1059,8 @@ pn_connection_t *pn_messenger_connection(pn_messenger_t *messenger,
 
   pn_connection_set_container(connection, messenger->name);
   pn_connection_set_hostname(connection, host);
+  pn_connection_set_user(connection, user);
+  pn_connection_set_password(connection, pass);
 
   pn_list_add(messenger->connections, connection);
 
@@ -1096,6 +1092,7 @@ void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *even
       pn_connection_reset(conn);
       pn_transport_t *t = pn_transport();
       pn_transport_bind(t, conn);
+      pn_decref(t);
       pn_transport_config(messenger, conn);
     }
   }
@@ -1612,6 +1609,10 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
 
   pn_socket_t sock = pn_connect(messenger->io, host, port ? port : default_port(scheme));
   if (sock == PN_INVALID_SOCKET) {
+    pn_error_copy(messenger->error, pn_io_error(messenger->io));
+    pn_error_format(messenger->error, PN_ERR, "CONNECTION ERROR (%s:%s): %s\n",
+                    messenger->address.host, messenger->address.port,
+                    pn_error_text(messenger->error));
     return NULL;
   }
 
@@ -1619,6 +1620,7 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
     pn_messenger_connection(messenger, sock, scheme, user, pass, host, port, NULL);
   pn_transport_t *transport = pn_transport();
   pn_transport_bind(transport, connection);
+  pn_decref(transport);
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
   pn_selectable_t *sel = ctx->selectable;
   err = pn_transport_config(messenger, connection);

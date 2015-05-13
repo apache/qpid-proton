@@ -29,7 +29,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <proton/types.h>
 #include <proton/object.h>
 
@@ -40,10 +39,13 @@ PN_EXTERN ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, siz
 int pn_quote(pn_string_t *dst, const char *src, size_t size);
 PN_EXTERN void pn_fprint_data(FILE *stream, const char *bytes, size_t size);
 PN_EXTERN void pn_print_data(const char *bytes, size_t size);
-bool pni_eq_nocase(const char *a, const char *b);
-bool pni_eq_n_nocase(const char *a, const char *b, int len);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
+
+char *pn_strdup(const char *src);
+char *pn_strndup(const char *src, size_t n);
+int pn_strcasecmp(const char* a, const char* b);
+int pn_strncasecmp(const char* a, const char* b, size_t len);
 
 #define DIE_IFR(EXPR, STRERR)                                           \
   do {                                                                  \
@@ -103,9 +105,6 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
     if ((NODE) == LL_TAIL(ROOT, LIST))                                 \
       LL_TAIL(ROOT, LIST) = (NODE)-> LIST ## _prev;                    \
   }
-
-char *pn_strdup(const char *src);
-char *pn_strndup(const char *src, size_t n);
 
 #define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
 #define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))

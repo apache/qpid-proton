@@ -18,9 +18,12 @@
 #
 
 import os, common, gc
+import sys
 from time import time, sleep
 from proton import *
-from common import pump
+from common import pump, Skipped
+from proton.reactor import Reactor
+
 
 # older versions of gc do not provide the garbage list
 if not hasattr(gc, "garbage"):
@@ -231,6 +234,25 @@ class ConnectionTest(Test):
     pump(t1, t2)
     assert c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
+  def test_user_config(self):
+    if "java" in sys.platform:
+      raise Skipped("Unsupported API")
+
+    self.c1.user = "vindaloo"
+    self.c1.password = "secret"
+    self.c1.open()
+    self.pump()
+
+    self.c2.user = "leela"
+    self.c2.password = "trustno1"
+    self.c2.open()
+    self.pump()
+
+    assert self.c1.user == "vindaloo", self.c1.user
+    assert self.c1.password == None, self.c1.password
+    assert self.c2.user == "leela", self.c2.user
+    assert self.c2.password == None, self.c2.password
+
 class SessionTest(Test):
 
   def setup(self):
@@ -367,6 +389,50 @@ class SessionTest(Test):
     gc.collect()
     self.pump()
     assert rcv_ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
+
+  def test_reopen_on_same_session_without_free(self):
+    """
+    confirm that a link is correctly opened when attaching to a previously
+    closed link *that has not been freed yet* on the same session
+    """
+    self.ssn.open()
+    self.pump()
+
+    ssn2 = self.c2.session_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+    ssn2.open()
+    self.pump()
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
+    snd.close()
+    rcv.close()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+    assert rcv.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
+
+    snd = self.ssn.sender("test-link")
+    rcv = ssn2.receiver("test-link")
+    assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+    assert rcv.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT
+
+    snd.open()
+    rcv.open()
+    self.pump()
+
+    assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+    assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
+
 
 class LinkTest(Test):
 
@@ -1800,8 +1866,6 @@ class PipelineTest(Test):
 
     assert rcv.queued == 0, rcv.queued
 
-import sys
-from common import Skipped
 
 class ServerTest(Test):
 
@@ -1810,45 +1874,32 @@ class ServerTest(Test):
     """
     if "java" in sys.platform:
       raise Skipped()
-    idle_timeout_secs = self.delay
-    self.server = common.TestServerDrain()
-    self.server.start()
-    self.driver = Driver()
-    self.cxtr = self.driver.connector(self.server.host, self.server.port)
-    self.cxtr.transport.idle_timeout = idle_timeout_secs
-    self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.conn = Connection()
-    self.cxtr.connection = self.conn
-    self.conn.open()
-    #self.session = self.conn.session()
-    #self.session.open()
-    #self.link = self.session.sender("test-sender")
-    #self.link.open()
+    idle_timeout = self.delay
+    server = common.TestServer()
+    server.start()
 
-    # wait for the connection to come up
+    class Program:
 
-    deadline = time() + self.timeout
-    while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
-          and time() <= deadline:
-      self.cxtr.process()
-      self.driver.wait(0.001)
-      self.cxtr.process()
+      def on_reactor_init(self, event):
+        self.conn = event.reactor.connection()
+        self.conn.hostname = "%s:%s" % (server.host, server.port)
+        self.conn.open()
+        self.old_count = None
+        event.reactor.schedule(3 * idle_timeout, self)
 
-    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
+      def on_connection_bound(self, event):
+        event.transport.idle_timeout = idle_timeout
 
-    # wait up to 3x the idle timeout
-    old_count = self.cxtr.transport.frames_input
-    duration = 3 * idle_timeout_secs
-    deadline = time() + duration
-    while time() <= deadline:
-      self.cxtr.process()
-      self.driver.wait(0.001)
-      self.cxtr.process()
+      def on_connection_remote_open(self, event):
+        self.old_count = event.transport.frames_input
 
-    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
-    assert self.cxtr.transport.frames_input > old_count, "No idle frames received"
+      def on_timer_task(self, event):
+        assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+        assert self.conn.transport.frames_input > self.old_count, "No idle frames received"
+        self.conn.close()
 
-    self.server.stop()
+    Reactor(Program()).run()
+    server.stop()
 
   def testIdleTimeout(self):
     """ Verify that a Connection is terminated properly when Idle frames do not
@@ -1856,55 +1907,45 @@ class ServerTest(Test):
     """
     if "java" in sys.platform:
       raise Skipped()
-    idle_timeout_secs = self.delay
-    self.server = common.TestServerDrain(idle_timeout=idle_timeout_secs)
-    self.server.start()
-    self.driver = Driver()
-    self.cxtr = self.driver.connector(self.server.host, self.server.port)
-    self.cxtr.sasl().mechanisms("ANONYMOUS")
-    self.conn = Connection()
-    self.cxtr.connection = self.conn
-    self.conn.open()
+    idle_timeout = self.delay
+    server = common.TestServer(idle_timeout=idle_timeout)
+    server.start()
 
-    # wait for the connection to come up
+    class Program:
 
-    deadline = time() + self.timeout
-    while self.conn.state != (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE) \
-          and time() <= deadline:
-      self.cxtr.process()
-      self.driver.wait(self.timeout)
-      self.cxtr.process()
+      def on_reactor_init(self, event):
+        self.conn = event.reactor.connection()
+        self.conn.hostname = "%s:%s" % (server.host, server.port)
+        self.conn.open()
+        self.remote_condition = None
+        self.old_count = None
+        # verify the connection stays up even if we don't explicitly send stuff
+        # wait up to 3x the idle timeout
+        event.reactor.schedule(3 * idle_timeout, self)
 
-    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection failed"
+      def on_connection_bound(self, event):
+        self.transport = event.transport
 
-    # verify the connection stays up even if we don't explicitly send stuff
-    # wait up to 3x the idle timeout
-    old_count = self.cxtr.transport.frames_output
-    duration = 3 * idle_timeout_secs
-    deadline = time() + duration
-    while time() <= deadline:
-      self.cxtr.process()
-      self.driver.wait(10 * duration)
-      self.cxtr.process()
+      def on_connection_remote_open(self, event):
+        self.old_count = event.transport.frames_output
 
-    assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
-    assert self.cxtr.transport.frames_output > old_count, "No idle frames sent"
+      def on_connection_remote_close(self, event):
+        assert self.conn.remote_condition
+        assert self.conn.remote_condition.name == "amqp:resource-limit-exceeded"
+        self.remote_condition = self.conn.remote_condition
 
-    # now wait to explicitly cause the other side to expire:
+      def on_timer_task(self, event):
+        assert self.conn.state == (Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE), "Connection terminated"
+        assert self.conn.transport.frames_output > self.old_count, "No idle frames sent"
 
-    sleep(idle_timeout_secs * 3)
+        # now wait to explicitly cause the other side to expire:
+        sleep(3 * idle_timeout)
 
-    # and check that the remote killed the connection:
-
-    deadline = time() + self.timeout
-    while (self.conn.state & Endpoint.REMOTE_ACTIVE) and time() <= deadline:
-      self.cxtr.process()
-      self.driver.wait(self.timeout)
-      self.cxtr.process()
-
-    assert self.conn.state & Endpoint.REMOTE_CLOSED, "Connection failed to close"
-
-    self.server.stop()
+    p = Program()
+    Reactor(p).run()
+    assert p.remote_condition
+    assert p.remote_condition.name == "amqp:resource-limit-exceeded"
+    server.stop()
 
 class NoValue:
 
@@ -2387,9 +2428,10 @@ class TeardownLeakTest(PeerTest):
                   Event.TRANSPORT_CLOSED)
 
     self.connection.free()
+    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL)
     self.transport.unbind()
 
-    self.expect(Event.LINK_FINAL, Event.SESSION_FINAL, Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
+    self.expect(Event.CONNECTION_UNBOUND, Event.CONNECTION_FINAL)
 
   def testLocalRemoteLeak(self):
     self.doLeak(True, True)
@@ -2442,3 +2484,71 @@ class DeliverySegFaultTest(Test):
     t.bind(conn)
     t.unbind()
     dlv = snd.delivery("tag")
+
+class SaslEventTest(CollectorTest):
+
+  def testAnonymousNoInitialResponse(self):
+    if "java" in sys.platform:
+      raise Skipped()
+    conn = Connection()
+    conn.collect(self.collector)
+    transport = Transport(Transport.SERVER)
+    transport.bind(conn)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
+
+    transport.push('AMQP\x03\x01\x00\x00\x00\x00\x00 \x02\x01\x00\x00\x00SA'
+                   '\xd0\x00\x00\x00\x10\x00\x00\x00\x02\xa3\tANONYMOUS@'
+                   'AMQP\x00\x01\x00\x00')
+    self.expect(Event.TRANSPORT)
+    for i in range(1024):
+      p = transport.pending()
+      self.drain()
+    p = transport.pending()
+    self.expect()
+
+  def testPipelinedServerReadFirst(self):
+    if "java" in sys.platform:
+      raise Skipped()
+    conn = Connection()
+    conn.collect(self.collector)
+    transport = Transport(Transport.CLIENT)
+    s = transport.sasl()
+    s.allowed_mechs("ANONYMOUS PLAIN")
+    transport.bind(conn)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
+    transport.push('AMQP\x03\x01\x00\x00\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@'
+                   '\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS\x00\x00\x00\x10'
+                   '\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00AMQP\x00\x01\x00'
+                   '\x00')
+    self.expect(Event.TRANSPORT)
+    p = transport.pending()
+    bytes = transport.peek(p)
+    transport.pop(p)
+
+    server = Transport(Transport.SERVER)
+    server.push(bytes)
+    assert server.sasl().outcome == SASL.OK
+
+  def testPipelinedServerWriteFirst(self):
+    if "java" in sys.platform:
+      raise Skipped()
+    conn = Connection()
+    conn.collect(self.collector)
+    transport = Transport(Transport.CLIENT)
+    s = transport.sasl()
+    s.allowed_mechs("ANONYMOUS")
+    transport.bind(conn)
+    p = transport.pending()
+    bytes = transport.peek(p)
+    transport.pop(p)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND, Event.TRANSPORT)
+    transport.push('AMQP\x03\x01\x00\x00\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@'
+                   '\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS\x00\x00\x00\x10'
+                   '\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00AMQP\x00\x01\x00'
+                   '\x00')
+    self.expect(Event.TRANSPORT)
+    p = transport.pending()
+    bytes = transport.peek(p)
+    transport.pop(p)
+    # XXX: the bytes above appear to be correct, but we don't get any
+    # sort of event indicating that the transport is authenticated

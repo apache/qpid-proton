@@ -26,7 +26,6 @@
 #include <proton/types.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <sys/types.h>
 #include <proton/type_compat.h>
 
 #ifdef __cplusplus
@@ -48,16 +47,6 @@ extern "C" {
  * formatted message data.
  */
 typedef struct pn_message_t pn_message_t;
-
-/**
- * Encoding format for message content.
- */
-typedef enum {
-  PN_DATA, /**< Raw binary data. Not all messages can be encoded this way.*/
-  PN_TEXT, /**< Raw text. Not all messages can be encoded this way.*/
-  PN_AMQP, /**< AMQP formatted data. All messages can be encoded this way.*/
-  PN_JSON /**< JSON formatted data. Not all messages can be encoded with full fidelity way.*/
-} pn_format_t;
 
 /**
  * Default priority for messages.
@@ -658,66 +647,6 @@ PN_EXTERN const char *   pn_message_get_reply_to_group_id (pn_message_t *msg);
 PN_EXTERN int            pn_message_set_reply_to_group_id (pn_message_t *msg, const char *reply_to_group_id);
 
 /**
- * @deprecated
- */
-PN_EXTERN pn_format_t pn_message_get_format(pn_message_t *message);
-
-/**
- * @deprecated
- */
-PN_EXTERN int pn_message_set_format(pn_message_t *message, pn_format_t format);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_data(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_text(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_amqp(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_load_json(pn_message_t *message, const char *data, size_t size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_data(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_text(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_amqp(pn_message_t *message, char *data, size_t *size);
-
-/**
- * @deprecated Use ::pn_message_body() instead.
- */
-PN_EXTERN int pn_message_save_json(pn_message_t *message, char *data, size_t *size);
-
-/**
  * Get/set the delivery instructions for a message.
  *
  * This operation returns a pointer to a ::pn_data_t representing the
@@ -809,9 +738,9 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
 /**
- * @deprecated
+ * Save message content into a pn_data_t object data. The data object will first be cleared.
  */
-PN_EXTERN ssize_t pn_message_data(char *dst, size_t available, const char *src, size_t size);
+PN_EXTERN int pn_message_data(pn_message_t *msg, pn_data_t *data);
 
 /** @}
  */

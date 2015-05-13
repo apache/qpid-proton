@@ -43,6 +43,12 @@ public class PlainTransportWrapper implements TransportWrapper
     }
 
     @Override
+    public int position()
+    {
+        return _inputProcessor.position();
+    }
+
+    @Override
     public ByteBuffer tail()
     {
         return _inputProcessor.tail();

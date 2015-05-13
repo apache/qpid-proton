@@ -476,7 +476,8 @@ int pn_data_intern_node(pn_data_t *data, pni_node_t *node)
 
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
-  int err;
+  int err = 0;
+  const char *begin = fmt;
   while (*fmt) {
     char code = *(fmt++);
     if (!code) return 0;
@@ -578,7 +579,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     case '[':
-      if (*(fmt - 2) != 'T') {
+      if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pn_data_put_list(data);
         if (err) return err;
         pn_data_enter(data);
@@ -656,7 +657,6 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pni_node_t *current = pn_data_node(data, data->current);
         current->down = 0;
         current->children = 0;
-        if (err) return err;
         parent = pn_data_node(data, data->parent);
       } else {
         break;
@@ -1331,7 +1331,7 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
     case PN_SYMBOL:
       {
         pn_bytes_t bytes = pn_data_get_bytes(data);
-        if (!strncmp(name, bytes.start, bytes.size)) {
+        if (strlen(name) == bytes.size && !strncmp(name, bytes.start, bytes.size)) {
           return pn_data_next(data);
         }
       }
@@ -1424,6 +1424,11 @@ ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
   return pn_encoder_encode(data->encoder, data, bytes, size);
 }
 
+ssize_t pn_data_encoded_size(pn_data_t *data)
+{
+  return pn_encoder_size(data->encoder, data);
+}
+
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
   return pn_decoder_decode(data->decoder, bytes, size, data);
@@ -1455,7 +1460,7 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type)
 {
   pni_node_t *array = pn_data_current(data);
-  array->type = type;
+  if (array) array->type = type;
 }
 
 int pn_data_put_described(pn_data_t *data)
@@ -1929,7 +1934,7 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
   if (node) {
     return *((pn_atom_t *) &node->atom);
   } else {
-    pn_atom_t t = {PN_NULL};
+    pn_atom_t t = {PN_NULL, {0,}};
     return t;
   }
 }

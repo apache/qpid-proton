@@ -54,7 +54,13 @@ class InteropTest(common.Test):
             buffer = buffer[n:]
         self.data.rewind()
 
-    def decode_data_file(self, name): self.decode_data(self.get_data(name))
+    def decode_data_file(self, name):
+        encoded = self.get_data(name)
+        self.decode_data(encoded)
+        encoded_size = self.data.encoded_size()
+        # Re-encode and verify pre-computed and actual encoded size match.
+        reencoded = self.data.encode()
+        assert encoded_size == len(reencoded), "%d != %d" % (encoded_size, len(reencoded))
 
     def decode_message_file(self, name):
         self.message.decode(self.get_data(name))

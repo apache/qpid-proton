@@ -44,6 +44,7 @@ struct pn_reactor_t {
   pn_handler_t *handler;
   pn_list_t *children;
   pn_timer_t *timer;
+  pn_socket_t wakeup[2];
   pn_selectable_t *selectable;
   pn_event_type_t previous;
   pn_timestamp_t now;
@@ -52,9 +53,15 @@ struct pn_reactor_t {
   bool yield;
 };
 
-void pn_reactor_mark(pn_reactor_t *reactor) {
+pn_timestamp_t pn_reactor_mark(pn_reactor_t *reactor) {
   assert(reactor);
   reactor->now = pn_i_now();
+  return reactor->now;
+}
+
+pn_timestamp_t pn_reactor_now(pn_reactor_t *reactor) {
+  assert(reactor);
+  return reactor->now;
 }
 
 static void pn_reactor_initialize(pn_reactor_t *reactor) {
@@ -65,6 +72,8 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
   reactor->handler = pn_handler(NULL);
   reactor->children = pn_list(PN_OBJECT, 0);
   reactor->timer = pn_timer(reactor->collector);
+  reactor->wakeup[0] = PN_INVALID_SOCKET;
+  reactor->wakeup[1] = PN_INVALID_SOCKET;
   reactor->selectable = NULL;
   reactor->previous = PN_EVENT_NONE;
   reactor->selectables = 0;
@@ -74,6 +83,11 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
 }
 
 static void pn_reactor_finalize(pn_reactor_t *reactor) {
+  for (int i = 0; i < 2; i++) {
+    if (reactor->wakeup[i] != PN_INVALID_SOCKET) {
+      pn_close(reactor->io, reactor->wakeup[i]);
+    }
+  }
   pn_decref(reactor->attachments);
   pn_decref(reactor->collector);
   pn_decref(reactor->global);
@@ -90,7 +104,14 @@ static void pn_reactor_finalize(pn_reactor_t *reactor) {
 PN_CLASSDEF(pn_reactor)
 
 pn_reactor_t *pn_reactor() {
-  return pn_reactor_new();
+  pn_reactor_t *reactor = pn_reactor_new();
+  int err = pn_pipe(reactor->io, reactor->wakeup);
+  if (err) {
+    pn_free(reactor);
+    return NULL;
+  } else {
+    return reactor;
+  }
 }
 
 pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor) {
@@ -98,9 +119,14 @@ pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor) {
   return reactor->attachments;
 }
 
-int pn_reactor_timeout(pn_reactor_t *reactor) {
+pn_millis_t pn_reactor_get_timeout(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->timeout;
+}
+
+void pn_reactor_set_timeout(pn_reactor_t *reactor, pn_millis_t timeout) {
+  assert(reactor);
+  reactor->timeout = timeout;
 }
 
 void pn_reactor_free(pn_reactor_t *reactor) {
@@ -112,16 +138,28 @@ void pn_reactor_free(pn_reactor_t *reactor) {
   }
 }
 
-void pn_reactor_global(pn_reactor_t *reactor, pn_handler_t *handler) {
+pn_handler_t *pn_reactor_get_global_handler(pn_reactor_t *reactor) {
+  assert(reactor);
+  return reactor->global;
+}
+
+void pn_reactor_set_global_handler(pn_reactor_t *reactor, pn_handler_t *handler) {
   assert(reactor);
   pn_decref(reactor->global);
   reactor->global = handler;
   pn_incref(reactor->global);
 }
 
-pn_handler_t *pn_reactor_handler(pn_reactor_t *reactor) {
+pn_handler_t *pn_reactor_get_handler(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->handler;
+}
+
+void pn_reactor_set_handler(pn_reactor_t *reactor, pn_handler_t *handler) {
+  assert(reactor);
+  pn_decref(reactor->handler);
+  reactor->handler = handler;
+  pn_incref(reactor->handler);
 }
 
 pn_io_t *pn_reactor_io(pn_reactor_t *reactor) {
@@ -173,18 +211,6 @@ void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable) {
     } else {
       pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_UPDATED);
     }
-  }
-}
-
-static void pni_reactor_dispatch_pre(pn_reactor_t *reactor, pn_event_t *event) {
-  assert(reactor);
-  assert(event);
-  switch (pn_event_type(event)) {
-  case PN_CONNECTION_INIT:
-    pni_record_init_reactor(pn_connection_attachments(pn_event_connection(event)), reactor);
-    break;
-  default:
-    break;
   }
 }
 
@@ -247,33 +273,41 @@ static pn_reactor_t *pni_reactor(pn_selectable_t *sel) {
   return (pn_reactor_t *) pni_selectable_get_context(sel);
 }
 
-pn_reactor_t *pn_event_reactor(pn_event_t *event) {
-  const pn_class_t *clazz = pn_event_class(event);
-  void *context = pn_event_context(event);
+pn_reactor_t *pn_class_reactor(const pn_class_t *clazz, void *object) {
   switch (pn_class_id(clazz)) {
   case CID_pn_reactor:
-    return (pn_reactor_t *) context;
+    return (pn_reactor_t *) object;
   case CID_pn_task:
-    return pni_record_get_reactor(pn_task_attachments((pn_task_t *) context));
+    return pni_record_get_reactor(pn_task_attachments((pn_task_t *) object));
   case CID_pn_transport:
-    return pni_record_get_reactor(pn_transport_attachments((pn_transport_t *) context));
+    return pni_record_get_reactor(pn_transport_attachments((pn_transport_t *) object));
   case CID_pn_delivery:
   case CID_pn_link:
   case CID_pn_session:
   case CID_pn_connection:
     {
-      pn_connection_t *conn = pni_object_connection(pn_event_class(event), context);
+      pn_connection_t *conn = pni_object_connection(clazz, object);
       pn_record_t *record = pn_connection_attachments(conn);
       return pni_record_get_reactor(record);
     }
   case CID_pn_selectable:
     {
-      pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
+      pn_selectable_t *sel = (pn_selectable_t *) object;
       return pni_reactor(sel);
     }
   default:
     return NULL;
   }
+}
+
+pn_reactor_t *pn_object_reactor(void *object) {
+  return pn_class_reactor(pn_object_reify(object), object);
+}
+
+pn_reactor_t *pn_event_reactor(pn_event_t *event) {
+  const pn_class_t *clazz = pn_event_class(event);
+  void *context = pn_event_context(event);
+  return pn_class_reactor(clazz, context);
 }
 
 pn_handler_t *pn_event_handler(pn_event_t *event, pn_handler_t *default_handler) {
@@ -337,6 +371,17 @@ void pn_reactor_yield(pn_reactor_t *reactor) {
   reactor->yield = true;
 }
 
+bool pn_reactor_quiesced(pn_reactor_t *reactor) {
+  assert(reactor);
+  pn_event_t *event = pn_collector_peek(reactor->collector);
+  // no events
+  if (!event) { return true; }
+  // more than one event
+  if (pn_collector_more(reactor->collector)) { return false; }
+  // if we have just one event then we are quiesced if the quiesced event
+  return pn_event_type(event) == PN_REACTOR_QUIESCED;
+}
+
 bool pn_reactor_process(pn_reactor_t *reactor) {
   assert(reactor);
   pn_reactor_mark(reactor);
@@ -350,12 +395,14 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         return true;
       }
       reactor->yield = false;
-      pni_reactor_dispatch_pre(reactor, event);
+      pn_incref(event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
-      pn_handler_dispatch(handler, event);
-      pn_handler_dispatch(reactor->global, event);
+      pn_event_type_t type = pn_event_type(event);
+      pn_handler_dispatch(handler, event, type);
+      pn_handler_dispatch(reactor->global, event, type);
       pni_reactor_dispatch_post(reactor, event);
-      previous = reactor->previous = pn_event_type(event);
+      previous = reactor->previous = type;
+      pn_decref(event);
       pn_collector_pop(reactor->collector);
     } else {
       if (pni_reactor_more(reactor)) {
@@ -384,12 +431,39 @@ static void pni_timer_expired(pn_selectable_t *sel) {
   pn_reactor_update(reactor, sel);
 }
 
+static void pni_timer_readable(pn_selectable_t *sel) {
+  char buf[64];
+  pn_reactor_t *reactor = pni_reactor(sel);
+  pn_socket_t fd = pn_selectable_get_fd(sel);
+  pn_read(reactor->io, fd, buf, 64);
+  pni_timer_expired(sel);
+}
+
+static void pni_timer_finalize(pn_selectable_t *sel) {
+  pn_reactor_t *reactor = pni_reactor(sel);
+  pn_close(reactor->io, pn_selectable_get_fd(sel));
+}
+
 pn_selectable_t *pni_timer_selectable(pn_reactor_t *reactor) {
   pn_selectable_t *sel = pn_reactor_selectable(reactor);
+  pn_selectable_set_fd(sel, reactor->wakeup[0]);
+  pn_selectable_on_readable(sel, pni_timer_readable);
   pn_selectable_on_expired(sel, pni_timer_expired);
+  pn_selectable_on_finalize(sel, pni_timer_finalize);
+  pn_selectable_set_reading(sel, true);
   pn_selectable_set_deadline(sel, pn_timer_deadline(reactor->timer));
   pn_reactor_update(reactor, sel);
   return sel;
+}
+
+int pn_reactor_wakeup(pn_reactor_t *reactor) {
+  assert(reactor);
+  ssize_t n = pn_write(reactor->io, reactor->wakeup[1], "x", 1);
+  if (n < 0) {
+    return (int) n;
+  } else {
+    return 0;
+  }
 }
 
 void pn_reactor_start(pn_reactor_t *reactor) {
@@ -398,22 +472,18 @@ void pn_reactor_start(pn_reactor_t *reactor) {
   reactor->selectable = pni_timer_selectable(reactor);
  }
 
-bool pn_reactor_work(pn_reactor_t *reactor, int timeout) {
-  assert(reactor);
-  reactor->timeout = timeout;
-  return pn_reactor_process(reactor);
-}
-
 void pn_reactor_stop(pn_reactor_t *reactor) {
   assert(reactor);
   pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
+  // XXX: should consider removing this fron stop to avoid reentrance
   pn_reactor_process(reactor);
   pn_collector_release(reactor->collector);
 }
 
 void pn_reactor_run(pn_reactor_t *reactor) {
   assert(reactor);
+  pn_reactor_set_timeout(reactor, 3141);
   pn_reactor_start(reactor);
-  while (pn_reactor_work(reactor, 1000)) {}
+  while (pn_reactor_process(reactor)) {}
   pn_reactor_stop(reactor);
 }

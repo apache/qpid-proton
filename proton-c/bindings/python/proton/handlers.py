@@ -22,58 +22,6 @@ from proton import Collector, Connection, Delivery, Described, Endpoint, Event, 
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 
-class FlowController(Handler):
-    """
-    A handler that controls a configured credit window for associated
-    receivers.
-    """
-    def __init__(self, window=1):
-        self.window = window
-
-    def top_up(self, link):
-        delta = self.window - link.credit
-        link.flow(delta)
-
-    def on_link_local_open(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_link_remote_open(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_link_flow(self, event):
-        if event.link.is_receiver:
-            self.top_up(event.link)
-
-    def on_delivery(self, event):
-        if event.delivery.link.is_receiver:
-            self.top_up(event.delivery.link)
-
-def add_nested_handler(handler, nested):
-    if hasattr(handler, 'handlers'):
-        getattr(handler, 'handlers').append(nested)
-    else:
-        handler.handlers = [nested]
-
-class ScopedHandler(Handler):
-    """
-    An internal handler that checks for handlers scoped to the engine
-    objects an event relates to. E.g it allows delivery, link, session
-    or connection scoped handlers that will only be called with events
-    for the object to which they are scoped.
-    """
-    scopes = ["delivery", "link", "session", "connection"]
-
-    def on_unhandled(self, method, event):
-        if event.type in [Event.CONNECTION_FINAL, Event.SESSION_FINAL, Event.LINK_FINAL]:
-            return
-
-        objects = [getattr(event, attr) for attr in self.scopes if hasattr(event, attr) and getattr(event, attr)]
-        targets = [getattr(o, "context") for o in objects if hasattr(o, "context")]
-        for t in targets:
-            event.dispatch(t)
-
 
 class OutgoingMessageHandler(Handler):
     """
@@ -86,7 +34,7 @@ class OutgoingMessageHandler(Handler):
 
     def on_link_flow(self, event):
         if event.link.is_sender and event.link.credit:
-            self.on_credit(event)
+            self.on_sendable(event)
 
     def on_delivery(self, event):
         dlv = event.delivery
@@ -95,36 +43,50 @@ class OutgoingMessageHandler(Handler):
                 self.on_accepted(event)
             elif dlv.remote_state == Delivery.REJECTED:
                 self.on_rejected(event)
-            elif dlv.remote_state == Delivery.RELEASED:
+            elif dlv.remote_state == Delivery.RELEASED or dlv.remote_state == Delivery.MODIFIED:
                 self.on_released(event)
-            elif dlv.remote_state == Delivery.MODIFIED:
-                self.on_modified(event)
             if dlv.settled:
                 self.on_settled(event)
             if self.auto_settle:
                 dlv.settle()
 
-    def on_credit(self, event):
+    def on_sendable(self, event):
+        """
+        Called when the sender link has credit and messages can
+        therefore be transferred.
+        """
         if self.delegate:
-            dispatch(self.delegate, 'on_credit', event)
+            dispatch(self.delegate, 'on_sendable', event)
 
     def on_accepted(self, event):
+        """
+        Called when the remote peer accepts an outgoing message.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_accepted', event)
 
     def on_rejected(self, event):
+        """
+        Called when the remote peer rejects an outgoing message.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_rejected', event)
 
     def on_released(self, event):
+        """
+        Called when the remote peer releases an outgoing message. Note
+        that this may be in response to either the RELEASE or MODIFIED
+        state as defined by the AMQP specification.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_released', event)
 
-    def on_modified(self, event):
-        if self.delegate:
-            dispatch(self.delegate, 'on_modified', event)
-
     def on_settled(self, event):
+        """
+        Called when the remote peer has settled the outgoing
+        message. This is the point at which it shouod never be
+        retransmitted.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_settled', event)
 
@@ -140,14 +102,33 @@ class Reject(ProtonException):
   """
   pass
 
+class Release(ProtonException):
+  """
+  An exception that indicate a message should be rejected
+  """
+  pass
+
 class Acking(object):
     def accept(self, delivery):
+        """
+        Accepts a received message.
+        """
         self.settle(delivery, Delivery.ACCEPTED)
 
     def reject(self, delivery):
+        """
+        Rejects a received message that is considered invalid or
+        unprocessable.
+        """
         self.settle(delivery, Delivery.REJECTED)
 
     def release(self, delivery, delivered=True):
+        """
+        Releases a received message, making it available at the source
+        for any (other) interested receiver. The ``delivered``
+        parameter indicates whether this should be considered a
+        delivery attempt (and the delivery count updated) or not.
+        """
         if delivered:
             self.settle(delivery, Delivery.MODIFIED)
         else:
@@ -173,18 +154,33 @@ class IncomingMessageHandler(Handler, Acking):
         if not dlv.link.is_receiver: return
         if dlv.readable and not dlv.partial:
             event.message = recv_msg(dlv)
-            try:
-                self.on_message(event)
+            if event.link.state & Endpoint.LOCAL_CLOSED:
                 if self.auto_accept:
-                    dlv.update(Delivery.ACCEPTED)
+                    dlv.update(Delivery.RELEASED)
                     dlv.settle()
-            except Reject:
-                dlv.update(Delivery.REJECTED)
-                dlv.settle()
+            else:
+                try:
+                    self.on_message(event)
+                    if self.auto_accept:
+                        dlv.update(Delivery.ACCEPTED)
+                        dlv.settle()
+                except Reject:
+                    dlv.update(Delivery.REJECTED)
+                    dlv.settle()
+                except Release:
+                    dlv.update(Delivery.MODIFIED)
+                    dlv.settle()
         elif dlv.updated and dlv.settled:
             self.on_settled(event)
 
     def on_message(self, event):
+        """
+        Called when a message is received. The message itself can be
+        obtained as a property on the event. For the purpose of
+        refering to this message in further actions (e.g. if
+        explicitly accepting it, the ``delivery`` should be used, also
+        obtainable via a property on the event.
+        """
         if self.delegate:
             dispatch(self.delegate, 'on_message', event)
 
@@ -258,7 +254,7 @@ class EndpointStateHandler(Handler):
         if event.connection.remote_condition:
             self.on_connection_error(event)
         elif self.is_local_closed(event.connection):
-            self.on_connection_closed(event)
+           self.on_connection_closed(event)
         else:
             self.on_connection_closing(event)
         event.connection.close()
@@ -370,6 +366,13 @@ class EndpointStateHandler(Handler):
         elif self.peer_close_is_error:
             self.on_link_error(event)
 
+    def on_transport_tail_closed(self, event):
+        self.on_transport_closed(event)
+
+    def on_transport_closed(self, event):
+        if self.delegate and event.connection and self.is_local_open(event.connection):
+            dispatch(self.delegate, 'on_disconnected', event)
+
 class MessagingHandler(Handler, Acking):
     """
     A general purpose handler that makes the proton-c events somewhat
@@ -379,21 +382,123 @@ class MessagingHandler(Handler, Acking):
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
         if prefetch:
-            self.handlers.append(FlowController(prefetch))
+            self.handlers.append(CFlowController(prefetch))
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
         self.handlers.append(IncomingMessageHandler(auto_accept, self))
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
 
     def on_connection_error(self, event):
+        """
+        Called when the peer closes the connection with an error condition.
+        """
         EndpointStateHandler.print_error(event.connection, "connection")
 
     def on_session_error(self, event):
+        """
+        Called when the peer closes the session with an error condition.
+        """
         EndpointStateHandler.print_error(event.session, "session")
         event.connection.close()
 
     def on_link_error(self, event):
+        """
+        Called when the peer closes the link with an error condition.
+        """
         EndpointStateHandler.print_error(event.link, "link")
         event.connection.close()
+
+    def on_reactor_init(self, event):
+        """
+        Called when the event loop - the reactor - starts.
+        """
+        if hasattr(event.reactor, 'subclass'):
+            setattr(event, event.reactor.subclass.__name__.lower(), event.reactor)
+        self.on_start(event)
+
+    def on_start(self, event):
+        """
+        Called when the event loop starts. (Just an alias for on_reactor_init)
+        """
+        pass
+    def on_connection_closed(self, event):
+        """
+        Called when the connection is closed.
+        """
+        pass
+    def on_session_closed(self, event):
+        """
+        Called when the session is closed.
+        """
+        pass
+    def on_link_closed(self, event):
+        """
+        Called when the link is closed.
+        """
+        pass
+    def on_connection_closing(self, event):
+        """
+        Called when the peer initiates the closing of the connection.
+        """
+        pass
+    def on_session_closing(self, event):
+        """
+        Called when the peer initiates the closing of the session.
+        """
+        pass
+    def on_link_closing(self, event):
+        """
+        Called when the peer initiates the closing of the link.
+        """
+        pass
+    def on_disconnected(self, event):
+        """
+        Called when the socket is disconnected.
+        """
+        pass
+
+    def on_sendable(self, event):
+        """
+        Called when the sender link has credit and messages can
+        therefore be transferred.
+        """
+        pass
+
+    def on_accepted(self, event):
+        """
+        Called when the remote peer accepts an outgoing message.
+        """
+        pass
+
+    def on_rejected(self, event):
+        """
+        Called when the remote peer rejects an outgoing message.
+        """
+        pass
+
+    def on_released(self, event):
+        """
+        Called when the remote peer releases an outgoing message. Note
+        that this may be in response to either the RELEASE or MODIFIED
+        state as defined by the AMQP specification.
+        """
+        pass
+
+    def on_settled(self, event):
+        """
+        Called when the remote peer has settled the outgoing
+        message. This is the point at which it shouod never be
+        retransmitted.
+        """
+        pass
+    def on_message(self, event):
+        """
+        Called when a message is received. The message itself can be
+        obtained as a property on the event. For the purpose of
+        refering to this message in further actions (e.g. if
+        explicitly accepting it, the ``delivery`` should be used, also
+        obtainable via a property on the event.
+        """
+        pass
 
 class TransactionHandler(object):
     """
@@ -471,6 +576,9 @@ class PythonIO:
 
     def on_reactor_quiesced(self, event):
         reactor = event.reactor
+        # check if we are still quiesced, other handlers of
+        # on_reactor_quiesced could have produced events to process
+        if not reactor.quiesced: return
 
         reading = []
         writing = []

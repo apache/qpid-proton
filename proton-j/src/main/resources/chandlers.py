@@ -17,7 +17,14 @@
 # under the License.
 #
 
+from cerror import Skipped
+
 # from proton/handlers.h
-pn_flowcontroller = None
-pn_handshaker = None
-pn_iohandler = None
+def pn_flowcontroller(window):
+    raise Skipped()
+
+def pn_handshaker():
+    raise Skipped()
+
+def pn_iohandler():
+    raise Skipped()

@@ -24,8 +24,11 @@
 
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/types.h>
+#include <proton/object.h>
+#include <proton/error.h>
+#include <proton/condition.h>
 #include <stddef.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {

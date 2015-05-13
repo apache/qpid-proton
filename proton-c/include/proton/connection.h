@@ -30,7 +30,6 @@
 #include <proton/types.h>
 
 #include <stddef.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -274,6 +273,45 @@ PN_EXTERN const char *pn_connection_get_container(pn_connection_t *connection);
  * @param[in] container the container name
  */
 PN_EXTERN void pn_connection_set_container(pn_connection_t *connection, const char *container);
+
+/**
+ * Set the authentication username for a client connection
+ *
+ * It is necessary to set the username and password before binding the connection
+ * to a trasnport and it isn't allowed to change them after the binding.
+ *
+ * If not set then no authentication will be negotiated unless the client
+ * sasl layer is explicitly created (this would be for sometting like Kerberos
+ * where the credentials are implicit in the environment, or to explicitly use
+ * the ANONYMOUS SASL mechanism)
+ *
+ * @param[in] connection the connection
+ * @param[in] user the username
+ */
+PN_EXTERN void pn_connection_set_user(pn_connection_t *connection, const char *user);
+
+/**
+ * Set the authentication password for a client connection
+ *
+ * It is necessary to set the username and password before binding the connection
+ * to a trasnport and it isn't allowed to change them after the binding.
+ *
+ * Note that the password is write only and has no accessor as the underlying
+ * implementation should be zeroing the password after use to avoid the password
+ * being present in memory longer than necessary
+ *
+ * @param[in] connection the connection
+ * @param[in] password the password corresponding to the username - this will be copied and zeroed out after use
+ */
+PN_EXTERN void pn_connection_set_password(pn_connection_t *connection, const char *password);
+
+/**
+ * Get the authentication username for a client connection
+ *
+ * @param[in] connection the connection
+ * @return the username passed into the connection
+ */
+PN_EXTERN const char *pn_connection_get_user(pn_connection_t *connection);
 
 /**
  * Get the value of the AMQP Hostname used by a connection object.

@@ -20,11 +20,17 @@
 
 from distutils.core import setup, Extension
 
-setup(name='Proton',
+setup(name='python-qpid-proton',
       version='0.9',
       description='An AMQP based messaging library.',
       author='Apache Qpid',
       author_email='proton@qpid.apache.org',
       url='http://qpid.apache.org/proton/',
       packages=['proton'],
-      ext_modules=[Extension('cproton', ['cproton.i'])])
+      py_modules=['cproton'],
+      license="Apache Software License",
+      classifiers=["License :: OSI Approved :: Apache Software License",
+                   "Intended Audience :: Developers",
+                   "Programming Language :: Python"],
+      ext_modules=[Extension('_cproton', ['cproton.i'],
+                             libraries=['qpid-proton'])])

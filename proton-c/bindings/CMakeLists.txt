@@ -22,6 +22,17 @@ include(UseSWIG)
 # Add any new bindings here - the directory name must be the same as the binding name
 set (BINDINGS python ruby php perl javascript)
 
+# All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
+file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/proton-c/include/proton/*.h")
+
+# If swig version is 3.0 or greater then we can build some additional bindings
+if (${SWIG_VERSION} VERSION_GREATER 3.0 OR ${SWIG_VERSION} VERSION_EQUAL 3.0)
+  set (BINDINGS
+    ${BINDINGS}
+    node
+    )
+endif()
+
 set (BINDING_DEPS qpid-proton)
 
 # Add a block here to detect the prerequisites to build each language binding:
@@ -37,6 +48,7 @@ endif (PYTHONLIBS_FOUND)
 
 # Prerequisites for Ruby:
 find_program(GEM_EXE "gem")
+mark_as_advanced(GEM_EXE)
 macro(CheckRubyGem varname gemname)
   execute_process(COMMAND ${GEM_EXE} list --local ${gemname}
     OUTPUT_VARIABLE CHECK_OUTPUT)

@@ -51,6 +51,7 @@ class FrameWriter
     private int _frameStart = 0;
     private int _payloadStart;
     private int _performativeSize;
+    private long _framesOutput = 0;
 
     FrameWriter(EncoderImpl encoder, int maxFrameSize, byte frameType,
                 Ref<ProtocolTracer> protocolTracer, TransportImpl transport)
@@ -101,7 +102,7 @@ class FrameWriter
             try
             {
                 _buffer.position(_frameStart + 8);
-                _encoder.writeObject(frameBody);
+                if (frameBody != null) _encoder.writeObject(frameBody);
                 break;
             }
             catch (BufferOverflowException e)
@@ -185,6 +186,8 @@ class FrameWriter
         }
 
         endFrame(channel);
+
+        _framesOutput += 1;
     }
 
     void writeFrame(Object frameBody)
@@ -215,4 +218,8 @@ class FrameWriter
         return size;
     }
 
+    long getFramesOutput()
+    {
+        return _framesOutput;
+    }
 }

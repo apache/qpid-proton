@@ -17,6 +17,7 @@
 # under the License.
 #
 
+include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 
@@ -36,6 +37,7 @@ if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSI
   # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
   # so turn off unknown symbol warnings
   set (NOENABLE_UNDEFINED_ERROR ON)
+  set (OLD_ADD_TEST_COMMAND ON)
 else()
   set (OPTIONAL_ARG OPTIONAL)
   add_custom_target(docs)
@@ -43,8 +45,16 @@ endif()
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
-
 find_package (PythonInterp REQUIRED)
+find_package(SWIG)
+# FindSwig.cmake "forgets" make its outputs advanced like a good citizen
+mark_as_advanced(SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
+
+# See if Cyrus SASL is available
+find_library(CYRUS_SASL_LIBRARY sasl2)
+find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
+find_package_handle_standard_args(CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
+mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
 if(PN_WINAPI)
   set(ssl_impl schannel)
@@ -57,7 +67,14 @@ if (OPENSSL_FOUND)
   set(ssl_impl openssl)
 endif (OPENSSL_FOUND)
 set(SSL_IMPL ${ssl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${ssl_providers}")
-mark_as_advanced (SSL_IMPL)
+
+set(sasl_providers cyrus none)
+if (CYRUSSASL_FOUND)
+  set (sasl_impl cyrus)
+else ()
+  set (sasl_impl none)
+endif ()
+set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${sasl_providers}")
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
@@ -73,42 +90,49 @@ include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 # if/when this executable gets sorted out remove
 include_directories ("${CMAKE_SOURCE_DIR}/examples/include")
 
+set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py)
+
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
   )
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
-# Select driver
+# Select IO impl
 if(PN_WINAPI)
   set (pn_io_impl src/windows/io.c src/windows/iocp.c src/windows/write_pipeline.c)
   set (pn_selector_impl src/windows/selector.c)
-  set (pn_driver_impl src/windows/driver.c)
 else(PN_WINAPI)
   set (pn_io_impl src/posix/io.c)
   set (pn_selector_impl src/posix/selector.c)
-  set (pn_driver_impl src/posix/driver.c)
 endif(PN_WINAPI)
+
+# Link in SASL if present
+if (SASL_IMPL STREQUAL cyrus)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
+  include_directories (${CYRUS_SASL_INCLUDE_DIR})
+  set(SASL_LIB ${CYRUS_SASL_LIBRARY})
+elseif (SASL_IMPL STREQUAL none)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
+endif ()
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
-  set (pn_driver_ssl_impl src/ssl/openssl.c)
-  include_directories ("${OPENSSL_INCLUDE_DIR}")
+  set (pn_ssl_impl src/ssl/openssl.c)
+  include_directories (${OPENSSL_INCLUDE_DIR})
   set (SSL_LIB ${OPENSSL_LIBRARIES})
-else (SSL_IMPL STREQUAL openssl)
-  if (SSL_IMPL STREQUAL schannel)
-    set (pn_driver_ssl_impl src/windows/schannel.c)
-    set (SSL_LIB Crypt32.lib Secur32.lib)
-  else (SSL_IMPL STREQUAL schannel)
-    set (pn_driver_ssl_impl src/ssl/ssl_stub.c)
-  endif (SSL_IMPL STREQUAL schannel)
-endif (SSL_IMPL STREQUAL openssl)
+elseif (SSL_IMPL STREQUAL schannel)
+  set (pn_ssl_impl src/windows/schannel.c)
+  set (SSL_LIB Crypt32.lib Secur32.lib)
+else ()
+  set (pn_ssl_impl src/ssl/ssl_stub.c)
+endif ()
 
 # First check whether we get clock_gettime without any special library linked
 CHECK_SYMBOL_EXISTS(clock_gettime "time.h" CLOCK_GETTIME_IN_LIBC)
@@ -256,7 +280,6 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
-find_package(SWIG)
 if (SWIG_FOUND)
   add_subdirectory(bindings)
 endif (SWIG_FOUND)
@@ -268,9 +291,9 @@ add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 set (qpid-proton-platform
   ${pn_io_impl}
   ${pn_selector_impl}
-  ${pn_driver_impl}
   src/platform.c
-  ${pn_driver_ssl_impl}
+  ${pn_sasl_impl}
+  ${pn_ssl_impl}
   )
 
 set (qpid-proton-core
@@ -302,7 +325,6 @@ set (qpid-proton-core
   src/transport/autodetect.c
   src/transport/transport.c
   src/message/message.c
-  src/sasl/sasl.c
 
   src/reactor/reactor.c
   src/reactor/handler.c
@@ -319,6 +341,8 @@ set (qpid-proton-core
   src/messenger/store.c
   src/messenger/transform.c
   src/selectable.c
+
+  src/config.h
 
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
@@ -344,7 +368,7 @@ add_library (
   ${qpid-proton-platform}
   )
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
 set_target_properties (
   qpid-proton
@@ -359,14 +383,11 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
-add_executable (proton src/proton.c)
-target_link_libraries (proton qpid-proton)
-
 add_executable (proton-dump src/proton-dump.c)
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
-  proton proton-dump
+  proton-dump
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
   )
@@ -382,10 +403,10 @@ macro(pn_c_files)
   endforeach (src_file)
 endmacro(pn_c_files)
 
-pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton.c src/proton-dump.c)
+pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton-dump.c)
 
 # Install executables and libraries
-install (TARGETS proton proton-dump
+install (TARGETS proton-dump
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
@@ -447,39 +468,6 @@ install (FILES
 
 # CTest
 
-  # suffix for Visual Studio targets.  Only support RelWithDebInfo for now.
-if (MSVC)
-  set (bld_suffix "/RelWithDebInfo")
-endif(MSVC)
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-  # Substitute windows separators in path and remove empty entries.
-  # Replace necessary colons after windows drive letters.
-  function(set_path result path)
-    string (REGEX REPLACE ":" ";" path "${path}")
-    string (REGEX REPLACE ";;" ";" path "${path}")
-    string (REGEX REPLACE "^;" "" path "${path}")
-    string (REGEX REPLACE "\\\\" "/" path "${path}")
-    string (REGEX REPLACE ";([a-zA-Z]);" ";\\1:" path "${path}")
-    string (REGEX REPLACE "^([a-zA-Z]);" "\\1:" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-  # Set variable result to path, with empty entries removed
-  function(set_path result path)
-    string (REGEX REPLACE "^:" "" path "${path}")
-    string (REGEX REPLACE "::" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-
-set (env_py "${CMAKE_CURRENT_SOURCE_DIR}/env.py" )
-
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND)
@@ -496,47 +484,78 @@ mark_as_advanced (VALGRIND_EXE)
 
 add_subdirectory(src/tests)
 
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # No change needed for windows already use correct separator
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Just change ';'->':'
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    string (REGEX REPLACE ";" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
   set (py_root "${pn_test_root}/python")
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
-  set (py_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}") # For windows
-  set (app_path "${pn_test_bin}/tools/apps/c${bld_suffix}")
-  set (app_path "${app_path}:${pn_test_root}/tools/apps/python")
-  set_path (py_path "${py_bin}:${py_bld}:${app_path}:$ENV{PATH}")
-  set_path (py_pythonpath "${py_root}:${py_src}:${py_bin}:${py_bld}|$ENV{PYTHONPATH}")
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    set_path (py_pythonpath "${py_bin}${bld_suffix}:${py_pythonpath}")
-  endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  add_test (python-test ${PYTHON_EXECUTABLE} ${env_py}
+  set (py_dll "$<TARGET_FILE_DIR:_cproton>")
+  set (py_bld "$<TARGET_FILE_DIR:qpid-proton>") # For windows
+  set (app_path $<TARGET_FILE_DIR:msgr-send> "${pn_test_root}/tools/apps/python")
+  set (py_path ${py_bld} ${app_path} $ENV{PATH})
+  set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
+
+  if (NOT OLD_ADD_TEST_COMMAND)
+  to_native_path ("${py_path}" py_path)
+  to_native_path ("${py_pythonpath}" py_pythonpath)
+  add_test (NAME python-test
+            COMMAND ${env_py}
+                    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+                    ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+  else (NOT OLD_ADD_TEST_COMMAND)
+  list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+  to_native_path ("${py_path}" py_path)
+  to_native_path ("${py_pythonpath}" py_pythonpath)
+  add_test (python-test
+            ${env_py}
             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+  endif (NOT OLD_ADD_TEST_COMMAND)
+
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
 if (RUBY_EXE)
-  set (rb_root "${pn_test_root}/ruby")
-  set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
-  set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
-  set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
-  set (rb_bld "${CMAKE_CURRENT_BINARY_DIR}${bld_suffix}")
-  set (rb_path "$ENV{PATH}:${rb_bin}:${rb_bld}")
-  set (rb_rubylib "${rb_root}:${rb_src}:${rb_bin}:${rb_bld}:${rb_lib}")
-
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
-    add_test (ruby-unit-test ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-      "${rb_root}/proton-test")
+    set (rb_root "${pn_test_root}/ruby")
+    set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
+    set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
+    set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
+    set (rb_bld "$<TARGET_FILE_DIR:qpid-proton>")
+    set (rb_path $ENV{PATH} ${rb_bin} ${rb_bld})
+    set (rb_rubylib ${rb_root} ${rb_src} ${rb_bin} ${rb_bld} ${rb_lib})
+    to_native_path("${rb_path}" rb_path)
+    to_native_path("${rb_rubylib}" rb_rubylib)
+
+    add_test (NAME ruby-unit-test
+              COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                      "${rb_root}/proton-test")
 
     # ruby spec tests
     find_program(RSPEC_EXE rspec)
     if (RSPEC_EXE)
       add_test (NAME ruby-spec-test
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-                COMMAND ${PYTHON_EXECUTABLE} ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
                         ${RSPEC_EXE})
 
     else(RSPEC_EXE)
@@ -552,8 +571,8 @@ endif (RUBY_EXE)
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
 
 if (BUILD_JAVASCRIPT)
-  add_test (javascript-codec ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/codec.js)
-  add_test (javascript-message ${PYTHON_EXECUTABLE} ${env_py} node ${pn_test_root}/javascript/message.js)
+  add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
+  add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
 endif (BUILD_JAVASCRIPT)
 
 # build examples to make sure they still work

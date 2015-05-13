@@ -26,7 +26,7 @@
 #include <assert.h>
 
 struct pn_handler_t {
-  void (*dispatch) (pn_handler_t *, pn_event_t *);
+  void (*dispatch) (pn_handler_t *, pn_event_t *, pn_event_type_t);
   void (*finalize) (pn_handler_t *);
   pn_list_t *children;
 };
@@ -49,11 +49,12 @@ void pn_handler_finalize(void *object) {
 #define pn_handler_compare NULL
 #define pn_handler_inspect NULL
 
-pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *)) {
+pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t)) {
   return pn_handler_new(dispatch, 0, NULL);
 }
 
-pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *), size_t size, void (*finalize)(pn_handler_t *)) {
+pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t), size_t size,
+                             void (*finalize)(pn_handler_t *)) {
   static const pn_class_t clazz = PN_CLASS(pn_handler);
   pn_handler_t *handler = (pn_handler_t *) pn_class_new(&clazz, sizeof(pn_handler_t) + size);
   handler->dispatch = dispatch;
@@ -81,21 +82,30 @@ void *pn_handler_mem(pn_handler_t *handler) {
 }
 
 void pn_handler_add(pn_handler_t *handler, pn_handler_t *child) {
+  assert(handler);
   if (!handler->children) {
     handler->children = pn_list(PN_OBJECT, 0);
   }
   pn_list_add(handler->children, child);
 }
 
-void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void pn_handler_clear(pn_handler_t *handler) {
+  assert(handler);
+  if (handler->children) {
+    pn_list_clear(handler->children);
+  }
+}
+
+void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+  assert(handler);
   if (handler->dispatch) {
-    handler->dispatch(handler, event);
+    handler->dispatch(handler, event, type);
   }
   if (handler->children) {
     size_t n = pn_list_size(handler->children);
     for (size_t i = 0; i < n; i++) {
       pn_handler_t *child = (pn_handler_t *) pn_list_get(handler->children, i);
-      pn_handler_dispatch(child, event);
+      pn_handler_dispatch(child, event, type);
     }
   }
 }

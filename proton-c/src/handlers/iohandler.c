@@ -21,6 +21,7 @@
 
 #include <proton/handlers.h>
 #include <proton/selector.h>
+#include <proton/transport.h>
 #include <assert.h>
 
 static void *pni_selector_handle = NULL;
@@ -28,7 +29,10 @@ static void *pni_selector_handle = NULL;
 #define PN_SELECTOR ((pn_handle_t) &pni_selector_handle)
 
 void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
-  pn_selector_select(selector, pn_reactor_timeout(reactor));
+  // check if we are still quiesced, other handlers of
+  // PN_REACTOR_QUIESCED could have produced more events to process
+  if (!pn_reactor_quiesced(reactor)) { return; }
+  pn_selector_select(selector, pn_reactor_get_timeout(reactor));
   pn_selectable_t *sel;
   int events;
   pn_reactor_mark(reactor);
@@ -51,8 +55,9 @@ void pni_handle_quiesced(pn_reactor_t *reactor, pn_selector_t *selector) {
 
 void pni_handle_transport(pn_reactor_t *reactor, pn_event_t *event);
 void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event);
+void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event);
 
-static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
+static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pn_reactor_t *reactor = pn_event_reactor(event);
   pn_record_t *record = pn_reactor_attachments(reactor);
   pn_selector_t *selector = (pn_selector_t *) pn_record_get(record, PN_SELECTOR);
@@ -62,7 +67,7 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
     pn_record_set(record, PN_SELECTOR, selector);
     pn_decref(selector);
   }
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_SELECTABLE_INIT:
     {
       pn_selectable_t *sel = (pn_selectable_t *) pn_event_context(event);
@@ -85,8 +90,14 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event) {
   case PN_CONNECTION_LOCAL_OPEN:
     pni_handle_open(reactor, event);
     break;
+  case PN_CONNECTION_BOUND:
+    pni_handle_bound(reactor, event);
+    break;
   case PN_TRANSPORT:
     pni_handle_transport(reactor, event);
+    break;
+  case PN_TRANSPORT_CLOSED:
+    pn_transport_unbind(pn_event_transport(event));
     break;
   case PN_REACTOR_QUIESCED:
     pni_handle_quiesced(reactor, selector);

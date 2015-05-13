@@ -196,11 +196,6 @@ class Messenger
 
 class Message {
 
-  const DATA = PN_DATA;
-  const TEXT = PN_TEXT;
-  const AMQP = PN_AMQP;
-  const JSON = PN_JSON;
-
   const DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY;
 
   var $impl;
@@ -266,9 +261,9 @@ class Message {
     $props->clear();
     if ($this->properties != null)
       $props->put_object($this->properties);
+
+    $body->clear();
     if ($this->body != null) {
-      // XXX: move this out when load/save are gone
-      $body->clear();
       $body->put_object($this->body);
     }
   }
@@ -459,15 +454,6 @@ class Message {
     $this->_check(pn_message_set_reply_to_group_id($this->impl, $value));
   }
 
-  # XXX
-  private function _get_format() {
-    return pn_message_get_format($this->impl);
-  }
-
-  private function _set_format($value) {
-    $this->_check(pn_message_set_format($this->impl, $value));
-  }
-
   public function encode() {
     $this->_pre_encode();
     $sz = 16;
@@ -486,24 +472,6 @@ class Message {
   public function decode($data) {
     $this->_check(pn_message_decode($this->impl, $data, strlen($data)));
     $this->_post_decode();
-  }
-
-  public function load($data) {
-    $this->_check(pn_message_load($this->impl, $data, strlen($data)));
-  }
-
-  public function save() {
-    $sz = 16;
-    while (true) {
-      list($err, $data) = pn_message_save($this->impl, $sz);
-      if ($err == PN_OVERFLOW) {
-        $sz *= 2;
-        continue;
-      } else {
-        $this->_check($err);
-        return $data;
-      }
-    }
   }
 }
 

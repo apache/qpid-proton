@@ -163,7 +163,7 @@ void pn_selector_update(pn_selector_t *selector, pn_selectable_t *selectable)
 
   if (iocpd) {
     assert(sock == iocpd->socket || iocpd->closing);
-    int interests = 0;
+    int interests = PN_ERROR; // Always
     if (pn_selectable_is_reading(selectable)) {
       interests |= PN_READABLE;
     }
@@ -313,8 +313,10 @@ static void triggered_list_remove(pn_selector_t *selector, iocpdesc_t *iocpd)
 
 void pni_events_update(iocpdesc_t *iocpd, int events)
 {
-  int old_events = iocpd->events;
-  if (old_events == events)
+  // If set, a poll error is permanent
+  if (iocpd->poll_error)
+    events |= PN_ERROR;
+  if (iocpd->events == events)
     return;
   iocpd->events = events;
   if (iocpd->selector) {

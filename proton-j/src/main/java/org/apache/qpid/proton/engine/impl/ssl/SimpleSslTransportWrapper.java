@@ -21,9 +21,7 @@
 package org.apache.qpid.proton.engine.impl.ssl;
 
 
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newReadableBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
-import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourAll;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
@@ -328,6 +326,13 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
     {
         if (_tail_closed) return Transport.END_OF_STREAM;
         return _inputBuffer.remaining();
+    }
+
+    @Override
+    public int position()
+    {
+        if (_tail_closed) return Transport.END_OF_STREAM;
+        return _inputBuffer.position();
     }
 
     @Override

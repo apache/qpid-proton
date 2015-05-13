@@ -97,9 +97,6 @@ typedef struct {
   bool disp;
 } pn_session_state_t;
 
-#include <proton/sasl.h>
-#include <proton/ssl.h>
-
 typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
@@ -194,6 +191,12 @@ struct pn_transport_t {
   bool posted_idle_timeout;
   bool server;
   bool halt;
+  bool auth_required;
+  bool authenticated;
+  bool encryption_required;
+  bool encrypted;
+
+  bool referenced;
 };
 
 struct pn_connection_t {
@@ -211,6 +214,8 @@ struct pn_connection_t {
   pn_delivery_t *tpwork_tail;
   pn_string_t *container;
   pn_string_t *hostname;
+  pn_string_t *auth_user;
+  pn_string_t *auth_password;
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;
   pn_data_t *properties;
@@ -305,8 +310,6 @@ struct pn_delivery_t {
   bool work;
   bool tpwork;
   bool done;
-  bool constructed; // track whether the delivery was explicitly
-                    // constructed or not
   bool referenced;
 };
 
@@ -331,6 +334,7 @@ void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
+void pn_set_error_layer(pn_transport_t *transport);
 void pn_session_bound(pn_session_t* ssn);
 void pn_session_unbound(pn_session_t* ssn);
 void pn_link_bound(pn_link_t* link);

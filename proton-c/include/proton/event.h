@@ -26,7 +26,6 @@
 #include <proton/type_compat.h>
 #include <proton/object.h>
 #include <stddef.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -263,6 +262,14 @@ typedef enum {
   PN_TRANSPORT,
 
   /**
+   * The transport has authenticated, if this is received by a server
+   * the associated transport has authenticated an incoming connection
+   * and pn_transport_get_user() can be used to obtain the authenticated
+   * user.
+   */
+  PN_TRANSPORT_AUTHENTICATED,
+
+  /**
    * Indicates that a transport error has occurred. Use
    * ::pn_transport_condition() to access the details of the error
    * from the associated transport.
@@ -374,6 +381,16 @@ PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
  * @return true if the event was popped, false if the collector is empty
  */
 PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
+
+/**
+ * Check if there are more events after the current event. If this
+ * returns true, then pn_collector_peek() will return an event even
+ * after pn_collector_pop() is called.
+ *
+ * @param[in] collector a collector object
+ * @return true if the collector has more than the current event
+ */
+PN_EXTERN  bool pn_collector_more(pn_collector_t *collector);
 
 /**
  * Get the type of an event.

@@ -150,15 +150,23 @@ static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
 
-// @todo: used to avoid littering the code with calls to printf...
+static void ssl_vlog(pn_transport_t *transport, const char *fmt, va_list ap)
+{
+  if (transport) {
+    if (PN_TRACE_DRV & transport->trace) {
+      pn_transport_vlogf(transport, fmt, ap);
+    }
+  } else {
+    pn_transport_vlogf(transport, fmt, ap);
+  }
+}
+
 static void ssl_log(pn_transport_t *transport, const char *fmt, ...)
 {
-  if (PN_TRACE_DRV & transport->trace) {
-    va_list ap;
-    va_start(ap, fmt);
-    pn_transport_vlogf(transport, fmt, ap);
-    va_end(ap);
-  }
+  va_list ap;
+  va_start(ap, fmt);
+  ssl_vlog(transport, fmt, ap);
+  va_end(ap);
 }
 
 static void ssl_log_flush(pn_transport_t* transport)
@@ -167,7 +175,7 @@ static void ssl_log_flush(pn_transport_t* transport)
   unsigned long err = ERR_get_error();
   while (err) {
     ERR_error_string_n(err, buf, sizeof(buf));
-    pn_transport_logf(transport, "%s", buf);
+    ssl_log(transport, "%s", buf);
     err = ERR_get_error();
   }
 }
@@ -175,21 +183,14 @@ static void ssl_log_flush(pn_transport_t* transport)
 // log an error and dump the SSL error stack
 static void ssl_log_error(const char *fmt, ...)
 {
-  va_list ap;
-
   if (fmt) {
+    va_list ap;
     va_start(ap, fmt);
-    pn_transport_vlogf(NULL, fmt, ap);
+    ssl_vlog(NULL, fmt, ap);
     va_end(ap);
   }
 
-  char buf[128];        // see "man ERR_error_string_n()"
-  unsigned long err = ERR_get_error();
-  while (err) {
-    ERR_error_string_n(err, buf, sizeof(buf));
-    pn_transport_logf(NULL, "%s", buf);
-    err = ERR_get_error();
-  }
+  ssl_log_flush(NULL);
 }
 
 static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
@@ -229,7 +230,7 @@ static bool match_dns_pattern( const char *hostname,
   int slen = (int) strlen(hostname);
   if (memchr( pattern, '*', plen ) == NULL)
     return (plen == slen &&
-            strncasecmp( pattern, hostname, plen ) == 0);
+            pn_strncasecmp( pattern, hostname, plen ) == 0);
 
   /* dns wildcarded pattern - RFC2818 */
   char plabel[64];   /* max label length < 63 - RFC1034 */
@@ -259,15 +260,15 @@ static bool match_dns_pattern( const char *hostname,
 
     char *star = strchr( plabel, '*' );
     if (!star) {
-      if (strcasecmp( plabel, slabel )) return false;
+      if (pn_strcasecmp( plabel, slabel )) return false;
     } else {
       *star = '\0';
       char *prefix = plabel;
       int prefix_len = strlen(prefix);
       char *suffix = star + 1;
       int suffix_len = strlen(suffix);
-      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
-      if (suffix_len && strncasecmp( suffix,
+      if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && pn_strncasecmp( suffix,
                                      slabel + (strlen(slabel) - suffix_len),
                                      suffix_len )) return false;
     }
@@ -805,6 +806,13 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   }
 
   transport->ssl = ssl;
+
+  // Set up hostname from any bound connection
+  if (transport->connection) {
+    if (pn_string_size(transport->connection->hostname)) {
+      pn_ssl_set_peer_hostname((pn_ssl_t *) transport, pn_string_get(transport->connection->hostname));
+    }
+  }
 
   return (pn_ssl_t *) transport;
 }

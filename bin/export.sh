@@ -20,30 +20,62 @@
 #
 
 # export.sh - Create a release archive.
+set -e
+trap "cleanup" 0 1 2 3 9 11 13 15
 
 ME=$(basename ${0})
 SRC=$(dirname $(dirname $(readlink -f $0)))
 
 usage()
 {
-    echo "Usage: ${ME} [DIR]"
+    echo
+    echo "Usage: ${ME} [DIR] [TAG]"
     exit 1
 }
 
-if [ $# == 1 ]; then
-    DIR=$1
-elif [ $# == 0 ]; then
-    DIR=$PWD
-else
+cleanup()
+{
+    trap - 0 1 2 3 9 11 13 15
+    echo
+    [ ${WORKDIR} ] && [ -d ${WORKDIR} ] && rm -rf ${WORKDIR}
+}
+
+DIR=$PWD
+TAG=$(git describe --tags --always)
+
+##
+## Allow overrides to be passed on the cmdline
+##
+if [ $# -gt 2 ]; then
     usage
+elif [ $# -ge 1 ]; then
+    DIR=$1
+    if [ $# -eq 2 ]; then
+        TAG=$2
+    fi
 fi
+
+# verify the tag exists
+git rev-list -1 tags/${TAG} -- >/dev/null || usage
+
+WORKDIR=$(mktemp -d)
 
 ##
 ## Create the archive
 ##
 (
     cd ${SRC}
-    TAG=$(git describe --tags --always)
-    ARCHIVE=$DIR/qpid-proton-${TAG}.tgz
-    git archive --format=tgz --prefix=qpid-proton-${TAG}/ ${TAG} -o ${ARCHIVE}
+    MTIME=$(date -d @`git log -1 --pretty=format:%ct tags/${TAG}` '+%Y-%m-%d %H:%M:%S')
+    ARCHIVE=$DIR/qpid-proton-${TAG}.tar.gz
+    VERSION=$(git show tags/${TAG}:version.txt)
+    PREFIX=qpid-proton-${VERSION}
+    [ -d ${WORKDIR} ] || mkdir -p ${WORKDIR}
+    git archive --format=tar --prefix=${PREFIX}/ tags/${TAG} \
+        | tar -x -C ${WORKDIR}
+    cd ${WORKDIR}
+    tar -c -z \
+        --owner=root --group=root --numeric-owner \
+        --mtime="${MTIME}" \
+        -f ${ARCHIVE} .
+    echo "${ARCHIVE}"
 )

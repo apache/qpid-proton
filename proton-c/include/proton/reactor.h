@@ -47,23 +47,28 @@ typedef struct pn_acceptor_t pn_acceptor_t;
 typedef struct pn_timer_t pn_timer_t;
 typedef struct pn_task_t pn_task_t;
 
-PN_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *));
-PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *), size_t size,
+PN_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t));
+PN_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t), size_t size,
                                        void (*finalize)(pn_handler_t *));
 PN_EXTERN void pn_handler_free(pn_handler_t *handler);
 PN_EXTERN void *pn_handler_mem(pn_handler_t *handler);
 PN_EXTERN void pn_handler_add(pn_handler_t *handler, pn_handler_t *child);
-PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event);
+PN_EXTERN void pn_handler_clear(pn_handler_t *handler);
+PN_EXTERN void pn_handler_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type);
 
 PN_EXTERN pn_reactor_t *pn_reactor(void);
 PN_EXTERN pn_record_t *pn_reactor_attachments(pn_reactor_t *reactor);
-PN_EXTERN int pn_reactor_timeout(pn_reactor_t *reactor);
-PN_EXTERN void pn_reactor_mark(pn_reactor_t *reactor);
+PN_EXTERN pn_millis_t pn_reactor_get_timeout(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_set_timeout(pn_reactor_t *reactor, pn_millis_t timeout);
+PN_EXTERN pn_timestamp_t pn_reactor_mark(pn_reactor_t *reactor);
+PN_EXTERN pn_timestamp_t pn_reactor_now(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_yield(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_free(pn_reactor_t *reactor);
 PN_EXTERN pn_collector_t *pn_reactor_collector(pn_reactor_t *reactor);
-PN_EXTERN void pn_reactor_global(pn_reactor_t *reactor, pn_handler_t *handler);
-PN_EXTERN pn_handler_t *pn_reactor_handler(pn_reactor_t *reactor);
+PN_EXTERN pn_handler_t *pn_reactor_get_global_handler(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_set_global_handler(pn_reactor_t *reactor, pn_handler_t *handler);
+PN_EXTERN pn_handler_t *pn_reactor_get_handler(pn_reactor_t *reactor);
+PN_EXTERN void pn_reactor_set_handler(pn_reactor_t *reactor, pn_handler_t *handler);
 PN_EXTERN pn_io_t *pn_reactor_io(pn_reactor_t *reactor);
 PN_EXTERN pn_list_t *pn_reactor_children(pn_reactor_t *reactor);
 PN_EXTERN pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor);
@@ -71,8 +76,10 @@ PN_EXTERN void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selecta
 PN_EXTERN pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port,
                                              pn_handler_t *handler);
 PN_EXTERN pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *handler);
+PN_EXTERN int pn_reactor_wakeup(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_start(pn_reactor_t *reactor);
-PN_EXTERN bool pn_reactor_work(pn_reactor_t *reactor, int timeout);
+PN_EXTERN bool pn_reactor_quiesced(pn_reactor_t *reactor);
+PN_EXTERN bool pn_reactor_process(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_stop(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_run(pn_reactor_t *reactor);
 PN_EXTERN pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *handler);
@@ -88,6 +95,8 @@ PN_EXTERN int pn_timer_tasks(pn_timer_t *timer);
 
 PN_EXTERN pn_record_t *pn_task_attachments(pn_task_t *task);
 
+PN_EXTERN pn_reactor_t *pn_class_reactor(const pn_class_t *clazz, void *object);
+PN_EXTERN pn_reactor_t *pn_object_reactor(void *object);
 PN_EXTERN pn_reactor_t *pn_event_reactor(pn_event_t *event);
 
 PN_EXTERN pn_handler_t *pn_record_get_handler(pn_record_t *record);

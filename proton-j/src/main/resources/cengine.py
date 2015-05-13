@@ -25,7 +25,7 @@ from org.apache.qpid.proton.amqp.transaction import Coordinator
 from org.apache.qpid.proton.amqp.transport import ErrorCondition, \
   SenderSettleMode, ReceiverSettleMode
 from org.apache.qpid.proton.engine import EndpointState, Sender, \
-  Receiver, Transport, TransportException
+  Receiver, Transport as _Transport, TransportException
 
 from java.util import EnumSet
 from jarray import array, zeros
@@ -72,10 +72,10 @@ PN_REJECTED = (0x0000000000000025)
 PN_RELEASED = (0x0000000000000026)
 PN_MODIFIED = (0x0000000000000027)
 
-PN_TRACE_OFF = Transport.TRACE_OFF
-PN_TRACE_RAW = Transport.TRACE_RAW
-PN_TRACE_FRM = Transport.TRACE_FRM
-PN_TRACE_DRV = Transport.TRACE_DRV
+PN_TRACE_OFF = _Transport.TRACE_OFF
+PN_TRACE_RAW = _Transport.TRACE_RAW
+PN_TRACE_FRM = _Transport.TRACE_FRM
+PN_TRACE_DRV = _Transport.TRACE_DRV
 
 def wrap(obj, wrapper):
   if obj:
@@ -219,6 +219,9 @@ def pn_connection_attachments(conn):
 
 def pn_connection_set_container(conn, name):
   conn.impl.setContainer(name)
+
+def pn_connection_get_container(conn):
+  return conn.impl.getContainer()
 
 def pn_connection_remote_container(conn):
   return conn.impl.getRemoteContainer()
@@ -865,6 +868,9 @@ class pn_transport_wrapper:
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
 
+def pn_transport_get_pytracer(trans):
+  raise Skipped()
+
 def pn_transport_attachments(trans):
   return trans.attachments
 
@@ -881,7 +887,19 @@ def pn_transport_get_remote_max_frame(trans):
   return trans.impl.getRemoteMaxFrameSize()
 
 def pn_transport_set_idle_timeout(trans, value):
-  raise Skipped()
+  trans.impl.setIdleTimeout(value);
+
+def pn_transport_get_idle_timeout(trans):
+  return trans.impl.getIdleTimeout()
+
+def pn_transport_get_remote_idle_timeout(trans):
+  return trans.impl.getRemoteIdleTimeout()
+
+def pn_transport_get_frames_input(trans):
+  return trans.impl.getFramesInput()
+
+def pn_transport_get_frames_output(trans):
+  return trans.impl.getFramesOutput()
 
 def pn_transport_set_channel_max(trans, n):
   trans.impl.setChannelMax(n)
@@ -891,6 +909,9 @@ def pn_transport_get_channel_max(trans):
 
 def pn_transport_remote_channel_max(trans):
   return trans.impl.getRemoteChannelMax()
+
+def pn_transport_tick(trans, now):
+  return trans.impl.tick(now);
 
 def pn_transport_bind(trans, conn):
   trans.impl.bind(conn.impl)

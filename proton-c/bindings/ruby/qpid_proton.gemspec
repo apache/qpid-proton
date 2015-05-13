@@ -3,7 +3,7 @@ lib = File.expand_path('lib/', __FILE__)
 $:.unshift lib unless $:.include?(lib)
 
 # Generate the Swig wrapper
-system "swig -ruby -I../../include -o ext/cproton/cproton.c ruby.i"
+system "swig -ruby -I/usr/include -o ext/cproton/cproton.c ruby.i"
 
 Gem::Specification.new do |s|
   s.name        = "qpid_proton"
@@ -31,5 +31,6 @@ EOF
                 "lib/**/*.rb",
                 ]
   s.require_path = 'lib'
+  s.add_runtime_dependency "json"
 end
 

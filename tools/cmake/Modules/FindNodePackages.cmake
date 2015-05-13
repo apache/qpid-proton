@@ -58,8 +58,11 @@ if (NOT NODE_PACKAGES_FOUND)
         endif()
     endmacro()
 
-    # Check if ws WebSocket library https://github.com/einaros/ws is installed
-    InstallPackage("NODE_WS_FOUND" "ws")
+    # Check if ws WebSocket library https://github.com/websockets/ws is installed
+    # N.B. something changed between ws 0.5.0 and 0.6.0 that breaks proton js
+    # so explicitly pulling version 0.5.0
+    # TODO update javascript binding/emscripten/both to work with latest ws.
+    InstallPackage("NODE_WS_FOUND" "ws@0.5.0")
 
     # Check if jsdoc3 API documentation generator https://github.com/jsdoc3/jsdoc is installed
     InstallPackage("NODE_JSDOC_FOUND" "jsdoc")

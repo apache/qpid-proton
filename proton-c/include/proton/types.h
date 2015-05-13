@@ -24,7 +24,6 @@
 
 #include <proton/import_export.h>
 #include <stddef.h>
-#include <sys/types.h>
 #include <proton/type_compat.h>
 
 /**
@@ -45,6 +44,7 @@ extern "C" {
 
 typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
+#define PN_MILLIS_MAX (~0U)
 typedef uint32_t pn_seconds_t;
 typedef int64_t  pn_timestamp_t;
 typedef uint32_t pn_char_t;

@@ -68,11 +68,11 @@ pni_test_handler_t *thmem(pn_handler_t *handler) {
   return (pni_test_handler_t *) pn_handler_mem(handler);
 }
 
-void test_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void test_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pni_test_handler_t *th = thmem(handler);
   pn_reactor_t *reactor = pn_event_reactor(event);
   assert(reactor == th->reactor);
-  pn_list_add(th->events, (void *) pn_event_type(event));
+  pn_list_add(th->events, (void *) type);
 }
 
 pn_handler_t *test_handler(pn_reactor_t *reactor, pn_list_t *events) {
@@ -105,7 +105,7 @@ void expect(pn_list_t *events, ...) {
 static void test_reactor_handler(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_t *th = test_handler(reactor, events);
@@ -119,7 +119,7 @@ static void test_reactor_handler(void) {
 static void test_reactor_handler_free(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(handler, test_handler(reactor, events));
@@ -131,7 +131,7 @@ static void test_reactor_handler_free(void) {
 static void test_reactor_handler_run(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_t *th = test_handler(reactor, events);
@@ -146,7 +146,7 @@ static void test_reactor_handler_run(void) {
 static void test_reactor_handler_run_free(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *handler = pn_reactor_handler(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
   assert(handler);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(handler, test_handler(reactor, events));
@@ -163,7 +163,7 @@ static void test_reactor_connection(void) {
   pn_handler_t *tch = test_handler(reactor, cevents);
   pn_connection_t *connection = pn_reactor_connection(reactor, tch);
   assert(connection);
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *revents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, revents));
   pn_reactor_run(reactor);
@@ -188,8 +188,8 @@ pn_acceptor_t **tram(pn_handler_t *h) {
   return (pn_acceptor_t **) pn_handler_mem(h);
 }
 
-static void tra_dispatch(pn_handler_t *handler, pn_event_t *event) {
-  switch (pn_event_type(event)) {
+static void tra_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+  switch (type) {
   case PN_REACTOR_INIT:
     {
       pn_acceptor_t *acceptor = *tram(handler);
@@ -210,7 +210,7 @@ static pn_handler_t *tra_handler(pn_acceptor_t *acceptor) {
 static void test_reactor_acceptor_run(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   assert(root);
   pn_acceptor_t *acceptor = pn_reactor_acceptor(reactor, "0.0.0.0", "5678", NULL);
   assert(acceptor);
@@ -229,10 +229,10 @@ static server_t *smem(pn_handler_t *handler) {
   return (server_t *) pn_handler_mem(handler);
 }
 
-static void server_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void server_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   server_t *srv = smem(handler);
   pn_list_add(srv->events, (void *) pn_event_type(event));
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_CONNECTION_REMOTE_OPEN:
     pn_connection_open(pn_event_connection(event));
     break;
@@ -254,9 +254,9 @@ static client_t *cmem(pn_handler_t *handler) {
   return (client_t *) pn_handler_mem(handler);
 }
 
-static void client_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void client_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   client_t *cli = cmem(handler);
-  pn_list_add(cli->events, (void *) pn_event_type(event));
+  pn_list_add(cli->events, (void *) type);
   pn_connection_t *conn = pn_event_connection(event);
   switch (pn_event_type(event)) {
   case PN_CONNECTION_INIT:
@@ -288,7 +288,7 @@ static void test_reactor_connect(void) {
   pn_reactor_connection(reactor, ch);
   pn_reactor_run(reactor);
   expect(srv->events, PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
-         PN_TRANSPORT, PN_CONNECTION_REMOTE_OPEN,
+         PN_CONNECTION_REMOTE_OPEN,
          PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
          PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
          PN_CONNECTION_LOCAL_CLOSE, PN_TRANSPORT,
@@ -297,7 +297,7 @@ static void test_reactor_connect(void) {
   pn_free(srv->events);
   pn_decref(sh);
   expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
-         PN_CONNECTION_BOUND, PN_TRANSPORT, PN_TRANSPORT,
+         PN_CONNECTION_BOUND,
          PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_LOCAL_CLOSE,
          PN_TRANSPORT, PN_TRANSPORT_HEAD_CLOSED,
          PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
@@ -316,10 +316,10 @@ static sink_t *sink(pn_handler_t *handler) {
   return (sink_t *) pn_handler_mem(handler);
 }
 
-void sink_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void sink_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   sink_t *snk = sink(handler);
   pn_delivery_t *dlv = pn_event_delivery(event);
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_DELIVERY:
     if (!pn_delivery_partial(dlv)) {
       pn_delivery_settle(dlv);
@@ -340,10 +340,10 @@ static source_t *source(pn_handler_t *handler) {
 }
 
 
-void source_dispatch(pn_handler_t *handler, pn_event_t *event) {
+void source_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   source_t *src = source(handler);
   pn_connection_t *conn = pn_event_connection(event);
-  switch (pn_event_type(event)) {
+  switch (type) {
   case PN_CONNECTION_INIT:
     {
       pn_connection_set_hostname(conn, "127.0.0.1:5678");
@@ -411,7 +411,7 @@ static void test_reactor_transfer(int count, int window) {
 
 static void test_reactor_schedule(void) {
   pn_reactor_t *reactor = pn_reactor();
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, events));
   pn_reactor_schedule(reactor, 0, NULL);
@@ -424,7 +424,7 @@ static void test_reactor_schedule(void) {
 
 static void test_reactor_schedule_handler(void) {
   pn_reactor_t *reactor = pn_reactor();
-  pn_handler_t *root = pn_reactor_handler(reactor);
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *events = pn_list(PN_VOID, 0);
   pn_list_t *tevents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, events));

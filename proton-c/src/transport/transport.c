@@ -30,6 +30,7 @@
 #include "proton/event.h"
 #include "platform.h"
 #include "platform_fmt.h"
+#include "config.h"
 #include "../log_private.h"
 
 #include <stdlib.h>
@@ -44,7 +45,7 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
-  db->deliveries = pn_hash(PN_OBJECT, 0, 0.75);
+  db->deliveries = pn_hash(PN_WEAKREF, 0, 0.75);
   db->next = next;
 }
 
@@ -102,6 +103,9 @@ static void pni_default_tracer(pn_transport_t *transport, const char *message)
 
 static ssize_t pn_io_layer_input_passthru(pn_transport_t *, unsigned int, const char *, size_t );
 static ssize_t pn_io_layer_output_passthru(pn_transport_t *, unsigned int, char *, size_t );
+
+static ssize_t pn_io_layer_input_error(pn_transport_t *, unsigned int, const char *, size_t );
+static ssize_t pn_io_layer_output_error(pn_transport_t *, unsigned int, char *, size_t );
 
 static ssize_t pn_io_layer_input_setup(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
 static ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
@@ -164,6 +168,13 @@ const pn_io_layer_t pni_passthru_layer = {
     NULL
 };
 
+const pn_io_layer_t pni_error_layer = {
+    pn_io_layer_input_error,
+    pn_io_layer_output_error,
+    NULL,
+    NULL
+};
+
 /* Set up the transport protocol layers depending on what is configured */
 static void pn_io_layer_setup(pn_transport_t *transport, unsigned int layer)
 {
@@ -203,6 +214,15 @@ ssize_t pn_io_layer_output_setup(pn_transport_t *transport, unsigned int layer, 
   return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
 }
 
+void pn_set_error_layer(pn_transport_t *transport)
+{
+  // Set every layer to the error layer in case we manually
+  // pass through (happens from SASL to AMQP)
+  for (int layer=0; layer<PN_IO_LAYER_CT; ++layer) {
+    transport->io_layers[layer] = &pni_error_layer;
+  }
+}
+
 // Autodetect the layer by reading the protocol header
 ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
 {
@@ -210,6 +230,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   bool eos = pn_transport_capacity(transport)==PN_EOS;
   if (eos && available==0) {
     pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
+    pn_set_error_layer(transport);
     return PN_EOS;
   }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
@@ -240,15 +261,21 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
         pn_transport_logf(transport, "  <- %s", "SASL");
     return 8;
   case PNI_PROTOCOL_AMQP1:
-    if (transport->sasl && pn_sasl_state((pn_sasl_t *)transport)==PN_SASL_IDLE) {
-      if (pn_sasl_skipping_allowed(transport)) {
-        pn_sasl_done((pn_sasl_t *)transport, PN_SASL_SKIPPED);
-      } else {
-        pn_do_error(transport, "amqp:connection:policy-error",
-                    "Client skipped SASL exchange - forbidden");
-        return PN_EOS;
-      }
+    if (!transport->authenticated && transport->auth_required) {
+      pn_do_error(transport, "amqp:connection:policy-error",
+                  "Client skipped authentication - forbidden");
+      pn_set_error_layer(transport);
+      return 8;
     }
+// TODO: Encrypted connection detection not implemented yet
+#if 0
+    if (!transport->encrypted && transport->encryption_required) {
+      pn_do_error(transport, "amqp:connection:policy-error",
+                  "Client connection unencryted - forbidden");
+      pn_set_error_layer(transport);
+      return 8;
+    }
+#endif
     transport->io_layers[layer] = &amqp_write_header_layer;
     if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "AMQP");
@@ -270,7 +297,8 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   pn_do_error(transport, "amqp:connection:framing-error",
               "%s: '%s'%s", error, quoted,
               !eos ? "" : " (connection aborted)");
-  return PN_EOS;
+  pn_set_error_layer(transport);
+  return 0;
 }
 
 // We don't know what the output should be - do nothing
@@ -295,6 +323,18 @@ ssize_t pn_io_layer_output_passthru(pn_transport_t *transport, unsigned int laye
     return PN_EOS;
 }
 
+/** Input handler after detected error */
+ssize_t pn_io_layer_input_error(pn_transport_t *transport, unsigned int layer, const char *data, size_t available)
+{
+    return PN_EOS;
+}
+
+/** Output handler after detected error */
+ssize_t pn_io_layer_output_error(pn_transport_t *transport, unsigned int layer, char *data, size_t available)
+{
+    return PN_EOS;
+}
+
 static void pn_transport_initialize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *)object;
@@ -310,7 +350,9 @@ static void pn_transport_initialize(void *object)
   transport->scratch = pn_string(NULL);
   transport->args = pn_data(16);
   transport->output_args = pn_data(16);
-  transport->frame = pn_buffer(4*1024);
+  transport->frame = pn_buffer(TRANSPORT_INITIAL_FRAME_SIZE);
+  transport->input_frames_ct = 0;
+  transport->output_frames_ct = 0;
 
   transport->connection = NULL;
   transport->context = pn_record();
@@ -348,8 +390,8 @@ static void pn_transport_initialize(void *object)
   pn_condition_init(&transport->condition);
   transport->error = pn_error();
 
-  transport->local_channels = pn_hash(PN_OBJECT, 0, 0.75);
-  transport->remote_channels = pn_hash(PN_OBJECT, 0, 0.75);
+  transport->local_channels = pn_hash(PN_WEAKREF, 0, 0.75);
+  transport->remote_channels = pn_hash(PN_WEAKREF, 0, 0.75);
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
@@ -363,6 +405,12 @@ static void pn_transport_initialize(void *object)
 
   transport->server = false;
   transport->halt = false;
+  transport->auth_required = false;
+  transport->authenticated = false;
+  transport->encryption_required = false;
+  transport->encrypted = false;
+
+  transport->referenced = true;
 
   transport->trace = (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
     (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
@@ -400,15 +448,35 @@ static void pni_unmap_remote_channel(pn_session_t *ssn)
   pn_hash_del(transport->remote_channels, channel);
 }
 
+static void pn_transport_incref(void *object)
+{
+  pn_transport_t *transport = (pn_transport_t *) object;
+  if (!transport->referenced) {
+    transport->referenced = true;
+    if (transport->connection) {
+      pn_incref(transport->connection);
+    } else {
+      pn_object_incref(object);
+    }
+  } else {
+    pn_object_incref(object);
+  }
+}
 
 static void pn_transport_finalize(void *object);
+#define pn_transport_new pn_object_new
+#define pn_transport_refcount pn_object_refcount
+#define pn_transport_decref pn_object_decref
+#define pn_transport_reify pn_object_reify
 #define pn_transport_hashcode NULL
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL
 
 pn_transport_t *pn_transport(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_transport);
+#define pn_transport_free pn_object_free
+  static const pn_class_t clazz = PN_METACLASS(pn_transport);
+#undef pn_transport_free
   pn_transport_t *transport =
     (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
@@ -438,7 +506,40 @@ pn_transport_t *pn_transport(void)
 
 void pn_transport_set_server(pn_transport_t *transport)
 {
+  assert(transport);
   transport->server = true;
+}
+
+const char *pn_transport_get_user(pn_transport_t *transport)
+{
+  assert(transport);
+  if (!transport->sasl) return "anonymous";
+
+  return pn_sasl_get_user((pn_sasl_t *)transport);
+}
+
+void pn_transport_require_auth(pn_transport_t *transport, bool required)
+{
+  assert(transport);
+  transport->auth_required = required;
+}
+
+bool pn_transport_is_authenticated(pn_transport_t *transport)
+{
+  assert(transport);
+  return transport->authenticated;
+}
+
+void pn_transport_require_encryption(pn_transport_t *transport, bool required)
+{
+  assert(transport);
+  transport->encryption_required = required;
+}
+
+bool pn_transport_is_encrypted(pn_transport_t *transport)
+{
+    assert(transport);
+    return transport->encrypted;
 }
 
 void pn_transport_free(pn_transport_t *transport)
@@ -452,6 +553,13 @@ void pn_transport_free(pn_transport_t *transport)
 static void pn_transport_finalize(void *object)
 {
   pn_transport_t *transport = (pn_transport_t *) object;
+
+  if (transport->referenced && transport->connection && pn_refcount(transport->connection) > 1) {
+    pn_object_incref(transport);
+    transport->referenced = false;
+    pn_decref(transport->connection);
+    return;
+  }
 
   // once the application frees the transport, no further I/O
   // processing can be done to the connection:
@@ -482,6 +590,13 @@ static void pn_transport_finalize(void *object)
   free(transport->output);
 }
 
+static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
+    pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
+    if (transport->remote_idle_timeout) {
+      pn_collector_put(connection->collector, PN_OBJECT, transport, PN_TRANSPORT);
+    }
+}
+
 int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
 {
   assert(transport);
@@ -497,9 +612,21 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
 
   pn_connection_bound(connection);
 
+  // set the hostname/user/password
+  if (pn_string_size(connection->auth_user)) {
+    pn_sasl(transport);
+    pni_sasl_set_user_password(transport, pn_string_get(connection->auth_user), pn_string_get(connection->auth_password));
+  }
+  if (transport->sasl) {
+    pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
+  }
+  if (transport->ssl) {
+    pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+  }
+
   if (transport->open_rcvd) {
     PN_SET_REMOTE(connection->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(connection->collector, PN_OBJECT, connection, PN_CONNECTION_REMOTE_OPEN);
+    pni_post_remote_open_events(transport, connection);
     transport->halt = false;
     transport_consume(transport);        // blech - testBindAfterOpen
   }
@@ -543,6 +670,7 @@ int pn_transport_unbind(pn_transport_t *transport)
 
   pn_connection_t *conn = transport->connection;
   transport->connection = NULL;
+  bool was_referenced = transport->referenced;
 
   pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_UNBOUND);
 
@@ -565,7 +693,9 @@ int pn_transport_unbind(pn_transport_t *transport)
   pni_transport_unbind_channels(transport->remote_channels);
 
   pn_connection_unbound(conn);
-  pn_decref(conn);
+  if (was_referenced) {
+    pn_decref(conn);
+  }
   return 0;
 }
 
@@ -711,7 +841,8 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
     return PN_ERR;
   }
 
-  pn_frame_t frame = {type};
+  pn_frame_t frame = {0,};
+  frame.type = type;
   frame.channel = ch;
   frame.payload = buf.start;
   frame.size = wr;
@@ -885,8 +1016,12 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   va_list ap;
   va_start(ap, fmt);
   char buf[1024];
-  // XXX: result
-  vsnprintf(buf, 1024, fmt, ap);
+  if (fmt) {
+    // XXX: result
+    vsnprintf(buf, 1024, fmt, ap);
+  } else {
+    buf[0] = '\0';
+  }
   va_end(ap);
   if (!transport->close_sent) {
     if (!transport->open_sent) {
@@ -897,11 +1032,27 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     transport->close_sent = true;
   }
   transport->halt = true;
-  pn_condition_set_name(&transport->condition, condition);
-  pn_condition_set_description(&transport->condition, buf);
+  pn_condition_t *cond = &transport->condition;
+  if (!pn_condition_is_set(cond)) {
+    pn_condition_set_name(cond, condition);
+    if (fmt) {
+      pn_condition_set_description(cond, buf);
+    }
+  } else {
+    const char *first = pn_condition_get_description(cond);
+    if (first && fmt) {
+      char extended[2048];
+      snprintf(extended, 2048, "%s (%s)", first, buf);
+      pn_condition_set_description(cond, extended);
+    } else if (fmt) {
+      pn_condition_set_description(cond, buf);
+    }
+  }
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
-  pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  if (transport->trace & PN_TRACE_DRV) {
+    pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  }
   transport->done_processing = true;
   pni_close_tail(transport);
   return PN_ERR;
@@ -949,7 +1100,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
-    pn_collector_put(conn->collector, PN_OBJECT, conn, PN_CONNECTION_REMOTE_OPEN);
+    pni_post_remote_open_events(transport, conn);
   } else {
     transport->halt = true;
   }
@@ -987,6 +1138,11 @@ pn_link_t *pn_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
   {
     pn_link_t *link = (pn_link_t *) pn_list_get(ssn->links, i);
     if (link->endpoint.type == type &&
+        // This function is used to locate the link object for an
+        // incoming attach. If a link object of the same name is found
+        // which is closed both locally and remotely, assume that is
+        // no longer in use.
+        !((link->endpoint.state & PN_LOCAL_CLOSED) && (link->endpoint.state & PN_REMOTE_CLOSED)) &&
         !strncmp(name.start, pn_string_get(link->name), name.size))
     {
       return link;
@@ -1075,6 +1231,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_session_t *ssn = pn_channel_state(transport, channel);
   if (!ssn) {
       pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
+      if (strheap) free(strheap);
       return PN_EOS;
   }
   pn_link_t *link = pn_find_link(ssn, name, is_sender);
@@ -1117,6 +1274,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_data_clear(link->remote_target.capabilities);
     err = pn_data_scan(args, "D.[.....D..DL[C]...]", &code,
                        link->remote_target.capabilities);
+    if (err) return err;
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
     } else {
@@ -1168,6 +1326,8 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   assert(!delivery->work);
   pn_clear_tpwork(delivery);
   pn_delivery_map_del(db, delivery);
+  pn_incref(delivery);
+  pn_decref(delivery);
 }
 
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
@@ -1472,6 +1632,18 @@ ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t 
 // process pending input until none remaining or EOS
 static ssize_t transport_consume(pn_transport_t *transport)
 {
+  // This allows whatever is driving the I/O to set the error
+  // condition on the transport before doing pn_transport_close_head()
+  // or pn_transport_close_tail(). This allows all transport errors to
+  // flow to the app the same way, but provides cleaner error messages
+  // since we don't try to look for a protocol header when, e.g. the
+  // connection was refused.
+  if (!transport->bytes_input && transport->tail_closed &&
+      pn_condition_is_set(&transport->condition)) {
+    pn_do_error(transport, NULL, NULL);
+    return PN_EOS;
+  }
+
   size_t consumed = 0;
 
   while (transport->input_pending || transport->tail_closed) {
@@ -1538,7 +1710,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
     }
   }
 
-  if (!available) {
+  if (!transport->close_rcvd && !available) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
     return PN_EOS;
   }
@@ -2267,6 +2439,7 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   return pn_dispatcher_output(transport, bytes, available);
 }
 
+// Mark transport output as closed and send event
 static void pni_close_head(pn_transport_t *transport)
 {
   if (!transport->head_closed) {
@@ -2315,9 +2488,7 @@ static ssize_t transport_produce(pn_transport_t *transport)
       if (transport->output_pending)
         break;   // return what is available
       if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
-        if (n < 0) {
-          pn_transport_log(transport, "  -> EOS");
-        }
+        pn_transport_log(transport, "  -> EOS");
       }
       pni_close_head(transport);
       return n;
@@ -2381,8 +2552,7 @@ pn_record_t *pn_transport_attachments(pn_transport_t *transport)
 void pn_transport_log(pn_transport_t *transport, const char *message)
 {
   assert(transport);
-  if (transport->trace)
-    transport->tracer(transport, message);
+  transport->tracer(transport, message);
 }
 
 void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
@@ -2606,7 +2776,9 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
                transport->output_pending );
     }
 
-    if (!transport->output_pending && pn_transport_pending(transport) < 0) {
+    if (transport->output_pending==0 && pn_transport_pending(transport) < 0) {
+      // TODO: It looks to me that this is a NOP as iff we ever get here
+      // TODO: pni_close_head() will always have been already called before leaving pn_transport_pending()
       pni_close_head(transport);
     }
   }
@@ -2614,9 +2786,10 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
 
 int pn_transport_close_head(pn_transport_t *transport)
 {
-  size_t pending = pn_transport_pending(transport);
+  ssize_t pending = pn_transport_pending(transport);
   pni_close_head(transport);
-  pn_transport_pop(transport, pending);
+  if (pending > 0)
+    pn_transport_pop(transport, pending);
   return 0;
 }
 

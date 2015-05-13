@@ -4,10 +4,8 @@
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/sasl.h>
-#include <proton/driver.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
-#include <proton/driver_extras.h>
 #include <proton/url.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>
@@ -154,38 +152,8 @@
 %cstring_output_withsize(char *OUTPUT, size_t *OUTPUT_SIZE)
 %cstring_output_allocate_size(char **ALLOC_OUTPUT, size_t *ALLOC_SIZE, free(*$1));
 
-int pn_message_load(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load;
-
-int pn_message_load_data(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_data;
-
-int pn_message_load_text(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_text;
-
-int pn_message_load_amqp(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_amqp;
-
-int pn_message_load_json(pn_message_t *msg, char *STRING, size_t LENGTH);
-%ignore pn_message_load_json;
-
 int pn_message_encode(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_message_encode;
-
-int pn_message_save(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save;
-
-int pn_message_save_data(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_data;
-
-int pn_message_save_text(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_text;
-
-int pn_message_save_amqp(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_amqp;
-
-int pn_message_save_json(pn_message_t *msg, char *OUTPUT, size_t *OUTPUT_SIZE);
-%ignore pn_message_save_json;
 
 ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_link_send;
@@ -235,25 +203,11 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %inline %{
   void wrap_pn_delivery_tag(pn_delivery_t *delivery, char **ALLOC_OUTPUT, size_t *ALLOC_SIZE) {
     pn_delivery_tag_t tag = pn_delivery_tag(delivery);
-    *ALLOC_OUTPUT = malloc(tag.size);
+    *ALLOC_OUTPUT = (char *)malloc(tag.size);
     *ALLOC_SIZE = tag.size;
     memcpy(*ALLOC_OUTPUT, tag.start, tag.size);
   }
 %}
 %ignore pn_delivery_tag;
-
-%rename(pn_message_data) wrap_pn_message_data;
-%inline %{
-  int wrap_pn_message_data(char *STRING, size_t LENGTH, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_message_data(OUTPUT, *OUTPUT_SIZE, STRING, LENGTH);
-    if (sz >= 0) {
-      *OUTPUT_SIZE = sz;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return sz;
-  }
-%}
-%ignore pn_message_data;
 
 %include "proton/cproton.i"

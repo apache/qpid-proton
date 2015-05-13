@@ -784,23 +784,6 @@ _Message_['setReplyToGroupID'] = function(id) {
 };
 
 /**
- * The following methods are marked as deprecated and are not implemented.
- * pn_message_get_format()
- * pn_message_set_format()
- * pn_message_load()
- * pn_message_load_data()
- * pn_message_load_text()
- * pn_message_load_amqp()
- * pn_message_load_json()
- * pn_message_save()
- * pn_message_save_data()
- * pn_message_save_text()
- * pn_message_save_amqp()
- * pn_message_save_json()
- * pn_message_data()
- */
-
-/**
  * Return a Binary representation of the message encoded in AMQP format. N.B. the
  * returned {@link proton.Data.Binary} "owns" the underlying raw data and is thus
  * responsible for freeing it or passing it to a method that consumes a Binary
@@ -811,19 +794,25 @@ _Message_['setReplyToGroupID'] = function(id) {
  */
 _Message_['encode'] = function() {
     this._preEncode();
+    var sp = Runtime.stackSave();
+    var sizeptr = allocate(4, 'i32', ALLOC_STACK);
     var size = 1024;
     while (true) {
-        setValue(size, size, 'i32'); // Set pass by reference variable.
+        setValue(sizeptr, size, 'i32'); // Set pass by reference variable.
         var bytes = _malloc(size);   // Allocate storage from emscripten heap.
-        var err = _pn_message_encode(this._message, bytes, size);
-        var size = getValue(size, 'i32'); // Dereference the real size value;
+        var err = _pn_message_encode(this._message, bytes, sizeptr);
+        var size = getValue(sizeptr, 'i32'); // Dereference the real size value;
 
         if (err === Module['Error']['OVERFLOW']) {
             _free(bytes);
             size *= 2;
         } else if (err >= 0) {
+            // Tidy up the memory that we allocated on emscripten's stack.
+            Runtime.stackRestore(sp);
             return new Data['Binary'](size, bytes);
         } else {
+            // Tidy up the memory that we allocated on emscripten's stack.
+            Runtime.stackRestore(sp);
             _free(bytes);
             this._check(err);
             return;

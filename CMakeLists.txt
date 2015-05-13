@@ -18,14 +18,6 @@
 #
 cmake_minimum_required (VERSION 2.6)
 
-# Set default build type. Must come before project() which sets default to ""
-set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
-  "Build type: Debug, Release, RelWithDebInfo or MinSizeRel (default RelWithDebInfo)")
-if (CMAKE_BUILD_TYPE MATCHES "Deb")
-  set (has_debug_symbols " (has debug symbols)")
-endif (CMAKE_BUILD_TYPE MATCHES "Deb")
-message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
-
 project (Proton C)
 
 if (MSVC)
@@ -38,14 +30,51 @@ if (BUILD_WITH_CXX)
   project (Proton C CXX)
 endif (BUILD_WITH_CXX)
 
+if (CMAKE_CONFIGURATION_TYPES)
+  # There is no single "build type"...
+  message(STATUS "Build types are ${CMAKE_CONFIGURATION_TYPES}")
+else (CMAKE_CONFIGURATION_TYPES)
+  # There is a single build configuration
+  # If the build type is not set then set the default
+  if (NOT CMAKE_BUILD_TYPE)
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
+       "Build type: Debug, Release, RelWithDebInfo or MinSizeRel (default RelWithDebInfo)" FORCE)
+  endif ()
+
+  if (CMAKE_BUILD_TYPE MATCHES "Deb")
+    set (has_debug_symbols " (has debug symbols)")
+  endif (CMAKE_BUILD_TYPE MATCHES "Deb")
+  message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
+endif (CMAKE_CONFIGURATION_TYPES)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  # Default to universal binary on Mac OS X unless user has overriden
+  if (NOT DEFINED CMAKE_OSX_ARCHITECTURES OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+    set(CMAKE_OSX_ARCHITECTURES "i386;x86_64")
+  endif ()
+endif ()
+
 file(READ version.txt PN_VERSION_FILE)
-string(REGEX MATCHALL "[0-9]+" PN_VERSION_LIST "${PN_VERSION_FILE}")
+string(STRIP ${PN_VERSION_FILE} PN_VERSION_LINE)
+string(REPLACE "-" ";" PN_VERSION_SPLIT "${PN_VERSION_LINE}")
+list(GET PN_VERSION_SPLIT 0 PN_VERSION_CLEAN)
+list(REMOVE_AT PN_VERSION_SPLIT 0)
+string(REPLACE ";" "-" PN_VERSION_QUALIFIER "${PN_VERSION_SPLIT}")
+string(REGEX MATCHALL "[0-9]+" PN_VERSION_LIST "${PN_VERSION_CLEAN}")
 
 list(GET PN_VERSION_LIST 0 PN_VERSION_MAJOR)
 list(GET PN_VERSION_LIST 1 PN_VERSION_MINOR)
 
-set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
-message(STATUS "PN_VERSION: ${PN_VERSION}")
+list(LENGTH PN_VERSION_LIST PN_VERSION_LENGTH)
+if (${PN_VERSION_LENGTH} GREATER 2)
+  list(GET PN_VERSION_LIST 2 PN_VERSION_POINT)
+  set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}.${PN_VERSION_POINT}")
+else()
+  set (PN_VERSION_POINT 0)
+  set (PN_VERSION "${PN_VERSION_MAJOR}.${PN_VERSION_MINOR}")
+endif()
+
+message(STATUS "PN_VERSION: ${PN_VERSION} (${PN_VERSION_QUALIFIER})")
 
 enable_testing()
 include (CTest)
@@ -98,32 +127,14 @@ foreach (LANG ${BINDING_LANGS})
   endif ()
 endforeach()
 
-if (WIN32)
-  set (EXAMPLES_INSTALL_DIR proton/examples)
-endif (WIN32)
-
-if (UNIX)
-  set (EXAMPLES_INSTALL_DIR ${SHARE_INSTALL_DIR}/proton/examples)
-endif (UNIX)
-
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
 # Pull in local cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
 
-if (NOBUILD_JAVA)
-  set (DEFAULT_JAVA OFF)
-else()
-  find_package(Java)
-  if (JAVA_FOUND)
-    set (DEFAULT_JAVA ON)
-  else()
-    set (DEFAULT_JAVA OFF)
-  endif()
-endif()
-
-option (BUILD_JAVA "Build proton-j." ${DEFAULT_JAVA})
+find_package(Java)
+option (BUILD_JAVA "Build proton-j." ${JAVA_FOUND})
 
 if (BUILD_JAVA)
   add_subdirectory(proton-j)
@@ -131,29 +142,17 @@ endif()
 
 add_subdirectory(proton-c)
 
-install (FILES LICENSE README TODO
+install (FILES LICENSE README.md TODO
          DESTINATION ${PROTON_SHARE})
 
-# install the C messenger example
-install (FILES examples/messenger/c/CMakeLists.txt
-               examples/messenger/c/send.c
-               examples/messenger/c/recv.c
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger)
-
-install (FILES examples/include/pncompat/misc_defs.h
-               examples/include/pncompat/misc_funcs.inc
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat)
-
-install (FILES examples/include/pncompat/internal/LICENSE
-               examples/include/pncompat/internal/getopt.c
-               examples/include/pncompat/internal/getopt.h
-         DESTINATION ${EXAMPLES_INSTALL_DIR}/messenger/pncompat/internal)
+install (DIRECTORY examples
+         DESTINATION ${PROTON_SHARE})
 
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")
 mark_as_advanced (MAVEN_EXE)
 if (JAVA_FOUND AND MAVEN_EXE)
-  add_test (proton-java mvn test --file ${CMAKE_CURRENT_SOURCE_DIR}/pom.xml)
+  add_test (proton-java ${MAVEN_EXE} test --file ${Proton_SOURCE_DIR}/pom.xml)
 else (JAVA_FOUND AND MAVEN_EXE)
   message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
 endif (JAVA_FOUND AND MAVEN_EXE)

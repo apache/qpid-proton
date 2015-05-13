@@ -50,6 +50,12 @@ class RememberingTransportInput implements TransportInput
     }
 
     @Override
+    public int position()
+    {
+        return _buffer.position();
+    }
+
+    @Override
     public ByteBuffer tail()
     {
         return _buffer;

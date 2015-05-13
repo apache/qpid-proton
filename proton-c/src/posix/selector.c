@@ -160,15 +160,16 @@ int pn_selector_select(pn_selector_t *selector, int timeout)
     }
   }
 
+  int error = 0;
   int result = poll(selector->fds, size, timeout);
   if (result == -1) {
-    pn_i_error_from_errno(selector->error, "poll");
+    error = pn_i_error_from_errno(selector->error, "poll");
   } else {
     selector->current = 0;
     selector->awoken = pn_i_now();
   }
 
-  return pn_error_code(selector->error);
+  return error;
 }
 
 pn_selectable_t *pn_selector_next(pn_selector_t *selector, int *events)

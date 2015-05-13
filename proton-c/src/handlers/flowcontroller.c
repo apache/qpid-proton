@@ -25,6 +25,7 @@
 
 typedef struct {
   int window;
+  int drained;
 } pni_flowcontroller_t;
 
 pni_flowcontroller_t *pni_flowcontroller(pn_handler_t *handler) {
@@ -36,18 +37,19 @@ static void pni_topup(pn_link_t *link, int window) {
   pn_link_flow(link, delta);
 }
 
-static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event) {
+static void pn_flowcontroller_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   pni_flowcontroller_t *fc = pni_flowcontroller(handler);
   int window = fc->window;
+  pn_link_t *link = pn_event_link(event);
 
   switch (pn_event_type(event)) {
   case PN_LINK_LOCAL_OPEN:
   case PN_LINK_REMOTE_OPEN:
   case PN_LINK_FLOW:
   case PN_DELIVERY:
-    {
-      pn_link_t *link = pn_event_link(event);
-      if (pn_link_is_receiver(link)) {
+    if (pn_link_is_receiver(link)) {
+      fc->drained += pn_link_drained(link);
+      if (!fc->drained) {
         pni_topup(link, window);
       }
     }
@@ -64,5 +66,6 @@ pn_flowcontroller_t *pn_flowcontroller(int window) {
   pn_flowcontroller_t *handler = pn_handler_new(pn_flowcontroller_dispatch, sizeof(pni_flowcontroller_t), NULL);
   pni_flowcontroller_t *fc = pni_flowcontroller(handler);
   fc->window = window;
+  fc->drained = 0;
   return handler;
 }

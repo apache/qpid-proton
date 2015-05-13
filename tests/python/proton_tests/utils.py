@@ -17,14 +17,14 @@
 # under the License.
 #
 
-import os
-from threading import Thread
+import os, time
+from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
 from proton import Message, Url, generate_uuid
 from proton.handlers import MessagingHandler
-from proton.reactors import Container, send_msg, delivery_tags
+from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
 
 
@@ -34,36 +34,42 @@ class EchoServer(MessagingHandler, Thread):
     Will only accept a single connection and shut down when that connection closes.
     """
 
-    def __init__(self, url):
+    def __init__(self, url, timeout):
         MessagingHandler.__init__(self)
         Thread.__init__(self)
+        self.daemon = True
+        self.timeout = timeout
         self.url = url
         self.senders = {}
         self.container = None
+        self.event = Event()
 
     def on_start(self, event):
         self.acceptor = event.container.listen(self.url)
         self.container = event.container
+        self.event.set()
 
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
                 event.link.source.address = str(generate_uuid())
                 self.senders[event.link.source.address] = event.link
-                event.link.tags = delivery_tags()
 
     def on_message(self, event):
         m = event.message
         sender = self.senders.get(m.reply_to)
         if sender:
             reply = Message(address=m.reply_to, body=m.body, correlation_id=m.correlation_id)
-            send_msg(sender, reply)
+            sender.send(reply)
 
     def on_connection_closing(self, event):
         self.acceptor.close()
 
     def run(self):
         Container(self).run()
+
+    def wait(self):
+        self.event.wait(self.timeout)
 
 
 class SyncRequestResponseTest(Test):
@@ -77,10 +83,13 @@ class SyncRequestResponseTest(Test):
                 self.assertEquals(response.address, client.reply_to)
                 self.assertEquals(response.body, body)
 
-        server = EchoServer(Url(port=free_tcp_port()))
+        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()), self.timeout)
         server.start()
-        client = SyncRequestResponse(BlockingConnection(server.url, timeout=self.timeout))
+        server.wait()
+        connection = BlockingConnection(server.url, timeout=self.timeout)
+        client = SyncRequestResponse(connection)
         try:
             test("foo")         # Simple request/resposne
         finally:
             client.connection.close()
+        server.join(timeout=self.timeout)

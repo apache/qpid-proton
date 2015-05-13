@@ -61,6 +61,20 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     }
 
     @Override
+    public int position()
+    {
+        if (isDeterminationMade())
+        {
+            return _selectedTransportWrapper.position();
+        }
+        else
+        {
+            if (_tail_closed) { return Transport.END_OF_STREAM; }
+            return _determinationBuffer.position();
+        }
+    }
+
+    @Override
     public ByteBuffer tail()
     {
         if (isDeterminationMade())

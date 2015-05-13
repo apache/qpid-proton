@@ -20,9 +20,11 @@
  */
 
 #include <proton/connection.h>
+#include <proton/event.h>
 #include <proton/session.h>
 #include <proton/link.h>
 #include <proton/delivery.h>
+#include <proton/transport.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -274,6 +276,99 @@ static void test_decref_permutations(void) {
   permute(4, indexes, objects);
 }
 
+static void test_transport(void) {
+  pn_transport_t *transport = pn_transport();
+  assert(pn_refcount(transport) == 1);
+  pn_incref(transport);
+  assert(pn_refcount(transport) == 2);
+  pn_decref(transport);
+  assert(pn_refcount(transport) == 1);
+  pn_free(transport);
+}
+
+static void test_connection_transport(void) {
+  pn_connection_t *connection = pn_connection();
+  assert(pn_refcount(connection) == 1);
+  pn_transport_t *transport = pn_transport();
+  assert(pn_refcount(transport) == 1);
+  pn_transport_bind(transport, connection);
+  assert(pn_refcount(connection) == 2);
+  pn_decref(transport);
+  assert(pn_refcount(transport) == 1); // preserved by the bind
+  assert(pn_refcount(connection) == 1);
+  pn_free(connection);
+}
+
+static void test_transport_connection(void) {
+  pn_transport_t *transport = pn_transport();
+  assert(pn_refcount(transport) == 1);
+  pn_connection_t *connection = pn_connection();
+  assert(pn_refcount(connection) == 1);
+  pn_transport_bind(transport, connection);
+  assert(pn_refcount(connection) == 2);
+  pn_decref(connection);
+  assert(pn_refcount(connection) == 1);
+  assert(pn_refcount(transport) == 1);
+  pn_free(transport);
+}
+
+static void drain(pn_collector_t *collector) {
+  while (pn_collector_peek(collector)) { pn_collector_pop(collector); }
+}
+
+static void test_collector_connection_transport(void) {
+  pn_collector_t *collector = pn_collector();
+  assert(pn_refcount(collector) == 1);
+  pn_connection_t *connection = pn_connection();
+  assert(pn_refcount(connection) == 1);
+  pn_connection_collect(connection, collector);
+  assert(pn_refcount(collector) == 2);
+  assert(pn_refcount(connection) == 2);
+  drain(collector);
+  assert(pn_refcount(connection) == 1);
+  pn_transport_t *transport = pn_transport();
+  assert(pn_refcount(transport) == 1);
+  pn_transport_bind(transport, connection);
+  assert(pn_refcount(transport) == 1);
+  assert(pn_refcount(connection) == 3);
+  drain(collector);
+  assert(pn_refcount(connection) == 2);
+  pn_decref(transport);
+  assert(pn_refcount(transport) == 1); // preserved by the bind
+  assert(pn_refcount(connection) == 1);
+  pn_free(connection);
+  assert(pn_refcount(transport) == 1); // events
+  assert(pn_refcount(connection) == 1); // events
+  pn_collector_free(collector);
+}
+
+static void test_collector_transport_connection(void) {
+  pn_collector_t *collector = pn_collector();
+  assert(pn_refcount(collector) == 1);
+  pn_transport_t *transport = pn_transport();
+  assert(pn_refcount(transport) == 1);
+  pn_connection_t *connection = pn_connection();
+  assert(pn_refcount(connection) == 1);
+  pn_connection_collect(connection, collector);
+  assert(pn_refcount(collector) == 2);
+  assert(pn_refcount(connection) == 2);
+  drain(collector);
+  assert(pn_refcount(connection) == 1);
+  pn_transport_bind(transport, connection);
+  assert(pn_refcount(connection) == 3);
+  assert(pn_refcount(transport) == 1);
+  drain(collector);
+  assert(pn_refcount(connection) == 2);
+  assert(pn_refcount(transport) == 1);
+  pn_decref(connection);
+  assert(pn_refcount(connection) == 1);
+  assert(pn_refcount(transport) == 1);
+  pn_free(transport);
+  assert(pn_refcount(connection) == 1);
+  assert(pn_refcount(transport) == 1);
+  pn_collector_free(collector);
+}
+
 int main(int argc, char **argv)
 {
   test_decref_order_csl();
@@ -287,5 +382,11 @@ int main(int argc, char **argv)
   test_incref_order_ls();
 
   test_decref_permutations();
+
+  test_transport();
+  test_connection_transport();
+  test_transport_connection();
+  test_collector_connection_transport();
+  test_collector_transport_connection();
   return 0;
 }

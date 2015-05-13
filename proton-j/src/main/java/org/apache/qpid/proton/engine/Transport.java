@@ -224,4 +224,13 @@ public interface Transport extends Endpoint
 
     ErrorCondition getCondition();
 
+    void setIdleTimeout(int timeout);
+    int getIdleTimeout();
+    int getRemoteIdleTimeout();
+
+    long tick(long now);
+
+    long getFramesInput();
+
+    long getFramesOutput();
 }

@@ -33,9 +33,13 @@ The proton APIs consist of the following classes:
 from cproton import *
 from wrapper import Wrapper
 
-import weakref, socket, sys
+import weakref, socket, sys, threading
 try:
   import uuid
+
+  def generate_uuid():
+    return uuid.uuid4()
+
 except ImportError:
   """
   No 'native' UUID support.  Provide a very basic UUID type that is a compatible subset of the uuid type provided by more modern python releases.
@@ -86,8 +90,8 @@ except ImportError:
   def uuid4():
     return uuid.UUID(bytes=random_uuid())
 
-def generate_uuid():
-  return uuid.uuid4()
+  def generate_uuid():
+    return uuid4()
 
 try:
   bytes()
@@ -151,6 +155,7 @@ PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
 RELEASED = Constant("RELEASED")
+MODIFIED = Constant("MODIFIED")
 ABORTED = Constant("ABORTED")
 SETTLED = Constant("SETTLED")
 
@@ -159,6 +164,7 @@ STATUSES = {
   PN_STATUS_ACCEPTED: ACCEPTED,
   PN_STATUS_REJECTED: REJECTED,
   PN_STATUS_RELEASED: RELEASED,
+  PN_STATUS_MODIFIED: MODIFIED,
   PN_STATUS_PENDING: PENDING,
   PN_STATUS_SETTLED: SETTLED,
   PN_STATUS_UNKNOWN: None
@@ -507,7 +513,7 @@ first message.
     @type tracker: tracker
     @param tracker: the tracker whose status is to be retrieved
 
-    @return: one of None, PENDING, REJECTED, or ACCEPTED
+    @return: one of None, PENDING, REJECTED, MODIFIED, or ACCEPTED
     """
     disp = pn_messenger_status(self._mng, tracker);
     return STATUSES.get(disp, disp)
@@ -728,7 +734,7 @@ first message.
 
              >>> messenger.route("*", "amqp://user:password@broker/$1");
     """
-    self._check(pn_messenger_route(self._mng, pattern, address))
+    self._check(pn_messenger_route(self._mng, unicode2utf8(pattern), unicode2utf8(address)))
 
   def rewrite(self, pattern, address):
     """
@@ -745,7 +751,7 @@ first message.
     The default rewrite rule removes username and password from addresses
     before they are transmitted.
     """
-    self._check(pn_messenger_rewrite(self._mng, pattern, address))
+    self._check(pn_messenger_rewrite(self._mng, unicode2utf8(pattern), unicode2utf8(address)))
 
   def selectable(self):
     return Selectable.wrap(pn_messenger_selectable(self._mng))
@@ -771,14 +777,9 @@ class Message(object):
   @type body: bytes | unicode | dict | list | int | long | float | UUID
   """
 
-  DATA = PN_DATA
-  TEXT = PN_TEXT
-  AMQP = PN_AMQP
-  JSON = PN_JSON
-
   DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
 
-  def __init__(self, **kwargs):
+  def __init__(self, body=None, **kwargs):
     """
     @param kwargs: Message property name/value pairs to initialise the Message
     """
@@ -788,7 +789,7 @@ class Message(object):
     self.instructions = None
     self.annotations = None
     self.properties = None
-    self.body = None
+    self.body = body
     for k,v in kwargs.iteritems():
       getattr(self, k)          # Raise exception if it's not a valid attribute.
       setattr(self, k, v)
@@ -955,10 +956,10 @@ The user id of the message creator.
 """)
 
   def _get_address(self):
-    return pn_message_get_address(self._msg)
+    return utf82unicode(pn_message_get_address(self._msg))
 
   def _set_address(self, value):
-    self._check(pn_message_set_address(self._msg, value))
+    self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
 
   address = property(_get_address, _set_address,
                      doc="""
@@ -977,10 +978,10 @@ The subject of the message.
 """)
 
   def _get_reply_to(self):
-    return pn_message_get_reply_to(self._msg)
+    return utf82unicode(pn_message_get_reply_to(self._msg))
 
   def _set_reply_to(self, value):
-    self._check(pn_message_set_reply_to(self._msg, value))
+    self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
 
   reply_to = property(_get_reply_to, _set_reply_to,
                       doc="""
@@ -1077,18 +1078,6 @@ The sequence of the message within its group.
 The group-id for any replies.
 """)
 
-  # XXX
-  def _get_format(self):
-    return pn_message_get_format(self._msg)
-
-  def _set_format(self, value):
-    self._check(pn_message_set_format(self._msg, value))
-
-  format = property(_get_format, _set_format,
-                    doc="""
-The format of the message.
-""")
-
   def encode(self):
     self._pre_encode()
     sz = 16
@@ -1105,19 +1094,39 @@ The format of the message.
     self._check(pn_message_decode(self._msg, data, len(data)))
     self._post_decode()
 
-  def load(self, data):
-    self._check(pn_message_load(self._msg, data))
+  def send(self, sender, tag=None):
+    dlv = sender.delivery(tag or sender.delivery_tag())
+    encoded = self.encode()
+    sender.stream(encoded)
+    sender.advance()
+    if sender.snd_settle_mode == Link.SND_SETTLED:
+      dlv.settle()
+    return dlv
 
-  def save(self):
-    sz = 16
-    while True:
-      err, data = pn_message_save(self._msg, sz)
-      if err == PN_OVERFLOW:
-        sz *= 2
-        continue
-      else:
-        self._check(err)
-        return data
+  def recv(self, link):
+    """
+    Receives and decodes the message content for the current delivery
+    from the link. Upon success it will return the current delivery
+    for the link. If there is no current delivery, or if the current
+    delivery is incomplete, or if the link is not a receiver, it will
+    return None.
+
+    @type link: Link
+    @param link: the link to receive a message from
+    @return the delivery associated with the decoded message (or None)
+
+    """
+    if link.is_sender: return None
+    dlv = link.current
+    if not dlv or dlv.partial: return None
+    encoded = link.recv(dlv.pending)
+    link.advance()
+    # the sender has already forgotten about the delivery, so we might
+    # as well too
+    if link.remote_snd_settle_mode == Link.SND_SETTLED:
+      dlv.settle()
+    self.decode(encoded)
+    return dlv
 
   def __repr2__(self):
     props = []
@@ -1289,6 +1298,9 @@ class Array(object):
     self.descriptor = descriptor
     self.type = type
     self.elements = elements
+
+  def __iter__(self):
+    return iter(self.elements)
 
   def __repr__(self):
     if self.elements:
@@ -1505,6 +1517,12 @@ class Data:
       return None
     else:
       return dtype
+
+  def encoded_size(self):
+    """
+    Returns the size in bytes needed to encode the data in AMQP format.
+    """
+    return pn_data_encoded_size(self._data)
 
   def encode(self):
     """
@@ -1843,7 +1861,9 @@ class Data:
       >>> # read a symbolically described string
       >>> assert data.is_described() # will error if the current node is not described
       >>> data.enter()
+      >>> data.next()
       >>> print data.get_symbol()
+      >>> data.next()
       >>> print data.get_string()
       >>> data.exit()
     """
@@ -2208,12 +2228,24 @@ class Endpoint(object):
       assert False, "Subclass must override this!"
 
   def _get_handler(self):
+    import reactor
+    ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+    if ractor:
+      on_error = ractor.on_error
+    else:
+      on_error = None
     record = self._get_attachments()
-    return WrappedHandler(pn_record_get_handler(record))
+    return WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
   def _set_handler(self, handler):
+    import reactor
+    ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+    if ractor:
+      on_error = ractor.on_error
+    else:
+      on_error = None
+    impl = _chandler(handler, on_error)
     record = self._get_attachments()
-    impl = _chandler(handler)
     pn_record_set_handler(record, impl)
     pn_decref(impl)
 
@@ -2278,7 +2310,38 @@ def secs2millis(secs):
 def millis2secs(millis):
   return float(millis)/1000.0
 
+def timeout2millis(secs):
+  if secs is None: return PN_MILLIS_MAX
+  return secs2millis(secs)
+
+def millis2timeout(millis):
+  if millis == PN_MILLIS_MAX: return None
+  return millis2secs(millis)
+
+def unicode2utf8(string):
+    if string is None:
+        return None
+    if isinstance(string, unicode):
+        return string.encode('utf8')
+    elif isinstance(string, str):
+        return string
+    else:
+        raise TypeError("Unrecognized string type: %r" % string)
+
+def utf82unicode(string):
+    if string is None:
+        return None
+    if isinstance(string, unicode):
+        return string
+    elif isinstance(string, str):
+        return string.decode('utf8')
+    else:
+        raise TypeError("Unrecognized string type")
+
 class Connection(Wrapper, Endpoint):
+  """
+  A representation of an AMQP connection
+  """
 
   @staticmethod
   def wrap(impl):
@@ -2328,40 +2391,66 @@ class Connection(Wrapper, Endpoint):
     self._collector = weakref.ref(collector)
 
   def _get_container(self):
-    return pn_connection_get_container(self._impl)
+    return utf82unicode(pn_connection_get_container(self._impl))
   def _set_container(self, name):
-    return pn_connection_set_container(self._impl, name)
+    return pn_connection_set_container(self._impl, unicode2utf8(name))
 
   container = property(_get_container, _set_container)
 
   def _get_hostname(self):
-    return pn_connection_get_hostname(self._impl)
+    return utf82unicode(pn_connection_get_hostname(self._impl))
   def _set_hostname(self, name):
-    return pn_connection_set_hostname(self._impl, name)
+    return pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
   hostname = property(_get_hostname, _set_hostname)
 
+  def _get_user(self):
+    return utf82unicode(pn_connection_get_user(self._impl))
+  def _set_user(self, name):
+    return pn_connection_set_user(self._impl, unicode2utf8(name))
+
+  user = property(_get_user, _set_user)
+
+  def _get_password(self):
+    return None
+  def _set_password(self, name):
+    return pn_connection_set_password(self._impl, unicode2utf8(name))
+
+  password = property(_get_password, _set_password)
+
   @property
   def remote_container(self):
+    """The container identifier specified by the remote peer for this connection."""
     return pn_connection_remote_container(self._impl)
 
   @property
   def remote_hostname(self):
+    """The hostname specified by the remote peer for this connection."""
     return pn_connection_remote_hostname(self._impl)
 
   @property
   def remote_offered_capabilities(self):
+    """The capabilities offered by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_offered_capabilities(self._impl))
 
   @property
   def remote_desired_capabilities(self):
+    """The capabilities desired by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_desired_capabilities(self._impl))
 
   @property
   def remote_properties(self):
+    """The properties specified by the remote peer for this connection."""
     return dat2obj(pn_connection_remote_properties(self._impl))
 
   def open(self):
+    """
+    Opens the connection.
+
+    In more detail, this moves the local state of the connection to
+    the ACTIVE state and triggers an open frame to be sent to the
+    peer. A connection is fully active once both peers have opened it.
+    """
     obj2dat(self.offered_capabilities,
             pn_connection_offered_capabilities(self._impl))
     obj2dat(self.desired_capabilities,
@@ -2370,14 +2459,31 @@ class Connection(Wrapper, Endpoint):
     pn_connection_open(self._impl)
 
   def close(self):
+    """
+    Closes the connection.
+
+    In more detail, this moves the local state of the connection to
+    the CLOSED state and triggers a close frame to be sent to the
+    peer. A connection is fully closed once both peers have closed it.
+    """
     self._update_cond()
     pn_connection_close(self._impl)
 
   @property
   def state(self):
+    """
+    The state of the connection as a bit field. The state has a local
+    and a remote component. Each of these can be in one of three
+    states: UNINIT, ACTIVE or CLOSED. These can be tested by masking
+    against LOCAL_UNINIT, LOCAL_ACTIVE, LOCAL_CLOSED, REMOTE_UNINIT,
+    REMOTE_ACTIVE and REMOTE_CLOSED.
+    """
     return pn_connection_state(self._impl)
 
   def session(self):
+    """
+    Returns a new session on this connection.
+    """
     return Session(pn_session(self._impl))
 
   def session_head(self, mask):
@@ -2456,10 +2562,10 @@ class Session(Wrapper, Endpoint):
     return Connection.wrap(pn_session_connection(self._impl))
 
   def sender(self, name):
-    return Sender(pn_sender(self._impl, name))
+    return Sender(pn_sender(self._impl, unicode2utf8(name)))
 
   def receiver(self, name):
-    return Receiver(pn_receiver(self._impl, name))
+    return Receiver(pn_receiver(self._impl, unicode2utf8(name)))
 
   def free(self):
     pn_session_free(self._impl)
@@ -2468,6 +2574,10 @@ class LinkException(ProtonException):
   pass
 
 class Link(Wrapper, Endpoint):
+  """
+  A representation of an AMQP link, of which there are two concrete
+  implementations, Sender and Receiver.
+  """
 
   SND_UNSETTLED = PN_SND_UNSETTLED
   SND_SETTLED = PN_SND_SETTLED
@@ -2504,29 +2614,55 @@ class Link(Wrapper, Endpoint):
     return pn_link_remote_condition(self._impl)
 
   def open(self):
+    """
+    Opens the link.
+
+    In more detail, this moves the local state of the link to the
+    ACTIVE state and triggers an attach frame to be sent to the
+    peer. A link is fully active once both peers have attached it.
+    """
     pn_link_open(self._impl)
 
   def close(self):
+    """
+    Closes the link.
+
+    In more detail, this moves the local state of the link to the
+    CLOSED state and triggers an detach frame (with the closed flag
+    set) to be sent to the peer. A link is fully closed once both
+    peers have detached it.
+    """
     self._update_cond()
     pn_link_close(self._impl)
 
   @property
   def state(self):
+    """
+    The state of the link as a bit field. The state has a local
+    and a remote component. Each of these can be in one of three
+    states: UNINIT, ACTIVE or CLOSED. These can be tested by masking
+    against LOCAL_UNINIT, LOCAL_ACTIVE, LOCAL_CLOSED, REMOTE_UNINIT,
+    REMOTE_ACTIVE and REMOTE_CLOSED.
+    """
     return pn_link_state(self._impl)
 
   @property
   def source(self):
+    """The source of the link as described by the local peer."""
     return Terminus(pn_link_source(self._impl))
 
   @property
   def target(self):
+    """The target of the link as described by the local peer."""
     return Terminus(pn_link_target(self._impl))
 
   @property
   def remote_source(self):
+    """The source of the link as described by the remote peer."""
     return Terminus(pn_link_remote_source(self._impl))
   @property
   def remote_target(self):
+    """The target of the link as described by the remote peer."""
     return Terminus(pn_link_remote_target(self._impl))
 
   @property
@@ -2535,6 +2671,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def connection(self):
+    """The connection on which this link was attached."""
     return self.session.connection
 
   def delivery(self, tag):
@@ -2553,6 +2690,7 @@ class Link(Wrapper, Endpoint):
 
   @property
   def credit(self):
+    """The amount of oustanding credit on this link."""
     return pn_link_credit(self._impl)
 
   @property
@@ -2568,14 +2706,17 @@ class Link(Wrapper, Endpoint):
 
   @property
   def name(self):
-      return pn_link_name(self._impl)
+    """Returns the name of the link"""
+    return utf82unicode(pn_link_name(self._impl))
 
   @property
   def is_sender(self):
+    """Returns true if this link is a sender."""
     return pn_link_is_sender(self._impl)
 
   @property
   def is_receiver(self):
+    """Returns true if this link is a receiver."""
     return pn_link_is_receiver(self._impl)
 
   @property
@@ -2597,6 +2738,14 @@ class Link(Wrapper, Endpoint):
   def _set_rcv_settle_mode(self, mode):
     pn_link_set_rcv_settle_mode(self._impl, mode)
   rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode)
+
+  def _get_drain(self):
+    return pn_link_get_drain(self._impl)
+
+  def _set_drain(self, b):
+    pn_link_set_drain(self._impl, bool(b))
+
+  drain_mode = property(_get_drain, _set_drain)
 
   def drained(self):
     return pn_link_drained(self._impl)
@@ -2639,9 +2788,10 @@ class Terminus(object):
   type = property(_get_type, _set_type)
 
   def _get_address(self):
-    return pn_terminus_get_address(self._impl)
+    """The address that identifies the source or target node"""
+    return utf82unicode(pn_terminus_get_address(self._impl))
   def _set_address(self, address):
-    self._check(pn_terminus_set_address(self._impl, address))
+    self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
   address = property(_get_address, _set_address)
 
   def _get_durability(self):
@@ -2663,6 +2813,8 @@ class Terminus(object):
   timeout = property(_get_timeout, _set_timeout)
 
   def _is_dynamic(self):
+    """Indicates whether the source or target node was dynamically
+    created"""
     return pn_terminus_is_dynamic(self._impl)
   def _set_dynamic(self, dynamic):
     self._check(pn_terminus_set_dynamic(self._impl, dynamic))
@@ -2676,10 +2828,12 @@ class Terminus(object):
 
   @property
   def properties(self):
+    """Properties of a dynamic source or target."""
     return Data(pn_terminus_properties(self._impl))
 
   @property
   def capabilities(self):
+    """Capabilities of the source or target."""
     return Data(pn_terminus_capabilities(self._impl))
 
   @property
@@ -2688,22 +2842,59 @@ class Terminus(object):
 
   @property
   def filter(self):
+    """A filter on a source allows the set of messages transfered over
+    the link to be restricted"""
     return Data(pn_terminus_filter(self._impl))
 
   def copy(self, src):
     self._check(pn_terminus_copy(self._impl, src._impl))
 
 class Sender(Link):
+  """
+  A link over which messages are sent.
+  """
 
   def offered(self, n):
     pn_link_offered(self._impl, n)
 
-  def send(self, bytes):
+  def stream(self, bytes):
+    """
+    Send specified bytes as part of the current delivery
+    """
     return self._check(pn_link_send(self._impl, bytes))
 
+  def send(self, obj, tag=None):
+    """
+    Send specified object over this sender; the object is expected to
+    have a send() method on it that takes the sender and an optional
+    tag as arguments.
+
+    Where the object is a Message, this will send the message over
+    this link, creating a new delivery for the purpose.
+    """
+    if hasattr(obj, 'send'):
+      return obj.send(self, tag=tag)
+    else:
+      # treat object as bytes
+      return self.stream(obj)
+
+  def delivery_tag(self):
+    if not hasattr(self, 'tag_generator'):
+      def simple_tags():
+        count = 1
+        while True:
+          yield str(count)
+          count += 1
+      self.tag_generator = simple_tags()
+    return self.tag_generator.next()
+
 class Receiver(Link):
+  """
+  A link over which messages are received.
+  """
 
   def flow(self, n):
+    """Increases the credit issued to the remote sender by the specified number of messages."""
     pn_link_flow(self._impl, n)
 
   def recv(self, limit):
@@ -2825,6 +3016,9 @@ class Disposition(object):
   condition = property(_get_condition, _set_condition)
 
 class Delivery(Wrapper):
+  """
+  Tracks and/or records the delivery of a message over a link.
+  """
 
   RECEIVED = Disposition.RECEIVED
   ACCEPTED = Disposition.ACCEPTED
@@ -2848,21 +3042,29 @@ class Delivery(Wrapper):
 
   @property
   def tag(self):
+    """The identifier for the delivery."""
     return pn_delivery_tag(self._impl)
 
   @property
   def writable(self):
+    """Returns true for an outgoing delivery to which data can now be written."""
     return pn_delivery_writable(self._impl)
 
   @property
   def readable(self):
+    """Returns true for an incoming delivery that has data to read."""
     return pn_delivery_readable(self._impl)
 
   @property
   def updated(self):
+    """Returns true if the state of the delivery has been updated
+    (e.g. it has been settled and/or accepted, rejected etc)."""
     return pn_delivery_updated(self._impl)
 
   def update(self, state):
+    """
+    Set the local state of the delivery e.g. ACCEPTED, REJECTED, RELEASED.
+    """
     obj2dat(self.local._data, pn_disposition_data(self.local._impl))
     obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
     obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
@@ -2874,21 +3076,38 @@ class Delivery(Wrapper):
 
   @property
   def partial(self):
+    """
+    Returns true for an incoming delivery if not all the data is
+    yet available.
+    """
     return pn_delivery_partial(self._impl)
 
   @property
   def local_state(self):
+    """Returns the local state of the delivery."""
     return DispositionType.get(pn_delivery_local_state(self._impl))
 
   @property
   def remote_state(self):
+    """
+    Returns the state of the delivery as indicated by the remote
+    peer.
+    """
     return DispositionType.get(pn_delivery_remote_state(self._impl))
 
   @property
   def settled(self):
+    """
+    Returns true if the delivery has been settled by the remote peer.
+    """
     return pn_delivery_settled(self._impl)
 
   def settle(self):
+    """
+    Settles the delivery locally. This indicates the aplication
+    considers the delivery complete and does not wish to receive any
+    further events about it. Every delivery should be settled locally.
+    """
     pn_delivery_settle(self._impl)
 
   @property
@@ -2897,14 +3116,23 @@ class Delivery(Wrapper):
 
   @property
   def link(self):
+    """
+    Returns the link on which the delivery was sent or received.
+    """
     return Link.wrap(pn_delivery_link(self._impl))
 
   @property
   def session(self):
+    """
+    Returns the session over which the delivery was sent or received.
+    """
     return self.link.session
 
   @property
   def connection(self):
+    """
+    Returns the connection over which the delivery was sent or received.
+    """
     return self.session.connection
 
   @property
@@ -2913,6 +3141,14 @@ class Delivery(Wrapper):
 
 class TransportException(ProtonException):
   pass
+
+class TraceAdapter:
+
+  def __init__(self, tracer):
+    self.tracer = tracer
+
+  def __call__(self, trans_impl, message):
+    self.tracer(Transport.wrap(trans_impl), message)
 
 class Transport(Wrapper):
 
@@ -2950,6 +3186,38 @@ class Transport(Wrapper):
       raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._impl))))
     else:
       return err
+
+  def _set_tracer(self, tracer):
+    pn_transport_set_pytracer(self._impl, TraceAdapter(tracer));
+
+  def _get_tracer(self):
+    adapter = pn_transport_get_pytracer(self._impl)
+    if adapter:
+      return adapter.tracer
+    else:
+      return None
+
+  tracer = property(_get_tracer, _set_tracer,
+                            doc="""
+A callback for trace logging. The callback is passed the transport and log message.
+""")
+
+  def log(self, message):
+    pn_transport_log(self._impl, message)
+
+  def require_auth(self, bool):
+    pn_transport_require_auth(self._impl, bool)
+
+  @property
+  def authenticated(self):
+    return pn_transport_is_authenticated(self._impl)
+
+  def require_encryption(self, bool):
+    pn_transport_require_encryption(self._impl, bool)
+
+  @property
+  def encrypted(self):
+    return pn_transport_is_encrypted(self._impl)
 
   def bind(self, connection):
     """Assign a connection to the transport"""
@@ -3087,7 +3355,6 @@ class SASL(Wrapper):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
-  SKIPPED = PN_SASL_SKIPPED
 
   def __init__(self, transport):
     Wrapper.__init__(self, transport._impl, pn_transport_attachments)
@@ -3100,39 +3367,6 @@ class SASL(Wrapper):
     else:
       return err
 
-  def mechanisms(self, mechs):
-    pn_sasl_mechanisms(self._sasl, mechs)
-
-  # @deprecated
-  def client(self):
-    pn_sasl_client(self._sasl)
-
-  # @deprecated
-  def server(self):
-    pn_sasl_server(self._sasl)
-
-  def allow_skip(self, allow):
-    pn_sasl_allow_skip(self._sasl, allow)
-
-  def plain(self, user, password):
-    pn_sasl_plain(self._sasl, user, password)
-
-  def send(self, data):
-    self._check(pn_sasl_send(self._sasl, data, len(data)))
-
-  def recv(self):
-    sz = 16
-    while True:
-      n, data = pn_sasl_recv(self._sasl, sz)
-      if n == PN_OVERFLOW:
-        sz *= 2
-        continue
-      elif n == PN_EOS:
-        return None
-      else:
-        self._check(n)
-        return data
-
   @property
   def outcome(self):
     outcome = pn_sasl_outcome(self._sasl)
@@ -3141,17 +3375,11 @@ class SASL(Wrapper):
     else:
       return outcome
 
+  def allowed_mechs(self, mechs):
+    pn_sasl_allowed_mechs(self._sasl, mechs)
+
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
-
-  STATE_IDLE = PN_SASL_IDLE
-  STATE_STEP = PN_SASL_STEP
-  STATE_PASS = PN_SASL_PASS
-  STATE_FAIL = PN_SASL_FAIL
-
-  @property
-  def state(self):
-    return pn_sasl_state(self._sasl)
 
 
 class SSLException(TransportException):
@@ -3194,6 +3422,9 @@ class SSLDomain(object):
 
   def allow_unsecured_client(self):
     return self._check( pn_ssl_domain_allow_unsecured_client(self._domain) )
+
+  def __del__(self):
+    pn_ssl_domain_free(self._domain)
 
 class SSL(object):
 
@@ -3252,11 +3483,11 @@ class SSL(object):
     return pn_ssl_resume_status( self._ssl )
 
   def _set_peer_hostname(self, hostname):
-    self._check(pn_ssl_set_peer_hostname( self._ssl, hostname ))
+    self._check(pn_ssl_set_peer_hostname( self._ssl, unicode2utf8(hostname) ))
   def _get_peer_hostname(self):
     err, name = pn_ssl_get_peer_hostname( self._ssl, 1024 )
     self._check(err)
-    return name
+    return utf82unicode(name)
   peer_hostname = property(_get_peer_hostname, _set_peer_hostname,
                            doc="""
 Manage the expected name of the remote peer.  Used to authenticate the remote.
@@ -3307,13 +3538,32 @@ class Collector:
 
 class EventType(object):
 
+  _lock = threading.Lock()
+  _extended = 10000
   TYPES = {}
 
-  def __init__(self, number, method):
-    self.number = number
-    self.name = pn_event_type_name(self.number)
-    self.method = method
-    self.TYPES[number] = self
+  def __init__(self, name=None, number=None, method=None):
+    if name is None and number is None:
+      raise TypeError("extended events require a name")
+    try:
+      self._lock.acquire()
+      if name is None:
+        name = pn_event_type_name(number)
+
+      if number is None:
+        number = EventType._extended
+        EventType._extended += 1
+
+      if method is None:
+        method = "on_%s" % name
+
+      self.name = name
+      self.number = number
+      self.method = method
+
+      self.TYPES[number] = self
+    finally:
+      self._lock.release()
 
   def __repr__(self):
     return self.name
@@ -3337,118 +3587,138 @@ class EventBase(object):
 
 def _none(x): return None
 
+DELEGATED = Constant("DELEGATED")
+
+def _core(number, method):
+  return EventType(number=number, method=method)
+
 class Event(Wrapper, EventBase):
 
-  REACTOR_INIT = EventType(PN_REACTOR_INIT, "on_reactor_init")
-  REACTOR_QUIESCED = EventType(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
-  REACTOR_FINAL = EventType(PN_REACTOR_FINAL, "on_reactor_final")
+  REACTOR_INIT = _core(PN_REACTOR_INIT, "on_reactor_init")
+  REACTOR_QUIESCED = _core(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
+  REACTOR_FINAL = _core(PN_REACTOR_FINAL, "on_reactor_final")
 
-  TIMER_TASK = EventType(PN_TIMER_TASK, "on_timer_task")
+  TIMER_TASK = _core(PN_TIMER_TASK, "on_timer_task")
 
-  CONNECTION_INIT = EventType(PN_CONNECTION_INIT, "on_connection_init")
-  CONNECTION_BOUND = EventType(PN_CONNECTION_BOUND, "on_connection_bound")
-  CONNECTION_UNBOUND = EventType(PN_CONNECTION_UNBOUND, "on_connection_unbound")
-  CONNECTION_LOCAL_OPEN = EventType(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
-  CONNECTION_LOCAL_CLOSE = EventType(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
-  CONNECTION_REMOTE_OPEN = EventType(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
-  CONNECTION_REMOTE_CLOSE = EventType(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
-  CONNECTION_FINAL = EventType(PN_CONNECTION_FINAL, "on_connection_final")
+  CONNECTION_INIT = _core(PN_CONNECTION_INIT, "on_connection_init")
+  CONNECTION_BOUND = _core(PN_CONNECTION_BOUND, "on_connection_bound")
+  CONNECTION_UNBOUND = _core(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+  CONNECTION_LOCAL_OPEN = _core(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+  CONNECTION_LOCAL_CLOSE = _core(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+  CONNECTION_REMOTE_OPEN = _core(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+  CONNECTION_REMOTE_CLOSE = _core(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+  CONNECTION_FINAL = _core(PN_CONNECTION_FINAL, "on_connection_final")
 
-  SESSION_INIT = EventType(PN_SESSION_INIT, "on_session_init")
-  SESSION_LOCAL_OPEN = EventType(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
-  SESSION_LOCAL_CLOSE = EventType(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
-  SESSION_REMOTE_OPEN = EventType(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
-  SESSION_REMOTE_CLOSE = EventType(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
-  SESSION_FINAL = EventType(PN_SESSION_FINAL, "on_session_final")
+  SESSION_INIT = _core(PN_SESSION_INIT, "on_session_init")
+  SESSION_LOCAL_OPEN = _core(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+  SESSION_LOCAL_CLOSE = _core(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+  SESSION_REMOTE_OPEN = _core(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+  SESSION_REMOTE_CLOSE = _core(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+  SESSION_FINAL = _core(PN_SESSION_FINAL, "on_session_final")
 
-  LINK_INIT = EventType(PN_LINK_INIT, "on_link_init")
-  LINK_LOCAL_OPEN = EventType(PN_LINK_LOCAL_OPEN, "on_link_local_open")
-  LINK_LOCAL_CLOSE = EventType(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
-  LINK_LOCAL_DETACH = EventType(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
-  LINK_REMOTE_OPEN = EventType(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
-  LINK_REMOTE_CLOSE = EventType(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
-  LINK_REMOTE_DETACH = EventType(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
-  LINK_FLOW = EventType(PN_LINK_FLOW, "on_link_flow")
-  LINK_FINAL = EventType(PN_LINK_FINAL, "on_link_final")
+  LINK_INIT = _core(PN_LINK_INIT, "on_link_init")
+  LINK_LOCAL_OPEN = _core(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+  LINK_LOCAL_CLOSE = _core(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+  LINK_LOCAL_DETACH = _core(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+  LINK_REMOTE_OPEN = _core(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+  LINK_REMOTE_CLOSE = _core(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+  LINK_REMOTE_DETACH = _core(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+  LINK_FLOW = _core(PN_LINK_FLOW, "on_link_flow")
+  LINK_FINAL = _core(PN_LINK_FINAL, "on_link_final")
 
-  DELIVERY = EventType(PN_DELIVERY, "on_delivery")
+  DELIVERY = _core(PN_DELIVERY, "on_delivery")
 
-  TRANSPORT = EventType(PN_TRANSPORT, "on_transport")
-  TRANSPORT_ERROR = EventType(PN_TRANSPORT_ERROR, "on_transport_error")
-  TRANSPORT_HEAD_CLOSED = EventType(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
-  TRANSPORT_TAIL_CLOSED = EventType(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
-  TRANSPORT_CLOSED = EventType(PN_TRANSPORT_CLOSED, "on_transport_closed")
+  TRANSPORT = _core(PN_TRANSPORT, "on_transport")
+  TRANSPORT_ERROR = _core(PN_TRANSPORT_ERROR, "on_transport_error")
+  TRANSPORT_HEAD_CLOSED = _core(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+  TRANSPORT_TAIL_CLOSED = _core(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+  TRANSPORT_CLOSED = _core(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
-  SELECTABLE_INIT = EventType(PN_SELECTABLE_INIT, "on_selectable_init")
-  SELECTABLE_UPDATED = EventType(PN_SELECTABLE_UPDATED, "on_selectable_updated")
-  SELECTABLE_READABLE = EventType(PN_SELECTABLE_READABLE, "on_selectable_readable")
-  SELECTABLE_WRITABLE = EventType(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
-  SELECTABLE_EXPIRED = EventType(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
-  SELECTABLE_ERROR = EventType(PN_SELECTABLE_ERROR, "on_selectable_error")
-  SELECTABLE_FINAL = EventType(PN_SELECTABLE_FINAL, "on_selectable_final")
+  SELECTABLE_INIT = _core(PN_SELECTABLE_INIT, "on_selectable_init")
+  SELECTABLE_UPDATED = _core(PN_SELECTABLE_UPDATED, "on_selectable_updated")
+  SELECTABLE_READABLE = _core(PN_SELECTABLE_READABLE, "on_selectable_readable")
+  SELECTABLE_WRITABLE = _core(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
+  SELECTABLE_EXPIRED = _core(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
+  SELECTABLE_ERROR = _core(PN_SELECTABLE_ERROR, "on_selectable_error")
+  SELECTABLE_FINAL = _core(PN_SELECTABLE_FINAL, "on_selectable_final")
 
   @staticmethod
-  def wrap(impl):
+  def wrap(impl, number=None):
     if impl is None:
       return None
 
-    event = Event(impl)
+    if number is None:
+      number = pn_event_type(impl)
+
+    event = Event(impl, number)
 
     if isinstance(event.context, EventBase):
       return event.context
     else:
       return event
 
-  def __init__(self, impl):
+  def __init__(self, impl, number):
     Wrapper.__init__(self, impl, pn_event_attachments)
+    self.__dict__["type"] = EventType.TYPES[number]
 
   def _init(self):
     pass
 
   @property
   def clazz(self):
-    return pn_class_name(pn_event_class(self._impl))
+    cls = pn_event_class(self._impl)
+    if cls:
+      return pn_class_name(cls)
+    else:
+      return None
 
   @property
   def context(self):
+    """Returns the context object associated with the event. The type of this depend on the type of event."""
     return wrappers[self.clazz](pn_event_context(self._impl))
 
-  @property
-  def type(self):
-    return EventType.TYPES[pn_event_type(self._impl)]
-
-  def dispatch(self, handler):
+  def dispatch(self, handler, type=None):
+    type = type or self.type
     if isinstance(handler, WrappedHandler):
-      pn_handler_dispatch(handler._impl, self._impl)
+      pn_handler_dispatch(handler._impl, self._impl, type.number)
     else:
-      dispatch(handler, self.type.method, self)
-      if hasattr(handler, "handlers"):
+      result = dispatch(handler, type.method, self)
+      if result != DELEGATED and hasattr(handler, "handlers"):
         for h in handler.handlers:
-          self.dispatch(h)
+          self.dispatch(h, type)
 
 
   @property
   def reactor(self):
+    """Returns the reactor associated with the event."""
     return wrappers.get("pn_reactor", _none)(pn_event_reactor(self._impl))
 
   @property
   def transport(self):
+    """Returns the transport associated with the event, or null if none is associated with it."""
     return Transport.wrap(pn_event_transport(self._impl))
 
   @property
   def connection(self):
+    """Returns the connection associated with the event, or null if none is associated with it."""
     return Connection.wrap(pn_event_connection(self._impl))
 
   @property
   def session(self):
+    """Returns the session associated with the event, or null if none is associated with it."""
     return Session.wrap(pn_event_session(self._impl))
 
   @property
   def link(self):
+    """Returns the link associated with the event, or null if none is associated with it."""
     return Link.wrap(pn_event_link(self._impl))
 
   @property
   def sender(self):
+    """Returns the sender link associated with the event, or null if
+       none is associated with it. This is essentially an alias for
+       link(), that does an additional checkon the type of the
+       link."""
     l = self.link
     if l and l.is_sender:
       return l
@@ -3457,6 +3727,9 @@ class Event(Wrapper, EventBase):
 
   @property
   def receiver(self):
+    """Returns the receiver link associated with the event, or null if
+       none is associated with it. This is essentially an alias for
+       link(), that does an additional checkon the type of the link."""
     l = self.link
     if l and l.is_receiver:
       return l
@@ -3465,6 +3738,7 @@ class Event(Wrapper, EventBase):
 
   @property
   def delivery(self):
+    """Returns the delivery associated with the event, or null if none is associated with it."""
     return Delivery.wrap(pn_event_delivery(self._impl))
 
   def __repr__(self):
@@ -3481,25 +3755,45 @@ class _cadapter:
     self.handler = handler
     self.on_error = on_error
 
-  def __call__(self, cevent):
-    ev = Event.wrap(cevent)
-    try:
-      ev.dispatch(self.handler)
-    except:
-      if self.on_error is None:
-        raise
-      else:
-        self.on_error(sys.exc_info())
+  def dispatch(self, cevent, ctype):
+    ev = Event.wrap(cevent, ctype)
+    ev.dispatch(self.handler)
+
+  def exception(self, exc, val, tb):
+    if self.on_error is None:
+      raise exc, val, tb
+    else:
+      self.on_error((exc, val, tb))
 
 class WrappedHandler(Wrapper):
+
+  @staticmethod
+  def wrap(impl, on_error=None):
+    if impl is None:
+      return None
+    else:
+      handler = WrappedHandler(impl)
+      handler.__dict__["on_error"] = on_error
+      return handler
 
   def __init__(self, impl_or_constructor):
     Wrapper.__init__(self, impl_or_constructor)
 
+  def _on_error(self, info):
+    on_error = getattr(self, "on_error", None)
+    if on_error is None:
+      raise info[0], info[1], info[2]
+    else:
+      on_error(info)
+
   def add(self, handler):
-    impl = _chandler(handler, getattr(self, "on_error", None))
+    if handler is None: return
+    impl = _chandler(handler, self._on_error)
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
+
+  def clear(self):
+    pn_handler_clear(self._impl)
 
 def _chandler(obj, on_error=None):
   if obj is None:
@@ -3511,201 +3805,11 @@ def _chandler(obj, on_error=None):
   else:
     return pn_pyhandler(_cadapter(obj, on_error))
 
-###
-# Driver
-###
-
-class DriverException(ProtonException):
-  """
-  The DriverException class is the root of the driver exception hierarchy.
-  """
-  pass
-
-class Connector(object):
-
-  @staticmethod
-  def _wrap_connector(c_cxtr, py_driver=None):
-    """Maintain only a single instance of this class for each Connector object that
-    exists in the C Driver.
-    """
-    if not c_cxtr: return None
-    py_cxtr = pn_void2py(pn_connector_context(c_cxtr))
-    if py_cxtr: return py_cxtr
-    wrapper = Connector(_cxtr=c_cxtr, _py_driver=py_driver)
-    return wrapper
-
-  def __init__(self, _cxtr, _py_driver):
-    self._cxtr = _cxtr
-    assert(_py_driver)
-    self._driver = weakref.ref(_py_driver)
-    pn_connector_set_context(self._cxtr, pn_py2void(self))
-    self._connection = None
-    self._driver()._connectors.add(self)
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if hasattr(self, '_cxtr'):
-      pn_connector_set_context(self._cxtr, pn_py2void(None))
-      pn_connector_free(self._cxtr)
-      del self._cxtr
-
-  def free(self):
-    """Release the Connector, freeing its resources.
-
-    Call this when you no longer need the Connector.  This will allow the
-    connector's resources to be reclaimed.  Once called, you should no longer
-    reference this connector.
-
-    """
-    self.connection = None
-    d = self._driver()
-    if d: d._connectors.remove(self)
-    self._release()
-
-  def next(self):
-    return Connector._wrap_connector(pn_connector_next(self._cxtr))
-
-  def process(self):
-    pn_connector_process(self._cxtr)
-
-  def listener(self):
-    return Listener._wrap_listener(pn_connector_listener(self._cxtr))
-
-  def sasl(self):
-    ## seems easier just to grab the SASL associated with the transport:
-    trans = self.transport
-    if trans:
-      return SASL(self.transport)
-    return None
-
-  @property
-  def transport(self):
-    trans = pn_connector_transport(self._cxtr)
-    return Transport.wrap(trans)
-
-  def close(self):
-    return pn_connector_close(self._cxtr)
-
-  @property
-  def closed(self):
-    return pn_connector_closed(self._cxtr)
-
-  def _get_connection(self):
-    return self._connection
-
-  def _set_connection(self, conn):
-    if conn:
-      pn_connector_set_connection(self._cxtr, conn._impl)
-    else:
-      pn_connector_set_connection(self._cxtr, None)
-    self._connection = conn
-
-
-  connection = property(_get_connection, _set_connection,
-                        doc="""
-Associate a Connection with this Connector.
-""")
-
-class Listener(object):
-
-  @staticmethod
-  def _wrap_listener(c_lsnr, py_driver=None):
-    """Maintain only a single instance of this class for each Listener object that
-    exists in the C Driver.
-    """
-    if not c_lsnr: return None
-    py_lsnr = pn_void2py(pn_listener_context(c_lsnr))
-    if py_lsnr: return py_lsnr
-    wrapper = Listener(_lsnr=c_lsnr, _py_driver=py_driver)
-    return wrapper
-
-  def __init__(self, _lsnr, _py_driver):
-    self._lsnr = _lsnr
-    assert(_py_driver)
-    self._driver = weakref.ref(_py_driver)
-    pn_listener_set_context(self._lsnr, pn_py2void(self))
-    self._driver()._listeners.add(self)
-
-  def _release(self):
-    """Release the underlying C Engine resource."""
-    if hasattr(self, '_lsnr'):
-      pn_listener_set_context(self._lsnr, pn_py2void(None));
-      pn_listener_free(self._lsnr)
-      del self._lsnr
-
-  def free(self):
-    """Release the Listener, freeing its resources"""
-    d = self._driver()
-    if d: d._listeners.remove(self)
-    self._release()
-
-  def next(self):
-    return Listener._wrap_listener(pn_listener_next(self._lsnr))
-
-  def accept(self):
-    d = self._driver()
-    if d:
-      cxtr = pn_listener_accept(self._lsnr)
-      c = Connector._wrap_connector(cxtr, d)
-      return c
-    return None
-
-  def close(self):
-    pn_listener_close(self._lsnr)
-
-class Driver(object):
-  def __init__(self):
-    self._driver = pn_driver()
-    self._listeners = set()
-    self._connectors = set()
-
-  def __del__(self):
-    # freeing the driver will release all child objects in the C Engine, so
-    # clean up their references in the corresponding Python objects
-    for c in self._connectors:
-      c._release()
-    for l in self._listeners:
-      l._release()
-    if hasattr(self, "_driver") and self._driver:
-      pn_driver_free(self._driver)
-      del self._driver
-
-  def wait(self, timeout_sec):
-    if timeout_sec is None or timeout_sec < 0.0:
-      t = -1
-    else:
-      t = secs2millis(timeout_sec)
-    return pn_driver_wait(self._driver, t)
-
-  def wakeup(self):
-    return pn_driver_wakeup(self._driver)
-
-  def listener(self, host, port):
-    """Construct a listener"""
-    return Listener._wrap_listener(pn_listener(self._driver, host, port, None),
-                                   self)
-
-  def pending_listener(self):
-    return Listener._wrap_listener(pn_driver_listener(self._driver))
-
-  def head_listener(self):
-    return Listener._wrap_listener(pn_listener_head(self._driver))
-
-  def connector(self, host, port):
-    return Connector._wrap_connector(pn_connector(self._driver, host, port, None),
-                                     self)
-
-  def head_connector(self):
-    return Connector._wrap_connector(pn_connector_head(self._driver))
-
-  def pending_connector(self):
-    return Connector._wrap_connector(pn_driver_connector(self._driver))
-
 class Url(object):
   """
   Simple URL parser/constructor, handles URLs of the form:
 
-    <scheme>://<user>:<password>@<host>:<port>/<path>
+  <scheme>://<user>:<password>@<host>:<port>/<path>
 
   All components can be None if not specifeid in the URL string.
 
@@ -3823,24 +3927,21 @@ __all__ = [
            "MANUAL",
            "REJECTED",
            "RELEASED",
+           "MODIFIED",
            "SETTLED",
            "UNDESCRIBED",
            "Array",
            "Collector",
            "Condition",
            "Connection",
-           "Connector",
            "Data",
            "Delivery",
            "Disposition",
            "Described",
-           "Driver",
-           "DriverException",
            "Endpoint",
            "Event",
            "Handler",
            "Link",
-           "Listener",
            "Message",
            "MessageException",
            "Messenger",

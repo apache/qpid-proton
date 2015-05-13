@@ -71,6 +71,8 @@ class FrameParser implements TransportInput
 
     private State _state = State.HEADER0;
 
+    private long _framesInput = 0;
+
     /** the stated size of the current frame */
     private int _size;
 
@@ -366,9 +368,10 @@ class FrameParser implements TransportInput
 
                     try
                     {
+                        _framesInput += 1;
+
                         if (frameBodySize > 0)
                         {
-
                             _decoder.setByteBuffer(in);
                             Object val = _decoder.readObject();
                             _decoder.setByteBuffer(null);
@@ -484,6 +487,14 @@ class FrameParser implements TransportInput
     }
 
     @Override
+    public int position() {
+        if (_tail_closed) {
+            return Transport.END_OF_STREAM;
+        }
+        return (_inputBuffer == null) ? 0 : _inputBuffer.position();
+    }
+
+    @Override
     public ByteBuffer tail()
     {
         if (_tail_closed) {
@@ -559,5 +570,10 @@ class FrameParser implements TransportInput
     {
         _size = 0;
         _state = State.SIZE_0;
+    }
+
+    long getFramesInput()
+    {
+        return _framesInput;
     }
 }

@@ -22,11 +22,10 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArr
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.amqp.transport.Attach;
@@ -53,11 +52,9 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
-import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 
@@ -95,10 +92,6 @@ public class TransportImpl extends EndpointImpl
     private TransportInput _inputProcessor;
     private TransportOutput _outputProcessor;
 
-    private Map<SessionImpl, TransportSession> _transportSessionState = new HashMap<SessionImpl, TransportSession>();
-    private Map<LinkImpl, TransportLink<?>> _transportLinkState = new HashMap<LinkImpl, TransportLink<?>>();
-
-
     private DecoderImpl _decoder = new DecoderImpl();
     private EncoderImpl _encoder = new EncoderImpl(_decoder);
 
@@ -126,6 +119,15 @@ public class TransportImpl extends EndpointImpl
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
+
+    private int _localIdleTimeout = 0;
+    private int _remoteIdleTimeout = 0;
+    private long _bytesInput = 0;
+    private long _bytesOutput = 0;
+    private long _localIdleDeadline = 0;
+    private long _lastBytesInput = 0;
+    private long _lastBytesOutput = 0;
+    private long _remoteIdleDeadline = 0;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -242,12 +244,11 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void unbind()
     {
-        for (TransportSession ts: _transportSessionState.values()) {
+        for (TransportSession ts: _localSessions.values()) {
             ts.unbind();
         }
-
-        for (TransportLink tl: _transportLinkState.values()) {
-            tl.unbind();
+        for (TransportSession ts: _remoteSessions.values()) {
+            ts.unbind();
         }
 
         put(Event.Type.CONNECTION_UNBOUND, _connectionEndpoint);
@@ -384,6 +385,7 @@ public class TransportImpl extends EndpointImpl
 
                     if(((link.getLocalState() == EndpointState.CLOSED) || link.detached())
                        && transportLink.isLocalHandleSet()
+                       && transportSession.isLocalChannelSet()
                        && !_isCloseSent)
                     {
                         if((link instanceof SenderImpl)
@@ -518,6 +520,7 @@ public class TransportImpl extends EndpointImpl
         if(!delivery.isDone() &&
            (delivery.getDataLength() > 0 || delivery != snd.current()) &&
            tpSession.hasOutgoingCredit() && tpLink.hasCredit() &&
+           tpSession.isLocalChannelSet() &&
            tpLink.getLocalHandle() != null && !_frameWriter.isFull())
         {
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
@@ -614,20 +617,24 @@ public class TransportImpl extends EndpointImpl
         SessionImpl session = rcv.getSession();
         TransportSession tpSession = session.getTransportSession();
 
-        Disposition disposition = new Disposition();
-        disposition.setFirst(tpDelivery.getDeliveryId());
-        disposition.setLast(tpDelivery.getDeliveryId());
-        disposition.setRole(Role.RECEIVER);
-        disposition.setSettled(delivery.isSettled());
-
-        disposition.setState(delivery.getLocalState());
-        writeFrame(tpSession.getLocalChannel(), disposition, null,
-                   null);
-        if(delivery.isSettled())
+        if (tpSession.isLocalChannelSet())
         {
-            tpDelivery.settled();
+            Disposition disposition = new Disposition();
+            disposition.setFirst(tpDelivery.getDeliveryId());
+            disposition.setLast(tpDelivery.getDeliveryId());
+            disposition.setRole(Role.RECEIVER);
+            disposition.setSettled(delivery.isSettled());
+
+            disposition.setState(delivery.getLocalState());
+            writeFrame(tpSession.getLocalChannel(), disposition, null, null);
+            if (delivery.isSettled())
+            {
+                tpDelivery.settled();
+            }
+            return true;
         }
-        return true;
+
+        return false;
     }
 
     private void processReceiverFlow()
@@ -782,6 +789,11 @@ public class TransportImpl extends EndpointImpl
                 open.setChannelMax(UnsignedShort.valueOf((short) _channelMax));
             }
 
+            // as per the recommendation in the spec, advertise half our
+            // actual timeout to the remote
+            if (_localIdleTimeout > 0) {
+                open.setIdleTimeOut(new UnsignedInteger(_localIdleTimeout / 2));
+            }
             _isOpenSent = true;
 
             writeFrame(0, open, null, null);
@@ -824,23 +836,21 @@ public class TransportImpl extends EndpointImpl
 
     private TransportSession getTransportState(SessionImpl session)
     {
-        TransportSession transportSession = _transportSessionState.get(session);
+        TransportSession transportSession = session.getTransportSession();
         if(transportSession == null)
         {
             transportSession = new TransportSession(this, session);
             session.setTransportSession(transportSession);
-            _transportSessionState.put(session, transportSession);
         }
         return transportSession;
     }
 
     private TransportLink<?> getTransportState(LinkImpl link)
     {
-        TransportLink<?> transportLink = _transportLinkState.get(link);
+        TransportLink<?> transportLink = link.getTransportLink();
         if(transportLink == null)
         {
             transportLink = TransportLink.createTransportLink(link);
-            _transportLinkState.put(link, transportLink);
         }
         return transportLink;
     }
@@ -968,7 +978,7 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
-    private void writeFrame(int channel, FrameBody frameBody,
+    protected void writeFrame(int channel, FrameBody frameBody,
                             ByteBuffer payload, Runnable onPayloadTooLarge)
     {
         _frameWriter.writeFrame(channel, frameBody, payload, onPayloadTooLarge);
@@ -1014,6 +1024,11 @@ public class TransportImpl extends EndpointImpl
         if (open.getChannelMax().longValue() > 0)
         {
             _remoteChannelMax = (int) open.getChannelMax().longValue();
+        }
+
+        if (open.getIdleTimeOut() != null && open.getIdleTimeOut().longValue() > 0)
+        {
+            _remoteIdleTimeout = open.getIdleTimeOut().intValue();
         }
     }
 
@@ -1065,7 +1080,27 @@ public class TransportImpl extends EndpointImpl
         else
         {
             SessionImpl session = transportSession.getSession();
-            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(attach.getHandle());
+            final UnsignedInteger handle = attach.getHandle();
+            if (handle.compareTo(transportSession.getHandleMax()) > 0) {
+                // The handle-max value is the highest handle value that can be used on the session. A peer MUST
+                // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
+                // A peer that receives a handle outside the supported range MUST close the connection with the
+                // framing-error error-code.
+                ErrorCondition condition =
+                        new ErrorCondition(ConnectionError.FRAMING_ERROR,
+                                                            "handle-max exceeded");
+                _connectionEndpoint.setCondition(condition);
+                _connectionEndpoint.setLocalState(EndpointState.CLOSED);
+                if (!_isCloseSent) {
+                    Close close = new Close();
+                    close.setError(condition);
+                    _isCloseSent = true;
+                    writeFrame(0, close, null, null);
+                }
+                close_tail();
+                return;
+            }
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(handle);
             LinkImpl link = null;
 
             if(transportLink != null)
@@ -1100,8 +1135,8 @@ public class TransportImpl extends EndpointImpl
                 link.setRemoteSenderSettleMode(attach.getSndSettleMode());
 
                 transportLink.setName(attach.getName());
-                transportLink.setRemoteHandle(attach.getHandle());
-                transportSession.addLinkRemoteHandle(transportLink, attach.getHandle());
+                transportLink.setRemoteHandle(handle);
+                transportSession.addLinkRemoteHandle(transportLink, handle);
 
             }
 
@@ -1201,6 +1236,7 @@ public class TransportImpl extends EndpointImpl
         {
             _remoteSessions.remove(channel);
             transportSession.receivedEnd();
+            transportSession.unsetRemoteChannel();
             SessionImpl session = transportSession.getSession();
             session.setRemoteState(EndpointState.CLOSED);
             ErrorCondition errorCondition = end.getError();
@@ -1217,6 +1253,7 @@ public class TransportImpl extends EndpointImpl
     public void handleClose(Close close, Binary payload, Integer channel)
     {
         _closeReceived = true;
+        _remoteIdleTimeout = 0;
         setRemoteState(EndpointState.CLOSED);
         if(_connectionEndpoint != null)
         {
@@ -1356,7 +1393,9 @@ public class TransportImpl extends EndpointImpl
 
         try {
             init();
+            int beforePosition = _inputProcessor.position();
             _inputProcessor.process();
+            _bytesInput += beforePosition - _inputProcessor.position();
         } catch (TransportException e) {
             _head_closed = true;
             throw e;
@@ -1389,6 +1428,7 @@ public class TransportImpl extends EndpointImpl
     {
         init();
         _outputProcessor.pop(bytes);
+        _bytesOutput += bytes;
 
         int p = pending();
         if (p < 0 && !postedHeadClosed) {
@@ -1396,6 +1436,87 @@ public class TransportImpl extends EndpointImpl
             postedHeadClosed = true;
             maybePostClosed();
         }
+    }
+
+    public void setIdleTimeout(int timeout) {
+        _localIdleTimeout = timeout;
+    }
+
+    public int getIdleTimeout() {
+        return _localIdleTimeout;
+    }
+
+    public int getRemoteIdleTimeout() {
+        return _remoteIdleTimeout;
+    }
+
+    @Override
+    public long tick(long now)
+    {
+        long timeout = 0;
+
+        if (_localIdleTimeout > 0) {
+            if (_localIdleDeadline == 0 || _lastBytesInput != _bytesInput) {
+                _localIdleDeadline = now + _localIdleTimeout;
+                _lastBytesInput = _bytesInput;
+            } else if (_localIdleDeadline <= now) {
+                _localIdleDeadline = now + _localIdleTimeout;
+
+                if (_connectionEndpoint != null &&
+                    _connectionEndpoint.getLocalState() != EndpointState.CLOSED) {
+                    ErrorCondition condition =
+                            new ErrorCondition(Symbol.getSymbol("amqp:resource-limit-exceeded"),
+                                                                "local-idle-timeout expired");
+                    _connectionEndpoint.setCondition(condition);
+                    _connectionEndpoint.setLocalState(EndpointState.CLOSED);
+
+                    if (!_isOpenSent) {
+                        if ((_sasl != null) && (!_sasl.isDone())) {
+                            _sasl.fail();
+                        }
+                        Open open = new Open();
+                        _isOpenSent = true;
+                        writeFrame(0, open, null, null);
+                    }
+                    if (!_isCloseSent) {
+                        Close close = new Close();
+                        close.setError(condition);
+                        _isCloseSent = true;
+                        writeFrame(0, close, null, null);
+                    }
+                    close_tail();
+                }
+            }
+            timeout = _localIdleDeadline;
+        }
+
+        if (_remoteIdleTimeout != 0 && !_isCloseSent) {
+            if (_remoteIdleDeadline == 0 || _lastBytesOutput != _bytesOutput) {
+                _remoteIdleDeadline = now + (_remoteIdleTimeout / 2);
+                _lastBytesOutput = _bytesOutput;
+            } else if (_remoteIdleDeadline <= now) {
+                _remoteIdleDeadline = now + (_remoteIdleTimeout / 2);
+                if (pending() == 0) {
+                    writeFrame(0, null, null, null);
+                    _lastBytesOutput += pending();
+                }
+            }
+            timeout = Math.min(timeout == 0 ? _remoteIdleDeadline : timeout, _remoteIdleDeadline);
+        }
+
+        return timeout;
+    }
+
+    @Override
+    public long getFramesOutput()
+    {
+        return _frameWriter.getFramesOutput();
+    }
+
+    @Override
+    public long getFramesInput()
+    {
+        return _frameParser.getFramesInput();
     }
 
     @Override

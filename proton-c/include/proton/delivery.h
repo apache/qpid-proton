@@ -26,7 +26,6 @@
 #include <proton/disposition.h>
 #include <proton/type_compat.h>
 #include <stddef.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -238,12 +237,21 @@ PN_EXTERN void pn_delivery_update(pn_delivery_t *delivery, uint64_t state);
  */
 PN_EXTERN void pn_delivery_clear(pn_delivery_t *delivery);
 
-//int pn_delivery_format(pn_delivery_t *delivery);
+/**
+ * Return true if delivery is the current delivery for its link.
+ *
+ * @param[in] delivery a delivery object
+ * @return true if delivery is the current delivery for its link.
+ */
+PN_EXTERN bool pn_delivery_current(pn_delivery_t *delivery);
 
 /**
  * Settle a delivery.
  *
  * A settled delivery can never be used again.
+ *
+ * NOTE: if pn_delivery_current(delivery) is true before the call then
+ * pn_link_advance(pn_delivery_link(deliver)) is called automatically.
  *
  * @param[in] delivery a delivery object
  */

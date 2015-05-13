@@ -22,6 +22,7 @@
 #include <proton/connection.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 #include <proton/transport.h>
 #include <assert.h>
 #include <stdio.h>
@@ -63,7 +64,10 @@ static ssize_t pni_connection_pending(pn_selectable_t *sel)
 
 static pn_timestamp_t pni_connection_deadline(pn_selectable_t *sel)
 {
-  return 0;
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_timestamp_t deadline = pn_transport_tick(transport, pn_reactor_now(reactor));
+  return deadline;
 }
 
 static void pni_connection_update(pn_selectable_t *sel) {
@@ -97,10 +101,19 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
   }
 
   pn_transport_t *transport = pn_transport();
-  pn_sasl_t *sasl = pn_sasl(transport);
-  pn_sasl_mechanisms(sasl, "ANONYMOUS");
   pn_transport_bind(transport, conn);
+  pn_decref(transport);
+}
+
+void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
+  assert(reactor);
+  assert(event);
+
+  pn_connection_t *conn = pn_event_connection(event);
   const char *hostname = pn_connection_get_hostname(conn);
+  if (!hostname) {
+      return;
+  }
   pn_string_t *str = pn_string(hostname);
   char *host = pn_string_buffer(str);
   const char *port = "5672";
@@ -110,9 +123,17 @@ void pni_handle_open(pn_reactor_t *reactor, pn_event_t *event) {
     colon[0] = '\0';
   }
   pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
+  pn_transport_t *transport = pn_event_transport(event);
+  // invalid sockets are ignored by poll, so we need to do this manualy
+  if (sock == PN_INVALID_SOCKET) {
+    pn_condition_t *cond = pn_transport_condition(transport);
+    pn_condition_set_name(cond, "proton:io");
+    pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+    pn_transport_close_tail(transport);
+    pn_transport_close_head(transport);
+  }
   pn_free(str);
   pn_reactor_selectable_transport(reactor, sock, transport);
-  pn_decref(transport);
 }
 
 void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event) {
@@ -132,7 +153,11 @@ static void pni_connection_readable(pn_selectable_t *sel)
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
       if (n == 0 || !pn_wouldblock(pn_reactor_io(reactor))) {
-        if (n < 0) perror("recv");
+        if (n < 0) {
+          pn_condition_t *cond = pn_transport_condition(transport);
+          pn_condition_set_name(cond, "proton:io");
+          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+        }
         pn_transport_close_tail(transport);
       }
     } else {
@@ -141,7 +166,9 @@ static void pni_connection_readable(pn_selectable_t *sel)
   }
 
   ssize_t newcap = pn_transport_capacity(transport);
-  if (newcap != capacity) {
+  //occasionally transport events aren't generated when expected, so
+  //the following hack ensures we always update the selector
+  if (1 || newcap != capacity) {
     pni_connection_update(sel);
     pn_reactor_update(reactor, sel);
   }
@@ -157,7 +184,11 @@ static void pni_connection_writable(pn_selectable_t *sel)
                         pn_transport_head(transport), pending);
     if (n < 0) {
       if (!pn_wouldblock(pn_reactor_io(reactor))) {
-        perror("send");
+        pn_condition_t *cond = pn_transport_condition(transport);
+        if (!pn_condition_is_set(cond)) {
+          pn_condition_set_name(cond, "proton:io");
+          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+        }
         pn_transport_close_head(transport);
       }
     } else {
@@ -174,11 +205,24 @@ static void pni_connection_writable(pn_selectable_t *sel)
 
 static void pni_connection_error(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_transport_close_head(transport);
+  pn_transport_close_tail(transport);
   pn_selectable_terminate(sel);
   pn_reactor_update(reactor, sel);
 }
 
-static void pni_connection_expired(pn_selectable_t *sel) {}
+static void pni_connection_expired(pn_selectable_t *sel) {
+  pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
+  pn_transport_t *transport = pni_transport(sel);
+  pn_timestamp_t deadline = pn_transport_tick(transport, pn_reactor_now(reactor));
+  pn_selectable_set_deadline(sel, deadline);
+  ssize_t c = pni_connection_capacity(sel);
+  ssize_t p = pni_connection_pending(sel);
+  pn_selectable_set_reading(sel, c > 0);
+  pn_selectable_set_writing(sel, p > 0);
+  pn_reactor_update(reactor, sel);
+}
 
 static void pni_connection_finalize(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
@@ -212,9 +256,11 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
 pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *handler) {
   assert(reactor);
   pn_connection_t *connection = pn_connection();
-  pn_record_set_handler(pn_connection_attachments(connection), handler);
+  pn_record_t *record = pn_connection_attachments(connection);
+  pn_record_set_handler(record, handler);
   pn_connection_collect(connection, pn_reactor_collector(reactor));
   pn_list_add(pn_reactor_children(reactor), connection);
+  pni_record_init_reactor(record, reactor);
   pn_decref(connection);
   return connection;
 }

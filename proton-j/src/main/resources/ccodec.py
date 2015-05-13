@@ -61,6 +61,7 @@ def DATA_TYPES(jtype, ptype):
 
 DATA_TYPES(DataType.NULL, PN_NULL)
 DATA_TYPES(DataType.BOOL, PN_BOOL)
+DATA_TYPES(DataType.BYTE, PN_BYTE)
 DATA_TYPES(DataType.UBYTE, PN_UBYTE)
 DATA_TYPES(DataType.USHORT, PN_USHORT)
 DATA_TYPES(DataType.UINT, PN_UINT)
@@ -98,6 +99,13 @@ def pn_data_put_bool(data, b):
 def pn_data_get_bool(data):
   return data.getBoolean()
 
+def pn_data_get_byte(data):
+  return data.getByte()
+
+def pn_data_put_byte(data, u):
+  data.putByte(u)
+  return 0
+
 def pn_data_get_ubyte(data):
   return data.getUnsignedByte().longValue()
 
@@ -123,8 +131,13 @@ def pn_data_put_ulong(data, u):
   data.putUnsignedLong(UnsignedLong.valueOf(u))
   return 0
 
+BITS_64 = 2**64 - 1;
+
 def pn_data_get_ulong(data):
-  return data.getUnsignedLong().longValue()
+  value =  data.getUnsignedLong().longValue()
+  if value < 0:
+    return value & BITS_64;
+  return value
 
 def pn_data_get_short(data):
   return data.getShort()
@@ -286,6 +299,9 @@ def pn_data_encode(data, size):
     return PN_OVERFLOW, None
   else:
     return len(enc), enc
+
+def pn_data_encoded_size(data):
+  return data.encodedSize()
 
 def pn_data_decode(data, encoded):
   return data.decode(ByteBuffer.wrap(array(encoded, 'b')))

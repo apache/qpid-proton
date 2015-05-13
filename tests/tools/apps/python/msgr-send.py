@@ -132,7 +132,7 @@ def main(argv=None):
 
     message = Message()
     message.reply_to = "~"
-    message.load( "X" * opts.msg_size )
+    message.body = "X" * opts.msg_size
     reply_message = Message()
     messenger = Messenger( opts.name )
 

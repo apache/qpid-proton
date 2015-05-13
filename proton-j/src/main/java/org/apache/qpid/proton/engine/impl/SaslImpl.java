@@ -100,6 +100,18 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         _frameWriter = new FrameWriter(_encoder, maxFrameSize, FrameWriter.SASL_FRAME_TYPE, null, _transport);
     }
 
+    void fail() {
+        if (_role == null || _role == Role.CLIENT) {
+            _role = Role.CLIENT;
+            _initSent = true;
+        } else {
+            _initReceived = true;
+
+        }
+        _done = true;
+        _outcome = SaslOutcome.PN_SASL_SYS;
+    }
+
     @Override
     public boolean isDone()
     {
@@ -340,12 +352,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     @Override
     public void done(SaslOutcome outcome)
     {
-        // Support current hack in C code to allow producing sasl frames for
-        // ANONYMOUS in a single chunk
-        if(_role == Role.CLIENT)
-        {
-            return;
-        }
+        checkRole(Role.SERVER);
         _outcome = outcome;
         _done = true;
         _state = classifyStateFromOutcome(outcome);
@@ -546,6 +553,20 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             else
             {
                 return _underlyingInput.capacity();
+            }
+        }
+
+        @Override
+        public int position()
+        {
+            if (_tail_closed) return Transport.END_OF_STREAM;
+            if (isInputInSaslMode())
+            {
+                return _inputBuffer.position();
+            }
+            else
+            {
+                return _underlyingInput.position();
             }
         }
 

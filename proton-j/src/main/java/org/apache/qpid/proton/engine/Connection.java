@@ -88,6 +88,8 @@ public interface Connection extends Endpoint
 
     public void setContainer(String container);
 
+    public String getContainer();
+
     public void setHostname(String hostname);
 
     public String getHostname();
