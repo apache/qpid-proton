@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
 import java.util.List;
 
@@ -28,29 +28,29 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class SaslResponse implements Encodable
+public final class SaslChallenge implements Encodable
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000043L;
+    public final static long DESCRIPTOR_LONG = 0x0000000000000042L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-response:list";
+    public final static String DESCRIPTOR_STRING = "amqp:sasl-challenge:list";
 
     public final static Factory FACTORY = new Factory();
 
-    private byte[] _response;
+    private byte[] _challenge;
 
-    public byte[] getResponse()
+    public byte[] getChallenge()
     {
-        return _response;
+        return _challenge;
     }
 
-    public void setResponse(byte[] response)
+    public void setChallenge(byte[] challenge)
     {
-        if (response == null)
+        if (challenge == null)
         {
-            throw new NullPointerException("the response field is mandatory");
+            throw new NullPointerException("the challenge field is mandatory");
         }
 
-        _response = response;
+        _challenge = challenge;
     }
 
     @Override
@@ -59,7 +59,7 @@ public final class SaslResponse implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putBinary(_response, 0, _response.length);
+        encoder.putBinary(_challenge, 0, _challenge.length);
         encoder.end();
     }
 
@@ -69,20 +69,20 @@ public final class SaslResponse implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            SaslResponse saslResponse = new SaslResponse();
+            SaslChallenge saslChallenge = new SaslChallenge();
 
             if (l.size() > 0)
             {
-                saslResponse.setResponse((byte[]) l.get(0));
+                saslChallenge.setChallenge((byte[]) l.get(0));
             }
 
-            return saslResponse;
+            return saslChallenge;
         }
     }
 
     @Override
     public String toString()
     {
-        return "SaslResponse{response=" + _response + '}';
+        return "SaslChallenge{" + "challenge=" + _challenge + '}';
     }
 }

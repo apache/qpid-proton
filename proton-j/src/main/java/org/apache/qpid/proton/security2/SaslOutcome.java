@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
 import java.util.List;
 
@@ -28,53 +28,41 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class SaslInit implements Encodable
+public final class SaslOutcome implements Encodable
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000042L;
+    public final static long DESCRIPTOR_LONG = 0x0000000000000044L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-challenge:list";
+    public final static String DESCRIPTOR_STRING = "amqp:sasl-saslOutcome:list";
 
     public final static Factory FACTORY = new Factory();
 
-    private String _mechanism;
+    private SaslCode _code;
 
-    private byte[] _initialResponse;
+    private byte[] _additionalData;
 
-    private String _hostname;
-
-    public String getMechanism()
+    public SaslCode getCode()
     {
-        return _mechanism;
+        return _code;
     }
 
-    public void setMechanism(String mechanism)
+    public void setCode(SaslCode code)
     {
-        if (mechanism == null)
+        if (code == null)
         {
-            throw new NullPointerException("the mechanism field is mandatory");
+            throw new NullPointerException("the code field is mandatory");
         }
 
-        _mechanism = mechanism;
+        _code = code;
     }
 
-    public byte[] getInitialResponse()
+    public byte[] getAdditionalData()
     {
-        return _initialResponse;
+        return _additionalData;
     }
 
-    public void setInitialResponse(byte[] initialResponse)
+    public void setAdditionalData(byte[] additionalData)
     {
-        _initialResponse = initialResponse;
-    }
-
-    public String getHostname()
-    {
-        return _hostname;
-    }
-
-    public void setHostname(String hostname)
-    {
-        _hostname = hostname;
+        _additionalData = additionalData;
     }
 
     @Override
@@ -83,9 +71,11 @@ public final class SaslInit implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putSymbol(_mechanism);
-        encoder.putBinary(_initialResponse, 0, _initialResponse.length);
-        encoder.putString(_hostname);
+        encoder.putUbyte(_code.getValue());
+        if (_additionalData != null)
+        {
+            encoder.putBinary(_additionalData, 0, _additionalData.length);
+        }
         encoder.end();
     }
 
@@ -95,30 +85,33 @@ public final class SaslInit implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            SaslInit saslInit = new SaslInit();
+            SaslOutcome saslOutcome = new SaslOutcome();
 
-            switch (3 - l.size())
+            if(l.isEmpty())
             {
-
-            case 0:
-                saslInit.setHostname((String) l.get(2));
-            case 1:
-                saslInit.setInitialResponse((byte[]) l.get(1));
-            case 2:
-                saslInit.setMechanism((String) l.get(0));
+                throw new DecodeException("The code field cannot be omitted");
             }
 
-            return saslInit;
+            switch(2 - l.size())
+            {
+
+                case 0:
+                    saslOutcome.setAdditionalData( (byte[]) l.get( 1 ) );
+                case 1:
+                    saslOutcome.setCode(SaslCode.valueOf((Byte)l.get(0)));
+            }
+
+
+            return saslOutcome;
         }
     }
 
     @Override
     public String toString()
     {
-        return "SaslInit{" +
-               "mechanism=" + _mechanism +
-               ", initialResponse=" + _initialResponse +
-               ", hostname='" + _hostname + '\'' +
+        return "SaslOutcome{" +
+               "_code=" + _code +
+               ", _additionalData=" + _additionalData +
                '}';
     }
 }

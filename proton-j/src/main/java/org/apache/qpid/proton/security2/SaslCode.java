@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
 public enum SaslCode
 {

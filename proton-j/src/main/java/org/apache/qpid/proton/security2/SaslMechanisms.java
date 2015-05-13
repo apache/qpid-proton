@@ -19,50 +19,40 @@
  *
  */
 
-package org.apache.qpid.proton.security;
+package org.apache.qpid.proton.security2;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
+import org.apache.qpid.proton.codec2.Type;
 
-public final class SaslOutcome implements Encodable
+public final class SaslMechanisms implements Encodable
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000044L;
+    public final static long DESCRIPTOR_LONG = 0x0000000000000040L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-saslOutcome:list";
+    public final static String DESCRIPTOR_STRING = "amqp:sasl-mechanisms:list";
 
     public final static Factory FACTORY = new Factory();
 
-    private SaslCode _code;
+    private String[] _saslServerMechanisms;
 
-    private byte[] _additionalData;
-
-    public SaslCode getCode()
+    public String[] getSaslServerMechanisms()
     {
-        return _code;
+        return _saslServerMechanisms;
     }
 
-    public void setCode(SaslCode code)
+    public void setSaslServerMechanisms(String... saslServerMechanisms)
     {
-        if (code == null)
+        if (saslServerMechanisms == null)
         {
-            throw new NullPointerException("the code field is mandatory");
+            throw new NullPointerException("the sasl-server-mechanisms field is mandatory");
         }
 
-        _code = code;
-    }
-
-    public byte[] getAdditionalData()
-    {
-        return _additionalData;
-    }
-
-    public void setAdditionalData(byte[] additionalData)
-    {
-        _additionalData = additionalData;
+        _saslServerMechanisms = saslServerMechanisms;
     }
 
     @Override
@@ -71,11 +61,12 @@ public final class SaslOutcome implements Encodable
         encoder.putDescriptor();
         encoder.putUlong(DESCRIPTOR_LONG);
         encoder.putList();
-        encoder.putUbyte(_code.getValue());
-        if (_additionalData != null)
+        encoder.putArray(Type.SYMBOL);
+        for (String mech : _saslServerMechanisms)
         {
-            encoder.putBinary(_additionalData, 0, _additionalData.length);
+            encoder.putSymbol(mech);
         }
+        encoder.end();
         encoder.end();
     }
 
@@ -85,33 +76,30 @@ public final class SaslOutcome implements Encodable
         public Object create(Object in) throws DecodeException
         {
             List<Object> l = (List<Object>) in;
-            SaslOutcome saslOutcome = new SaslOutcome();
+            SaslMechanisms saslMech = new SaslMechanisms();
 
-            if(l.isEmpty())
+            if (l.isEmpty())
             {
-                throw new DecodeException("The code field cannot be omitted");
+                throw new DecodeException("The sasl-server-mechanisms field cannot be omitted");
             }
 
-            switch(2 - l.size())
+            Object val0 = l.get(0);
+            if (val0 == null || val0.getClass().isArray())
             {
-
-                case 0:
-                    saslOutcome.setAdditionalData( (byte[]) l.get( 1 ) );
-                case 1:
-                    saslOutcome.setCode(SaslCode.valueOf((Byte)l.get(0)));
+                saslMech.setSaslServerMechanisms((String[]) val0);
             }
-
-
-            return saslOutcome;
+            else
+            {
+                saslMech.setSaslServerMechanisms((String) val0);
+            }
+            return saslMech;
         }
     }
 
     @Override
     public String toString()
     {
-        return "SaslOutcome{" +
-               "_code=" + _code +
-               ", _additionalData=" + _additionalData +
-               '}';
+        return "SaslMechanisms{" + "saslServerMechanisms="
+                + (_saslServerMechanisms == null ? null : Arrays.asList(_saslServerMechanisms)) + '}';
     }
 }
