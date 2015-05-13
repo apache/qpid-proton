@@ -19,14 +19,31 @@
  *
  */
 
-package org.apache.qpid.proton.transport;
+package org.apache.qpid.proton.transport2;
 
-public enum Role
+
+public enum TerminusDurability
 {
-    SENDER, RECEIVER;
+    NONE, CONFIGURATION, UNSETTLED_STATE;
 
-    public boolean getValue()
+    public byte getValue()
     {
-        return this == RECEIVER;
+        return (byte) ordinal();
     }
+
+    public static TerminusDurability get(byte value)
+    {
+
+        switch (value)
+        {
+        case 0:
+            return NONE;
+        case 1:
+            return CONFIGURATION;
+        case 2:
+            return UNSETTLED_STATE;
+        }
+        throw new IllegalArgumentException("Unknown TerminusDurablity: " + value);
+    }
+
 }

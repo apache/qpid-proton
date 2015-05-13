@@ -19,15 +19,14 @@
  *
  */
 
-package org.apache.qpid.proton.transport;
+package org.apache.qpid.proton.transport2;
 
-public enum SenderSettleMode
+public enum Role
 {
-    UNSETTLED, SETTLED, MIXED;
+    SENDER, RECEIVER;
 
-    public byte getValue()
+    public boolean getValue()
     {
-        return (byte) ordinal();
+        return this == RECEIVER;
     }
-
 }
