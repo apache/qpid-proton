@@ -30,7 +30,6 @@ import java.util.Map;
 
 public final class MessageAnnotations implements Section
 {
-
     private final Map<Symbol, Object> _value;
 
     public MessageAnnotations(Map<Symbol, Object> value)

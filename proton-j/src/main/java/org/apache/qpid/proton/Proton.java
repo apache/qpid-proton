@@ -21,25 +21,22 @@
 package org.apache.qpid.proton;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.DeliveryAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Footer;
-import org.apache.qpid.proton.amqp.messaging.Header;
-import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Properties;
-import org.apache.qpid.proton.amqp.messaging.Section;
-import org.apache.qpid.proton.codec.Codec;
-import org.apache.qpid.proton.codec.Data;
+
 import org.apache.qpid.proton.driver.Driver;
-import org.apache.qpid.proton.engine.Engine;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
+import org.apache.qpid.proton.engine.Engine;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message2.ApplicationProperties;
+import org.apache.qpid.proton.message2.DeliveryAnnotations;
+import org.apache.qpid.proton.message2.Footer;
+import org.apache.qpid.proton.message2.Header;
+import org.apache.qpid.proton.message2.Message;
+import org.apache.qpid.proton.message2.MessageAnnotations;
+import org.apache.qpid.proton.message2.Properties;
+import org.apache.qpid.proton.message2.Section;
 import org.apache.qpid.proton.messenger.Messenger;
 
 public final class Proton
@@ -74,11 +71,6 @@ public final class Proton
         return Engine.sslPeerDetails(hostname, port);
     }
 
-    public static Data data(long capacity)
-    {
-        return Codec.data(capacity);
-    }
-
     public static Message message()
     {
         return Message.Factory.create();
@@ -109,5 +101,4 @@ public final class Proton
     {
         return Driver.Factory.create();
     }
-
 }

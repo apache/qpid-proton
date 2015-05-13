@@ -45,7 +45,7 @@ import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.message.Message;
+import org.apache.qpid.proton.message2.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.MessengerException;
 import org.apache.qpid.proton.messenger.Status;
