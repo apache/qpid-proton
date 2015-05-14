@@ -18,13 +18,17 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.engine;
 
-package org.apache.qpid.proton.reactor;
 
-import org.apache.qpid.proton.engine.Extendable;
+/**
+ * Extendable
+ *
+ */
 
-public interface Acceptor extends ReactorChild, Extendable {
+public interface Extendable
+{
 
-    void close();
+    Record attachments();
 
 }

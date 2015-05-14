@@ -27,17 +27,22 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import org.apache.qpid.proton.Proton;
+import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 
 public class AcceptorImpl implements Acceptor {
+
+    private Record attachments = new RecordImpl();
 
     private class AcceptorReadable implements Callback {
         @Override
@@ -48,7 +53,7 @@ public class AcceptorImpl implements Acceptor {
                 if (socketChannel == null) {
                     throw new ReactorInternalException("Selectable readable, but no socket to accept");
                 }
-                Handler handler = (Handler)selectable.getAttachment();
+                Handler handler = BaseHandler.getHandler(AcceptorImpl.this);
                 if (handler == null) {
                     // TODO: set selectable.getAttachment() to null?
                     handler = reactor.getHandler();
@@ -99,7 +104,7 @@ public class AcceptorImpl implements Acceptor {
         sel.onReadable(new AcceptorReadable());
         sel.onFree(new AcceptorFree());
         sel.setReactor(reactor);
-        sel.setAttachment(handler);
+        BaseHandler.setHandler(this, handler);
         sel.setReading(true);
         reactor.update(sel);
     }
@@ -120,11 +125,6 @@ public class AcceptorImpl implements Acceptor {
         }
     }
 
-    @Override
-    public void add(Handler handler) {
-        sel.add(handler);
-    }
-
     // Used for unit tests, where acceptor is bound to an ephemeral port
     public int getPortNumber() throws IOException {
         ServerSocketChannel ssc = (ServerSocketChannel)sel.getChannel();
@@ -135,4 +135,10 @@ public class AcceptorImpl implements Acceptor {
     public void free() {
         sel.free();
     }
+
+    @Override
+    public Record attachments() {
+        return attachments;
+    }
+
 }

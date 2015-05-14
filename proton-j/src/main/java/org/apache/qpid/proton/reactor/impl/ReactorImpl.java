@@ -33,6 +33,7 @@ import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
+import org.apache.qpid.proton.engine.Extendable;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
@@ -46,7 +47,7 @@ import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.apache.qpid.proton.reactor.Selector;
 import org.apache.qpid.proton.reactor.Task;
 
-public class ReactorImpl implements Reactor {
+public class ReactorImpl implements Reactor, Extendable {
 
     private CollectorImpl collector;
     private long now;
@@ -201,37 +202,29 @@ public class ReactorImpl implements Reactor {
         }
     }
 
-    static Handler getHandler(Record record) {
-        return record.get(ReactorImpl.class, Handler.class);
-    }
-
-    static void setHandler(Record record, Handler handler) {
-        record.set(ReactorImpl.class, Handler.class, handler);
-    }
-
     // pn_event_handler
     private Handler eventHandler(Event event) {
         Handler result;
         if (event.getLink() != null) {
-            result = getHandler(event.getLink().attachments());
+            result = BaseHandler.getHandler(event.getLink());
             if (result != null) return result;
         }
         if (event.getSession() != null) {
-            result = getHandler(event.getSession().attachments());
+            result = BaseHandler.getHandler(event.getSession());
             if (result != null) return result;
         }
         if (event.getConnection() != null) {
-            result = getHandler(event.getConnection().attachments());
+            result = BaseHandler.getHandler(event.getConnection());
             if (result != null) return result;
         }
 
         if (event.getTask() != null) {
-            result = event.getTask().getHandler();
+            result = BaseHandler.getHandler(event.getTask());
             if (result != null) return result;
         }
 
         if (event.getSelectable() != null) {
-            result = event.getSelectable().getHandler();
+            result = BaseHandler.getHandler(event.getSelectable());
             if (result != null) return result;
         }
 
@@ -332,7 +325,7 @@ public class ReactorImpl implements Reactor {
     public Task schedule(int delay, Handler handler) {
         Task task = timer.schedule(now + delay);
         task.setReactor(this);
-        task.setHandler(handler);
+        BaseHandler.setHandler(task, handler);
         if (selectable != null) {
             selectable.setDeadline(timer.deadline());
             update(selectable);
@@ -403,7 +396,7 @@ public class ReactorImpl implements Reactor {
     @Override
     public Connection connection(Handler handler) {
         Connection connection = Proton.connection();
-        setHandler(connection.attachments(), handler);
+        BaseHandler.setHandler(connection, handler);
         connection.collect(collector);
         children.add(connection);
         ((ConnectionImpl)connection).setReactor(this);

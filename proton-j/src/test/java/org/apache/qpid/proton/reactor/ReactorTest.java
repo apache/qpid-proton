@@ -122,8 +122,7 @@ public class ReactorTest {
      * which is immediately closed by the reactor.  The expected behaviour is for:
      * <ul>
      *   <li>The reactor to end immediately (as it has no more work to process).</li>
-     *   <li>The handler, associated with the acceptor, to receive init, update and
-     *       final events.</li>
+     *   <li>The handler, associated with the acceptor, to receive no events.</li>
      *   <li>For it's lifetime, the acceptor is one of the reactor's children.</li>
      * </ul>
      * @throws IOException
@@ -135,7 +134,7 @@ public class ReactorTest {
         assertNotNull(acceptor);
         assertTrue("acceptor should be one of the reactor's children", reactor.children().contains(acceptor));
         TestHandler acceptorHandler = new TestHandler();
-        acceptor.add(acceptorHandler);
+        BaseHandler.setHandler(acceptor, acceptorHandler);
         reactor.getHandler().add(new BaseHandler() {
             @Override
             public void onReactorInit(Event event) {
@@ -144,7 +143,7 @@ public class ReactorTest {
         });
         reactor.run();
         reactor.free();
-        acceptorHandler.assertEvents(Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.SELECTABLE_FINAL);
+        acceptorHandler.assertEvents();
         assertFalse("acceptor should have been removed from the reactor's children", reactor.children().contains(acceptor));
     }
 

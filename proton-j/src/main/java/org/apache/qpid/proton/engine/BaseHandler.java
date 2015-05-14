@@ -31,6 +31,15 @@ import java.util.Iterator;
 
 public class BaseHandler implements Handler
 {
+
+    public static Handler getHandler(Extendable ext) {
+        return ext.attachments().get(Handler.class, Handler.class);
+    }
+
+    public static void setHandler(Extendable ext, Handler handler) {
+        ext.attachments().set(Handler.class, Handler.class, handler);
+    }
+
     private HashSet<Handler> children = new HashSet<Handler>();
 
     @Override public void onConnectionInit(Event e) { onUnhandled(e); }

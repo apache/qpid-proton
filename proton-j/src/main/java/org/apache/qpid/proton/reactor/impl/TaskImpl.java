@@ -23,7 +23,8 @@ package org.apache.qpid.proton.reactor.impl;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Record;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Task;
 
@@ -31,11 +32,13 @@ public class TaskImpl implements Task, Comparable<TaskImpl> {
     private final long deadline;
     private final int counter;
     private final AtomicInteger count = new AtomicInteger();
+    private Record attachments = new RecordImpl();
 
     public TaskImpl(long deadline) {
         this.deadline = deadline;
         this.counter = count.getAndIncrement();
     }
+
     @Override
     public int compareTo(TaskImpl other) {
         int result;
@@ -48,36 +51,26 @@ public class TaskImpl implements Task, Comparable<TaskImpl> {
         }
         return result;
     }
+
     @Override
     public long deadline() {
         return deadline;
     }
+
     private Reactor reactor;
     @Override
     public void setReactor(Reactor reactor) {
         this.reactor = reactor;
-
     }
+
     @Override
     public Reactor getReactor() {
         return reactor;
     }
-    private Handler handler;
+
     @Override
-    public void setHandler(Handler handler) {
-        this.handler = handler;
+    public Record attachments() {
+        return attachments;
     }
-    @Override
-    public Handler getHandler() {
-        return handler;
-    }
-    private Object attachment;
-    @Override
-    public Object getAttachment() {
-        return attachment;
-    }
-    @Override
-    public void setAttachment(Object attachment) {
-        this.attachment = attachment;
-    }
+
 }

@@ -21,15 +21,12 @@
 
 package org.apache.qpid.proton.reactor;
 
-import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Extendable;
 
-public interface Task {
+public interface Task extends Extendable {
 
     public long deadline();
-    public void setReactor(Reactor reactor) ;
+    public void setReactor(Reactor reactor);
     public Reactor getReactor();
-    public void setHandler(Handler handler) ;
-    public Handler getHandler() ;
-    public Object getAttachment() ;
-    public void setAttachment(Object attachment) ;
+
 }

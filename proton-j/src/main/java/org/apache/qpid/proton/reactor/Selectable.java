@@ -24,10 +24,11 @@ package org.apache.qpid.proton.reactor;
 import java.nio.channels.SelectableChannel;
 
 import org.apache.qpid.proton.engine.Collector;
+import org.apache.qpid.proton.engine.Extendable;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Transport;
 
-public interface Selectable extends ReactorChild {
+public interface Selectable extends ReactorChild, Extendable {
 
     public interface Callback {
         void run(Selectable selectable);
@@ -75,10 +76,6 @@ public interface Selectable extends ReactorChild {
 
     public SelectableChannel getChannel() ;
 
-    void setAttachment(Object attachment) ;
-
-    Object getAttachment() ;
-
     boolean isRegistered() ;
 
     void setRegistered(boolean registered) ;
@@ -86,6 +83,7 @@ public interface Selectable extends ReactorChild {
     void setCollector(final Collector collector) ;
 
     public Reactor getReactor() ;
+
     public void terminate() ;
 
     public boolean isTerminal();
@@ -96,7 +94,4 @@ public interface Selectable extends ReactorChild {
 
     public void setReactor(Reactor reactor) ;
 
-    public void add(Handler handler);
-
-    public Handler getHandler() ;
 }

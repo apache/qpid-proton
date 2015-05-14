@@ -38,13 +38,13 @@ public class Scheduling extends BaseHandler {
         startTime = System.currentTimeMillis();
         System.out.println("Hello, World!");
         Task task = event.getReactor().schedule(1000, this);
-        task.setAttachment("Yay");
+        task.attachments().set("key", String.class, "Yay");
     }
 
     @Override
     public void onTimerTask(Event event) {
         Task task = event.getTask();
-        System.out.println(task.getAttachment() + " my task is complete!");
+        System.out.println(task.attachments().get("key", String.class) + " my task is complete!");
     }
 
     @Override

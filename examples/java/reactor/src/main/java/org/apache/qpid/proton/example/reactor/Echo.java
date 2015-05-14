@@ -78,7 +78,7 @@ public class Echo extends BaseHandler {
         Reactor reactor = event.getReactor();
         Selectable selectable = reactor.selectable();
         selectable.setChannel(channel);
-        selectable.add(new EchoHandler());
+        setHandler(selectable, new EchoHandler());
         reactor.update(selectable);
     }
 

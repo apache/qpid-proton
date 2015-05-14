@@ -27,8 +27,10 @@ import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
+import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 
@@ -45,7 +47,7 @@ public class SelectableImpl implements Selectable {
     private boolean writing = false;
     private long deadline = 0;
     private SelectableChannel channel;
-    private Object attachment;
+    private Record attachments = new RecordImpl();
     private boolean registered;
     private Reactor reactor;
     private Transport transport;
@@ -166,16 +168,6 @@ public class SelectableImpl implements Selectable {
     }
 
     @Override
-    public void setAttachment(Object attachment) {
-        this.attachment = attachment;
-    }
-
-    @Override
-    public Object getAttachment() {
-        return attachment;
-    }
-
-    @Override
     public boolean isRegistered() {
         return registered;
     }
@@ -245,21 +237,10 @@ public class SelectableImpl implements Selectable {
         this.reactor = reactor;
     }
 
-    // TODO: all this gets stuffed into records in the C code...
-    private BaseHandler _handler;
     @Override
-    public void add(Handler handler) {
-        if (_handler == null) {
-            _handler = new BaseHandler();
-        }
-        _handler.add(handler);
+    public Record attachments() {
+        return attachments;
     }
-
-    @Override
-    public Handler getHandler() {
-        return _handler;
-    }
-
 
     public boolean isTerminated() {
         return terminated;
