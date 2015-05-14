@@ -92,6 +92,6 @@ void pn_acceptor_set_ssl_domain(pn_acceptor_t *acceptor, pn_ssl_domain_t *domain
 {
   pn_selectable_t *sel = (pn_selectable_t *) acceptor;
   pn_record_t *record = pn_selectable_attachments(sel);
-  pn_record_def(record, PNI_ACCEPTOR_SSL_DOMAIN, PN_WEAKREF);
+  pn_record_def(record, PNI_ACCEPTOR_SSL_DOMAIN, PN_VOID);
   pn_record_set(record, PNI_ACCEPTOR_SSL_DOMAIN, domain);
 }
