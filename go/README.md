@@ -1,5 +1,9 @@
 # *EXPERIMENTAL* Go binding for proton
 
+    NOTE: The go directory is in the proton repository root with a symlink at
+    proton-c/bindings/go to facilitate use of go tools: go get, godep and godoc.
+    There may be a cleaner solution to this in future.
+
 This is the beginning of a [Go](http://golang.org) binding for proton.
 
 This work is in early *experimental* stages, *everything* may change in future.
@@ -9,7 +13,7 @@ early feedback can guide development.
 - Email <proton@qpid.apache.org>
 - Create issues <https://issues.apache.org/jira/browse/PROTON>, attach patches to an issue.
 
-There are working [examples](../../../examples/go/README.md) and the examples README file
+There are working [examples](../examples/go/README.md) and the examples README file
 explains how to install the packages in your go workspace and read the documentation.
 
 ## Goals
