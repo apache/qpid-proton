@@ -19,6 +19,7 @@
 
 require "cproton"
 require "date"
+require "weakref"
 
 if RUBY_VERSION < "1.9"
 require "kconv"
