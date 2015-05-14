@@ -111,6 +111,8 @@ struct pni_ssl_t {
   bool ssl_closed;      // shutdown complete, or SSL error
   bool read_blocked;    // SSL blocked until more network data is read
   bool write_blocked;   // SSL blocked until data is written to network
+
+  char *subject;
 };
 
 static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
@@ -780,6 +782,7 @@ void pn_ssl_free(pn_transport_t *transport)
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
   if (ssl->inbuf) free((void *)ssl->inbuf);
   if (ssl->outbuf) free((void *)ssl->outbuf);
+  if (ssl->subject) free(ssl->subject);
   free(ssl);
 }
 
@@ -1179,6 +1182,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
     BIO_set_ssl_mode(ssl->bio_ssl, 1);  // client mode
     ssl_log( transport, "Client SSL socket created." );
   }
+  ssl->subject = NULL;
   return 0;
 }
 
@@ -1247,6 +1251,27 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl0, char *hostname, size_t *bufsize)
   }
   *bufsize = len;
   return 0;
+}
+
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl0)
+{
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (!ssl || !ssl->ssl) return NULL;
+  if (!ssl->subject) {
+    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+    if (!cert) return NULL;
+    X509_NAME *subject = X509_get_subject_name(cert);
+    if (!subject) return NULL;
+
+    BIO *out = BIO_new(BIO_s_mem());
+    X509_NAME_print_ex(out, subject, 0, XN_FLAG_RFC2253);
+    int len = BIO_number_written(out);
+    ssl->subject = (char*) malloc(len+1);
+    ssl->subject[len] = 0;
+    BIO_read(out, ssl->subject, len);
+    BIO_free(out);
+  }
+  return ssl->subject;
 }
 
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)

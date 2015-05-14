@@ -3459,7 +3459,8 @@ class SSL(object):
       obj._ssl = pn_ssl( transport._impl )
       if obj._ssl is None:
         raise SSLUnavailable()
-      pn_ssl_init( obj._ssl, domain._domain, session_id )
+      if domain:
+        pn_ssl_init( obj._ssl, domain._domain, session_id )
       transport._ssl = obj
     return transport._ssl
 
@@ -3474,6 +3475,10 @@ class SSL(object):
     if rc:
       return name
     return None
+
+  @property
+  def remote_subject(self):
+    return pn_ssl_get_remote_subject( self._ssl )
 
   RESUME_UNKNOWN = PN_SSL_RESUME_UNKNOWN
   RESUME_NEW = PN_SSL_RESUME_NEW

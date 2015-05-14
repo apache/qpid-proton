@@ -318,6 +318,14 @@ PN_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
  */
 PN_EXTERN int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
 
+/** Get the subject from the peers certificate.
+ *
+ * @param[in] ssl the ssl client/server to query.
+ * @return A null terminated string representing the full subject,
+ * which is valid until the ssl object is destroyed.
+ */
+PN_EXTERN const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl);
+
 /** @} */
 
 #ifdef __cplusplus
