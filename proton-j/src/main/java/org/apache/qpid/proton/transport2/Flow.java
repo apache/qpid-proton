@@ -30,11 +30,11 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class Flow implements Encodable
+public final class Flow implements Encodable, Performative
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000013L;
+    public final static long CODE = 0x0000000000000013L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:flow:list";
+    public final static String DESCRIPTOR = "amqp:flow:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -174,7 +174,7 @@ public final class Flow implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putUint(_nextIncomingId);
         encoder.putUint(_incomingWindow);
@@ -246,5 +246,17 @@ public final class Flow implements Encodable
                 ", echo=" + _echo +
                 ", properties=" + _properties +
                 '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }
