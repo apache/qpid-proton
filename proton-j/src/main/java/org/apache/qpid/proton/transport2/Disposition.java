@@ -28,11 +28,11 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class Disposition implements Encodable
+public final class Disposition implements Encodable, Performative
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000015L;
+    public final static long CODE = 0x0000000000000015L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:disposition:list";
+    public final static String DESCRIPTOR = "amqp:disposition:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -116,7 +116,7 @@ public final class Disposition implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putBoolean(_role.getValue());
         encoder.putUint(_first);
@@ -177,5 +177,17 @@ public final class Disposition implements Encodable
                 ", state=" + _state +
                 ", batchable=" + _batchable +
                 '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }

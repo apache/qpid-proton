@@ -31,11 +31,11 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class Open implements Encodable
+public final class Open implements Encodable, Performative
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000010L;
+    public final static long CODE = 0x0000000000000010L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:open:list";
+    public final static String DESCRIPTOR = "amqp:open:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -168,7 +168,7 @@ public final class Open implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putString(_containerId);
         encoder.putString(_hostname);
@@ -267,5 +267,17 @@ public final class Open implements Encodable
                 ", desiredCapabilities=" + (_desiredCapabilities == null ? null : Arrays.asList(_desiredCapabilities)) +
                 ", properties=" + _properties +
                 '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }
