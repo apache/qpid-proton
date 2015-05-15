@@ -795,6 +795,12 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl0, char *hostname, size_t *bufsize )
   return 0;
 }
 
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl)
+{
+  //TODO: actual implementation
+  return NULL;
+}
+
 
 /** SChannel specific: */
 
