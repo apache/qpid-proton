@@ -58,9 +58,9 @@ import org.apache.qpid.proton.transport2.Transfer;
 
 public class DiscriptorRegistry
 {
-    private static Map<String, DescribedTypeFactory> _typeRegByStrCode = new HashMap<String, DescribedTypeFactory>();
+    private static Map<String, DescribedTypeFactory> _typeRegByDescriptor = new HashMap<String, DescribedTypeFactory>();
 
-    private static Map<Long, DescribedTypeFactory> _typeRegByLongCode = new HashMap<Long, DescribedTypeFactory>();
+    private static Map<Long, DescribedTypeFactory> _typeRegByCode = new HashMap<Long, DescribedTypeFactory>();
 
     // Register the standard types
     static
@@ -70,23 +70,23 @@ public class DiscriptorRegistry
         registerSaslTypes();
     }
 
-    public static void registerType(long longCode, String strCode, DescribedTypeFactory factory)
+    public static void registerType(long code, String descriptor, DescribedTypeFactory factory)
     {
-        _typeRegByStrCode.put(strCode, factory);
-        _typeRegByLongCode.put(longCode, factory);
+        _typeRegByDescriptor.put(descriptor, factory);
+        _typeRegByCode.put(code, factory);
     }
 
     private static void registerTransportTypes()
     {
-        registerType(Open.DESCRIPTOR_LONG, Open.DESCRIPTOR_STRING, Open.FACTORY);
-        registerType(Begin.DESCRIPTOR_LONG, Begin.DESCRIPTOR_STRING, Begin.FACTORY);
-        registerType(Attach.DESCRIPTOR_LONG, Attach.DESCRIPTOR_STRING, Attach.FACTORY);
-        registerType(Flow.DESCRIPTOR_LONG, Flow.DESCRIPTOR_STRING, Flow.FACTORY);
-        registerType(Transfer.DESCRIPTOR_LONG, Transfer.DESCRIPTOR_STRING, Transfer.FACTORY);
-        registerType(Disposition.DESCRIPTOR_LONG, Disposition.DESCRIPTOR_STRING, Disposition.FACTORY);
-        registerType(Detach.DESCRIPTOR_LONG, Detach.DESCRIPTOR_STRING, Detach.FACTORY);
-        registerType(End.DESCRIPTOR_LONG, End.DESCRIPTOR_STRING, End.FACTORY);
-        registerType(Close.DESCRIPTOR_LONG, Close.DESCRIPTOR_STRING, Close.FACTORY);
+        registerType(Open.CODE, Open.DESCRIPTOR, Open.FACTORY);
+        registerType(Begin.CODE, Begin.DESCRIPTOR, Begin.FACTORY);
+        registerType(Attach.CODE, Attach.DESCRIPTOR, Attach.FACTORY);
+        registerType(Flow.CODE, Flow.DESCRIPTOR, Flow.FACTORY);
+        registerType(Transfer.CODE, Transfer.DESCRIPTOR, Transfer.FACTORY);
+        registerType(Disposition.CODE, Disposition.DESCRIPTOR, Disposition.FACTORY);
+        registerType(Detach.CODE, Detach.DESCRIPTOR, Detach.FACTORY);
+        registerType(End.CODE, End.DESCRIPTOR, End.FACTORY);
+        registerType(Close.CODE, Close.DESCRIPTOR, Close.FACTORY);
         registerType(ErrorCondition.DESCRIPTOR_LONG, ErrorCondition.DESCRIPTOR_STRING, ErrorCondition.FACTORY);
     }
 
@@ -136,11 +136,11 @@ public class DiscriptorRegistry
     {
         if (code instanceof Long)
         {
-            return lookupLongCode((Long) code);
+            return lookupByCode((Long) code);
         }
         else if (code instanceof String)
         {
-            return lookupStringCode((String) code);
+            return lookupByDescriptor((String) code);
         }
         else
         {
@@ -148,13 +148,13 @@ public class DiscriptorRegistry
         }
     }
 
-    static DescribedTypeFactory lookupLongCode(long code)
+    static DescribedTypeFactory lookupByCode(long code)
     {
-        return _typeRegByLongCode.get(code);
+        return _typeRegByCode.get(code);
     }
 
-    static DescribedTypeFactory lookupStringCode(String code)
+    static DescribedTypeFactory lookupByDescriptor(String code)
     {
-        return _typeRegByStrCode.get(code);
+        return _typeRegByDescriptor.get(code);
     }
 }
