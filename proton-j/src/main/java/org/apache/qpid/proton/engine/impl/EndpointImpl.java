@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJEndpoint;
+import org.apache.qpid.proton.engine.Transport;
 
 public abstract class EndpointImpl implements ProtonJEndpoint
 {
@@ -149,7 +150,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
         if (emit) {
             ConnectionImpl conn = getConnectionImpl();
-            TransportImpl trans = conn.getTransport();
+            Transport trans = conn.getTransport();
             if (trans != null) {
                 conn.put(Event.Type.TRANSPORT, trans);
             }

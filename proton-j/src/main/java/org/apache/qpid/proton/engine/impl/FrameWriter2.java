@@ -31,6 +31,7 @@ import org.apache.qpid.proton.codec2.ByteArrayEncoder;
 import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.Type;
 import org.apache.qpid.proton.framing.TransportFrame;
+import org.apache.qpid.proton.transport2.Performative;
 
 /**
  * FrameWriter2
@@ -58,7 +59,7 @@ class FrameWriter2
 
     final private Ref<ProtocolTracer> _protocolTracer;
 
-    private TransportImpl _transport;
+    private TransportImpl2 _transport;
 
     private int _frameStart = 0;
 
@@ -70,8 +71,10 @@ class FrameWriter2
 
     private int _read = 0;
 
+    private long _framesOutput = 0;
+
     FrameWriter2(ByteArrayEncoder encoder, int maxFrameSize, byte frameType, Ref<ProtocolTracer> protocolTracer,
-            TransportImpl transport)
+            TransportImpl2 transport)
     {
         _encoder = encoder;
         _encoder.init(_buffer, 0, _buffer.length);
@@ -143,7 +146,7 @@ class FrameWriter2
         _encoder.putShort((short) channel);
     }
 
-    void writeFrame(int channel, Object frameBody, ByteBuffer payload, Runnable onPayloadTooLarge)
+    void writeFrame(int channel, Performative frameBody, ByteBuffer payload, Runnable onPayloadTooLarge)
     {
         startFrame();
 
@@ -200,9 +203,10 @@ class FrameWriter2
             _position = _position + payloadSize + 1;
         }
         endFrame(channel);
+        _framesOutput += 1;
     }
 
-    void writeFrame(Object frameBody)
+    void writeFrame(Performative frameBody)
     {
         writeFrame(0, frameBody, null, null);
     }
@@ -231,5 +235,10 @@ class FrameWriter2
         // dst.arrayOffset(), dst.position()) + "\"");
 
         return size;
+    }
+
+    long getFramesOutput()
+    {
+        return _framesOutput;
     }
 }
