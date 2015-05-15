@@ -137,3 +137,8 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize )
 {
   return -1;
 }
+
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl)
+{
+  return NULL;
+}
