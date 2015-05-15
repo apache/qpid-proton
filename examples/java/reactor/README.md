@@ -9,11 +9,11 @@ a context object, i.e. the *target* object upon which the event
 occurred. These objects are contained either directly or indirectly
 within the Reactor:
 
-  Delivery --> Link --> Session --> Connection --+
-                                                 |
-                                          Task --+--> Reactor
-                                                 |
-                                    Selectable --+
+    Delivery --> Link --> Session --> Connection --+
+                                                   |
+                                            Task --+--> Reactor
+                                                   |
+                                      Selectable --+
 
 
 Each event is dispatched first to a target-specific handler, and
@@ -38,13 +38,13 @@ target-specific handler is invoked) can be accessed and modified using
 Reactor.set/getGlobalHandler. This can be useful for a number of
 reasons, e.g. you could log all events by doing this:
 
-  reactor.getGlobalHandler().add(new LoggerHandler());
+    reactor.getGlobalHandler().add(new LoggerHandler());
 
 Where LoggerHandler does this:
 
-  public void onUnhandled(Event evt) {
-      System.out.println(evt);
-  }
+    public void onUnhandled(Event evt) {
+        System.out.println(evt);
+    }
 
 The above trick is particularly useful for debugging.
 
