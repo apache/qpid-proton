@@ -56,7 +56,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
     private DeliveryImpl _workHead;
     private DeliveryImpl _workTail;
 
-    private TransportImpl _transport;
+    private Transport _transport;
     private DeliveryImpl _transportWorkHead;
     private DeliveryImpl _transportWorkTail;
     private int _transportWorkSize = 0;
@@ -236,6 +236,11 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         put(Event.Type.CONNECTION_REMOTE_OPEN, this);
     }
 
+    //Added by Rajith as temp hack in support of TransportFrame2
+    void addConnectionOpenEvent()
+    {
+        put(Event.Type.CONNECTION_REMOTE_OPEN, this);
+    }
 
     EndpointImpl getTransportHead()
     {
@@ -482,13 +487,12 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return new WorkSequence(_workHead);
     }
 
-    void setTransport(TransportImpl transport)
+    void setTransport(Transport transport)
     {
         _transport = transport;
     }
 
-    @Override
-    public TransportImpl getTransport()
+    public Transport getTransport()
     {
         return _transport;
     }
