@@ -63,6 +63,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private final Pipe wakeup;
     private Selector selector;
     private Record attachments;
+    private final IO io;
 
     @Override
     public long mark() {
@@ -75,16 +76,21 @@ public class ReactorImpl implements Reactor, Extendable {
         return now;
     }
 
-    public ReactorImpl() throws IOException {
+    protected ReactorImpl(IO io) throws IOException {
         collector = (CollectorImpl)Proton.collector();
         global = new IOHandler();
         handler = new BaseHandler();
         children = new HashSet<ReactorChild>();
         selectables = 0;
         timer = new Timer(collector);
-        wakeup = Pipe.open();
+        this.io = io;
+        wakeup = this.io.pipe();
         mark();
         attachments = new RecordImpl();
+    }
+
+    public ReactorImpl() throws IOException {
+        this(new IOImpl());
     }
 
     @Override
@@ -113,6 +119,7 @@ public class ReactorImpl implements Reactor, Extendable {
         }
     }
 
+    @Override
     public Record attachments() {
         return attachments;
     }
@@ -411,5 +418,9 @@ public class ReactorImpl implements Reactor, Extendable {
     @Override
     public Acceptor acceptor(String host, int port, Handler handler) throws IOException {
         return new AcceptorImpl(this, host, port, handler);
+    }
+
+    public IO getIO() {
+        return io;
     }
 }

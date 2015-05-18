@@ -90,14 +90,8 @@ public class AcceptorImpl implements Acceptor {
 
     private final Selectable sel;
 
-    // Split out from AcceptorImpl to make it easier for unittests to mock this class
-    // without having to open an actual port.
-    protected ServerSocketChannel openServerSocket() throws IOException {
-        return ServerSocketChannel.open();
-    }
-
     protected AcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
-        ServerSocketChannel ssc = openServerSocket();
+        ServerSocketChannel ssc = ((ReactorImpl)reactor).getIO().serverSocketChannel();
         ssc.bind(new InetSocketAddress(host, port));
         sel = ((ReactorImpl)reactor).selectable(this);
         sel.setChannel(ssc);

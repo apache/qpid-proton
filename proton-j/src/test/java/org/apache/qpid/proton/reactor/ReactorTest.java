@@ -29,6 +29,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
@@ -40,9 +42,60 @@ import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.reactor.impl.AcceptorImpl;
+import org.apache.qpid.proton.reactor.impl.LeakTestReactor;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class ReactorTest {
+
+    public ReactorFactory reactorFactory;
+    private Reactor reactor;
+
+    private static interface ReactorFactory {
+        Reactor newReactor() throws IOException;
+    }
+
+    // Parameterize the tests, and run them once with a reactor obtained by calling
+    // 'Proton.reactor()' and once with the LeakTestReactor.
+    @Parameters
+    public static Collection<ReactorFactory[]> data() throws IOException {
+        ReactorFactory classicReactor = new ReactorFactory() {
+            @Override public Reactor newReactor() throws IOException {
+                return Proton.reactor();
+            }
+        };
+        ReactorFactory newLeakDetection = new ReactorFactory() {
+            @Override public Reactor newReactor() throws IOException {
+                return new LeakTestReactor();
+            }
+        };
+        return Arrays.asList(new ReactorFactory[][]{{classicReactor}, {newLeakDetection}});
+    }
+
+    public ReactorTest(ReactorFactory reactorFactory) {
+        this.reactorFactory = reactorFactory;
+    }
+
+    @Before
+    public void before() throws IOException {
+        reactor = reactorFactory.newReactor();
+    }
+
+    private void checkForLeaks() {
+        if (reactor instanceof LeakTestReactor) {
+            ((LeakTestReactor)reactor).assertNoLeaks();
+        }
+    }
+
+    @After
+    public void after() {
+        checkForLeaks();
+    }
 
     /**
      * Tests that creating a reactor and running it:
@@ -54,7 +107,6 @@ public class ReactorTest {
      */
     @Test
     public void runEmpty() throws IOException {
-        Reactor reactor = Proton.reactor();
         assertNotNull(reactor);
         reactor.run();
         reactor.free();
@@ -81,7 +133,6 @@ public class ReactorTest {
      */
     @Test
     public void handlerRun() throws IOException {
-        Reactor reactor = Proton.reactor();
         Handler handler = reactor.getHandler();
         assertNotNull(handler);
         TestHandler testHandler = new TestHandler();
@@ -104,7 +155,6 @@ public class ReactorTest {
      */
     @Test
     public void connection() throws IOException {
-        Reactor reactor = Proton.reactor();
         TestHandler connectionHandler = new TestHandler();
         Connection connection = reactor.connection(connectionHandler);
         assertNotNull(connection);
@@ -129,7 +179,6 @@ public class ReactorTest {
      */
     @Test
     public void acceptor() throws IOException {
-        Reactor reactor = Proton.reactor();
         final Acceptor acceptor = reactor.acceptor("127.0.0.1", 0);
         assertNotNull(acceptor);
         assertTrue("acceptor should be one of the reactor's children", reactor.children().contains(acceptor));
@@ -176,8 +225,6 @@ public class ReactorTest {
      */
     @Test
     public void connect() throws IOException {
-        Reactor reactor = Proton.reactor();
-
         ServerHandler sh = new ServerHandler();
         Acceptor acceptor = reactor.acceptor("127.0.0.1",  0, sh);
         final int listeningPort = ((AcceptorImpl)acceptor).getPortNumber();
@@ -288,7 +335,7 @@ public class ReactorTest {
     }
 
     private void transfer(int count, int window) throws IOException {
-        Reactor reactor = Proton.reactor();
+        reactor = reactorFactory.newReactor();
         ServerHandler sh = new ServerHandler();
         Acceptor acceptor = reactor.acceptor("127.0.0.1", 0, sh);
         sh.setAcceptor(acceptor);
@@ -305,6 +352,7 @@ public class ReactorTest {
         reactor.run();
         reactor.free();
         assertEquals("Did not receive the expected number of messages", count, snk.received);
+        checkForLeaks();
     }
 
     @Test
@@ -326,7 +374,6 @@ public class ReactorTest {
 
     @Test
     public void schedule() throws IOException {
-        Reactor reactor = Proton.reactor();
         TestHandler reactorHandler = new TestHandler();
         reactor.getHandler().add(reactorHandler);
         TestHandler taskHandler = new TestHandler();

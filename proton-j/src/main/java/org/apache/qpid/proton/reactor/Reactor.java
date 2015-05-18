@@ -56,12 +56,6 @@ public interface Reactor {
 
     public void setHandler(Handler handler);
 
-    // XXX: The C reactor has a pn_reactor_io() function.  The closest Java equivalent
-    //      would be a factory for creating SocketChannel's, ServerSocketChannelsm and Selectors.
-    //      This seems like overkill unless there's a use for this in unit testing, or the
-    //      Reactor needs to be integrated with an exotic Java environment which provides its
-    //      own networking implementation.
-
     public Set<ReactorChild> children();
 
     public Collector collector();

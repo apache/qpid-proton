@@ -24,8 +24,6 @@ package org.apache.qpid.proton.reactor.impl;
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
 
-import org.apache.qpid.proton.engine.Handler;
-import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.junit.Test;
@@ -44,21 +42,18 @@ public class AcceptorImplTest {
         final SelectableImpl selectable = new SelectableImpl();
         selectable.onError(mockCallback);
         ReactorImpl mockReactor = Mockito.mock(ReactorImpl.class);
-        Mockito.when(mockReactor.selectable(Mockito.any(ReactorChild.class))).thenReturn(selectable);
-        class MockAcceptorImpl extends AcceptorImpl {
-
-            protected MockAcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
-                super(reactor, host, port, handler);
-            }
-
+        class MockIO extends IOImpl {
             @Override
-            protected ServerSocketChannel openServerSocket() throws IOException {
+            public ServerSocketChannel serverSocketChannel() throws IOException {
                 ServerSocketChannel result = Mockito.mock(ServerSocketChannel.class);
                 Mockito.when(result.accept()).thenThrow(new IOException());
                 return result;
             }
         }
-        new MockAcceptorImpl(mockReactor, "host", 1234, null);
+        IO mockIO = new MockIO();
+        Mockito.when(mockReactor.getIO()).thenReturn(mockIO);
+        Mockito.when(mockReactor.selectable(Mockito.any(ReactorChild.class))).thenReturn(selectable);
+        new AcceptorImpl(mockReactor, "host", 1234, null);
         selectable.readable();
         Mockito.verify(mockCallback).run(selectable);
     }
@@ -75,21 +70,18 @@ public class AcceptorImplTest {
         final SelectableImpl selectable = new SelectableImpl();
         selectable.onError(mockCallback);
         ReactorImpl mockReactor = Mockito.mock(ReactorImpl.class);
-        Mockito.when(mockReactor.selectable(Mockito.any(ReactorChild.class))).thenReturn(selectable);
-        class MockAcceptorImpl extends AcceptorImpl {
-
-            protected MockAcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
-                super(reactor, host, port, handler);
-            }
-
+        class MockIO extends IOImpl {
             @Override
-            protected ServerSocketChannel openServerSocket() throws IOException {
+            public ServerSocketChannel serverSocketChannel() throws IOException {
                 ServerSocketChannel result = Mockito.mock(ServerSocketChannel.class);
                 Mockito.when(result.accept()).thenReturn(null);
                 return result;
             }
         }
-        new MockAcceptorImpl(mockReactor, "host", 1234, null);
+        IO mockIO = new MockIO();
+        Mockito.when(mockReactor.getIO()).thenReturn(mockIO);
+        Mockito.when(mockReactor.selectable(Mockito.any(ReactorChild.class))).thenReturn(selectable);
+        new AcceptorImpl(mockReactor, "host", 1234, null);
         selectable.readable();
     }
 }

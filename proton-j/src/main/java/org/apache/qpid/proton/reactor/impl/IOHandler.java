@@ -102,7 +102,7 @@ public class IOHandler extends BaseHandler {
         Transport transport = event.getConnection().getTransport();
         Socket socket = null;   // In this case, 'null' is the proton-j equivalent of PN_INVALID_SOCKET
         try {
-            SocketChannel socketChannel = SocketChannel.open();
+            SocketChannel socketChannel = ((ReactorImpl)reactor).getIO().socketChannel();
             socketChannel.connect(new InetSocketAddress(hostname, port));
             socket = socketChannel.socket();
         } catch(IOException ioException) {
@@ -166,8 +166,6 @@ public class IOHandler extends BaseHandler {
             Transport transport = selectable.getTransport();
             int capacity = transport.capacity();
             if (capacity > 0) {
-                // TODO: we shouldn't be doing this cast.  Instead - selectable should return an
-                //       object with 1) a getter for the SelectableChannel, 2) read/write methods.
                 SocketChannel socketChannel = (SocketChannel)selectable.getChannel();
                 try {
                     int n = socketChannel.read(transport.tail());
@@ -200,7 +198,7 @@ public class IOHandler extends BaseHandler {
             Transport transport = selectable.getTransport();
             int pending = transport.pending();
             if (pending > 0) {
-                SocketChannel channel = (SocketChannel)selectable.getChannel(); // TODO: can't rely on this cast always working!
+                SocketChannel channel = (SocketChannel)selectable.getChannel();
                 try {
                     int n = channel.write(transport.head());
                     if (n < 0) {
@@ -299,7 +297,7 @@ public class IOHandler extends BaseHandler {
             ReactorImpl reactor = (ReactorImpl)event.getReactor();
             Selector selector = reactor.getSelector();
             if (selector == null) {
-                selector = new SelectorImpl();
+                selector = new SelectorImpl(reactor.getIO());
                 reactor.setSelector(selector);
             }
 

@@ -30,7 +30,7 @@ import java.util.Iterator;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selector;
 
-public class SelectorImpl implements Selector {
+class SelectorImpl implements Selector {
 
     private final java.nio.channels.Selector selector;
     private final HashSet<Selectable> selectables = new HashSet<Selectable>();
@@ -39,8 +39,8 @@ public class SelectorImpl implements Selector {
     private final HashSet<Selectable> expired = new HashSet<Selectable>();
     private final HashSet<Selectable> error = new HashSet<Selectable>();
 
-    public SelectorImpl() throws IOException {
-        selector = java.nio.channels.Selector.open();
+    protected SelectorImpl(IO io) throws IOException {
+        selector = io.selector();
     }
 
     @Override
