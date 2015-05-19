@@ -17,23 +17,15 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton
 
-  module Proton # :nodoc:
+  # @private
+  class SSLSessionDetails
 
-    # A +Subscription+ is an opaque object for working with a +Messenger+'s
-    # subscriptions.
-    #
-    class Subscription
+    attr_reader :session_id
 
-      def initialize(impl) # :nodoc:
-          @impl = impl
-      end
-
-      def impl # :nodoc:
-          @impl
-      end
-
+    def initialize(session_id)
+      @session_id = session_id
     end
 
   end

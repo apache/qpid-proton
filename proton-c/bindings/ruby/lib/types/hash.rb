@@ -22,6 +22,7 @@
 # to a Qpid::Proton::Data instance.
 #++
 
+# @private
 class Hash # :nodoc:
 
   # Places the contents of the hash into the specified data object.
@@ -59,7 +60,7 @@ class Hash # :nodoc:
 
       type = data.type
 
-      raise TypeError, "element is not a map" unless type == Qpid::Proton::MAP
+      raise TypeError, "element is not a map" unless type == Qpid::Proton::Codec::MAP
 
       count = data.map
       result = {}

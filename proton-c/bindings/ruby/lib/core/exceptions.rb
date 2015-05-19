@@ -17,9 +17,9 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid
 
-  module Proton # :nodoc:
+  module Proton
 
     module Error
 
@@ -78,6 +78,37 @@ module Qpid # :nodoc:
     end
 
     class InProgressError < ProtonError
+    end
+
+    # Raised by instances of Transport.
+    #
+    class TransportError < ProtonError
+    end
+
+    # Raised by instances of SASL
+    #
+    class SASLError < TransportError
+    end
+
+    # Raised by Session.
+    #
+    class SessionError < ProtonError
+    end
+
+    # Raised when an attempt is made to change an attribute that is read-only.
+    #
+    class AttributeError < ProtonError
+    end
+
+    # Raised by link components.
+    #
+    class LinkError < ProtonError
+    end
+
+    class SSLError < TransportError
+    end
+
+    class SSLUnavailableError < SSLError
     end
 
   end

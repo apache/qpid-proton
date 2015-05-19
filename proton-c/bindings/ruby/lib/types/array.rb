@@ -22,38 +22,37 @@
 # to a Qpid::Proton::Data instance.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Types
 
-  module Proton # :nodoc:
+  # Holds the information for an AMQP Array compound type.
+  #
+  # It holds the type for the array and the descriptor if the
+  # array is described.
+  #
+  # @private
+  #
+  class ArrayHeader
+    attr_reader :type
+    attr_reader :descriptor
 
-    # Holds the information for an AMQP Array compound type.
-    #
-    # It holds the type for the array and the descriptor if the
-    # array is described.
-    #
-    class ArrayHeader
-      attr_reader :type
-      attr_reader :descriptor
-
-      def initialize(type, descriptor = nil)
-        @type = type
-        @descriptor = descriptor
-      end
-
-      # Returns true if the array is described.
-      def described?
-        !@descriptor.nil?
-      end
-
-      def ==(that)
-        ((@type == that.type) && (@descriptor == that.descriptor))
-      end
+    def initialize(type, descriptor = nil)
+      @type = type
+      @descriptor = descriptor
     end
 
+    # Returns true if the array is described.
+    def described?
+      !@descriptor.nil?
+    end
+
+    def ==(that)
+      ((@type == that.type) && (@descriptor == that.descriptor))
+    end
   end
 
 end
 
+# @private
 class Array # :nodoc:
 
   # Used to declare an array as an AMQP array.

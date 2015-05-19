@@ -19,24 +19,87 @@
 
 require "cproton"
 require "date"
+require "weakref"
 
 if RUBY_VERSION < "1.9"
 require "kconv"
+else
+  require "securerandom"
 end
 
-require "qpid_proton/version"
-require "qpid_proton/described"
-require "qpid_proton/strings"
-require "qpid_proton/mapping"
-require "qpid_proton/array"
-require "qpid_proton/hash"
-require "qpid_proton/exceptions"
-require "qpid_proton/exception_handling"
-require "qpid_proton/filters"
-require "qpid_proton/data"
-require "qpid_proton/message"
-require "qpid_proton/subscription"
-require "qpid_proton/tracker_status"
-require "qpid_proton/tracker"
-require "qpid_proton/selectable"
-require "qpid_proton/messenger"
+# Exception classes
+require "core/exceptions"
+
+# Utility classes
+require "util/version"
+require "util/error_handler"
+require "util/constants"
+require "util/swig_helper"
+require "util/condition"
+require "util/wrapper"
+require "util/class_wrapper"
+require "util/engine"
+require "util/uuid"
+
+# Types
+require "types/strings"
+require "types/hash"
+require "types/array"
+require "types/described"
+
+# Codec classes
+require "codec/mapping"
+require "codec/data"
+
+# Event API classes
+require "event/event_type"
+require "event/event_base"
+require "event/event"
+require "event/collector"
+
+# Main Proton classes
+require "core/message"
+require "core/endpoint"
+require "core/session"
+require "core/terminus"
+require "core/disposition"
+require "core/delivery"
+require "core/link"
+require "core/sender"
+require "core/receiver"
+require "core/connection"
+require "core/sasl"
+require "core/ssl_domain"
+require "core/ssl_details"
+require "core/ssl"
+require "core/transport"
+
+# Messenger API classes
+require "messenger/filters"
+require "messenger/subscription"
+require "messenger/tracker_status"
+require "messenger/tracker"
+require "messenger/selectable"
+require "messenger/messenger"
+
+module Qpid::Proton
+  # @private
+  def self.registry
+    @registry ||= {}
+  end
+
+  # @private
+  def self.add_to_registry(key, value)
+    self.registry[key] = value
+  end
+
+  # @private
+  def self.get_from_registry(key)
+    self.registry[key]
+  end
+
+  # @private
+  def self.delete_from_registry(key)
+    self.registry.delete(key)
+  end
+end

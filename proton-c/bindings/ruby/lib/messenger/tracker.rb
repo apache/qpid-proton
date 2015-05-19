@@ -17,24 +17,20 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Messenger
 
-  module Proton # :nodoc:
+  # A +Tracker+ is used to track the disposition of a +Message+.
+  #
+  class Tracker
 
-    # A +Tracker+ is used to track the disposition of a +Message+.
-    #
-    class Tracker
+    CUMULATIVE = Cproton::PN_CUMULATIVE
 
-      CUMULATIVE = Cproton::PN_CUMULATIVE
+    def initialize(impl) # :nodoc:
+      @impl = impl
+    end
 
-      def initialize(impl) # :nodoc:
-        @impl = impl
-      end
-
-      def impl # :nodoc:
-        @impl
-      end
-
+    def impl # :nodoc:
+      @impl
     end
 
   end

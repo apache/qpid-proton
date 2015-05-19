@@ -17,15 +17,20 @@
 # under the License.
 #++
 
-module Qpid # :nodoc:
+module Qpid::Proton::Messenger
 
-  module Proton # :nodoc:
+  # A +Subscription+ is an opaque object for working with a +Messenger+'s
+  # subscriptions.
+  #
+  class Subscription
 
-    # The major version for the underlying Proton library.
-    VERSION_MAJOR = Cproton::PN_VERSION_MAJOR
+    def initialize(impl) # :nodoc:
+      @impl = impl
+    end
 
-    # The minor version for the underlying Proton library.
-    VERSION_MINOR = Cproton::PN_VERSION_MINOR
+    def impl # :nodoc:
+      @impl
+    end
 
   end
 
