@@ -50,6 +50,7 @@ class Link : public Endpoint, public ProtonHandle<pn_link_t>
     PROTON_CPP_EXTERN Terminus getTarget();
     PROTON_CPP_EXTERN Terminus getRemoteSource();
     PROTON_CPP_EXTERN Terminus getRemoteTarget();
+    PROTON_CPP_EXTERN std::string getName();
     PROTON_CPP_EXTERN pn_link_t *getPnLink() const;
     virtual PROTON_CPP_EXTERN Connection &getConnection();
     PROTON_CPP_EXTERN Link getNext(Endpoint::State mask);

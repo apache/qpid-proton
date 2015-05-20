@@ -116,38 +116,16 @@ class OverrideHandler : public Handler
         pn_handler_dispatch(baseHandler, cevent, (pn_event_type_t) type);
 
         if (conn && type == PN_CONNECTION_FINAL) {
-            //  TODO:  this must be the last acation of the last handler looking at
+            //  TODO:  this must be the last action of the last handler looking at
             //  connection events. Better: generate a custom FINAL event (or task).  Or move to
             //  separate event streams per connection as part of multi threading support.
             ConnectionImpl *cimpl = getConnectionContext(conn);
             if (cimpl)
                 cimpl->reactorDetach();
-            // TODO: remember all connections and do reactorDetach of zombies connections
-            // not pn_connection_release'd at PN_REACTOR_FINAL.
+            // TODO: remember all connections and do reactorDetach of zombie connections
+            // not yet pn_connection_release'd at PN_REACTOR_FINAL.
         }
     }
-};
-
-
-class CFlowController : public ProtonHandler
-{
-  public:
-    pn_handler_t *flowcontroller;
-
-    CFlowController(int window) : flowcontroller(pn_flowcontroller(window)) {}
-    ~CFlowController() {
-        pn_decref(flowcontroller);
-    }
-
-    void redirect(Event &e) {
-        ProtonEvent *pne = dynamic_cast<ProtonEvent *>(&e);
-        pn_handler_dispatch(flowcontroller, pne->getPnEvent(), (pn_event_type_t) pne->getType());
-    }
-
-    virtual void onLinkLocalOpen(Event &e) { redirect(e); }
-    virtual void onLinkRemoteOpen(Event &e) { redirect(e); }
-    virtual void onLinkFlow(Event &e) { redirect(e); }
-    virtual void onDelivery(Event &e) { redirect(e); }
 };
 
 
@@ -165,18 +143,12 @@ Session getDefaultSession(pn_connection_t *conn, pn_session_t **ses) {
 
 struct InboundContext {
     ContainerImpl *containerImpl;
-    Container containerRef;  // create only once for all inbound events
     Handler *cppHandler;
 };
 
 ContainerImpl *getContainerImpl(pn_handler_t *c_handler) {
     struct InboundContext *ctxt = (struct InboundContext *) pn_handler_mem(c_handler);
     return ctxt->containerImpl;
-}
-
-Container &getContainerRef(pn_handler_t *c_handler) {
-    struct InboundContext *ctxt = (struct InboundContext *) pn_handler_mem(c_handler);
-    return ctxt->containerRef;
 }
 
 Handler &getCppHandler(pn_handler_t *c_handler) {
@@ -186,21 +158,19 @@ Handler &getCppHandler(pn_handler_t *c_handler) {
 
 void cpp_handler_dispatch(pn_handler_t *c_handler, pn_event_t *cevent, pn_event_type_t type)
 {
-    MessagingEvent mevent(cevent, type, getContainerRef(c_handler));
+    Container c(getContainerImpl(c_handler)); // Ref counted per event, but when is the last event if stop() never called?
+    MessagingEvent mevent(cevent, type, c);
     mevent.dispatch(getCppHandler(c_handler));
 }
 
 void cpp_handler_cleanup(pn_handler_t *c_handler)
 {
-    struct InboundContext *ctxt = (struct InboundContext *) pn_handler_mem(c_handler);
-    ctxt->containerRef.~Container();
 }
 
 pn_handler_t *cpp_handler(ContainerImpl *c, Handler *h)
 {
     pn_handler_t *handler = pn_handler_new(cpp_handler_dispatch, sizeof(struct InboundContext), cpp_handler_cleanup);
     struct InboundContext *ctxt = (struct InboundContext *) pn_handler_mem(handler);
-    new (&ctxt->containerRef) Container(c);
     ctxt->containerImpl = c;
     ctxt->cppHandler = h;
     return handler;
@@ -220,18 +190,29 @@ void ContainerImpl::decref(ContainerImpl *impl) {
         delete impl;
 }
 
-ContainerImpl::ContainerImpl(MessagingHandler &mhandler) :
-    reactor(0), globalHandler(0), messagingHandler(mhandler), containerId(generateUuid()),
+ContainerImpl::ContainerImpl(Handler &h) :
+    reactor(0), handler(&h), messagingAdapter(0),
+    overrideHandler(0), flowController(0), containerId(generateUuid()),
     refCount(0)
-{
+{}
+
+ContainerImpl::ContainerImpl() :
+    reactor(0), handler(0), messagingAdapter(0),
+    overrideHandler(0), flowController(0), containerId(generateUuid()),
+    refCount(0)
+{}
+
+ContainerImpl::~ContainerImpl() {
+    delete overrideHandler;
+    delete flowController;
+    delete messagingAdapter;
+    pn_reactor_free(reactor);
 }
 
-ContainerImpl::~ContainerImpl() {}
-
-Connection ContainerImpl::connect(std::string &host) {
-    if (!reactor) throw ProtonException(MSG("Container not initialized"));
+Connection ContainerImpl::connect(std::string &host, Handler *h) {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
     Container cntnr(this);
-    Connection connection(cntnr);
+    Connection connection(cntnr, handler);
     Connector *connector = new Connector(connection);
     // Connector self-deletes depending on reconnect logic
     connector->setAddress(host);  // TODO: url vector
@@ -242,15 +223,36 @@ Connection ContainerImpl::connect(std::string &host) {
 
 pn_reactor_t *ContainerImpl::getReactor() { return reactor; }
 
-pn_handler_t *ContainerImpl::getGlobalHandler() { return globalHandler; }
 
 std::string ContainerImpl::getContainerId() { return containerId; }
 
+Duration ContainerImpl::getTimeout() {
+    pn_millis_t tmo = pn_reactor_get_timeout(reactor);
+    if (tmo == PN_MILLIS_MAX)
+        return Duration::FOREVER;
+    return Duration(tmo);
+}
 
-Sender ContainerImpl::createSender(Connection &connection, std::string &addr) {
+void ContainerImpl::setTimeout(Duration timeout) {
+    if (timeout == Duration::FOREVER || timeout.getMilliseconds() > PN_MILLIS_MAX)
+        pn_reactor_set_timeout(reactor, PN_MILLIS_MAX);
+    else {
+        pn_millis_t tmo = timeout.getMilliseconds();
+        pn_reactor_set_timeout(reactor, tmo);
+    }
+}
+
+
+Sender ContainerImpl::createSender(Connection &connection, std::string &addr, Handler *h) {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
     Session session = getDefaultSession(connection.getPnConnection(), &getImpl(connection)->defaultSession);
     Sender snd = session.createSender(containerId  + '-' + addr);
-    pn_terminus_set_address(pn_link_target(snd.getPnLink()), addr.c_str());
+    pn_link_t *lnk = snd.getPnLink();
+    pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
+    if (h) {
+        pn_record_t *record = pn_link_attachments(lnk);
+        pn_record_set_handler(record, wrapHandler(h));
+    }
     snd.open();
 
     ConnectionImpl *connImpl = getImpl(connection);
@@ -258,7 +260,8 @@ Sender ContainerImpl::createSender(Connection &connection, std::string &addr) {
 }
 
 Sender ContainerImpl::createSender(std::string &urlString) {
-    Connection conn = connect(urlString);
+    if (!reactor) throw ProtonException(MSG("Container not started"));
+    Connection conn = connect(urlString, 0);
     Session session = getDefaultSession(conn.getPnConnection(), &getImpl(conn)->defaultSession);
     std::string path = Url(urlString).getPath();
     Sender snd = session.createSender(containerId + '-' + path);
@@ -270,6 +273,7 @@ Sender ContainerImpl::createSender(std::string &urlString) {
 }
 
 Receiver ContainerImpl::createReceiver(Connection &connection, std::string &addr) {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
     ConnectionImpl *connImpl = getImpl(connection);
     Session session = getDefaultSession(connImpl->pnConnection, &connImpl->defaultSession);
     Receiver rcv = session.createReceiver(containerId + '-' + addr);
@@ -279,8 +283,9 @@ Receiver ContainerImpl::createReceiver(Connection &connection, std::string &addr
 }
 
 Receiver ContainerImpl::createReceiver(const std::string &urlString) {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
     // TODO: const cleanup of API
-    Connection conn = connect(const_cast<std::string &>(urlString));
+    Connection conn = connect(const_cast<std::string &>(urlString), 0);
     Session session = getDefaultSession(conn.getPnConnection(), &getImpl(conn)->defaultSession);
     std::string path = Url(urlString).getPath();
     Receiver rcv = session.createReceiver(containerId + '-' + path);
@@ -298,50 +303,76 @@ Acceptor ContainerImpl::acceptor(const std::string &host, const std::string &por
 }
 
 Acceptor ContainerImpl::listen(const std::string &urlString) {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
     Url url(urlString);
     // TODO: SSL
     return acceptor(url.getHost(), url.getPort());
 }
 
 
-void ContainerImpl::run() {
+pn_handler_t *ContainerImpl::wrapHandler(Handler *h) {
+    return cpp_handler(this, h);
+}
+
+
+void ContainerImpl::initializeReactor() {
+    if (reactor) throw ProtonException(MSG("Container already running"));
     reactor = pn_reactor();
 
     // Set our context on the reactor
     setContainerContext(reactor, this);
 
-    int prefetch = messagingHandler.prefetch;
-    Handler *flowController = 0;
-
-    // Set the reactor's main/default handler (see note below)
-    if (prefetch) {
-        flowController = new CFlowController(prefetch);
-        messagingHandler.addChildHandler(*flowController);
+    if (handler) {
+        pn_handler_t *cppHandler = cpp_handler(this, handler);
+        pn_reactor_set_handler(reactor, cppHandler);
+        pn_decref(cppHandler);
     }
-    MessagingAdapter messagingAdapter(messagingHandler);
-    messagingHandler.addChildHandler(messagingAdapter);
-    pn_handler_t *cppHandler = cpp_handler(this, &messagingHandler);
-    pn_reactor_set_handler(reactor, cppHandler);
 
     // Set our own global handler that "subclasses" the existing one
-    pn_handler_t *cGlobalHandler = pn_reactor_get_global_handler(reactor);
-    pn_incref(cGlobalHandler);
-    OverrideHandler overrideHandler(cGlobalHandler);
-    pn_handler_t *cppGlobalHandler = cpp_handler(this, &overrideHandler);
+    pn_handler_t *globalHandler = pn_reactor_get_global_handler(reactor);
+    overrideHandler = new OverrideHandler(globalHandler);
+    pn_handler_t *cppGlobalHandler = cpp_handler(this, overrideHandler);
     pn_reactor_set_global_handler(reactor, cppGlobalHandler);
+    pn_decref(cppGlobalHandler);
 
     // Note: we have just set up the following 4/5 handlers that see events in this order:
     // messagingHandler (Proton C events), pn_flowcontroller (optional), messagingAdapter,
-    // messagingHandler (Messaging events from the messagingAdapter), connector override,
-    // the reactor's default globalhandler (pn_iohandler)
-    pn_reactor_run(reactor);
+    // messagingHandler (Messaging events from the messagingAdapter, i.e. the delegate),
+    // connector override, the reactor's default globalhandler (pn_iohandler)
+}
 
-    pn_decref(cppHandler);
-    pn_decref(cppGlobalHandler);
-    pn_decref(cGlobalHandler);
-    pn_reactor_free(reactor);
-    reactor = 0;
-    delete(flowController);
+void ContainerImpl::run() {
+    initializeReactor();
+    pn_reactor_run(reactor);
+}
+
+void ContainerImpl::start() {
+    initializeReactor();
+    pn_reactor_start(reactor);
+}
+
+bool ContainerImpl::process() {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
+    bool result = pn_reactor_process(reactor);
+    // TODO: check errors
+    return result;
+}
+
+void ContainerImpl::stop() {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
+    pn_reactor_stop(reactor);
+    // TODO: check errors
+}
+
+void ContainerImpl::wakeup() {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
+    pn_reactor_wakeup(reactor);
+    // TODO: check errors
+}
+
+bool ContainerImpl::isQuiesced() {
+    if (!reactor) throw ProtonException(MSG("Container not started"));
+    return pn_reactor_quiesced(reactor);
 }
 
 }} // namespace proton::reactor

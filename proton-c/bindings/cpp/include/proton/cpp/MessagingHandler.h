@@ -30,6 +30,7 @@ namespace proton {
 namespace reactor {
 
 class Event;
+class MessagingAdapter;
 
 class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler , public Acking
 {
@@ -80,9 +81,14 @@ class PROTON_CPP_EXTERN MessagingHandler : public ProtonHandler , public Acking
     bool autoSettle;
     bool autoAccept;
     bool peerCloseIsError;
+    MessagingAdapter *messagingAdapter;
+    Handler *flowController;
+    PROTON_CPP_EXTERN MessagingHandler(bool rawHandler, int prefetch=10, bool autoAccept=true, bool autoSettle=true,
+                                       bool peerCloseIsError=false);
   private:
     friend class ContainerImpl;
     friend class MessagingAdapter;
+    void createHelpers();
 };
 
 

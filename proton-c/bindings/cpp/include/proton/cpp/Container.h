@@ -24,6 +24,7 @@
 #include "proton/cpp/ImportExport.h"
 #include "proton/cpp/Handle.h"
 #include "proton/cpp/Acceptor.h"
+#include "proton/cpp/Duration.h"
 #include <proton/reactor.h>
 #include <string>
 
@@ -39,6 +40,7 @@ class MessagingHandler;
 class Sender;
 class Receiver;
 class Link;
+ class Handler;
 
 class Container : public Handle<ContainerImpl>
 {
@@ -48,17 +50,24 @@ class Container : public Handle<ContainerImpl>
     PROTON_CPP_EXTERN Container& operator=(const Container& c);
     PROTON_CPP_EXTERN ~Container();
 
+    PROTON_CPP_EXTERN Container();
     PROTON_CPP_EXTERN Container(MessagingHandler &mhandler);
-    PROTON_CPP_EXTERN Connection connect(std::string &host);
+    PROTON_CPP_EXTERN Connection connect(std::string &host, Handler *h=0);
     PROTON_CPP_EXTERN void run();
+    PROTON_CPP_EXTERN void start();
+    PROTON_CPP_EXTERN bool process();
+    PROTON_CPP_EXTERN void stop();
+    PROTON_CPP_EXTERN void wakeup();
+    PROTON_CPP_EXTERN bool isQuiesced();
     PROTON_CPP_EXTERN pn_reactor_t *getReactor();
-    PROTON_CPP_EXTERN pn_handler_t *getGlobalHandler();
-    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr);
+    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h=0);
     PROTON_CPP_EXTERN Sender createSender(std::string &url);
     PROTON_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
     PROTON_CPP_EXTERN Receiver createReceiver(const std::string &url);
     PROTON_CPP_EXTERN Acceptor listen(const std::string &url);
     PROTON_CPP_EXTERN std::string getContainerId();
+    PROTON_CPP_EXTERN Duration getTimeout();
+    PROTON_CPP_EXTERN void setTimeout(Duration timeout);
   private:
    friend class PrivateImplRef<Container>;
 };

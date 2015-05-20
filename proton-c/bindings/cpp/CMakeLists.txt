@@ -40,6 +40,7 @@ set (qpid-proton-cpp-core
     src/Terminus.cpp
     src/Acceptor.cpp
     src/Url.cpp
+    src/Duration.cpp
     src/Message.cpp
     src/MessagingAdapter.cpp
     src/MessagingEvent.cpp
@@ -55,6 +56,10 @@ set (qpid-proton-cpp-core
     src/Logger.cpp
     src/contexts.cpp
     src/exceptions.cpp
+    src/blocking/BlockingConnection.cpp
+    src/blocking/BlockingConnectionImpl.cpp
+    src/blocking/BlockingLink.cpp
+    src/blocking/BlockingSender.cpp
   )
 
 #set_source_files_properties (
@@ -102,6 +107,8 @@ add_executable (SimpleSend examples/SimpleSend.cpp)
 target_link_libraries (SimpleSend qpid-proton-cpp)
 add_executable (Broker examples/Broker.cpp)
 target_link_libraries (Broker qpid-proton-cpp)
+add_executable (HelloWorldBlocking examples/HelloWorldBlocking.cpp)
+target_link_libraries (HelloWorldBlocking qpid-proton-cpp)
 
 
 install (TARGETS qpid-proton-cpp

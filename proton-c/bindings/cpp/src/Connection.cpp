@@ -42,8 +42,8 @@ Connection::Connection(const Connection& c) : Handle<ConnectionImpl>() { PI::cop
 Connection& Connection::operator=(const Connection& c) { return PI::assign(*this, c); }
 Connection::~Connection() { PI::dtor(*this); }
 
-Connection::Connection(Container &c) {
-    ConnectionImpl *cimpl = new ConnectionImpl(c);
+Connection::Connection(Container &c, Handler *h) {
+    ConnectionImpl *cimpl = new ConnectionImpl(c, h);
     PI::ctor(*this, cimpl);
 }
 

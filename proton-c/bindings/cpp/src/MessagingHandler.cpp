@@ -26,11 +26,64 @@
 namespace proton {
 namespace reactor {
 
+namespace {
+class CFlowController : public ProtonHandler
+{
+  public:
+    pn_handler_t *flowcontroller;
+
+    CFlowController(int window) : flowcontroller(pn_flowcontroller(window)) {}
+    ~CFlowController() {
+        pn_decref(flowcontroller);
+    }
+
+    void redirect(Event &e) {
+        ProtonEvent *pne = dynamic_cast<ProtonEvent *>(&e);
+        pn_handler_dispatch(flowcontroller, pne->getPnEvent(), (pn_event_type_t) pne->getType());
+    }
+
+    virtual void onLinkLocalOpen(Event &e) { redirect(e); }
+    virtual void onLinkRemoteOpen(Event &e) { redirect(e); }
+    virtual void onLinkFlow(Event &e) { redirect(e); }
+    virtual void onDelivery(Event &e) { redirect(e); }
+};
+
+} // namespace
+
+
+
+
 MessagingHandler::MessagingHandler(int prefetch0, bool autoAccept0, bool autoSettle0, bool peerCloseIsError0) :
     prefetch(prefetch0), autoAccept(autoAccept0), autoSettle(autoSettle0), peerCloseIsError(peerCloseIsError0)
-{}
+{
+    createHelpers();
+}
 
-MessagingHandler::~MessagingHandler(){};
+MessagingHandler::MessagingHandler(bool rawHandler, int prefetch0, bool autoAccept0, bool autoSettle0,
+                                   bool peerCloseIsError0) :
+    prefetch(prefetch0), autoAccept(autoAccept0), autoSettle(autoSettle0), peerCloseIsError(peerCloseIsError0)
+{
+    if (rawHandler) {
+        flowController = 0;
+        messagingAdapter = 0;
+    } else {
+        createHelpers();
+    }
+}
+
+void MessagingHandler::createHelpers() {
+    if (prefetch > 0) {
+        flowController = new CFlowController(prefetch);
+        addChildHandler(*flowController);
+    }
+    messagingAdapter = new MessagingAdapter(*this);
+    addChildHandler(*messagingAdapter);
+}
+
+MessagingHandler::~MessagingHandler(){
+    delete flowController;
+    delete messagingAdapter;
+};
 
 void MessagingHandler::onAbort(Event &e) { onUnhandled(e); }
 void MessagingHandler::onAccepted(Event &e) { onUnhandled(e); }

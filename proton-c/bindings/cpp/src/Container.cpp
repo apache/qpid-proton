@@ -53,17 +53,23 @@ Container::Container(MessagingHandler &mhandler) {
     PI::ctor(*this, cimpl);
 }
 
-Connection Container::connect(std::string &host) { return impl->connect(host); }
+Container::Container() {
+    ContainerImpl *cimpl = new ContainerImpl();
+    PI::ctor(*this, cimpl);
+}
+
+Connection Container::connect(std::string &host, Handler *h) { return impl->connect(host, h); }
 
 pn_reactor_t *Container::getReactor() { return impl->getReactor(); }
 
-pn_handler_t *Container::getGlobalHandler() { return impl->getGlobalHandler(); }
-
 std::string Container::getContainerId() { return impl->getContainerId(); }
 
+Duration Container::getTimeout() { return impl->getTimeout(); }
+void Container::setTimeout(Duration timeout) { impl->setTimeout(timeout); }
 
-Sender Container::createSender(Connection &connection, std::string &addr) {
-    return impl->createSender(connection, addr);
+
+Sender Container::createSender(Connection &connection, std::string &addr, Handler *h) {
+    return impl->createSender(connection, addr, h);
 }
 
 Sender Container::createSender(std::string &urlString) {
@@ -83,8 +89,11 @@ Acceptor Container::listen(const std::string &urlString) {
 }
 
 
-void Container::run() {
-    impl->run();
-}
+void Container::run() { impl->run(); }
+void Container::start() { impl->start(); }
+bool Container::process() { return impl->process(); }
+void Container::stop() { impl->stop(); }
+void Container::wakeup() { impl->wakeup(); }
+bool Container::isQuiesced() { return impl->isQuiesced(); }
 
 }} // namespace proton::reactor

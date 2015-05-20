@@ -25,6 +25,7 @@
 #include "proton/cpp/MessagingHandler.h"
 #include "proton/cpp/Connection.h"
 #include "proton/cpp/Link.h"
+#include "proton/cpp/Duration.h"
 
 #include "proton/reactor.h"
 
@@ -40,26 +41,37 @@ class Acceptor;
 class ContainerImpl
 {
   public:
-    PROTON_CPP_EXTERN ContainerImpl(MessagingHandler &mhandler);
+    PROTON_CPP_EXTERN ContainerImpl(Handler &h);
+    PROTON_CPP_EXTERN ContainerImpl();
     PROTON_CPP_EXTERN ~ContainerImpl();
-    PROTON_CPP_EXTERN Connection connect(std::string &host);
+    PROTON_CPP_EXTERN Connection connect(std::string &host, Handler *h);
     PROTON_CPP_EXTERN void run();
     PROTON_CPP_EXTERN pn_reactor_t *getReactor();
-    PROTON_CPP_EXTERN pn_handler_t *getGlobalHandler();
-    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr);
+    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h);
     PROTON_CPP_EXTERN Sender createSender(std::string &url);
     PROTON_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
     PROTON_CPP_EXTERN Receiver createReceiver(const std::string &url);
     PROTON_CPP_EXTERN Acceptor listen(const std::string &url);
     PROTON_CPP_EXTERN std::string getContainerId();
+    PROTON_CPP_EXTERN Duration getTimeout();
+    PROTON_CPP_EXTERN void setTimeout(Duration timeout);
+    void start();
+    bool process();
+    void stop();
+    void wakeup();
+    bool isQuiesced();
+    pn_handler_t *wrapHandler(Handler *h);
     static void incref(ContainerImpl *);
     static void decref(ContainerImpl *);
   private:
     void dispatch(pn_event_t *event, pn_event_type_t type);
     Acceptor acceptor(const std::string &host, const std::string &port);
+    void initializeReactor();
     pn_reactor_t *reactor;
-    pn_handler_t *globalHandler;
-    MessagingHandler &messagingHandler;
+    Handler *handler;
+    MessagingAdapter *messagingAdapter;
+    Handler *overrideHandler;
+    Handler *flowController;
     std::string containerId;
     int refCount;
 };

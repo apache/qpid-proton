@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DELIVERY_H
-#define PROTON_CPP_DELIVERY_H
+#ifndef PROTON_CPP_BLOCKINGLINK_H
+#define PROTON_CPP_BLOCKINGLINK_H
 
 /*
  *
@@ -22,42 +22,38 @@
  *
  */
 #include "proton/cpp/ImportExport.h"
-#include "proton/cpp/ProtonHandle.h"
-
-#include "ProtonImplRef.h"
-
-#include "proton/delivery.h"
-#include "proton/disposition.h"
+#include "proton/cpp/Handle.h"
+#include "proton/cpp/Endpoint.h"
+#include "proton/cpp/Container.h"
+#include "proton/cpp/Duration.h"
+#include "proton/cpp/MessagingHandler.h"
+#include "proton/cpp/BlockingConnection.h"
+#include "proton/types.h"
+#include <string>
 
 namespace proton {
 namespace reactor {
 
-class Delivery : public ProtonHandle<pn_delivery_t>
+class BlockingConnection;
+
+class BlockingLink
 {
   public:
-
-    enum state {
-        NONE = 0,
-        RECEIVED = PN_RECEIVED,
-        ACCEPTED = PN_ACCEPTED,
-        REJECTED = PN_REJECTED,
-        RELEASED = PN_RELEASED,
-        MODIFIED = PN_MODIFIED
-    };  // AMQP spec 3.4 Delivery State
-
-    PROTON_CPP_EXTERN Delivery(pn_delivery_t *d);
-    PROTON_CPP_EXTERN Delivery();
-    PROTON_CPP_EXTERN ~Delivery();
-    PROTON_CPP_EXTERN Delivery(const Delivery&);
-    PROTON_CPP_EXTERN Delivery& operator=(const Delivery&);
-    PROTON_CPP_EXTERN bool settled();
-    PROTON_CPP_EXTERN void settle();
-    PROTON_CPP_EXTERN pn_delivery_t *getPnDelivery();
+    PROTON_CPP_EXTERN void close();
+    ~BlockingLink();
+  protected:
+    PROTON_CPP_EXTERN BlockingLink(BlockingConnection *c, pn_link_t *l);
+    PROTON_CPP_EXTERN void waitForClosed(Duration timeout=Duration::SECOND);
   private:
-    friend class ProtonImplRef<Delivery>;
+    BlockingConnection connection;
+    Link link;
+    void checkClosed();
+    friend class BlockingConnection;
+    friend class BlockingSender;
+    friend class BlockingReceiver;
 };
 
 
 }} // namespace proton::reactor
 
-#endif  /*!PROTON_CPP_DELIVERY_H*/
+#endif  /*!PROTON_CPP_BLOCKINGLINK_H*/

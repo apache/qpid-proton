@@ -33,40 +33,28 @@ namespace proton {
 namespace reactor {
 
 class Handler;
-class Transport;
 class Container;
+class SslDomain;
 
-class ConnectionImpl : public Endpoint
+ class BlockingConnectionImpl : public MessagingHandler
 {
   public:
-    PROTON_CPP_EXTERN ConnectionImpl(Container &c, pn_connection_t &pnConn);
-    PROTON_CPP_EXTERN ConnectionImpl(Container &c, Handler *h = 0);
-    PROTON_CPP_EXTERN ~ConnectionImpl();
-    PROTON_CPP_EXTERN Transport &getTransport();
-    PROTON_CPP_EXTERN Handler *getOverride();
-    PROTON_CPP_EXTERN void setOverride(Handler *h);
-    PROTON_CPP_EXTERN void open();
+    PROTON_CPP_EXTERN BlockingConnectionImpl(std::string &url, Duration d, SslDomain *ssld, Container *c);
+    PROTON_CPP_EXTERN ~BlockingConnectionImpl();
     PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN pn_connection_t *getPnConnection();
-    PROTON_CPP_EXTERN Container &getContainer();
-    PROTON_CPP_EXTERN std::string getHostname();
-    PROTON_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    static Connection &getReactorReference(pn_connection_t *);
-    static ConnectionImpl *getImpl(const Connection &c) { return c.impl; }
-    void reactorDetach();
-    static void incref(ConnectionImpl *);
-    static void decref(ConnectionImpl *);
+    PROTON_CPP_EXTERN void wait(WaitCondition &condition);
+    PROTON_CPP_EXTERN void wait(WaitCondition &condition, std::string &msg, Duration timeout);
+    PROTON_CPP_EXTERN pn_connection_t *getPnBlockingConnection();
+    Duration getTimeout() { return timeout; }
+    static void incref(BlockingConnectionImpl *);
+    static void decref(BlockingConnectionImpl *);
   private:
-    friend class Connector;
-    friend class ContainerImpl;
+    friend class BlockingConnection;
     Container container;
+    Connection connection;
+    std::string url;
+    Duration timeout;
     int refCount;
-    Handler *override;
-    Transport *transport;
-    pn_session_t *defaultSession;  // Temporary, for SessionPerConnection style policy.
-    pn_connection_t *pnConnection;
-    Connection reactorReference;   // Keep-alive reference, until PN_CONNECTION_FINAL.
 };
 
 

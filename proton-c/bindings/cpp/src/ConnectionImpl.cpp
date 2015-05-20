@@ -25,6 +25,8 @@
 #include "proton/cpp/Transport.h"
 #include "Msg.h"
 #include "contexts.h"
+#include "PrivateImplRef.h"
+#include "ContainerImpl.h"
 
 #include "proton/connection.h"
 
@@ -41,12 +43,25 @@ void ConnectionImpl::decref(ConnectionImpl *impl) {
         delete impl;
 }
 
-ConnectionImpl::ConnectionImpl(Container &c, pn_connection_t *pnConn) : container(c), refCount(0), override(0), transport(0), defaultSession(0),
-                                               pnConnection(pnConn),
-                                               reactorReference(this)
+ConnectionImpl::ConnectionImpl(Container &c, pn_connection_t &pnConn)
+    : container(c), refCount(0), override(0), transport(0), defaultSession(0),
+      pnConnection(&pnConn), reactorReference(this)
 {
-    if (!pnConnection)
-        pnConnection = pn_reactor_connection(container.getReactor(), NULL);
+    setConnectionContext(pnConnection, this);
+}
+
+ConnectionImpl::ConnectionImpl(Container &c, Handler *handler)
+    : container(c), refCount(0), override(0), transport(0), defaultSession(0),
+      reactorReference(this)
+{
+    pn_handler_t *chandler = 0;
+    if (handler) {
+        ContainerImpl *containerImpl = PrivateImplRef<Container>::get(c);
+        chandler = containerImpl->wrapHandler(handler);
+    }
+    pnConnection = pn_reactor_connection(container.getReactor(), chandler);
+    if (chandler)
+        pn_decref(chandler);
     setConnectionContext(pnConnection, this);
 }
 
@@ -112,7 +127,7 @@ Connection &ConnectionImpl::getReactorReference(pn_connection_t *conn) {
         Container container(getContainerContext(reactor));
         if (!container)  // can't be one created by our container
             throw ProtonException(MSG("Unknown Proton connection specifier"));
-        impl = new ConnectionImpl(container, conn);
+        impl = new ConnectionImpl(container, *conn);
     }
     return impl->reactorReference;
 }
@@ -120,6 +135,5 @@ Connection &ConnectionImpl::getReactorReference(pn_connection_t *conn) {
 Link ConnectionImpl::getLinkHead(Endpoint::State mask) {
     return Link(pn_link_head(pnConnection, mask));
 }
-
 
 }} // namespace proton::reactor

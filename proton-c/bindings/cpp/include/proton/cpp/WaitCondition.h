@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DELIVERY_H
-#define PROTON_CPP_DELIVERY_H
+#ifndef PROTON_CPP_WAITCONDITION_H
+#define PROTON_CPP_WAITCONDITION_H
 
 /*
  *
@@ -22,42 +22,24 @@
  *
  */
 #include "proton/cpp/ImportExport.h"
-#include "proton/cpp/ProtonHandle.h"
-
-#include "ProtonImplRef.h"
-
-#include "proton/delivery.h"
-#include "proton/disposition.h"
 
 namespace proton {
 namespace reactor {
 
-class Delivery : public ProtonHandle<pn_delivery_t>
+// Interface class to indicates that an expected contion has been
+// achieved, i.e. for BlockingConnection.wait()
+
+class WaitCondition
 {
   public:
+    PROTON_CPP_EXTERN virtual ~WaitCondition();
 
-    enum state {
-        NONE = 0,
-        RECEIVED = PN_RECEIVED,
-        ACCEPTED = PN_ACCEPTED,
-        REJECTED = PN_REJECTED,
-        RELEASED = PN_RELEASED,
-        MODIFIED = PN_MODIFIED
-    };  // AMQP spec 3.4 Delivery State
-
-    PROTON_CPP_EXTERN Delivery(pn_delivery_t *d);
-    PROTON_CPP_EXTERN Delivery();
-    PROTON_CPP_EXTERN ~Delivery();
-    PROTON_CPP_EXTERN Delivery(const Delivery&);
-    PROTON_CPP_EXTERN Delivery& operator=(const Delivery&);
-    PROTON_CPP_EXTERN bool settled();
-    PROTON_CPP_EXTERN void settle();
-    PROTON_CPP_EXTERN pn_delivery_t *getPnDelivery();
-  private:
-    friend class ProtonImplRef<Delivery>;
+    // Overide this member function to indicate whether an expected
+    // condition is achieved and requires no further waiting.
+    virtual bool achieved() = 0;
 };
 
 
 }} // namespace proton::reactor
 
-#endif  /*!PROTON_CPP_DELIVERY_H*/
+#endif  /*!PROTON_CPP_WAITCONDITION_H*/

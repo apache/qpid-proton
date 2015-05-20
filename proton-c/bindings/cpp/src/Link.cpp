@@ -96,6 +96,10 @@ Terminus Link::getRemoteTarget() {
     return Terminus(pn_link_remote_target(impl), this);
 }
 
+std::string Link::getName() {
+    return std::string(pn_link_name(impl));
+}
+
 Connection &Link::getConnection() {
     pn_session_t *s = pn_link_session(impl);
     pn_connection_t *c = pn_session_connection(s);

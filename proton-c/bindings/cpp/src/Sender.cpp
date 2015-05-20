@@ -54,7 +54,7 @@ namespace{
 uint64_t tagCounter = 0;
 }
 
-void Sender::send(Message &message) {
+Delivery Sender::send(Message &message) {
     char tag[8];
     void *ptr = &tag;
     uint64_t id = ++tagCounter;
@@ -67,6 +67,7 @@ void Sender::send(Message &message) {
     pn_link_advance(link);
     if (pn_link_snd_settle_mode(link) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
+    return Delivery(dlv);
 }
 
 }} // namespace proton::reactor

@@ -71,9 +71,6 @@ class MessagingAdapter : public MessagingHandler
     PROTON_CPP_EXTERN virtual void onTransportTailClosed(Event &e);
   private:
     MessagingHandler &delegate;  // The handler for generated MessagingEvent's
-    bool autoSettle;
-    bool autoAccept;
-    bool peerCloseIsError;
 };
 
 

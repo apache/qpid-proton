@@ -22,6 +22,7 @@
  *
  */
 #include "proton/cpp/ImportExport.h"
+#include "proton/cpp/Delivery.h"
 #include "proton/cpp/Link.h"
 #include "proton/cpp/Message.h"
 
@@ -40,7 +41,7 @@ class Sender : public Link
     PROTON_CPP_EXTERN Sender(pn_link_t *lnk);
     PROTON_CPP_EXTERN Sender();
     PROTON_CPP_EXTERN Sender(const Link& c);
-    PROTON_CPP_EXTERN void send(Message &m);
+    PROTON_CPP_EXTERN Delivery send(Message &m);
   protected:
     virtual void verifyType(pn_link_t *l);
 };
