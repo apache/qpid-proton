@@ -19,7 +19,7 @@
 
 # Add bindings that do not require swig here - the directory name must be the same as the binding name
 # See below for swig bindings
-set(BINDINGS javascript cpp)
+set(BINDINGS javascript cpp go)
 
 # Prerequisites for javascript.
 #
@@ -35,6 +35,13 @@ endif (EMSCRIPTEN_FOUND)
 if (CMAKE_CXX_COMPILER)
   set (DEFAULT_CPP ON)
 endif (CMAKE_CXX_COMPILER)
+
+# Prerequisites for Go
+find_program(GO_EXE go)
+mark_as_advanced(GO_EXE)
+if (GO_EXE)
+  set (DEFAULT_GO ON)
+endif (GO_EXE)
 
 if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name

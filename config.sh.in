@@ -18,6 +18,16 @@
 # under the License.
 #
 
+merge_paths() {
+    # Merge paths, remove duplicates (keep first instance)
+    path=$(echo $* | sed 's/:/ /'g) # Split with spaces.
+    newpath=""
+    for d in $path; do		# Remove duplicates
+	{ echo $newpath | grep -q "\(:\|^\)$d\(:\|$\)"; } || newpath="$newpath:$d"
+    done
+    echo $newpath | sed 's/^://' # Remove leading :
+}
+
 PROTON_HOME=@CMAKE_SOURCE_DIR@
 PROTON_BUILD=@CMAKE_BINARY_DIR@
 
@@ -50,10 +60,17 @@ export RUBYLIB=$RUBY_BINDINGS:$PROTON_HOME/proton-c/bindings/ruby/lib:$PROTON_HO
 # Perl
 export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
 
+# Go
+export GOPATH="$(merge_paths $PROTON_HOME/proton-c/bindings/go $GOPATH)"
+# Help Go compiler find libraries and include files.
+export C_INCLUDE_PATH="$(merge_paths $PROTON_HOME/proton-c/include $PROTON_BUILD/proton-c/include $C_INCLUDE_PATH)"
+export LIBRARY_PATH="$(merge_paths $PROTON_BUILD/proton-c $LIBRARY_PATH)"
+export LD_LIBRARY_PATH="$(merge_paths $PROTON_BUILD/proton-c $LD_LIBRARY_PATH)"
+
+
+
 # test applications
-export PATH="$PATH:$PROTON_BUILD/tests/tools/apps/c"
-export PATH="$PATH:$PROTON_HOME/tests/tools/apps/python"
-export PATH="$PATH:$PROTON_HOME/tests/python"
+export PATH="$(merge_paths $PATH $PROTON_BUILD/tests/tools/apps/c $PROTON_HOME/tests/tools/apps/python $PROTON_HOME/tests/python)"
 
 # can the test harness use valgrind?
 if [[ -x "$(type -p valgrind)" ]] ; then

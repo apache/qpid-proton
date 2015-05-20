@@ -25,6 +25,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -77,11 +78,11 @@ func (b *broker) check() error {
 
 // Start the demo broker, wait till it is listening on *addr. No-op if already started.
 func (b *broker) start() error {
-	build("event/broker.go")
+	build("event_broker.go")
 	if b.cmd == nil { // Not already started
 		// FIXME aconway 2015-04-30: better way to pick/configure a broker port.
 		b.addr = fmt.Sprintf("127.0.0.1:%d", rand.Intn(10000)+10000)
-		b.cmd = exec.Command(exepath("broker"), "-addr", b.addr, "-verbose", "0")
+		b.cmd = exec.Command(exepath("event_broker"), "-addr", b.addr, "-verbose", "0")
 		b.runerr = make(chan error)
 		// Change the -verbose setting above to see broker output on stdout/stderr.
 		b.cmd.Stderr, b.cmd.Stdout = os.Stderr, os.Stdout
@@ -246,7 +247,12 @@ func init() {
 
 func build(prog string) {
 	if !built[prog] {
-		build := exec.Command("go", "build", path.Join(exampleDir, prog))
+		args := []string{"build"}
+		if *rpath != "" {
+			args = append(args, "-ldflags", "-r "+*rpath)
+		}
+		args = append(args, path.Join(exampleDir, prog))
+		build := exec.Command("go", args...)
 		build.Dir = binDir
 		out, err := build.CombinedOutput()
 		if err != nil {
@@ -255,6 +261,8 @@ func build(prog string) {
 		built[prog] = true
 	}
 }
+
+var rpath = flag.String("rpath", "", "Runtime path for test executables")
 
 func TestMain(m *testing.M) {
 	rand.Seed(time.Now().UTC().UnixNano())

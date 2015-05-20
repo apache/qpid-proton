@@ -17,9 +17,13 @@
 # under the License.
 #
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(c)
-add_subdirectory(go)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
+# FIXME aconway 2015-05-20:
+# - use proton build for Go includes & libs.
+# - pre-build go libraries? Respect user GOPATH?
+
+if(BUILD_GO)
+  add_test(
+    NAME go_example_test
+    COMMAND ${GO_TEST} example_test.go -rpath ${CMAKE_BINARY_DIR}/proton-c
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

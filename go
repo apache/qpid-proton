@@ -1,0 +1,1 @@
+proton-c/bindings/go/src/qpid.apache.org/proton/go

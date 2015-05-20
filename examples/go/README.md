@@ -9,48 +9,33 @@ There are 3 go packages for proton:
 Most applications should use the `messaging` package. The `event` package is for
 applications that need low-level access to the proton engine.
 
-## messaging examples
+## Example programs
 
-- [receive.go](receive.go) receive from many connections concurrently.
-- [send.go](send.go) send to many connections concurrently.
+- [receive.go](receive.go) receive from many connections concurrently using messaging package.
+- [send.go](send.go) send to many connections concurrently using messaging package.
+- [event_broker.go](event_broker.go) simple mini-broker using event package.
 
-## event examples
+## Using the Go packages
 
-- [broker.go](event/broker.go) simple mini-broker, queues are created automatically.
+Set your GOPATH environment variable to include `/<path-to-proton>/proton-c/bindings/go`
 
-## Installing the proton Go packages
+The proton Go packages include C code so the cgo compiler needs to be able to
+find the proton library and include files.  There are a couple of ways to do this:
 
-You need to install proton in a standard place such as `/usr` or `/usr/local` so go
-can find the proton C headers and libraries to build the C parts of the packages.
+1. Build proton in directory `$BUILD`. Source the script `$BUILD/config.sh` to set your environment.
 
-You should create a go workspace and set GOPATH as described in https://golang.org/doc/code.html
+2. Install proton to a standard prefix such as `/usr` or `/usr/local`. No need for further settings.
 
-To get the proton packages into your workspace you can clone the proton repository like this:
+3. Install proton to a non-standard prefix `$PREFIX`. Set the following:
 
-    git clone https://git.apache.org/qpid-proton.git $GOPATH/src/qpid.apache.org/proton
+        export LIBRARY_PATH=$PREFIX/lib:$LIBRARY_PATH
+        export C_INCLUDE_PATH=$PREFIX/include:$C_INCLUDE_PATH
+        export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 
-If you prefer to keep your proton clone elsewhere you can create a symlink to it in your workspace.
+Once you are set up, the go tools will work as normal. You can see documentation
+in your web browser at `localhost:6060` by running:
 
-You can also use `go get` as follows:
-
-    go get qpid.apache.org/proton/go/messaging
-
-Once installed you can use godoc to look at docmentation on the commane line or start a
-godoc web server like this:
-
-	godoc -http=:6060
-
-And look at the docs in your browser.
-
-Right now the layout of the documentation is a bit messed up, showing the long
-path for imports, i.e.
-
-    qpid.apache.org/proton/proton-c/bindings/go/amqp
-
-In your code you should use:
-
-    qpid.apache.org/proton/go/amqp
-
+    godoc -http=:6060
 
 ## Running the examples
 
@@ -69,15 +54,15 @@ the example source have more details.
 
 First start the broker:
 
-    go run event/broker.go
+    go run event_broker.go
 
 Send messages concurrently to queues "foo" and "bar", 10 messages to each queue:
 
-    go run go/send.go -count 10 localhost:/foo localhost:/bar
+    go run send.go -count 10 localhost:/foo localhost:/bar
 
 Receive messages concurrently from "foo" and "bar". Note -count 20 for 10 messages each on 2 queues:
 
-    go run go/receive.go -count 20 localhost:/foo localhost:/bar
+    go run receive.go -count 20 localhost:/foo localhost:/bar
 
 The broker and clients use the amqp port on the local host by default, to use a
 different address use the `-addr host:port` flag.
