@@ -276,7 +276,7 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %rename(pn_transport_peek) wrap_pn_transport_peek;
 %inline %{
   int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t sz = pn_transport_peek(transport, OUTPUT, OUTPUT_SIZE);
+    ssize_t sz = pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
     if(sz >= 0) {
       *OUTPUT_SIZE = sz;
     } else {
