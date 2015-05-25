@@ -33,6 +33,7 @@ import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.reactor.FlowController;
 import org.apache.qpid.proton.reactor.Handshaker;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 public class Recv extends BaseHandler {
 
@@ -72,7 +73,7 @@ public class Recv extends BaseHandler {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor r = Proton.reactor(new Recv());
         r.run();
     }

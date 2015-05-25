@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 public class Counter extends BaseHandler {
 
@@ -68,7 +69,7 @@ public class Counter extends BaseHandler {
         System.out.println("Goodbye, World! (after " + elapsedTime + " long milliseconds)");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         // In HelloWorld.java we said the reactor exits when there are no more
         // events to process. While this is true, it's not actually complete.
         // The reactor exits when there are no more events to process and no

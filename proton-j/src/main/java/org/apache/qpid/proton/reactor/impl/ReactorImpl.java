@@ -38,8 +38,10 @@ import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
+import org.apache.qpid.proton.engine.impl.EventImpl;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Acceptor;
+import org.apache.qpid.proton.reactor.HandlerException;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable;
@@ -253,7 +255,7 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public boolean process() {
+    public boolean process() throws HandlerException {
         mark();
         Type previous = null;
         while (true) {
@@ -265,8 +267,13 @@ public class ReactorImpl implements Reactor, Extendable {
                 }
                 yield = false;  // TODO: is this required?
                 Handler handler = eventHandler(event);
-                event.dispatch(handler);
-                event.dispatch(global);
+                try {
+                    event.dispatch(handler);
+                    event.dispatch(global);
+                } catch (RuntimeException runtimeException) {
+                    Handler errorHandler = ((EventImpl)event).getLastHandler();
+                    throw new HandlerException(errorHandler, runtimeException);
+                }
 
                 if (event.getType() == Type.CONNECTION_FINAL) { // TODO: this should be the same as the pni_reactor_dispatch_post logic...
                     children.remove(event.getConnection());
@@ -308,7 +315,7 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public void stop() {
+    public void stop() throws HandlerException {
         collector.put(Type.REACTOR_FINAL, this);
         // (Comment from C code) XXX: should consider removing this fron stop to avoid reentrance
         process();
@@ -320,7 +327,7 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public void run() {
+    public void run() throws HandlerException {
         setTimeout(3141);
         start();
         while(process()) {}

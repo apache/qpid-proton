@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 // TODO: sort out docs!
 // So far the reactive hello-world doesn't look too different from a
@@ -55,7 +56,7 @@ public class GoodbyeWorld extends BaseHandler {
         System.out.println("Goodbye, World!");;
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor reactor = Proton.reactor(new GoodbyeWorld());
         reactor.run();
     }

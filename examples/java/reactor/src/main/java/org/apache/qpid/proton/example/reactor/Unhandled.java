@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 public class Unhandled extends BaseHandler {
 
@@ -39,7 +40,7 @@ public class Unhandled extends BaseHandler {
         System.out.println(event);
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor reactor = Proton.reactor(new Unhandled());
         reactor.run();
     }

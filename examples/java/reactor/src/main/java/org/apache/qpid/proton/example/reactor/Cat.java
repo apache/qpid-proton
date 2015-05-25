@@ -30,6 +30,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 import org.apache.qpid.proton.reactor.Selectable;
 
 public class Cat extends BaseHandler {
@@ -82,7 +83,7 @@ public class Cat extends BaseHandler {
         reactor.update(selectable);
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         if (args.length != 1) {
             System.err.println("Specify a file name as an argument.");
             System.exit(1);

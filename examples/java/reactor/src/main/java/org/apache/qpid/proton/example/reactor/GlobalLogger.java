@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 /*
 # Not every event goes to the reactor's event handler. If we have a
@@ -99,7 +100,7 @@ public class GlobalLogger extends BaseHandler {
         System.out.println("Goodbye, World!");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor reactor = Proton.reactor(new GlobalLogger());
 
         // In addition to having a regular handler, the reactor also has a

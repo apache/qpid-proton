@@ -37,6 +37,7 @@ import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.FlowController;
+import org.apache.qpid.proton.reactor.HandlerException;
 import org.apache.qpid.proton.reactor.Handshaker;
 import org.apache.qpid.proton.reactor.Reactor;
 
@@ -178,7 +179,7 @@ public class ProtonJInterop {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         try {
             int port = Integer.valueOf(args[1]);
             int numMsgs = Integer.valueOf(args[2]);

@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 /*
 class Logger:
@@ -83,7 +84,7 @@ public class ReactorLogger extends BaseHandler {
 
     private static boolean loggingEnabled = false;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
 
         // You can pass multiple handlers to a reactor when you construct it.
         // Each of these handlers will see every event the reactor sees. By
