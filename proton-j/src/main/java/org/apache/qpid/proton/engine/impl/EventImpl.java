@@ -38,12 +38,13 @@ import org.apache.qpid.proton.reactor.Task;
  *
  */
 
-class EventImpl implements Event
+public class EventImpl implements Event
 {
 
     Type type;
     Object context;
     EventImpl next;
+    Handler lastHandler;
 
     EventImpl()
     {
@@ -77,6 +78,7 @@ class EventImpl implements Event
     @Override
     public void dispatch(Handler handler)
     {
+        lastHandler = handler;
         switch (type) {
         case CONNECTION_INIT:
             handler.onConnectionInit(this);
@@ -207,6 +209,8 @@ class EventImpl implements Event
         while(children.hasNext()) {
             dispatch(children.next());
         }
+
+        lastHandler = null;
     }
 
     @Override
@@ -323,6 +327,10 @@ class EventImpl implements Event
        EventImpl newEvent = new EventImpl();
        newEvent.init(type, context);
        return newEvent;
+    }
+
+    public Handler getLastHandler() {
+        return lastHandler;
     }
 
     @Override

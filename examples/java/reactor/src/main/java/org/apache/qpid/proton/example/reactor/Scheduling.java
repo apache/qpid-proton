@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 import org.apache.qpid.proton.reactor.Task;
 
 public class Scheduling extends BaseHandler {
@@ -53,7 +54,7 @@ public class Scheduling extends BaseHandler {
         System.out.println("Goodbye, World! (after " + elapsedTime + " long milliseconds)");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor reactor = Proton.reactor(new Scheduling());
         reactor.run();
     }

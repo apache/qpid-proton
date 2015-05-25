@@ -28,6 +28,7 @@ import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 // Events know how to dispatch themselves to handlers. By combining
 // this with on_unhandled, you can provide a kind of inheritance
@@ -61,7 +62,7 @@ public class Delegates extends BaseHandler {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         Reactor reactor = Proton.reactor(new Delegates(new Hello(), new Goodbye()));
         reactor.run();
     }

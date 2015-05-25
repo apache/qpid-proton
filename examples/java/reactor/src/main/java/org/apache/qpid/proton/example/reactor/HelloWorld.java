@@ -27,6 +27,7 @@ import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 // TODO: sort out docs!
 /*
@@ -46,7 +47,7 @@ public class HelloWorld extends BaseHandler {
         System.out.println("Hello, World!");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
 
         // When you construct a reactor, you can give it a handler that
         // is used, by default.

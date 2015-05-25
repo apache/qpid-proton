@@ -25,12 +25,15 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+
+import junit.framework.AssertionFailedError;
 
 import org.apache.qpid.proton.Proton;
 import org.apache.qpid.proton.engine.BaseHandler;
@@ -106,7 +109,7 @@ public class ReactorTest {
      * @throws IOException
      */
     @Test
-    public void runEmpty() throws IOException {
+    public void runEmpty() throws IOException, HandlerException {
         assertNotNull(reactor);
         reactor.run();
         reactor.free();
@@ -132,7 +135,7 @@ public class ReactorTest {
      * @throws IOException
      */
     @Test
-    public void handlerRun() throws IOException {
+    public void handlerRun() throws IOException, HandlerException {
         Handler handler = reactor.getHandler();
         assertNotNull(handler);
         TestHandler testHandler = new TestHandler();
@@ -154,7 +157,7 @@ public class ReactorTest {
      * @throws IOException
      */
     @Test
-    public void connection() throws IOException {
+    public void connection() throws IOException, HandlerException {
         TestHandler connectionHandler = new TestHandler();
         Connection connection = reactor.connection(connectionHandler);
         assertNotNull(connection);
@@ -178,7 +181,7 @@ public class ReactorTest {
      * @throws IOException
      */
     @Test
-    public void acceptor() throws IOException {
+    public void acceptor() throws IOException, HandlerException {
         final Acceptor acceptor = reactor.acceptor("127.0.0.1", 0);
         assertNotNull(acceptor);
         assertTrue("acceptor should be one of the reactor's children", reactor.children().contains(acceptor));
@@ -224,7 +227,7 @@ public class ReactorTest {
      * @throws IOException
      */
     @Test
-    public void connect() throws IOException {
+    public void connect() throws IOException, HandlerException {
         ServerHandler sh = new ServerHandler();
         Acceptor acceptor = reactor.acceptor("127.0.0.1",  0, sh);
         final int listeningPort = ((AcceptorImpl)acceptor).getPortNumber();
@@ -334,7 +337,7 @@ public class ReactorTest {
         }
     }
 
-    private void transfer(int count, int window) throws IOException {
+    private void transfer(int count, int window) throws IOException, HandlerException {
         reactor = reactorFactory.newReactor();
         ServerHandler sh = new ServerHandler();
         Acceptor acceptor = reactor.acceptor("127.0.0.1", 0, sh);
@@ -356,24 +359,24 @@ public class ReactorTest {
     }
 
     @Test
-    public void transfer_0to64_2() throws IOException {
+    public void transfer_0to64_2() throws IOException, HandlerException {
         for (int i = 0; i < 64; ++i) {
             transfer(i, 2);
         }
     }
 
     @Test
-    public void transfer_1024_64() throws IOException {
+    public void transfer_1024_64() throws IOException, HandlerException {
         transfer(1024, 64);
     }
 
     @Test
-    public void transfer_4096_1024() throws IOException {
+    public void transfer_4096_1024() throws IOException, HandlerException {
         transfer(4*1024, 1024);
     }
 
     @Test
-    public void schedule() throws IOException {
+    public void schedule() throws IOException, HandlerException {
         TestHandler reactorHandler = new TestHandler();
         reactor.getHandler().add(reactorHandler);
         TestHandler taskHandler = new TestHandler();
@@ -383,5 +386,180 @@ public class ReactorTest {
         reactorHandler.assertEvents(Type.REACTOR_INIT, Type.SELECTABLE_INIT, Type.SELECTABLE_UPDATED, Type.REACTOR_QUIESCED, Type.SELECTABLE_UPDATED,
                 Type.SELECTABLE_FINAL, Type.REACTOR_FINAL);
         taskHandler.assertEvents(Type.TIMER_TASK);
+    }
+
+    private class BarfException extends RuntimeException {
+        private static final long serialVersionUID = -5891140258375562884L;
+    }
+
+    private class BarfOnSomethingHandler extends BaseHandler {
+        protected final BarfException exception;
+
+        protected BarfOnSomethingHandler(BarfException exception) {
+            this.exception = exception;
+        }
+    }
+
+    private class BarfOnReactorInit extends BarfOnSomethingHandler {
+
+        protected BarfOnReactorInit(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onReactorInit(Event e) {
+            throw exception;
+        }
+    }
+
+    private class BarfOnReactorFinal extends BarfOnSomethingHandler {
+
+        protected BarfOnReactorFinal(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onReactorFinal(Event event) {
+            throw exception;
+        }
+    }
+
+    private class BarfOnConnectionInit extends BarfOnSomethingHandler {
+
+        protected BarfOnConnectionInit(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onConnectionInit(Event e) {
+            throw exception;
+        }
+    }
+
+    private class BarfOnSessionInit extends BarfOnSomethingHandler {
+
+        protected BarfOnSessionInit(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onSessionInit(Event e) {
+            throw exception;
+        }
+    }
+
+    private class BarfOnLinkInit extends BarfOnSomethingHandler {
+
+        protected BarfOnLinkInit(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onLinkInit(Event e) {
+            throw exception;
+        }
+    }
+
+    private class BarfOnTask extends BarfOnSomethingHandler {
+
+        protected BarfOnTask(BarfException exception) {
+            super(exception);
+        }
+
+        @Override
+        public void onTimerTask(Event e) {
+            throw exception;
+        }
+    }
+
+    private void assertReactorRunBarfsOnHandler(Reactor reactor, BarfException expectedException, Handler expectedHandler) {
+        try {
+            reactor.run();
+            throw new AssertionFailedError("Reactor.run() should have thrown an exception");
+        } catch(HandlerException handlerException) {
+            assertSame("Linked exception does not match expected exception", expectedException, handlerException.getCause());
+            assertSame("Handler in exception does not match expected handler", expectedHandler, handlerException.getHandler());
+        }
+    }
+
+    @Test
+    public void barfInReactorFinal() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnReactorFinal(expectedBarf);
+        reactor.getGlobalHandler().add(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnGlobalSet() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnReactorInit(expectedBarf);
+        reactor.setGlobalHandler(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnGlobalAdd() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnReactorInit(expectedBarf);
+        reactor.getGlobalHandler().add(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnReactorSet() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnReactorInit(expectedBarf);
+        reactor.setHandler(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnReactorAdd() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnReactorInit(expectedBarf);
+        reactor.getHandler().add(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnConnection() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnConnectionInit(expectedBarf);
+        reactor.connection(expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnSession() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnSessionInit(expectedBarf);
+        reactor.connection(expectedHandler).session();
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnLink() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnLinkInit(expectedBarf);
+        reactor.connection(expectedHandler).session().sender("barf");
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
+    }
+
+    @Test
+    public void barfOnSchedule() throws IOException {
+        BarfException expectedBarf = new BarfException();
+        Handler expectedHandler = new BarfOnTask(expectedBarf);
+        reactor.schedule(0, expectedHandler);
+        assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
+        reactor.free();
     }
 }

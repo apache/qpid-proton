@@ -72,15 +72,15 @@ public interface Reactor {
 
     public boolean quiesced();
 
-    public boolean process();
+    public boolean process() throws HandlerException;
 
     public void wakeup() throws IOException;
 
     public void start() ;
 
-    public void stop() ;
+    public void stop() throws HandlerException;
 
-    public void run();
+    public void run() throws HandlerException;
 
     // pn_reactor_schedule from reactor.c
     public Task schedule(int delay, Handler handler);

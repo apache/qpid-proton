@@ -36,6 +36,7 @@ import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.reactor.Handshaker;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.HandlerException;
 
 // This is a send in terms of low level AMQP events.
 public class Send extends BaseHandler {
@@ -131,7 +132,7 @@ public class Send extends BaseHandler {
         event.getReactor().connection(new SendHandler(hostname, message));
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, HandlerException {
         String hostname = args.length > 0 ? args[0] : "localhost";
         String content = args.length > 1 ? args[1] : "Hello World!";
 
