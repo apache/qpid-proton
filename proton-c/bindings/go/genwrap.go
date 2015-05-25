@@ -35,6 +35,59 @@ import (
 	"text/template"
 )
 
+var includeProton = "../../include/proton"
+var outpath = "src/qpid.apache.org/proton/go/event/wrappers_gen.go"
+
+func main() {
+	flag.Parse()
+	out, err := os.Create(outpath)
+	panicIf(err)
+	defer out.Close()
+
+	apis := []string{"session", "link", "delivery", "disposition", "condition", "terminus", "connection"}
+	fmt.Fprintln(out, copyright)
+	fmt.Fprint(out, `
+package event
+
+import (
+	"time"
+  "unsafe"
+  "qpid.apache.org/proton/go/internal"
+)
+
+// #include <proton/types.h>
+// #include <proton/event.h>
+// #include <stdlib.h>
+`)
+	for _, api := range apis {
+		fmt.Fprintf(out, "// #include <proton/%s.h>\n", api)
+	}
+	fmt.Fprintln(out, `import "C"`)
+
+	event(out)
+
+	for _, api := range apis {
+		fmt.Fprintf(out, "// Wrappers for declarations in %s.h\n\n", api)
+		header := readHeader(api)
+		enums := findEnums(header)
+		for _, e := range enums {
+			genEnum(out, e.Name, e.Values)
+		}
+		apiWrapFns(api, header, out)
+	}
+	out.Close()
+
+	// Run gofmt.
+	cmd := exec.Command("gofmt", "-w", outpath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gofmt: %s", err)
+		os.Exit(1)
+	}
+}
+
 func mixedCase(s string) string {
 	result := ""
 	for _, w := range strings.Split(s, "_") {
@@ -96,7 +149,7 @@ func panicIf(err error) {
 }
 
 func readHeader(name string) string {
-	file, err := os.Open(path.Join(*includeProton, name+".h"))
+	file, err := os.Open(path.Join(includeProton, name+".h"))
 	panicIf(err)
 	defer file.Close()
 	s, err := ioutil.ReadAll(file)
@@ -370,58 +423,5 @@ func apiWrapFns(api, header string, out io.Writer) {
 		fmt.Fprint(out, cAssigns(args))
 		rtype.printBody(out, fmt.Sprintf("C.pn_%s_%s(%c.pn%s)", api, fname, api[0], cArgs(args)))
 		fmt.Fprintf(out, "}\n")
-	}
-}
-
-var includeProton = flag.String("include", "", "path to proton include files, including /proton")
-
-func main() {
-	flag.Parse()
-	outpath := "wrappers_gen.go"
-	out, err := os.Create(outpath)
-	panicIf(err)
-	defer out.Close()
-
-	apis := []string{"session", "link", "delivery", "disposition", "condition", "terminus", "connection"}
-	fmt.Fprintln(out, copyright)
-	fmt.Fprint(out, `
-package event
-
-import (
-	"time"
-  "unsafe"
-  "qpid.apache.org/proton/go/internal"
-)
-
-// #include <proton/types.h>
-// #include <proton/event.h>
-// #include <stdlib.h>
-`)
-	for _, api := range apis {
-		fmt.Fprintf(out, "// #include <proton/%s.h>\n", api)
-	}
-	fmt.Fprintln(out, `import "C"`)
-
-	event(out)
-
-	for _, api := range apis {
-		fmt.Fprintf(out, "// Wrappers for declarations in %s.h\n\n", api)
-		header := readHeader(api)
-		enums := findEnums(header)
-		for _, e := range enums {
-			genEnum(out, e.Name, e.Values)
-		}
-		apiWrapFns(api, header, out)
-	}
-	out.Close()
-
-	// Run gofmt.
-	cmd := exec.Command("gofmt", "-w", outpath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "gofmt: %s", err)
-		os.Exit(1)
 	}
 }

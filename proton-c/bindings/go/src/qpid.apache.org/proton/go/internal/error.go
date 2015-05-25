@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"unsafe"
 )
 
@@ -105,21 +104,23 @@ func panicIf(condition bool, fmt string, args ...interface{}) {
 
 // FirstError is a goroutine-safe error holder that keeps the first error that is set.
 type FirstError struct {
-	err  atomic.Value
-	once sync.Once
+	err  error
+	lock sync.Mutex
 }
 
-// Set the error if not allread set.
-func (e *FirstError) Set(err error) {
-	e.once.Do(func() { e.err.Store(err) })
+// Set the error if not already set, return the error.
+func (e *FirstError) Set(err error) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	if e.err == nil {
+		e.err = err
+	}
+	return e.err
 }
 
 // Get the error.
 func (e *FirstError) Get() error {
-	v := e.err.Load()
-	if v != nil {
-		return v.(error)
-	} else {
-		return nil
-	}
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	return e.err
 }

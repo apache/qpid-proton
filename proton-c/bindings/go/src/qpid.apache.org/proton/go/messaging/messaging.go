@@ -23,10 +23,15 @@ package messaging
 import "C"
 
 import (
+	"io"
 	"net"
 	"qpid.apache.org/proton/go/amqp"
 	"qpid.apache.org/proton/go/event"
+	"qpid.apache.org/proton/go/internal"
 )
+
+// Closed is an alias for io.EOF. It indicates orderly closure of an endpoint.
+var Closed = io.EOF
 
 // Connection is a connection to a remote AMQP endpoint.
 //
@@ -42,27 +47,27 @@ type Connection struct {
 	handler *handler
 	pump    *event.Pump
 	session Session
+	err     internal.FirstError
 }
 
+// Error returns nil if the connection is open, messaging.Closed if was closed cleanly
+// or an error value if it was closed due to an error.
+func (c *Connection) Error() error { return c.err.Get() }
+
 // Make an AMQP connection over a net.Conn connection.
-//
-// Use Connection.Close() to close the Connection, this will also close conn.
-// Using conn.Close() directly will cause an abrupt disconnect rather than an
-// orderly AMQP close.
-//
+// You must call c.Close() to close the connection and clean up its resources.
 func (c *Connection) Open(conn net.Conn) (err error) {
 	c.handler = newHandler(c)
 	c.pump, err = event.NewPump(conn,
 		event.NewMessagingDelegator(c.handler),
 	)
-	if err != nil {
-		return err
+	if err == nil {
+		if c.Server {
+			c.pump.Server()
+		}
+		go c.pump.Run()
 	}
-	if c.Server {
-		c.pump.Server()
-	}
-	go c.pump.Run()
-	return nil
+	return c.err.Set(err)
 }
 
 // Connect opens a default client connection. It is a shortcut for
@@ -71,14 +76,16 @@ func (c *Connection) Open(conn net.Conn) (err error) {
 //
 func Connect(conn net.Conn) (*Connection, error) {
 	c := &Connection{}
-	err := c.Open(conn)
-	return c, err
+	c.err.Set(c.Open(conn))
+	return c, c.Error()
 }
 
-// Close the connection.
-//
-// Connections must be closed to clean up resources and stop associated goroutines.
-func (c *Connection) Close() error { return c.pump.Close() }
+// Close cleans up resources and closes the associated net.Conn connection.
+func (c *Connection) Close() error {
+	err := c.pump.Close()   // Will be nil on close OK
+	c.err.Set(c.pump.Error) // Will be io.EOF on close OK
+	return err
+}
 
 // DefaultSession returns a default session for the connection.
 //
@@ -86,6 +93,9 @@ func (c *Connection) Close() error { return c.pump.Close() }
 // Use Session() for more control over creating sessions.
 //
 func (c *Connection) DefaultSession() (s Session, err error) {
+	if c.Error() != nil {
+		return Session{}, c.Error()
+	}
 	if c.session.e.IsNil() {
 		c.session, err = c.Session()
 	}
@@ -237,14 +247,15 @@ func (s *Sender) Send(m amqp.Message) (ack Acknowledgement, err error) {
 // Close the sender.
 func (s *Sender) Close() error { return nil } // FIXME aconway 2015-04-27: close/free
 
-// Receiver receives messages via the channel Receive.
 type Receiver struct {
 	Link
-	// Channel of messag
+	// Channel to receive messages. When it closes, check Receiver.Error() for an error.
 	Receive <-chan amqp.Message
 }
 
 // FIXME aconway 2015-04-29: settlement - ReceivedMessage with Settle() method?
+
+// FIXME aconway 2015-05-25:  Close must unblock Receive() calls.
 
 // Close the Receiver.
 func (r *Receiver) Close() error { return nil } // FIXME aconway 2015-04-29: close/free

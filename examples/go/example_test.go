@@ -78,13 +78,11 @@ func (b *broker) check() error {
 
 // Start the demo broker, wait till it is listening on *addr. No-op if already started.
 func (b *broker) start() error {
-	build("event_broker.go")
 	if b.cmd == nil { // Not already started
 		// FIXME aconway 2015-04-30: better way to pick/configure a broker port.
 		b.addr = fmt.Sprintf("127.0.0.1:%d", rand.Intn(10000)+10000)
-		b.cmd = exec.Command(exepath("event_broker"), "-addr", b.addr, "-verbose", "0")
+		b.cmd = exampleCommand("event_broker", "-addr", b.addr)
 		b.runerr = make(chan error)
-		// Change the -verbose setting above to see broker output on stdout/stderr.
 		b.cmd.Stderr, b.cmd.Stdout = os.Stderr, os.Stdout
 		go func() {
 			b.runerr <- b.cmd.Run()
@@ -111,7 +109,12 @@ func checkEqual(want interface{}, got interface{}) error {
 // runCommand returns an exec.Cmd to run an example.
 func exampleCommand(prog string, arg ...string) *exec.Cmd {
 	build(prog + ".go")
-	cmd := exec.Command(exepath(prog), arg...)
+	args := []string{}
+	if *debug {
+		args = append(args, "-debug=true")
+	}
+	args = append(args, arg...)
+	cmd := exec.Command(exepath(prog), args...)
 	cmd.Stderr = os.Stderr
 	return cmd
 }
@@ -149,16 +152,16 @@ func TestExampleSendReceive(t *testing.T) {
 	}
 	testBroker.start()
 	err := runExampleWant(
-		"send: Received all 15 acknowledgements\n",
+		"Received all 15 acknowledgements\n",
 		"send",
-		exampleArgs("-count", "5", "-verbose", "1")...)
+		exampleArgs("-count", "5")...)
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = runExampleWant(
-		"receive: Listening\nreceive: Received 15 messages\n",
+		"Listening on 3 connections\nReceived 15 messages\n",
 		"receive",
-		exampleArgs("-verbose", "1", "-count", "15")...)
+		exampleArgs("-count", "15")...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +190,7 @@ func goReceiveWant(errchan chan<- error, want string, arg ...string) *exec.Cmd {
 			errchan <- err
 			return
 		}
-		listening := "receive: Listening\n"
+		listening := "Listening on 3 connections\n"
 		if line != listening {
 			errchan <- checkEqual(listening, line)
 			return
@@ -209,8 +212,8 @@ func TestExampleReceiveSend(t *testing.T) {
 	testBroker.start()
 	recvErr := make(chan error)
 	recvCmd := goReceiveWant(recvErr,
-		"receive: Received 15 messages\n",
-		exampleArgs("-count", "15", "-verbose", "1")...)
+		"Received 15 messages\n",
+		exampleArgs("-count", "15")...)
 	defer func() {
 		recvCmd.Process.Kill()
 		recvCmd.Wait()
@@ -219,9 +222,9 @@ func TestExampleReceiveSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := runExampleWant(
-		"send: Received all 15 acknowledgements\n",
+		"Received all 15 acknowledgements\n",
 		"send",
-		exampleArgs("-count", "5", "-verbose", "1")...)
+		exampleArgs("-count", "5")...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,6 +266,7 @@ func build(prog string) {
 }
 
 var rpath = flag.String("rpath", "", "Runtime path for test executables")
+var debug = flag.Bool("debug", false, "Debugging output from examples")
 
 func TestMain(m *testing.M) {
 	rand.Seed(time.Now().UTC().UnixNano())

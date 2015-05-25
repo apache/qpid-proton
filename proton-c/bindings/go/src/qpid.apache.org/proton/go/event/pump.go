@@ -101,7 +101,7 @@ you are doing something fairly low-level it is probably a better choice.
 */
 type Pump struct {
 	// Error is set on exit from Run() if there was an error.
-	Error error
+	Error error // FIXME aconway 2015-05-26: make it a function
 	// Channel to inject functions to be executed in the Pump's proton event loop.
 	Inject chan func()
 
@@ -212,6 +212,9 @@ func (p *Pump) Close() error {
 	}
 	delete(pumps, p.connection)
 	p.free()
+	if p.Error == io.EOF {
+		return nil
+	}
 	return p.Error
 }
 
