@@ -32,8 +32,8 @@ from . import log
 #-----------------------------------------------------------------------------
 # Constants
 #-----------------------------------------------------------------------------
-min_qpid_proton = (0, 9)
-min_qpid_proton_str = "%i.%i" % min_qpid_proton
+min_qpid_proton = (0,9,1)
+min_qpid_proton_str = "%i.%i.%i" % min_qpid_proton
 
 bundled_version = (0,9,1)
 bundled_version_str = "%i.%i.%i" % (0,9,1)
