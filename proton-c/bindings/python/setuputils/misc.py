@@ -30,7 +30,7 @@ def settings_from_prefix(prefix=None):
     settings['libraries'] = []
     settings['include_dirs'] = []
     settings['library_dirs'] = []
-    settings['swig_opts'] = []
+    settings['swig_opts'] = ['-threads']
     settings['runtime_library_dirs'] = []
     settings['extra_link_args'] = []
 
