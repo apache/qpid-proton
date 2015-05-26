@@ -257,6 +257,13 @@ PN_EXTERN int pn_ssl_init( pn_ssl_t *ssl,
  */
 PN_EXTERN bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
+/** Get the SSF (security strength factor) of the Cipher that is currently in use.
+ *
+ * @param[in] ssl the ssl client/server to query.
+ * @return the ssf, note that 0 means no security.
+ */
+PN_EXTERN int pn_ssl_get_ssf(pn_ssl_t *ssl);
+
 /** Get the name of the SSL protocol that is currently in use.
  *
  * Gets a text description of the SSL protocol that is currently active, or returns FALSE if SSL

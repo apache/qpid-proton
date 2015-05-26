@@ -142,3 +142,8 @@ const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl)
 {
   return NULL;
 }
+
+int pn_ssl_get_ssf(pn_ssl_t *ssl)
+{
+  return 0;
+}

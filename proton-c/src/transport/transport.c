@@ -180,21 +180,12 @@ static void pn_io_layer_setup(pn_transport_t *transport, unsigned int layer)
 {
   assert(layer == 0);
   // Figure out if we are server or not
-  if (transport->server)
-  {
-    // XXX: This is currently a large hack to work around the SSL
-    // code not handling a connection error before being set up fully
-    if (transport->ssl && pn_ssl_allow_unsecured(transport)) {
+  if (transport->server) {
       transport->io_layers[layer++] = &pni_autodetect_layer;
       return;
-    }
   }
   if (transport->ssl) {
     transport->io_layers[layer++] = &ssl_layer;
-  }
-  if (transport->server) {
-    transport->io_layers[layer++] = &pni_autodetect_layer;
-    return;
   }
   if (transport->sasl) {
     transport->io_layers[layer++] = &sasl_header_layer;
@@ -261,21 +252,18 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
         pn_transport_logf(transport, "  <- %s", "SASL");
     return 8;
   case PNI_PROTOCOL_AMQP1:
-    if (!transport->authenticated && transport->auth_required) {
+    if (transport->auth_required && !pn_transport_is_authenticated(transport)) {
       pn_do_error(transport, "amqp:connection:policy-error",
                   "Client skipped authentication - forbidden");
       pn_set_error_layer(transport);
       return 8;
     }
-// TODO: Encrypted connection detection not implemented yet
-#if 0
-    if (!transport->encrypted && transport->encryption_required) {
+    if (transport->encryption_required && !pn_transport_is_encrypted(transport)) {
       pn_do_error(transport, "amqp:connection:policy-error",
                   "Client connection unencryted - forbidden");
       pn_set_error_layer(transport);
       return 8;
     }
-#endif
     transport->io_layers[layer] = &amqp_write_header_layer;
     if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "AMQP");
@@ -408,7 +396,6 @@ static void pn_transport_initialize(void *object)
   transport->auth_required = false;
   transport->authenticated = false;
   transport->encryption_required = false;
-  transport->encrypted = false;
 
   transport->referenced = true;
 
@@ -526,8 +513,7 @@ void pn_transport_require_auth(pn_transport_t *transport, bool required)
 
 bool pn_transport_is_authenticated(pn_transport_t *transport)
 {
-  assert(transport);
-  return transport->authenticated;
+  return transport && transport->authenticated;
 }
 
 void pn_transport_require_encryption(pn_transport_t *transport, bool required)
@@ -538,8 +524,7 @@ void pn_transport_require_encryption(pn_transport_t *transport, bool required)
 
 bool pn_transport_is_encrypted(pn_transport_t *transport)
 {
-    assert(transport);
-    return transport->encrypted;
+    return transport && transport->ssl && pn_ssl_get_ssf((pn_ssl_t*)transport)>0;
 }
 
 void pn_transport_free(pn_transport_t *transport)

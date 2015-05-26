@@ -194,7 +194,6 @@ struct pn_transport_t {
   bool auth_required;
   bool authenticated;
   bool encryption_required;
-  bool encrypted;
 
   bool referenced;
 };

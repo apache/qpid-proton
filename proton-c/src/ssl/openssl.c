@@ -718,6 +718,10 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
+  // If SSL doesn't specifically allow skipping encryption, require SSL
+  // TODO: This is a probably a stop-gap until allow_unsecured is removed
+  if (!domain->allow_unsecured) transport->encryption_required = true;
+
   return init_ssl_socket(transport, ssl);
 }
 
@@ -733,9 +737,15 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
   return 0;
 }
 
-bool pn_ssl_allow_unsecured(pn_transport_t *transport)
+int pn_ssl_get_ssf(pn_ssl_t *ssl0)
 {
-  return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
+  const SSL_CIPHER *c;
+
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (ssl && ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
+    return SSL_CIPHER_get_bits(c, NULL);
+  }
+  return 0;
 }
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )

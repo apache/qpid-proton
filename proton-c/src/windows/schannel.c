@@ -409,6 +409,8 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 /** Public API - visible to application code */
 
+// TODO: This should really return true as SSL is fully implemented,
+// but the tests currently fail because the fixed certificates aren't usable on windows
 bool pn_ssl_present(void)
 {
   return false;
@@ -612,6 +614,10 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
+  // If SSL doesn't specifically allow skipping encryption, require SSL
+  // TODO: This is a probably a stop-gap until allow_unsecured is removed
+  if (!domain->allow_unsecured) transport->encryption_required = true;
+
   ssl->cred = domain->cred;
   pn_incref(domain->cred);
 
@@ -641,9 +647,19 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 }
 
 
-bool pn_ssl_allow_unsecured(pn_transport_t *transport)
+// TODO: This is just an untested guess
+int pn_ssl_get_ssf(pn_ssl_t *ssl0)
 {
-  return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
+  SecPkgContext_ConnectionInfo info;
+
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (ssl &&
+      ssl->state == RUNNING &&
+      SecIsValidHandle(&ssl->ctxt_handle) &&
+      QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
+    return info.dwCipherStrength;
+  }
+  return 0;
 }
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
