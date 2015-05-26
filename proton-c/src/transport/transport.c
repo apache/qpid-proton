@@ -250,6 +250,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     transport->io_layers[layer+1] = &pni_autodetect_layer;
     if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "SASL");
+    pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return 8;
   case PNI_PROTOCOL_AMQP1:
     if (transport->auth_required && !pn_transport_is_authenticated(transport)) {

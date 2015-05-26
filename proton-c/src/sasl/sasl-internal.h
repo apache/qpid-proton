@@ -29,6 +29,7 @@
 void pn_sasl_free(pn_transport_t *transport);
 void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *password);
 void pni_sasl_set_remote_hostname(pn_transport_t *transport, const char* fqdn);
+void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const char *authid);
 
 // Internal SASL authenticator interface
 void pni_sasl_impl_free(pn_transport_t *transport);
@@ -63,6 +64,8 @@ struct pni_sasl_t {
   const char *config_name;
   char *config_dir;
   const char *remote_fqdn;
+  char *external_auth;
+  int external_ssf;
   pn_sasl_outcome_t outcome;
   pn_bytes_t bytes_out;
   enum pni_sasl_state desired_state;

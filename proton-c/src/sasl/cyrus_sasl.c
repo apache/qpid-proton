@@ -122,6 +122,23 @@ bool pni_init_client(pn_transport_t* transport) {
     if (result!=SASL_OK) return false;
     sasl->impl_context = cyrus_conn;
 
+    sasl_security_properties_t secprops = {0};
+    secprops.security_flags =
+    SASL_SEC_NOPLAINTEXT |
+    ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+
+    result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
+    if (result!=SASL_OK) return false;
+
+    sasl_ssf_t ssf = sasl->external_ssf;
+    result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
+    if (result!=SASL_OK) return false;
+
+    const char *extid = sasl->external_auth;
+    if (extid) {
+      result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
+      if (result!=SASL_OK) return false;
+    }
     return true;
 }
 
@@ -242,17 +259,15 @@ static int pni_wrap_server_new(pn_transport_t *transport)
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) return result;
 
-    // EXTERNAL not implemented yet
-    #if 0
-    sasl_ssf_t ssf = 128;
-    result = sasl_setprop(sasl->cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
+    sasl_ssf_t ssf = sasl->external_ssf;
+    result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
     if (result!=SASL_OK) return result;
 
-    const char *extid = "user";
-    result = sasl_setprop(sasl->cyrus_conn, SASL_AUTH_EXTERNAL, extid);
-    if (result!=SASL_OK) return result;
-    #endif
-
+    const char *extid = sasl->external_auth;
+    if (extid) {
+      result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
+      if (result!=SASL_OK) return result;
+    }
     return result;
 }
 

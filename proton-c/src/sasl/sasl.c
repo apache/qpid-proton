@@ -24,6 +24,7 @@
 #include "dispatch_actions.h"
 #include "engine/engine-internal.h"
 #include "protocol.h"
+#include "proton/ssl.h"
 #include "util.h"
 #include "transport/autodetect.h"
 
@@ -87,6 +88,7 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
     }
     if (transport->trace & PN_TRACE_FRM)
         pn_transport_logf(transport, "  <- %s", "SASL");
+    pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return SASL_HEADER_LEN;
   case PNI_PROTOCOL_INSUFFICIENT:
     if (!eos) return 0;
@@ -367,6 +369,8 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->config_name = sasl->client ? "proton-client" : "proton-server";
     sasl->config_dir =  sasl_config_path ? pn_strdup(sasl_config_path) : NULL;
     sasl->remote_fqdn = NULL;
+    sasl->external_auth = NULL;
+    sasl->external_ssf = 0;
     sasl->outcome = PN_SASL_NONE;
     sasl->impl_context = NULL;
     sasl->bytes_out.size = 0;
@@ -415,6 +419,14 @@ void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, con
   sasl->username = user;
   free(sasl->password);
   sasl->password = password ? pn_strdup(password) : NULL;
+}
+
+void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const char *authid)
+{
+  pni_sasl_t *sasl = transport->sasl;
+  sasl->external_ssf = ssf;
+  free(sasl->external_auth);
+  sasl->external_auth = authid ? pn_strdup(authid) : NULL;
 }
 
 const char *pn_sasl_get_user(pn_sasl_t *sasl0)
@@ -476,6 +488,7 @@ void pn_sasl_free(pn_transport_t *transport)
       free(sasl->included_mechanisms);
       free(sasl->password);
       free(sasl->config_dir);
+      free(sasl->external_auth);
 
       // CYRUS_SASL
       if (sasl->impl_context) {
