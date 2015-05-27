@@ -133,7 +133,9 @@ class Configure(build_ext):
     description = "Discover Qpid Proton version"
 
     def bundle_libqpid_proton_extension(self):
-        bundledir = "bundled"
+        base = self.get_finalized_command('build').build_base
+        install = self.get_finalized_command('install').install_base
+        bundledir = os.path.join(base, "bundled")
         ext_modules = self.distribution.ext_modules
 
         log.info("Using bundled libqpid-proton")
@@ -154,7 +156,7 @@ class Configure(build_ext):
             # is in `distutils.sysconfig.PREFIX` and finally, disable testing
             # as well. The python binding will be built by this script later
             # on. Don't let cmake do it.
-            extra_compile_args = ['-DCMAKE_INSTALL_PREFIX:PATH=%s' % ds_sys.PREFIX,
+            extra_compile_args = ['-DCMAKE_INSTALL_PREFIX:PATH=%s' % install,
                                   '-DBUILD_PYTHON=False',
                                   '-DBUILD_JAVA=False',
                                   '-DBUILD_PERL=False',
@@ -168,6 +170,7 @@ class Configure(build_ext):
         # NOTE(flaper87): Register this new extension and make
         # sure it's built and installed *before* `_cproton`.
         self.distribution.ext_modules.insert(0, libqpid_proton)
+        return install
 
     def set_cproton_settings(self, prefix=None):
         settings = misc.settings_from_prefix(prefix)
@@ -191,8 +194,7 @@ class Configure(build_ext):
     def run(self):
         prefix = None
         if self.bundle_proton:
-            self.bundle_libqpid_proton_extension()
-            prefix = ds_sys.PREFIX
+            prefix = self.bundle_libqpid_proton_extension()
 
         self.set_cproton_settings(prefix)
 
@@ -204,7 +206,7 @@ cmdclass = {'configure': Configure,
 
 
 setup(name='python-qpid-proton',
-      version=bundle.min_qpid_proton_str,
+      version=bundle.bundled_version_str,
       description='An AMQP based messaging library.',
       author='Apache Qpid',
       author_email='proton@qpid.apache.org',
