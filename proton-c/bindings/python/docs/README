@@ -1,5 +1,0 @@
-Note: The generation of the documentation is not yet hooked into the
-overall build. The docs are based on shpinx which you will need to
-have installed. To build the docs you also need to have the proton lib
-on your PYTHONPATH. Then simply run `make html` and the html files are
-generated under build here.

@@ -94,6 +94,18 @@ if (EPYDOC_EXE)
            ${OPTIONAL_ARG})
 endif (EPYDOC_EXE)
 
+find_program(SPHINX_EXE sphinx-build)
+mark_as_advanced (SPHINX_EXE)
+if (SPHINX_EXE)
+   add_custom_target(tutorial-py COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
+     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+     ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
+   add_dependencies(docs tutorial-py)
+   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
+           DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
+           COMPONENT documentation)
+endif (SPHINX_EXE)
+
 install(FILES ${CPROTON_ARTIFACTS}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)

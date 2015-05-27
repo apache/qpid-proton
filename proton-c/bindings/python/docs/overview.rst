@@ -38,8 +38,7 @@ at-most-once, at-least-once or exactly-once. See
 A summary of the most commonly used classes and members
 =======================================================
 
-A brief summary of some of the key classes follows. A more complete
-reference is available in :doc:`reference`.
+A brief summary of some of the key classes follows.
 
 The :py:class:`~proton.reactor.Container` class is a convenient entry
 point into the API, allowing connections and links to be
