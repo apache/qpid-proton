@@ -506,6 +506,26 @@ if (BUILD_PYTHON)
             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+
+  # Eventually, we'll get rid of this check when other
+  # platforms will be supported. Since `setup.py` will skip
+  # the build for non linux plaforms, it doesn't make sense
+  # to try to run them.
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+     find_program(TOX_CMD "tox")
+     if (TOX_CMD)
+         list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+         add_test (NAME python-tox-test
+                   COMMAND ${env_py}
+		   "PATH=${py_path}" ${VALGRIND_ENV}
+                   tox
+		   WORKING_DIRECTORY ${py_src})
+         set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+     else (TOX_CMD)
+         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+     endif (TOX_CMD)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
+
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
