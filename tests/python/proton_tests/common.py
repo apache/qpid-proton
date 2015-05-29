@@ -219,14 +219,22 @@ class MessengerApp(object):
                     foundfile = self.findfile(cmd[0], os.environ['PATH'])
                     if foundfile is None:
                         foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
-                        assert foundfile is not None, "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                        msg = "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                        raise Skipped("Skipping test - %s" % msg)
+
                     del cmd[0:1]
                     cmd.insert(0, foundfile)
                     cmd.insert(0, sys.executable)
             self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
         except OSError, e:
             print("ERROR: '%s'" % e)
-            assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
+            msg = "Unable to execute command '%s', is it in your PATH?" % cmd[0]
+
+            # NOTE(flaper87): Skip the test if the command is not found.
+            if e.errno == 2:
+              raise Skipped("Skipping test - %s" % msg)
+            assert False, msg
+
         self._ready()  # wait for it to initialize
 
     def stop(self):

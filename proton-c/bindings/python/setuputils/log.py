@@ -26,7 +26,7 @@ if os.environ.get('DEBUG'):
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
-    logger.addHandler(logging.StreamHandler(sys.stderr))
+logger.addHandler(logging.StreamHandler(sys.stderr))
 
 
 def debug(msg):

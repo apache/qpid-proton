@@ -501,6 +501,7 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
+  set (pn_c_root "${CMAKE_BINARY_DIR}/proton")
   set (py_root "${pn_test_root}/python")
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
@@ -515,7 +516,7 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (NAME python-test
             COMMAND ${env_py}
-                    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+	             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
                     ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   else (NOT OLD_ADD_TEST_COMMAND)
@@ -524,10 +525,31 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (python-test
             ${env_py}
-            "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   endif (NOT OLD_ADD_TEST_COMMAND)
+
+  # Eventually, we'll get rid of this check when other
+  # platforms will be supported. Since `setup.py` will skip
+  # the build for non linux plaforms, it doesn't make sense
+  # to try to run them.
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+     find_program(TOX_CMD "tox")
+     if (TOX_CMD)
+         list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+         to_native_path ("${py_path}" py_path)
+         to_native_path ("${py_pythonpath}" py_pythonpath)
+         add_test (NAME python-tox-test
+                   COMMAND ${env_py}
+		   "PATH=${py_path}" ${VALGRIND_ENV}
+                   tox
+		   WORKING_DIRECTORY ${py_src})
+         set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+     else (TOX_CMD)
+         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+     endif (TOX_CMD)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
 
 endif (BUILD_PYTHON)
 
