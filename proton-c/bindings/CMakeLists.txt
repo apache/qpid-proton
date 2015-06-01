@@ -109,10 +109,10 @@ if (EMSCRIPTEN_FOUND)
   set (DEFAULT_JAVASCRIPT ON)
 endif (EMSCRIPTEN_FOUND)
 
-# C++ client: very experimental.  To try, change this to "ON"
-# or provide -DBUILD_CPP=ON to CMake
-set (DEFAULT_CPP OFF)
-
+# Prerequisites for C++
+if (CMAKE_CXX_COMPILER)
+  set (DEFAULT_CPP ON)
+endif (CMAKE_CXX_COMPILER)
 
 # Shouldn't need to modify below here when adding new language binding
 foreach(BINDING ${BINDINGS})

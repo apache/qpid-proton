@@ -26,7 +26,8 @@
 #include <deque>
 #include <map>
 #include <list>
-
+#include <stdlib.h>
+#include <string.h>
 
 using namespace proton::reactor;
 
@@ -97,6 +98,7 @@ class Broker : public MessagingHandler {
 
     void onStart(Event &e) {
         e.getContainer().listen(url);
+        std::cout << "broker listening on " << url << std::endl;
     }
 
     Queue &queue(std::string &address) {
@@ -188,6 +190,12 @@ class Broker : public MessagingHandler {
 };
 
 int main(int argc, char **argv) {
-    Broker hw("localhost:5672");
-    Container(hw).run();
+    std::string url = argc > 1 ? argv[1] : ":5672";
+    Broker broker(url);
+    try {
+        Container(broker).run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }

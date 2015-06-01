@@ -74,16 +74,21 @@ class Send : public MessagingHandler {
 static void parse_options(int argc, char **argv, int &count, std::string &addr);
 
 int main(int argc, char **argv) {
-    int messageCount = 100;
-    std::string address("localhost:5672/examples");
-    parse_options(argc, argv, messageCount, address);
-    Send send(address, messageCount);
-    Container(send).run();
+    try {
+        int messageCount = 100;
+        std::string address("localhost:5672/examples");
+        parse_options(argc, argv, messageCount, address);
+        Send send(address, messageCount);
+        Container(send).run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }
 
 
 static void usage() {
-    std::cout << "Usage: SimpleSend -m message_count -a address:" << std::endl;
+    std::cout << "Usage: simple_send -m message_count -a address:" << std::endl;
     exit (1);
 }
 

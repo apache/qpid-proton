@@ -21,6 +21,7 @@
 
 #include "proton/cpp/Delivery.h"
 #include "proton/delivery.h"
+#include "ProtonImplRef.h"
 
 namespace proton {
 namespace reactor {

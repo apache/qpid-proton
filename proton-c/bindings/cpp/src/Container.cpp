@@ -27,7 +27,6 @@
 #include "proton/cpp/exceptions.h"
 #include "ContainerImpl.h"
 #include "PrivateImplRef.h"
-#include "LogInternal.h"
 
 #include "Connector.h"
 #include "contexts.h"

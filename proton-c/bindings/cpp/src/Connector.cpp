@@ -27,7 +27,6 @@
 #include "Connector.h"
 #include "ConnectionImpl.h"
 #include "Url.h"
-#include "LogInternal.h"
 
 namespace proton {
 namespace reactor {
@@ -46,7 +45,6 @@ void Connector::connect() {
     Url url(address);
     std::string hostname = url.getHost() + ":" + url.getPort();
     pn_connection_set_hostname(conn, hostname.c_str());
-    PN_CPP_LOG(info, "connecting to " << hostname << "...");
     transport = new Transport();
     transport->bind(connection);
     connection.impl->transport = transport;
@@ -57,16 +55,13 @@ void Connector::onConnectionLocalOpen(Event &e) {
     connect();
 }
 
-void Connector::onConnectionRemoteOpen(Event &e) {
-    PN_CPP_LOG(info, "connected to " << e.getConnection().getHostname());
-}
+void Connector::onConnectionRemoteOpen(Event &e) {}
 
 void Connector::onConnectionInit(Event &e) {
 }
 
 void Connector::onTransportClosed(Event &e) {
     // TODO: prepend with reconnect logic
-    PN_CPP_LOG(info, "Disconnected");
     pn_connection_release(connection.impl->pnConnection);
     // No more interaction, so drop our counted reference.
     connection = Connection();

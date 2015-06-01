@@ -24,8 +24,6 @@
 #include "proton/cpp/ImportExport.h"
 #include "proton/cpp/ProtonHandle.h"
 
-#include "ProtonImplRef.h"
-
 #include "proton/delivery.h"
 #include "proton/disposition.h"
 

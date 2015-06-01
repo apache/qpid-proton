@@ -19,27 +19,26 @@
  *
  */
 
-#include "proton/cpp/MessagingHandler.h"
 #include "proton/cpp/Container.h"
+#include "proton/cpp/MessagingHandler.h"
 
-//#include "proton/cpp/Acceptor.h"
 #include <iostream>
 
 
 using namespace proton::reactor;
 
-
-class HelloWorldDirect : public MessagingHandler {
+class HelloWorld : public MessagingHandler {
   private:
-    std::string url;
-    Acceptor acceptor;
+    std::string server;
+    std::string address;
   public:
 
-    HelloWorldDirect(const std::string &u) : url(u) {}
+    HelloWorld(const std::string &s, const std::string &addr) : server(s), address(addr) {}
 
     void onStart(Event &e) {
-        acceptor = e.getContainer().listen(url);
-        e.getContainer().createSender(url);
+        Connection conn = e.getContainer().connect(server);
+        e.getContainer().createReceiver(conn, address);
+        e.getContainer().createSender(conn, address);
     }
 
     void onSendable(Event &e) {
@@ -52,19 +51,19 @@ class HelloWorldDirect : public MessagingHandler {
     void onMessage(Event &e) {
         std::string body = e.getMessage().getBody();
         std::cout << body << std::endl;
-    }
-
-    void onAccepted(Event &e) {
         e.getConnection().close();
-    }
-
-    void onConnectionClosed(Event &e) {
-        acceptor.close();
     }
 
 };
 
 int main(int argc, char **argv) {
-    HelloWorldDirect hwd("localhost:8888/examples");
-    Container(hwd).run();
+    try {
+        std::string server = argc > 1 ? argv[1] : ":5672";
+        std::string addr = argc > 2 ? argv[2] : "examples";
+        HelloWorld hw(server, addr);
+        Container(hw).run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }

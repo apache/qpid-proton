@@ -21,34 +21,27 @@
  * under the License.
  *
  */
-#include "proton/cpp/ImportExport.h"
-#include <string>
-#include <exception>
+#include <stdexcept>
 
 namespace proton {
 namespace reactor {
 
-class ProtonException : public std::exception
+class ProtonException : public std::runtime_error
 {
   public:
-    PROTON_CPP_EXTERN explicit ProtonException(const std::string& message=std::string()) throw();
-    PROTON_CPP_EXTERN virtual ~ProtonException() throw();
-    PROTON_CPP_EXTERN virtual const char* what() const throw();
-
-  private:
-    const std::string message;
+    explicit ProtonException(const std::string& msg) throw() : std::runtime_error(msg) {}
 };
 
 class MessageReject : public ProtonException
 {
   public:
-    PROTON_CPP_EXTERN explicit MessageReject(const std::string& message=std::string()) throw();
+    explicit MessageReject(const std::string& msg) throw() : ProtonException(msg) {}
 };
 
 class MessageRelease : public ProtonException
 {
   public:
-    PROTON_CPP_EXTERN explicit MessageRelease(const std::string& message=std::string()) throw();
+    explicit MessageRelease(const std::string& msg) throw() : ProtonException(msg) {}
 };
 
 }} // namespace proton::reactor

@@ -25,8 +25,8 @@
 #include "proton/cpp/MessagingAdapter.h"
 #include "proton/cpp/Acceptor.h"
 #include "proton/cpp/exceptions.h"
-#include "LogInternal.h"
 
+#include "Msg.h"
 #include "ContainerImpl.h"
 #include "ConnectionImpl.h"
 #include "Connector.h"

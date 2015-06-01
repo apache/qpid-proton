@@ -42,6 +42,7 @@ class Recv : public MessagingHandler {
 
     void onStart(Event &e) {
         e.getContainer().createReceiver(url);
+        std::cout << "simple_recv listening on " << url << std::endl;
     }
 
     void onMessage(Event &e) {
@@ -66,16 +67,21 @@ class Recv : public MessagingHandler {
 static void parse_options(int argc, char **argv, int &count, std::string &addr);
 
 int main(int argc, char **argv) {
-    int messageCount = 100;
-    std::string address("localhost:5672/examples");
-    parse_options(argc, argv, messageCount, address);
-    Recv recv(address, messageCount);
-    Container(recv).run();
+    try {
+        int messageCount = 100;
+        std::string address("localhost:5672/examples");
+        parse_options(argc, argv, messageCount, address);
+        Recv recv(address, messageCount);
+        Container(recv).run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }
 
 
 static void usage() {
-    std::cout << "Usage: SimpleRecv -m message_count -a address:" << std::endl;
+    std::cout << "Usage: simple_recv -m message_count -a address:" << std::endl;
     exit (1);
 }
 

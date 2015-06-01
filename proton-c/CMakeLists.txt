@@ -574,6 +574,3 @@ if (BUILD_JAVASCRIPT)
   add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
   add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
 endif (BUILD_JAVASCRIPT)
-
-# build examples to make sure they still work
-add_subdirectory(../examples ../examples)

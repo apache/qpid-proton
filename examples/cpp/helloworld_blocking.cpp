@@ -50,16 +50,21 @@ class HelloWorldBlocking : public MessagingHandler {
 };
 
 int main(int argc, char **argv) {
-    std::string url("localhost:5672");
-    std::string addr("examples");
-    BlockingConnection conn = BlockingConnection(url);
-    BlockingSender sender = conn.createSender(addr);
-    Message m;
-    m.setBody("Hello World!");
-    sender.send(m);
-    conn.close();
+    try {
+        std::string server = argc > 1 ? argv[1] : ":5672";
+        std::string addr = argc > 2 ? argv[2] : "examples";
+        BlockingConnection conn = BlockingConnection(server);
+        BlockingSender sender = conn.createSender(addr);
+        Message m;
+        m.setBody("Hello World!");
+        sender.send(m);
+        conn.close();
 
-    // Temporary hack until blocking receiver available
-    HelloWorldBlocking hw("localhost:5672", "examples");
-    Container(hw).run();
+        // TODO Temporary hack until blocking receiver available
+        HelloWorldBlocking hw(server, addr);
+        Container(hw).run();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 }

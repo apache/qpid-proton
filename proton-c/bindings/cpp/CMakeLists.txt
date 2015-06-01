@@ -17,8 +17,6 @@
 # under the License.
 #
 
-project (Proton C CXX)
-
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -53,20 +51,12 @@ set (qpid-proton-cpp-core
     src/Delivery.cpp
     src/Acking.cpp
     src/Transport.cpp
-    src/Logger.cpp
     src/contexts.cpp
-    src/exceptions.cpp
     src/blocking/BlockingConnection.cpp
     src/blocking/BlockingConnectionImpl.cpp
     src/blocking/BlockingLink.cpp
     src/blocking/BlockingSender.cpp
   )
-
-#set_source_files_properties (
-#  ${qpid-proton-cpp-core}
-#  PROPERTIES
-#  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
-#  )
 
 set_source_files_properties (${qpid-proton-cpp-platform} PROPERTIES LANGUAGE CXX)
 set_source_files_properties (
@@ -75,8 +65,6 @@ set_source_files_properties (
   COMPILE_FLAGS "${COMPILE_PLATFORM_FLAGS}"
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
-
-
 
 add_library (
   qpid-proton-cpp SHARED
@@ -96,20 +84,6 @@ set_target_properties (
   SOVERSION "${PN_LIB_SOMAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
-
-add_executable (HelloWorld examples/HelloWorld.cpp)
-target_link_libraries (HelloWorld qpid-proton-cpp)
-add_executable (HelloWorldDirect examples/HelloWorldDirect.cpp)
-target_link_libraries (HelloWorldDirect qpid-proton-cpp)
-add_executable (SimpleRecv examples/SimpleRecv.cpp)
-target_link_libraries (SimpleRecv qpid-proton-cpp)
-add_executable (SimpleSend examples/SimpleSend.cpp)
-target_link_libraries (SimpleSend qpid-proton-cpp)
-add_executable (Broker examples/Broker.cpp)
-target_link_libraries (Broker qpid-proton-cpp)
-add_executable (HelloWorldBlocking examples/HelloWorldBlocking.cpp)
-target_link_libraries (HelloWorldBlocking qpid-proton-cpp)
-
 
 install (TARGETS qpid-proton-cpp
   EXPORT  proton

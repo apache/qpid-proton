@@ -28,6 +28,7 @@ namespace proton {
 namespace reactor {
 
 template <class> class PrivateImplRef;
+template <class> class ProtonImplRef;
 
 /**
  * A handle is like a pointer: refers to an underlying implementation object.

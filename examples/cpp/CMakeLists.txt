@@ -17,10 +17,14 @@
 # under the License.
 #
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories ("${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_subdirectory(c/messenger)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
-endif()
+foreach(example broker helloworld helloworld_blocking helloworld_direct simple_recv simple_send)
+  add_executable(${example} ${example}.cpp)
+  target_link_libraries(${example} qpid-proton-cpp)
+endforeach()
+
+add_test(
+  NAME cpp_example_test
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
