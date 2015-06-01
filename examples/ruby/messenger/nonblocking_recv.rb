@@ -76,8 +76,6 @@ loop do
       write_array.delete(sel)
       sel.free
     else
-      sel.capacity
-      sel.pending
       if !sel.registered?
         read_array << sel
         write_array << sel
@@ -102,8 +100,8 @@ loop do
       result.flatten.each do |io|
         sel = selectables[io.fileno]
 
-        sel.writable if sel.pending > 0
-        sel.readable if sel.capacity > 0
+        sel.writable
+        sel.readable
       end
     end
 
@@ -145,4 +143,3 @@ loop do
 end
 
 messenger.stop
-

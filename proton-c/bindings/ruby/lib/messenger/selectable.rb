@@ -44,7 +44,7 @@ module Qpid::Proton::Messenger
     # This can be used in conjunction with the IO class.
     #
     def fileno
-      Cproton.pn_selectable_fd(@impl)
+      Cproton.pn_selectable_get_fd(@impl)
     end
 
     def to_io
