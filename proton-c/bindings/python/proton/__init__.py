@@ -3219,6 +3219,10 @@ A callback for trace logging. The callback is passed the transport and log messa
   def encrypted(self):
     return pn_transport_is_encrypted(self._impl)
 
+  @property
+  def user(self):
+    return pn_transport_get_user(self._impl)
+
   def bind(self, connection):
     """Assign a connection to the transport"""
     self._check(pn_transport_bind(self._impl, connection._impl))
@@ -3355,6 +3359,9 @@ class SASL(Wrapper):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
+  SYS = PN_SASL_SYS
+  PERM = PN_SASL_PERM
+  TEMP = PN_SASL_TEMP
 
   def __init__(self, transport):
     Wrapper.__init__(self, transport._impl, pn_transport_attachments)
@@ -3366,6 +3373,14 @@ class SASL(Wrapper):
       raise exc("[%s]" % (err))
     else:
       return err
+
+  @property
+  def user(self):
+    return pn_sasl_get_user(self._sasl)
+
+  @property
+  def mech(self):
+    return pn_sasl_get_mech(self._sasl)
 
   @property
   def outcome(self):
@@ -3381,6 +3396,11 @@ class SASL(Wrapper):
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
+  def config_name(self, name):
+    pn_sasl_config_name(self._sasl, name)
+
+  def config_path(self, path):
+    pn_sasl_config_path(self._sasl, path)
 
 class SSLException(TransportException):
   pass
