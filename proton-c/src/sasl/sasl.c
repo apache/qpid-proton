@@ -338,7 +338,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pni_emit(transport);
       break;
     case SASL_RECVED_OUTCOME:
-      if (sasl->last_state < SASL_POSTED_INIT) {
+      if (sasl->last_state < SASL_POSTED_INIT && sasl->outcome==PN_SASL_OK) {
         desired_state = SASL_POSTED_INIT;
         continue;
       }
@@ -620,6 +620,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   pni_sasl_t *sasl = transport->sasl;
   sasl->outcome = (pn_sasl_outcome_t) outcome;
+  transport->authenticated = sasl->outcome==PN_SASL_OK;
   pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
 
   return 0;
