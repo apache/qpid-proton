@@ -20,6 +20,14 @@
 require 'qpid_proton'
 require 'optparse'
 
+Thread.new do
+  print "This is a side thread:\n"
+  loop do
+    print "The time is now #{Time.new.strftime('%I:%M:%S')}.\n"
+    sleep 1
+  end
+end
+
 addresses = []
 
 OptionParser.new do |opts|
@@ -37,8 +45,8 @@ messenger.passive = true
 begin
   messenger.start
 rescue ProtonError => error
-  puts "ERROR: #{error.message}"
-  puts error.backtrace.join("\n")
+  print "ERROR: #{error.message}\n"
+  print error.backtrace.join("\n")
   exit
 end
 
@@ -46,7 +54,7 @@ addresses.each do |address|
   begin
     messenger.subscribe(address)
   rescue Qpid::Proton::ProtonError => error
-    puts "ERROR: #{error.message}"
+    print "ERROR: #{error.message}\n"
     exit
   end
 end
@@ -102,7 +110,7 @@ loop do
     begin
       messenger.receive(10)
     rescue Qpid::Proton::ProtonError => error
-      puts "ERROR: #{error.message}"
+      print "ERROR: #{error.message}\n"
       exit
     end
 
@@ -110,24 +118,24 @@ loop do
       begin
         messenger.get(msg)
       rescue Qpid::Proton::Error => error
-        puts "ERROR: #{error.message}"
+        print "ERROR: #{error.message}\n"
         exit
       end
 
-      puts "Address: #{msg.address}"
+      print "Address: #{msg.address}\n"
       subject = msg.subject || "(no subject)"
-      puts "Subject: #{subject}"
-      puts "Body: #{msg.body}"
-      puts "Properties: #{msg.properties}"
-      puts "Instructions: #{msg.instructions}"
-      puts "Annotations: #{msg.annotations}"
+      print "Subject: #{subject}\n"
+      print "Body: #{msg.body}\n"
+      print "Properties: #{msg.properties}\n"
+      print "Instructions: #{msg.instructions}\n"
+      print "Annotations: #{msg.annotations}\n"
 
       if msg.reply_to
-        puts "=== Sending a reply to #{msg.reply_to}"
+        print "=== Sending a reply to #{msg.reply_to}\n"
         reply = Qpid::Proton::Message.new
         reply.address = msg.reply_to
         reply.subject = "RE: #{msg.subject}"
-        reply.content = "Thanks for the message!"
+        reply.body = "Thanks for the message!"
 
         messenger.put(reply)
         messenger.send
