@@ -25,13 +25,11 @@ module Qpid::Proton
   # @private
   class Selectable
 
+    # @private
+    include Util::SwigHelper
 
-    def initialize(messenger, impl) # :nodoc:
-      @messenger = messenger
-      @impl = impl
-      @io = nil
-      @freed = false
-    end
+    # @private
+    PROTON_METHOD_PREFIX = "pn_selectable"
 
     # Returns the underlying file descriptor.
     #
@@ -41,76 +39,90 @@ module Qpid::Proton
       Cproton.pn_selectable_get_fd(@impl)
     end
 
-    def to_io
-      @io ||= IO.new(fileno)
+    proton_reader :reading, :is_or_get => :is
+
+    proton_reader :writing, :is_or_get => :is
+
+    proton_caller :readable
+
+    proton_caller :writable
+
+    proton_caller :expired
+
+    proton_accessor :registered, :is_or_get => :is
+
+    proton_accessor :terminal, :is_or_get => :is
+
+    proton_caller :terminate
+
+    proton_caller :release
+
+    # @private
+    def self.wrap(impl)
+      return nil if impl.nil?
+
+      self.fetch_instance(impl, :pn_selectable_attachments) || Selectable.new(impl)
     end
 
-    # The number of bytes the selectable is capable of consuming.
-    #
-    #def capacity
-    #  Cproton.pn_selectable_capacity(@impl)
-    #end
+    # @private
+    include Util::Wrapper
 
-    # The number of bytes waiting to be written to the file descriptor.
-    #
-    def pending
-      Cproton.pn_selectable_pending(@impl)
-    end
-
-    # The future expiry time at which control will be returned to the
-    # selectable.
-    #
-    def deadline
-      tstamp = Cproton.pn_selectable_deadline(@impl)
-      tstamp.nil? ? nil : tstamp / 1000
-    end
-
-    def readable
-      Cproton.pn_selectable_readable(@impl)
-    end
-
-    def writable
-      Cproton.pn_selectable_writable(@impl)
-    end
-
-    def expired?
-      Cproton.pn_selectable_expired(@impl)
-    end
-
-    def registered=(registered)
-      Cproton.pn_selectable_set_registered(@impl, registered)
-    end
-
-    def registered?
-      Cproton.pn_selectable_is_registered(@impl)
-    end
-
-    def terminal?
-      return true if @impl.nil?
-      Cproton.pn_selectable_is_terminal(@impl)
-    end
-
-    def to_s
-      "fileno=#{self.fileno} registered=#{self.registered?} terminal=#{self.terminal?}"
-    end
-
-    def free
-      return if @freed
-      @freed = true
-      @messenger.unregister_selectable(fileno)
-      @io.close unless @io.nil?
-      Cproton.pn_selectable_free(@impl)
-      @impl = nil
-    end
-
-    def freed? # :nodoc:
-      @freed
+    # @private
+    def initialize(impl)
+      @impl = impl
+      self.class.store_instance(self, :pn_selectable_attachments)
     end
 
     private
 
-    def check_is_initialized
-      raise RuntimeError.new("selectable freed") if @impl.nil?
+    DEFAULT = Object.new
+
+    public
+
+    def fileno(fd = DEFAULT)
+      if fd == DEFAULT
+        Cproton.pn_selectable_get_fd(@impl)
+      elsif fd.nil?
+        Cproton.pn_selectable_set_fd(@impl, Cproton::PN_INVALID_SOCKET)
+      else
+        Cproton.pn_selectable_set_fd(@impl, fd)
+      end
+    end
+
+    def reading=(reading)
+      if reading.nil?
+        reading = false
+      elsif reading == "0"
+        reading = false
+      else
+        reading = true
+      end
+      Cproton.pn_selectable_set_reading(@impl, reading ? true : false)
+    end
+
+    def writing=(writing)
+      if writing.nil?
+        writing = false
+      elsif writing == "0"
+        writing = false
+      else
+        writing = true
+      end
+      Cproton.pn_selectable_set_writing(@impl, writing ? true : false)
+    end
+
+    def deadline
+      tstamp = Cproton.pn_selectable_get_deadline(@impl)
+      return nil if tstamp.nil?
+      mills_to_sec(tstamp)
+    end
+
+    def deadline=(deadline)
+      Cproton.pn_selectable_set_deadline(sec_to_millis(deadline))
+    end
+
+    def to_io
+      @io ||= IO.new(fileno)
     end
 
   end
