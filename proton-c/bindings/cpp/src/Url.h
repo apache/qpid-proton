@@ -32,13 +32,13 @@ namespace reactor {
 class Url : public ProtonHandle<pn_url_t>
 {
   public:
-    PROTON_CPP_EXTERN Url(const std::string &url);
-    PROTON_CPP_EXTERN ~Url();
-    PROTON_CPP_EXTERN Url(const Url&);
-    PROTON_CPP_EXTERN Url& operator=(const Url&);
-    PROTON_CPP_EXTERN std::string getHost();
-    PROTON_CPP_EXTERN std::string getPort();
-    PROTON_CPP_EXTERN std::string getPath();
+    PN_CPP_EXTERN Url(const std::string &url);
+    PN_CPP_EXTERN ~Url();
+    PN_CPP_EXTERN Url(const Url&);
+    PN_CPP_EXTERN Url& operator=(const Url&);
+    PN_CPP_EXTERN std::string getHost();
+    PN_CPP_EXTERN std::string getPort();
+    PN_CPP_EXTERN std::string getPath();
   private:
     friend class ProtonImplRef<Url>;
 };

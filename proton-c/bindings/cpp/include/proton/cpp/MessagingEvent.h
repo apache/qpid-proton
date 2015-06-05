@@ -79,13 +79,13 @@ class MessagingEvent : public ProtonEvent
     MessagingEvent(pn_event_t *ce, pn_event_type_t t, Container &c);
     MessagingEvent(MessagingEventType_t t, ProtonEvent &parent);
     ~MessagingEvent();
-    virtual PROTON_CPP_EXTERN void dispatch(Handler &h);
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    virtual PROTON_CPP_EXTERN Sender getSender();
-    virtual PROTON_CPP_EXTERN Receiver getReceiver();
-    virtual PROTON_CPP_EXTERN Link getLink();
-    virtual PROTON_CPP_EXTERN Message getMessage();
-    virtual PROTON_CPP_EXTERN void setMessage(Message &);
+    virtual PN_CPP_EXTERN void dispatch(Handler &h);
+    virtual PN_CPP_EXTERN Connection &getConnection();
+    virtual PN_CPP_EXTERN Sender getSender();
+    virtual PN_CPP_EXTERN Receiver getReceiver();
+    virtual PN_CPP_EXTERN Link getLink();
+    virtual PN_CPP_EXTERN Message getMessage();
+    virtual PN_CPP_EXTERN void setMessage(Message &);
   private:
     MessagingEventType_t messagingType;
     ProtonEvent *parentEvent;

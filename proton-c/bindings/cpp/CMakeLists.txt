@@ -17,6 +17,8 @@
 # under the License.
 #
 
+## Build
+
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -25,20 +27,23 @@ set (qpid-proton-cpp-platform
   )
 
 set (qpid-proton-cpp-core
+    src/Acceptor.cpp
+    src/Acking.cpp
     src/Connection.cpp
     src/ConnectionImpl.cpp
     src/Connector.cpp
     src/Connector.h
     src/Container.cpp
     src/ContainerImpl.cpp
+    src/Data.cpp
+    src/Decoder.cpp
+    src/Delivery.cpp
+    src/Duration.cpp
+    src/Encoder.cpp
     src/Endpoint.cpp
     src/Event.cpp
     src/Handler.cpp
     src/Link.cpp
-    src/Terminus.cpp
-    src/Acceptor.cpp
-    src/Url.cpp
-    src/Duration.cpp
     src/Message.cpp
     src/MessagingAdapter.cpp
     src/MessagingEvent.cpp
@@ -48,14 +53,17 @@ set (qpid-proton-cpp-core
     src/Receiver.cpp
     src/Sender.cpp
     src/Session.cpp
-    src/Delivery.cpp
-    src/Acking.cpp
+    src/Terminus.cpp
     src/Transport.cpp
-    src/contexts.cpp
+    src/Url.cpp
+    src/Value.cpp
+    src/proton_bits.cpp
     src/blocking/BlockingConnection.cpp
     src/blocking/BlockingConnectionImpl.cpp
     src/blocking/BlockingLink.cpp
     src/blocking/BlockingSender.cpp
+    src/contexts.cpp
+    src/types.cpp
   )
 
 set_source_files_properties (${qpid-proton-cpp-platform} PROPERTIES LANGUAGE CXX)
@@ -84,6 +92,28 @@ set_target_properties (
   SOVERSION "${PN_LIB_SOMAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
+
+## Test
+if (ENABLE_VALGRIND AND VALGRIND_EXE)
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet --leak-check=full --trace-children=yes)
+endif ()
+
+macro(add_cpp_test test)
+  add_executable (${test} src/${test}.cpp)
+  target_link_libraries (${test} qpid-proton qpid-proton-cpp)
+  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    add_test (NAME cpp_${test}
+              COMMAND ${env_py}
+                "PATH=$<TARGET_FILE_DIR:qpid-proton>"
+                ${test}> ${ARGN})
+  else ()
+    add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${test} ${ARGN})
+  endif ()
+endmacro(add_cpp_test)
+
+add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
+
+## Install
 
 install (TARGETS qpid-proton-cpp
   EXPORT  proton

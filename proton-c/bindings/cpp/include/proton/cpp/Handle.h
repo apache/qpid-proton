@@ -30,6 +30,8 @@ namespace reactor {
 template <class> class PrivateImplRef;
 template <class> class ProtonImplRef;
 
+// FIXME aconway 2015-06-09: don't need handle, get rid of it.
+
 /**
  * A handle is like a pointer: refers to an underlying implementation object.
  * Copying the handle does not copy the object.

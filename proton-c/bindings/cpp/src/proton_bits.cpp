@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +15,34 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
 
-#include "proton/types.h"
 #include <string>
+#include <ostream>
+#include <proton/error.h>
+#include <proton/object.h>
+#include "proton_bits.h"
 
-struct pn_connection_t;
+std::string errorStr(int code) {
+  switch (code)
+  {
+  case 0: return "ok";
+  case PN_EOS: return "end of data stream";
+  case PN_ERR: return "error";
+  case PN_OVERFLOW: return "overflow";
+  case PN_UNDERFLOW: return "underflow";
+  case PN_STATE_ERR: return "invalid state";
+  case PN_ARG_ERR: return "invalud argument";
+  case PN_TIMEOUT: return "timeout";
+  case PN_INTR: return "interrupt";
+  default: return "unknown error code";
+  }
+}
 
-namespace proton {
-namespace reactor {
-
-
-class Sender : public Link
-{
-  public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
-  protected:
-    virtual void verifyType(pn_link_t *l);
-};
-
-
-}} // namespace proton::reactor
-
-#endif  /*!PROTON_CPP_SENDER_H*/
+std::ostream& operator<<(std::ostream& o, const Object& object) {
+    pn_string_t* str = pn_string("");
+    pn_inspect(object.value, str);
+    o << pn_string_get(str);
+    pn_free(str);
+    return o;
+}

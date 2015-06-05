@@ -42,15 +42,15 @@ class Transport;
  class Session : public Endpoint, public ProtonHandle<pn_session_t>
 {
   public:
-    PROTON_CPP_EXTERN Session(pn_session_t *s);
-    PROTON_CPP_EXTERN Session();
-    PROTON_CPP_EXTERN ~Session();
-    PROTON_CPP_EXTERN void open();
-    PROTON_CPP_EXTERN Session(const Session&);
-    PROTON_CPP_EXTERN Session& operator=(const Session&);
-    PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN pn_session_t *getPnSession();
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
+    PN_CPP_EXTERN Session(pn_session_t *s);
+    PN_CPP_EXTERN Session();
+    PN_CPP_EXTERN ~Session();
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN Session(const Session&);
+    PN_CPP_EXTERN Session& operator=(const Session&);
+    PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN pn_session_t *getPnSession();
+    virtual PN_CPP_EXTERN Connection &getConnection();
     Receiver createReceiver(std::string name);
     Sender createSender(std::string name);
   private:

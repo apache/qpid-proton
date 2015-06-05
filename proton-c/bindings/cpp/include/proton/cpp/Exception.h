@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
+#ifndef PROTON_CPP_EXCEPTIONS_H
+#define PROTON_CPP_EXCEPTIONS_H
 
 /*
  *
@@ -21,32 +21,29 @@
  * under the License.
  *
  */
-#include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
-
-#include "proton/types.h"
-#include <string>
-
-struct pn_connection_t;
+#include <stdexcept>
 
 namespace proton {
 namespace reactor {
 
-
-class Sender : public Link
+class Exception : public std::runtime_error
 {
   public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
-  protected:
-    virtual void verifyType(pn_link_t *l);
+    explicit Exception(const std::string& msg) throw() : std::runtime_error(msg) {}
 };
 
+class MessageReject : public Exception
+{
+  public:
+    explicit MessageReject(const std::string& msg) throw() : Exception(msg) {}
+};
+
+class MessageRelease : public Exception
+{
+  public:
+    explicit MessageRelease(const std::string& msg) throw() : Exception(msg) {}
+};
 
 }} // namespace proton::reactor
 
-#endif  /*!PROTON_CPP_SENDER_H*/
+#endif  /*!PROTON_CPP_EXCEPTIONS_H*/

@@ -45,8 +45,8 @@ class Endpoint
     typedef int State;
 
     // TODO: getCondition, getRemoteCondition, updateCondition, get/setHandler
-    virtual PROTON_CPP_EXTERN Connection &getConnection() = 0;
-    Transport PROTON_CPP_EXTERN &getTransport();
+    virtual PN_CPP_EXTERN Connection &getConnection() = 0;
+    Transport PN_CPP_EXTERN &getTransport();
   protected:
     Endpoint();
     ~Endpoint();

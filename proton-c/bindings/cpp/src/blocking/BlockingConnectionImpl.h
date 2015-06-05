@@ -39,12 +39,12 @@ class SslDomain;
  class BlockingConnectionImpl : public MessagingHandler
 {
   public:
-    PROTON_CPP_EXTERN BlockingConnectionImpl(std::string &url, Duration d, SslDomain *ssld, Container *c);
-    PROTON_CPP_EXTERN ~BlockingConnectionImpl();
-    PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN void wait(WaitCondition &condition);
-    PROTON_CPP_EXTERN void wait(WaitCondition &condition, std::string &msg, Duration timeout);
-    PROTON_CPP_EXTERN pn_connection_t *getPnBlockingConnection();
+    PN_CPP_EXTERN BlockingConnectionImpl(std::string &url, Duration d, SslDomain *ssld, Container *c);
+    PN_CPP_EXTERN ~BlockingConnectionImpl();
+    PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN void wait(WaitCondition &condition);
+    PN_CPP_EXTERN void wait(WaitCondition &condition, std::string &msg, Duration timeout);
+    PN_CPP_EXTERN pn_connection_t *getPnBlockingConnection();
     Duration getTimeout() { return timeout; }
     static void incref(BlockingConnectionImpl *);
     static void decref(BlockingConnectionImpl *);

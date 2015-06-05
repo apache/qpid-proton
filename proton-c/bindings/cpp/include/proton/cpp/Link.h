@@ -36,24 +36,24 @@ namespace reactor {
 class Link : public Endpoint, public ProtonHandle<pn_link_t>
 {
   public:
-    PROTON_CPP_EXTERN Link(pn_link_t *);
-    PROTON_CPP_EXTERN Link();
-    PROTON_CPP_EXTERN ~Link();
-    PROTON_CPP_EXTERN Link(const Link&);
-    PROTON_CPP_EXTERN Link& operator=(const Link&);
-    PROTON_CPP_EXTERN void open();
-    PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN bool isSender();
-    PROTON_CPP_EXTERN bool isReceiver();
-    PROTON_CPP_EXTERN int getCredit();
-    PROTON_CPP_EXTERN Terminus getSource();
-    PROTON_CPP_EXTERN Terminus getTarget();
-    PROTON_CPP_EXTERN Terminus getRemoteSource();
-    PROTON_CPP_EXTERN Terminus getRemoteTarget();
-    PROTON_CPP_EXTERN std::string getName();
-    PROTON_CPP_EXTERN pn_link_t *getPnLink() const;
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    PROTON_CPP_EXTERN Link getNext(Endpoint::State mask);
+    PN_CPP_EXTERN Link(pn_link_t *);
+    PN_CPP_EXTERN Link();
+    PN_CPP_EXTERN ~Link();
+    PN_CPP_EXTERN Link(const Link&);
+    PN_CPP_EXTERN Link& operator=(const Link&);
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN bool isSender();
+    PN_CPP_EXTERN bool isReceiver();
+    PN_CPP_EXTERN int getCredit();
+    PN_CPP_EXTERN Terminus getSource();
+    PN_CPP_EXTERN Terminus getTarget();
+    PN_CPP_EXTERN Terminus getRemoteSource();
+    PN_CPP_EXTERN Terminus getRemoteTarget();
+    PN_CPP_EXTERN std::string getName();
+    PN_CPP_EXTERN pn_link_t *getPnLink() const;
+    virtual PN_CPP_EXTERN Connection &getConnection();
+    PN_CPP_EXTERN Link getNext(Endpoint::State mask);
   protected:
     virtual void verifyType(pn_link_t *l);
   private:

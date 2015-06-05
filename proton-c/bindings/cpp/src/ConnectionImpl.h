@@ -39,19 +39,19 @@ class Container;
 class ConnectionImpl : public Endpoint
 {
   public:
-    PROTON_CPP_EXTERN ConnectionImpl(Container &c, pn_connection_t &pnConn);
-    PROTON_CPP_EXTERN ConnectionImpl(Container &c, Handler *h = 0);
-    PROTON_CPP_EXTERN ~ConnectionImpl();
-    PROTON_CPP_EXTERN Transport &getTransport();
-    PROTON_CPP_EXTERN Handler *getOverride();
-    PROTON_CPP_EXTERN void setOverride(Handler *h);
-    PROTON_CPP_EXTERN void open();
-    PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN pn_connection_t *getPnConnection();
-    PROTON_CPP_EXTERN Container &getContainer();
-    PROTON_CPP_EXTERN std::string getHostname();
-    PROTON_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
+    PN_CPP_EXTERN ConnectionImpl(Container &c, pn_connection_t &pnConn);
+    PN_CPP_EXTERN ConnectionImpl(Container &c, Handler *h = 0);
+    PN_CPP_EXTERN ~ConnectionImpl();
+    PN_CPP_EXTERN Transport &getTransport();
+    PN_CPP_EXTERN Handler *getOverride();
+    PN_CPP_EXTERN void setOverride(Handler *h);
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN pn_connection_t *getPnConnection();
+    PN_CPP_EXTERN Container &getContainer();
+    PN_CPP_EXTERN std::string getHostname();
+    PN_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
+    virtual PN_CPP_EXTERN Connection &getConnection();
     static Connection &getReactorReference(pn_connection_t *);
     static ConnectionImpl *getImpl(const Connection &c) { return c.impl; }
     void reactorDetach();

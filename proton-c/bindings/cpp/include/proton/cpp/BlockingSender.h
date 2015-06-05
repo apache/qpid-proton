@@ -41,10 +41,10 @@ class BlockingLink;
 class BlockingSender : public BlockingLink
 {
   public:
-    PROTON_CPP_EXTERN Delivery send(Message &msg);
-    PROTON_CPP_EXTERN Delivery send(Message &msg, Duration timeout);
+    PN_CPP_EXTERN Delivery send(Message &msg);
+    PN_CPP_EXTERN Delivery send(Message &msg, Duration timeout);
   private:
-    PROTON_CPP_EXTERN BlockingSender(BlockingConnection &c, Sender &l);
+    PN_CPP_EXTERN BlockingSender(BlockingConnection &c, Sender &l);
     friend class BlockingConnection;
 };
 

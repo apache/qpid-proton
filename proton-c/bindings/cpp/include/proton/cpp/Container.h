@@ -45,29 +45,29 @@ class Link;
 class Container : public Handle<ContainerImpl>
 {
   public:
-    PROTON_CPP_EXTERN Container(ContainerImpl *);
-    PROTON_CPP_EXTERN Container(const Container& c);
-    PROTON_CPP_EXTERN Container& operator=(const Container& c);
-    PROTON_CPP_EXTERN ~Container();
+    PN_CPP_EXTERN Container(ContainerImpl *);
+    PN_CPP_EXTERN Container(const Container& c);
+    PN_CPP_EXTERN Container& operator=(const Container& c);
+    PN_CPP_EXTERN ~Container();
 
-    PROTON_CPP_EXTERN Container();
-    PROTON_CPP_EXTERN Container(MessagingHandler &mhandler);
-    PROTON_CPP_EXTERN Connection connect(std::string &host, Handler *h=0);
-    PROTON_CPP_EXTERN void run();
-    PROTON_CPP_EXTERN void start();
-    PROTON_CPP_EXTERN bool process();
-    PROTON_CPP_EXTERN void stop();
-    PROTON_CPP_EXTERN void wakeup();
-    PROTON_CPP_EXTERN bool isQuiesced();
-    PROTON_CPP_EXTERN pn_reactor_t *getReactor();
-    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h=0);
-    PROTON_CPP_EXTERN Sender createSender(std::string &url);
-    PROTON_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
-    PROTON_CPP_EXTERN Receiver createReceiver(const std::string &url);
-    PROTON_CPP_EXTERN Acceptor listen(const std::string &url);
-    PROTON_CPP_EXTERN std::string getContainerId();
-    PROTON_CPP_EXTERN Duration getTimeout();
-    PROTON_CPP_EXTERN void setTimeout(Duration timeout);
+    PN_CPP_EXTERN Container();
+    PN_CPP_EXTERN Container(MessagingHandler &mhandler);
+    PN_CPP_EXTERN Connection connect(std::string &host, Handler *h=0);
+    PN_CPP_EXTERN void run();
+    PN_CPP_EXTERN void start();
+    PN_CPP_EXTERN bool process();
+    PN_CPP_EXTERN void stop();
+    PN_CPP_EXTERN void wakeup();
+    PN_CPP_EXTERN bool isQuiesced();
+    PN_CPP_EXTERN pn_reactor_t *getReactor();
+    PN_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h=0);
+    PN_CPP_EXTERN Sender createSender(std::string &url);
+    PN_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
+    PN_CPP_EXTERN Receiver createReceiver(const std::string &url);
+    PN_CPP_EXTERN Acceptor listen(const std::string &url);
+    PN_CPP_EXTERN std::string getContainerId();
+    PN_CPP_EXTERN Duration getTimeout();
+    PN_CPP_EXTERN void setTimeout(Duration timeout);
   private:
    friend class PrivateImplRef<Container>;
 };

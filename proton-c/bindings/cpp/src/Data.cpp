@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +15,34 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
 
-#include "proton/types.h"
-#include <string>
-
-struct pn_connection_t;
+#include "proton/cpp/Data.h"
+#include <proton/codec.h>
+#include "proton_bits.h"
 
 namespace proton {
 namespace reactor {
 
+Data::Data(pn_data_t* p) : data(p ? p : pn_data(0)) {}
 
-class Sender : public Link
-{
-  public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
-  protected:
-    virtual void verifyType(pn_link_t *l);
-};
+Data::~Data() { if (data) pn_data_free(data); }
 
+Data& Data::operator=(const Data& x) {
+    if (this != &x) {
+        pn_data_free(data);
+        data = pn_data(pn_data_size(x.data));
+        pn_data_copy(data, x.data);
+    }
+    return *this;
+}
+
+void Data::clear() { pn_data_clear(data); }
+
+bool Data::empty() const { return pn_data_size(data) == 0; }
+
+std::ostream& operator<<(std::ostream& o, const Data& d) {
+    o << Object(d.data);
+}
 
 }} // namespace proton::reactor
-
-#endif  /*!PROTON_CPP_SENDER_H*/

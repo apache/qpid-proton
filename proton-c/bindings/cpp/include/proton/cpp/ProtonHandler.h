@@ -32,7 +32,7 @@ class ProtonEvent;
 class ProtonHandler : public Handler
 {
   public:
-    PROTON_CPP_EXTERN ProtonHandler();
+    PN_CPP_EXTERN ProtonHandler();
     virtual void onReactorInit(Event &e);
     virtual void onReactorQuiesced(Event &e);
     virtual void onReactorFinal(Event &e);

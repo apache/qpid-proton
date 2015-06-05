@@ -32,10 +32,10 @@ namespace reactor {
 class Acking
 {
   public:
-    PROTON_CPP_EXTERN virtual void accept(Delivery &d);
-    PROTON_CPP_EXTERN virtual void reject(Delivery &d);
-    PROTON_CPP_EXTERN virtual void release(Delivery &d, bool delivered=true);
-    PROTON_CPP_EXTERN virtual void settle(Delivery &d, Delivery::state s = Delivery::REJECTED);
+    PN_CPP_EXTERN virtual void accept(Delivery &d);
+    PN_CPP_EXTERN virtual void reject(Delivery &d);
+    PN_CPP_EXTERN virtual void release(Delivery &d, bool delivered=true);
+    PN_CPP_EXTERN virtual void settle(Delivery &d, Delivery::state s = Delivery::REJECTED);
 };
 
 

@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
+#ifndef ERROR_H
+#define ERROR_H
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +17,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
 
-#include "proton/types.h"
-#include <string>
+#include <iosfwd>
 
-struct pn_connection_t;
+/**@file
+ *
+ * Assorted internal proton utilities.
+ */
+std::string errorStr(int code);
 
-namespace proton {
-namespace reactor {
+/** Wrapper for a proton object pointer. */
+struct Object { void* value; Object(void* o) : value(o) {} };
 
-
-class Sender : public Link
-{
-  public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
-  protected:
-    virtual void verifyType(pn_link_t *l);
-};
+/** Stream a proton object via pn_inspect. */
+std::ostream& operator<<(std::ostream& o, const Object& object);
 
 
-}} // namespace proton::reactor
 
-#endif  /*!PROTON_CPP_SENDER_H*/
+
+#endif // ERROR_H

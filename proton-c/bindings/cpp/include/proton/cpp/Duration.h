@@ -34,22 +34,22 @@ namespace reactor {
 class Duration
 {
   public:
-    PROTON_CPP_EXTERN explicit Duration(uint64_t milliseconds);
-    PROTON_CPP_EXTERN uint64_t getMilliseconds() const;
-    PROTON_CPP_EXTERN static const Duration FOREVER;
-    PROTON_CPP_EXTERN static const Duration IMMEDIATE;
-    PROTON_CPP_EXTERN static const Duration SECOND;
-    PROTON_CPP_EXTERN static const Duration MINUTE;
+    PN_CPP_EXTERN explicit Duration(uint64_t milliseconds);
+    PN_CPP_EXTERN uint64_t getMilliseconds() const;
+    PN_CPP_EXTERN static const Duration FOREVER;
+    PN_CPP_EXTERN static const Duration IMMEDIATE;
+    PN_CPP_EXTERN static const Duration SECOND;
+    PN_CPP_EXTERN static const Duration MINUTE;
   private:
     uint64_t milliseconds;
 };
 
-PROTON_CPP_EXTERN Duration operator*(const Duration& duration,
+PN_CPP_EXTERN Duration operator*(const Duration& duration,
                                          uint64_t multiplier);
-PROTON_CPP_EXTERN Duration operator*(uint64_t multiplier,
+PN_CPP_EXTERN Duration operator*(uint64_t multiplier,
                                          const Duration& duration);
-PROTON_CPP_EXTERN bool operator==(const Duration& a, const Duration& b);
-PROTON_CPP_EXTERN bool operator!=(const Duration& a, const Duration& b);
+PN_CPP_EXTERN bool operator==(const Duration& a, const Duration& b);
+PN_CPP_EXTERN bool operator!=(const Duration& a, const Duration& b);
 
 }} // namespace proton::reactor
 

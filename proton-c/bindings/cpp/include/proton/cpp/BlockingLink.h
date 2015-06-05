@@ -39,11 +39,11 @@ class BlockingConnection;
 class BlockingLink
 {
   public:
-    PROTON_CPP_EXTERN void close();
+    PN_CPP_EXTERN void close();
     ~BlockingLink();
   protected:
-    PROTON_CPP_EXTERN BlockingLink(BlockingConnection *c, pn_link_t *l);
-    PROTON_CPP_EXTERN void waitForClosed(Duration timeout=Duration::SECOND);
+    PN_CPP_EXTERN BlockingLink(BlockingConnection *c, pn_link_t *l);
+    PN_CPP_EXTERN void waitForClosed(Duration timeout=Duration::SECOND);
   private:
     BlockingConnection connection;
     Link link;

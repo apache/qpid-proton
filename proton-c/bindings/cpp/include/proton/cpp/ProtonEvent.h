@@ -35,16 +35,16 @@ class Container;
 class ProtonEvent : public Event
 {
   public:
-    virtual PROTON_CPP_EXTERN void dispatch(Handler &h);
-    virtual PROTON_CPP_EXTERN Container &getContainer();
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    virtual PROTON_CPP_EXTERN Sender getSender();
-    virtual PROTON_CPP_EXTERN Receiver getReceiver();
-    virtual PROTON_CPP_EXTERN Link getLink();
-    PROTON_CPP_EXTERN int getType();
-    PROTON_CPP_EXTERN pn_event_t* getPnEvent();
+    virtual PN_CPP_EXTERN void dispatch(Handler &h);
+    virtual PN_CPP_EXTERN Container &getContainer();
+    virtual PN_CPP_EXTERN Connection &getConnection();
+    virtual PN_CPP_EXTERN Sender getSender();
+    virtual PN_CPP_EXTERN Receiver getReceiver();
+    virtual PN_CPP_EXTERN Link getLink();
+    PN_CPP_EXTERN int getType();
+    PN_CPP_EXTERN pn_event_t* getPnEvent();
   protected:
-    PROTON_CPP_EXTERN ProtonEvent(pn_event_t *ce, pn_event_type_t t, Container &c);
+    PN_CPP_EXTERN ProtonEvent(pn_event_t *ce, pn_event_type_t t, Container &c);
   private:
     pn_event_t *pnEvent;
     int type;

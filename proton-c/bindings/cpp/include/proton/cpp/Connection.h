@@ -41,23 +41,23 @@ class ConnectionImpl;
 class Connection : public Endpoint, public Handle<ConnectionImpl>
 {
   public:
-    PROTON_CPP_EXTERN Connection();
-    PROTON_CPP_EXTERN Connection(ConnectionImpl *);
-    PROTON_CPP_EXTERN Connection(const Connection& c);
-    PROTON_CPP_EXTERN Connection& operator=(const Connection& c);
-    PROTON_CPP_EXTERN ~Connection();
+    PN_CPP_EXTERN Connection();
+    PN_CPP_EXTERN Connection(ConnectionImpl *);
+    PN_CPP_EXTERN Connection(const Connection& c);
+    PN_CPP_EXTERN Connection& operator=(const Connection& c);
+    PN_CPP_EXTERN ~Connection();
 
-    PROTON_CPP_EXTERN Connection(Container &c, Handler *h = 0);
-    PROTON_CPP_EXTERN Transport &getTransport();
-    PROTON_CPP_EXTERN Handler *getOverride();
-    PROTON_CPP_EXTERN void setOverride(Handler *h);
-    PROTON_CPP_EXTERN void open();
-    PROTON_CPP_EXTERN void close();
-    PROTON_CPP_EXTERN pn_connection_t *getPnConnection();
-    PROTON_CPP_EXTERN Container &getContainer();
-    PROTON_CPP_EXTERN std::string getHostname();
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    PROTON_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
+    PN_CPP_EXTERN Connection(Container &c, Handler *h = 0);
+    PN_CPP_EXTERN Transport &getTransport();
+    PN_CPP_EXTERN Handler *getOverride();
+    PN_CPP_EXTERN void setOverride(Handler *h);
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN pn_connection_t *getPnConnection();
+    PN_CPP_EXTERN Container &getContainer();
+    PN_CPP_EXTERN std::string getHostname();
+    virtual PN_CPP_EXTERN Connection &getConnection();
+    PN_CPP_EXTERN Link getLinkHead(Endpoint::State mask);
   private:
    friend class PrivateImplRef<Connection>;
    friend class Connector;

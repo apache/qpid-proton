@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
+#ifndef PN_DATA_H
+#define PN_DATA_H
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +17,14 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
 
-#include "proton/types.h"
-#include <string>
+// Some routines for handling pn_data_t
 
-struct pn_connection_t;
+std::ostream& operator<<(std::ostream& o, const Value& v) {
+    pn_string_t* str = pn_string("");
+    pn_inspect(v.data, str);
+    return o << pn_string_get(str);
+}
 
-namespace proton {
-namespace reactor {
-
-
-class Sender : public Link
-{
-  public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
-  protected:
-    virtual void verifyType(pn_link_t *l);
-};
-
-
-}} // namespace proton::reactor
-
-#endif  /*!PROTON_CPP_SENDER_H*/
+#endif // PN_DATA_H

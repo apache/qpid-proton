@@ -44,19 +44,19 @@ class WaitCondition;
 class BlockingConnection : public Handle<BlockingConnectionImpl>
 {
   public:
-    PROTON_CPP_EXTERN BlockingConnection();
-    PROTON_CPP_EXTERN BlockingConnection(const BlockingConnection& c);
-    PROTON_CPP_EXTERN BlockingConnection& operator=(const BlockingConnection& c);
-    PROTON_CPP_EXTERN ~BlockingConnection();
+    PN_CPP_EXTERN BlockingConnection();
+    PN_CPP_EXTERN BlockingConnection(const BlockingConnection& c);
+    PN_CPP_EXTERN BlockingConnection& operator=(const BlockingConnection& c);
+    PN_CPP_EXTERN ~BlockingConnection();
 
-    PROTON_CPP_EXTERN BlockingConnection(std::string &url, Duration = Duration::FOREVER,
+    PN_CPP_EXTERN BlockingConnection(std::string &url, Duration = Duration::FOREVER,
                                          SslDomain *ssld=0, Container *c=0);
-    PROTON_CPP_EXTERN void close();
+    PN_CPP_EXTERN void close();
 
-    PROTON_CPP_EXTERN BlockingSender createSender(std::string &address, Handler *h=0);
-    PROTON_CPP_EXTERN void wait(WaitCondition &condition);
-    PROTON_CPP_EXTERN void wait(WaitCondition &condition, std::string &msg, Duration timeout=Duration::FOREVER);
-    PROTON_CPP_EXTERN Duration getTimeout();
+    PN_CPP_EXTERN BlockingSender createSender(std::string &address, Handler *h=0);
+    PN_CPP_EXTERN void wait(WaitCondition &condition);
+    PN_CPP_EXTERN void wait(WaitCondition &condition, std::string &msg, Duration timeout=Duration::FOREVER);
+    PN_CPP_EXTERN Duration getTimeout();
   private:
     friend class PrivateImplRef<BlockingConnection>;
 };

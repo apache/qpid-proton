@@ -258,10 +258,7 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
-if (SWIG_FOUND)
-  add_subdirectory(bindings)
-endif (SWIG_FOUND)
-
+add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)

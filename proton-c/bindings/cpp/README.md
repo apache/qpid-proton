@@ -9,7 +9,7 @@ API documentation in doxygen format.
 
 There are a number of things that remain to be done.
 
-- Type mapping between AMQP and C++ types, e.g. encoding std::map as map message.
+- Mapping of complex types.
 
 - Finish blocking API & demos.
 - API documentation, HTML docs on website.
@@ -20,3 +20,11 @@ There are a number of things that remain to be done.
 
 - Security: SASL/SSL support.
 - Reconnection
+
+
+# Nice to have
+
+Subclasses of Encoder/Decoder that push to/pull from a std::ostream/istream as
+values are inserted/extracted.
+
+Better support for Decimal type.

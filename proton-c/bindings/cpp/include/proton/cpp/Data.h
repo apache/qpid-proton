@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
+#ifndef DATA_H
+#define DATA_H
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +17,39 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
+
 #include "proton/cpp/ImportExport.h"
-#include "proton/cpp/Delivery.h"
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Message.h"
+#include <iosfwd>
 
-#include "proton/types.h"
-#include <string>
-
-struct pn_connection_t;
+struct pn_data_t;
 
 namespace proton {
 namespace reactor {
 
-
-class Sender : public Link
-{
+/** Base for classes that hold AMQP data. */
+class Data {
   public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
-    PN_CPP_EXTERN Sender(const Link& c);
-    PN_CPP_EXTERN Delivery send(Message &m);
+    virtual ~Data();
+
+    /** Copies the data */
+    Data& operator=(const Data&);
+
+    /** Clear the data. */
+    PN_CPP_EXTERN void clear();
+
+    /** True if there are no values. */
+    PN_CPP_EXTERN bool empty() const;
+
+    /** Human readable representation of data. */
+    friend std::ostream& operator<<(std::ostream&, const Data&);
+
   protected:
-    virtual void verifyType(pn_link_t *l);
+    /** Takes ownership of pd */
+    explicit Data(pn_data_t* pd=0);
+    mutable pn_data_t* data;
 };
 
 
-}} // namespace proton::reactor
-
-#endif  /*!PROTON_CPP_SENDER_H*/
+}}
+#endif // DATA_H

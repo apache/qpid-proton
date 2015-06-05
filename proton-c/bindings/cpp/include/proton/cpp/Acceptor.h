@@ -33,13 +33,13 @@ namespace reactor {
 class Acceptor : public ProtonHandle<pn_acceptor_t>
 {
   public:
-    PROTON_CPP_EXTERN Acceptor();
-    PROTON_CPP_EXTERN Acceptor(pn_acceptor_t *);
-    PROTON_CPP_EXTERN Acceptor(const Acceptor&);
-    PROTON_CPP_EXTERN Acceptor& operator=(const Acceptor&);
-    PROTON_CPP_EXTERN ~Acceptor();
+    PN_CPP_EXTERN Acceptor();
+    PN_CPP_EXTERN Acceptor(pn_acceptor_t *);
+    PN_CPP_EXTERN Acceptor(const Acceptor&);
+    PN_CPP_EXTERN Acceptor& operator=(const Acceptor&);
+    PN_CPP_EXTERN ~Acceptor();
 
-    PROTON_CPP_EXTERN void close();
+    PN_CPP_EXTERN void close();
   private:
     friend class ProtonImplRef<Acceptor>;
 };

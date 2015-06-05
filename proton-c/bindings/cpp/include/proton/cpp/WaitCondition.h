@@ -32,7 +32,7 @@ namespace reactor {
 class WaitCondition
 {
   public:
-    PROTON_CPP_EXTERN virtual ~WaitCondition();
+    PN_CPP_EXTERN virtual ~WaitCondition();
 
     // Overide this member function to indicate whether an expected
     // condition is achieved and requires no further waiting.

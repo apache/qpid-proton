@@ -35,9 +35,9 @@ class Connection;
 class Transport
 {
   public:
-    PROTON_CPP_EXTERN Transport();
-    PROTON_CPP_EXTERN ~Transport();
-    PROTON_CPP_EXTERN void bind(Connection &c);
+    PN_CPP_EXTERN Transport();
+    PN_CPP_EXTERN ~Transport();
+    PN_CPP_EXTERN void bind(Connection &c);
     Connection *connection;
     pn_transport_t *pnTransport;
 };

@@ -52,25 +52,25 @@ class Terminus : public ProtonHandle<pn_terminus_t>
     };
 
   public:
-    PROTON_CPP_EXTERN Terminus();
-    PROTON_CPP_EXTERN ~Terminus();
-    PROTON_CPP_EXTERN Terminus(const Terminus&);
-    PROTON_CPP_EXTERN Terminus& operator=(const Terminus&);
-    PROTON_CPP_EXTERN pn_terminus_t *getPnTerminus();
-    PROTON_CPP_EXTERN Type getType();
-    PROTON_CPP_EXTERN void setType(Type);
-    PROTON_CPP_EXTERN ExpiryPolicy getExpiryPolicy();
-    PROTON_CPP_EXTERN void setExpiryPolicy(ExpiryPolicy);
-    PROTON_CPP_EXTERN DistributionMode getDistributionMode();
-    PROTON_CPP_EXTERN void setDistributionMode(DistributionMode);
-    PROTON_CPP_EXTERN std::string getAddress();
-    PROTON_CPP_EXTERN void setAddress(std::string &);
-    PROTON_CPP_EXTERN bool isDynamic();
-    PROTON_CPP_EXTERN void setDynamic(bool);
+    PN_CPP_EXTERN Terminus();
+    PN_CPP_EXTERN ~Terminus();
+    PN_CPP_EXTERN Terminus(const Terminus&);
+    PN_CPP_EXTERN Terminus& operator=(const Terminus&);
+    PN_CPP_EXTERN pn_terminus_t *getPnTerminus();
+    PN_CPP_EXTERN Type getType();
+    PN_CPP_EXTERN void setType(Type);
+    PN_CPP_EXTERN ExpiryPolicy getExpiryPolicy();
+    PN_CPP_EXTERN void setExpiryPolicy(ExpiryPolicy);
+    PN_CPP_EXTERN DistributionMode getDistributionMode();
+    PN_CPP_EXTERN void setDistributionMode(DistributionMode);
+    PN_CPP_EXTERN std::string getAddress();
+    PN_CPP_EXTERN void setAddress(std::string &);
+    PN_CPP_EXTERN bool isDynamic();
+    PN_CPP_EXTERN void setDynamic(bool);
 
   private:
     Link *link;
-    PROTON_CPP_EXTERN Terminus(pn_terminus_t *, Link *);
+    PN_CPP_EXTERN Terminus(pn_terminus_t *, Link *);
     friend class Link;
     friend class ProtonImplRef<Terminus>;
 };

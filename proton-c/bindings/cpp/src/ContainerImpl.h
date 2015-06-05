@@ -41,20 +41,20 @@ class Acceptor;
 class ContainerImpl
 {
   public:
-    PROTON_CPP_EXTERN ContainerImpl(Handler &h);
-    PROTON_CPP_EXTERN ContainerImpl();
-    PROTON_CPP_EXTERN ~ContainerImpl();
-    PROTON_CPP_EXTERN Connection connect(std::string &host, Handler *h);
-    PROTON_CPP_EXTERN void run();
-    PROTON_CPP_EXTERN pn_reactor_t *getReactor();
-    PROTON_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h);
-    PROTON_CPP_EXTERN Sender createSender(std::string &url);
-    PROTON_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
-    PROTON_CPP_EXTERN Receiver createReceiver(const std::string &url);
-    PROTON_CPP_EXTERN Acceptor listen(const std::string &url);
-    PROTON_CPP_EXTERN std::string getContainerId();
-    PROTON_CPP_EXTERN Duration getTimeout();
-    PROTON_CPP_EXTERN void setTimeout(Duration timeout);
+    PN_CPP_EXTERN ContainerImpl(Handler &h);
+    PN_CPP_EXTERN ContainerImpl();
+    PN_CPP_EXTERN ~ContainerImpl();
+    PN_CPP_EXTERN Connection connect(std::string &host, Handler *h);
+    PN_CPP_EXTERN void run();
+    PN_CPP_EXTERN pn_reactor_t *getReactor();
+    PN_CPP_EXTERN Sender createSender(Connection &connection, std::string &addr, Handler *h);
+    PN_CPP_EXTERN Sender createSender(std::string &url);
+    PN_CPP_EXTERN Receiver createReceiver(Connection &connection, std::string &addr);
+    PN_CPP_EXTERN Receiver createReceiver(const std::string &url);
+    PN_CPP_EXTERN Acceptor listen(const std::string &url);
+    PN_CPP_EXTERN std::string getContainerId();
+    PN_CPP_EXTERN Duration getTimeout();
+    PN_CPP_EXTERN void setTimeout(Duration timeout);
     void start();
     bool process();
     void stop();

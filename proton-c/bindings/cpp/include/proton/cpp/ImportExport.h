@@ -39,9 +39,9 @@
 // For c++ library symbols
 
 #ifdef protoncpp_EXPORTS
-#  define PROTON_CPP_EXTERN PROTON_CPP_EXPORT
+#  define PN_CPP_EXTERN PROTON_CPP_EXPORT
 #else
-#  define PROTON_CPP_EXTERN PROTON_CPP_IMPORT
+#  define PN_CPP_EXTERN PROTON_CPP_IMPORT
 #endif
 
 // TODO:

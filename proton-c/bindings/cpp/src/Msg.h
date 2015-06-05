@@ -72,7 +72,7 @@ inline std::ostream& operator<<(std::ostream& o, const Msg& m) {
 /** Construct a message using operator << and append (file:line) */
 #define QUOTE_(x) #x
 #define QUOTE(x) QUOTE_(x)
-#define MSG(message) (::proton::reactor::Msg() << message << " (" __FILE__ ":" QUOTE(__LINE__) ")")
+#define MSG(message) (::proton::reactor::Msg() << message)
 
 }} // namespace proton::reactor
 

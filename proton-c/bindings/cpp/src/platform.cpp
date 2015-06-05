@@ -22,6 +22,8 @@
 #include "platform.h"
 #include <string>
 
+// FIXME aconway 2015-06-09: probably don't need UUIDs in the binding.
+
 // Copy neccesary platform neutral functionality from Proton-C
 // TODO: make this sensibly maintainable (even though it is mostly static)
 

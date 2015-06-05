@@ -29,17 +29,17 @@
 namespace proton {
 namespace reactor {
 
-class PROTON_CPP_EXTERN Handler
+class PN_CPP_EXTERN Handler
 {
   public:
-    PROTON_CPP_EXTERN Handler();
-    PROTON_CPP_EXTERN virtual ~Handler();
+    PN_CPP_EXTERN Handler();
+    PN_CPP_EXTERN virtual ~Handler();
 
-    PROTON_CPP_EXTERN virtual void onUnhandled(Event &e);
+    PN_CPP_EXTERN virtual void onUnhandled(Event &e);
 
-    PROTON_CPP_EXTERN virtual void addChildHandler(Handler &e);
-    PROTON_CPP_EXTERN std::vector<Handler *>::iterator childHandlersBegin();
-    PROTON_CPP_EXTERN std::vector<Handler *>::iterator childHandlersEnd();
+    PN_CPP_EXTERN virtual void addChildHandler(Handler &e);
+    PN_CPP_EXTERN std::vector<Handler *>::iterator childHandlersBegin();
+    PN_CPP_EXTERN std::vector<Handler *>::iterator childHandlersEnd();
   protected:
     std::vector<Handler *>childHandlers;
 };

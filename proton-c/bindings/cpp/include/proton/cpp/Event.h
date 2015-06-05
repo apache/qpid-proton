@@ -38,20 +38,20 @@ class Connection;
 class Event
 {
   public:
-    virtual PROTON_CPP_EXTERN void dispatch(Handler &h) = 0;
-    virtual PROTON_CPP_EXTERN Container &getContainer();
-    virtual PROTON_CPP_EXTERN Connection &getConnection();
-    virtual PROTON_CPP_EXTERN Sender getSender();
-    virtual PROTON_CPP_EXTERN Receiver getReceiver();
-    virtual PROTON_CPP_EXTERN Link getLink();
-    virtual PROTON_CPP_EXTERN Message getMessage();
-    virtual PROTON_CPP_EXTERN void setMessage(Message &);
-    virtual PROTON_CPP_EXTERN ~Event();
+    virtual PN_CPP_EXTERN void dispatch(Handler &h) = 0;
+    virtual PN_CPP_EXTERN Container &getContainer();
+    virtual PN_CPP_EXTERN Connection &getConnection();
+    virtual PN_CPP_EXTERN Sender getSender();
+    virtual PN_CPP_EXTERN Receiver getReceiver();
+    virtual PN_CPP_EXTERN Link getLink();
+    virtual PN_CPP_EXTERN Message getMessage();
+    virtual PN_CPP_EXTERN void setMessage(Message &);
+    virtual PN_CPP_EXTERN ~Event();
   protected:
-    PROTON_CPP_EXTERN PROTON_CPP_EXTERN Event();
+    PN_CPP_EXTERN PN_CPP_EXTERN Event();
   private:
-    PROTON_CPP_EXTERN Event(const Event&);
-    PROTON_CPP_EXTERN Event& operator=(const Event&);
+    PN_CPP_EXTERN Event(const Event&);
+    PN_CPP_EXTERN Event& operator=(const Event&);
 };
 
 
