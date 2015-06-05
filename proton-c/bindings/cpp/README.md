@@ -1,7 +1,6 @@
 # C++ binding for proton.
 
-This is a C++ wrapper for the proton reactor API.
-It is very similar to the python wrapper for the same API.
+This is a C++ binding for the proton API.
 
 There are [examples](../../../examples/cpp/README.md) and the header files have
 API documentation in doxygen format.
