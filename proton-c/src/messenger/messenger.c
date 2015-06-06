@@ -485,13 +485,51 @@ static void pn_connection_ctx_free(pn_connection_t *conn)
 #define pn_tracker_direction(tracker) ((tracker) & (0x1000000000000000))
 #define pn_tracker_sequence(tracker) ((pn_sequence_t) ((tracker) & (0x00000000FFFFFFFF)))
 
+
 static char *build_name(const char *name)
 {
+  static bool seeded = false;
+  // UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
+  static const char *uuid_fmt = "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+
+  int count = 0;
+  char *generated;
+  uint8_t bytes[16];
+  unsigned int r = 0;
+
   if (name) {
     return pn_strdup(name);
-  } else {
-    return pn_i_genuuid();
   }
+
+  if (!seeded) {
+    int pid = pn_i_getpid();
+    srand(pn_i_now() + pid);
+    seeded = true;
+  }
+
+  while (count < 16) {
+    if (!r) {
+      r =  (unsigned int) rand();
+    }
+
+    bytes[count] = r & 0xFF;
+    r >>= 8;
+    count++;
+  }
+
+  // From RFC4122, the version bits are set to 0100
+  bytes[6] = (bytes[6] & 0x0F) | 0x40;
+
+  // From RFC4122, the top two bits of byte 8 get set to 01
+  bytes[8] = (bytes[8] & 0x3F) | 0x80;
+
+  generated = (char *) malloc(37*sizeof(char));
+  sprintf(generated, uuid_fmt,
+	  bytes[0], bytes[1], bytes[2], bytes[3],
+	  bytes[4], bytes[5], bytes[6], bytes[7],
+	  bytes[8], bytes[9], bytes[10], bytes[11],
+	  bytes[12], bytes[13], bytes[14], bytes[15]);
+  return generated;
 }
 
 struct pn_link_ctx_t {

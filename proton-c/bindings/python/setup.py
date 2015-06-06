@@ -157,7 +157,14 @@ class Configure(build_ext):
         # depending on the version. Specifically, lets avoid adding things
         # we don't need.
         sources = []
-        libraries = ['uuid']
+        libraries = []
+        extra_compile_args = [
+            '-std=gnu99',
+            '-Dqpid_proton_EXPORTS',
+            '-DUSE_ATOLL',
+            '-DUSE_CLOCK_GETTIME',
+            '-DUSE_STRERROR_R',
+        ]
 
         for subdir in ['object', 'framing', 'codec', 'dispatcher',
                        'engine', 'events', 'transport',
@@ -230,14 +237,7 @@ class Configure(build_ext):
             # the place. All these compile arguments will be appended to
             # the GCC command. This list of flags is not used during the
             # linking phase.
-            extra_compile_args = [
-                '-std=gnu99',
-                '-Dqpid_proton_EXPORTS',
-                '-DUSE_ATOLL',
-                '-DUSE_CLOCK_GETTIME',
-                '-DUSE_STRERROR_R',
-                '-DUSE_UUID_GENERATE',
-            ],
+            extra_compile_args = extra_compile_args,
 
             # If you need to add flags to the linking phase
             # this is the right place to do it. Just like the compile flags,
