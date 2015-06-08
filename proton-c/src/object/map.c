@@ -265,7 +265,7 @@ void *pn_map_get(pn_map_t *map, void *key)
   return entry ? entry->value : NULL;
 }
 
-void pn_map_rehash(pn_map_t *map, size_t index)
+static void pni_map_rehash(pn_map_t *map, size_t index)
 {
   //reinsert entries in chain starting at index
   assert(map);
@@ -331,7 +331,7 @@ void pn_map_del(pn_map_t *map, void *key)
     map->size--;
 
     if (orig_state == PNI_ENTRY_LINK) {
-      pn_map_rehash(map, orig_next);
+      pni_map_rehash(map, orig_next);
     }
 
     // do this last as it may trigger further deletions

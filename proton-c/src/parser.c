@@ -47,17 +47,12 @@ pn_parser_t *pn_parser()
   return parser;
 }
 
-void pn_parser_ensure(pn_parser_t *parser, size_t size)
+static void pni_parser_ensure(pn_parser_t *parser, size_t size)
 {
   while (parser->capacity - parser->size < size) {
     parser->capacity = parser->capacity ? 2 * parser->capacity : 1024;
     parser->atoms = (char *) realloc(parser->atoms, parser->capacity);
   }
-}
-
-void pn_parser_line_info(pn_parser_t *parser, int *line, int *col)
-{
-  pn_scanner_line_info(parser->scanner, line, col);
 }
 
 int pn_parser_err(pn_parser_t *parser, int code, const char *fmt, ...)
@@ -88,29 +83,29 @@ void pn_parser_free(pn_parser_t *parser)
   }
 }
 
-int pn_parser_shift(pn_parser_t *parser)
+static int pni_parser_shift(pn_parser_t *parser)
 {
   return pn_scanner_shift(parser->scanner);
 }
 
-pn_token_t pn_parser_token(pn_parser_t *parser)
+static pn_token_t pni_parser_token(pn_parser_t *parser)
 {
   return pn_scanner_token(parser->scanner);
 }
 
-int pn_parser_value(pn_parser_t *parser, pn_data_t *data);
+static int pni_parser_value(pn_parser_t *parser, pn_data_t *data);
 
-int pn_parser_descriptor(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_descriptor(pn_parser_t *parser, pn_data_t *data)
 {
-  if (pn_parser_token(parser).type == PN_TOK_AT) {
-    int err = pn_parser_shift(parser);
+  if (pni_parser_token(parser).type == PN_TOK_AT) {
+    int err = pni_parser_shift(parser);
     if (err) return err;
 
     err = pn_data_put_described(data);
     if (err) return pn_parser_err(parser, err, "error writing described");
     pn_data_enter(data);
     for (int i = 0; i < 2; i++) {
-      err = pn_parser_value(parser, data);
+      err = pni_parser_value(parser, data);
       if (err) return err;
     }
     pn_data_exit(data);
@@ -120,10 +115,10 @@ int pn_parser_descriptor(pn_parser_t *parser, pn_data_t *data)
   }
 }
 
-int pn_parser_map(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_map(pn_parser_t *parser, pn_data_t *data)
 {
-  if (pn_parser_token(parser).type == PN_TOK_LBRACE) {
-    int err = pn_parser_shift(parser);
+  if (pni_parser_token(parser).type == PN_TOK_LBRACE) {
+    int err = pni_parser_shift(parser);
     if (err) return err;
 
     err = pn_data_put_map(data);
@@ -131,23 +126,23 @@ int pn_parser_map(pn_parser_t *parser, pn_data_t *data)
 
     pn_data_enter(data);
 
-    if (pn_parser_token(parser).type != PN_TOK_RBRACE) {
+    if (pni_parser_token(parser).type != PN_TOK_RBRACE) {
       while (true) {
-        err = pn_parser_value(parser, data);
+        err = pni_parser_value(parser, data);
         if (err) return err;
 
-        if (pn_parser_token(parser).type == PN_TOK_EQUAL) {
-          err = pn_parser_shift(parser);
+        if (pni_parser_token(parser).type == PN_TOK_EQUAL) {
+          err = pni_parser_shift(parser);
           if (err) return err;
         } else {
           return pn_parser_err(parser, PN_ERR, "expecting '='");
         }
 
-        err = pn_parser_value(parser, data);
+        err = pni_parser_value(parser, data);
         if (err) return err;
 
-        if (pn_parser_token(parser).type == PN_TOK_COMMA) {
-          err = pn_parser_shift(parser);
+        if (pni_parser_token(parser).type == PN_TOK_COMMA) {
+          err = pni_parser_shift(parser);
           if (err) return err;
         } else {
           break;
@@ -157,8 +152,8 @@ int pn_parser_map(pn_parser_t *parser, pn_data_t *data)
 
     pn_data_exit(data);
 
-    if (pn_parser_token(parser).type == PN_TOK_RBRACE) {
-      return pn_parser_shift(parser);
+    if (pni_parser_token(parser).type == PN_TOK_RBRACE) {
+      return pni_parser_shift(parser);
     } else {
       return pn_parser_err(parser, PN_ERR, "expecting '}'");
     }
@@ -167,12 +162,12 @@ int pn_parser_map(pn_parser_t *parser, pn_data_t *data)
   }
 }
 
-int pn_parser_list(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_list(pn_parser_t *parser, pn_data_t *data)
 {
   int err;
 
-  if (pn_parser_token(parser).type == PN_TOK_LBRACKET) {
-    err = pn_parser_shift(parser);
+  if (pni_parser_token(parser).type == PN_TOK_LBRACKET) {
+    err = pni_parser_shift(parser);
     if (err) return err;
 
     err = pn_data_put_list(data);
@@ -180,13 +175,13 @@ int pn_parser_list(pn_parser_t *parser, pn_data_t *data)
 
     pn_data_enter(data);
 
-    if (pn_parser_token(parser).type != PN_TOK_RBRACKET) {
+    if (pni_parser_token(parser).type != PN_TOK_RBRACKET) {
       while (true) {
-        err = pn_parser_value(parser, data);
+        err = pni_parser_value(parser, data);
         if (err) return err;
 
-        if (pn_parser_token(parser).type == PN_TOK_COMMA) {
-          err = pn_parser_shift(parser);
+        if (pni_parser_token(parser).type == PN_TOK_COMMA) {
+          err = pni_parser_shift(parser);
           if (err) return err;
         } else {
           break;
@@ -196,8 +191,8 @@ int pn_parser_list(pn_parser_t *parser, pn_data_t *data)
 
     pn_data_exit(data);
 
-    if (pn_parser_token(parser).type == PN_TOK_RBRACKET) {
-      return pn_parser_shift(parser);
+    if (pni_parser_token(parser).type == PN_TOK_RBRACKET) {
+      return pni_parser_shift(parser);
     } else {
       return pn_parser_err(parser, PN_ERR, "expecting ']'");
     }
@@ -206,13 +201,13 @@ int pn_parser_list(pn_parser_t *parser, pn_data_t *data)
   }
 }
 
-void pn_parser_append_tok(pn_parser_t *parser, char *dst, int *idx)
+static void pni_parser_append_tok(pn_parser_t *parser, char *dst, int *idx)
 {
-  memcpy(dst + *idx, pn_parser_token(parser).start, pn_parser_token(parser).size);
-  *idx += pn_parser_token(parser).size;
+  memcpy(dst + *idx, pni_parser_token(parser).start, pni_parser_token(parser).size);
+  *idx += pni_parser_token(parser).size;
 }
 
-int pn_parser_number(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_number(pn_parser_t *parser, pn_data_t *data)
 {
   bool dbl = false;
   char number[1024];
@@ -221,17 +216,17 @@ int pn_parser_number(pn_parser_t *parser, pn_data_t *data)
 
   bool negate = false;
 
-  if (pn_parser_token(parser).type == PN_TOK_NEG || pn_parser_token(parser).type == PN_TOK_POS) {
-    if (pn_parser_token(parser).type == PN_TOK_NEG)
+  if (pni_parser_token(parser).type == PN_TOK_NEG || pni_parser_token(parser).type == PN_TOK_POS) {
+    if (pni_parser_token(parser).type == PN_TOK_NEG)
       negate = !negate;
-    err = pn_parser_shift(parser);
+    err = pni_parser_shift(parser);
     if (err) return err;
   }
 
-  if (pn_parser_token(parser).type == PN_TOK_FLOAT || pn_parser_token(parser).type == PN_TOK_INT) {
-    dbl = pn_parser_token(parser).type == PN_TOK_FLOAT;
-    pn_parser_append_tok(parser, number, &idx);
-    err = pn_parser_shift(parser);
+  if (pni_parser_token(parser).type == PN_TOK_FLOAT || pni_parser_token(parser).type == PN_TOK_INT) {
+    dbl = pni_parser_token(parser).type == PN_TOK_FLOAT;
+    pni_parser_append_tok(parser, number, &idx);
+    err = pni_parser_shift(parser);
     if (err) return err;
   } else {
     return pn_parser_err(parser, PN_ERR, "expecting FLOAT or INT");
@@ -258,7 +253,7 @@ int pn_parser_number(pn_parser_t *parser, pn_data_t *data)
   return 0;
 }
 
-int pn_parser_unquote(pn_parser_t *parser, char *dst, const char *src, size_t *n)
+static int pni_parser_unquote(pn_parser_t *parser, char *dst, const char *src, size_t *n)
 {
   size_t idx = 0;
   bool escape = false;
@@ -336,29 +331,29 @@ int pn_parser_unquote(pn_parser_t *parser, char *dst, const char *src, size_t *n
   return 0;
 }
 
-int pn_parser_value(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_value(pn_parser_t *parser, pn_data_t *data)
 {
   int err;
   size_t n;
   char *dst;
 
-  pn_token_t tok = pn_parser_token(parser);
+  pn_token_t tok = pni_parser_token(parser);
 
   switch (tok.type)
   {
   case PN_TOK_AT:
-    return pn_parser_descriptor(parser, data);
+    return pni_parser_descriptor(parser, data);
   case PN_TOK_LBRACE:
-    return pn_parser_map(parser, data);
+    return pni_parser_map(parser, data);
   case PN_TOK_LBRACKET:
-    return pn_parser_list(parser, data);
+    return pni_parser_list(parser, data);
   case PN_TOK_BINARY:
   case PN_TOK_SYMBOL:
   case PN_TOK_STRING:
     n = tok.size;
-    pn_parser_ensure(parser, n);
+    pni_parser_ensure(parser, n);
     dst = parser->atoms + parser->size;
-    err = pn_parser_unquote(parser, dst, tok.start, &n);
+    err = pni_parser_unquote(parser, dst, tok.start, &n);
     if (err) return err;
     parser->size += n;
     switch (tok.type) {
@@ -375,42 +370,42 @@ int pn_parser_value(pn_parser_t *parser, pn_data_t *data)
       return pn_parser_err(parser, PN_ERR, "internal error");
     }
     if (err) return pn_parser_err(parser, err, "error writing string/binary/symbol");
-    return pn_parser_shift(parser);
+    return pni_parser_shift(parser);
   case PN_TOK_POS:
   case PN_TOK_NEG:
   case PN_TOK_FLOAT:
   case PN_TOK_INT:
-    return pn_parser_number(parser, data);
+    return pni_parser_number(parser, data);
   case PN_TOK_TRUE:
     err = pn_data_put_bool(data, true);
     if (err) return pn_parser_err(parser, err, "error writing boolean");
-    return pn_parser_shift(parser);
+    return pni_parser_shift(parser);
   case PN_TOK_FALSE:
     err = pn_data_put_bool(data, false);
     if (err) return pn_parser_err(parser, err, "error writing boolean");
-    return pn_parser_shift(parser);
+    return pni_parser_shift(parser);
   case PN_TOK_NULL:
     err = pn_data_put_null(data);
     if (err) return pn_parser_err(parser, err, "error writing null");
-    return pn_parser_shift(parser);
+    return pni_parser_shift(parser);
   default:
     return pn_parser_err(parser, PN_ERR, "expecting one of '[', '{', STRING, "
                          "SYMBOL, BINARY, true, false, null, NUMBER");
   }
 }
 
-int pn_parser_parse_r(pn_parser_t *parser, pn_data_t *data)
+static int pni_parser_parse_r(pn_parser_t *parser, pn_data_t *data)
 {
   while (true) {
     int err;
-    switch (pn_parser_token(parser).type)
+    switch (pni_parser_token(parser).type)
     {
     case PN_TOK_EOS:
       return 0;
     case PN_TOK_ERR:
       return PN_ERR;
     default:
-      err = pn_parser_value(parser, data);
+      err = pni_parser_value(parser, data);
       if (err) return err;
     }
   }
@@ -421,5 +416,5 @@ int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *data)
   int err = pn_scanner_start(parser->scanner, str);
   if (err) return err;
   parser->size = 0;
-  return pn_parser_parse_r(parser, data);
+  return pni_parser_parse_r(parser, data);
 }
