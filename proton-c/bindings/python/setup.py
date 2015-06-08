@@ -191,7 +191,8 @@ class Configure(build_ext):
         # if it is available before adding the implementation to the sources
         # list. Eventually, `sasl.c` will be added and one of the existing
         # implementations will be used.
-        if not cc.has_function('sasl_set_path', libraries=('sasl2')):
+        if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'],
+                           libraries=['sasl2']):
             libraries.append('sasl2')
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
         else:
