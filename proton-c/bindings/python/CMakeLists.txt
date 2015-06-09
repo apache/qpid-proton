@@ -103,7 +103,8 @@ if (SPHINX_EXE)
    add_dependencies(docs tutorial-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
            DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
-           COMPONENT documentation)
+           COMPONENT documentation
+           ${OPTIONAL_ARG})
 endif (SPHINX_EXE)
 
 install(FILES ${CPROTON_ARTIFACTS}
