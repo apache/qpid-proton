@@ -79,8 +79,8 @@ except ImportError:
     bytes = [rand.randint(0, 255) for i in xrange(16)]
 
     # From RFC4122, the version bits are set to 0100
-    bytes[7] &= 0x0F
-    bytes[7] |= 0x40
+    bytes[6] &= 0x0F
+    bytes[6] |= 0x40
 
     # From RFC4122, the top two bits of byte 8 get set to 01
     bytes[8] &= 0x3F
