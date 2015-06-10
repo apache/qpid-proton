@@ -1156,7 +1156,7 @@ pn_handle_t pn_data_point(pn_data_t *data)
 bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 {
   pn_shandle_t spoint = (pn_shandle_t) point;
-  if (spoint < 0 && ((size_t) (-spoint)) <= data->size) {
+  if (spoint <= 0 && ((size_t) (-spoint)) <= data->size) {
     data->parent = -((pn_shandle_t) point);
     data->current = 0;
     return true;
