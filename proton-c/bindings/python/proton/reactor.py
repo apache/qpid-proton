@@ -411,6 +411,11 @@ class Selector(Filter):
     def __init__(self, value, name='selector'):
         super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
 
+class DurableSubscription(ReceiverOption):
+    def apply(self, receiver):
+        receiver.source.durability = Terminus.DELIVERIES
+        receiver.source.expiry_policy = Terminus.EXPIRE_NEVER
+
 class Move(ReceiverOption):
     def apply(self, receiver):
         receiver.source.distribution_mode = Terminus.DIST_MODE_MOVE
