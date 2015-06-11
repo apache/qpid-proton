@@ -520,7 +520,7 @@ if (BUILD_PYTHON)
          to_native_path ("${py_pythonpath}" py_pythonpath)
          add_test (NAME python-tox-test
                    COMMAND ${env_py}
-		   "PATH=${py_path}" ${VALGRIND_ENV}
+		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../" ${VALGRIND_ENV}
                    tox
 		   WORKING_DIRECTORY ${py_src})
          set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")

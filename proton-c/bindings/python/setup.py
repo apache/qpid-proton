@@ -78,10 +78,30 @@ from distutils.ccompiler import new_compiler, get_default_compiler
 from distutils.core import setup, Extension
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
+from distutils.command.sdist import sdist
+from distutils import errors
 
 from setuputils import bundle
 from setuputils import log
 from setuputils import misc
+
+
+class CheckSDist(sdist):
+
+    def run(self):
+        self.distribution.run_command('configure')
+
+        # Append the source that was removed during
+        # the configuration step.
+        _cproton = self.distribution.ext_modules[-1]
+        _cproton.sources.append('cproton.i')
+
+        try:
+            sdist.run(self)
+        finally:
+            for src in ['cproton.py', 'cproton_wrap.c']:
+                if os.path.exists(src):
+                    os.remove(src)
 
 
 class Configure(build_ext):
@@ -96,6 +116,21 @@ class Configure(build_ext):
             return compiler
         else:
             return compiler.compiler_type
+
+    def prepare_swig_wrap(self):
+        ext = self.distribution.ext_modules[-1]
+
+        try:
+            # This will actually call swig to generate the files
+            # and list the sources.
+            self.swig_sources(ext.sources, ext)
+        except (errors.DistutilsExecError, errors.DistutilsPlatformError) as e:
+            if not (os.path.exists('cproton_wrap.c') or
+                    os.path.exists('cproton.py')):
+                raise e
+
+        ext.sources = ext.sources[1:]
+        ext.swig_opts = []
 
     def bundle_libqpid_proton_extension(self):
         base = self.get_finalized_command('build').build_base
@@ -262,6 +297,7 @@ class Configure(build_ext):
         _cproton = self.distribution.ext_modules[-1]
         _cproton.library_dirs.append(self.build_lib)
         _cproton.include_dirs.append(proton_include)
+        _cproton.include_dirs.append(build_include)
         _cproton.include_dirs.append(os.path.join(proton_src, 'bindings', 'python'))
 
         _cproton.swig_opts.append('-I%s' % build_include)
@@ -283,11 +319,20 @@ class Configure(build_ext):
     @property
     def bundle_proton(self):
         """Bundled proton if the conditions below are met."""
-        return sys.platform == 'linux2' and not self.check_qpid_proton_version()
+        return not self.check_qpid_proton_version()
 
     def run(self):
-        if self.bundle_proton:
-            self.bundle_libqpid_proton_extension()
+        if sys.platform == 'linux2':
+            if self.bundle_proton:
+                self.bundle_libqpid_proton_extension()
+
+            # Do this just on linux since it's the only
+            # platform we support building the bundle for
+            # and especially, it's the only platform we check
+            # the, hopefully installed, qpid-proton version.
+            # This avoids re-using the distributed wrappers with
+            # uncompatible versions.
+            self.prepare_swig_wrap()
 
 
 class CustomBuildOrder(build):
@@ -316,7 +361,8 @@ class CheckingBuildExt(build_ext):
 # Override `build_ext` and add `configure`
 cmdclass = {'configure': Configure,
             'build': CustomBuildOrder,
-            'build_ext': CheckingBuildExt}
+            'build_ext': CheckingBuildExt,
+            'sdist': CheckSDist}
 
 
 setup(name='python-qpid-proton',
@@ -332,6 +378,8 @@ setup(name='python-qpid-proton',
                    "Intended Audience :: Developers",
                    "Programming Language :: Python"],
       cmdclass = cmdclass,
-      ext_modules=[Extension('_cproton', ['cproton.i'],
+      ext_modules=[Extension('_cproton',
+                             sources=['cproton.i', 'cproton_wrap.c'],
                              swig_opts=['-threads'],
+                             extra_compile_args=['-pthread'],
                              libraries=['qpid-proton'])])
