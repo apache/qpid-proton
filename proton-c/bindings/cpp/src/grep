@@ -32,9 +32,6 @@
   -rw-rw-r--. 1 aconway aconway  5864 Jun 10 08:40 MessagingEvent.cpp
   -rw-rw-r--. 1 aconway aconway  5230 Jun 10 08:40 MessagingHandler.cpp
   -rw-rw-r--. 1 aconway aconway  2587 Jun 10 08:40 Msg.h
-  -rw-rw-r--. 1 aconway aconway  2208 Jun 10 08:40 platform.cpp
-  -rw-rw-r--. 1 aconway aconway  1145 Jun 10 08:40 platform.h
-  -rw-rw-r--. 1 aconway aconway  1072 Jun 11 11:49 pn_data.h
   -rw-rw-r--. 1 aconway aconway  3000 Jun 10 08:40 PrivateImplRef.h
   -rw-rw-r--. 1 aconway aconway  6032 Jun 10 08:40 ProtonEvent.cpp
   -rw-rw-r--. 1 aconway aconway  3818 Jun 10 08:40 ProtonHandler.cpp

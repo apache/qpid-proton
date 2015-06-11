@@ -32,7 +32,6 @@
 #include "Connector.h"
 #include "contexts.h"
 #include "Url.h"
-#include "platform.h"
 #include "PrivateImplRef.h"
 
 #include "proton/connection.h"
@@ -192,13 +191,13 @@ void ContainerImpl::decref(ContainerImpl *impl) {
 
 ContainerImpl::ContainerImpl(Handler &h) :
     reactor(0), handler(&h), messagingAdapter(0),
-    overrideHandler(0), flowController(0), containerId(generateUuid()),
+    overrideHandler(0), flowController(0), containerId(),
     refCount(0)
 {}
 
 ContainerImpl::ContainerImpl() :
     reactor(0), handler(0), messagingAdapter(0),
-    overrideHandler(0), flowController(0), containerId(generateUuid()),
+    overrideHandler(0), flowController(0), containerId(),
     refCount(0)
 {}
 

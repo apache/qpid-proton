@@ -31,7 +31,6 @@
 #include "Connector.h"
 #include "contexts.h"
 #include "Url.h"
-#include "platform.h"
 
 #include "proton/connection.h"
 #include "proton/session.h"

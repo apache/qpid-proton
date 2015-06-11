@@ -22,64 +22,45 @@
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-set (qpid-proton-cpp-platform
-  "src/platform"
-  )
-
-set (qpid-proton-cpp-core
-    src/Acceptor.cpp
-    src/Acking.cpp
-    src/Connection.cpp
-    src/ConnectionImpl.cpp
-    src/Connector.cpp
-    src/Connector.h
-    src/Container.cpp
-    src/ContainerImpl.cpp
-    src/Data.cpp
-    src/Decoder.cpp
-    src/Delivery.cpp
-    src/Duration.cpp
-    src/Encoder.cpp
-    src/Endpoint.cpp
-    src/Event.cpp
-    src/Handler.cpp
-    src/Link.cpp
-    src/Message.cpp
-    src/MessagingAdapter.cpp
-    src/MessagingEvent.cpp
-    src/MessagingHandler.cpp
-    src/ProtonEvent.cpp
-    src/ProtonHandler.cpp
-    src/Receiver.cpp
-    src/Sender.cpp
-    src/Session.cpp
-    src/Terminus.cpp
-    src/Transport.cpp
-    src/Url.cpp
-    src/Value.cpp
-    src/proton_bits.cpp
-    src/blocking/BlockingConnection.cpp
-    src/blocking/BlockingConnectionImpl.cpp
-    src/blocking/BlockingLink.cpp
-    src/blocking/BlockingSender.cpp
-    src/contexts.cpp
-    src/types.cpp
-  )
-
-set_source_files_properties (${qpid-proton-cpp-platform} PROPERTIES LANGUAGE CXX)
-set_source_files_properties (
-  ${qpid-proton-cpp-platform}
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_PLATFORM_FLAGS}"
-  COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
-  )
-
 add_library (
   qpid-proton-cpp SHARED
-
-  ${qpid-proton-cpp-core}
-  ${qpid-proton-cpp-platform}
-
+  src/Acceptor.cpp
+  src/Acking.cpp
+  src/Connection.cpp
+  src/ConnectionImpl.cpp
+  src/Connector.cpp
+  src/Connector.h
+  src/Container.cpp
+  src/ContainerImpl.cpp
+  src/Data.cpp
+  src/Decoder.cpp
+  src/Delivery.cpp
+  src/Duration.cpp
+  src/Encoder.cpp
+  src/Endpoint.cpp
+  src/Event.cpp
+  src/Handler.cpp
+  src/Link.cpp
+  src/Message.cpp
+  src/MessagingAdapter.cpp
+  src/MessagingEvent.cpp
+  src/MessagingHandler.cpp
+  src/ProtonEvent.cpp
+  src/ProtonHandler.cpp
+  src/Receiver.cpp
+  src/Sender.cpp
+  src/Session.cpp
+  src/Terminus.cpp
+  src/Transport.cpp
+  src/Url.cpp
+  src/Value.cpp
+  src/proton_bits.cpp
+  src/blocking/BlockingConnection.cpp
+  src/blocking/BlockingConnectionImpl.cpp
+  src/blocking/BlockingLink.cpp
+  src/blocking/BlockingSender.cpp
+  src/contexts.cpp
+  src/types.cpp
   )
 
 target_link_libraries (qpid-proton-cpp ${PLATFORM_LIBS} qpid-proton)
@@ -103,9 +84,9 @@ macro(add_cpp_test test)
   target_link_libraries (${test} qpid-proton qpid-proton-cpp)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME cpp_${test}
-              COMMAND ${env_py}
-                "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-                ${test}> ${ARGN})
+      COMMAND ${env_py}
+      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
+      ${test}> ${ARGN})
   else ()
     add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${test} ${ARGN})
   endif ()
