@@ -101,25 +101,25 @@ static const sasl_callback_t pni_user_callbacks[] = {
 };
 
 bool pni_init_client(pn_transport_t* transport) {
-    int result;
-    pni_sasl_t *sasl = transport->sasl;
-
+  pni_sasl_t *sasl = transport->sasl;
+  int result;
+  sasl_conn_t *cyrus_conn = NULL;
+  do {
     if (sasl->config_dir) {
-        result = sasl_set_path(SASL_PATH_TYPE_CONFIG, sasl->config_dir);
-        if (result!=SASL_OK) return false;
+      result = sasl_set_path(SASL_PATH_TYPE_CONFIG, sasl->config_dir);
+      if (result!=SASL_OK) break;
     }
 
     result = sasl_client_init(NULL);
-    if (result!=SASL_OK) return false;
+    if (result!=SASL_OK) break;
 
     const sasl_callback_t *callbacks = sasl->username ? sasl->password ? pni_user_password_callbacks : pni_user_callbacks : NULL;
-    sasl_conn_t *cyrus_conn;
     result = sasl_client_new(amqp_service,
                              sasl->remote_fqdn,
                              NULL, NULL,
                              callbacks, 0,
                              &cyrus_conn);
-    if (result!=SASL_OK) return false;
+    if (result!=SASL_OK) break;
     sasl->impl_context = cyrus_conn;
 
     sasl_security_properties_t secprops = {0};
@@ -128,18 +128,19 @@ bool pni_init_client(pn_transport_t* transport) {
     ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
-    if (result!=SASL_OK) return false;
+    if (result!=SASL_OK) break;
 
     sasl_ssf_t ssf = sasl->external_ssf;
     result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
-    if (result!=SASL_OK) return false;
+    if (result!=SASL_OK) break;
 
     const char *extid = sasl->external_auth;
     if (extid) {
       result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
-      if (result!=SASL_OK) return false;
     }
-    return true;
+  } while (false);
+  cyrus_conn = (sasl_conn_t*) sasl->impl_context;
+  return pni_check_sasl_result(cyrus_conn, result, transport);
 }
 
 static int pni_wrap_client_start(pni_sasl_t *sasl, const char *mechs, const char **mechusing)
@@ -233,42 +234,43 @@ void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
     }
 }
 
-static int pni_wrap_server_new(pn_transport_t *transport)
+bool pni_init_server(pn_transport_t* transport)
 {
-    pni_sasl_t *sasl = transport->sasl;
-    int result;
-
+  pni_sasl_t *sasl = transport->sasl;
+  int result;
+  sasl_conn_t *cyrus_conn = NULL;
+  do {
     if (sasl->config_dir) {
         result = sasl_set_path(SASL_PATH_TYPE_CONFIG, sasl->config_dir);
-        if (result!=SASL_OK) return result;
+        if (result!=SASL_OK) break;
     }
 
     result = sasl_server_init(NULL, sasl->config_name);
-    if (result!=SASL_OK) return result;
+    if (result!=SASL_OK) break;
 
-    sasl_conn_t *cyrus_conn;
     result = sasl_server_new(amqp_service, NULL, NULL, NULL, NULL, NULL, 0, &cyrus_conn);
-    if (result!=SASL_OK) return result;
+    if (result!=SASL_OK) break;
     sasl->impl_context = cyrus_conn;
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
-    SASL_SEC_NOPLAINTEXT |
-    ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+      SASL_SEC_NOPLAINTEXT |
+      ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
-    if (result!=SASL_OK) return result;
+    if (result!=SASL_OK) break;
 
     sasl_ssf_t ssf = sasl->external_ssf;
     result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
-    if (result!=SASL_OK) return result;
+    if (result!=SASL_OK) break;
 
     const char *extid = sasl->external_auth;
     if (extid) {
-      result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
-      if (result!=SASL_OK) return result;
+    result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
     }
-    return result;
+  } while (false);
+  cyrus_conn = (sasl_conn_t*) sasl->impl_context;
+  return pni_check_sasl_result(cyrus_conn, result, transport);
 }
 
 static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, const pn_bytes_t *in)
@@ -325,13 +327,6 @@ static void pni_process_server_result(pn_transport_t *transport, int result)
             pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
     }
-}
-
-bool pni_init_server(pn_transport_t* transport)
-{
-    int r = pni_wrap_server_new(transport);
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
-    return pni_check_sasl_result(cyrus_conn, r, transport);
 }
 
 void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
