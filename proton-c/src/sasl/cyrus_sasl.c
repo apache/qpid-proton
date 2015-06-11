@@ -380,3 +380,8 @@ void pni_sasl_impl_free(pn_transport_t *transport)
         sasl_server_done();
     }
 }
+
+bool pn_sasl_extended(void)
+{
+  return true;
+}

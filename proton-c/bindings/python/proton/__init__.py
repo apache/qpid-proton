@@ -3368,6 +3368,10 @@ class SASL(Wrapper):
   PERM = PN_SASL_PERM
   TEMP = PN_SASL_TEMP
 
+  @staticmethod
+  def extended():
+    return pn_sasl_extended()
+
   def __init__(self, transport):
     Wrapper.__init__(self, transport._impl, pn_transport_attachments)
     self._sasl = pn_sasl(transport._impl)

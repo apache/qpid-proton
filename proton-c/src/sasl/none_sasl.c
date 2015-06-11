@@ -171,3 +171,8 @@ void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
 void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
 {
 }
+
+bool pn_sasl_extended(void)
+{
+  return false;
+}

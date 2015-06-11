@@ -30,6 +30,9 @@ PN_SASL_SYS=2
 PN_SASL_PERM=3
 PN_SASL_TEMP=4
 
+def pn_sasl_extended():
+  return False
+
 def pn_sasl(tp):
   sasl = tp.impl.sasl()
   if tp.server:
