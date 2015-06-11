@@ -24,6 +24,7 @@
 #include "engine/engine-internal.h"
 
 static const char ANONYMOUS[] = "ANONYMOUS";
+static const char EXTERNAL[] = "EXTERNAL";
 static const char PLAIN[] = "PLAIN";
 
 bool pni_init_server(pn_transport_t* transport)
@@ -44,27 +45,53 @@ void pni_sasl_impl_free(pn_transport_t *transport)
 // Client handles ANONYMOUS or PLAIN mechanisms if offered
 bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
 {
-  // Check whether offered ANONYMOUS or PLAIN
+  // Check whether offered EXTERNAL, PLAIN or ANONYMOUS
+  // Look for "EXTERNAL" in mechs
+  const char *found = strstr(mechs, EXTERNAL);
+  // Make sure that string is separated and terminated and allowed
+  if (found && (found==mechs || found[-1]==' ') && (found[8]==0 || found[8]==' ') &&
+      pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(8, found))) {
+    transport->sasl->selected_mechanism = pn_strdup(EXTERNAL);
+    if (transport->sasl->username) {
+      size_t size = strlen(transport->sasl->username);
+      char *iresp = (char *) malloc(size);
+      if (!iresp) return false;
+
+      transport->sasl->impl_context = iresp;
+
+      memmove(iresp, transport->sasl->username, size);
+      transport->sasl->bytes_out.start = iresp;
+      transport->sasl->bytes_out.size =  size;
+    } else {
+      static const char empty[] = "";
+      transport->sasl->bytes_out.start = empty;
+      transport->sasl->bytes_out.size =  0;
+    }
+    return true;
+  }
+
   // Look for "PLAIN" in mechs
-  const char *found = strstr(mechs, PLAIN);
+  found = strstr(mechs, PLAIN);
   // Make sure that string is separated and terminated, allowed
-  // and we have a username and password
+  // and we have a username and password and connection is encrypted
   if (found && (found==mechs || found[-1]==' ') && (found[5]==0 || found[5]==' ') &&
       pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(5, found)) &&
+      transport->sasl->external_ssf > 0 &&
       transport->sasl->username && transport->sasl->password) {
     transport->sasl->selected_mechanism = pn_strdup(PLAIN);
     size_t usize = strlen(transport->sasl->username);
     size_t psize = strlen(transport->sasl->password);
-    size_t size = usize + psize + 2;
+    size_t size = 2*usize + psize + 2;
     char *iresp = (char *) malloc(size);
     if (!iresp) return false;
 
     transport->sasl->impl_context = iresp;
 
-    iresp[0] = 0;
-    memmove(iresp + 1, transport->sasl->username, usize);
-    iresp[usize + 1] = 0;
-    memmove(iresp + usize + 2, transport->sasl->password, psize);
+    memmove(iresp, transport->sasl->username, usize);
+    iresp[usize] = 0;
+    memmove(iresp + usize + 1, transport->sasl->username, usize);
+    iresp[2*usize + 1] = 0;
+    memmove(iresp + 2*usize + 2, transport->sasl->password, psize);
     transport->sasl->bytes_out.start = iresp;
     transport->sasl->bytes_out.size =  size;
 
@@ -101,20 +128,34 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
   return false;
 }
 
-// Server will offer only ANONYMOUS
+// Server will offer only ANONYMOUS and EXTERNAL if appropriate
 int pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist)
 {
-  *mechlist = pn_strdup("ANONYMOUS");
-  return 1;
+  // If we have an external authid then we can offer EXTERNAL
+  if (transport->sasl && transport->sasl->external_auth) {
+    *mechlist = pn_strdup("EXTERNAL ANONYMOUS");
+    return 2;
+  } else {
+    *mechlist = pn_strdup("ANONYMOUS");
+    return 1;
+  }
 }
 
 void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
 {
   // Check that mechanism is ANONYMOUS and it is allowed
-  if (strcmp(mechanism, "ANONYMOUS")==0 &&
+  if (strcmp(mechanism, ANONYMOUS)==0 &&
       pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(sizeof(ANONYMOUS)-1, ANONYMOUS))) {
     transport->sasl->username = "anonymous";
     transport->sasl->outcome = PN_SASL_OK;
+    transport->authenticated = true;
+    pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
+  } else if (strcmp(mechanism, EXTERNAL)==0 &&
+      transport->sasl->external_auth &&
+      pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(sizeof(EXTERNAL)-1, EXTERNAL))) {
+    transport->sasl->username = transport->sasl->external_auth;
+    transport->sasl->outcome = PN_SASL_OK;
+    transport->authenticated = true;
     pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
   } else {
     transport->sasl->outcome = PN_SASL_AUTH;
