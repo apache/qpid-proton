@@ -28,7 +28,7 @@
 namespace proton {
 namespace reactor {
 
-/**   \ingroup C++
+/** @ingroup cpp
  * A duration is a time in milliseconds.
  */
 class Duration

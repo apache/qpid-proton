@@ -27,7 +27,7 @@ namespace proton {
 namespace reactor {
 
 
-Transport::Transport() : connection(0), pnTransport(pn_transport()) {} ;
+Transport::Transport() : connection(0), pnTransport(pn_transport()) {}
 
 Transport::~Transport() { pn_decref(pnTransport); }
 

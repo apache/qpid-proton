@@ -83,7 +83,7 @@ void MessagingHandler::createHelpers() {
 MessagingHandler::~MessagingHandler(){
     delete flowController;
     delete messagingAdapter;
-};
+}
 
 void MessagingHandler::onAbort(Event &e) { onUnhandled(e); }
 void MessagingHandler::onAccepted(Event &e) { onUnhandled(e); }

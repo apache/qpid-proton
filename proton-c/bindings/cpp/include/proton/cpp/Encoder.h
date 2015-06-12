@@ -31,13 +31,28 @@ namespace reactor {
 
 class Value;
 
-/**
-Stream-like encoder from C++ values to AMQP bytes.
+/**@file
+ * Stream-like encoder from C++ values to AMQP bytes.
+ * @ingroup cpp
+*/
 
-@see types.h defines C++ typedefs and types for AMQP each type. These types
+/**
+@ingroup cpp
+
+types.h defines C++ typedefs and types for AMQP each type. These types
 insert as the corresponding AMQP type. Normal C++ conversion rules apply if you
 insert any other type.
 
+C++ containers can be inserted as AMQP containers with the as() helper functions. E.g.
+
+   std::vector<Symbol> v; encoder << as<List>(v);
+
+AMQP maps can be inserted/extracted to any container with pair<X,Y> as
+value_type, which includes std::map and std::unordered_map but also for
+example std::vector<std::pair<X,Y> >. This allows you to perserve order when
+extracting AMQP maps.
+
+You can also insert containers element-by-element, see the Start class.
 */
 class Encoder : public virtual Data {
   public:
@@ -68,9 +83,10 @@ class Encoder : public virtual Data {
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
 
-    /** @defgroup encoder_simple_types Insert simple types.
+    /** @name Insert simple types.
      *@{
      */
+    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Null);
     PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Bool);
     PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Ubyte);
     PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Byte);
@@ -94,8 +110,25 @@ class Encoder : public virtual Data {
     PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Value&);
     ///@}
 
+    /** Start a container type. See the Start class. */
+    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Start&);
+
+    /** Finish a container type. */
+    PN_CPP_EXTERN friend Encoder& operator<<(Encoder& e, Finish);
+
+
+    /**@name Insert values returned by the as<TypeId> helper.
+     *@{
+     */
+  template <class T, TypeId A> friend Encoder& operator<<(Encoder&, CRef<T, A>);
+  template <class T> friend Encoder& operator<<(Encoder&, CRef<T, ARRAY>);
+  template <class T> friend Encoder& operator<<(Encoder&, CRef<T, LIST>);
+  template <class T> friend Encoder& operator<<(Encoder&, CRef<T, MAP>);
+    // TODO aconway 2015-06-16: DESCRIBED.
+    ///@}
+
   private:
-    PN_CPP_EXTERN Encoder(pn_data_t* pd); // Does not own.
+    PN_CPP_EXTERN Encoder(pn_data_t* pd);
 
     // Not implemented
     Encoder(const Encoder&);
@@ -103,6 +136,49 @@ class Encoder : public virtual Data {
 
   friend class Value;
 };
+
+/** Encode const char* as string */
+inline Encoder& operator<<(Encoder& e, const char* s) { return e << String(s); }
+
+/** Encode char* as string */
+inline Encoder& operator<<(Encoder& e, char* s) { return e << String(s); }
+
+/** Encode std::string as string */
+inline Encoder& operator<<(Encoder& e, const std::string& s) { return e << String(s); }
+
+//@internal Convert a Ref to a CRef.
+template <class T, TypeId A> Encoder& operator<<(Encoder& e, Ref<T, A> ref) {
+    return e << CRef<T,A>(ref);
+}
+
+// TODO aconway 2015-06-16: described array insertion.
+
+template <class T> Encoder& operator<<(Encoder& e, CRef<T, ARRAY> a) {
+    e << Start::array(TypeIdOf<typename T::value_type>::value);
+    for (typename T::const_iterator i = a.value.begin(); i != a.value.end(); ++i)
+        e << *i;
+    e << finish();
+    return e;
+}
+
+template <class T> Encoder& operator<<(Encoder& e, CRef<T, LIST> l) {
+    e << Start::list();
+    for (typename T::const_iterator i = l.value.begin(); i != l.value.end(); ++i)
+        e << *i;
+    e << finish();
+    return e;
+}
+
+template <class T> Encoder& operator<<(Encoder& e, CRef<T, MAP> m){
+    e << Start::map();
+    for (typename T::const_iterator i = m.value.begin(); i != m.value.end(); ++i) {
+        e << i->first;
+        e << i->second;
+    }
+    e << finish();
+    return e;
+}
+
 
 }}
 #endif // ENCODER_H

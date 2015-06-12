@@ -29,43 +29,40 @@ namespace reactor {
 
 class Value;
 
+/**@file
+ * Stream-like decoder from AMQP bytes to C++ values.
+ * @ingroup cpp
+ */
+
 /**
+@ingroup cpp
+
 Stream-like decoder from AMQP bytes to a stream of C++ values.
 
-@see types.h defines C++ typedefs and types for AMQP each type. These types can
-all be extracted from the corresponding AMQP type. In additon operator>> will do
-the following conversions from AMQP to C++ types:
+types.h defines C++ types corresponding to AMQP types.
 
-+-----------------------------------------+--------------------------------------------------+
-|Target C++ type                          |Allowed AMQP types                                |
-+=========================================+==================================================+
-|bool                                     |Bool                                              |
-|-----------------------------------------+--------------------------------------------------|
-|signed integer type                      |Byte,Short,Int,Long [1]                           |
-+-----------------------------------------+--------------------------------------------------+
-|unsigned integer type                    |UByte,UShort,UInt,ULong [1]                       |
-+-----------------------------------------+--------------------------------------------------+
-|float or double                          |Float or Double                                   |
-+-----------------------------------------+--------------------------------------------------+
-|Value                                    |Any type                                          |
-+-----------------------------------------+--------------------------------------------------+
-|std::string                              |String, Binary, Symbol                            |
-+-----------------------------------------+--------------------------------------------------+
-|wchar_t                                  |Char                                              |
-+-----------------------------------------+--------------------------------------------------+
-|std::map<K, T>                           |Map with keys that convert to K and data that     |
-|                                         |converts to T                                     |
-+-----------------------------------------+--------------------------------------------------+
-|Map                                      |Map may have mixed keys and data types            |
-+-----------------------------------------+--------------------------------------------------+
-|std::vector<T>                           |List or Array if data converts to T               |
-+-----------------------------------------+--------------------------------------------------+
-|List                                     |List, may have mixed types and datas              |
-+-----------------------------------------+--------------------------------------------------+
+Decoder operator>> will extract AMQP types into corresponding C++ types, and do
+simple conversions, e.g. from AMQP integer types to corresponding or larger C++
+integer types.
 
-You can disable conversions and force an exact type match using @see exact()
+You can require an exact AMQP type using the `as<type>(value)` helper. E.g.
+
+    Int i;
+    decoder >> as<INT>(i):       // Will throw if decoder does not contain an INT
+
+You can also use the `as` helper to extract an AMQP list, array or map into C++ containers.
+
+    std::vector<Int> v;
+    decoder >> as<LIST>(v);     // Extract a list of INT.
+
+AMQP maps can be inserted/extracted to any container with pair<X,Y> as
+value_type, which includes std::map and std::unordered_map but also for
+example std::vector<std::pair<X,Y> >. This allows you to perserve order when
+extracting AMQP maps.
+
+You can also extract container values element-by-element, see the Start class.
 */
-class Decoder : public virtual Data {
+PN_CPP_EXTERN class Decoder : public virtual Data {
   public:
     /** Raised if a Decoder operation fails  */
     struct Error : public ProtonException {
@@ -95,10 +92,12 @@ class Decoder : public virtual Data {
      */
     PN_CPP_EXTERN TypeId type() const;
 
-    /** @defgroup decoder_simple_types Extract simple types, @see Decoder for details.
-     *@throw Error if the Decoder is empty or the current value has an incompatible type.
-     *@{
+    /** @name Extract simple types
+     * Overloads to extract simple types.
+     * @throw Error if the Decoder is empty or the current value has an incompatible type.
+     * @{
      */
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Null);
     PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Bool&);
     PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Ubyte&);
     PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Byte&);
@@ -120,14 +119,59 @@ class Decoder : public virtual Data {
     PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Value&);
     ///@}
 
-    ///@internal
-    template <class T> struct ExactRef { T& value; ExactRef(T& ref) : value(ref) {} };
+    /** Extract and return a value of type T. */
+    template <class T> T get() { T value; *this >> value; return value; }
 
-    /** @see exact() */
-  template <class T> friend Decoder& operator>>(Decoder&, ExactRef<T>);
+    /** Extract and return a value of type T, as AMQP type. */
+    template <class T, TypeId A> T getAs() { T value; *this >> as<A>(value); return value; }
+
+    /** Call Decoder::start() in constructor, Decoder::finish in destructor() */
+    struct Scope : public Start {
+        Decoder& decoder;
+        Scope(Decoder& d) : decoder(d) { d >> *this; }
+        ~Scope() { decoder >> finish(); }
+    };
+
+    template <TypeId A, class T> friend Decoder& operator>>(Decoder& d, Ref<T, A> ref) {
+        d.checkType(A);
+        d >> ref.value;
+        return d;
+    }
+
+    /** start extracting a container value, one of array, list, map, described.
+     * The basic pattern is:
+     *
+     *     Start s;
+     *     decoder >> s;
+     *     // check s.type() to see if this is an ARRAY, LIST, MAP or DESCRIBED type.
+     *     if (s.described) extract the descriptor...
+     *     for (size_t i = 0; i < s.size(); ++i) Extract each element...
+     *     decoder >> finish();
+     *
+     * The first value of an ARRAY is a descriptor if Start::descriptor is true,
+     * followed by Start::size elemets of type Start::element.
+     *
+     * A LIST has Start::size elements which may be of mixed type.
+     *
+     * A MAP has Start::size elements which alternate key, value, key, value...
+     * and may be of mixed type.
+     *
+     * A DESCRIBED contains a descriptor and a single element, so it always has
+     * Start::described=true and Start::size=1.
+     *
+     * Note Scope automatically calls finish() in its destructor.
+     *
+     *@throw decoder::error if the curent value is not a container type.
+     */
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Start&);
+
+    /** Finish extracting a container value. */
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Finish);
+
+    /** Skip a value */
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Skip);
 
   private:
-    PN_CPP_EXTERN Decoder(pn_data_t*);
     template <class T> Decoder& extract(T& value);
     void checkType(TypeId);
 
@@ -139,26 +183,36 @@ class Decoder : public virtual Data {
   friend class Encoder;
 };
 
-/**
- * exact() disables the conversions allowed by Decoder operator>> and requires exact type match.
- *
- * For example the following will throw Decode::Error unless decoder conntains
- * an AMQP bool and an AMQP ULong.
- *
- * @code
- * Bool b;
- * ULong ul;
- * decoder >> exact(b) >> exact(ul)
- * @code
- */
-template <class T> Decoder::ExactRef<T> exact(T& value) {
-    return Decoder::ExactRef<T>(value);
+template <class T> Decoder& operator>>(Decoder& d, Ref<T, ARRAY> ref)  {
+    Decoder::Scope s(d);
+    if (s.isDescribed) d >> skip();
+    ref.value.clear();
+    ref.value.resize(s.size);
+    for (typename T::iterator i = ref.value.begin(); i != ref.value.end(); ++i) {
+        d >> *i;
+    }
+    return d;
 }
 
-///@see exact()
-template <class T> Decoder& operator>>(Decoder& d, Decoder::ExactRef<T> ref) {
-    d.checkType(TypeIdOf<T>::value);
-    d >> ref.value;
+template <class T> Decoder& operator>>(Decoder& d, Ref<T, LIST> ref)  {
+    Decoder::Scope s(d);
+    ref.value.clear();
+    ref.value.resize(s.size);
+    for (typename T::iterator i = ref.value.begin(); i != ref.value.end(); ++i)
+        d >> *i;
+    return d;
+}
+
+template <class T> Decoder& operator>>(Decoder& d, Ref<T, MAP> ref)  {
+    Decoder::Scope m(d);
+    ref.value.clear();
+    for (size_t i = 0; i < m.size/2; ++i) {
+        typename T::key_type k;
+        typename T::mapped_type v;
+        d >> k >> v;
+        ref.value[k] = v;
+    }
+    return d;
 }
 
 }} // namespace proton::reactor

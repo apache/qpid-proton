@@ -73,6 +73,8 @@ const char *pn_type_name(pn_type_t type)
   return "<UNKNOWN>";
 }
 
+const pn_type_t PN_INVALID = (pn_type_t) -1;
+
 static inline void pni_atom_init(pn_atom_t *atom, pn_type_t type)
 {
   memset(atom, 0, sizeof(pn_atom_t));
@@ -690,7 +692,7 @@ static bool pn_scan_next(pn_data_t *data, pn_type_t *type, bool suspend)
       pn_data_exit(data);
       return pn_scan_next(data, type, suspend);
     } else {
-      *type = (pn_type_t) -1;
+      *type = PN_INVALID;
       return false;
     }
   }
@@ -1266,7 +1268,7 @@ pn_type_t pn_data_type(pn_data_t *data)
   if (node) {
     return node->atom.type;
   } else {
-    return (pn_type_t) -1;
+    return PN_INVALID;
   }
 }
 
@@ -1276,7 +1278,7 @@ pn_type_t pni_data_parent_type(pn_data_t *data)
   if (node) {
     return node->atom.type;
   } else {
-    return (pn_type_t) -1;
+    return PN_INVALID;
   }
 }
 
@@ -1686,7 +1688,7 @@ pn_type_t pn_data_get_array_type(pn_data_t *data)
   if (node && node->atom.type == PN_ARRAY) {
     return node->type;
   } else {
-    return (pn_type_t) -1;
+    return PN_INVALID;
   }
 }
 

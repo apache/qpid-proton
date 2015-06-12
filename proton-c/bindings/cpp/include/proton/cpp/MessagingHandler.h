@@ -78,8 +78,8 @@ class PN_CPP_EXTERN MessagingHandler : public ProtonHandler , public Acking
     virtual void onTransportClosed(Event &e);
   protected:
     int prefetch;
-    bool autoSettle;
     bool autoAccept;
+    bool autoSettle;
     bool peerCloseIsError;
     MessagingAdapter *messagingAdapter;
     Handler *flowController;

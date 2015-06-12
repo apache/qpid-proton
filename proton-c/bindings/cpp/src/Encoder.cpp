@@ -18,8 +18,10 @@
  */
 
 #include "proton/cpp/Encoder.h"
+#include "proton/cpp/Value.h"
 #include <proton/codec.h>
 #include "proton_bits.h"
+#include "Msg.h"
 
 namespace proton {
 namespace reactor {
@@ -33,27 +35,30 @@ struct SaveState {
     pn_handle_t handle;
     SaveState(pn_data_t* d) : data(d), handle(pn_data_point(d)) {}
     ~SaveState() { if (data) pn_data_restore(data, handle); }
+    void cancel() { data = 0; }
 };
 
-template <class T> T check(T result) {
+void check(int result, pn_data_t* data) {
     if (result < 0)
-        throw Encoder::Error("encode: " + errorStr(result));
-    return result;
+        throw Encoder::Error("encode: " + errorStr(pn_data_error(data), result));
 }
 }
 
 bool Encoder::encode(char* buffer, size_t& size) {
     SaveState ss(data);               // In case of error
-    pn_data_rewind(data);
     ssize_t result = pn_data_encode(data, buffer, size);
     if (result == PN_OVERFLOW) {
-        size = pn_data_encoded_size(data);
-        return false;
+        result = pn_data_encoded_size(data);
+        if (result >= 0) {
+            size = result;
+            return false;
+        }
     }
-    check(result);
+    check(result, data);
     size = result;
-    ss.data = 0;                // Don't restore state, all is well.
+    ss.cancel();                // Don't restore state, all is well.
     pn_data_clear(data);
+    return true;
 }
 
 void Encoder::encode(std::string& s) {
@@ -70,16 +75,35 @@ std::string Encoder::encode() {
     return s;
 }
 
+Encoder& operator<<(Encoder& e, const Start& s) {
+    switch (s.type) {
+      case ARRAY: pn_data_put_array(e.data, s.isDescribed, pn_type_t(s.element)); break;
+      case MAP: pn_data_put_map(e.data); break;
+      case LIST: pn_data_put_list(e.data); break;
+      case DESCRIBED: pn_data_put_described(e.data); break;
+      default:
+        throw Encoder::Error(MSG("encode: " << s.type << " is not a container type"));
+    }
+    pn_data_enter(e.data);
+    return e;
+}
+
+Encoder& operator<<(Encoder& e, Finish) {
+    pn_data_exit(e.data);
+    return e;
+}
+
 namespace {
 template <class T, class U>
 Encoder& insert(Encoder& e, pn_data_t* data, T& value, int (*put)(pn_data_t*, U)) {
     SaveState ss(data);         // Save state in case of error.
-    check(put(data, value));
-    ss.data = 0;                // Don't restore state, all is good.
+    check(put(data, value), data);
+    ss.cancel();                // Don't restore state, all is good.
     return e;
 }
 }
 
+Encoder& operator<<(Encoder& e, Null) { pn_data_put_null(e.data); return e; }
 Encoder& operator<<(Encoder& e, Bool value) { return insert(e, e.data, value, pn_data_put_bool); }
 Encoder& operator<<(Encoder& e, Ubyte value) { return insert(e, e.data, value, pn_data_put_ubyte); }
 Encoder& operator<<(Encoder& e, Byte value) { return insert(e, e.data, value, pn_data_put_byte); }
@@ -100,5 +124,35 @@ Encoder& operator<<(Encoder& e, Uuid value) { return insert(e, e.data, value, pn
 Encoder& operator<<(Encoder& e, String value) { return insert(e, e.data, value, pn_data_put_string); }
 Encoder& operator<<(Encoder& e, Symbol value) { return insert(e, e.data, value, pn_data_put_symbol); }
 Encoder& operator<<(Encoder& e, Binary value) { return insert(e, e.data, value, pn_data_put_binary); }
+
+// Meta-function to get the class from the type ID.
+template <TypeId A> struct ClassOf {};
+template<> struct ClassOf<NULL_> { typedef Null ValueType; };
+template<> struct ClassOf<BOOL> { typedef Bool ValueType; };
+template<> struct ClassOf<UBYTE> { typedef Ubyte ValueType; };
+template<> struct ClassOf<BYTE> { typedef Byte ValueType; };
+template<> struct ClassOf<USHORT> { typedef Ushort ValueType; };
+template<> struct ClassOf<SHORT> { typedef Short ValueType; };
+template<> struct ClassOf<UINT> { typedef Uint ValueType; };
+template<> struct ClassOf<INT> { typedef Int ValueType; };
+template<> struct ClassOf<CHAR> { typedef Char ValueType; };
+template<> struct ClassOf<ULONG> { typedef Ulong ValueType; };
+template<> struct ClassOf<LONG> { typedef Long ValueType; };
+template<> struct ClassOf<TIMESTAMP> { typedef Timestamp ValueType; };
+template<> struct ClassOf<FLOAT> { typedef Float ValueType; };
+template<> struct ClassOf<DOUBLE> { typedef Double ValueType; };
+template<> struct ClassOf<DECIMAL32> { typedef Decimal32 ValueType; };
+template<> struct ClassOf<DECIMAL64> { typedef Decimal64 ValueType; };
+template<> struct ClassOf<DECIMAL128> { typedef Decimal128 ValueType; };
+template<> struct ClassOf<UUID> { typedef Uuid ValueType; };
+template<> struct ClassOf<BINARY> { typedef Binary ValueType; };
+template<> struct ClassOf<STRING> { typedef String ValueType; };
+template<> struct ClassOf<SYMBOL> { typedef Symbol ValueType; };
+
+Encoder& operator<<(Encoder& e, const Value& v) {
+    if (e.data == v.values.data) throw Encoder::Error("encode: cannot insert into self");
+    check(pn_data_appendn(e.data, v.values.data, 1), e.data);
+    return e;
+}
 
 }} // namespace proton::reactor

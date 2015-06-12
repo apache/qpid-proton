@@ -20,7 +20,7 @@
 import unittest
 import os, sys, socket, time
 from  random import randrange
-from subprocess import Popen, check_output, PIPE
+from subprocess import Popen, check_output, PIPE, STDOUT
 
 NULL = open(os.devnull, 'w')
 
@@ -58,7 +58,7 @@ class Broker(object):
 
 
 class ExampleTest(unittest.TestCase):
-    """Test examples"""
+    """Run the examples, verify they behave as expected."""
 
     @classmethod
     def tearDownClass(self):
@@ -89,6 +89,8 @@ class ExampleTest(unittest.TestCase):
         recv_expect += "".join(['[%d]: b"some arbitrary binary data"\n' % (i+1) for i in range(n)])
         self.assertEqual(recv_expect, recv)
 
+        # FIXME aconway 2015-06-16: bug when receiver is started before sender, messages
+        # are not delivered to receiver.
     def FIXME_test_simple_recv_send(self):
         """Start receiver first, then run sender"""
         b = Broker.get()
@@ -101,5 +103,40 @@ class ExampleTest(unittest.TestCase):
         out, err = recv.communicate()
         self.assertEqual(recv_expect, out)
 
+    def call(self, *cmd):
+        p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+        out, err = p.communicate()
+        self.assertEqual(0, p.returncode,
+                         "%s exit code %s, output:\n%s\n---- end of %s exit code %s" % (
+                             cmd, p.returncode, out, cmd, p.returncode))
+        return out
+
+    def test_encode_decode(self):
+        expect="""
+== Simple values: int, string, bool
+Values: int(42), string("foo"), bool(true)
+Extracted: 42, foo, 1
+Encoded as AMQP in 8 bytes
+
+== Specific AMQP types: byte, long, symbol
+Values: byte(120), long(123456789123456789), symbol(:bar)
+Extracted (with conversion) 120, 123456789123456789, bar
+Extracted (exact) x, 123456789123456789, bar
+
+== Array, list and map.
+Values: array<int>[int(1), int(2), int(3)], list[int(4), int(5)], map{string("one"):int(1), string("two"):int(2)}
+Extracted: [ 1 2 3 ], [ 4 5 ], { one:1 two:2 }
+
+== List and map of mixed type values.
+Values: list[int(42), string("foo")], map{int(4):string("four"), string("five"):int(5)}
+Extracted: [ 42 "foo" ], { 4:"four" "five":5 }
+
+== Insert with stream operators.
+Values: array<int>[int(1), int(2), int(3)]
+Values: list[int(42), bool(false), symbol(:x)]
+Values: map{string("k1"):int(42), symbol(:"k2"):bool(false)}
+"""
+        self.maxDiff = None
+        self.assertMultiLineEqual(expect, self.call("./encode_decode"))
 if __name__ == "__main__":
     unittest.main()

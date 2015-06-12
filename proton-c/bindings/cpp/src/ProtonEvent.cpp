@@ -70,11 +70,12 @@ Receiver ProtonEvent::getReceiver() {
 
 Link ProtonEvent::getLink() {
     pn_link_t *lnk = pn_event_link(getPnEvent());
-    if (lnk)
+    if (lnk) {
         if (pn_link_is_sender(lnk))
             return Sender(lnk);
         else
             return Receiver(lnk);
+    }
     throw ProtonException(MSG("No link context for this event"));
 }
 

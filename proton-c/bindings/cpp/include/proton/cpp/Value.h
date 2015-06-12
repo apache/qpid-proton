@@ -19,66 +19,61 @@
  * under the License.
  */
 
-#include "proton/cpp/Encoder.h"
-#include "proton/cpp/Decoder.h"
-#include <iosfwd>
+#include "proton/cpp/Values.h"
 
+/**@file
+ * Holder for an AMQP value.
+ * @ingroup cpp
+ */
 namespace proton {
 namespace reactor {
 
-/** Holds a sequence of AMQP values, allows inserting and extracting.
- *
- * After inserting values, call rewind() to extract them.
- */
-class Values : public Encoder, public Decoder {
-  public:
-    Values();
-    Values(const Values&);
-    ~Values();
-
-    /** Copy data from another Values */
-    Values& operator=(const Values&);
-
-    PN_CPP_EXTERN void rewind();
-
-  private:
-  friend class Value;
-};
-
 /** Holds a single AMQP value. */
-class Value {
+PN_CPP_EXTERN class Value {
   public:
     PN_CPP_EXTERN Value();
     PN_CPP_EXTERN Value(const Value&);
+    /** Converting constructor from any settable value */
+    template <class T> explicit Value(const T& v);
     PN_CPP_EXTERN ~Value();
-
     PN_CPP_EXTERN Value& operator=(const Value&);
+
 
     TypeId type() const;
 
-    /** Set the value */
+    /** Set the value. */
     template<class T> void set(const T& value);
-    /** Get the value */
+    /** Get the value. */
     template<class T> void get(T& value) const;
     /** Get the value */
     template<class T> T get() const;
 
     /** Assignment sets the value */
     template<class T> Value& operator=(const T& value);
+
     /** Conversion operator gets  the value */
     template<class T> operator T() const;
 
-    /** Insert a value into an Encoder. */
+    /** insert a value into an Encoder. */
     PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Value&);
 
     /** Extract a value from a decoder. */
-    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, const Value&);
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Value&);
 
-  friend Decoder& operator>>(Decoder&, Value&);
-  friend Encoder& operator<<(Encoder&, const Value&);
+    /** Human readable format */
+    PN_CPP_EXTERN friend std::ostream& operator<<(std::ostream&, const Value&);
 
-    private:
-    Values values;
+    bool operator==(const Value&) const;
+    bool operator !=(const Value& v) const{ return !(*this == v); }
+
+    /** operator < makes Value valid for use as a std::map key. */
+    bool operator<(const Value&) const;
+    bool operator>(const Value& v) const { return v < *this; }
+    bool operator<=(const Value& v) const { return !(*this > v); }
+    bool operator>=(const Value& v) const { return !(*this < v); }
+
+  private:
+    mutable Values values;
 };
 
 template<class T> void Value::set(const T& value) {
@@ -88,8 +83,7 @@ template<class T> void Value::set(const T& value) {
 
 template<class T> void Value::get(T& value) const {
     Values& v = const_cast<Values&>(values);
-    v.rewind();
-    v >> value;
+    v.rewind() >> value;
 }
 
 template<class T> T Value::get() const { T value; get(value); return value; }
@@ -98,6 +92,7 @@ template<class T> Value& Value::operator=(const T& value) { set(value); return *
 
 template<class T> Value::operator T() const { return get<T>(); }
 
+template<class T> Value::Value(const T& value) { set(value); }
 }}
 
 #endif // VALUE_H

@@ -24,7 +24,7 @@
 namespace proton {
 namespace reactor {
 
-ProtonHandler::ProtonHandler(){};
+ProtonHandler::ProtonHandler(){}
 
 // Everything goes to onUnhandled() unless overriden by subclass
 

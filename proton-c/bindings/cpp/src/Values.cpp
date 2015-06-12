@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_EXCEPTIONS_H
-#define PROTON_CPP_EXCEPTIONS_H
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,31 +15,25 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include <stdexcept>
+
+#include "proton/cpp/Value.h"
+#include "proton_bits.h"
+#include <proton/codec.h>
+#include <ostream>
 
 namespace proton {
 namespace reactor {
 
-class Exception : public std::runtime_error
-{
-  public:
-    explicit Exception(const std::string& msg) throw() : std::runtime_error(msg) {}
-};
+Values::Values() {}
+Values::Values(const Values& v) { *this = v; }
+Values::~Values() {}
+Values& Values::operator=(const Values& v) { Data::operator=(v); return *this; }
 
-class MessageReject : public Exception
-{
-  public:
-    explicit MessageReject(const std::string& msg) throw() : Exception(msg) {}
-};
+Values& Values::rewind() { pn_data_rewind(data); return *this; }
 
-class MessageRelease : public Exception
-{
-  public:
-    explicit MessageRelease(const std::string& msg) throw() : Exception(msg) {}
-};
+std::ostream& operator<<(std::ostream& o, const Values& v) {
+    return o << static_cast<const Encoder&>(v);
+}
 
-}} // namespace proton::reactor
-
-#endif  /*!PROTON_CPP_EXCEPTIONS_H*/
+}}

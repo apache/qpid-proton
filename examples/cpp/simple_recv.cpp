@@ -46,7 +46,7 @@ class Recv : public MessagingHandler {
     }
 
     void onMessage(Event &e) {
-        uint64_t id = 0;
+        int64_t id = 0;
         Message msg = e.getMessage();
         if (msg.getIdType() == PN_ULONG) {
             id = msg.getId();

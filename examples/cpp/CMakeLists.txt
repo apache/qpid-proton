@@ -17,11 +17,19 @@
 # under the License.
 #
 
-include_directories ("${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")
+include_directories("${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")
 
-foreach(example broker helloworld helloworld_blocking helloworld_direct simple_recv simple_send)
+foreach(example
+    broker
+    helloworld
+    helloworld_blocking
+    helloworld_direct
+    simple_recv
+    simple_send
+    encode_decode)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} qpid-proton-cpp)
+  set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 endforeach()
 
 add_test(

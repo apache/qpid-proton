@@ -250,17 +250,17 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
   pn_atom_t *atom = &node->atom;
-  uint8_t code;
+  uint8_t code = pn_node2code(encoder, node);
   conv_t c;
 
   /** In an array we don't write the code before each element, only the first. */
   if (pn_is_in_array(data, parent, node)) {
-    code = pn_type2code(encoder, parent->type);
-    if (pn_is_first_in_array(data, parent, node)) {
+    uint8_t array_code = pn_type2code(encoder, parent->type);
+    if (code != array_code)
+        return pn_error_format(data->error, PN_ERR, "array element type mismatch");
+    if (pn_is_first_in_array(data, parent, node))
       pn_encoder_writef8(encoder, code);
-    }
   } else {
-    code = pn_node2code(encoder, node);
     pn_encoder_writef8(encoder, code);
   }
 

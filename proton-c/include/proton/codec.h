@@ -177,6 +177,9 @@ typedef enum {
   PN_MAP = 25
 } pn_type_t;
 
+/** A special invalid type value that is returned when no valid type is available. */
+extern const pn_type_t PN_INVALID;
+
 /**
  * Return a string name for an AMQP type.
  *
@@ -468,8 +471,8 @@ PN_EXTERN bool pn_data_exit(pn_data_t *data);
 PN_EXTERN bool pn_data_lookup(pn_data_t *data, const char *name);
 
 /**
- * Access the type of the current node. Returns an undefined value if
- * there is no current node.
+ * Access the type of the current node. Returns PN_INVALID if there is no
+ * current node.
  *
  * @param data a data object
  * @return the type of the current node
@@ -953,7 +956,7 @@ PN_EXTERN bool pn_data_is_array_described(pn_data_t *data);
 
 /**
  * Return the array type if the current node points to an array,
- * undefined otherwise.
+ * PN_INVALID otherwise.
  *
  * @param data a pn_data_t object
  * @return the element type of an array node

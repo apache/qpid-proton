@@ -18,8 +18,10 @@
  */
 
 #include "proton/cpp/Decoder.h"
+#include "proton/cpp/Value.h"
 #include <proton/codec.h>
 #include "proton_bits.h"
+#include "Msg.h"
 
 namespace proton {
 namespace reactor {
@@ -44,15 +46,28 @@ struct SaveState {
     ~SaveState() { if (data) pn_data_restore(data, handle); }
     void cancel() { data = 0; }
 };
+
+struct Narrow {
+    pn_data_t* data;
+    Narrow(pn_data_t* d) : data(d) { pn_data_narrow(d); }
+    ~Narrow() { pn_data_widen(data); }
+};
+
+template <class T> T check(T result) {
+    if (result < 0)
+        throw Decoder::Error("decode: " + errorStr(result));
+    return result;
+}
+
+std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
+
 }
 
 void Decoder::decode(const char* i, size_t size) {
     SaveState ss(data);
     const char* end = i + size;
     while (i < end) {
-        int result = pn_data_decode(data, i, end - i);
-        if (result < 0) throw Decoder::Error("decode: " + errorStr(result));
-        i += result;
+        i += check(pn_data_decode(data, i, end - i));
     }
 }
 
@@ -89,9 +104,63 @@ template <class T, class U> void extract(pn_data_t* data, T& value, U (*get)(pn_
 
 }
 
+void Decoder::checkType(TypeId want) {
+    TypeId got = type();
+    if (want != got) badType(want, got);
+}
+
 TypeId Decoder::type() const {
     SaveState ss(data);
     return preGet(data);
+}
+
+Decoder& operator>>(Decoder& d, Start& s) {
+    SaveState ss(d.data);
+    s.type = preGet(d.data);
+    switch (s.type) {
+      case ARRAY:
+        s.size = pn_data_get_array(d.data);
+        s.element = TypeId(pn_data_get_array_type(d.data));
+        s.isDescribed = pn_data_is_array_described(d.data);
+        break;
+      case LIST:
+        s.size = pn_data_get_list(d.data);
+        break;
+      case MAP:
+        s.size = pn_data_get_map(d.data);
+        break;
+      case DESCRIBED:
+        s.isDescribed = true;
+        s.size = 1;
+        break;
+      default:
+        throw Decoder::Error(MSG("decode: " << s.type << " is not a container type"));
+    }
+    pn_data_enter(d.data);
+    ss.cancel();
+    return d;
+}
+
+Decoder& operator>>(Decoder& d, Finish) { pn_data_exit(d.data); return d; }
+
+Decoder& operator>>(Decoder& d, Skip) { pn_data_next(d.data); return d; }
+
+Decoder& operator>>(Decoder& d, Value& v) {
+    if (d.data == v.values.data) throw Decoder::Error("decode: extract into self");
+    pn_data_clear(v.values.data);
+    {
+        Narrow n(d.data);
+        check(pn_data_appendn(v.values.data, d.data, 1));
+    }
+    if (!pn_data_next(d.data)) throw Decoder::Error("decode: no more data");
+    return d;
+}
+
+
+Decoder& operator>>(Decoder& d, Null) {
+    SaveState ss(d.data);
+    badType(NULL_, preGet(d.data));
+    return d;
 }
 
 Decoder& operator>>(Decoder& d, Bool& value) {
@@ -112,7 +181,7 @@ Decoder& operator>>(Decoder& d, Ubyte& value) {
 Decoder& operator>>(Decoder& d, Byte& value) {
     SaveState ss(d.data);
     switch (preGet(d.data)) {
-      case BYTE: value = pn_data_get_ubyte(d.data); break;
+      case BYTE: value = pn_data_get_byte(d.data); break;
       default: badType(BYTE, TypeId(TypeId(pn_data_type(d.data))));
     }
     ss.cancel();
@@ -255,11 +324,5 @@ Decoder& operator>>(Decoder& d, std::string& value) {
     ss.cancel();
     return d;
 }
-
-void Decoder::checkType(TypeId want) {
-    TypeId got = type();
-    if (want != got) badType(want, got);
-}
-
 
 }} // namespace proton::reactor

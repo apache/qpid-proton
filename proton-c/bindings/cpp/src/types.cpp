@@ -19,31 +19,10 @@
 
 #include "proton/cpp/types.h"
 #include <proton/codec.h>
+#include <ostream>
 
 namespace proton {
 namespace reactor {
-
-const TypeId TypeIdOf<Null>::value = NULL_;
-const TypeId TypeIdOf<Bool>::value = BOOL;
-const TypeId TypeIdOf<Ubyte>::value = UBYTE;
-const TypeId TypeIdOf<Byte>::value = BYTE;
-const TypeId TypeIdOf<Ushort>::value = USHORT;
-const TypeId TypeIdOf<Short>::value = SHORT;
-const TypeId TypeIdOf<Uint>::value = UINT;
-const TypeId TypeIdOf<Int>::value = INT;
-const TypeId TypeIdOf<Char>::value = CHAR;
-const TypeId TypeIdOf<Ulong>::value = ULONG;
-const TypeId TypeIdOf<Long>::value = LONG;
-const TypeId TypeIdOf<Timestamp>::value = TIMESTAMP;
-const TypeId TypeIdOf<Float>::value = FLOAT;
-const TypeId TypeIdOf<Double>::value = DOUBLE;
-const TypeId TypeIdOf<Decimal32>::value = DECIMAL32;
-const TypeId TypeIdOf<Decimal64>::value = DECIMAL64;
-const TypeId TypeIdOf<Decimal128>::value = DECIMAL128;
-const TypeId TypeIdOf<Uuid>::value = UUID;
-const TypeId TypeIdOf<Binary>::value = BINARY;
-const TypeId TypeIdOf<String>::value = STRING;
-const TypeId TypeIdOf<Symbol>::value = SYMBOL;
 
 std::string typeName(TypeId t) {
     switch (t) {
@@ -76,7 +55,27 @@ std::string typeName(TypeId t) {
     }
 }
 
-std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
-pn_bytes_t bytes(const std::string& s) { pn_bytes_t b; b.start = &s[0]; b.size = s.size(); return b; }
+std::ostream& operator<<(std::ostream& o,TypeId t) { return o << typeName(t); }
+
+PN_CPP_EXTERN bool isContainer(TypeId t) {
+    return (t == LIST || t == MAP || t == ARRAY || t == DESCRIBED);
+}
+
+pn_bytes_t pn_bytes(const std::string& s) {
+    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
+    return b;
+}
+
+pn_uuid_t pn_uuid(const std::string& s) {
+    pn_uuid_t u = {0};          // Zero initialized.
+    std::copy(s.begin(), s.begin() + std::max(s.size(), sizeof(pn_uuid_t::bytes)), &u.bytes[0]);
+    return u;
+}
+
+Start::Start(TypeId t, TypeId e, bool d, size_t s) : type(t), element(e), isDescribed(d), size(s) {}
+Start Start::array(TypeId element, bool described) { return Start(ARRAY, element, described); }
+Start Start::list() { return Start(LIST); }
+Start Start::map() { return Start(MAP); }
+Start Start::described() { return Start(DESCRIBED, NULL_, true); }
 
 }}

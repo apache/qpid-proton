@@ -20,12 +20,17 @@
  */
 
 #include <iosfwd>
+#include <proton/error.h>
 
 /**@file
  *
  * Assorted internal proton utilities.
  */
+
 std::string errorStr(int code);
+
+/** Print the error string from pn_error_t, or from code if pn_error_t has no error. */
+std::string errorStr(pn_error_t*, int code=0);
 
 /** Wrapper for a proton object pointer. */
 struct Object { void* value; Object(void* o) : value(o) {} };

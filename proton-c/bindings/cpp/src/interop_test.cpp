@@ -48,11 +48,7 @@ string read(string filename) {
     return string(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
 }
 
-template <class T> T get(Decoder& d) {
-    T value;
-    d >> exact(value);
-    return value;
-}
+template <class T> T get(Decoder& d) { return d.getAs<T, TypeIdOf<T>::value>(); }
 
 template <class T> std::string str(const T& value) {
     ostringstream oss;
@@ -129,7 +125,7 @@ int run_test(void (*testfn)(), const char* name) {
     return 1;
 }
 
-// FIXME aconway 2015-06-11: not testing all types.
+// TODO aconway 2015-06-11: interop test is not complete.
 
 #define RUN_TEST(T) run_test(&T, #T)
 

@@ -35,10 +35,10 @@ namespace reactor {
 MessagingAdapter::MessagingAdapter(MessagingHandler &delegate_) :
     MessagingHandler(true, delegate_.prefetch, delegate_.autoSettle, delegate_.autoAccept, delegate_.peerCloseIsError),
     delegate(delegate_)
-{};
+{}
 
 
-MessagingAdapter::~MessagingAdapter(){};
+MessagingAdapter::~MessagingAdapter(){}
 
 
 void MessagingAdapter::onReactorInit(Event &e) {
@@ -126,7 +126,7 @@ void MessagingAdapter::onDelivery(Event &e) {
                     MessagingEvent mevent(PN_MESSAGING_ACCEPTED, *pe);
                     delegate.onAccepted(mevent);
                 }
-                else if (rstate = PN_REJECTED) {
+                else if (rstate == PN_REJECTED) {
                     MessagingEvent mevent(PN_MESSAGING_REJECTED, *pe);
                     delegate.onRejected(mevent);
                 }
@@ -162,10 +162,6 @@ bool isLocalClosed(pn_state_t state) {
 
 bool isRemoteOpen(pn_state_t state) {
     return state & PN_REMOTE_ACTIVE;
-}
-
-bool isRemoteClosed(pn_state_t state) {
-    return state & PN_REMOTE_CLOSED;
 }
 
 } // namespace

@@ -1,5 +1,6 @@
+#ifndef VALUES_H
+#define VALUES_H
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,29 +17,40 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/cpp/Handler.h"
-#include "proton/cpp/Event.h"
+
+#include <proton/cpp/Encoder.h>
+#include <proton/cpp/Decoder.h>
+
+/**@file
+ * Holder for a sequence of AMQP values.
+ * @ingroup cpp
+ */
 
 namespace proton {
 namespace reactor {
 
-Handler::Handler() {}
-Handler::~Handler() {}
+/** Holds a sequence of AMQP values, allows inserting and extracting.
+ *
+ * After inserting values, call rewind() to extract them.
+ */
+PN_CPP_EXTERN class Values : public Encoder, public Decoder {
+  public:
+    Values();
+    Values(const Values&);
+    ~Values();
 
-void Handler::onUnhandled(Event &e) {}
+    /** Copy data from another Values */
+    Values& operator=(const Values&);
 
-void Handler::addChildHandler(Handler &e) {
-    childHandlers.push_back(&e);
-}
+    PN_CPP_EXTERN Values& rewind();
 
-std::vector<Handler *>::iterator Handler::childHandlersBegin() {
-    return childHandlers.begin();
-}
+  private:
+  friend class Value;
+};
 
-std::vector<Handler *>::iterator Handler::childHandlersEnd() {
-    return childHandlers.end();
-}
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const Values&);
 
-}} // namespace proton::reactor
+}}
+
+#endif // VALUES_H

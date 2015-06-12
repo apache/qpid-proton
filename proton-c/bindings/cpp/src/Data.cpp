@@ -41,8 +41,6 @@ void Data::clear() { pn_data_clear(data); }
 
 bool Data::empty() const { return pn_data_size(data) == 0; }
 
-std::ostream& operator<<(std::ostream& o, const Data& d) {
-    o << Object(d.data);
-}
+std::ostream& operator<<(std::ostream& o, const Data& d) { return o << Object(d.data); }
 
 }} // namespace proton::reactor

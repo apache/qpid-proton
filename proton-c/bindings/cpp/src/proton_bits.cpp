@@ -39,6 +39,14 @@ std::string errorStr(int code) {
   }
 }
 
+std::string errorStr(pn_error_t* err, int code) {
+    if (err && pn_error_code(err)) {
+        const char* text = pn_error_text(err);
+        return text ? std::string(text) : errorStr(pn_error_code(err));
+    }
+    return errorStr(code);
+}
+
 std::ostream& operator<<(std::ostream& o, const Object& object) {
     pn_string_t* str = pn_string("");
     pn_inspect(object.value, str);

@@ -47,10 +47,6 @@ ConnectionImpl *getImpl(const Connection &c) {
     return PrivateImplRef<Connection>::get(c);
 }
 
-ContainerImpl *getImpl(const Container &c) {
-    return PrivateImplRef<Container>::get(c);
-}
-
 } // namespace
 
 
@@ -253,8 +249,6 @@ Sender ContainerImpl::createSender(Connection &connection, std::string &addr, Ha
         pn_record_set_handler(record, wrapHandler(h));
     }
     snd.open();
-
-    ConnectionImpl *connImpl = getImpl(connection);
     return snd;
 }
 
@@ -266,8 +260,6 @@ Sender ContainerImpl::createSender(std::string &urlString) {
     Sender snd = session.createSender(containerId + '-' + path);
     pn_terminus_set_address(pn_link_target(snd.getPnLink()), path.c_str());
     snd.open();
-
-    ConnectionImpl *connImpl = getImpl(conn);
     return snd;
 }
 

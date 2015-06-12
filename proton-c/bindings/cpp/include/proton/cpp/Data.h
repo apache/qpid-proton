@@ -22,6 +22,10 @@
 #include "proton/cpp/ImportExport.h"
 #include <iosfwd>
 
+/**@file
+ * Base for classes that hold AMQP data.
+ * @internal
+ */
 struct pn_data_t;
 
 namespace proton {

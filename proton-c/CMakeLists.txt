@@ -213,6 +213,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
   set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  # C++ allow "%z" format specifier and variadic macros
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros" CACHE STRING "C++ warning flags")
   if (NOT BUILD_WITH_CXX)
     set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes")
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
@@ -227,8 +229,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
       set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
     endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
-    # allow "%z" format specifier and variadic macros
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
+    set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
   endif (NOT BUILD_WITH_CXX)
 
   if (ENABLE_UNDEFINED_ERROR)

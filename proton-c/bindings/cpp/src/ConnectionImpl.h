@@ -41,7 +41,7 @@ class ConnectionImpl : public Endpoint
   public:
     PN_CPP_EXTERN ConnectionImpl(Container &c, pn_connection_t &pnConn);
     PN_CPP_EXTERN ConnectionImpl(Container &c, Handler *h = 0);
-    PN_CPP_EXTERN ~ConnectionImpl();
+    PN_CPP_EXTERN virtual ~ConnectionImpl();
     PN_CPP_EXTERN Transport &getTransport();
     PN_CPP_EXTERN Handler *getOverride();
     PN_CPP_EXTERN void setOverride(Handler *h);

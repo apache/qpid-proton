@@ -22,8 +22,7 @@
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library (
-  qpid-proton-cpp SHARED
+set(qpid-proton-cpp-source
   src/Acceptor.cpp
   src/Acking.cpp
   src/Connection.cpp
@@ -54,6 +53,7 @@ add_library (
   src/Transport.cpp
   src/Url.cpp
   src/Value.cpp
+  src/Values.cpp
   src/proton_bits.cpp
   src/blocking/BlockingConnection.cpp
   src/blocking/BlockingConnectionImpl.cpp
@@ -62,6 +62,10 @@ add_library (
   src/contexts.cpp
   src/types.cpp
   )
+
+set_source_files_properties(${qpid-proton-cpp-source} PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
+
+add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 
 target_link_libraries (qpid-proton-cpp ${PLATFORM_LIBS} qpid-proton)
 
