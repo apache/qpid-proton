@@ -27,8 +27,6 @@ from proton import *
 from .common import pump, Skipped
 from proton._compat import str2bin
 
-from cproton import *
-
 def _sslCertpath(file):
     """ Return the full path to the certificate,keyfile, etc.
     """
