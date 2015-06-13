@@ -149,7 +149,7 @@ class Configure(build_ext):
 #define PN_VERSION_MINOR %i
 #endif /* version.h */
 """ % bundle.min_qpid_proton
-            ver.write(version_text)
+            ver.write(version_text.encode('utf-8'))
 
         # Collect all the C files that need to be built.
         # we could've used `glob(.., '*', '*.c')` but I preferred going
@@ -269,6 +269,9 @@ class Configure(build_ext):
 
         _cproton.runtime_library_dirs.extend([install_lib])
 
+        if sys.version_info.major >= 3:
+            _cproton.libraries[0] = "qpid-proton%s" % ds_sys.get_config_var('EXT_SUFFIX')[:-3]
+
         # Register this new extension and make
         # sure it's built and installed *before* `_cproton`.
         self.distribution.ext_modules.insert(0, libqpid_proton)
@@ -283,7 +286,7 @@ class Configure(build_ext):
     @property
     def bundle_proton(self):
         """Bundled proton if the conditions below are met."""
-        return sys.platform == 'linux2' and not self.check_qpid_proton_version()
+        return 'linux' in sys.platform and not self.check_qpid_proton_version()
 
     def run(self):
         if self.bundle_proton:
