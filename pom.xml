@@ -99,6 +99,7 @@
     <module>contrib/proton-hawtdispatch</module>
     <module>tests</module>
     <module>examples/java/messenger</module>
+    <module>examples/java/reactor</module>
   </modules>
 
   <url>http://qpid.apache.org/proton</url>

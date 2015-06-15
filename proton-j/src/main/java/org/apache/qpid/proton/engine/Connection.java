@@ -22,9 +22,11 @@ package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
 import java.util.Map;
-import org.apache.qpid.proton.amqp.Symbol;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
+import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.ReactorChild;
 
 
 /**
@@ -35,7 +37,7 @@ import org.apache.qpid.proton.engine.impl.ConnectionImpl;
  * {@link #sessionHead(EnumSet, EnumSet)}, {@link #linkHead(EnumSet, EnumSet)}
  * {@link #getWorkHead()} respectively.
  */
-public interface Connection extends Endpoint
+public interface Connection extends Endpoint, ReactorChild
 {
 
     public static final class Factory
@@ -110,12 +112,15 @@ public interface Connection extends Endpoint
 
     void setProperties(Map<Symbol,Object> properties);
 
+    @Override
     Object getContext();
 
+    @Override
     void setContext(Object context);
 
     void collect(Collector collector);
 
     Transport getTransport();
 
+    Reactor getReactor();
 }

@@ -41,4 +41,5 @@ public interface Collector
 
     void pop();
 
+    boolean more();
 }
