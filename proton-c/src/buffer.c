@@ -40,10 +40,21 @@ struct pn_buffer_t {
 pn_buffer_t *pn_buffer(size_t capacity)
 {
   pn_buffer_t *buf = (pn_buffer_t *) malloc(sizeof(pn_buffer_t));
-  buf->capacity = capacity;
-  buf->start = 0;
-  buf->size = 0;
-  buf->bytes = capacity ? (char *) malloc(capacity) : NULL;
+  if (buf != NULL) {
+    buf->capacity = capacity;
+    buf->start = 0;
+    buf->size = 0;
+    if (capacity > 0) {
+        buf->bytes = (char *)malloc(capacity);
+        if (buf->bytes == NULL) {
+            free(buf);
+            buf = NULL;
+        }
+    }
+    else {
+        buf->bytes = NULL;
+    }
+  }
   return buf;
 }
 
@@ -70,12 +81,12 @@ size_t pn_buffer_available(pn_buffer_t *buf)
   return buf->capacity - buf->size;
 }
 
-size_t pn_buffer_head(pn_buffer_t *buf)
+static size_t pni_buffer_head(pn_buffer_t *buf)
 {
   return buf->start;
 }
 
-size_t pn_buffer_tail(pn_buffer_t *buf)
+static size_t pni_buffer_tail(pn_buffer_t *buf)
 {
   size_t tail = buf->start + buf->size;
   if (tail >= buf->capacity)
@@ -83,42 +94,42 @@ size_t pn_buffer_tail(pn_buffer_t *buf)
   return tail;
 }
 
-bool pn_buffer_wrapped(pn_buffer_t *buf)
+static bool pni_buffer_wrapped(pn_buffer_t *buf)
 {
-  return buf->size && pn_buffer_head(buf) >= pn_buffer_tail(buf);
+  return buf->size && pni_buffer_head(buf) >= pni_buffer_tail(buf);
 }
 
-size_t pn_buffer_tail_space(pn_buffer_t *buf)
+static size_t pni_buffer_tail_space(pn_buffer_t *buf)
 {
-  if (pn_buffer_wrapped(buf)) {
+  if (pni_buffer_wrapped(buf)) {
     return pn_buffer_available(buf);
   } else {
-    return buf->capacity - pn_buffer_tail(buf);
+    return buf->capacity - pni_buffer_tail(buf);
   }
 }
 
-size_t pn_buffer_head_space(pn_buffer_t *buf)
+static size_t pni_buffer_head_space(pn_buffer_t *buf)
 {
-  if (pn_buffer_wrapped(buf)) {
+  if (pni_buffer_wrapped(buf)) {
     return pn_buffer_available(buf);
   } else {
-    return pn_buffer_head(buf);
+    return pni_buffer_head(buf);
   }
 }
 
-size_t pn_buffer_head_size(pn_buffer_t *buf)
+static size_t pni_buffer_head_size(pn_buffer_t *buf)
 {
-  if (pn_buffer_wrapped(buf)) {
-    return buf->capacity - pn_buffer_head(buf);
+  if (pni_buffer_wrapped(buf)) {
+    return buf->capacity - pni_buffer_head(buf);
   } else {
-    return pn_buffer_tail(buf) - pn_buffer_head(buf);
+    return pni_buffer_tail(buf) - pni_buffer_head(buf);
   }
 }
 
-size_t pn_buffer_tail_size(pn_buffer_t *buf)
+static size_t pni_buffer_tail_size(pn_buffer_t *buf)
 {
-  if (pn_buffer_wrapped(buf)) {
-    return pn_buffer_tail(buf);
+  if (pni_buffer_wrapped(buf)) {
+    return pni_buffer_tail(buf);
   } else {
     return 0;
   }
@@ -127,20 +138,23 @@ size_t pn_buffer_tail_size(pn_buffer_t *buf)
 int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
   size_t old_capacity = buf->capacity;
-  size_t old_head = pn_buffer_head(buf);
-  bool wrapped = pn_buffer_wrapped(buf);
+  size_t old_head = pni_buffer_head(buf);
+  bool wrapped = pni_buffer_wrapped(buf);
 
   while (pn_buffer_available(buf) < size) {
     buf->capacity = 2*(buf->capacity ? buf->capacity : 16);
   }
 
   if (buf->capacity != old_capacity) {
-    buf->bytes = (char *) realloc(buf->bytes, buf->capacity);
+    char* new_bytes = (char *)realloc(buf->bytes, buf->capacity);
+    if (new_bytes) {
+      buf->bytes = new_bytes;
 
-    if (wrapped) {
-      size_t n = old_capacity - old_head;
-      memmove(buf->bytes + buf->capacity - n, buf->bytes + old_head, n);
-      buf->start = buf->capacity - n;
+      if (wrapped) {
+          size_t n = old_capacity - old_head;
+          memmove(buf->bytes + buf->capacity - n, buf->bytes + old_head, n);
+          buf->start = buf->capacity - n;
+      }
     }
   }
 
@@ -152,8 +166,8 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
   int err = pn_buffer_ensure(buf, size);
   if (err) return err;
 
-  size_t tail = pn_buffer_tail(buf);
-  size_t tail_space = pn_buffer_tail_space(buf);
+  size_t tail = pni_buffer_tail(buf);
+  size_t tail_space = pni_buffer_tail_space(buf);
   size_t n = pn_min(tail_space, size);
 
   memmove(buf->bytes + tail, bytes, n);
@@ -169,8 +183,8 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   int err = pn_buffer_ensure(buf, size);
   if (err) return err;
 
-  size_t head = pn_buffer_head(buf);
-  size_t head_space = pn_buffer_head_space(buf);
+  size_t head = pni_buffer_head(buf);
+  size_t head_space = pni_buffer_head_space(buf);
   size_t n = pn_min(head_space, size);
 
   memmove(buf->bytes + head - n, bytes + size - n, n);
@@ -187,7 +201,7 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   return 0;
 }
 
-size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
+static size_t pni_buffer_index(pn_buffer_t *buf, size_t index)
 {
   size_t result = buf->start + index;
   if (result >= buf->capacity) result -= buf->capacity;
@@ -197,8 +211,8 @@ size_t pn_buffer_index(pn_buffer_t *buf, size_t index)
 size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
 {
   size = pn_min(size, buf->size);
-  size_t start = pn_buffer_index(buf, offset);
-  size_t stop = pn_buffer_index(buf, offset + size);
+  size_t start = pni_buffer_index(buf, offset);
+  size_t stop = pni_buffer_index(buf, offset + size);
 
   if (size == 0) return 0;
 
@@ -289,8 +303,8 @@ pn_buffer_memory_t pn_buffer_memory(pn_buffer_t *buf)
 int pn_buffer_print(pn_buffer_t *buf)
 {
   printf("pn_buffer(\"");
-  pn_print_data(buf->bytes + pn_buffer_head(buf), pn_buffer_head_size(buf));
-  pn_print_data(buf->bytes, pn_buffer_tail_size(buf));
+  pn_print_data(buf->bytes + pni_buffer_head(buf), pni_buffer_head_size(buf));
+  pn_print_data(buf->bytes, pni_buffer_tail_size(buf));
   printf("\")");
   return 0;
 }

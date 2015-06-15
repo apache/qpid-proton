@@ -53,13 +53,13 @@ class SslTest(common.Test):
     class SslTestConnection(object):
         """ Represents a single SSL connection.
         """
-        def __init__(self, domain=None, session_details=None):
+        def __init__(self, domain=None, mode=Transport.CLIENT, session_details=None):
             if not common.isSSLPresent():
                 raise Skipped("No SSL libraries found.")
 
             self.ssl = None
             self.domain = domain
-            self.transport = Transport()
+            self.transport = Transport(mode)
             self.connection = Connection()
             self.transport.bind(self.connection)
             if domain:
@@ -86,7 +86,7 @@ class SslTest(common.Test):
         """ By default, both the server and the client support anonymous
         ciphers - they should connect without need for a certificate.
         """
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         # check that no SSL connection exists
@@ -115,7 +115,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -137,7 +137,7 @@ class SslTest(common.Test):
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -158,7 +158,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -180,7 +180,7 @@ class SslTest(common.Test):
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         # give the client a certificate, but let's not require server authentication
         self.client_domain.set_credentials(self._testpath("client-certificate.pem"),
@@ -208,7 +208,7 @@ class SslTest(common.Test):
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         self.client_domain.set_credentials(self._testpath("bad-server-certificate.pem"),
                                            self._testpath("bad-server-private-key.pem"),
@@ -236,7 +236,7 @@ class SslTest(common.Test):
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
                                                     self._testpath("ca-certificate.pem") )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
         client = SslTest.SslTestConnection( self.client_domain )
@@ -265,7 +265,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -290,7 +290,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -313,7 +313,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.connection.open()
@@ -331,7 +331,7 @@ class SslTest(common.Test):
         self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
 
         client = SslTest.SslTestConnection( self.client_domain )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         client.connection.open()
         server.connection.open()
@@ -352,7 +352,7 @@ class SslTest(common.Test):
                                                     self._testpath("ca-certificate.pem") )
         # allow unsecured clients on this connection
         self.server_domain.allow_unsecured_client()
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         # non-ssl connection
         client = SslTest.SslTestConnection()
@@ -387,7 +387,7 @@ class SslTest(common.Test):
 
         # client uses ssl. Server should detect this.
         client = SslTest.SslTestConnection( self.client_domain )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         client.connection.open()
         server.connection.open()
@@ -406,7 +406,7 @@ class SslTest(common.Test):
                                            "server-password")
         self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.server_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
 
         # non-ssl connection
         client = SslTest.SslTestConnection()
@@ -433,8 +433,8 @@ class SslTest(common.Test):
         # details will be used in initial and subsequent connections to allow session to be resumed
         initial_session_details = SSLSessionDetails("my-session-id")
 
-        server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain, initial_session_details )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
+        client = SslTest.SslTestConnection( self.client_domain, session_details=initial_session_details )
 
         # bring up the connection and store its state
         client.connection.open()
@@ -452,9 +452,9 @@ class SslTest(common.Test):
         del server
 
         # now create a new set of connections, use last session id
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         # provide the details of the last session, allowing it to be resumed
-        client = SslTest.SslTestConnection( self.client_domain, initial_session_details )
+        client = SslTest.SslTestConnection( self.client_domain, session_details=initial_session_details )
 
         #client.transport.trace(Transport.TRACE_DRV)
         #server.transport.trace(Transport.TRACE_DRV)
@@ -479,8 +479,8 @@ class SslTest(common.Test):
         del client
         del server
 
-        server = SslTest.SslTestConnection( self.server_domain )
-        client = SslTest.SslTestConnection( self.client_domain, SSLSessionDetails("some-other-session-id") )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
+        client = SslTest.SslTestConnection( self.client_domain, session_details=SSLSessionDetails("some-other-session-id") )
 
         client.connection.open()
         server.connection.open()
@@ -511,7 +511,7 @@ class SslTest(common.Test):
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
 
         max_count = 100
-        sessions = [(SslTest.SslTestConnection( self.server_domain ),
+        sessions = [(SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER ),
                      SslTest.SslTestConnection( self.client_domain )) for x in
                     range(max_count)]
         for s in sessions:
@@ -545,7 +545,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "a1.good.server.domain.com"
@@ -563,7 +563,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "A1.Good.Server.domain.comX"
@@ -591,7 +591,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "alternate.Name.one.com"
@@ -608,7 +608,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "ANOTHER.NAME.COM"
@@ -625,7 +625,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "SOME.PREfix.domain.COM"
@@ -642,7 +642,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "FOO.PREfixZZZ.domain.com"
@@ -659,7 +659,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "FOO.PREfi.domain.com"
@@ -680,7 +680,7 @@ class SslTest(common.Test):
         self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
 
-        server = SslTest.SslTestConnection( self.server_domain )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
         client = SslTest.SslTestConnection( self.client_domain )
 
         client.ssl.peer_hostname = "PREfix.domain.COM"

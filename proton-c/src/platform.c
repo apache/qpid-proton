@@ -22,6 +22,18 @@
 #include "platform.h"
 #include "util.h"
 
+#ifdef PN_WINAPI
+#include <windows.h>
+int pn_i_getpid() {
+  return (int) GetCurrentProcessId();
+}
+#else
+#include <unistd.h>
+int pn_i_getpid() {
+  return (int) getpid();
+}
+#endif
+
 /* Allow for systems that do not implement clock_gettime()*/
 #ifdef USE_CLOCK_GETTIME
 #include <time.h>
@@ -51,42 +63,6 @@ pn_timestamp_t pn_i_now(void)
   if (gettimeofday(&now, NULL)) pni_fatal("gettimeofday failed\n");
   return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
-#endif
-
-#ifdef USE_UUID_GENERATE
-#include <uuid/uuid.h>
-#include <stdlib.h>
-char* pn_i_genuuid(void) {
-    char *generated = (char *) malloc(37*sizeof(char));
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse(uuid, generated);
-    return generated;
-}
-#elif USE_UUID_CREATE
-#include <uuid.h>
-char* pn_i_genuuid(void) {
-    char *generated;
-    uuid_t uuid;
-    uint32_t rc;
-    uuid_create(&uuid, &rc);
-    // Under FreeBSD the returned string is newly allocated from the heap
-    uuid_to_string(&uuid, &generated, &rc);
-    return generated;
-}
-#elif USE_WIN_UUID
-#include <rpc.h>
-char* pn_i_genuuid(void) {
-    unsigned char *generated;
-    UUID uuid;
-    UuidCreate(&uuid);
-    UuidToString(&uuid, &generated);
-    char* r = pn_strdup((const char*)generated);
-    RpcStringFree(&generated);
-    return r;
-}
-#else
-#error "Don't know how to generate uuid strings on this platform"
 #endif
 
 #ifdef USE_STRERROR_R

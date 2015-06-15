@@ -27,6 +27,7 @@ if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
   set (PN_WINAPI TRUE)
   set (PLATFORM_LIBS ws2_32 Rpcrt4)
+  list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
 endif(WIN32 AND NOT CYGWIN)
 
 # Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
@@ -152,29 +153,6 @@ else (CLOCK_GETTIME_IN_LIBC)
     endif (WINDOWS_FILETIME)
   endif (CLOCK_GETTIME_IN_RT)
 endif (CLOCK_GETTIME_IN_LIBC)
-
-CHECK_SYMBOL_EXISTS(uuid_generate "uuid/uuid.h" UUID_GENERATE_IN_LIBC)
-if (UUID_GENERATE_IN_LIBC)
-  list(APPEND PLATFORM_DEFINITIONS "USE_UUID_GENERATE")
-else (UUID_GENERATE_IN_LIBC)
-  CHECK_LIBRARY_EXISTS (uuid uuid_generate "" UUID_GENERATE_IN_UUID)
-  if (UUID_GENERATE_IN_UUID)
-    set (UUID_LIB uuid)
-    list(APPEND PLATFORM_DEFINITIONS "USE_UUID_GENERATE")
-  else (UUID_GENERATE_IN_UUID)
-    CHECK_SYMBOL_EXISTS(uuid_create "uuid.h" UUID_CREATE_IN_LIBC)
-    if (UUID_CREATE_IN_LIBC)
-      list(APPEND PLATFORM_DEFINITIONS "USE_UUID_CREATE")
-    else (UUID_CREATE_IN_LIBC)
-      CHECK_SYMBOL_EXISTS(UuidToString "rpc.h" WIN_UUID)
-      if (WIN_UUID)
-        list(APPEND PLATFORM_DEFINITIONS "USE_WIN_UUID")
-      else (WIN_UUID)
-        message(FATAL_ERROR "No Uuid API found")
-      endif (WIN_UUID)
-    endif (UUID_CREATE_IN_LIBC)
-  endif (UUID_GENERATE_IN_UUID)
-endif (UUID_GENERATE_IN_LIBC)
 
 if (PN_WINAPI)
   CHECK_SYMBOL_EXISTS(strerror_s "string.h" STRERROR_S_IN_WINAPI)
@@ -342,6 +320,8 @@ set (qpid-proton-core
   src/messenger/transform.c
   src/selectable.c
 
+  src/config.h
+
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
@@ -499,6 +479,7 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
+  set (pn_c_root "${CMAKE_BINARY_DIR}/proton")
   set (py_root "${pn_test_root}/python")
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
@@ -513,7 +494,7 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (NAME python-test
             COMMAND ${env_py}
-                    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+	             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
                     ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   else (NOT OLD_ADD_TEST_COMMAND)
@@ -522,10 +503,31 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (python-test
             ${env_py}
-            "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" ${VALGRIND_ENV}
+	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
             ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   endif (NOT OLD_ADD_TEST_COMMAND)
+
+  # Eventually, we'll get rid of this check when other
+  # platforms will be supported. Since `setup.py` will skip
+  # the build for non linux plaforms, it doesn't make sense
+  # to try to run them.
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+     find_program(TOX_CMD "tox")
+     if (TOX_CMD)
+         list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+         to_native_path ("${py_path}" py_path)
+         to_native_path ("${py_pythonpath}" py_pythonpath)
+         add_test (NAME python-tox-test
+                   COMMAND ${env_py}
+		   "PATH=${py_path}" ${VALGRIND_ENV}
+                   tox
+		   WORKING_DIRECTORY ${py_src})
+         set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+     else (TOX_CMD)
+         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+     endif (TOX_CMD)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
 
 endif (BUILD_PYTHON)
 

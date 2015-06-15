@@ -124,9 +124,6 @@ ssize_t pn_link_send(pn_link_t *transport, char *STRING, size_t LENGTH);
 ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGTH);
 %ignore pn_transport_input;
 
-ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
-%ignore pn_sasl_send;
-
 
 // Use the OUTPUT_BUFFER,OUTPUT_LEN typemap to allow these functions to return
 // variable length binary data.
@@ -142,18 +139,6 @@ ssize_t pn_sasl_send(pn_sasl_t *sasl, char *STRING, size_t LENGTH);
     }
 %}
 %ignore pn_link_recv;
-
-%rename(pn_sasl_recv) wrap_pn_sasl_recv;
-// in PHP:   array = pn_sasl_recv(sasl, MAXLEN);
-//           array[0] = size || error code
-//           array[1] = native string containing binary data
-%inline %{
-    void wrap_pn_sasl_recv(pn_sasl_t *sasl, size_t maxCount, char **OUTPUT_BUFFER, ssize_t *OUTPUT_LEN) {
-        *OUTPUT_BUFFER = emalloc(sizeof(char) * maxCount);
-        *OUTPUT_LEN = pn_sasl_recv( sasl, *OUTPUT_BUFFER, maxCount );
-    }
-%}
-%ignore pn_sasl_recv;
 
 %rename(pn_transport_output) wrap_pn_transport_output;
 // in PHP:   array = pn_transport_output(transport, MAXLEN);

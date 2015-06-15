@@ -273,6 +273,20 @@ ssize_t pn_transport_input(pn_transport_t *transport, char *STRING, size_t LENGT
 %}
 %ignore pn_transport_output;
 
+%rename(pn_transport_peek) wrap_pn_transport_peek;
+%inline %{
+  int wrap_pn_transport_peek(pn_transport_t *transport, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t sz = pn_transport_peek(transport, OUTPUT, *OUTPUT_SIZE);
+    if(sz >= 0) {
+      *OUTPUT_SIZE = sz;
+    } else {
+      *OUTPUT_SIZE = 0;
+    }
+    return sz;
+  }
+%}
+%ignore pn_transport_peek;
+
 %rename(pn_delivery) wrap_pn_delivery;
 %inline %{
   pn_delivery_t *wrap_pn_delivery(pn_link_t *link, char *STRING, size_t LENGTH) {
@@ -450,5 +464,110 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 %ignore pn_messenger_send;
 %ignore pn_messenger_recv;
 %ignore pn_messenger_work;
+
+%inline %{
+
+#define CID_pn_rbkey CID_pn_void
+
+typedef struct {
+  void *registry;
+  char *method;
+  char *key_value;
+} pn_rbkey_t;
+
+void pn_rbkey_initialize(pn_rbkey_t *rbkey) {
+  assert(rbkey);
+  rbkey->registry = NULL;
+  rbkey->method = NULL;
+  rbkey->key_value = NULL;
+}
+
+void pn_rbkey_finalize(pn_rbkey_t *rbkey) {
+  if(rbkey && rbkey->registry && rbkey->method && rbkey->key_value) {
+    rb_funcall((VALUE )rbkey->registry, rb_intern(rbkey->method), 1, rb_str_new2(rbkey->key_value));
+  }
+  if(rbkey->key_value) {
+    free(rbkey->key_value);
+    rbkey->key_value = NULL;
+  }
+}
+
+#define pn_rbkey_inspect NULL
+#define pn_rbkey_compare NULL
+#define pn_rbkey_hashcode NULL
+
+PN_CLASSDEF(pn_rbkey)
+
+void pn_rbkey_set_registry(pn_rbkey_t *rbkey, void *registry) {
+  assert(rbkey);
+  rbkey->registry = registry;
+}
+
+void *pn_rbkey_get_registry(pn_rbkey_t *rbkey) {
+  assert(rbkey);
+  return rbkey->registry;
+}
+
+void pn_rbkey_set_method(pn_rbkey_t *rbkey, char *method) {
+  assert(rbkey);
+  rbkey->method = method;
+}
+
+char *pn_rbkey_get_method(pn_rbkey_t *rbkey) {
+  assert(rbkey);
+  return rbkey->method;
+}
+
+void pn_rbkey_set_key_value(pn_rbkey_t *rbkey, char *key_value) {
+  assert(rbkey);
+  rbkey->key_value = malloc(strlen(key_value) + 1);
+  strncpy(rbkey->key_value, key_value, strlen(key_value) + 1);
+}
+
+char *pn_rbkey_get_key_value(pn_rbkey_t *rbkey) {
+  assert(rbkey);
+  return rbkey->key_value;
+}
+
+pn_rbkey_t *pni_void2rbkey(void *object) {
+  return (pn_rbkey_t *)object;
+}
+
+VALUE pn_void2rb(void *object) {
+  return (VALUE )object;
+}
+
+void *pn_rb2void(VALUE object) {
+  return (void *)object;
+}
+
+VALUE pni_address_of(void *object) {
+  return ULL2NUM((unsigned long )object);
+}
+
+%}
+
+//%rename(pn_collector_put) wrap_pn_collector_put;
+//%inline %{
+//  pn_event_t *wrap_pn_collector_put(pn_collector_t *collector, void *context,
+//                               pn_event_type_t type) {
+//    return pn_collector_put(collector, PN_RBREF, context, type);
+//  }
+//  %}
+//%ignore pn_collector_put;
+
+%rename(pn_ssl_get_peer_hostname) wrap_pn_ssl_get_peer_hostname;
+%inline %{
+  int wrap_pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE) {
+    ssize_t size = pn_ssl_get_peer_hostname(ssl, OUTPUT, *OUTPUT_SIZE);
+    if (size >= 0) {
+      *OUTPUT_SIZE = size;
+    } else {
+      *OUTPUT_SIZE = 0;
+    }
+    return size;
+  }
+  %}
+%ignore pn_ssl_get_peer_hostname;
 
 %include "proton/cproton.i"

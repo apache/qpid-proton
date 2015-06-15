@@ -29,6 +29,7 @@
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport);
 
 PN_HANDLE(PNI_ACCEPTOR_HANDLER)
+PN_HANDLE(PNI_ACCEPTOR_SSL_DOMAIN)
 
 void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
@@ -36,9 +37,15 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_socket_t sock = pn_accept(pn_reactor_io(reactor), pn_selectable_get_fd(sel), name, 1024);
   pn_handler_t *handler = (pn_handler_t *) pn_record_get(pn_selectable_attachments(sel), PNI_ACCEPTOR_HANDLER);
   if (!handler) { handler = pn_reactor_get_handler(reactor); }
+  pn_record_t *record = pn_selectable_attachments(sel);
+  pn_ssl_domain_t *ssl_domain = (pn_ssl_domain_t *) pn_record_get(record, PNI_ACCEPTOR_SSL_DOMAIN);
   pn_connection_t *conn = pn_reactor_connection(reactor, handler);
   pn_transport_t *trans = pn_transport();
   pn_transport_set_server(trans);
+  if (ssl_domain) {
+    pn_ssl_t *ssl = pn_ssl(trans);
+    pn_ssl_init(ssl, ssl_domain, 0);
+  }
   pn_transport_bind(trans, conn);
   pn_decref(trans);
   pn_reactor_selectable_transport(reactor, sock, trans);
@@ -79,4 +86,12 @@ void pn_acceptor_close(pn_acceptor_t *acceptor) {
     pn_selectable_terminate(sel);
     pn_reactor_update(reactor, sel);
   }
+}
+
+void pn_acceptor_set_ssl_domain(pn_acceptor_t *acceptor, pn_ssl_domain_t *domain)
+{
+  pn_selectable_t *sel = (pn_selectable_t *) acceptor;
+  pn_record_t *record = pn_selectable_attachments(sel);
+  pn_record_def(record, PNI_ACCEPTOR_SSL_DOMAIN, PN_VOID);
+  pn_record_set(record, PNI_ACCEPTOR_SSL_DOMAIN, domain);
 }

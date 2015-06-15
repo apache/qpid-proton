@@ -20,9 +20,69 @@ from __future__ import absolute_import
 
 import sys, os
 from . import common
+from string import Template
+import subprocess
+
 from proton import *
 from .common import pump, Skipped
 from proton._compat import str2bin
+
+from cproton import *
+
+def _sslCertpath(file):
+    """ Return the full path to the certificate,keyfile, etc.
+    """
+    return os.path.join(os.path.dirname(__file__),
+                        "ssl_db/%s" % file)
+
+def _cyrusSetup(conf_dir):
+  """Write out simple SASL config
+  """
+  t = Template("""sasldb_path: ${db}
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
+""")
+  subprocess.call(args=['rm','-rf',conf_dir])
+  os.mkdir(conf_dir)
+  db = os.path.abspath(os.path.join(conf_dir,'proton.sasldb'))
+  conf = os.path.abspath(os.path.join(conf_dir,'proton.conf'))
+  f = open(conf, 'w')
+  f.write(t.substitute(db=db))
+  f.close()
+
+  cmd = Template("echo password | saslpasswd2 -c -p -f ${db} -u proton user").substitute(db=db)
+  subprocess.call(args=cmd, shell=True)
+
+def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', encrypted=False, authenticated=True):
+  self.s1.allowed_mechs(mech)
+  self.c1.open()
+
+  pump(self.t1, self.t2, 1024)
+
+  if encrypted:
+    assert self.t2.encrypted == encrypted
+    assert self.t1.encrypted == encrypted
+  assert self.t2.authenticated == authenticated
+  assert self.t1.authenticated == authenticated
+  if authenticated:
+    # Server
+    assert self.t2.user == authUser
+    assert self.s2.user == authUser
+    assert self.s2.mech == mech.strip()
+    assert self.s2.outcome == SASL.OK
+    # Client
+    assert self.t1.user == clientUser
+    assert self.s1.user == clientUser
+    assert self.s1.mech == mech.strip()
+    assert self.s1.outcome == SASL.OK
+  else:
+    # Server
+    assert self.t2.user == None
+    assert self.s2.user == None
+    assert self.s2.outcome != SASL.OK
+    # Client
+    assert self.t1.user == clientUser
+    assert self.s1.user == clientUser
+    assert self.s1.outcome != SASL.OK
 
 class Test(common.Test):
   pass
@@ -34,6 +94,13 @@ class SaslTest(Test):
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)
     self.s2 = SASL(self.t2)
+
+    if not SASL.extended():
+      return
+
+    _cyrusSetup('sasl_conf')
+    self.s2.config_name('proton')
+    self.s2.config_path(os.path.abspath('sasl_conf'))
 
   def pump(self):
     pump(self.t1, self.t2, 1024)
@@ -218,11 +285,11 @@ class SaslTest(Test):
     self.t2.require_auth(False)
     self.pump()
     assert self.s2.outcome == None
-    self.t2.condition == None
-    self.t2.authenticated == False
+    assert self.t2.condition == None
+    assert self.t2.authenticated == False
     assert self.s1.outcome == None
-    self.t1.condition == None
-    self.t1.authenticated == False
+    assert self.t1.condition == None
+    assert self.t1.authenticated == False
 
   def testSaslSkippedFail(self):
     """Verify that the server (with SASL) correctly handles a client without SASL"""
@@ -230,6 +297,175 @@ class SaslTest(Test):
     self.t2.require_auth(True)
     self.pump()
     assert self.s2.outcome == None
-    self.t2.condition != None
+    assert self.t2.condition != None
     assert self.s1.outcome == None
-    self.t1.condition != None
+    assert self.t1.condition != None
+
+  def testMechNotFound(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support checking authentication state")
+    self.c1 = Connection()
+    self.c1.open()
+    self.t1.bind(self.c1)
+    self.s1.allowed_mechs('IMPOSSIBLE')
+
+    self.pump()
+
+    assert self.t2.authenticated == False
+    assert self.t1.authenticated == False
+    assert self.s1.outcome != SASL.OK
+    assert self.s2.outcome != SASL.OK
+
+class CyrusSASLTest(Test):
+  def setup(self):
+    self.t1 = Transport()
+    self.s1 = SASL(self.t1)
+    self.t2 = Transport(Transport.SERVER)
+    self.s2 = SASL(self.t2)
+
+    self.c1 = Connection()
+    self.c1.user = 'user@proton'
+    self.c1.password = 'password'
+    self.c1.hostname = 'localhost'
+
+    if not SASL.extended():
+      return
+
+    _cyrusSetup('sasl_conf')
+    self.s2.config_name('proton')
+    self.s2.config_path(os.path.abspath('sasl_conf'))
+
+  def testMechANON(self):
+    self.t1.bind(self.c1)
+    _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
+
+  def testMechCRAMMD5(self):
+    if not SASL.extended():
+      raise Skipped('Extended SASL not supported')
+
+    self.t1.bind(self.c1)
+    _testSaslMech(self, 'CRAM-MD5')
+
+  def testMechDIGESTMD5(self):
+    if not SASL.extended():
+      raise Skipped('Extended SASL not supported')
+
+    self.t1.bind(self.c1)
+    _testSaslMech(self, 'DIGEST-MD5')
+
+# SCRAM not supported before Cyrus SASL 2.1.26
+# so not universal and hance need a test for support
+# to keep it in tests.
+#  def testMechSCRAMSHA1(self):
+#    if not SASL.extended():
+#      raise Skipped('Extended SASL not supported')
+#
+#    self.t1.bind(self.c1)
+#    _testSaslMech(self, 'SCRAM-SHA-1')
+
+def _sslConnection(domain, transport, connection):
+  transport.bind(connection)
+  ssl = SSL(transport, domain, None )
+  return connection
+
+class SSLSASLTest(Test):
+  def setup(self):
+    if not common.isSSLPresent():
+      raise Skipped("No SSL libraries found.")
+
+    self.server_domain = SSLDomain(SSLDomain.MODE_SERVER)
+    self.client_domain = SSLDomain(SSLDomain.MODE_CLIENT)
+
+    self.t1 = Transport()
+    self.s1 = SASL(self.t1)
+    self.t2 = Transport(Transport.SERVER)
+    self.s2 = SASL(self.t2)
+
+    self.c1 = Connection()
+
+    if not SASL.extended():
+      return
+
+    _cyrusSetup('sasl_conf')
+    self.s2.config_name('proton')
+    self.s2.config_path(os.path.abspath('sasl_conf'))
+
+  def testSSLPlainSimple(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support SSL with SASL")
+    if not SASL.extended():
+      raise Skipped("Simple SASL server does not support PLAIN")
+
+    clientUser = 'user@proton'
+    mech = 'PLAIN'
+
+    self.c1.user = clientUser
+    self.c1.password = 'password'
+    self.c1.hostname = 'localhost'
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+
+    _testSaslMech(self, mech, encrypted=True)
+
+  def testSSLPlainSimpleFail(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support SSL with SASL")
+    if not SASL.extended():
+      raise Skipped("Simple SASL server does not support PLAIN")
+
+    clientUser = 'usr@proton'
+    mech = 'PLAIN'
+
+    self.c1.user = clientUser
+    self.c1.password = 'password'
+    self.c1.hostname = 'localhost'
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+
+    _testSaslMech(self, mech, clientUser='usr@proton', encrypted=True, authenticated=False)
+
+  def testSSLExternalSimple(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support SSL with SASL")
+
+    extUser = 'O=Client,CN=127.0.0.1'
+    mech = 'EXTERNAL'
+
+    self.server_domain.set_credentials(_sslCertpath("server-certificate.pem"),
+                                       _sslCertpath("server-private-key.pem"),
+                                       "server-password")
+    self.server_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.server_domain.set_peer_authentication(SSLDomain.VERIFY_PEER,
+                                               _sslCertpath("ca-certificate.pem") )
+    self.client_domain.set_credentials(_sslCertpath("client-certificate.pem"),
+                                       _sslCertpath("client-private-key.pem"),
+                                       "client-password")
+    self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+
+    _testSaslMech(self, mech, clientUser=None, authUser=extUser, encrypted=True)
+
+  def testSSLExternalSimpleFail(self):
+    if "java" in sys.platform:
+      raise Skipped("Proton-J does not support SSL with SASL")
+
+    mech = 'EXTERNAL'
+
+    self.server_domain.set_credentials(_sslCertpath("server-certificate.pem"),
+                                       _sslCertpath("server-private-key.pem"),
+                                       "server-password")
+    self.server_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.server_domain.set_peer_authentication(SSLDomain.VERIFY_PEER,
+                                               _sslCertpath("ca-certificate.pem") )
+    self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+
+    _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)

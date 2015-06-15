@@ -200,10 +200,13 @@ typedef struct {
 
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
+  void *object = NULL;
   pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
-  void *object = head + 1;
-  head->clazz = clazz;
-  head->refcount = 1;
+  if (head != NULL) {
+    object = head + 1;
+    head->clazz = clazz;
+    head->refcount = 1;
+  }
   return object;
 }
 

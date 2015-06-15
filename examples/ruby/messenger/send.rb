@@ -37,7 +37,7 @@ end
 options[:address] = "0.0.0.0" unless options[:address]
 messages << "Hello world!" if messages.empty?
 
-messenger = Qpid::Proton::Messenger.new
+messenger = Qpid::Proton::Messenger::Messenger.new
 messenger.start
 msg = Qpid::Proton::Message.new
 

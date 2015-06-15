@@ -124,7 +124,7 @@ PN_EXTERN void pn_transport_free(pn_transport_t *transport);
  *
  * This is usually used at the the server end to find the name of the authenticated user.
  * On the client it will merely return whatever user was passed in to the
- * pn_transport_set_user_password() API.
+ * pn_connection_set_user() API of the bound connection.
  *
  * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
  *

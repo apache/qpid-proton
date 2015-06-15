@@ -29,6 +29,14 @@
 extern "C" {
 #endif
 
+/** Get the current PID
+ *
+ * @return process id
+ * @internal
+ */
+int pn_i_getpid(void);
+
+
 /** Get the current time in pn_timestamp_t format.
  *
  * Returns current time in milliseconds since Unix Epoch,
@@ -38,17 +46,6 @@ extern "C" {
  * @internal
  */
 pn_timestamp_t pn_i_now(void);
-
-/** Generate a UUID in string format.
- *
- * Returns a newly generated UUID in the standard 36 char format.
- * The returned char* array is zero terminated.
- * (eg. d797830d-0f5b-49d4-a83f-adaa78425125)
- *
- * @return newly generated stringised UUID
- * @internal
- */
-char* pn_i_genuuid(void);
 
 /** Generate system error message.
  *
@@ -84,9 +81,6 @@ int64_t pn_i_atoll(const char* num);
 
 int pn_i_snprintf(char *buf, size_t count, const char *fmt, ...);
 int pn_i_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
-
-#define strcasecmp(A,B) (!pni_eq_nocase(A,B))
-#define strncasecmp(A,B,C) (!pni_eq_n_nocase(A,B,C))
 
 #if !defined(S_ISDIR)
 # define S_ISDIR(X) ((X) & _S_IFDIR)

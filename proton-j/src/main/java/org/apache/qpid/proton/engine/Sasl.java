@@ -97,6 +97,19 @@ public interface Sasl
     String[] getRemoteMechanisms();
 
     /**
+     * Set the remote hostname to indicate the host being connected to when
+     * sending a SaslInit to the server.
+     */
+    void setRemoteHostname(String hostname);
+
+    /**
+     * Retrieve the hostname indicated by the client when sending its SaslInit.
+     *
+     * @return the hostname indicated by the remote client, or null if none specified.
+     */
+    String getHostname();
+
+    /**
      * Determine the size of the bytes available via recv().
      *
      * Returns the size in bytes available via recv().

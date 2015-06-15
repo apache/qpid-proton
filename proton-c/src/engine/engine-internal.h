@@ -97,9 +97,6 @@ typedef struct {
   bool disp;
 } pn_session_state_t;
 
-#include <proton/sasl.h>
-#include <proton/ssl.h>
-
 typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
@@ -197,13 +194,8 @@ struct pn_transport_t {
   bool auth_required;
   bool authenticated;
   bool encryption_required;
-  bool encrypted;
 
   bool referenced;
-
-  // Temporarily here until refactor
-  bool sasl_input_bypass;
-  bool sasl_output_bypass;
 };
 
 struct pn_connection_t {
@@ -342,9 +334,7 @@ void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
 int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
 void pn_set_error_layer(pn_transport_t *transport);
-void pn_session_bound(pn_session_t* ssn);
 void pn_session_unbound(pn_session_t* ssn);
-void pn_link_bound(pn_link_t* link);
 void pn_link_unbound(pn_link_t* link);
 void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);

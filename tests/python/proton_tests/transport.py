@@ -191,3 +191,18 @@ class TransportTest(Test):
 
     # server closed
     assert srv.pending() < 0
+
+class LogTest(Test):
+
+  def testTracer(self):
+    t = Transport()
+    assert t.tracer is None
+    messages = []
+    def tracer(transport, message):
+      messages.append((transport, message))
+    t.tracer = tracer
+    assert t.tracer is tracer
+    t.log("one")
+    t.log("two")
+    t.log("three")
+    assert messages == [(t, "one"), (t, "two"), (t, "three")], messages

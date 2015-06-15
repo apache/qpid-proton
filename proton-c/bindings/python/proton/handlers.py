@@ -255,7 +255,7 @@ class EndpointStateHandler(Handler):
         if event.connection.remote_condition:
             self.on_connection_error(event)
         elif self.is_local_closed(event.connection):
-            self.on_connection_closed(event)
+           self.on_connection_closed(event)
         else:
             self.on_connection_closing(event)
         event.connection.close()

@@ -82,8 +82,8 @@ except ImportError:
     data = [rand.randint(0, 255) for i in xrange(16)]
 
     # From RFC4122, the version bits are set to 0100
-    data[7] &= 0x0F
-    data[7] |= 0x40
+    data[6] &= 0x0F
+    data[6] |= 0x40
 
     # From RFC4122, the top two bits of byte 8 get set to 01
     data[8] &= 0x3F
@@ -1313,6 +1313,9 @@ class Array(object):
     self.descriptor = descriptor
     self.type = type
     self.elements = elements
+
+  def __iter__(self):
+    return iter(self.elements)
 
   def __repr__(self):
     if self.elements:
@@ -2800,6 +2803,11 @@ class Terminus(object):
   DIST_MODE_COPY = PN_DIST_MODE_COPY
   DIST_MODE_MOVE = PN_DIST_MODE_MOVE
 
+  EXPIRE_WITH_LINK = PN_EXPIRE_WITH_LINK
+  EXPIRE_WITH_SESSION = PN_EXPIRE_WITH_SESSION
+  EXPIRE_WITH_CONNECTION = PN_EXPIRE_WITH_CONNECTION
+  EXPIRE_NEVER = PN_EXPIRE_NEVER
+
   def __init__(self, impl):
     self._impl = impl
 
@@ -3174,6 +3182,14 @@ class Delivery(Wrapper):
 class TransportException(ProtonException):
   pass
 
+class TraceAdapter:
+
+  def __init__(self, tracer):
+    self.tracer = tracer
+
+  def __call__(self, trans_impl, message):
+    self.tracer(Transport.wrap(trans_impl), message)
+
 class Transport(Wrapper):
 
   TRACE_OFF = PN_TRACE_OFF
@@ -3211,6 +3227,24 @@ class Transport(Wrapper):
     else:
       return err
 
+  def _set_tracer(self, tracer):
+    pn_transport_set_pytracer(self._impl, TraceAdapter(tracer));
+
+  def _get_tracer(self):
+    adapter = pn_transport_get_pytracer(self._impl)
+    if adapter:
+      return adapter.tracer
+    else:
+      return None
+
+  tracer = property(_get_tracer, _set_tracer,
+                            doc="""
+A callback for trace logging. The callback is passed the transport and log message.
+""")
+
+  def log(self, message):
+    pn_transport_log(self._impl, message)
+
   def require_auth(self, bool):
     pn_transport_require_auth(self._impl, bool)
 
@@ -3224,6 +3258,10 @@ class Transport(Wrapper):
   @property
   def encrypted(self):
     return pn_transport_is_encrypted(self._impl)
+
+  @property
+  def user(self):
+    return pn_transport_get_user(self._impl)
 
   def bind(self, connection):
     """Assign a connection to the transport"""
@@ -3361,6 +3399,13 @@ class SASL(Wrapper):
 
   OK = PN_SASL_OK
   AUTH = PN_SASL_AUTH
+  SYS = PN_SASL_SYS
+  PERM = PN_SASL_PERM
+  TEMP = PN_SASL_TEMP
+
+  @staticmethod
+  def extended():
+    return pn_sasl_extended()
 
   def __init__(self, transport):
     Wrapper.__init__(self, transport._impl, pn_transport_attachments)
@@ -3372,6 +3417,14 @@ class SASL(Wrapper):
       raise exc("[%s]" % (err))
     else:
       return err
+
+  @property
+  def user(self):
+    return pn_sasl_get_user(self._sasl)
+
+  @property
+  def mech(self):
+    return pn_sasl_get_mech(self._sasl)
 
   @property
   def outcome(self):
@@ -3386,6 +3439,12 @@ class SASL(Wrapper):
 
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
+
+  def config_name(self, name):
+    pn_sasl_config_name(self._sasl, name)
+
+  def config_path(self, path):
+    pn_sasl_config_path(self._sasl, path)
 
 class SSLException(TransportException):
   pass
@@ -3464,7 +3523,8 @@ class SSL(object):
       obj._ssl = pn_ssl( transport._impl )
       if obj._ssl is None:
         raise SSLUnavailable()
-      pn_ssl_init( obj._ssl, domain._domain, session_id )
+      if domain:
+        pn_ssl_init( obj._ssl, domain._domain, session_id )
       transport._ssl = obj
     return transport._ssl
 
@@ -3479,6 +3539,10 @@ class SSL(object):
     if rc:
       return name
     return None
+
+  @property
+  def remote_subject(self):
+    return pn_ssl_get_remote_subject( self._ssl )
 
   RESUME_UNKNOWN = PN_SSL_RESUME_UNKNOWN
   RESUME_NEW = PN_SSL_RESUME_NEW

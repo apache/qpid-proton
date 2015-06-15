@@ -58,6 +58,9 @@ class Acceptor(Wrapper):
     def __init__(self, impl):
         Wrapper.__init__(self, impl)
 
+    def set_ssl_domain(self, ssl_domain):
+        pn_acceptor_set_ssl_domain(self._impl, ssl_domain._domain)
+
     def close(self):
         pn_acceptor_close(self._impl)
 
@@ -415,6 +418,11 @@ class Selector(Filter):
     def __init__(self, value, name='selector'):
         super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
 
+class DurableSubscription(ReceiverOption):
+    def apply(self, receiver):
+        receiver.source.durability = Terminus.DELIVERIES
+        receiver.source.expiry_policy = Terminus.EXPIRE_NEVER
+
 class Move(ReceiverOption):
     def apply(self, receiver):
         receiver.source.distribution_mode = Terminus.DIST_MODE_MOVE
@@ -491,6 +499,10 @@ class Connector(Handler):
         connection.hostname = "%s:%s" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
 
+        if url.username:
+            connection.user = url.username
+        if url.password:
+            connection.password = url.password
         transport = Transport()
         transport.bind(connection)
         if self.heartbeat:
@@ -498,12 +510,6 @@ class Connector(Handler):
         if url.scheme == 'amqps' and self.ssl_domain:
             self.ssl = SSL(transport, self.ssl_domain)
             self.ssl.peer_hostname = url.host
-        if url.username:
-            sasl = transport.sasl()
-            if url.username == 'anonymous':
-                sasl.mechanisms('ANONYMOUS')
-            else:
-                sasl.plain(url.username, url.password)
 
     def on_connection_local_open(self, event):
         self._connect(event.connection)
@@ -751,10 +757,13 @@ class Container(Reactor):
         on the interface and port specified.
         """
         url = Url(url)
+        acceptor = self.acceptor(url.host, url.port)
         ssl_config = ssl_domain
-        if not ssl_config and url.scheme == 'amqps':
-            ssl_config = self.ssl_domain
-        return self.acceptor(url.host, url.port)
+        if not ssl_config and url.scheme == 'amqps' and self.ssl:
+            ssl_config = self.ssl.server
+        if ssl_config:
+            acceptor.set_ssl_domain(ssl_config)
+        return acceptor
 
     def do_work(self, timeout=None):
         if timeout:

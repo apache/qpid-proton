@@ -25,10 +25,12 @@
  * this is it. This file also provides a way to pass any global variable or
  * #defined values to the JavaScript binding by providing wrapper functions.
  */
+#include <uuid/uuid.h>
 #include <stdio.h>
 #include <proton/version.h>
 
 // To access #define values in JavaScript we need to wrap them in a function.
 int pn_get_version_major() {return PN_VERSION_MAJOR;}
 int pn_get_version_minor() {return PN_VERSION_MINOR;}
+void pn_uuid_generate(uuid_t out) { uuid_generate(out); }
 

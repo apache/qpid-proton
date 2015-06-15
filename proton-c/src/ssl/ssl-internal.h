@@ -21,6 +21,8 @@
  *
  */
 
+#include "proton/ssl.h"
+
 /** @file
  * Internal API for SSL/TLS support in the Driver Layer.
  *
@@ -30,7 +32,5 @@
 
 // release the SSL context
 void pn_ssl_free(pn_transport_t *transport);
-
-bool pn_ssl_allow_unsecured(pn_transport_t *transport);
 
 #endif /* ssl-internal.h */

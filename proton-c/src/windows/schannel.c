@@ -409,6 +409,8 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 /** Public API - visible to application code */
 
+// TODO: This should really return true as SSL is fully implemented,
+// but the tests currently fail because the fixed certificates aren't usable on windows
 bool pn_ssl_present(void)
 {
   return false;
@@ -612,6 +614,10 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
+  // If SSL doesn't specifically allow skipping encryption, require SSL
+  // TODO: This is a probably a stop-gap until allow_unsecured is removed
+  if (!domain->allow_unsecured) transport->encryption_required = true;
+
   ssl->cred = domain->cred;
   pn_incref(domain->cred);
 
@@ -641,9 +647,19 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 }
 
 
-bool pn_ssl_allow_unsecured(pn_transport_t *transport)
+// TODO: This is just an untested guess
+int pn_ssl_get_ssf(pn_ssl_t *ssl0)
 {
-  return transport && transport->ssl && transport->ssl->domain && transport->ssl->domain->allow_unsecured;
+  SecPkgContext_ConnectionInfo info;
+
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (ssl &&
+      ssl->state == RUNNING &&
+      SecIsValidHandle(&ssl->ctxt_handle) &&
+      QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
+    return info.dwCipherStrength;
+  }
+  return 0;
 }
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
@@ -793,6 +809,12 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl0, char *hostname, size_t *bufsize )
   }
   *bufsize = len;
   return 0;
+}
+
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl)
+{
+  //TODO: actual implementation
+  return NULL;
 }
 
 
@@ -1725,8 +1747,7 @@ static HCERTSTORE open_cert_db(const char *store_name, const char *passwd, int *
   if (sys_store_type) {
     // Opening a system store, names are not case sensitive.
     // Map confusing GUI name to actual registry store name.
-    if (pni_eq_nocase(store_name, "personal"))
-      store_name= "my";
+    if (!pn_strcasecmp(store_name, "personal")) store_name= "my";
     cert_store = CertOpenStore(CERT_STORE_PROV_SYSTEM_A, 0, NULL,
                                CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG |
                                sys_store_type, store_name);
@@ -1818,7 +1839,7 @@ static bool match_dns_pattern(const char *hostname, const char *pattern, int ple
   int slen = (int) strlen(hostname);
   if (memchr( pattern, '*', plen ) == NULL)
     return (plen == slen &&
-            strncasecmp( pattern, hostname, plen ) == 0);
+            pn_strncasecmp( pattern, hostname, plen ) == 0);
 
   /* dns wildcarded pattern - RFC2818 */
   char plabel[64];   /* max label length < 63 - RFC1034 */
@@ -1848,15 +1869,15 @@ static bool match_dns_pattern(const char *hostname, const char *pattern, int ple
 
     char *star = strchr( plabel, '*' );
     if (!star) {
-      if (strcasecmp( plabel, slabel )) return false;
+      if (pn_strcasecmp( plabel, slabel )) return false;
     } else {
       *star = '\0';
       char *prefix = plabel;
       int prefix_len = strlen(prefix);
       char *suffix = star + 1;
       int suffix_len = strlen(suffix);
-      if (prefix_len && strncasecmp( prefix, slabel, prefix_len )) return false;
-      if (suffix_len && strncasecmp( suffix,
+      if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
+      if (suffix_len && pn_strncasecmp( suffix,
                                      slabel + (strlen(slabel) - suffix_len),
                                      suffix_len )) return false;
     }

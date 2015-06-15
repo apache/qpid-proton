@@ -51,7 +51,7 @@ void pn_list_set(pn_list_t *list, int index, void *value)
   pn_class_incref(list->clazz, value);
 }
 
-void pn_list_ensure(pn_list_t *list, size_t capacity)
+static void pni_list_ensure(pn_list_t *list, size_t capacity)
 {
   assert(list);
   if (list->capacity < capacity) {
@@ -66,7 +66,7 @@ void pn_list_ensure(pn_list_t *list, size_t capacity)
 int pn_list_add(pn_list_t *list, void *value)
 {
   assert(list);
-  pn_list_ensure(list, list->size + 1);
+  pni_list_ensure(list, list->size + 1);
   list->elements[list->size++] = value;
   pn_class_incref(list->clazz, value);
   return 0;
@@ -128,13 +128,6 @@ void pn_list_clear(pn_list_t *list)
 {
   assert(list);
   pn_list_del(list, 0, list->size);
-}
-
-void pn_list_fill(pn_list_t *list, void *value, int n)
-{
-  for (int i = 0; i < n; i++) {
-    pn_list_add(list, value);
-  }
 }
 
 void pn_list_minpush(pn_list_t *list, void *value)

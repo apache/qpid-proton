@@ -64,7 +64,7 @@ void pn_io_finalize(void *obj)
 
 #define pn_io_hashcode NULL
 #define pn_io_compare NULL
-#define pn_io_inspect
+#define pn_io_inspect NULL
 
 pn_io_t *pn_io(void)
 {

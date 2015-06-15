@@ -41,7 +41,7 @@ struct pn_scanner_t {
   pn_error_t *error;
 };
 
-const char *pn_token_type(pn_token_type_t type)
+static const char *pni_token_type(pn_token_type_t type)
 {
   switch (type)
   {
@@ -94,7 +94,7 @@ pn_token_t pn_scanner_token(pn_scanner_t *scanner)
   if (scanner) {
     return scanner->token;
   } else {
-    pn_token_t tok = {PN_TOK_ERR};
+    pn_token_t tok = {PN_TOK_ERR, 0, (size_t)0};
     return tok;
   }
 }
@@ -132,7 +132,7 @@ int pn_scanner_verr(pn_scanner_t *scanner, int code, const char *fmt, va_list ap
   int size = scanner->token.size;
   int ln = snprintf(error, ERROR_SIZE,
                     "input line %i column %i %s:'%.*s': ", line, col,
-                    pn_token_type(scanner->token.type),
+                    pni_token_type(scanner->token.type),
                     size, scanner->token.start);
   if (ln >= ERROR_SIZE) {
     return pn_scanner_err(scanner, code, "error info truncated");
@@ -161,14 +161,14 @@ const char *pn_scanner_error(pn_scanner_t *scanner)
   return pn_error_text(scanner->error);
 }
 
-void pn_scanner_emit(pn_scanner_t *scanner, pn_token_type_t type, const char *start, size_t size)
+static void pni_scanner_emit(pn_scanner_t *scanner, pn_token_type_t type, const char *start, size_t size)
 {
   scanner->token.type = type;
   scanner->token.start = start;
   scanner->token.size = size;
 }
 
-int pn_scanner_quoted(pn_scanner_t *scanner, const char *str, int start,
+static int pni_scanner_quoted(pn_scanner_t *scanner, const char *str, int start,
                       pn_token_type_t type)
 {
   bool escape = false;
@@ -181,7 +181,7 @@ int pn_scanner_quoted(pn_scanner_t *scanner, const char *str, int start,
       switch (c) {
       case '\0':
       case '"':
-        pn_scanner_emit(scanner, c ? type : PN_TOK_ERR,
+        pni_scanner_emit(scanner, c ? type : PN_TOK_ERR,
                         str, c ? i + 1 : i);
         return c ? 0 : pn_scanner_err(scanner, PN_ERR, "missmatched quote");
       case '\\':
@@ -192,17 +192,17 @@ int pn_scanner_quoted(pn_scanner_t *scanner, const char *str, int start,
   }
 }
 
-int pn_scanner_binary(pn_scanner_t *scanner, const char *str)
+static int pni_scanner_binary(pn_scanner_t *scanner, const char *str)
 {
-  return pn_scanner_quoted(scanner, str, 2, PN_TOK_BINARY);
+  return pni_scanner_quoted(scanner, str, 2, PN_TOK_BINARY);
 }
 
-int pn_scanner_string(pn_scanner_t *scanner, const char *str)
+static int pni_scanner_string(pn_scanner_t *scanner, const char *str)
 {
-  return pn_scanner_quoted(scanner, str, 1, PN_TOK_STRING);
+  return pni_scanner_quoted(scanner, str, 1, PN_TOK_STRING);
 }
 
-int pn_scanner_alpha_end(pn_scanner_t *scanner, const char *str, int start)
+static int pni_scanner_alpha_end(pn_scanner_t *scanner, const char *str, int start)
 {
   for (int i = start; true; i++) {
     char c = str[i];
@@ -212,9 +212,9 @@ int pn_scanner_alpha_end(pn_scanner_t *scanner, const char *str, int start)
   }
 }
 
-int pn_scanner_alpha(pn_scanner_t *scanner, const char *str)
+static int pni_scanner_alpha(pn_scanner_t *scanner, const char *str)
 {
-  int n = pn_scanner_alpha_end(scanner, str, 0);
+  int n = pni_scanner_alpha_end(scanner, str, 0);
   pn_token_type_t type;
   if (!strncmp(str, "true", n)) {
     type = PN_TOK_TRUE;
@@ -226,24 +226,24 @@ int pn_scanner_alpha(pn_scanner_t *scanner, const char *str)
     type = PN_TOK_ID;
   }
 
-  pn_scanner_emit(scanner, type, str, n);
+  pni_scanner_emit(scanner, type, str, n);
   return type == PN_TOK_ERR ? pn_scanner_err(scanner, PN_ERR, "unrecognized keyword") : 0;
 }
 
-int pn_scanner_symbol(pn_scanner_t *scanner, const char *str)
+static int pni_scanner_symbol(pn_scanner_t *scanner, const char *str)
 {
   char c = str[1];
 
   if (c == '"') {
-    return pn_scanner_quoted(scanner, str, 2, PN_TOK_SYMBOL);
+    return pni_scanner_quoted(scanner, str, 2, PN_TOK_SYMBOL);
   } else {
-    int n = pn_scanner_alpha_end(scanner, str, 1);
-    pn_scanner_emit(scanner, PN_TOK_SYMBOL, str, n);
+    int n = pni_scanner_alpha_end(scanner, str, 1);
+    pni_scanner_emit(scanner, PN_TOK_SYMBOL, str, n);
     return 0;
   }
 }
 
-int pn_scanner_number(pn_scanner_t *scanner, const char *str)
+static int pni_scanner_number(pn_scanner_t *scanner, const char *str)
 {
   bool dot = false;
   bool exp = false;
@@ -262,7 +262,7 @@ int pn_scanner_number(pn_scanner_t *scanner, const char *str)
       continue;
     case '.':
       if (dot) {
-        pn_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
+        pni_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
         return 0;
       } else {
         dot = true;
@@ -271,7 +271,7 @@ int pn_scanner_number(pn_scanner_t *scanner, const char *str)
     case 'e':
     case 'E':
       if (exp) {
-        pn_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
+        pni_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
         return 0;
       } else {
         dot = true;
@@ -283,19 +283,19 @@ int pn_scanner_number(pn_scanner_t *scanner, const char *str)
       }
     default:
       if (dot || exp) {
-        pn_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
+        pni_scanner_emit(scanner, PN_TOK_FLOAT, str, i);
         return 0;
       } else {
-        pn_scanner_emit(scanner, PN_TOK_INT, str, i);
+        pni_scanner_emit(scanner, PN_TOK_INT, str, i);
         return 0;
       }
     }
   }
 }
 
-int pn_scanner_single(pn_scanner_t *scanner, const char *str, pn_token_type_t type)
+static int pni_scanner_single(pn_scanner_t *scanner, const char *str, pn_token_type_t type)
 {
-  pn_scanner_emit(scanner, type, str, 1);
+  pni_scanner_emit(scanner, type, str, 1);
   return 0;
 }
 
@@ -317,54 +317,54 @@ int pn_scanner_scan(pn_scanner_t *scanner)
     switch (c)
     {
     case '{':
-      return pn_scanner_single(scanner, str, PN_TOK_LBRACE);
+      return pni_scanner_single(scanner, str, PN_TOK_LBRACE);
     case '}':
-      return pn_scanner_single(scanner, str, PN_TOK_RBRACE);
+      return pni_scanner_single(scanner, str, PN_TOK_RBRACE);
     case'[':
-      return pn_scanner_single(scanner, str, PN_TOK_LBRACKET);
+      return pni_scanner_single(scanner, str, PN_TOK_LBRACKET);
     case ']':
-      return pn_scanner_single(scanner, str, PN_TOK_RBRACKET);
+      return pni_scanner_single(scanner, str, PN_TOK_RBRACKET);
     case '=':
-      return pn_scanner_single(scanner, str, PN_TOK_EQUAL);
+      return pni_scanner_single(scanner, str, PN_TOK_EQUAL);
     case ',':
-      return pn_scanner_single(scanner, str, PN_TOK_COMMA);
+      return pni_scanner_single(scanner, str, PN_TOK_COMMA);
     case '.':
       n = *(str+1);
       if ((n >= '0' && n <= '9')) {
-        return pn_scanner_number(scanner, str);
+        return pni_scanner_number(scanner, str);
       } else {
-        return pn_scanner_single(scanner, str, PN_TOK_DOT);
+        return pni_scanner_single(scanner, str, PN_TOK_DOT);
       }
     case '@':
-      return pn_scanner_single(scanner, str, PN_TOK_AT);
+      return pni_scanner_single(scanner, str, PN_TOK_AT);
     case '$':
-      return pn_scanner_single(scanner, str, PN_TOK_DOLLAR);
+      return pni_scanner_single(scanner, str, PN_TOK_DOLLAR);
     case '-':
       n = *(str+1);
       if ((n >= '0' && n <= '9') || n == '.') {
-        return pn_scanner_number(scanner, str);
+        return pni_scanner_number(scanner, str);
       } else {
-        return pn_scanner_single(scanner, str, PN_TOK_NEG);
+        return pni_scanner_single(scanner, str, PN_TOK_NEG);
       }
     case '+':
       n = *(str+1);
       if ((n >= '0' && n <= '9') || n == '.') {
-        return pn_scanner_number(scanner, str);
+        return pni_scanner_number(scanner, str);
       } else {
-        return pn_scanner_single(scanner, str, PN_TOK_POS);
+        return pni_scanner_single(scanner, str, PN_TOK_POS);
       }
     case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
       break;
     case '0': case '1': case '2': case '3': case '4': case '5': case '6':
     case '7': case '8': case '9':
-      return pn_scanner_number(scanner, str);
+      return pni_scanner_number(scanner, str);
     case ':':
-      return pn_scanner_symbol(scanner, str);
+      return pni_scanner_symbol(scanner, str);
     case '"':
-      return pn_scanner_string(scanner, str);
+      return pni_scanner_string(scanner, str);
     case 'b':
       if (str[1] == '"') {
-        return pn_scanner_binary(scanner, str);
+        return pni_scanner_binary(scanner, str);
       }
     case 'a': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h':
     case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': case 'o':
@@ -374,12 +374,12 @@ int pn_scanner_scan(pn_scanner_t *scanner)
     case 'K': case 'L': case 'M': case 'N': case 'O': case 'P': case 'Q':
     case 'R': case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
     case 'Y': case 'Z':
-      return pn_scanner_alpha(scanner, str);
+      return pni_scanner_alpha(scanner, str);
     case '\0':
-      pn_scanner_emit(scanner, PN_TOK_EOS, str, 0);
+      pni_scanner_emit(scanner, PN_TOK_EOS, str, 0);
       return PN_EOS;
     default:
-      pn_scanner_emit(scanner, PN_TOK_ERR, str, 1);
+      pni_scanner_emit(scanner, PN_TOK_ERR, str, 1);
       return pn_scanner_err(scanner, PN_ERR, "illegal character");
     }
   }

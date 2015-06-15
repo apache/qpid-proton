@@ -868,6 +868,9 @@ class pn_transport_wrapper:
 def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
 
+def pn_transport_get_pytracer(trans):
+  raise Skipped()
+
 def pn_transport_attachments(trans):
   return trans.attachments
 

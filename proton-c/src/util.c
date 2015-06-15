@@ -212,29 +212,32 @@ void pni_fatal(const char *fmt, ...)
   va_end(ap);
 }
 
-bool pni_eq_nocase(const char *a, const char *b)
+int pn_strcasecmp(const char *a, const char *b)
 {
-    while (*b) {
-        if (tolower(*a++) != tolower(*b++))
-            return false;
-    }
-    return !(*a);
+  int diff;
+  while (*b) {
+    diff = tolower(*a++)-tolower(*b++);
+    if ( diff!=0 ) return diff;
+  }
+  return *a;
 }
 
-bool pni_eq_n_nocase(const char *a, const char *b, int len)
+int pn_strncasecmp(const char* a, const char* b, size_t len)
 {
-  while (*b && len-- > 0 ) {
-    if (tolower(*a++) != tolower(*b++))
-      return false;
-  }
-  return !(*a) && !(*b);
+  int diff = 0;
+  while (*b && len > 0) {
+    diff = tolower(*a++)-tolower(*b++);
+    if ( diff!=0 ) return diff;
+    --len;
+  };
+  return len==0 ? diff : *a;
 }
 
 bool pn_env_bool(const char *name)
 {
   char *v = getenv(name);
-  return v && (pni_eq_nocase(v, "true") || pni_eq_nocase(v, "1") ||
-               pni_eq_nocase(v, "yes") || pni_eq_nocase(v, "on"));
+  return v && (!pn_strcasecmp(v, "true") || !pn_strcasecmp(v, "1") ||
+               !pn_strcasecmp(v, "yes")  || !pn_strcasecmp(v, "on"));
 }
 
 char *pn_strdup(const char *src)

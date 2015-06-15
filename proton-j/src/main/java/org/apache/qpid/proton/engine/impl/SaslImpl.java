@@ -704,4 +704,26 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
             _underlyingOutput.close_head();
         }
     }
+
+    @Override
+    public String getHostname()
+    {
+        if(_role != null)
+        {
+            checkRole(Role.SERVER);
+        }
+
+        return _hostname;
+    }
+
+    @Override
+    public void setRemoteHostname(String hostname)
+    {
+        if(_role != null)
+        {
+            checkRole(Role.CLIENT);
+        }
+
+        _hostname = hostname;
+    }
 }
