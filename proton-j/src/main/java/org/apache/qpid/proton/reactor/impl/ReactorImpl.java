@@ -35,6 +35,7 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.Extendable;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.HandlerException;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
@@ -253,7 +254,7 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public boolean process() {
+    public boolean process() throws HandlerException {
         mark();
         Type previous = null;
         while (true) {
@@ -308,9 +309,9 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public void stop() {
+    public void stop() throws HandlerException {
         collector.put(Type.REACTOR_FINAL, this);
-        // (Comment from C code) XXX: should consider removing this fron stop to avoid reentrance
+        // (Comment from C code) XXX: should consider removing this from stop to avoid reentrance
         process();
         collector = null;
     }
@@ -320,7 +321,7 @@ public class ReactorImpl implements Reactor, Extendable {
     }
 
     @Override
-    public void run() {
+    public void run() throws HandlerException {
         setTimeout(3141);
         start();
         while(process()) {}
