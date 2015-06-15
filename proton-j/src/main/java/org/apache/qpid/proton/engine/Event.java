@@ -87,7 +87,7 @@ public interface Event extends Extendable
 
     Object getContext();
 
-    void dispatch(Handler handler);
+    void dispatch(Handler handler) throws HandlerException;
 
     Connection getConnection();
 

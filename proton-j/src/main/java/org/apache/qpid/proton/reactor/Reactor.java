@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Handler;
+import org.apache.qpid.proton.engine.HandlerException;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.reactor.impl.ReactorImpl;
 
@@ -72,15 +73,15 @@ public interface Reactor {
 
     public boolean quiesced();
 
-    public boolean process();
+    public boolean process() throws HandlerException;
 
     public void wakeup() throws IOException;
 
     public void start() ;
 
-    public void stop() ;
+    public void stop() throws HandlerException;
 
-    public void run();
+    public void run() throws HandlerException;
 
     // pn_reactor_schedule from reactor.c
     public Task schedule(int delay, Handler handler);
