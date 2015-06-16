@@ -22,10 +22,11 @@ from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
-import sys, os, string
+import sys, os, string, subprocess
 from proton import Connection, Transport, SASL, Endpoint, Delivery, SSL
 from proton.reactor import Container
 from proton.handlers import CHandshaker, CFlowController
+from string import Template
 
 
 def free_tcp_ports(count=1):
@@ -85,6 +86,31 @@ def pump(transport1, transport2, buffer_size=1024):
 
 def isSSLPresent():
     return SSL.present()
+
+def _cyrusSetup(conf_dir):
+  """Write out simple SASL config.
+     This assumes saslpasswd2 is in the OS path.
+  """
+  t = Template("""sasldb_path: ${db}
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
+""")
+  abs_conf_dir = os.path.abspath(conf_dir)
+  subprocess.call(args=['rm','-rf',abs_conf_dir])
+  os.mkdir(abs_conf_dir)
+  db = os.path.join(abs_conf_dir,'proton.sasldb')
+  conf = os.path.join(abs_conf_dir,'proton-server.conf')
+  f = open(conf, 'w')
+  f.write(t.substitute(db=db))
+  f.close()
+
+  cmd = Template("echo password | saslpasswd2 -c -p -f ${db} -u proton user").substitute(db=db)
+  subprocess.call(args=cmd, shell=True)
+
+  os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
+
+# Globally initialize Cyrus SASL configuration
+if SASL.extended():
+  _cyrusSetup('sasl_conf')
 
 class Test(TestCase):
 
