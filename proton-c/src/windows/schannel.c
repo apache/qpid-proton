@@ -283,6 +283,7 @@ struct pni_ssl_t {
   SecPkgContext_StreamSizes sc_sizes;
   pn_ssl_verify_mode_t verify_mode;
   win_credential_t *cred;
+  char *subject;
 };
 
 static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
@@ -728,6 +729,7 @@ void pn_ssl_free( pn_transport_t *transport)
   if (ssl->sc_inbuf) free((void *)ssl->sc_inbuf);
   if (ssl->sc_outbuf) free((void *)ssl->sc_outbuf);
   if (ssl->inbuf2) pn_buffer_free(ssl->inbuf2);
+  if (ssl->subject) free(ssl->subject);
 
   free(ssl);
 }
@@ -811,10 +813,39 @@ int pn_ssl_get_peer_hostname( pn_ssl_t *ssl0, char *hostname, size_t *bufsize )
   return 0;
 }
 
-const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl)
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl0)
 {
-  //TODO: actual implementation
-  return NULL;
+  // RFC 2253 compliant, but differs from openssl's subject string with space separators and
+  // ordering of multicomponent RDNs.  Made to work as similarly as possible with choice of flags.
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  if (!ssl || !SecIsValidHandle(&ssl->ctxt_handle))
+    return NULL;
+  if (!ssl->subject) {
+    SECURITY_STATUS status;
+    PCCERT_CONTEXT peer_cc = 0;
+    status = QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &peer_cc);
+    if (status != SEC_E_OK) {
+      ssl_log_error_status(status, "can't obtain remote certificate subject");
+      return NULL;
+    }
+    DWORD flags = CERT_X500_NAME_STR | CERT_NAME_STR_REVERSE_FLAG;
+    DWORD strlen = CertNameToStr(peer_cc->dwCertEncodingType, &peer_cc->pCertInfo->Subject,
+                                 flags, NULL, 0);
+    if (strlen > 0) {
+      ssl->subject = (char*) malloc(strlen);
+      if (ssl->subject) {
+        DWORD len = CertNameToStr(peer_cc->dwCertEncodingType, &peer_cc->pCertInfo->Subject,
+                                  flags, ssl->subject, strlen);
+        if (len != strlen) {
+          free(ssl->subject);
+          ssl->subject = NULL;
+          ssl_log_error("pn_ssl_get_remote_subject failure in CertNameToStr");
+        }
+      }
+    }
+    CertFreeCertificateContext(peer_cc);
+  }
+  return ssl->subject;
 }
 
 
@@ -1678,16 +1709,16 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 
     if (ssl->network_out_pending == 0) {
       if (ssl->state == SHUTTING_DOWN) {
-	if (!ssl->queued_shutdown) {
-	  start_ssl_shutdown(transport);
-	  work_pending = true;
-	} else {
-	  ssl->state = SSL_CLOSED;
-	}
+        if (!ssl->queued_shutdown) {
+          start_ssl_shutdown(transport);
+          work_pending = true;
+        } else {
+          ssl->state = SSL_CLOSED;
+        }
       }
       else if (ssl->state == NEGOTIATING && ssl->app_input_closed) {
-	ssl->app_output_closed = PN_EOS;
-	ssl->state = SSL_CLOSED;
+        ssl->app_output_closed = PN_EOS;
+        ssl->state = SSL_CLOSED;
       }
     }
   } while (work_pending);
