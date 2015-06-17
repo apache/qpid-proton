@@ -556,18 +556,7 @@ VALUE pni_address_of(void *object) {
 //  %}
 //%ignore pn_collector_put;
 
-%rename(pn_ssl_get_peer_hostname) wrap_pn_ssl_get_peer_hostname;
-%inline %{
-  int wrap_pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE) {
-    ssize_t size = pn_ssl_get_peer_hostname(ssl, OUTPUT, *OUTPUT_SIZE);
-    if (size >= 0) {
-      *OUTPUT_SIZE = size;
-    } else {
-      *OUTPUT_SIZE = 0;
-    }
-    return size;
-  }
-  %}
+int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
 %include "proton/cproton.i"

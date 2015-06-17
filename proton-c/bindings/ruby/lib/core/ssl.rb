@@ -66,11 +66,6 @@ module Qpid::Proton
     # @private
     PROTON_METHOD_PREFIX = "pn_ssl"
 
-    # @!attribute peer_hostname
-    #
-    # @return [String] The peer hostname.
-    proton_accessor :peer_hostname
-
     # @private
     include Util::ErrorHandler
 
@@ -108,10 +103,10 @@ module Qpid::Proton
 
     def initialize(impl, domain, session_details, session_id)
       @impl = impl
-      @domain = domain
+      @domain = domain.impl unless domain.nil?
       @session_details = session_details
       @session_id = session_id
-      Cproton.pn_ssl_init(@impl, @domain.impl, @session_id)
+      Cproton.pn_ssl_init(@impl, @domain, @session_id)
     end
 
     public
@@ -153,6 +148,15 @@ module Qpid::Proton
     #
     def resume_status
       Cproton.pn_ssl_resume_status(@impl)
+    end
+
+    # Gets the peer hostname.
+    #
+    # @return [String] The peer hostname.
+    def peer_hostname
+      (error, name) = Cproton.pn_ssl_get_peer_hostname(@impl, 1024)
+      raise SSLError.new if error < 0
+      return name
     end
 
   end

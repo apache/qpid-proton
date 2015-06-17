@@ -398,13 +398,12 @@ module Qpid::Proton
     # @return [SSL] The SSL object.
     #
     def ssl(domain = nil, session_details = nil)
-      self.ssl = SSL.create(self, domain, session_details) if self.ssl.nil?
-      self.ssl
+      @ssl ||= SSL.create(self, domain, session_details) if @ssl.nil?
     end
 
     # @private
     def ssl?
-      self.respond_to?(:ssl) && !self.ssl.nil?
+      !@ssl.nil?
     end
 
   end
