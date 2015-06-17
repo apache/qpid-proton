@@ -19,7 +19,7 @@
  *
  */
 
-#include "proton/cpp/Acking.h"
+#include "proton/Acking.hpp"
 #include "proton/delivery.h"
 
 namespace proton {

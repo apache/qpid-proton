@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#include "proton/cpp/Encoder.h"
-#include "proton/cpp/Value.h"
+#include "proton/Encoder.hpp"
+#include "proton/Value.hpp"
 #include <proton/codec.h>
-#include "proton_bits.h"
-#include "Msg.h"
+#include "proton_bits.hpp"
+#include "Msg.hpp"
 
 namespace proton {
 namespace reactor {

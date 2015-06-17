@@ -19,14 +19,14 @@
  *
  */
 
-#include "proton/cpp/Connection.h"
-#include "proton/cpp/Transport.h"
-#include "proton/cpp/Container.h"
-#include "proton/cpp/Event.h"
+#include "proton/Connection.hpp"
+#include "proton/Transport.hpp"
+#include "proton/Container.hpp"
+#include "proton/Event.hpp"
 #include "proton/connection.h"
-#include "Connector.h"
-#include "ConnectionImpl.h"
-#include "Url.h"
+#include "Connector.hpp"
+#include "ConnectionImpl.hpp"
+#include "Url.hpp"
 
 namespace proton {
 namespace reactor {

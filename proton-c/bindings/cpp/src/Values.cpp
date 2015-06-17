@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include "proton/cpp/Value.h"
-#include "proton_bits.h"
+#include "proton/Value.hpp"
+#include "proton_bits.hpp"
 #include <proton/codec.h>
 #include <ostream>
 

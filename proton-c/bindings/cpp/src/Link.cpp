@@ -18,13 +18,13 @@
  * under the License.
  *
  */
-#include "proton/cpp/Link.h"
-#include "proton/cpp/exceptions.h"
-#include "proton/cpp/Connection.h"
-#include "ConnectionImpl.h"
-#include "Msg.h"
-#include "contexts.h"
-#include "ProtonImplRef.h"
+#include "proton/Link.hpp"
+#include "proton/exceptions.hpp"
+#include "proton/Connection.hpp"
+#include "ConnectionImpl.hpp"
+#include "Msg.hpp"
+#include "contexts.hpp"
+#include "ProtonImplRef.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"

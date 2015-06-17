@@ -18,15 +18,15 @@
  * under the License.
  *
  */
-#include "proton/cpp/Container.h"
-#include "proton/cpp/Handler.h"
-#include "proton/cpp/exceptions.h"
-#include "ConnectionImpl.h"
-#include "proton/cpp/Transport.h"
-#include "Msg.h"
-#include "contexts.h"
-#include "PrivateImplRef.h"
-#include "ContainerImpl.h"
+#include "proton/Container.hpp"
+#include "proton/Handler.hpp"
+#include "proton/exceptions.hpp"
+#include "ConnectionImpl.hpp"
+#include "proton/Transport.hpp"
+#include "Msg.hpp"
+#include "contexts.hpp"
+#include "PrivateImplRef.hpp"
+#include "ContainerImpl.hpp"
 
 #include "proton/connection.h"
 

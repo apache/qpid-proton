@@ -21,7 +21,7 @@
 #include <ostream>
 #include <proton/error.h>
 #include <proton/object.h>
-#include "proton_bits.h"
+#include "proton_bits.hpp"
 
 std::string errorStr(int code) {
   switch (code)

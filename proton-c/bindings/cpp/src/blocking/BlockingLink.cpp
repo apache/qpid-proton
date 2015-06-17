@@ -18,12 +18,12 @@
  * under the License.
  *
  */
-#include "proton/cpp/BlockingLink.h"
-#include "proton/cpp/BlockingConnection.h"
-#include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/WaitCondition.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
+#include "proton/BlockingLink.hpp"
+#include "proton/BlockingConnection.hpp"
+#include "proton/MessagingHandler.hpp"
+#include "proton/WaitCondition.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
 
 
 namespace proton {

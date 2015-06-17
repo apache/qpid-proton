@@ -17,9 +17,9 @@
  * under the License.
  */
 
-#include "proton/cpp/Data.h"
+#include "proton/Data.hpp"
 #include <proton/codec.h>
-#include "proton_bits.h"
+#include "proton_bits.hpp"
 
 namespace proton {
 namespace reactor {

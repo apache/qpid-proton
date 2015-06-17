@@ -19,9 +19,9 @@
  *
  */
 
-#include "contexts.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
+#include "contexts.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
 #include "proton/object.h"
 #include "proton/message.h"
 #include "proton/session.h"

@@ -18,10 +18,10 @@
  * under the License.
  *
  */
-#include "proton/cpp/Link.h"
-#include "proton/cpp/Receiver.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
+#include "proton/Link.hpp"
+#include "proton/Receiver.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"

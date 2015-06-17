@@ -19,7 +19,7 @@
  *
  */
 
-#include "proton/cpp/Link.h"
+#include "proton/Link.hpp"
 #include "proton/link.h"
 
 namespace proton {

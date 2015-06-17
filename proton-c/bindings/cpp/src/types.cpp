@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "proton/cpp/types.h"
+#include "proton/types.hpp"
 #include <proton/codec.h>
 #include <ostream>
 

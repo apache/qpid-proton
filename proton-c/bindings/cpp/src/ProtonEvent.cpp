@@ -23,14 +23,14 @@
 #include "proton/event.h"
 #include "proton/link.h"
 
-#include "proton/cpp/ProtonEvent.h"
-#include "proton/cpp/ProtonHandler.h"
-#include "proton/cpp/exceptions.h"
-#include "proton/cpp/Container.h"
+#include "proton/ProtonEvent.hpp"
+#include "proton/ProtonHandler.hpp"
+#include "proton/exceptions.hpp"
+#include "proton/Container.hpp"
 
-#include "ConnectionImpl.h"
-#include "Msg.h"
-#include "contexts.h"
+#include "ConnectionImpl.hpp"
+#include "Msg.hpp"
+#include "contexts.hpp"
 
 namespace proton {
 namespace reactor {

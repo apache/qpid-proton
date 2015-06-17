@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include "proton/cpp/Decoder.h"
-#include "proton/cpp/Encoder.h"
-#include "proton/cpp/Value.h"
-#include "./Msg.h"
+#include "proton/Decoder.hpp"
+#include "proton/Encoder.hpp"
+#include "proton/Value.hpp"
+#include "Msg.hpp"
 #include <stdexcept>
 #include <string>
 #include <sstream>

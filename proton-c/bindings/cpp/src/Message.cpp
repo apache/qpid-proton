@@ -19,10 +19,10 @@
  *
  */
 
-#include "proton/cpp/Message.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
-#include "ProtonImplRef.h"
+#include "proton/Message.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
+#include "ProtonImplRef.hpp"
 
 #include <cstring>
 

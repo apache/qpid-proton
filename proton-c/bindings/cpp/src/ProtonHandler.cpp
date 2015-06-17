@@ -18,8 +18,8 @@
  * under the License.
  *
  */
-#include "proton/cpp/ProtonHandler.h"
-#include "proton/cpp/ProtonEvent.h"
+#include "proton/ProtonHandler.hpp"
+#include "proton/ProtonEvent.hpp"
 
 namespace proton {
 namespace reactor {

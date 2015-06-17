@@ -18,9 +18,9 @@
  * under the License.
  *
  */
-#include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/ProtonEvent.h"
-#include "proton/cpp/MessagingAdapter.h"
+#include "proton/MessagingHandler.hpp"
+#include "proton/ProtonEvent.hpp"
+#include "proton/MessagingAdapter.hpp"
 #include "proton/handlers.h"
 
 namespace proton {

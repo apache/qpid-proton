@@ -19,10 +19,10 @@
  *
  */
 
-#include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/Container.h"
+#include "proton/MessagingHandler.hpp"
+#include "proton/Container.hpp"
 
-//#include "proton/cpp/Acceptor.h"
+//#include "proton/Acceptor.hpp"
 #include <iostream>
 
 

@@ -19,8 +19,8 @@
  *
  */
 
-#include "proton/cpp/Container.h"
-#include "proton/cpp/MessagingHandler.h"
+#include "proton/Container.hpp"
+#include "proton/MessagingHandler.hpp"
 
 #include <iostream>
 

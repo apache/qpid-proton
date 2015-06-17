@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include <proton/cpp/Values.h>
-#include <proton/cpp/Value.h>
+#include <proton/Values.hpp>
+#include <proton/Value.hpp>
 #include <algorithm>
 #include <iostream>
 #include <iterator>

@@ -22,12 +22,12 @@
 #include "proton/reactor.h"
 #include "proton/event.h"
 
-#include "proton/cpp/Event.h"
-#include "proton/cpp/Handler.h"
-#include "proton/cpp/exceptions.h"
+#include "proton/Event.hpp"
+#include "proton/Handler.hpp"
+#include "proton/exceptions.hpp"
 
-#include "Msg.h"
-#include "contexts.h"
+#include "Msg.hpp"
+#include "contexts.hpp"
 
 namespace proton {
 namespace reactor {

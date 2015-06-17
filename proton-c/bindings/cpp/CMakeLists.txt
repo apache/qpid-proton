@@ -28,7 +28,6 @@ set(qpid-proton-cpp-source
   src/Connection.cpp
   src/ConnectionImpl.cpp
   src/Connector.cpp
-  src/Connector.h
   src/Container.cpp
   src/ContainerImpl.cpp
   src/Data.cpp

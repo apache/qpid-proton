@@ -18,14 +18,14 @@
  * under the License.
  *
  */
-#include "proton/cpp/Session.h"
-#include "contexts.h"
+#include "proton/Session.hpp"
+#include "contexts.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
-#include "proton/cpp/Session.h"
-#include "proton/cpp/Connection.h"
-#include "ConnectionImpl.h"
+#include "proton/Session.hpp"
+#include "proton/Connection.hpp"
+#include "ConnectionImpl.hpp"
 
 namespace proton {
 namespace reactor {

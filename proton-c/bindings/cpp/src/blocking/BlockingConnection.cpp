@@ -18,14 +18,14 @@
  * under the License.
  *
  */
-#include "proton/cpp/Container.h"
-#include "proton/cpp/BlockingConnection.h"
-#include "proton/cpp/BlockingSender.h"
-#include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
-#include "BlockingConnectionImpl.h"
-#include "PrivateImplRef.h"
+#include "proton/Container.hpp"
+#include "proton/BlockingConnection.hpp"
+#include "proton/BlockingSender.hpp"
+#include "proton/MessagingHandler.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
+#include "BlockingConnectionImpl.hpp"
+#include "PrivateImplRef.hpp"
 
 namespace proton {
 namespace reactor {

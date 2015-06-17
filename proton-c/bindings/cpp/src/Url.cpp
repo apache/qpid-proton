@@ -19,10 +19,10 @@
  *
  */
 
-#include "proton/cpp/exceptions.h"
-#include "Url.h"
-#include "ProtonImplRef.h"
-#include "Msg.h"
+#include "proton/exceptions.hpp"
+#include "Url.hpp"
+#include "ProtonImplRef.hpp"
+#include "Msg.hpp"
 
 namespace proton {
 namespace reactor {

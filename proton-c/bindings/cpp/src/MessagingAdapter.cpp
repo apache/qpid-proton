@@ -18,11 +18,11 @@
  * under the License.
  *
  */
-#include "proton/cpp/MessagingAdapter.h"
-#include "proton/cpp/MessagingEvent.h"
-#include "proton/cpp/Sender.h"
-#include "proton/cpp/exceptions.h"
-#include "Msg.h"
+#include "proton/MessagingAdapter.hpp"
+#include "proton/MessagingEvent.hpp"
+#include "proton/Sender.hpp"
+#include "proton/exceptions.hpp"
+#include "Msg.hpp"
 
 #include "proton/link.h"
 #include "proton/handlers.h"

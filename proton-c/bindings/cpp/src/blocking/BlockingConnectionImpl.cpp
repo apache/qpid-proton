@@ -18,14 +18,14 @@
  * under the License.
  *
  */
-#include "proton/cpp/Container.h"
-#include "proton/cpp/MessagingHandler.h"
-#include "proton/cpp/Duration.h"
-#include "proton/cpp/exceptions.h"
-#include "proton/cpp/WaitCondition.h"
-#include "BlockingConnectionImpl.h"
-#include "Msg.h"
-#include "contexts.h"
+#include "proton/Container.hpp"
+#include "proton/MessagingHandler.hpp"
+#include "proton/Duration.hpp"
+#include "proton/exceptions.hpp"
+#include "proton/WaitCondition.hpp"
+#include "BlockingConnectionImpl.hpp"
+#include "Msg.hpp"
+#include "contexts.hpp"
 
 #include "proton/connection.h"
 

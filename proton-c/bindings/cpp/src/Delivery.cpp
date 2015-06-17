@@ -19,9 +19,9 @@
  *
  */
 
-#include "proton/cpp/Delivery.h"
+#include "proton/Delivery.hpp"
 #include "proton/delivery.h"
-#include "ProtonImplRef.h"
+#include "ProtonImplRef.hpp"
 
 namespace proton {
 namespace reactor {

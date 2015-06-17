@@ -18,19 +18,19 @@
  * under the License.
  *
  */
-#include "proton/cpp/Container.h"
-#include "proton/cpp/MessagingEvent.h"
-#include "proton/cpp/Connection.h"
-#include "proton/cpp/Session.h"
-#include "proton/cpp/MessagingAdapter.h"
-#include "proton/cpp/Acceptor.h"
-#include "proton/cpp/exceptions.h"
-#include "ContainerImpl.h"
-#include "PrivateImplRef.h"
+#include "proton/Container.hpp"
+#include "proton/MessagingEvent.hpp"
+#include "proton/Connection.hpp"
+#include "proton/Session.hpp"
+#include "proton/MessagingAdapter.hpp"
+#include "proton/Acceptor.hpp"
+#include "proton/exceptions.hpp"
+#include "ContainerImpl.hpp"
+#include "PrivateImplRef.hpp"
 
-#include "Connector.h"
-#include "contexts.h"
-#include "Url.h"
+#include "Connector.hpp"
+#include "contexts.hpp"
+#include "Url.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"

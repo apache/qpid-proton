@@ -19,9 +19,9 @@
  *
  */
 
-#include "proton/cpp/Endpoint.h"
-#include "proton/cpp/Connection.h"
-#include "proton/cpp/Transport.h"
+#include "proton/Endpoint.hpp"
+#include "proton/Connection.hpp"
+#include "proton/Transport.hpp"
 
 namespace proton {
 namespace reactor {

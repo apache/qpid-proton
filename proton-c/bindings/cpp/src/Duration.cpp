@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-#include "proton/cpp/Duration.h"
+#include "proton/Duration.hpp"
 #include <limits>
 
 namespace proton {

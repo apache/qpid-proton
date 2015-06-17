@@ -18,8 +18,8 @@
  * under the License.
  *
  */
-#include "proton/cpp/Transport.h"
-#include "proton/cpp/Connection.h"
+#include "proton/Transport.hpp"
+#include "proton/Connection.hpp"
 
 #include "proton/transport.h"
 
