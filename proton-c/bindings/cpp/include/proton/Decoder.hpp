@@ -21,13 +21,15 @@
 
 #include "proton/Data.hpp"
 #include "proton/types.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include <iosfwd>
 
 namespace proton {
-namespace reactor {
 
 class Value;
+
+/** Raised by Decoder operations on error */
+struct DecodeError : public Error { explicit DecodeError(const std::string&) throw(); };
 
 /**@file
  * Stream-like decoder from AMQP bytes to C++ values.
@@ -64,10 +66,6 @@ You can also extract container values element-by-element, see the Start class.
 */
 PN_CPP_EXTERN class Decoder : public virtual Data {
   public:
-    /** Raised if a Decoder operation fails  */
-    struct Error : public ProtonException {
-        explicit Error(const std::string& msg) throw() : ProtonException(msg) {}
-    };
 
     PN_CPP_EXTERN Decoder();
     PN_CPP_EXTERN ~Decoder();
@@ -215,5 +213,5 @@ template <class T> Decoder& operator>>(Decoder& d, Ref<T, MAP> ref)  {
     return d;
 }
 
-}} // namespace proton::reactor
+}
 #endif // DECODER_H

@@ -27,7 +27,7 @@
 #include "proton/Message.hpp"
 #include "proton/ProtonHandler.hpp"
 #include "proton/MessagingHandler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 #include "contexts.hpp"
 
@@ -41,7 +41,7 @@ MessagingEvent::MessagingEvent(pn_event_t *ce, pn_event_type_t t, Container &c) 
 MessagingEvent::MessagingEvent(MessagingEventType_t t, ProtonEvent &p) :
     ProtonEvent(NULL, PN_EVENT_NONE, p.getContainer()), messagingType(t), parentEvent(&p), message(0) {
     if (messagingType == PN_MESSAGING_PROTON)
-        throw ProtonException(MSG("invalid messaging event type"));
+        throw Error(MSG("invalid messaging event type"));
 }
 
 MessagingEvent::~MessagingEvent() {
@@ -53,7 +53,7 @@ Connection &MessagingEvent::getConnection() {
         return ProtonEvent::getConnection();
     if (parentEvent)
         return parentEvent->getConnection();
-    throw ProtonException(MSG("No connection context for event"));
+    throw Error(MSG("No connection context for event"));
 }
 
 Sender MessagingEvent::getSender() {
@@ -61,7 +61,7 @@ Sender MessagingEvent::getSender() {
         return ProtonEvent::getSender();
     if (parentEvent)
         return parentEvent->getSender();
-    throw ProtonException(MSG("No sender context for event"));
+    throw Error(MSG("No sender context for event"));
 }
 
 Receiver MessagingEvent::getReceiver() {
@@ -69,7 +69,7 @@ Receiver MessagingEvent::getReceiver() {
         return ProtonEvent::getReceiver();
     if (parentEvent)
         return parentEvent->getReceiver();
-    throw ProtonException(MSG("No receiver context for event"));
+    throw Error(MSG("No receiver context for event"));
 }
 
 Link MessagingEvent::getLink() {
@@ -77,7 +77,7 @@ Link MessagingEvent::getLink() {
         return ProtonEvent::getLink();
     if (parentEvent)
         return parentEvent->getLink();
-    throw ProtonException(MSG("No link context for event"));
+    throw Error(MSG("No link context for event"));
 }
 
 Message MessagingEvent::getMessage() {
@@ -86,13 +86,13 @@ Message MessagingEvent::getMessage() {
         if (m)
             return Message(m);
     }
-    throw ProtonException(MSG("No message context for event"));
+    throw Error(MSG("No message context for event"));
 }
 
 void MessagingEvent::setMessage(Message &m) {
     if (messagingType != PN_MESSAGING_MESSAGE || !parentEvent)
-        throw ProtonException(MSG("Event type does not provide message"));
-    setEventContext(parentEvent->getPnEvent(), m.getPnMessage());
+        throw Error(MSG("Event type does not provide message"));
+    setEventContext(parentEvent->getPnEvent(), m.pnMessage());
 }
 
 void MessagingEvent::dispatch(Handler &h) {
@@ -133,7 +133,7 @@ void MessagingEvent::dispatch(Handler &h) {
 
         case PN_MESSAGING_TRANSPORT_CLOSED:       handler->onTransportClosed(*this); break;
         default:
-            throw ProtonException(MSG("Unkown messaging event type " << messagingType));
+            throw Error(MSG("Unkown messaging event type " << messagingType));
             break;
         }
     } else {

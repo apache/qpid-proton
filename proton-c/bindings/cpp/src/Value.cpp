@@ -24,11 +24,11 @@
 #include <algorithm>
 
 namespace proton {
-namespace reactor {
 
 Value::Value() { *this = Null(); }
 Value::Value(const Value& v) { *this = v; }
 Value::~Value() {}
+
 Value& Value::operator=(const Value& v) { values = v.values; return *this; }
 
 TypeId Value::type() const {
@@ -39,7 +39,7 @@ TypeId Value::type() const {
 namespace {
 template <class T> T check(T result) {
     if (result < 0)
-        throw Encoder::Error("encode: " + errorStr(result));
+        throw EncodeError("encode: " + errorStr(result));
     return result;
 }
 }
@@ -133,4 +133,4 @@ bool Value::operator<(const Value& v) const {
     return compareNext(values, v.values) < 0;
 }
 
-}}
+}

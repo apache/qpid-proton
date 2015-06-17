@@ -33,7 +33,7 @@
  */
 
 namespace proton {
-namespace reactor {
+
 
 /** TypeId identifies an AMQP type */
 enum TypeId {
@@ -98,11 +98,14 @@ typedef double Double;
 
 ///@internal
 pn_bytes_t pn_bytes(const std::string&);
+//@internal
+std::string str(const pn_bytes_t& b);
 
 ///@internal
 #define STRING_LIKE(NAME)                                               \
     PN_CPP_EXTERN struct NAME : public std::string{                     \
         NAME(const std::string& s=std::string()) : std::string(s) {}    \
+        NAME(const char* s) : std::string(s) {}    \
         NAME(const pn_bytes_t& b) : std::string(b.start, b.size) {}     \
         operator pn_bytes_t() const { return pn_bytes(*this); }         \
     }
@@ -141,10 +144,11 @@ typedef Decimal<pn_decimal32_t> Decimal32;
 typedef Decimal<pn_decimal64_t> Decimal64;
 typedef Decimal<pn_decimal128_t> Decimal128;
 
-PN_CPP_EXTERN struct Timestamp {
+PN_CPP_EXTERN struct Timestamp : public Comparable<Timestamp> {
     pn_timestamp_t milliseconds; ///< Since the epoch 00:00:00 (UTC), 1 January 1970.
     Timestamp(int64_t ms=0) : milliseconds(ms) {}
     operator pn_timestamp_t() const { return milliseconds; }
+    bool operator==(const Timestamp& x) { return milliseconds == x.milliseconds; }
     bool operator<(const Timestamp& x) { return milliseconds < x.milliseconds; }
 };
 
@@ -245,6 +249,6 @@ inline Finish finish() { return Finish(); }
 PN_CPP_EXTERN struct Skip{};
 inline Skip skip() { return Skip(); }
 
-}}
+}
 
 #endif // TYPES_H

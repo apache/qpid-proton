@@ -24,8 +24,6 @@
 #include "Msg.hpp"
 
 namespace proton {
-namespace reactor {
-
 
 /**@file
  *
@@ -37,6 +35,8 @@ Decoder::Decoder() {}
 Decoder::Decoder(const char* buffer, size_t size) { decode(buffer, size); }
 Decoder::Decoder(const std::string& buffer) { decode(buffer); }
 Decoder::~Decoder() {}
+
+DecodeError::DecodeError(const std::string& msg) throw() : Error("decode: "+msg) {}
 
 namespace {
 struct SaveState {
@@ -55,11 +55,9 @@ struct Narrow {
 
 template <class T> T check(T result) {
     if (result < 0)
-        throw Decoder::Error("decode: " + errorStr(result));
+        throw DecodeError("" + errorStr(result));
     return result;
 }
-
-std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
 
 }
 
@@ -84,13 +82,13 @@ namespace {
 
 void badType(TypeId want, TypeId got) {
     if (want != got)
-        throw Decoder::Error("decode: expected "+typeName(want)+" found "+typeName(got));
+        throw DecodeError("expected "+typeName(want)+" found "+typeName(got));
 }
 
 TypeId preGet(pn_data_t* data) {
-    if (!pn_data_next(data)) throw Decoder::Error("decode: no more data");
+    if (!pn_data_next(data)) throw DecodeError("no more data");
     TypeId t = TypeId(pn_data_type(data));
-    if (t < 0) throw Decoder::Error("decode: invalid data");
+    if (t < 0) throw DecodeError("invalid data");
     return t;
 }
 
@@ -134,7 +132,7 @@ Decoder& operator>>(Decoder& d, Start& s) {
         s.size = 1;
         break;
       default:
-        throw Decoder::Error(MSG("decode: " << s.type << " is not a container type"));
+        throw DecodeError(MSG("" << s.type << " is not a container type"));
     }
     pn_data_enter(d.data);
     ss.cancel();
@@ -146,13 +144,13 @@ Decoder& operator>>(Decoder& d, Finish) { pn_data_exit(d.data); return d; }
 Decoder& operator>>(Decoder& d, Skip) { pn_data_next(d.data); return d; }
 
 Decoder& operator>>(Decoder& d, Value& v) {
-    if (d.data == v.values.data) throw Decoder::Error("decode: extract into self");
+    if (d.data == v.values.data) throw DecodeError("extract into self");
     pn_data_clear(v.values.data);
     {
         Narrow n(d.data);
         check(pn_data_appendn(v.values.data, d.data, 1));
     }
-    if (!pn_data_next(d.data)) throw Decoder::Error("decode: no more data");
+    if (!pn_data_next(d.data)) throw DecodeError("no more data");
     return d;
 }
 
@@ -325,4 +323,4 @@ Decoder& operator>>(Decoder& d, std::string& value) {
     return d;
 }
 
-}} // namespace proton::reactor
+}

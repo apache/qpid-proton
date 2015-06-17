@@ -47,7 +47,7 @@ std::string errorStr(pn_error_t* err, int code) {
     return errorStr(code);
 }
 
-std::ostream& operator<<(std::ostream& o, const Object& object) {
+std::ostream& operator<<(std::ostream& o, const PnObject& object) {
     pn_string_t* str = pn_string("");
     pn_inspect(object.value, str);
     o << pn_string_get(str);

@@ -1,10 +1,20 @@
 # C++ examples
 
+Many of the examples expect a broker to be running on the standard AMQP
+port. You can use any broker that supports AMQP 1.0, or you can use the simple
+example `broker` provided here. Run the broker in a separate window before
+running the other examples.
+
+If you use another broker you will need to create a queue named `examples`.
+
 ## broker.cpp
 
 A very simple "mini broker". You can use this to run other examples that reqiure
-an intermediary, or you can use a real AMQP 1.0 broker. It creates queues
-automatically when a client tries to send to or subscribe from a node.
+an intermediary, or you can use any AMQP 1.0 broker. This broker creates queues
+automatically when a client tries to send or subscribe.
+
+    $ ./broker
+    broker listening on :5672
 
 ## helloworld.cpp
 
@@ -40,3 +50,7 @@ an intermediary accessible on port 5672 on localhost.
 
 Subscribes to the 'examples' node on an intermediary accessible on port 5672 on
 localhost. Simply prints out the body of received messages.
+
+## encode_decode.cpp
+
+Shows how C++ data types can be converted to and from AMQP types.

@@ -44,7 +44,6 @@ class Acceptor : public ProtonHandle<pn_acceptor_t>
     friend class ProtonImplRef<Acceptor>;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_ACCEPTOR_H*/

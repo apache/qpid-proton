@@ -21,13 +21,13 @@
 
 #include "proton/Data.hpp"
 #include "proton/types.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include <iosfwd>
 
 struct pn_data_t;
 
 namespace proton {
-namespace reactor {
+
 
 class Value;
 
@@ -35,6 +35,9 @@ class Value;
  * Stream-like encoder from C++ values to AMQP bytes.
  * @ingroup cpp
 */
+
+/** Raised by Encoder operations on error */
+struct EncodeError : public Error { explicit EncodeError(const std::string&) throw(); };
 
 /**
 @ingroup cpp
@@ -56,11 +59,6 @@ You can also insert containers element-by-element, see the Start class.
 */
 class Encoder : public virtual Data {
   public:
-    /** Raised if a Encoder operation fails  */
-    struct Error : public ProtonException {
-        explicit Error(const std::string& msg) throw() : ProtonException(msg) {}
-    };
-
     PN_CPP_EXTERN Encoder();
     PN_CPP_EXTERN ~Encoder();
 
@@ -127,6 +125,8 @@ class Encoder : public virtual Data {
     // TODO aconway 2015-06-16: DESCRIBED.
     ///@}
 
+    /** Copy data from a raw pn_data_t */
+    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, pn_data_t*);
   private:
     PN_CPP_EXTERN Encoder(pn_data_t* pd);
 
@@ -180,5 +180,5 @@ template <class T> Encoder& operator<<(Encoder& e, CRef<T, MAP> m){
 }
 
 
-}}
+}
 #endif // ENCODER_H

@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_WAITCONDITION_H
-#define PROTON_CPP_WAITCONDITION_H
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,27 +15,16 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/ImportExport.hpp"
+
+#include "proton/Error.hpp"
 
 namespace proton {
-namespace reactor {
 
-// Interface class to indicates that an expected contion has been
-// achieved, i.e. for BlockingConnection.wait()
+Error::Error(const std::string& msg) throw() : std::runtime_error("proton: "+msg) {}
 
-class WaitCondition
-{
-  public:
-    PN_CPP_EXTERN virtual ~WaitCondition();
+MessageReject::MessageReject(const std::string& msg) throw() : Error(msg) {}
 
-    // Overide this member function to indicate whether an expected
-    // condition is achieved and requires no further waiting.
-    virtual bool achieved() = 0;
-};
+MessageRelease::MessageRelease(const std::string& msg) throw() : Error(msg) {}
 
-
-}}
-
-#endif  /*!PROTON_CPP_WAITCONDITION_H*/
+}

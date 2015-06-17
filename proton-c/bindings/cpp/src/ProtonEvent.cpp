@@ -25,7 +25,7 @@
 
 #include "proton/ProtonEvent.hpp"
 #include "proton/ProtonHandler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "proton/Container.hpp"
 
 #include "ConnectionImpl.hpp"
@@ -50,7 +50,7 @@ Container &ProtonEvent::getContainer() { return container; }
 Connection &ProtonEvent::getConnection() {
     pn_connection_t *conn = pn_event_connection(getPnEvent());
     if (!conn)
-        throw ProtonException(MSG("No connection context for this event"));
+        throw Error(MSG("No connection context for this event"));
     return ConnectionImpl::getReactorReference(conn);
 }
 
@@ -58,14 +58,14 @@ Sender ProtonEvent::getSender() {
     pn_link_t *lnk = pn_event_link(getPnEvent());
     if (lnk && pn_link_is_sender(lnk))
         return Sender(lnk);
-    throw ProtonException(MSG("No sender context for this event"));
+    throw Error(MSG("No sender context for this event"));
 }
 
 Receiver ProtonEvent::getReceiver() {
     pn_link_t *lnk = pn_event_link(getPnEvent());
     if (lnk && pn_link_is_receiver(lnk))
         return Receiver(lnk);
-    throw ProtonException(MSG("No receiver context for this event"));
+    throw Error(MSG("No receiver context for this event"));
 }
 
 Link ProtonEvent::getLink() {
@@ -76,7 +76,7 @@ Link ProtonEvent::getLink() {
         else
             return Receiver(lnk);
     }
-    throw ProtonException(MSG("No link context for this event"));
+    throw Error(MSG("No link context for this event"));
 }
 
 
@@ -136,7 +136,7 @@ void ProtonEvent::dispatch(Handler &h) {
         case PN_SELECTABLE_ERROR: handler->onSelectableError(*this); break;
         case PN_SELECTABLE_FINAL: handler->onSelectableFinal(*this); break;
         default:
-            throw ProtonException(MSG("Invalid Proton event type " << type));
+            throw Error(MSG("Invalid Proton event type " << type));
             break;
         }
     } else {

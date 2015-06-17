@@ -58,11 +58,11 @@ template <class T> class ProtonHandle {
     typedef T Impl;
     PROTON_CPP_INLINE_EXTERN ProtonHandle() :impl() {}
 
-    Impl* impl;
+    mutable Impl* impl;
 
   friend class ProtonImplRef<T>;
 };
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_PROTONHANDLE_H*/

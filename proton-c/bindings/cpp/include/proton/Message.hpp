@@ -23,94 +23,90 @@
  */
 #include "proton/ImportExport.hpp"
 #include "proton/ProtonHandle.hpp"
-#include "proton/message.h"
+#include "proton/Value.hpp"
+#include "proton/Message.hpp"
 #include <string>
 
+struct pn_message_t;
+struct pn_data_t;
 
 namespace proton {
-namespace reactor {
 
-class Message : public ProtonHandle<pn_message_t>
+// FIXME aconway 2015-06-17: documentation of properties.
+PN_CPP_EXTERN class Message : public reactor::ProtonHandle<pn_message_t>
 {
   public:
-    PN_CPP_EXTERN Message();
-    PN_CPP_EXTERN Message(pn_message_t *);
-    PN_CPP_EXTERN Message(const Message&);
-    PN_CPP_EXTERN Message& operator=(const Message&);
-    PN_CPP_EXTERN ~Message();
+    Message();
+    Message(pn_message_t *);
+    Message(const Message&);
+    Message& operator=(const Message&);
+    ~Message();
 
-    PN_CPP_EXTERN pn_message_t *getPnMessage() const;
+    pn_message_t *pnMessage() const;
 
-    // FIXME aconway 2015-06-11: get rid of get/set prefixes
+    void id(const Value& id);
+    Value id() const;
 
-    // FIXME aconway 2015-06-11: use Value not string to allow full range of AMQP types.
-    PN_CPP_EXTERN void setId(uint64_t id);
-    PN_CPP_EXTERN uint64_t getId();
-    PN_CPP_EXTERN void setId(const std::string &id);
-    PN_CPP_EXTERN std::string getStringId();
-    PN_CPP_EXTERN void setId(const char *p, size_t len);
-    PN_CPP_EXTERN size_t getId(const char **p);
-    PN_CPP_EXTERN pn_type_t getIdType();
+    void user(const std::string &user);
+    std::string user() const;
 
-    PN_CPP_EXTERN void setUserId(const std::string &id);
-    PN_CPP_EXTERN std::string getUserId();
+    void address(const std::string &addr);
+    std::string address() const;
 
-    PN_CPP_EXTERN void setAddress(const std::string &addr);
-    PN_CPP_EXTERN std::string getAddress();
+    void subject(const std::string &s);
+    std::string subject() const;
 
-    PN_CPP_EXTERN void setSubject(const std::string &s);
-    PN_CPP_EXTERN std::string getSubject();
+    void replyTo(const std::string &s);
+    std::string replyTo() const;
 
-    PN_CPP_EXTERN void setReplyTo(const std::string &s);
-    PN_CPP_EXTERN std::string getReplyTo();
+    void correlationId(const Value&);
+    Value correlationId() const;
 
-    PN_CPP_EXTERN void setCorrelationId(uint64_t id);
-    PN_CPP_EXTERN uint64_t getCorrelationId();
-    PN_CPP_EXTERN void setCorrelationId(const std::string &id);
-    PN_CPP_EXTERN std::string getStringCorrelationId();
-    PN_CPP_EXTERN void setCorrelationId(const char *p, size_t len);
-    PN_CPP_EXTERN size_t getCorrelationId(const char **p);
+    void contentType(const std::string &s);
+    std::string contentType() const;
 
-    // FIXME aconway 2015-06-11: use Value not string to allow full range of AMQP types.
-    PN_CPP_EXTERN pn_type_t getCorrelationIdType();
+    void contentEncoding(const std::string &s);
+    std::string contentEncoding() const;
 
-    PN_CPP_EXTERN void setContentType(const std::string &s);
-    PN_CPP_EXTERN std::string getContentType();
+    void expiry(Timestamp t);
+    Timestamp expiry() const;
 
-    PN_CPP_EXTERN void setContentEncoding(const std::string &s);
-    PN_CPP_EXTERN std::string getContentEncoding();
+    void creationTime(Timestamp t);
+    Timestamp creationTime() const;
 
-    PN_CPP_EXTERN void setExpiry(pn_timestamp_t t);
-    PN_CPP_EXTERN pn_timestamp_t getExpiry();
+    void groupId(const std::string &s);
+    std::string groupId() const;
 
-    PN_CPP_EXTERN void setCreationTime(pn_timestamp_t t);
-    PN_CPP_EXTERN pn_timestamp_t getCreationTime();
+    void replyToGroupId(const std::string &s);
+    std::string replyToGroupId() const;
 
-    PN_CPP_EXTERN void setGroupId(const std::string &s);
-    PN_CPP_EXTERN std::string getGroupId();
+    /** Set the body to an AMQP value. */
+    void body(const Value&);
 
-    PN_CPP_EXTERN void setReplyToGroupId(const std::string &s);
-    PN_CPP_EXTERN std::string getReplyToGroupId();
+    /** Template to convert any type to a Value and set as the body */
+    template <class T> void body(const T& v) { body(Value(v)); }
 
-    // FIXME aconway 2015-06-11: use Values for body.
-    PN_CPP_EXTERN void setBody(const std::string &data);
-    PN_CPP_EXTERN std::string getBody();
+    /** Set the body to a sequence of sections containing AMQP values. */
+    void body(const Values&);
 
-    PN_CPP_EXTERN void getBody(std::string &str);
+    const Values& body() const;
 
-    PN_CPP_EXTERN void setBody(const char *, size_t len);
-    PN_CPP_EXTERN size_t getBody(char *, size_t len);
-    PN_CPP_EXTERN size_t getBinaryBodySize();
+    Values& body(); ///< Allows in-place modification of body sections.
 
+    // FIXME aconway 2015-06-17: consistent and flexible treatment of buffers.
+    // Allow convenient std::string encoding/decoding (with re-use of existing
+    // string capacity) but also need to allow encoding/decoding of non-string
+    // buffers. Introduce a buffer type with begin/end pointers?
 
-    PN_CPP_EXTERN void encode(std::string &data);
-    PN_CPP_EXTERN void decode(const std::string &data);
+    void encode(std::string &data);
+    std::string encode();
+    void decode(const std::string &data);
 
   private:
-    friend class ProtonImplRef<Message>;
+    mutable Values body_;
+  friend class reactor::ProtonImplRef<Message>;
 };
 
-
-}} // namespace proton::reactor
+}
 
 #endif  /*!PROTON_CPP_MESSAGE_H*/

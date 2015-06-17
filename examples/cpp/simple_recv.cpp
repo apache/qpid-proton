@@ -24,11 +24,13 @@
 #include "proton/Link.hpp"
 
 #include <iostream>
+#include <map>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 
+using namespace proton;
 using namespace proton::reactor;
 
 class Recv : public MessagingHandler {
@@ -46,15 +48,14 @@ class Recv : public MessagingHandler {
     }
 
     void onMessage(Event &e) {
-        int64_t id = 0;
         Message msg = e.getMessage();
-        if (msg.getIdType() == PN_ULONG) {
-            id = msg.getId();
-            if (id < received)
+        Value id = msg.id();
+        if (id.type() == ULONG) {
+            if (id.get<int>() < received)
                 return; // ignore duplicate
         }
         if (expected == 0 || received < expected) {
-            std::cout << '[' << id << "]: " << msg.getBody() << std::endl;
+            std::cout << msg.body() << std::endl;
             received++;
             if (received == expected) {
                 e.getReceiver().close();

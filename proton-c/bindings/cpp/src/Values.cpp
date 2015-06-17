@@ -23,10 +23,11 @@
 #include <ostream>
 
 namespace proton {
-namespace reactor {
 
 Values::Values() {}
 Values::Values(const Values& v) { *this = v; }
+Values::Values(pn_data_t* d) : Data(d) {}
+
 Values::~Values() {}
 Values& Values::operator=(const Values& v) { Data::operator=(v); return *this; }
 
@@ -36,4 +37,4 @@ std::ostream& operator<<(std::ostream& o, const Values& v) {
     return o << static_cast<const Encoder&>(v);
 }
 
-}}
+}

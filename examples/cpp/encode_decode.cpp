@@ -28,7 +28,7 @@
 #include <vector>
 
 using namespace std;
-using namespace proton::reactor;
+using namespace proton;
 
 // Examples of how to use the Encoder and Decoder to create and examine AMQP values.
 //
@@ -49,7 +49,13 @@ void simple_insert_extract() {
     values.rewind();
     values >> i >> s >> b;
     cout << "Extracted: " << i << ", " << s << ", " << b << endl;
-    cout << "Encoded as AMQP in " << values.encode().size() << " bytes" << endl;
+    // Encode and decode as AMQP
+    string amqpData = values.encode();
+    cout << "Encoded as AMQP in " << amqpData.size() << " bytes" << endl;
+    Values values2;
+    values.decode(amqpData);
+    values >> i >> s >> b;
+    cout << "Decoded: " << i << ", " << s << ", " << b << endl;
 }
 
 // Inserting values as a specific AMQP type
@@ -71,12 +77,12 @@ void simple_insert_extract_exact_type() {
     values.rewind();            // Byte(1) << Long(2) << Symbol("bar");
     Long l;
     // Fails, extracting Byte as Long
-    try { values >> as<LONG>(l); throw logic_error("expected error"); } catch (Decoder::Error) {}
+    try { values >> as<LONG>(l); throw logic_error("expected error"); } catch (DecodeError) {}
     Byte b;
     values >> as<BYTE>(b) >> as<LONG>(l); // OK, extract Byte as Byte, Long as Long.
     std::string str;
     // Fails, extracting Symbol as String.
-    try { values >> as<STRING>(str); throw logic_error("expected error"); } catch (Decoder::Error) {}
+    try { values >> as<STRING>(str); throw logic_error("expected error"); } catch (DecodeError) {}
     values >> as<SYMBOL>(str);       // OK, extract Symbol as Symbol
     cout << "Extracted (exact) " << b << ", " << l << ", " << str << endl;
 }

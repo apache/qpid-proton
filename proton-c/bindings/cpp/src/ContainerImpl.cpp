@@ -24,7 +24,7 @@
 #include "proton/Session.hpp"
 #include "proton/MessagingAdapter.hpp"
 #include "proton/Acceptor.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 
 #include "Msg.hpp"
 #include "ContainerImpl.hpp"
@@ -205,7 +205,7 @@ ContainerImpl::~ContainerImpl() {
 }
 
 Connection ContainerImpl::connect(std::string &host, Handler *h) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     Container cntnr(this);
     Connection connection(cntnr, handler);
     Connector *connector = new Connector(connection);
@@ -229,17 +229,17 @@ Duration ContainerImpl::getTimeout() {
 }
 
 void ContainerImpl::setTimeout(Duration timeout) {
-    if (timeout == Duration::FOREVER || timeout.getMilliseconds() > PN_MILLIS_MAX)
+    if (timeout == Duration::FOREVER || timeout.milliseconds > PN_MILLIS_MAX)
         pn_reactor_set_timeout(reactor, PN_MILLIS_MAX);
     else {
-        pn_millis_t tmo = timeout.getMilliseconds();
+        pn_millis_t tmo = timeout.milliseconds;
         pn_reactor_set_timeout(reactor, tmo);
     }
 }
 
 
 Sender ContainerImpl::createSender(Connection &connection, std::string &addr, Handler *h) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     Session session = getDefaultSession(connection.getPnConnection(), &getImpl(connection)->defaultSession);
     Sender snd = session.createSender(containerId  + '-' + addr);
     pn_link_t *lnk = snd.getPnLink();
@@ -253,7 +253,7 @@ Sender ContainerImpl::createSender(Connection &connection, std::string &addr, Ha
 }
 
 Sender ContainerImpl::createSender(std::string &urlString) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     Connection conn = connect(urlString, 0);
     Session session = getDefaultSession(conn.getPnConnection(), &getImpl(conn)->defaultSession);
     std::string path = Url(urlString).getPath();
@@ -264,7 +264,7 @@ Sender ContainerImpl::createSender(std::string &urlString) {
 }
 
 Receiver ContainerImpl::createReceiver(Connection &connection, std::string &addr) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     ConnectionImpl *connImpl = getImpl(connection);
     Session session = getDefaultSession(connImpl->pnConnection, &connImpl->defaultSession);
     Receiver rcv = session.createReceiver(containerId + '-' + addr);
@@ -274,7 +274,7 @@ Receiver ContainerImpl::createReceiver(Connection &connection, std::string &addr
 }
 
 Receiver ContainerImpl::createReceiver(const std::string &urlString) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     // TODO: const cleanup of API
     Connection conn = connect(const_cast<std::string &>(urlString), 0);
     Session session = getDefaultSession(conn.getPnConnection(), &getImpl(conn)->defaultSession);
@@ -290,11 +290,11 @@ Acceptor ContainerImpl::acceptor(const std::string &host, const std::string &por
     if (acptr)
         return Acceptor(acptr);
     else
-        throw ProtonException(MSG("accept fail: " << pn_error_text(pn_io_error(pn_reactor_io(reactor))) << "(" << host << ":" << port << ")"));
+        throw Error(MSG("accept fail: " << pn_error_text(pn_io_error(pn_reactor_io(reactor))) << "(" << host << ":" << port << ")"));
 }
 
 Acceptor ContainerImpl::listen(const std::string &urlString) {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     Url url(urlString);
     // TODO: SSL
     return acceptor(url.getHost(), url.getPort());
@@ -307,7 +307,7 @@ pn_handler_t *ContainerImpl::wrapHandler(Handler *h) {
 
 
 void ContainerImpl::initializeReactor() {
-    if (reactor) throw ProtonException(MSG("Container already running"));
+    if (reactor) throw Error(MSG("Container already running"));
     reactor = pn_reactor();
 
     // Set our context on the reactor
@@ -343,26 +343,26 @@ void ContainerImpl::start() {
 }
 
 bool ContainerImpl::process() {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     bool result = pn_reactor_process(reactor);
     // TODO: check errors
     return result;
 }
 
 void ContainerImpl::stop() {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     pn_reactor_stop(reactor);
     // TODO: check errors
 }
 
 void ContainerImpl::wakeup() {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     pn_reactor_wakeup(reactor);
     // TODO: check errors
 }
 
 bool ContainerImpl::isQuiesced() {
-    if (!reactor) throw ProtonException(MSG("Container not started"));
+    if (!reactor) throw Error(MSG("Container not started"));
     return pn_reactor_quiesced(reactor);
 }
 

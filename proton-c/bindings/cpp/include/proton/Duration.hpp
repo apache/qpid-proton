@@ -23,34 +23,33 @@
  */
 
 #include "proton/ImportExport.hpp"
-#include "proton/types.h"
+#include "proton/types.hpp"
 
 namespace proton {
-namespace reactor {
 
 /** @ingroup cpp
  * A duration is a time in milliseconds.
  */
-class Duration
+class Duration : public Comparable<Duration>
 {
   public:
-    PN_CPP_EXTERN explicit Duration(uint64_t milliseconds);
-    PN_CPP_EXTERN uint64_t getMilliseconds() const;
-    PN_CPP_EXTERN static const Duration FOREVER;
-    PN_CPP_EXTERN static const Duration IMMEDIATE;
-    PN_CPP_EXTERN static const Duration SECOND;
-    PN_CPP_EXTERN static const Duration MINUTE;
-  private:
     uint64_t milliseconds;
+    explicit Duration(uint64_t ms) : milliseconds(ms) {}
+
+    bool operator<(Duration d) { return milliseconds < d.milliseconds; }
+    bool operator==(Duration d) { return milliseconds == d.milliseconds; }
+
+    static const Duration FOREVER;
+    static const Duration IMMEDIATE;
+    static const Duration SECOND;
+    static const Duration MINUTE;
 };
 
-PN_CPP_EXTERN Duration operator*(const Duration& duration,
-                                         uint64_t multiplier);
-PN_CPP_EXTERN Duration operator*(uint64_t multiplier,
-                                         const Duration& duration);
-PN_CPP_EXTERN bool operator==(const Duration& a, const Duration& b);
-PN_CPP_EXTERN bool operator!=(const Duration& a, const Duration& b);
+inline Duration operator*(Duration d, uint64_t n) { return Duration(d.milliseconds*n); }
+inline Duration operator*(uint64_t n, Duration d) { return d * n; }
 
-}} // namespace proton::reactor
+inline Timestamp operator+(Timestamp ts, Duration d) { return Timestamp(ts.milliseconds+d.milliseconds); }
+inline Timestamp operator+(Duration d, Timestamp ts) { return ts + d; }
+}
 
 #endif  /*!PROTON_CPP_DURATION_H*/

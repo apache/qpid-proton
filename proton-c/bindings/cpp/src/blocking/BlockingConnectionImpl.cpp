@@ -21,7 +21,7 @@
 #include "proton/Container.hpp"
 #include "proton/MessagingHandler.hpp"
 #include "proton/Duration.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "proton/WaitCondition.hpp"
 #include "BlockingConnectionImpl.hpp"
 #include "Msg.hpp"
@@ -98,10 +98,10 @@ void BlockingConnectionImpl::wait(WaitCondition &condition, std::string &msg, Du
 
     pn_reactor_t *reactor = container.getReactor();
     pn_millis_t origTimeout = pn_reactor_get_timeout(reactor);
-    pn_reactor_set_timeout(reactor, waitTimeout.getMilliseconds());
+    pn_reactor_set_timeout(reactor, waitTimeout.milliseconds);
     try {
         pn_timestamp_t now = pn_reactor_mark(reactor);
-        pn_timestamp_t deadline = now + waitTimeout.getMilliseconds();
+        pn_timestamp_t deadline = now + waitTimeout.milliseconds;
         while (!condition.achieved()) {
             container.process();
             if (deadline < pn_reactor_mark(reactor)) {
@@ -109,7 +109,7 @@ void BlockingConnectionImpl::wait(WaitCondition &condition, std::string &msg, Du
                 if (!msg.empty())
                     txt += ": " + msg;
                 // TODO: proper Timeout exception
-                throw ProtonException(MSG(txt));
+                throw Error(MSG(txt));
             }
         }
     } catch (...) {

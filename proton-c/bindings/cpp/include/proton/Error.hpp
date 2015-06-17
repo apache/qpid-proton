@@ -24,26 +24,19 @@
 #include <stdexcept>
 
 namespace proton {
-namespace reactor {
 
-class ProtonException : public std::runtime_error
-{
-  public:
-    explicit ProtonException(const std::string& msg) throw() : std::runtime_error(msg) {}
-};
+/** @ingroup cpp
+ * Functions in the proton namespace throw a subclass of proton::Error on error.
+ */
+struct Error : public std::runtime_error { explicit Error(const std::string&) throw(); };
 
-class MessageReject : public ProtonException
-{
-  public:
-    explicit MessageReject(const std::string& msg) throw() : ProtonException(msg) {}
-};
+/** Raised if a message is rejected */
+struct MessageReject : public Error { explicit MessageReject(const std::string&) throw(); };
 
-class MessageRelease : public ProtonException
-{
-  public:
-    explicit MessageRelease(const std::string& msg) throw() : ProtonException(msg) {}
-};
+/** Raised if a message is released */
+struct MessageRelease : public Error { explicit MessageRelease(const std::string&) throw(); };
 
-}} // namespace proton::reactor
+
+}
 
 #endif  /*!PROTON_CPP_EXCEPTIONS_H*/

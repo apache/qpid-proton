@@ -20,7 +20,7 @@
  */
 
 #include "proton/Acceptor.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "ProtonImplRef.hpp"
 #include "Msg.hpp"
 

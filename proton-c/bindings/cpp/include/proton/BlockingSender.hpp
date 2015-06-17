@@ -48,7 +48,6 @@ class BlockingSender : public BlockingLink
     friend class BlockingConnection;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_BLOCKINGSENDER_H*/

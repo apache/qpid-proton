@@ -24,11 +24,13 @@
 #include "proton/Connection.hpp"
 
 #include <iostream>
+#include <map>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 
+using namespace proton;
 using namespace proton::reactor;
 
 class Send : public MessagingHandler {
@@ -49,10 +51,10 @@ class Send : public MessagingHandler {
         Sender sender = e.getSender();
         while (sender.getCredit() && sent < total) {
             Message msg;
-            msg.setId(sent + 1);
-            // TODO: fancy map body content as in Python example.  Simple binary for now.
-            const char *bin = "some arbitrary binary data";
-            msg.setBody(bin, strlen(bin));
+            msg.id(Value(sent + 1));
+            std::map<std::string, int> m;
+            m["sequence"] = sent+1;
+            msg.body(as<MAP>(m));
             sender.send(msg);
             sent++;
         }

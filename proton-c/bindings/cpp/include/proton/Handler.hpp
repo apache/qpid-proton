@@ -44,7 +44,6 @@ class PN_CPP_EXTERN Handler
     std::vector<Handler *>childHandlers;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_HANDLER_H*/

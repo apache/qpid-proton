@@ -61,8 +61,7 @@ class Link : public Endpoint, public ProtonHandle<pn_link_t>
     bool senderLink;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #include "proton/Sender.hpp"
 #include "proton/Receiver.hpp"

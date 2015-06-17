@@ -17,6 +17,8 @@
 # under the License
 #
 
+# This is a test script to run the examples and verify that they behave as expected.
+
 import unittest
 import os, sys, socket, time
 from  random import randrange
@@ -86,7 +88,7 @@ class ExampleTest(unittest.TestCase):
         self.assertEqual("all messages confirmed\n", send)
         recv = check_output(["./simple_recv", "-a", b.addr, "-m", str(n)])
         recv_expect = "simple_recv listening on %s\n" % (b.addr)
-        recv_expect += "".join(['[%d]: b"some arbitrary binary data"\n' % (i+1) for i in range(n)])
+        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(n)])
         self.assertEqual(recv_expect, recv)
 
         # FIXME aconway 2015-06-16: bug when receiver is started before sender, messages
@@ -117,6 +119,7 @@ class ExampleTest(unittest.TestCase):
 Values: int(42), string("foo"), bool(true)
 Extracted: 42, foo, 1
 Encoded as AMQP in 8 bytes
+Decoded: 42, foo, 1
 
 == Specific AMQP types: byte, long, symbol
 Values: byte(120), long(123456789123456789), symbol(:bar)

@@ -54,7 +54,6 @@ class Event
     PN_CPP_EXTERN Event& operator=(const Event&);
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_EVENT_H*/

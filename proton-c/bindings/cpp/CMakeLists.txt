@@ -36,6 +36,7 @@ set(qpid-proton-cpp-source
   src/Duration.cpp
   src/Encoder.cpp
   src/Endpoint.cpp
+  src/Error.cpp
   src/Event.cpp
   src/Handler.cpp
   src/Link.cpp

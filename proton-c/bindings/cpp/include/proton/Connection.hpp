@@ -64,7 +64,6 @@ class Connection : public Endpoint, public Handle<ConnectionImpl>
    friend class ConnectionImpl;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_CONNECTION_H*/

@@ -21,23 +21,29 @@
 
 #include "proton/Values.hpp"
 
+struct pn_data_t;
+
 /**@file
  * Holder for an AMQP value.
  * @ingroup cpp
  */
 namespace proton {
-namespace reactor {
 
 /** Holds a single AMQP value. */
 PN_CPP_EXTERN class Value {
   public:
-    PN_CPP_EXTERN Value();
-    PN_CPP_EXTERN Value(const Value&);
+    Value();
+    Value(const Value&);
+
     /** Converting constructor from any settable value */
     template <class T> explicit Value(const T& v);
-    PN_CPP_EXTERN ~Value();
-    PN_CPP_EXTERN Value& operator=(const Value&);
 
+    ~Value();
+
+    Value& operator=(const Value&);
+
+    /** Copy the first value from a raw pn_data_t. */
+    Value& operator=(pn_data_t*);
 
     TypeId type() const;
 
@@ -55,13 +61,13 @@ PN_CPP_EXTERN class Value {
     template<class T> operator T() const;
 
     /** insert a value into an Encoder. */
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Value&);
+    friend Encoder& operator<<(Encoder&, const Value&);
 
     /** Extract a value from a decoder. */
-    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Value&);
+    friend Decoder& operator>>(Decoder&, Value&);
 
     /** Human readable format */
-    PN_CPP_EXTERN friend std::ostream& operator<<(std::ostream&, const Value&);
+    friend std::ostream& operator<<(std::ostream&, const Value&);
 
     bool operator==(const Value&) const;
     bool operator !=(const Value& v) const{ return !(*this == v); }
@@ -93,6 +99,6 @@ template<class T> Value& Value::operator=(const T& value) { set(value); return *
 template<class T> Value::operator T() const { return get<T>(); }
 
 template<class T> Value::Value(const T& value) { set(value); }
-}}
+}
 
 #endif // VALUE_H

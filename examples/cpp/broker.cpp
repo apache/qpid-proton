@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+using namespace proton;
 using namespace proton::reactor;
 
 std::string generateUuid(){

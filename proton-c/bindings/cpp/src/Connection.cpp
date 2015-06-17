@@ -21,7 +21,7 @@
 #include "proton/Container.hpp"
 #include "proton/Connection.hpp"
 #include "proton/Handler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 #include "contexts.hpp"
 #include "ConnectionImpl.hpp"

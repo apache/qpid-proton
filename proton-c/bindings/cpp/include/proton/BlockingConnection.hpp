@@ -61,7 +61,6 @@ class BlockingConnection : public Handle<BlockingConnectionImpl>
     friend class PrivateImplRef<BlockingConnection>;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_BLOCKINGCONNECTION_H*/

@@ -21,7 +21,7 @@
 #include "proton/BlockingSender.hpp"
 #include "proton/BlockingConnection.hpp"
 #include "proton/WaitCondition.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 
 
@@ -45,7 +45,7 @@ BlockingSender::BlockingSender(BlockingConnection &c, Sender &l) : BlockingLink(
         waitForClosed();
         link.close();
         std::string txt = "Failed to open sender " + link.getName() + ", target does not match";
-        throw ProtonException(MSG("Container not started"));
+        throw Error(MSG("Container not started"));
     }
 }
 

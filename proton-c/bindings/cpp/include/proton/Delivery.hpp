@@ -55,7 +55,6 @@ class Delivery : public ProtonHandle<pn_delivery_t>
     friend class ProtonImplRef<Delivery>;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_DELIVERY_H*/

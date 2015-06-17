@@ -20,7 +20,7 @@
  */
 #include "proton/Container.hpp"
 #include "proton/Handler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "ConnectionImpl.hpp"
 #include "proton/Transport.hpp"
 #include "Msg.hpp"
@@ -73,7 +73,7 @@ ConnectionImpl::~ConnectionImpl() {
 Transport &ConnectionImpl::getTransport() {
     if (transport)
         return *transport;
-    throw ProtonException(MSG("Connection has no transport"));
+    throw Error(MSG("Connection has no transport"));
 }
 
 Handler* ConnectionImpl::getOverride() { return override; }
@@ -99,7 +99,7 @@ std::string ConnectionImpl::getHostname() {
 
 Connection &ConnectionImpl::getConnection() {
     // Endpoint interface.  Should be implemented in the Connection object.
-    throw ProtonException(MSG("Internal error"));
+    throw Error(MSG("Internal error"));
 }
 
 Container &ConnectionImpl::getContainer() {
@@ -117,16 +117,16 @@ void ConnectionImpl::reactorDetach() {
 
 Connection &ConnectionImpl::getReactorReference(pn_connection_t *conn) {
     if (!conn)
-        throw ProtonException(MSG("Null Proton connection"));
+        throw Error(MSG("Null Proton connection"));
     ConnectionImpl *impl = getConnectionContext(conn);
     if (!impl) {
         // First time we have seen this connection
         pn_reactor_t *reactor = pn_object_reactor(conn);
         if (!reactor)
-            throw ProtonException(MSG("Invalid Proton connection specifier"));
+            throw Error(MSG("Invalid Proton connection specifier"));
         Container container(getContainerContext(reactor));
         if (!container)  // can't be one created by our container
-            throw ProtonException(MSG("Unknown Proton connection specifier"));
+            throw Error(MSG("Unknown Proton connection specifier"));
         impl = new ConnectionImpl(container, *conn);
     }
     return impl->reactorReference;

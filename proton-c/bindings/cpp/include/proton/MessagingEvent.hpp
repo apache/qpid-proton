@@ -94,7 +94,6 @@ class MessagingEvent : public ProtonEvent
     MessagingEvent(const MessagingEvent&);
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_MESSAGINGEVENT_H*/

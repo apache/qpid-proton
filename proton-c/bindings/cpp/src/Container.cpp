@@ -24,7 +24,7 @@
 #include "proton/Session.hpp"
 #include "proton/MessagingAdapter.hpp"
 #include "proton/Acceptor.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "ContainerImpl.hpp"
 #include "PrivateImplRef.hpp"
 

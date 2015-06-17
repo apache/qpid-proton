@@ -22,7 +22,7 @@
 #include "proton/BlockingConnection.hpp"
 #include "proton/BlockingSender.hpp"
 #include "proton/MessagingHandler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 #include "BlockingConnectionImpl.hpp"
 #include "PrivateImplRef.hpp"

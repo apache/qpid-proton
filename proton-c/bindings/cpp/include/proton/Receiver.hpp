@@ -42,7 +42,6 @@ class Receiver : public Link
     virtual void verifyType(pn_link_t *l);
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_RECEIVER_H*/

@@ -25,6 +25,7 @@
 #include <iostream>
 
 
+using namespace proton;
 using namespace proton::reactor;
 
 class HelloWorld : public MessagingHandler {
@@ -43,14 +44,13 @@ class HelloWorld : public MessagingHandler {
 
     void onSendable(Event &e) {
         Message m;
-        m.setBody("Hello World!");
+        m.body("Hello World!");
         e.getSender().send(m);
         e.getSender().close();
     }
 
     void onMessage(Event &e) {
-        std::string body = e.getMessage().getBody();
-        std::cout << body << std::endl;
+        std::cout << e.getMessage().body().get<String>() << std::endl;
         e.getConnection().close();
     }
 

@@ -43,6 +43,6 @@ class Transport
 };
 
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_TRANSPORT_H*/

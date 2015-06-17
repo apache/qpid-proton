@@ -18,20 +18,39 @@
  */
 
 #include "proton/Data.hpp"
-#include <proton/codec.h>
+#include "proton/codec.h"
 #include "proton_bits.hpp"
+#include <utility>
 
 namespace proton {
-namespace reactor {
 
-Data::Data(pn_data_t* p) : data(p ? p : pn_data(0)) {}
+Data::Data() : data(pn_data(0)), own_(true) {}
 
-Data::~Data() { if (data) pn_data_free(data); }
+Data::Data(pn_data_t* p) : data(p), own_(false) { }
+
+Data::Data(const Data& x) : data(pn_data(0)), own_(true) { *this = x; }
+
+Data::~Data() { if (own_ && data) pn_data_free(data); }
+
+void Data::view(pn_data_t* newData) {
+    if (data && own_) pn_data_free(data);
+    data = newData;
+    own_ = false;
+}
+
+void Data::swap(Data& x) {
+    std::swap(data, x.data);
+    std::swap(own_, x.own_);
+}
 
 Data& Data::operator=(const Data& x) {
     if (this != &x) {
-        pn_data_free(data);
-        data = pn_data(pn_data_size(x.data));
+        if (!own_) {
+            data = pn_data(pn_data_size(x.data));
+            own_ = true;
+        } else {
+            clear();
+        }
         pn_data_copy(data, x.data);
     }
     return *this;
@@ -41,6 +60,6 @@ void Data::clear() { pn_data_clear(data); }
 
 bool Data::empty() const { return pn_data_size(data) == 0; }
 
-std::ostream& operator<<(std::ostream& o, const Data& d) { return o << Object(d.data); }
+std::ostream& operator<<(std::ostream& o, const Data& d) { return o << PnObject(d.data); }
 
-}} // namespace proton::reactor
+}

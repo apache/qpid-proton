@@ -24,7 +24,7 @@
 
 #include "proton/Event.hpp"
 #include "proton/Handler.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 
 #include "Msg.hpp"
 #include "contexts.hpp"
@@ -39,31 +39,31 @@ Event::~Event() {}
 
 Container &Event::getContainer() {
     // Subclasses to override as appropriate
-    throw ProtonException(MSG("No container context for event"));
+    throw Error(MSG("No container context for event"));
 }
 
 Connection &Event::getConnection() {
-    throw ProtonException(MSG("No connection context for Event"));
+    throw Error(MSG("No connection context for Event"));
 }
 
 Sender Event::getSender() {
-    throw ProtonException(MSG("No Sender context for event"));
+    throw Error(MSG("No Sender context for event"));
 }
 
 Receiver Event::getReceiver() {
-    throw ProtonException(MSG("No Receiver context for event"));
+    throw Error(MSG("No Receiver context for event"));
 }
 
 Link Event::getLink() {
-    throw ProtonException(MSG("No Link context for event"));
+    throw Error(MSG("No Link context for event"));
 }
 
 Message Event::getMessage() {
-    throw ProtonException(MSG("No message associated with event"));
+    throw Error(MSG("No message associated with event"));
 }
 
 void Event::setMessage(Message &) {
-    throw ProtonException(MSG("Operation not supported for this type of event"));
+    throw Error(MSG("Operation not supported for this type of event"));
 }
 
 

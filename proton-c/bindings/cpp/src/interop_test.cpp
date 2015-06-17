@@ -30,6 +30,7 @@
 #include <unistd.h>
 
 using namespace std;
+using namespace proton;
 using namespace proton::reactor;
 
 std::string testsDir;
@@ -66,22 +67,22 @@ void testDataOstream() {
 void testDecoderPrimitvesExact() {
     Decoder d(read("primitives"));
     ASSERT(d.more());
-    try { get<int8_t>(d); FAIL("got bool as byte"); } catch(Decoder::Error){}
+    try { get<int8_t>(d); FAIL("got bool as byte"); } catch(DecodeError){}
     ASSERT_EQUAL(true, get<bool>(d));
     ASSERT_EQUAL(false, get<bool>(d));
-    try { get<int8_t>(d); FAIL("got ubyte as byte"); } catch(Decoder::Error){}
+    try { get<int8_t>(d); FAIL("got ubyte as byte"); } catch(DecodeError){}
     ASSERT_EQUAL(42, get<uint8_t>(d));
-    try { get<int32_t>(d); FAIL("got uint as ushort"); } catch(Decoder::Error){}
+    try { get<int32_t>(d); FAIL("got uint as ushort"); } catch(DecodeError){}
     ASSERT_EQUAL(42, get<uint16_t>(d));
-    try { get<uint16_t>(d); FAIL("got short as ushort"); } catch(Decoder::Error){}
+    try { get<uint16_t>(d); FAIL("got short as ushort"); } catch(DecodeError){}
     ASSERT_EQUAL(-42, get<int16_t>(d));
     ASSERT_EQUAL(12345, get<uint32_t>(d));
     ASSERT_EQUAL(-12345, get<int32_t>(d));
     ASSERT_EQUAL(12345, get<uint64_t>(d));
     ASSERT_EQUAL(-12345, get<int64_t>(d));
-    try { get<double>(d); FAIL("got float as double"); } catch(Decoder::Error){}
+    try { get<double>(d); FAIL("got float as double"); } catch(DecodeError){}
     ASSERT_EQUAL(0.125, get<float>(d));
-    try { get<float>(d); FAIL("got double as float"); } catch(Decoder::Error){}
+    try { get<float>(d); FAIL("got double as float"); } catch(DecodeError){}
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());
 }
@@ -109,8 +110,8 @@ void testValueConversions() {
     ASSERT_EQUAL(3, long(v=Byte(3)));
     ASSERT_EQUAL(1.0, double(v=Float(1.0)));
     ASSERT_EQUAL(1.0, float(v=Double(1.0)));
-    try { bool(v = Byte(1)); FAIL("got byte as bool"); } catch (Decoder::Error) {}
-    try { float(v = true); FAIL("got bool as float"); } catch (Decoder::Error) {}
+    try { bool(v = Byte(1)); FAIL("got byte as bool"); } catch (DecodeError) {}
+    try { float(v = true); FAIL("got bool as float"); } catch (DecodeError) {}
 }
 
 int run_test(void (*testfn)(), const char* name) {

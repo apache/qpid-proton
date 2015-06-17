@@ -26,6 +26,7 @@
 #include <iostream>
 
 
+using namespace proton;
 using namespace proton::reactor;
 
 class HelloWorldBlocking : public MessagingHandler {
@@ -42,8 +43,7 @@ class HelloWorldBlocking : public MessagingHandler {
     }
 
     void onMessage(Event &e) {
-        std::string body = e.getMessage().getBody();
-        std::cout << body << std::endl;
+        std::cout << e.getMessage().body().get<String>() << std::endl;
         e.getConnection().close();
     }
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         BlockingConnection conn = BlockingConnection(server);
         BlockingSender sender = conn.createSender(addr);
         Message m;
-        m.setBody("Hello World!");
+        m.body("Hello World!");
         sender.send(m);
         conn.close();
 

@@ -20,7 +20,7 @@
  */
 
 #include "contexts.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 #include "proton/object.h"
 #include "proton/message.h"
@@ -55,7 +55,7 @@ void setContainerContext(pn_reactor_t *pnReactor, ContainerImpl *container) {
 ContainerImpl *getContainerContext(pn_reactor_t *pnReactor) {
     pn_record_t *record = pn_reactor_attachments(pnReactor);
     ContainerImpl *p = (ContainerImpl *) pn_record_get(record, PNI_CPP_CONTAINER_CONTEXT);
-    if (!p) throw ProtonException(MSG("Reactor has no C++ container context"));
+    if (!p) throw Error(MSG("Reactor has no C++ container context"));
     return p;
 }
 

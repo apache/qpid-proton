@@ -47,6 +47,6 @@ class Sender : public Link
 };
 
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_SENDER_H*/

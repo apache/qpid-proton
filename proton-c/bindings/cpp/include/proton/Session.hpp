@@ -57,7 +57,6 @@ class Transport;
     friend class ProtonImplRef<Session>;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_SESSION_H*/

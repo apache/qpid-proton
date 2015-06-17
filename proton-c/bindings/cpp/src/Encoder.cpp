@@ -24,10 +24,11 @@
 #include "Msg.hpp"
 
 namespace proton {
-namespace reactor {
 
 Encoder::Encoder() {}
 Encoder::~Encoder() {}
+
+EncodeError::EncodeError(const std::string& msg) throw() : Error("encode: "+msg) {}
 
 namespace {
 struct SaveState {
@@ -40,7 +41,7 @@ struct SaveState {
 
 void check(int result, pn_data_t* data) {
     if (result < 0)
-        throw Encoder::Error("encode: " + errorStr(pn_data_error(data), result));
+        throw EncodeError(errorStr(pn_data_error(data), result));
 }
 }
 
@@ -82,7 +83,7 @@ Encoder& operator<<(Encoder& e, const Start& s) {
       case LIST: pn_data_put_list(e.data); break;
       case DESCRIBED: pn_data_put_described(e.data); break;
       default:
-        throw Encoder::Error(MSG("encode: " << s.type << " is not a container type"));
+        throw EncodeError(MSG("" << s.type << " is not a container type"));
     }
     pn_data_enter(e.data);
     return e;
@@ -150,9 +151,9 @@ template<> struct ClassOf<STRING> { typedef String ValueType; };
 template<> struct ClassOf<SYMBOL> { typedef Symbol ValueType; };
 
 Encoder& operator<<(Encoder& e, const Value& v) {
-    if (e.data == v.values.data) throw Encoder::Error("encode: cannot insert into self");
+    if (e.data == v.values.data) throw EncodeError("cannot insert into self");
     check(pn_data_appendn(e.data, v.values.data, 1), e.data);
     return e;
 }
 
-}} // namespace proton::reactor
+}

@@ -53,6 +53,6 @@ class Endpoint
 };
 
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_ENDPOINT_H*/

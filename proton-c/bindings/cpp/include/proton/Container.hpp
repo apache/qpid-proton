@@ -72,6 +72,6 @@ class Container : public Handle<ContainerImpl>
    friend class PrivateImplRef<Container>;
 };
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_CONTAINER_H*/

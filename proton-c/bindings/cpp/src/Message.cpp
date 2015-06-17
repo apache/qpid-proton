@@ -20,410 +20,208 @@
  */
 
 #include "proton/Message.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
+#include "proton/message.h"
 #include "Msg.hpp"
+#include "proton_bits.hpp"
 #include "ProtonImplRef.hpp"
 
 #include <cstring>
 
 namespace proton {
+
 namespace reactor {
-
 template class ProtonHandle<pn_message_t>;
-typedef ProtonImplRef<Message> PI;
+}
+typedef reactor::ProtonImplRef<Message> PI;
 
-Message::Message() {
+Message::Message() : body_(0) {
     PI::ctor(*this, 0);
 }
-Message::Message(pn_message_t *p) {
+Message::Message(pn_message_t *p) : body_(0) {
     PI::ctor(*this, p);
 }
-Message::Message(const Message& m) : ProtonHandle<pn_message_t>() {
+Message::Message(const Message& m) : ProtonHandle<pn_message_t>(), body_(0) {
     PI::copy(*this, m);
 }
+
+// FIXME aconway 2015-06-17: Message should be a value type, needs to own pn_message_t
+// and do appropriate _copy and _free operations.
 Message& Message::operator=(const Message& m) {
     return PI::assign(*this, m);
 }
 Message::~Message() { PI::dtor(*this); }
 
 namespace {
-void confirm(pn_message_t *&p) {
+void confirm(pn_message_t * const&  p) {
     if (p) return;
-    p = pn_message(); // Correct refcount of 1
+    const_cast<pn_message_t*&>(p) = pn_message(); // Correct refcount of 1
     if (!p)
-        throw ProtonException(MSG("No memory"));
+        throw Error(MSG("No memory"));
 }
 
-void getFormatedStringContent(pn_data_t *data, std::string &str) {
-    pn_data_rewind(data);
-    size_t sz = str.capacity();
-    if (sz < 512) sz = 512;
-    while (true) {
-        str.resize(sz);
-        int err = pn_data_format(data, (char *) str.data(), &sz);
-        if (err) {
-            if (err != PN_OVERFLOW)
-                throw ProtonException(MSG("Unexpected message body data error"));
-        }
-        else {
-            str.resize(sz);
-            return;
-        }
-        sz *= 2;
-    }
+void check(int err) {
+    if (err) throw Error(errorStr(err));
 }
 
+void setValue(pn_data_t* d, const Value& v) {
+    Values values(d);
+    values.clear();
+    values << v;
+}
+
+Value getValue(pn_data_t* d) {
+    Values values(d);
+    values.rewind();
+    return values.get<Value>();
+}
 } // namespace
 
-void Message::setId(uint64_t id) {
+void Message::id(const Value& id) {
     confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_ulong(data, id))
-        throw ProtonException(MSG("setId error " << err));
+    setValue(pn_message_id(impl), id);
 }
 
-uint64_t Message::getId() {
+Value Message::id() const {
     confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_ULONG) {
-        return pn_data_get_ulong(data);
-    }
-    throw ProtonException(MSG("Message ID is not a ULONG"));
+    return getValue(pn_message_id(impl));
+}
+void Message::user(const std::string &id) {
+    confirm(impl);
+    check(pn_message_set_user_id(impl, pn_bytes(id)));
 }
 
-void Message::setId(const std::string &id) {
+std::string Message::user() const {
     confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_string(data, pn_bytes(id.size(), id.data())))
-        throw ProtonException(MSG("setId error " << err));
+    return str(pn_message_get_user_id(impl));
 }
 
-std::string Message::getStringId() {
+void Message::address(const std::string &addr) {
     confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_STRING) {
-        pn_bytes_t bytes = pn_data_get_string(data);
-        return (std::string(bytes.start, bytes.size));
-    }
-    throw ProtonException(MSG("Message ID is not a string value"));
+    check(pn_message_set_address(impl, addr.c_str()));
 }
 
-void Message::setId(const char *p, size_t len) {
-    confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_binary(data, pn_bytes(len, p)))
-        throw ProtonException(MSG("setId error " << err));
-}
-
-size_t Message::getId(const char **p) {
-    confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_BINARY) {
-        pn_bytes_t pnb = pn_data_get_binary(data);
-        *p = pnb.start;
-        return pnb.size;
-    }
-    throw ProtonException(MSG("Message ID is not a binary value"));
-}
-
-pn_type_t Message::getIdType() {
-    confirm(impl);
-    pn_data_t *data = pn_message_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data)) {
-        pn_type_t type = pn_data_type(data);
-        switch (type) {
-        case PN_ULONG:
-        case PN_STRING:
-        case PN_BINARY:
-        case PN_UUID:
-            return type;
-            break;
-        default:
-            break;
-        }
-    }
-    return PN_NULL;
-}
-
-void Message::setUserId(const std::string &id) {
-    confirm(impl);
-    if (int err = pn_message_set_user_id(impl, pn_bytes(id.size(), id.data())))
-        throw ProtonException(MSG("setUserId error " << err));
-}
-
-std::string Message::getUserId() {
-    confirm(impl);
-    pn_bytes_t bytes = pn_message_get_user_id(impl);
-    return (std::string(bytes.start, bytes.size));
-}
-
-void Message::setAddress(const std::string &addr) {
-    confirm(impl);
-    if (int err = pn_message_set_address(impl, addr.c_str()))
-        throw ProtonException(MSG("setAddress error " << err));
-}
-
-std::string Message::getAddress() {
+std::string Message::address() const {
     confirm(impl);
     const char* addr = pn_message_get_address(impl);
     return addr ? std::string(addr) : std::string();
 }
 
-void Message::setSubject(const std::string &s) {
+void Message::subject(const std::string &s) {
     confirm(impl);
-    if (int err = pn_message_set_subject(impl, s.c_str()))
-        throw ProtonException(MSG("setSubject error " << err));
+    check(pn_message_set_subject(impl, s.c_str()));
 }
 
-std::string Message::getSubject() {
+std::string Message::subject() const {
     confirm(impl);
     const char* s = pn_message_get_subject(impl);
     return s ? std::string(s) : std::string();
 }
 
-void Message::setReplyTo(const std::string &s) {
+void Message::replyTo(const std::string &s) {
     confirm(impl);
-    if (int err = pn_message_set_reply_to(impl, s.c_str()))
-        throw ProtonException(MSG("setReplyTo error " << err));
+    check(pn_message_set_reply_to(impl, s.c_str()));
 }
 
-std::string Message::getReplyTo() {
+std::string Message::replyTo() const {
     confirm(impl);
     const char* s = pn_message_get_reply_to(impl);
     return s ? std::string(s) : std::string();
 }
 
-void Message::setCorrelationId(uint64_t id) {
+void Message::correlationId(const Value& id) {
     confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_ulong(data, id))
-        throw ProtonException(MSG("setCorrelationId error " << err));
+    setValue(pn_message_correlation_id(impl), id);
 }
 
-uint64_t Message::getCorrelationId() {
+Value Message::correlationId() const {
     confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_ULONG) {
-        return pn_data_get_ulong(data);
-    }
-    throw ProtonException(MSG("Correlation ID is not a ULONG"));
+    return getValue(pn_message_correlation_id(impl));
 }
 
-void Message::setCorrelationId(const std::string &id) {
+void Message::contentType(const std::string &s) {
     confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_string(data, pn_bytes(id.size(), id.data())))
-        throw ProtonException(MSG("setCorrelationId error " << err));
+    check(pn_message_set_content_type(impl, s.c_str()));
 }
 
-std::string Message::getStringCorrelationId() {
-    confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_STRING) {
-        pn_bytes_t bytes = pn_data_get_string(data);
-        return (std::string(bytes.start, bytes.size));
-    }
-    throw ProtonException(MSG("Message ID is not a string value"));
-}
-
-void Message::setCorrelationId(const char *p, size_t len) {
-    confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_clear(data);
-    if (int err = pn_data_put_binary(data, pn_bytes(len, p)))
-        throw ProtonException(MSG("setCorrelationId error " << err));
-}
-
-size_t Message::getCorrelationId(const char **p) {
-    confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data) && pn_data_type(data) == PN_BINARY) {
-        pn_bytes_t pnb = pn_data_get_binary(data);
-        *p = pnb.start;
-        return pnb.size;
-    }
-    throw ProtonException(MSG("Message ID is not a binary value"));
-}
-
-pn_type_t Message::getCorrelationIdType() {
-    confirm(impl);
-    pn_data_t *data = pn_message_correlation_id(impl);
-    pn_data_rewind(data);
-    if (pn_data_size(data) == 1 && pn_data_next(data)) {
-        pn_type_t type = pn_data_type(data);
-        switch (type) {
-        case PN_ULONG:
-        case PN_STRING:
-        case PN_BINARY:
-        case PN_UUID:
-            return type;
-            break;
-        default:
-            break;
-        }
-    }
-    return PN_NULL;
-}
-
-void Message::setContentType(const std::string &s) {
-    confirm(impl);
-    if (int err = pn_message_set_content_type(impl, s.c_str()))
-        throw ProtonException(MSG("setContentType error " << err));
-}
-
-std::string Message::getContentType() {
+std::string Message::contentType() const {
     confirm(impl);
     const char* s = pn_message_get_content_type(impl);
     return s ? std::string(s) : std::string();
 }
 
-void Message::setContentEncoding(const std::string &s) {
+void Message::contentEncoding(const std::string &s) {
     confirm(impl);
-    if (int err = pn_message_set_content_encoding(impl, s.c_str()))
-        throw ProtonException(MSG("setContentEncoding error " << err));
+    check(pn_message_set_content_encoding(impl, s.c_str()));
 }
 
-std::string Message::getContentEncoding() {
+std::string Message::contentEncoding() const {
     confirm(impl);
     const char* s = pn_message_get_content_encoding(impl);
     return s ? std::string(s) : std::string();
 }
 
-void Message::setExpiry(pn_timestamp_t t) {
+void Message::expiry(Timestamp t) {
     confirm(impl);
-    pn_message_set_expiry_time(impl, t);
+    pn_message_set_expiry_time(impl, t.milliseconds);
 }
-pn_timestamp_t Message::getExpiry() {
+Timestamp Message::expiry() const {
     confirm(impl);
-    return pn_message_get_expiry_time(impl);
+    return Timestamp(pn_message_get_expiry_time(impl));
 }
 
-void Message::setCreationTime(pn_timestamp_t t) {
+void Message::creationTime(Timestamp t) {
     confirm(impl);
     pn_message_set_creation_time(impl, t);
 }
-pn_timestamp_t Message::getCreationTime() {
+Timestamp Message::creationTime() const {
     confirm(impl);
     return pn_message_get_creation_time(impl);
 }
 
-
-void Message::setGroupId(const std::string &s) {
+void Message::groupId(const std::string &s) {
     confirm(impl);
-    if (int err = pn_message_set_group_id(impl, s.c_str()))
-        throw ProtonException(MSG("setGroupId error " << err));
+    check(pn_message_set_group_id(impl, s.c_str()));
 }
 
-std::string Message::getGroupId() {
+std::string Message::groupId() const {
     confirm(impl);
     const char* s = pn_message_get_group_id(impl);
     return s ? std::string(s) : std::string();
 }
 
-void Message::setReplyToGroupId(const std::string &s) {
+void Message::replyToGroupId(const std::string &s) {
     confirm(impl);
-    if (int err = pn_message_set_reply_to_group_id(impl, s.c_str()))
-        throw ProtonException(MSG("setReplyToGroupId error " << err));
+    check(pn_message_set_reply_to_group_id(impl, s.c_str()));
 }
 
-std::string Message::getReplyToGroupId() {
+std::string Message::replyToGroupId() const {
     confirm(impl);
     const char* s = pn_message_get_reply_to_group_id(impl);
     return s ? std::string(s) : std::string();
 }
 
-
-void Message::setBody(const std::string &buf) {
+void Message::body(const Value& v) {
     confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_clear(body);
-    pn_data_put_string(body, pn_bytes(buf.size(), buf.data()));
+    setValue(pn_message_body(impl), v);
 }
 
-void Message::getBody(std::string &str) {
-    // User supplied string/buffer
+void Message::body(const Values& v) {
     confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_rewind(body);
-
-    if (pn_data_next(body) && pn_data_type(body) == PN_STRING) {
-        pn_bytes_t bytes = pn_data_get_string(body);
-        if (!pn_data_next(body)) {
-            // String data and nothing else
-            str.resize(bytes.size);
-            memmove((void *) str.data(), bytes.start, bytes.size);
-            return;
-        }
-    }
-
-    getFormatedStringContent(body, str);
+    pn_data_copy(pn_message_body(impl), v.data);
 }
 
-std::string Message::getBody() {
+const Values& Message::body() const {
     confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_rewind(body);
-
-    if (pn_data_next(body) && pn_data_type(body) == PN_STRING) {
-        pn_bytes_t bytes= pn_data_get_string(body);
-        if (!pn_data_next(body)) {
-            // String data and nothing else
-            return std::string(bytes.start, bytes.size);
-        }
-    }
-
-    std::string str;
-    getFormatedStringContent(body, str);
-    return str;
+    body_.view(pn_message_body(impl));
+    return body_;
 }
 
-void Message::setBody(const char *bytes, size_t len) {
+Values& Message::body() {
     confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_clear(body);
-    pn_data_put_binary(body, pn_bytes(len, bytes));
+    body_.view(pn_message_body(impl));
+    return body_;
 }
-
-size_t Message::getBody(char *bytes, size_t len) {
-    confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_rewind(body);
-    if (pn_data_size(body) == 1 && pn_data_next(body) && pn_data_type(body) == PN_BINARY) {
-        pn_bytes_t pnb = pn_data_get_binary(body);
-        if (len >= pnb.size) {
-            memmove(bytes, pnb.start, pnb.size);
-            return pnb.size;
-        }
-        throw ProtonException(MSG("Binary buffer too small"));
-    }
-    throw ProtonException(MSG("Not simple binary data"));
-}
-
-
-
-size_t Message::getBinaryBodySize() {
-    confirm(impl);
-    pn_data_t *body = pn_message_body(impl);
-    pn_data_rewind(body);
-    if (pn_data_size(body) == 1 && pn_data_next(body) && pn_data_type(body) == PN_BINARY) {
-        pn_bytes_t bytes = pn_data_get_binary(body);
-        return bytes.size;
-    }
-    return 0;
-}
-
 
 void Message::encode(std::string &s) {
     confirm(impl);
@@ -434,7 +232,7 @@ void Message::encode(std::string &s) {
         int err = pn_message_encode(impl, (char *) s.data(), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
-                throw ProtonException(MSG("unexpected error"));
+                check(err);
         } else {
             s.resize(sz);
             return;
@@ -445,12 +243,11 @@ void Message::encode(std::string &s) {
 
 void Message::decode(const std::string &s) {
     confirm(impl);
-    int err = pn_message_decode(impl, s.data(), s.size());
-    if (err) throw ProtonException(MSG("unexpected error"));
+    check(pn_message_decode(impl, s.data(), s.size()));
 }
 
-pn_message_t *Message::getPnMessage() const {
+pn_message_t *Message::pnMessage() const {
     return impl;
 }
 
-}} // namespace proton::reactor
+}

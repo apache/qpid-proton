@@ -76,6 +76,6 @@ class Terminus : public ProtonHandle<pn_terminus_t>
 };
 
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_TERMINUS_H*/

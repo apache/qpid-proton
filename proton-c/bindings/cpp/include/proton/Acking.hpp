@@ -39,6 +39,6 @@ class Acking
 };
 
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_ACKING_H*/

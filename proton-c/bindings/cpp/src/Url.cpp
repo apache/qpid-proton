@@ -19,7 +19,7 @@
  *
  */
 
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Url.hpp"
 #include "ProtonImplRef.hpp"
 #include "Msg.hpp"
@@ -35,7 +35,7 @@ Url::Url(const std::string &url) {
     pn_url_t *up = pn_url_parse(url.c_str());
     // refcount is 1, no need to incref
     if (!up)
-        throw ProtonException(MSG("invalid URL: " << url));
+        throw Error(MSG("invalid URL: " << url));
     impl = up;
 }
 

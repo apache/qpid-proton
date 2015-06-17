@@ -21,7 +21,7 @@
 #include "proton/MessagingAdapter.hpp"
 #include "proton/MessagingEvent.hpp"
 #include "proton/Sender.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 
 #include "proton/link.h"
@@ -69,7 +69,7 @@ Message receiveMessage(pn_link_t *lnk, pn_delivery_t *dlv) {
     buf.resize(sz);
     ssize_t n = pn_link_recv(lnk, (char *) buf.data(), sz);
     if (n != (ssize_t) sz)
-        throw ProtonException(MSG("link read failure"));
+        throw Error(MSG("link read failure"));
     Message m;
     m. decode(buf);
     pn_link_advance(lnk);

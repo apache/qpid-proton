@@ -51,7 +51,6 @@ class ProtonEvent : public Event
     Container &container;
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_PROTONEVENT_H*/

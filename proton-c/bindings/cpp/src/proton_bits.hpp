@@ -33,10 +33,10 @@ std::string errorStr(int code);
 std::string errorStr(pn_error_t*, int code=0);
 
 /** Wrapper for a proton object pointer. */
-struct Object { void* value; Object(void* o) : value(o) {} };
+struct PnObject { void* value; PnObject(void* o) : value(o) {} };
 
 /** Stream a proton object via pn_inspect. */
-std::ostream& operator<<(std::ostream& o, const Object& object);
+std::ostream& operator<<(std::ostream& o, const PnObject& object);
 
 
 

@@ -29,31 +29,44 @@
 struct pn_data_t;
 
 namespace proton {
-namespace reactor {
 
 /** Base for classes that hold AMQP data. */
-class Data {
+PN_CPP_EXTERN class Data {
   public:
+    explicit Data();
     virtual ~Data();
+    Data(const Data&);
 
-    /** Copies the data */
     Data& operator=(const Data&);
 
     /** Clear the data. */
-    PN_CPP_EXTERN void clear();
+    void clear();
 
     /** True if there are no values. */
-    PN_CPP_EXTERN bool empty() const;
+    bool empty() const;
 
     /** Human readable representation of data. */
     friend std::ostream& operator<<(std::ostream&, const Data&);
 
+    /** The underlying pn_data_t */
+    pn_data_t* pnData() { return data; }
+
+    /** True if this Data object owns it's own pn_data_t, false if it is acting as a "view" */
+    bool own() const { return own_; }
+
+    void swap(Data&);
+
   protected:
-    /** Takes ownership of pd */
-    explicit Data(pn_data_t* pd=0);
+    /** Does not take ownership, just a view on the data */
+    explicit Data(pn_data_t*);
+
+    /** Does not take ownership, just a view on the data */
+    void view(pn_data_t*);
+
     mutable pn_data_t* data;
+    bool own_;
 };
 
 
-}}
+}
 #endif // DATA_H

@@ -22,7 +22,6 @@
 #include <ostream>
 
 namespace proton {
-namespace reactor {
 
 std::string typeName(TypeId t) {
     switch (t) {
@@ -66,6 +65,8 @@ pn_bytes_t pn_bytes(const std::string& s) {
     return b;
 }
 
+std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
+
 pn_uuid_t pn_uuid(const std::string& s) {
     pn_uuid_t u = {0};          // Zero initialized.
     std::copy(s.begin(), s.begin() + std::max(s.size(), sizeof(pn_uuid_t::bytes)), &u.bytes[0]);
@@ -78,4 +79,4 @@ Start Start::list() { return Start(LIST); }
 Start Start::map() { return Start(MAP); }
 Start Start::described() { return Start(DESCRIBED, NULL_, true); }
 
-}}
+}

@@ -22,7 +22,7 @@
 #include "proton/BlockingConnection.hpp"
 #include "proton/MessagingHandler.hpp"
 #include "proton/WaitCondition.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 
 
@@ -72,7 +72,7 @@ void BlockingLink::checkClosed() {
     if (pn_link_state(pnLink) & PN_REMOTE_CLOSED) {
         link.close();
         // TODO: LinkDetached exception
-        throw ProtonException(MSG("Link detached"));
+        throw Error(MSG("Link detached"));
     }
 }
 

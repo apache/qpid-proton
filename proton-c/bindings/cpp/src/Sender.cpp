@@ -20,7 +20,7 @@
  */
 #include "proton/Link.hpp"
 #include "proton/Sender.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "Msg.hpp"
 #include "contexts.hpp"
 
@@ -43,7 +43,7 @@ Sender::Sender() : Link(0) {}
 
 void Sender::verifyType(pn_link_t *lnk) {
     if (lnk && pn_link_is_receiver(lnk))
-        throw ProtonException(MSG("Creating sender with receiver context"));
+        throw Error(MSG("Creating sender with receiver context"));
 }
 
 Sender::Sender(const Link& c) : Link(c.getPnLink()) {}

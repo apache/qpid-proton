@@ -28,7 +28,7 @@
  */
 
 namespace proton {
-namespace reactor {
+
 
 /** Holds a sequence of AMQP values, allows inserting and extracting.
  *
@@ -38,19 +38,24 @@ PN_CPP_EXTERN class Values : public Encoder, public Decoder {
   public:
     Values();
     Values(const Values&);
+
+    /** Does not take ownership, just a view on the data */
+    Values(pn_data_t*);
+
     ~Values();
 
     /** Copy data from another Values */
     Values& operator=(const Values&);
 
-    PN_CPP_EXTERN Values& rewind();
+    Values& rewind();
 
-  private:
+
   friend class Value;
+  friend class Message;
 };
 
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const Values&);
 
-}}
+}
 
 #endif // VALUES_H

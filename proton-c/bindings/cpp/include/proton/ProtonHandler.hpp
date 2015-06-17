@@ -77,7 +77,6 @@ class ProtonHandler : public Handler
     virtual void onUnhandled(Event &e);
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_PROTONHANDLER_H*/

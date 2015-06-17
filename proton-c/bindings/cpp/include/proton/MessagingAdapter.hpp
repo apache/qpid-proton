@@ -34,7 +34,6 @@ namespace reactor {
 
 // Combine's Python's: EndpointStateHandler, IncomingMessageHandler, OutgoingMessageHandler
 
-
 class MessagingAdapter : public MessagingHandler
 {
   public:
@@ -73,7 +72,6 @@ class MessagingAdapter : public MessagingHandler
     MessagingHandler &delegate;  // The handler for generated MessagingEvent's
 };
 
-
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_MESSAGING_ADAPTER_H*/

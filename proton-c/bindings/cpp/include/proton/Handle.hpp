@@ -69,11 +69,11 @@ template <class T> class Handle {
     typedef T Impl;
     PROTON_CPP_INLINE_EXTERN Handle() :impl() {}
 
-    Impl* impl;
+    mutable Impl* impl;
 
   friend class PrivateImplRef<T>;
 };
 
-}} // namespace proton::reactor
+}}
 
 #endif  /*!PROTON_CPP_HANDLE_H*/

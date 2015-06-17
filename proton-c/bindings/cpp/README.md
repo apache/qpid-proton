@@ -7,24 +7,33 @@ API documentation in doxygen format.
 
 # TO DO
 
-There are a number of things that remain to be done.
+Doc & examples
+- Example set with tutorial documentation. Follow pyton examples + C++ encode/decode example.
+  - Consistent option parsing for examples, like other languages.
+  - Auto tests for all examples validating all statements & code in tutorial.
+- API documentation, fill out & organize for readable doxygen HTML.
+- C++ section on website.
 
-- Mapping of complex types.
+Bugs
+- Memory management
+  - Drop PIMPL pattern in API: pn_foo pointer is already hiding the impl.
+  - Proper ownership of pn_objects created by user, e.g. Message. Let user choose pointer style?
+- Error handling, examples crash on error e.g. queue not found.
+- FIXME and TODO notes in code.
 
-- Finish blocking API & demos.
-- API documentation, HTML docs on website.
-- FIXME and TODO notes in code, esp. error handling, missing sender/receiver/connection methods.
+Tests
+- Interop/type testing for full AMQP type coverage.
+- Unit testing for reasonable code coverage.
+- Valgrind for automated unit and example tests.
 
-- Valgrind for automated tests and demos.
-- More automated tests and examples.
-
-- Security: SASL/SSL support.
+Features
+- SASL/SSL support with interop tests.
 - Reconnection
-
+- Finish blocking API & examples.
+- Described types, full support and tests.
+- Durable subscriptions & demos (see python changes)
 
 # Nice to have
 
-Subclasses of Encoder/Decoder that push to/pull from a std::ostream/istream as
-values are inserted/extracted.
-
-Better support for Decimal type.
+- Helpers (or at least doc) for multi-threaded use (reactor/engine per connection)
+- Usable support for decimal types.

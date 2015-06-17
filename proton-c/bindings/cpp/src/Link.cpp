@@ -19,7 +19,7 @@
  *
  */
 #include "proton/Link.hpp"
-#include "proton/exceptions.hpp"
+#include "proton/Error.hpp"
 #include "proton/Connection.hpp"
 #include "ConnectionImpl.hpp"
 #include "Msg.hpp"
