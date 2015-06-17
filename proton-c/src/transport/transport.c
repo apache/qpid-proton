@@ -168,6 +168,13 @@ const pn_io_layer_t pni_passthru_layer = {
     NULL
 };
 
+const pn_io_layer_t pni_header_error_layer = {
+    pn_io_layer_input_error,
+    pn_output_write_amqp_header,
+    NULL,
+    NULL
+};
+
 const pn_io_layer_t pni_error_layer = {
     pn_io_layer_input_error,
     pn_io_layer_output_error,
@@ -286,7 +293,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   pn_do_error(transport, "amqp:connection:framing-error",
               "%s: '%s'%s", error, quoted,
               !eos ? "" : " (connection aborted)");
-  pn_set_error_layer(transport);
+  transport->io_layers[layer] = &pni_header_error_layer;
   return 0;
 }
 
@@ -2397,7 +2404,9 @@ static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned i
     pn_transport_logf(transport, "  -> %s", "AMQP");
   assert(available >= 8);
   memmove(bytes, AMQP_HEADER, 8);
-  if (transport->io_layers[layer] == &amqp_write_header_layer) {
+  if (transport->io_layers[layer] == &pni_header_error_layer) {
+    transport->io_layers[layer] = &pni_error_layer;
+  }else if (transport->io_layers[layer] == &amqp_write_header_layer) {
     transport->io_layers[layer] = &amqp_layer;
   } else {
     transport->io_layers[layer] = &amqp_read_header_layer;
