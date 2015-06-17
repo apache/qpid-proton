@@ -245,7 +245,7 @@ bool pni_init_server(pn_transport_t* transport)
         if (result!=SASL_OK) break;
     }
 
-    result = sasl_server_init(NULL, sasl->config_name);
+    result = sasl_server_init(NULL, sasl->config_name ? sasl->config_name : "proton-server");
     if (result!=SASL_OK) break;
 
     result = sasl_server_new(amqp_service, NULL, NULL, NULL, NULL, NULL, 0, &cyrus_conn);
