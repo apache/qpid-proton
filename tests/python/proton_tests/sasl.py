@@ -20,8 +20,6 @@ from __future__ import absolute_import
 
 import sys, os
 from . import common
-from string import Template
-import subprocess
 
 from proton import *
 from .common import pump, Skipped
@@ -32,23 +30,6 @@ def _sslCertpath(file):
     """
     return os.path.join(os.path.dirname(__file__),
                         "ssl_db/%s" % file)
-
-def _cyrusSetup(conf_dir):
-  """Write out simple SASL config
-  """
-  t = Template("""sasldb_path: ${db}
-mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
-""")
-  subprocess.call(args=['rm','-rf',conf_dir])
-  os.mkdir(conf_dir)
-  db = os.path.abspath(os.path.join(conf_dir,'proton.sasldb'))
-  conf = os.path.abspath(os.path.join(conf_dir,'proton.conf'))
-  f = open(conf, 'w')
-  f.write(t.substitute(db=db))
-  f.close()
-
-  cmd = Template("echo password | saslpasswd2 -c -p -f ${db} -u proton user").substitute(db=db)
-  subprocess.call(args=cmd, shell=True)
 
 def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', encrypted=False, authenticated=True):
   self.s1.allowed_mechs(mech)
@@ -92,13 +73,6 @@ class SaslTest(Test):
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)
     self.s2 = SASL(self.t2)
-
-    if not SASL.extended():
-      return
-
-    _cyrusSetup('sasl_conf')
-    self.s2.config_name('proton')
-    self.s2.config_path(os.path.abspath('sasl_conf'))
 
   def pump(self):
     pump(self.t1, self.t2, 1024)
@@ -326,13 +300,6 @@ class CyrusSASLTest(Test):
     self.c1.password = 'password'
     self.c1.hostname = 'localhost'
 
-    if not SASL.extended():
-      return
-
-    _cyrusSetup('sasl_conf')
-    self.s2.config_name('proton')
-    self.s2.config_path(os.path.abspath('sasl_conf'))
-
   def testMechANON(self):
     self.t1.bind(self.c1)
     _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
@@ -380,13 +347,6 @@ class SSLSASLTest(Test):
     self.s2 = SASL(self.t2)
 
     self.c1 = Connection()
-
-    if not SASL.extended():
-      return
-
-    _cyrusSetup('sasl_conf')
-    self.s2.config_name('proton')
-    self.s2.config_path(os.path.abspath('sasl_conf'))
 
   def testSSLPlainSimple(self):
     if "java" in sys.platform:

@@ -61,7 +61,7 @@ struct pni_sasl_t {
   char *included_mechanisms;
   const char *username;
   char *password;
-  const char *config_name;
+  char *config_name;
   char *config_dir;
   const char *remote_fqdn;
   char *external_auth;
