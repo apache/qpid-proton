@@ -366,7 +366,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->included_mechanisms = NULL;
     sasl->username = NULL;
     sasl->password = NULL;
-    sasl->config_name = sasl->client ? "proton-client" : "proton-server";
+    sasl->config_name = pn_strdup(sasl->client ? "proton-client" : "proton-server");
     sasl->config_dir =  sasl_config_path ? pn_strdup(sasl_config_path) : NULL;
     sasl->remote_fqdn = NULL;
     sasl->external_auth = NULL;
@@ -455,7 +455,8 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
 void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)
 {
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
-    sasl->config_name = name;
+    free(sasl->config_name);
+    sasl->config_name = pn_strdup(name);
 }
 
 void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
@@ -487,6 +488,7 @@ void pn_sasl_free(pn_transport_t *transport)
       free(sasl->selected_mechanism);
       free(sasl->included_mechanisms);
       free(sasl->password);
+      free(sasl->config_name);
       free(sasl->config_dir);
       free(sasl->external_auth);
 
