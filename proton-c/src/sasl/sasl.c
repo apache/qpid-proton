@@ -586,7 +586,10 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
       pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
     }
   }
-  pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
+
+  if (pn_string_size(mechs)) {
+      pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
+  }
 
   if (pni_init_client(transport) &&
       pni_process_mechanisms(transport, pn_string_get(mechs))) {
