@@ -22,19 +22,21 @@
  *
  */
 #include <stdexcept>
+#include <string>
+#include "proton/export.hpp"
 
 namespace proton {
 
 /** @ingroup cpp
  * Functions in the proton namespace throw a subclass of proton::Error on error.
  */
-struct Error : public std::runtime_error { explicit Error(const std::string&) throw(); };
+struct Error : public std::runtime_error { PN_CPP_EXTERN explicit Error(const std::string&) throw(); };
 
 /** Raised if a message is rejected */
-struct MessageReject : public Error { explicit MessageReject(const std::string&) throw(); };
+struct MessageReject : public Error { PN_CPP_EXTERN explicit MessageReject(const std::string&) throw(); };
 
 /** Raised if a message is released */
-struct MessageRelease : public Error { explicit MessageRelease(const std::string&) throw(); };
+struct MessageRelease : public Error { PN_CPP_EXTERN explicit MessageRelease(const std::string&) throw(); };
 
 
 }

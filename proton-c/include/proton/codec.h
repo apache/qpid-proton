@@ -178,7 +178,7 @@ typedef enum {
 } pn_type_t;
 
 /** A special invalid type value that is returned when no valid type is available. */
-extern const pn_type_t PN_INVALID;
+PN_EXTERN extern const pn_type_t PN_INVALID;
 
 /**
  * Return a string name for an AMQP type.

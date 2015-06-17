@@ -27,7 +27,6 @@
 #include <fstream>
 #include <streambuf>
 #include <iosfwd>
-#include <unistd.h>
 
 using namespace std;
 using namespace proton;
@@ -43,7 +42,7 @@ struct Fail : public logic_error { Fail(const string& what) : logic_error(what) 
 
 
 string read(string filename) {
-    filename = testsDir+"/interop/"+filename+".amqp";
+    filename = testsDir+string("/interop/")+filename+string(".amqp");
     ifstream ifs(filename.c_str());
     if (!ifs.good()) FAIL("Can't open " << filename);
     return string(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
@@ -67,19 +66,19 @@ void testDataOstream() {
 void testDecoderPrimitvesExact() {
     Decoder d(read("primitives"));
     ASSERT(d.more());
-    try { get<int8_t>(d); FAIL("got bool as byte"); } catch(DecodeError){}
+    try { get<std::int8_t>(d); FAIL("got bool as byte"); } catch(DecodeError){}
     ASSERT_EQUAL(true, get<bool>(d));
     ASSERT_EQUAL(false, get<bool>(d));
-    try { get<int8_t>(d); FAIL("got ubyte as byte"); } catch(DecodeError){}
-    ASSERT_EQUAL(42, get<uint8_t>(d));
-    try { get<int32_t>(d); FAIL("got uint as ushort"); } catch(DecodeError){}
-    ASSERT_EQUAL(42, get<uint16_t>(d));
-    try { get<uint16_t>(d); FAIL("got short as ushort"); } catch(DecodeError){}
-    ASSERT_EQUAL(-42, get<int16_t>(d));
-    ASSERT_EQUAL(12345, get<uint32_t>(d));
-    ASSERT_EQUAL(-12345, get<int32_t>(d));
-    ASSERT_EQUAL(12345, get<uint64_t>(d));
-    ASSERT_EQUAL(-12345, get<int64_t>(d));
+    try { get<std::int8_t>(d); FAIL("got ubyte as byte"); } catch(DecodeError){}
+    ASSERT_EQUAL(42, get<std::uint8_t>(d));
+    try { get<std::int32_t>(d); FAIL("got uint as ushort"); } catch(DecodeError){}
+    ASSERT_EQUAL(42, get<std::uint16_t>(d));
+    try { get<std::uint16_t>(d); FAIL("got short as ushort"); } catch(DecodeError){}
+    ASSERT_EQUAL(-42, get<std::int16_t>(d));
+    ASSERT_EQUAL(12345, get<std::uint32_t>(d));
+    ASSERT_EQUAL(-12345, get<std::int32_t>(d));
+    ASSERT_EQUAL(12345, get<std::uint64_t>(d));
+    ASSERT_EQUAL(-12345, get<std::int64_t>(d));
     try { get<double>(d); FAIL("got float as double"); } catch(DecodeError){}
     ASSERT_EQUAL(0.125, get<float>(d));
     try { get<float>(d); FAIL("got double as float"); } catch(DecodeError){}
@@ -91,10 +90,10 @@ void testDecoderPrimitvesExact() {
 void testEncoderPrimitives() {
     Encoder e;
     e << true << false;
-    e << uint8_t(42);
-    e << uint16_t(42) << int16_t(-42);
-    e << uint32_t(12345) << int32_t(-12345);
-    e << uint64_t(12345) << int64_t(-12345);
+    e << std::uint8_t(42);
+    e << std::uint16_t(42) << std::int16_t(-42);
+    e << std::uint32_t(12345) << std::int32_t(-12345);
+    e << std::uint64_t(12345) << std::int64_t(-12345);
     e << float(0.125) << double(0.125);
     ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(e));
     std::string data = e.encode();
@@ -132,8 +131,7 @@ int run_test(void (*testfn)(), const char* name) {
 
 int main(int argc, char** argv) {
     int failed = 0;
-    char buf[1024];
-    if (argc != 2) FAIL("Usage: " << argv[0] << " tests-dir" << " IN " << getcwd(buf, sizeof(buf)));
+    if (argc != 2) FAIL("Usage: " << argv[0] << " tests-dir");
     testsDir = argv[1];
 
     failed += RUN_TEST(testDataOstream);

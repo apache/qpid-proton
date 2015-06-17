@@ -20,8 +20,45 @@
 #include "proton/types.hpp"
 #include <proton/codec.h>
 #include <ostream>
+#include <algorithm>
 
 namespace proton {
+
+Uuid::Uuid() { std::fill(bytes, bytes+SIZE, 0); }
+Uuid::Uuid(const pn_uuid_t& u) { std::copy(u.bytes, u.bytes+SIZE, bytes); }
+
+Uuid::operator pn_uuid_t() const {
+    pn_uuid_t u;
+    std::copy(begin(), end(), u.bytes);
+    return u;
+}
+
+bool Uuid::operator==(const Uuid& x) const {
+    return std::equal(begin(), end(), x.begin());
+}
+
+bool Uuid::operator<(const Uuid& x) const {
+    return std::lexicographical_compare(begin(), end(), x.begin(), x.end()) < 0;
+}
+
+namespace {
+inline std::ostream& printSegment(std::ostream& o, const Uuid& u, size_t begin, size_t end, const char* sep="") {
+    for (const char* p = &u[begin]; p < &u[end]; ++p) o << *p;
+    return o << sep;
+}
+}
+
+std::ostream& operator<<(std::ostream& o, const Uuid& u) {
+    std::ios_base::fmtflags ff = o.flags();
+    o.flags(std::ios_base::hex);
+    printSegment(o, u, 0, 4, "-");
+    printSegment(o, u, 4, 6, "-");
+    printSegment(o, u, 6, 8, "-");
+    printSegment(o, u, 8, 10, "-");
+    printSegment(o, u, 10, 16);
+    o.flags(ff);
+    return o;
+}
 
 std::string typeName(TypeId t) {
     switch (t) {
@@ -66,12 +103,6 @@ pn_bytes_t pn_bytes(const std::string& s) {
 }
 
 std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
-
-pn_uuid_t pn_uuid(const std::string& s) {
-    pn_uuid_t u = {0};          // Zero initialized.
-    std::copy(s.begin(), s.begin() + std::max(s.size(), sizeof(pn_uuid_t::bytes)), &u.bytes[0]);
-    return u;
-}
 
 Start::Start(TypeId t, TypeId e, bool d, size_t s) : type(t), element(e), isDescribed(d), size(s) {}
 Start Start::array(TypeId element, bool described) { return Start(ARRAY, element, described); }

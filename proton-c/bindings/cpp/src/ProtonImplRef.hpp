@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/object.h"
 
 namespace proton {

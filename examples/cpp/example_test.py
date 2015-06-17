@@ -22,7 +22,18 @@
 import unittest
 import os, sys, socket, time
 from  random import randrange
-from subprocess import Popen, check_output, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT
+
+def call(*args, **kwargs):
+    p = Popen(*args, stdout=PIPE, stderr=STDOUT, **kwargs)
+    out, err = p.communicate()
+    if p.returncode:
+        raise CalledProcessError("""%s exit code %s
+vvvvvvvvvvvvvvvv output of %s exit code %s vvvvvvvvvvvvvvvv
+%s
+^^^^^^^^^^^^^^^^ output of %s exit code %s ^^^^^^^^^^^^^^^^""" % (
+    p.cmd, p.returncode, p.cmd, p.returncode, out, p.cmd, p.returncode))
+    return out
 
 NULL = open(os.devnull, 'w')
 
@@ -68,25 +79,25 @@ class ExampleTest(unittest.TestCase):
 
     def test_helloworld(self):
         b = Broker.get()
-        hw = check_output(["./helloworld", b.addr])
+        hw = call(["./helloworld", b.addr])
         self.assertEqual("Hello World!\n", hw)
 
     def test_helloworld_blocking(self):
         b = Broker.get()
-        hw = check_output(["./helloworld_blocking", b.addr])
+        hw = call(["./helloworld_blocking", b.addr])
         self.assertEqual("Hello World!\n", hw)
 
     def test_helloworld_direct(self):
         url = ":%s/examples" % randrange(10000, 20000)
-        hw = check_output(["./helloworld_direct", url])
+        hw = call(["./helloworld_direct", url])
         self.assertEqual("Hello World!\n", hw)
 
     def test_simple_send_recv(self):
         b = Broker.get()
         n = 5
-        send = check_output(["./simple_send", "-a", b.addr, "-m", str(n)])
+        send = call(["./simple_send", "-a", b.addr, "-m", str(n)])
         self.assertEqual("all messages confirmed\n", send)
-        recv = check_output(["./simple_recv", "-a", b.addr, "-m", str(n)])
+        recv = call(["./simple_recv", "-a", b.addr, "-m", str(n)])
         recv_expect = "simple_recv listening on %s\n" % (b.addr)
         recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(n)])
         self.assertEqual(recv_expect, recv)
@@ -99,19 +110,11 @@ class ExampleTest(unittest.TestCase):
         n = 5
         recv = Popen(["./simple_recv", "-a", b.addr, "-m", str(n)], stdout=PIPE)
         self.assertEqual("simple_recv listening on %s\n" % (b.addr), recv.stdout.readline())
-        send = check_output(["./simple_send", "-a", b.addr, "-m", str(n)])
+        send = call(["./simple_send", "-a", b.addr, "-m", str(n)])
         self.assertEqual("all messages confirmed\n", send)
         recv_expect = "".join(['[%d]: b"some arbitrary binary data"\n' % (i+1) for i in range(n)])
         out, err = recv.communicate()
         self.assertEqual(recv_expect, out)
-
-    def call(self, *cmd):
-        p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        out, err = p.communicate()
-        self.assertEqual(0, p.returncode,
-                         "%s exit code %s, output:\n%s\n---- end of %s exit code %s" % (
-                             cmd, p.returncode, out, cmd, p.returncode))
-        return out
 
     def test_encode_decode(self):
         expect="""
@@ -140,6 +143,6 @@ Values: list[int(42), bool(false), symbol(:x)]
 Values: map{string("k1"):int(42), symbol(:"k2"):bool(false)}
 """
         self.maxDiff = None
-        self.assertMultiLineEqual(expect, self.call("./encode_decode"))
+        self.assertMultiLineEqual(expect, call("./encode_decode"))
 if __name__ == "__main__":
     unittest.main()

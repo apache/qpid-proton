@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/connection.h"
 
 namespace proton {
@@ -48,8 +48,8 @@ class Endpoint
     virtual PN_CPP_EXTERN Connection &getConnection() = 0;
     Transport PN_CPP_EXTERN &getTransport();
   protected:
-    Endpoint();
-    ~Endpoint();
+    PN_CPP_EXTERN Endpoint();
+    PN_CPP_EXTERN ~Endpoint();
 };
 
 

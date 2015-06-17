@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Link.hpp"
 #include "proton/Connection.hpp"
 #include "proton/Message.hpp"
@@ -48,10 +48,10 @@ class Event
     virtual PN_CPP_EXTERN void setMessage(Message &);
     virtual PN_CPP_EXTERN ~Event();
   protected:
-    PN_CPP_EXTERN PN_CPP_EXTERN Event();
+    PN_CPP_EXTERN Event();
   private:
-    PN_CPP_EXTERN Event(const Event&);
-    PN_CPP_EXTERN Event& operator=(const Event&);
+    Event(const Event&);
+    Event& operator=(const Event&);
 };
 
 }}

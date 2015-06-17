@@ -32,63 +32,65 @@ namespace reactor {
 class Event;
 class MessagingAdapter;
 
-class PN_CPP_EXTERN MessagingHandler : public ProtonHandler , public Acking
+class MessagingHandler : public ProtonHandler , public Acking
 {
   public:
     PN_CPP_EXTERN MessagingHandler(int prefetch=10, bool autoAccept=true, bool autoSettle=true,
                                        bool peerCloseIsError=false);
-    virtual ~MessagingHandler();
+    PN_CPP_EXTERN virtual ~MessagingHandler();
 
-    virtual void onAbort(Event &e);
-    virtual void onAccepted(Event &e);
-    virtual void onCommit(Event &e);
-    virtual void onConnectionClosed(Event &e);
-    virtual void onConnectionClosing(Event &e);
-    virtual void onConnectionError(Event &e);
-    virtual void onConnectionOpening(Event &e);
-    virtual void onConnectionOpened(Event &e);
-    virtual void onDisconnected(Event &e);
-    virtual void onFetch(Event &e);
-    virtual void onIdLoaded(Event &e);
-    virtual void onLinkClosed(Event &e);
-    virtual void onLinkClosing(Event &e);
-    virtual void onLinkError(Event &e);
-    virtual void onLinkOpened(Event &e);
-    virtual void onLinkOpening(Event &e);
-    virtual void onMessage(Event &e);
-    virtual void onQuit(Event &e);
-    virtual void onRecordInserted(Event &e);
-    virtual void onRecordsLoaded(Event &e);
-    virtual void onRejected(Event &e);
-    virtual void onReleased(Event &e);
-    virtual void onRequest(Event &e);
-    virtual void onResponse(Event &e);
-    virtual void onSendable(Event &e);
-    virtual void onSessionClosed(Event &e);
-    virtual void onSessionClosing(Event &e);
-    virtual void onSessionError(Event &e);
-    virtual void onSessionOpened(Event &e);
-    virtual void onSessionOpening(Event &e);
-    virtual void onSettled(Event &e);
-    virtual void onStart(Event &e);
-    virtual void onTimer(Event &e);
-    virtual void onTransactionAborted(Event &e);
-    virtual void onTransactionCommitted(Event &e);
-    virtual void onTransactionDeclared(Event &e);
-    virtual void onTransportClosed(Event &e);
-  protected:
+    PN_CPP_EXTERN virtual void onAbort(Event &e);
+    PN_CPP_EXTERN virtual void onAccepted(Event &e);
+    PN_CPP_EXTERN virtual void onCommit(Event &e);
+    PN_CPP_EXTERN virtual void onConnectionClosed(Event &e);
+    PN_CPP_EXTERN virtual void onConnectionClosing(Event &e);
+    PN_CPP_EXTERN virtual void onConnectionError(Event &e);
+    PN_CPP_EXTERN virtual void onConnectionOpening(Event &e);
+    PN_CPP_EXTERN virtual void onConnectionOpened(Event &e);
+    PN_CPP_EXTERN virtual void onDisconnected(Event &e);
+    PN_CPP_EXTERN virtual void onFetch(Event &e);
+    PN_CPP_EXTERN virtual void onIdLoaded(Event &e);
+    PN_CPP_EXTERN virtual void onLinkClosed(Event &e);
+    PN_CPP_EXTERN virtual void onLinkClosing(Event &e);
+    PN_CPP_EXTERN virtual void onLinkError(Event &e);
+    PN_CPP_EXTERN virtual void onLinkOpened(Event &e);
+    PN_CPP_EXTERN virtual void onLinkOpening(Event &e);
+    PN_CPP_EXTERN virtual void onMessage(Event &e);
+    PN_CPP_EXTERN virtual void onQuit(Event &e);
+    PN_CPP_EXTERN virtual void onRecordInserted(Event &e);
+    PN_CPP_EXTERN virtual void onRecordsLoaded(Event &e);
+    PN_CPP_EXTERN virtual void onRejected(Event &e);
+    PN_CPP_EXTERN virtual void onReleased(Event &e);
+    PN_CPP_EXTERN virtual void onRequest(Event &e);
+    PN_CPP_EXTERN virtual void onResponse(Event &e);
+    PN_CPP_EXTERN virtual void onSendable(Event &e);
+    PN_CPP_EXTERN virtual void onSessionClosed(Event &e);
+    PN_CPP_EXTERN virtual void onSessionClosing(Event &e);
+    PN_CPP_EXTERN virtual void onSessionError(Event &e);
+    PN_CPP_EXTERN virtual void onSessionOpened(Event &e);
+    PN_CPP_EXTERN virtual void onSessionOpening(Event &e);
+    PN_CPP_EXTERN virtual void onSettled(Event &e);
+    PN_CPP_EXTERN virtual void onStart(Event &e);
+    PN_CPP_EXTERN virtual void onTimer(Event &e);
+    PN_CPP_EXTERN virtual void onTransactionAborted(Event &e);
+    PN_CPP_EXTERN virtual void onTransactionCommitted(Event &e);
+    PN_CPP_EXTERN virtual void onTransactionDeclared(Event &e);
+    PN_CPP_EXTERN virtual void onTransportClosed(Event &e);
+
+ protected:
     int prefetch;
     bool autoAccept;
     bool autoSettle;
     bool peerCloseIsError;
     MessagingAdapter *messagingAdapter;
     Handler *flowController;
-    PN_CPP_EXTERN MessagingHandler(bool rawHandler, int prefetch=10, bool autoAccept=true, bool autoSettle=true,
-                                       bool peerCloseIsError=false);
+    PN_CPP_EXTERN MessagingHandler(
+        bool rawHandler, int prefetch=10, bool autoAccept=true,
+        bool autoSettle=true, bool peerCloseIsError=false);
   private:
     friend class ContainerImpl;
     friend class MessagingAdapter;
-    void createHelpers();
+    PN_CPP_EXTERN void createHelpers();
 };
 
 }}

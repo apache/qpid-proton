@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/ProtonHandle.hpp"
 #include "proton/url.h"
 #include <string>

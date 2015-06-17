@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Handle.hpp"
 #include "proton/Acceptor.hpp"
 #include "proton/Duration.hpp"

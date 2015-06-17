@@ -36,7 +36,8 @@ Decoder::Decoder(const char* buffer, size_t size) { decode(buffer, size); }
 Decoder::Decoder(const std::string& buffer) { decode(buffer); }
 Decoder::~Decoder() {}
 
-DecodeError::DecodeError(const std::string& msg) throw() : Error("decode: "+msg) {}
+static const std::string prefix("decode: ");
+DecodeError::DecodeError(const std::string& msg) throw() : Error(prefix+msg) {}
 
 namespace {
 struct SaveState {

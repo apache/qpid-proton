@@ -23,7 +23,7 @@
 
 namespace proton {
 
-const Duration Duration::FOREVER(std::numeric_limits<uint64_t>::max());
+const Duration Duration::FOREVER(std::numeric_limits<std::uint64_t>::max());
 const Duration Duration::IMMEDIATE(0);
 const Duration Duration::SECOND(1000);
 const Duration Duration::MINUTE(SECOND * 60);

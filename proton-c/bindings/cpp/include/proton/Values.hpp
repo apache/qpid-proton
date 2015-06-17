@@ -34,21 +34,20 @@ namespace proton {
  *
  * After inserting values, call rewind() to extract them.
  */
-PN_CPP_EXTERN class Values : public Encoder, public Decoder {
+class Values : public Encoder, public Decoder {
   public:
-    Values();
-    Values(const Values&);
+    PN_CPP_EXTERN Values();
+    PN_CPP_EXTERN Values(const Values&);
 
     /** Does not take ownership, just a view on the data */
-    Values(pn_data_t*);
+    PN_CPP_EXTERN Values(pn_data_t*);
 
-    ~Values();
+    PN_CPP_EXTERN ~Values();
 
     /** Copy data from another Values */
-    Values& operator=(const Values&);
+    PN_CPP_EXTERN Values& operator=(const Values&);
 
-    Values& rewind();
-
+    PN_CPP_EXTERN Values& rewind();
 
   friend class Value;
   friend class Message;

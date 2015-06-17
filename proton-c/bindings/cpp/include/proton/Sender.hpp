@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Delivery.hpp"
 #include "proton/Link.hpp"
 #include "proton/Message.hpp"
@@ -38,12 +38,12 @@ namespace reactor {
 class Sender : public Link
 {
   public:
-    PN_CPP_EXTERN Sender(pn_link_t *lnk);
-    PN_CPP_EXTERN Sender();
+    PN_CPP_EXTERN Sender(pn_link_t *lnk=0);
     PN_CPP_EXTERN Sender(const Link& c);
     PN_CPP_EXTERN Delivery send(Message &m);
+
   protected:
-    virtual void verifyType(pn_link_t *l);
+    PN_CPP_EXTERN virtual void verifyType(pn_link_t *l);
 };
 
 

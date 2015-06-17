@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 
 namespace proton {
 namespace reactor {
@@ -43,20 +43,20 @@ template <class T> class Handle {
   public:
 
     /**@return true if handle is valid,  i.e. not null. */
-    PROTON_CPP_INLINE_EXTERN bool isValid() const { return impl; }
+    bool isValid() const { return impl; }
 
     /**@return true if handle is null. It is an error to call any function on a null handle. */
-    PROTON_CPP_INLINE_EXTERN bool isNull() const { return !impl; }
+    bool isNull() const { return !impl; }
 
     /** Conversion to bool supports idiom if (handle) { handle->... } */
-    PROTON_CPP_INLINE_EXTERN operator bool() const { return impl; }
+    operator bool() const { return impl; }
 
     /** Operator ! supports idiom if (!handle) { do_if_handle_is_null(); } */
-    PROTON_CPP_INLINE_EXTERN bool operator !() const { return !impl; }
+    bool operator !() const { return !impl; }
 
     /** Operator ==  equal if they point to same non-null object*/
-    PROTON_CPP_INLINE_EXTERN bool operator ==(const Handle<T>& other) const { return impl == other.impl; }
-    PROTON_CPP_INLINE_EXTERN bool operator !=(const Handle<T>& other) const { return impl != other.impl; }
+    bool operator ==(const Handle<T>& other) const { return impl == other.impl; }
+    bool operator !=(const Handle<T>& other) const { return impl != other.impl; }
 
     void swap(Handle<T>& h) { T* t = h.impl; h.impl = impl; impl = t; }
 
@@ -67,7 +67,7 @@ template <class T> class Handle {
 
   protected:
     typedef T Impl;
-    PROTON_CPP_INLINE_EXTERN Handle() :impl() {}
+    Handle() : impl() {}
 
     mutable Impl* impl;
 

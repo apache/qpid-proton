@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Event.hpp"
 #include "proton/event.h"
 #include <vector>
@@ -29,7 +29,7 @@
 namespace proton {
 namespace reactor {
 
-class PN_CPP_EXTERN Handler
+class Handler
 {
   public:
     PN_CPP_EXTERN Handler();

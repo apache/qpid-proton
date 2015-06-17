@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Handle.hpp"
 #include "proton/Endpoint.hpp"
 #include "proton/Container.hpp"
@@ -40,14 +40,14 @@ class BlockingLink
 {
   public:
     PN_CPP_EXTERN void close();
-    ~BlockingLink();
+    PN_CPP_EXTERN ~BlockingLink();
   protected:
     PN_CPP_EXTERN BlockingLink(BlockingConnection *c, pn_link_t *l);
     PN_CPP_EXTERN void waitForClosed(Duration timeout=Duration::SECOND);
   private:
     BlockingConnection connection;
     Link link;
-    void checkClosed();
+    PN_CPP_EXTERN void checkClosed();
     friend class BlockingConnection;
     friend class BlockingSender;
     friend class BlockingReceiver;

@@ -68,7 +68,7 @@ void simple_insert_extract_exact_type() {
     // Check that we encoded the correct types, but note that decoding will
     // still convert to standard C++ types, in particular any AMQP integer type
     // can be converted to a long-enough C++ integer type..
-    int64_t i1, i2;
+    std::int64_t i1, i2;
     std::string s;
     values >> i1 >> i2 >> s;
     cout << "Extracted (with conversion) " << i1 << ", " << i2 << ", " << s << endl;

@@ -21,9 +21,10 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
-#include "proton/ProtonHandle.hpp"
+
 #include "proton/reactor.h"
+#include "proton/export.hpp"
+#include "proton/ProtonHandle.hpp"
 
 struct pn_connection_t;
 

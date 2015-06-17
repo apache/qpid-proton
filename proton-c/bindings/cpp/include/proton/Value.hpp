@@ -30,22 +30,22 @@ struct pn_data_t;
 namespace proton {
 
 /** Holds a single AMQP value. */
-PN_CPP_EXTERN class Value {
+class Value {
   public:
-    Value();
-    Value(const Value&);
+    PN_CPP_EXTERN Value();
+    PN_CPP_EXTERN Value(const Value&);
 
     /** Converting constructor from any settable value */
     template <class T> explicit Value(const T& v);
 
-    ~Value();
+    PN_CPP_EXTERN ~Value();
 
-    Value& operator=(const Value&);
+    PN_CPP_EXTERN Value& operator=(const Value&);
 
     /** Copy the first value from a raw pn_data_t. */
-    Value& operator=(pn_data_t*);
+    PN_CPP_EXTERN Value& operator=(pn_data_t*);
 
-    TypeId type() const;
+    PN_CPP_EXTERN TypeId type() const;
 
     /** Set the value. */
     template<class T> void set(const T& value);
@@ -61,19 +61,19 @@ PN_CPP_EXTERN class Value {
     template<class T> operator T() const;
 
     /** insert a value into an Encoder. */
-    friend Encoder& operator<<(Encoder&, const Value&);
+    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Value&);
 
     /** Extract a value from a decoder. */
-    friend Decoder& operator>>(Decoder&, Value&);
+    PN_CPP_EXTERN friend Decoder& operator>>(Decoder&, Value&);
 
     /** Human readable format */
-    friend std::ostream& operator<<(std::ostream&, const Value&);
+    PN_CPP_EXTERN friend std::ostream& operator<<(std::ostream&, const Value&);
 
-    bool operator==(const Value&) const;
-    bool operator !=(const Value& v) const{ return !(*this == v); }
+    PN_CPP_EXTERN bool operator==(const Value&) const;
+    PN_CPP_EXTERN bool operator !=(const Value& v) const{ return !(*this == v); }
 
     /** operator < makes Value valid for use as a std::map key. */
-    bool operator<(const Value&) const;
+    PN_CPP_EXTERN bool operator<(const Value&) const;
     bool operator>(const Value& v) const { return v < *this; }
     bool operator<=(const Value& v) const { return !(*this > v); }
     bool operator>=(const Value& v) const { return !(*this < v); }

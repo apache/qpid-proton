@@ -17,10 +17,26 @@
 # under the License.
 #
 
-## Build
+set(CPP_FLAGS ${CXX_WARNING_FLAGS})
 
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
+## Check compiler capabilities.
+macro(compiler_test RESULT_VAR NAME CODE)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${NAME} "${CODE}")
+  try_compile(${RESULT_VAR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${NAME})
+endmacro()
+
+compiler_test(RESULT has_long_long.cpp "long long ll; int main(int, char**) { return 0; }")
+if (RESULT)
+  message("C++ compiler has long long")
+  set(CPP_FLAGS "${CPP_FLAGS} -DHAS_LONG_LONG")
+else()
+  message("C++ compiler does not have long long")
+endif()
+
+include_directories(
+  "${CMAKE_SOURCE_DIR}/proton-c/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(qpid-proton-cpp-source
   src/Acceptor.cpp
@@ -55,15 +71,19 @@ set(qpid-proton-cpp-source
   src/Value.cpp
   src/Values.cpp
   src/proton_bits.cpp
-  src/blocking/BlockingConnection.cpp
-  src/blocking/BlockingConnectionImpl.cpp
-  src/blocking/BlockingLink.cpp
-  src/blocking/BlockingSender.cpp
+  src/BlockingConnection.cpp
+  src/BlockingConnectionImpl.cpp
+  src/BlockingLink.cpp
+  src/BlockingSender.cpp
   src/contexts.cpp
   src/types.cpp
   )
 
-set_source_files_properties(${qpid-proton-cpp-source} PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
+set_source_files_properties (
+  ${qpid-proton-cpp-source}
+  PROPERTIES
+  COMPILE_FLAGS "${CPP_FLAGS}"
+  )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 
@@ -100,7 +120,7 @@ add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 
 ## Install
 
-install (TARGETS qpid-proton-cpp
+install(TARGETS qpid-proton-cpp
   EXPORT  proton
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})

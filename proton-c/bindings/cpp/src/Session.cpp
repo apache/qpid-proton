@@ -26,6 +26,7 @@
 #include "proton/Session.hpp"
 #include "proton/Connection.hpp"
 #include "ConnectionImpl.hpp"
+#include "ProtonImplRef.hpp"
 
 namespace proton {
 namespace reactor {

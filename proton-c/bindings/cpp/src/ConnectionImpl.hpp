@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Endpoint.hpp"
 #include "proton/Container.hpp"
 #include "proton/types.h"

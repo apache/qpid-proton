@@ -20,14 +20,16 @@
  */
 
 #include "proton/Data.hpp"
-#include "proton/types.hpp"
 #include "proton/Error.hpp"
+#include "proton/types.hpp"
+#include "proton/type_traits.hpp"
 #include <iosfwd>
+
+#include <iostream>             // FIXME aconway 2015-06-18:
 
 struct pn_data_t;
 
 namespace proton {
-
 
 class Value;
 
@@ -37,7 +39,7 @@ class Value;
 */
 
 /** Raised by Encoder operations on error */
-struct EncodeError : public Error { explicit EncodeError(const std::string&) throw(); };
+struct EncodeError : public Error { PN_CPP_EXTERN explicit EncodeError(const std::string&) throw(); };
 
 /**
 @ingroup cpp
@@ -84,41 +86,41 @@ class Encoder : public virtual Data {
     /** @name Insert simple types.
      *@{
      */
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Null);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Bool);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Ubyte);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Byte);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Ushort);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Short);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Uint);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Int);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Char);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Ulong);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Long);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Timestamp);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Float);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Double);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Decimal32);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Decimal64);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Decimal128);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Uuid);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, String);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Symbol);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, Binary);
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Value&);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Null);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Bool);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Ubyte);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Byte);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Ushort);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Short);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Uint);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Int);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Char);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Ulong);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Long);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Timestamp);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Float);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Double);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Decimal32);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Decimal64);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Decimal128);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Uuid);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, String);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Symbol);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, Binary);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, const Value&);
     ///@}
 
     /** Start a container type. See the Start class. */
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, const Start&);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, const Start&);
 
     /** Finish a container type. */
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder& e, Finish);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder& e, Finish);
 
 
     /**@name Insert values returned by the as<TypeId> helper.
      *@{
      */
-  template <class T, TypeId A> friend Encoder& operator<<(Encoder&, CRef<T, A>);
+  template <class T, TypeId A> friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, CRef<T, A>);
   template <class T> friend Encoder& operator<<(Encoder&, CRef<T, ARRAY>);
   template <class T> friend Encoder& operator<<(Encoder&, CRef<T, LIST>);
   template <class T> friend Encoder& operator<<(Encoder&, CRef<T, MAP>);
@@ -126,29 +128,24 @@ class Encoder : public virtual Data {
     ///@}
 
     /** Copy data from a raw pn_data_t */
-    PN_CPP_EXTERN friend Encoder& operator<<(Encoder&, pn_data_t*);
+    friend PN_CPP_EXTERN Encoder& operator<<(Encoder&, pn_data_t*);
+
   private:
     PN_CPP_EXTERN Encoder(pn_data_t* pd);
-
-    // Not implemented
-    Encoder(const Encoder&);
-    Encoder& operator=(const Encoder&);
 
   friend class Value;
 };
 
-/** Encode const char* as string */
-inline Encoder& operator<<(Encoder& e, const char* s) { return e << String(s); }
-
-/** Encode char* as string */
+// Need to disambiguate char* conversion to bool and std::string as String.
 inline Encoder& operator<<(Encoder& e, char* s) { return e << String(s); }
-
-/** Encode std::string as string */
+inline Encoder& operator<<(Encoder& e, const char* s) { return e << String(s); }
 inline Encoder& operator<<(Encoder& e, const std::string& s) { return e << String(s); }
 
-//@internal Convert a Ref to a CRef.
-template <class T, TypeId A> Encoder& operator<<(Encoder& e, Ref<T, A> ref) {
-    return e << CRef<T,A>(ref);
+// operator << for integer types that are not covered by the standard overrides.
+template <class T>
+typename std::enable_if<IsUnknownInteger<T>::value, Encoder&>::type operator<<(Encoder& e, T i)  {
+    typename IntegerType<sizeof(T), std::is_signed<T>::value>::type v = i;
+    return e << v;              // Insert as a known integer type
 }
 
 // TODO aconway 2015-06-16: described array insertion.
@@ -177,6 +174,10 @@ template <class T> Encoder& operator<<(Encoder& e, CRef<T, MAP> m){
     }
     e << finish();
     return e;
+}
+//@internal Convert a Ref to a CRef.
+template <class T, TypeId A> Encoder& operator<<(Encoder& e, Ref<T, A> ref) {
+    return e << CRef<T,A>(ref);
 }
 
 

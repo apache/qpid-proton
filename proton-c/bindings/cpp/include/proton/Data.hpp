@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include <iosfwd>
 
 /**@file
@@ -31,37 +31,36 @@ struct pn_data_t;
 namespace proton {
 
 /** Base for classes that hold AMQP data. */
-PN_CPP_EXTERN class Data {
+class Data {
   public:
-    explicit Data();
-    virtual ~Data();
-    Data(const Data&);
-
-    Data& operator=(const Data&);
+    PN_CPP_EXTERN explicit Data();
+    PN_CPP_EXTERN Data(const Data&);
+    PN_CPP_EXTERN virtual ~Data();
+    PN_CPP_EXTERN Data& operator=(const Data&);
 
     /** Clear the data. */
-    void clear();
+    PN_CPP_EXTERN void clear();
 
     /** True if there are no values. */
-    bool empty() const;
-
-    /** Human readable representation of data. */
-    friend std::ostream& operator<<(std::ostream&, const Data&);
+    PN_CPP_EXTERN bool empty() const;
 
     /** The underlying pn_data_t */
-    pn_data_t* pnData() { return data; }
+    PN_CPP_EXTERN pn_data_t* pnData() { return data; }
 
     /** True if this Data object owns it's own pn_data_t, false if it is acting as a "view" */
-    bool own() const { return own_; }
+    PN_CPP_EXTERN bool own() const { return own_; }
 
-    void swap(Data&);
+    PN_CPP_EXTERN void swap(Data&);
+
+    /** Human readable representation of data. */
+    friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const Data&);
 
   protected:
     /** Does not take ownership, just a view on the data */
-    explicit Data(pn_data_t*);
+    PN_CPP_EXTERN explicit Data(pn_data_t*);
 
     /** Does not take ownership, just a view on the data */
-    void view(pn_data_t*);
+    PN_CPP_EXTERN  void view(pn_data_t*);
 
     mutable pn_data_t* data;
     bool own_;

@@ -121,7 +121,7 @@ void MessagingAdapter::onDelivery(Event &e) {
         } else {
             // Sender
             if (pn_delivery_updated(dlv)) {
-                uint64_t rstate = pn_delivery_remote_state(dlv);
+                std::uint64_t rstate = pn_delivery_remote_state(dlv);
                 if (rstate == PN_ACCEPTED) {
                     MessagingEvent mevent(PN_MESSAGING_ACCEPTED, *pe);
                     delegate.onAccepted(mevent);

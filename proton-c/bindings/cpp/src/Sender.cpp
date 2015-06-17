@@ -38,8 +38,7 @@ namespace proton {
 namespace reactor {
 
 
-Sender::Sender(pn_link_t *lnk = 0) : Link(lnk) {}
-Sender::Sender() : Link(0) {}
+Sender::Sender(pn_link_t *lnk) : Link(lnk) {}
 
 void Sender::verifyType(pn_link_t *lnk) {
     if (lnk && pn_link_is_receiver(lnk))
@@ -51,14 +50,14 @@ Sender::Sender(const Link& c) : Link(c.getPnLink()) {}
 
 namespace{
 // revisit if thread safety required
-uint64_t tagCounter = 0;
+std::uint64_t tagCounter = 0;
 }
 
 Delivery Sender::send(Message &message) {
     char tag[8];
     void *ptr = &tag;
-    uint64_t id = ++tagCounter;
-    *((uint64_t *) ptr) = id;
+    std::uint64_t id = ++tagCounter;
+    *((std::uint64_t *) ptr) = id;
     pn_delivery_t *dlv = pn_delivery(getPnLink(), pn_dtag(tag, 8));
     std::string buf;
     message.encode(buf);

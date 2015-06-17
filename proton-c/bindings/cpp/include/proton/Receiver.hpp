@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Endpoint.hpp"
 #include "proton/Link.hpp"
 #include "proton/types.h"
@@ -39,7 +39,7 @@ class Receiver : public Link
     PN_CPP_EXTERN Receiver();
     PN_CPP_EXTERN Receiver(const Link& c);
   protected:
-    virtual void verifyType(pn_link_t *l);
+    PN_CPP_EXTERN virtual void verifyType(pn_link_t *l);
 };
 
 }}

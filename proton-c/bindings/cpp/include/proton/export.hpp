@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_IMPORTEXPORT_H
-#define PROTON_CPP_IMPORTEXPORT_H
+#ifndef PN_CPP_IMPORTEXPORT_H
+#define PN_CPP_IMPORTEXPORT_H
 
 /*
  *
@@ -21,30 +21,26 @@
  * under the License.
  *
  */
-#if defined(WIN32) && !defined(PROTON_CPP_DECLARE_STATIC)
+
+#if defined(WIN32) && !defined(PN_CPP_DECLARE_STATIC)
   //
   // Import and Export definitions for Windows:
   //
-#  define PROTON_CPP_EXPORT __declspec(dllexport)
-#  define PROTON_CPP_IMPORT __declspec(dllimport)
+#  define PN_CPP_EXPORT __declspec(dllexport)
+#  define PN_CPP_IMPORT __declspec(dllimport)
 #else
   //
   // Non-Windows (Linux, etc.) definitions:
   //
-#  define PROTON_CPP_EXPORT
-#  define PROTON_CPP_IMPORT
+#  define PN_CPP_EXPORT
+#  define PN_CPP_IMPORT
 #endif
 
-
-// For c++ library symbols
-
-#ifdef protoncpp_EXPORTS
-#  define PN_CPP_EXTERN PROTON_CPP_EXPORT
+// For qpid-proton-cpp library symbols
+#ifdef qpid_proton_cpp_EXPORTS
+#  define PN_CPP_EXTERN PN_CPP_EXPORT
 #else
-#  define PN_CPP_EXTERN PROTON_CPP_IMPORT
+#  define PN_CPP_EXTERN PN_CPP_IMPORT
 #endif
 
-// TODO:
-#define PROTON_CPP_INLINE_EXTERN
-
-#endif  /*!PROTON_CPP_IMPORTEXPORT_H*/
+#endif  /*!PN_CPP_IMPORTEXPORT_H*/

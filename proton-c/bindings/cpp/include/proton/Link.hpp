@@ -21,7 +21,7 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/ProtonHandle.hpp"
 #include "proton/Endpoint.hpp"
 #include "proton/Terminus.hpp"
@@ -55,7 +55,7 @@ class Link : public Endpoint, public ProtonHandle<pn_link_t>
     virtual PN_CPP_EXTERN Connection &getConnection();
     PN_CPP_EXTERN Link getNext(Endpoint::State mask);
   protected:
-    virtual void verifyType(pn_link_t *l);
+    PN_CPP_EXTERN virtual void verifyType(pn_link_t *l);
   private:
     friend class ProtonImplRef<Link>;
     bool senderLink;

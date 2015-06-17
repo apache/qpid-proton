@@ -20,8 +20,9 @@
  */
 
 #include "proton/Data.hpp"
-#include "proton/types.hpp"
 #include "proton/Error.hpp"
+#include "proton/type_traits.hpp"
+#include "proton/types.hpp"
 #include <iosfwd>
 
 namespace proton {
@@ -29,7 +30,7 @@ namespace proton {
 class Value;
 
 /** Raised by Decoder operations on error */
-struct DecodeError : public Error { explicit DecodeError(const std::string&) throw(); };
+struct DecodeError : public Error { PN_CPP_EXTERN explicit DecodeError(const std::string&) throw(); };
 
 /**@file
  * Stream-like decoder from AMQP bytes to C++ values.
@@ -64,7 +65,7 @@ extracting AMQP maps.
 
 You can also extract container values element-by-element, see the Start class.
 */
-PN_CPP_EXTERN class Decoder : public virtual Data {
+class Decoder : public virtual Data {
   public:
 
     PN_CPP_EXTERN Decoder();
@@ -171,15 +172,20 @@ PN_CPP_EXTERN class Decoder : public virtual Data {
 
   private:
     template <class T> Decoder& extract(T& value);
-    void checkType(TypeId);
-
-    // Not implemented
-    Decoder(const Decoder&);
-    Decoder& operator=(const Decoder&);
+    PN_CPP_EXTERN void checkType(TypeId);
 
   friend class Value;
   friend class Encoder;
 };
+
+// operator >> for integer types that are not covered by the standard overrides.
+template <class T>
+typename std::enable_if<IsUnknownInteger<T>::value, Decoder&>::type operator>>(Decoder& d, T& i)  {
+    typename IntegerType<sizeof(T), std::is_signed<T>::value>::type v;
+    d >> v;                     // Extract as a known integer type
+    i = v;
+    return d;
+}
 
 template <class T> Decoder& operator>>(Decoder& d, Ref<T, ARRAY> ref)  {
     Decoder::Scope s(d);

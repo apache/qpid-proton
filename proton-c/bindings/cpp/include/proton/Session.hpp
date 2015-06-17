@@ -21,13 +21,12 @@
  * under the License.
  *
  */
-#include "proton/ImportExport.hpp"
+#include "proton/export.hpp"
 #include "proton/Endpoint.hpp"
 #include "proton/Link.hpp"
 
 #include "proton/types.h"
 #include "proton/link.h"
-#include "ProtonImplRef.hpp"
 #include <string>
 
 struct pn_connection_t;
@@ -50,9 +49,9 @@ class Transport;
     PN_CPP_EXTERN Session& operator=(const Session&);
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN pn_session_t *getPnSession();
-    virtual PN_CPP_EXTERN Connection &getConnection();
-    Receiver createReceiver(std::string name);
-    Sender createSender(std::string name);
+    PN_CPP_EXTERN virtual Connection &getConnection();
+    PN_CPP_EXTERN Receiver createReceiver(std::string name);
+    PN_CPP_EXTERN Sender createSender(std::string name);
   private:
     friend class ProtonImplRef<Session>;
 };

@@ -28,7 +28,8 @@ namespace proton {
 Encoder::Encoder() {}
 Encoder::~Encoder() {}
 
-EncodeError::EncodeError(const std::string& msg) throw() : Error("encode: "+msg) {}
+static const std::string prefix("encode: ");
+EncodeError::EncodeError(const std::string& msg) throw() : Error(prefix+msg) {}
 
 namespace {
 struct SaveState {

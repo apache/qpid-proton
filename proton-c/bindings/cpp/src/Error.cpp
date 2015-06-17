@@ -21,7 +21,9 @@
 
 namespace proton {
 
-Error::Error(const std::string& msg) throw() : std::runtime_error("proton: "+msg) {}
+static const std::string prefix("proton: ");
+
+Error::Error(const std::string& msg) throw() : std::runtime_error(prefix+msg) {}
 
 MessageReject::MessageReject(const std::string& msg) throw() : Error(msg) {}
 
