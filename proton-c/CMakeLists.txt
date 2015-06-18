@@ -523,7 +523,10 @@ if (BUILD_PYTHON)
 		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../" ${VALGRIND_ENV}
                    tox
 		   WORKING_DIRECTORY ${py_src})
-         set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+         set_tests_properties(python-tox-test
+                              PROPERTIES
+                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
      else (TOX_CMD)
          message(STATUS "The tox tool is not available - skipping the python-tox-tests")
      endif (TOX_CMD)
