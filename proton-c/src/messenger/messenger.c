@@ -503,7 +503,10 @@ static char *build_name(const char *name)
 
   if (!seeded) {
     int pid = pn_i_getpid();
-    srand(pn_i_now() + pid);
+    int nowish = (int)pn_i_now();
+    // the lower bits of time are the most random, shift pid to push some
+    // randomness into the higher order bits
+    srand(nowish ^ (pid<<16));
     seeded = true;
   }
 
