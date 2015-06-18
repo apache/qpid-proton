@@ -77,7 +77,13 @@ install(DIRECTORY lib/core
 install(DIRECTORY lib/event
         DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)
+install(DIRECTORY lib/handler
+        DESTINATION ${RUBY_ARCHLIB_DIR}
+        COMPONENT Ruby)
 install(DIRECTORY lib/messenger
+        DESTINATION ${RUBY_ARCHLIB_DIR}
+        COMPONENT Ruby)
+install(DIRECTORY lib/reactor
         DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)
 install(DIRECTORY lib/types
@@ -86,4 +92,3 @@ install(DIRECTORY lib/types
 install(DIRECTORY lib/util
         DESTINATION ${RUBY_ARCHLIB_DIR}
         COMPONENT Ruby)
-
