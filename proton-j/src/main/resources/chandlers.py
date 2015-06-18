@@ -17,9 +17,10 @@
 # under the License.
 #
 
+import sys
 from cerror import Skipped
 from org.apache.qpid.proton.reactor import FlowController, Handshaker
-from org.apache.qpid.proton.engine import BaseHandler
+from org.apache.qpid.proton.engine import BaseHandler, HandlerException
 
 # from proton/handlers.h
 def pn_flowcontroller(window):
@@ -40,4 +41,7 @@ class pn_pyhandler(BaseHandler):
 
     def onUnhandled(self, event):
         ev = pn_event(event)
-        self.pyobj.dispatch(ev, pn_event_type(ev))
+        try:
+            self.pyobj.dispatch(ev, pn_event_type(ev))
+        except:
+            self.pyobj.exception(*sys.exc_info())
