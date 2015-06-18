@@ -211,11 +211,51 @@ class ConnectionTest(Test):
     assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
     assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
 
-  def test_channel_max(self, value=1234):
+  # The proton implementation limits channel_max to 32767.
+  # If I set the application's limit lower than that, I should 
+  # get my wish.  If I set it higher -- not.
+  def test_channel_max_low(self, value=1234):
     self.c1.transport.channel_max = value
     self.c1.open()
     self.pump()
-    assert self.c2.transport.remote_channel_max == value, (self.c2.transport.remote_channel_max, value)
+    assert self.c1.transport.channel_max == value, (self.c1.transport.channel_max, value)
+
+  def test_channel_max_high(self, value=33333):
+    self.c1.transport.channel_max = value
+    self.c1.open()
+    self.pump()
+    assert self.c1.transport.channel_max == 32767, (self.c1.transport.channel_max, value)
+
+  def test_channel_max_raise_and_lower(self):
+    # It's OK to lower the max below 32767.
+    self.c1.transport.channel_max = 12345
+    assert self.c1.transport.channel_max == 12345
+    # But it won't let us raise the limit above 32767.
+    self.c1.transport.channel_max = 33333
+    assert self.c1.transport.channel_max == 32767
+    self.c1.open()
+    self.pump()
+    # Now it's too late to make any change, because
+    # we have already sent the OPEN frame.
+    self.c1.transport.channel_max = 666
+    assert self.c1.transport.channel_max == 32767
+
+
+  def test_channel_max_limits_sessions(self):
+    return
+    # This is an index -- so max number of channels should be 1.
+    self.c1.transport.channel_max = 0
+    self.c1.open()
+    self.c2.open()
+    ssn_0 = self.c2.session()
+    assert ssn_0 != None
+    ssn_0.open()
+    self.pump()
+    try:
+      ssn_1 = self.c2.session()
+      assert False, "expected session exception"
+    except SessionException:
+      pass
 
   def test_cleanup(self):
     self.c1.open()

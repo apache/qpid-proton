@@ -320,6 +320,10 @@ PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...
 
 /**
  * Get the maximum allowed channel for a transport.
+ * This will be the minimum of 
+ *   1. limit imposed by this proton implementation
+ *   2. limit imposed by remote peer
+ *   3. limit imposed by this application, using pn_transport_set_channel_max()
  *
  * @param[in] transport a transport object
  * @return the maximum allowed channel
@@ -327,7 +331,17 @@ PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...
 PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
 
 /**
- * Set the maximum allowed channel for a transport.
+ * Set the maximum allowed channel number for a transport.
+ * Note that this is the maximum channel number allowed, giving a 
+ * valid channel number range of [0..channel_max]. Therefore the 
+ * maximum number of simultaineously active channels will be 
+ * channel_max plus 1.
+ * You can call this function more than once to raise and lower
+ * the limit your application imposes on max channels for this 
+ * transport.  However, smaller limits may be imposed by this
+ * library, or by the remote peer.
+ * After the OPEN frame has been sent to the remote peer,
+ * further calls to this function will have no effect.
  *
  * @param[in] transport a transport object
  * @param[in] channel_max the maximum allowed channel
