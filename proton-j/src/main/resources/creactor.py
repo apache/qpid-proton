@@ -72,6 +72,9 @@ def pn_task_attachments(t):
 def pn_selectable_attachments(s):
     return s.attachments()
 
+def pn_selectable_set_fd(s, fd):
+    s.setChannel(fd.getChannel())
+
 def pn_acceptor_close(a):
     a.close()
 

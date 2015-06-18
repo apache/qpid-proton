@@ -47,6 +47,9 @@ def pn_cast_pn_reactor(obj):
 def pn_cast_pn_task(obj):
     return obj
 
+def pn_cast_pn_selectable(obj):
+    return obj
+
 PN_PYREF = None
 
 def pn_record_def(record, key, clazz):

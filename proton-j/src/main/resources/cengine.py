@@ -1052,7 +1052,7 @@ def pn_event_transport(event):
 
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
   SenderImpl, ReceiverImpl, DeliveryImpl, TransportImpl
-from org.apache.qpid.proton.reactor.impl import TaskImpl
+from org.apache.qpid.proton.reactor.impl import TaskImpl, SelectableImpl
 
 J2C = {
   ConnectionImpl: "pn_connection",
@@ -1061,7 +1061,8 @@ J2C = {
   ReceiverImpl: "pn_link",
   DeliveryImpl: "pn_delivery",
   TransportImpl: "pn_transport",
-  TaskImpl: "pn_task"
+  TaskImpl: "pn_task",
+  SelectableImpl: "pn_selectable"
 }
 
 wrappers = {
@@ -1071,6 +1072,7 @@ wrappers = {
   "pn_delivery": lambda x: wrap(x, pn_delivery_wrapper),
   "pn_transport": lambda x: wrap(x, pn_transport_wrapper),
   "pn_task": lambda x: x,
+  "pn_selectable": lambda x: x,
   "pn_void": lambda x: x
 }
 
